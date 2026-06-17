@@ -146,6 +146,8 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')"><span class="nav-icon">💆</span>서비스 메뉴</div>
         <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
+    <div class="nav-item" id="nav-payroll" onclick="_nav(this,'payroll')"><span class="nav-icon">💰</span>급여 정산</div>
+    <div class="nav-item" id="nav-crm" onclick="_nav(this,'crm')"><span class="nav-icon">🗂</span>고객 관리</div>
     <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
         <div class="nav-section">연결</div>
         <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
@@ -690,6 +692,431 @@ function _openQR(){
   var el = document.getElementById('online-link');
   if(!el) return;
   window.open('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(el.textContent));
+}
+</script>
+<script>// ★ 2026년 기준 4대보험 + 세금 계산 엔진
+var TAX2026 = {
+  // 국민연금 (근로자 4.5%, 사업주 4.5%)
+  pension: { employee: 0.045, employer: 0.045 },
+  // 건강보험 (근로자 3.545%, 사업주 3.545%)
+  health: { employee: 0.03545, employer: 0.03545 },
+  // 장기요양보험 (건강보험료의 12.95%)
+  longterm: { rate: 0.1295 },
+  // 고용보험 (근로자 0.9%, 사업주 1.15%)
+  employment: { employee: 0.009, employer: 0.0115 },
+  // 산재보험 (사업주 전액, 업종별 다름 — 기본 1.0%)
+  accident: { employer: 0.010 },
+  // 최저임금 2026년 (시급)
+  minWage: 10030,
+  // 원천세 간이세액표 기준 (월 급여별)
+  incomeTax: function(monthly) {
+    // 간이세액표 근사값 (부양가족 1인 기준)
+    if(monthly <= 1060000) return 0;
+    if(monthly <= 1500000) return Math.round((monthly - 1060000) * 0.06);
+    if(monthly <= 3000000) return Math.round(26640 + (monthly - 1500000) * 0.15);
+    if(monthly <= 4500000) return Math.round(251640 + (monthly - 3000000) * 0.24);
+    if(monthly <= 8000000) return Math.round(611640 + (monthly - 4500000) * 0.35);
+    return Math.round(1836640 + (monthly - 8000000) * 0.38);
+  },
+  // 프리랜서 원천세 3.3%
+  freelance: { rate: 0.033 }
+};
+
+function _calcInsurance(grossPay, employType) {
+  var result = {
+    grossPay: grossPay,
+    employType: employType,
+    deductions: {},
+    totalDeduction: 0,
+    netPay: 0,
+    employerCost: 0
+  };
+
+  if(employType === 'freelancer') {
+    // 프리랜서: 원천세 3.3%만
+    var tax33 = Math.round(grossPay * TAX2026.freelance.rate);
+    result.deductions = { incomeTax33: tax33 };
+    result.totalDeduction = tax33;
+
+  } else if(employType === 'contractor') {
+    // 사업자(지입): 고용보험 + 산재만 (근로자부담 없음)
+    result.deductions = {
+      employment_employer: Math.round(grossPay * TAX2026.employment.employer),
+      accident_employer: Math.round(grossPay * TAX2026.accident.employer)
+    };
+    result.employerCost = result.deductions.employment_employer + result.deductions.accident_employer;
+    result.totalDeduction = 0; // 근로자 부담 없음
+
+  } else {
+    // 직원: 4대보험 + 원천세 전부
+    var pension_e = Math.round(grossPay * TAX2026.pension.employee);
+    var health_e = Math.round(grossPay * TAX2026.health.employee);
+    var longterm_e = Math.round(health_e * TAX2026.longterm.rate);
+    var employ_e = Math.round(grossPay * TAX2026.employment.employee);
+    var incomeTax = TAX2026.incomeTax(grossPay);
+    var localTax = Math.round(incomeTax * 0.1);
+
+    // 사업주 부담
+    var pension_r = Math.round(grossPay * TAX2026.pension.employer);
+    var health_r = Math.round(grossPay * TAX2026.health.employer);
+    var longterm_r = Math.round(health_r * TAX2026.longterm.rate);
+    var employ_r = Math.round(grossPay * TAX2026.employment.employer);
+    var accident_r = Math.round(grossPay * TAX2026.accident.employer);
+
+    result.deductions = {
+      pension: pension_e,
+      health: health_e,
+      longterm: longterm_e,
+      employment: employ_e,
+      incomeTax: incomeTax,
+      localTax: localTax
+    };
+    result.employerCost = pension_r + health_r + longterm_r + employ_r + accident_r;
+    result.totalDeduction = pension_e + health_e + longterm_e + employ_e + incomeTax + localTax;
+  }
+
+  result.netPay = grossPay - result.totalDeduction;
+  return result;
+}
+
+// ★ 직원 급여 정산 페이지
+function _pagePayroll(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  var ym = new Date().toISOString().slice(0,7);
+
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💰 직원 급여 정산</div>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">' +
+      '<button onclick="_payrollShift(-1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">‹</button>' +
+      '<div id="payroll-ym" style="flex:1;text-align:center;font-size:14px;font-weight:700">' + ym + '</div>' +
+      '<button onclick="_payrollShift(1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">›</button>' +
+    '</div>' +
+    '<div id="payroll-list"><div style="text-align:center;padding:20px;color:#475569">⏳ 계산 중...</div></div>';
+
+  window._payrollYm = ym;
+  _loadPayroll(did, ym);
+}
+
+function _payrollShift(dir) {
+  var ym = window._payrollYm || new Date().toISOString().slice(0,7);
+  var d = new Date(ym + '-01');
+  d.setMonth(d.getMonth() + dir);
+  var newYm = d.toISOString().slice(0,7);
+  window._payrollYm = newYm;
+  var lbl = document.getElementById('payroll-ym');
+  if(lbl) lbl.textContent = newYm;
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+  _loadPayroll(did, newYm);
+}
+
+function _loadPayroll(did, ym) {
+  // 직원 목록 + 해당월 매출 동시 조회
+  Promise.all([
+    _db.collection('mbetco_workers').where('dealerId','==',did).where('active','==',true).get(),
+    _db.collection('mbetco_sales').where('dealerId','==',did).where('ym','==',ym).get()
+  ]).then(function(results) {
+    var workers = []; results[0].forEach(function(d){ var wdata=d.data();wdata.id=d.id;workers.push(wdata); });
+    var sales = []; results[1].forEach(function(d){ var sdata=d.data();sales.push(sdata); });
+
+    // 직원별 매출 집계
+    var workerSales = {};
+    sales.forEach(function(s) {
+      (s.workerIds||[s.designerName]).forEach(function(wid) {
+        if(!wid) return;
+        if(!workerSales[wid]) workerSales[wid] = {amt:0, cnt:0};
+        workerSales[wid].amt += s.finalPrice||0;
+        workerSales[wid].cnt++;
+      });
+    });
+
+    var el = document.getElementById('payroll-list');
+    if(!el) return;
+    if(!workers.length) { el.innerHTML='<div style="text-align:center;padding:20px;color:#475569">등록된 직원 없음</div>'; return; }
+
+    var totalNetPay = 0, totalEmployer = 0;
+
+    el.innerHTML = workers.map(function(w) {
+      var salesAmt = workerSales[w.id] ? workerSales[w.id].amt : (workerSales[w.name] ? workerSales[w.name].amt : 0);
+      var salesCnt = workerSales[w.id] ? workerSales[w.id].cnt : (workerSales[w.name] ? workerSales[w.name].cnt : 0);
+
+      // 급여 계산
+      var base = w.basePay || 0;
+      var commission = w.payType === 'commission' || w.payType === 'mixed'
+        ? Math.round(salesAmt * ((w.commissionRate||0)/100)) : 0;
+      var gross = base + commission;
+      var calc = _calcInsurance(gross, w.employType||'employee');
+      totalNetPay += calc.netPay;
+      totalEmployer += calc.employerCost;
+
+      var typeBadge = w.employType === 'contractor' ? '사업자' : w.employType === 'freelancer' ? '프리랜서' : '직원';
+      var typeColor = w.employType === 'contractor' ? '#f59e0b' : w.employType === 'freelancer' ? '#7b2fff' : '#22c55e';
+
+      var deductLines = Object.entries(calc.deductions).map(function(e) {
+        var labels = {pension:'국민연금',health:'건강보험',longterm:'장기요양',employment:'고용보험',incomeTax:'소득세',localTax:'지방세',incomeTax33:'원천세(3.3%)',employment_employer:'고용보험(사업주)',accident_employer:'산재(사업주)'};
+        return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)">' +
+          '<span style="color:#94a3b8">' + (labels[e[0]]||e[0]) + '</span>' +
+          '<span style="color:#ef4444">-₩' + e[1].toLocaleString() + '</span>' +
+        '</div>';
+      }).join('');
+
+      return '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:10px">' +
+        // 헤더
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+          '<div>' +
+            '<span style="font-size:13px;font-weight:800">' + w.name + '</span>' +
+            '<span style="font-size:10px;padding:2px 7px;border-radius:5px;margin-left:6px;background:rgba(34,197,94,.12);color:' + typeColor + '">' + typeBadge + '</span>' +
+            '<div style="font-size:10px;color:#475569;margin-top:2px">' + w.role + '</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:12px;color:#94a3b8">매출 ' + salesCnt + '건</div>' +
+            '<div style="font-size:12px;color:#00d4ff">₩' + salesAmt.toLocaleString() + '</div>' +
+          '</div>' +
+        '</div>' +
+        // 급여 계산
+        '<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">' +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">' +
+            '<span style="color:#94a3b8">기본급</span><span>₩' + base.toLocaleString() + '</span>' +
+          '</div>' +
+          (commission > 0 ? '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">' +
+            '<span style="color:#94a3b8">수수료(' + w.commissionRate + '%)</span><span style="color:#00d4ff">+₩' + commission.toLocaleString() + '</span>' +
+          '</div>' : '') +
+          '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.1)">' +
+            '<span style="font-weight:700">총 지급액</span><span style="font-weight:800">₩' + gross.toLocaleString() + '</span>' +
+          '</div>' +
+          deductLines +
+          '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px;font-weight:800">' +
+            '<span>실수령액</span><span style="color:#22c55e">₩' + calc.netPay.toLocaleString() + '</span>' +
+          '</div>' +
+          (calc.employerCost > 0 ? '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px">' +
+            '<span style="color:#94a3b8">사업주 추가부담</span><span style="color:#f59e0b">₩' + calc.employerCost.toLocaleString() + '</span>' +
+          '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('') +
+    // 합계
+    '<div style="background:linear-gradient(135deg,rgba(0,102,255,.15),rgba(0,212,255,.08));border:1px solid rgba(0,212,255,.3);border-radius:12px;padding:14px;margin-top:4px">' +
+      '<div style="font-size:12px;font-weight:800;color:#00d4ff;margin-bottom:8px">' + ym + ' 급여 합계</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800">' +
+        '<span>총 실수령합계</span><span style="color:#22c55e">₩' + totalNetPay.toLocaleString() + '</span>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">' +
+        '<span style="color:#94a3b8">사업주 총부담</span><span style="color:#f59e0b">₩' + (totalNetPay + totalEmployer).toLocaleString() + '</span>' +
+      '</div>' +
+    '</div>';
+  });
+}
+
+// ★ 고객 CRM 페이지
+function _pageCustomerCRM(c) {
+  if(!c) c = document.getElementById('main-content');
+  var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
+
+  c.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🗂 고객 관리</div>' +
+    // 탭
+    '<div style="display:flex;gap:6px;margin-bottom:12px">' +
+      '<button onclick="_crmTab(\'list\')" id="crm-tab-list" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">목록</button>' +
+      '<button onclick="_crmTab(\'add\')" id="crm-tab-add" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">+ 등록</button>' +
+      '<button onclick="_crmTab(\'notify\')" id="crm-tab-notify" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">📢 알림</button>' +
+    '</div>' +
+    '<div id="crm-content"></div>';
+
+  window._crmDid = did;
+  _crmTab('list');
+}
+
+function _crmTab(tab) {
+  ['list','add','notify'].forEach(function(t) {
+    var btn = document.getElementById('crm-tab-'+t);
+    if(btn){ btn.style.background = t===tab ? '#0066ff' : 'var(--bg3,#1e3a5f)'; btn.style.color = t===tab ? '#fff' : '#94a3b8'; }
+  });
+  var c = document.getElementById('crm-content');
+  if(!c) return;
+  if(tab === 'list') _crmList(c);
+  else if(tab === 'add') _crmAddForm(c);
+  else if(tab === 'notify') _crmNotify(c);
+}
+
+function _crmList(c) {
+  var did = window._crmDid;
+  c.innerHTML = '<div style="text-align:center;padding:20px;color:#475569">⏳</div>';
+  _db.collection('mbetco_customers').where('dealerId','==',did)
+    .orderBy('lastVisit','desc').limit(50).get()
+    .then(function(snap) {
+      if(snap.empty){ c.innerHTML='<div style="text-align:center;padding:20px;color:#475569">등록된 고객 없음</div>'; return; }
+      c.innerHTML =
+        '<input id="crm-search" placeholder="🔍 이름·연락처 검색" oninput="_crmSearch(this.value)" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;margin-bottom:10px">' +
+        '<div id="crm-list-items">' +
+        snap.docs.map(function(doc) {
+          var v = doc.data();
+          var daysSince = v.lastVisit ? Math.floor((Date.now() - new Date(v.lastVisit).getTime()) / 86400000) : 999;
+          var visitBadge = daysSince > 90 ? '<span style="color:#ef4444;font-size:10px">'+daysSince+'일 미방문</span>' :
+                           daysSince > 30 ? '<span style="color:#f59e0b;font-size:10px">'+daysSince+'일 전</span>' :
+                           '<span style="color:#22c55e;font-size:10px">'+daysSince+'일 전</span>';
+          return '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="_crmDetail(\'' + doc.id + '\')">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center">' +
+              '<div>' +
+                '<div style="font-size:13px;font-weight:800">' + (v.name||'') + '</div>' +
+                '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (v.phone||'') + ' · ' + visitBadge + '</div>' +
+              '</div>' +
+              '<div style="text-align:right">' +
+                '<div style="font-size:12px;font-weight:700;color:#0066ff">₩' + (v.totalSpent||0).toLocaleString() + '</div>' +
+                '<div style="font-size:10px;color:#475569">' + (v.totalVisits||0) + '회 방문</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+      window._crmDocs = snap.docs.map(function(d){ var rdata=d.data();rdata.id=d.id;return rdata; });
+    });
+}
+
+function _crmSearch(val) {
+  if(!window._crmDocs) return;
+  var items = document.getElementById('crm-list-items');
+  if(!items) return;
+  var filtered = window._crmDocs.filter(function(v) {
+    return !val || (v.name||'').includes(val) || (v.phone||'').includes(val);
+  });
+  items.innerHTML = filtered.map(function(v) {
+    return '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:12px;margin-bottom:8px">' +
+      '<div style="font-size:13px;font-weight:800">' + (v.name||'') + '</div>' +
+      '<div style="font-size:11px;color:#94a3b8">' + (v.phone||'') + ' · ₩' + (v.totalSpent||0).toLocaleString() + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _crmAddForm(c) {
+  c.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<input id="cust-name" placeholder="이름 *" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<input id="cust-phone" placeholder="연락처 *" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<input id="cust-birth" placeholder="생년월일 (YYYY-MM-DD)" type="date" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+      '<select id="cust-gender" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<option value="">성별 선택</option>' +
+        '<option value="female">여성</option>' +
+        '<option value="male">남성</option>' +
+      '</select>' +
+      '<textarea id="cust-memo" placeholder="메모 (관심 서비스, 특이사항 등)" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;height:80px;resize:none"></textarea>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8;cursor:pointer">' +
+        '<input type="checkbox" id="cust-marketing" style="width:16px;height:16px"> 마케팅 알림 수신 동의' +
+      '</label>' +
+      '<button onclick="_saveCRM()" style="padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 고객 등록</button>' +
+    '</div>';
+}
+
+function _saveCRM() {
+  var did = window._crmDid;
+  var name = (document.getElementById('cust-name')||{}).value.trim();
+  var phone = (document.getElementById('cust-phone')||{}).value.trim();
+  if(!name||!phone){ toast('이름과 연락처를 입력하세요'); return; }
+  _db.collection('mbetco_customers').add({
+    dealerId: did, name: name, phone: phone,
+    birthDate: (document.getElementById('cust-birth')||{}).value||'',
+    gender: (document.getElementById('cust-gender')||{}).value||'',
+    memo: (document.getElementById('cust-memo')||{}).value||'',
+    marketingAgree: document.getElementById('cust-marketing') ? document.getElementById('cust-marketing').checked : false,
+    totalVisits: 0, totalSpent: 0, lastVisit: '',
+    createdAt: new Date().toISOString()
+  }).then(function(){ toast('✅ 고객 등록 완료'); _crmTab('list'); })
+  .catch(function(e){ toast('❌ '+e.message); });
+}
+
+function _crmNotify(c) {
+  c.innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">📢 고객 알림 발송</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<select id="notif-type" onchange="_notifTypeChange()" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<option value="all">전체 고객</option>' +
+        '<option value="novisit30">30일 이상 미방문</option>' +
+        '<option value="novisit60">60일 이상 미방문</option>' +
+        '<option value="birthday">이번달 생일 고객</option>' +
+        '<option value="marketing">마케팅 동의 고객</option>' +
+      '</select>' +
+      '<div id="notif-target-count" style="font-size:12px;color:#94a3b8;padding:4px 0"></div>' +
+      '<select id="notif-channel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
+        '<option value="kakao">카카오 알림톡</option>' +
+        '<option value="sms">문자 (SMS)</option>' +
+      '</select>' +
+      '<textarea id="notif-msg" placeholder="메시지 내용을 입력하세요&#10;예) [매장명] 안녕하세요! 이번달 특별 이벤트 안내드립니다 😊" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px;height:100px;resize:none"></textarea>' +
+      '<div style="font-size:11px;color:#475569;line-height:1.6;padding:8px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.15)">' +
+        '⚠️ 카카오 알림톡은 별도 채널 심사 필요<br>현재는 발송 내역만 저장됩니다' +
+      '</div>' +
+      '<button onclick="_sendNotif()" style="padding:12px;background:linear-gradient(135deg,#0066ff,#7b2fff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📢 발송</button>' +
+    '</div>';
+  _notifTypeChange();
+}
+
+function _notifTypeChange() {
+  var did = window._crmDid;
+  var type = (document.getElementById('notif-type')||{}).value;
+  var today = new Date().toISOString().slice(0,10);
+  var ym = today.slice(0,7);
+  var countEl = document.getElementById('notif-target-count');
+  if(!countEl) return;
+
+  var query = _db.collection('mbetco_customers').where('dealerId','==',did);
+  if(type === 'marketing') query = query.where('marketingAgree','==',true);
+
+  query.get().then(function(snap) {
+    var filtered = snap.docs.filter(function(d) {
+      var v = d.data();
+      if(type === 'novisit30') {
+        var days = v.lastVisit ? Math.floor((Date.now()-new Date(v.lastVisit).getTime())/86400000) : 999;
+        return days >= 30;
+      }
+      if(type === 'novisit60') {
+        var days2 = v.lastVisit ? Math.floor((Date.now()-new Date(v.lastVisit).getTime())/86400000) : 999;
+        return days2 >= 60;
+      }
+      if(type === 'birthday') return (v.birthDate||'').slice(5,7) === ym.slice(5,7);
+      return true;
+    });
+    countEl.textContent = '대상 고객: ' + filtered.length + '명';
+    window._notifTargets = filtered.map(function(d){ var rdata=d.data();rdata.id=d.id;return rdata; });
+  });
+}
+
+function _sendNotif() {
+  var did = window._crmDid;
+  var msg = (document.getElementById('notif-msg')||{}).value.trim();
+  var channel = (document.getElementById('notif-channel')||{}).value;
+  var targets = window._notifTargets || [];
+  if(!msg){ toast('메시지를 입력하세요'); return; }
+  if(!targets.length){ toast('대상 고객이 없습니다'); return; }
+
+  _db.collection('mbetco_notifications').add({
+    dealerId: did, message: msg, channel: channel,
+    targetType: (document.getElementById('notif-type')||{}).value,
+    targetCount: targets.length, successCount: 0,
+    sentAt: new Date().toISOString()
+  }).then(function(){
+    toast('✅ 발송 내역 저장 (' + targets.length + '명)');
+  }).catch(function(e){ toast('❌ '+e.message); });
+}
+
+function _crmDetail(id) {
+  var doc = (window._crmDocs||[]).find(function(d){ return d.id===id; });
+  if(!doc) return;
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-end;padding:0" onclick="this.remove()">' +
+    '<div style="background:var(--bg2,#0d1b3e);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">' +
+      '<div style="font-size:16px;font-weight:800;margin-bottom:4px">' + (doc.name||'') + '</div>' +
+      '<div style="font-size:12px;color:#94a3b8;margin-bottom:14px">' + (doc.phone||'') + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">' +
+        '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:16px;font-weight:900;color:#0066ff">₩' + (doc.totalSpent||0).toLocaleString() + '</div>' +
+          '<div style="font-size:10px;color:#475569;margin-top:2px">총 결제액</div>' +
+        '</div>' +
+        '<div style="background:var(--bg3,#1e3a5f);border-radius:8px;padding:10px;text-align:center">' +
+          '<div style="font-size:16px;font-weight:900;color:#22c55e">' + (doc.totalVisits||0) + '회</div>' +
+          '<div style="font-size:10px;color:#475569;margin-top:2px">방문 횟수</div>' +
+        '</div>' +
+      '</div>' +
+      (doc.memo ? '<div style="background:rgba(0,212,255,.06);border-radius:8px;padding:10px;font-size:12px;color:#94a3b8;margin-bottom:10px">' + doc.memo + '</div>' : '') +
+      '<div style="font-size:11px;color:#475569;margin-bottom:14px">마지막 방문: ' + (doc.lastVisit||'없음') + '</div>' +
+      '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;padding:10px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;font-size:13px;cursor:pointer">닫기</button>' +
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 </script>
 </body>
