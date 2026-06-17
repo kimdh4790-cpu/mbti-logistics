@@ -827,6 +827,8 @@ function _loadMySlug(){
   if(!_db||!_CU||!_CU.dealerId||isSuperAdmin()) return;
   _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
     if(snap.exists){
+    // ★ 구독 만료 체크 (자동 체험 포함)
+    _checkSubscription(snap.data());
       var slug=snap.data().slug||'';
       if(slug){
         window._mySlug=slug;
