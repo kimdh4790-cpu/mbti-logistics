@@ -138,7 +138,8 @@ tr:hover td{background:var(--bg3)}
         <div class="nav-item" id="nav-return" onclick="_nav(this,'return')"><span class="nav-icon">🔄</span>반품 관리</div>
         <div class="nav-item" id="nav-master" onclick="_nav(this,'master')"><span class="nav-icon">📋</span>품목 마스터</div>
         <div class="nav-section">분석</div>
-        <div class="nav-item" id="nav-dashboard" onclick="_nav(this,'dashboard')"><span class="nav-icon">📊</span>대시보드</div>
+        <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>입출고 통계</div>
+    <div class="nav-item" id="nav-dashboard" onclick="_nav(this,'dashboard')"><span class="nav-icon">📊</span>대시보드</div>
         <div class="nav-item" id="nav-log" onclick="_nav(this,'log')"><span class="nav-icon">📝</span>수정 이력</div>
         <div class="nav-section">설정</div>
         <div class="nav-item" id="nav-industry" onclick="_nav(this,'industry')"><span class="nav-icon">🏷️</span>업종 설정</div>
@@ -399,6 +400,7 @@ function _nav(el,page){
   else if(page==='return') _pageReturn(c);
   else if(page==='master') _pageMaster(c);
   else if(page==='dashboard') _pageDashboard(c);
+  else if(page==='stats') _statsPage(c,_getDid(),'inventory_out','date','qty','📦 출고');
   else if(page==='log') _pageLog(c);
   else if(page==='industry') _pageIndustry(c);
 }
