@@ -67,7 +67,8 @@ body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","N
     <div class="nav-item" onclick="_nav(this,'attend')"><span class="nav-icon">⏰</span>출퇴근 관리</div>
     <div class="nav-item" onclick="_nav(this,'booking')"><span class="nav-icon">📅</span>예약 현황</div>
     <div class="nav-item" onclick="_nav(this,'today')"><span class="nav-icon">📊</span>오늘 매출</div>
-    <div class="nav-item" onclick="_nav(this,'history')"><span class="nav-icon">📋</span>결제 내역</div>
+    <div class="nav-item" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
+  <div class="nav-item" onclick="_nav(this,'history')"><span class="nav-icon">📋</span>결제 내역</div>
   </div>
   <div class="sidebar-bottom">
     <div style="font-size:11px;color:var(--text3);margin-bottom:4px" id="user-email"></div>
@@ -530,6 +531,7 @@ function _renderPage(page){
   else if(page==='today')   _qrTab('today');
   else if(page==='history') _qrTab('history');
   else if(page==='booking') { _pageQrBooking(c); }
+  else if(page==='stats') _statsPage(c,_dealer?_dealer.id:'','mbetco_sales','date','finalPrice','💰 매출');
 
 }
 
