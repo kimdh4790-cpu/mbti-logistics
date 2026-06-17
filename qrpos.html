@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<link rel="manifest" href="/mbtico-manifest.json">
+<meta name="theme-color" content="#7b2fff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="mbtico QR">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>QR POS — mbtico.kr</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -656,6 +662,21 @@ window.addEventListener('resize',function(){
   document.addEventListener('contextmenu',function(e){if(!_isSA())e.preventDefault();});
   document.addEventListener('keydown',function(e){if(_isSA())return;if(e.keyCode===123){e.preventDefault();return false;}if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}});
 })();
+</script>
+
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+var _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();_deferredPrompt=e;
+  var btn=document.getElementById('install-btn');
+  if(btn)btn.style.display='flex';
+});
+function _installPWA(){
+  if(!_deferredPrompt)return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(function(){_deferredPrompt=null;});
+}
 </script>
 </body>
 </html>
