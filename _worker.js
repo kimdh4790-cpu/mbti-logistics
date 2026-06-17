@@ -534,6 +534,7 @@ export default {
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
+      if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
@@ -615,9 +616,10 @@ export default {
       });
     }
 
-    // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
+    // ★ 루트 접속 → 랜딩페이지 리라이트 (mbtico.kr 제외)
     // ── 루트 경로 처리 ──
-    if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
+    if (!['mbtico.kr','www.mbtico.kr','filo.ai.kr','www.filo.ai.kr'].includes(hostname) &&
+        (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/')) {
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
         // mbtico.kr 루트 → 허브 페이지
