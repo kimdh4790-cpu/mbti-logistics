@@ -501,55 +501,25 @@ export default {
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
     }
 
-    // ★ mbtico.kr 최우선 처리 (slugMatch 오인식 방지)
-    if (hostname === 'bico.kr' || hostname === 'www.mbtico.kr' ||
-        hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
-      const e = env || _env_ref;
-      // 루트 → 허브
-      if (path === '/' || path === '') {
-        const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('mbtico_hub.html',{type:'text'}) : null;
-        if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-      }
-      // 재고관리
-      if (path === '/inventory' || path === '/inventory.html') {
-        const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('inventory.html',{type:'text'}) : null;
-        if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        // KV miss → GitHub Raw fallback
-        const gh = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/inventory.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
-        if (gh.ok) return new Response(await gh.text(), {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        return new Response('inventory.html not found', {status:500});
-      }
-      // QR
-      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') {
-        const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('qrpos.html',{type:'text'}) : null;
-        if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        // KV miss → GitHub Raw fallback
-        const gh = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/qrpos.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
-        if (gh.ok) return new Response(await gh.text(), {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        return new Response('qrpos.html not found', {status:500});
-      }
-      // 키오스크
-      if (path === '/kiosk' || path === '/kiosk.html') {
-        const kvK = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('kiosk.html',{type:'text'}) : null;
-        if (kvK) return new Response(kvK, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        // KV 없으면 GitHub Raw
-        const ghKR = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/kiosk.html?v='+Date.now(),{headers:{'Cache-Control':'no-cache'}});
-        if (ghKR.ok) return new Response(ghKR.body,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-      }
-      // 예약
-      if (path === '/order' || path === '/order.html') {
-        const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('order.html',{type:'text'}) : null;
-        if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-      }
-      // admin_sub
-      if (path === '/register' || path === '/register.html') {
-      return serveKVFile(env, 'register.html', 'text/html');
+    // ★ mbtico.kr → 엠비티아이 배송앱
+    if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
+      if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
+      if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
+      if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
+      if (path === '/delivery' || path === '/delivery.html') return serveKVFile(env, 'delivery.html', 'text/html');
+      if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
+      if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
+      if (path === '/app' || path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
     }
-
-    if (path === '/admin_sub' || path === '/admin_sub.html') {
-        const kv = e && e.DONWAY_ASSETS ? await e.DONWAY_ASSETS.get('admin_sub.html',{type:'text'}) : null;
-        if (kv) return new Response(kv, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-      }
+    // ★ mbetco.kr / bico.kr → FILO 구버전 호환
+    if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
+      if (path === '/' || path === '') return serveKVFile(env, 'filo_landing.html', 'text/html');
+      if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
+      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
+      if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
     }
     // ── donway_og.jpg / OG 이미지 직접 서빙 (Base64 내장) ──
     if (path === '/donway_og.jpg' || path === '/og_banner.jpg' || path === '/donway_og.png') {
