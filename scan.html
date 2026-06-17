@@ -1181,5 +1181,177 @@ function _checkMbticoSub(db, uid, email, cb){
   }).catch(function(){cb(true);});// 오류시 허용
 }
 </script>
+<script>
+// ════════════════════════════════════════
+// ★ scan.html 고도화
+// ① 연속 스캔 카운터 (진동 피드백)
+// ② 라우트별 건수 통계 실시간
+// ③ DONWAY 정산 건수 자동 전송
+// ════════════════════════════════════════
+
+var _scanCount = 0;
+var _scanSession = [];
+var _scanStartTime = null;
+
+// 연속 스캔 세션 시작
+function _startScanSession() {
+  _scanCount = 0;
+  _scanSession = [];
+  _scanStartTime = new Date();
+  var el = document.getElementById('scan-session-bar');
+  if(el) el.style.display = 'block';
+  _updateSessionBar();
+}
+
+// 세션 바 업데이트
+function _updateSessionBar() {
+  var el = document.getElementById('scan-session-cnt');
+  if(el) el.textContent = _scanCount;
+  var timeEl = document.getElementById('scan-session-time');
+  if(timeEl && _scanStartTime) {
+    var sec = Math.floor((Date.now() - _scanStartTime.getTime()) / 1000);
+    timeEl.textContent = Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+  }
+}
+
+// 스캔 성공 시 진동 + 카운터 증가
+function _onScanSuccess(barcode, routeName) {
+  _scanCount++;
+  _scanSession.push({ barcode: barcode, route: routeName, at: new Date().toISOString() });
+  _updateSessionBar();
+  // 진동 피드백
+  if(navigator.vibrate) navigator.vibrate(50);
+  // 50건마다 강한 진동
+  if(_scanCount % 50 === 0) {
+    if(navigator.vibrate) navigator.vibrate([100,50,100]);
+    toast('📦 ' + _scanCount + '건 스캔 완료!');
+  }
+}
+
+// DONWAY 정산 건수 전송
+function _sendScanToDonway() {
+  if(!_scanSession.length) { toast('스캔 데이터 없음'); return; }
+  var did = typeof _did !== 'undefined' ? _did : '';
+  if(!did) { toast('로그인 필요'); return; }
+
+  var today = new Date().toISOString().slice(0,10);
+  var ym = today.slice(0,7);
+
+  // 라우트별 집계
+  var byRoute = {};
+  _scanSession.forEach(function(s) {
+    var r = s.route || '미분류';
+    if(!byRoute[r]) byRoute[r] = 0;
+    byRoute[r]++;
+  });
+
+  // Firestore에 스캔 결과 저장
+  var db = typeof _db !== 'undefined' ? _db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+  if(!db) { toast('DB 연결 오류'); return; }
+
+  db.collection('scan_results').add({
+    dealerId: did,
+    date: today, ym: ym,
+    totalCount: _scanSession.length,
+    byRoute: byRoute,
+    session: _scanSession.slice(0, 500), // 최대 500건
+    sentAt: new Date().toISOString()
+  }).then(function() {
+    toast('✅ ' + _scanSession.length + '건 → DONWAY 전송 완료');
+    // 세션 초기화
+    _scanCount = 0;
+    _scanSession = [];
+    _scanStartTime = null;
+    _updateSessionBar();
+  }).catch(function(e) { toast('❌ ' + e.message); });
+}
+
+// 라우트별 건수 통계 로드
+function _loadScanStats() {
+  var did = typeof _did !== 'undefined' ? _did : '';
+  if(!did) return;
+  var db = typeof _db !== 'undefined' ? _db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+  if(!db) return;
+
+  var today = new Date().toISOString().slice(0,10);
+  db.collection('scan_results').where('dealerId','==',did).where('date','==',today)
+    .get().then(function(snap) {
+      var el = document.getElementById('scan-stats-today');
+      if(!el) return;
+      if(snap.empty) { el.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">오늘 스캔 기록 없음</div>'; return; }
+
+      var totalToday = 0;
+      var byRoute = {};
+      snap.forEach(function(d) {
+        var v = d.data();
+        totalToday += v.totalCount || 0;
+        Object.keys(v.byRoute || {}).forEach(function(r) {
+          byRoute[r] = (byRoute[r]||0) + (v.byRoute[r]||0);
+        });
+      });
+
+      var sorted = Object.entries(byRoute).sort(function(a,b){return b[1]-a[1];});
+      el.innerHTML =
+        '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">오늘 총 <strong style="color:#00d4ff;font-size:14px">' + totalToday + '건</strong></div>' +
+        sorted.map(function(e) {
+          var pct = totalToday ? Math.round(e[1]/totalToday*100) : 0;
+          return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+            '<span style="font-size:12px">' + e[0] + '</span>' +
+            '<div style="display:flex;align-items:center;gap:6px">' +
+              '<div style="width:60px;height:4px;background:rgba(255,255,255,.1);border-radius:2px"><div style="width:'+pct+'%;height:100%;background:#0066ff;border-radius:2px"></div></div>' +
+              '<span style="font-size:12px;font-weight:700;color:#00d4ff;min-width:28px;text-align:right">' + e[1] + '건</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+    });
+}
+
+// 세션 바 HTML 주입
+(function() {
+  var bar = document.createElement('div');
+  bar.id = 'scan-session-bar';
+  bar.style.cssText = 'display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#185FA5,#0c447c);padding:10px 16px;z-index:999;max-width:500px;margin:0 auto';
+  bar.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div style="color:#fff">' +
+        '<span style="font-size:20px;font-weight:900" id="scan-session-cnt">0</span>' +
+        '<span style="font-size:12px;margin-left:4px">건 스캔</span>' +
+        '<span style="font-size:11px;color:rgba(255,255,255,.6);margin-left:8px" id="scan-session-time">0:00</span>' +
+      '</div>' +
+      '<button onclick="_sendScanToDonway()" style="padding:7px 14px;background:#00d4ff;color:#0c447c;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">DONWAY 전송 →</button>' +
+    '</div>';
+  document.body.appendChild(bar);
+
+  // 통계 패널 주입
+  setTimeout(function() {
+    var app = document.querySelector('.app');
+    if(!app) return;
+    var statsDiv = document.createElement('div');
+    statsDiv.className = 'card';
+    statsDiv.style.marginBottom = '10px';
+    statsDiv.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+        '<div style="font-size:13px;font-weight:800">📊 오늘 스캔 현황</div>' +
+        '<button onclick="_loadScanStats()" style="padding:4px 10px;background:#185FA5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">새로고침</button>' +
+      '</div>' +
+      '<div id="scan-stats-today"><div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">로딩 중...</div></div>';
+    app.insertBefore(statsDiv, app.firstChild);
+    _loadScanStats();
+  }, 800);
+})();
+
+// 기존 doScan에 훅 추가 (원본 함수 래핑)
+var _origDoScan = typeof doScan !== 'undefined' ? doScan : null;
+if(_origDoScan) {
+  doScan = function(mode, input) {
+    var result = _origDoScan.call(this, mode, input);
+    if(result !== false) {
+      if(!_scanStartTime) _startScanSession();
+      _onScanSuccess(input, mode || '');
+    }
+    return result;
+  };
+}
+</script>
 </body>
 </html>
