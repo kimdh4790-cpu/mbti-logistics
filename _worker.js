@@ -532,6 +532,7 @@ export default {
 
     // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
+      if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/' || path === '') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/landing') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
