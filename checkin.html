@@ -513,5 +513,23 @@ function showStatus(id,msg,type){
   el.textContent=msg;
 }
 </script>
+<div style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:rgba(10,15,30,.9);border-top:1px solid rgba(0,102,255,.2);display:flex;justify-content:space-between;align-items:center;z-index:50">
+  <a href="/app" style="font-size:11px;color:#94a3b8;text-decoration:none">← 배송앱 홈</a>
+  <a href="https://donway.ai.kr/settle" style="font-size:11px;color:#00d4ff;text-decoration:none">🤖 DONWAY 정산 →</a>
+</div>
+<script>
+// ★ mbtico.kr 구독 체크
+function _checkMbticoSub(db, uid, email, cb){
+  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+  if(SA.indexOf(email)>=0){cb(true);return;}
+  db.collection('companies').doc(uid).get().then(function(snap){
+    if(!snap.exists){cb(false);return;}
+    var co=snap.data();
+    var sub=(co.subscriptions||{}).mbtico||(co.subscriptions||{}).delivery||{};
+    var today=new Date().toISOString().slice(0,10);
+    cb(co.settlePaid||(sub.active&&(!sub.expiry||sub.expiry>=today)));
+  }).catch(function(){cb(true);});// 오류시 허용
+}
+</script>
 </body>
 </html>
