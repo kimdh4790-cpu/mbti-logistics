@@ -2481,7 +2481,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     if (path === '/firebase-messaging-sw.js') {
       const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
         + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
+        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
         + "const messaging=firebase.messaging();"
         + "messaging.onBackgroundMessage(function(payload){"
         + "  const data=payload.data||{};const type=data.type||'alert';"
@@ -2524,7 +2524,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       const slug = slugSwMatch[1];
       const swContent = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');`
         + `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');`
-        + `firebase.initializeApp({apiKey:''+env.FIREBASE_WEB_API_KEY+'',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
+        + `firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
         + `const messaging=firebase.messaging();`
         + `messaging.onBackgroundMessage(function(payload){`
         + `  const data=payload.data||{};`
