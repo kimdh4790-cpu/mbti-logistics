@@ -1,7 +1,7 @@
 {
-  "name": "mbtico - 재고·QR·키오스크",
-  "short_name": "mbtico",
-  "description": "재고관리 · QR출퇴근 · 키오스크POS | mbtico.kr",
+  "name": "BICO - 재고·QR·키오스크",
+  "short_name": "BICO",
+  "description": "재고관리 · QR출퇴근 · 키오스크POS | bico.kr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
