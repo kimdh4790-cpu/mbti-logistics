@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>회사 등록 · DONWAY / mbtico.kr</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:420px}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00d4ff,#7b2fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:12px;color:#64748b;margin-top:4px}
+.card{background:#0d1b3e;border:1px solid rgba(0,212,255,.15);border-radius:16px;padding:24px}
+.card h2{font-size:16px;font-weight:800;margin-bottom:18px;text-align:center}
+.field{margin-bottom:14px}
+.field label{font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;font-weight:600}
+.field input,.field select{width:100%;padding:11px 14px;background:#1e3a5f;border:1px solid rgba(0,212,255,.2);border-radius:10px;color:#e2e8f0;font-size:13px;outline:none;transition:.2s}
+.field input:focus,.field select:focus{border-color:#00d4ff}
+.field input::placeholder{color:#4a6080}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.plan-card{background:#1e3a5f;border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:12px;cursor:pointer;transition:.2s;text-align:center}
+.plan-card.active{border-color:#00d4ff;background:rgba(0,212,255,.08)}
+.plan-card .icon{font-size:20px;margin-bottom:4px}
+.plan-card .name{font-size:12px;font-weight:700}
+.plan-card .desc{font-size:10px;color:#64748b;margin-top:2px}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#ef4444;margin-bottom:12px;display:none}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#22c55e;margin-bottom:12px;display:none}
+.divider{text-align:center;font-size:12px;color:#475569;margin:16px 0}
+.login-link{text-align:center;font-size:12px;color:#64748b;margin-top:16px}
+.login-link a{color:#00d4ff;text-decoration:none}
+.badge{font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(0,212,255,.15);color:#00d4ff;margin-left:6px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="logo">
+    <h1>DONWAY · mbtico.kr</h1>
+    <p>통합 정산·재고·QR·키오스크 플랫폼</p>
+  </div>
+
+  <div class="card">
+    <h2>🏢 회사 등록</h2>
+
+    <div id="err-box" class="err"></div>
+    <div id="ok-box" class="ok"></div>
+
+    <div class="field">
+      <label>회사명 (상호) *</label>
+      <input id="r-company" placeholder="예: ○○뷰티, ○○물류" maxlength="30">
+    </div>
+
+    <div class="field">
+      <label>이메일 (로그인 ID) *</label>
+      <input id="r-email" type="email" placeholder="company@email.com">
+    </div>
+
+    <div class="field">
+      <label>비밀번호 * <span style="font-size:10px;color:#64748b">(8자 이상)</span></label>
+      <input id="r-pw" type="password" placeholder="비밀번호 입력">
+    </div>
+
+    <div class="field">
+      <label>비밀번호 확인 *</label>
+      <input id="r-pw2" type="password" placeholder="비밀번호 재입력">
+    </div>
+
+    <div class="field">
+      <label>연락처</label>
+      <input id="r-phone" type="tel" placeholder="010-0000-0000">
+    </div>
+
+    <div class="field">
+      <label>관심 서비스 선택 <span class="badge">복수 선택 가능</span></label>
+    </div>
+    <div class="plans" id="plan-grid">
+      <div class="plan-card" data-plan="settle" onclick="_togglePlan(this)">
+        <div class="icon">🤖</div>
+        <div class="name">AI 정산</div>
+        <div class="desc">donway.ai.kr</div>
+      </div>
+      <div class="plan-card" data-plan="inventory" onclick="_togglePlan(this)">
+        <div class="icon">📦</div>
+        <div class="name">재고관리</div>
+        <div class="desc">mbtico.kr</div>
+      </div>
+      <div class="plan-card" data-plan="qr" onclick="_togglePlan(this)">
+        <div class="icon">🔲</div>
+        <div class="name">QR 출퇴근</div>
+        <div class="desc">mbtico.kr</div>
+      </div>
+      <div class="plan-card" data-plan="kiosk" onclick="_togglePlan(this)">
+        <div class="icon">🖥️</div>
+        <div class="name">키오스크 POS</div>
+        <div class="desc">mbtico.kr</div>
+      </div>
+    </div>
+
+    <button class="btn" id="reg-btn" onclick="_doRegister()">🚀 무료 체험 시작 (7일)</button>
+
+    <div class="login-link">
+      이미 계정이 있으신가요?
+      <a href="https://donway.ai.kr/settle">AI정산 로그인</a> ·
+      <a href="https://mbtico.kr">mbtico 로그인</a>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
+  authDomain: "mbti-logistics.firebaseapp.com",
+  projectId: "mbti-logistics",
+  storageBucket: "mbti-logistics.firebasestorage.app",
+  messagingSenderId: "40761160761",
+  appId: "1:40761160761:web:20545b610f03f534e949e8"
+});
+_db.settings({experimentalAutoDetectLongPolling:true,merge:true});
+var _db = firebase.firestore();
+var _auth = firebase.auth();
+
+var _selectedPlans = [];
+
+function _togglePlan(el){
+  var plan = el.dataset.plan;
+  var idx = _selectedPlans.indexOf(plan);
+  if(idx >= 0){
+    _selectedPlans.splice(idx,1);
+    el.classList.remove('active');
+  } else {
+    _selectedPlans.push(plan);
+    el.classList.add('active');
+  }
+}
+
+function _showErr(msg){ var e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; document.getElementById('ok-box').style.display='none'; }
+function _showOk(msg){ var e=document.getElementById('ok-box'); e.textContent=msg; e.style.display='block'; document.getElementById('err-box').style.display='none'; }
+function _hideMsg(){ document.getElementById('err-box').style.display='none'; document.getElementById('ok-box').style.display='none'; }
+
+function _doRegister(){
+  _hideMsg();
+  var company = document.getElementById('r-company').value.trim();
+  var email   = document.getElementById('r-email').value.trim().toLowerCase();
+  var pw      = document.getElementById('r-pw').value;
+  var pw2     = document.getElementById('r-pw2').value;
+  var phone   = document.getElementById('r-phone').value.trim();
+
+  if(!company||!email||!pw){ _showErr('회사명, 이메일, 비밀번호는 필수입니다'); return; }
+  if(pw.length < 8){ _showErr('비밀번호는 8자 이상이어야 합니다'); return; }
+  if(pw !== pw2){ _showErr('비밀번호가 일치하지 않습니다'); return; }
+
+  var btn = document.getElementById('reg-btn');
+  btn.disabled = true; btn.textContent = '등록 중...';
+
+  // ★ 이메일로 기존 companies 검색 (mbtico ↔ donway 통합)
+  _db.collection('companies').where('email','==',email).limit(1).get()
+  .then(function(snap){
+    if(!snap.empty){
+      // 기존 계정 존재 → 로그인 후 서비스만 추가
+      _showErr('이미 등록된 이메일입니다. 로그인 후 서비스를 추가해주세요.');
+      btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+      return;
+    }
+
+    // 신규 가입
+    var now = new Date();
+    var trialEnd = new Date(now.getTime() + 7*24*60*60*1000);
+    var companyCode = Math.random().toString(36).slice(2,8).toUpperCase();
+    var emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+
+    _auth.createUserWithEmailAndPassword(email, pw)
+    .then(function(cred){
+      var uid = cred.user.uid;
+      var services = _selectedPlans.length ? _selectedPlans : ['settle'];
+      var companyDoc = {
+        companyName: company,
+        name: company,
+        email: email,
+        phone: phone,
+        plan: 'trial',
+        services: services,
+        companyCode: companyCode,
+        slug: emailPrefix || uid.slice(0,8),
+        trialStart: now.toISOString().slice(0,10),
+        trialEnd: trialEnd.toISOString().slice(0,10),
+        trialUsed: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        uid: uid,
+        dealerId: uid,
+        // 모든 모듈 비활성 (수동활성화 후 켜짐)
+        settlePaid: false, inventoryPaid: false,
+        qrPaid: false, kioskPaid: false,
+        registeredFrom: 'register.html'
+      };
+
+      var batch = _db.batch();
+      // companies 생성
+      batch.set(_db.collection('companies').doc(uid), companyDoc);
+      // users 생성
+      batch.set(_db.collection('users').doc(uid), {
+        uid: uid, email: email,
+        name: company, companyName: company,
+        role: 'dealer', dealerId: uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return batch.commit().then(function(){ return uid; });
+    })
+    .then(function(uid){
+      // 대표님 FCM 알림
+      fetch('/sa/notify-admin', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          title: '🎉 신규 회사 등록!',
+          body: company + ' · ' + email + ' · ' + _selectedPlans.join(','),
+          type: 'join'
+        })
+      }).catch(function(){});
+
+      _showOk('✅ 등록 완료! 7일 무료 체험이 시작됩니다.\n담당자가 확인 후 서비스를 활성화해 드립니다.');
+      btn.textContent = '✅ 등록 완료';
+
+      // 3초 후 해당 서비스로 이동
+      setTimeout(function(){
+        if(_selectedPlans.includes('settle')){
+          location.href = 'https://donway.ai.kr/settle';
+        } else {
+          location.href = 'https://mbtico.kr';
+        }
+      }, 3000);
+    })
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+      if(e.code === 'auth/email-already-in-use'){
+        _showErr('이미 가입된 이메일입니다. 로그인해주세요.');
+      } else if(e.code === 'auth/weak-password'){
+        _showErr('비밀번호가 너무 간단합니다. 8자 이상 입력해주세요.');
+      } else {
+        _showErr('오류: ' + e.message);
+      }
+    });
+  })
+  .catch(function(e){
+    btn.disabled=false; btn.textContent='🚀 무료 체험 시작 (7일)';
+    _showErr('오류: ' + e.message);
+  });
+}
+
+// 엔터키 지원
+document.addEventListener('keydown', function(e){
+  if(e.key==='Enter') _doRegister();
+});
+</script>
+</body>
+</html>
