@@ -486,12 +486,28 @@ function showApp(){
   refreshCounters();
   loadRouteInfo();
   loadTodayList();
+  _loadApiKeys();
   // 기존 긴급배송 스캔 카운트 초기화
   window._emerScanCount = window._emerScanCount||0;
   window._emerSaveCount = window._emerSaveCount||0;
 }
 
 // ── 오늘 노선 조회 (근무표 또는 drivers.todayDispatch) ──
+// ★ Firestore settings에서 카카오 키 로드
+async function _loadApiKeys(){
+  if(!_db) return;
+  try {
+    var d = await _db.collection('settings').doc('claude_config').get();
+    if(d.exists) {
+      var data = d.data();
+      if(data.kakaoApiKey) {
+        window._cachedKakaoApiKey = data.kakaoApiKey;
+        localStorage.setItem('mbti_kakao_api_key', data.kakaoApiKey);
+      }
+    }
+  } catch(e) {}
+}
+
 async function loadTodayRoute(){
   if(!_db) return;
   var route = '';
