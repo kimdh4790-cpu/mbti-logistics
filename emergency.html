@@ -10228,14 +10228,39 @@ function toast(msg, duration){
   },duration||2500);
 }
 
+var _SA_EM=['kimdh4790@gmail.com','soungkyekim@naver.com'];
 _auth.onAuthStateChanged(function(user){
   if(user){
     _CU={uid:user.uid,email:user.email,dealerId:user.uid};
     window._CU=_CU;
-    S.curDriver=user.email||''; S.curAdminName=user.email||'';
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('main-screen').style.display='block';
-    loadApiKeys();loadTodayStats();
+    // ★ 구독 체크
+    _db.collection('companies').doc(user.uid).get().then(function(snap){
+      var co=snap.exists?snap.data():{};
+      var isSA=_SA_EM.indexOf(user.email)>=0;
+      var subs=(co.subscriptions||{});
+      var sub=subs.mbtico||subs.delivery||subs.settle||{};
+      var today=new Date().toISOString().slice(0,10);
+      var ok=isSA||(sub.active&&(!sub.expiry||sub.expiry>=today))||co.settlePaid;
+      if(!ok){
+        document.getElementById('login-screen').style.display='flex';
+        document.getElementById('main-screen').style.display='none';
+        toast('❌ 구독이 필요합니다. 관리자에게 문의하세요.');
+        _auth.signOut();
+        return;
+      }
+      S.curDriver=user.email||''; S.curAdminName=user.email||'';
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('main-screen').style.display='block';
+      loadApiKeys();loadTodayStats();
+      // 3도메인 통합 연결
+      fetch('/api/link-account',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:user.email,fromDomain:'mbtico.kr'})}).catch(function(){});
+    }).catch(function(){
+      S.curDriver=user.email||'';
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('main-screen').style.display='block';
+      loadApiKeys();loadTodayStats();
+    });
   } else {
     document.getElementById('login-screen').style.display='flex';
     document.getElementById('main-screen').style.display='none';
