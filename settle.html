@@ -1327,6 +1327,235 @@ function _getWorkDaysCount(ym, workDays) {
   return count;
 }
 
+
+// ═══════════════════════════════════════════════════════
+// ★ 휴가 고도화 v2
+// ① 시간 단위 휴가 (반차/시간 단위)
+// ② 연차 자동 발생 (입사일 기준 근로기준법)
+// ③ 보상휴가 / 휴일대체
+// ④ 출퇴근 자동승인
+// ═══════════════════════════════════════════════════════
+
+// ── ① 시간 단위 휴가 계산
+function _calcLeaveHours(startDate, endDate, startTime, endTime, leaveUnit) {
+  if(leaveUnit === 'hour') {
+    if(!startTime || !endTime) return 0;
+    var s = startTime.split(':'); var e = endTime.split(':');
+    return Math.max(0, (parseInt(e[0])*60+parseInt(e[1])) - (parseInt(s[0])*60+parseInt(s[1]))) / 60;
+  }
+  if(leaveUnit === 'half') return 0.5; // 반차
+  // 일 단위
+  if(!startDate || !endDate) return 0;
+  var d1 = new Date(startDate), d2 = new Date(endDate);
+  var days = 0;
+  for(var d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)) {
+    var dow = d.getDay();
+    if(dow !== 0 && dow !== 6) days++; // 주말 제외
+  }
+  return days;
+}
+
+// ── ② 연차 자동 발생 (근로기준법)
+function _calcAnnualLeave(joinDateStr) {
+  if(!joinDateStr) return 0;
+  var join = new Date(joinDateStr);
+  var today = new Date();
+  var months = (today.getFullYear()-join.getFullYear())*12 + (today.getMonth()-join.getMonth());
+  var years = Math.floor(months/12);
+
+  if(months < 1) return 0;
+  if(months < 12) return months; // 1개월마다 1일 (최대 11일)
+  if(years < 3) return 15;       // 1~2년: 15일
+  // 3년 이상: 2년마다 1일 추가 (최대 25일)
+  var extra = Math.floor((years-1)/2);
+  return Math.min(25, 15 + extra);
+}
+
+// ── 연차 잔여일 계산
+function _calcLeaveBalance(joinDateStr, usedDays, manualBalance) {
+  var total = manualBalance !== undefined && manualBalance !== null
+    ? manualBalance
+    : _calcAnnualLeave(joinDateStr);
+  return {
+    total: total,
+    used: usedDays || 0,
+    remain: Math.max(0, total - (usedDays||0))
+  };
+}
+
+// ── ③ 보상휴가 적립
+async function _addCompLeave(did, userId, userName, hours, reason) {
+  if(!_db||!did||!userId) return;
+  var leaveId = did+'_comp_'+userId+'_'+Date.now();
+  await _db.collection('comp_leaves').doc(leaveId).set({
+    dealerId: did,
+    userId: userId,
+    name: userName || userId,
+    hours: hours,           // 시간 단위
+    days: hours / 8,        // 일 환산
+    reason: reason || '연장/야간/휴일근무',
+    status: 'available',    // available / used / expired
+    createdAt: new Date().toISOString(),
+    expiry: new Date(Date.now() + 365*24*3600000).toISOString().slice(0,10) // 1년 유효
+  });
+  toast('✅ 보상휴가 '+hours+'시간 적립');
+}
+
+// ── 보상휴가 현황 렌더
+async function _leaveRenderCompLeave(el) {
+  var did = _CU.dealerId;
+  el.innerHTML = '<div class="empty">⏳ 로딩 중...</div>';
+  try {
+    var snap = await _db.collection('comp_leaves')
+      .where('dealerId','==',did)
+      .where('status','==','available')
+      .orderBy('createdAt','desc').limit(100).get();
+
+    if(snap.empty) {
+      el.innerHTML = '<div class="empty">적립된 보상휴가가 없습니다</div>'; return;
+    }
+    var rows = '';
+    var totalH = 0;
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      totalH += d.hours||0;
+      rows += '<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:8px 10px;font-weight:700">'+esc(d.name||d.userId||'')+'</td>'
+        +'<td style="padding:8px;text-align:center;color:var(--brand);font-weight:700">'+d.hours+'h</td>'
+        +'<td style="padding:8px;text-align:center">'+d.days.toFixed(1)+'일</td>'
+        +'<td style="padding:8px;text-align:center;font-size:11px;color:var(--text3)">'+esc(d.reason||'')+'</td>'
+        +'<td style="padding:8px;text-align:center;font-size:11px">'+esc(d.expiry||'')+'</td>'
+        +'<td style="padding:8px;text-align:center">'
+        +'<button onclick="_useCompLeave(''+doc.id+'')" class="btn" style="font-size:10px;padding:3px 8px">사용</button>'
+        +'</td>'
+        +'</tr>';
+    });
+
+    el.innerHTML = '<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
+      +'<div style="font-size:13px;font-weight:700">💰 보상휴가 현황</div>'
+      +'<div style="font-size:12px;color:var(--brand)">총 적립: <strong>'+totalH+'h</strong></div>'
+      +'</div>'
+      +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:var(--bg3)">'
+      +'<th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">적립시간</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">일환산</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">사유</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">만료일</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">처리</th>'
+      +'</tr>'+rows+'</table></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="empty">'+esc(e.message)+'</div>';
+  }
+}
+
+async function _useCompLeave(docId) {
+  if(!confirm('보상휴가를 사용 처리하시겠습니까?')) return;
+  await _db.collection('comp_leaves').doc(docId).update({status:'used', usedAt:new Date().toISOString()});
+  toast('✅ 보상휴가 사용 처리됨');
+  goPage('leave');
+}
+
+// ── ④ 출퇴근 자동승인 설정
+function _leaveAutoApproveSettings() {
+  var did = _CU.dealerId;
+  var mo = document.createElement('div');
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  mo.onclick = function(e){ if(e.target===mo) mo.remove(); };
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:400px';
+
+  _db.collection('companies').doc(did).collection('settings').doc('leaveSettings')
+    .get().then(function(snap) {
+      var ls = snap.exists ? snap.data() : {};
+      box.innerHTML = '<div style="font-size:15px;font-weight:800;margin-bottom:16px">⚡ 자동 승인 설정</div>'
+        +'<div style="margin-bottom:12px">'
+        +'<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'
+        +'<input type="checkbox" id="auto-approve-all" '+(ls.autoApproveAll?'checked':'')+' style="width:18px;height:18px">'
+        +'<div><div style="font-size:13px;font-weight:700">모든 휴가 자동 승인</div>'
+        +'<div style="font-size:11px;color:var(--text3)">신청 즉시 자동으로 승인됩니다</div></div>'
+        +'</label></div>'
+        +'<div style="margin-bottom:16px">'
+        +'<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'
+        +'<input type="checkbox" id="auto-approve-annual" '+(ls.autoApproveAnnual?'checked':'')+' style="width:18px;height:18px">'
+        +'<div><div style="font-size:13px;font-weight:700">연차만 자동 승인</div>'
+        +'<div style="font-size:11px;color:var(--text3)">연차는 자동, 나머지는 수동 승인</div></div>'
+        +'</label></div>'
+        +'<div style="margin-bottom:16px">'
+        +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;font-weight:600">사전 신청 최소 일수</label>'
+        +'<input type="number" id="auto-advance-days" value="'+(ls.advanceDays||1)+'" min="0" max="30" '
+        +'style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:4px">0 = 당일 신청도 허용</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px">'
+        +'<button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:10px;font-size:13px;cursor:pointer">취소</button>'
+        +'<button onclick="_saveLeaveAutoApprove()" style="flex:1;padding:11px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">저장</button>'
+        +'</div>';
+      mo.appendChild(box);
+      document.body.appendChild(mo);
+    });
+}
+
+function _saveLeaveAutoApprove() {
+  var did = _CU.dealerId;
+  var settings = {
+    autoApproveAll: document.getElementById('auto-approve-all').checked,
+    autoApproveAnnual: document.getElementById('auto-approve-annual').checked,
+    advanceDays: parseInt(document.getElementById('auto-advance-days').value)||1,
+    updatedAt: new Date().toISOString()
+  };
+  _db.collection('companies').doc(did).collection('settings').doc('leaveSettings')
+    .set(settings, {merge:true}).then(function() {
+      toast('✅ 자동승인 설정 저장됨');
+      document.querySelector('[style*="position:fixed"][style*="inset:0"]').remove();
+    }).catch(function(e){ toast('❌ '+e.message); });
+}
+
+// ── 휴가 신청 시 자동승인 체크
+async function _checkAutoApprove(did, leaveType) {
+  try {
+    var snap = await _db.collection('companies').doc(did)
+      .collection('settings').doc('leaveSettings').get();
+    if(!snap.exists) return false;
+    var ls = snap.data();
+    if(ls.autoApproveAll) return true;
+    if(ls.autoApproveAnnual && leaveType === 'annual') return true;
+    return false;
+  } catch(e) { return false; }
+}
+
+// ── 연차 자동 발생 일괄 적용
+async function _autoGenerateAnnualLeave(did) {
+  if(!_db||!did) return;
+  try {
+    var snap = await _db.collection('drivers').where('dealerId','==',did).get();
+    var batch = _db.batch();
+    var count = 0;
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      if(!d.joinDate) return;
+      var totalLeave = _calcAnnualLeave(d.joinDate);
+      if(totalLeave <= 0) return;
+      // leaveBalance 컬렉션에 저장
+      var balRef = _db.collection('leaveBalance').doc(did+'_'+doc.id+'_'+new Date().getFullYear());
+      batch.set(balRef, {
+        dealerId: did,
+        userId: d.userId || doc.id,
+        name: d.name || '',
+        year: new Date().getFullYear(),
+        totalDays: totalLeave,
+        joinDate: d.joinDate,
+        autoGenerated: true,
+        generatedAt: new Date().toISOString()
+      }, {merge:true});
+      count++;
+    });
+    await batch.commit();
+    toast('✅ '+count+'명 연차 자동 발생 완료');
+  } catch(e) { toast('❌ '+e.message); }
+}
+
 function calcDailyPay(params) {
   var L = LABOR_LAW_2026;
   var dailyRate = params.dailyRate || L.minDaily;
@@ -20868,7 +21097,7 @@ function pageLeave(){
     +(isDriver?'':'<button id="ltab-balance" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="balance" style="font-size:12px">📊 잔여 연차</button>')
     +(isDriver?'':'<button id="ltab-yearend" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="yearend" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🗓 연도말 처리</button>')
     +'<button id="ltab-mine" class="btn'+(isDriver?' btn-blue':'')+'" onclick="_leaveTab(this.dataset.t)" data-t="mine" style="font-size:12px">👤 내 휴가</button>'
-    +'<button onclick="_leaveApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">✏️ 휴가 신청</button>'
+    +'<button id="ltab-comp" class="btn" onclick="_leaveTab(\'comp\')" data-t="comp" style="font-size:12px">💰 보상휴가</button>'+(isDriver?'':'<button onclick="_leaveAutoApproveSettings()" class="btn" style="font-size:11px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚡ 자동승인</button>')+(isSuperAdmin()||!isDriver?'<button onclick="_autoGenerateAnnualLeave(_CU.dealerId)" class="btn" style="font-size:11px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">🔄 연차발생</button>':'')+'<button onclick="_leaveApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">✏️ 휴가 신청</button>'
     +'</div>'
     +'<div id="leave-tab-content"></div>'
     +'</div>';
@@ -20877,7 +21106,7 @@ function pageLeave(){
   });
 }
 function _leaveTab(tab){
-  ['pending','all','balance','yearend','mine'].forEach(function(t){
+  ['pending','all','balance','yearend','mine','comp'].forEach(function(t){
     var btn=document.getElementById('ltab-'+t);
     if(btn)btn.className=(t===tab)?'btn btn-blue':'btn';
   });
@@ -20888,6 +21117,7 @@ function _leaveTab(tab){
   else if(tab==='balance')_leaveRenderBalance(el);
   else if(tab==='yearend')_leaveRenderYearEnd(el);
   else if(tab==='mine')_leaveRenderMine(el);
+else if(tab==='comp')_leaveRenderCompLeave(el);
 }
 
 // ── 승인 대기 목록 ──
@@ -20960,7 +21190,7 @@ function _leaveRenderBalance(el){
 
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
       +'<div style="font-size:13px;font-weight:700">'+year+'년 연차 현황</div>'
-      +'<button onclick="_leaveEditBalance()" class="btn" style="font-size:11px">✏️ 연차 일괄 설정</button>'
+      +'<div style="display:flex;gap:6px">'+'<button onclick="_leaveEditBalance()" class="btn" style="font-size:11px">✏️ 일괄 설정</button>'+'<button onclick="_autoGenerateAnnualLeave(_CU.dealerId)" class="btn btn-blue" style="font-size:11px">🔄 자동 발생</button>'+'</div>'
       +'</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<tr style="background:var(--bg3)">'
@@ -21224,6 +21454,17 @@ function _leaveApplyModal(){
     var el=document.getElementById(id);
     if(el)el.addEventListener('change',_leaveCalcDays);
   });
+}
+
+
+function _leaveSetUnit(btn, unit) {
+  document.querySelectorAll('[data-unit]').forEach(function(b){
+    b.style.background='var(--bg3)';b.style.color='var(--text2)';b.style.borderColor='var(--border)';
+  });
+  btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';
+  var hourRow=document.getElementById('leave-hour-row');
+  if(hourRow) hourRow.style.display=unit==='hour'?'flex':'none';
+  document.getElementById('leave-type-val').dataset.unit=unit;
 }
 
 function _leaveSelectType(btn, type){
