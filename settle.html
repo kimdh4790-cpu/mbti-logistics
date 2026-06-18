@@ -21194,6 +21194,292 @@ function _msgRenderTemplate(el) {
     +'</div>';
 }
 
+
+// ══════════════════════════════════════════════════════
+// 🔗 통합 연동 엔진 — 정산↔재고↔QR↔POS 실시간 연동
+// dealerId 기준 Firebase onSnapshot 실시간 감지
+// ══════════════════════════════════════════════════════
+
+var _integListeners = {};  // 실시간 리스너 저장
+
+// ── 전체 연동 초기화 (로그인 후 자동 호출) ──
+function _initIntegration(did) {
+  if(!_db || !did) return;
+  var co = window._cachedCompanyDoc || {};
+
+  // 1) POS 결제 → 재고 자동 차감 리스너
+  if(_hasKiosk(co) && _hasInventory(co)) {
+    _startPosToInventorySync(did);
+  }
+
+  // 2) QR 출퇴근 → 급여 자동 연동 리스너
+  if(_hasInventory(co) || co.qrPaid || co.payrollPaid) {
+    _startQrToPayrollSync(did);
+  }
+
+  // 3) 정산 → 대시보드 실시간 업데이트
+  _startSettleSync(did);
+
+  // 4) 재고 부족 자동 알림
+  if(_hasInventory(co)) {
+    _startInventoryAlertSync(did);
+  }
+
+  console.log('[통합연동] 초기화 완료 — dealerId:', did);
+}
+
+// ── 1) POS 결제 → 재고 자동 차감 ──
+function _startPosToInventorySync(did) {
+  if(_integListeners['pos_inv']) return;
+  var today = new Date().toISOString().slice(0,10);
+
+  _integListeners['pos_inv'] = _db.collection('mbetco_sales')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .where('inventoryDeducted','==',false)
+    .onSnapshot(function(snap) {
+      snap.docChanges().forEach(function(change) {
+        if(change.type !== 'added') return;
+        var sale = change.doc.data();
+        var saleId = change.doc.id;
+        // 판매 품목별 재고 차감
+        if(sale.items && sale.items.length) {
+          _deductInventoryFromSale(did, saleId, sale.items);
+        }
+      });
+    }, function(e){ console.warn('[POS→재고]', e.message); });
+
+  console.log('[연동] POS→재고 실시간 감지 시작');
+}
+
+function _deductInventoryFromSale(did, saleId, items) {
+  var batch = _db.batch();
+  var now = new Date().toISOString();
+
+  // 각 판매 품목 재고 차감
+  items.forEach(function(item) {
+    if(!item.itemId || !item.qty) return;
+
+    // inventory 컬렉션 재고 차감
+    var invRef = _db.collection('inventory').doc(did+'_'+item.itemId);
+    batch.update(invRef, {
+      stock: firebase.firestore.FieldValue.increment(-(item.qty||1)),
+      lastUpdated: now,
+      lastSaleId: saleId
+    });
+
+    // inventory_out 출고 기록
+    batch.set(_db.collection('inventory_out').doc(), {
+      dealerId: did,
+      itemId: item.itemId,
+      name: item.name || '',
+      qty: item.qty || 1,
+      price: item.price || 0,
+      outType: 'POS판매',
+      saleId: saleId,
+      date: now.slice(0,10),
+      createdAt: now
+    });
+  });
+
+  // 판매 기록에 재고차감 완료 표시
+  batch.update(_db.collection('mbetco_sales').doc(saleId), {
+    inventoryDeducted: true,
+    inventoryDeductedAt: now
+  });
+
+  batch.commit()
+    .then(function(){ console.log('[재고차감] 완료:', saleId); })
+    .catch(function(e){ console.warn('[재고차감] 오류:', e.message); });
+}
+
+// ── 2) QR 출퇴근 → 급여 실시간 연동 ──
+function _startQrToPayrollSync(did) {
+  if(_integListeners['qr_pay']) return;
+  var today = new Date().toISOString().slice(0,10);
+  var ym = today.slice(0,7);
+
+  _integListeners['qr_pay'] = _db.collection('attendance')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .onSnapshot(function(snap) {
+      snap.docChanges().forEach(function(change) {
+        if(change.type === 'modified') {
+          var att = change.doc.data();
+          // 퇴근 찍혔을 때 → 당일 근무시간 계산 → hourly_settlements 업데이트
+          if(att.checkOut && att.checkIn && !att.payCalcDone) {
+            _calcDayPayFromAtt(did, ym, att, change.doc.id);
+          }
+        }
+      });
+    }, function(e){ console.warn('[QR→급여]', e.message); });
+
+  console.log('[연동] QR→급여 실시간 감지 시작');
+}
+
+function _calcDayPayFromAtt(did, ym, att, attId) {
+  if(!att.checkIn || !att.checkOut) return;
+  try {
+    var inH  = parseFloat(att.checkIn.split(':')[0])  + parseFloat(att.checkIn.split(':')[1])/60;
+    var outH = parseFloat(att.checkOut.split(':')[0]) + parseFloat(att.checkOut.split(':')[1])/60;
+    if(outH <= inH) return;
+    var hours = Math.round((outH - inH) * 10) / 10;
+    var overtime = Math.max(0, hours - 8);
+    var normalH  = Math.min(hours, 8);
+
+    // hourly_settlements 업데이트
+    var ref = _db.collection('hourly_settlements')
+      .where('dealerId','==',did)
+      .where('userId','==',att.userId)
+      .where('ym','==',ym);
+
+    ref.get().then(function(snap) {
+      var minWage = 9860; // 2024 최저임금
+      var dayPay = Math.round(normalH * minWage + overtime * minWage * 1.5);
+
+      if(!snap.empty) {
+        // 기존 기록 업데이트
+        snap.docs[0].ref.update({
+          totalHours: firebase.firestore.FieldValue.increment(hours),
+          totalPay:   firebase.firestore.FieldValue.increment(dayPay),
+          lastAttDate: att.date,
+          updatedAt:   new Date().toISOString()
+        });
+      }
+      // 출퇴근 기록에 급여계산 완료 표시
+      _db.collection('attendance').doc(attId).update({
+        payCalcDone: true,
+        dayPay: dayPay,
+        workHours: hours
+      }).catch(function(){});
+    });
+  } catch(e) { console.warn('[급여계산]', e.message); }
+}
+
+// ── 3) 정산 → 대시보드 실시간 업데이트 ──
+function _startSettleSync(did) {
+  if(_integListeners['settle_dash']) return;
+  var ym = new Date().toISOString().slice(0,7);
+
+  _integListeners['settle_dash'] = _db.collection('settlements')
+    .where('dealerId','==',did)
+    .where('month','==',ym)
+    .onSnapshot(function(snap) {
+      // 정산 데이터 변경 시 홈 대시보드 자동 갱신
+      var total=0, cnt=0;
+      snap.forEach(function(doc){
+        var d=doc.data();
+        total += (d.net||d.netPay||0);
+        cnt++;
+      });
+      var el = document.getElementById('home-settle-total');
+      if(el) {
+        el.innerHTML = '<span style="font-size:22px;font-weight:900;color:var(--blue)">'
+          +(total/10000).toFixed(0)+'<span style="font-size:13px">만원</span></span>'
+          +'<span style="font-size:11px;color:var(--text3);margin-left:6px">'+cnt+'명</span>';
+      }
+    }, function(e){ console.warn('[정산→대시보드]', e.message); });
+}
+
+// ── 4) 재고 부족 자동 알림 ──
+function _startInventoryAlertSync(did) {
+  if(_integListeners['inv_alert']) return;
+
+  _integListeners['inv_alert'] = _db.collection('inventory')
+    .where('dealerId','==',did)
+    .where('alertEnabled','==',true)
+    .onSnapshot(function(snap) {
+      snap.docChanges().forEach(function(change) {
+        if(change.type !== 'modified') return;
+        var item = change.doc.data();
+        var minStock = item.minStock || 5;
+        // 재고 부족 감지 → 알림톡 발송
+        if(item.stock <= minStock && item.stock >= 0) {
+          _sendInventoryAlert(did, item);
+        }
+      });
+    }, function(e){ console.warn('[재고알림]', e.message); });
+}
+
+function _sendInventoryAlert(did, item) {
+  var coName = (window._cachedCompanyDoc&&window._cachedCompanyDoc.companyName)||'DONWAY';
+  var msg = '['+coName+'] 재고 부족 알림'+String.fromCharCode(10)
+    +item.name+'  현재 '+item.stock+'개 (최소 '+item.minStock+'개)'+String.fromCharCode(10)
+    +'즉시 발주가 필요합니다.';
+
+  // 관리자에게 FCM 푸시
+  _db.collection('companies').doc(did).get().then(function(snap) {
+    if(!snap.exists) return;
+    var d = snap.data();
+    var adminTokens = d.adminFcmTokens || [];
+    if(!adminTokens.length) return;
+    fetch('/fcm/notify-drivers', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tokens: adminTokens,
+        title: '📦 재고 부족: '+item.name,
+        body:  '현재 '+item.stock+'개 남음 — 즉시 발주 필요',
+        type:  'inventory_alert'
+      })
+    }).catch(function(){});
+  });
+
+  // 알림 이력 저장
+  _db.collection('admin_notifications').add({
+    dealerId: did,
+    type: 'inventory_alert',
+    itemId: item.id || '',
+    itemName: item.name || '',
+    stock: item.stock,
+    minStock: item.minStock || 5,
+    message: msg,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  }).catch(function(){});
+}
+
+// ── 연동 리스너 전체 해제 (로그아웃 시) ──
+function _stopIntegration() {
+  Object.keys(_integListeners).forEach(function(key) {
+    if(typeof _integListeners[key] === 'function') {
+      _integListeners[key](); // unsubscribe
+    }
+  });
+  _integListeners = {};
+  console.log('[통합연동] 리스너 해제');
+}
+
+// ── 통합 대시보드 위젯 — 홈에 연동 상태 표시 ──
+function _homeIntegWidget(did) {
+  var co = window._cachedCompanyDoc || {};
+  var hasSettle    = co.settlePaid || hasSvc('settle');
+  var hasInv       = _hasInventory(co);
+  var hasKiosk     = _hasKiosk(co);
+  var hasQr        = co.qrPaid || hasSvc('qr');
+  var hasPayroll   = co.payrollPaid || hasSvc('payroll');
+
+  var items = [
+    {label:'정산',    icon:'📊', active:hasSettle},
+    {label:'재고',    icon:'📦', active:hasInv},
+    {label:'QR출퇴근',icon:'📱', active:hasQr||hasPayroll},
+    {label:'POS',     icon:'🖥️', active:hasKiosk},
+  ];
+
+  var dots = items.map(function(it) {
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'
+      +'<div style="font-size:18px">'+it.icon+'</div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+(it.active?'var(--green)':'var(--text3)')+'">'+it.label+'</div>'
+      +'<div style="width:6px;height:6px;border-radius:50%;background:'+(it.active?'var(--green)':'var(--border)')+'"></div>'
+      +'</div>';
+  }).join('<div style="font-size:10px;color:var(--text3);padding-top:8px">—</div>');
+
+  return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:10px">🔗 연동 현황</div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-around">'+dots+'</div>'
+    +'</div>';
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -21291,7 +21577,8 @@ function pageHome(){
       html += '</div>';
     }
 
-    // ── 달력/송금 링크 (AI정산)
+    html += _homeIntegWidget(did);
+  // ── 달력/송금 링크 (AI정산)
     if(hasSvc('settle')||isSA){
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
       html += '<button onclick="goPage(\'schedule\')" class="card" style="text-align:center;padding:12px;cursor:pointer;border:none">';
@@ -27160,7 +27447,7 @@ function _copyCompanyCode(el){
 
 
 // 재고관리 → filo.ai.kr로 이전 (스텁)
-function pageInventory(){window.open("https://filo.ai.kr","_blank");toast('🔗 재고관리는 filo.ai.kr에서 이용하세요');}
+function pageInventory(){}
 function pageInvSummary(){pageInventory();}
 function pageInvMonthly(){pageInventory();}
 function pageInvOrder(){pageInventory();}
