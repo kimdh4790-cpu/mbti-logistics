@@ -2,1053 +2,496 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>DONWAY — 정산 담당자의 3시간을 돌려드립니다</title>
-<meta name="description" content="키오스크·태블릿 실시간 연동부터 엑셀 업로드까지. 결제 즉시 세무사 자동 등록. 어떤 업종이든 DONWAY 하나면 끝.">
-<meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />
-<meta property="og:title" content="DONWAY — 정산 담당자의 3시간을 돌려드립니다">
-<meta property="og:description" content="키오스크·태블릿 실시간 연동부터 엑셀 업로드까지. 결제 즉시 세무사 자동 등록. 어떤 업종이든 DONWAY 하나면 끝.">
-<meta property="og:url" content="https://donway.ai.kr">
-<meta property="og:image" content="https://donway.ai.kr/donway_og.jpg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_og.jpg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DONWAY · 업무자동화 플랫폼</title>
 <style>
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#04080F;--bg2:#080E1A;--bg3:#0D1526;
+  --bg:#080c14;--bg2:#0f1623;--bg3:#161e2e;
+  --text:#f0f4ff;--text2:#94a3b8;--text3:#64748b;
   --border:rgba(255,255,255,.08);
-  --text:#F0F4FF;--text2:rgba(240,244,255,.65);--text3:rgba(240,244,255,.35);
-  --acc:#00D4FF;--acc2:#7B2FFF;--green:#00FF94;--red:#FF5555;--orange:#FF9F43;
+  --acc:#6c47ff;--acc2:#00d4ff;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
-body{font-family:'Noto Sans KR',sans-serif;color:var(--text)}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Pretendard',sans-serif}
 
-/* 슬라이드 */
-.slides{width:100%;height:100vh;position:relative}
+/* ── 슬라이더: 가로 방향 ── */
+.slides-wrap{position:fixed;inset:0;overflow:hidden}
+.slides{display:flex;width:100%;height:100%;transition:transform .55s cubic-bezier(.77,0,.18,1)}
 .slide{
-  position:absolute;inset:0;
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  padding:60px 40px 80px;
-  opacity:0;transform:translateY(60px);
-  transition:opacity .6s ease,transform .6s ease;
-  pointer-events:none;overflow-y:auto;
+  min-width:100%;width:100%;height:100%;
+  position:relative;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;flex-shrink:0;
 }
-.slide.active{opacity:1;transform:translateY(0);pointer-events:all}
-.slide.exit-up{opacity:0;transform:translateY(-60px)}
-.slide.exit-down{opacity:0;transform:translateY(60px)}
 
-/* 배경 */
-.slide-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
-.glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.12}
-.grid-bg{
-  position:absolute;inset:0;
-  background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
-  background-size:48px 48px;
-}
-.slide-inner{position:relative;z-index:1;width:100%;max-width:860px;margin:0 auto}
+/* 배경 요소 */
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:60px 60px;z-index:0}
+.glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.12;z-index:0;pointer-events:none}
 
-/* 네비 */
-.nav-dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--border);border:1px solid rgba(255,255,255,.15);cursor:pointer;transition:all .3s}
-.dot.on{background:var(--acc);box-shadow:0 0 10px var(--acc);height:24px;border-radius:4px}
+.slide-inner{position:relative;z-index:1;width:100%;max-width:720px;padding:20px 28px;overflow-y:auto;max-height:100vh}
+@media(max-width:480px){.slide-inner{padding:16px 18px}}
 
-/* 화살표 */
-.arrow{position:fixed;bottom:28px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;z-index:100;transition:all .3s}
-.arrow:hover{background:rgba(0,212,255,.15);border-color:var(--acc)}
-.arrow.prev{left:50%;transform:translateX(-56px)}
-.arrow.next{left:50%;transform:translateX(12px)}
-.arrow.disabled{opacity:.2;pointer-events:none}
-.slide-counter{position:fixed;bottom:34px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);font-weight:700;letter-spacing:2px;z-index:100}
+/* 레이블 */
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--acc2);margin-bottom:12px}
+.sec-title{font-size:clamp(24px,5vw,42px);font-weight:900;line-height:1.2;margin-bottom:14px}
+.sec-sub{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+.grad{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad2{background:linear-gradient(90deg,#22c55e,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad3{background:linear-gradient(90deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 
-/* 사이드메뉴 */
-.menu-btn{position:fixed;top:20px;right:20px;z-index:200;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;color:var(--text2)}
-.menu-btn:hover{background:rgba(0,212,255,.1);color:var(--acc)}
+/* 카드 그리드 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:520px){.g2,.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:360px){.g3{grid-template-columns:1fr}}
 
-/* 타이포 */
-.sec-label{font-size:11px;font-weight:700;color:var(--acc);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px}
-.sec-title{font-family:'Oswald',sans-serif;font-size:clamp(30px,6vw,54px);font-weight:700;line-height:1.1;margin-bottom:14px}
-.sec-sub{font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:28px}
-
-/* 카드 */
-.card-grid{display:grid;gap:12px}
-.g2{grid-template-columns:1fr 1fr}
-.g3{grid-template-columns:1fr 1fr 1fr}
-.g4{grid-template-columns:1fr 1fr 1fr 1fr}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:all .3s}
-.card:hover{border-color:rgba(0,212,255,.3);transform:translateY(-2px)}
-.c-blue{border-top:3px solid var(--acc)}
-.c-green{border-top:3px solid var(--green)}
-.c-purple{border-top:3px solid var(--acc2)}
-.c-orange{border-top:3px solid var(--orange)}
-.c-red{border-top:3px solid var(--red)}
-
-/* 배지 */
-.badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700}
-.b-blue{background:rgba(0,212,255,.15);color:var(--acc)}
-.b-green{background:rgba(0,255,148,.15);color:var(--green)}
-.b-red{background:rgba(255,85,85,.15);color:var(--red)}
-.b-purple{background:rgba(123,47,255,.15);color:#a78bfa}
-.b-gray{background:rgba(255,255,255,.08);color:var(--text2)}
-.b-orange{background:rgba(255,159,67,.15);color:var(--orange)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 16px}
+.card .ico{font-size:26px;margin-bottom:10px}
+.card h3{font-size:13px;font-weight:800;margin-bottom:6px}
+.card p{font-size:12px;color:var(--text2);line-height:1.6}
+.c-blue{border-color:rgba(108,71,255,.3);background:rgba(108,71,255,.06)}
+.c-teal{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.06)}
+.c-green{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06)}
+.c-red{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)}
+.c-yellow{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)}
 
 /* 비교표 */
-.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.compare-col{border-radius:12px;padding:20px}
-.compare-before{background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.2)}
-.compare-after{background:rgba(0,255,148,.06);border:1px solid rgba(0,255,148,.2)}
-.compare-title{font-size:13px;font-weight:800;margin-bottom:12px}
-.compare-item{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.5}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.cmp{border-radius:12px;padding:16px}
+.cmp-bad{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2)}
+.cmp-good{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2)}
+.cmp h3{font-size:12px;font-weight:800;margin-bottom:10px}
+.cmp ul{list-style:none;font-size:12px;color:var(--text2);line-height:2}
+.cmp-bad ul li::before{content:"✕ ";color:#ef4444}
+.cmp-good ul li::before{content:"✓ ";color:#22c55e}
 
-/* 애니 */
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.anim-1{animation:fadeUp .6s .1s ease both}
-.anim-2{animation:fadeUp .6s .2s ease both}
-.anim-3{animation:fadeUp .6s .3s ease both}
-.anim-4{animation:fadeUp .6s .4s ease both}
-.anim-5{animation:fadeUp .6s .5s ease both}
-.anim-6{animation:fadeUp .6s .6s ease both}
+/* 요금표 */
+.price-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+@media(max-width:360px){.price-cards{grid-template-columns:1fr}}
+.price-card{border-radius:14px;padding:18px 16px;border:1px solid var(--border)}
+.price-card.main{border-color:var(--acc);background:rgba(108,71,255,.1)}
+.price-tag{font-size:11px;font-weight:700;color:var(--acc2);margin-bottom:8px;letter-spacing:.05em}
+.price-num{font-size:22px;font-weight:900;margin-bottom:4px}
+.price-sub{font-size:11px;color:var(--text3)}
+.price-features{margin-top:10px;font-size:11px;color:var(--text2);line-height:2}
+.price-features span::before{content:"· ";color:var(--acc2)}
 
-/* 반응형 */
-@media(max-width:640px){
-  .g3{grid-template-columns:1fr 1fr}
-  .g4{grid-template-columns:1fr 1fr}
-  .compare{grid-template-columns:1fr}
-  .slide{padding:60px 20px 80px}
-}
+/* CTA 버튼 */
+.btn-main{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:50px;font-size:14px;font-weight:800;text-decoration:none;transition:transform .2s,box-shadow .2s;box-shadow:0 0 30px rgba(108,71,255,.4)}
+.btn-main:hover{transform:translateY(-2px);box-shadow:0 4px 40px rgba(108,71,255,.6)}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:1.5px solid var(--border);color:var(--text2);border-radius:50px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s}
+.btn-ghost:hover{border-color:var(--acc2);color:var(--acc2)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
 
-/* 진행바 */
-.progress-bar{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:6px}
-.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width 1s ease}
+/* 태그 */
+.tag{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(108,71,255,.15);color:var(--acc2);margin-bottom:12px}
 
-/* 업종 태그 */
-.ind-tags{display:flex;flex-wrap:wrap;gap:6px}
-.ind-tag{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700}
+/* 업종 뱃지 */
+.ind-badges{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.ind-badge{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--bg3);border:1px solid var(--border)}
+
+/* 스텝 */
+.steps{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{min-width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}
+.step-txt h4{font-size:13px;font-weight:800;margin-bottom:3px}
+.step-txt p{font-size:12px;color:var(--text2)}
+
+/* mbtico 섹션 */
+.mbtico-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:480px){.mbtico-cards{grid-template-columns:1fr}}
+.mbtico-card{border-radius:14px;padding:18px 16px;text-align:center;border:1px solid var(--border);background:var(--bg2)}
+.mbtico-card .ico2{font-size:32px;margin-bottom:10px}
+.mbtico-card h3{font-size:13px;font-weight:800;margin-bottom:6px}
+.mbtico-card p{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.mbtico-card .lnk{font-size:11px;color:var(--acc2);font-weight:700;text-decoration:none}
+
+/* 내비게이션 */
+.arrow{position:fixed;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);background:rgba(255,255,255,.04);color:var(--text2);font-size:18px;cursor:pointer;z-index:100;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.arrow:hover{background:rgba(255,255,255,.1);border-color:var(--acc2);color:var(--acc2)}
+.arrow.prev{left:14px}
+.arrow.next{right:14px}
+.arrow.disabled{opacity:.2;pointer-events:none}
+@media(max-width:480px){.arrow{display:none}}
+
+.nav-dots{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:100}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:all .3s}
+.dot.on{background:var(--acc2);width:18px;border-radius:3px}
+
+.slide-counter{position:fixed;bottom:38px;right:20px;font-size:10px;color:var(--text3);z-index:100}
+
+/* 모바일 스와이프 힌트 */
+.swipe-hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);z-index:100;pointer-events:none}
+
+/* kakao 버튼 */
+.kakao-float{position:fixed;bottom:64px;right:16px;z-index:200}
+.kakao-float a{display:flex;align-items:center;gap:8px;background:#FEE500;color:#3A1D1D;padding:10px 16px;border-radius:50px;font-size:13px;font-weight:800;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+
+/* 애니메이션 */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.a1{animation:fadeUp .5s .1s both}
+.a2{animation:fadeUp .5s .25s both}
+.a3{animation:fadeUp .5s .4s both}
+.a4{animation:fadeUp .5s .55s both}
 </style>
 </head>
 <body>
+
+<div class="slides-wrap">
 <div class="slides" id="slides">
 
-<!-- S1: 표지 -->
-<div class="slide active" id="s0">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:500px;height:500px;background:var(--acc);top:-150px;left:-150px"></div>
-    <div class="glow" style="width:400px;height:400px;background:var(--acc2);bottom:-100px;right:-100px"></div>
-  </div>
+<!-- ───────────── S0: 표지 ───────────── -->
+<div class="slide" id="s0">
+  <div class="glow" style="width:600px;height:600px;background:var(--acc);top:-200px;left:-150px"></div>
+  <div class="glow" style="width:400px;height:400px;background:var(--acc2);bottom:-100px;right:-100px"></div>
+  <div class="grid-bg"></div>
   <div class="slide-inner" style="text-align:center">
-    <div class="sec-label anim-1">DONWAY · 정산 자동화 플랫폼</div>
-    <div class="sec-title anim-2" style="font-size:clamp(28px,6vw,56px)">
-      정산 담당자의<br>
-      <span style="background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">3시간을 돌려드립니다</span>
+    <div class="sec-label a1">DONWAY · MBTICO · 업무자동화 플랫폼</div>
+    <div class="sec-title a2" style="font-size:clamp(28px,6vw,52px)">
+      직원관리부터<br>
+      <span class="grad">정산·재고·키오스크</span>까지<br>
+      하나로
     </div>
-    <div class="sec-sub anim-3" style="max-width:520px;margin:0 auto 32px">
-      직원은 그대로 — 하는 일이 달라집니다<br>
-      엑셀 올리면 정산·명세서 자동완성 · 어떤 업종이든
+    <p class="sec-sub a3" style="font-size:15px;max-width:480px;margin:0 auto 24px">
+      업종 불문 — 소상공인·프리랜서·물류 대리점<br>
+      월 <strong style="color:#fff">3만원대</strong>부터, 설치 없이, 지금 바로
+    </p>
+    <div class="a3" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="https://donway.ai.kr/settle" class="btn-main">🚀 7일 무료 체험</a>
+      <a href="https://mbtico.kr" class="btn-ghost" target="_blank">📦 mbtico.kr 보기</a>
     </div>
-    <div class="anim-4" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:32px">
-      <a href="https://donway.ai.kr/settle" target="_blank" style="padding:14px 28px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">🚀 7일 무료 시작</a>
-      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:14px 28px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:12px;font-size:14px;font-weight:700;text-decoration:none">💬 카카오 문의</a>
-    </div>
-    <div class="anim-5" style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center">
-      <div style="text-align:center">
-        <div style="font-family:'Oswald',sans-serif;font-size:32px;font-weight:700;color:var(--acc)">3분</div>
-        <div style="font-size:11px;color:var(--text3)">업로드 → 완료</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-family:'Oswald',sans-serif;font-size:32px;font-weight:700;color:var(--green)">0건</div>
-        <div style="font-size:11px;color:var(--text3)">계산 오류</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-family:'Oswald',sans-serif;font-size:32px;font-weight:700;color:var(--acc2)">자동</div>
-        <div style="font-size:11px;color:var(--text3)">명세서 발송</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-family:'Oswald',sans-serif;font-size:32px;font-weight:700;color:var(--orange)">모든</div>
-        <div style="font-size:11px;color:var(--text3)">업종 지원</div>
-      </div>
+    <div class="a4" style="margin-top:28px;display:flex;justify-content:center;gap:24px;font-size:12px;color:var(--text3)">
+      <span>✓ 카드 등록 불필요</span>
+      <span>✓ 사업자번호 1회 한정</span>
+      <span>✓ 즉시 사용</span>
     </div>
   </div>
 </div>
 
-<!-- S2: 문제 -->
+<!-- ───────────── S1: 문제 ───────────── -->
 <div class="slide" id="s1">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:400px;height:400px;background:var(--red);top:-100px;right:-80px"></div>
-  </div>
+  <div class="glow" style="width:400px;height:400px;background:var(--red);top:-100px;right:-80px"></div>
+  <div class="grid-bg"></div>
   <div class="slide-inner">
-    <div class="sec-label anim-1">01 · PROBLEM</div>
-    <div class="sec-title anim-2">지금 이런 상황 아닌가요?</div>
-    <div class="card-grid g3 anim-3">
-      <div class="card" style="border-top:3px solid var(--red)">
-        <div style="font-size:28px;margin-bottom:10px">😤</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">매달 정산이 며칠</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">엑셀 복붙 → 수식 → 검토 → 수정<br>담당자 혼자 며칠씩 매달려요</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--red)">
-        <div style="font-size:28px;margin-bottom:10px">📞</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">기사 이의제기 전화</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">"내 정산 왜 이래요?"<br>계산 오류 때마다 기사와 마찰</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--red)">
-        <div style="font-size:28px;margin-bottom:10px">🤦</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">실수는 또 실수로</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">수작업 엑셀의 한계<br>아무리 조심해도 오류 반복</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--orange)">
-        <div style="font-size:28px;margin-bottom:10px">📊</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">중요한 일은 못 해</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">정산에 치여서<br>매출분석·기사관리·성장은 뒷전</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--orange)">
-        <div style="font-size:28px;margin-bottom:10px">😰</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">담당자 바뀌면 �멘붕</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">엑셀 파일 인수인계 지옥<br>새 직원 적응까지 매달 불안</div>
-      </div>
-      <div class="card" style="border-top:3px solid var(--orange)">
-        <div style="font-size:28px;margin-bottom:10px">💸</div>
-        <div style="font-size:13px;font-weight:800;margin-bottom:6px">직원 인건비는 그대로</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">정산 작업에만 쓰이는<br>담당자 월급 — 아깝지 않나요?</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- S3: 해결 (도입 전 vs 후) -->
-<div class="slide" id="s2">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:400px;height:400px;background:var(--green);bottom:-100px;left:-60px"></div>
-  </div>
-  <div class="slide-inner">
-    <div class="sec-label anim-1">02 · SOLUTION</div>
-    <div class="sec-title anim-2">직원은 그대로 — 하는 일이 달라집니다</div>
-    <div class="compare anim-3">
-      <div class="compare-col compare-before">
-        <div class="compare-title" style="color:var(--red)">❌ DONWAY 도입 전</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>엑셀 복붙·수식 작업 3~4시간</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>계산 오류 → 기사 이의제기</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>명세서 개별 발송 1~2시간</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>담당자 교체 시 인수인계 지옥</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>세무사 자료 따로 정리</div>
-        <div class="compare-item"><span style="color:var(--red);flex-shrink:0">✗</span>정산일 = 야근 확정</div>
-      </div>
-      <div class="compare-col compare-after">
-        <div class="compare-title" style="color:var(--green)">✅ DONWAY 도입 후</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>파일 업로드 → 3분 완료</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>계산 오류 0 → 이의제기 없음</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>카카오·이메일 전원 자동 발송</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>시스템이 다 기억 → 인수인계 쉬움</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>세무사 링크 자동 생성·공유</div>
-        <div class="compare-item"><span style="color:var(--green);flex-shrink:0">✓</span>남은 시간에 더 중요한 일</div>
-      </div>
-    </div>
-    <div class="anim-4" style="margin-top:16px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px 20px;text-align:center">
-      <span style="font-size:13px;color:var(--text2)">담당자가 </span>
-      <span style="font-size:15px;font-weight:800;color:var(--acc)">정산 대신 사람을 관리</span>
-      <span style="font-size:13px;color:var(--text2)">하게 해주세요</span>
-    </div>
-  </div>
-</div>
-
-<!-- S4: 서비스 4종 -->
-<div class="slide" id="s3">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:350px;height:350px;background:var(--acc2);top:-80px;right:-60px"></div>
-  </div>
-  <div class="slide-inner">
-    <div class="sec-label anim-1">03 · SERVICES</div>
-    <div class="sec-title anim-2">6가지 서비스</div>
-    <div class="card-grid g2 anim-3">
-      <div class="card c-blue">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">🤖</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">AI 정산</div>
-            <span class="badge b-blue">복잡한 계산 · 개인별 추적</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">쿠팡·청소·보험·건설·퀵·뷰티<br>업종별 파서 자동 인식 · 팀장수수료 자동</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.9">개인: ~50명 / ~150명 / ~300명 / ~500명 / ~700명 / ~1,000명<br><span style="color:var(--acc);font-weight:700">단체(20개사+): 별도 할인</span></div>
+    <div class="sec-label a1">01 · PROBLEM</div>
+    <div class="sec-title a2">지금 이런 상황<br>아닌가요?</div>
+    <div class="g3 a3">
+      <div class="card c-red">
+        <div class="ico">📊</div>
+        <h3>엑셀 노동</h3>
+        <p>매달 수십 장 엑셀 수작업 정산, 오류 수정에 반나절</p>
       </div>
       <div class="card c-red">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">🛵</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">배달대행</div>
-            <span class="badge b-red">플랫폼 차액 자동 보전</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">배민·이츠·바로고·생각대로<br>소급 자동 적용 · 라이더 명세서 자동</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.9">개인: ~50명 / ~150명 / ~300명 / ~500명 / ~700명 / ~1,000명<br><span style="color:var(--red);font-weight:700">단체(20개사+): 별도 할인</span></div>
+        <div class="ico">⏰</div>
+        <h3>출퇴근 종이</h3>
+        <p>수기 출석부, 지각·초과근무 계산 직접 해야</p>
       </div>
-      <div class="card c-purple">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">📋</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">범용 정산</div>
-            <span class="badge b-purple">단순계산 · 다업체 명세서</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">CJ·한진·프랜차이즈·용역·농산물<br>업체·인원 무제한 · 엑셀 업로드로 끝</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px">문의 시 맞춤 견적</div>
+      <div class="card c-red">
+        <div class="ico">📦</div>
+        <h3>재고 미스터리</h3>
+        <p>창고 재고가 장부랑 다름. 도대체 어디로?</p>
+      </div>
+      <div class="card c-red">
+        <div class="ico">💸</div>
+        <h3>급여 분쟁</h3>
+        <p>"왜 이만큼?" 직원 민원에 매번 증빙 찾아 헤매기</p>
+      </div>
+      <div class="card c-red">
+        <div class="ico">🧾</div>
+        <h3>세금계산서</h3>
+        <p>세무사에게 넘길 자료 취합 매달 스트레스</p>
+      </div>
+      <div class="card c-red">
+        <div class="ico">📱</div>
+        <h3>앱 난립</h3>
+        <p>정산, 출퇴근, 재고 앱이 다 따로. 비용도 따로</p>
+      </div>
+    </div>
+    <p class="a4" style="font-size:13px;color:var(--text2)">이 모든 걸 <strong style="color:#fff">하나의 플랫폼</strong>으로 해결합니다 →</p>
+  </div>
+</div>
+
+<!-- ───────────── S2: 솔루션 ───────────── -->
+<div class="slide" id="s2">
+  <div class="glow" style="width:400px;height:400px;background:var(--green);bottom:-100px;left:-60px"></div>
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="sec-label a1">02 · SOLUTION</div>
+    <div class="sec-title a2">직원은 그대로<br><span class="grad2">하는 일이 달라집니다</span></div>
+    <div class="compare a3">
+      <div class="cmp cmp-bad">
+        <h3 style="color:#ef4444">❌ 지금까지</h3>
+        <ul>
+          <li>엑셀 수작업 정산</li>
+          <li>수기 출퇴근 관리</li>
+          <li>재고 눈으로 파악</li>
+          <li>급여명세서 수작업</li>
+          <li>앱 3~4개 따로 비용</li>
+        </ul>
+      </div>
+      <div class="cmp cmp-good">
+        <h3 style="color:#22c55e">✅ DONWAY/MBTICO</h3>
+        <ul>
+          <li>파일 업로드 → 자동정산</li>
+          <li>QR 찍으면 출퇴근 완료</li>
+          <li>바코드 스캔 → 재고 자동</li>
+          <li>명세서 자동 발송 (FCM)</li>
+          <li>하나로 통합, 비용 절반</li>
+        </ul>
+      </div>
+    </div>
+    <div class="g2 a4">
+      <div class="card c-blue" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--acc2)">98%</div>
+        <div style="font-size:12px;color:var(--text2)">정산 오류 감소</div>
+      </div>
+      <div class="card c-green" style="text-align:center">
+        <div style="font-size:28px;font-weight:900;color:var(--green)">3분</div>
+        <div style="font-size:12px;color:var(--text2)">월 정산 소요시간</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────── S3: DONWAY 서비스 ───────────── -->
+<div class="slide" id="s3">
+  <div class="glow" style="width:350px;height:350px;background:var(--acc2);top:-80px;right:-60px"></div>
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="sec-label a1">03 · DONWAY</div>
+    <div class="sec-title a2">정산·급여·출퇴근<br><span class="grad">자동화 패키지</span></div>
+    <div class="g2 a3">
+      <div class="card c-blue">
+        <div class="ico">🤖</div>
+        <h3>AI 정산 자동화</h3>
+        <p>엑셀 업로드 한 번으로 쿠팡·배달대행·범용 정산 완료</p>
+      </div>
+      <div class="card c-teal">
+        <div class="ico">📱</div>
+        <h3>QR 출퇴근</h3>
+        <p>직원이 폰으로 QR 스캔 → 출퇴근 자동 기록·급여 연동</p>
       </div>
       <div class="card c-green">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">📦</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">재고관리</div>
-            <span class="badge b-green">입출고 실시간 파악</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">주류·의약품·의류·식자재 도매<br>바코드 스캔 · 현장↔사무실 실시간</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px">문의 시 맞춤 견적</div>
+        <div class="ico">💰</div>
+        <h3>급여 자동계산</h3>
+        <p>출퇴근 데이터 → 최저임금 기준 급여 자동 산출·명세서 발송</p>
+      </div>
+      <div class="card c-yellow">
+        <div class="ico">🌴</div>
+        <h3>휴가·보상관리</h3>
+        <p>연차·보상·시간단위 휴가 신청·승인 앱으로 끝</p>
       </div>
       <div class="card c-blue">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">🔲</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">QR 출퇴근</div>
-            <span class="badge b-blue">30초 동적 QR · 보안 강화</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">직원이 QR 스캔 → 출퇴근 자동 기록<br>30초마다 갱신 · 캡처 재사용 불가<br>근태 데이터 → 정산 자동 연동</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px">1,500원/인/월 · <a href="https://filo.ai.kr/qr" style="color:var(--blue)">filo.ai.kr/qr</a></div>
+        <div class="ico">🧾</div>
+        <h3>세무사 연동</h3>
+        <p>정산 데이터 자동 취합 → 세무사 공유 원클릭</p>
       </div>
-      <div class="card c-pink" style="--card-color:#f472b6">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <span style="font-size:28px">🖥️</span>
-          <div>
-            <div style="font-size:14px;font-weight:800">키오스크·POS</div>
-            <span class="badge b-pink" style="background:rgba(244,114,182,.15);color:#f472b6">매장 매출 실시간 정산 연동</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">태블릿·폰으로 시술 입력<br>직원별 매출·건수 실시간 집계<br>월말 버튼 하나로 전 직원 정산 완료</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:6px">문의 시 맞춤 견적 · <a href="https://filo.ai.kr/kiosk" style="color:#f472b6">filo.ai.kr/kiosk</a></div>
+      <div class="card c-teal">
+        <div class="ico">📊</div>
+        <h3>실적 대시보드</h3>
+        <p>월별 정산액·인원·캠프별 실적 한눈에</p>
       </div>
     </div>
-    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">모든 서비스는 연동됩니다 — 키오스크 매출·QR 근태가 정산에 자동 반영</div>
-  </div>
-</div>
-
-
-<!-- S5: AI정산 작동 방식 -->
-<div class="slide" id="s4b">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:350px;height:350px;background:var(--acc);bottom:-80px;left:-60px"></div>
-  </div>
-  <div class="slide-inner">
-    <div class="sec-label anim-1">05 · HOW IT WORKS</div>
-    <div class="sec-title anim-2">AI정산 — 이렇게 작동합니다</div>
-    <div class="sec-sub anim-3" style="margin-bottom:16px">어떤 업종이든 · 어떤 엑셀이든 · 3분 완료</div>
-
-    <!-- 4단계 흐름 -->
-    <div class="anim-3" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:16px;justify-content:center">
-      <div style="background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
-        <div style="font-size:20px;margin-bottom:4px">📂</div>
-        <div style="font-size:12px;font-weight:800">① 엑셀 업로드</div>
-        <div style="font-size:10px;opacity:.7;margin-top:2px">어떤 형식이든 OK</div>
-      </div>
-      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
-        <div style="font-size:20px;margin-bottom:4px">⚙️</div>
-        <div style="font-size:12px;font-weight:800">② 자동 계산</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">업종별 엔진 적용</div>
-      </div>
-      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
-        <div style="font-size:20px;margin-bottom:4px">📋</div>
-        <div style="font-size:12px;font-weight:800">③ 명세서 생성</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">개인별 상세 내역</div>
-      </div>
-      <div style="font-size:20px;color:var(--acc);font-weight:900">→</div>
-      <div style="background:rgba(0,255,148,.1);border:1px solid rgba(0,255,148,.3);border-radius:10px;padding:10px 16px;text-align:center;min-width:120px">
-        <div style="font-size:20px;margin-bottom:4px">💬</div>
-        <div style="font-size:12px;font-weight:800;color:var(--green)">④ 자동 발송</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">카카오·이메일</div>
-      </div>
-    </div>
-
-    <!-- 업종별 계산 방식 -->
-    <div class="card-grid g3 anim-4">
-      <div class="card" style="border-top:3px solid var(--acc)">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🚚 쿠팡 대리점</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          라우트별 건수 × 단가<br>
-          아이디지원 자동 차감<br>
-          팀장수수료 자동 배분<br>
-          캠프별 자동 분리
-        </div>
-      </div>
-      <div class="card" style="border-top:3px solid #10b981">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🧹 청소·파견</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          현장별 시급·일당 계산<br>
-          연장·야간수당 자동<br>
-          팀장 수수료 배분<br>
-          원천세 자동 공제
-        </div>
-      </div>
-      <div class="card" style="border-top:3px solid #f59e0b">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">💇 뷰티·미용</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          시술별 단가 자동 매핑<br>
-          수수료율 개별 설정<br>
-          기본급 자동 적용<br>
-          재료비 공제 자동
-        </div>
-      </div>
-      <div class="card" style="border-top:3px solid #8b5cf6">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🛡️ 보험설계사</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          실적별 수수료 계산<br>
-          팀장 수수료 배분<br>
-          초회·유지 구분<br>
-          환수금 자동 차감
-        </div>
-      </div>
-      <div class="card" style="border-top:3px solid #ef4444">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🏗️ 건설·일용직</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          현장별 일당 계산<br>
-          주민번호 원천세<br>
-          일용직 소득세 자동<br>
-          신고자료 자동 생성
-        </div>
-      </div>
-      <div class="card" style="border-top:3px solid #06b6d4">
-        <div style="font-size:13px;font-weight:800;margin-bottom:8px">🚗 퀵·대리운전</div>
-        <div style="font-size:11px;color:var(--text2);line-height:1.7">
-          콜단가 자동 계산<br>
-          팀장 수수료 배분<br>
-          플랫폼별 정산 통합<br>
-          시간대별 가중치 적용
-        </div>
-      </div>
-    </div>
-
-    <div class="anim-5" style="margin-top:12px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 20px;text-align:center;font-size:12px;color:var(--text2)">
-      목록에 없는 업종도 <strong style="color:var(--acc)">문의주시면 맞춤 적용</strong> 가능합니다 · 051-711-3103
+    <div class="a4 btn-row">
+      <a href="https://donway.ai.kr/settle" class="btn-main">donway.ai.kr 시작하기 →</a>
     </div>
   </div>
 </div>
 
-
-<!-- S5-NEW: 키오스크·태블릿 실시간 연동 -->
-<div class="slide" id="s5k">
-  <div class="slide-bg">
-    <div class="glow" style="width:500px;height:500px;background:var(--acc2);top:-100px;right:-100px"></div>
-    <div class="glow" style="width:400px;height:400px;background:#C2185B;bottom:-100px;left:-100px"></div>
-    <div class="grid-bg"></div>
-  </div>
-  <div class="slide-inner">
-    <div class="sec-label anim-1">DONWAY · 실시간 연동</div>
-    <h2 class="sec-title anim-2">매장·출장 어디서든<br><span style="background:linear-gradient(90deg,#C2185B,#E91E63);-webkit-background-clip:text;-webkit-text-fill-color:transparent">실시간 정산 자동화</span></h2>
-    <div class="sec-sub anim-3" style="margin-bottom:20px">키오스크·태블릿으로 입력하면 — 정산·세무 자동 완성</div>
-
-    <!-- 연동 흐름 -->
-    <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:8px;margin-bottom:20px">
-      <!-- 키오스크 -->
-      <div style="background:rgba(194,24,91,.1);border:1px solid rgba(194,24,91,.3);border-radius:14px;padding:14px;text-align:center">
-        <div style="font-size:28px;margin-bottom:6px">🖥️</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:4px">매장 키오스크</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">시술 선택<br>담당자 지정<br>카드 결제</div>
-      </div>
-      <div style="color:var(--acc);font-size:18px;font-weight:900">⇄</div>
-      <!-- 태블릿 -->
-      <div style="background:rgba(123,47,255,.1);border:1px solid rgba(123,47,255,.3);border-radius:14px;padding:14px;text-align:center">
-        <div style="font-size:28px;margin-bottom:6px">📱</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:4px">출장 태블릿</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">현장 시술 입력<br>고객 서명<br>현금영수증</div>
-      </div>
-      <div style="color:var(--acc);font-size:18px;font-weight:900">→</div>
-      <!-- DONWAY -->
-      <div style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:14px;padding:14px;text-align:center">
-        <div style="font-size:28px;margin-bottom:6px">⚡</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:4px;color:var(--acc)">DONWAY</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">실시간 누적<br>자동 정산<br>명세서 발송</div>
-      </div>
-    </div>
-
-    <!-- 3가지 자동 연동 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:22px;margin-bottom:6px">💳</div>
-        <div style="font-size:11px;font-weight:800;margin-bottom:4px">카드 결제 연동</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">결제 즉시<br>매출 자동 기록<br>담당자별 누적</div>
-      </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:22px;margin-bottom:6px">🧾</div>
-        <div style="font-size:11px;font-weight:800;margin-bottom:4px">세무사 자동 등록</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">현금영수증·카드<br>매출 자동 분류<br>부가세 자동 산출</div>
-      </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:22px;margin-bottom:6px">📊</div>
-        <div style="font-size:11px;font-weight:800;margin-bottom:4px">월말 자동 정산</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.5">버튼 하나로<br>전 직원 정산<br>카카오 명세서</div>
-      </div>
-    </div>
-
-    <!-- 지원 업종 -->
-    <div style="background:rgba(194,24,91,.05);border:1px solid rgba(194,24,91,.2);border-radius:12px;padding:12px">
-      <div style="font-size:11px;font-weight:800;color:#C2185B;margin-bottom:8px">💆 실시간 연동 지원 업종</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <span style="padding:4px 10px;background:rgba(194,24,91,.15);border-radius:20px;font-size:10px;color:#E91E63;font-weight:700">💄 헤어·뷰티</span>
-        <span style="padding:4px 10px;background:rgba(194,24,91,.15);border-radius:20px;font-size:10px;color:#E91E63;font-weight:700">💅 네일샵</span>
-        <span style="padding:4px 10px;background:rgba(194,24,91,.15);border-radius:20px;font-size:10px;color:#E91E63;font-weight:700">👁️ 속눈썹</span>
-        <span style="padding:4px 10px;background:rgba(194,24,91,.15);border-radius:20px;font-size:10px;color:#E91E63;font-weight:700">💆 피부관리</span>
-        <span style="padding:4px 10px;background:rgba(123,47,255,.15);border-radius:20px;font-size:10px;color:#a78bfa;font-weight:700">🏥 요양·돌봄</span>
-        <span style="padding:4px 10px;background:rgba(123,47,255,.15);border-radius:20px;font-size:10px;color:#a78bfa;font-weight:700">🎪 행사출장</span>
-        <span style="padding:4px 10px;background:rgba(0,212,255,.1);border-radius:20px;font-size:10px;color:var(--acc);font-weight:700">+ 더보기</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- S_QR: QR결제·출퇴근 -->
-<div class="slide" id="s5q">
-<div class="slide-bg">
-<div class="glow" style="width:500px;height:500px;background:#3b82f6;top:-100px;left:-100px;opacity:.12"></div>
-<div class="glow" style="width:400px;height:400px;background:var(--acc2);bottom:-100px;right:-100px;opacity:.1"></div>
-<div class="grid-bg"></div>
-</div>
-<div class="slide-inner">
-<div class="sec-label anim-1">DONWAY · QR 결제·출퇴근</div>
-<h2 class="sec-title anim-2">QR 하나로<br><span style="background:linear-gradient(90deg,#3b82f6,var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">결제·출퇴근 동시 해결</span></h2>
-<div class="card-grid g2 anim-3" style="margin-top:20px">
-  <div class="card" style="border:1px solid rgba(59,130,246,.3)">
-    <div style="font-size:28px;margin-bottom:8px">🔲</div>
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">QR 결제</div>
-    <div style="font-size:11px;color:var(--text2);line-height:1.7">태블릿·폰으로 즉시 결제<br>시술·상품 메뉴 선택<br>직원별 매출 자동 집계<br>월말 정산 자동 연동</div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px">filo.ai.kr</div>
-  </div>
-  <div class="card" style="border:1px solid rgba(99,102,241,.3)">
-    <div style="font-size:28px;margin-bottom:8px">✅</div>
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">QR 출퇴근</div>
-    <div style="font-size:11px;color:var(--text2);line-height:1.7">30초 갱신 동적 QR<br>캡처 재사용 원천 차단<br>출퇴근 기록 자동 저장<br>급여 계산 자동 연동</div>
-    <div style="font-size:10px;color:var(--text3);margin-top:8px">1,500원/인/월</div>
-  </div>
-</div>
-<div style="text-align:center;margin-top:20px" class="anim-4">
-  <a href="https://filo.ai.kr" target="_blank" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#3b82f6,var(--acc2));color:#fff;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">🔲 QR 무료 체험</a>
-</div>
-</div>
-</div>
-
-<!-- S5: 지원 업종 -->
+<!-- ───────────── S4: MBTICO ───────────── -->
 <div class="slide" id="s4">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:350px;height:350px;background:var(--acc);bottom:-80px;right:-60px"></div>
-  </div>
+  <div class="glow" style="width:500px;height:500px;background:#f59e0b;top:-150px;right:-150px;opacity:.08"></div>
+  <div class="grid-bg"></div>
   <div class="slide-inner">
-    <div class="sec-label anim-1">04 · INDUSTRIES</div>
-    <div class="sec-title anim-2">우리 업종에도 맞을까요?<br><span style="background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">맞습니다.</span></div>
-    <div class="sec-sub anim-3" style="margin-bottom:16px">직원이 있고 파일이 있다면 — DONWAY는 바로 작동합니다</div>
-
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" class="anim-3">
-      <button class="ind-svc-tab" onclick="switchIndTab(this,'ai')" style="padding:7px 16px;border-radius:20px;border:2px solid var(--acc);background:var(--acc);color:#fff;font-size:12px;font-weight:700;cursor:pointer">🤖 AI정산</button>
-      <button class="ind-svc-tab" onclick="switchIndTab(this,'delivery')" style="padding:7px 16px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">🛵 배달대행</button>
-      <button class="ind-svc-tab" onclick="switchIndTab(this,'universal')" style="padding:7px 16px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">📋 범용정산</button>
-      <button class="ind-svc-tab" onclick="switchIndTab(this,'inventory')" style="padding:7px 16px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer">📦 재고관리</button>
-    </div>
-
-    <div id="ind-ai" class="ind-tab-content anim-4">
-      <div class="ind-tags">
-        <div class="ind-tag">🚚 쿠팡 대리점</div><div class="ind-tag">🧹 청소·파견</div>
-        <div class="ind-tag">🛡️ 보험설계사</div><div class="ind-tag">🏗️ 건설·일용직</div>
-        <div class="ind-tag">🚗 퀵·대리운전</div><div class="ind-tag">💇 뷰티·미용</div>
-        <div class="ind-tag" style="border-color:rgba(0,212,255,.3);color:var(--acc)">❓ 그 외 문의</div>
+    <div class="sec-label a1">04 · MBTICO</div>
+    <div class="sec-title a2">정산 필요 없고<br><span class="grad3">재고·QR·키오스크만</span> 필요하다면</div>
+    <p class="sec-sub a2">소매·카페·미용·학원 — 정산보다 <strong style="color:#fff">현장 운영</strong>이 우선인 업종을 위한 별도 플랫폼</p>
+    <div class="mbtico-cards a3">
+      <div class="mbtico-card">
+        <div class="ico2">📦</div>
+        <h3>재고관리</h3>
+        <p>바코드 스캔으로 입출고 자동 기록. 재고 부족 알림</p>
+        <a href="https://mbtico.kr" class="lnk" target="_blank">mbtico.kr/inventory →</a>
+      </div>
+      <div class="mbtico-card">
+        <div class="ico2">📲</div>
+        <h3>QR 출퇴근</h3>
+        <p>QR 단독 패키지. 월 1,500원/인. 앱 설치 불필요</p>
+        <a href="https://mbtico.kr" class="lnk" target="_blank">mbtico.kr/qr →</a>
+      </div>
+      <div class="mbtico-card">
+        <div class="ico2">🖥️</div>
+        <h3>키오스크 POS</h3>
+        <p>태블릿 하나로 주문·결제·매출 집계까지</p>
+        <a href="https://mbtico.kr" class="lnk" target="_blank">mbtico.kr/kiosk →</a>
       </div>
     </div>
-    <div id="ind-delivery" class="ind-tab-content anim-4" style="display:none">
-      <div class="ind-tags">
-        <div class="ind-tag">🟡 배달의민족</div><div class="ind-tag">🔴 쿠팡이츠</div>
-        <div class="ind-tag">🔵 바로고</div><div class="ind-tag">🟢 생각대로</div>
-        <div class="ind-tag">⚫ 만나플래닛</div>
-        <div class="ind-tag" style="border-color:rgba(0,212,255,.3);color:var(--acc)">❓ 그 외 문의</div>
-      </div>
+    <div class="a4" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:14px 16px;font-size:13px">
+      💡 재고+QR+키오스크 <strong style="color:#f59e0b">콤보 구독 없음</strong> — 필요한 것만 독립 결제<br>
+      <span style="color:var(--text2);font-size:12px">재고 130,000원 / 키오스크 50,000원 / QR 1,500원·인·월 (VAT별도)</span>
     </div>
-    <div id="ind-universal" class="ind-tab-content anim-4" style="display:none">
-      <div class="ind-tags">
-        <div class="ind-tag">📦 CJ·한진·로젠</div><div class="ind-tag">🏪 프랜차이즈</div>
-        <div class="ind-tag">🌿 농산물·축산</div><div class="ind-tag">🏢 용역·인력</div>
-        <div class="ind-tag">🧴 화장품 도매</div><div class="ind-tag">🚐 이사업체</div>
-        <div class="ind-tag" style="border-color:rgba(0,212,255,.3);color:var(--acc)">❓ 그 외 문의</div>
-      </div>
-    </div>
-    <div id="ind-inventory" class="ind-tab-content anim-4" style="display:none">
-      <div class="ind-tags">
-        <div class="ind-tag">🍶 주류·식품</div><div class="ind-tag">💊 의약품</div>
-        <div class="ind-tag">👕 의류·잡화</div><div class="ind-tag">🥩 식자재</div>
-        <div class="ind-tag">🔧 공구·자재</div><div class="ind-tag">🏗️ 건자재</div>
-        <div class="ind-tag" style="border-color:rgba(0,212,255,.3);color:var(--acc)">❓ 그 외 문의</div>
-      </div>
-    </div>
-
-    <div class="anim-5" style="margin-top:16px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:13px;font-weight:800">우리 업종이 목록에 없다면?</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">문의주시면 맞춤 견적 드립니다</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:8px 16px;background:var(--acc);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">💬 카카오 문의</a>
-        <a href="tel:051-711-3103" style="padding:8px 16px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">📞 전화</a>
-      </div>
+    <div class="a4 btn-row">
+      <a href="https://mbtico.kr" class="btn-main" target="_blank">📦 mbtico.kr 바로가기 →</a>
     </div>
   </div>
 </div>
 
-
-<!-- S6: 재고관리 -->
-<div class="slide" id="s6inv">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:350px;height:350px;background:#f59e0b;bottom:-100px;right:-100px;opacity:.07"></div>
-  </div>
-  <div class="slide-content" style="padding:40px 24px 32px;max-width:600px;margin:0 auto">
-    <div class="tag" style="background:rgba(245,158,11,.15);color:#f59e0b;margin-bottom:16px">재고관리</div>
-    <h2 style="font-size:22px;font-weight:900;line-height:1.4;margin-bottom:8px">
-      재고가 언제 떨어지는지<br>매번 직접 확인하시나요?
-    </h2>
-    <p style="font-size:13px;color:var(--text3);margin-bottom:28px">
-      filo.ai.kr — 업종별 재고 자동 관리
-    </p>
-
-    <!-- 업종별 카드 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px">
-
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-        <div style="font-size:20px;margin-bottom:8px">💄</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:6px">뷰티·미용</div>
-        <div style="font-size:11px;color:var(--text3);line-height:1.6">
-          샴푸·염색약·파마약<br>
-          소모품 자동 재고 알림
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-        <div style="font-size:20px;margin-bottom:8px">☕</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:6px">카페</div>
-        <div style="font-size:11px;color:var(--text3);line-height:1.6">
-          원두·시럽·포장재<br>
-          선입선출 재고 관리
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-        <div style="font-size:20px;margin-bottom:8px">🍺</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:6px">주류·바</div>
-        <div style="font-size:11px;color:var(--text3);line-height:1.6">
-          소주·맥주·와인·양주<br>
-          주종별 입출고 관리
-        </div>
-      </div>
-
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px">
-        <div style="font-size:20px;margin-bottom:8px">🍽️</div>
-        <div style="font-size:12px;font-weight:800;margin-bottom:6px">음식점</div>
-        <div style="font-size:11px;color:var(--text3);line-height:1.6">
-          식재료·소모품<br>
-          일별 출고 원가 자동 계산
-        </div>
-      </div>
-
+<!-- ───────────── S5: 업종 ───────────── -->
+<div class="slide" id="s5">
+  <div class="glow" style="width:400px;height:400px;background:var(--acc);bottom:-80px;left:-60px"></div>
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="sec-label a1">05 · INDUSTRIES</div>
+    <div class="sec-title a2">어떤 업종이든<br><span class="grad">맞춤 용어·화면</span> 적용</div>
+    <div class="ind-badges a3">
+      <span class="ind-badge">🍕 음식점·카페</span>
+      <span class="ind-badge">✂️ 미용실·네일</span>
+      <span class="ind-badge">💪 헬스·요가</span>
+      <span class="ind-badge">📚 학원·교습소</span>
+      <span class="ind-badge">👕 소매·잡화</span>
+      <span class="ind-badge">🛏 숙박·펜션</span>
+      <span class="ind-badge">🚗 세차·수리</span>
+      <span class="ind-badge">🏥 병원·클리닉</span>
+      <span class="ind-badge">🚚 물류·배달</span>
+      <span class="ind-badge">🧹 세탁·청소</span>
     </div>
-
-    <!-- 핵심 기능 -->
-    <div style="background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:14px;padding:16px;margin-bottom:20px">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="font-size:16px;flex-shrink:0">📦</span>
-          <div>
-            <div style="font-size:12px;font-weight:800;margin-bottom:2px">업종별 기본 품목 자동 세팅</div>
-            <div style="font-size:11px;color:var(--text3)">업종 선택 한 번으로 기본 재고 항목 자동 등록</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="font-size:16px;flex-shrink:0">🔴</span>
-          <div>
-            <div style="font-size:12px;font-weight:800;margin-bottom:2px">재고 부족 알림</div>
-            <div style="font-size:11px;color:var(--text3)">설정한 최소 수량 이하 시 카카오 알림톡 자동 발송</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <span style="font-size:16px;flex-shrink:0">💰</span>
-          <div>
-            <div style="font-size:12px;font-weight:800;margin-bottom:2px">원가 자동 계산 → 정산 연동</div>
-            <div style="font-size:11px;color:var(--text3)">출고 시 원가 자동 계산, DONWAY 정산에 바로 반영</div>
-          </div>
-        </div>
+    <div class="g2 a4">
+      <div class="card c-blue">
+        <h3>💇 미용실 사용 시</h3>
+        <p style="font-size:12px;color:var(--text2);line-height:1.8">"직원" → 디자이너<br>"정산" → 매출 정산<br>"출퇴근" → 근무 체크</p>
+      </div>
+      <div class="card c-green">
+        <h3>🏋️ 헬스장 사용 시</h3>
+        <p style="font-size:12px;color:var(--text2);line-height:1.8">"직원" → 트레이너<br>"고객" → 회원<br>"회원권" → PT 이용권</p>
       </div>
     </div>
-
-    <div style="display:flex;gap:8px">
-      <a href="/join" style="flex:1;display:block;text-align:center;padding:13px;background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;border-radius:12px;font-size:13px;font-weight:900;text-decoration:none">
-        재고관리 도입 신청 →
-      </a>
-      <a href="https://filo.ai.kr/inventory" target="_blank" style="padding:13px 16px;background:var(--bg2);border:1px solid var(--border);color:var(--text2);border-radius:12px;font-size:12px;text-decoration:none;white-space:nowrap">
-        미리보기
-      </a>
-    </div>
-
+    <p class="a4" style="font-size:12px;color:var(--text3);margin-top:12px">* 업종 선택 시 자동으로 용어가 바뀝니다</p>
   </div>
 </div>
 
-<!-- S7: 업종별 고민 해결 -->
+<!-- ───────────── S6: 요금 ───────────── -->
+<div class="slide" id="s6">
+  <div class="glow" style="width:400px;height:400px;background:var(--acc2);top:-100px;right:-80px;opacity:.1"></div>
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="sec-label a1">06 · PRICING</div>
+    <div class="sec-title a2">작은 곳도 부담 없는<br><span class="grad">투명한 요금제</span></div>
+    <div class="price-cards a3">
+      <div class="price-card">
+        <div class="price-tag">DONWAY · 소규모</div>
+        <div class="price-num">39<span style="font-size:14px;font-weight:500">만원</span></div>
+        <div class="price-sub">월 / ~50명 / VAT별도</div>
+        <div class="price-features">
+          <div><span>AI 정산 자동화</span></div>
+          <div><span>QR 출퇴근</span></div>
+          <div><span>급여·명세서</span></div>
+          <div><span>휴가 관리</span></div>
+        </div>
+      </div>
+      <div class="price-card main">
+        <div class="price-tag">DONWAY · 중규모 🔥</div>
+        <div class="price-num">65<span style="font-size:14px;font-weight:500">만원</span></div>
+        <div class="price-sub">월 / ~150명 / VAT별도</div>
+        <div class="price-features">
+          <div><span>소규모 전체 포함</span></div>
+          <div><span>팀장 수수료 자동</span></div>
+          <div><span>다중 캠프 관리</span></div>
+          <div><span>세무사 연동</span></div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-tag">MBTICO · 재고관리</div>
+        <div class="price-num">13<span style="font-size:14px;font-weight:500">만원</span></div>
+        <div class="price-sub">월 / VAT별도</div>
+        <div class="price-features">
+          <div><span>바코드 입출고</span></div>
+          <div><span>재고 부족 알림</span></div>
+          <div><span>월별 재고 리포트</span></div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-tag">MBTICO · 키오스크</div>
+        <div class="price-num">5<span style="font-size:14px;font-weight:500">만원</span></div>
+        <div class="price-sub">월 / VAT별도</div>
+        <div class="price-features">
+          <div><span>주문·결제 처리</span></div>
+          <div><span>매출 집계</span></div>
+          <div><span>태블릿 최적화</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="a4" style="font-size:12px;color:var(--text3)">* 단체(20개사+) 할인 별도 문의 | QR 단독 1,500원/인/월</div>
+    <div class="a4 btn-row">
+      <a href="https://donway.ai.kr/settle" class="btn-main">7일 무료로 시작 →</a>
+      <a href="https://pf.kakao.com/_xkuxabX/chat" class="btn-ghost" target="_blank">💬 요금 문의</a>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────── S7: 시작 방법 ───────────── -->
 <div class="slide" id="s7">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:400px;height:400px;background:var(--acc);top:-100px;right:-100px;opacity:.06"></div>
-  </div>
-  <div class="slide-content" style="padding:40px 24px 32px;max-width:600px;margin:0 auto">
-    <div class="tag" style="margin-bottom:16px">업종별 맞춤 정산</div>
-    <h2 style="font-size:22px;font-weight:900;line-height:1.4;margin-bottom:8px">
-      대표님의 정산 고민,<br>업종별로 해결해 드립니다
-    </h2>
-    <p style="font-size:13px;color:var(--text3);margin-bottom:28px">
-      어떤 업종을 운영하고 계신가요?
-    </p>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="ind-cards">
-
-      <!-- 물류·배송 -->
-      <div class="ind-card" onclick="_selInd(this,'logistics')">
-        <div class="ind-icon">🤖</div>
-        <div class="ind-name">물류·배송</div>
-        <div class="ind-desc">쿠팡·배달대행 기사별 정산</div>
-      </div>
-
-      <!-- 뷰티·미용 -->
-      <div class="ind-card" onclick="_selInd(this,'beauty')">
-        <div class="ind-icon">💄</div>
-        <div class="ind-name">뷰티·미용</div>
-        <div class="ind-desc">디자이너별 인센티브 계산</div>
-      </div>
-
-      <!-- 건설·현장 -->
-      <div class="ind-card" onclick="_selInd(this,'construction')">
-        <div class="ind-icon">🏗️</div>
-        <div class="ind-name">건설·현장</div>
-        <div class="ind-desc">현장별 인부 일당 정산</div>
-      </div>
-
-      <!-- 보험·영업 -->
-      <div class="ind-card" onclick="_selInd(this,'insurance')">
-        <div class="ind-icon">🛡️</div>
-        <div class="ind-name">보험·영업</div>
-        <div class="ind-desc">설계사별 수수료 자동 계산</div>
-      </div>
-
-      <!-- 요양·돌봄 -->
-      <div class="ind-card" onclick="_selInd(this,'care')">
-        <div class="ind-icon">🏥</div>
-        <div class="ind-name">요양·돌봄</div>
-        <div class="ind-desc">요양사별 방문 수가 정산</div>
-      </div>
-
-      <!-- 학원·교육 -->
-      <div class="ind-card" onclick="_selInd(this,'academy')">
-        <div class="ind-icon">🎓</div>
-        <div class="ind-name">학원·교육</div>
-        <div class="ind-desc">강사별 수강료 정산</div>
-      </div>
-
-      <!-- 골프장 -->
-      <div class="ind-card" onclick="_selInd(this,'golf')">
-        <div class="ind-icon">🏌️</div>
-        <div class="ind-name">골프장·캐디</div>
-        <div class="ind-desc">캐디별 캐디피 자동 정산</div>
-      </div>
-
-      <!-- 기타 -->
-      <div class="ind-card" onclick="_selInd(this,'etc')">
-        <div class="ind-icon">📋</div>
-        <div class="ind-name">그 외 업종</div>
-        <div class="ind-desc">18개 업종 모두 지원</div>
-      </div>
-
-    </div>
-
-    <!-- 업종별 고민 설명 -->
-    <div id="ind-detail" style="display:none;margin-top:20px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:16px;padding:20px;transition:all .3s">
-      <div id="ind-detail-content"></div>
-      <a href="/join" style="display:block;margin-top:16px;padding:13px;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-align:center;text-decoration:none">
-        이 고민 해결하기 →
-      </a>
-    </div>
-
-  </div>
-</div>
-
-<style>
-.ind-card{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:16px 14px;
-  cursor:pointer;
-  transition:all .2s;
-  text-align:center;
-}
-.ind-card:hover,.ind-card.selected{
-  border-color:var(--acc);
-  background:rgba(0,212,255,.08);
-}
-.ind-icon{font-size:24px;margin-bottom:6px}
-.ind-name{font-size:13px;font-weight:800;margin-bottom:4px}
-.ind-desc{font-size:10px;color:var(--text3);line-height:1.4}
-</style>
-
-<script>
-var IND_STORIES={
-  logistics:{
-    icon:'🤖', name:'물류·배송',
-    pain:'기사 30명 정산에 매달 3시간씩 걸리시나요?',
-    problems:[
-      '기사별 배송 건수 집계가 엑셀로 한계',
-      '쿠팡·배달대행 단가 계산이 복잡',
-      '수당·공제 항목이 기사마다 달라 실수 빈번',
-      '명세서 발송에 추가 1~2시간 소요'
-    ],
-    solution:'AI가 엑셀 업로드 한 번으로 기사별 정산을 자동 완료. 카카오 명세서 자동 발송까지.'
-  },
-  beauty:{
-    icon:'💄', name:'뷰티·미용',
-    pain:'급여날 디자이너 인센티브 계산에 하루가 통째로 날아가나요?',
-    problems:[
-      '시술별 단가·인센티브 구성이 디자이너마다 달라 계산 복잡',
-      '컷트·펌·염색 구성 다른데 매출 합산으로 계산하면 분쟁 발생',
-      '프리랜서 3.3% vs 직원 4대보험 처리 혼재',
-      '카드·네이버페이 정산 주기 달라 입금액 헷갈림'
-    ],
-    solution:'시술별 단가 기준 인센티브 자동 계산. 디자이너별 명세서 카카오 자동 발송.'
-  },
-  construction:{
-    icon:'🏗️', name:'건설·현장',
-    pain:'현장별 인부 일당 정산이 매달 복잡하고 실수가 생기나요?',
-    problems:[
-      '현장별·직종별 일당이 달라 수기 계산 오류',
-      '출역 일수 집계가 엑셀로 한계',
-      '4대보험·원천세 공제 계산이 복잡',
-      '인부별 명세서 발송 시간 과다'
-    ],
-    solution:'현장별 출역 일수 × 일당 자동 계산. 직종별 단가 설정으로 오류 제로.'
-  },
-  insurance:{
-    icon:'🛡️', name:'보험·영업',
-    pain:'설계사별 수수료 계산이 매달 분쟁의 시작이 되나요?',
-    problems:[
-      '상품별·설계사별 수수료율이 달라 계산 복잡',
-      '초회·유지·재발 수수료 구분 어려움',
-      '설계사 수십 명 명세서 개별 발송 번거로움',
-      '수수료 기준 불투명으로 분쟁 발생'
-    ],
-    solution:'설계사별 수수료율 설정 후 자동 계산. 명확한 기준으로 분쟁 원천 차단.'
-  },
-  care:{
-    icon:'🏥', name:'요양·돌봄',
-    pain:'요양사별 방문 수가 정산이 매달 헷갈리시나요?',
-    problems:[
-      '방문 횟수·시간별 수가 계산이 복잡',
-      '국민건강보험 청구액과 실지급액 차이 관리',
-      '요양사별 방문 일정 집계 누락',
-      '공단 청구 데이터와 내부 정산 불일치'
-    ],
-    solution:'방문 수가 자동 계산. 요양사별 명세서로 투명한 급여 지급.'
-  },
-  academy:{
-    icon:'🎓', name:'학원·교육',
-    pain:'강사별 수강료 정산이 매달 복잡하게 얽히나요?',
-    problems:[
-      '과목별·시간별 강사료 계산 기준 다양',
-      '수강생 수에 따른 인센티브 구조 복잡',
-      '프리랜서 강사 3.3% 공제 누락 리스크',
-      '강사별 출강 일수 집계 번거로움'
-    ],
-    solution:'과목별 강사료 × 출강 횟수 자동 계산. 강사별 명세서 즉시 발송.'
-  },
-  golf:{
-    icon:'🏌️', name:'골프장·캐디',
-    pain:'캐디별 캐디피 정산이 매달 머리 아프신가요?',
-    problems:[
-      '18홀·9홀 구분 캐디피 계산 복잡',
-      '캐디별 라운드 수 집계 누락',
-      '팁·추가 수당 처리 기준 불명확',
-      '캐디 명세서 발송 시간 과다'
-    ],
-    solution:'라운드 수 × 캐디피 자동 계산. 캐디별 명세서 카카오 자동 발송.'
-  },
-  etc:{
-    icon:'📋', name:'그 외 업종',
-    pain:'인건비 정산이 매달 반복적으로 힘드신가요?',
-    problems:[
-      '직원·프리랜서 혼재로 공제 항목 복잡',
-      '엑셀 수기 계산으로 실수 빈번',
-      '명세서 개별 발송 시간 낭비',
-      '정산 기준 불명확으로 직원 분쟁'
-    ],
-    solution:'18개 업종 지원. 어떤 업종이든 엑셀 업로드 한 번으로 자동 정산.'
-  }
-};
-
-function _selInd(el, key){
-  document.querySelectorAll('.ind-card').forEach(function(c){c.classList.remove('selected');});
-  el.classList.add('selected');
-  var data=IND_STORIES[key];
-  if(!data)return;
-  var detail=document.getElementById('ind-detail');
-  var dc=document.getElementById('ind-detail-content');
-  dc.innerHTML=
-    '<div style="font-size:13px;font-weight:900;color:var(--acc);margin-bottom:8px">'+data.icon+' '+data.name+'</div>'+
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text)">'+data.pain+'</div>'+
-    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">'+
-      data.problems.map(function(p){
-        return '<div style="display:flex;gap:8px;font-size:12px;color:var(--text2)">'+
-          '<span style="color:var(--red);flex-shrink:0">✗</span>'+
-          '<span>'+p+'</span>'+
-        '</div>';
-      }).join('')+
-    '</div>'+
-    '<div style="display:flex;gap:8px;font-size:12px;color:var(--green);font-weight:700">'+
-      '<span>✓</span><span>'+data.solution+'</span>'+
-    '</div>';
-  detail.style.display='block';
-}
-</script>
-
-
-
-<!-- 실시간 연동 슬라이드 -->
-<div class="slide" id="s-sync">
-<div class="glow" style="width:500px;height:500px;background:#7b2fff;top:-150px;left:50%;transform:translateX(-50%);opacity:.1"></div>
-<div class="grid-bg"></div>
-<div style="position:relative;width:100%;max-width:360px">
-  <div class="sec-label anim-1" style="color:#00d4ff">3 PLATFORMS · 1 COMPANY</div>
-  <h2 class="sec-title anim-2" style="font-size:22px">하나의 회사<br>3개 플랫폼 <span style="background:linear-gradient(90deg,#00d4ff,#7b2fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">실시간 연동</span></h2>
-  <p style="font-size:12px;color:rgba(255,255,255,.6);text-align:center;margin-bottom:16px;line-height:1.6" class="anim-2">
-    결제 즉시 모든 기능 활성화<br>데이터는 실시간으로 공유됩니다
-  </p>
-  <div style="display:flex;flex-direction:column;gap:10px" class="anim-3">
-    <div style="background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(123,47,255,.15));border:1px solid rgba(0,212,255,.3);border-radius:12px;padding:14px;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">🤖</div>
-      <div style="font-size:14px;font-weight:900">DONWAY AI정산</div>
-      <div style="font-size:10px;color:#00d4ff;margin-top:2px">donway.ai.kr · 현재 서비스</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:4px">쿠팡 정산 자동화 · 명세서 발송</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:24px">🌊</span>
-          <div>
-            <div style="font-size:13px;font-weight:800">FILO 현장관리</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.5)">filo.ai.kr</div>
-          </div>
+  <div class="glow" style="width:500px;height:500px;background:var(--acc);top:-150px;right:-150px;opacity:.08"></div>
+  <div class="grid-bg"></div>
+  <div class="slide-inner">
+    <div class="sec-label a1">07 · HOW TO START</div>
+    <div class="sec-title a2">3분이면<br><span class="grad">지금 바로 시작</span></div>
+    <div class="steps a3">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-txt">
+          <h4>회원가입 (1분)</h4>
+          <p>donway.ai.kr/settle 접속 → 사업자번호·업종 선택 → 완료</p>
         </div>
-        <div style="font-size:11px;color:rgba(255,255,255,.7);line-height:1.6">재고·QR·키오스크 매출 → 정산 자동 반영</div>
       </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="font-size:24px">🚚</span>
-          <div>
-            <div style="font-size:13px;font-weight:800">엠비티아이 배송앱</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.5)">mbtico.kr</div>
-          </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-txt">
+          <h4>직원 등록 (1분)</h4>
+          <p>직원명단 업로드 or 직접 입력 → QR 자동 생성</p>
         </div>
-        <div style="font-size:11px;color:rgba(255,255,255,.7);line-height:1.6">배송건수·출퇴근 → 급여 자동 계산</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-txt">
+          <h4>바로 사용</h4>
+          <p>출퇴근 QR 배포 → 정산 파일 업로드 → 끝</p>
+        </div>
       </div>
     </div>
-  </div>
-  <div style="margin-top:14px;padding:10px;background:rgba(0,212,255,.08);border-radius:10px;text-align:center;font-size:11px;color:rgba(255,255,255,.6)" class="anim-4">
-    ✅ 하나의 계정으로 3개 서비스 모두 사용<br>
-    ✅ 결제 데이터 → 정산 자동 반영<br>
-    ✅ 출퇴근 → 급여 자동 계산
-  </div>
-</div>
-</div>
-
-
-<!-- 경쟁사 비교 슬라이드 -->
-<div class="slide" id="s-compare">
-<div class="grid-bg"></div>
-<div style="position:relative;width:100%;max-width:380px">
-  <div class="sec-label anim-1" style="color:#00d4ff">WHY DONWAY</div>
-  <h2 class="sec-title anim-2" style="font-size:20px">경쟁사는 일부만<br><span style="background:linear-gradient(90deg,#00d4ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">DONWAY은 전부 됩니다</span></h2>
-  <div class="anim-3" style="overflow-x:auto;margin-top:8px">
-    <table style="width:100%;border-collapse:collapse;background:var(--bg2,#0d1b3e);border-radius:12px;overflow:hidden">
-      <thead>
-        <tr style="background:rgba(255,255,255,.05)">
-          <th style="padding:10px;text-align:left;font-size:11px;color:#94a3b8;font-weight:600">기능</th>
-          <th style="padding:10px;text-align:center;font-size:11px;color:#94a3b8;font-weight:600">경쟁사A</th>
-          <th style="padding:10px;text-align:center;font-size:11px;color:#94a3b8;font-weight:600">경쟁사B</th>
-          <th style="padding:10px;text-align:center;font-size:11px;color:#00d4ff;font-weight:800">DONWAY</th>
-        </tr>
-      </thead>
-      <tbody><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">쿠팡 엑셀 자동 파싱</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">라우트별 자동 정산</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">팀장 수수료 자동 계산</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">AI OCR 주소 인식</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">카카오 명세서 발송</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">법정 급여명세서 발급</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">4대보험 자동 계산</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">FILO·배송앱 실시간 연동</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr><tr><td style="padding:8px 10px;font-size:12px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06)">7일 무료체험</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">✅</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px">❌</td><td style="padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#00d4ff;font-weight:900">✅</td></tr></tbody>
-    </table>
-  </div>
-  <div class="anim-4" style="margin-top:12px;padding:10px 14px;background:rgba(0,102,255,.08);border-radius:10px;text-align:center;font-size:12px;color:#94a3b8">
-    🎁 <strong style="color:#fff">7일 무료체험</strong> · 카드 불필요 · 즉시 사용
-  </div>
-</div>
-</div>
-<!-- S8: CTA -->
-<div class="slide" id="s7">
-  <div class="slide-bg">
-    <div class="grid-bg"></div>
-    <div class="glow" style="width:500px;height:500px;background:var(--acc);top:-150px;right:-150px"></div>
-    <div class="glow" style="width:400px;height:400px;background:var(--acc2);bottom:-100px;left:-100px"></div>
-  </div>
-  <div class="slide-inner" style="text-align:center">
-    <div class="sec-label anim-1">DONWAY · 지금 시작하세요</div>
-    <div class="sec-title anim-2" style="font-size:clamp(26px,5vw,46px)">
-      <span style="background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">7일 무료</span>로<br>직접 확인해보세요
+    <div class="a4" style="background:rgba(108,71,255,.1);border:1px solid rgba(108,71,255,.3);border-radius:12px;padding:14px 16px;margin-bottom:18px">
+      🎁 <strong>오픈 기념 7일 무료</strong> — 카드 등록 없음, 사업자번호 1회 한정
     </div>
-    <div class="sec-sub anim-3" style="max-width:480px;margin:0 auto 28px">
-      가입 즉시 사용 가능 · 신용카드 불필요<br>
-      지금 쓰시는 엑셀 그대로 올리시면 됩니다
+    <div class="a4 btn-row">
+      <a href="https://donway.ai.kr/settle" class="btn-main" style="font-size:15px;padding:16px 32px">🚀 지금 무료로 시작하기</a>
     </div>
-    <div class="anim-4" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:28px">
-      <a href="https://donway.ai.kr/settle" target="_blank" style="padding:16px 32px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px">
-        🚀 무료로 시작하기
-      </a>
-      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:16px 32px;background:#FEE500;color:#1a1a2e;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none">
-        💬 카카오 문의
-      </a>
-      <a href="tel:051-711-3103" style="padding:16px 32px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);border-radius:14px;font-size:15px;font-weight:700;text-decoration:none">
-        📞 051-711-3103
-      </a>
-    </div>
-    <div class="anim-5" style="font-size:12px;color:var(--text3)">
-      (유)엠비티아이 · 사업자번호 373-86-02536 · 부산시 수영구 수영로 668, 607호<br>
-      all@donway.ai.kr · donway.ai.kr
-    </div>
+    <p class="a4" style="font-size:12px;color:var(--text3);margin-top:14px">문의: <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--acc2)">카카오채널</a> · 051-711-3103</p>
   </div>
 </div>
 
 </div><!-- /slides -->
+</div><!-- /slides-wrap -->
 
-<!-- 네비 -->
-<div class="nav-dots" id="navDots"></div>
+<!-- 화살표 -->
 <button class="arrow prev" id="btnPrev" onclick="move(-1)">←</button>
-<div class="slide-counter" id="counter">1 / 10</div>
 <button class="arrow next" id="btnNext" onclick="move(1)">→</button>
 
-<script>
-var cur=0;
-var slides=document.querySelectorAll('.slide');
-var total=slides.length;
+<!-- 도트 -->
+<div class="nav-dots" id="navDots"></div>
+<div class="slide-counter" id="counter">1 / 8</div>
+<div class="swipe-hint">← 스와이프 →</div>
 
-var dots=document.getElementById('navDots');
+<!-- 카카오 플로팅 -->
+<div class="kakao-float">
+  <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 상담하기</a>
+</div>
+
+<script>
+var cur = 0;
+var slidesEl = document.getElementById('slides');
+var slideNodes = document.querySelectorAll('.slide');
+var total = slideNodes.length;
+var dots = document.getElementById('navDots');
+
+// 도트 생성
 for(var i=0;i<total;i++){
   var d=document.createElement('div');
   d.className='dot'+(i===0?' on':'');
@@ -1065,15 +508,12 @@ function updateNav(){
 }
 
 function goTo(n){
-  if(n<0||n>=total||n===cur) return;
-  var dir=n>cur?1:-1;
-  slides[cur].classList.remove('active');
-  slides[cur].classList.add(dir>0?'exit-up':'exit-down');
-  setTimeout(function(){slides[cur].classList.remove('exit-up','exit-down');},600);
+  if(n<0||n>=total||n===cur)return;
   cur=n;
-  slides[cur].classList.add('active');
+  slidesEl.style.transform='translateX(-'+(cur*100)+'%)';
   updateNav();
-  slides[cur].querySelectorAll('[class*="anim-"]').forEach(function(el){
+  // 애니메이션 리셋
+  slideNodes[cur].querySelectorAll('[class*="a"]').forEach(function(el){
     el.style.animation='none';
     requestAnimationFrame(function(){el.style.animation='';});
   });
@@ -1081,78 +521,31 @@ function goTo(n){
 
 function move(d){goTo(cur+d);}
 
+// 키보드
 document.addEventListener('keydown',function(e){
-  if(e.key==='ArrowDown'||e.key==='ArrowRight') move(1);
-  if(e.key==='ArrowUp'||e.key==='ArrowLeft') move(-1);
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') move(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') move(-1);
 });
 
-var ts=0,tx=0;
-document.addEventListener('touchstart',function(e){ts=e.touches[0].clientY;tx=e.touches[0].clientX;});
+// 터치
+var tx=0,ty=0;
+document.addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
 document.addEventListener('touchend',function(e){
-  var dy=ts-e.changedTouches[0].clientY;
   var dx=tx-e.changedTouches[0].clientX;
-  if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>50) move(dy>0?1:-1);
-  else if(Math.abs(dx)>50) move(dx>0?1:-1);
+  var dy=ty-e.changedTouches[0].clientY;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40) move(dx>0?1:-1);
+  else if(Math.abs(dy)>40) move(dy>0?1:-1);
 });
 
+// 휠
 var wt=0;
 document.addEventListener('wheel',function(e){
   var now=Date.now();
-  if(now-wt<800) return; wt=now;
-  move(e.deltaY>0?1:-1);
+  if(now-wt<800)return; wt=now;
+  move(e.deltaX>0||e.deltaY>0?1:-1);
 },{passive:true});
 
-function switchIndTab(btn,tab){
-  document.querySelectorAll('.ind-svc-tab').forEach(function(b){
-    b.style.background='transparent';
-    b.style.borderColor='var(--border)';
-    b.style.color='var(--text2)';
-  });
-  btn.style.background='var(--acc)';
-  btn.style.borderColor='var(--acc)';
-  btn.style.color='#fff';
-  document.querySelectorAll('.ind-tab-content').forEach(function(el){el.style.display='none';});
-  var t=document.getElementById('ind-'+tab);
-  if(t) t.style.display='block';
-}
-
 updateNav();
-</script>
-
-<script>
-// 오픈기념 카운터 실시간 로드
-(function(){
-  function loadCounter(){
-    if(!window.firebase||!window.db) return setTimeout(loadCounter,1000);
-    var db=window.db||firebase.firestore();
-    db.collection('open_event').doc('counter')
-      .onSnapshot(function(snap){
-        var cnt=snap.exists?(snap.data().count||0):0;
-        var total=30;
-        var remain=total-cnt;
-        var pct=Math.min(100,Math.round(cnt/total*100));
-        var bar=document.getElementById('open-bar');
-        var txt=document.getElementById('open-count-text');
-        var rem=document.getElementById('open-remain-text');
-        if(bar) bar.style.width=pct+'%';
-        if(txt) txt.textContent=cnt+'개사 계약 완료 ('+pct+'%)';
-        if(rem){
-          if(remain<=0){
-            rem.textContent='마감되었습니다';
-            rem.style.color='#ef4444';
-          } else {
-            rem.textContent='남은 자리: '+remain+'개사';
-            rem.style.color='#ef4444';
-            rem.style.fontWeight='700';
-          }
-        }
-      },function(){
-        var txt=document.getElementById('open-count-text');
-        if(txt) txt.textContent='곧 오픈 예정';
-      });
-  }
-  loadCounter();
-})();
 </script>
 </body>
 </html>
