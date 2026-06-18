@@ -1,7 +1,7 @@
 {
-  "name": "DONWAY - AI 정산 자동화",
+  "name": "DONWAY · 정산·급여·출퇴근 자동화",
   "short_name": "DONWAY",
-  "description": "AI 자동 정산 · 배달대행 · 세무사 연동 | DONWAY",
+  "description": "정산·급여·QR출퇴근·휴가·세무연동 — 소상공인 업무자동화 플랫폼",
   "start_url": "/settle",
   "scope": "/",
   "display": "standalone",
@@ -12,7 +12,8 @@
   "categories": [
     "business",
     "finance",
-    "productivity"
+    "productivity",
+    "utilities"
   ],
   "icons": [
     {
@@ -30,14 +31,16 @@
     {
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
-      "name": "AI 정산",
+      "name": "📊 정산하기",
       "short_name": "정산",
-      "url": "/settle",
+      "description": "이번 달 정산 바로가기",
+      "url": "/settle?page=settle",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -46,8 +49,21 @@
       ]
     },
     {
-      "name": "직원 관리",
+      "name": "📱 QR 출퇴근",
+      "short_name": "출퇴근",
+      "description": "QR 출퇴근 기록 확인",
+      "url": "/settle?page=attendance",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "👤 직원 관리",
       "short_name": "직원",
+      "description": "직원 목록 및 관리",
       "url": "/settle?page=drivers",
       "icons": [
         {
@@ -57,20 +73,10 @@
       ]
     },
     {
-      "name": "도입 신청",
-      "short_name": "신청",
-      "url": "/join",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "어드민",
-      "short_name": "어드민",
-      "url": "/admin_sub",
+      "name": "💰 급여 계산",
+      "short_name": "급여",
+      "description": "이번 달 급여 자동계산",
+      "url": "/settle?page=hourly_settle",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -78,5 +84,7 @@
         }
       ]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
