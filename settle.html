@@ -20596,8 +20596,7 @@ function _attDownloadExcel(ym) {
         // CSV 생성 (EXCEL 호환 UTF-8 BOM)
         var csv = '﻿' + rows.map(function(r){
           return r.map(function(c){ return '"'+(String(c||'').replace(/"/g,'""'))+'"'; }).join(',');
-        }).join('
-');
+        }).join('\n');
         var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
