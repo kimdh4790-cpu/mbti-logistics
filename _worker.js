@@ -1602,20 +1602,19 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const signature = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
         const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`;
 
+        // 톡 실패 시 SMS 자동 대체 (fallbackText 있으면 ATA, 없으면 SMS fallback)
         const payload = {
           messages: [{
             to: to.replace(/[^0-9]/g,''),
             from: '05171133103',
+            type: 'ATA',           // 카카오 알림톡 우선
+            text: fallbackText || '', // 톡 실패 시 SMS로 대체 발송
             kakaoOptions: {
               pfId: pfId || 'KA01PF260520195942036aXUy629GdrA',
               templateCode: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
-              variables: variables || {}
-            },
-            type: 'ATA', // 알림톡
-            ...(fallbackText ? {
-              text: fallbackText,
-              type: 'ATA'
-            } : {})
+              variables: variables || {},
+              disableSms: false      // false = 톡 실패 시 SMS 자동 전환
+            }
           }]
         };
 
