@@ -20921,7 +20921,7 @@ function pageMessage() {
       +'</div>'
       +'<div id="msg-content"></div>'
       +'</div>';
-    window._msgChannel = 'sms';
+    window._msgChannel = 'kakao';
     window._msgRecipients = [];
     window._msgTemplateKey = 'custom';
     _msgTab('send');
@@ -20948,9 +20948,9 @@ function _msgRenderSend(el) {
   el.innerHTML = '<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">📡 발송 채널</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:16px">'
-    +'<button id="msg-ch-sms" onclick="_msgSelCh(\'sms\')" class="btn btn-blue" style="font-size:12px">📱 SMS</button>'
-    +'<button id="msg-ch-kakao" onclick="_msgSelCh(\'kakao\')" class="btn" style="font-size:12px">💛 카카오</button>'
-    +'<button id="msg-ch-both" onclick="_msgSelCh(\'both\')" class="btn" style="font-size:12px">📡 둘다</button>'
+    +'<button id="msg-ch-kakao" onclick="_msgSelCh(\'kakao\')" class="btn btn-blue" style="font-size:12px">💛 카카오 알림톡</button>'
+    +'<button id="msg-ch-sms" onclick="_msgSelCh(\'sms\')" class="btn" style="font-size:12px">📱 SMS만</button>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">💡 카카오 선택 시 톡 실패하면 자동으로 문자로 대체 발송됩니다</div>'
     +'</div>'
     +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">📝 템플릿</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">'+tplBtns+'</div>'
@@ -20985,7 +20985,7 @@ function _msgRenderSend(el) {
 
 function _msgSelCh(ch) {
   window._msgChannel=ch;
-  ['sms','kakao','both'].forEach(function(c){
+  ['sms','kakao','both','kakao_fallback'].forEach(function(c){
     var b=document.getElementById('msg-ch-'+c);
     if(b) b.className=(c===ch)?'btn btn-blue':'btn';
   });
@@ -21092,14 +21092,25 @@ async function _msgSendAll() {
         var data=await res.json();
         if(data.ok)ok++;else fail++;
       }
-      if(channel==='kakao'||channel==='both'){
+      if(channel==='kakao'||channel==='kakao_fallback'){
         var tplKey=window._msgTemplateKey||'custom';
         var tpl=ALIMTALK_TEMPLATES[tplKey];
         if(tpl&&tpl.code){
-          await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({to:r.phone,templateCode:tpl.code,variables:{'#{이름}':r.name||'','#{회사명}':coName},fallbackText:msg})});
+          // fallbackText 포함 → 톡 실패 시 SMS 자동 대체 (disableSms:false)
+          var kRes=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({to:r.phone,templateCode:tpl.code,
+              variables:{'#{이름}':r.name||'','#{회사명}':coName},
+              fallbackText:msg  // 톡 실패 → 이 내용으로 SMS 자동 전환
+            })});
+          var kData=await kRes.json();
           ok++;
-        } else { toast('알림톡 템플릿 코드 없음 — SMS로 전환'); }
+        } else {
+          // 템플릿 코드 없음 → SMS로 직접 발송
+          var res2=await fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({messages:[{to:r.phone.replace(/[^0-9]/g,''),text:msg}]})});
+          var d2=await res2.json();
+          if(d2.ok)ok++;else fail++;
+        }
       }
     } catch(e){fail++;}
     if(_db){
