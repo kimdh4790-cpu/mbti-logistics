@@ -9947,6 +9947,9 @@ function pageRoster(){
   });
 }
 
+function _rosterPDFBtn(ym){
+  return '<button onclick="_rosterDownloadPDF(\''+ym+'\')" class="btn" style="font-size:11px;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff">📄 PDF</button>';
+}
 function _renderRosterPaywall(){
   var content=document.getElementById('content');
   // ★ 데모 근무표 미리보기 생성
@@ -20237,6 +20240,672 @@ function _shareJoinKakao(){
   }
 }
 
+
+// ═══════════════════════════════════════════════════════
+// ★ 고도화 기능 패키지
+// ① 시간단위 휴가
+// ② 보상휴가 관리
+// ③ 근무일정 PDF 다운로드
+// ④ 급여명세서 자동 발송
+// ⑤ 고객/회원 관리 (회원권·예약)
+// ⑥ FCM 출근 누락 알림
+// ═══════════════════════════════════════════════════════
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ① 시간단위 휴가
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _leaveApplyHourly() {
+  var did = _CU.dealerId||'';
+  var uid = _CU.driverId||_CU.userId||_CU.uid||'';
+  var today = new Date().toISOString().slice(0,10);
+  var mo = document.createElement('div');
+  mo.className='mo show'; mo.id='mo-leave-h';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:420px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">⏰ 시간단위 휴가 신청</div>'
+    +'<div style="display:grid;gap:10px;margin-bottom:16px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">날짜</label>'
+    +'<input type="date" id="lh-date" value="'+today+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">시작 시간</label>'
+    +'<input type="time" id="lh-start" value="09:00" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">종료 시간</label>'
+    +'<input type="time" id="lh-end" value="12:00" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">사유</label>'
+    +'<input type="text" id="lh-reason" placeholder="병원, 관공서 방문 등" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById('mo-leave-h').remove()" class="btn" style="flex:1">취소</button>'
+    +'<button onclick="_submitHourlyLeave()" class="btn btn-blue" style="flex:2">신청</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _submitHourlyLeave() {
+  var did=_CU.dealerId||''; var uid=_CU.driverId||_CU.userId||_CU.uid||'';
+  var date=document.getElementById('lh-date').value;
+  var start=document.getElementById('lh-start').value;
+  var end=document.getElementById('lh-end').value;
+  var reason=document.getElementById('lh-reason').value;
+  if(!date||!start||!end){toast('날짜와 시간을 입력하세요');return;}
+  var sh=parseFloat(start.split(':')[0])+parseFloat(start.split(':')[1])/60;
+  var eh=parseFloat(end.split(':')[0])+parseFloat(end.split(':')[1])/60;
+  if(eh<=sh){toast('종료 시간이 시작 시간보다 빠릅니다');return;}
+  var hours=Math.round((eh-sh)*10)/10;
+  _db.collection('leaves').add({
+    dealerId:did, userId:uid, name:_CU.name||'',
+    type:'hourly', leaveType:'annual',
+    date:date, startTime:start, endTime:end,
+    hours:hours, reason:reason,
+    status:'pending', isHourly:true,
+    createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ 시간 휴가 신청 완료 ('+hours+'시간)');
+    document.getElementById('mo-leave-h').remove();
+    pageLeave();
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ② 보상휴가 관리
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _leaveRenderCompLeave(el) {
+  var did=_CU.dealerId||'';
+  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
+  _db.collection('comp_leaves').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap) {
+      var rows='';
+      snap.forEach(function(doc) {
+        var d=doc.data();
+        var statusC=d.status==='active'?'✅ 사용가능':'🔴 소진';
+        rows+='<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:8px 10px;font-weight:700">'+esc(d.name||d.userId||'')+'</td>'
+          +'<td style="padding:8px;text-align:center">'+esc(d.reason||'연장근무')+'</td>'
+          +'<td style="padding:8px;text-align:center;font-weight:700;color:var(--blue)">'+( d.hours||0)+'h</td>'
+          +'<td style="padding:8px;text-align:center">'+(d.usedHours||0)+'h</td>'
+          +'<td style="padding:8px;text-align:center">'+esc(d.expiry||'-')+'</td>'
+          +'<td style="padding:8px;text-align:center;font-size:11px">'+statusC+'</td>'
+          +'</tr>';
+      });
+      el.innerHTML='<div style="margin-bottom:10px;display:flex;justify-content:flex-end">'
+        +'<button onclick="_addCompLeaveModal()" class="btn btn-blue" style="font-size:12px">➕ 보상휴가 부여</button>'
+        +'</div>'
+        +(rows?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+          +'<tr style="background:var(--bg3)"><th style="padding:8px 10px;text-align:left">직원</th>'
+          +'<th style="padding:8px">사유</th><th style="padding:8px">부여</th>'
+          +'<th style="padding:8px">사용</th><th style="padding:8px">만료</th>'
+          +'<th style="padding:8px">상태</th></tr>'+rows
+          +'</table></div>'
+        :'<div class="empty">보상휴가 내역 없음</div>');
+    });
+}
+
+function _addCompLeaveModal() {
+  var did=_CU.dealerId||'';
+  var mo=document.createElement('div');
+  mo.className='mo show'; mo.id='mo-comp-leave';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var expiry=new Date(); expiry.setMonth(expiry.getMonth()+3);
+  mo.innerHTML='<div class="md" style="max-width:400px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">🎁 보상휴가 부여</div>'
+    +'<div style="display:grid;gap:10px;margin-bottom:16px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">직원 선택</label>'
+    +'<select id="cl-uid" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"><option value="">로딩중...</option></select></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">부여 시간 (h)</label>'
+    +'<input type="number" id="cl-hours" value="8" min="1" max="100" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">사유</label>'
+    +'<input type="text" id="cl-reason" placeholder="휴일근무 보상" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">만료일</label>'
+    +'<input type="date" id="cl-expiry" value="'+expiry.toISOString().slice(0,10)+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById('mo-comp-leave').remove()" class="btn" style="flex:1">취소</button>'
+    +'<button onclick="_saveCompLeave()" class="btn btn-blue" style="flex:2">부여</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+  // 직원 목록 로드
+  _db.collection('drivers').where('dealerId','==',did).where('is_active','==',true)
+    .get().then(function(snap){
+      var sel=document.getElementById('cl-uid');
+      if(!sel)return;
+      sel.innerHTML='<option value="">직원 선택</option>';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        sel.innerHTML+='<option value="'+doc.id+'|'+esc(d.name||'')+'">'+esc(d.name||doc.id)+'</option>';
+      });
+    });
+}
+
+function _saveCompLeave() {
+  var did=_CU.dealerId||'';
+  var selVal=(document.getElementById('cl-uid')||{}).value||'';
+  var parts=selVal.split('|');
+  var uid=parts[0]; var name=parts[1]||uid;
+  var hours=parseFloat((document.getElementById('cl-hours')||{}).value)||0;
+  var reason=(document.getElementById('cl-reason')||{}).value||'';
+  var expiry=(document.getElementById('cl-expiry')||{}).value||'';
+  if(!uid||!hours){toast('직원과 시간을 입력하세요');return;}
+  _db.collection('comp_leaves').add({
+    dealerId:did, userId:uid, name:name,
+    hours:hours, usedHours:0, reason:reason,
+    expiry:expiry, status:'active',
+    createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ 보상휴가 '+hours+'h 부여 완료');
+    document.getElementById('mo-comp-leave').remove();
+    _leaveTab('comp');
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ③ 근무일정 PDF 다운로드
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _rosterDownloadPDF(ym) {
+  var did=_CU.dealerId||'';
+  if(!did){toast('로그인 필요');return;}
+  toast('📄 PDF 생성 중...');
+  _db.collection('roster_week').where('dealerId','==',did)
+    .where('ym','==',ym).get()
+    .then(function(snap) {
+      var coName=(_CU.companyName||_CU.name||'회사');
+      var html='<!DOCTYPE html><html><head><meta charset="utf-8">'
+        +'<title>'+ym+' 근무표</title>'
+        +'<style>body{font-family:sans-serif;font-size:11px;padding:20px}'
+        +'table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px 8px;text-align:center}'
+        +'th{background:#f0f4ff;font-weight:700}.name{text-align:left;font-weight:700}'
+        +'@media print{body{margin:0}}</style></head>'
+        +'<body><h2 style="margin-bottom:4px">'+esc(coName)+' 근무표</h2>'
+        +'<div style="color:#666;margin-bottom:12px">'+ym+'</div>';
+      var entries=[];
+      snap.forEach(function(doc){entries.push(doc.data());});
+      if(!entries.length){toast('근무표 데이터 없음');return;}
+      // 직원별 정리
+      var byDriver={};
+      entries.forEach(function(e){
+        var uid=e.userId||e.driverId||'';
+        if(!byDriver[uid]) byDriver[uid]={name:e.name||uid,days:{}};
+        byDriver[uid].days[e.date]=e.type||'출근';
+      });
+      var dates=Array.from(new Set(entries.map(function(e){return e.date;}))).sort();
+      html+='<table><thead><tr><th class="name">직원</th>'
+        +dates.map(function(d){return '<th>'+d.slice(5)+'</th>';}).join('')
+        +'</tr></thead><tbody>';
+      Object.values(byDriver).forEach(function(dv){
+        html+='<tr><td class="name">'+esc(dv.name)+'</td>'
+          +dates.map(function(d){
+            var t=dv.days[d]||'-';
+            var c=t==='출근'?'#1d4ed8':t==='휴무'?'#6b7280':'#dc2626';
+            return '<td style="color:'+c+';font-weight:700">'+t+'</td>';
+          }).join('')+'</tr>';
+      });
+      html+='</tbody></table></body></html>';
+      var w=window.open('','_blank');
+      if(w){w.document.write(html);w.document.close();w.print();}
+      else toast('팝업 차단을 해제해 주세요');
+    }).catch(function(e){toast('❌ '+e.message);});
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ④ 급여명세서 자동 발송
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function _sendPayslip(uid, name, ym, payData) {
+  var did=_CU.dealerId||'';
+  try {
+    // FCM으로 급여명세서 알림
+    var tokens=[];
+    var uSnap=await _db.collection('drivers').doc(uid).get();
+    if(uSnap.exists){
+      var ud=uSnap.data();
+      (ud.fcmTokens||[]).forEach(function(t){if(t.token)tokens.push(t.token);});
+    }
+    if(!tokens.length){toast(name+': FCM 토큰 없음');return false;}
+    // 급여명세서 Firestore 저장
+    await _db.collection('payslips').add({
+      dealerId:did, userId:uid, name:name, ym:ym,
+      totalPay:payData.totalPay||0,
+      basePay:payData.basePay||0,
+      overtimePay:payData.overtimePay||0,
+      nightPay:payData.nightPay||0,
+      deductions:payData.deductions||0,
+      netPay:payData.netPay||0,
+      workDays:payData.workDays||0,
+      totalHours:payData.totalHours||0,
+      sentAt:new Date().toISOString()
+    });
+    // FCM 발송
+    var fmt=function(n){return Math.round(n||0).toLocaleString('ko-KR');};
+    var msg=ym+' 급여명세서
+'
+      +'총 근무: '+( payData.workDays||0)+'일 '+(payData.totalHours||0)+'h
+'
+      +'기본급: '+fmt(payData.basePay)+'원
+'
+      +'연장수당: '+fmt(payData.overtimePay)+'원
+'
+      +'공제: '+fmt(payData.deductions)+'원
+'
+      +'실수령액: '+fmt(payData.netPay)+'원';
+    await fetch('/fcm/send',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:tokens,title:'💰 '+ym+' 급여명세서',body:msg,data:{type:'payslip',ym:ym}})});
+    return true;
+  } catch(e){console.warn('payslip send:',e.message);return false;}
+}
+
+async function _sendAllPayslips(ym) {
+  var did=_CU.dealerId||'';
+  if(!confirm(ym+' 급여명세서를 전직원에게 발송합니까?'))return;
+  toast('📤 발송 중...');
+  var snap=await _db.collection('hourly_settlements')
+    .where('dealerId','==',did).where('ym','==',ym).get();
+  var cnt=0;
+  for(var i=0;i<snap.docs.length;i++){
+    var d=snap.docs[i].data();
+    var ok=await _sendPayslip(d.userId||d.driverId||'',d.name||'',ym,{
+      totalPay:d.totalPay||d.pay||0,
+      basePay:d.basePay||d.pay||0,
+      overtimePay:d.overtimePay||0,
+      nightPay:d.nightPay||0,
+      deductions:d.deductions||0,
+      netPay:d.netPay||d.totalPay||d.pay||0,
+      workDays:d.workDays||0,
+      totalHours:d.totalHours||0
+    });
+    if(ok)cnt++;
+  }
+  toast('✅ '+cnt+'명 급여명세서 발송 완료');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⑤ 고객/회원 관리 (회원권·예약)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function pageCustomer() {
+  document.getElementById('page-title').textContent='👤 고객 관리';
+  _requirePlan('filo', function(){
+    var el=document.getElementById('content');
+    var did=_CU.dealerId||'';
+    el.innerHTML='<div style="max-width:900px;margin:0 auto">'
+      +'<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
+      +'<button id="ct-tab-list" class="btn btn-blue" onclick="_ctTab('list')" style="font-size:12px">👥 고객 목록</button>'
+      +'<button id="ct-tab-member" class="btn" onclick="_ctTab('member')" style="font-size:12px">🎫 회원권</button>'
+      +'<button id="ct-tab-expire" class="btn" onclick="_ctTab('expire')" style="font-size:12px">⏰ 만료 예정</button>'
+      +'<button id="ct-tab-reserve" class="btn" onclick="_ctTab('reserve')" style="font-size:12px">📅 예약 현황</button>'
+      +'<button onclick="_ctAddCustomer()" class="btn btn-teal" style="font-size:12px;margin-left:auto">➕ 고객 등록</button>'
+      +'</div>'
+      +'<div id="ct-content"></div>'
+      +'</div>';
+    _ctTab('list');
+  });
+}
+
+function _ctTab(tab) {
+  ['list','member','expire','reserve'].forEach(function(t){
+    var btn=document.getElementById('ct-tab-'+t);
+    if(btn)btn.className=(t===tab)?'btn btn-blue':'btn';
+  });
+  var el=document.getElementById('ct-content');
+  if(!el)return;
+  if(tab==='list')_ctRenderList(el);
+  else if(tab==='member')_ctRenderMembership(el);
+  else if(tab==='expire')_ctRenderExpiring(el);
+  else if(tab==='reserve')_ctRenderReservations(el);
+}
+
+function _ctRenderList(el) {
+  var did=_CU.dealerId||'';
+  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
+  _db.collection('customers').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap) {
+      if(snap.empty){
+        el.innerHTML='<div class="empty"><div class="empty-icon">👥</div>'
+          +'고객이 없습니다<br><button onclick="_ctAddCustomer()" class="btn btn-blue" style="margin-top:12px">➕ 첫 고객 등록</button></div>';
+        return;
+      }
+      var rows='';
+      snap.forEach(function(doc){
+        var d=doc.data(); var cid=doc.id;
+        var mem=d.membership||{};
+        var memBadge=mem.type?'<span style="font-size:10px;background:rgba(0,102,255,.15);color:var(--blue);padding:2px 7px;border-radius:10px;font-weight:700">'+esc(mem.type)+'</span>':'';
+        var expBadge='';
+        if(mem.expiry){
+          var daysLeft=Math.ceil((new Date(mem.expiry)-new Date())/(1000*60*60*24));
+          if(daysLeft<=0) expBadge='<span style="font-size:10px;background:rgba(239,68,68,.15);color:#ef4444;padding:2px 7px;border-radius:10px;font-weight:700">만료</span>';
+          else if(daysLeft<=7) expBadge='<span style="font-size:10px;background:rgba(245,158,11,.15);color:#f59e0b;padding:2px 7px;border-radius:10px;font-weight:700">D-'+daysLeft+'</span>';
+        }
+        rows+='<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="_ctDetail(''+cid+'')">'
+          +'<td style="padding:10px;font-weight:700">'+esc(d.name||'이름없음')+'</td>'
+          +'<td style="padding:8px">'+esc(d.phone||'-')+'</td>'
+          +'<td style="padding:8px;text-align:center">'+memBadge+' '+expBadge+'</td>'
+          +'<td style="padding:8px;text-align:center;font-size:11px;color:var(--text3)">'+esc(d.lastVisit||'-')+'</td>'
+          +'<td style="padding:8px;text-align:center">'
+          +'<button onclick="event.stopPropagation();_ctAddMembership(''+cid+'',''+esc(d.name||'')+'')" class="btn" style="font-size:10px;padding:3px 8px">🎫 회원권</button>'
+          +'</td></tr>';
+      });
+      el.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<tr style="background:var(--bg3)">'
+        +'<th style="padding:10px;text-align:left">이름</th>'
+        +'<th style="padding:8px">연락처</th>'
+        +'<th style="padding:8px">회원권</th>'
+        +'<th style="padding:8px">마지막방문</th>'
+        +'<th style="padding:8px">관리</th>'
+        +'</tr>'+rows+'</table></div>';
+    }).catch(function(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
+}
+
+function _ctRenderMembership(el) {
+  var did=_CU.dealerId||'';
+  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
+  _db.collection('memberships').where('dealerId','==',did)
+    .orderBy('createdAt','desc').limit(100).get()
+    .then(function(snap){
+      if(snap.empty){el.innerHTML='<div class="empty">회원권 내역 없음</div>';return;}
+      var rows='';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var daysLeft=d.expiry?Math.ceil((new Date(d.expiry)-new Date())/(1000*60*60*24)):null;
+        var statusC=daysLeft===null?'#6b7280':daysLeft<=0?'#ef4444':daysLeft<=7?'#f59e0b':'#22c55e';
+        var statusL=daysLeft===null?'횟수권':daysLeft<=0?'만료':daysLeft<=7?'D-'+daysLeft:'유효';
+        rows+='<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:10px;font-weight:700">'+esc(d.customerName||'')+'</td>'
+          +'<td style="padding:8px;text-align:center"><span style="background:rgba(0,102,255,.12);color:var(--blue);padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700">'+esc(d.type||'기간권')+'</span></td>'
+          +'<td style="padding:8px;text-align:center">'+(d.expiry||d.remainCount+'회')+'</td>'
+          +'<td style="padding:8px;text-align:center"><span style="color:'+statusC+';font-weight:700;font-size:11px">'+statusL+'</span></td>'
+          +'<td style="padding:8px;text-align:center;font-size:11px;color:var(--text3)">'+esc(d.startDate||'')+'</td>'
+          +'</tr>';
+      });
+      el.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<tr style="background:var(--bg3)">'
+        +'<th style="padding:10px;text-align:left">고객</th><th style="padding:8px">유형</th>'
+        +'<th style="padding:8px">만료/잔여</th><th style="padding:8px">상태</th><th style="padding:8px">시작일</th>'
+        +'</tr>'+rows+'</table></div>';
+    });
+}
+
+function _ctRenderExpiring(el) {
+  var did=_CU.dealerId||'';
+  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
+  var in7=new Date(); in7.setDate(in7.getDate()+7);
+  var in7s=in7.toISOString().slice(0,10);
+  var today=new Date().toISOString().slice(0,10);
+  _db.collection('memberships').where('dealerId','==',did)
+    .where('expiry','>=',today).where('expiry','<=',in7s)
+    .get().then(function(snap){
+      if(snap.empty){el.innerHTML='<div class="empty"><div class="empty-icon">✅</div>7일 내 만료 예정 없음</div>';return;}
+      var rows='';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var daysLeft=Math.ceil((new Date(d.expiry)-new Date())/(1000*60*60*24));
+        rows+='<tr style="border-bottom:1px solid var(--border);background:rgba(245,158,11,.05)">'
+          +'<td style="padding:10px;font-weight:700">'+esc(d.customerName||'')+'</td>'
+          +'<td style="padding:8px">'+esc(d.phone||'-')+'</td>'
+          +'<td style="padding:8px;text-align:center">'+esc(d.expiry||'')+'</td>'
+          +'<td style="padding:8px;text-align:center"><span style="color:#f59e0b;font-weight:700">D-'+daysLeft+'</span></td>'
+          +'<td style="padding:8px;text-align:center">'
+          +'<button onclick="_ctSendExpireAlert(''+esc(d.userId||'')+'',''+esc(d.customerName||'')+'',''+esc(d.expiry||'')+'')" class="btn" style="font-size:10px;padding:3px 8px">📲 알림</button>'
+          +'</td></tr>';
+      });
+      el.innerHTML='<div style="margin-bottom:10px;font-size:12px;color:var(--text3)">⚠️ 7일 이내 만료 예정 고객</div>'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<tr style="background:var(--bg3)"><th style="padding:10px;text-align:left">고객</th>'
+        +'<th style="padding:8px">연락처</th><th style="padding:8px">만료일</th>'
+        +'<th style="padding:8px">D-Day</th><th style="padding:8px">알림</th></tr>'
+        +rows+'</table></div>';
+    });
+}
+
+function _ctRenderReservations(el) {
+  var did=_CU.dealerId||'';
+  var today=new Date().toISOString().slice(0,10);
+  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
+  _db.collection('reservations').where('dealerId','==',did)
+    .where('date','>=',today).orderBy('date','asc').orderBy('time','asc').limit(50).get()
+    .then(function(snap){
+      if(snap.empty){
+        el.innerHTML='<div class="empty"><div class="empty-icon">📅</div>예약 없음'
+          +'<br><button onclick="_ctAddReservation()" class="btn btn-blue" style="margin-top:12px">➕ 예약 추가</button></div>';
+        return;
+      }
+      var rows='';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var statusC=d.status==='confirmed'?'#22c55e':d.status==='cancelled'?'#ef4444':'#f59e0b';
+        var statusL=d.status==='confirmed'?'확정':d.status==='cancelled'?'취소':'대기';
+        rows+='<tr style="border-bottom:1px solid var(--border)">'
+          +'<td style="padding:10px;font-weight:700">'+esc(d.customerName||'')+'</td>'
+          +'<td style="padding:8px">'+esc(d.date||'')+'</td>'
+          +'<td style="padding:8px;text-align:center">'+esc(d.time||'')+'</td>'
+          +'<td style="padding:8px">'+esc(d.service||'')+'</td>'
+          +'<td style="padding:8px;text-align:center"><span style="color:'+statusC+';font-size:11px;font-weight:700">'+statusL+'</span></td>'
+          +'<td style="padding:8px;text-align:center">'
+          +'<button onclick="_ctConfirmReservation(''+doc.id+'')" class="btn" style="font-size:10px;padding:3px 7px">확정</button>'
+          +'</td></tr>';
+      });
+      el.innerHTML='<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'
+        +'<button onclick="_ctAddReservation()" class="btn btn-blue" style="font-size:12px">➕ 예약 추가</button></div>'
+        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<tr style="background:var(--bg3)">'
+        +'<th style="padding:10px;text-align:left">고객</th><th style="padding:8px">날짜</th>'
+        +'<th style="padding:8px">시간</th><th style="padding:8px">서비스</th>'
+        +'<th style="padding:8px">상태</th><th style="padding:8px">처리</th>'
+        +'</tr>'+rows+'</table></div>';
+    });
+}
+
+function _ctAddCustomer() {
+  var did=_CU.dealerId||'';
+  var mo=document.createElement('div'); mo.className='mo show'; mo.id='mo-add-cust';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:400px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">➕ 고객 등록</div>'
+    +'<div style="display:grid;gap:10px;margin-bottom:16px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">이름 *</label>'
+    +'<input type="text" id="ac-name" placeholder="홍길동" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">연락처</label>'
+    +'<input type="tel" id="ac-phone" placeholder="010-0000-0000" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">생년월일</label>'
+    +'<input type="date" id="ac-birth" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">메모</label>'
+    +'<input type="text" id="ac-memo" placeholder="특이사항, 알레르기 등" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById('mo-add-cust').remove()" class="btn" style="flex:1">취소</button>'
+    +'<button onclick="_saveCustomer()" class="btn btn-blue" style="flex:2">등록</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _saveCustomer() {
+  var did=_CU.dealerId||'';
+  var name=(document.getElementById('ac-name')||{}).value||'';
+  var phone=(document.getElementById('ac-phone')||{}).value||'';
+  var birth=(document.getElementById('ac-birth')||{}).value||'';
+  var memo=(document.getElementById('ac-memo')||{}).value||'';
+  if(!name){toast('이름을 입력하세요');return;}
+  _db.collection('customers').add({
+    dealerId:did, name:name, phone:phone,
+    birth:birth, memo:memo, visitCount:0,
+    createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ 고객 등록 완료');
+    document.getElementById('mo-add-cust').remove();
+    _ctTab('list');
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _ctAddMembership(customerId, customerName) {
+  var did=_CU.dealerId||'';
+  var now=new Date(); var exp=new Date(now); exp.setMonth(exp.getMonth()+1);
+  var mo=document.createElement('div'); mo.className='mo show'; mo.id='mo-add-mem';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:420px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">🎫 회원권 발급</div>'
+    +'<div style="font-size:13px;color:var(--brand);margin-bottom:16px">'+esc(customerName)+'</div>'
+    +'<div style="display:grid;gap:10px;margin-bottom:16px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">회원권 유형</label>'
+    +'<select id="am-type" onchange="_amTypeChange()" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+    +'<option value="period">📅 기간권</option>'
+    +'<option value="count">🔢 횟수권</option>'
+    +'<option value="amount">💰 금액권</option>'
+    +'</select></div>'
+    +'<div id="am-period-row"><label style="font-size:11px;color:var(--text3);font-weight:700">만료일</label>'
+    +'<input type="date" id="am-expiry" value="'+exp.toISOString().slice(0,10)+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div id="am-count-row" style="display:none"><label style="font-size:11px;color:var(--text3);font-weight:700">총 횟수</label>'
+    +'<input type="number" id="am-count" value="10" min="1" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div id="am-amount-row" style="display:none"><label style="font-size:11px;color:var(--text3);font-weight:700">충전 금액 (원)</label>'
+    +'<input type="number" id="am-amount" value="100000" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">결제 금액 (원)</label>'
+    +'<input type="number" id="am-price" value="0" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById('mo-add-mem').remove()" class="btn" style="flex:1">취소</button>'
+    +'<button onclick="_saveMembership(''+customerId+'',''+esc(customerName)+'')" class="btn btn-blue" style="flex:2">발급</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _amTypeChange() {
+  var t=(document.getElementById('am-type')||{}).value||'period';
+  document.getElementById('am-period-row').style.display=t==='period'?'':'none';
+  document.getElementById('am-count-row').style.display=t==='count'?'':'none';
+  document.getElementById('am-amount-row').style.display=t==='amount'?'':'none';
+}
+
+function _saveMembership(customerId, customerName) {
+  var did=_CU.dealerId||'';
+  var type=(document.getElementById('am-type')||{}).value||'period';
+  var price=parseFloat((document.getElementById('am-price')||{}).value)||0;
+  var data={dealerId:did, customerId:customerId, customerName:customerName,
+    type:type, price:price, startDate:new Date().toISOString().slice(0,10),
+    createdAt:new Date().toISOString()};
+  if(type==='period') data.expiry=(document.getElementById('am-expiry')||{}).value||'';
+  else if(type==='count'){data.totalCount=parseInt((document.getElementById('am-count')||{}).value)||10; data.remainCount=data.totalCount;}
+  else if(type==='amount'){data.totalAmount=parseFloat((document.getElementById('am-amount')||{}).value)||0; data.remainAmount=data.totalAmount;}
+  _db.collection('memberships').add(data).then(function(){
+    // 고객 문서에도 회원권 정보 업데이트
+    var upd={membership:{type:type,price:price,startDate:data.startDate}};
+    if(type==='period') upd.membership.expiry=data.expiry;
+    else if(type==='count') upd.membership.remainCount=data.totalCount;
+    else if(type==='amount') upd.membership.remainAmount=data.totalAmount;
+    _db.collection('customers').doc(customerId).update(upd);
+    toast('✅ 회원권 발급 완료');
+    document.getElementById('mo-add-mem').remove();
+    _ctTab('member');
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _ctAddReservation() {
+  var did=_CU.dealerId||'';
+  var today=new Date().toISOString().slice(0,10);
+  var mo=document.createElement('div'); mo.className='mo show'; mo.id='mo-add-rsv';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:400px">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">📅 예약 추가</div>'
+    +'<div style="display:grid;gap:10px;margin-bottom:16px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">고객 이름</label>'
+    +'<input type="text" id="ar-name" placeholder="홍길동" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">날짜</label>'
+    +'<input type="date" id="ar-date" value="'+today+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">시간</label>'
+    +'<input type="time" id="ar-time" value="10:00" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">서비스</label>'
+    +'<input type="text" id="ar-service" placeholder="컷, PT, 필라테스 등" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);font-weight:700">메모</label>'
+    +'<input type="text" id="ar-memo" placeholder="특이사항" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById('mo-add-rsv').remove()" class="btn" style="flex:1">취소</button>'
+    +'<button onclick="_saveReservation()" class="btn btn-blue" style="flex:2">예약 등록</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _saveReservation() {
+  var did=_CU.dealerId||'';
+  var name=(document.getElementById('ar-name')||{}).value||'';
+  var date=(document.getElementById('ar-date')||{}).value||'';
+  var time=(document.getElementById('ar-time')||{}).value||'';
+  var service=(document.getElementById('ar-service')||{}).value||'';
+  var memo=(document.getElementById('ar-memo')||{}).value||'';
+  if(!name||!date||!time){toast('이름, 날짜, 시간을 입력하세요');return;}
+  _db.collection('reservations').add({
+    dealerId:did, customerName:name,
+    date:date, time:time, service:service, memo:memo,
+    status:'pending', createdAt:new Date().toISOString()
+  }).then(function(){
+    toast('✅ 예약 등록 완료');
+    document.getElementById('mo-add-rsv').remove();
+    _ctTab('reserve');
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _ctConfirmReservation(docId) {
+  _db.collection('reservations').doc(docId).update({status:'confirmed'})
+    .then(function(){toast('✅ 예약 확정');_ctTab('reserve');})
+    .catch(function(e){toast('❌ '+e.message);});
+}
+
+function _ctSendExpireAlert(userId, customerName, expiry) {
+  toast('📲 만료 알림 발송: '+customerName);
+  // FCM 발송 (토큰 있으면)
+  if(!userId){toast('고객 앱 미사용 — SMS 발송 권장');return;}
+  _getFcmToken(_CU.dealerId, userId, customerName).then(function(token){
+    if(!token){toast('FCM 토큰 없음 — SMS 발송 권장');return;}
+    fetch('/fcm/send',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:[token],title:'⏰ 회원권 만료 안내',
+        body:customerName+'님, 회원권이 '+expiry+'에 만료됩니다. 갱신을 원하시면 연락해 주세요.',
+        data:{type:'membership_expire',expiry:expiry}})})
+      .then(function(){toast('✅ 알림 발송 완료');})
+      .catch(function(){toast('알림 발송 실패');});
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ⑥ FCM 출근 누락 알림
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function _attCheckMissingFCM() {
+  var did=_CU.dealerId||'';
+  var today=new Date().toISOString().slice(0,10);
+  var now=new Date();
+  var nowH=now.getHours()+now.getMinutes()/60;
+  var ws=window._workSettings||_DEFAULT_WORK_SETTINGS;
+  var stdH=parseFloat(ws.startTime.split(':')[0])+parseFloat(ws.startTime.split(':')[1])/60;
+  // 출근 시간+1시간 이후에만 발송
+  if(nowH < stdH+1){toast('출근 기준시간 1시간 후부터 발송 가능');return;}
+  toast('🔍 미출근 직원 확인 중...');
+  try {
+    var [drvSnap, attSnap] = await Promise.all([
+      _db.collection('drivers').where('dealerId','==',did).where('is_active','==',true).get(),
+      _db.collection('attendance').where('dealerId','==',did).where('date','==',today).get()
+    ]);
+    var checkedIn=new Set();
+    attSnap.forEach(function(d){checkedIn.add(d.data().userId||d.data().driverId||'');});
+    var missing=[];
+    drvSnap.forEach(function(doc){
+      var d=doc.data();
+      if(!checkedIn.has(doc.id)&&!checkedIn.has(d.userId||'')) missing.push({id:doc.id,name:d.name||doc.id,data:d});
+    });
+    if(!missing.length){toast('✅ 전직원 출근 완료');return;}
+    var cnt=0;
+    for(var i=0;i<missing.length;i++){
+      var m=missing[i];
+      var tokens=[];
+      (m.data.fcmTokens||[]).forEach(function(t){if(t.token)tokens.push(t.token);});
+      if(!tokens.length) continue;
+      await fetch('/fcm/send',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tokens:tokens,
+          title:'⏰ 출근 확인',
+          body:m.name+'님, 아직 출근 기록이 없습니다. QR을 스캔해 주세요.',
+          data:{type:'missing_checkin',date:today}})});
+      cnt++;
+    }
+    toast('📲 '+missing.length+'명 미출근 / '+cnt+'명 FCM 발송 완료');
+  } catch(e){toast('❌ '+e.message);}
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -20345,6 +21014,8 @@ function pageHome(){
     }
 
     // ── POS (FILO 결제 시만)
+    // 고객관리 버튼 (filo 서비스)
+    if(hasSvc('filo')||isSA) html += _homeQuickBtn2('👤','고객 관리','customer','#0891b2');
     if((hasSvc('filo')||isSA) && _hasKiosk(co)){
       html += '<div class="card" style="margin-bottom:10px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
@@ -21789,6 +22460,7 @@ function pageLeave(){
 +(isDriver?'':'<button id="ltab-yearend" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="yearend" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🗓 연도말 처리</button>')
     +'<button id="ltab-mine" class="btn'+(isDriver?' btn-blue':'')+'" onclick="_leaveTab(this.dataset.t)" data-t="mine" style="font-size:12px">👤 내 휴가</button>'
     +'<button id="ltab-comp" class="btn" onclick="_leaveTab(\'comp\')" data-t="comp" style="font-size:12px">💰 보상휴가</button>'+(isDriver?'':'<button onclick="_leaveAutoApproveSettings()" class="btn" style="font-size:11px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚡ 자동승인</button>')+(isSuperAdmin()||!isDriver?'<button onclick="_autoGenerateAnnualLeave(_CU.dealerId)" class="btn" style="font-size:11px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">🔄 연차발생</button>':'')+'<button onclick="_leaveApproveAll(_CU.dealerId)" class="btn" style="font-size:11px;background:#0066ff;color:#fff;border:none">✅ 일괄승인</button>'+'<button onclick="_leaveAutoApproveSettings()" class="btn" style="font-size:11px;background:#7c3aed;color:#fff;border:none">⚡ 자동승인</button>'+'<button onclick="_leaveCompView()" class="btn" style="font-size:11px;background:#059669;color:#fff;border:none">💰 보상휴가</button>'+'<button onclick="_leaveApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">✏️ 휴가 신청</button>'
++'<button onclick="_leaveApplyHourly()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff">⏰ 시간 휴가</button>'
     +'</div>'
     +'<div id="leave-tab-content"></div>'
     +'</div>';
@@ -22882,7 +23554,8 @@ function pageAttendance(){
     +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🙋 방문자 관리</button>'
     +'<button id="att-tab-url" class="btn" onclick="_attTab(\'url\')" style="font-size:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none">🔗 URL 발급</button>'
     +'<button id="att-tab-guide" class="btn" onclick="_attTab(\'guide\')" style="font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none">📄 안내문 출력</button>'
-    +'<button onclick="pageWorkSettings()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚙️ 근무설정</button>'
+    +'<button onclick="_attCheckMissingFCM()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff">📲 누락알림</button>'
++'<button onclick="pageWorkSettings()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚙️ 근무설정</button>'
 +'<button onclick="pageMonthlyStats()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">📊 월간집계</button>'
 +'<button id="att-tab-sim" class="btn" onclick="_attTab(\'sim\')" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 시뮬레이션</button>'
     +'</div>'
@@ -27075,6 +27748,7 @@ function goPage(page){
   var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },
 work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
+customer:pageCustomer,
 comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);},delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
@@ -32229,7 +32903,8 @@ function pageHourlySettle(){
     +'<select id="hs-month-sel" style="padding:8px 12px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);border-radius:8px;font-size:13px;font-weight:700"></select>'
     +'<button onclick="_hsLoad()" class="btn btn-blue">🔄 QR 데이터 불러오기</button>'
     +'<button onclick="_hsSaveAll()" class="btn btn-teal">💾 전체 저장</button>'
-    +'<button onclick="_hsSendAll()" class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none">📱 전체 급여 문자 발송</button>'
+    +'<button onclick="_sendAllPayslips(_selMonth)" class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:12px">📨 명세서 전송</button>'
++'<button onclick="_hsSendAll()" class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none">📱 전체 급여 문자 발송</button>'
     +'<button onclick="_hsAnomalyCheck()" class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🤖 AI 이상감지</button>'
     +'<button onclick="_hsTaxShare()" class="btn" style="background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;margin-left:auto">📤 세무사 공유</button>'
     +'</div>'
