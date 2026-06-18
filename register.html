@@ -73,53 +73,61 @@ body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e
       <input id="r-phone" type="tel" placeholder="010-0000-0000">
     </div>
 
-    <div class="field">
-      <label>관심 서비스 선택 <span class="badge">복수 선택 가능</span></label>
-    </div>
-<div style="margin-bottom:16px">
-  <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:8px">서비스 선택 (복수 선택 가능)</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="plan-grid">
-    <div class="plan-card" onclick="_togglePlan(this,'settle')" data-plan="settle"
-      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">🤖</div>
-      <div style="font-size:12px;font-weight:800">DONWAY 정산</div>
-      <div style="font-size:10px;color:#94a3b8;margin-top:2px">쿠팡 자동정산</div>
-    </div>
-    <div class="plan-card" onclick="_togglePlan(this,'filo')" data-plan="filo"
-      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">🌊</div>
-      <div style="font-size:12px;font-weight:800">FILO 현장관리</div>
-      <div style="font-size:10px;color:#94a3b8;margin-top:2px">재고·QR·키오스크</div>
-    </div>
-    <div class="plan-card" onclick="_togglePlan(this,'mbtico')" data-plan="mbtico"
-      style="padding:12px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:10px;cursor:pointer;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">🚚</div>
-      <div style="font-size:12px;font-weight:800">배송앱</div>
-      <div style="font-size:10px;color:#94a3b8;margin-top:2px">스캔·라벨·긴급배송</div>
-    </div>
-    <div class="plan-card" onclick="_togglePlan(this,'all')" data-plan="all"
-      style="padding:12px;background:rgba(0,102,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:10px;cursor:pointer;text-align:center">
-      <div style="font-size:20px;margin-bottom:4px">⭐</div>
-      <div style="font-size:12px;font-weight:800;color:#00d4ff">전체 통합</div>
-      <div style="font-size:10px;color:#94a3b8;margin-top:2px">첫달 무료</div>
-    </div>
-  </div>
+<div class="field">
+<label>업종 선택 <span class="badge">필수</span></label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px" id="industry-grid"><div class="plan-card" onclick="_selectIndustry(this,'food',['settle', 'qr'])" data-ind="food"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🍽️</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">음식점·카페</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'beauty',['settle', 'qr', 'filo'])" data-ind="beauty"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">💇</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">미용실·네일</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'health',['settle', 'qr', 'filo'])" data-ind="health"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">💪</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">헬스·요가</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'academy',['settle', 'qr'])" data-ind="academy"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">📚</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">학원·교습</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'laundry',['settle', 'filo'])" data-ind="laundry"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">👕</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">세탁·수선</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'stay',['settle', 'filo'])" data-ind="stay"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🏨</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">숙박·펜션</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'retail',['settle', 'filo'])" data-ind="retail"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🛍️</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">소매·잡화</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'delivery',['settle', 'qr'])" data-ind="delivery"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🚚</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">배달·물류</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'const',['settle', 'qr', 'payroll'])" data-ind="const"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🏗️</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">건설·일용</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'insurance',['settle', 'payroll'])" data-ind="insurance"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">🛡️</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">보험·영업</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'care',['settle', 'qr', 'payroll'])" data-ind="care"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">💊</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">요양·돌봄</div>
+</div><div class="plan-card" onclick="_selectIndustry(this,'other',['settle'])" data-ind="other"
+  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
+  <div style="font-size:26px;margin-bottom:6px">⚙️</div>
+  <div style="font-size:12px;font-weight:800;color:#fff">기타 업종</div>
 </div>
-<!-- 업종 선택 (FILO 선택 시) -->
-<div id="industry-select" style="display:none;margin-bottom:16px">
-  <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:8px">업종 선택 (FILO)</div>
-  <select id="r-industry" style="width:100%;padding:11px 14px;background:#1e3a5f;border:1px solid rgba(0,102,255,.2);border-radius:8px;color:#e2e8f0;font-size:13px">
-    <option value="">업종 선택</option>
-    <option value="beauty">💇 뷰티·미용</option>
-    <option value="nail">💅 네일·피부관리</option>
-    <option value="food">🍽️ 음식점·카페</option>
-    <option value="health">💪 헬스·요가·필라테스</option>
-    <option value="academy">📚 학원·교습소</option>
-    <option value="laundry">👕 세탁</option>
-    <option value="stay">🏨 숙박·게스트하우스</option>
-    <option value="retail">🛍️ 소매·잡화</option>
-    <option value="other">기타</option>
-  </select>
+</div></div>
+<div id="industry-features" style="display:none;margin-bottom:16px;padding:12px;background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.3);border-radius:10px">
+<div style="font-size:11px;font-weight:700;color:#00d4ff;margin-bottom:6px">✅ 선택된 기능</div>
+<div id="industry-feat-list" style="font-size:11px;color:#94a3b8;line-height:1.8"></div>
 </div>
         <div class="desc">donway.ai.kr</div>
       </div>
@@ -167,10 +175,10 @@ _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 var _db = firebase.firestore();
 var _auth = firebase.auth();
 
-var _selectedPlans = [];
+// _selectedPlans는 _selectIndustry에서 관리
 function _togglePlan(el, plan) {
   if(plan === 'all') {
-    _selectedPlans = ['settle','filo','mbtico'];
+    _selectedPlans = ['settle'];
     document.querySelectorAll('.plan-card').forEach(function(c){
       c.style.borderColor = c.getAttribute('data-plan')==='all' ? '#00d4ff' : 'rgba(0,102,255,.4)';
       c.style.background = 'rgba(0,102,255,.15)';
@@ -245,7 +253,7 @@ function _doRegister(){
     .then(function(cred){
       var uid = cred.user.uid;
       var services = _selectedPlans.length ? _selectedPlans : ['settle'];
-  var industry = (document.getElementById('r-industry')||{}).value||'';
+  var industry = _selectedIndustry || '';
       var companyDoc = {
         companyName: company,
         name: company,
@@ -374,6 +382,52 @@ function _doRegister(){
 document.addEventListener('keydown', function(e){
   if(e.key==='Enter') _doRegister();
 });
+
+// ★ 업종 선택 → services 자동 설정
+var _selectedIndustry = '';
+var _selectedPlans = ['settle']; // 기본값
+
+// 업종별 기능 설명
+var _INDUSTRY_FEATURES = {
+  food:     {name:'음식점·카페',    svcs:['settle','qr'],                desc:['출퇴근 QR','급여 자동계산','세무사 연동','매출 관리']},
+  beauty:   {name:'미용실·네일',    svcs:['settle','qr','filo'],         desc:['출퇴근 QR','고객 회원관리','예약 관리','급여 자동계산']},
+  health:   {name:'헬스·요가',      svcs:['settle','qr','filo'],         desc:['회원권 관리','QR 출입','출퇴근','급여 자동계산']},
+  academy:  {name:'학원·교습',      svcs:['settle','qr'],                desc:['출퇴근 QR','수강생 관리','급여 계산','연차 관리']},
+  laundry:  {name:'세탁·수선',      svcs:['settle','filo'],              desc:['접수 관리','POS 결제','고객 관리','급여 계산']},
+  stay:     {name:'숙박·펜션',      svcs:['settle','filo'],              desc:['객실 관리','체크인/아웃','POS 결제','매출 관리']},
+  retail:   {name:'소매·잡화',      svcs:['settle','filo'],              desc:['재고 관리','POS 결제','출퇴근','급여 계산']},
+  delivery: {name:'배달·물류',      svcs:['settle','qr'],                desc:['정산 자동화','기사 관리','출퇴근','급여 계산']},
+  const:    {name:'건설·일용직',    svcs:['settle','qr','payroll'],      desc:['일용직 정산','출퇴근 QR','4대보험 계산','급여명세서']},
+  insurance:{name:'보험·영업',      svcs:['settle','payroll'],           desc:['수수료 정산','급여 계산','실적 관리','세무사 연동']},
+  care:     {name:'요양·돌봄',      svcs:['settle','qr','payroll'],      desc:['출퇴근 QR','4대보험 계산','급여명세서','연차 관리']},
+  other:    {name:'기타',           svcs:['settle'],                     desc:['출퇴근 관리','급여 계산','세무사 연동','직원 관리']},
+};
+
+function _selectIndustry(el, key, svcs) {
+  // 선택 표시
+  document.querySelectorAll('[data-ind]').forEach(function(c) {
+    c.style.borderColor = 'rgba(255,255,255,.1)';
+    c.style.background = '#1e3a5f';
+  });
+  el.style.borderColor = '#0066ff';
+  el.style.background = 'rgba(0,102,255,.2)';
+  _selectedIndustry = key;
+  _selectedPlans = svcs || ['settle'];
+
+  // 기능 미리보기 표시
+  var info = _INDUSTRY_FEATURES[key] || {};
+  var featEl = document.getElementById('industry-features');
+  var listEl = document.getElementById('industry-feat-list');
+  if(featEl && listEl) {
+    featEl.style.display = 'block';
+    listEl.innerHTML = (info.desc||[]).map(function(d){ return '✅ '+d; }).join('<br>');
+  }
+
+  // 가입 버튼 활성화
+  var btn = document.getElementById('r-submit');
+  if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
 </script>
 </body>
 </html>
