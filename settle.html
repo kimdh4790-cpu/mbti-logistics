@@ -19761,7 +19761,7 @@ function pageHome(){
   +'<div style="background:linear-gradient(135deg,#0a1628,#0f2744);border:1.5px solid rgba(0,102,255,.3);border-radius:16px;padding:18px;margin-bottom:14px">'
   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
   +'<div style="font-size:15px;font-weight:800;color:#fff">📊 '+ym+' 정산 현황</div>'
-  +'<button onclick="goPage(\'settle\')" style="padding:7px 16px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산하기 →</button>'
+  +'<button onclick="_goMainSettle()" style="padding:7px 16px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산하기 →</button>'
   +'</div>'
   +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
   +'<div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#94a3b8;margin-bottom:6px">총 배송</div><div style="font-size:22px;font-weight:900;color:#00d4ff" id="h-total-cnt">-</div><div style="font-size:10px;color:#64748b">건</div></div>'
@@ -19882,6 +19882,36 @@ function _homeQuickBtn(icon, label, page, color, bg){
 }
 
 
+
+// ★ 고객 서비스에 따라 정산 페이지 결정
+function _getMainSettlePage() {
+  var co = window._cachedCompanyDoc || {};
+  var svcs = co.services || [];
+  var sub = (co.subscriptions||{}).donway||{};
+  var plan = sub.plan || co.plan || '';
+
+  // SA는 쿠팡 정산
+  if(typeof isSuperAdmin === 'function' && isSuperAdmin()) return 'settle';
+
+  // services 배열 기반
+  if(svcs.indexOf('settle') >= 0) return 'settle';           // 쿠팡 정산
+  if(svcs.indexOf('universal') >= 0) return 'universal_settle'; // 범용 정산
+  if(svcs.indexOf('delivery') >= 0) return 'delivery_settle';   // 배달대행
+  if(svcs.indexOf('payroll') >= 0) return 'hourly_settle';      // 급여 계산
+
+  // plan 기반 폴백
+  if(plan === 'settle' || plan === 'trial') return 'settle';
+  if(plan === 'universal') return 'universal_settle';
+
+  // 기본값: 쿠팡 정산
+  return 'settle';
+}
+
+function _goMainSettle() {
+  var page = _getMainSettlePage();
+  goPage(page);
+}
+
 function _homeLoadSettleSummary(did, ym) {
   if(!_db||!did) return;
   var cntEl = document.getElementById('h-total-cnt');
@@ -19912,6 +19942,36 @@ function _homeLoadSettleSummary(did, ym) {
     });
 }
 
+
+
+// ★ 고객 서비스에 따라 정산 페이지 결정
+function _getMainSettlePage() {
+  var co = window._cachedCompanyDoc || {};
+  var svcs = co.services || [];
+  var sub = (co.subscriptions||{}).donway||{};
+  var plan = sub.plan || co.plan || '';
+
+  // SA는 쿠팡 정산
+  if(typeof isSuperAdmin === 'function' && isSuperAdmin()) return 'settle';
+
+  // services 배열 기반
+  if(svcs.indexOf('settle') >= 0) return 'settle';           // 쿠팡 정산
+  if(svcs.indexOf('universal') >= 0) return 'universal_settle'; // 범용 정산
+  if(svcs.indexOf('delivery') >= 0) return 'delivery_settle';   // 배달대행
+  if(svcs.indexOf('payroll') >= 0) return 'hourly_settle';      // 급여 계산
+
+  // plan 기반 폴백
+  if(plan === 'settle' || plan === 'trial') return 'settle';
+  if(plan === 'universal') return 'universal_settle';
+
+  // 기본값: 쿠팡 정산
+  return 'settle';
+}
+
+function _goMainSettle() {
+  var page = _getMainSettlePage();
+  goPage(page);
+}
 
 function _homeLoadSettleSummary(did,ym){
   if(!_db||!did)return;
@@ -25627,7 +25687,7 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settle_inc:pageSettle,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
