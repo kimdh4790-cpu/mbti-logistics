@@ -19785,13 +19785,26 @@ function pageHome(){
     +'<div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px">'
     +'<div class="card" style="text-align:center"><div style="font-size:11px;color:var(--text3)">⏳</div><div style="font-size:22px;font-weight:900;color:var(--brand)">-</div><div style="font-size:11px;color:var(--text3)">로딩 중...</div></div>'
     +'</div>'
-    // 오늘 출퇴근 현황
-    +'<div class="card" style="margin-bottom:14px">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-    +'<div style="font-size:14px;font-weight:800">🔐 오늘 출퇴근</div>'
-    +'<button onclick="goPage(\'attendance\')" class="btn" style="font-size:11px">전체보기 →</button>'
-    +'</div>'
-    +'<div id="home-att"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>'
+// ★ 이번달 정산 요약 (메인)
++'<div style="background:linear-gradient(135deg,#0f2744,#1e3a5f);border:1px solid rgba(0,102,255,.2);border-radius:16px;padding:16px;margin-bottom:14px">'
++'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
++'<div style="font-size:14px;font-weight:800;color:#fff">📊 이번달 정산 현황 <span style="font-size:11px;color:#94a3b8;font-weight:400">'+ym+'</span></div>'
++'<button onclick="goPage(\'settle_inc\')" class="btn" style="font-size:11px;background:#0066ff;color:#fff;border:none">정산하기 →</button>'
++'</div>'
++'<div id="home-settle-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
++'<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'
++'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px">총 배송</div>'
++'<div style="font-size:18px;font-weight:900;color:#00d4ff" id="h-total-cnt">-</div>'
++'<div style="font-size:10px;color:#94a3b8">건</div></div>'
++'<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'
++'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px">기사 정산액</div>'
++'<div style="font-size:16px;font-weight:900;color:#22c55e" id="h-total-pay">-</div>'
++'<div style="font-size:10px;color:#94a3b8">원</div></div>'
++'<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'
++'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px">기사 수</div>'
++'<div style="font-size:18px;font-weight:900;color:#f59e0b" id="h-driver-cnt">-</div>'
++'<div style="font-size:10px;color:#94a3b8">명</div></div>'
++'</div></div>'
     +'</div>'
     // 승인 대기 휴가
     +'<div class="card" style="margin-bottom:14px">'
@@ -19896,6 +19909,37 @@ function _homeQuickBtn(icon, label, page, color, bg){
     +'<div style="font-size:28px;margin-bottom:7px">'+icon+'</div>'
     +'<div style="font-size:11px;font-weight:800;color:'+color+'">'+label+'</div>'
     +'</div>';
+}
+
+
+function _homeLoadSettleSummary(did, ym) {
+  if(!_db||!did) return;
+  var cntEl = document.getElementById('h-total-cnt');
+  var payEl = document.getElementById('h-total-pay');
+  var drvEl = document.getElementById('h-driver-cnt');
+
+  _db.collection('incomes').where('dealerId','==',did).where('ym','==',ym)
+    .get().then(function(snap) {
+      if(snap.empty) {
+        if(cntEl) cntEl.textContent = '0';
+        if(payEl) payEl.textContent = '0';
+        if(drvEl) drvEl.textContent = '0';
+        return;
+      }
+      var totalCnt = 0, totalPay = 0;
+      var drivers = new Set();
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        totalCnt += parseInt(d.totalCnt||d.cnt||0);
+        totalPay += parseInt(d.driverPay||d.totalPay||d.pay||0);
+        if(d.driver||d.driverName) drivers.add(d.driver||d.driverName);
+      });
+      if(cntEl) cntEl.textContent = totalCnt.toLocaleString();
+      if(payEl) payEl.textContent = (totalPay/10000).toFixed(0)+'만';
+      if(drvEl) drvEl.textContent = drivers.size || snap.size;
+    }).catch(function() {
+      if(cntEl) cntEl.textContent = '-';
+    });
 }
 
 function _homeLoadStats(did, today, ym){
