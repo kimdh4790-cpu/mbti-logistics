@@ -20896,6 +20896,278 @@ async function _attCheckMissingFCM() {
   } catch(e){toast('❌ '+e.message);}
 }
 
+
+// ══════════════════════════════════════════════════════
+// 📨 메시지 발송 페이지
+// ══════════════════════════════════════════════════════
+var ALIMTALK_TEMPLATES = {
+  settle:   {name:'💰 정산안내',   code:'KA01TP2605202011489862wFDonmS7ny', text:'[DONWAY 정산안내]\n#{이름}님, #{월} 정산내역입니다.\n총수익: #{총수익}원 / 공제: #{공제}원\n실지급: #{실지급}원\n\n문의: 051-711-3103', vars:['#{이름}','#{월}','#{총수익}','#{공제}','#{실지급}']},
+  payslip:  {name:'💼 급여명세서', code:'KA01TP_PAYSLIP',                   text:'[DONWAY 급여명세서]\n#{이름}님, #{월} 급여가 지급됩니다.\n기본급: #{기본급}원 / 연장: #{연장}원\n실수령: #{실수령}원\n\n문의: 051-711-3103', vars:['#{이름}','#{월}','#{기본급}','#{연장}','#{실수령}']},
+  attend:   {name:'⏰ 출근독려',   code:'KA01TP_ATTEND',                    text:'[#{회사명} 알림]\n#{이름}님, 아직 출근 체크가 안 되어 있습니다.\nQR을 스캔해 출근 기록을 남겨주세요.', vars:['#{회사명}','#{이름}']},
+  notice:   {name:'📢 공지사항',   code:'KA01TP_NOTICE',                    text:'[#{회사명} 공지]\n#{내용}\n\n문의: 051-711-3103', vars:['#{회사명}','#{내용}']},
+  member:   {name:'🎫 회원권만료', code:'KA01TP_MEM',                       text:'[#{회사명}]\n#{이름}님, 회원권이 #{만료일}에 만료됩니다.\n갱신 문의: #{전화번호}', vars:['#{회사명}','#{이름}','#{만료일}','#{전화번호}']},
+  custom:   {name:'✏️ 직접입력',  code:'',                                  text:'', vars:[]}
+};
+
+function pageMessage() {
+  document.getElementById('page-title').textContent = '📨 메시지 발송';
+  _requirePlan('settle', function(){
+    var el = document.getElementById('content');
+    el.innerHTML = '<div style="max-width:780px;margin:0 auto">'
+      +'<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">'
+      +'<button id="msg-tab-send" class="btn btn-blue" onclick="_msgTab(\'send\')" style="font-size:12px">📨 메시지 발송</button>'
+      +'<button id="msg-tab-history" class="btn" onclick="_msgTab(\'history\')" style="font-size:12px">📋 발송내역</button>'
+      +'<button id="msg-tab-template" class="btn" onclick="_msgTab(\'template\')" style="font-size:12px">📝 템플릿 안내</button>'
+      +'</div>'
+      +'<div id="msg-content"></div>'
+      +'</div>';
+    window._msgChannel = 'sms';
+    window._msgRecipients = [];
+    window._msgTemplateKey = 'custom';
+    _msgTab('send');
+  });
+}
+
+function _msgTab(tab) {
+  ['send','history','template'].forEach(function(t){
+    var b=document.getElementById('msg-tab-'+t);
+    if(b) b.className=(t===tab)?'btn btn-blue':'btn';
+  });
+  var el=document.getElementById('msg-content');
+  if(!el) return;
+  if(tab==='send') _msgRenderSend(el);
+  else if(tab==='history') _msgRenderHistory(el);
+  else if(tab==='template') _msgRenderTemplate(el);
+}
+
+function _msgRenderSend(el) {
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';
+  var tplBtns = Object.entries(ALIMTALK_TEMPLATES).map(function(e){
+    return '<button onclick="_msgSelTemplate(\''+e[0]+'\')" class="btn" style="font-size:11px">'+esc(e[1].name)+'</button>';
+  }).join('');
+  el.innerHTML = '<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">📡 발송 채널</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:16px">'
+    +'<button id="msg-ch-sms" onclick="_msgSelCh(\'sms\')" class="btn btn-blue" style="font-size:12px">📱 SMS</button>'
+    +'<button id="msg-ch-kakao" onclick="_msgSelCh(\'kakao\')" class="btn" style="font-size:12px">💛 카카오</button>'
+    +'<button id="msg-ch-both" onclick="_msgSelCh(\'both\')" class="btn" style="font-size:12px">📡 둘다</button>'
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">📝 템플릿</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">'+tplBtns+'</div>'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:6px">✏️ 메시지 내용 (직접 수정 가능)</div>'
+    +'<textarea id="msg-text" rows="7" style="width:100%;padding:10px 12px;background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;resize:vertical;line-height:1.6">'
+    +'['+esc(coName)+' 공지]\n내용을 입력하세요.\n\n문의: 051-711-3103'
+    +'</textarea>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:4px">#{이름} #{회사명} 등 변수는 자동으로 채워집니다 | SMS 최대 90자</div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text3)">👥 수신자</div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<button onclick="_msgLoadGroup(\'drivers\')" class="btn" style="font-size:11px">직원</button>'
+    +'<button onclick="_msgLoadGroup(\'customers\')" class="btn" style="font-size:11px">고객</button>'
+    +'<button onclick="_msgSelectAll(true)" class="btn" style="font-size:11px">전체</button>'
+    +'<button onclick="_msgSelectAll(false)" class="btn" style="font-size:11px">해제</button>'
+    +'</div></div>'
+    +'<div id="msg-recipient-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">'
+    +'<div class="empty" style="padding:16px;font-size:12px">그룹 선택 또는 번호 직접 추가</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:8px">'
+    +'<input type="tel" id="msg-add-phone" placeholder="010-0000-0000" style="flex:1;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'
+    +'<input type="text" id="msg-add-name" placeholder="이름" style="width:70px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'
+    +'<button onclick="_msgAddPhone()" class="btn" style="font-size:11px">추가</button>'
+    +'</div></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="_msgPreview()" class="btn" style="flex:1;font-size:13px">👁 미리보기</button>'
+    +'<button onclick="_msgSendAll()" class="btn btn-blue" style="flex:2;font-size:13px;font-weight:800">📨 발송하기</button>'
+    +'</div>';
+}
+
+function _msgSelCh(ch) {
+  window._msgChannel=ch;
+  ['sms','kakao','both'].forEach(function(c){
+    var b=document.getElementById('msg-ch-'+c);
+    if(b) b.className=(c===ch)?'btn btn-blue':'btn';
+  });
+}
+
+function _msgSelTemplate(key) {
+  var tpl=ALIMTALK_TEMPLATES[key]; if(!tpl)return;
+  window._msgTemplateKey=key;
+  var ta=document.getElementById('msg-text');
+  if(ta&&tpl.text) ta.value=tpl.text;
+  document.querySelectorAll('[onclick^="_msgSelTemplate"]').forEach(function(b){b.className='btn';});
+  if(event&&event.target) event.target.className='btn btn-blue';
+}
+
+function _msgLoadGroup(type) {
+  var did=_CU.dealerId||''; if(!_db||!did)return;
+  var listEl=document.getElementById('msg-recipient-list');
+  if(listEl) listEl.innerHTML='<div class="empty" style="padding:12px">⏳</div>';
+  _db.collection(type).where('dealerId','==',did).get().then(function(snap){
+    window._msgRecipients=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var phone=d.phone||d.driverPhone||'';
+      var name=d.name||d.driverName||d.userId||'';
+      if(phone) window._msgRecipients.push({id:doc.id,name:name,phone:phone,type:type,selected:true});
+    });
+    _msgRenderRecipients();
+    toast('✅ '+window._msgRecipients.length+'명 로드');
+  });
+}
+
+function _msgRenderRecipients() {
+  var el=document.getElementById('msg-recipient-list'); if(!el)return;
+  if(!window._msgRecipients||!window._msgRecipients.length){
+    el.innerHTML='<div class="empty" style="padding:12px;font-size:12px">수신자 없음</div>'; return;
+  }
+  el.innerHTML=window._msgRecipients.map(function(r,i){
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer">'
+      +'<input type="checkbox" class="msg-chk" data-idx="'+i+'" '+(r.selected?'checked':'')
+      +' style="width:15px;height:15px;accent-color:var(--blue)">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700">'+esc(r.name)+'</div>'
+      +'<div style="font-size:11px;color:var(--text3)">'+esc(r.phone)+'</div></div>'
+      +'<button onclick="_msgRemove('+i+')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>'
+      +'</label>';
+  }).join('');
+  el.querySelectorAll('.msg-chk').forEach(function(chk){
+    chk.addEventListener('change',function(){
+      var idx=parseInt(this.dataset.idx);
+      if(window._msgRecipients[idx]) window._msgRecipients[idx].selected=this.checked;
+    });
+  });
+}
+
+function _msgSelectAll(v){(window._msgRecipients||[]).forEach(function(r){r.selected=v;});_msgRenderRecipients();}
+function _msgRemove(idx){if(window._msgRecipients)window._msgRecipients.splice(idx,1);_msgRenderRecipients();}
+
+function _msgAddPhone() {
+  var phone=(document.getElementById('msg-add-phone')||{value:''}).value.trim();
+  var name=(document.getElementById('msg-add-name')||{value:''}).value.trim()||'수신자';
+  if(!phone||phone.replace(/[^0-9]/g,'').length<10){toast('번호 오류');return;}
+  if(!window._msgRecipients) window._msgRecipients=[];
+  window._msgRecipients.push({name:name,phone:phone,selected:true,type:'manual'});
+  _msgRenderRecipients();
+  document.getElementById('msg-add-phone').value='';
+  document.getElementById('msg-add-name').value='';
+}
+
+function _msgPreview() {
+  var text=(document.getElementById('msg-text')||{value:''}).value;
+  var targets=(window._msgRecipients||[]).filter(function(r){return r.selected;});
+  if(!targets.length){toast('수신자 선택');return;}
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||'DONWAY';
+  var preview=text.replace(/#{이름}/g,targets[0].name||'홍길동').replace(/#{회사명}/g,coName).replace(/#{월}/g,new Date().toISOString().slice(0,7));
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:380px;width:100%">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">👁 미리보기</div>'
+    +'<div style="background:#FEE500;border-radius:12px;padding:14px;color:#1a1a1a;font-size:13px;line-height:1.7;white-space:pre-wrap;margin-bottom:12px">'+esc(preview)+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">수신자 '+targets.length+'명 발송 예정</div>'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove()" class="btn" style="width:100%">닫기</button>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+async function _msgSendAll() {
+  var text=(document.getElementById('msg-text')||{value:''}).value.trim();
+  var channel=window._msgChannel||'sms';
+  var targets=(window._msgRecipients||[]).filter(function(r){return r.selected&&r.phone;});
+  var did=_CU.dealerId||'';
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||'DONWAY';
+  if(!text){toast('메시지 입력');return;}
+  if(!targets.length){toast('수신자 선택');return;}
+  if(!confirm(targets.length+'명에게 발송합니까?')) return;
+  toast('📨 발송 중... ('+targets.length+'명)');
+  var ok=0,fail=0;
+  for(var i=0;i<targets.length;i++){
+    var r=targets[i];
+    var msg=text.replace(/#{이름}/g,r.name||'').replace(/#{회사명}/g,coName);
+    try {
+      if(channel==='sms'||channel==='both'){
+        var res=await fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({messages:[{to:r.phone.replace(/[^0-9]/g,''),text:msg}]})});
+        var data=await res.json();
+        if(data.ok)ok++;else fail++;
+      }
+      if(channel==='kakao'||channel==='both'){
+        var tplKey=window._msgTemplateKey||'custom';
+        var tpl=ALIMTALK_TEMPLATES[tplKey];
+        if(tpl&&tpl.code){
+          await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({to:r.phone,templateCode:tpl.code,variables:{'#{이름}':r.name||'','#{회사명}':coName},fallbackText:msg})});
+          ok++;
+        } else { toast('알림톡 템플릿 코드 없음 — SMS로 전환'); }
+      }
+    } catch(e){fail++;}
+    if(_db){
+      _db.collection('message_history').add({
+        dealerId:did,to:r.phone,name:r.name||'',channel:channel,text:msg,
+        sentAt:new Date().toISOString(),sentBy:_CU.name||'관리자'
+      }).catch(function(){});
+    }
+  }
+  toast('✅ 완료 — 성공:'+ok+' 실패:'+fail);
+  _msgTab('history');
+}
+
+function _msgRenderHistory(el) {
+  var did=_CU.dealerId||'';
+  el.innerHTML='<div class="empty">⏳</div>';
+  if(!_db||!did)return;
+  _db.collection('message_history').where('dealerId','==',did).orderBy('sentAt','desc').limit(100).get()
+    .then(function(snap){
+      if(snap.empty){el.innerHTML='<div class="empty"><div class="empty-icon">📭</div>발송 내역 없음</div>';return;}
+      var rows='';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var dt=d.sentAt?d.sentAt.slice(0,16).replace('T',' '):'';
+        var chLabel=d.channel==='kakao'?'카카오':d.channel==='both'?'SMS+카카오':'SMS';
+        var chClr=d.channel==='kakao'?'#f59e0b':'var(--blue)';
+        rows+='<div style="border-bottom:1px solid var(--border);padding:12px 0">'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+          +'<span style="color:'+chClr+';font-size:10px;font-weight:700;background:rgba(0,102,255,.1);padding:2px 8px;border-radius:10px">'+chLabel+'</span>'
+          +'<span style="font-size:12px;font-weight:700">'+esc(d.name||d.to||'')+'</span>'
+          +'<span style="font-size:11px;color:var(--text3);margin-left:auto">'+dt+'</span>'
+          +'</div>'
+          +'<div style="font-size:12px;color:var(--text2);white-space:pre-wrap;background:var(--bg3);padding:8px 10px;border-radius:8px">'+esc((d.text||'').slice(0,120))+'</div>'
+          +'</div>';
+      });
+      el.innerHTML='<div style="padding:0 4px">'+rows+'</div>';
+    }).catch(function(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
+}
+
+function _msgRenderTemplate(el) {
+  var rows=Object.entries(ALIMTALK_TEMPLATES).map(function(e){
+    var tpl=e[1];
+    return '<div class="card" style="margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+      +'<div style="font-size:13px;font-weight:800">'+esc(tpl.name)+'</div>'
+      +(tpl.code?'<span style="font-size:10px;color:var(--text3)">'+esc(tpl.code.slice(0,24))+'</span>'
+        :'<span style="font-size:10px;color:var(--yellow);font-weight:700">심사 필요</span>')
+      +'</div>'
+      +'<pre style="font-size:11px;color:var(--text2);background:var(--bg3);padding:10px;border-radius:8px;white-space:pre-wrap;line-height:1.6;margin-bottom:6px">'
+      +esc(tpl.text||'직접 입력')+'</pre>'
+      +(tpl.vars&&tpl.vars.length?'<div style="font-size:10px;color:var(--text3)">변수: '+tpl.vars.join(', ')+'</div>':'')
+      +'</div>';
+  }).join('');
+  el.innerHTML='<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px">'
+    +'⚠️ <strong>카카오 알림톡</strong>은 솔라피(solapi.com) 템플릿 심사 완료 후 코드를 등록해야 발송됩니다.<br>'
+    +'<span style="color:var(--text2)">SMS는 솔라피 SOLAPI_KEY 등록 즉시 발송 가능</span>'
+    +'</div>'
+    +rows
+    +'<div style="margin-top:14px;padding:14px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2);line-height:1.8">'
+    +'📋 <strong style="color:var(--text)">알림톡 템플릿 심사 신청 방법</strong><br>'
+    +'1. solapi.com 로그인 → 카카오 채널 연동<br>'
+    +'2. 알림톡 템플릿 → 신규 등록<br>'
+    +'3. 위 내용 그대로 붙여넣고 변수 형식 유지<br>'
+    +'4. 심사 완료(2~5일) 후 발급받은 코드를 위 ALIMTALK_TEMPLATES에 입력<br>'
+    +'5. 문의: <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--brand)">카카오채널</a> · 051-711-3103'
+    +'</div>';
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -27759,6 +28031,7 @@ function goPage(page){
   var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },
 work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
+message:pageMessage,
 customer:pageCustomer,
 comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);},delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
