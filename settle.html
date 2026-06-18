@@ -19769,6 +19769,76 @@ function pageHome(){
   +'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#94a3b8;margin-bottom:6px">기사</div><div style="font-size:22px;font-weight:900;color:#f59e0b" id="h-driver-cnt">-</div><div style="font-size:10px;color:#64748b">명</div></div>'
   +'</div>'
   +'</div>'
+  // ── services 기반 동적 퀵버튼 + 카드
+  +(function(){
+    var co = window._cachedCompanyDoc || {};
+    var svcs = co.services || ['settle'];
+    var hasSvc = function(s){ return svcs.indexOf(s)>=0; };
+    var isSA = typeof isSuperAdmin==='function' && isSuperAdmin();
+    var html = '';
+
+    // ── 퀵버튼 (서비스별)
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+    // AI정산 공통
+    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📊','정산하기','settle','#0066ff');
+    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('👤','기사 관리','drivers','#0891b2');
+    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📈','통계','stats','#7c3aed');
+    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('🧾','세무사 연동','tax_share','#059669');
+    // QR출퇴근 결제 시
+    if(hasSvc('qr')||isSA) html += _homeQuickBtn2('🔐','출퇴근 현황','attendance','#0891b2');
+    if(hasSvc('qr')||isSA) html += _homeQuickBtn2('🗓','근무표','roster','#db2777');
+    // 급여관리 결제 시
+    if(hasSvc('payroll')||isSA) html += _homeQuickBtn2('💼','급여 계산','hourly_settle','#7c3aed');
+    if(hasSvc('payroll')||isSA) html += _homeQuickBtn2('🌴','연차 관리','leave','#d97706');
+    // 배송앱(mbtico) 결제 시
+    if(hasSvc('mbtico')||isSA) html += _homeQuickBtn2('🚚','배차 현황','drivers','#059669');
+    // 직원 가입 QR은 항상
+    html += _homeQuickBtn2('📱','직원 가입 QR','join_qr','#0066ff');
+    html += '</div>';
+
+    // ── 이번달 급여 카드 (급여관리 결제 시만)
+    if(hasSvc('payroll')||isSA){
+      html += '<div class="card" style="margin-bottom:10px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      html += '<div style="font-size:13px;font-weight:800">💼 이번달 급여 <span style="font-size:11px;color:var(--text3);font-weight:400">'+ym+'</span></div>';
+      html += '<button onclick="goPage(\'hourly_settle\')" class="btn" style="font-size:11px">계산하기 →</button>';
+      html += '</div>';
+      html += '<div id="home-pay"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>';
+      html += '</div>';
+    }
+
+    // ── 오늘 처리 필요 (AI정산 결제 시만)
+    if(hasSvc('settle')||isSA){
+      html += '<div class="card" style="margin-bottom:10px">';
+      html += '<div style="font-size:13px;font-weight:800;margin-bottom:8px">✅ 오늘 처리 필요</div>';
+      html += '<div id="home-todo" style="display:flex;flex-direction:column;gap:6px"></div>';
+      html += '</div>';
+    }
+
+    // ── 달력/송금 링크 (AI정산)
+    if(hasSvc('settle')||isSA){
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+      html += '<button onclick="goPage(\'schedule\')" class="card" style="text-align:center;padding:12px;cursor:pointer;border:none">';
+      html += '<div style="font-size:20px">🗓</div><div style="font-size:12px;font-weight:700;margin-top:4px">달력</div></button>';
+      html += '<button onclick="goPage(\'remittance\')" class="card" style="text-align:center;padding:12px;cursor:pointer;border:none">';
+      html += '<div style="font-size:20px">💸</div><div style="font-size:12px;font-weight:700;margin-top:4px">송금 관리</div></button>';
+      html += '</div>';
+    }
+
+    // ── POS (FILO 결제 시만)
+    if((hasSvc('filo')||isSA) && _hasKiosk(co)){
+      html += '<div class="card" style="margin-bottom:10px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      html += '<div style="font-size:13px;font-weight:800">🖥️ POS 오늘 매출 <span style="font-size:10px;background:#7b2fff22;color:#a78bfa;padding:2px 6px;border-radius:4px">실시간</span></div>';
+      html += '<a href="https://filo.ai.kr/kiosk" target="_blank" class="btn" style="font-size:11px">POS 열기 →</a>';
+      html += '</div>';
+      html += '<div id="home-pos-today"><div style="font-size:12px;color:var(--text3)">로딩 중...</div></div>';
+      html += '</div>';
+    }
+
+    return html;
+  })()
+  +'</div>';
   // ── 퀵버튼 4개
   +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
   +_homeQuickBtn2('💼','급여 계산','hourly_settle','#7c3aed')
@@ -19804,6 +19874,16 @@ function pageHome(){
   // 데이터 로드
   _homeLoadStats(did, today, ym);
 _homeLoadSettleSummary(did, ym);
+// 급여 카드 로드 (payroll 구독 시만)
+var _co2 = window._cachedCompanyDoc||{};
+var _svcs2 = _co2.services||['settle'];
+if(_svcs2.indexOf('payroll')>=0 || (typeof isSuperAdmin==='function'&&isSuperAdmin())){
+  _homeLoadPaySummary(did, ym);
+}
+// POS 로드 (filo 구독 시만)
+if((_svcs2.indexOf('filo')>=0||(typeof isSuperAdmin==='function'&&isSuperAdmin()))&&_hasKiosk(_co2)){
+  _homeLoadPosToday(did, today);
+}
   _homeLoadTodo(did, today);
   setTimeout(_renderHomeJoinQR, 400);  // 직원 가입 QR
   // POS 매출 실시간 로드 (키오스크 결제한 회사만)
