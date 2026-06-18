@@ -21058,7 +21058,12 @@ function _msgPreview() {
   var targets=(window._msgRecipients||[]).filter(function(r){return r.selected;});
   if(!targets.length){toast('수신자 선택');return;}
   var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||'DONWAY';
-  var preview=text.replace(/#{이름}/g,targets[0].name||'홍길동').replace(/#{회사명}/g,coName).replace(/#{월}/g,new Date().toISOString().slice(0,7));
+  var phone2=(_cachedCompanyDoc&&_cachedCompanyDoc.phone)||'051-711-3103';
+  var preview=text
+    .replace(/#{이름}/g,targets[0].name||'홍길동')
+    .replace(/#{회사명}/g,coName)
+    .replace(/#{전화번호}/g,phone2)
+    .replace(/#{월}/g,new Date().toISOString().slice(0,7));
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -21084,7 +21089,12 @@ async function _msgSendAll() {
   var ok=0,fail=0;
   for(var i=0;i<targets.length;i++){
     var r=targets[i];
-    var msg=text.replace(/#{이름}/g,r.name||'').replace(/#{회사명}/g,coName);
+    var phone=(_cachedCompanyDoc&&_cachedCompanyDoc.phone)||'051-711-3103';
+    var msg=text
+      .replace(/#{이름}/g,r.name||'')
+      .replace(/#{회사명}/g,coName)
+      .replace(/#{전화번호}/g,phone)
+      .replace(/#{월}/g,new Date().toISOString().slice(0,7));
     try {
       if(channel==='sms'||channel==='both'){
         var res=await fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -21099,8 +21109,13 @@ async function _msgSendAll() {
           // fallbackText 포함 → 톡 실패 시 SMS 자동 대체 (disableSms:false)
           var kRes=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({to:r.phone,templateCode:tpl.code,
-              variables:{'#{이름}':r.name||'','#{회사명}':coName},
-              fallbackText:msg  // 톡 실패 → 이 내용으로 SMS 자동 전환
+              variables:{
+                '#{이름}': r.name||'',
+                '#{회사명}': coName,
+                '#{전화번호}': (_cachedCompanyDoc&&_cachedCompanyDoc.phone)||'051-711-3103',
+                '#{월}': new Date().toISOString().slice(0,7)
+              },
+              fallbackText:msg
             })});
           var kData=await kRes.json();
           ok++;
