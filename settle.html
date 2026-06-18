@@ -1426,7 +1426,7 @@ async function _leaveRenderCompLeave(el) {
         +'<td style="padding:8px;text-align:center;font-size:11px;color:var(--text3)">'+esc(d.reason||'')+'</td>'
         +'<td style="padding:8px;text-align:center;font-size:11px">'+esc(d.expiry||'')+'</td>'
         +'<td style="padding:8px;text-align:center">'
-        +'<button onclick="_useCompLeave(''+doc.id+'')" class="btn" style="font-size:10px;padding:3px 8px">사용</button>'
+        +'<button onclick="_useCompLeave(this.dataset.id)" data-id="'+doc.id+'" class="btn" style="font-size:10px;padding:3px 8px">사용</button>'
         +'</td>'
         +'</tr>';
     });
@@ -1460,6 +1460,7 @@ async function _useCompLeave(docId) {
 function _leaveAutoApproveSettings() {
   var did = _CU.dealerId;
   var mo = document.createElement('div');
+  mo.id='mo-auto-approve';
   mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   mo.onclick = function(e){ if(e.target===mo) mo.remove(); };
 
@@ -1489,7 +1490,7 @@ function _leaveAutoApproveSettings() {
         +'<div style="font-size:11px;color:var(--text3);margin-top:4px">0 = 당일 신청도 허용</div>'
         +'</div>'
         +'<div style="display:flex;gap:8px">'
-        +'<button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:10px;font-size:13px;cursor:pointer">취소</button>'
+        +'<button onclick="document.getElementById(\'mo-auto-approve\').remove()" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:10px;font-size:13px;cursor:pointer">취소</button>'
         +'<button onclick="_saveLeaveAutoApprove()" style="flex:1;padding:11px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">저장</button>'
         +'</div>';
       mo.appendChild(box);
