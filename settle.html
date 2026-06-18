@@ -19760,10 +19760,10 @@ function pageHome(){
     +'</div>'
     // 빠른 실행 버튼
     +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:18px">'
-    +_homeQuickBtn('📺','QR 표시','attendance','#3b82f6','#eff6ff')
+    +_homeQuickBtn('📊','쿠팡 정산','settle_inc','#0066ff','#dbeafe')
     +_homeQuickBtn('📋','출퇴근','attendance','#059669','#f0fdf4')
     +_homeQuickBtn('💼','급여 계산','hourly_settle','#7c3aed','#faf5ff')
-    +_homeQuickBtn('🌴','휴가 승인','leave','#d97706','#fffbeb')
+    +_homeQuickBtn('🚚','기사 앱','drivers','#059669','#f0fdf4')
     +_homeQuickBtn('👤','직원 관리','drivers','#0891b2','#ecfeff')
     +_homeQuickBtn('🗓','근무표','roster','#db2777','#fdf2f8')
     +'</div>'
@@ -19841,6 +19841,7 @@ function pageHome(){
 
   // 데이터 로드
   _homeLoadStats(did, today, ym);
+_homeLoadSettleSummary(did, ym);
   _homeLoadTodo(did, today);
   setTimeout(_renderHomeJoinQR, 400);  // 직원 가입 QR
   // POS 매출 실시간 로드 (키오스크 결제한 회사만)
@@ -19942,6 +19943,22 @@ function _homeLoadSettleSummary(did, ym) {
     });
 }
 
+
+function _homeLoadSettleSummary(did,ym){
+  if(!_db||!did)return;
+  var ce=document.getElementById('h-total-cnt');
+  var pe=document.getElementById('h-total-pay');
+  var de=document.getElementById('h-driver-cnt');
+  _db.collection('incomes').where('dealerId','==',did).where('ym','==',ym).get()
+  .then(function(snap){
+    if(snap.empty){if(ce)ce.textContent='0';if(pe)pe.textContent='0';if(de)de.textContent='0';return;}
+    var tc=0,tp=0;var drv=new Set();
+    snap.forEach(function(d){var v=d.data();tc+=parseInt(v.totalCnt||v.cnt||0);tp+=parseInt(v.driverPay||v.totalPay||v.pay||0);if(v.driver)drv.add(v.driver);});
+    if(ce)ce.textContent=tc.toLocaleString();
+    if(pe)pe.textContent=(tp/10000).toFixed(0)+'만';
+    if(de)de.textContent=drv.size||snap.size;
+  }).catch(function(){});
+}
 function _homeLoadStats(did, today, ym){
   // 통계 카드
   var _sDone=0,_sTotal=3,_drivers=[],_attDocs=[],_leaveDocs=[];
