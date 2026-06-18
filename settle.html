@@ -9557,7 +9557,8 @@ async function _tossPay(planType, amount, hc){
     }).catch(function(){});
   }
   try{
-    var tossPayments=TossPayments('test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN');
+    var _tossCK = window.__TOSS_CK || 'test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN';
+var tossPayments=TossPayments(_tossCK);
     var custKey=(_CU.dealerId||_CU.uid||'guest').replace(/[^a-zA-Z0-9\-_]/g,'').slice(0,30)||'guest01';
     tossPayments.payment({customerKey:custKey}).requestPayment({
       method:'CARD',
@@ -20161,6 +20162,7 @@ function pageHome(){
 
   // 데이터 로드
   _homeLoadStats(did, today, ym);
+_loadIndustrySettings(did);
 _homeLoadSettleSummary(did, ym);
 // 급여 카드 로드 (payroll 구독 시만)
 var _co2 = window._cachedCompanyDoc||{};
@@ -20280,6 +20282,46 @@ function _goMainSettle() {
   goPage(page);
 }
 
+
+// ★ 업종별 용어 자동 설정
+function _applyIndustryTerms(industry) {
+  var INDUSTRY_MAP = {
+    food:     {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
+    beauty:   {worker:'직원', attend:'출퇴근', camp:'지점', rate:'건단가', unit:'건'},
+    health:   {worker:'강사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
+    academy:  {worker:'강사', attend:'출퇴근', camp:'학원', rate:'시급', unit:'시간'},
+    laundry:  {worker:'직원', attend:'출퇴근', camp:'매장', rate:'건단가', unit:'건'},
+    stay:     {worker:'직원', attend:'출퇴근', camp:'지점', rate:'일급', unit:'일'},
+    retail:   {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
+    delivery: {worker:'기사', attend:'출퇴근', camp:'캠프', rate:'건단가', unit:'건'},
+    const:    {worker:'인부', attend:'출퇴근', camp:'현장', rate:'일급', unit:'일'},
+    insurance:{worker:'설계사', attend:'출퇴근', camp:'지점', rate:'수수료', unit:'건'},
+    care:     {worker:'요양사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
+  };
+  var t = INDUSTRY_MAP[industry] || INDUSTRY_MAP['delivery'];
+  // terms 전역 변수 업데이트 (이미 있는 terms 객체)
+  if(typeof terms !== 'undefined') {
+    Object.assign(terms, t);
+  }
+  window._currentIndustry = industry;
+  var badge = document.getElementById('dash-industry-badge');
+  var EMOJIS = {food:'🍽️',beauty:'💇',health:'💪',academy:'📚',laundry:'👕',stay:'🏨',retail:'🛍️',delivery:'🚚',const:'🏗️',insurance:'🛡️',care:'💊'};
+  var NAMES = {food:'음식점·카페',beauty:'미용실·네일',health:'헬스·요가',academy:'학원·교습',laundry:'세탁·수선',stay:'숙박·펜션',retail:'소매·잡화',delivery:'배달·물류',const:'건설·일용직',insurance:'보험·영업',care:'요양·돌봄'};
+  if(badge) badge.innerHTML = '<span style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;font-size:10px">'+(EMOJIS[industry]||'🏢')+' '+(NAMES[industry]||industry)+'</span>';
+}
+
+// 로그인 후 회사 industry 로드 → terms 자동 적용
+function _loadIndustrySettings(did) {
+  if(!_db||!did) return;
+  _db.collection('companies').doc(did).get().then(function(snap) {
+    if(!snap.exists) return;
+    var co = snap.data();
+    var ind = co.industry || 'delivery';
+    _applyIndustryTerms(ind);
+    window._cachedCompanyDoc = co;
+  }).catch(function(){});
+}
+
 function _homeLoadSettleSummary(did, ym) {
   if(!_db||!did) return;
   var cntEl = document.getElementById('h-total-cnt');
@@ -20339,6 +20381,46 @@ function _getMainSettlePage() {
 function _goMainSettle() {
   var page = _getMainSettlePage();
   goPage(page);
+}
+
+
+// ★ 업종별 용어 자동 설정
+function _applyIndustryTerms(industry) {
+  var INDUSTRY_MAP = {
+    food:     {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
+    beauty:   {worker:'직원', attend:'출퇴근', camp:'지점', rate:'건단가', unit:'건'},
+    health:   {worker:'강사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
+    academy:  {worker:'강사', attend:'출퇴근', camp:'학원', rate:'시급', unit:'시간'},
+    laundry:  {worker:'직원', attend:'출퇴근', camp:'매장', rate:'건단가', unit:'건'},
+    stay:     {worker:'직원', attend:'출퇴근', camp:'지점', rate:'일급', unit:'일'},
+    retail:   {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
+    delivery: {worker:'기사', attend:'출퇴근', camp:'캠프', rate:'건단가', unit:'건'},
+    const:    {worker:'인부', attend:'출퇴근', camp:'현장', rate:'일급', unit:'일'},
+    insurance:{worker:'설계사', attend:'출퇴근', camp:'지점', rate:'수수료', unit:'건'},
+    care:     {worker:'요양사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
+  };
+  var t = INDUSTRY_MAP[industry] || INDUSTRY_MAP['delivery'];
+  // terms 전역 변수 업데이트 (이미 있는 terms 객체)
+  if(typeof terms !== 'undefined') {
+    Object.assign(terms, t);
+  }
+  window._currentIndustry = industry;
+  var badge = document.getElementById('dash-industry-badge');
+  var EMOJIS = {food:'🍽️',beauty:'💇',health:'💪',academy:'📚',laundry:'👕',stay:'🏨',retail:'🛍️',delivery:'🚚',const:'🏗️',insurance:'🛡️',care:'💊'};
+  var NAMES = {food:'음식점·카페',beauty:'미용실·네일',health:'헬스·요가',academy:'학원·교습',laundry:'세탁·수선',stay:'숙박·펜션',retail:'소매·잡화',delivery:'배달·물류',const:'건설·일용직',insurance:'보험·영업',care:'요양·돌봄'};
+  if(badge) badge.innerHTML = '<span style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;font-size:10px">'+(EMOJIS[industry]||'🏢')+' '+(NAMES[industry]||industry)+'</span>';
+}
+
+// 로그인 후 회사 industry 로드 → terms 자동 적용
+function _loadIndustrySettings(did) {
+  if(!_db||!did) return;
+  _db.collection('companies').doc(did).get().then(function(snap) {
+    if(!snap.exists) return;
+    var co = snap.data();
+    var ind = co.industry || 'delivery';
+    _applyIndustryTerms(ind);
+    window._cachedCompanyDoc = co;
+  }).catch(function(){});
 }
 
 function _homeLoadSettleSummary(did,ym){
