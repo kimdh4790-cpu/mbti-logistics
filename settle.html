@@ -1055,6 +1055,278 @@ function calcWorkHoursFromQR(checkIn, checkOut) {
 // ════════════════════════════════════════
 // ★ 일급제 정산
 // ════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// ★ 출퇴근 고도화 v2
+// ① 근무 유형 설정 (workSettings)
+// ② 지각/조퇴/결근/정상 자동 판정
+// ③ 월간 집계 + 주52시간 경고
+// ④ 출퇴근 → 급여 자동 연동
+// ═══════════════════════════════════════════════════════
+
+// ── 기본 근무 설정 (workSettings 없을 때 기본값)
+var _DEFAULT_WORK_SETTINGS = {
+  startTime: '09:00',       // 출근 기준시간
+  endTime: '18:00',         // 퇴근 기준시간
+  breakMin: 60,             // 휴게시간 (분)
+  lateGraceMin: 10,         // 지각 유예 (분) - 9:10까지는 정상
+  earlyLeaveMin: 10,        // 조퇴 유예 (분)
+  workDays: [1,2,3,4,5],    // 근무요일 (0=일,1=월,...6=토)
+  workType: 'fixed',        // fixed/flex/shift
+  weeklyMaxHours: 52,       // 주 최대 근무시간
+};
+window._workSettings = null;
+
+// ── workSettings 로드
+function _loadWorkSettings(did, cb) {
+  if(window._workSettings) { cb(window._workSettings); return; }
+  if(!_db||!did) { cb(_DEFAULT_WORK_SETTINGS); return; }
+  _db.collection('companies').doc(did).collection('settings').doc('workSettings')
+    .get().then(function(snap) {
+      var ws = snap.exists ? Object.assign({}, _DEFAULT_WORK_SETTINGS, snap.data()) : _DEFAULT_WORK_SETTINGS;
+      window._workSettings = ws;
+      cb(ws);
+    }).catch(function() { cb(_DEFAULT_WORK_SETTINGS); });
+}
+
+// ── 근무 상태 판정 (지각/조퇴/결근/정상/근무중)
+function _judgeAttStatus(d, ws) {
+  var ws2 = ws || _DEFAULT_WORK_SETTINGS;
+  var today = new Date().toISOString().slice(0,10);
+  var isToday = d.date === today;
+
+  // 결근: 오늘이 아니고 기록 없음
+  if(!d.checkIn) return {code:'absent', label:'결근', color:'#6b7280', bg:'rgba(107,114,128,.12)'};
+
+  var parseHHMM = function(s) {
+    if(!s) return null;
+    var p = s.split(':'); return parseFloat(p[0]) + parseFloat(p[1]||0)/60;
+  };
+
+  var inH = parseHHMM(d.checkIn);
+  var outH = d.checkOut ? parseHHMM(d.checkOut) : null;
+  var stdIn = parseHHMM(ws2.startTime);
+  var stdOut = parseHHMM(ws2.endTime);
+  var graceIn = (ws2.lateGraceMin||0) / 60;
+  var graceOut = (ws2.earlyLeaveMin||0) / 60;
+
+  // 근무중 (오늘 퇴근 안 함)
+  if(isToday && !outH) return {code:'working', label:'근무중', color:'#0066ff', bg:'rgba(0,102,255,.12)'};
+
+  var isLate = inH > stdIn + graceIn;
+  var isEarly = outH && outH < stdOut - graceOut;
+  var workH = outH ? Math.max(0, outH - inH - (ws2.breakMin||60)/60) : 0;
+
+  if(isLate && isEarly) return {code:'late_early', label:'지각+조퇴', color:'#ef4444', bg:'rgba(239,68,68,.12)'};
+  if(isLate) return {code:'late', label:'지각', color:'#f59e0b', bg:'rgba(245,158,11,.12)'};
+  if(isEarly) return {code:'early', label:'조퇴', color:'#f97316', bg:'rgba(249,115,22,.12)'};
+  if(outH) return {code:'normal', label:'정상', color:'#22c55e', bg:'rgba(34,197,94,.12)'};
+  return {code:'working', label:'근무중', color:'#0066ff', bg:'rgba(0,102,255,.12)'};
+}
+
+// ── 주 52시간 체크
+function _check52Hours(weeklyHours) {
+  if(weeklyHours >= 52) return {warn:true, level:'danger', msg:'주 52시간 초과 🔴 '+weeklyHours.toFixed(1)+'h'};
+  if(weeklyHours >= 48) return {warn:true, level:'warning', msg:'주 48시간 근접 ⚠️ '+weeklyHours.toFixed(1)+'h'};
+  return {warn:false, level:'ok', msg:weeklyHours.toFixed(1)+'h'};
+}
+
+// ── 월간 근무 집계
+async function _calcMonthlyStats(did, ym) {
+  if(!_db||!did) return null;
+  try {
+    var snap = await _db.collection('attendance')
+      .where('dealerId','==',did)
+      .where('date','>=',ym+'-01')
+      .where('date','<=',ym+'-31')
+      .get();
+
+    var byDriver = {};
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      var uid = d.userId||d.driverName||'unknown';
+      if(!byDriver[uid]) byDriver[uid] = {name:d.driverName||d.name||uid, totalH:0, days:0, lateCount:0, absentCount:0, earlyCount:0};
+      var ws = window._workSettings || _DEFAULT_WORK_SETTINGS;
+      var qr = calcWorkHoursFromQR(d.checkIn||'', d.checkOut||'');
+      byDriver[uid].totalH += qr.hours;
+      if(d.checkIn) byDriver[uid].days++;
+      var status = _judgeAttStatus(d, ws);
+      if(status.code==='late'||status.code==='late_early') byDriver[uid].lateCount++;
+      if(status.code==='early'||status.code==='late_early') byDriver[uid].earlyCount++;
+    });
+    return byDriver;
+  } catch(e) { return null; }
+}
+
+// ── 근무 설정 페이지
+function pageWorkSettings() {
+  document.getElementById('page-title').textContent = '⚙️ 근무 설정';
+  var el = document.getElementById('content');
+  var did = _CU.dealerId;
+  window._workSettings = null; // 캐시 초기화
+
+  _loadWorkSettings(did, function(ws) {
+    el.innerHTML = '<div style="max-width:600px;margin:0 auto">'
+      + '<div class="card" style="margin-bottom:14px">'
+      + '<div class="card-title">⚙️ 기본 근무 설정</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'
+      // 출근 기준시간
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">출근 기준시간</label>'
+      + '<input type="time" id="ws-start" value="'+ws.startTime+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
+      // 퇴근 기준시간
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">퇴근 기준시간</label>'
+      + '<input type="time" id="ws-end" value="'+ws.endTime+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
+      // 지각 유예
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">지각 유예 (분)</label>'
+      + '<input type="number" id="ws-late" value="'+(ws.lateGraceMin||10)+'" min="0" max="60" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
+      // 조퇴 유예
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">조퇴 유예 (분)</label>'
+      + '<input type="number" id="ws-early" value="'+(ws.earlyLeaveMin||10)+'" min="0" max="60" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
+      // 휴게시간
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">휴게시간 (분)</label>'
+      + '<input type="number" id="ws-break" value="'+(ws.breakMin||60)+'" min="0" max="120" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
+      // 근무유형
+      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">근무 유형</label>'
+      + '<select id="ws-type" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">'
+      + '<option value="fixed"'+(ws.workType==='fixed'?' selected':'')+'>정시제 (고정시간)</option>'
+      + '<option value="flex"'+(ws.workType==='flex'?' selected':'')+'>유연근무제</option>'
+      + '<option value="shift"'+(ws.workType==='shift'?' selected':'')+'>교대근무</option>'
+      + '</select></div>'
+      + '</div>'
+      // 근무요일
+      + '<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:8px">근무 요일</label>'
+      + '<div style="display:flex;gap:6px">'
+      + ['일','월','화','수','목','금','토'].map(function(d,i){
+          var on=(ws.workDays||[1,2,3,4,5]).indexOf(i)>=0;
+          return '<button type="button" data-day="'+i+'" onclick="_wsToggleDay(this)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg3)')+';color:'+(on?'#fff':'var(--text3)')+';font-size:12px;font-weight:700;cursor:pointer">'+d+'</button>';
+        }).join('')
+      + '</div></div>'
+      // 저장 버튼
+      + '<button onclick="_saveWorkSettings()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 설정 저장</button>'
+      + '</div>'
+      // 미리보기
+      + '<div class="card"><div class="card-title">📋 현재 설정 미리보기</div>'
+      + '<div style="font-size:13px;line-height:2">'
+      + '출근: <strong>'+ws.startTime+'</strong> ('+ws.lateGraceMin+'분 유예까지 정상)<br>'
+      + '퇴근: <strong>'+ws.endTime+'</strong> ('+ws.earlyLeaveMin+'분 유예까지 정상)<br>'
+      + '휴게: <strong>'+ws.breakMin+'분</strong> 자동 차감<br>'
+      + '유형: <strong>'+{fixed:'정시제',flex:'유연근무',shift:'교대근무'}[ws.workType||'fixed']+'</strong><br>'
+      + '주 최대: <strong>52시간</strong> (법정)'
+      + '</div></div>'
+      + '</div>';
+  });
+}
+
+function _wsToggleDay(btn) {
+  var on = btn.style.background.indexOf('var(--blue)') >= 0 || btn.style.background === 'var(--blue)';
+  btn.style.background = on ? 'var(--bg3)' : 'var(--blue)';
+  btn.style.color = on ? 'var(--text3)' : '#fff';
+  btn.style.borderColor = on ? 'var(--border)' : 'var(--blue)';
+}
+
+function _saveWorkSettings() {
+  var did = _CU.dealerId;
+  if(!did||!_db){ toast('로그인 필요'); return; }
+  var days = [];
+  document.querySelectorAll('[data-day]').forEach(function(btn) {
+    if(btn.style.background === 'var(--blue)' || btn.style.background.indexOf('blue')>=0) {
+      days.push(parseInt(btn.getAttribute('data-day')));
+    }
+  });
+  var ws = {
+    startTime: document.getElementById('ws-start').value || '09:00',
+    endTime: document.getElementById('ws-end').value || '18:00',
+    lateGraceMin: parseInt(document.getElementById('ws-late').value)||10,
+    earlyLeaveMin: parseInt(document.getElementById('ws-early').value)||10,
+    breakMin: parseInt(document.getElementById('ws-break').value)||60,
+    workType: document.getElementById('ws-type').value || 'fixed',
+    workDays: days.length ? days : [1,2,3,4,5],
+    weeklyMaxHours: 52,
+    updatedAt: new Date().toISOString()
+  };
+  _db.collection('companies').doc(did).collection('settings').doc('workSettings')
+    .set(ws).then(function() {
+      window._workSettings = ws;
+      toast('✅ 근무 설정 저장됨');
+      pageWorkSettings(); // 미리보기 갱신
+    }).catch(function(e) { toast('❌ '+e.message); });
+}
+
+// ── 월간 집계 페이지
+function pageMonthlyStats() {
+  document.getElementById('page-title').textContent = '📊 월간 근무 집계';
+  var el = document.getElementById('content');
+  var did = _CU.dealerId;
+  var now = new Date();
+  var ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+  el.innerHTML = '<div style="max-width:900px;margin:0 auto">'
+    + '<div class="card">'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">'
+    + '<div class="card-title" style="margin:0">📊 월간 근무 집계</div>'
+    + '<input type="month" id="ms-ym" value="'+ym+'" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+    + '<button onclick="_loadMonthlyStats()" class="btn btn-blue" style="font-size:12px">조회</button>'
+    + '</div>'
+    + '<div id="ms-content"><div class="empty">조회 버튼을 누르세요</div></div>'
+    + '</div></div>';
+  _loadMonthlyStats();
+}
+
+async function _loadMonthlyStats() {
+  var did = _CU.dealerId;
+  var ym = (document.getElementById('ms-ym')||{value:new Date().toISOString().slice(0,7)}).value;
+  var el = document.getElementById('ms-content');
+  if(!el) return;
+  el.innerHTML = '<div class="empty">⏳ 집계 중...</div>';
+
+  _loadWorkSettings(did, async function(ws) {
+    var stats = await _calcMonthlyStats(did, ym);
+    if(!stats||!Object.keys(stats).length) {
+      el.innerHTML = '<div class="empty">해당 월 출퇴근 기록 없음</div>'; return;
+    }
+    var workDaysInMonth = _getWorkDaysCount(ym, ws.workDays||[1,2,3,4,5]);
+    var rows = Object.values(stats).sort(function(a,b){return b.totalH-a.totalH;}).map(function(s) {
+      var avgH = s.days ? (s.totalH/s.days).toFixed(1) : 0;
+      var w52 = _check52Hours(s.totalH/4); // 주당 평균
+      var attendRate = workDaysInMonth ? Math.round(s.days/workDaysInMonth*100) : 0;
+      return '<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:10px;font-weight:700">'+esc(s.name)+'</td>'
+        +'<td style="padding:8px;text-align:center">'+s.days+'일 / '+workDaysInMonth+'일</td>'
+        +'<td style="padding:8px;text-align:center"><span style="background:'+(attendRate>=90?'rgba(34,197,94,.12)':'rgba(239,68,68,.12)');+';color:'+(attendRate>=90?'#22c55e':'#ef4444')+';padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700">'+attendRate+'%</span></td>'
+        +'<td style="padding:8px;text-align:center;font-weight:700">'+s.totalH.toFixed(1)+'h</td>'
+        +'<td style="padding:8px;text-align:center">'+avgH+'h</td>'
+        +'<td style="padding:8px;text-align:center"><span style="color:'+(w52.level==='danger'?'#ef4444':w52.level==='warning'?'#f59e0b':'#22c55e')+'">'+w52.msg+'</span></td>'
+        +'<td style="padding:8px;text-align:center">'+(s.lateCount?'<span style="color:#f59e0b;font-size:11px">지각 '+s.lateCount+'회</span>':'-')+'</td>'
+        +'</tr>';
+    }).join('');
+
+    el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<tr style="background:var(--bg3)">'
+      +'<th style="padding:10px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">출근일수</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">출근율</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">총 근무</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">일평균</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">주52h</th>'
+      +'<th style="padding:8px;border-bottom:2px solid var(--border)">특이사항</th>'
+      +'</tr>'+rows+'</table></div>'
+      +'<div style="margin-top:12px;padding:10px;background:rgba(239,68,68,.08);border-radius:8px;font-size:11px;color:var(--text3)">'
+      +'⚠️ 주 52시간 = 법정 최대 근무시간 (기본 40h + 연장 12h). 초과 시 근로기준법 위반.</div>';
+  });
+}
+
+function _getWorkDaysCount(ym, workDays) {
+  var parts = ym.split('-');
+  var year = parseInt(parts[0]), month = parseInt(parts[1])-1;
+  var daysInMonth = new Date(year, month+1, 0).getDate();
+  var count = 0;
+  for(var d=1; d<=daysInMonth; d++) {
+    var dow = new Date(year, month, d).getDay();
+    if((workDays||[1,2,3,4,5]).indexOf(dow) >= 0) count++;
+  }
+  return count;
+}
+
 function calcDailyPay(params) {
   var L = LABOR_LAW_2026;
   var dailyRate = params.dailyRate || L.minDaily;
@@ -19801,6 +20073,7 @@ function pageHome(){
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('🧾','세무사 연동','tax_share','#059669');
     // QR출퇴근 결제 시
     if(hasSvc('qr')||isSA) html += _homeQuickBtn2('🔐','출퇴근 현황','attendance','#0891b2');
+    if(hasSvc('qr')||isSA) html += _homeQuickBtn2('⚙️','근무 설정','work_settings','#6b7280');
     if(hasSvc('qr')||isSA) html += _homeQuickBtn2('🗓','근무표','roster','#db2777');
     // 급여관리 결제 시
     if(hasSvc('payroll')||isSA) html += _homeQuickBtn2('💼','급여 계산','hourly_settle','#7c3aed');
@@ -21595,7 +21868,9 @@ function pageAttendance(){
     +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🙋 방문자 관리</button>'
     +'<button id="att-tab-url" class="btn" onclick="_attTab(\'url\')" style="font-size:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none">🔗 URL 발급</button>'
     +'<button id="att-tab-guide" class="btn" onclick="_attTab(\'guide\')" style="font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none">📄 안내문 출력</button>'
-    +'<button id="att-tab-sim" class="btn" onclick="_attTab(\'sim\')" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 시뮬레이션</button>'
+    +'<button onclick="pageWorkSettings()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚙️ 근무설정</button>'
++'<button onclick="pageMonthlyStats()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">📊 월간집계</button>'
++'<button id="att-tab-sim" class="btn" onclick="_attTab(\'sim\')" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 시뮬레이션</button>'
     +'</div>'
     +'<div id="att-qr-area"></div>'
     +'<div id="att-today-area" style="display:none"></div>'
@@ -25782,7 +26057,9 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+  var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },
+work_settings:pageWorkSettings,
+monthly_stats:pageMonthlyStats,delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
