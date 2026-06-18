@@ -28938,7 +28938,7 @@ function openSendModal(x){
 
   // 버튼들
   var channels=[
-    {icon:'💬',name:'카카오톡 공유',sub:'카카오톡 앱으로 전송',bg:'#FEE500',color:'#3A1D1D',fn:function(){sendKakao(msgEnc);}},
+    {icon:'💬',name:'카카오 명세서 공유',sub:'명세서 카드로 전송 (권장)',bg:'#FEE500',color:'#3A1D1D',fn:function(){sendKakaoStatement(x,name,r.month||_settle_month||'',calcNet(x).net||0);}},
     {icon:'📱',name:'문자(SMS) 발송',sub:phone||'전화번호 없음 - 기사정보에 추가',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,encodeURIComponent(phone));}},
     {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음 - 기사정보에 추가',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(email),subjectEnc,msgEnc);}},
     {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome,docId);}},
@@ -28976,10 +28976,62 @@ function sendKakao(msgEnc){
       link:{mobileWebUrl:'https://donway.ai.kr',webUrl:'https://donway.ai.kr'}
     });
   } else {
-    // 카카오 SDK 없으면 클립보드 복사
-    navigator.clipboard.writeText(msg).then(function(){
-      toast('📋 메시지 복사됨! 카카오톡에 붙여넣기 하세요');
-    }).catch(function(){toast('카카오톡을 열어 직접 붙여넣기 하세요');});
+    navigator.clipboard&&navigator.clipboard.writeText(msg).then(function(){
+      toast('📋 복사됨 — 카카오톡에 붙여넣기 하세요');
+    }).catch(function(){toast('카카오톡에 직접 붙여넣기 하세요');});
+  }
+}
+
+// 명세서 카카오 피드 공유 — 명세서 저장 후 URL로 공유
+async function sendKakaoStatement(settleData, driverName, month, netPay) {
+  try {
+    toast('📋 명세서 준비 중...');
+    var did = _CU.dealerId||'';
+    var coName = (_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||'DONWAY';
+
+    // Firestore에 명세서 저장 → 고유 token 생성
+    var token = Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+    var stmtData = Object.assign({}, settleData, {
+      _token: token,
+      _driverName: driverName,
+      _month: month,
+      _netPay: netPay,
+      _coName: coName,
+      _createdAt: new Date().toISOString(),
+      _dealerId: did
+    });
+    await _db.collection('statement_share').doc(token).set(stmtData);
+
+    var stmtUrl = 'https://donway.ai.kr/stmt?t='+token;
+    var title   = '['+coName+'] '+month+' 정산명세서';
+    var desc    = driverName+'님 · 실지급 '+Math.round(netPay||0).toLocaleString()+'원';
+
+    if(window.Kakao&&window.Kakao.isInitialized()){
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title:       title,
+          description: desc,
+          imageUrl:    'https://donway.ai.kr/og_banner.jpg',
+          link: {
+            mobileWebUrl: stmtUrl,
+            webUrl:       stmtUrl
+          }
+        },
+        buttons: [{
+          title:  '📋 명세서 확인하기',
+          link: {mobileWebUrl:stmtUrl, webUrl:stmtUrl}
+        }]
+      });
+      toast('✅ 카카오톡으로 명세서 전송!');
+    } else {
+      // SDK 없으면 URL 복사
+      navigator.clipboard&&navigator.clipboard.writeText(stmtUrl).then(function(){
+        toast('📋 명세서 링크 복사됨 — 카카오톡에 붙여넣기');
+      });
+    }
+  } catch(e) {
+    toast('❌ '+e.message);
   }
 }
 
