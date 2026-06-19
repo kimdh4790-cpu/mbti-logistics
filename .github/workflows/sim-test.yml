@@ -11,35 +11,49 @@ jobs:
         run: |
           SECRET="${{ secrets.CRON_SECRET }}"
           BASE="https://donway.ai.kr"
+          RESULTS=""
           
           echo "=== [1] 테스트 데이터 생성 ==="
           R1=$(curl -s -X POST "$BASE/api/test-sim" \
             -H "Content-Type: application/json" \
-            -d "{"action":"create_test_company","secret":"$SECRET"}")
+            -d "{\"action\":\"create_test_company\",\"secret\":\"$SECRET\"}")
           echo "$R1"
+          RESULTS="$RESULTS|create:$R1"
           
           echo "=== [2] 데이터 확인 ==="
           R2=$(curl -s -X POST "$BASE/api/test-sim" \
             -H "Content-Type: application/json" \
-            -d "{"action":"check_data","secret":"$SECRET","data":{"dealerId":"TEST_SIM_001"}}")
+            -d "{\"action\":\"check_data\",\"secret\":\"$SECRET\",\"data\":{\"dealerId\":\"TEST_SIM_001\"}}")
           echo "$R2"
           
           echo "=== [3] 알림톡 테스트 ==="
           R3=$(curl -s -X POST "$BASE/api/send-alimtalk" \
             -H "Content-Type: application/json" \
-            -d '{"to":"01047903103","templateCode":"KA01TP2605202011489862wFDonmS7ny","variables":{"#{회사명}":"테스트","#{이름}":"홍길동","#{월}":"2026-06","#{실지급}":"4,410,000","#{명세서링크}":"testtoken123"},"fallbackText":"[시뮬레이션] 알림톡 테스트"}')
+            -d '{"to":"01047903103","templateCode":"KA01TP2605202011489862wFDonmS7ny","variables":{"#{회사명}":"테스트회사","#{이름}":"홍길동","#{월}":"2026-06","#{실지급}":"4,410,000","#{명세서링크}":"testtoken123"},"fallbackText":"[시뮬레이션] 알림톡 테스트"}')
           echo "$R3"
+          RESULTS="$RESULTS|alimtalk:$R3"
           
           echo "=== [4] SMS 테스트 ==="
           R4=$(curl -s -X POST "$BASE/api/send-sms" \
             -H "Content-Type: application/json" \
-            -d '{"messages":[{"to":"01047903103","text":"[DONWAY 시뮬레이션] SMS 발송 테스트입니다."}]}')
+            -d '{"messages":[{"to":"01047903103","text":"[DONWAY 시뮬레이션] SMS 발송 테스트"}]}')
           echo "$R4"
+          RESULTS="$RESULTS|sms:$R4"
           
-          echo "=== [5] 데이터 정리 ==="
-          R5=$(curl -s -X POST "$BASE/api/test-sim" \
+          echo "=== [5] /stmt 뷰어 테스트 ==="
+          R5=$(curl -s -o /dev/null -w "%{http_code}" "https://donway.ai.kr/stmt?t=testtoken999")
+          echo "HTTP Status: $R5"
+          
+          echo "=== [6] 데이터 정리 ==="
+          R6=$(curl -s -X POST "$BASE/api/test-sim" \
             -H "Content-Type: application/json" \
-            -d "{"action":"cleanup","secret":"$SECRET"}")
-          echo "$R5"
+            -d "{\"action\":\"cleanup\",\"secret\":\"$SECRET\"}")
+          echo "$R6"
           
-          echo "=== 시뮬레이션 완료 ==="
+          echo ""
+          echo "========== 시뮬레이션 최종 결과 =========="
+          echo "1. 데이터 생성: $R1"
+          echo "2. 알림톡: $R3"
+          echo "3. SMS: $R4"
+          echo "4. /stmt HTTP: $R5"
+          echo "5. 정리: $R6"
