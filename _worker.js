@@ -1835,6 +1835,338 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
 
 
+    
+    // ── Firestore Rules 자동 배포 (/api/deploy-rules) ──
+    if (path === '/api/deploy-rules' && method === 'POST') {
+      try {
+        const body = await request.json();
+        if (body.secret !== (env.CRON_SECRET || '')) {
+          return new Response(JSON.stringify({ok:false,error:'unauthorized'}), {headers:{'Content-Type':'application/json'}});
+        }
+        const fsToken = await getFsToken(env);
+        const rulesContent = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && (
+        request.auth.token.email == 'kimdh4790@gmail.com' ||
+        request.auth.token.email == 'soungkyekim@naver.com'
+      );
+    }
+
+    // dealerId 확인 — uid 직접비교 + users 문서 조회 둘 다
+    function isDealer(dealerId) {
+      return isAuth() && (
+        request.auth.uid == dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == dealerId) ||
+        isSuperAdmin()
+      );
+    }
+
+    function ownsDoc() {
+      return isAuth() && (
+        request.auth.uid == resource.data.dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
+        isSuperAdmin()
+      );
+    }
+
+    function ownsNewDoc() {
+      return isAuth() && (
+        request.auth.uid == request.resource.data.dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == request.resource.data.dealerId) ||
+        isSuperAdmin()
+      );
+    }
+
+    match /admins/{docId} {
+      allow read: if isAuth();
+      allow write: if isSuperAdmin();
+    }
+    match /security_logs/{docId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuth();
+    }
+    match /error_logs/{docId} {
+      allow create: if isAuth();
+      allow read: if isSuperAdmin();
+    }
+    match /admin_events/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+    match /admin_notifications/{docId} {
+      allow read, write: if isSuperAdmin();
+    }
+    match /admin_tokens/{docId} {
+      allow read, write: if isAuth();
+    }
+    match /cron_logs/{docId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /subscription_logs/{docId} {
+      allow read, create: if isSuperAdmin();
+    }
+    match /alimtalk_queue/{docId} {
+      allow create: if true;
+      allow read, update: if isSuperAdmin();
+    }
+    match /join_requests/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin();
+    }
+    match /companies/{dealerId} {
+      allow read: if isDealer(dealerId);
+      allow create: if isAuth();
+      allow update: if isDealer(dealerId);
+      allow delete: if isSuperAdmin();
+    }
+    match /users/{userId} {
+      allow read: if isAuth() && (
+        request.auth.uid == userId || ownsDoc() || isSuperAdmin()
+      );
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && (
+        request.auth.uid == userId || isSuperAdmin()
+      );
+    }
+    match /subscriptions/{uid} {
+      allow read: if isAuth() && (
+        request.auth.uid == uid || isDealer(uid) || isSuperAdmin()
+      );
+      allow write: if isSuperAdmin();
+    }
+    match /payments/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+    match /payment_requests/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc();
+      allow update, delete: if isSuperAdmin();
+    }
+    match /mbetco_subscriptions/{docId} {
+      allow read: if isAuth() && (
+        resource.data.email == request.auth.token.email || isSuperAdmin()
+      );
+      allow write: if isSuperAdmin();
+    }
+    match /plan_guards/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /plan_guard_alerts/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /drivers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /members/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /attendance/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /leaves/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /leaveBalance/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /overtimes/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payslips/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /notices/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory_in/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory_out/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /mbetco_sales/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /message_history/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /statement_share/{docId} {
+      allow read: if true;
+      allow create: if isAuth();
+      allow update, delete: if isSuperAdmin();
+    }
+    match /settings/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /contracts/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /expenses/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /vehicles/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /customers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /taxShares/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /documents/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /dispatch_results/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /driver_settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /incomes/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /evaluations/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /reservations/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /idSupport/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    // 기타 모든 컬렉션 — 인증된 사용자 읽기/쓰기
+    match /{document=**} {
+      allow read, write: if isAuth();
+    }
+  }
+}
+`;
+        
+        // Firebase Rules API로 배포
+        const rulesRes = await fetch(
+          'https://firebaserules.googleapis.com/v1/projects/mbti-logistics/rulesets',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${fsToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              source: {
+                files: [{
+                  name: 'firestore.rules',
+                  content: rulesContent
+                }]
+              }
+            })
+          }
+        );
+        const rulesData = await rulesRes.json();
+        if (!rulesData.name) {
+          return new Response(JSON.stringify({ok:false,error:'ruleset 생성 실패',data:rulesData}), {headers:{'Content-Type':'application/json'}});
+        }
+        
+        // Release에 적용
+        const releaseRes = await fetch(
+          'https://firebaserules.googleapis.com/v1/projects/mbti-logistics/releases/cloud.firestore',
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${fsToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              release: {
+                name: 'projects/mbti-logistics/releases/cloud.firestore',
+                rulesetName: rulesData.name
+              }
+            })
+          }
+        );
+        const releaseData = await releaseRes.json();
+        const ok = !!releaseData.rulesetName;
+        return new Response(JSON.stringify({ok, ruleset: rulesData.name, release: releaseData.rulesetName}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+
     // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
     if (path === '/api/kakao-config' && method === 'GET') {
       return new Response(JSON.stringify({
