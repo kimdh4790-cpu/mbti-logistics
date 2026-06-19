@@ -510,9 +510,7 @@ async function syncKVFromGitHub(env) {
 
 // subscriptions 구조: donway/filo/mbtico modules 배열로 메뉴 제어
 export default {
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(syncKVFromGitHub(env));
-  },
+  // scheduled: KV sync moved to main scheduled handler below
   async fetch(request, env) {
     _env_ref = env;
     const url      = new URL(request.url);
