@@ -1610,7 +1610,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const body = await request.json();
         const { action, data, secret } = body;
         // 보안키 확인
-        if (secret !== (env.CRON_SECRET || '')) {
+        // superadmin 이메일로 인증
+        const ALLOWED = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+        if (!ALLOWED.includes(secret)) {
           return new Response(JSON.stringify({ok:false,error:'unauthorized'}), {headers:{'Content-Type':'application/json'}});
         }
         const fsToken = await getFsToken(env);
