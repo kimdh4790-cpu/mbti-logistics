@@ -23032,7 +23032,7 @@ function _empHomeLoad(did, uid, today, ym){
   // 연차 현황
   var year=new Date().getFullYear();
   Promise.all([
-    _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get(),
+    _db.collection('drivers').where('dealerId','==',did).get(),
     _db.collection('leaves').where('dealerId','==',did).where('userId','==',uid)
       .where('status','==','approved')
       .where('startDate','>=',year+'-01-01').where('startDate','<=',year+'-12-31').get()
@@ -29215,7 +29215,7 @@ function openSendModal(x){
 var phone=x.phone||x.driverPhone||x.tel||x.mobile||'';
   var did=_CU.dealerId||'';var uid=x.userId||x.driver||'';
   if(!phone&&did&&uid&&_db){
-    _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+    _db.collection('drivers').where('dealerId','==',did).get()
     .then(function(snap){
       if(!snap.empty){
         var dv=snap.docs[0].data();
