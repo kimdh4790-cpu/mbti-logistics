@@ -7,15 +7,28 @@ jobs:
   fix:
     runs-on: ubuntu-latest
     steps:
-      - name: Fix test0 account data
+      - name: Fix test0 dealerId in users collection
         run: |
           SECRET="${{ secrets.CRON_SECRET }}"
           BASE="https://donway.ai.kr"
           
-          echo "=== test0 계정 데이터 수정 ==="
-          
-          # test0 계정 users + companies 데이터 확인 및 수정
+          echo "=== test0 계정 fix_test_account 실행 ==="
           R=$(curl -s -X POST "$BASE/api/test-sim" \
             -H "Content-Type: application/json" \
             -d "{\"action\":\"fix_test_account\",\"secret\":\"$SECRET\"}")
           echo "$R"
+          
+          echo ""
+          echo "=== 결과 확인 ==="
+          echo "$R" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print('ok:', d.get('ok'))
+    print('testUid:', d.get('testUid'))
+    print('dealerId:', d.get('dealerId'))
+    print('userUpdate:', d.get('userUpdate'))
+    print('companyUpdate:', d.get('companyUpdate'))
+except Exception as e:
+    print('파싱오류:', e)
+"
