@@ -29205,25 +29205,39 @@ function sendKakao(msgEnc){
   }
 }
 
-function openSendModal(x){
+async function openSendModal(x){
   var r=calcNet(x);
   var net=r.net||0;
   var emp=(r.emp||0)+(r.work||0);
   var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계
   var name=x.driver||x.userId||'기사';
   var month=x.month||'';
-var phone=x.phone||x.driverPhone||x.tel||x.mobile||'';
+  var phone=x.phone||x.driverPhone||x.tel||x.mobile||'';
   var did=_CU.dealerId||'';var uid=x.userId||x.driver||'';
-  if(!phone&&did&&uid&&_db){
-    _db.collection('drivers').where('dealerId','==',did).get()
-    .then(function(snap){
-      if(!snap.empty){
-        var dv=snap.docs[0].data();
+  var dname=x.driver||x.driverName||'';
+  if(!phone&&did&&_db){
+    try{
+      var snap2=await _db.collection('drivers').where('dealerId','==',did).get();
+      var found=null;
+      snap2.forEach(function(doc){
+        var dv=doc.data();
+        if(uid&&(dv.userId===uid||dv.driverId===uid||dv.couId===uid))found=dv;
+        else if(!found&&dname&&dv.name===dname)found=dv;
+      });
+      if(found){x.phone=found.phone||found.tel||'';x.email=found.email||x.email||'';phone=x.phone;}
+    }catch(e2){console.warn('phone조회',e2);}
+  }
+
+
+
+
+
+
         x.phone=dv.phone||dv.driverPhone||dv.tel||dv.mobile||'';
         if(x.phone){var phEls=document.querySelectorAll('[data-ch-phone]');phEls.forEach(function(el){el.textContent=x.phone;});}
-      }
-    }).catch(function(){});
-  }
+
+
+
   var email=x.email||x.driverEmail||'';
   var docId=x.id||x.fbId||'';
 
