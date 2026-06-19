@@ -8282,6 +8282,9 @@ function showApp(){
     }).catch(function(){});
   }
   setTimeout(function(){if(window._initPlanGuard)_initPlanGuard();},2000);
+  if(_CU&&_CU.dealerId&&typeof _initIntegration==='function'){
+    setTimeout(function(){_initIntegration(_CU.dealerId);},3000);
+  }
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
       .then(function(snap){var r=[];snap.forEach(function(d){r.push(Object.assign({_id:d.id},d.data()));});window._idSupportRules=r;})
@@ -20919,12 +20922,17 @@ async function _attCheckMissingFCM() {
 // 📨 메시지 발송 페이지
 // ══════════════════════════════════════════════════════
 var ALIMTALK_TEMPLATES = {
-  settle:   {name:'💰 정산안내',   code:'KA01TP2605202011489862wFDonmS7ny', text:'[DONWAY 정산안내]\n#{이름}님, #{월} 정산내역입니다.\n총수익: #{총수익}원 / 공제: #{공제}원\n실지급: #{실지급}원\n\n문의: 051-711-3103', vars:['#{이름}','#{월}','#{총수익}','#{공제}','#{실지급}']},
-  payslip:  {name:'💼 급여명세서', code:'KA01TP_PAYSLIP',                   text:'[DONWAY 급여명세서]\n#{이름}님, #{월} 급여가 지급됩니다.\n기본급: #{기본급}원 / 연장: #{연장}원\n실수령: #{실수령}원\n\n문의: 051-711-3103', vars:['#{이름}','#{월}','#{기본급}','#{연장}','#{실수령}']},
-  attend:   {name:'⏰ 출근독려',   code:'KA01TP_ATTEND',                    text:'[#{회사명} 알림]\n#{이름}님, 아직 출근 체크가 안 되어 있습니다.\nQR을 스캔해 출근 기록을 남겨주세요.', vars:['#{회사명}','#{이름}']},
-  notice:   {name:'📢 공지사항',   code:'KA01TP_NOTICE',                    text:'[#{회사명} 공지]\n#{내용}\n\n문의: 051-711-3103', vars:['#{회사명}','#{내용}']},
-  member:   {name:'🎫 회원권만료', code:'KA01TP_MEM',                       text:'[#{회사명}]\n#{이름}님, 회원권이 #{만료일}에 만료됩니다.\n갱신 문의: #{전화번호}', vars:['#{회사명}','#{이름}','#{만료일}','#{전화번호}']},
-  custom:   {name:'✏️ 직접입력',  code:'',                                  text:'', vars:[]}
+  settle:  {name:'💬 정산명세서',  code:'KA01TP2605202011489862wFDonmS7ny', useSMS:false,
+            text:'[#{회사명} 정산명세서]\n#{이름}님 #{월} 정산명세서입니다.\n\n💰 실지급액: #{실지급}원\n\n명세서 확인: #{명세서링크}\n\n문의: 051-711-3103'},
+  payslip: {name:'💼 급여명세서',  code:'', useSMS:true,
+            text:'[#{회사명}] #{이름}님 #{월} 급여가 지급되었습니다.\n실수령: #{실지급}원\n문의: 051-711-3103'},
+  attend:  {name:'⏰ 출근독려',    code:'', useSMS:true,
+            text:'[#{회사명}] #{이름}님 아직 출근 체크가 안 되어있습니다. QR을 스캔해주세요.'},
+  notice:  {name:'📢 공지사항',    code:'', useSMS:true,
+            text:'[#{회사명}] #{내용}\n\n문의: 051-711-3103'},
+  member:  {name:'🎫 회원권만료',  code:'', useSMS:true,
+            text:'[#{회사명}] #{이름}님 회원권이 #{만료일}에 만료됩니다. 갱신 문의: 051-711-3103'},
+  custom:  {name:'✏️ 직접입력',   code:'', useSMS:true, text:'', vars:[]}
 };
 
 function pageMessage() {
