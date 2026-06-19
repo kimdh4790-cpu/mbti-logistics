@@ -8605,7 +8605,7 @@ function showApp(){
 
 // ══ DONWAY 화이트리스트 (영구 무료 계정) ══
 var OWNER_BIZ = ['373-86-02536'];
-var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com','test1@naver.com','test_sim@donway.ai.kr'];
 
 // ── 탭 전환 ──
 function switchTab(tab){
@@ -9815,7 +9815,7 @@ var tossPayments=TossPayments(_tossCK);
       method:'CARD',
       amount:{currency:'KRW',value:finalAmount},
       orderId:orderId,
-      orderName:'DONWAY '+plan.label,
+      orderName:'DONWAY '+(planType||'구독'),
       successUrl:window.location.origin+window.location.pathname+'?toss=success&orderId='+orderId+'&planType='+planType,
       failUrl:window.location.origin+window.location.pathname+'?toss=fail',
       customerEmail:_CU.email||'',
@@ -33104,7 +33104,7 @@ function addRpCamp(cid){
 // ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
 // 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
-var DW_RATE={g1:9000,g2:9000};
+var DW_RATE={g1:4500,g2:2500};
 var SUB_TIERS=[
   {cap:50, label:'~50명'},
   {cap:100,label:'~100명'},
@@ -33196,22 +33196,22 @@ function _showSubModal(){
       .get().then(function(s){_hc=Math.max(1,s.size);_refreshSubCalc();}).catch(function(){});
   }
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:9000,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4500,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:9000,g:1,color:'#7c3aed',badge:'추천',
+    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:4500,g:1,color:'#7c3aed',badge:'추천',
      tl:'출퇴근부터 급여까지 원스톱',
      ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:9000,g:2,color:'#059669',
+    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:2500,g:2,color:'#059669',
      tl:'QR 하나로 출퇴근 자동화',
      ft:['동적 QR 출퇴근','GPS 위치 검증','근무표 자동 관리','출퇴근 현황 조회']},
-    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:9000,g:2,color:'#8b5cf6',
+    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:2500,g:2,color:'#8b5cf6',
      tl:'급여 계산·명세서 자동화',
      ft:['시급·일급·월급·건당 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:9000,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4500,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:9000,g:1,color:'#7c3aed',badge:'NEW',
+    {key:'universal',ic:'📋',nm:'범용 정산',         up:4500,g:1,color:'#7c3aed',badge:'NEW',
      tl:'쿠팡 외 타업종 / 복합업종 정산',
      ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
   ];
@@ -33262,8 +33262,8 @@ function _selectTier(cap){
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
     else{btn.style.background='var(--bg)';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
-  // 금액 갱신 — 9,000원/인
-  var rate=9000;
+  // 금액 갱신
+  var rate=DW_RATE.g1;
   var groups={settle:rate,delivery:rate};
   var tierLabel='~'+cap+'명';
   Object.keys(groups).forEach(function(k){
