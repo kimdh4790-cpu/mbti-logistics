@@ -27,14 +27,18 @@ service cloud.firestore {
     function ownsDoc() {
       return isAuth() && (
         resource.data.dealerId == myUid() ||
-        resource.data.dealerId == myDealerId() ||
+        resource.data.dealerId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         resource.data.dealerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId) ||
         isSuperAdmin()
       );
     }
     function ownsNewDoc() {
       return isAuth() && (
         request.resource.data.dealerId == myUid() ||
-        request.resource.data.dealerId == myDealerId() ||
+        request.resource.data.dealerId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         request.resource.data.dealerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId) ||
         isSuperAdmin()
       );
     }
