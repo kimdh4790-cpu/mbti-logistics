@@ -1603,6 +1603,124 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     
     // ── 명세서 뷰어 (/stmt?t=TOKEN) — 로그인 없이 토큰으로만 접근 ──
 
+    
+    // ── 시뮬레이션 테스트 엔드포인트 (/api/test-sim) ──
+    if (path === '/api/test-sim' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { action, data, secret } = body;
+        // 보안키 확인
+        if (secret !== (env.CRON_SECRET || '')) {
+          return new Response(JSON.stringify({ok:false,error:'unauthorized'}), {headers:{'Content-Type':'application/json'}});
+        }
+        const fsToken = await getFsToken(env);
+        const project = 'mbti-logistics';
+        const fsBase  = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents`;
+        const headers = { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' };
+
+        // action: create_test_company
+        if (action === 'create_test_company') {
+          const dealerId = 'TEST_SIM_001';
+          const companyDoc = {
+            fields: {
+              companyName:   {stringValue: '시뮬레이션 테스트 주식회사'},
+              bizNumber:     {stringValue: '000-00-00000'},
+              email:         {stringValue: 'sim_test@donway.ai.kr'},
+              plan:          {stringValue: 'trial'},
+              services:      {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
+              industryType:  {stringValue: 'coupang'},
+              dealerId:      {stringValue: dealerId},
+              trialEnd:      {stringValue: '2026-12-31'},
+              createdAt:     {stringValue: new Date().toISOString()}
+            }
+          };
+          const r1 = await fetch(`${fsBase}/companies/${dealerId}`, {method:'PATCH', headers, body: JSON.stringify(companyDoc)});
+          const d1 = await r1.json();
+
+          // 테스트 기사 등록
+          const driverId = 'drv_sim_test001';
+          const driverDoc = {
+            fields: {
+              name:     {stringValue: '홍길동'},
+              userId:   {stringValue: 'sim_drv001'},
+              phone:    {stringValue: '01012345678'},
+              camp:     {stringValue: '부산1'},
+              dealerId: {stringValue: dealerId},
+              status:   {stringValue: '재직'},
+              isBiz:    {booleanValue: false},
+              createdAt:{stringValue: new Date().toISOString()}
+            }
+          };
+          const r2 = await fetch(`${fsBase}/drivers/${driverId}`, {method:'PATCH', headers, body: JSON.stringify(driverDoc)});
+          const d2 = await r2.json();
+
+          // 테스트 정산 데이터
+          const settleId = 'settle_sim_2026_06';
+          const settleDoc = {
+            fields: {
+              dealerId:   {stringValue: dealerId},
+              driver:     {stringValue: '홍길동'},
+              userId:     {stringValue: 'sim_drv001'},
+              month:      {stringValue: '2026-06'},
+              camp:       {stringValue: '부산1'},
+              totalAmt:   {doubleValue: 4500000},
+              supplyAmt:  {doubleValue: 4090909},
+              net:        {doubleValue: 4410000},
+              emp:        {doubleValue: 90000},
+              dcnt:       {integerValue: 1200},
+              rcnt:       {integerValue: 5},
+              status:     {stringValue: 'pending'},
+              isBiz:      {booleanValue: false},
+              createdAt:  {stringValue: new Date().toISOString()}
+            }
+          };
+          const r3 = await fetch(`${fsBase}/settlements/${settleId}`, {method:'PATCH', headers, body: JSON.stringify(settleDoc)});
+          const d3 = await r3.json();
+
+          return new Response(JSON.stringify({
+            ok: true,
+            results: {
+              company:  d1.fields ? '✅ 회사 생성' : '❌ ' + JSON.stringify(d1),
+              driver:   d2.fields ? '✅ 기사 생성' : '❌ ' + JSON.stringify(d2),
+              settle:   d3.fields ? '✅ 정산 생성' : '❌ ' + JSON.stringify(d3),
+              dealerId, driverId, settleId
+            }
+          }), {headers:{'Content-Type':'application/json'}});
+        }
+
+        // action: check_data
+        if (action === 'check_data') {
+          const dealerId = data?.dealerId || 'TEST_SIM_001';
+          const [r1,r2,r3] = await Promise.all([
+            fetch(`${fsBase}/companies/${dealerId}`, {headers}),
+            fetch(`${fsBase}/drivers?pageSize=5`, {headers}),
+            fetch(`${fsBase}/settlements?pageSize=5`, {headers})
+          ]);
+          const [c1,c2,c3] = await Promise.all([r1.json(),r2.json(),r3.json()]);
+          return new Response(JSON.stringify({
+            ok: true,
+            company:  c1.fields?.companyName?.stringValue || 'not found',
+            drivers:  (c2.documents||[]).length + '개',
+            settles:  (c3.documents||[]).length + '개'
+          }), {headers:{'Content-Type':'application/json'}});
+        }
+
+        // action: cleanup
+        if (action === 'cleanup') {
+          const dealerId = 'TEST_SIM_001';
+          await fetch(`${fsBase}/companies/${dealerId}`, {method:'DELETE', headers});
+          await fetch(`${fsBase}/drivers/drv_sim_test001`, {method:'DELETE', headers});
+          await fetch(`${fsBase}/settlements/settle_sim_2026_06`, {method:'DELETE', headers});
+          return new Response(JSON.stringify({ok:true,message:'테스트 데이터 삭제 완료'}), {headers:{'Content-Type':'application/json'}});
+        }
+
+        return new Response(JSON.stringify({ok:false,error:'unknown action'}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+
     // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
     if (path === '/api/kakao-config' && method === 'GET') {
       return new Response(JSON.stringify({
