@@ -1785,12 +1785,19 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
               const compUpdate = {
                 fields: {
                   ...existing,
-                  services:    {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
-                  settlePaid:  {booleanValue: true},
-                  qrPaid:      {booleanValue: true},
-                  payrollPaid: {booleanValue: true},
-                  trialEnd:    {stringValue: '2026-12-31'},
-                  dealerId:    {stringValue: dealerId}
+                  services:      {arrayValue: {values: [
+                    {stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'},
+                    {stringValue:'inventory'},{stringValue:'kiosk'},{stringValue:'delivery'},
+                    {stringValue:'filo'},{stringValue:'premium'}
+                  ]}},
+                  plan:          {stringValue: 'OWNER'},
+                  settlePaid:    {booleanValue: true},
+                  qrPaid:        {booleanValue: true},
+                  payrollPaid:   {booleanValue: true},
+                  inventoryPaid: {booleanValue: true},
+                  kioskPaid:     {booleanValue: true},
+                  trialEnd:      {stringValue: '2026-12-31'},
+                  dealerId:      {stringValue: dealerId}
                 }
               };
               const r2 = await fetch(`${fsBase}/companies/${dealerId}`, {method:'PATCH', headers, body: JSON.stringify(compUpdate)});
