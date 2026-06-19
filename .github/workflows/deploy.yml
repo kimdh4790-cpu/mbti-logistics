@@ -6,24 +6,19 @@ on:
 
 jobs:
 
-  deploy-worker:
+  deploy-worker-and-kv:
     runs-on: ubuntu-latest
-    name: "Worker Deploy"
+    name: "Worker + KV 전체 배포"
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy Worker
+
+      - name: Deploy Worker (wrangler)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
-          npm install -g wrangler@3 --silent
-          npx wrangler --version
-          npx wrangler deploy --dry-run 2>&1 || true
+          npm install -g wrangler@4 --silent
           npx wrangler deploy 2>&1
 
-  deploy-settle-kv:
-    runs-on: ubuntu-latest
-    name: "settle.html to KV"
-    steps:
       - name: Upload settle.html to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
@@ -31,48 +26,22 @@ jobs:
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" -o /tmp/settle.html
-          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @/tmp/settle.html)
-          echo "$RESULT" | grep -q '"success":true' && echo "settle.html KV OK" || echo "FAIL: $RESULT"
-      - name: Upload backup settle_latest
+          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" \
+            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+            --data-binary @settle.html)
+          echo "$RESULT" | grep -q '"success":true' && echo "✅ settle.html KV 업로드 성공" || echo "❌ FAIL: $RESULT"
+
+      - name: Upload other HTML assets to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/backup/settle_latest.html" -o /tmp/sl.html
-          [ -s /tmp/sl.html ] && curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/backup/settle_latest.html" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @/tmp/sl.html | grep -q '"success":true' && echo "backup OK" || echo "backup FAIL"
-
-  deploy-settle-pages:
-    runs-on: ubuntu-latest
-    name: "settle.html to Pages"
-    steps:
-      - name: Prepare
-        run: |
-          mkdir -p settle-pages
-          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html" -o settle-pages/index.html
-      - name: Deploy Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
-        run: |
-          npm install -g wrangler@3 --silent
-          npx wrangler pages deploy settle-pages --project-name donway-settle --branch production 2>&1
-
-  deploy-kv-assets:
-    runs-on: ubuntu-latest
-    name: "HTML files to KV"
-    steps:
-      - name: Upload assets
-        env:
-          CF_EMAIL: kimdh4790@gmail.com
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-        run: |
-          ACCOUNT="02709cbec18d848913b4246015b9148f"
-          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          BASE="https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main"
-          for FILE in kiosk.html inventory.html qrpos.html mbtico_hub.html join.html admin_sub.html order.html donway_landing.html emergency.html label.html scan.html universal_settle.html mbetco.html admin.html portal.html my.html notice.html drivers.html dashboard.html delivery.html contract.html checkin.html attendance.html report.html schedule.html settings.html visitor.html; do
-            curl -sL "$BASE/$FILE" -o "/tmp/$FILE"
-            [ -s "/tmp/$FILE" ] && curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" --data-binary @"/tmp/$FILE" | grep -q '"success":true' && echo "OK $FILE" || echo "FAIL/SKIP $FILE"
+          for FILE in donway_landing.html manifest.json firebase-messaging-sw.js sw.js; do
+            [ -f "$FILE" ] && \
+            RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
+              -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+              --data-binary @"$FILE") && \
+            echo "$RESULT" | grep -q '"success":true' && echo "✅ $FILE" || echo "❌ $FILE: $RESULT"
           done
