@@ -1645,9 +1645,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             text: fallbackText || '', // 톡 실패 시 SMS로 대체 발송
             kakaoOptions: {
               pfId: pfId || 'KA01PF260520195942036aXUy629GdrA',
-              templateCode: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
+              templateId: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
               variables: variables || {},
-              disableSms: false      // false = 톡 실패 시 SMS 자동 전환
+              disableSms: false
             }
           }]
         };
