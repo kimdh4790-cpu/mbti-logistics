@@ -29212,7 +29212,18 @@ function openSendModal(x){
   var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계
   var name=x.driver||x.userId||'기사';
   var month=x.month||'';
-  var phone=x.phone||x.driverPhone||'';
+var phone=x.phone||x.driverPhone||x.tel||x.mobile||'';
+  var did=_CU.dealerId||'';var uid=x.userId||x.driver||'';
+  if(!phone&&did&&uid&&_db){
+    _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get()
+    .then(function(snap){
+      if(!snap.empty){
+        var dv=snap.docs[0].data();
+        x.phone=dv.phone||dv.driverPhone||dv.tel||dv.mobile||'';
+        if(x.phone){var phEls=document.querySelectorAll('[data-ch-phone]');phEls.forEach(function(el){el.textContent=x.phone;});}
+      }
+    }).catch(function(){});
+  }
   var email=x.email||x.driverEmail||'';
   var docId=x.id||x.fbId||'';
 
