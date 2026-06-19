@@ -5,40 +5,38 @@ service cloud.firestore {
     function isAuth() {
       return request.auth != null;
     }
+
     function isSuperAdmin() {
       return isAuth() && (
         request.auth.token.email == 'kimdh4790@gmail.com' ||
         request.auth.token.email == 'soungkyekim@naver.com'
       );
     }
-    function myUid() {
-      return request.auth.uid;
-    }
-    function myDealerId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId;
-    }
-    function isMyDealer(dealerId) {
+
+    // dealerId 확인 — uid 직접비교 + users 문서 조회 둘 다
+    function isDealer(dealerId) {
       return isAuth() && (
-        myUid() == dealerId ||
-        myDealerId() == dealerId ||
+        request.auth.uid == dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == dealerId) ||
         isSuperAdmin()
       );
     }
+
     function ownsDoc() {
       return isAuth() && (
-        resource.data.dealerId == myUid() ||
-        resource.data.dealerId == request.auth.uid ||
+        request.auth.uid == resource.data.dealerId ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         resource.data.dealerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId) ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
         isSuperAdmin()
       );
     }
+
     function ownsNewDoc() {
       return isAuth() && (
-        request.resource.data.dealerId == myUid() ||
-        request.resource.data.dealerId == request.auth.uid ||
+        request.auth.uid == request.resource.data.dealerId ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         request.resource.data.dealerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId) ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == request.resource.data.dealerId) ||
         isSuperAdmin()
       );
     }
@@ -69,8 +67,7 @@ service cloud.firestore {
       allow write: if false;
     }
     match /subscription_logs/{docId} {
-      allow read: if isSuperAdmin();
-      allow create: if isSuperAdmin();
+      allow read, create: if isSuperAdmin();
     }
     match /alimtalk_queue/{docId} {
       allow create: if true;
@@ -81,27 +78,23 @@ service cloud.firestore {
       allow read, update, delete: if isSuperAdmin();
     }
     match /companies/{dealerId} {
-      allow read: if isAuth() && (
-        isMyDealer(dealerId) || isSuperAdmin()
-      );
+      allow read: if isDealer(dealerId);
       allow create: if isAuth();
-      allow update: if isMyDealer(dealerId) || isSuperAdmin();
+      allow update: if isDealer(dealerId);
       allow delete: if isSuperAdmin();
     }
     match /users/{userId} {
       allow read: if isAuth() && (
-        myUid() == userId ||
-        myDealerId() == resource.data.dealerId ||
-        isSuperAdmin()
+        request.auth.uid == userId || ownsDoc() || isSuperAdmin()
       );
       allow create: if isAuth();
       allow update, delete: if isAuth() && (
-        myUid() == userId || isSuperAdmin()
+        request.auth.uid == userId || isSuperAdmin()
       );
     }
     match /subscriptions/{uid} {
       allow read: if isAuth() && (
-        myUid() == uid || myDealerId() == uid || isSuperAdmin()
+        request.auth.uid == uid || isDealer(uid) || isSuperAdmin()
       );
       allow write: if isSuperAdmin();
     }
@@ -131,252 +124,148 @@ service cloud.firestore {
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /drivers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /members/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /tax_docs/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /attendance/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /driver_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /delivery_sessions/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /dispatch_results/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /hourly_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /contracts/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /leaves/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /absences/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /leave_payments/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /overtimes/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /evaluations/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /notices/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /driver_notifications/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /devices/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /biometrics/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /lunch/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /lunch_alerts/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /roster_week/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /vehicles/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /maintenance/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /expenses/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /documents/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /signatures/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /driverDocs/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /ind_workers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /payout_sessions/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /settings/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /cal_memos/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /idSupport/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /clean_orders/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /clean_dispatch/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /clean_workers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /inventory/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /inventory_in/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /inventory_out/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /inv_edit_log/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /inv_change_log/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_bookings/{docId} {
-      allow create: if true;
-      allow read, update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /mbetco_sales/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_customers/{docId} {
-      allow create: if true;
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_services/{docId} {
-      allow read: if true;
-      allow write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_reviews/{docId} {
-      allow create, read: if true;
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /mbetco_coupons/{docId} {
+    match /drivers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /members/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /attendance/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /leaves/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /leaveBalance/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /overtimes/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payslips/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /notices/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory_in/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inventory_out/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /mbetco_sales/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /message_history/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /statement_share/{docId} {
       allow read: if true;
-      allow write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_mappings/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_settles/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_settle_details/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_workers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_companies/{docId} {
-      allow read: if isAuth() && (
-        resource.data.email == request.auth.token.email || isSuperAdmin()
-      );
       allow create: if isAuth();
-      allow update: if isAuth() && (
-        resource.data.email == request.auth.token.email || isSuperAdmin()
-      );
-      allow delete: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
     }
-    match /beauty_sales/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
+    match /settings/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /contracts/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /expenses/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /vehicles/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /customers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /taxShares/{docId} {
-      allow read: if true;
-      allow write: if isAuth();
-      match /settlements/{sId} {
-        allow read: if true;
-        allow write: if isAuth();
-      }
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /visitors/{docId} {
-      allow create: if true;
-      allow read, write: if isAuth();
+    match /documents/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /customer_profiles/{docId} {
-      allow create: if true;
-      allow read, write: if isAuth();
+    match /dispatch_results/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /customer_invites/{docId} {
-      allow read, write: if isAuth();
+    match /driver_settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /customer_notifications/{docId} {
-      allow read, write: if isAuth();
+    match /incomes/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /customer_push_queue/{docId} {
-      allow read, write: if isAuth();
+    match /evaluations/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /sms_queue/{docId} {
-      allow read, write: if isAuth();
+    match /reservations/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /open_event/{docId} {
-      allow read: if true;
-      allow write: if isAuth();
+    match /idSupport/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /managers/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /settlements_universal/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /universal_employees/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /universal_rules/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /universal_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
-    match /mbetco_settlements/{docId} {
-      allow read, write: if ownsDoc() || ownsNewDoc();
-    }
+    // 기타 모든 컬렉션 — 인증된 사용자 읽기/쓰기
     match /{document=**} {
-      allow read, write: if isSuperAdmin();
-    }
- 
-    // ★ 배송앱 — 기사 비인증 접근 허용
-    // driver + dealerId 조건으로 데이터 분리
-    match /emergency_deliveries/{docId} {
-      // 읽기: 인증된 사용자 (ownsDoc) 또는 비인증 기사 (driver 필드로 구분)
-      allow read: if ownsDoc() || isSuperAdmin() ||
-        // 비인증 기사: 자신의 driver명 데이터만 읽기
-        (request.auth == null && resource.data.driver != null);
-      // 쓰기: 인증된 사용자 또는 비인증 기사 (driver 필드 필수)
-      allow create: if ownsNewDoc() || isSuperAdmin() ||
-        (request.auth == null && request.resource.data.driver != null);
-      allow update: if ownsDoc() || isSuperAdmin() ||
-        (request.auth == null && resource.data.driver == request.resource.data.driver);
-      allow delete: if ownsDoc() || isSuperAdmin();
-    }
-    // scan_results (배송 스캔 통계)
-    match /scan_results/{docId} {
-      allow read, write: if ownsDoc() || isSuperAdmin() ||
-        (request.auth == null && request.resource.data.dealerId != null);
-    }
-    // ★ mbtico.kr 배송앱 전용
-    match /delivery_sessions/{docId} {
-      allow read, write: if true; // 공개 (기사 비인증)
+      allow read, write: if isAuth();
     }
   }
 }
