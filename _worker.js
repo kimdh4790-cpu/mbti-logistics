@@ -1578,6 +1578,14 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
 
 
+    
+    // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
+    if (path === '/api/kakao-config' && method === 'GET') {
+      return new Response(JSON.stringify({
+        key: env.KAKAO_JS_KEY || ''
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+    }
+
     // ── 카카오 알림톡 (/api/send-alimtalk) ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
       try {
