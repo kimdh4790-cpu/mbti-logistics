@@ -37917,7 +37917,7 @@ function _homeLoadPosToday(did, today){
 
 // 플랜별 구매 유도 정보
 var _PLAN_UPSELL={
-  settle:  {icon:'📦',label:'택배 정산',   price:'89,000',color:'#f97316',planKey:'settle_taxi',
+  settle:  {icon:'📦',label:'택배 정산',   price:'210,000',color:'#f97316',planKey:'settle_taxi',
     items:['쿠팡 대리점 전용','쿠팡 엑셀 자동 정산','세금계산서 자동 발행','기사 급여 계산','카카오·문자 일괄 발송']},
   delivery:{icon:'🛵',label:'배달대행 정산',price:'별도문의',color:'#10b981',planKey:'delivery',
     items:['쿠팡이츠·배민 엑셀 자동인식','건수별 트랙 보전·환수','5대 시간대 분석','3.3% 세무 자동처리','세무사 연동']},
@@ -38554,7 +38554,7 @@ function _loadPaymentRequests(container){
     if(!items.length){container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">📭 결제 신청 없음</div>';return;}
 
     var TYPE_LABEL={settle:'📦 AI 택배정산',qr:'🔐 QR 근태관리',payroll:'💼 급여관리',delivery:'🛵 배달대행',contract:'📝 위수탁 계약서',roster:'🗓 근무표',full:'⚡ ALL-IN-ONE'};
-    var TYPE_PRICE={settle:89000,qr:49000,payroll:79000,delivery:89000,contract:9900,roster:9900,full:179000};
+    var TYPE_PRICE={settle:210000,qr:59000,payroll:59000,delivery:210000,contract:9900,roster:9900,full:270000};
     var TYPE_FIELD={settle:{settlePaid:true},qr:{qrPaid:true},payroll:{payrollPaid:true},delivery:{deliveryPaid:true},universal:{universalPaid:true},contract:{contractPaid:true},roster:{rosterPaid:true},full:{settlePaid:true,qrPaid:true,payrollPaid:true,deliveryPaid:true,universalPaid:true,contractPaid:true,rosterPaid:true}};
     var STATUS_COLOR={pending:'#f59e0b',approved:'#10b981',rejected:'#ef4444'};
 
