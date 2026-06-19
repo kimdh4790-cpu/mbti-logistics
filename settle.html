@@ -29244,12 +29244,13 @@ function openSendModal(x){
   box.appendChild(lbl);
 
   // 버튼들
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';
   var channels=[
-    {icon:'💬',name:'카카오 명세서 공유',sub:'명세서 카드로 전송 (권장)',bg:'#FEE500',color:'#3A1D1D',fn:function(){sendKakaoStatement(x,name,r.month||_settle_month||'',calcNet(x).net||0);}},
-    {icon:'📱',name:'문자(SMS) 발송',sub:phone||'전화번호 없음 - 기사정보에 추가',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,encodeURIComponent(phone));}},
-    {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음 - 기사정보에 추가',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(email),subjectEnc,msgEnc);}},
-    {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome,docId);}},
-    {icon:'🧾',name:'세금계산서 앱 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome,docId);}}
+    {icon:'💬',name:'카카오 알림톡 발송',sub:phone?phone:'전화번호 없음',bg:'#FEE500',color:'#1a1a1a',fn:function(){_sendAlimtalkWithStmt(x,r,name,month,net,phone,coName);}},
+    {icon:'📱',name:'문자(SMS) 발송',sub:phone?phone:'전화번호 없음',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,email,phone);}},
+    {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(decodeURIComponent(msgEnc)),email);}}  ,
+    {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome);}},
+    {icon:'🧾',name:'세금계산서 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome);}}
   ];
   var btnWrap=document.createElement('div');
   btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
