@@ -29718,7 +29718,7 @@ function _buildDocModalHTML(){
   +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
   +'<div style="display:flex;gap:8px">'
   +'<button class="btn" onclick="saveDocFirestore()" style="background:var(--bg3);border:1px solid var(--border2)">☁ 저장</button>'
-  +'<button class="btn btn-blue" onclick="printDoc()">🖨 인쇄 / PDF</button>'
+  +'<div style="display:flex;gap:8px">'+'<button class="btn" onclick="sendKakaoStatement(window._lastSettleData,window._lastSettleRow,window._lastSettleName,window._lastSettleYm,window._lastSettleNet,0)" style="background:#FEE500;color:#3A1D1D;font-weight:700">💬 카카오 전송</button>'+'<button class="btn btn-blue" onclick="printDoc()">🖨 인쇄 / PDF</button>'+'</div>'
   +'</div>'
   +'</div>'
   +'</div>';
@@ -34111,6 +34111,92 @@ function _psSetDeduct(wid){
 }
 
 // 명세서 인쇄
+
+// 급여명세서 카카오 전송
+function _psKakaoSend(wid) {
+  var st = window._settleResult||window._lastSettleResult;
+  if(!st||!st.results||!st.results[wid]) { toast('정산 데이터 없음'); return; }
+  var r = st.results[wid];
+  var w = r.w || {};
+  var did = _CU.dealerId||'';
+  var coName = (_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';
+  var name = w.name||w.userId||'';
+  var ym = r.ym||'';
+  var netPay = r.netPay||r.totalPay||0;
+
+  toast('📸 명세서 이미지 생성 중...');
+
+  // 캡처용 div 생성 (화면 밖)
+  var cap = document.createElement('div');
+  cap.id = 'ps-kakao-capture';
+  cap.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:Malgun Gothic,sans-serif;padding:30px;color:#111;font-size:13px';
+
+  // 명세서 HTML 구성
+  var totalDeduct = (w.advance||0)+(w.taxIncome||0)+(w.taxLocal||0)+(w.taxHealth||0)+(w.taxEmp||0)+(w.taxPension||0)+(w.etcDeduct||0);
+  var html2 = '<div style="text-align:center;margin-bottom:16px">'
+    +'<div style="font-size:11px;color:#666;font-weight:700;letter-spacing:.1em">OFFICIAL STATEMENT · '+esc(coName)+'</div>'
+    +'<div style="font-size:22px;font-weight:900;margin:6px 0">'+esc(ym)+' 급여 명세서</div>'
+    +'<div style="font-size:13px;color:#444">'+esc(name)+'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
+    +'<div style="background:#f8f9fa;border-radius:8px;padding:12px;text-align:center">'
+    +'<div style="font-size:11px;color:#666;margin-bottom:4px">지급 합계</div>'
+    +'<div style="font-size:20px;font-weight:900;color:#059669">₩'+Math.round(r.totalPay||0).toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="background:#1e3a5f;border-radius:8px;padding:12px;text-align:center">'
+    +'<div style="font-size:11px;color:#aaa;margin-bottom:4px">실 지급액</div>'
+    +'<div style="font-size:20px;font-weight:900;color:#fff">₩'+Math.round(netPay).toLocaleString()+'</div>'
+    +'</div>'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse;margin-bottom:12px">'
+    +'<tr style="background:#f8f9fa"><th style="padding:8px;border:1px solid #ddd;text-align:left">항목</th><th style="padding:8px;border:1px solid #ddd;text-align:right">금액</th></tr>';
+
+  // 지급내역
+  Object.entries(r.breakdown||{}).forEach(function(e){
+    if(e[1]>0) html2+='<tr><td style="padding:7px 10px;border:1px solid #eee">'+esc(e[0])+'</td>'
+      +'<td style="padding:7px 10px;border:1px solid #eee;text-align:right;color:#059669;font-weight:700">+₩'+Math.round(e[1]).toLocaleString()+'</td></tr>';
+  });
+
+  // 공제내역
+  if(totalDeduct>0){
+    html2+='<tr style="background:#fff3cd"><td style="padding:7px 10px;border:1px solid #eee;font-weight:700">공제 합계</td>'
+      +'<td style="padding:7px 10px;border:1px solid #eee;text-align:right;color:#dc2626;font-weight:700">-₩'+Math.round(totalDeduct).toLocaleString()+'</td></tr>';
+  }
+  html2+='</table>'
+    +'<div style="text-align:center;font-size:11px;color:#999;margin-top:12px">'+new Date().toLocaleDateString('ko-KR')+' · DONWAY 발행</div>';
+
+  cap.innerHTML = html2;
+  document.body.appendChild(cap);
+
+  setTimeout(function(){
+    if(typeof html2canvas==='undefined'){
+      document.body.removeChild(cap);
+      _kakaoShareFallback(coName, name, ym, netPay);
+      return;
+    }
+    html2canvas(cap, {scale:2, useCORS:true, backgroundColor:'#ffffff', logging:false})
+    .then(function(canvas){
+      if(cap.parentNode) document.body.removeChild(cap);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      var path = 'stmt_kakao/'+did+'/'+ym+'_'+wid+'_'+Date.now()+'.jpg';
+      _uploadImgToStorage(dataUrl, path).then(function(imgUrl){
+        var token = Math.random().toString(36).slice(2,10)+Date.now().toString(36);
+        var stmtUrl = 'https://donway.ai.kr/stmt?t='+token;
+        if(_db) _db.collection('statement_share').doc(token).set({
+          dealerId:did, driverName:name, month:ym, net:netPay,
+          imgUrl:imgUrl, createdAt:new Date().toISOString()
+        }).catch(function(){});
+        _kakaoShareWithImage(coName, name, ym, netPay, imgUrl, stmtUrl);
+      }).catch(function(){
+        _kakaoShareFallback(coName, name, ym, netPay);
+      });
+    }).catch(function(){
+      if(cap.parentNode) document.body.removeChild(cap);
+      _kakaoShareFallback(coName, name, ym, netPay);
+    });
+  }, 300);
+}
+
 function _psPrint(wid){
   var st=window._hsState||{};
   var r=st.results&&st.results[wid];
