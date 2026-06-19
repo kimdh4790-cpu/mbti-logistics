@@ -21453,11 +21453,13 @@ function _stopIntegration() {
 // ── 통합 대시보드 위젯 — 홈에 연동 상태 표시 ──
 function _homeIntegWidget(did) {
   var co = window._cachedCompanyDoc || {};
-  var hasSettle    = co.settlePaid || hasSvc('settle');
-  var hasInv       = _hasInventory(co);
-  var hasKiosk     = _hasKiosk(co);
-  var hasQr        = co.qrPaid || hasSvc('qr');
-  var hasPayroll   = co.payrollPaid || hasSvc('payroll');
+  var svcs = window._svcs2 || window._svcs || [];
+  var isSA = typeof isSuperAdmin==='function' && isSuperAdmin();
+  var hasSettle  = co.settlePaid || svcs.indexOf('settle')>=0 || isSA;
+  var hasInv     = _hasInventory ? _hasInventory(co) : (co.inventoryPaid||false);
+  var hasKiosk   = _hasKiosk ? _hasKiosk(co) : (co.kioskPaid||false);
+  var hasQr      = co.qrPaid || svcs.indexOf('qr')>=0 || isSA;
+  var hasPayroll = co.payrollPaid || svcs.indexOf('payroll')>=0 || isSA;
 
   var items = [
     {label:'정산',    icon:'📊', active:hasSettle},
