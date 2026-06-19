@@ -1579,6 +1579,106 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
 
 
     
+    
+    // ── 명세서 뷰어 (/stmt?t=TOKEN) — 로그인 없이 토큰으로만 접근 ──
+    if (path === '/stmt') {
+      const token = url.searchParams.get('t') || '';
+      if (!token) {
+        return new Response('잘못된 접근입니다.', { status: 400 });
+      }
+
+      // Firestore REST API로 statement_share 조회
+      const fsToken = await getFsToken(env);
+      const project = 'mbti-logistics';
+      const docUrl = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/statement_share/${token}`;
+      const fsRes = await fetch(docUrl, {
+        headers: { 'Authorization': `Bearer ${fsToken}` }
+      });
+
+      if (!fsRes.ok) {
+        return new Response(renderStmtError('명세서를 찾을 수 없습니다.'), {
+          headers: { 'Content-Type': 'text/html;charset=utf-8' }
+        });
+      }
+
+      const fsData = await fsRes.json();
+      const fields = fsData.fields || {};
+      const get = (f, def='') => (fields[f]?.stringValue || fields[f]?.integerValue || fields[f]?.doubleValue || def);
+
+      const name    = get('driverName', '');
+      const month   = get('month', '');
+      const net     = parseInt(get('net', 0)) || 0;
+      const imgUrl  = get('imgUrl', '');
+      const coName  = get('_coName', 'DONWAY');
+      const created = get('createdAt', '').slice(0,10);
+
+      const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="${coName} ${month} 정산명세서">
+<meta property="og:description" content="${name}님 · 실지급 ₩${net.toLocaleString()}원">
+<meta property="og:image" content="${imgUrl}">
+<title>${coName} 정산명세서</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1623;color:#f0f4ff;font-family:'Apple SD Gothic Neo',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}
+.card{background:#161e2e;border:1px solid rgba(255,255,255,.08);border-radius:20px;max-width:420px;width:100%;overflow:hidden;margin-top:20px}
+.header{background:linear-gradient(135deg,#0066ff,#00d4ff);padding:24px;text-align:center}
+.header .label{font-size:11px;font-weight:700;letter-spacing:.1em;opacity:.8;margin-bottom:6px}
+.header .title{font-size:20px;font-weight:900}
+.header .sub{font-size:13px;opacity:.8;margin-top:4px}
+.img-wrap{padding:16px}
+.img-wrap img{width:100%;border-radius:12px;display:block}
+.info{padding:16px;display:grid;gap:10px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,.04);border-radius:10px}
+.info-row .lbl{font-size:12px;color:#94a3b8}
+.info-row .val{font-size:14px;font-weight:800}
+.net-row{background:rgba(0,102,255,.15);border:1px solid rgba(0,102,255,.3)}
+.net-row .val{color:#00d4ff;font-size:18px}
+.footer{padding:16px;text-align:center;font-size:11px;color:#475569}
+.btn{display:block;margin:16px;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border-radius:12px;text-align:center;font-size:14px;font-weight:800;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="label">OFFICIAL STATEMENT · ${coName}</div>
+    <div class="title">${month} 정산명세서</div>
+    <div class="sub">${name}님</div>
+  </div>
+  ${imgUrl ? `<div class="img-wrap"><img src="${imgUrl}" alt="명세서"></div>` : ''}
+  <div class="info">
+    <div class="info-row">
+      <span class="lbl">기사명</span>
+      <span class="val">${name}</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">정산월</span>
+      <span class="val">${month}</span>
+    </div>
+    <div class="info-row net-row">
+      <span class="lbl">💰 실지급액</span>
+      <span class="val">₩${net.toLocaleString()}원</span>
+    </div>
+  </div>
+  <div class="footer">발행일: ${created} · DONWAY 자동 발행<br>본 명세서는 암호화된 고유 링크로 보호됩니다.</div>
+</div>
+</body>
+</html>`;
+
+      return new Response(html, {
+        headers: { 'Content-Type': 'text/html;charset=utf-8' }
+      });
+    }
+
+    function renderStmtError(msg) {
+      return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>오류</title>
+<style>body{background:#0f1623;color:#f0f4ff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}</style>
+</head><body><div><div style="font-size:40px;margin-bottom:16px">⚠️</div><div style="font-size:16px">${msg}</div></div></body></html>`;
+    }
+
     // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
     if (path === '/api/kakao-config' && method === 'GET') {
       return new Response(JSON.stringify({
