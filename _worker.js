@@ -1707,6 +1707,111 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }), {headers:{'Content-Type':'application/json'}});
         }
 
+
+        // action: fix_test_account — test0 계정 데이터 수정
+        if (action === 'fix_test_account') {
+          try {
+            // test0 계정 uid 찾기
+            const usersRes = await fetch(`${fsBase}/users?pageSize=100`, {headers});
+            const usersData = await usersRes.json();
+            const docs = usersData.documents || [];
+            
+            // test0 또는 test1@naver.com 찾기
+            let testUser = null;
+            let testUid = null;
+            for (const doc of docs) {
+              const d = doc.fields || {};
+              const email = d.email?.stringValue || '';
+              const userId = d.userId?.stringValue || '';
+              if (email === 'test1@naver.com' || userId === 'test0' || email.includes('test0')) {
+                testUser = d;
+                testUid = doc.name.split('/').pop();
+                break;
+              }
+            }
+
+            if (!testUser) {
+              return new Response(JSON.stringify({ok:false,error:'test0 계정 못찾음', docs: docs.length}), {headers:{'Content-Type':'application/json'}});
+            }
+
+            const dealerId = testUser.dealerId?.stringValue || testUid;
+
+            // users 문서에 dealerId 추가
+            const userPatch = {
+              fields: {
+                ...testUser,
+                dealerId: {stringValue: dealerId},
+                role: {stringValue: 'admin'},
+                plan: {stringValue: 'trial'},
+                services: {arrayValue: {values: [
+                  {stringValue:'settle'},
+                  {stringValue:'qr'},
+                  {stringValue:'payroll'},
+                  {stringValue:'inventory'}
+                ]}}
+              }
+            };
+            const r1 = await fetch(`${fsBase}/users/${testUid}`, {method:'PATCH', headers, body: JSON.stringify(userPatch)});
+
+            // companies 문서 확인/생성
+            const compRes = await fetch(`${fsBase}/companies/${dealerId}`, {headers});
+            const compData = await compRes.json();
+            let compStatus = '';
+
+            if (!compData.fields) {
+              // 회사 문서 생성
+              const compDoc = {
+                fields: {
+                  companyName:  {stringValue: '테스트 대리점'},
+                  bizNumber:    {stringValue: '000-00-00001'},
+                  email:        {stringValue: 'test1@naver.com'},
+                  plan:         {stringValue: 'trial'},
+                  services:     {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
+                  industryType: {stringValue: 'coupang'},
+                  dealerId:     {stringValue: dealerId},
+                  trialEnd:     {stringValue: '2026-12-31'},
+                  settlePaid:   {booleanValue: true},
+                  qrPaid:       {booleanValue: true},
+                  payrollPaid:  {booleanValue: true},
+                  createdAt:    {stringValue: new Date().toISOString()}
+                }
+              };
+              const r2 = await fetch(`${fsBase}/companies/${dealerId}`, {method:'PATCH', headers, body: JSON.stringify(compDoc)});
+              const d2 = await r2.json();
+              compStatus = d2.fields ? '✅ 회사 생성' : '❌ ' + JSON.stringify(d2).slice(0,100);
+            } else {
+              // 기존 회사 문서에 서비스 플래그 추가
+              const existing = compData.fields;
+              const compUpdate = {
+                fields: {
+                  ...existing,
+                  services:    {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
+                  settlePaid:  {booleanValue: true},
+                  qrPaid:      {booleanValue: true},
+                  payrollPaid: {booleanValue: true},
+                  trialEnd:    {stringValue: '2026-12-31'},
+                  dealerId:    {stringValue: dealerId}
+                }
+              };
+              const r2 = await fetch(`${fsBase}/companies/${dealerId}`, {method:'PATCH', headers, body: JSON.stringify(compUpdate)});
+              const d2 = await r2.json();
+              compStatus = d2.fields ? '✅ 회사 업데이트' : '❌ ' + JSON.stringify(d2).slice(0,100);
+            }
+
+            const d1 = await r1.json();
+            return new Response(JSON.stringify({
+              ok: true,
+              testUid,
+              dealerId,
+              userUpdate: d1.fields ? '✅ users 업데이트' : '❌ ' + JSON.stringify(d1).slice(0,100),
+              companyUpdate: compStatus
+            }), {headers:{'Content-Type':'application/json'}});
+          } catch(e) {
+            return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+          }
+        }
+
+
         // action: cleanup
         if (action === 'cleanup') {
           const dealerId = 'TEST_SIM_001';
