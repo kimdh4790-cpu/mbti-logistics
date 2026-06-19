@@ -29274,7 +29274,7 @@ function openSendModal(x){
     var btn=document.createElement('button');
   btn.style.cssText='display:flex;align-items:center;gap:12px;padding:14px 16px;background:'+ch.bg+';color:'+ch.color+';border:none;cursor:pointer;border-radius:12px;width:100%;text-align:left';
   btn.innerHTML='<span style="font-size:22px">'+ch.icon+'</span><div style="line-height:1.4"><div style="font-size:14px;font-weight:800;color:'+ch.color+'">'+ch.name+'</div><div style="font-size:11px;opacity:.85;margin-top:2px;color:'+ch.color+'">'+esc(ch.sub)+'</div></div>';
-    btn.onclick=ch.fn;
+    (function(fn){btn.addEventListener('click',function(){try{fn();}catch(e){console.error('[발송오류]',e);toast('❌ '+e.message);}});})(ch.fn);
     btnWrap.appendChild(btn);
   });
   box.appendChild(btnWrap);
