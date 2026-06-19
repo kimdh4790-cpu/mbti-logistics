@@ -137,19 +137,20 @@ tr:hover>td{background:var(--bg3)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4" crossorigin="anonymous"></script>
 <script>
-// 카카오 SDK 초기화
+// 카카오 SDK 초기화 — 서버에서 앱키 안전하게 로드
 (function(){
-  function _initKakao(){
-    if(window.Kakao && !window.Kakao.isInitialized()){
-      window.Kakao.init('7ce3d17a7b1e4e4d8c9b2f3a6e8c5d9f');
+  function _initKakao(key){
+    if(window.Kakao && key && !window.Kakao.isInitialized()){
+      window.Kakao.init(key);
       console.log('[Kakao] SDK 초기화 완료');
     }
   }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', _initKakao);
-  } else {
-    _initKakao();
-  }
+  fetch('/api/kakao-config')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.key) _initKakao(d.key);
+    })
+    .catch(function(){console.warn('[Kakao] 앱키 로드 실패');});
 })();
 </script>
 </head>
