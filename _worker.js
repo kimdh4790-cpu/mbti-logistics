@@ -1619,7 +1619,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const { to, templateCode, variables, fallbackText } = body;
         const apiKey    = env.SOLAPI_KEY;
         const apiSecret = env.SOLAPI_SECRET;
-        const pfId      = env.KAKAO_PF_ID || 'KA01PF260520195942036aXUy629GdrA';
+        const pfId      = env.KAKAO_PF_ID || 'KA01PF260618094439788FzuY2GxDiSW';
         if (!apiKey || !apiSecret) {
           return new Response(JSON.stringify({ error: 'SOLAPI 키 없음' }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -1644,7 +1644,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             type: 'ATA',           // 카카오 알림톡 우선
             text: fallbackText || '', // 톡 실패 시 SMS로 대체 발송
             kakaoOptions: {
-              pfId: pfId || 'KA01PF260520195942036aXUy629GdrA',
+              pfId: pfId || 'KA01PF260618094439788FzuY2GxDiSW',
               templateId: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
               variables: variables || {},
               disableSms: false
