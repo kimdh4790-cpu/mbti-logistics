@@ -32130,7 +32130,8 @@ window._biParse=function(rows){
       }
     });
     seen[engId]=true;
-    list.push({name:korName,userId:engId,camp:'',phone:phone,email:email,bankName:bN,bankNum:bNum,carNum:''});
+    var cleanName=korName.replace(/웡[0-9]+$/,'').trim();
+    list.push({name:cleanName,userId:engId,camp:'',phone:phone,email:email,bankName:bN,bankNum:bNum,carNum:''});
   });
   return list.length?list:null;
 };
