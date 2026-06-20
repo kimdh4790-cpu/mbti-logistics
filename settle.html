@@ -33311,10 +33311,10 @@ function _showSubModal(){
     {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:4725,g:1,color:'#7c3aed',badge:'추천',
      tl:'출퇴근부터 급여까지 원스톱',
      ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:2100,g:2,color:'#059669',
+    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:3675,g:2,color:'#059669',
      tl:'QR 하나로 출퇴근 자동화',
      ft:['동적 QR 출퇴근','GPS 위치 검증','근무표 자동 관리','출퇴근 현황 조회']},
-    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:2100,g:2,color:'#8b5cf6',
+    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:3675,g:2,color:'#8b5cf6',
      tl:'급여 계산·명세서 자동화',
      ft:['시급·일급·월급·건당 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
     {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
@@ -37644,7 +37644,7 @@ function pageNotices(){
     +'<div class="fg"><label>첨부파일 (명세서·세금계산서·PDF)</label>'
     +'<input id="n-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
     +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
-    +'<button onclick="_saveNotice()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700">📢 공지 발송</button>'
+    +'<div style="display:flex;gap:8px;margin-top:4px">'+'<button onclick="_saveNotice()" class="btn btn-blue" style="flex:1;padding:10px;font-weight:700">📢 앱 푸시+공지 발송</button>'+'<button onclick="_saveNoticeAlimtalk()" class="btn" style="flex:1;padding:10px;font-weight:700;background:linear-gradient(135deg,#fee500,#f5c800);color:#000">💬 알림톡 발송</button>'+'</div>'+'</button>'
     +'</div>');
   _db.collection('notices').where('dealerId','==',_CU.dealerId||_CU.uid).orderBy('createdAt','desc').get().then(function(snap){
     var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉',payslip:'💰',tax:'🧾'};
@@ -37677,6 +37677,35 @@ function pageNotices(){
   });
 }
 
+function _saveNoticeAlimtalk(){
+  if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+  var title=((document.getElementById('n-title')||{}).value||'').trim();
+  var body=((document.getElementById('n-body')||{}).value||'').trim();
+  if(!title){toast('❌ 제목을 입력하세요');return;}
+  var did=_CU.dealerId||_CU.uid;
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.name)||'회사';
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var sent=0,failed=0;
+    var total=snap.size;
+    if(!total){toast('❌ 직원이 없습니다');return;}
+    if(!confirm(total+'명에게 알림톡 공지를 발송합니다. 계속하시겠습니까?'))return;
+    toast('💬 알림톡 발송 중...');
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var phone=d.phone||'';
+      if(!phone){failed++;if(sent+failed===total)toast('✅ 완료 '+sent+'건 / 실패 '+failed+'건');return;}
+      fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          to:phone,
+          templateCode:'KA01TP260618101225825DuJHXpoC4kY',
+          variables:{'#{회사명}':coName,'#{이름}':d.name||d.driverName||'직원','#{월}':new Date().toISOString().slice(0,7),'#{실지급}':title,'#{명세서링크}':body.slice(0,40)},
+          fallbackText:'['+coName+'] '+title+(body?' '+body:'')
+        })
+      }).then(function(){sent++;if(sent+failed===total)toast('✅ 알림톡 완료 '+sent+'건 / 실패 '+failed+'건');})
+        .catch(function(){failed++;if(sent+failed===total)toast('완료 '+sent+'건 실패 '+failed+'건');});
+    });
+  }).catch(function(e){toast('❌ '+e.message);});
+}
 function _deleteNotice(id){
   if(!confirm('이 공지를 삭제하시겠습니까?'))return;
   _db.collection('notices').doc(id).delete().then(function(){
