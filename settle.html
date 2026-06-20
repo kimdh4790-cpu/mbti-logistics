@@ -33104,7 +33104,7 @@ function addRpCamp(cid){
 // ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
 // 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
-var DW_RATE={g1:4500,g2:2500};
+var DW_RATE={g1:4725,g2:3675};
 var SUB_TIERS=[
   {cap:50, label:'~50명'},
   {cap:100,label:'~100명'},
@@ -33120,7 +33120,7 @@ function _tierCap(hc){
 }
 function _tierAmt(pkey, hc){
   var cap=_tierCap(hc);
-  var rate=DW_RATE.g1; // 9,000원/인
+  var _subType=window._subPlanType||'ind';var rate=_subType==='grp'?DW_RATE.g2:DW_RATE.g1; // 9,000원/인
   return rate*cap;
 }
 function _tierLabel(hc){
