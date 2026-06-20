@@ -560,15 +560,25 @@ function _filoJoin(){
     var email=phone+'_'+code.toLowerCase()+'@filo.member';
     return _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
       var uid=cred.user.uid;
-      return _db.collection('members').doc(uid).set({
-        uid:uid,name:name,phone:phone,dealerId:did,
+      var memberDoc={
+        uid:uid, name:name, phone:phone, dealerId:did,
         companyName:company.companyName||company.name||'',
-        role:'member',platform:'filo',
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        email:email, role:'member', status:'active', platform:'filo',
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      // ① members 컬렉션 — 관리자 직원 목록에 즉시 표시
+      return _db.collection('members').doc(uid).set(memberDoc).then(function(){
+        // ② users 컬렉션 — 로그인 권한용
+        return _db.collection('users').doc(uid).set({
+          uid:uid, name:name, phone:phone, email:email,
+          dealerId:did, role:'member', platform:'filo',
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
       });
     });
   }).then(function(){
-    _filoToast('✅ 가입 완료!');
+    _filoToast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됩니다.');
   }).catch(function(e){
     if(e&&e.code==='auth/email-already-in-use'){errEl.textContent='이미 가입된 전화번호·코드 조합';}
     else if(e){errEl.textContent=e.message||String(e);}
