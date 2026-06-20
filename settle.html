@@ -32097,36 +32097,40 @@ window._biParse=function(rows){
   if(!rows||!rows.length)return null;
   var list=[],seen={};
   var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
-  // 헤더 유무 상관없이 모든 행 스캔
-  // 한 행에 한글이름(2~6자) + 영문아이디(4~20자) 함께 있으면 인식
+  var CAMPS=['신평','엄궁','대구','진주','1인','부산','서울','광주','인체','울산','수원','성남','안양','전주','청주','제주','여수','거제','구미','수영','사상'];
   rows.forEach(function(row){
-    var korName=null,engId=null,camp=null,phone=null,email=null,bankRaw=null;
-    row.forEach(function(v){
-      var s=String(v||'').trim();
-      if(!s)return;
-      // 한글 이름: 2~6자 한글
-      if(/^[가-힣]{2,6}$/.test(s)&&!korName) korName=s;
-      // 영문 아이디: 영문시작 4~20자 영숫자_
-      if(/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&!/@/.test(s)&&!engId) engId=s;
-      // 전화번호
-      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s.replace(/\s/g,''))) phone=s.replace(/[^0-9]/g,'');
-      // 이메일
-      if(/@[a-zA-Z0-9]+\.[a-z]{2,}/i.test(s)) email=s;
-      // 통장: 은행명\n계좌
-      if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;})) bankRaw=s;
-      if(!bankRaw&&/^[0-9\-]{10,}$/.test(s.replace(/\s/g,''))) bankRaw=s;
-      // 캐프: 부산/대구/진주 등 지역명+숫자/영문
-      if(/^(부산|대구|진주|서울|광주|인체|울산|수원|성남|창원|안양|전주|청주|제주|여수|여수|거제|구미|계룡|경주|포항|구미|청주)[0-9A-Za-z_]*$/.test(s)) camp=s;
-    });
-    if(korName&&engId&&!seen[engId]){
-      seen[engId]=true;
-      var bN='',bNum='';
-      if(bankRaw){
-        if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bN=bp[0].trim();bNum=(bp[1]||'').replace(/[^0-9]/g,'');}
-        else{bNum=bankRaw.replace(/[^0-9]/g,'');}
+    var cells=row.map(function(v){return String(v||'').trim();});
+    // 영문 아이디 찾기
+    var engId=null,engIdCol=-1;
+    cells.forEach(function(s,ci){
+      if(!engId&&/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&s.indexOf('@')<0){
+        engId=s;engIdCol=ci;
       }
-      list.push({name:korName,userId:engId,camp:camp||'',phone:phone||'',email:email||'',bankName:bN,bankNum:bNum,carNum:''});
-    }
+    });
+    if(!engId||seen[engId])return;
+    // 한글 이름 찾기 (캐프명 제외, 아이디 왼쪽 우선)
+    var kors=[];
+    cells.forEach(function(s,ci){
+      if(/^[가-힣]/.test(s)&&s.length>=2&&s.length<=10){
+        var isC=CAMPS.some(function(c){return s===c||s.indexOf(c)===0;});
+        if(!isC)kors.push({s:s,ci:ci});
+      }
+    });
+    if(!kors.length)return;
+    var before=kors.filter(function(k){return k.ci<engIdCol;});
+    var korName=(before.length?before[before.length-1]:kors[0]).s;
+    // 연락수/이메일/통장
+    var phone='',email='',bN='',bNum='';
+    cells.forEach(function(s){
+      if(!phone&&/^01[0-9]/.test(s.replace(/[^0-9]/g,''))&&s.replace(/[^0-9]/g,'').length===11)
+        phone=s.replace(/[^0-9]/g,'');
+      if(!email&&s.indexOf('@')>0&&/\.[a-z]{2,}$/i.test(s))email=s;
+      if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;})){
+        var bp=s.split('\n');bN=bp[0].trim();bNum=(bp[1]||'').replace(/[^0-9]/g,'');
+      }
+    });
+    seen[engId]=true;
+    list.push({name:korName,userId:engId,camp:'',phone:phone,email:email,bankName:bN,bankNum:bNum,carNum:''});
   });
   return list.length?list:null;
 };
