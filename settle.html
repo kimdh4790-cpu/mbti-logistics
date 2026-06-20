@@ -32236,33 +32236,6 @@ function pageDrivers(){
   btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
-  if(isSuperAdmin()){
-    var btnClean=document.createElement('button');btnClean.className='btn btn-sm';
-    btnClean.style.cssText='background:#ef4444;color:#fff;font-size:11px;margin-left:4px';
-    btnClean.textContent='개었데이터 삭제';
-    btnClean.onclick=function(){
-      _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
-        var bad=snap.docs.filter(function(d){
-          var data=d.data();
-          var n=(data.name||'').trim();
-          var hascamp=(data.camp||'').trim();
-          var imported=!!data.importedAt;
-          // 캠프 없고 일괄등록으로 들어온 문서
-          return imported&&!hascamp;
-        });
-        if(!bad.length){toast('?? 정리할 항목 없음');return;}
-        if(!confirm(bad.length+'건 삭제하겠습니까?'))return;
-        var cnt=0;
-        bad.forEach(function(d){
-          d.ref.delete().then(function(){
-            cnt++;
-            if(cnt>=bad.length){toast('✅ '+cnt+'건 삭제 완료');_drvCache=null;pageDrivers();}
-          }).catch(function(){cnt++;if(cnt>=bad.length){_drvCache=null;pageDrivers();}});
-        });
-      });
-    };
-    tr.appendChild(btnClean);
-  }
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
   c.innerHTML='<div class="loading">로딩 중...</div>';
