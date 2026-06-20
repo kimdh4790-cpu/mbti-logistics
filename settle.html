@@ -33196,22 +33196,22 @@ function _showSubModal(){
       .get().then(function(s){_hc=Math.max(1,s.size);_refreshSubCalc();}).catch(function(){});
   }
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4500,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4725,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:4500,g:1,color:'#7c3aed',badge:'추천',
+    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:4725,g:1,color:'#7c3aed',badge:'추천',
      tl:'출퇴근부터 급여까지 원스톱',
      ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:2500,g:2,color:'#059669',
+    {key:'qr',       ic:'🔐',nm:'QR 근태',        up:2625,g:2,color:'#059669',
      tl:'QR 하나로 출퇴근 자동화',
      ft:['동적 QR 출퇴근','GPS 위치 검증','근무표 자동 관리','출퇴근 현황 조회']},
-    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:2500,g:2,color:'#8b5cf6',
+    {key:'payroll',  ic:'💼',nm:'급여 관리',       up:2625,g:2,color:'#8b5cf6',
      tl:'급여 계산·명세서 자동화',
      ft:['시급·일급·월급·건당 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4500,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:4500,g:1,color:'#7c3aed',badge:'NEW',
+    {key:'universal',ic:'📋',nm:'범용 정산',         up:4725,g:1,color:'#7c3aed',badge:'NEW',
      tl:'쿠팡 외 타업종 / 복합업종 정산',
      ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
   ];
@@ -33219,9 +33219,9 @@ function _showSubModal(){
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[50,100,200,300,400,500].map(function(n,i){
+    +[50,150,300,500,700,1000].map(function(n,i){
       var active=i===0;
       return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)')+'">~'+n+'명</button>';
     }).join('')
@@ -33256,7 +33256,7 @@ function _showSubModal(){
 }
 function _selectTier(cap){
   // 버튼 스타일 갱신
-  [50,100,200,300,400,500].forEach(function(n){
+  [50,150,300,500,700,1000].forEach(function(n){
     var btn=document.getElementById('sub-tier-'+n);
     if(!btn) return;
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
