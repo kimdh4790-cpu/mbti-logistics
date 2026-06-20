@@ -935,7 +935,37 @@ export default {
       });
     }
 
-    if (path === '/test-inject') {
+    // ── /api/join-member — 직원 가입 시 members 자동 저장 (서버 백업)
+  if (path === '/api/join-member' && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const uid = body.uid||''; const dealerId = body.dealerId||'';
+      const name = body.name||''; const driverId = body.driverId||'';
+      const email = body.email||''; const phone = body.phone||'';
+      const companyName = body.companyName||''; const role = body.role||'member';
+      const store = body.store||''; const platform = body.platform||'donway';
+      if (!uid || !dealerId) return new Response(JSON.stringify({error:'uid, dealerId 필수'}), {status:400,headers:{'Content-Type':'application/json'}});
+      const memberDoc = { fields: {
+        uid:{stringValue:uid}, name:{stringValue:name}, driverId:{stringValue:driverId},
+        email:{stringValue:email}, phone:{stringValue:phone},
+        dealerId:{stringValue:dealerId}, companyName:{stringValue:companyName},
+        role:{stringValue:role}, store:{stringValue:store},
+        status:{stringValue:'active'}, platform:{stringValue:platform}, authUid:{stringValue:uid},
+        joinedAt:{timestampValue:new Date().toISOString()},
+        createdAt:{timestampValue:new Date().toISOString()},
+      }};
+      const saKey = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
+      if (!saKey) return new Response(JSON.stringify({error:'SA key 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
+      const token = await getFirebaseAccessToken(saKey);
+      const fsUrl = 'https://firestore.googleapis.com/v1/projects/' + PROJECT_ID + '/databases/(default)/documents/members/' + uid;
+      await fetch(fsUrl, {method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(memberDoc)});
+      return new Response(JSON.stringify({ok:true,name:name,dealerId:dealerId}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    } catch(e) {
+      return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+    }
+  }
+
+  if (path === '/test-inject') {
       const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
       return new Response(JSON.stringify({
         key_len: key.length,
