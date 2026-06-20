@@ -27605,7 +27605,223 @@ function _copyCompanyCode(el){
 
 
 // 재고관리 → filo.ai.kr로 이전 (스텁)
-function pageInventory(){}
+function pageInventory(){
+  document.getElementById('page-title').textContent='📦 재고·매출·마진';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid;
+  el.innerHTML='<div style="max-width:860px;margin:0 auto">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'
+    +'<button id="inv-tab-dash" class="btn btn-blue" onclick="_invTab(this,\'dash\')" style="font-size:12px">📊 대시보드</button>'
+    +'<button id="inv-tab-stock" class="btn" onclick="_invTab(this,\'stock\')" style="font-size:12px">📦 재고 현황</button>'
+    +'<button id="inv-tab-order" class="btn" onclick="_invTab(this,\'order\')" style="font-size:12px">🛒 자동발주 설정</button>'
+    +'<button id="inv-tab-salary" class="btn" onclick="_invTab(this,\'salary\')" style="font-size:12px">💼 급여 연동</button>'
+    +'</div>'
+    +'<div id="inv-dash-area"></div>'
+    +'<div id="inv-stock-area" style="display:none"></div>'
+    +'<div id="inv-order-area" style="display:none"></div>'
+    +'<div id="inv-salary-area" style="display:none"></div>'
+    +'</div>';
+  _invTab(document.getElementById('inv-tab-dash'),'dash');
+}
+
+function _invTab(btn,tab){
+  ['dash','stock','order','salary'].forEach(function(t){
+    var b=document.getElementById('inv-tab-'+t);
+    var a=document.getElementById('inv-'+t+'-area');
+    if(b) b.className=t===tab?'btn btn-blue':'btn';
+    if(a) a.style.display=t===tab?'':'none';
+  });
+  if(tab==='dash') _invRenderDash();
+  if(tab==='stock') _invRenderStock();
+  if(tab==='order') _invRenderOrder();
+  if(tab==='salary') _invRenderSalary();
+}
+
+function _invRenderDash(){
+  var area=document.getElementById('inv-dash-area');
+  if(!area)return;
+  var did=_CU.dealerId||_CU.uid;
+  var today=new Date().toISOString().slice(0,10);
+  var ym=today.slice(0,7);
+  area.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  Promise.all([
+    _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
+    _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+    _db.collection('inventory').where('dealerId','==',did).get()
+  ]).then(function(res){
+    var todaySales=res[0],monthSales=res[1],invSnap=res[2];
+    var todayRev=0,todayCount=0;
+    todaySales.forEach(function(doc){var d=doc.data();todayRev+=(d.totalAmount||d.amount||0);todayCount++;});
+    var monthRev=0,monthCost=0;
+    monthSales.forEach(function(doc){var d=doc.data();monthRev+=(d.totalAmount||d.amount||0);monthCost+=(d.totalCost||0);});
+    var monthMargin=monthRev-monthCost;
+    var marginRate=monthRev>0?Math.round(monthMargin/monthRev*100):0;
+    var lowStock=[];
+    invSnap.forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)lowStock.push(d);});
+    var html='';
+    html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">📅 오늘 ('+today+')</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">';
+    html+='<div style="background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#60a5fa">'+todayRev.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">오늘 매출(원)</div></div>';
+    html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#22c55e">'+todayCount+'</div><div style="font-size:10px;color:var(--text3)">거래건수</div></div>';
+    html+='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#ef4444">'+lowStock.length+'</div><div style="font-size:10px;color:var(--text3)">재고부족</div></div>';
+    html+='</div>';
+    html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">📊 '+ym+' 월간 매출·마진</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:20px">';
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center"><div style="font-size:15px;font-weight:900;color:#60a5fa">'+monthRev.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">월 매출</div></div>';
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center"><div style="font-size:15px;font-weight:900;color:#ef4444">'+monthCost.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">월 원가</div></div>';
+    html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:15px;font-weight:900;color:#22c55e">'+monthMargin.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">월 마진</div></div>';
+    html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:15px;font-weight:900;color:#22c55e">'+marginRate+'%</div><div style="font-size:10px;color:var(--text3)">마진율</div></div>';
+    html+='</div>';
+    if(lowStock.length){
+      html+='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:16px;margin-bottom:16px">';
+      html+='<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:10px">⚠️ 재고 부족 품목 ('+lowStock.length+'개)</div>';
+      lowStock.forEach(function(item){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(239,68,68,.15)">';
+        html+='<div><div style="font-size:13px;font-weight:700">'+esc(item.name||'')+'</div>';
+        html+='<div style="font-size:10px;color:var(--text3)">최소 '+(item.minStock||0)+'개 / 발주 '+(item.autoOrderQty||1)+'개'+(item.supplierName?' / '+esc(item.supplierName):'')+'</div></div>';
+        html+='<div style="display:flex;align-items:center;gap:6px">';
+        html+='<span style="font-size:18px;font-weight:900;color:#ef4444">'+(item.stock??0)+'개</span>';
+        if(item.autoOrderEnabled&&item.supplierPhone) html+='<span style="background:#22c55e;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px">자동발주ON</span>';
+        html+='</div></div>';
+      });
+      html+='<button onclick="_invBulkOrder()" style="margin-top:10px;width:100%;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📱 부족 품목 전체 발주 알림톡 발송</button>';
+      html+='</div>';
+    }
+    area.innerHTML=html;
+  }).catch(function(e){area.innerHTML='<div style="color:#ef4444;padding:20px">'+e.message+'</div>';});
+}
+
+window._invBulkOrder=function(){
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock&&d.supplierPhone&&d.autoOrderEnabled)items.push(d);});
+    if(!items.length){toast('자동발주 설정된 부족 품목이 없습니다');return;}
+    if(!confirm(items.length+'개 품목 거래처에 발주 알림톡 발송합니다. 계속?'))return;
+    items.forEach(function(item){_sendInventoryAlert(did,item);});
+    toast('✅ '+items.length+'개 품목 발주 알림톡 발송 완료');
+  });
+};
+
+function _invRenderStock(){
+  var area=document.getElementById('inv-stock-area');
+  if(!area)return;
+  var did=_CU.dealerId||_CU.uid;
+  area.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+    if(snap.empty){area.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">재고 품목 없음</div>';return;}
+    var html='<div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border)">';
+    html+='<div style="display:grid;grid-template-columns:1fr 60px 60px 60px 70px;padding:10px 14px;background:var(--bg3);font-size:11px;font-weight:700;color:var(--text3)"><div>품목명</div><div style="text-align:center">현재고</div><div style="text-align:center">최소</div><div style="text-align:center">발주량</div><div style="text-align:center">상태</div></div>';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var isLow=d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock;
+      html+='<div style="display:grid;grid-template-columns:1fr 60px 60px 60px 70px;padding:10px 14px;border-top:1px solid var(--border);align-items:center">';
+      html+='<div><div style="font-size:13px;font-weight:700">'+esc(d.name||'')+'</div>'+(d.supplierName?'<div style="font-size:10px;color:var(--text3)">'+esc(d.supplierName)+'</div>':'')+'</div>';
+      html+='<div style="text-align:center;font-size:14px;font-weight:900;color:'+(isLow?'#ef4444':'#22c55e')+'">'+(d.stock??'-')+'</div>';
+      html+='<div style="text-align:center;font-size:12px;color:var(--text3)">'+(d.minStock??'-')+'</div>';
+      html+='<div style="text-align:center;font-size:12px">'+(d.autoOrderQty??'-')+'</div>';
+      html+='<div style="text-align:center">'+(isLow?'<span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px">부족</span>':'<span style="background:rgba(34,197,94,.2);color:#22c55e;padding:2px 7px;border-radius:8px;font-size:10px">정상</span>')+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    area.innerHTML=html;
+  }).catch(function(e){area.innerHTML='<div style="color:#ef4444">'+e.message+'</div>';});
+}
+
+function _invRenderOrder(){
+  var area=document.getElementById('inv-order-area');
+  if(!area)return;
+  var did=_CU.dealerId||_CU.uid;
+  area.innerHTML='<div style="font-size:12px;color:var(--text2);margin-bottom:14px">재고 최소수량 이하 시 거래처에 알림톡 자동 발송됩니다.</div>';
+  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+    if(snap.empty){area.innerHTML+='<div style="padding:20px;text-align:center;color:var(--text3)">재고 품목 없음</div>';return;}
+    var html='<div style="display:flex;flex-direction:column;gap:10px">';
+    snap.forEach(function(doc){
+      var d=doc.data();var id=doc.id;
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:14px;font-weight:800">'+esc(d.name||'')+'</div>';
+      html+='<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ao-'+id+'" '+(d.autoOrderEnabled?'checked':'')+'> 자동발주 ON</label></div>';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+      html+='<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">최소 재고수량</label><input type="number" id="ms-'+id+'" value="'+(d.minStock||1)+'" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>';
+      html+='<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">자동발주 수량</label><input type="number" id="oq-'+id+'" value="'+(d.autoOrderQty||1)+'" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>';
+      html+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+      html+='<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">거래처명</label><input type="text" id="sn-'+id+'" value="'+esc(d.supplierName||'')+'" placeholder="예: OO원두공장" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>';
+      html+='<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">거래처 전화번호</label><input type="tel" id="sp-'+id+'" value="'+esc(d.supplierPhone||'')+'" placeholder="01012345678" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>';
+      html+='</div><button onclick="_invSaveOrder(\''+id+'\')" style="width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">💾 저장</button>';
+      html+='</div>';
+    });
+    html+='</div>';
+    area.innerHTML=(area.innerHTML||'')+html;
+  }).catch(function(e){area.innerHTML+='<div style="color:#ef4444">'+e.message+'</div>';});
+}
+
+window._invSaveOrder=function(docId){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  var cb=document.getElementById('ao-'+docId);
+  _db.collection('inventory').doc(docId).update({
+    autoOrderEnabled:cb?cb.checked:false,
+    minStock:parseInt(g('ms-'+docId))||1,
+    autoOrderQty:parseInt(g('oq-'+docId))||1,
+    supplierName:g('sn-'+docId),
+    supplierPhone:g('sp-'+docId).replace(/[^0-9]/g,''),
+    alertEnabled:true
+  }).then(function(){toast('✅ 자동발주 설정 저장');}).catch(function(e){toast('❌ '+e.message);});
+};
+
+function _invRenderSalary(){
+  var area=document.getElementById('inv-salary-area');
+  if(!area)return;
+  var did=_CU.dealerId||_CU.uid;
+  var ym=new Date().toISOString().slice(0,7);
+  area.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+  Promise.all([
+    _db.collection('attendance').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+    _db.collection('members').where('dealerId','==',did).get()
+  ]).then(function(results){
+    var attSnap=results[0],memSnap=results[1];
+    var members={};
+    memSnap.forEach(function(doc){var d=doc.data();members[doc.id]={name:d.name||d.driverName||doc.id,type:d.employeeType||'알바',hourlyWage:d.hourlyWage||d.wage||0,monthlyWage:d.monthlyWage||0};});
+    var byUser={};
+    attSnap.forEach(function(doc){
+      var d=doc.data();
+      if(!byUser[d.userId])byUser[d.userId]={days:0,hours:0,lateCount:0};
+      var u=byUser[d.userId];
+      if(d.checkIn)u.days++;
+      if(d.workHours)u.hours+=parseFloat(d.workHours)||0;
+      var st=_getAttStatus(d,{startTime:'09:00',lateGraceMin:10});
+      if(st.code==='late'||st.code==='late_early')u.lateCount++;
+    });
+    var rows=Object.keys(byUser).map(function(uid){
+      var u=byUser[uid];var m=members[uid]||{name:uid,type:'알바',hourlyWage:0,monthlyWage:0};
+      var basePay=m.type==='정직원'&&m.monthlyWage>0?m.monthlyWage:Math.round(u.hours*(m.hourlyWage||0));
+      var lateDed=u.lateCount*Math.round((m.hourlyWage||0)*0.5);
+      var net=Math.max(0,basePay-lateDed);
+      return {uid:uid,name:m.name,type:m.type,days:u.days,hours:u.hours.toFixed(1),basePay:basePay,lateDed:lateDed,net:net,lateCount:u.lateCount};
+    });
+    rows.sort(function(a,b){return b.net-a.net;});
+    var totalPay=rows.reduce(function(s,r){return s+r.net;},0);
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">';
+    html+='<div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#a78bfa">'+rows.length+'명</div><div style="font-size:10px;color:var(--text3)">근무 직원</div></div>';
+    html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:20px;font-weight:900;color:#22c55e">'+totalPay.toLocaleString()+'원</div><div style="font-size:10px;color:var(--text3)">이번달 총 급여</div></div>';
+    html+='</div>';
+    html+='<div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border)">';
+    html+='<div style="display:grid;grid-template-columns:1fr 50px 50px 50px 60px 70px;padding:10px 12px;background:var(--bg3);font-size:10px;font-weight:700;color:var(--text3)"><div>직원</div><div style="text-align:center">유형</div><div style="text-align:center">출근</div><div style="text-align:center">시간</div><div style="text-align:center">지각</div><div style="text-align:right">예상급여</div></div>';
+    rows.forEach(function(r){
+      html+='<div style="display:grid;grid-template-columns:1fr 50px 50px 50px 60px 70px;padding:10px 12px;border-top:1px solid var(--border);align-items:center">';
+      html+='<div style="font-size:12px;font-weight:700">'+esc(r.name)+'</div>';
+      html+='<div style="text-align:center"><span style="font-size:9px;padding:2px 5px;border-radius:6px;background:'+(r.type==='정직원'?'rgba(0,102,255,.2)':'rgba(245,158,11,.2)')+';color:'+(r.type==='정직원'?'#60a5fa':'#f59e0b')+'">'+r.type+'</span></div>';
+      html+='<div style="text-align:center;font-size:11px">'+r.days+'일</div>';
+      html+='<div style="text-align:center;font-size:11px">'+r.hours+'h</div>';
+      html+='<div style="text-align:center;font-size:11px;color:'+(r.lateCount?'#f59e0b':'var(--text3)')+'">'+r.lateCount+'회</div>';
+      html+='<div style="text-align:right;font-size:12px;font-weight:800;color:#22c55e">'+r.net.toLocaleString()+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<div style="margin-top:12px"><button onclick="_payrollBulkAlimtalk('+JSON.stringify(rows)+')" style="width:100%;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📱 급여 명세서 알림톡 일괄발송</button></div>';
+    area.innerHTML=html;
+  }).catch(function(e){area.innerHTML='<div style="color:#ef4444;padding:20px">'+e.message+'</div>';});
+}
 function pageInvSummary(){pageInventory();}
 function pageInvMonthly(){pageInventory();}
 function pageInvOrder(){pageInventory();}
