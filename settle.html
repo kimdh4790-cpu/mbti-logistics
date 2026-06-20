@@ -24174,6 +24174,7 @@ function pageAttendance(){
     +'<div style="display:flex;gap:6px;margin-bottom:14px">'
     +'<button id="att-tab-qr" class="btn btn-blue" onclick="_attTab(\'qr\')" style="font-size:12px">📺 QR 코드 표시</button>'
     +'<button id="att-tab-today" class="btn" onclick="_attTab(\'today\')" style="font-size:12px">📋 오늘 현황</button>'
++'<button id="att-tab-payroll" class="btn" onclick="_attTab(\'payroll\')" style="font-size:12px">💼 급여 현황</button>'
     +'<button id="att-tab-hist" class="btn" onclick="_attTab(\'hist\')" style="font-size:12px">📅 기간별 조회</button>'
     +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🙋 방문자 관리</button>'
     +'<button id="att-tab-url" class="btn" onclick="_attTab(\'url\')" style="font-size:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none">🔗 URL 발급</button>'
@@ -24189,14 +24190,15 @@ function pageAttendance(){
     +'<div id="att-visitor-area" style="display:none"></div>'
     +'<div id="att-url-area" style="display:none"></div>'
     +'<div id="att-guide-area" style="display:none"></div>'
-    +'<div id="att-sim-area" style="display:none"></div>'
+    +'<div id="att-payroll-area" style="display:none"></div>'
++'<div id="att-sim-area" style="display:none"></div>'
     +'</div>';
 
   _attTab('qr');
   });
 }
 function _attTab(tab){
-  ['qr','today','hist','visitor','url','guide','sim'].forEach(function(t){
+  ['qr','today','payroll','hist','visitor','url','guide','sim'].forEach(function(t){
     var btn=document.getElementById('att-tab-'+t);
     var area=document.getElementById('att-'+t+'-area');
     if(!btn||!area)return;
@@ -24211,7 +24213,8 @@ function _attTab(tab){
   if(tab==='visitor')_attRenderVisitor();
   if(tab==='url')_attRenderUrl();
   if(tab==='guide')_attRenderGuide();
-  if(tab==='sim')_attRenderSim();
+  if(tab==='payroll')_attRenderPayrollDash();
+if(tab==='sim')_attRenderSim();
 }
 
 // ── QR 코드 표시 (관리자가 모니터/태블릿에 띄워두는 화면) ──
@@ -24957,6 +24960,112 @@ function _attLoadGPSStatus(cid){
 }
 
 // ── 오늘 출퇴근 현황 ──
+function _attRenderPayrollDash(){
+  var area=document.getElementById('att-payroll-area');
+  if(!area)return;
+  var did=_CU.dealerId;
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
+  area.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 급여 현황 로딩중...</div>';
+  // attendance 이번달 전체 조회
+  _db.collection('attendance').where('dealerId','==',did)
+    .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get()
+    .then(function(snap){
+      var byUser={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(!byUser[d.userId]) byUser[d.userId]={name:d.driverName||d.name||d.userId,days:0,hours:0,lateCount:0,earlyCount:0,absentCount:0,records:[]};
+        var u=byUser[d.userId];
+        var st=_getAttStatus(d,{startTime:'09:00',endTime:'18:00',lateGraceMin:10,earlyLeaveMin:10});
+        if(d.checkIn) u.days++;
+        if(d.workHours) u.hours+=parseFloat(d.workHours)||0;
+        if(st.code==='late'||st.code==='late_early') u.lateCount++;
+        if(st.code==='early'||st.code==='late_early') u.earlyCount++;
+        u.records.push(d);
+      });
+      var uids=Object.keys(byUser);
+      // members에서 시급 조회
+      _db.collection('members').where('dealerId','==',did).get().then(function(mSnap){
+        var wages={};
+        mSnap.forEach(function(m){var d=m.data();wages[m.id]=d.hourlyWage||d.wage||0;});
+        var totalPay=0;
+        var rows=uids.map(function(uid){
+          var u=byUser[uid];
+          var wage=wages[uid]||0;
+          var basePay=Math.round(u.hours*wage);
+          var lateDed=u.lateCount*Math.round(wage*0.5); // 지각 30분치 차감
+          var earlyDed=u.earlyCount*Math.round(wage*0.5);
+          var net=Math.max(0,basePay-lateDed-earlyDed);
+          totalPay+=net;
+          return {name:u.name,days:u.days,hours:u.hours.toFixed(1),wage:wage,basePay:basePay,lateCount:u.lateCount,earlyCount:u.earlyCount,lateDed:lateDed,earlyDed:earlyDed,net:net,uid:uid};
+        });
+        rows.sort(function(a,b){return b.net-a.net;});
+        var html='';
+        // 요약 카드
+        html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px">';
+        html+='<div style="background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#0066ff">'+uids.length+'</div><div style="font-size:11px;color:var(--text3)">출근 직원</div></div>';
+        html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#22c55e">'+totalPay.toLocaleString()+'</div><div style="font-size:11px;color:var(--text3)">예상 급여합계(원)</div></div>';
+        var totalLate=rows.reduce(function(s,r){return s+r.lateCount;},0);
+        html+='<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#f59e0b">'+totalLate+'</div><div style="font-size:11px;color:var(--text3)">지각 누적</div></div>';
+        var totalEarly=rows.reduce(function(s,r){return s+r.earlyCount;},0);
+        html+='<div style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:900;color:#f97316">'+totalEarly+'</div><div style="font-size:11px;color:var(--text3)">조퇴 누적</div></div>';
+        html+='</div>';
+        // 직원별 급여 테이블
+        html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">💼 '+ym+' 직원별 급여 현황</div>';
+        html+='<div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border)">';
+        html+='<div style="display:grid;grid-template-columns:1fr 60px 60px 60px 60px 80px;gap:0;padding:10px 12px;background:var(--bg3);font-size:11px;font-weight:700;color:var(--text3)">';
+        html+='<div>직원명</div><div style="text-align:center">출근일</div><div style="text-align:center">시간</div><div style="text-align:center">지각</div><div style="text-align:center">조퇴</div><div style="text-align:right">예상급여</div></div>';
+        rows.forEach(function(r){
+          html+='<div style="display:grid;grid-template-columns:1fr 60px 60px 60px 60px 80px;gap:0;padding:10px 12px;border-top:1px solid var(--border);align-items:center">';
+          html+='<div style="font-size:13px;font-weight:700">'+esc(r.name)+'</div>';
+          html+='<div style="text-align:center;font-size:12px">'+r.days+'일</div>';
+          html+='<div style="text-align:center;font-size:12px">'+r.hours+'h</div>';
+          html+='<div style="text-align:center;font-size:12px;color:'+(r.lateCount?'#f59e0b':'var(--text3)')+'">'+r.lateCount+'회</div>';
+          html+='<div style="text-align:center;font-size:12px;color:'+(r.earlyCount?'#f97316':'var(--text3)')+'">'+r.earlyCount+'회</div>';
+          html+='<div style="text-align:right;font-size:13px;font-weight:800;color:#22c55e">'+r.net.toLocaleString()+'원</div>';
+          html+='</div>';
+        });
+        html+='</div>';
+        // 알림톡 일괄 발송 버튼
+        html+='<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">';
+        html+='<button onclick="_payrollBulkAlimtalk('+JSON.stringify(rows)+')" style="padding:10px 18px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📱 급여 명세서 알림톡 일괄 발송</button>';
+        html+='<button onclick="_payrollExport('+JSON.stringify(rows)+')" style="padding:10px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">📥 엑셀 다운로드</button>';
+        html+='</div>';
+        area.innerHTML=html;
+      });
+    }).catch(function(e){area.innerHTML='<div style="color:#ef4444;padding:20px">오류: '+e.message+'</div>';});
+}
+
+// 급여 명세서 알림톡 일괄 발송
+window._payrollBulkAlimtalk=function(rows){
+  if(!rows||!rows.length){toast('❌ 급여 데이터 없음');return;}
+  var sent=0,failed=0;
+  var did=_CU.dealerId;
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
+  var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.name)||'회사';
+  function doNext(i){
+    if(i>=rows.length){toast('✅ 발송완료 '+sent+'건 / 실패 '+failed+'건');return;}
+    var r=rows[i];
+    _db.collection('members').doc(r.uid).get().then(function(doc){
+      var phone=doc.exists?doc.data().phone:'';
+      if(!phone){failed++;doNext(i+1);return;}
+      // stmt 생성 후 발송
+      var stmtRef=_db.collection('statement_share').doc();
+      stmtRef.set({dealerId:did,userId:r.uid,name:r.name,month:ym,netPay:r.net,details:{days:r.days,hours:r.hours,lateCount:r.lateCount,earlyCount:r.earlyCount,lateDed:r.lateDed||0,earlyDed:r.earlyDed||0},createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){
+        fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',
+            variables:{'#{회사명}':coName,'#{이름}':r.name,'#{월}':ym,'#{실지급}':r.net.toLocaleString(),'#{명세서링크}':stmtRef.id},
+            fallbackText:'['+coName+'] '+r.name+'님 '+ym+' 급여: '+r.net.toLocaleString()+'원'})
+        }).then(function(){sent++;doNext(i+1);}).catch(function(){failed++;doNext(i+1);});
+      });
+    }).catch(function(){failed++;doNext(i+1);});
+  }
+  if(!confirm(rows.length+'명에게 급여 명세서를 발송합니다. 계속하시겠습니까?'))return;
+  toast('📱 발송 중...');
+  doNext(0);
+};
+
 function _attRenderToday(){
   var area=document.getElementById('att-today-area');
   if(!area)return;
