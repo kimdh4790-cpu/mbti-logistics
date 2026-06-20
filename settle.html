@@ -32083,140 +32083,158 @@ window._bulkLoadInfoFile=function(inp){
   st.textContent='\u23f3 \uc77d\ub294 \uc911...';
   var reader=new FileReader();
 
-  // ── 값 패턴으로 컬럼 타입 판단
-  function detectColByValue(col){
-    // col = 해당 컬럼의 데이터 값 배열 (헤더 제외, 상위 5개)
-    var samples=col.filter(function(v){return v&&String(v).trim();}).slice(0,5);
-    if(!samples.length) return null;
-    var hits={phone:0,email:0,bank:0,name:0,car:0,biz:0,addr:0};
-    samples.forEach(function(v){
-      var s=String(v).replace(/\s/g,'');
-      // 전화번호: 010으로 시작하는 10~11자리 숫자 (하이픈 포함)
-      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s)) hits.phone+=2;
+  // 은행명 목록 (셀 값에 포함되어 있으면 은행명 컬럼)
+  var BANK_NAMES=['\ud558\ub098','\uad6d\ubbfc','\uc2e0\ud55c','\uc6b0\ub9ac','\uc2dc\ud2f0','\ub18d\ud611','\uae30\uc5c5','\uce74\uce74\uc624','\ud1a0\uc2a4','\ucf00\uc774\ube45\ud06c','\uc0b0\uc5c5','\uc218\ud611','\uc804\ub0a8','\uacbd\ub0a8','\uc81c\uc8fc','\uad11\uc8fc','\uc804\ubd81','\uc0bc\uc131','\uc6b0\uccb4\uad6d','\ubaa8\uc0c1','\uc5ac\uc2e0\uae08\uace0'];
+
+  // 값 패턴으로 컬럼 타입 판단
+  function detectType(samples){
+    var s_arr=samples.filter(function(v){return v&&String(v).trim();}).slice(0,6);
+    if(!s_arr.length) return null;
+    var hits={phone:0,email:0,bank:0,bankName:0,loginId:0,name:0,car:0,biz:0,addr:0};
+    s_arr.forEach(function(raw){
+      var v=String(raw).trim();
+      var s=v.replace(/\s/g,'');
+      // 전화번호: 010 시작 10~11자리
+      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s)) hits.phone+=3;
       // 이메일
-      if(/@[a-z0-9]+\.[a-z]{2,}/i.test(s)) hits.email+=3;
-      // 계좌번호: 은행명\n숫자 or 숫자만 10자리 이상
-      if(/^[\uac00-\ud7a3]+\n[0-9\-]+$/.test(v)||(/^[0-9\-]{10,}$/.test(s)&&s.replace(/\-/g,'').length>=10)) hits.bank+=2;
-      // 차량번호: 지역명+숫자+한글+숫자 패턴
-      if(/[\uac00-\ud7a3]{2}[0-9]{2}[\uac00-\ud7a3][0-9]{4}/.test(s)) hits.car+=3;
-      // 사업자번호: 000-00-00000
-      if(/^[0-9]{3}[\-][0-9]{2}[\-][0-9]{5}$/.test(s)||/^[0-9]{10}$/.test(s)) hits.biz+=2;
-      // 주소: 시/도/구/동 포함
-      if(/[\uad6c\ub3d9\uc2dc\ub3c4\ub85c\ubc88\uae38]/.test(s)&&s.length>8) hits.addr+=2;
-      // 이름: 한글 2~4자
-      if(/^[\uac00-\ud7a3]{2,5}$/.test(s)&&s.length<=5) hits.name+=1;
+      if(/@[a-zA-Z0-9]+\.[a-z]{2,}/i.test(v)) hits.email+=4;
+      // 계좌: 은행명\n계좌번호 형식 (줄바꿈 포함)
+      if(v.indexOf('\n')>=0){
+        var parts=v.split('\n');
+        var hasBankWord=BANK_NAMES.some(function(b){return parts[0].indexOf(b)>=0;});
+        var hasNum=/[0-9\-]{8,}/.test(parts[1]||'');
+        if(hasBankWord&&hasNum) hits.bank+=5;
+      }
+      // 은행명만 있는 컬럼 (줄바꿈 없이 은행명만)
+      if(!v.indexOf('\n')>=0){
+        var isBankWord=BANK_NAMES.some(function(b){return v.indexOf(b)>=0;})&&v.length<10;
+        if(isBankWord) hits.bankName+=4;
+      }
+      // 계좌번호만 (숫자+하이픈 10자리 이상)
+      if(/^[0-9\-]{10,}$/.test(s)&&s.replace(/\-/g,'').length>=10) hits.bank+=2;
+      // 차량번호
+      if(/[\uac00-\ud7a3]{2}[0-9]{2}[\uac00-\ud7a3][0-9]{4}/.test(s)) hits.car+=4;
+      // 사업자번호
+      if(/^[0-9]{3}[\-][0-9]{2}[\-][0-9]{5}$/.test(s)) hits.biz+=4;
+      if(/^[0-9]{10}$/.test(s)&&s[0]!=='0') hits.biz+=2;
+      // 주소
+      if(/([\uc2dc\uad6c\ub3d9\uc74c\ub85c\ubc88\uae38\ub3c4])/.test(s)&&s.length>8) hits.addr+=3;
+      // 아이디: 영문+숫자 조합 4~20자 (이메일 아닌 것)
+      if(/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&!/@/.test(s)) hits.loginId+=2;
+      // 이름: 한글 2~5자만
+      if(/^[\uac00-\ud7a3]{2,5}$/.test(s)) hits.name+=2;
     });
     var max=0,type=null;
     Object.keys(hits).forEach(function(k){if(hits[k]>max){max=hits[k];type=k;}});
-    return max>=1?type:null;
+    return max>=2?type:null;
   }
 
   function parseAuto(rows){
-    if(!rows.length) return [];
-    // 데이터 시작 행 찾기 (이름으로 보이는 한글 2~5자 컬럼이 있는 첫 행)
+    if(!rows||!rows.length) return null;
+    // 데이터 시작 행 탐색
     var dataStart=0;
     for(var ri=0;ri<Math.min(rows.length,8);ri++){
-      var row=rows[ri];
-      var hasKorName=row.some(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(String(v||'').trim());});
-      if(hasKorName){dataStart=ri;break;}
+      var hasName=rows[ri].some(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(String(v||'').trim());});
+      if(hasName){dataStart=ri;break;}
     }
-
-    // 각 컬럼 샘플 수집 (상위 6개 데이터 행)
+    // 컬럼 수
     var numCols=0;
-    rows.slice(dataStart,dataStart+6).forEach(function(r){if(r.length>numCols)numCols=r.length;});
+    rows.slice(dataStart,dataStart+8).forEach(function(r){if(r.length>numCols)numCols=r.length;});
 
-    var colTypes={};  // colIndex → type
+    // 각 컬럼 타입 감지
+    var colTypes={};
     for(var ci=0;ci<numCols;ci++){
-      var colSamples=rows.slice(dataStart,dataStart+8).map(function(r){return r[ci]||'';});
-      var t=detectColByValue(colSamples);
+      var samples=rows.slice(dataStart,dataStart+10).map(function(r){return r[ci]||'';});
+      var t=detectType(samples);
       if(t) colTypes[ci]=t;
     }
 
-    // 이름 컬럼: 타입 미분류 중 한글 2~5자가 많은 컬럼
-    if(!Object.values(colTypes).includes('name')){
+    // 이름 컬럼 보정: 타입 미분류 중 한글 2~5자 비율 높은 것
+    if(!Object.values(colTypes).some(function(v){return v==='name';})){
       for(var ci2=0;ci2<numCols;ci2++){
         if(colTypes[ci2]) continue;
-        var ns=rows.slice(dataStart,dataStart+8).map(function(r){return String(r[ci2]||'').trim();});
-        var nHit=ns.filter(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(v);}).length;
-        if(nHit>=2){colTypes[ci2]='name';break;}
+        var s2=rows.slice(dataStart,dataStart+8).map(function(r){return String(r[ci2]||'').trim();});
+        var n=s2.filter(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(v);}).length;
+        if(n>=3){colTypes[ci2]='name';break;}
       }
     }
 
-    console.log('colTypes:', JSON.stringify(colTypes));
-
-    var nameCol=null,phoneCol=null,emailCol=null,bankCol=null,carCol=null,bizCol=null,addrCol=null;
+    // 타입→컬럼 인덱스 맵
+    var cm={};
     Object.keys(colTypes).forEach(function(ci){
-      var t=colTypes[ci];
-      if(t==='name'&&nameCol===null) nameCol=parseInt(ci);
-      if(t==='phone'&&phoneCol===null) phoneCol=parseInt(ci);
-      if(t==='email'&&emailCol===null) emailCol=parseInt(ci);
-      if(t==='bank'&&bankCol===null) bankCol=parseInt(ci);
-      if(t==='car'&&carCol===null) carCol=parseInt(ci);
-      if(t==='biz'&&bizCol===null) bizCol=parseInt(ci);
-      if(t==='addr'&&addrCol===null) addrCol=parseInt(ci);
+      var t=colTypes[ci]; var idx=parseInt(ci);
+      if(!cm[t]) cm[t]=idx;
     });
 
-    if(nameCol===null) return null;  // 이름 컬럼 없으면 실패
+    console.log('감지된 컬럼:', JSON.stringify(cm));
+    if(cm.name===undefined) return null;
 
     var parsed=[];
     for(var ri2=dataStart;ri2<rows.length;ri2++){
-      var r2=rows[ri2];
-      var name=String(r2[nameCol]||'').trim();
-      if(!name||name.length<2||name.length>6) continue;
-      // 통장: 값에 \n 있으면 은행명\n계좌 분리, 아니면 계좌만
-      var bankRaw=bankCol!==null?String(r2[bankCol]||'').trim():'';
-      var bankName='',bankNum='';
+      var r=rows[ri2];
+      var name=String(r[cm.name]||'').trim();
+      if(!name||!/^[\uac00-\ud7a3]{2,5}$/.test(name)) continue;
+
+      // 통장: 은행명\n계좌 형식이면 분리, 아니면 계좌만
+      var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
+      var bankName='', bankNum='';
       if(bankRaw.indexOf('\n')>=0){
         var bp=bankRaw.split('\n');
         bankName=bp[0].trim();
-        bankNum=bp[1].replace(/[^0-9]/g,'');
+        bankNum=(bp[1]||'').replace(/[^0-9]/g,'');
       } else {
+        // 은행명 컬럼 따로 있는 경우
+        bankName=cm.bankName!==undefined?String(r[cm.bankName]||'').trim():'';
         bankNum=bankRaw.replace(/[^0-9]/g,'');
       }
-      var phone=phoneCol!==null?String(r2[phoneCol]||'').replace(/[^0-9]/g,''):'';
-      var biz=bizCol!==null?String(r2[bizCol]||'').replace(/[^0-9]/g,''):'';
+
       parsed.push({
-        name:name,
-        phone:phone,
-        email:emailCol!==null?String(r2[emailCol]||'').trim():'',
+        name:    name,
+        loginId: cm.loginId!==undefined?String(r[cm.loginId]||'').replace(/\n/g,'').trim():'',
+        phone:   cm.phone!==undefined?String(r[cm.phone]||'').replace(/[^0-9]/g,''):'',
+        email:   cm.email!==undefined?String(r[cm.email]||'').trim():'',
         bankName:bankName,
-        bankNum:bankNum,
-        carNum:carCol!==null?String(r2[carCol]||'').trim():'',
-        bizNum:biz,
-        address:addrCol!==null?String(r2[addrCol]||'').trim():'',
-        status:'active'
+        bankNum: bankNum,
+        carNum:  cm.car!==undefined?String(r[cm.car]||'').trim():'',
+        bizNum:  cm.biz!==undefined?String(r[cm.biz]||'').replace(/[^0-9]/g,''):'',
+        address: cm.addr!==undefined?String(r[cm.addr]||'').trim():'',
+        status:  'active'
       });
     }
-    return parsed;
+    return parsed.length?parsed:null;
   }
 
   function showPreview(parsed){
     var applyBtn=document.getElementById('bulk-info-apply');
     if(!parsed||!parsed.length){
-      st.textContent='\u274c \uc774\ub984\u00b7\uc5f0\ub77d\uc218\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc74c';
+      st.textContent='\u274c \uc774\ub984/\uc5f0\ub77d\uc218\ub97c \uc778\uc2dd\ud558\uc9c0 \ubabb\ud568';
       return;
     }
     window._bulkInfoParsed=parsed;
-    st.textContent='\u2705 '+parsed.length+'\uba85 \uc778\uc2dd \u2014 \ub4f1\ub85d \ubc84\ud2bc \ud074\ub9ad';
+    st.textContent='\u2705 '+parsed.length+'\uba85 \uc778\uc2dd \u2014 \ud655\uc778 \ud6c4 \ub4f1\ub85d';
     var prev=document.getElementById('bulk-info-preview');
-    var html='<table style="width:100%;font-size:10px;border-collapse:collapse">'
+    var html='<div style="overflow-x:auto"><table style="width:100%;font-size:10px;border-collapse:collapse;min-width:420px">'
       +'<tr style="background:var(--bg3);font-weight:700">'
       +'<th style="padding:4px 6px;text-align:left">\uc774\ub984</th>'
+      +'<th style="padding:4px 6px">\uc544\uc774\ub514</th>'
       +'<th style="padding:4px 6px">\uc5f0\ub77d\uc218</th>'
       +'<th style="padding:4px 6px">\uc774\uba54\uc77c</th>'
       +'<th style="padding:4px 6px">\uc740\ud589\uba85</th>'
-      +'<th style="padding:4px 6px">\uacc4\uc88c</th>'
+      +'<th style="padding:4px 6px">\uacc4\uc88c\ubc88\ud638</th>'
+      +'<th style="padding:4px 6px">\ucc28\ub7c9</th>'
       +'</tr>';
     parsed.forEach(function(d){
       html+='<tr style="border-bottom:1px solid var(--border)">'
         +'<td style="padding:4px 6px;font-weight:700">'+esc(d.name)+'</td>'
+        +'<td style="padding:4px 6px;color:var(--brand)">'+esc(d.loginId)+'</td>'
         +'<td style="padding:4px 6px">'+esc(d.phone)+'</td>'
         +'<td style="padding:4px 6px">'+esc(d.email)+'</td>'
         +'<td style="padding:4px 6px">'+esc(d.bankName)+'</td>'
         +'<td style="padding:4px 6px">'+esc(d.bankNum)+'</td>'
+        +'<td style="padding:4px 6px">'+esc(d.carNum)+'</td>'
         +'</tr>';
     });
-    html+='</table>';
+    html+='</table></div>';
     if(prev) prev.innerHTML=html;
     if(applyBtn) applyBtn.disabled=false;
   }
