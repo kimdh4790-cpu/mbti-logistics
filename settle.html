@@ -32203,7 +32203,8 @@ window._biApply=function(list){
       var m=(d.userId?byId[d.userId]:null)||byName[d.name];
       if(m){
         var od=m.data,upd={};
-        if(d.name   &&!od.name)       upd.name=d.name;
+        var odNameIsKor=/^[\uac00-\ud7a3]/.test(od.name||'');
+        if(d.name&&(!od.name||!odNameIsKor))upd.name=d.name;
         if(d.userId &&!od.userId)     upd.userId=d.userId;
         if(d.camp   &&!od.camp)       upd.camp=d.camp;
         if(d.phone  &&!od.phone)      upd.phone=d.phone;
