@@ -38842,8 +38842,7 @@ function _buildNavRender(nav,cur,companyDoc){
   });
 
   // ── 미결제 플랜별 구매 유도 (순서: settle → delivery → qr → payroll → premium)
-  var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
-  var hasLocked=Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
+  var hasLocked=lockedSections.length>0||Object.keys(lockByPlan).some(function(k){return lockByPlan[k].length>0;});
   var _isTrialPlan=window._trialActive||(window._cachedCompanyDoc&&(['trial','any_paid'].indexOf((window._cachedCompanyDoc.plan)||'')>=0));
   if(hasLocked){
       +'<div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;padding:0 4px 8px">💳 추가 구독 가능한 기능</div>';
