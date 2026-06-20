@@ -32057,38 +32057,49 @@ window._bulkLoadScheduleReg=function(inp){
       var iId=hdr.indexOf('아이디');
       var iCamp=hdr.indexOf('캐프명');
       if(iName<0||iId<0){st.textContent='❌ 이름/아이디 컨럼 없음';return;}
-      var seen={},drivers=[];
+      // 이름+아이디 unique 추출
+      var seen={},list=[];
       rows.slice(1).forEach(function(r){
         var name=String(r[iName]||'').trim();
         var uid=String(r[iId]||'').trim();
         var camp=iCamp>=0?String(r[iCamp]||'').trim():'';
-        if(name&&uid&&!seen[name]){seen[name]=true;drivers.push({name:name,userId:uid,camp:camp});}
+        if(name&&uid&&!seen[uid]){seen[uid]=true;list.push({name:name,userId:uid,camp:camp});}
       });
-      if(!drivers.length){st.textContent='❌ 데이터 없음';return;}
+      if(!list.length){st.textContent='❌ 데이터 없음';return;}
       var did=_CU&&(_CU.dealerId||_CU.uid);
-      var done=0,fail=0,total=drivers.length;
-      st.textContent='⏳ '+total+'명 등록 중...';
-      drivers.forEach(function(d){
-        _db.collection('drivers').where('dealerId','==',did).where('userId','==',d.userId).limit(1).get()
-        .then(function(snap){
-          if(snap.empty){
-            return _db.collection('drivers').add({
+      var updated=0,added=0,fail=0,total=list.length;
+      st.textContent='⏳ '+total+'명 매칭 중...';
+      // 기존 drivers 전체 로드 후 아이디로 매칭
+      _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+        var byId={};
+        snap.docs.forEach(function(doc){
+          var d=doc.data();
+          if(d.userId) byId[d.userId.trim()]=doc.ref;
+        });
+        list.forEach(function(d){
+          var ref=byId[d.userId];
+          if(ref){
+            // 기존 기사 — 이름/캠프 업데이트
+            ref.update({name:d.name,camp:d.camp})
+              .then(function(){updated++;_chk();})
+              .catch(function(){fail++;_chk();});
+          } else {
+            // 없으면 신규 등록
+            _db.collection('drivers').add({
               dealerId:did,name:d.name,userId:d.userId,camp:d.camp,
               is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',
               createdAt:firebase.firestore.FieldValue.serverTimestamp()
-            });
+            }).then(function(){added++;_chk();})
+              .catch(function(){fail++;_chk();});
           }
-          return snap.docs[0].ref.update({camp:d.camp,name:d.name});
-        })
-        .then(function(){done++;_chk();})
-        .catch(function(){fail++;_chk();});
-      });
-      function _chk(){
-        if(done+fail>=total){
-          st.textContent='✅ '+done+'명 등록'+(fail?' / 실패 '+fail+'명':'');
-          _drvCache=null;pageDrivers();
+        });
+        function _chk(){
+          if(updated+added+fail>=total){
+            st.textContent='✅ 업데이트 '+updated+'명'+(added?' / 신규 '+added+'명':'')+(fail?' / 실패 '+fail+'명':'');
+            _drvCache=null;pageDrivers();
+          }
         }
-      }
+      }).catch(function(e){st.textContent='❌ '+e.message;});
     }catch(err){st.textContent='❌ '+err.message;}
   };
   reader.readAsArrayBuffer(file);
