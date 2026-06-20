@@ -578,6 +578,15 @@ function _filoJoin(){
       });
     });
   }).then(function(){
+    // ★ 서버사이드 백업 저장
+    fetch('/api/join-member',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:_auth.currentUser&&_auth.currentUser.uid||'',
+        name:document.getElementById('fj-name').value.trim(),
+        phone:document.getElementById('fj-phone').value.trim(),
+        dealerId:window._filoJoinDid||'',
+        companyName:window._filoJoinCo||'',
+        platform:'filo'
+      })}).catch(function(){});
     _filoToast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됩니다.');
   }).catch(function(e){
     if(e&&e.code==='auth/email-already-in-use'){errEl.textContent='이미 가입된 전화번호·코드 조합';}
