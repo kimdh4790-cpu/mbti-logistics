@@ -32618,6 +32618,15 @@ function editDriver(id){
         '<div class="fg"><label>기본급</label><input id="edr-basepay" type="number" value="'+(d.basePay||0)+'"></div>'+
         '<div class="fg"><label>계좌번호</label><input id="edr-bank" value="'+esc(d.bankAccount||'')+'"></div>'+
       '</div>'+
+'<div class="gr">'+
+'<div class="fg"><label>은행명</label><input id="edr-bankname" value="'+esc(d.bankName||'')+'"></div>'+
+'<div class="fg"><label>차량번호</label><input id="edr-carnum" value="'+esc(d.carNum||'')+'"></div>'+
+'</div>'+
+'<div class="fg"><label>주소</label><input id="edr-address" value="'+esc(d.address||'')+'"></div>'+
+'<div class="gr">'+
+'<div class="fg"><label>면허번호</label><input id="edr-license" value="'+esc(d.licenseNum||'')+'"></div>'+
+'<div class="fg"><label>안전교육일</label><input id="edr-safetyedu" value="'+esc(d.safetyEdu||'')+'"></div>'+
+'</div>'+
       '<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'+
         campOptions.map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+esc(cc)+'</option>';}).join('')+
       '</select></div>'+
@@ -33157,6 +33166,11 @@ function saveDriver(id){
     commissionRate:parseInt((document.getElementById('edr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('edr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('edr-bank')||{value:''}).value.trim()||'',
+  bankName:gvs('edr-bankname')||'',
+  carNum:gvs('edr-carnum')||'',
+  address:gvs('edr-address')||'',
+  licenseNum:gvs('edr-license')||'',
+  safetyEdu:gvs('edr-safetyedu')||'',
     bankName:gvs('edr-bankname')||'',
     carNum:gvs('edr-carnum')||'',
     address:gvs('edr-address')||'',
