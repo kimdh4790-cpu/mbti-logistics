@@ -32237,12 +32237,6 @@ function pageDrivers(){
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
   if(isSuperAdmin()){
-    var btnSync=document.createElement('button');btnSync.className='btn btn-sm';
-    btnSync.style.cssText='background:#0ea5e9;color:#fff;font-size:11px;margin-left:4px';
-    btnSync.textContent='?? 연락수 동기화';
-    btnSync.onclick=function(){_syncDriverPhone(_CU.dealerId);};
-    tr.appendChild(btnSync);
-    // 잊못 등록 데이터 정리 (이름 한글 아닌 문서 삭제)
     var btnClean=document.createElement('button');btnClean.className='btn btn-sm';
     btnClean.style.cssText='background:#ef4444;color:#fff;font-size:11px;margin-left:4px';
     btnClean.textContent='개었데이터 삭제';
