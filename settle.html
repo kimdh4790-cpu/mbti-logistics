@@ -9580,6 +9580,17 @@ function doJoin(){
     };
     // users 컬렉션 저장
     return _db.collection('users').doc(uid).set(userDoc).then(function(){
+      // ★ members 컬렉션 자동 저장 — 관리자 직원 목록·기사 관리에 즉시 표시
+      var memberDoc={
+        uid:uid, name:name, driverId:driverId, email:email, phone:'',
+        dealerId:companyId, companyName:companyName,
+        role:joinRole, store:joinStore,
+        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
+        status:'active', platform:'donway', authUid:uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      _db.collection('members').doc(uid).set(memberDoc,{merge:true}).catch(function(){});
       // drivers 컬렉션에도 자동 등록 (관리자 기사 관리에 표시)
       return _db.collection('drivers').where('dealerId','==',companyId).where('userId','==',driverId).get()
       .then(function(snap){
@@ -9601,7 +9612,7 @@ function doJoin(){
       });
     });
   }).then(function(){
-    toast('✅ 가입 완료! 로그인해 주세요');
+    toast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됐습니다. 로그인해 주세요');
     switchTab('login');
     setTimeout(_requestFcmAfterJoin, 1000);
     ['j-name','j-driverid','j-email','j-pw','j-code','j-biz-num','j-biz-name','j-biz-owner'].forEach(function(id){
