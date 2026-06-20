@@ -25071,6 +25071,14 @@ function _attRenderToday(){
   if(!area)return;
   var did=_CU.dealerId;
   var today=new Date().toISOString().slice(0,10);
+  // ── 오늘 요약 대시보드
+  var _sumHtml='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+    +'<div style="background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.2);border-radius:12px;padding:12px;text-align:center"><div id="sum-total" style="font-size:20px;font-weight:900;color:#60a5fa">-</div><div style="font-size:10px;color:var(--text3)">전체직원</div></div>'
+    +'<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center"><div id="sum-in" style="font-size:20px;font-weight:900;color:#22c55e">-</div><div style="font-size:10px;color:var(--text3)">출근완료</div></div>'
+    +'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px;text-align:center"><div id="sum-late" style="font-size:20px;font-weight:900;color:#f59e0b">-</div><div style="font-size:10px;color:var(--text3)">지각</div></div>'
+    +'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px;text-align:center"><div id="sum-absent" style="font-size:20px;font-weight:900;color:#ef4444">-</div><div style="font-size:10px;color:var(--text3)">미출근</div></div>'
+    +'</div>';
+  area.innerHTML=_sumHtml;
   area.innerHTML='<div class="card">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
     +'<div class="card-title">📋 오늘 출퇴근 현황 <span style="font-size:11px;color:var(--text3);font-weight:400">'+today+'</span></div>'
@@ -25083,6 +25091,19 @@ function _attRenderToday(){
     .where('dealerId','==',did).where('date','==',today)
     .orderBy('checkIn','asc').limit(200).get()
   .then(function(snap){
+  // 요약 통계 업데이트
+  var _ws={startTime:(_workSettings&&_workSettings.startTime)||'09:00',lateGraceMin:(_workSettings&&_workSettings.lateGraceMin)||10};
+  var _lateC=0;
+  snap.forEach(function(doc){var d=doc.data();var st=_getAttStatus(d,_ws);if(st.code==='late'||st.code==='late_early')_lateC++;});
+  _db.collection('members').where('dealerId','==',did).where('status','==','재직').get().then(function(mS){
+    var tot=mS.size||snap.size;
+    var g=function(id){return document.getElementById(id);};
+    if(g('sum-total'))g('sum-total').textContent=tot;
+    if(g('sum-in'))g('sum-in').textContent=snap.size;
+    if(g('sum-late'))g('sum-late').textContent=_lateC;
+    if(g('sum-absent'))g('sum-absent').textContent=Math.max(0,tot-snap.size);
+  }).catch(function(){});
+
     var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<tr style="background:var(--bg3)">'
       +'<th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
