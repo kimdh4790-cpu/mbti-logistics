@@ -32409,79 +32409,87 @@ window._bulkApplyDrivers=function(){
 };
 
 // ★ 엑셀에서 파싱한 직원 데이터 일괄 Firestore 등록
-window._bulkImportDrivers = function(driversJson){
-  var did = _CU && (_CU.dealerId||_CU.uid);
-  if(!did){toast('❌ 로그인 필요');return;}
-  if(!confirm('직원 '+driversJson.length+'명을 drivers 컬렉션에 일괄 등록합니다. 계속?'))return;
-  var done=0, fail=0, skip=0;
-  var total=driversJson.length;
-  driversJson.forEach(function(d){
-    if(!d.name){skip++;return;}
-    // 아이디(loginId)로 중복 확인 후 등록
-    var _qId=d.loginId||d.name||'';
-    _db.collection('drivers')
-      .where('dealerId','==',did)
-      .where('name','==',d.name)
-      .limit(1).get()
-      .then(function(snap){
-        var docData = {
-          dealerId: did,
-          name: d.name||'',
-          userId: d.loginId||d.name||'',
-          camp: d.camp||'',
-          phone: d.phone||'',
-          email: d.email||'',
-          bankAccount: d.bankNum||'',
-          bankName: d.bankName||'',
-          carNum: d.carNum||'',
-          address: d.address||'',
-          clothSize: d.clothSize||'',
-          licenseNum: d.licenseNum||'',
-          safetyEdu: d.safetyEdu||'',
-          joinDate: d.joinDate||'',
-          leaveDate: d.leaveDate||'',
-          bizNum: d.bizNum||'',
-          is_active: d.status!=='retired',
-          status: d.status==='retired'?'퇴직':'재직',
-          jobsub: '쿠팡',
-          workType: 'coupang',
-          importedAt: firebase.firestore.FieldValue.serverTimestamp()
+window._bulkImportDrivers=function(arr){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did){toast('\u274c \ub85c\uadf8\uc778 \ud544\uc694');return;}
+  if(!confirm(arr.length+'\uba85 \uc815\ubcf4\ub97c \uae30\uc874 \uc9c1\uc6d0\uc5d0 \uc5c5\ub370\uc774\ud2b8\ud569\ub2c8\ub2e4.\n\uc5c6\ub294 \uc774\ub984\uc740 \uc2e0\uaddc \ub4f1\ub85d\ud569\ub2c8\ub2e4. \uacc4\uc18d?'))return;
+  // 기존 drivers 전체 로드 후 이름으로 매칭
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var existing={};  // name → {ref, data}
+    snap.docs.forEach(function(doc){
+      var d=doc.data();
+      if(d.name) existing[d.name.trim()]=({ref:doc.ref,data:d});
+      if(d.userId) existing[d.userId.trim()]=({ref:doc.ref,data:d});
+    });
+    var done=0,fail=0,total=arr.length;
+    arr.forEach(function(d){
+      if(!d.name){fail++;if(done+fail>=total)_bulkDone(done,fail);return;}
+      var name=d.name.trim();
+      var matched=existing[name]||(d.loginId?existing[d.loginId.trim()]:null);
+      // 빈 필드만 채우는 업데이트 객체 생성
+      function onlyNew(newVal, oldVal){
+        return (newVal&&!oldVal)?newVal:undefined;
+      }
+      if(matched){
+        // 기존 문서 — 비어있는 필드만 채움
+        var upd={};
+        var od=matched.data;
+        var pairs={
+          phone:     d.phone,
+          email:     d.email,
+          bankAccount: d.bankNum,
+          bankName:  d.bankName,
+          carNum:    d.carNum,
+          address:   d.address,
+          licenseNum:d.licenseNum,
+          safetyEdu: d.safetyEdu,
+          bizNum:    d.bizNum,
+          clothSize: d.clothSize,
+          joinDate:  d.joinDate
         };
-        var prom = snap.empty
-          ? _db.collection('drivers').add(docData)
-          : snap.docs[0].ref.update(docData);
-        return prom;
-      })
-      .then(function(){
-        done++;
-        // members 컬렉션에도 동기 저장
-        _db.collection('members').where('dealerId','==',did).where('phone','==',d.phone||'').limit(1).get()
-          .then(function(ms){
-            if(ms.empty && d.phone){
-              _db.collection('members').add({
-                dealerId:did, name:d.name, phone:d.phone, email:d.email||'',
-                loginId:d.loginId||'', camp:d.camp||'', bankAccount:d.bankNum||'',
-                bankName:d.bankName||'', carNum:d.carNum||'', address:d.address||'',
-                is_active:d.status!=='retired', status:d.status==='retired'?'retired':'active',
-                importedAt:firebase.firestore.FieldValue.serverTimestamp()
-              }).catch(function(){});
-            }
-          }).catch(function(){});
-        if(done+fail+skip>=total){
-          toast('✅ 일괄 등록 완료 — 성공:'+done+' 실패:'+fail+' 스킵:'+skip);
-          pageDrivers();
+        Object.keys(pairs).forEach(function(k){
+          var nv=pairs[k];
+          if(nv&&!od[k]) upd[k]=nv;  // 기존에 없을 때만 채움
+        });
+        // loginId도 없으면 추가
+        if(d.loginId&&!od.userId) upd.userId=d.loginId;
+        if(!Object.keys(upd).length){
+          // 업데이트할 내용 없음
+          done++;if(done+fail>=total)_bulkDone(done,fail);return;
         }
-      })
-      .catch(function(e){
-        fail++;
-        console.error('등록 실패:', d.name, e.message);
-        if(done+fail+skip>=total){
-          toast('⚠️ 완료 — 성공:'+done+' 실패:'+fail+' 스킵:'+skip);
-          pageDrivers();
-        }
-      });
-  });
+        matched.ref.update(upd)
+          .then(function(){done++;if(done+fail>=total)_bulkDone(done,fail);})
+          .catch(function(e){console.error(name,e.message);fail++;if(done+fail>=total)_bulkDone(done,fail);});
+      } else {
+        // 신규 — 새로 추가
+        _db.collection('drivers').add({
+          dealerId:did, name:name,
+          userId:d.loginId||name,
+          camp:d.camp||'',
+          phone:d.phone||'',
+          email:d.email||'',
+          bankAccount:d.bankNum||'',
+          bankName:d.bankName||'',
+          carNum:d.carNum||'',
+          address:d.address||'',
+          licenseNum:d.licenseNum||'',
+          safetyEdu:d.safetyEdu||'',
+          bizNum:d.bizNum||'',
+          clothSize:d.clothSize||'',
+          joinDate:d.joinDate||'',
+          is_active:true, status:'\uc7ac\uc9c1', jobsub:'\ucfe0\ud321', workType:'coupang',
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(function(){done++;if(done+fail>=total)_bulkDone(done,fail);})
+        .catch(function(e){console.error(name,e.message);fail++;if(done+fail>=total)_bulkDone(done,fail);});
+      }
+    });
+  }).catch(function(e){toast('\u274c '+e.message);});
 };
+function _bulkDone(done,fail){
+  toast('\u2705 \uc5c5\ub370\uc774\ud2b8 '+done+'\uba85'+(fail?' / \uc2e4\ud328 '+fail+'\uba85':''));
+  _drvCache=null; pageDrivers();
+}
 
 // ★ 엑셀 직원 일괄 등록
 window._bulkImportDrivers=function(arr){
