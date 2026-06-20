@@ -32103,7 +32103,7 @@ window._biParse=function(rows){
     // 영문 아이디 찾기
     var engId=null,engIdCol=-1;
     cells.forEach(function(s,ci){
-      if(!engId&&/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&s.indexOf('@')<0){
+      if(!engId&&/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&s.indexOf('@')<0&&!/^(WAVE|D[0-9]|F[0-9]|W[0-9]|M_)/i.test(s)&&s.toUpperCase()!==s){
         engId=s;engIdCol=ci;
       }
     });
