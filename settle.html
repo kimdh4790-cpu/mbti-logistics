@@ -32018,142 +32018,179 @@ function _openBulkDriverRegister(){
   var old=document.getElementById('mo-bulk-drv');if(old)old.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-bulk-drv';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:480px"><div class="mdt">📂 기사 일괄 등록</div><div style="padding:16px;font-size:12px;color:var(--text3);margin-bottom:8px">근무표(쿠팡 schedule.xlsx)와 고용·산재 계산표를 올리면 이름 매칭 후 자동 등록됩니다.</div><div style="padding:0 16px"><div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">① 근무표 (이름+아이디)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 근무표 선택 (schedule xlsx)<input type="file" id="bulk-schedule-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadSchedule(this)"></label><div id="bulk-schedule-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">② 고용·산재 계산표 (이름+사업자번호)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 고용산재표 선택 (xls/xlsx)<input type="file" id="bulk-biz-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadBizExcel(this)"></label><div id="bulk-biz-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div id="bulk-preview" style="margin-bottom:12px"></div></div><div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button><button class="btn btn-blue" id="bulk-apply-btn" onclick="_bulkApplyDrivers()" disabled>적용</button></div></div>';
+  mo.innerHTML=
+    '<div class="md" style="max-width:460px">'
+    +'<div class="mdt">?? 직원정보 업로드</div>'
+    +'<div style="padding:16px">'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">'
+    +'엑셀 또는 txt 업로드 → <b>이름 / 아이디</b>로 기존 기사 매칭<br>'
+    +'기존에 없는 정보만 채움니다. 새 문서는 만들지 않습니다.'
+    +'</div>'
+    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="document.getElementById(\'_bulk_inp\').click()">'
+    +'<div style="font-size:28px">??</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-top:6px">파일 선택 (.xlsx / .txt / .csv)</div>'
+    +'<input id="_bulk_inp" type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_bulkDoLoad(this)">'
+    +'</div>'
+    +'<div id="_bulk_st" style="font-size:12px;margin-top:10px;color:var(--text3)"></div>'
+    +'<div id="_bulk_prev" style="max-height:220px;overflow-y:auto;margin-top:8px"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:14px">'
+    +'<button id="_bulk_ok" class="btn btn-blue" style="flex:1" disabled onclick="_bulkDoApply()">업데이트</button>'
+    +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+    +'</div>'
+    +'</div></div>';
   document.getElementById('modals').appendChild(mo);
-  window._bulkScheduleMap={};  // userId→name
-  window._bulkBizMap={};       // name→bizNum
 }
 
-window._bulkLoadSchedule=function(inp){
+window._bulkDoLoad=function(inp){
   var file=inp.files[0];if(!file)return;
-  var st=document.getElementById('bulk-schedule-status');
+  var st=document.getElementById('_bulk_st');
   st.textContent='⏳ 읽는 중...';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      var sh=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
-      window._bulkScheduleMap={};
-      var cnt=0;
-      rows.slice(1).forEach(function(r){
-        var name=String(r[5]||'').trim();
-        var uid=String(r[6]||'').trim();
-        if(name&&uid&&name!=='이름'){
-          window._bulkScheduleMap[uid]=name;
-          cnt++;
-        }
+  var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
+  // 값 패턴으로 컬럼 타입 감지
+  function guessCol(samples){
+    var h={phone:0,email:0,bank:0,id:0,car:0,biz:0,name:0};
+    samples.filter(Boolean).slice(0,6).forEach(function(v){
+      var s=String(v).trim();
+      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s.replace(/\s/g,''))) h.phone+=3;
+      if(/@[a-zA-Z0-9]+\.[a-z]{2,}/i.test(s)) h.email+=4;
+      if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;})) h.bank+=5;
+      if(/^[0-9\-]{10,}$/.test(s.replace(/\s/g,''))&&!/^01/.test(s)) h.bank+=2;
+      if(/[\uac00-\ud7a3]{2}[0-9]{2}[\uac00-\ud7a3][0-9]{4}/.test(s)) h.car+=4;
+      if(/^[0-9]{3}[\-][0-9]{2}[\-][0-9]{5}$/.test(s)) h.biz+=4;
+      if(/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&!/@/.test(s)) h.id+=2;
+      if(/^[\uac00-\ud7a3]{2,5}$/.test(s)) h.name+=2;
+    });
+    var max=0,t=null;
+    Object.keys(h).forEach(function(k){if(h[k]>max){max=h[k];t=k;}});
+    return max>=2?t:null;
+  }
+  function parseFile(rows){
+    // 이름 있는 행 탐색
+    var ds=0;
+    for(var r=0;r<Math.min(rows.length,8);r++){
+      if(rows[r].some(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(String(v||'').trim());})){ds=r;break;}
+    }
+    var nc=0;
+    rows.slice(ds,ds+8).forEach(function(r){if(r.length>nc)nc=r.length;});
+    var cm={};
+    for(var ci=0;ci<nc;ci++){
+      var t=guessCol(rows.slice(ds,ds+10).map(function(r){return r[ci]||'';}));
+      if(t&&cm[t]===undefined) cm[t]=ci;
+    }
+    // 이름 컬럼 보정
+    if(cm.name===undefined){
+      for(var ci2=0;ci2<nc;ci2++){
+        if(Object.values(cm).indexOf(ci2)>=0) continue;
+        var ns=rows.slice(ds,ds+8).map(function(r){return String(r[ci2]||'').trim();});
+        if(ns.filter(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(v);}).length>=2){cm.name=ci2;break;}
+      }
+    }
+    if(cm.name===undefined) return null;
+    var out=[];
+    for(var ri=ds;ri<rows.length;ri++){
+      var r=rows[ri];
+      var name=String(r[cm.name]||'').trim();
+      if(!name||!/^[\uac00-\ud7a3]{2,5}$/.test(name)) continue;
+      var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
+      var bankName='',bankNum='';
+      if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bankName=bp[0].trim();bankNum=(bp[1]||'').replace(/[^0-9]/g,'');}
+      else{bankNum=bankRaw.replace(/[^0-9]/g,'');}
+      out.push({
+        name:name,
+        loginId:cm.id!==undefined?String(r[cm.id]||'').replace(/\n/g,'').trim():'',
+        phone:cm.phone!==undefined?String(r[cm.phone]||'').replace(/[^0-9]/g,''):'',
+        email:cm.email!==undefined?String(r[cm.email]||'').trim():'',
+        bankName:bankName,bankNum:bankNum,
+        carNum:cm.car!==undefined?String(r[cm.car]||'').trim():'',
+        bizNum:cm.biz!==undefined?String(r[cm.biz]||'').replace(/[^0-9]/g,''):'',
       });
-      st.textContent='✅ '+cnt+'명 로드됨';
-      _bulkUpdatePreview();
-    }catch(e){st.textContent='❌ '+e.message;}
-  };
-  reader.readAsArrayBuffer(file);
+    }
+    return out.length?out:null;
+  }
+  function showPreview(parsed){
+    var st=document.getElementById('_bulk_st');
+    var prev=document.getElementById('_bulk_prev');
+    var ok=document.getElementById('_bulk_ok');
+    if(!parsed){st.textContent='❌ 이름/아이디를 인식하지 못했습니다';return;}
+    window._bulkParsed=parsed;
+    st.textContent='✅ '+parsed.length+'명 인식 — 아래 확인 후 업데이트 클릭';
+    var html='<table style="width:100%;font-size:10px;border-collapse:collapse">'
+      +'<tr style="background:var(--bg3);font-weight:700">'
+      +'<th style="padding:4px 6px;text-align:left">이름</th>'
+      +'<th style="padding:4px 6px">아이디</th>'
+      +'<th style="padding:4px 6px">연락수</th>'
+      +'<th style="padding:4px 6px">이메일</th>'
+      +'<th style="padding:4px 6px">은행</th>'
+      +'<th style="padding:4px 6px">계좌</th>'
+      +'</tr>';
+    parsed.forEach(function(d){
+      html+='<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:4px 6px;font-weight:700">'+esc(d.name)+'</td>'
+        +'<td style="padding:4px 6px;color:var(--brand)">'+esc(d.loginId)+'</td>'
+        +'<td style="padding:4px 6px">'+esc(d.phone)+'</td>'
+        +'<td style="padding:4px 6px">'+esc(d.email)+'</td>'
+        +'<td style="padding:4px 6px">'+esc(d.bankName)+'</td>'
+        +'<td style="padding:4px 6px">'+esc(d.bankNum)+'</td>'
+        +'</tr>';
+    });
+    html+='</table>';
+    if(prev)prev.innerHTML=html;
+    if(ok)ok.disabled=false;
+  }
+  var ext=file.name.split('.').pop().toLowerCase();
+  var reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});showPreview(parseFile(rows));}catch(err){st.textContent='❌ '+err.message;}};
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';var rows=t.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});});showPreview(parseFile(rows));}catch(err){st.textContent='❌ '+err.message;}};
+    reader.readAsText(file,'utf-8');
+  }
+  inp.value='';
 };
 
-window._bulkLoadBizExcel=function(inp){
-  var file=inp.files[0];if(!file)return;
-  var st=document.getElementById('bulk-biz-status');
-  st.textContent='⏳ 읽는 중...';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      var sh=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(sh,{header:1,defval:''});
-      window._bulkBizMap={};
-      var cnt=0;
-      rows.slice(3).forEach(function(r){
-        var name=String(r[2]||'').trim();
-        var company=String(r[1]||'').trim();
-        var joinRaw=r[3];
-        var ssn=String(r[4]||'').trim();
-        var biz=String(r[5]||'').trim();
-        if(name&&name!=='성명'&&(biz.length>5||ssn)){
-          var joinDate='';
-          if(joinRaw&&typeof joinRaw==='number'&&joinRaw>40000){
-            var d=new Date(Math.round((joinRaw-25569)*86400000));
-            joinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-          }else if(joinRaw){joinDate=String(joinRaw).slice(0,10);}
-          window._bulkBizMap[name]={bizNum:biz,bizName:company,ssn:ssn,joinDate:joinDate};
-          cnt++;
-        }
-      });
-      st.textContent='✅ '+cnt+'명 로드됨';
-      _bulkUpdatePreview();
-    }catch(e){st.textContent='❌ '+e.message;}
-  };
-  reader.readAsArrayBuffer(file);
-};
-
-function _bulkUpdatePreview(){
-  var prev=document.getElementById('bulk-preview');
-  var applyBtn=document.getElementById('bulk-apply-btn');
-  if(!prev)return;
-  var sm=window._bulkScheduleMap||{};
-  var bm=window._bulkBizMap||{};
-  if(!Object.keys(sm).length||!Object.keys(bm).length){
-    prev.innerHTML='';
-    if(applyBtn)applyBtn.disabled=true;
-    return;
-  }
-  var matched=[];var noMatch=[];
-  Object.keys(sm).forEach(function(uid){
-    var name=sm[uid];
-    if(bm[name]){var _bm=bm[name];var _bmO=typeof _bm==='object'?_bm:{bizNum:_bm,bizName:'',ssn:'',joinDate:''};matched.push({uid:uid,name:name,biz:(_bmO.bizNum||''),bizName:(_bmO.bizName||''),ssn:(_bmO.ssn||''),joinDate:(_bmO.joinDate||'')});}
-    else noMatch.push(name);
-  });
-  var html='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:11px">'    +'<div style="font-weight:700;margin-bottom:6px;color:var(--green)">✅ 매칭 '+matched.length+'명</div>';
-  matched.forEach(function(m){
-    html+='<div style="padding:2px 0;color:var(--text2)">'+esc(m.name)+' ('+esc(m.uid)+') → '+esc(m.biz)+'</div>';
-  });
-  if(noMatch.length){
-    html+='<div style="font-weight:700;margin:6px 0 4px;color:var(--text3)">⚠️ 사업자번호 없음 '+noMatch.length+'명</div>';
-    html+='<div style="color:var(--text3)">'+noMatch.map(esc).join(', ')+'</div>';
-  }
-  html+='</div>';
-  prev.innerHTML=html;
-  if(applyBtn)applyBtn.disabled=matched.length===0;
-  window._bulkMatched=matched;
-}
-
-window._bulkApplyDrivers=function(){
-  var matched=window._bulkMatched||[];
-  if(!matched.length){toast('❌ 매칭된 기사 없음');return;}
-  var did=_CU.dealerId||_CU.uid;
-  var applyBtn=document.getElementById('bulk-apply-btn');
-  if(applyBtn){applyBtn.disabled=true;applyBtn.textContent='적용 중...';}
+window._bulkDoApply=function(){
+  var parsed=window._bulkParsed||[];
+  if(!parsed.length)return;
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var ok=document.getElementById('_bulk_ok');
+  if(ok){ok.disabled=true;ok.textContent='업데이트 중...';}
+  // 기존 drivers 전체 로드 후 이름/아이디로 매칭
   _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
-    var batch=_db.batch();
-    var cnt=0;
-    // userId→docRef 맵
-    var docMap={};
+    var byName={},byId={};
     snap.docs.forEach(function(doc){
       var d=doc.data();
-      var uid=d.userId||doc.id;
-      var name=d.name||'';
-      docMap[uid]=doc.ref;
-      if(name)docMap[name]=doc.ref;
+      if(d.name) byName[d.name.trim()]={ref:doc.ref,data:d};
+      if(d.userId) byId[d.userId.trim()]={ref:doc.ref,data:d};
     });
-    matched.forEach(function(m){
-      var ref=docMap[m.uid]||docMap[m.name];
-      if(ref){
-          var _upd={name:m.name,bizNum:m.biz||'',bizName:m.bizName||'',isBiz:!!(m.biz&&m.biz.length>5),updatedAt:new Date().toISOString()};
-          if(m.ssn) _upd.ssn=m.ssn;
-          if(m.joinDate) _upd.joinDate=m.joinDate;
-          batch.update(ref,_upd);
-          cnt++;
+    var updated=0,skipped=0,total=parsed.length;
+    function done(){
+      if(updated+skipped>=total){
+        toast('✅ '+updated+'명 업데이트'+(skipped?' / 매칭안됨 '+skipped+'명':''));
+        _drvCache=null;pageDrivers();
+        var mo=document.getElementById('mo-bulk-drv');if(mo)mo.remove();
       }
+    }
+    parsed.forEach(function(d){
+      // 이름 우선, 없으면 아이디로 매칭 — 둘 다 없으면 스킵
+      var match=byName[d.name]||(d.loginId?byId[d.loginId]:null);
+      if(!match){skipped++;done();return;}
+      // 기존에 값 있으면 절대 덮어쓰지 않음
+      var od=match.data;
+      var upd={};
+      if(d.phone   &&!od.phone)      upd.phone=d.phone;
+      if(d.email   &&!od.email)      upd.email=d.email;
+      if(d.bankNum &&!od.bankAccount) upd.bankAccount=d.bankNum;
+      if(d.bankName&&!od.bankName)   upd.bankName=d.bankName;
+      if(d.carNum  &&!od.carNum)     upd.carNum=d.carNum;
+      if(d.bizNum  &&!od.bizNum)     upd.bizNum=d.bizNum;
+      if(d.loginId &&!od.userId)     upd.userId=d.loginId;
+      if(!Object.keys(upd).length){updated++;done();return;}
+      match.ref.update(upd)
+        .then(function(){updated++;done();})
+        .catch(function(){skipped++;done();});
     });
-    return batch.commit().then(function(){
-      toast('✅ '+cnt+'명 등록 완료');
-      var mo=document.getElementById('mo-bulk-drv');if(mo)mo.remove();
-      _drvCache=null;
-    });
-  }).catch(function(e){
-    toast('❌ '+e.message);
-    if(applyBtn){applyBtn.disabled=false;applyBtn.textContent='적용';}
-  });
+  }).catch(function(e){toast('❌ '+e.message);if(ok){ok.disabled=false;ok.textContent='업데이트';}});
 };
 
 // ★ 엑셀에서 파싱한 직원 데이터 일괄 Firestore 등록
