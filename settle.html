@@ -32068,7 +32068,7 @@ window._bulkDoLoad=function(inp){
     // 이름 있는 행 탐색
     var ds=0;
     for(var r=0;r<Math.min(rows.length,8);r++){
-      if(rows[r].some(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(String(v||'').trim());})){ds=r;break;}
+      if(rows[r].some(function(v){var s=String(v||'').trim();return /^[\uac00-\ud7a3]{2}/.test(s)&&s.length>=2&&s.length<=8;})){ds=r;break;}
     }
     var nc=0;
     rows.slice(ds,ds+8).forEach(function(r){if(r.length>nc)nc=r.length;});
@@ -32078,19 +32078,35 @@ window._bulkDoLoad=function(inp){
       if(t&&cm[t]===undefined) cm[t]=ci;
     }
     // 이름 컬럼 보정
+    // 이름: 한글 2~6자 (외1, 외2 등 포함), 아이디 컬럼 바로 왼쪽 컬럼 우선
     if(cm.name===undefined){
+      // 아이디 컬럼 기준으로 왼쪽 컬럼들 중 한글 이름 많은 것
+      var idCol=cm.id;
+      var nameScores={};
       for(var ci2=0;ci2<nc;ci2++){
         if(Object.values(cm).indexOf(ci2)>=0) continue;
-        var ns=rows.slice(ds,ds+8).map(function(r){return String(r[ci2]||'').trim();});
-        if(ns.filter(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(v);}).length>=2){cm.name=ci2;break;}
+        var ns=rows.slice(ds,ds+10).map(function(r){return String(r[ci2]||'').trim();});
+        // 한글 2~6자 (숫자/영문 포함 가능 — 김강혁외1 같은 케이스)
+        var score=ns.filter(function(v){
+          return /^[\uac00-\ud7a3]{2}/.test(v) && v.length>=2 && v.length<=8;
+        }).length;
+        // 아이디 컬럼보다 작은 인덱스면 가중치 (보통 이름이 아이디보다 앞에 있음)
+        if(idCol!==undefined && ci2 < idCol) score += 2;
+        nameScores[ci2]=score;
       }
+      // 가장 점수 높은 컬럼 선택
+      var bestCol=null, bestScore=0;
+      Object.keys(nameScores).forEach(function(ci){
+        if(nameScores[ci]>bestScore){bestScore=nameScores[ci];bestCol=parseInt(ci);}
+      });
+      if(bestScore>=2) cm.name=bestCol;
     }
     if(cm.name===undefined) return null;
     var out=[];
     for(var ri=ds;ri<rows.length;ri++){
       var r=rows[ri];
       var name=String(r[cm.name]||'').trim();
-      if(!name||!/^[\uac00-\ud7a3]{2,5}$/.test(name)) continue;
+      if(!name||name.length<2||name.length>10||!/^[\uac00-\ud7a3]/.test(name)) continue;
       var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
       var bankName='',bankNum='';
       if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bankName=bp[0].trim();bankNum=(bp[1]||'').replace(/[^0-9]/g,'');}
