@@ -50,7 +50,7 @@ async function fetchAsset(path, request, env) {
   const fileName = filePath.replace(/^\//, '');
 
   // ★ 1순위: KV — settle.html만 (나머지는 GitHub Raw)
-  const KV_ONLY = ['settle.html'];
+  const KV_ONLY = ['settle.html','filo.html'];
   if (e && e.DONWAY_ASSETS && KV_ONLY.includes(fileName)) {
     try {
       const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
@@ -558,7 +558,8 @@ export default {
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
-      if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
+      if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
+  if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
     }
 
