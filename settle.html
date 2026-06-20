@@ -32071,53 +32071,85 @@ window._biLoad=function(inp){
     return max>=2?t:null;
   }
   function parse(rows){
-    // 데이터 시작행
+    if(!rows||!rows.length)return null;
+    var h0=rows[0].map(function(v){return String(v||'').trim();});
+    // 엑셀 헤더명으로 컨럼 감지
+    var iName=-1,iId=-1,iCamp=-1,iPhone=-1,iEmail=-1,iBank=-1;
+    h0.forEach(function(v,i){
+      if(v==='이름'||v==='성명')iName=i;
+      if(v==='아이디')iId=i;
+      if(v==='캐프명'||v==='캐프')iCamp=i;
+      if(v.indexOf('휴대폰')>=0||v.indexOf('연락')>=0)iPhone=i;
+      if(v.indexOf('메일')>=0||/email/i.test(v))iEmail=i;
+      if(v.indexOf('통장')>=0||v.indexOf('계좌')>=0)iBank=i;
+    });
+    // 헤더에 이름+아이디 있으면 헤더 기반
+    if(iName>=0&&iId>=0){
+      var list=[],seen={};
+      rows.slice(1).forEach(function(r){
+        var name=String(r[iName]||'').trim();
+        var uid=String(r[iId]||'').trim();
+        if(!name||!uid||seen[uid])return;
+        seen[uid]=true;
+        var bankRaw=iBank>=0?String(r[iBank]||'').trim():'';
+        var bN='',bNum='';
+        if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bN=bp[0].trim();bNum=(bp[1]||'').replace(/[^0-9]/g,'');}
+        else{bNum=bankRaw.replace(/[^0-9]/g,'');}
+        list.push({
+          name:name,userId:uid,
+          camp:iCamp>=0?String(r[iCamp]||'').trim():'',
+          phone:iPhone>=0?String(r[iPhone]||'').replace(/[^0-9]/g,''):'',
+          email:iEmail>=0?String(r[iEmail]||'').trim():'',
+          bankName:bN,bankNum:bNum,carNum:''
+        });
+      });
+      return list.length?list:null;
+    }
+    // 값 패턴 기반 (직원목록 등 헤더 없는 파일)
+    var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
     var ds=0;
     for(var r=0;r<Math.min(rows.length,8);r++){
-      if(rows[r].some(function(v){var s=String(v||'').trim();return /^[\uac00-\ud7a3]{2}/.test(s)&&s.length>=2&&s.length<=10;})){ds=r;break;}
+      if(rows[r].some(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(String(v||'').trim());})){ds=r;break;}
     }
     var nc=0;rows.slice(ds,ds+8).forEach(function(r){if(r.length>nc)nc=r.length;});
-    // 컬럼별 타입
     var cm={};
     for(var ci=0;ci<nc;ci++){
       var t=guessType(rows.slice(ds,ds+10).map(function(r){return r[ci]||'';}));
       if(t&&cm[t]===undefined)cm[t]=ci;
     }
-    // 이름 컬럼 — 아이디 왼쪽, 한글 2자 이상 많은 컬럼
     if(cm.name===undefined){
       var best=-1,bsc=0;
       for(var ci2=0;ci2<nc;ci2++){
         if(Object.values(cm).indexOf(ci2)>=0)continue;
         var ns=rows.slice(ds,ds+10).map(function(r){return String(r[ci2]||'').trim();});
-        var sc=ns.filter(function(v){return /^[\uac00-\ud7a3]{2}/.test(v)&&v.length>=2&&v.length<=10;}).length;
-        if(cm.id!==undefined&&ci2<cm.id)sc+=2;
+        var sc=ns.filter(function(v){return /^[\uac00-\ud7a3]{2,5}$/.test(v);}).length;
+        if(cm.id!==undefined&&ci2<cm.id)sc+=3;
         if(sc>bsc){bsc=sc;best=ci2;}
       }
       if(bsc>=2)cm.name=best;
     }
     if(cm.name===undefined)return null;
-    var list=[],seen={};
+    var list2=[],seen2={};
     for(var ri=ds;ri<rows.length;ri++){
-      var r=rows[ri];
-      var name=String(r[cm.name]||'').trim();
-      if(!name||name.length<2||name.length>10||!/^[\uac00-\ud7a3]/.test(name))continue;
-      if(seen[name])continue;
-      seen[name]=true;
-      var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
-      var bankName='',bankNum='';
-      if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bankName=bp[0].trim();bankNum=(bp[1]||'').replace(/[^0-9]/g,'');}
-      else{bankNum=bankRaw.replace(/[^0-9]/g,'');}
-      list.push({
-        name:name,
-        userId:cm.id!==undefined?String(r[cm.id]||'').replace(/\n/g,'').trim():'',
-        phone:cm.phone!==undefined?String(r[cm.phone]||'').replace(/[^0-9]/g,''):'',
-        email:cm.email!==undefined?String(r[cm.email]||'').trim():'',
-        bankName:bankName,bankNum:bankNum,
-        carNum:cm.car!==undefined?String(r[cm.car]||'').trim():'',
-        camp:cm.camp!==undefined?String(r[cm.camp]||'').trim():'',
+      var row=rows[ri];
+      var nm=String(row[cm.name]||'').trim();
+      if(!nm||!/^[\uac00-\ud7a3]{2,5}$/.test(nm)||seen2[nm])continue;
+      seen2[nm]=true;
+      var br=cm.bank!==undefined?String(row[cm.bank]||'').trim():'';
+      var bn='',bnum='';
+      if(br.indexOf('\n')>=0){var bpp=br.split('\n');bn=bpp[0].trim();bnum=(bpp[1]||'').replace(/[^0-9]/g,'');}
+      else{bnum=br.replace(/[^0-9]/g,'');}
+      list2.push({
+        name:nm,
+        userId:cm.id!==undefined?String(row[cm.id]||'').replace(/\n/g,'').trim():'',
+        phone:cm.phone!==undefined?String(row[cm.phone]||'').replace(/[^0-9]/g,''):'',
+        email:cm.email!==undefined?String(row[cm.email]||'').trim():'',
+        bankName:bn,bankNum:bnum,
+        carNum:cm.car!==undefined?String(row[cm.car]||'').trim():'',
+        camp:'',
       });
     }
-    return list.length?list:null;
+    return list2.length?list2:null;
   }
   function show(list){
     if(!list){st.textContent='❌ 이름 컨럼을 인식하지 못함';return;}
