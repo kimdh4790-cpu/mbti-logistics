@@ -32018,11 +32018,205 @@ function _openBulkDriverRegister(){
   var old=document.getElementById('mo-bulk-drv');if(old)old.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-bulk-drv';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:480px"><div class="mdt">📂 기사 일괄 등록</div><div style="padding:16px;font-size:12px;color:var(--text3);margin-bottom:8px">근무표(쿠팡 schedule.xlsx)와 고용·산재 계산표를 올리면 이름 매칭 후 자동 등록됩니다.</div><div style="padding:0 16px"><div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">① 근무표 (이름+아이디)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 근무표 선택 (schedule xlsx)<input type="file" id="bulk-schedule-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadSchedule(this)"></label><div id="bulk-schedule-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">② 고용·산재 계산표 (이름+사업자번호)</div><label style="display:block;padding:10px;border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📂 고용산재표 선택 (xls/xlsx)<input type="file" id="bulk-biz-file" accept=".xlsx,.xls" style="display:none" onchange="_bulkLoadBizExcel(this)"></label><div id="bulk-biz-status" style="font-size:11px;color:var(--green);margin-top:4px"></div></div><div id="bulk-preview" style="margin-bottom:12px"></div></div><div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">취소</button><button class="btn btn-blue" id="bulk-apply-btn" onclick="_bulkApplyDrivers()" disabled>적용</button></div></div>';
+  mo.innerHTML='<div class="md" style="max-width:520px">'
+  +'<div class="mdt">📂 기사 일괄 등록</div>'
+  // ── 탭
+  +'<div style="display:flex;gap:4px;padding:12px 16px 0;background:var(--bg3);border-bottom:1px solid var(--border)">'
+  +'<button id="bulk-tab-info" onclick="_bulkSwitchTab(\'info\')" style="flex:1;padding:8px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg2);color:var(--brand)">👤 직원정보 엑셀/TXT</button>'
+  +'<button id="bulk-tab-biz" onclick="_bulkSwitchTab(\'biz\')" style="flex:1;padding:8px;border:none;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📋 근무표+사업자</button>'
+  +'</div>'
+  // ── 직원정보 탭
+  +'<div id="bulk-pane-info" style="padding:16px">'
+  +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">엑셀(.xlsx/.xls) 또는 텍스트(.txt/.csv) 파일을 올리면<br>이름·연락처·통장·이메일 등을 자동 인식해 등록합니다.</div>'
+  +'<div style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="document.getElementById(\'bulk-info-input\').click()">'
+  +'<div style="font-size:28px;margin-bottom:6px">📁</div>'
+  +'<div style="font-size:13px;font-weight:700;color:var(--text2)">파일 선택 또는 드래그</div>'
+  +'<div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx · .xls · .txt · .csv 지원</div>'
+  +'<input id="bulk-info-input" type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_bulkLoadInfoFile(this)">'
+  +'</div>'
+  +'<div id="bulk-info-status" style="font-size:11px;margin-top:8px;color:var(--text3)"></div>'
+  +'<div id="bulk-info-preview" style="max-height:220px;overflow-y:auto;margin-top:8px"></div>'
+  +'<div style="margin-top:12px;display:flex;gap:8px">'
+  +'<button id="bulk-info-apply" class="btn btn-blue" style="flex:1" disabled onclick="_bulkApplyInfoDrivers()">등록</button>'
+  +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+  +'</div>'
+  +'</div>'
+  // ── 근무표+사업자 탭
+  +'<div id="bulk-pane-biz" style="padding:16px;display:none">'
+  +'<div style="font-size:12px;color:var(--text3);margin-bottom:8px">근무표(쿠팡 schedule.xlsx)와 고용·산재 계산표를 올리면 이름 매칭 후 자동 등록됩니다.</div>'
+  +'<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📅 근무표 (schedule.xlsx)</div>'
+  +'<input type="file" accept=".xlsx,.xls" onchange="_bulkLoadSchedule(this)" style="font-size:11px">'
+  +'<div id="bulk-schedule-status" style="font-size:10px;color:var(--text3);margin-top:4px"></div>'
+  +'</div>'
+  +'<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">📋 고용·산재 계산표</div>'
+  +'<input type="file" accept=".xlsx,.xls" onchange="_bulkLoadBizExcel(this)" style="font-size:11px">'
+  +'<div id="bulk-biz-status" style="font-size:10px;color:var(--text3);margin-top:4px"></div>'
+  +'</div>'
+  +'<div id="bulk-preview" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>'
+  +'<div style="display:flex;gap:8px">'
+  +'<button id="bulk-apply-btn" class="btn btn-blue" style="flex:1" disabled onclick="_bulkApplyDrivers()">적용</button>'
+  +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
+  +'</div>'
+  +'</div>'
+  +'</div>';
   document.getElementById('modals').appendChild(mo);
   window._bulkScheduleMap={};  // userId→name
   window._bulkBizMap={};       // name→bizNum
 }
+
+window._bulkSwitchTab=function(tab){
+  var pI=document.getElementById('bulk-pane-info');
+  var pB=document.getElementById('bulk-pane-biz');
+  var tI=document.getElementById('bulk-tab-info');
+  var tB=document.getElementById('bulk-tab-biz');
+  if(pI)pI.style.display=tab==='info'?'':'none';
+  if(pB)pB.style.display=tab==='biz'?'':'none';
+  if(tI){tI.style.background=tab==='info'?'var(--bg2)':'transparent';tI.style.color=tab==='info'?'var(--brand)':'var(--text3)';}
+  if(tB){tB.style.background=tab==='biz'?'var(--bg2)':'transparent';tB.style.color=tab==='biz'?'var(--brand)':'var(--text3)';}
+};
+
+// ★ 직원정보 파일 파싱 (xlsx/txt/csv 통합)
+window._bulkLoadInfoFile=function(inp){
+  var file=inp.files[0];if(!file)return;
+  var st=document.getElementById('bulk-info-status');
+  var ext=file.name.split('.').pop().toLowerCase();
+  st.textContent='\u23f3 \uc77d\ub294 \uc911...';
+  var reader=new FileReader();
+
+  // ── 컬럼 헤더 매핑 (다양한 표현 통합)
+  function detectCol(row){
+    var m={};
+    row.forEach(function(v,ci){
+      var h=String(v||'').replace(/\s/g,'').toLowerCase();
+      if(h==='\uc774\ub984'||h==='\uc131\uba85'||h==='name')m.name=ci;
+      if(h==='\uc5f41'||h==='\uce90\ud504'||h==='\uc18c\uc18d'||h==='\uce90\ud504\uba85')m.camp=ci;
+      if(h==='\ud734\ub300\ud3f0\ubc88\ud638'||h==='\uc5f0\ub77d\uc218'||h==='\uc804\ud654\ubc88\ud638'||h==='\ud734\ub300\ud3f0'||h==='\uc5f0\ub77d\ucc98'||h==='phone')m.phone=ci;
+      if(h==='\ud1b5\uc7a5'||h==='\uacc4\uc88c'||h==='\uacc4\uc88c\ubc88\ud638'||h==='bank')m.bank=ci;
+      if(h==='\uba54\uc77c'||h==='\uc774\uba54\uc77c'||h==='email')m.email=ci;
+      if(h==='\uc544\uc774\ub514'||h==='id'||h==='loginid')m.loginId=ci;
+      if(h==='\uc8fc\uc18c'||h==='address')m.address=ci;
+      if(h==='\uc6b4\uc804\uba74\ud638'||h==='\uba74\ud5c8'||h==='\uba74\ud5c8\ubc88\ud638')m.license=ci;
+      if(h==='\ubc30\ub118\ubc84'||h==='\ucc28\ub7c9\ubc88\ud638'||h==='\ucc28\ubc88')m.carNum=ci;
+      if(h==='\uc0ac\uc5c5\uc790'||h==='\uc0ac\uc5c5\uc790\ubc88\ud638')m.bizNum=ci;
+      if(h==='\uc548\uc804\uad50\uc721\ub0a0\uc9dc'||h==='\uc548\uc804\uad50\uc721')m.safetyEdu=ci;
+      if(h==='\uc785\uc0ac\uc77c')m.joinDate=ci;
+      if(h==='\ud1f4\uc0ac\uc77c')m.leaveDate=ci;
+      if(h==='\uc637\uc2f8\uc774\uc988'||h==='\uc637\uc0ac\uc774\uc988'||h==='\uc637')m.clothSize=ci;
+    });
+    return m;
+  }
+
+  function parseRows(rows){
+    var hRow=-1,colMap={};
+    for(var ri=0;ri<Math.min(rows.length,7);ri++){
+      var c=detectCol(rows[ri]);
+      if(c.name!==undefined){hRow=ri;colMap=c;break;}
+    }
+    if(hRow<0)return null;
+    var parsed=[];
+    for(var ri2=hRow+1;ri2<rows.length;ri2++){
+      var r=rows[ri2];
+      var name=String(r[colMap.name]||'').trim();
+      if(!name||name==='\uc774\ub984'||name==='\uc131\uba85')continue;
+      var bankRaw=String(r[colMap.bank!==undefined?colMap.bank:-1]||'').trim();
+      var bps=bankRaw.split('\n');
+      var bankName=bps[0]||'';
+      var bankNum=(bps[1]||'').replace(/[^0-9]/g,'');
+      var phone=String(r[colMap.phone!==undefined?colMap.phone:-1]||'').replace(/[^0-9]/g,'');
+      var biz=String(r[colMap.bizNum!==undefined?colMap.bizNum:-1]||'').replace(/[^0-9]/g,'');
+      var leave=String(r[colMap.leaveDate!==undefined?colMap.leaveDate:-1]||'').trim();
+      parsed.push({
+        name:name,
+        camp:String(r[colMap.camp!==undefined?colMap.camp:-1]||'').trim(),
+        phone:phone,
+        email:String(r[colMap.email!==undefined?colMap.email:-1]||'').trim(),
+        loginId:String(r[colMap.loginId!==undefined?colMap.loginId:-1]||'').replace(/\n/g,'').trim(),
+        bankName:bankName,bankNum:bankNum,
+        address:String(r[colMap.address!==undefined?colMap.address:-1]||'').trim(),
+        licenseNum:String(r[colMap.license!==undefined?colMap.license:-1]||'').replace(/\n/g,' ').trim(),
+        carNum:String(r[colMap.carNum!==undefined?colMap.carNum:-1]||'').trim(),
+        bizNum:biz,
+        safetyEdu:String(r[colMap.safetyEdu!==undefined?colMap.safetyEdu:-1]||'').trim(),
+        joinDate:String(r[colMap.joinDate!==undefined?colMap.joinDate:-1]||'').trim(),
+        leaveDate:leave,
+        clothSize:String(r[colMap.clothSize!==undefined?colMap.clothSize:-1]||'').trim(),
+        status:leave?'retired':'active'
+      });
+    }
+    return parsed;
+  }
+
+  function showPreview(parsed){
+    var st=document.getElementById('bulk-info-status');
+    var prev=document.getElementById('bulk-info-preview');
+    var applyBtn=document.getElementById('bulk-info-apply');
+    if(!parsed||!parsed.length){st.textContent='\u274c \ub370\uc774\ud130\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc74c (\ud5e4\ub354 \ud655\uc778)';return;}
+    window._bulkInfoParsed=parsed;
+    st.textContent='\u2705 '+parsed.length+'\uba85 \ud30c\uc2f1 \uc644\ub8cc \u2014 \ud655\uc778 \ud6c4 \ub4f1\ub85d \ud074\ub9ad';
+    var html='<table style="width:100%;font-size:10px;border-collapse:collapse">'
+      +'<tr style="background:var(--bg3);font-weight:700">'
+      +'<th style="padding:4px;text-align:left">\uc774\ub984</th>'
+      +'<th style="padding:4px">\uce90\ud504</th>'
+      +'<th style="padding:4px">\uc5f0\ub77d\uc218</th>'
+      +'<th style="padding:4px">\uc774\uba54\uc77c</th>'
+      +'<th style="padding:4px">\uc740\ud589</th>'
+      +'<th style="padding:4px">\uc0c1\ud0dc</th>'
+      +'</tr>';
+    parsed.forEach(function(d){
+      html+='<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:4px;font-weight:700">'+esc(d.name)+'</td>'
+        +'<td style="padding:4px;text-align:center">'+esc(d.camp)+'</td>'
+        +'<td style="padding:4px">'+esc(d.phone)+'</td>'
+        +'<td style="padding:4px">'+esc(d.email)+'</td>'
+        +'<td style="padding:4px">'+esc(d.bankName)+'</td>'
+        +'<td style="padding:4px;color:'+(d.status==='retired'?'var(--red)':'var(--green)')+'\">'+(d.status==='retired'?'\ud1f4\uc9c1':'\uc7ac\uc9c1')+'</td>'
+        +'</tr>';
+    });
+    html+='</table>';
+    if(prev)prev.innerHTML=html;
+    if(applyBtn)applyBtn.disabled=false;
+  }
+
+  // xlsx/xls
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        var parsed=parseRows(rows);
+        showPreview(parsed);
+      }catch(err){if(st)st.textContent='\u274c '+err.message;}
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  // txt/csv
+  else{
+    reader.onload=function(e){
+      try{
+        var text=e.target.result;
+        // 탭 또는 쉼표 구분
+        var sep=text.indexOf('\t')>=0?'\t':',';
+        var rows=text.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});});
+        var parsed=parseRows(rows);
+        showPreview(parsed);
+      }catch(err){if(st)st.textContent='\u274c '+err.message;}
+    };
+    reader.readAsText(file,'utf-8');
+  }
+  inp.value='';
+};
+
+// ★ 직원정보 Firestore 등록
+window._bulkApplyInfoDrivers=function(){
+  var parsed=window._bulkInfoParsed||[];
+  if(!parsed.length){toast('\u274c \ub370\uc774\ud130 \uc5c6\uc74c');return;}
+  var applyBtn=document.getElementById('bulk-info-apply');
+  if(applyBtn){applyBtn.disabled=true;applyBtn.textContent='\ub4f1\ub85d \uc911...';}
+  window._bulkImportDrivers(parsed);
+  var mo=document.getElementById('mo-bulk-drv');if(mo)setTimeout(function(){mo.remove();},1500);
+};
+
 
 window._bulkLoadSchedule=function(inp){
   var file=inp.files[0];if(!file)return;
