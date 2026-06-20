@@ -32156,6 +32156,78 @@ window._bulkApplyDrivers=function(){
   });
 };
 
+// ★ 엑셀에서 파싱한 직원 데이터 일괄 Firestore 등록
+window._bulkImportDrivers = function(driversJson){
+  var did = _CU && (_CU.dealerId||_CU.uid);
+  if(!did){toast('❌ 로그인 필요');return;}
+  if(!confirm('직원 '+driversJson.length+'명을 drivers 컬렉션에 일괄 등록합니다. 계속?'))return;
+  var done=0, fail=0, skip=0;
+  var total=driversJson.length;
+  driversJson.forEach(function(d){
+    if(!d.name){skip++;return;}
+    // 아이디(loginId)로 중복 확인 후 등록
+    _db.collection('drivers')
+      .where('dealerId','==',did)
+      .where('userId','==',d.loginId||d.name)
+      .limit(1).get()
+      .then(function(snap){
+        var docData = {
+          dealerId: did,
+          name: d.name||'',
+          userId: d.loginId||'',
+          camp: d.camp||'',
+          phone: d.phone||'',
+          email: d.email||'',
+          bankAccount: d.bankNum||'',
+          bankName: d.bankName||'',
+          carNum: d.carNum||'',
+          address: d.address||'',
+          clothSize: d.clothSize||'',
+          licenseNum: d.licenseNum||'',
+          safetyEdu: d.safetyEdu||'',
+          joinDate: d.joinDate||'',
+          leaveDate: d.leaveDate||'',
+          bizNum: d.bizNum||'',
+          is_active: d.status!=='retired',
+          workType: 'coupang',
+          importedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        var prom = snap.empty
+          ? _db.collection('drivers').add(docData)
+          : snap.docs[0].ref.update(docData);
+        return prom;
+      })
+      .then(function(){
+        done++;
+        // members 컬렉션에도 동기 저장
+        _db.collection('members').where('dealerId','==',did).where('phone','==',d.phone||'').limit(1).get()
+          .then(function(ms){
+            if(ms.empty && d.phone){
+              _db.collection('members').add({
+                dealerId:did, name:d.name, phone:d.phone, email:d.email||'',
+                loginId:d.loginId||'', camp:d.camp||'', bankAccount:d.bankNum||'',
+                bankName:d.bankName||'', carNum:d.carNum||'', address:d.address||'',
+                is_active:d.status!=='retired', status:d.status==='retired'?'retired':'active',
+                importedAt:firebase.firestore.FieldValue.serverTimestamp()
+              }).catch(function(){});
+            }
+          }).catch(function(){});
+        if(done+fail+skip>=total){
+          toast('✅ 일괄 등록 완료 — 성공:'+done+' 실패:'+fail+' 스킵:'+skip);
+          pageDrivers();
+        }
+      })
+      .catch(function(e){
+        fail++;
+        console.error('등록 실패:', d.name, e.message);
+        if(done+fail+skip>=total){
+          toast('⚠️ 완료 — 성공:'+done+' 실패:'+fail+' 스킵:'+skip);
+          pageDrivers();
+        }
+      });
+  });
+};
+
 function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
@@ -32919,6 +32991,12 @@ function saveDriver(id){
     commissionRate:parseInt((document.getElementById('edr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('edr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('edr-bank')||{value:''}).value.trim()||'',
+    bankName:gvs('edr-bankname')||'',
+    carNum:gvs('edr-carnum')||'',
+    address:gvs('edr-address')||'',
+    clothSize:gvs('edr-clothsize')||'',
+    safetyEdu:gvs('edr-safetyedu')||'',
+    licenseNum:gvs('edr-license')||'',
     bizKind:gvs('edr-bizitem')||'',
     isBiz:!!(gvs('edr-biznum').replace(/-/g,'').replace(/\s/g,'')),
     workType:gvs('edr-worktype')||'coupang',
