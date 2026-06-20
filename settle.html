@@ -9579,6 +9579,16 @@ function doJoin(){
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     // users 컬렉션 저장
+      // ★ members 컬렉션 자동 저장 — 관리자 직원목록·기사관리 즉시 표시
+      _db.collection('members').doc(uid).set({
+        uid:uid, name:name, driverId:driverId, email:email, phone:'',
+        dealerId:companyId, companyName:companyName,
+        role:joinRole, store:joinStore,
+        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
+        status:'active', platform:'donway', authUid:uid,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
+      },{merge:true}).catch(function(){});
     return _db.collection('users').doc(uid).set(userDoc).then(function(){
       // ★ members 컬렉션 자동 저장 — 관리자 직원 목록·기사 관리에 즉시 표시
       var memberDoc={
