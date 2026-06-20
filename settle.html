@@ -32235,27 +32235,6 @@ function pageDrivers(){
   var btnBulk=document.createElement('button');btnBulk.className='btn btn-sm';
   btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
-  if(isSuperAdmin()){
-    var btnReset=document.createElement('button');btnReset.className='btn btn-sm';
-    btnReset.style.cssText='background:#ef4444;color:#fff;font-size:11px;margin-left:4px';
-    btnReset.textContent='?? 전체완전삭제';
-    btnReset.onclick=function(){
-      var did=_CU&&(_CU.dealerId||_CU.uid);
-      if(!did)return;
-      _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
-        if(!snap.size){toast('삭제할 데이터 없음');return;}
-        if(!confirm('기사 전체 '+snap.size+'명을 모두 삭제합니다.\n이 작업은 되돌릴 수 없습니다. 계속?'))return;
-        var cnt=0,total=snap.size;
-        snap.docs.forEach(function(d){
-          d.ref.delete().then(function(){
-            cnt++;
-            if(cnt>=total){toast('✅ 전체 '+cnt+'명 삭제 완료');_drvCache=null;pageDrivers();}
-          }).catch(function(){cnt++;if(cnt>=total){_drvCache=null;pageDrivers();}});
-        });
-      });
-    };
-    tr.appendChild(btnReset);
-  }
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
