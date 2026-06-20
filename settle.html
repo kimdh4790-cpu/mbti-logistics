@@ -16239,6 +16239,182 @@ function _renderUniversalEmp(c, emps, did){
     '</div>';
 }
 
+function pageUniversalDash(){
+  document.getElementById('page-title').textContent='🌐 범용 통합 대시보드';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid;
+  var ym=new Date().toISOString().slice(0,7);
+  el.innerHTML='<div style="max-width:860px;margin:0 auto"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>';
+  _db.collection('universal_companies').where('parentDealerId','==',did).get().then(function(snap){
+    var companies=[];
+    snap.forEach(function(doc){companies.push({id:doc.id,data:doc.data()});});
+    if(!companies.length){
+      el.innerHTML='<div style="max-width:860px;margin:0 auto">'
+        +'<div style="background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:14px;padding:24px;text-align:center">'
+        +'<div style="font-size:32px;margin-bottom:12px">🏢</div>'
+        +'<div style="font-size:15px;font-weight:800;margin-bottom:8px">산하 사업장을 등록하세요</div>'
+        +'<div style="font-size:12px;color:var(--text2);margin-bottom:16px">여러 업체·지점을 하나의 계정으로 통합 관리</div>'
+        +'<button onclick="_univAddCompany()" style="padding:12px 24px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">+ 사업장 추가</button>'
+        +'</div></div>';
+      return;
+    }
+    var results=[];var done=0;
+    companies.forEach(function(co){
+      var coId=co.data.dealerId||co.id;
+      Promise.all([
+        _db.collection('members').where('dealerId','==',coId).get(),
+        _db.collection('settlements').where('dealerId','==',coId).where('ym','==',ym).get()
+      ]).then(function(res){
+        var empCount=res[0].size;var settleAmt=0;
+        res[1].forEach(function(doc){settleAmt+=(doc.data().netPay||doc.data().totalPay||0);});
+        results.push({name:co.data.name||coId,dealerId:coId,empCount:empCount,settleAmt:settleAmt,type:co.data.bizType||'일반'});
+        done++;if(done===companies.length)_univRenderList(results,ym,el);
+      }).catch(function(){done++;if(done===companies.length)_univRenderList(results,ym,el);});
+    });
+  }).catch(function(e){el.innerHTML='<div style="color:#ef4444;padding:20px">'+e.message+'</div>';});
+}
+
+function _univRenderList(list,ym,el){
+  var totalEmp=list.reduce(function(s,r){return s+r.empCount;},0);
+  var totalSettle=list.reduce(function(s,r){return s+r.settleAmt;},0);
+  var html='<div style="max-width:860px;margin:0 auto">';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">';
+  html+='<button onclick="_univAddCompany()" style="padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 사업장 추가</button>';
+  html+='<button onclick="_univBulkAlimtalk()" style="padding:8px 16px;background:linear-gradient(135deg,#fee500,#f5c800);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💬 전체 명세서 알림톡</button>';
+  html+='</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">';
+  html+='<div style="background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:22px;font-weight:900;color:#60a5fa">'+list.length+'</div><div style="font-size:10px;color:var(--text3)">산하 사업장</div></div>';
+  html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:22px;font-weight:900;color:#22c55e">'+totalEmp+'</div><div style="font-size:10px;color:var(--text3)">전체 직원</div></div>';
+  html+='<div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:12px;padding:14px;text-align:center"><div style="font-size:17px;font-weight:900;color:#a78bfa">'+totalSettle.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">'+ym+' 정산합계</div></div>';
+  html+='</div>';
+  html+='<div style="font-size:13px;font-weight:800;margin-bottom:10px">🏢 사업장별 현황</div>';
+  html+='<div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border)">';
+  html+='<div style="display:grid;grid-template-columns:1fr 60px 70px 90px 70px;padding:10px 14px;background:var(--bg3);font-size:11px;font-weight:700;color:var(--text3)"><div>사업장명</div><div style="text-align:center">업종</div><div style="text-align:center">직원수</div><div style="text-align:right">이번달 정산</div><div style="text-align:center">관리</div></div>';
+  list.forEach(function(co){
+    html+='<div style="display:grid;grid-template-columns:1fr 60px 70px 90px 70px;padding:11px 14px;border-top:1px solid var(--border);align-items:center">';
+    html+='<div style="font-size:13px;font-weight:700">'+esc(co.name)+'</div>';
+    html+='<div style="text-align:center;font-size:10px;color:var(--text2)">'+esc(co.type)+'</div>';
+    html+='<div style="text-align:center;font-size:13px;font-weight:700">'+co.empCount+'명</div>';
+    html+='<div style="text-align:right;font-size:12px;font-weight:800;color:#22c55e">'+co.settleAmt.toLocaleString()+'원</div>';
+    html+='<div style="text-align:center"><button data-id="'+co.dealerId+'" onclick="window._adminViewDealerId=this.dataset.id;goPage(\'settle\')" style="padding:4px 10px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer">입장</button></div>';
+    html+='</div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+window._univAddCompany=function(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:24px;width:90%;max-width:400px">'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:16px">🏢 사업장 추가</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">'
+    +'<input id="uc-name" placeholder="사업장명 (예: A지점, 강남청소팀)" style="padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+    +'<input id="uc-biztype" placeholder="업종 (예: 청소, 물류, 카페, 배달)" style="padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+    +'<input id="uc-dealerid" placeholder="DONWAY 딜러ID (없으면 자동 생성)" style="padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="this.closest(\'div\').parentElement.remove()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">취소</button>'
+    +'<button data-pid="'+did+'" onclick="_univSaveCompany(this.dataset.pid)" style="flex:1;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">추가</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+};
+
+window._univSaveCompany=function(parentId){
+  var name=(document.getElementById('uc-name')||{}).value||'';
+  var bizType=(document.getElementById('uc-biztype')||{}).value||'일반';
+  var dealerId=(document.getElementById('uc-dealerid')||{}).value||('univ_'+Date.now());
+  if(!name){toast('❌ 사업장명을 입력하세요');return;}
+  _db.collection('universal_companies').add({
+    parentDealerId:parentId,name:name,bizType:bizType,dealerId:dealerId,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    toast('✅ '+name+' 추가 완료');
+    document.querySelectorAll('div[style*="position:fixed"]').forEach(function(el){if(el.style.zIndex==='9999')el.remove();});
+    pageUniversalDash();
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
+window._univBulkAlimtalk=function(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var coName=(_cachedCompanyDoc&&(_cachedCompanyDoc.name||_cachedCompanyDoc.companyName))||'DONWAY';
+  if(!confirm('전체 사업장 직원에게 명세서 알림톡을 발송합니다. 계속하시겠습니까?'))return;
+  var sent=0;
+  _db.collection('universal_companies').where('parentDealerId','==',did).get().then(function(snap){
+    snap.forEach(function(doc){
+      var coId=doc.data().dealerId||doc.id;
+      _db.collection('members').where('dealerId','==',coId).get().then(function(mSnap){
+        mSnap.forEach(function(m){
+          var d=m.data();
+          if(!d.phone)return;
+          fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({to:d.phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',
+              variables:{'#{회사명}':coName,'#{이름}':d.name||'직원','#{월}':new Date().toISOString().slice(0,7),'#{실지급}':'명세서 확인','#{명세서링크}':coId},
+              fallbackText:'['+coName+'] 이번달 급여 명세서가 등록되었습니다.'
+            })
+          }).then(function(){sent++;}).catch(function(){});
+        });
+      });
+    });
+    setTimeout(function(){toast('✅ 알림톡 발송 완료 ('+sent+'건)');},3000);
+  });
+};
+
+// 범용 구독 모달
+window._openUnivSubModal=function(){
+  var UNIV_PLANS=[
+    {label:'~3개 사업장',sites:3,price:300000},
+    {label:'~10개 사업장',sites:10,price:600000},
+    {label:'~30개 사업장',sites:30,price:1200000},
+    {label:'30개+ (협의)',sites:99,price:0}
+  ];
+  var modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
+  var html='<div style="background:var(--bg2);border-radius:16px;padding:24px;width:90%;max-width:420px;max-height:90vh;overflow-y:auto">';
+  html+='<div style="font-size:15px;font-weight:800;margin-bottom:6px">🌐 범용 정산 플랜</div>';
+  html+='<div style="font-size:11px;color:var(--text2);margin-bottom:14px">여러 업체·사업장 통합 관리 · 인원 무제한 · 업종 무관</div>';
+  html+='<div style="background:rgba(0,102,255,.08);border:1px solid rgba(0,102,255,.2);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text2);line-height:2">';
+  html+='✅ 사업장별 정산 분리 · 업종 무관 엑셀 자동 파싱<br>✅ 직원 무제한 · 알림톡 명세서 자동 발송<br>✅ QR 출퇴근 · 급여 자동 계산 · 사내공지<br>✅ 앱 설치 없이 브라우저에서 즉시 사용</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
+  UNIV_PLANS.forEach(function(p,i){
+    html+='<label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;cursor:pointer">';
+    html+='<div style="display:flex;align-items:center;gap:10px"><input type="radio" name="up" value="'+i+'" '+(i===0?'checked':'')+' style="accent-color:#0066ff">';
+    html+='<div><div style="font-size:13px;font-weight:800">'+p.label+'</div><div style="font-size:10px;color:var(--text3)">인원 무제한 · 업종 무관</div></div></div>';
+    html+='<div style="text-align:right">';
+    if(p.sites===99) html+='<div style="font-size:12px;font-weight:900;color:#f59e0b">별도 협의</div>';
+    else html+='<div style="font-size:16px;font-weight:900;color:#0066ff">'+p.price.toLocaleString()+'원</div><div style="font-size:9px;color:var(--text3)">월/VAT별도</div>';
+    html+='</div></label>';
+  });
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<button onclick="this.closest(\'div\').parentElement.remove()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">닫기</button>';
+  html+='<button onclick="_univSubscribe(this,'+JSON.stringify(UNIV_PLANS)+')" style="flex:2;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🚀 7일 무료체험</button>';
+  html+='</div>';
+  html+='<div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">카드 등록 불필요 · 즉시 사용</div>';
+  html+='</div>';
+  modal.innerHTML=html;
+  document.body.appendChild(modal);
+};
+
+window._univSubscribe=function(btn,plans){
+  var sel=document.querySelector('input[name="up"]:checked');
+  var idx=sel?parseInt(sel.value):0;
+  var plan=plans[idx];
+  if(plan.sites===99){window.open('https://pf.kakao.com/_xkuxabX/chat','_blank');return;}
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did){toast('❌ 로그인 필요');return;}
+  _db.collection('subscriptions').doc(did).set({
+    plan:'universal',univPlanSites:plan.sites,univPlanLabel:plan.label,univPlanPrice:plan.price,
+    trialStart:new Date().toISOString(),trialEnd:new Date(Date.now()+7*86400000).toISOString(),
+    status:'trial',updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(function(){
+    toast('✅ 7일 무료체험 시작 — '+plan.label);
+    document.querySelectorAll('div[style*="position:fixed"]').forEach(function(el){if(el.style.zIndex==='9999')el.remove();});
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
 function pageUniversalSettle(){
   document.getElementById('page-title').textContent='📊 범용 정산 현황';
   // 규칙 미로드 시 로드
