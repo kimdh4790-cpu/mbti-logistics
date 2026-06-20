@@ -32019,280 +32019,199 @@ function _openBulkDriverRegister(){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-bulk-drv';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   mo.innerHTML=
-    '<div class="md" style="max-width:460px">'
-    +'<div class="mdt">?? 직원정보 업로드</div>'
+    '<div class="md" style="max-width:440px">'
+    +'<div class="mdt">?? 직원정보 등록</div>'
     +'<div style="padding:16px">'
-    +'<div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">'
-    +'엑셀 또는 txt 업로드 → <b>이름 / 아이디</b>로 기존 기사 매칭<br>'
-    +'기존에 없는 정보만 채움니다. 새 문서는 만들지 않습니다.'
+    +'<div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.8">'
+    +'엑셀 업로드 하면 내용 자동 인식 후 등록<br>'
+    +'<span style="font-size:11px;color:var(--text3)">'
+    +'• 근무표 → 이름 + 아이디 + 캐프 등록<br>'
+    +'• 직원목록 → 연락수 + 이메일 + 계좌 등록'
+    +'</span></div>'
+    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer" onclick="document.getElementById(\'_bi\').click()">'
+    +'<div style="font-size:32px">??</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-top:8px">파일 선택</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx · .xls · .txt · .csv</div>'
+    +'<input id="_bi" type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_biLoad(this)">'
     +'</div>'
-    +'<div style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer" onclick="document.getElementById(\'_bulk_inp\').click()">'
-    +'<div style="font-size:28px">??</div>'
-    +'<div style="font-size:13px;font-weight:700;margin-top:6px">파일 선택 (.xlsx / .txt / .csv)</div>'
-    +'<input id="_bulk_inp" type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_bulkDoLoad(this)">'
-    +'</div>'
-    +'<div id="_bulk_st" style="font-size:12px;margin-top:10px;color:var(--text3)"></div>'
-    +'<div id="_bulk_prev" style="max-height:220px;overflow-y:auto;margin-top:8px"></div>'
+    +'<div id="_bi_st" style="font-size:12px;margin-top:12px;min-height:20px"></div>'
+    +'<div id="_bi_prev" style="max-height:200px;overflow-y:auto;margin-top:8px"></div>'
     +'<div style="display:flex;gap:8px;margin-top:14px">'
-    +'<button id="_bulk_ok" class="btn btn-blue" style="flex:1" disabled onclick="_bulkDoApply()">업데이트</button>'
+    +'<button id="_bi_ok" class="btn btn-blue" style="flex:1" disabled onclick="_biApply()">등록 / 업데이트</button>'
     +'<button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button>'
-    +'</div>'
-    +'</div></div>';
+    +'</div></div></div>';
   document.getElementById('modals').appendChild(mo);
 }
 
-// ▶ schedule.xlsx 기사 등록
-window._bulkLoadScheduleReg=function(inp){
+// 파일 로드 — 내용 보고 자동으로 타입 판단
+window._biLoad=function(inp){
   var file=inp.files[0];if(!file)return;
-  var st=document.getElementById('bulk-sch-reg-st');
+  var st=document.getElementById('_bi_st');
+  st.style.color='var(--text3)';
   st.textContent='⏳ 읽는 중...';
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      var hdr=rows[0].map(function(v){return String(v).trim();});
-      var iName=hdr.indexOf('이름');
-      var iId=hdr.indexOf('아이디');
-      var iCamp=hdr.indexOf('캐프명');
-      if(iName<0||iId<0){st.textContent='❌ 이름/아이디 컨럼 없음';return;}
-      // 이름+아이디 unique 추출
-      var seen={},list=[];
-      rows.slice(1).forEach(function(r){
-        var name=String(r[iName]||'').trim();
-        var uid=String(r[iId]||'').trim();
-        var camp=iCamp>=0?String(r[iCamp]||'').trim():'';
-        if(name&&uid&&!seen[uid]){seen[uid]=true;list.push({name:name,userId:uid,camp:camp});}
-      });
-      if(!list.length){st.textContent='❌ 데이터 없음';return;}
-      var did=_CU&&(_CU.dealerId||_CU.uid);
-      var updated=0,added=0,fail=0,total=list.length;
-      st.textContent='⏳ '+total+'명 매칭 중...';
-      // 기존 drivers 전체 로드 후 아이디로 매칭
-      _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
-        var byId={};
-        snap.docs.forEach(function(doc){
-          var d=doc.data();
-          if(d.userId) byId[d.userId.trim()]=doc.ref;
-        });
-        list.forEach(function(d){
-          var ref=byId[d.userId];
-          if(ref){
-            // 기존 기사 — 이름/캠프 업데이트
-            ref.update({name:d.name,camp:d.camp})
-              .then(function(){updated++;_chk();})
-              .catch(function(){fail++;_chk();});
-          } else {
-            // 없으면 신규 등록
-            _db.collection('drivers').add({
-              dealerId:did,name:d.name,userId:d.userId,camp:d.camp,
-              is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',
-              createdAt:firebase.firestore.FieldValue.serverTimestamp()
-            }).then(function(){added++;_chk();})
-              .catch(function(){fail++;_chk();});
-          }
-        });
-        function _chk(){
-          if(updated+added+fail>=total){
-            st.textContent='✅ 업데이트 '+updated+'명'+(added?' / 신규 '+added+'명':'')+(fail?' / 실패 '+fail+'명':'');
-            _drvCache=null;pageDrivers();
-          }
-        }
-      }).catch(function(e){st.textContent='❌ '+e.message;});
-    }catch(err){st.textContent='❌ '+err.message;}
-  };
-  reader.readAsArrayBuffer(file);
   inp.value='';
-};
-
-window._bulkDoLoad=function(inp){
-  var file=inp.files[0];if(!file)return;
-  var st=document.getElementById('_bulk_st');
-  st.textContent='⏳ 읽는 중...';
-  var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
-  // 값 패턴으로 컬럼 타입 감지
-  function guessCol(samples){
-    var h={phone:0,email:0,bank:0,id:0,car:0,biz:0,name:0};
-    samples.filter(Boolean).slice(0,6).forEach(function(v){
-      var s=String(v).trim();
-      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s.replace(/\s/g,''))) h.phone+=3;
-      if(/@[a-zA-Z0-9]+\.[a-z]{2,}/i.test(s)) h.email+=4;
-      if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;})) h.bank+=5;
-      if(/^[0-9\-]{10,}$/.test(s.replace(/\s/g,''))&&!/^01/.test(s)) h.bank+=2;
-      if(/[\uac00-\ud7a3]{2}[0-9]{2}[\uac00-\ud7a3][0-9]{4}/.test(s)) h.car+=4;
-      if(/^[0-9]{3}[\-][0-9]{2}[\-][0-9]{5}$/.test(s)) h.biz+=4;
-      if(/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&!/@/.test(s)) h.id+=2;
-      if(/^[\uac00-\ud7a3]{2,5}$/.test(s)) h.name+=2;
-    });
-    var max=0,t=null;
-    Object.keys(h).forEach(function(k){if(h[k]>max){max=h[k];t=k;}});
-    return max>=2?t:null;
-  }
-  function parseFile(rows){
-    // 이름 있는 행 탐색
-    var ds=0;
-    for(var r=0;r<Math.min(rows.length,8);r++){
-      if(rows[r].some(function(v){var s=String(v||'').trim();return /^[\uac00-\ud7a3]{2}/.test(s)&&s.length>=2&&s.length<=8;})){ds=r;break;}
-    }
-    var nc=0;
-    rows.slice(ds,ds+8).forEach(function(r){if(r.length>nc)nc=r.length;});
-    var cm={};
-    for(var ci=0;ci<nc;ci++){
-      var t=guessCol(rows.slice(ds,ds+10).map(function(r){return r[ci]||'';}));
-      if(t&&cm[t]===undefined) cm[t]=ci;
-    }
-    // 이름 컬럼 보정
-    // 이름: 한글 2~6자 (외1, 외2 등 포함), 아이디 컬럼 바로 왼쪽 컬럼 우선
-    if(cm.name===undefined){
-      // 아이디 컬럼 기준으로 왼쪽 컬럼들 중 한글 이름 많은 것
-      var idCol=cm.id;
-      var nameScores={};
-      for(var ci2=0;ci2<nc;ci2++){
-        if(Object.values(cm).indexOf(ci2)>=0) continue;
-        var ns=rows.slice(ds,ds+10).map(function(r){return String(r[ci2]||'').trim();});
-        // 한글 2~6자 (숫자/영문 포함 가능 — 김강혁외1 같은 케이스)
-        var score=ns.filter(function(v){
-          return /^[\uac00-\ud7a3]{2}/.test(v) && v.length>=2 && v.length<=8;
-        }).length;
-        // 아이디 컬럼보다 작은 인덱스면 가중치 (보통 이름이 아이디보다 앞에 있음)
-        if(idCol!==undefined && ci2 < idCol) score += 2;
-        nameScores[ci2]=score;
-      }
-      // 가장 점수 높은 컬럼 선택
-      var bestCol=null, bestScore=0;
-      Object.keys(nameScores).forEach(function(ci){
-        if(nameScores[ci]>bestScore){bestScore=nameScores[ci];bestCol=parseInt(ci);}
-      });
-      if(bestScore>=2) cm.name=bestCol;
-    }
-    if(cm.name===undefined) return null;
-    var out=[];
-    for(var ri=ds;ri<rows.length;ri++){
-      var r=rows[ri];
-      var name=String(r[cm.name]||'').trim();
-      if(!name||name.length<2||name.length>10||!/^[\uac00-\ud7a3]/.test(name)) continue;
-      var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
-      var bankName='',bankNum='';
-      if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bankName=bp[0].trim();bankNum=(bp[1]||'').replace(/[^0-9]/g,'');}
-      else{bankNum=bankRaw.replace(/[^0-9]/g,'');}
-      out.push({
-        name:name,
-        loginId:cm.id!==undefined?String(r[cm.id]||'').replace(/\n/g,'').trim():'',
-        phone:cm.phone!==undefined?String(r[cm.phone]||'').replace(/[^0-9]/g,''):'',
-        email:cm.email!==undefined?String(r[cm.email]||'').trim():'',
-        bankName:bankName,bankNum:bankNum,
-        carNum:cm.car!==undefined?String(r[cm.car]||'').trim():'',
-        bizNum:cm.biz!==undefined?String(r[cm.biz]||'').replace(/[^0-9]/g,''):'',
-      });
-    }
-    return out.length?out:null;
-  }
-  function showPreview(parsed){
-    var st=document.getElementById('_bulk_st');
-    var prev=document.getElementById('_bulk_prev');
-    var ok=document.getElementById('_bulk_ok');
-    if(!parsed){st.textContent='❌ 이름/아이디를 인식하지 못했습니다';return;}
-    window._bulkParsed=parsed;
-    st.textContent='✅ '+parsed.length+'명 인식 — 아래 확인 후 업데이트 클릭';
-    var html='<table style="width:100%;font-size:10px;border-collapse:collapse">'
-      +'<tr style="background:var(--bg3);font-weight:700">'
-      +'<th style="padding:4px 6px;text-align:left">이름</th>'
-      +'<th style="padding:4px 6px">아이디</th>'
-      +'<th style="padding:4px 6px">연락수</th>'
-      +'<th style="padding:4px 6px">이메일</th>'
-      +'<th style="padding:4px 6px">은행</th>'
-      +'<th style="padding:4px 6px">계좌</th>'
-      +'</tr>';
-    parsed.forEach(function(d){
-      html+='<tr style="border-bottom:1px solid var(--border)">'
-        +'<td style="padding:4px 6px;font-weight:700">'+esc(d.name)+'</td>'
-        +'<td style="padding:4px 6px;color:var(--brand)">'+esc(d.loginId)+'</td>'
-        +'<td style="padding:4px 6px">'+esc(d.phone)+'</td>'
-        +'<td style="padding:4px 6px">'+esc(d.email)+'</td>'
-        +'<td style="padding:4px 6px">'+esc(d.bankName)+'</td>'
-        +'<td style="padding:4px 6px">'+esc(d.bankNum)+'</td>'
-        +'</tr>';
-    });
-    html+='</table>';
-    if(prev)prev.innerHTML=html;
-    if(ok)ok.disabled=false;
-  }
   var ext=file.name.split('.').pop().toLowerCase();
   var reader=new FileReader();
+  function process(rows){
+    // 헤더로 파일 타입 판단
+    var h0=rows[0].map(function(v){return String(v||'').trim();});
+    var isSchedule=h0.indexOf('아이디')>=0&&h0.indexOf('이름')>=0&&h0.indexOf('캐프명')>=0;
+    if(isSchedule){
+      _biParseSchedule(rows,st);
+    } else {
+      _biParseInfo(rows,st);
+    }
+  }
   if(ext==='xlsx'||ext==='xls'){
-    reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});showPreview(parseFile(rows));}catch(err){st.textContent='❌ '+err.message;}};
+    reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});process(rows);}catch(err){st.textContent='❌ '+err.message;}};
     reader.readAsArrayBuffer(file);
   } else {
-    reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';var rows=t.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});});showPreview(parseFile(rows));}catch(err){st.textContent='❌ '+err.message;}};
+    reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';var rows=t.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});});process(rows);}catch(err){st.textContent='❌ '+err.message;}};
     reader.readAsText(file,'utf-8');
   }
-  inp.value='';
 };
 
-window._bulkDoApply=function(){
-  var parsed=window._bulkParsed||[];
-  if(!parsed.length)return;
+// schedule 파일 파싱 — 이름/아이디/캠프
+function _biParseSchedule(rows,st){
+  var h=rows[0].map(function(v){return String(v||'').trim();});
+  var iN=h.indexOf('이름'),iI=h.indexOf('아이디'),iC=h.indexOf('캐프명');
+  var seen={},list=[];
+  rows.slice(1).forEach(function(r){
+    var name=String(r[iN]||'').trim(),uid=String(r[iI]||'').trim(),camp=String(r[iC]||'').trim();
+    if(name&&uid&&!seen[uid]){seen[uid]=true;list.push({name:name,userId:uid,camp:camp});}
+  });
+  if(!list.length){st.textContent='❌ 데이터 없음';return;}
+  window._biData={type:'schedule',list:list};
+  var prev=document.getElementById('_bi_prev');
+  var ok=document.getElementById('_bi_ok');
+  st.textContent='✅ 근무표 인식 — '+list.length+'명';
+  st.style.color='var(--green)';
+  prev.innerHTML='<div style="font-size:11px;color:var(--text2)">'+list.map(function(d){return esc(d.name)+'('+esc(d.camp)+')';}).join(' · ')+'</div>';
+  if(ok)ok.disabled=false;
+}
+
+// 직원목록 파일 파싱 — 연락처/이메일/계좌 등
+function _biParseInfo(rows,st){
+  var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
+  function colType(samples){
+    var h={phone:0,email:0,bank:0,id:0,car:0,name:0};
+    samples.filter(Boolean).slice(0,6).forEach(function(v){
+      var s=String(v).trim();
+      if(/^01[0-9][\-\.]?[0-9]{3,4}[\-\.]?[0-9]{4}$/.test(s.replace(/\s/g,'')))h.phone+=3;
+      if(/@[a-zA-Z0-9]+\.[a-z]{2,}/i.test(s))h.email+=4;
+      if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;}))h.bank+=5;
+      if(/^[0-9\-]{10,}$/.test(s.replace(/\s/g,''))&&!/^01/.test(s))h.bank+=2;
+      if(/[\uac00-\ud7a3]{2}[0-9]{2}[\uac00-\ud7a3][0-9]{4}/.test(s))h.car+=4;
+      if(/^[a-zA-Z][a-zA-Z0-9_]{3,19}$/.test(s)&&!/@/.test(s))h.id+=2;
+      if(/^[\uac00-\ud7a3]{2}/.test(s)&&s.length>=2&&s.length<=8)h.name+=1;
+    });
+    var max=0,t=null;Object.keys(h).forEach(function(k){if(h[k]>max){max=h[k];t=k;}});
+    return max>=2?t:null;
+  }
+  // 데이터 시작행
+  var ds=0;
+  for(var r=0;r<Math.min(rows.length,8);r++){
+    if(rows[r].some(function(v){var s=String(v||'').trim();return /^[\uac00-\ud7a3]{2}/.test(s)&&s.length>=2&&s.length<=8;})){ds=r;break;}
+  }
+  var nc=0;rows.slice(ds,ds+8).forEach(function(r){if(r.length>nc)nc=r.length;});
+  var cm={};
+  for(var ci=0;ci<nc;ci++){
+    var t=colType(rows.slice(ds,ds+10).map(function(r){return r[ci]||'';}));
+    if(t&&cm[t]===undefined)cm[t]=ci;
+  }
+  // 이름 컬럼 — 아이디 컬럼 왼쪽에서 한글 많은 것
+  if(cm.name===undefined){
+    var best=-1,bsc=0;
+    for(var ci2=0;ci2<nc;ci2++){
+      if(Object.values(cm).indexOf(ci2)>=0)continue;
+      var ns=rows.slice(ds,ds+10).map(function(r){return String(r[ci2]||'').trim();});
+      var sc=ns.filter(function(v){return /^[\uac00-\ud7a3]{2}/.test(v)&&v.length>=2&&v.length<=8;}).length;
+      if(cm.id!==undefined&&ci2<cm.id)sc+=2;
+      if(sc>bsc){bsc=sc;best=ci2;}
+    }
+    if(bsc>=2)cm.name=best;
+  }
+  if(cm.name===undefined){st.textContent='❌ 이름 컨럼을 찾지 못함';return;}
+  var list=[];
+  for(var ri=ds;ri<rows.length;ri++){
+    var r=rows[ri];
+    var name=String(r[cm.name]||'').trim();
+    if(!name||name.length<2||name.length>10||!/^[\uac00-\ud7a3]/.test(name))continue;
+    var bankRaw=cm.bank!==undefined?String(r[cm.bank]||'').trim():'';
+    var bankName='',bankNum='';
+    if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bankName=bp[0].trim();bankNum=(bp[1]||'').replace(/[^0-9]/g,'');}
+    else{bankNum=bankRaw.replace(/[^0-9]/g,'');}
+    list.push({
+      name:name,
+      loginId:cm.id!==undefined?String(r[cm.id]||'').replace(/\n/g,'').trim():'',
+      phone:cm.phone!==undefined?String(r[cm.phone]||'').replace(/[^0-9]/g,''):'',
+      email:cm.email!==undefined?String(r[cm.email]||'').trim():'',
+      bankName:bankName,bankNum:bankNum,
+      carNum:cm.car!==undefined?String(r[cm.car]||'').trim():'',
+    });
+  }
+  if(!list.length){st.textContent='❌ 데이터 없음';return;}
+  window._biData={type:'info',list:list};
+  var prev=document.getElementById('_bi_prev');
+  var ok=document.getElementById('_bi_ok');
+  st.textContent='✅ 직원목록 인식 — '+list.length+'명';
+  st.style.color='var(--green)';
+  var html='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="background:var(--bg3)"><th style="padding:3px 6px;text-align:left">이름</th><th>아이디</th><th>연락수</th><th>이메일</th><th>은행</th></tr>';
+  list.forEach(function(d){html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px;font-weight:700">'+esc(d.name)+'</td><td style="padding:3px 6px;color:var(--brand)">'+esc(d.loginId)+'</td><td style="padding:3px 6px">'+esc(d.phone)+'</td><td style="padding:3px 6px">'+esc(d.email)+'</td><td style="padding:3px 6px">'+esc(d.bankName)+'</td></tr>';});
+  html+='</table>';
+  prev.innerHTML=html;
+  if(ok)ok.disabled=false;
+}
+
+// 등록/업데이트 실행
+window._biApply=function(){
+  var data=window._biData;
+  if(!data||!data.list.length)return;
   var did=_CU&&(_CU.dealerId||_CU.uid);
-  var ok=document.getElementById('_bulk_ok');
-  if(ok){ok.disabled=true;ok.textContent='업데이트 중...';}
-  // 기존 drivers 전체 로드 후 이름/아이디로 매칭
+  var ok=document.getElementById('_bi_ok');
+  var st=document.getElementById('_bi_st');
+  if(ok){ok.disabled=true;ok.textContent='진행 중...';}
   _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
-    var byName={},byId={};
+    var byId={},byName={};
     snap.docs.forEach(function(doc){
       var d=doc.data();
-      if(d.name) byName[d.name.trim()]={ref:doc.ref,data:d};
-      if(d.userId) byId[d.userId.trim()]={ref:doc.ref,data:d};
+      if(d.userId)byId[d.userId.trim()]={ref:doc.ref,data:d};
+      if(d.name)byName[d.name.trim()]={ref:doc.ref,data:d};
     });
-    var updated=0,skipped=0,total=parsed.length;
-    function done(){
-      if(updated+skipped>=total){
-        toast('✅ '+updated+'명 업데이트'+(skipped?' / 매칭안됨 '+skipped+'명':''));
+    var done=0,fail=0,total=data.list.length;
+    function _chk(){
+      if(done+fail>=total){
+        st.textContent='✅ '+done+'명 완료'+(fail?' / 실패 '+fail+'명':'');
+        st.style.color='var(--green)';
         _drvCache=null;pageDrivers();
-        var mo=document.getElementById('mo-bulk-drv');if(mo)mo.remove();
       }
     }
-    parsed.forEach(function(d){
-      // 이름 우선, 없으면 아이디로 매칭 — 둘 다 없으면 스킵
-      var match=byName[d.name]||(d.loginId?byId[d.loginId]:null);
-      if(match){
-        // 기존 기사 — 빈 필드만 채움
-        var od=match.data;
-        var upd={};
-        if(d.phone   &&!od.phone)       upd.phone=d.phone;
-        if(d.email   &&!od.email)       upd.email=d.email;
-        if(d.bankNum &&!od.bankAccount) upd.bankAccount=d.bankNum;
-        if(d.bankName&&!od.bankName)    upd.bankName=d.bankName;
-        if(d.carNum  &&!od.carNum)      upd.carNum=d.carNum;
-        if(d.bizNum  &&!od.bizNum)      upd.bizNum=d.bizNum;
-        if(d.loginId &&!od.userId)      upd.userId=d.loginId;
-        if(!Object.keys(upd).length){updated++;done();return;}
-        match.ref.update(upd)
-          .then(function(){updated++;done();})
-          .catch(function(){skipped++;done();});
+    data.list.forEach(function(d){
+      if(data.type==='schedule'){
+        // 아이디로 매칭 → 이름/캠프 업데이트, 없으면 신규
+        var m=byId[d.userId];
+        if(m){
+          m.ref.update({name:d.name,camp:d.camp}).then(function(){done++;_chk();}).catch(function(){fail++;_chk();});
+        } else {
+          _db.collection('drivers').add({dealerId:did,name:d.name,userId:d.userId,camp:d.camp,is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+            .then(function(){done++;_chk();}).catch(function(){fail++;_chk();});
+        }
       } else {
-        // 신규 기사 — 새로 등록
-        _db.collection('drivers').add({
-          dealerId:did,
-          name:d.name,
-          userId:d.loginId||d.name,
-          phone:d.phone||'',
-          email:d.email||'',
-          bankAccount:d.bankNum||'',
-          bankName:d.bankName||'',
-          carNum:d.carNum||'',
-          bizNum:d.bizNum||'',
-          camp:'',
-          is_active:true,
-          status:'재직',
-          jobsub:'쿠팡',
-          workType:'coupang',
-          createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function(){updated++;done();})
-          .catch(function(){skipped++;done();});
+        // 이름/아이디로 매칭 → 빈 필드만 채움
+        var m=byName[d.name]||(d.loginId?byId[d.loginId]:null);
+        if(!m){done++;_chk();return;}
+        var od=m.data,upd={};
+        if(d.phone&&!od.phone)upd.phone=d.phone;
+        if(d.email&&!od.email)upd.email=d.email;
+        if(d.bankNum&&!od.bankAccount)upd.bankAccount=d.bankNum;
+        if(d.bankName&&!od.bankName)upd.bankName=d.bankName;
+        if(d.carNum&&!od.carNum)upd.carNum=d.carNum;
+        if(d.loginId&&!od.userId)upd.userId=d.loginId;
+        if(!Object.keys(upd).length){done++;_chk();return;}
+        m.ref.update(upd).then(function(){done++;_chk();}).catch(function(){fail++;_chk();});
       }
     });
-  }).catch(function(e){toast('❌ '+e.message);if(ok){ok.disabled=false;ok.textContent='업데이트';}});
+  }).catch(function(e){st.textContent='❌ '+e.message;if(ok){ok.disabled=false;ok.textContent='등록 / 업데이트';}});
 };
 
 // ★ 엑셀에서 파싱한 직원 데이터 일괄 Firestore 등록
