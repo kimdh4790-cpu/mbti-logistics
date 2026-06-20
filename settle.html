@@ -19746,6 +19746,8 @@ function _txsBulkExcelQuick(){
 function pageTaxShare(){
   document.getElementById('page-title').textContent='🧾 세무사 연동';
   document.getElementById('topbar-right').innerHTML=
+    '<button class="btn btn-sm" onclick="_taxMonthReport()" style="background:#7c3aed;color:#fff;font-size:12px;margin-right:4px">📊 월보고서</button>'+
+    '<button class="btn btn-sm" onclick="_taxInviteAccountant()" style="background:#0891b2;color:#fff;font-size:12px;margin-right:4px">👩 세무사 초대</button>'+
     '<button class="btn btn-sm" onclick="_txsBulkExcelQuick()" style="background:#059669;color:#fff;font-size:12px;font-weight:700">📥 정산 엑셀</button> '+
     '<button class="btn btn-sm" onclick="_downloadDouzoneCSV()" style="background:#1e40af;color:#fff;font-size:12px">💾 더존 CSV</button> '+
     '<button class="btn btn-sm" onclick="_generateTaxShareLink()" style="background:linear-gradient(135deg,#7c3aed,#185FA5);color:#fff;font-size:12px;font-weight:700">🔗 공유링크</button>';
@@ -19843,6 +19845,19 @@ function pageTaxShare(){
       '<div id="pos-tax-result"></div>'+
       '</div>'
     :'')
+  +'<div class="card" style="margin-bottom:14px">'
+  +'<div style="font-size:14px;font-weight:800;margin-bottom:4px">⏰ 월 자동 발송 설정</div>'
+  +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">매월 정해진 날 세무사에게 정산자료를 자동 발송합니다</div>'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+  +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">자동 발송일 (매월)</label>'
+  +'<input id="tax-auto-day" type="number" min="1" max="28" placeholder="예: 10" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></div>'
+  +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">발송 방식</label>'
+  +'<select id="tax-auto-method" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
+  +'<option value="link">공유링크 이메일</option><option value="csv">더존 CSV 첨부</option><option value="both">둘 다</option>'
+  +'</select></div></div>'
+  +'<button onclick="_taxSaveAutoSend()" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">💾 자동 발송 설정 저장</button>'
+  +'<div id="tax-auto-result" style="margin-top:8px;font-size:11px;color:var(--text3)"></div>'
+  +'</div>'
     // ── 4. 세무사 방문 체크리스트
     +'<div class="card" style="margin-bottom:14px">'
     +'<div style="font-size:14px;font-weight:800;margin-bottom:8px">✅ 세무사 방문 체크리스트</div>'
@@ -19867,6 +19882,90 @@ function pageTaxShare(){
 }
 
 // POS 매출 세무사 자동 등록
+// ── 월 세무 보고서
+window._taxMonthReport=function(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var ym=(document.getElementById('txs-ym')||{}).value||new Date().toISOString().slice(0,7);
+  var coName=(_cachedCompanyDoc&&(_cachedCompanyDoc.name||_cachedCompanyDoc.companyName))||'회사';
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',did).where('ym','==',ym).get(),
+    _db.collection('attendance').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+    _db.collection('tax_docs').where('dealerId','==',did).where('ym','==',ym).get()
+  ]).then(function(res){
+    var totalSettle=0,settleCount=0;
+    res[0].forEach(function(doc){totalSettle+=(doc.data().netPay||doc.data().totalPay||0);settleCount++;});
+    var totalWorkH=0,byUser={};
+    res[1].forEach(function(doc){
+      var d=doc.data();
+      if(!byUser[d.userId])byUser[d.userId]={name:d.driverName||d.name||d.userId,days:0,hours:0};
+      if(d.checkIn)byUser[d.userId].days++;
+      if(d.workHours){byUser[d.userId].hours+=parseFloat(d.workHours)||0;totalWorkH+=parseFloat(d.workHours)||0;}
+    });
+    var taxDocCount=res[2].size;
+    var modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center';
+    var html='<div style="background:var(--bg2);border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:16px"><div style="font-size:15px;font-weight:800">📊 '+ym+' 세무 월보고서</div><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer">✕</button></div>';
+    html+='<div style="font-size:11px;color:var(--text3);margin-bottom:14px">'+coName+'</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+    html+='<div style="background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:17px;font-weight:900;color:#60a5fa">'+totalSettle.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">총 정산(원)</div></div>';
+    html+='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:17px;font-weight:900;color:#22c55e">'+settleCount+'</div><div style="font-size:10px;color:var(--text3)">정산 인원</div></div>';
+    html+='<div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:17px;font-weight:900;color:#a78bfa">'+totalWorkH.toFixed(0)+'h</div><div style="font-size:10px;color:var(--text3)">총 근무시간</div></div>';
+    html+='<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:17px;font-weight:900;color:#f59e0b">'+taxDocCount+'</div><div style="font-size:10px;color:var(--text3)">등록 서류</div></div>';
+    html+='</div>';
+    html+='<div style="font-size:12px;font-weight:700;margin-bottom:8px">직원별 근무 요약</div>';
+    html+='<div style="background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:14px">';
+    Object.values(byUser).slice(0,8).forEach(function(u){
+      html+='<div style="display:grid;grid-template-columns:1fr 50px 60px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:11px"><div>'+esc(u.name)+'</div><div style="text-align:center">'+u.days+'일</div><div style="text-align:right">'+u.hours.toFixed(1)+'h</div></div>';
+    });
+    html+='</div>';
+    html+='<div style="display:flex;gap:8px">';
+    html+='<button onclick="_downloadDouzoneCSV()" style="flex:1;padding:10px;background:#1e40af;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">💾 더존 CSV</button>';
+    html+='<button onclick="window._txsGenLink()" style="flex:1;padding:10px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">🔗 공유링크</button>';
+    html+='</div></div>';
+    modal.innerHTML=html;document.body.appendChild(modal);
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
+// ── 세무사 초대 링크
+window._taxInviteAccountant=function(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var ym=(document.getElementById('txs-ym')||{}).value||new Date().toISOString().slice(0,7);
+  var coName=(_cachedCompanyDoc&&(_cachedCompanyDoc.name||_cachedCompanyDoc.companyName))||'회사';
+  var taxName=(document.getElementById('txs-tax-name')||{}).value||'세무사';
+  var taxEmail=(document.getElementById('txs-tax-email')||{}).value||'';
+  var token=did+'_tax_'+ym+'_'+Date.now().toString(36);
+  _db.collection('taxShares').doc(token).set({
+    dealerId:did,ym:ym,companyName:coName,taxName:taxName,taxEmail:taxEmail,
+    type:'accountant_invite',
+    expireAt:new Date(Date.now()+90*86400000).toISOString(),
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    var url=location.origin+'?tax='+token;
+    navigator.clipboard.writeText(url).then(function(){toast('✅ 세무사 초대링크 복사됨 (90일 유효)');})
+    .catch(function(){
+      var r=document.getElementById('txs-result');
+      if(r)r.innerHTML='<div style="padding:8px;background:var(--bg3);border-radius:8px;font-size:10px;word-break:break-all">'+url+'</div>';
+    });
+  }).catch(function(e){toast('❌ '+e.message);});
+};
+
+// ── 자동발송 설정 저장
+window._taxSaveAutoSend=function(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var day=parseInt((document.getElementById('tax-auto-day')||{}).value)||0;
+  var method=(document.getElementById('tax-auto-method')||{}).value||'link';
+  var taxEmail=(document.getElementById('txs-tax-email')||{}).value||'';
+  if(!day||day<1||day>28){toast('❌ 발송일을 1~28 사이로 입력하세요');return;}
+  if(!taxEmail){toast('❌ 세무사 이메일을 먼저 입력하세요');return;}
+  _db.collection('companies').doc(did).update({
+    taxAutoSendDay:day,taxAutoSendMethod:method,taxEmail:taxEmail,taxAutoSendEnabled:true
+  }).then(function(){
+    var r=document.getElementById('tax-auto-result');
+    if(r)r.innerHTML='✅ 매월 <b>'+day+'일</b>에 세무사('+taxEmail+')에게 자동 발송됩니다.';
+    toast('✅ 자동 발송 설정 저장');
+  }).catch(function(e){toast('❌ '+e.message);});
+};
 window._posAutoRegister=function(){
   if(!_db||!_CU){toast('로그인 필요');return;}
   var did=_CU.dealerId;
