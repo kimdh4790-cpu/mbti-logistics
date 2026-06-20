@@ -32239,30 +32239,31 @@ function pageDrivers(){
   if(isSuperAdmin()){
     var btnSync=document.createElement('button');btnSync.className='btn btn-sm';
     btnSync.style.cssText='background:#0ea5e9;color:#fff;font-size:11px;margin-left:4px';
-    btnSync.textContent='🔄 연락처 동기화';
+    btnSync.textContent='?? 연락수 동기화';
     btnSync.onclick=function(){_syncDriverPhone(_CU.dealerId);};
-    // ★ 잘못 등록 데이터 정리 (슈퍼어드민 1회용)
+    tr.appendChild(btnSync);
+    // 잊못 등록 데이터 정리 (이름 한글 아닌 문서 삭제)
     var btnClean=document.createElement('button');btnClean.className='btn btn-sm';
     btnClean.style.cssText='background:#ef4444;color:#fff;font-size:11px;margin-left:4px';
-    btnClean.textContent='괴 삭제';
+    btnClean.textContent='개었데이터 삭제';
     btnClean.onclick=function(){
-      if(!confirm('미지정 12명 삭제? (이름이 한글 2~5자 아닌 문서 전체)'))return;
       _db.collection('drivers').where('dealerId','==',_CU.dealerId).get().then(function(snap){
-        var del=snap.docs.filter(function(d){
+        var bad=snap.docs.filter(function(d){
           var n=(d.data().name||'').trim();
           return !n||!/^[가-힣]{2,5}$/.test(n);
         });
+        if(!bad.length){toast('?? 정리할 항목 없음');return;}
+        if(!confirm(bad.length+'건 삭제하겠습니까?'))return;
         var cnt=0;
-        del.forEach(function(d){
+        bad.forEach(function(d){
           d.ref.delete().then(function(){
-            cnt++;if(cnt>=del.length){toast('✅ '+cnt+'건 삭제 완료');_drvCache=null;pageDrivers();}
-          });
+            cnt++;
+            if(cnt>=bad.length){toast('✅ '+cnt+'건 삭제 완료');_drvCache=null;pageDrivers();}
+          }).catch(function(){cnt++;if(cnt>=bad.length){_drvCache=null;pageDrivers();}});
         });
-        if(!del.length)toast('삭제할 항목 없음');
       });
     };
     tr.appendChild(btnClean);
-    tr.appendChild(btnSync);
   }
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
