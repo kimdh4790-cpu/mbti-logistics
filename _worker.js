@@ -2207,7 +2207,7 @@ service cloud.firestore {
             text: fallbackText || '', // 톡 실패 시 SMS로 대체 발송
             kakaoOptions: {
               pfId: pfId || 'KA01PF260618094439788FzuY2GxDiSW',
-              templateId: templateCode || 'KA01TP2605202011489862wFDonmS7ny',
+              templateId: templateCode || 'KA01TP260618101225825DuJHXpoC4kY',
               variables: variables || {},
               disableSms: false
             }
