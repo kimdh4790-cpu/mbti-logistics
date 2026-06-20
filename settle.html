@@ -32029,7 +32029,7 @@ function _openBulkDriverRegister(){
     +'<div style="font-size:32px">??</div>'
     +'<div style="font-size:13px;font-weight:700;margin-top:8px">파일 선택</div>'
     +'<div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx · .xls · .txt · .csv</div>'
-    +'<input id="_bi" type="file" accept=".xlsx,.xls,.txt,.csv" style="display:none" onchange="_biLoad(this)">'
+    +'<input id="_bi" type="file" accept=".xlsx,.xls,.txt,.csv" multiple style="display:none" onchange="_biLoadMulti(this)">'
     +'</div>'
     +'<div id="_bi_st" style="font-size:12px;margin-top:12px;min-height:20px"></div>'
     +'<div id="_bi_prev" style="max-height:220px;overflow-y:auto;margin-top:8px"></div>'
@@ -32039,6 +32039,92 @@ function _openBulkDriverRegister(){
     +'</div></div></div>';
   document.getElementById('modals').appendChild(mo);
 }
+
+window._biLoadMulti=function(inp){
+  var files=Array.from(inp.files);
+  if(!files.length)return;
+  var st=document.getElementById('_bi_st');
+  var prev=document.getElementById('_bi_prev');
+  var ok=document.getElementById('_bi_ok');
+  st.style.color='var(--text3)';
+  st.textContent='⏳ 읽는 중...';
+  prev.innerHTML='';if(ok)ok.disabled=true;
+  var allList={};  // uid 기준 중복제거
+  var done=0;
+  files.forEach(function(file){
+    var ext=file.name.split('.').pop().toLowerCase();
+    var reader=new FileReader();
+    function onRows(rows){
+      var parsed=_biParse(rows);
+      if(parsed)parsed.forEach(function(d){
+        var key=d.userId||d.name;
+        if(key&&!allList[key])allList[key]=d;
+        else if(key&&allList[key]){
+          // 정보 합산
+          var e=allList[key];
+          if(!e.name&&d.name)e.name=d.name;
+          if(!e.camp&&d.camp)e.camp=d.camp;
+          if(!e.phone&&d.phone)e.phone=d.phone;
+          if(!e.email&&d.email)e.email=d.email;
+        }
+      });
+      done++;
+      if(done>=files.length){
+        var list=Object.values(allList);
+        if(!list.length){st.textContent='❌ 인식 실패';return;}
+        window._biList=list;
+        if(ok){ok.disabled=false;ok.onclick=function(){_biApply(list);};}
+        st.style.color='var(--green)';
+        st.textContent='✅ '+list.length+'명 인식 — 업데이트 누르세요';
+        var html='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="background:var(--bg3)"><th style="padding:3px 6px;text-align:left">이름</th><th>아이디</th><th>캐프</th></tr>';
+        list.forEach(function(d){html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px;font-weight:700">'+esc(d.name)+'</td><td style="padding:3px 6px;color:var(--brand)">'+esc(d.userId)+'</td><td style="padding:3px 6px">'+esc(d.camp)+'</td></tr>';});
+        prev.innerHTML=html+'</table>';
+      }
+    }
+    if(ext==='xlsx'||ext==='xls'){
+      reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});onRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}));}catch(err){done++;st.textContent='❌ '+err.message;}};
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';onRows(t.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});}));}catch(err){done++;st.textContent='❌ '+err.message;}};
+      reader.readAsText(file,'utf-8');
+    }
+  });
+  inp.value='';
+};
+
+// parse 분리 함수
+window._biParse=function(rows){
+  if(!rows||!rows.length)return null;
+  var h0=rows[0].map(function(v){return String(v||'').trim();});
+  var iName=-1,iId=-1,iCamp=-1,iPhone=-1,iEmail=-1,iBank=-1;
+  h0.forEach(function(v,i){
+    if(v==='이름'||v==='성명')iName=i;
+    if(v==='아이디')iId=i;
+    if(v==='캐프명'||v==='캐프')iCamp=i;
+    if(v.indexOf('휴대폰')>=0||v.indexOf('연락')>=0)iPhone=i;
+    if(v.indexOf('메일')>=0||/email/i.test(v))iEmail=i;
+    if(v.indexOf('통장')>=0||v.indexOf('계좌')>=0)iBank=i;
+  });
+  if(iName>=0&&iId>=0){
+    var list=[],seen={};
+    rows.slice(1).forEach(function(r){
+      var name=String(r[iName]||'').trim();
+      var uid=String(r[iId]||'').trim();
+      if(!name||!uid||seen[uid])return;
+      seen[uid]=true;
+      var bankRaw=iBank>=0?String(r[iBank]||'').trim():'';
+      var bN='',bNum='';
+      if(bankRaw.indexOf('\n')>=0){var bp=bankRaw.split('\n');bN=bp[0].trim();bNum=(bp[1]||'').replace(/[^0-9]/g,'');}
+      else{bNum=bankRaw.replace(/[^0-9]/g,'');}
+      list.push({name:name,userId:uid,camp:iCamp>=0?String(r[iCamp]||'').trim():'',
+        phone:iPhone>=0?String(r[iPhone]||'').replace(/[^0-9]/g,''):'',
+        email:iEmail>=0?String(r[iEmail]||'').trim():'',
+        bankName:bN,bankNum:bNum,carNum:''});
+    });
+    return list.length?list:null;
+  }
+  return null;
+};
 
 window._biLoad=function(inp){
   var file=inp.files[0];if(!file)return;
