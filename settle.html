@@ -32041,6 +32041,60 @@ function _openBulkDriverRegister(){
   document.getElementById('modals').appendChild(mo);
 }
 
+// ▶ schedule.xlsx 기사 등록
+window._bulkLoadScheduleReg=function(inp){
+  var file=inp.files[0];if(!file)return;
+  var st=document.getElementById('bulk-sch-reg-st');
+  st.textContent='⏳ 읽는 중...';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var hdr=rows[0].map(function(v){return String(v).trim();});
+      var iName=hdr.indexOf('이름');
+      var iId=hdr.indexOf('아이디');
+      var iCamp=hdr.indexOf('캐프명');
+      if(iName<0||iId<0){st.textContent='❌ 이름/아이디 컨럼 없음';return;}
+      var seen={},drivers=[];
+      rows.slice(1).forEach(function(r){
+        var name=String(r[iName]||'').trim();
+        var uid=String(r[iId]||'').trim();
+        var camp=iCamp>=0?String(r[iCamp]||'').trim():'';
+        if(name&&uid&&!seen[name]){seen[name]=true;drivers.push({name:name,userId:uid,camp:camp});}
+      });
+      if(!drivers.length){st.textContent='❌ 데이터 없음';return;}
+      var did=_CU&&(_CU.dealerId||_CU.uid);
+      var done=0,fail=0,total=drivers.length;
+      st.textContent='⏳ '+total+'명 등록 중...';
+      drivers.forEach(function(d){
+        _db.collection('drivers').where('dealerId','==',did).where('userId','==',d.userId).limit(1).get()
+        .then(function(snap){
+          if(snap.empty){
+            return _db.collection('drivers').add({
+              dealerId:did,name:d.name,userId:d.userId,camp:d.camp,
+              is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',
+              createdAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+          return snap.docs[0].ref.update({camp:d.camp,name:d.name});
+        })
+        .then(function(){done++;_chk();})
+        .catch(function(){fail++;_chk();});
+      });
+      function _chk(){
+        if(done+fail>=total){
+          st.textContent='✅ '+done+'명 등록'+(fail?' / 실패 '+fail+'명':'');
+          _drvCache=null;pageDrivers();
+        }
+      }
+    }catch(err){st.textContent='❌ '+err.message;}
+  };
+  reader.readAsArrayBuffer(file);
+  inp.value='';
+};
+
 window._bulkDoLoad=function(inp){
   var file=inp.files[0];if(!file)return;
   var st=document.getElementById('_bulk_st');
