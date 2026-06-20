@@ -8781,6 +8781,7 @@ function doRegister(){
       slug:slugVal,
       companyCode:companyCode,
       serviceType:serviceType,
+        industryType:serviceType||'courier',
       services:services,
       industryType:settleIndustry,
       invIndustryType:invIndustry,
@@ -9952,6 +9953,29 @@ function uploadContract(input){
 
 // ══ 근무표 관리 ══
 function pageRoster(){
+  // 업종별 근무표 타입 분기
+  var rosterType=_getRosterType(_cachedCompanyDoc||{});
+  var rosterTitleMap={
+    route:'🛣️ 라우트 주야간 근무표',
+    timeslot:'⏰ 시간대별 배치표',
+    site:'🏢 현장별 인원 배치표',
+    team:'👥 팀별 실적 현황판',
+    manpower:'⚒️ 현장 공수 투입표',
+    caddie:'⛳ 캐디 배치표',
+    teacher:'📚 강사 배정표',
+    stylist:'💇 스타일리스트 배정',
+    vehicle:'🚚 차량·기사 배치표',
+    driver:'📦 배송기사 배치',
+    project:'💼 프로젝트 담당자',
+    caregiver:'🏥 요양보호사 배치표',
+    parttime:'🍽️ 알바 배치표'
+  };
+  if(rosterType!=='default'&&rosterType!=='route'){
+    // 근무표 타입에 맞는 페이지 타이틀 설정
+    var rTitle=rosterTitleMap[rosterType]||'📋 근무표';
+    var ptEl=document.getElementById('page-title');
+    if(ptEl) ptEl.textContent=rTitle;
+  }
   // trial도 roster 허용
   if(!_db||!_CU){_renderRosterPaywall();return;}
   var cid=_CU.dealerId||_CU.companyId;
@@ -23857,6 +23881,27 @@ function _sendLeaveNotif(userId, name, status, type, date){
 }
 
 function pageSchedule(){
+  // 업종별 달력 타입 분기
+  var calType=_getCalendarType(_cachedCompanyDoc||{});
+  if(calType!=='default'&&calType!=='advance'){
+    // 업종별 달력 헤더 타입 표시
+    var titleMap={
+      promotion:'📣 프로모션·일정 달력',
+      dispatch:'🏢 현장 배치 달력',
+      renewal:'📋 계약·시책 달력',
+      site:'🏗️ 공정 일정 달력',
+      booking:'⛳ 예약·배정 달력',
+      lesson:'📚 수업 일정 달력',
+      reservation:'💇 예약 달력',
+      project:'💼 프로젝트 달력',
+      visit:'🏥 방문 일정 달력',
+      shift:'🍽️ 시프트 달력',
+      shipping:'📦 출하 일정 달력'
+    };
+    var calTitle=titleMap[calType]||'📅 달력';
+    document.title=calTitle;
+  }
+  // 이후 기존 로직 그대로
   var now=new Date();
   window._calYear=window._calYear||now.getFullYear();
   window._calMonth=window._calMonth||now.getMonth();
@@ -26148,9 +26193,9 @@ var MENUS_SETTLE = [
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
     {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'settle'},
+    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
     {ic:'📋',l:'근무표',           p:'roster',           plan_key:'settle'},
-    {ic:'🌴',l:'연차 관리',        p:'leave',            plan_key:'settle'},
+    {ic:'🌴',l:'연차 관리',        p:'leave',            plan_key:'any_paid'},
     {ic:'🚚',l:'배차 현황',        p:'dispatch',         plan_key:'settle'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'settle'},
   ]},
@@ -38515,6 +38560,106 @@ function _hasIndPlan(d, plan_key){
   return !!indPaid[plan_key];
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 업종 감지 함수 — 전체 앱에서 참조
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function _getIndustryMode(doc){
+  var d=doc||_cachedCompanyDoc||{};
+  return d.industryType||d.serviceType||'courier';
+}
+
+// 플랜 보유 여부 (업종별 AI정산 + 공통 플랜)
+function _hasPlan(d,planKey){
+  if(isSuperAdmin()) return true;
+  var subs=(d&&d.subscriptions)||{};
+  var today=new Date().toISOString().slice(0,10);
+  function active(k){
+    var s=subs[k]||{};
+    return !!(s.active&&(!s.expiry||s.expiry>=today));
+  }
+  // AI정산 계열
+  if(planKey==='settle')   return active('settle')||active('full');
+  if(planKey==='delivery') return active('delivery')||active('full');
+  // QR+급여 계열
+  if(planKey==='qr')       return active('qr')||active('payroll')||active('full');
+  if(planKey==='payroll')  return active('payroll')||active('full');
+  // 업종별 AI정산
+  if(planKey==='courier')      return active('settle')||active('full');
+  if(planKey==='cleaning')     return active('cleaning')||active('settle')||active('full');
+  if(planKey==='insurance')    return active('ind_insurance')||active('full');
+  if(planKey==='construction') return active('ind_construction')||active('full');
+  if(planKey==='golf')         return active('ind_golf')||active('full');
+  if(planKey==='academy')      return active('ind_academy')||active('full');
+  if(planKey==='beauty')       return active('ind_beauty')||active('full');
+  if(planKey==='logistics')    return active('ind_logistics')||active('full');
+  if(planKey==='wholesale')    return active('ind_wholesale')||active('full');
+  if(planKey==='freelance')    return active('ind_freelance')||active('full');
+  if(planKey==='care')         return active('ind_care')||active('full');
+  if(planKey==='restaurant')   return active('ind_restaurant')||active('full');
+  // FILO
+  if(planKey==='inventory')    return active('inventory')||active('full');
+  if(planKey==='kiosk')        return active('kiosk')||active('full');
+  if(planKey==='universal')    return active('universal')||active('full');
+  return false;
+}
+
+// 공통 기능 허용 — 어떤 플랜이든 1개 결제 시 활성화
+// 공통: 직원관리, 세무사연동, 달력, 알림톡명세서, 사내공지, 고객공지
+function _hasCommon(d){
+  if(isSuperAdmin()) return true;
+  var keys=['settle','delivery','qr','payroll','cleaning','ind_insurance','ind_construction',
+    'ind_golf','ind_academy','ind_beauty','ind_logistics','ind_wholesale','ind_freelance',
+    'ind_care','ind_restaurant','inventory','kiosk','universal','full'];
+  var subs=(d&&d.subscriptions)||{};
+  var today=new Date().toISOString().slice(0,10);
+  return keys.some(function(k){
+    var s=subs[k]||{};
+    return !!(s.active&&(!s.expiry||s.expiry>=today));
+  });
+}
+
+// 업종별 달력 타입 반환
+function _getCalendarType(doc){
+  var ind=_getIndustryMode(doc);
+  var map={
+    courier:     'advance',     // 가불·선지급 메모 + 정산일
+    delivery:    'promotion',   // 프로모션·콜배정 일정
+    cleaning:    'dispatch',    // 현장 배치 일정
+    insurance:   'renewal',     // 계약 유지관리·시책 마감
+    construction:'site',        // 현장 공정 일정
+    golf:        'booking',     // 예약·캐디 배정
+    academy:     'lesson',      // 수업 일정
+    beauty:      'reservation', // 예약 일정
+    logistics:   'dispatch',    // 배차 일정
+    wholesale:   'shipping',    // 출하 일정
+    freelance:   'project',     // 프로젝트 마감
+    care:        'visit',       // 방문 일정
+    restaurant:  'shift'        // 알바 시프트 일정
+  };
+  return map[ind]||'default';
+}
+
+// 업종별 근무표 타입 반환
+function _getRosterType(doc){
+  var ind=_getIndustryMode(doc);
+  var map={
+    courier:     'route',       // 라우트별 주야간 근무표
+    delivery:    'timeslot',    // 시간대별 배치표
+    cleaning:    'site',        // 현장별 인원 배치표
+    insurance:   'team',        // 팀별 실적 현황판
+    construction:'manpower',    // 현장별 공수 투입표
+    golf:        'caddie',      // 캐디 배치표
+    academy:     'teacher',     // 강사 배정표
+    beauty:      'stylist',     // 스타일리스트 배정
+    logistics:   'vehicle',     // 차량·기사 배치표
+    wholesale:   'driver',      // 배송기사 배치
+    freelance:   'project',     // 프로젝트별 담당자
+    care:        'caregiver',   // 요양보호사 배치표
+    restaurant:  'parttime'     // 알바 배치표
+  };
+  return map[ind]||'default';
+}
+
 function _hasAnyPaid(d){   // 세무사 연동 - 하나라도 결제하면 허용
   return isSuperAdmin()||_hasSettle(d)||_hasQr(d)||_hasPayroll(d)||_hasDelivery(d)||_hasPremium(d)||_hasUniversal(d);
 }
@@ -38594,6 +38739,15 @@ function _buildNavRender(nav,cur,companyDoc){
     if(plan_key==='payroll')     return hasPayroll;
     if(plan_key==='premium')     return hasPremium;
     if(plan_key==='any_paid')    return hasAnyPaid;
+    if(plan_key==='common')      return hasAnyPaid; // 공통기능 = 어떤플랜이든 결제시
+    // 업종별 AI정산 플랜
+    if(plan_key==='courier')     return hasSettle||hasPremium;
+    if(plan_key==='ind_golf')    return _hasIndPlan(d,'ind_golf')||hasPremium;
+    if(plan_key==='ind_logistics') return _hasIndPlan(d,'ind_logistics')||hasPremium;
+    if(plan_key==='ind_wholesale') return _hasIndPlan(d,'ind_wholesale')||hasPremium;
+    if(plan_key==='ind_freelance') return _hasIndPlan(d,'ind_freelance')||hasPremium;
+    if(plan_key==='ind_care')    return _hasIndPlan(d,'ind_care')||hasPremium;
+    if(plan_key==='ind_restaurant') return _hasIndPlan(d,'ind_restaurant')||hasPremium;
     // 업종별 정산 — companies.services 배열에 해당 plan_key 있으면 허용
     if(plan_key==='cleaning')    return isSuperAdmin()||!!(d.cleaningPaid||d.settlePaid);
     if(plan_key==='ind_golf')      return _hasIndPlan(d,'ind_golf');
