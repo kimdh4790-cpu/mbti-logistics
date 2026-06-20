@@ -32604,7 +32604,7 @@ function _renderDrivers(drivers,c){
     if(['탈퇴','퇴직','거부'].indexOf(d.status||'')>=0) return false;
     // jobsub이 청소·파견이면 제외 (ind_workers에서 관리)
     var js=d.jobsub||'';
-    if(js&&js!=='쿠팡'&&js.indexOf('쿠팡')<0&&js!=='') return false;
+        if(js&&js!=='쿠팡'&&js.indexOf('쿠팡')<0) return false;
     return true;
   });
   // 실제 기사 데이터 기반 동적 캠프
