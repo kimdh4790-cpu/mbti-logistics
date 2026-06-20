@@ -32189,6 +32189,7 @@ window._biApply=function(){
   var ok=document.getElementById('_bi_ok');
   var st=document.getElementById('_bi_st');
   if(ok){ok.disabled=true;ok.textContent='진행 중...';}
+  // 기존 drivers 로드 후 batch로 한번에 처리
   _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
     var byId={},byName={};
     snap.docs.forEach(function(doc){
@@ -32196,41 +32197,44 @@ window._biApply=function(){
       if(d.userId)byId[d.userId.trim()]={ref:doc.ref,data:d};
       if(d.name)byName[d.name.trim()]={ref:doc.ref,data:d};
     });
-    var done=0,fail=0,total=list.length;
-    function chk(){
-      if(done+fail>=total){
-        st.style.color='var(--green)';
-        st.textContent='✅ '+done+'명 완료'+(fail?' / 실패 '+fail+'명':'');
-        _drvCache=null;pageDrivers();
-      }
-    }
+    var batch=_db.batch();
+    var cnt=0;
     list.forEach(function(d){
-      // 아이디 우선, 없으면 이름으로 매칭
       var m=(d.userId?byId[d.userId]:null)||byName[d.name];
-      var upd={};
-      if(d.userId&&m&&!m.data.userId)upd.userId=d.userId;
-      if(d.name&&m&&!m.data.name)upd.name=d.name;
-      if(d.camp&&m&&!m.data.camp)upd.camp=d.camp;
-      if(d.phone&&m&&!m.data.phone)upd.phone=d.phone;
-      if(d.email&&m&&!m.data.email)upd.email=d.email;
-      if(d.bankNum&&m&&!m.data.bankAccount)upd.bankAccount=d.bankNum;
-      if(d.bankName&&m&&!m.data.bankName)upd.bankName=d.bankName;
-      if(d.carNum&&m&&!m.data.carNum)upd.carNum=d.carNum;
       if(m){
-        if(!Object.keys(upd).length){done++;chk();return;}
-        m.ref.update(upd).then(function(){done++;chk();}).catch(function(){fail++;chk();});
+        var od=m.data,upd={};
+        if(d.userId&&!od.userId)upd.userId=d.userId;
+        if(d.camp&&!od.camp)upd.camp=d.camp;
+        if(d.phone&&!od.phone)upd.phone=d.phone;
+        if(d.email&&!od.email)upd.email=d.email;
+        if(d.bankNum&&!od.bankAccount)upd.bankAccount=d.bankNum;
+        if(d.bankName&&!od.bankName)upd.bankName=d.bankName;
+        if(d.carNum&&!od.carNum)upd.carNum=d.carNum;
+        if(Object.keys(upd).length){batch.update(m.ref,upd);cnt++;}
       } else {
-        // 없으면 신규 등록
-        _db.collection('drivers').add({
+        var ref=_db.collection('drivers').doc();
+        batch.set(ref,{
           dealerId:did,name:d.name,userId:d.userId||d.name,
           camp:d.camp||'',phone:d.phone||'',email:d.email||'',
           bankAccount:d.bankNum||'',bankName:d.bankName||'',carNum:d.carNum||'',
           is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function(){done++;chk();}).catch(function(){fail++;chk();});
+        });
+        cnt++;
       }
     });
-  }).catch(function(e){st.textContent='❌ '+e.message;if(ok){ok.disabled=false;ok.textContent='등록 / 업데이트';}});
+    batch.commit().then(function(){
+      st.style.color='var(--green)';
+      st.textContent='✅ '+cnt+'명 완료';
+      _drvCache=null;pageDrivers();
+    }).catch(function(e){
+      st.textContent='❌ '+e.message;
+      if(ok){ok.disabled=false;ok.textContent='등록 / 업데이트';}
+    });
+  }).catch(function(e){
+    st.textContent='❌ '+e.message;
+    if(ok){ok.disabled=false;ok.textContent='등록 / 업데이트';}
+  });
 };
 
 // ★ 엑셀에서 파싱한 직원 데이터 일괄 Firestore 등록
