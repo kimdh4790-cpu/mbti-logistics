@@ -32490,6 +32490,28 @@ function _bulkDone(done,fail){
   toast('\u2705 \uc5c5\ub370\uc774\ud2b8 '+done+'\uba85'+(fail?' / \uc2e4\ud328 '+fail+'\uba85':''));
   _drvCache=null; pageDrivers();
 }
+function _cleanBadDrivers(){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did||!isSuperAdmin()){toast('❌ 권한 없음');return;}
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var toDelete=[];
+    snap.docs.forEach(function(doc){
+      var d=doc.data();
+      var name=(d.name||'').trim();
+      var isKorName=/^[가-힣]{2,6}$/.test(name);
+      if(!name||!isKorName) toDelete.push({id:doc.id,name:name||'(비엀있음)'});
+    });
+    if(!toDelete.length){toast('✅ 정리할 항목 없음');return;}
+    var list=toDelete.slice(0,8).map(function(x){return x.name+'('+x.id.slice(0,6)+'...)';}).join(', ');
+    if(!confirm(toDelete.length+'건 삭제: '+list+' 계속?'))return;
+    var cnt=0;
+    toDelete.forEach(function(x){
+      _db.collection('drivers').doc(x.id).delete()
+        .then(function(){cnt++;if(cnt>=toDelete.length){toast('✅ '+cnt+'건 삭제');_drvCache=null;pageDrivers();}})
+        .catch(function(){cnt++;if(cnt>=toDelete.length){toast('⚠️ 일부 실패');_drvCache=null;pageDrivers();}});
+    });
+  });
+}
 
 // ★ 엑셀 직원 일괄 등록
 window._bulkImportDrivers=function(arr){
@@ -32538,6 +32560,11 @@ function pageDrivers(){
     btnSync.textContent='🔄 연락처 동기화';
     btnSync.onclick=function(){_syncDriverPhone(_CU.dealerId);};
     tr.appendChild(btnSync);
+    var btnClean=document.createElement('button');btnClean.className='btn btn-sm';
+    btnClean.style.cssText='background:#ef4444;color:#fff;font-size:11px;margin-left:4px';
+    btnClean.textContent='개었데이터 정리';
+    btnClean.onclick=function(){_cleanBadDrivers();};
+    tr.appendChild(btnClean);
   }
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
