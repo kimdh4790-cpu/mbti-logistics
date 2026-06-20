@@ -9623,6 +9623,16 @@ function doJoin(){
     });
   }).then(function(){
     toast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됐습니다. 로그인해 주세요');
+    // ★ 서버사이드 members 백업 저장 (클라이언트 실패 대비)
+    fetch('/api/join-member',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:cred&&cred.user&&cred.user.uid||'',
+        name:document.getElementById('j-name').value.trim(),
+        driverId:document.getElementById('j-driverid').value.trim(),
+        email:document.getElementById('j-email').value.trim(),
+        dealerId:document.getElementById('j-code').dataset.companyId||'',
+        companyName:document.getElementById('j-code').dataset.companyName||'',
+        platform:'donway'
+      })}).catch(function(){});
     switchTab('login');
     setTimeout(_requestFcmAfterJoin, 1000);
     ['j-name','j-driverid','j-email','j-pw','j-code','j-biz-num','j-biz-name','j-biz-owner'].forEach(function(id){
