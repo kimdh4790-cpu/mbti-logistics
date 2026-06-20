@@ -32228,6 +32228,39 @@ window._bulkImportDrivers = function(driversJson){
   });
 };
 
+// ★ 엑셀 직원 일괄 등록
+window._bulkImportDrivers=function(arr){
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did){toast('\u274c \ub85c\uadf8\uc778 \ud544\uc694');return;}
+  if(!confirm(arr.length+'\uba85 \ub4f1\ub85d?'))return;
+  var done=0,fail=0;
+  arr.forEach(function(d){
+    if(!d.name)return;
+    _db.collection('drivers').where('dealerId','==',did).where('name','==',d.name).limit(1).get()
+    .then(function(snap){
+      var doc={dealerId:did,name:d.name,userId:d.loginId||'',camp:d.camp||'',
+        phone:d.phone||'',email:d.email||'',bankAccount:d.bankNum||'',bankName:d.bankName||'',
+        carNum:d.carNum||'',address:d.address||'',licenseNum:d.licenseNum||'',
+        safetyEdu:d.safetyEdu||'',bizNum:d.bizNum||'',joinDate:d.joinDate||'',
+        leaveDate:d.leaveDate||'',clothSize:d.clothSize||'',
+        is_active:d.status!=='retired',workType:'coupang',
+        importedAt:firebase.firestore.FieldValue.serverTimestamp()};
+      return snap.empty?_db.collection('drivers').add(doc):snap.docs[0].ref.update(doc);
+    })
+    .then(function(){
+      _db.collection('members').add({dealerId:did,name:d.name,phone:d.phone||'',
+        email:d.email||'',loginId:d.loginId||'',camp:d.camp||'',
+        bankAccount:d.bankNum||'',bankName:d.bankName||'',carNum:d.carNum||'',
+        address:d.address||'',status:d.status==='retired'?'retired':'active',
+        importedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
+      done++;
+      if(done+fail>=arr.length){toast('\u2705 '+done+'\uba85 \ub4f1\ub85d \uc644\ub8cc');_drvCache=null;pageDrivers();}
+    })
+    .catch(function(e){fail++;console.error(d.name,e.message);
+      if(done+fail>=arr.length){toast('\u26a0\ufe0f \uc644\ub8cc \uc131\uacf5'+done+'/\uc2e4\ud328'+fail);pageDrivers();}
+    });
+  });
+};
 function pageDrivers(){
   document.getElementById('page-title').textContent='기사 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
@@ -32452,6 +32485,15 @@ function editDriver(id){
         '<div class="fg"><label>기본급</label><input id="edr-basepay" type="number" value="'+(d.basePay||0)+'"></div>'+
         '<div class="fg"><label>계좌번호</label><input id="edr-bank" value="'+esc(d.bankAccount||'')+'"></div>'+
       '</div>'+
+'<div class="gr">'+
+'<div class="fg"><label>은행명</label><input id="edr-bankname" value="'+esc(d.bankName||'')+'"></div>'+
+'<div class="fg"><label>차량번호</label><input id="edr-carnum" value="'+esc(d.carNum||'')+'"></div>'+
+'</div>'+
+'<div class="fg"><label>주소</label><input id="edr-address" value="'+esc(d.address||'')+'"></div>'+
+'<div class="gr">'+
+'<div class="fg"><label>면허번호</label><input id="edr-license" value="'+esc(d.licenseNum||'')+'"></div>'+
+'<div class="fg"><label>안전교육일</label><input id="edr-safetyedu" value="'+esc(d.safetyEdu||'')+'"></div>'+
+'</div>'+
       '<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'+
         campOptions.map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+esc(cc)+'</option>';}).join('')+
       '</select></div>'+
@@ -32991,6 +33033,11 @@ function saveDriver(id){
     commissionRate:parseInt((document.getElementById('edr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('edr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('edr-bank')||{value:''}).value.trim()||'',
+  bankName:gvs('edr-bankname')||'',
+  carNum:gvs('edr-carnum')||'',
+  address:gvs('edr-address')||'',
+  licenseNum:gvs('edr-license')||'',
+  safetyEdu:gvs('edr-safetyedu')||'',
     bankName:gvs('edr-bankname')||'',
     carNum:gvs('edr-carnum')||'',
     address:gvs('edr-address')||'',
