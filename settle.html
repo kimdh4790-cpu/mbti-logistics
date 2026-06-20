@@ -32418,15 +32418,16 @@ window._bulkImportDrivers = function(driversJson){
   driversJson.forEach(function(d){
     if(!d.name){skip++;return;}
     // 아이디(loginId)로 중복 확인 후 등록
+    var _qId=d.loginId||d.name||'';
     _db.collection('drivers')
       .where('dealerId','==',did)
-      .where('userId','==',d.loginId||d.name)
+      .where('name','==',d.name)
       .limit(1).get()
       .then(function(snap){
         var docData = {
           dealerId: did,
           name: d.name||'',
-          userId: d.loginId||'',
+          userId: d.loginId||d.name||'',
           camp: d.camp||'',
           phone: d.phone||'',
           email: d.email||'',
@@ -32441,6 +32442,8 @@ window._bulkImportDrivers = function(driversJson){
           leaveDate: d.leaveDate||'',
           bizNum: d.bizNum||'',
           is_active: d.status!=='retired',
+          status: d.status==='retired'?'퇴직':'재직',
+          jobsub: '쿠팡',
           workType: 'coupang',
           importedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
