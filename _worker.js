@@ -519,7 +519,11 @@ export default {
     const hostname = url.hostname;
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
-      if (path === '/' || path === '') return serveKVFile(env, 'donway_landing.html', 'text/html');
+      if (path === '/' || path === '') {
+    const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
+    const html = await ghRaw.text();
+    return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+  }
       if (path === '/stmt') {
         const token = url.searchParams.get('t') || '';
         if (!token) return new Response('잘못된 접근입니다.', { status: 400 });
