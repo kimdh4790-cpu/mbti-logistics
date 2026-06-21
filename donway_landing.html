@@ -265,19 +265,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="ttl">어떤 업종이든<br><span class="gr">맞춤 용어·화면</span></div>
   <p class="sub" style="margin-bottom:12px">업종 선택 시 화면·용어가 자동으로 바뀝니다</p>
   <div class="tags">
-    <span class="itag" data-ind="courier" style="cursor:pointer">📦 택배 대리점</span>
-    <span class="itag" data-ind="delivery" style="cursor:pointer">🛵 배달대행</span>
-    <span class="itag" data-ind="cleaning" style="cursor:pointer">🧹 청소·파견</span>
-    <span class="itag" data-ind="insurance" style="cursor:pointer">🛡️ 보험 GA</span>
-    <span class="itag" data-ind="construction" style="cursor:pointer">🏗️ 건설·일용직</span>
-    <span class="itag" data-ind="golf" style="cursor:pointer">⛳ 골프 캐디</span>
-    <span class="itag" data-ind="academy" style="cursor:pointer">📚 학원·교육</span>
-    <span class="itag" data-ind="beauty" style="cursor:pointer">💇 미용·뷰티</span>
-    <span class="itag" data-ind="logistics" style="cursor:pointer">🚛 물류·운송</span>
-    <span class="itag" data-ind="wholesale" style="cursor:pointer">🌾 농산물·도매</span>
-    <span class="itag" data-ind="freelance" style="cursor:pointer">💼 프리랜서·영업</span>
-    <span class="itag" data-ind="care" style="cursor:pointer">🏥 요양·돌봄</span>
-    <span class="itag" data-ind="restaurant" style="cursor:pointer">🍽️ 식당·프랜차이즈</span>
+    <span class="itag" onclick="window.showInd(\'courier\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">📦 택배 대리점</span>
+    <span class="itag" onclick="window.showInd(\'delivery\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🛵 배달대행</span>
+    <span class="itag" onclick="window.showInd(\'cleaning\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🧹 청소·파견</span>
+    <span class="itag" onclick="window.showInd(\'insurance\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🛡️ 보험 GA</span>
+    <span class="itag" onclick="window.showInd(\'construction\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🏗️ 건설·일용직</span>
+    <span class="itag" onclick="window.showInd(\'golf\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">⛳ 골프 캐디</span>
+    <span class="itag" onclick="window.showInd(\'academy\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">📚 학원·교육</span>
+    <span class="itag" onclick="window.showInd(\'beauty\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">💇 미용·뷰티</span>
+    <span class="itag" onclick="window.showInd(\'logistics\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🚛 물류·운송</span>
+    <span class="itag" onclick="window.showInd(\'wholesale\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🌾 농산물·도매</span>
+    <span class="itag" onclick="window.showInd(\'freelance\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">💼 프리랜서·영업</span>
+    <span class="itag" onclick="window.showInd(\'care\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🏥 요양·돌봄</span>
+    <span class="itag" onclick="window.showInd(\'restaurant\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🍽️ 식당·프랜차이즈</span>
   </div>
   <div style="margin-top:12px;background:rgba(0,200,248,.06);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:11px;color:var(--text2);max-width:380px;text-align:center">
     👆 업종 버튼을 누르면 불편함과 전용 기능을 확인할 수 있습니다
@@ -390,23 +390,10 @@ slides.addEventListener('scroll',function(){
   if(n!==cur){cur=n;updateDots();}
 },{passive:true});
 
-var ty=0,tx2=0;
-slides.addEventListener('touchstart',function(e){
-  ty=e.touches[0].clientY;
-  tx2=e.touches[0].clientX;
-},{passive:true});
+var ty=0;
+slides.addEventListener('touchstart',function(e){ty=e.touches[0].clientY;},{passive:true});
 slides.addEventListener('touchend',function(e){
   var dy=e.changedTouches[0].clientY-ty;
-  var dx=e.changedTouches[0].clientX-tx2;
-  // 거의 안 움직였으면 클릭으로 처리
-  if(Math.abs(dy)<10&&Math.abs(dx)<10){
-    var el=e.target;
-    while(el&&el!==document.body){
-      if(el.getAttribute('data-ind')){showInd(el.getAttribute('data-ind'));return;}
-      el=el.parentElement;
-    }
-    return;
-  }
   if(Math.abs(dy)>50)goTo(dy<0?Math.min(cur+1,total-1):Math.max(cur-1,0));
 },{passive:true});
 
@@ -491,7 +478,7 @@ var IND = {
   }
 };
 
-function showInd(key){
+window.showInd=function(key){
   var d=IND[key];
   if(!d)return;
   var mo=document.createElement('div');
@@ -517,15 +504,7 @@ function showInd(key){
     +'</div>';
   document.body.appendChild(mo);
 }
-// 업종 버튼 이벤트 등록
-document.addEventListener('DOMContentLoaded', function(){
-  document.querySelectorAll('[data-ind]').forEach(function(el){
-    el.addEventListener('click', function(e){
-      e.stopPropagation();
-      showInd(el.getAttribute('data-ind'));
-    });
-  });
-});
+
 </script>
 
 </body>
