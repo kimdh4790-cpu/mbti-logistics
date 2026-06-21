@@ -264,6 +264,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
         🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
       </div>
       <div class="fg"><label>회사명</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
+<div class="fg"><label>영문 약자 <span style="color:var(--text3);font-size:10px">(앞 아이콘에 표시 · 최대 4자)</span></label><input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"></div>
       <div class="fg"><label>사업자등록번호</label>
         <div style="display:flex;gap:8px">
           <input id="r-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
@@ -8731,6 +8732,7 @@ function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var biz=document.getElementById('r-biznum').value.trim();
   var email=document.getElementById('r-email').value.trim();
+  var shortLabel=(document.getElementById('r-short')||{value:''}).value.trim().toUpperCase().slice(0,4);
   var contactName=(document.getElementById('r-contact-name')||{value:''}).value.trim();
   var contactPhone=(document.getElementById('r-contact-phone')||{value:''}).value.trim();
   var pw=document.getElementById('r-pw').value;
@@ -8804,6 +8806,7 @@ function doRegister(){
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
       kakaoId:_kakaoId||'',
+        shortLabel:shortLabel,
         settlementContact:contactName,
         settlementPhone:contactPhone,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
