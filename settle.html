@@ -8678,7 +8678,7 @@ function generateCompanyCode(){
 // 서비스 토글 (복수 선택)
 function _toggleSvc(svc){
   var selEl=document.getElementById('r-services');
-  var selectedSvcs=selEl.value?selEl.value.split(',').filter(Boolean):['settle'];
+  var selectedSvcs=selEl.value?selEl.value.split(',').filter(Boolean):[];
   var card=document.getElementById('svc-'+svc+'-card');
   var check=document.getElementById('svc-'+svc+'-check');
   var industryDiv=document.getElementById('svc-'+svc+'-industry');
@@ -8742,7 +8742,7 @@ function doRegister(){
   if(!bizDocUrl){err.textContent='사업자등록증을 업로드해주세요';err.style.display='block';return;}
   if(!contactName){err.textContent='정산 문의 담당자명을 입력해주세요';err.style.display='block';return;}
   if(!contactPhone){err.textContent='정산 문의 연락처를 입력해주세요';err.style.display='block';return;}
-  var selSvcEl=document.getElementById('r-services-val');
+  var selSvcEl=document.getElementById('r-services');
   var selSvcs=selSvcEl&&selSvcEl.value?selSvcEl.value.split(',').filter(Boolean):[];
   if(!selSvcs.length){err.textContent='사용할 서비스를 하나 이상 선택해주세요';err.style.display='block';return;}
   if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
