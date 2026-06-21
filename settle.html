@@ -29787,10 +29787,10 @@ function _renderSettlePage(settles,c){
 
      +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'     +'<button onclick="_downloadSettleAllExcel()" style="padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 ?? 엑셀 다운로드</button>'     +'<button onclick="_taxShareDownload()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🧾 세무사 급여자료</button>'
 
-     +'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>'
-     +'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>'
-     +'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗓 월삭제</button>'
-     +'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>'
++(isSuperAdmin()?'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>':'')
++(isSuperAdmin()?'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>':'')
++(isSuperAdmin()?'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗓 월삭제</button>':'')
++(isSuperAdmin()?'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>':'')
      +'</div>'
      +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 업로드 → 재계산 → 정산 배포 순서로 진행하세요.</div>'
     +'</div>'
