@@ -2178,7 +2178,7 @@ function parseCoupangExcel(inp){
 
 
 // ── 카카오 알림톡 발송 ──
-function _sendAlimtalk_orig(phone, name, month, gross, deduct, net){
+function _sendAlimtalk_orig(phone, name, month, gross, deduct, net, stmtUrl, coName){
   if(!phone) return Promise.resolve({ok:false,reason:'번호없음'});
   return fetch('/api/send-alimtalk',{
     method:'POST',
@@ -2193,7 +2193,7 @@ function _sendAlimtalk_orig(phone, name, month, gross, deduct, net){
         '#{공제}': Number(deduct||0).toLocaleString(),
         '#{실지급}': Number(net||0).toLocaleString()
       },
-      fallbackText: '['+((_CU&&_CU.companyName)||'DONWAY')+'] '+name+'님 '+month+' 정산: 실지급 '+Number(net||0).toLocaleString()+'원'
+          fallbackText: '['+( (_CU&&_CU.companyName)||coName||'DONWAY')+'] '+name+'님 '+month+' 정산명세서: '+(stmtUrl||'donway.ai.kr'),
     })
   }).then(function(r){return r.json();})
   .catch(function(e){return {ok:false,error:e.message};});
