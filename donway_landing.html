@@ -15,10 +15,11 @@
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Pretendard',sans-serif}
 
 /* ── 슬라이더: 가로 방향 ── */
-.slides-wrap{position:fixed;inset:0;overflow-x:scroll;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;display:flex}.slides-wrap::-webkit-scrollbar{display:none}
-.slides{display:flex;height:100%}
+.slides-wrap{position:fixed;inset:0;overflow-x:scroll;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.slides-wrap::-webkit-scrollbar{display:none}
+.slides{display:flex;height:100vh;width:max-content}
 .slide{
-  min-width:100vw;width:100vw;height:100%;
+  min-width:100vw;width:100vw;height:100vh;
   scroll-snap-align:start;position:relative;display:flex;align-items:flex-start;justify-content:center;
   overflow:hidden;flex-shrink:0;
 }
@@ -619,6 +620,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 
 <script>
 const wrap=document.querySelector('.slides-wrap');
+const slidesEl2=wrap;
 const dots=document.querySelectorAll('.dot');
 const numEl=document.getElementById('slide-num');
 const total=dots.length;
