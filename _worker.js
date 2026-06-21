@@ -544,6 +544,64 @@ export default {
       }
 
       if (path === '/settle' || path === '/settle.html') return serveKVFile(env, 'settle.html', 'text/html');
+
+    // ★ slug 기반 동적 manifest + 아이콘
+    // /c/{slug}/manifest.json → 회사명으로 동적 생성
+    // /c/{slug}/icon.svg → 회사명 첫 두 글자 SVG 아이콘
+    // /c/{slug} → settle.html 서빙 (향후 회사별 랜딩)
+    const slugMatch = path.match(/^\/c\/([A-Za-z0-9\-_]+)(\/.+)?$/);
+    if (slugMatch) {
+      const slug = slugMatch[1];
+      const subPath = slugMatch[2] || '';
+      const fsToken2 = await getFsToken(env);
+      // Firestore에서 slug로 회사 조회
+      const qUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`;
+      const qBody = JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'companies' }],
+        where: { fieldFilter: { field: { fieldPath: 'slug' }, op: 'EQUAL', value: { stringValue: slug } } },
+        limit: 1
+      }});
+      const qRes = await fetch(qUrl, { method:'POST', headers:{ 'Authorization':`Bearer ${fsToken2}`, 'Content-Type':'application/json' }, body: qBody });
+      const qData = await qRes.json();
+      const compDoc = qData[0]?.document?.fields || {};
+      const compName = compDoc.companyName?.stringValue || 'DONWAY';
+      const shortName = compName.length > 4 ? compName.slice(0,2) : compName;
+      const label = shortName.slice(0,2);
+
+      // SVG 아이콘
+      if (subPath === '/icon.svg') {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#00c8f8"/><text x="96" y="130" font-size="88" font-family="'Noto Sans KR',sans-serif" font-weight="700" fill="white" text-anchor="middle">${label}</text></svg>`;
+        return new Response(svg, { headers: { 'Content-Type':'image/svg+xml', 'Cache-Control':'public,max-age=3600' } });
+      }
+
+      // manifest.json
+      if (subPath === '/manifest.json') {
+        const manifest = {
+          name: compName + ' DONWAY',
+          short_name: shortName,
+          start_url: '/c/' + slug,
+          display: 'standalone',
+          background_color: '#0f1623',
+          theme_color: '#00c8f8',
+          icons: [
+            { src: '/c/' + slug + '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
+          ]
+        };
+        return new Response(JSON.stringify(manifest), { headers: { 'Content-Type':'application/manifest+json', 'Cache-Control':'no-cache' } });
+      }
+
+      // /c/{slug} → settle.html 서빙 + manifest 링크 주입
+      if (!subPath || subPath === '/') {
+        const html = await env.DONWAY_ASSETS.get('settle.html');
+        if (html) {
+          const modified = html.replace(
+            '<head>',
+            `<head><link rel="manifest" href="/c/${slug}/manifest.json"><meta name="apple-mobile-web-app-title" content="${compName}"><link rel="apple-touch-icon" href="/c/${slug}/icon.svg">`
+          );
+          return new Response(modified, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
+        }
+      }
+    }
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
