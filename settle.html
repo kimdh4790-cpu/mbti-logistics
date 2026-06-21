@@ -33620,7 +33620,7 @@ function pageSeason(tabMode){
         +'<div style="font-size:12px;color:#92400e;line-height:1.7">'
         +'쿠팡 재계약 시즌에는 정산 기간 내 단가가 달라집니다.<br>'
         +'예: 5월 정산 (5/26~6/25) → <strong>5/26~5/31 단가</strong> + <strong>6/1~6/25 단가</strong> 분리 계산<br>'
-        +'배송건수 × 시즌단가 = 소계 (배송=반품 단가 동일)'
+        +'배송건수 × 시즌단가 = 소계 (배송=반품 단가 동일)<br>'+'<b>파일 형식:</b> 엑셀(.xlsx) — A열:시작일, B열:종료일, C열:단가<br>'+'<b>예시:</b> 2026-05-26 | 2026-05-31 | 1250 &nbsp; / &nbsp; 2026-06-01 | 2026-06-25 | 1300'
         +'</div>';
       el.appendChild(infoDiv);
       // + 기간 추가 / 파일 일괄 등록 버튼
@@ -37544,6 +37544,16 @@ function openIncPanel(){
   inner.style.cssText='background:var(--bg);border-radius:14px;width:700px;max-width:95vw;max-height:88vh;overflow:hidden;display:flex;flex-direction:column';
   inner.onclick=function(e){e.stopPropagation();};
   // 헤더
+  var incInfoDiv=document.createElement('div');
+  incInfoDiv.style.cssText='background:#f0fdf4;border:1.5px solid #22c55e;border-radius:10px;padding:12px 14px;margin-bottom:12px';
+  incInfoDiv.innerHTML='<div style="font-weight:700;color:#15803d;margin-bottom:5px">?? 팀장 수수료(인센)란?</div>'
+  +'<div style="font-size:11px;color:#166534;line-height:1.8">'
+  +'팀장 역할 기사에게 일반 기사와 다른 수수료를 설정할 수 있습니다.<br>'
+  +'• <b>원단가 방식:</b> 라우트 단가 대신 별도 지정단가 적용<br>'
+  +'• <b>수수료 방식:</b> 라우트 단가의 일정 비율(%) 추가<br>'
+  +'• 엑셀 업로드 없이 아래 표에서 기사별 직접 설정 가능'
+  +'</div>';
+  inner.appendChild(incInfoDiv);
   var incHdr=document.createElement('div');
   incHdr.style.cssText='padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center';
   incHdr.innerHTML='<span style="font-weight:700;font-size:14px">⚙️ 기사별 라우트 인센티브 설정</span>';
