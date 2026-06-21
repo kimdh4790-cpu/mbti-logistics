@@ -2187,11 +2187,12 @@ function _sendAlimtalk_orig(phone, name, month, gross, deduct, net, stmtUrl, coN
       to: phone.replace(/[^0-9]/g,''),
       templateCode: 'KA01TP260618101225825DuJHXpoC4kY',
       variables: {
-        '#{이름}': name||'',
-        '#{월}': month||'',
-        '#{총수익}': Number(gross||0).toLocaleString(),
-        '#{공제}': Number(deduct||0).toLocaleString(),
-        '#{실지급}': Number(net||0).toLocaleString()
+          '#{이름}': name||'',
+          '#{고객회사명}': ((_CU&&_CU.companyName)||coName||''),
+          '#{월}': month||'',
+          '#{명세서링크}': stmtUrl||'',
+          '#{담당자명}': ((_CU&&_CU.settlementContact)||''),
+          '#{문의전화}': ((_CU&&_CU.settlementPhone)||'')
       },
           fallbackText: '['+( (_CU&&_CU.companyName)||coName||'DONWAY')+'] '+name+'님 '+month+' 정산명세서: '+(stmtUrl||'donway.ai.kr'),
     })
