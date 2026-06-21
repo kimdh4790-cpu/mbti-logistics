@@ -8796,6 +8796,8 @@ function doRegister(){
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
       kakaoId:_kakaoId||'',
+        settlementContact:contactName,
+        settlementPhone:contactPhone,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     };
