@@ -8730,6 +8730,8 @@ function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var biz=document.getElementById('r-biznum').value.trim();
   var email=document.getElementById('r-email').value.trim();
+  var contactName=(document.getElementById('r-contact-name')||{value:''}).value.trim();
+  var contactPhone=(document.getElementById('r-contact-phone')||{value:''}).value.trim();
   var pw=document.getElementById('r-pw').value;
   var pw2=document.getElementById('r-pw2').value;
   var err=document.getElementById('r-err');
