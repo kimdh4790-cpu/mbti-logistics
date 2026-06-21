@@ -566,7 +566,8 @@ export default {
       const compDoc = qData[0]?.document?.fields || {};
       const compName = compDoc.companyName?.stringValue || 'DONWAY';
       const shortName = compName.length > 4 ? compName.slice(0,2) : compName;
-      const label = shortName.slice(0,2);
+      const shortLabel = compDoc.shortLabel?.stringValue || '';
+      const label = shortLabel || shortName.slice(0,2);
 
       // SVG 아이콘
       if (subPath === '/icon.svg') {
@@ -578,7 +579,7 @@ export default {
       if (subPath === '/manifest.json') {
         const manifest = {
           name: compName + ' DONWAY',
-          short_name: shortName,
+          short_name: shortLabel || shortName,
           start_url: '/c/' + slug,
           display: 'standalone',
           background_color: '#0f1623',
