@@ -390,10 +390,23 @@ slides.addEventListener('scroll',function(){
   if(n!==cur){cur=n;updateDots();}
 },{passive:true});
 
-var ty=0;
-slides.addEventListener('touchstart',function(e){ty=e.touches[0].clientY;},{passive:true});
+var ty=0,tx2=0;
+slides.addEventListener('touchstart',function(e){
+  ty=e.touches[0].clientY;
+  tx2=e.touches[0].clientX;
+},{passive:true});
 slides.addEventListener('touchend',function(e){
   var dy=e.changedTouches[0].clientY-ty;
+  var dx=e.changedTouches[0].clientX-tx2;
+  // 거의 안 움직였으면 클릭으로 처리
+  if(Math.abs(dy)<10&&Math.abs(dx)<10){
+    var el=e.target;
+    while(el&&el!==document.body){
+      if(el.getAttribute('data-ind')){showInd(el.getAttribute('data-ind'));return;}
+      el=el.parentElement;
+    }
+    return;
+  }
   if(Math.abs(dy)>50)goTo(dy<0?Math.min(cur+1,total-1):Math.max(cur-1,0));
 },{passive:true});
 
