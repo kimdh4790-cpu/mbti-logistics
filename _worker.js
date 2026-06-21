@@ -615,7 +615,11 @@ export default {
     // ★ filo.ai.kr 라우팅
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       const e = env || _env_ref;
-      if (path === '/' || path === '') return serveKVFile(env, 'filo_landing.html', 'text/html');
+      if (path === '/' || path === '') {
+    const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/filo_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
+    const html = await ghRaw.text();
+    return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+  }
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
@@ -649,7 +653,11 @@ export default {
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
-      if (path === '/' || path === '') return serveKVFile(env, 'filo_landing.html', 'text/html');
+      if (path === '/' || path === '') {
+    const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/filo_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
+    const html = await ghRaw.text();
+    return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+  }
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
