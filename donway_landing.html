@@ -182,36 +182,28 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="glow" style="width:400px;height:400px;background:var(--acc);bottom:-100px;right:-100px"></div>
   <div class="grid"></div>
   <div class="lbl">사용 흐름</div>
-  <div class="ttl">가입부터 정산완료까지<br><span class="gr">7단계</span></div>
+  <div class="ttl">딱 3단계로<br><span class="gr">정산 완료</span></div>
   <div class="flow">
     <div class="fstep">
-      <div class="fnum">1</div>
-      <div><div class="ftit">회사 등록 (1분)</div><div class="fdesc">사업자번호·담당자·정산 문의처 입력 → 7일 무료 즉시 시작</div></div>
+      <div class="fnum">①</div>
+      <div><div class="ftit">가입 (1분)</div><div class="fdesc">사업자번호·이메일·정산 담당자 입력<br>즉시 7일 무료 체험 시작</div></div>
     </div>
     <div class="fstep">
-      <div class="fnum">2</div>
-      <div><div class="ftit">직원 등록</div><div class="fdesc">엑셀 일괄 등록 또는 개별 입력 · 이름·아이디·계좌·캠프 관리</div></div>
+      <div class="fnum">②</div>
+      <div><div class="ftit">업종 선택 + 단가 등록</div><div class="fdesc">13개 업종 중 선택 → 화면·용어 자동 변경<br>직원 정보·단가 등록 (엑셀 일괄 등록 지원)</div></div>
     </div>
     <div class="fstep">
-      <div class="fnum">3</div>
-      <div><div class="ftit">단가 설정</div><div class="fdesc">라우트단가·시즌단가·팀장수수료 등 업종별 맞춤 설정</div></div>
+      <div class="fnum">③</div>
+      <div><div class="ftit">엑셀 업로드 → 정산 완료</div><div class="fdesc">업종별 엑셀 업로드 → 자동 재계산<br>카카오 명세서 발송 · 세무사 공유까지 한번에</div></div>
     </div>
-    <div class="fstep">
-      <div class="fnum">4</div>
-      <div><div class="ftit">엑셀 업로드</div><div class="fdesc">택배·배달·건설 등 업종별 엑셀 자동 인식 · 5가지 포맷 지원</div></div>
-    </div>
-    <div class="fstep">
-      <div class="fnum">5</div>
-      <div><div class="ftit">자동 재계산</div><div class="fdesc">단가×건수, 인센티브, 공제항목 자동 계산 · 오류 즉시 표시</div></div>
-    </div>
-    <div class="fstep">
-      <div class="fnum">6</div>
-      <div><div class="ftit">카카오 명세서 발송</div><div class="fdesc">버튼 하나 → 전 직원 카카오톡 명세서 자동 발송 · 링크로 바로 확인</div></div>
-    </div>
-    <div class="fstep">
-      <div class="fnum">7</div>
-      <div><div class="ftit">세무사 자동 공유</div><div class="fdesc">급여대장·원천세 자료 자동 생성 → 세무사 초대 링크 원클릭 공유</div></div>
-    </div>
+  </div>
+  <div class="btns">
+    <a href="https://donway.ai.kr/settle" class="btn btn-m">무료로 시작하기 →</a>
+    <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-g">💬 카카오 상담</a>
+  </div>
+  <div style="margin-top:12px;font-size:11px;color:var(--text3);text-align:center">
+    재고·QR·키오스크가 필요하다면 →
+    <a href="https://filo.ai.kr" target="_blank" style="color:var(--amber);font-weight:700;text-decoration:none">filo.ai.kr</a>
   </div>
 </div>
 
@@ -264,20 +256,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="lbl">지원 업종 13개</div>
   <div class="ttl">어떤 업종이든<br><span class="gr">맞춤 용어·화면</span></div>
   <p class="sub" style="margin-bottom:12px">업종 선택 시 화면·용어가 자동으로 바뀝니다</p>
-  <div class="tags">
-    <span class="itag" onclick="window.showInd(\'courier\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">📦 택배 대리점</span>
-    <span class="itag" onclick="window.showInd(\'delivery\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🛵 배달대행</span>
-    <span class="itag" onclick="window.showInd(\'cleaning\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🧹 청소·파견</span>
-    <span class="itag" onclick="window.showInd(\'insurance\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🛡️ 보험 GA</span>
-    <span class="itag" onclick="window.showInd(\'construction\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🏗️ 건설·일용직</span>
-    <span class="itag" onclick="window.showInd(\'golf\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">⛳ 골프 캐디</span>
-    <span class="itag" onclick="window.showInd(\'academy\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">📚 학원·교육</span>
-    <span class="itag" onclick="window.showInd(\'beauty\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">💇 미용·뷰티</span>
-    <span class="itag" onclick="window.showInd(\'logistics\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🚛 물류·운송</span>
-    <span class="itag" onclick="window.showInd(\'wholesale\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🌾 농산물·도매</span>
-    <span class="itag" onclick="window.showInd(\'freelance\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">💼 프리랜서·영업</span>
-    <span class="itag" onclick="window.showInd(\'care\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🏥 요양·돌봄</span>
-    <span class="itag" onclick="window.showInd(\'restaurant\')" style="cursor:pointer;-webkit-tap-highlight-color:rgba(0,200,248,.2)">🍽️ 식당·프랜차이즈</span>
+  <div class="tags" id="ind-tags">
+    <span class="itag" data-ind="courier" style="cursor:pointer">📦 택배 대리점</span>
+    <span class="itag" data-ind="delivery" style="cursor:pointer">🛵 배달대행</span>
+    <span class="itag" data-ind="cleaning" style="cursor:pointer">🧹 청소·파견</span>
+    <span class="itag" data-ind="insurance" style="cursor:pointer">🛡️ 보험 GA</span>
+    <span class="itag" data-ind="construction" style="cursor:pointer">🏗️ 건설·일용직</span>
+    <span class="itag" data-ind="golf" style="cursor:pointer">⛳ 골프 캐디</span>
+    <span class="itag" data-ind="academy" style="cursor:pointer">📚 학원·교육</span>
+    <span class="itag" data-ind="beauty" style="cursor:pointer">💇 미용·뷰티</span>
+    <span class="itag" data-ind="logistics" style="cursor:pointer">🚛 물류·운송</span>
+    <span class="itag" data-ind="wholesale" style="cursor:pointer">🌾 농산물·도매</span>
+    <span class="itag" data-ind="freelance" style="cursor:pointer">💼 프리랜서·영업</span>
+    <span class="itag" data-ind="care" style="cursor:pointer">🏥 요양·돌봄</span>
+    <span class="itag" data-ind="restaurant" style="cursor:pointer">🍽️ 식당·프랜차이즈</span>
   </div>
   <div style="margin-top:12px;background:rgba(0,200,248,.06);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:11px;color:var(--text2);max-width:380px;text-align:center">
     👆 업종 버튼을 누르면 불편함과 전용 기능을 확인할 수 있습니다
@@ -478,16 +470,40 @@ var IND = {
   }
 };
 
+// 업종 태그 이벤트 위임 (터치 충돌 방지)
+(function(){
+  var container = document.getElementById('ind-tags');
+  if(!container) return;
+  var tStart={x:0,y:0};
+  container.addEventListener('touchstart', function(e){
+    tStart.x = e.touches[0].clientX;
+    tStart.y = e.touches[0].clientY;
+  },{passive:true});
+  container.addEventListener('touchend', function(e){
+    var dx = Math.abs(e.changedTouches[0].clientX - tStart.x);
+    var dy = Math.abs(e.changedTouches[0].clientY - tStart.y);
+    if(dx > 10 || dy > 10) return; // 스와이프면 무시
+    var tag = e.target.closest('[data-ind]');
+    if(tag){ e.preventDefault(); window.showInd(tag.getAttribute('data-ind')); }
+  },{passive:false});
+  container.addEventListener('click', function(e){
+    var tag = e.target.closest('[data-ind]');
+    if(tag) window.showInd(tag.getAttribute('data-ind'));
+  });
+})();
+
 window.showInd=function(key){
   var d=IND[key];
   if(!d)return;
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.onclick=function(e){
+    if(e.target===mo || e.target.id==='filo-close-btn') mo.remove();
+  };
   mo.innerHTML='<div style="background:#0d0f1a;border:1px solid rgba(0,200,248,.2);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;padding:20px 20px 36px">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
     +'<div style="font-size:18px;font-weight:900">'+d.icon+' '+d.name+'</div>'
-    +'<button onclick="this.closest('[style]').remove()" style="background:rgba(255,255,255,.08);border:none;color:#94a3b8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">닫기</button>'
+    +'<button id="filo-close-btn" style="background:rgba(255,255,255,.08);border:none;color:#94a3b8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">닫기</button>'
     +'</div>'
     +'<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:12px 14px;margin-bottom:14px">'
     +'<div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:5px">😤 기존 불편함</div>'
