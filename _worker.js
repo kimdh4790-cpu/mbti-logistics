@@ -572,28 +572,28 @@ export default {
             const price = parseFloat(rf.unitPrice?.integerValue || 0);
             const amt   = cnt * price + ret * price;
             totalDcnt += cnt; totalRcnt += ret; totalAmt += amt;
-            routeRows += \`<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">\${route}</td>
+            routeRows += `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">\${route}</td>
               <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">\${cnt}</td>
               <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">\${ret}</td>
               <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">\${price.toLocaleString()}</td>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩\${amt.toLocaleString()}</td></tr>\`;
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩\${amt.toLocaleString()}</td></tr>`;
           });
 
           // 추가/공제 행
           let addRows = '';
-          if(fresh>0) addRows += \`<tr><td style="padding:4px 8px;font-size:12px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${fresh.toLocaleString()}</td></tr>\`;
-          if(finc>0) addRows += \`<tr><td style="padding:4px 8px;font-size:12px">④ 프레시백 인센티브\${fincPer>0?' <span style="font-size:10px;color:#94a3b8">'+dcnt+'건 × '+fincPer+'원</span>':''}</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${finc.toLocaleString()}</td></tr>\`;
-          if(nocont>0) addRows += \`<tr><td style="padding:4px 8px;font-size:12px">⑤ 미계약건</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${nocont.toLocaleString()}</td></tr>\`;
-          if(etcPlus>0) addRows += \`<tr><td style="padding:4px 8px;font-size:12px">⑦ 기타(+)/팀장수수료</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${etcPlus.toLocaleString()}</td></tr>\`;
+          if(fresh>0) addRows += `<tr><td style="padding:4px 8px;font-size:12px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${fresh.toLocaleString()}</td></tr>`;
+          if(finc>0) addRows += `<tr><td style="padding:4px 8px;font-size:12px">④ 프레시백 인센티브\${fincPer>0?' <span style="font-size:10px;color:#94a3b8">'+dcnt+'건 × '+fincPer+'원</span>':''}</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${finc.toLocaleString()}</td></tr>`;
+          if(nocont>0) addRows += `<tr><td style="padding:4px 8px;font-size:12px">⑤ 미계약건</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${nocont.toLocaleString()}</td></tr>`;
+          if(etcPlus>0) addRows += `<tr><td style="padding:4px 8px;font-size:12px">⑦ 기타(+)/팀장수수료</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩\${etcPlus.toLocaleString()}</td></tr>`;
 
           let deductRows = '';
-          if(emp>0) deductRows += \`<tr><td style="padding:4px 8px;font-size:12px">고용보험(0.8%,80만↑)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${emp.toLocaleString()}</td></tr>\`;
-          if(work>0) deductRows += \`<tr><td style="padding:4px 8px;font-size:12px">산재보험(0.88%)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${work.toLocaleString()}</td></tr>\`;
-          if(dmg>0) deductRows += \`<tr><td style="padding:4px 8px;font-size:12px">⑥ 분실/파손 공제\${dmgReason?' ('+dmgReason+')':''}</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${dmg.toLocaleString()}</td></tr>\`;
-          if(etcMinus>0) deductRows += \`<tr><td style="padding:4px 8px;font-size:12px">⑧ 기타(-)\${etcMinusReason?' ('+etcMinusReason+')':''}</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${etcMinus.toLocaleString()}</td></tr>\`;
-          if(adv>0) deductRows += \`<tr><td style="padding:4px 8px;font-size:12px">⑨ 가불 공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${adv.toLocaleString()}</td></tr>\`;
+          if(emp>0) deductRows += `<tr><td style="padding:4px 8px;font-size:12px">고용보험(0.8%,80만↑)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${emp.toLocaleString()}</td></tr>`;
+          if(work>0) deductRows += `<tr><td style="padding:4px 8px;font-size:12px">산재보험(0.88%)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${work.toLocaleString()}</td></tr>`;
+          if(dmg>0) deductRows += `<tr><td style="padding:4px 8px;font-size:12px">⑥ 분실/파손 공제\${dmgReason?' ('+dmgReason+')':''}</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${dmg.toLocaleString()}</td></tr>`;
+          if(etcMinus>0) deductRows += `<tr><td style="padding:4px 8px;font-size:12px">⑧ 기타(-)\${etcMinusReason?' ('+etcMinusReason+')':''}</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${etcMinus.toLocaleString()}</td></tr>`;
+          if(adv>0) deductRows += `<tr><td style="padding:4px 8px;font-size:12px">⑨ 가불 공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩\${adv.toLocaleString()}</td></tr>`;
 
-          const html = \`<!DOCTYPE html><html lang='ko'><head><meta charset='UTF-8'>
+          const html = `<!DOCTYPE html><html lang='ko'><head><meta charset='UTF-8'>
 <meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>\${coName} 정산명세서</title>
 <style>
@@ -642,24 +642,24 @@ th{padding:5px 8px;text-align:left;font-weight:600;color:#475569}
       <div class='sval' style='color:#185FA5'>₩\${net.toLocaleString()}</div>
     </div>
   </div>
-  \${routeRows ? \`<div class='sec'>
+  \${routeRows ? `<div class='sec'>
     <div class='sec-title'>📊 라우트별 실적 (건수×단가 — 배송=반품 동일)</div>
     <table>
       <thead><tr><th>라우트</th><th style='text-align:right'>배송건</th><th style='text-align:right'>반품건</th><th style='text-align:right'>단가</th><th style='text-align:right'>소계</th></tr></thead>
       <tbody>\${routeRows}</tbody>
       <tfoot><tr style='background:#eff6ff;font-weight:700'><td style='padding:6px 8px'>합계</td><td style='padding:6px 8px;text-align:right'>\${totalDcnt}건</td><td style='padding:6px 8px;text-align:right'>\${totalRcnt}건</td><td></td><td style='padding:6px 8px;text-align:right;color:#185FA5'>₩\${totalAmt.toLocaleString()}</td></tr></tfoot>
     </table>
-  </div>\` : ''}
-  \${(addRows||deductRows) ? \`<div class='sec' style='padding-top:0'>
+  </div>` : ''}
+  \${(addRows||deductRows) ? `<div class='sec' style='padding-top:0'>
     <table>\${addRows}\${deductRows}</table>
-  </div>\` : ''}
+  </div>` : ''}
   <div class='net-row'>
     <span style='font-weight:700;font-size:13px'>✅ 실지급액</span>
     <span style='font-size:20px;font-weight:900;color:#185FA5'>₩\${net.toLocaleString()}</span>
   </div>
   <div class='ft'>\${coName} · \${contactPhone} · 사업자번호 \${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
 </div>
-</body></html>\`;
+</body></html>`;
           return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' } });
         } catch(e2) {
           return new Response('<!DOCTYPE html><html><body style="background:#0f1623;color:#f0f4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center"><div><div style="font-size:40px;margin-bottom:16px">⚠️</div><div>명세서를 찾을 수 없거나 만료되었습니다.</div><div style="font-size:11px;color:#94a3b8;margin-top:12px">'+e2.message+'</div></div></body></html>', { status:404, headers:{'Content-Type':'text/html;charset=utf-8'} });
