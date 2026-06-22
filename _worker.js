@@ -528,7 +528,7 @@ export default {
         const token = url.searchParams.get('t') || '';
         if (!token) return new Response('잘못된 접근입니다.', { status: 400 });
         try {
-          const fsToken = await getFsToken(env);
+          const fsToken = await getAccessToken(env);
           const docUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/statement_share/${token}`;
           const fsRes = await fetch(docUrl, { headers: { 'Authorization': `Bearer ${fsToken}` } });
           if (!fsRes.ok) throw new Error('not found');
@@ -557,7 +557,7 @@ export default {
     if (slugMatch) {
       const slug = slugMatch[1];
       const subPath = slugMatch[2] || '';
-      const fsToken2 = await getFsToken(env);
+      const fsToken2 = await getAccessToken(env);
       // Firestore에서 slug로 회사 조회
       const qUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`;
       const qBody = JSON.stringify({ structuredQuery: {
@@ -1717,7 +1717,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         if (!ALLOWED.includes(secret)) {
           return new Response(JSON.stringify({ok:false,error:'unauthorized'}), {headers:{'Content-Type':'application/json'}});
         }
-        const fsToken = await getFsToken(env);
+        const fsToken = await getAccessToken(env);
         const project = 'mbti-logistics';
         const fsBase  = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents`;
         const headers = { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' };
@@ -1945,7 +1945,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         if (body.secret !== (env.CRON_SECRET || '')) {
           return new Response(JSON.stringify({ok:false,error:'unauthorized'}), {headers:{'Content-Type':'application/json'}});
         }
-        const fsToken = await getFsToken(env);
+        const fsToken = await getAccessToken(env);
         const rulesContent = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
