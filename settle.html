@@ -34391,7 +34391,7 @@ function _showSubModal(){
       +'<span style="font-size:24px">'+p.ic+'</span>'
       +'<div style="flex:1"><div style="font-size:14px;font-weight:800">'+p.nm+badge+grp+'</div><div style="font-size:11px;color:var(--text3)">'+p.tl+'</div></div>'
       +'<div style="text-align:right">'
-      +'<div class="sub-tier-label-'+p.key+'" style="font-size:11px;color:var(--text3)">~'+cap+'명 × '+p.up.toLocaleString()+'원</div>'
+      +'<div class="sub-tier-label-'+p.key+'" style="font-size:11px;color:var(--text3)">VAT별도</div>'
       +'<div class="sub-amt-'+p.key+'" style="font-size:19px;font-weight:900;color:'+p.color+'">'+amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span></div>'
       +'</div></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:8px">'
@@ -34440,7 +34440,7 @@ function _selectTier(cap){
       el.dataset.selcap=cap;
     });
     var tl=document.querySelector('.sub-tier-label-'+k);
-    if(tl) tl.textContent='~'+cap+'명 × '+rate.toLocaleString()+'원';
+    if(tl) tl.textContent='VAT별도';
   });
 }
 
