@@ -35963,24 +35963,27 @@ function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
       +'</tr>';
   });
 
+  // 추가 항목 (①② 라우트 이후)
+  var addRows='';
+  if(r.fresh>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.fresh.toLocaleString()+'</td></tr>';
+  if(r.finc>0){
+    var fincLabel='④ 프레시백 인센티브';
+    var fincNote='';
+    var dcnt2=x.dcnt||x.totalCount||0;
+    var fincPer=r._fincPerUnit||(dcnt2>0?Math.round(r.finc/dcnt2):0);
+    if(fincPer>0) fincNote=' <span style="font-size:10px;color:#94a3b8">'+dcnt2+'건 × '+fincPer+'원</span>';
+    addRows+='<tr><td style="padding:4px 8px;font-size:11px">'+fincLabel+fincNote+'</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.finc.toLocaleString()+'</td></tr>';
+  }
+  if(r.nocont>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">⑤ 미계약건</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.nocont.toLocaleString()+'</td></tr>';
+  if(r.etcPlus>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">⑦ 기타(+)/팀장수수료</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.etcPlus.toLocaleString()+'</td></tr>';
+
   // 공제 항목
   var deductRows='';
   if(r.emp>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">고용보험(0.8%,80만↑)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.emp.toLocaleString()+'</td></tr>';
   if(r.work>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">산재보험(0.88%)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.work.toLocaleString()+'</td></tr>';
-  if(r.etcMinus>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">기타공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.etcMinus.toLocaleString()+'</td></tr>';
-
-  // 추가 항목
-  var addRows='';
-  if(r.fresh>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.fresh.toLocaleString()+'</td></tr>';
-  if(r.finc>0){
-    // 건수×단가 표시 (x.incCnt/x.incRate 있으면)
-    var fincLabel='④ 프레시백 인센티브';
-    var fincNote='';
-    if(x&&x.incCnt&&x.incRate) fincNote=' <span style="font-size:10px;color:#94a3b8">'+x.incCnt+'건 × '+x.incRate+'원</span>';
-    else if(x&&x.incCnt&&r.finc) fincNote=' <span style="font-size:10px;color:#94a3b8">'+x.incCnt+'건 × '+Math.round(r.finc/x.incCnt)+'원</span>';
-    addRows+='<tr><td style="padding:4px 8px;font-size:11px">'+fincLabel+fincNote+'</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.finc.toLocaleString()+'</td></tr>';
-  }
-  if(r.etcPlus>0) addRows+='<tr><td style="padding:4px 8px;font-size:11px">⑦ 기타(+)/팀장수수료</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:11px">+₩'+r.etcPlus.toLocaleString()+'</td></tr>';
+  if(r.dmg>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">⑥ 분실/파손 공제'+(r.dmgReason?' ('+r.dmgReason+')':'')+'</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.dmg.toLocaleString()+'</td></tr>';
+  if(r.etcMinus>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">⑧ 기타(-)'+(r.etcMinusReason?' ('+r.etcMinusReason+')':'')+'</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.etcMinus.toLocaleString()+'</td></tr>';
+  if(r.adv>0) deductRows+='<tr><td style="padding:4px 8px;font-size:11px">⑨ 가불 공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:11px">-₩'+r.adv.toLocaleString()+'</td></tr>';
 
   return '<div style="background:#fff;width:600px;font-family:Malgun Gothic,sans-serif;font-size:13px;color:#1a1a1a">'
     // 헤더
