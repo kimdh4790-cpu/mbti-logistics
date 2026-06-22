@@ -1,0 +1,1 @@
+<div style="font-size:10px;color:var(--text3)">복잡한 계산이 필요한 업종 — 개인 31만~315만원/월 · 단체(20개사+) 22만~210만원/월 (VAT별도)</div>
