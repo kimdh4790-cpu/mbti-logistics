@@ -29961,10 +29961,30 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
 
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
-    if(_db)_db.collection('statement_share').doc(token).set({
+    // 정산 데이터 전체 저장 (로그인 없이 명세서 렌더링용)
+    var vatIncome2=x.totalSupply||x.totalPay||x.vatIncome||net||0;
+    var stmtData={
       dealerId:did,driverName:name,month:month,net:net,_coName:coName,
-      imgUrl:imgUrl||'',createdAt:new Date().toISOString()
-    }).catch(function(){});
+      imgUrl:imgUrl||'',createdAt:new Date().toISOString(),
+      // 정산 데이터
+      vatIncome:vatIncome2,
+      supply:Math.round(vatIncome2/1.1),
+      vat:vatIncome2-Math.round(vatIncome2/1.1),
+      emp:r.emp||0, work:r.work||0,
+      fresh:r.fresh||0, finc:r.finc||0,
+      nocont:r.nocont||0, etcPlus:r.etcPlus||0, etcMinus:r.etcMinus||0,
+      dmg:r.dmg||0, adv:r.adv||0,
+      etcMinusReason:r.etcMinusReason||'', dmgReason:r.dmgReason||'',
+      deduct:r.deduct||0,
+      dcnt:x.dcnt||x.totalCount||0,
+      fincPerUnit:r._fincPerUnit||0,
+      routeDetails:x.routeDetails||[],
+      companyName:coName,
+      contactName:(_CU&&_CU.settlementContact)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementContact)||'',
+      contactPhone:(_CU&&_CU.settlementPhone)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementPhone)||'051-711-3103',
+      bizNum:(_CU&&_CU.bizNum)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||'373-86-02536'
+    };
+    if(_db)_db.collection('statement_share').doc(token).set(stmtData).catch(function(){});
     var variables={'#{고객회사명}':coName||'','#{이름}':name||'','#{월}':month||'',
       '#{명세서링크}':stmtUrl,
       '#{담당자명}':(_CU&&_CU.settlementContact)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementContact)||'',
