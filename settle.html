@@ -2169,6 +2169,7 @@ function parseCoupangExcel(inp){
   if(industry==='insurance'){_parseInsuranceExcel(file,month);return;}
   if(industry==='construction'){_parseConstructionExcel(file,month);return;}
   if(industry==='quick'){_parseQuickExcel(file,month);return;}
+  if(industry==='logistics'){_parseLogisticsExcel(file,month);return;}
 
   // 기본: 쿠팡 파서
   var fbPromise=(window._db&&window._CU)
@@ -6599,6 +6600,60 @@ function _parseConstructionExcel(file, month){
 }
 
 
+
+// ══ 물류·운송 엑셀 파서 ══
+function _parseLogisticsExcel(file, month){
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+      if(!rows||rows.length<2){toast('❌ 데이터 없음');return;}
+      var header=rows[0].map(function(h){return String(h||'').trim();});
+      var iName=-1,iId=-1,iCnt=-1,iPrice=-1,iExtra=-1,iDeduct=-1,iNote=-1,iCamp=-1;
+      header.forEach(function(h,i){
+        if(iName<0&&(h.includes('기사명')||h.includes('이름')||h.includes('성명'))) iName=i;
+        if(iId<0&&(h.includes('ID')||h.includes('아이디')||h.includes('기사번호'))) iId=i;
+        if(iCnt<0&&(h.includes('운행')||h.includes('건수')||h.includes('배송건')||h.includes('물량'))) iCnt=i;
+        if(iPrice<0&&(h.includes('단가')||h.includes('운임')||h.includes('단위금액'))) iPrice=i;
+        if(iExtra<0&&(h.includes('추가')||h.includes('인센')||h.includes('수당'))) iExtra=i;
+        if(iDeduct<0&&(h.includes('공제')||h.includes('차감'))) iDeduct=i;
+        if(iNote<0&&(h.includes('비고')||h.includes('메모'))) iNote=i;
+        if(iCamp<0&&(h.includes('캠프')||h.includes('지점')||h.includes('센터'))) iCamp=i;
+      });
+      if(iName<0){toast('❌ 기사명 컬럼을 찾을 수 없습니다');return;}
+      var results=[];
+      rows.slice(1).forEach(function(row){
+        if(!row||!row[iName]) return;
+        var name=String(row[iName]||'').trim();
+        if(!name) return;
+        var id=iId>=0?String(row[iId]||'').trim():name;
+        var cnt=iCnt>=0?parseFloat(row[iCnt])||0:0;
+        var price=iPrice>=0?parseFloat(row[iPrice])||0:0;
+        var extra=iExtra>=0?parseFloat(row[iExtra])||0:0;
+        var deduct=iDeduct>=0?parseFloat(row[iDeduct])||0:0;
+        var camp=iCamp>=0?String(row[iCamp]||'').trim():'';
+        var totalPay=cnt*price+extra-deduct;
+        if(totalPay===0&&cnt===0) return;
+        results.push({
+          driver:name, userId:id, camp:camp, month:month,
+          dcnt:cnt, unitPrice:price,
+          etcPlus:extra, deduct:deduct,
+          totalPay:Math.max(0,totalPay),
+          net:Math.max(0,totalPay),
+          totalSupply:Math.max(0,totalPay),
+          jobsub:'물류', industryType:'logistics'
+        });
+      });
+      if(!results.length){toast('❌ 파싱된 데이터가 없습니다');return;}
+      toast('✅ '+results.length+'명 파싱 완료 — 저장 중...');
+      _autoRegisterIndWorkers(results,'logistics');
+    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function _parseQuickExcel(file, month){
   var reader=new FileReader();
@@ -26395,14 +26450,7 @@ var MENUS_SETTLE = [
 {ic:'💸',l:'송금',            p:'payout',                plan_key:'ind_logistics'},
 {ic:'🧾',l:'세무사 연동',     p:'tax_share',             plan_key:'any_paid'},
 ]},
-{s:'📦 농산물·주류도매', items:[
-{ic:'📊',l:'정산 현황',       p:'ind_wholesale_settle',  plan_key:'ind_wholesale'},
-{ic:'📋',l:'정산 관리',       p:'ind_wholesale_list',    plan_key:'ind_wholesale'},
-{ic:'👤',l:'직원 관리',       p:'ind_wholesale_workers', plan_key:'ind_wholesale'},
-{ic:'📋',l:'배치표',          p:'ind_wholesale_roster',  plan_key:'ind_wholesale'},
-{ic:'💸',l:'송금',            p:'payout',                plan_key:'ind_wholesale'},
-{ic:'🧾',l:'세무사 연동',     p:'tax_share',             plan_key:'any_paid'},
-]},
+
 {s:'🧹 청소업 관리', items:[
     {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:'cleaning'},
     {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:'cleaning'},
