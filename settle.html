@@ -310,8 +310,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
                 <span style="font-size:20px">🤖</span>
                 <div>
                   <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                  <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 31만 · 150명 68만 · 300명 102만 · 500명 170만 · 700명 275만 · 1000명 315만원/월</div>
-                  <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 22만 · 150명 52만 · 300명 78만 · 500명 131만 · 700명 183만 · 1000명 210만원/월 (VAT별도)</div>
+                  <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 31만 · 150명 68만 · 300명 102만 · 500명 170만 · 700명 275만 · 1000명 393만 · 1500명 589만 · 2000명 786만원/월</div>
+                  <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 25만 · 150명 54만 · 300명 82만 · 500명 136만 · 700명 220만 · 1000명 314만 · 1500명 471만 · 2000명 629만원/월 (VAT별도)</div>
                 </div>
               </div>
               <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -320,14 +320,14 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
                 <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
                 <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                  <option value="50">~50명 — 개인 31만 / 단체 22만원/월</option>
-                  <option value="150">~150명 — 개인 68만 / 단체 52만원/월</option>
-                  <option value="300">~300명 — 개인 102만 / 단체 78만원/월</option>
-                  <option value="500">~500명 — 개인 170만 / 단체 131만원/월</option>
-                  <option value="700">~700명 — 개인 275만 / 단체 183만원/월</option>
-                  <option value="1000">~1000명 — 개인 315만 / 단체 210만원/월</option>
-                  <option value="1500">~1500명 — 개인 420만 / 단체 280만원/월</option>
-                  <option value="2000">~2000명 — 개인 500만 / 단체 350만원/월</option>
+                  <option value="50">~50명 — 개인 31만 / 단체 25만원/월</option>
+                  <option value="150">~150명 — 개인 68만 / 단체 54만원/월</option>
+                  <option value="300">~300명 — 개인 102만 / 단체 82만원/월</option>
+                  <option value="500">~500명 — 개인 170만 / 단체 136만원/월</option>
+                  <option value="700">~700명 — 개인 275만 / 단체 220만원/월</option>
+                  <option value="1000">~1000명 — 개인 393만 / 단체 314만원/월</option>
+                  <option value="1500">~1500명 — 개인 589만 / 단체 471만원/월</option>
+                  <option value="2000">~2000명 — 개인 786만 / 단체 629만원/월</option>
                   <option value="9999">2000명+ — 별도 문의</option>
                 </select>
               </div>
@@ -34236,27 +34236,28 @@ function addRpCamp(cid){
 // ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
 // 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
-// 확정 요금제 (인수인계서 2026-06-22 기준, VAT별도)
+// 확정 요금제 (2026-06-22 개정, VAT별도)
+// 개인: 700명 이상 인당 3,929원 고정 / 단체: 개인 대비 20% 할인, 700명 이상 인당 3,143원 고정
 var DW_TIERS_IND=[
   {cap:50,  amt:310000, label:'~50명'},
   {cap:150, amt:680000, label:'~150명'},
   {cap:300, amt:1020000,label:'~300명'},
   {cap:500, amt:1700000,label:'~500명'},
   {cap:700, amt:2750000,label:'~700명'},
-  {cap:1000,amt:3150000,label:'~1000명'},
-  {cap:1500,amt:4200000,label:'~1500명'},
-  {cap:2000,amt:5000000,label:'~2000명'},
+  {cap:1000,amt:3930000,label:'~1000명'},
+  {cap:1500,amt:5890000,label:'~1500명'},
+  {cap:2000,amt:7860000,label:'~2000명'},
   {cap:9999,amt:0,       label:'2000명+'},
 ];
 var DW_TIERS_GRP=[
-  {cap:50,  amt:220000, label:'~50명'},
-  {cap:150, amt:520000, label:'~150명'},
-  {cap:300, amt:780000, label:'~300명'},
-  {cap:500, amt:1310000,label:'~500명'},
-  {cap:700, amt:1830000,label:'~700명'},
-  {cap:1000,amt:2100000,label:'~1000명'},
-  {cap:1500,amt:2800000,label:'~1500명'},
-  {cap:2000,amt:3500000,label:'~2000명'},
+  {cap:50,  amt:250000, label:'~50명'},
+  {cap:150, amt:540000, label:'~150명'},
+  {cap:300, amt:820000, label:'~300명'},
+  {cap:500, amt:1360000,label:'~500명'},
+  {cap:700, amt:2200000,label:'~700명'},
+  {cap:1000,amt:3140000,label:'~1000명'},
+  {cap:1500,amt:4710000,label:'~1500명'},
+  {cap:2000,amt:6290000,label:'~2000명'},
   {cap:9999,amt:0,       label:'2000명+'},
 ];
 function _tierCap(hc){
