@@ -29992,7 +29992,9 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   document.body.appendChild(captureDiv);
   setTimeout(async function(){
     try{
-      var canvas=await html2canvas(captureDiv,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false});
+      var fullH=captureDiv.scrollHeight;
+      var canvas=await html2canvas(captureDiv,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,
+        width:600,height:fullH,windowWidth:600,windowHeight:fullH});
       if(captureDiv.parentNode)document.body.removeChild(captureDiv);
       var dataUrl=canvas.toDataURL('image/jpeg',0.85);
       if(dataUrl.length>900000)dataUrl=canvas.toDataURL('image/jpeg',0.7);
