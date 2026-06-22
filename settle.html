@@ -29987,14 +29987,14 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
     await _doSendWithImg(''); return;
   }
   var captureDiv=document.createElement('div');
-  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif;padding:0';
+  captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif;padding:0;overflow:visible';
   captureDiv.innerHTML=_buildPayslipCaptureHTML(x,r,name,month,net,vatIncome);
   document.body.appendChild(captureDiv);
   setTimeout(async function(){
     try{
-      var fullH=captureDiv.scrollHeight;
+      var fullH=Math.max(captureDiv.scrollHeight, captureDiv.offsetHeight, captureDiv.getBoundingClientRect().height)||2000;
       var canvas=await html2canvas(captureDiv,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,
-        width:600,height:fullH,windowWidth:600,windowHeight:fullH});
+        width:600,height:fullH,windowWidth:600,windowHeight:fullH,scrollX:0,scrollY:0});
       if(captureDiv.parentNode)document.body.removeChild(captureDiv);
       var dataUrl=canvas.toDataURL('image/jpeg',0.85);
       if(dataUrl.length>900000)dataUrl=canvas.toDataURL('image/jpeg',0.7);
