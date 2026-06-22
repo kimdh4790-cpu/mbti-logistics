@@ -317,15 +317,27 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
             </div>
             <div id="svc-settle-industry" style="margin-top:10px;display:block">
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+                <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
+                <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
+                  <option value="50">~50명 — 개인 31만 / 단체 22만원/월</option>
+                  <option value="150">~150명 — 개인 68만 / 단체 52만원/월</option>
+                  <option value="300">~300명 — 개인 102만 / 단체 78만원/월</option>
+                  <option value="500">~500명 — 개인 170만 / 단체 131만원/월</option>
+                  <option value="700">~700명 — 개인 275만 / 단체 183만원/월</option>
+                  <option value="1000">~1000명 — 개인 315만 / 단체 210만원/월</option>
+                </select>
+              </div>
               <div style="font-size:10px;color:var(--text3);margin-bottom:6px">업종 선택:</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="coupang" checked> 🚚 쿠팡</label>
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="cleaning"> 🧹 청소</label>
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="insurance"> 🛡️ 보험</label>
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="construction"> 🏗️ 건설</label>
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="quick"> 🚗 퀵·대리</label>
-                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px"><input type="radio" name="settle-industry" value="other"> 📋 직접설정</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="coupang" checked onclick="event.stopPropagation()"> 🚚 쿠팡</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="cleaning" onclick="event.stopPropagation()"> 🧹 청소</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="insurance" onclick="event.stopPropagation()"> 🛡️ 보험</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="construction" onclick="event.stopPropagation()"> 🏗️ 건설</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="quick" onclick="event.stopPropagation()"> 🚗 퀵·대리</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="other" onclick="event.stopPropagation();document.getElementById('settle-industry-custom').style.display='block'"> 📋 직접설정</label>
               </div>
+              <input id="settle-industry-custom" type="text" placeholder="업종명 직접 입력 (예: 골프장, 학원, 요양원)" onclick="event.stopPropagation()" style="display:none;margin-top:6px;width:100%;padding:7px 10px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px">
             </div>
           </div>
 
@@ -341,6 +353,19 @@ window.onBizDocSelected=onBizDocSelected;</script>
                 </div>
               </div>
               <div id="svc-delivery-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent">✓</div>
+            </div>
+            <div id="svc-delivery-industry" style="margin-top:10px;display:none;align-items:center;gap:8px">
+              <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
+              <select id="delivery-tier-select" onchange="document.getElementById('r-delivery-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
+                <option value="50">~50명 — 개인 31만 / 단체 22만원/월</option>
+                <option value="150">~150명 — 개인 68만 / 단체 52만원/월</option>
+                <option value="300">~300명 — 개인 102만 / 단체 78만원/월</option>
+                <option value="500">~500명 — 개인 170만 / 단체 131만원/월</option>
+                <option value="700">~700명 — 개인 275만 / 단체 183만원/월</option>
+                <option value="1000">~1000명 — 개인 315만 / 단체 210만원/월</option>
+              </select>
+            </div>
+          </div>
             </div>
           </div>
 
@@ -386,6 +411,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
         <input type="hidden" id="r-service" value="">
         <input type="hidden" id="r-services" value="">
         <input type="hidden" id="r-settle-industry" value="coupang">
+        <input type="hidden" id="r-settle-tier" value="50">
+        <input type="hidden" id="r-delivery-tier" value="50">
         <input type="hidden" id="r-inv-industry" value="liquor">
       </div>
       <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
