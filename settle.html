@@ -6975,12 +6975,14 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
         if(route){
           if(!drvMap[cleanId].routes[route])
-            drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0};
+            drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0,camp:''};
           drvMap[cleanId].routes[route].cnt+=dcnt;
           drvMap[cleanId].routes[route].ret+=rcnt;
           drvMap[cleanId].routes[route].delAmt+=delAmt;
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
+          // ★ 라우트별 실제 캠프명 저장 (기사 캠프가 아닌 엑셀 Row의 캠프명)
+          if(campName&&campName!=='기타') drvMap[cleanId].routes[route].camp=campName;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
@@ -7165,13 +7167,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       // routeCampMap 구성 및 Firebase 저장
       // routeCampMap 구성 및 Firebase 저장
       var rcMap={};
-      var _fixedRouteCamp={'508B':'부산3캠프','812A':'부산2캠프','812B':'부산2캠프','812C':'부산2캠프','812D':'부산2캠프'};
       allCleanIds.forEach(function(cid){
         var dm=drvMap[cid];
         var campFull=dm.camp||'';
         if(!campFull||campFull==='기타')return;
         Object.keys(dm.routes).forEach(function(r){
-          rcMap[r]=_fixedRouteCamp[r]||campFull;
+          // ★ 라우트별 실제 캠프 사용 (drvMap.routes에 저장된 캠프 우선)
+          var rv=dm.routes[r];
+          var routeCamp=(rv&&rv.camp&&rv.camp!=='기타')?rv.camp:campFull;
+          rcMap[r]=routeCamp;
         });
       });
       if(Object.keys(rcMap).length&&_db&&_CU){
@@ -33906,9 +33910,6 @@ function pagePrices(tabMode){
 }
 function _getRouteCamp(route){
   if(!route)return '기타';
-  // 0순위: 하드코딩 고정 매핑 (라우트번호 기반 - 절대 변경 불가)
-  var _hardMap={'508B':'부산3캠프','812A':'부산2캠프','812B':'부산2캠프','812C':'부산2캠프','812D':'부산2캠프'};
-  if(_hardMap[route])return _hardMap[route];
   // 1순위: routeCampMap (엑셀 업로드 시 저장)
   if(_routeCampMap[route])return _routeCampMap[route];
   // 2순위: settlements 캐시
