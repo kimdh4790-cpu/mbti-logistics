@@ -30400,10 +30400,22 @@ function sendKakao(msgEnc){
 }
 
 async function openSendModal(x){
-  var r=calcNet(x);
-  var net=x.net||r.net||0;
-  var emp=(x.emp||r.emp||0)+(x.work||r.work||0);
-  var vatIncome=x.vatIncome||x.totalAmt||r.totalAmt||0;  // ★ 기사 세금계산서 합계
+  // ★ 보장성 금액 실시간 적용 (Firestore에 저장 안 된 경우 대비)
+  var _xClone=Object.assign({},x);
+  var _drv=(_drvCache||[]).find(function(d){return d.userId===x.userId;});
+  if(_drv&&_drv.settleGuarantee){
+    var _g=_drv.settleGuarantee||0;
+    var _cn0=calcNet(_xClone);
+    var _cur=_cn0.totalAmt||0;
+    if(_g>_cur&&_g-_cur>(_xClone.etcPlus||0)){
+      _xClone.etcPlus=(_xClone.etcPlus||0)+(_g-_cur);
+      _xClone.etcPlusReason=(_xClone.etcPlusReason?_xClone.etcPlusReason+' / ':'')+'정산보장('+Math.round(_g/10000)+'만원 보장)';
+    }
+  }
+  var r=calcNet(_xClone);
+  var net=_xClone.net||r.net||0;
+  var emp=(_xClone.emp||r.emp||0)+(_xClone.work||r.work||0);
+  var vatIncome=r.totalAmt||_xClone.vatIncome||0;  // ★ 기사 세금계산서 합계 (calcNet 재계산)
   var name=x.driver||x.userId||'기사';
   var month=x.month||'';
   var phone='';
@@ -30481,7 +30493,7 @@ async function openSendModal(x){
   // 버튼들
   var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';
   var channels=[
-    {icon:'💬',name:'카카오 알림톡 발송',sub:phone?phone:'전화번호 없음',bg:'#FEE500',color:'#1a1a1a',fn:function(){_sendAlimtalkWithStmt(x,r,name,month,net,phone,coName);}},
+    {icon:'💬',name:'카카오 알림톡 발송',sub:phone?phone:'전화번호 없음',bg:'#FEE500',color:'#1a1a1a',fn:function(){_sendAlimtalkWithStmt(_xClone,r,name,month,net,phone,coName);}},
     {icon:'📱',name:'문자(SMS) 발송',sub:phone?phone:'전화번호 없음',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,email,phone);}},
     {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(decodeURIComponent(msgEnc)),email);}}  ,
     {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome);}},
