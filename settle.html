@@ -6882,7 +6882,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         }
         // ★ 명절 프로모션 처리
         if(isSeolPromo||isSeolNormalPromo||isNocontPromo){
-          console.log('[프로모션감지]', divVal, route, 'dcnt:', dcnt, 'total:', rowTotal, 'isSeol:', isSeolPromo, 'isNormal:', isSeolNormalPromo, 'isNocont:', isNocontPromo);
+          
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
             dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
             addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},
@@ -7172,9 +7172,19 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       // ★ 라우트-캠프 매핑: 엑셀 Raw 캠프컬럼 기반 (기사 캠프 무관)
       // 엑셀에 나온 라우트만 업데이트, 없는 라우트는 기존값 유지
       var rcMap = window._rawRouteCampOverride || {};
-      console.log('[캠프저장] rcMap 508B:', rcMap['508B'], '812A:', rcMap['812A']);
       if(Object.keys(rcMap).length&&_db&&_CU){
         Object.assign(_routeCampMap,rcMap);
+        // ★ drvMap.camp 보정: 라우트별 실제 캠프 투표로 기사 캠프 재결정
+        Object.keys(drvMap).forEach(function(cid){
+          var dm=drvMap[cid];
+          var votes={};
+          Object.keys(dm.routes||{}).forEach(function(route){
+            var rc=rcMap[route]||_routeCampMap[route];
+            if(rc&&rc!=='기타'){var k=rc.replace('캠프','').trim();votes[k]=(votes[k]||0)+(dm.routes[route].cnt||1);}
+          });
+          var best=Object.keys(votes).sort(function(a,b){return votes[b]-votes[a];})[0];
+          if(best)dm.camp=best;
+        });
         _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').update(rcMap).then(function(){
           if(typeof pagePrices==='function')pagePrices();
         }).catch(function(){
@@ -7203,7 +7213,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         window._lastPromoTotal=_totalPromoRaw;
         window._lastDrvMap=drvMap;
         window._lastDrvMapRef=drvMap; // _doSettle에서 참조용
-        console.log('[프로모션합계]', _totalPromoRaw, '건수:', _totalPromoCnt);
+        
         var _totalPromoCnt=Object.values(drvMap).reduce(function(s,v){
           return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
         },0);
@@ -29783,12 +29793,25 @@ function _dynCampList(items,keyFn){
 var CAMP_LIST_S=[];  // 동적 (pageSettlements 시 갱신)
 var CAMP_COL_S={};   // 동적
 function _getSettleCamp(x){
+  // ★ 1순위: routeDetails × _routeCampMap 투표 (가장 많은 캠프 — 508B 부산3 등 정확 반영)
+  var rds=(x&&x.routeDetails)||[];
+  if(rds.length&&Object.keys(_routeCampMap||{}).length){
+    var _votes={};
+    rds.forEach(function(rd){
+      var rc=_routeCampMap[rd.route||''];
+      if(rc&&rc!=='기타'){var k=rc.replace('캠프','').trim();_votes[k]=(_votes[k]||0)+(rd.cnt||1);}
+    });
+    var _best=Object.keys(_votes).sort(function(a,b){return _votes[b]-_votes[a];})[0];
+    if(_best)return _best;
+  }
+  // ★ 2순위: x.camp (저장된 값)
   if(x&&x.camp){var ca=(x.camp||'').replace('캠프','').trim();if(ca)return ca;}
+  // ★ 3순위: driver 캐시
   if(x&&x.userId){
     var drv=(_drvCache||[]).find(function(d){return d.userId===x.userId;});
     if(drv&&drv.camp)return drv.camp.replace('캠프','').trim();
   }
-  var rds=(x&&x.routeDetails)||[];
+  // ★ 4순위: routeDetails 첫 번째 라우트
   if(rds.length){var r=rds[0].route||'';var c2=_getRouteCamp(r);if(c2&&c2!=='기타')return c2.replace('캠프','').trim();}
   return '기타';
 }
