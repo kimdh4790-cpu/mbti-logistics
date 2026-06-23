@@ -8017,7 +8017,8 @@ function _saveCpDriver(camp,dm,name,month,cb){
   });
   var dealerId=window._CU?window._CU.dealerId:'';
   // 명절 프로모션 데이터 — window._lastDrvMap에서 직접 읽기 (클로저 이슈 우회)
-  var _dmPromo=(window._lastDrvMap&&window._lastDrvMap[cleanId])||dm;
+  var _dmCleanId=(uid||'').replace(/@[a-z0-9@._-]+$/i,'').trim();
+  var _dmPromo=(window._lastDrvMap&&(window._lastDrvMap[_dmCleanId]||window._lastDrvMap[uid]))||dm;
   var _promoAmt=_dmPromo.promoAmt||0;
   var _promoCnt=_dmPromo.promoCnt||0;
   var _normalPromoAmt=_dmPromo.normalPromoAmt||0;
