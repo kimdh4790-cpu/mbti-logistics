@@ -481,6 +481,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
     <div class="sb-bot">
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
+      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="_openCompanyInfoModal()">🏢 회사 정보 수정</button>
       <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
 
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
@@ -38299,6 +38300,38 @@ function doResetData(){
       location.reload();
     }, 1200);
   }).catch(function(e){toast('⚠️ 일부 실패: '+e.message);});
+}
+
+function _openCompanyInfoModal(){
+  var co=window._cachedCompanyDoc||{};
+  var did=_CU&&_CU.dealerId;
+  if(!did||!_db){toast('❌ 로그인 필요');return;}
+  var old2=document.getElementById('mo-company-info');if(old2)old2.remove();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-company-info';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  mo.innerHTML='<div class="md" style="max-width:460px;width:95vw">'    +'<div class="mdt">🏢 회사 정보 수정 <button onclick="document.getElementById('mo-company-info').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button></div>'    +'<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'    +'<div class="fg"><label>회사명</label><input id="ci-name" value="'+esc(co.companyName||co.name||'')+'" placeholder="엠비티아이 유한회사"></div>'    +'<div class="fg"><label>사업자번호</label><input id="ci-biznum" value="'+esc(co.bizNumber||co.bizNum||'')+'" placeholder="000-00-00000"></div>'    +'<div class="fg"><label>사업장 주소</label><input id="ci-bizaddr" value="'+esc(co.bizAddr||'')+'" placeholder="부산시 수영구 수영로 668, 607호"></div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'      +'<div class="fg" style="margin-bottom:0"><label>업태</label><input id="ci-biztype" value="'+esc(co.bizType||'')+'" placeholder="서비스업"></div>'      +'<div class="fg" style="margin-bottom:0"><label>종목</label><input id="ci-bizitem" value="'+esc(co.bizItem||co.bizKind||'')+'" placeholder="기타물품운반원"></div>'    +'</div>'    +'<div class="fg"><label>정산 담당자명</label><input id="ci-contact-name" value="'+esc(co.settlementContact||'')+'" placeholder="홍길동 대표"></div>'    +'<div class="fg"><label>정산 문의 연락처</label><input id="ci-contact-phone" value="'+esc(co.settlementPhone||'')+'" placeholder="051-711-3103"></div>'    +'<button onclick="_saveCompanyInfo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💾 저장</button>'    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function _saveCompanyInfo(){
+  var did=_CU&&_CU.dealerId;if(!did||!_db)return;
+  var data={
+    companyName:(document.getElementById('ci-name')||{value:''}).value.trim(),
+    name:(document.getElementById('ci-name')||{value:''}).value.trim(),
+    bizNumber:(document.getElementById('ci-biznum')||{value:''}).value.trim(),
+    bizNum:(document.getElementById('ci-biznum')||{value:''}).value.trim(),
+    bizAddr:(document.getElementById('ci-bizaddr')||{value:''}).value.trim(),
+    bizType:(document.getElementById('ci-biztype')||{value:''}).value.trim(),
+    bizItem:(document.getElementById('ci-bizitem')||{value:''}).value.trim(),
+    settlementContact:(document.getElementById('ci-contact-name')||{value:''}).value.trim(),
+    settlementPhone:(document.getElementById('ci-contact-phone')||{value:''}).value.trim(),
+    updatedAt:new Date().toISOString()
+  };
+  _db.collection('companies').doc(did).update(data).then(function(){
+    Object.assign(window._cachedCompanyDoc||{},data);
+    toast('✅ 회사 정보 저장 완료');
+    var mo=document.getElementById('mo-company-info');if(mo)mo.remove();
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function openChangePw(forced){
