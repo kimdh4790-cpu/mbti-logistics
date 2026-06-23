@@ -7471,7 +7471,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
               var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
               if(hasDateRoutes){
-                // ★ 날짜 범위 내 배송+반품
+                // ★ 라우트별 합산 (날짜 범위 내)
+                var _rtAgg={};  // {rt: {cnt,ret}}
+                var _totalFresh=0, _totalDmg=0;
                 Object.keys(fd.dateRoutes).forEach(function(dt){
                   if(rStart&&dt<rStart)return;
                   if(rEnd&&dt>rEnd)return;
@@ -7481,30 +7483,41 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var up=RPRICE[rt]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0};
+                    _rtAgg[rt].cnt+=(rd.cnt||0);
+                    _rtAgg[rt].ret+=(rd.ret||0);
                   });
                 });
-                // ★ 날짜 범위 내 프레시백 인센티브
+                // ★ 프레시백
                 if(fd.dateFresh){
                   Object.keys(fd.dateFresh).forEach(function(dt){
                     if(rStart&&dt<rStart)return;
                     if(rEnd&&dt>rEnd)return;
-                    var fv=fd.dateFresh[dt]||0;
-                    if(fv>0){tot+=fv;pts.push('프레시백 ₩'+fv.toLocaleString());}
+                    _totalFresh+=(fd.dateFresh[dt]||0);
                   });
                 }
-                // ★ 날짜 범위 내 분실파손 차감
+                // ★ 분실파손
                 var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
                 if(_fdmg&&_fdmg.dateDmg){
                   Object.keys(_fdmg.dateDmg).forEach(function(dt){
                     if(rStart&&dt<rStart)return;
                     if(rEnd&&dt>rEnd)return;
-                    var dv=_fdmg.dateDmg[dt]||0;
-                    if(dv>0){tot-=dv;pts.push('분실파손 -₩'+dv.toLocaleString());}
+                    _totalDmg+=(_fdmg.dateDmg[dt]||0);
                   });
                 }
+                tot+=_totalFresh-_totalDmg;
+                // ★ 사유 포맷: 라우트*건수 반품*건수 / 프레시백 금액 / 분실 금액
+                Object.keys(_rtAgg).sort().forEach(function(rt){
+                  var a=_rtAgg[rt];
+                  var s=rt+'*'+a.cnt+'건';
+                  if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                  pts.push(s);
+                });
+                if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
+                if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
               } else {
-                // fallback: routeDetails 기준
+                // fallback: routeDetails 기준 (라우트별 합산)
+                var _rtAgg2={};
                 var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
                 if(fs2&&fs2.routeDetails){
                   fs2.routeDetails.forEach(function(rd){
@@ -7512,9 +7525,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var up=RPRICE[rd.route]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    pts.push(rd.route+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                    if(!_rtAgg2[rd.route])_rtAgg2[rd.route]={cnt:0,ret:0};
+                    _rtAgg2[rd.route].cnt+=(rd.cnt||0);
+                    _rtAgg2[rd.route].ret+=(rd.ret||0);
                   });
                 }
+                Object.keys(_rtAgg2).sort().forEach(function(rt){
+                  var a=_rtAgg2[rt];
+                  var s=rt+'*'+a.cnt+'건';
+                  if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                  pts.push(s);
+                });
               }
 
               if(!tot)return;
