@@ -6893,12 +6893,21 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
             drvMap[cleanId].camp=campName;
           if(isSeolPromo){
-            drvMap[cleanId].promoCnt+=dcnt;
-            if(rowTotal>0) drvMap[cleanId].promoAmt+=rowTotal;
+            // ★ 우리 라우트단가표에 있는 노선만 집계 (없는 노선은 제외)
+            var _isOurRoute=route&&(RPRICE[route]!==undefined||Object.keys(RPRICE).indexOf(route)>=0);
+            if(_isOurRoute){
+              drvMap[cleanId].promoCnt+=dcnt;
+              if(rowTotal>0) drvMap[cleanId].promoAmt+=rowTotal;
+            }
           } else if(isSeolNormalPromo){
-            drvMap[cleanId].normalPromoCnt+=dcnt;
-            if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
+            // 일반 프로모션도 우리 라우트만
+            var _isOurRoute2=route&&(RPRICE[route]!==undefined||Object.keys(RPRICE).indexOf(route)>=0);
+            if(_isOurRoute2){
+              drvMap[cleanId].normalPromoCnt+=dcnt;
+              if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
+            }
           } else if(isNocontPromo){
+            // 미계약 라우트는 라우트 없이 총금액만 있으므로 그대로 집계
             drvMap[cleanId].nocontPromoCnt+=dcnt;
             if(rowTotal>0) drvMap[cleanId].nocontPromoAmt+=rowTotal;
           }
