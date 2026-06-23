@@ -32285,7 +32285,32 @@ function recalcAllSettlements(){
         if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
       });
 
-      var taxBase=newDamt+newRamt+(x.fresh||0)+fincVal+(x.inc||0)+(x.nocont||0)+(x.etcPlus||0)+(x.etcPlusTL||0);
+      // ★ 보장성 재적용
+      var _recalcEtcPlus=x.etcPlus||0;
+      var _recalcEtcPlusReason=x.etcPlusReason||'';
+      var _drvInfo=dSnap.docs.map(function(d){return d.data();}).find(function(d){return (d.userId||'')===x.userId;});
+      if(_drvInfo&&_drvInfo.settleGuarantee){
+        var _g=_drvInfo.settleGuarantee;
+        var _baseAmt=newDamt+newRamt+(x.fresh||0)+fincVal+(x.inc||0)+(x.nocont||0)+(x.etcPlusTL||0);
+        // 보장성 제외한 기존 etcPlus (보장성 외 기타+ 있으면 유지)
+        var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
+        var _prevReason=_recalcEtcPlusReason;
+        if(_prevReason.indexOf('정산보장')>=0){
+          // 기존 보장성 차액 제거하고 순수 기타+만 남김
+          _prevEtcPlusNoGuarantee=0;
+          _prevReason='';
+        }
+        var _baseWithEtc=_baseAmt+_prevEtcPlusNoGuarantee;
+        if(_g>_baseWithEtc){
+          _recalcEtcPlus=_prevEtcPlusNoGuarantee+(_g-_baseWithEtc);
+          _recalcEtcPlusReason=(_prevReason?_prevReason+' / ':'')+'정산보장('+Math.round(_g/10000)+'만원 보장)';
+        } else {
+          _recalcEtcPlus=_prevEtcPlusNoGuarantee;
+          _recalcEtcPlusReason=_prevReason;
+        }
+      }
+
+      var taxBase=newDamt+newRamt+(x.fresh||0)+fincVal+(x.inc||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);
       var supplyAmt=Math.round(taxBase/1.1);
       var monthlyWage=Math.round(supplyAmt*0.654);
       var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
@@ -32295,6 +32320,7 @@ function recalcAllSettlements(){
 
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
+        etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
