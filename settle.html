@@ -7184,9 +7184,21 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       }
       Promise.all(routePromises.concat(driverPromises)).then(function(){
         // ★ 명절 프로모션 감지 → 마진율 입력 모달
+        // 설프로/설일반프로 있을 때만 명절로 처리 (없으면 미계약도 제외)
+        var _hasSeolPromo=Object.values(drvMap).some(function(v){return (v.promoAmt||0)+(v.normalPromoAmt||0)>0;});
         var _totalPromoRaw=Object.values(drvMap).reduce(function(s,v){
-          return s+(v.promoAmt||0)+(v.normalPromoAmt||0)+(v.nocontPromoAmt||0);
+          return s+(v.promoAmt||0)+(v.normalPromoAmt||0)+(_hasSeolPromo?(v.nocontPromoAmt||0):0);
         },0);
+        // 설프로 없으면 nocontPromo를 일반 미계약으로 돌려보냄
+        if(!_hasSeolPromo){
+          Object.values(drvMap).forEach(function(v){
+            if(v.nocontPromoAmt>0){
+              v.nocontCnt=(v.nocontCnt||0)+(v.nocontPromoCnt||0);
+              v.nocontAmt=(v.nocontAmt||0)+(v.nocontPromoAmt||0);
+              v.nocontPromoAmt=0; v.nocontPromoCnt=0;
+            }
+          });
+        }
         window._lastPromoTotal=_totalPromoRaw;
         window._lastDrvMap=drvMap;
         window._lastDrvMapRef=drvMap; // _doSettle에서 참조용
