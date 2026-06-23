@@ -560,6 +560,8 @@ export default {
           const dmgReason = gs('dmgReason');
           const etcMinusReason = gs('etcMinusReason');
           const etcPlusReason  = gs('etcPlusReason');
+          const etcPlusTL      = gn('etcPlusTL');
+          const etcPlusTLReason = gs('etcPlusTLReason');
           const bizAddr       = gs('bizAddr');
           const bizType       = gs('bizType');
           const bizItem       = gs('bizItem');
@@ -594,6 +596,7 @@ export default {
           if(finc>0)     addRows += `<tr><td class="item">④ 프레시백 인센티브${fincPer>0?' <small>('+dcnt+'건 × '+fincPer+'원)</small>':''}</td><td class="amt green">+₩${finc.toLocaleString()}</td></tr>`;
           if(nocont>0)   addRows += `<tr><td class="item">⑤ 미계약건</td><td class="amt green">+₩${nocont.toLocaleString()}</td></tr>`;
           if(etcPlus>0)  addRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
+          if(etcPlusTL>0) addRows += `<tr><td class="item">팀장수수료${etcPlusTLReason?' <small style="color:#94a3b8">('+etcPlusTLReason+')</small>':''}</td><td class="amt green">+₩${etcPlusTL.toLocaleString()}</td></tr>`;
 
           // 공제 항목
           let deductRows = '';
