@@ -8911,7 +8911,7 @@ function showApp(){
 
 // ══ DONWAY 화이트리스트 (영구 무료 계정) ══
 var OWNER_BIZ = ['373-86-02536'];
-var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com','test1@naver.com','test_sim@donway.ai.kr'];
+var OWNER_EMAIL = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
 // ── 탭 전환 ──
 function switchTab(tab){
@@ -40238,7 +40238,7 @@ function _loadTrialExtendPanel(container){
   if(!container)return;
 
   // 미리 등록된 테스트 계정 (이메일 기준)
-  var TEST_ACCOUNTS=['test0@naver.com','test123@naver.com','test1@naver.com'];
+  var TEST_ACCOUNTS=[];
 
   container.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:12px">🔄 체험 기간 연장</div>'
     +'<div style="background:#eff6ff;border-radius:10px;padding:12px;margin-bottom:16px;font-size:11px;color:#1d4ed8">'
@@ -40363,7 +40363,7 @@ function _loadPaymentRequests(container){
   container.appendChild(listArea);
   container=listArea;
 
-  var filterVal=window._payFilter||'pending';
+  var filterVal=window._payFilter||'all';
   var q=_db.collection('payment_requests').orderBy('createdAt','desc').limit(100);
   q.get()
   .then(function(snap){
@@ -40412,6 +40412,7 @@ function _loadPaymentRequests(container){
           ?'<button class="ap-btn" data-rid="'+item.id+'" data-did="'+item.dealerId+'" data-type="'+item.type+'" style="margin-left:auto;padding:6px 16px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 승인</button>'
           +'<button class="rj-btn" data-rid="'+item.id+'" style="padding:6px 12px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">거절</button>'
           :'')
+        +'<button class="del-pay-btn" data-rid="'+item.id+'" style="padding:6px 10px;background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);border-radius:8px;font-size:11px;cursor:pointer;margin-left:4px">🗑</button>'
         +'</div>'
         +'</div>';
     });
@@ -40422,6 +40423,8 @@ function _loadPaymentRequests(container){
       var rb=e.target.closest('.rj-btn');
       if(ab) _approvePayment(ab.dataset.rid,ab.dataset.did,ab.dataset.type);
       if(rb) _rejectPayment(rb.dataset.rid);
+      var db2=e.target.closest('.del-pay-btn');
+      if(db2){if(!confirm('이 항목을 삭제하시겠습니까?'))return;_db.collection('payment_requests').doc(db2.dataset.rid).delete().then(function(){toast('🗑 삭제 완료');_loadPaymentRequests(document.querySelector('.pay-list-area')||container);}).catch(function(e){toast('❌ '+e.message);});}
     };
   }).catch(function(e){container.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
