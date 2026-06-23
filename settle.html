@@ -38330,7 +38330,8 @@ function _saveCompanyInfo(){
     updatedAt:new Date().toISOString()
   };
   _db.collection('companies').doc(did).update(data).then(function(){
-    Object.assign(window._cachedCompanyDoc||{},data);
+    if(!window._cachedCompanyDoc) window._cachedCompanyDoc={};
+    Object.assign(window._cachedCompanyDoc, data);
     toast('✅ 회사 정보 저장 완료');
     var mo=document.getElementById('mo-company-info');if(mo)mo.remove();
   }).catch(function(e){toast('❌ '+e.message);});
