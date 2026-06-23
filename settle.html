@@ -21158,6 +21158,30 @@ async function _sendPayslip(uid, name, ym, payData) {
     var nl=String.fromCharCode(10);var msg=[ym+' 급여명세서','총 근무: '+(payData.workDays||0)+'일 '+(payData.totalHours||0).toFixed(1)+'h','기본급: '+fmt(payData.basePay)+'원','연장수당: '+fmt(payData.overtimePay)+'원','야간: '+fmt(payData.nightPay)+'원','공제: '+fmt(payData.deductions)+'원','실수령액: '+fmt(payData.netPay)+'원'].join(nl);
     await fetch('/fcm/send',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({tokens:tokens,title:'💰 '+ym+' 급여명세서',body:msg,data:{type:'payslip',ym:ym}})});
+
+    // 알림톡 발송 (전화번호 있을 경우)
+    var phone=(uSnap.exists&&uSnap.data().phone)||'';
+    if(phone){
+      var coName=(window._cachedCompanyDoc&&window._cachedCompanyDoc.companyName)||'';
+      var stmtLink='https://donway.ai.kr/stmt?uid='+uid+'&ym='+ym;
+      await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          to:phone.replace(/[^0-9]/g,''),
+          templateCode:'KA01TP260623201919874SBFmHTNdNft',
+          variables:{
+            '#{회사명}':coName,
+            '#{이름}':name,
+            '#{월}':ym,
+            '#{지급액}':fmt(payData.totalPay),
+            '#{공제액}':fmt(payData.deductions),
+            '#{실수령액}':fmt(payData.netPay),
+            '#{링크}':stmtLink,
+            '#{연락처}':(window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||'051-711-3103'
+          },
+          fallbackText:'['+coName+'] '+ym+' 급여명세서\n'+name+'님 실수령액: '+fmt(payData.netPay)+'원\n확인: '+stmtLink
+        })
+      }).catch(function(){});
+    }
     return true;
   } catch(e){console.warn('payslip send:',e.message);return false;}
 }
