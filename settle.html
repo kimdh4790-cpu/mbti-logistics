@@ -7182,6 +7182,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         },0);
         window._lastPromoTotal=_totalPromoRaw;
         window._lastDrvMap=drvMap;
+        window._lastDrvMapRef=drvMap; // _doSettle에서 참조용
         console.log('[프로모션합계]', _totalPromoRaw, '건수:', _totalPromoCnt);
         var _totalPromoCnt=Object.values(drvMap).reduce(function(s,v){
           return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
