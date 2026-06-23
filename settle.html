@@ -11949,12 +11949,6 @@ function _pfLoadStats(did, ym){
   // 쿠팡 + 범용 두 컬렉션 합쳐서 로드
   Promise.all([
     _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get(),
-    _db.collection('settlements_universal').where('dealerId','==',did).orderBy('month','desc').limit(200).get().catch(function(){return {forEach:function(){}};})
-  ]).then(function(results){
-    var snap={forEach:function(fn){results[0].forEach(fn);results[1].forEach(fn);}};
-  }).then(function(){return null;});
-  Promise.all([
-    _db.collection('settlements').where('dealerId','==',did).orderBy('month','desc').limit(200).get(),
     _db.collection('settlements_universal').where('dealerId','==',did).orderBy('month','desc').limit(200).get().catch(function(){return {docs:[]};})
   ]).then(function(results){
     var allDocs=[].concat(results[0].docs||[]).concat(results[1].docs||[]);
@@ -30037,10 +30031,13 @@ function _renderSettleList(){
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(_settleCache){_renderSettlePage(_settleCache,c);return;}
   var cid2=_CU.dealerId||_CU.companyId;
-  // ★ 정산 + 등록 기사 동시 로드
+  // ★ 정산 + 등록 기사 동시 로드 (drvCache 있으면 재사용)
+  var _drvPromise=_drvCache
+    ? Promise.resolve({docs:_drvCache.map(function(d){return {id:d.id||'',data:function(){return d;}};})} )
+    : _db.collection('drivers').where('dealerId','==',cid2).where('is_active','!=',false).get();
   Promise.all([
     _db.collection('settlements').where('dealerId','==',cid2).get(),
-    _db.collection('drivers').where('dealerId','==',cid2).where('is_active','!=',false).get()
+    _drvPromise
   ]).then(function(results){
     _settleCache=results[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
     _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
