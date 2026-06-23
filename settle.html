@@ -30148,26 +30148,28 @@ function _renderSettleList(){
 
 
     // ★ 등록된 기사 중 이번달 정산 없는 기사 → 미정산으로 추가
+    // (슈퍼어드민 방문 중에는 건너뜀 — 실제 고객 본인만 표시)
     var curMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
-    var settledUsers=new Set(_settleCache.filter(function(s){return s.month===curMonth;}).map(function(s){return s.userId||s.driver;}));
-    results[1].docs.forEach(function(doc){
-      var d=doc.data();
-      if(d.status==='pending')return;
-      var uid=d.userId||d.coupangId||'';
-      var nm=d.name||'';
-      if(!uid&&!nm)return;
-      var isSettled=settledUsers.has(uid)||settledUsers.has(nm);
-      if(!isSettled){
-        // 미정산 기사 → 정산 목록에 추가 (읽기 전용 표시용)
-        _settleCache.push({
-          id:'__driver__'+doc.id,
-          driver:nm,userId:uid,
-          camp:d.camp||'',month:curMonth,
-          totalAmt:0,net:0,status:'미등록',
-          _driverOnly:true // 정산 미등록 플래그
-        });
-      }
-    });
+    if(!_CU._visitingCompany){
+      var settledUsers=new Set(_settleCache.filter(function(s){return s.month===curMonth;}).map(function(s){return s.userId||s.driver;}));
+      results[1].docs.forEach(function(doc){
+        var d=doc.data();
+        if(d.status==='pending')return;
+        var uid=d.userId||d.coupangId||'';
+        var nm=d.name||'';
+        if(!uid&&!nm)return;
+        var isSettled=settledUsers.has(uid)||settledUsers.has(nm);
+        if(!isSettled){
+          _settleCache.push({
+            id:'__driver__'+doc.id,
+            driver:nm,userId:uid,
+            camp:d.camp||'',month:curMonth,
+            totalAmt:0,net:0,status:'미등록',
+            _driverOnly:true
+          });
+        }
+      });
+    }
     lss('settlements',_settleCache.filter(function(s){return !s._driverOnly;}));
     // ★ routeCampMap 로드 후 렌더링 (캠프 탭 정확도)
     // ★ routeCampMap 이미 로드됐으면 재요청 안 함
