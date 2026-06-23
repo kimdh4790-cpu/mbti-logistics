@@ -379,26 +379,42 @@ async function showDash(){
 // ── ① 대리점 목록 로드 (users 컬렉션 기준) ──
 async function loadDealers(){
   try{
-    const [userSnap,subSnap]=await Promise.all([
-      getDocs(query(collection(db,'users'),where('role','==','dealer'))),
-      getDocs(collection(db,'subscriptions'))
-    ]);
-    const subs={};
-    subSnap.forEach(d=>subs[d.id]=d.data());
-    const planAmt={starter:30000,basic:50000,pro:80000};
+    // companies 컬렉션 기준 (DONWAY 실제 데이터)
+    const compSnap=await getDocs(query(collection(db,'companies'),orderBy('createdAt','desc')));
     _all=[];
-    userSnap.forEach(d=>{
-      const u=d.data();const sub=subs[d.id]||{};
+    compSnap.forEach(d=>{
+      const u=d.data();
+      // 구독 상태 판단
+      const subs=u.subscriptions||{};
+      const subKeys=Object.keys(subs);
+      let status='none',plan='-',expireDate=null,amount=0;
+      if(u.role==='admin'||u.role==='dealer'){
+        // 체험 여부
+        const hasTrial=subKeys.some(k=>subs[k]&&subs[k].active&&subs[k].plan==='trial');
+        const hasPaid=subKeys.some(k=>subs[k]&&subs[k].active&&subs[k].plan!=='trial');
+        if(hasPaid){status='active';plan='유료';}
+        else if(hasTrial){status='trial';plan='체험';}
+        // 만료일
+        subKeys.forEach(k=>{
+          const s=subs[k];
+          if(s&&s.expiry){
+            const exp=new Date(s.expiry);
+            if(!expireDate||exp>expireDate) expireDate=exp;
+          }
+        });
+      }
       _all.push({
         id:d.id,
         name:u.companyName||u.name||'-',
-        manager:u.managerName||'-',
-        phone:u.phone||'-',
+        manager:u.name||u.managerName||'-',
+        phone:u.phone||u.settlementPhone||'-',
         email:u.email||'-',
-        plan:sub.plan||'-',
-        status:sub.status||'none',
-        expireDate:sub.expireDate?.toDate?.()||null,
-        amount:planAmt[sub.plan]||0
+        plan:plan,
+        status:status,
+        expireDate:expireDate,
+        amount:amount,
+        bizNum:u.bizNum||'-',
+        slug:u.slug||'-'
       });
     });
     _all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
