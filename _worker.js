@@ -603,9 +603,10 @@ export default {
           let deductRows = '';
           deductRows += `<tr><td class="item">고용보험 (0.8%, 80만↑)</td><td class="amt red">-₩${emp.toLocaleString()}</td></tr>`;
           deductRows += `<tr><td class="item">산재보험 (0.88%)</td><td class="amt red">-₩${work.toLocaleString()}</td></tr>`;
-          if(dmg>0)      deductRows += `<tr><td class="item">⑥ 분실/파손${dmgReason?' ('+dmgReason+')':''}</td><td class="amt red">-₩${dmg.toLocaleString()}</td></tr>`;
-          if(etcMinus>0) deductRows += `<tr><td class="item">⑧ 기타(-)${etcMinusReason?' <small style="color:#94a3b8">('+etcMinusReason+')</small>':''}</td><td class="amt red">-₩${etcMinus.toLocaleString()}</td></tr>`;
-          if(adv>0)      deductRows += `<tr><td class="item">⑨ 가불 공제</td><td class="amt red">-₩${adv.toLocaleString()}</td></tr>`;
+          deductRows += `<tr><td class="item">⑥ 분실/파손${dmgReason?' ('+dmgReason+')':''}</td><td class="amt red">-₩${dmg.toLocaleString()}</td></tr>`;
+          deductRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
+          deductRows += `<tr><td class="item">⑧ 기타(-)${etcMinusReason?' <small style="color:#94a3b8">('+etcMinusReason+')</small>':''}</td><td class="amt red">-₩${etcMinus.toLocaleString()}</td></tr>`;
+          deductRows += `<tr><td class="item">⑨ 가불 공제</td><td class="amt red">-₩${adv.toLocaleString()}</td></tr>`;
 
           const routeSec = routeRows ? `
             <div class="sec">
