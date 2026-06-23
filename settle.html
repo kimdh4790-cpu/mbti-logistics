@@ -6897,7 +6897,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             // RPRICE 로드됐으면 단가표 기준, 아니면 3자리숫자+알파벳 패턴으로 판단
             var _rpriceKeys=Object.keys(RPRICE||{});
             var _isOurRoute=route&&(
-              (_rpriceKeys.length>0&&RPRICE[route]!==undefined) ||
+              (_rpriceKeys.length>0&&RPRICE[route]>0) ||
               (_rpriceKeys.length===0&&/^\d{3}[A-Z]$/.test(route))
             );
             if(_isOurRoute){
@@ -6908,7 +6908,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             // 일반 프로모션도 우리 라우트만
             var _rpriceKeys2=Object.keys(RPRICE||{});
             var _isOurRoute2=route&&(
-              (_rpriceKeys2.length>0&&RPRICE[route]!==undefined) ||
+              (_rpriceKeys2.length>0&&RPRICE[route]>0) ||
               (_rpriceKeys2.length===0&&/^\d{3}[A-Z]$/.test(route))
             );
             if(_isOurRoute2){
@@ -6947,7 +6947,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(freshIncInc>0){
           var _rk3=Object.keys(RPRICE||{});
           var _ourFresh=!route || 
-            (_rk3.length>0&&RPRICE[route]!==undefined) ||
+            (_rk3.length>0&&RPRICE[route]>0) ||
             (_rk3.length===0&&/^\d{3}[A-Z]$/.test(route));
           if(_ourFresh) drvMap[cleanId].freshIncAmt+=freshIncInc;
         }
