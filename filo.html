@@ -116,7 +116,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
               <span style="font-size:18px">📦</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--acc)">재고관리</div>
-                <div style="font-size:10px;color:var(--text3)">입출고·자동발주·마진분석 — 90,000원/월</div>
+                <div style="font-size:10px;color:var(--text3)">입출고·자동발주·실시간차감 — 콤보로 이용</div>
               </div>
             </div>
             <div id="fs-inv-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
@@ -129,7 +129,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
               <span style="font-size:18px">🔐</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--text2)">QR출퇴근+급여</div>
-                <div style="font-size:10px;color:var(--text3)">동적QR·GPS검증·급여자동계산 — 인당 3,500원/월</div>
+                <div style="font-size:10px;color:var(--text3)">동적QR·GPS검증·급여자동계산 — 인당 4,500원/월</div>
               </div>
             </div>
             <div id="fs-qr-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
@@ -142,7 +142,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
               <span style="font-size:18px">🖥️</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--text2)">키오스크POS</div>
-                <div style="font-size:10px;color:var(--text3)">POS결제·포인트·회원권 — 50,000원/월</div>
+                <div style="font-size:10px;color:var(--text3)">POS결제·실시간매출·재고연동 — 콤보로 이용</div>
               </div>
             </div>
             <div id="fs-kiosk-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
@@ -155,7 +155,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
               <span style="font-size:18px">🚀</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--text2)">전체 콤보</div>
-                <div style="font-size:10px;color:var(--text3)">재고+QR급여+키오스크 — 150,000원/월</div>
+                <div style="font-size:10px;color:var(--text3)">재고+QR급여+키오스크 — 165,000원/월</div>
               </div>
             </div>
             <div id="fs-combo-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
@@ -492,12 +492,15 @@ function _filoBizCheck(){
 var _filoSelectedSvcs=['inventory'];
 function _filoToggleSvc(k){
   var idx=_filoSelectedSvcs.indexOf(k);
-  if(k==='combo'){_filoSelectedSvcs=['combo'];}
-  else {
+  if(k==='combo'||k==='inventory'||k==='kiosk'){
+    // 재고/키오스크는 콤보로만 제공
+    _filoSelectedSvcs=['combo'];
+    if(k!=='combo') setTimeout(function(){alert('재고관리·키오스크는 콤보 플랜으로만 제공됩니다 (165,000원/월)');},100);
+  } else {
     _filoSelectedSvcs=_filoSelectedSvcs.filter(function(x){return x!=='combo';});
     if(idx>=0)_filoSelectedSvcs.splice(idx,1);
     else _filoSelectedSvcs.push(k);
-    if(!_filoSelectedSvcs.length)_filoSelectedSvcs=['inventory'];
+    if(!_filoSelectedSvcs.length)_filoSelectedSvcs=['combo'];
   }
   ['inventory','qr','kiosk','combo'].forEach(function(s){
     var on=_filoSelectedSvcs.indexOf(s)>=0;
