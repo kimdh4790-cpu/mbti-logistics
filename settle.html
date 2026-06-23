@@ -6820,7 +6820,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백');
         var isEcoRow=divVal.includes('에코백');
         var isSugi=divVal.includes('수기')&&(divVal.includes('반품')||divVal.includes('회수'));
-        var isNocont=(!isFreshRow&&!isEcoRow&&!isSugi&&(divVal.includes('미계약')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근')));
+        // ★ 명절 프로모션 행 감지
+        var isSeolPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('프로모션')&&!divVal.includes('베이스')&&!divVal.includes('일반'));
+        var isSeolNormalPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('일반 프로모션'));
+        var isNocontPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('미계약 라우트'));
+        var isNocont=(!isFreshRow&&!isEcoRow&&!isSugi&&!isNocontPromo&&(divVal.includes('미계약')||divVal.includes('소급')||divVal.includes('계약외')||divVal.includes('외근')));
         var route=String(row[rColRoute]||'').trim();
         // ★ route가 '미계약'이면 isNocont로 처리
         if(!isNocont&&(route.includes('미계약')||route==='계약외'))isNocont=true;
@@ -6837,7 +6841,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(!drvMap[cleanId])drvMap[cleanId]={
           cleanId:cleanId,camp:campName,dcnt:0,rcnt:0,
           delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,
-          nocontCnt:0,nocontAmt:0,routes:{}
+          nocontCnt:0,nocontAmt:0,routes:{},
+          promoCnt:0,promoAmt:0,       // 설 프로모션
+          normalPromoCnt:0,normalPromoAmt:0, // 설 일반 프로모션
+          nocontPromoCnt:0,nocontPromoAmt:0  // 명절 미계약 라우트
         };
         // 캠프: 첫 번째로 발견된 캠프 우선
         if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
@@ -6874,6 +6881,27 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           }
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
             drvMap[cleanId].camp=campName;
+          continue;
+        }
+        // ★ 명절 프로모션 처리
+        if(isSeolPromo||isSeolNormalPromo||isNocontPromo){
+          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
+            dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
+            addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},
+            promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,
+            nocontPromoCnt:0,nocontPromoAmt:0};
+          if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
+            drvMap[cleanId].camp=campName;
+          if(isSeolPromo){
+            drvMap[cleanId].promoCnt+=dcnt;
+            if(rowTotal>0) drvMap[cleanId].promoAmt+=rowTotal;
+          } else if(isSeolNormalPromo){
+            drvMap[cleanId].normalPromoCnt+=dcnt;
+            if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
+          } else if(isNocontPromo){
+            drvMap[cleanId].nocontPromoCnt+=dcnt;
+            if(rowTotal>0) drvMap[cleanId].nocontPromoAmt+=rowTotal;
+          }
           continue;
         }
         if(isNocont){
@@ -7128,6 +7156,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').set(_routeCampMap,{merge:false}).catch(function(){});
       }
       Promise.all(routePromises.concat(driverPromises)).then(function(){
+        // ★ 명절 프로모션 감지 → 마진율 입력 모달
+        var _totalPromoRaw=Object.values(drvMap).reduce(function(s,v){
+          return s+(v.promoAmt||0)+(v.normalPromoAmt||0)+(v.nocontPromoAmt||0);
+        },0);
+        var _totalPromoCnt=Object.values(drvMap).reduce(function(s,v){
+          return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
+        },0);
+
+        function _doSettle(marginRate){
+          window._promoMarginRate=marginRate||10;
         _drvCache=null;  // 기사 캐시 초기화 (재로드)
         var settlements=ls('settlements');
         // ★ 해당 월 기존 데이터 제거 (엑셀 재업로드 시 깔끔하게 덮어쓰기)
@@ -7499,12 +7537,53 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         } else {
           _settleCache=null;SP('settlements',null);
         }
+        } // _doSettle 끝
+
+        // ★ 프로모션 있으면 마진율 입력 모달, 없으면 바로 정산
+        if(_totalPromoRaw>0){
+          var _mo=document.createElement('div');
+          _mo.className='mo show';
+          _mo.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7)';
+          _mo.innerHTML='<div style="background:var(--bg2,#1e293b);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:16px;padding:20px;max-width:340px;width:90%;font-size:13px">'
+            +'<div style="font-size:15px;font-weight:800;margin-bottom:4px">🎁 명절 프로모션 감지</div>'
+            +'<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">총 '+_totalPromoCnt+'건 / ₩'+_totalPromoRaw.toLocaleString()+'원 (VAT별도)</div>'
+            +'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:#94a3b8">'
+            +'💡 VAT(10%)는 기본 대리점 마진입니다<br>마진 10% = 기사에게 엑셀금액 100% 지급<br>마진 15% = 기사에게 엑셀금액 95% 지급</div>'
+            +'<div style="margin-bottom:14px">'
+            +'<label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:6px">대리점 마진율 설정</label>'
+            +'<div style="display:flex;align-items:center;gap:8px">'
+            +'<input type="range" id="promo-margin-range" min="10" max="30" step="1" value="10" style="flex:1" oninput="document.getElementById(\'promo-margin-val\').textContent=this.value+\'%\';document.getElementById(\'promo-margin-num\').value=this.value;_updatePromoPreview(this.value,'+(JSON.stringify(_totalPromoRaw))+','+_totalPromoCnt+')">'
+            +'<input type="number" id="promo-margin-num" min="10" max="30" value="10" style="width:55px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3,#111827);color:var(--text);font-size:13px;text-align:center" oninput="document.getElementById(\'promo-margin-range\').value=this.value;document.getElementById(\'promo-margin-val\').textContent=this.value+\'%\';_updatePromoPreview(this.value,'+(JSON.stringify(_totalPromoRaw))+','+_totalPromoCnt+')">'
+            +'<span id="promo-margin-val" style="font-size:13px;font-weight:700;color:#f59e0b;min-width:36px">10%</span>'
+            +'</div></div>'
+            +'<div id="promo-preview" style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px">'
+            +'<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">기사 지급 합계</span><span id="promo-pay-amt" style="font-weight:800;color:#22c55e">₩'+_totalPromoRaw.toLocaleString()+'원</span></div>'
+            +'<div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:#94a3b8">대리점 마진</span><span id="promo-margin-amt" style="color:#f59e0b">₩0원</span></div>'
+            +'</div>'
+            +'<div style="display:flex;gap:8px">'
+            +'<button onclick="this.closest(\'.mo\').remove();_doSettle(0)" style="flex:1;padding:10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:12px;cursor:pointer">건너뛰기</button>'
+            +'<button onclick="var m=parseInt(document.getElementById(\'promo-margin-num\').value)||10;this.closest(\'.mo\').remove();_doSettle(m)" style="flex:2;padding:10px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#fb923c);border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer">✅ 적용하고 정산</button>'
+            +'</div></div>';
+          document.body.appendChild(_mo);
+        } else {
+          _doSettle(10);
+        }
       });
     }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
 }
 // _parseCoupangExcelInner 끝
+
+function _updatePromoPreview(margin, totalRaw, totalCnt){
+  margin = parseInt(margin)||10;
+  var pay = Math.round(totalRaw * (1 - Math.max(0, margin-10)/100));
+  var marginAmt = totalRaw - pay;
+  var payEl = document.getElementById('promo-pay-amt');
+  var marginEl = document.getElementById('promo-margin-amt');
+  if(payEl) payEl.textContent = '₩'+pay.toLocaleString()+'원';
+  if(marginEl) marginEl.textContent = '₩'+marginAmt.toLocaleString()+'원';
+}
 
 </script>
 
@@ -7913,10 +7992,27 @@ function _saveCpDriver(camp,dm,name,month,cb){
       excelUnitPrice:rv.unitPrc||0});
   });
   var dealerId=window._CU?window._CU.dealerId:'';
+  // 명절 프로모션 데이터
+  var _promoAmt=dm.promoAmt||0;
+  var _promoCnt=dm.promoCnt||0;
+  var _normalPromoAmt=dm.normalPromoAmt||0;
+  var _normalPromoCnt=dm.normalPromoCnt||0;
+  var _nocontPromoAmt=dm.nocontPromoAmt||0;
+  var _nocontPromoCnt=dm.nocontPromoCnt||0;
+  var _totalPromoRaw=_promoAmt+_normalPromoAmt+_nocontPromoAmt;
+  var _promoMargin=window._promoMarginRate||10; // 기본 10%
+  // 마진 10% = 엑셀금액 그대로, 15% = 5% 추가 차감
+  var _promoPayAmt=_totalPromoRaw>0?Math.round(_totalPromoRaw*(1-Math.max(0,_promoMargin-10)/100)):0;
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
     dcnt:dm.dcnt||0,rcnt:dm.rcnt||0,damt:damt,ramt:ramt,fresh:freshRaw,finc:finc,inc:0,
-    nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,etcPlus:0,etcMinus:0,dmg:0,adv:0,
-    totalAmt:income,income:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,deduct:emp+work,net:income-(emp+work),
+    nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,
+    promoAmt:_promoAmt,promoCnt:_promoCnt,
+    normalPromoAmt:_normalPromoAmt,normalPromoCnt:_normalPromoCnt,
+    nocontPromoAmt:_nocontPromoAmt,nocontPromoCnt:_nocontPromoCnt,
+    promoPayAmt:_promoPayAmt,promoMargin:_promoMargin,
+    etcPlus:_promoPayAmt,etcPlusLabel:_promoPayAmt>0?'명절/프로모션 인센':'',
+    etcMinus:0,dmg:0,adv:0,
+    totalAmt:income+_promoPayAmt,income:income+_promoPayAmt,supplyAmt:sa+_promoPayAmt,monthlyWage:wage+_promoPayAmt,emp:emp,work:work,deduct:emp+work,net:(income+_promoPayAmt)-(emp+work),
     routeDetails:routeDetails,status:'정산예정'};
   // ★ drivers에서 priceOverride 조회 — 동기 캐시 우선
   var _cleanUid=(uid||'').replace(/@df$/i,'').trim();
