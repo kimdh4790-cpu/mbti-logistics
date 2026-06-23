@@ -293,6 +293,12 @@ window.onBizDocSelected=onBizDocSelected;</script>
 
 
       </div>
+      <!-- OCR 자동입력 필드 (사업자등록증 인식 후 자동 채워짐) -->
+      <div class="fg"><label>사업장 주소 <span style="font-size:10px;color:var(--text3)">(사업자등록증 자동 인식)</span></label><input id="r-bizaddr" type="text" placeholder="부산시 수영구 수영로 668, 607호"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div class="fg" style="margin-bottom:0"><label>업태 <span style="font-size:10px;color:var(--text3)">(자동 인식)</span></label><input id="r-biztype" type="text" placeholder="서비스업"></div>
+        <div class="fg" style="margin-bottom:0"><label>종목 <span style="font-size:10px;color:var(--text3)">(자동 인식)</span></label><input id="r-bizitem" type="text" placeholder="기타물품운반원"></div>
+      </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
       <div class="fg"><label>비밀번호 확인</label><input id="r-pw2" type="password" placeholder="비밀번호 재입력"></div>
@@ -9116,6 +9122,9 @@ function doRegister(){
         shortLabel:shortLabel,
         settlementContact:contactName,
         settlementPhone:contactPhone,
+        bizAddr:(document.getElementById('r-bizaddr')||{value:''}).value.trim(),
+        bizType:(document.getElementById('r-biztype')||{value:''}).value.trim(),
+        bizItem:(document.getElementById('r-bizitem')||{value:''}).value.trim(),
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     };
@@ -30323,7 +30332,10 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       companyName:coName,
       contactName:(_CU&&_CU.settlementContact)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementContact)||'',
       contactPhone:(_CU&&_CU.settlementPhone)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementPhone)||'051-711-3103',
-      bizNum:(_CU&&_CU.bizNum)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||'373-86-02536'
+      bizNum:(_CU&&_CU.bizNum)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||'373-86-02536',
+      bizAddr:(_cachedCompanyDoc&&_cachedCompanyDoc.bizAddr)||'',
+      bizType:(_cachedCompanyDoc&&_cachedCompanyDoc.bizType)||'',
+      bizItem:(_cachedCompanyDoc&&_cachedCompanyDoc.bizItem)||''
     };
     if(_db)_db.collection('statement_share').doc(token).set(stmtData).catch(function(){});
     var variables={'#{고객회사명}':coName||'','#{이름}':name||'','#{월}':month||'',
