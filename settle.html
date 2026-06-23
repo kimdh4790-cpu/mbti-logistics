@@ -30308,12 +30308,12 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   var token=Math.random().toString(36).slice(2,10)+Date.now().toString(36);
   var stmtUrl='https://donway.ai.kr/stmt?t='+token;
   var nl=String.fromCharCode(10);
-  var vatIncome=x.vatIncome||x.totalAmt||calcNet(x).totalAmt||net||0;
+  var vatIncome=x.totalAmt||x.vatIncome||calcNet(x).totalAmt||net||0;
 
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
     // 정산 데이터 전체 저장 (로그인 없이 명세서 렌더링용)
-    var vatIncome2=x.vatIncome||net||0;
+    var vatIncome2=x.totalAmt||x.vatIncome||net||0;
     var _netFinal=x.net||net;
     var stmtData={
       dealerId:did,driverName:name,month:month,net:_netFinal,_coName:coName,
