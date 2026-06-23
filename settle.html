@@ -7272,6 +7272,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
           var workIns=Math.floor(monthlyWage*0.0088/10)*10;
 
+          // ★ 명절 프로모션 금액 계산 (마진율 적용)
+          var _dmPromoEntry=(window._lastDrvMap&&window._lastDrvMap[cleanId])||dm;
+          var _entryPromoRaw=(_dmPromoEntry.promoAmt||0)+(_dmPromoEntry.normalPromoAmt||0)+(_dmPromoEntry.nocontPromoAmt||0);
+          var _entryPromoMargin=window._promoMarginRate||0;
+          var _entryPromoPayAmt=_entryPromoRaw>0?Math.round(_entryPromoRaw*(1-Math.max(0,_entryPromoMargin-10)/100)):0;
+
           var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
           var entry={
             driver:drvName, userId:cleanId, dealerId:_CU.dealerId,
@@ -7285,9 +7291,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             finc:fincVal,          // 프레시백 인센티브
             inc:addIncAmt,         // 추가인센티브(가중요인)
             nocont:nocontAmtCalc,nocontCnt:nocontCntVal,
+            promoAmt:_dmPromoEntry.promoAmt||0,
+            normalPromoAmt:_dmPromoEntry.normalPromoAmt||0,
+            nocontPromoAmt:_dmPromoEntry.nocontPromoAmt||0,
+            promoPayAmt:_entryPromoPayAmt,
+            promoMargin:_entryPromoMargin,
             dmg:dmgAmt,
-            etcPlus:0,etcMinus:0,
-            totalAmt:taxBase,
+            etcPlus:_entryPromoPayAmt,etcMinus:0,
+            etcPlusLabel:_entryPromoPayAmt>0?'명절/프로모션 인센':'',
+            totalAmt:taxBase+_entryPromoPayAmt,
             supplyAmt:supplyAmt,
             monthlyWage:monthlyWage,
             emp:empIns, work:workIns,
