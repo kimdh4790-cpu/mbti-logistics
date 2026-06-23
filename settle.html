@@ -30017,12 +30017,22 @@ function deleteMonthSettlements(month){
   var did=_CU&&_CU.dealerId;
   if(!_db||!did){toast('❌ 로그인 정보 없음');return;}
   toast('🗑 '+month+' 삭제 중...');
-  _db.collection('settlements')
-    .where('dealerId','==',did)
-    .where('month','==',month)
-    .get()
-    .then(function(snap){
-      if(!snap.size){toast('ℹ️ 삭제할 데이터 없음');return;}
+  // month 또는 ym 필드 둘 다 조회
+  Promise.all([
+    _db.collection('settlements').where('dealerId','==',did).where('month','==',month).get(),
+    _db.collection('settlements').where('dealerId','==',did).where('ym','==',month).get()
+  ]).then(function(results){
+    var snap = results[0];
+    var snap2 = results[1];
+    var allDocs = [];
+    snap.forEach(function(d){allDocs.push(d.ref);});
+    snap2.forEach(function(d){
+      // 중복 제거
+      if(!allDocs.find(function(r){return r.id===d.ref.id;})) allDocs.push(d.ref);
+    });
+    var fakeSnap = {size: allDocs.length, forEach: function(fn){allDocs.forEach(function(ref,i){fn({ref:ref});});} };
+    var snap = fakeSnap;
+    if(!snap.size){toast('ℹ️ 삭제할 데이터 없음');return;}
       // 500개 단위 배치 처리
       var batches=[],b=_db.batch(),cnt=0;
       snap.forEach(function(doc){
