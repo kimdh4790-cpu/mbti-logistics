@@ -29884,11 +29884,12 @@ function _buildDynCamps(settles){
 
 // ── 라우트→캠프 매핑 (동적, 엑셀 업로드 시 구성)
 var _routeCampMap={};
-function _loadRouteCampMap(){
-  if(!_db||!_CU)return;
+function _loadRouteCampMap(cb){
+  if(!_db||!_CU){if(cb)cb();return;}
   _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').get().then(function(snap){
     if(snap.exists)Object.assign(_routeCampMap,snap.data());
-  }).catch(function(){});
+    if(cb)cb();
+  }).catch(function(){if(cb)cb();});
 }
 // ── filterSettleM / filterSettleC 정의 (누락됐던 함수)
 function filterSettleM(m){
@@ -30033,6 +30034,7 @@ function _renderSettleList(){
     _settleCache=results[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
     _settleCache.sort(function(a,b){return (b.month||'').localeCompare(a.month||'');});
 
+
     // ★ 등록된 기사 중 이번달 정산 없는 기사 → 미정산으로 추가
     var curMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
     var settledUsers=new Set(_settleCache.filter(function(s){return s.month===curMonth;}).map(function(s){return s.userId||s.driver;}));
@@ -30055,7 +30057,11 @@ function _renderSettleList(){
       }
     });
     lss('settlements',_settleCache.filter(function(s){return !s._driverOnly;}));
-    _renderSettlePage(_settleCache,c);
+    // ★ routeCampMap 로드 후 렌더링 (캠프 탭 정확도)
+    _loadRouteCampMap(function(){
+      _buildDynCamps(_settleCache);
+      _renderSettlePage(_settleCache,c);
+    });
   }).catch(function(e){
     // fallback: 정산만 로드
     _db.collection('settlements').where('dealerId','==',cid2).get()
