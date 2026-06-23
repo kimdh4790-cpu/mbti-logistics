@@ -6894,14 +6894,23 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             drvMap[cleanId].camp=campName;
           if(isSeolPromo){
             // ★ 우리 라우트단가표에 있는 노선만 집계 (없는 노선은 제외)
-            var _isOurRoute=route&&(RPRICE[route]!==undefined||Object.keys(RPRICE).indexOf(route)>=0);
+            // RPRICE 로드됐으면 단가표 기준, 아니면 3자리숫자+알파벳 패턴으로 판단
+            var _rpriceKeys=Object.keys(RPRICE||{});
+            var _isOurRoute=route&&(
+              (_rpriceKeys.length>0&&RPRICE[route]!==undefined) ||
+              (_rpriceKeys.length===0&&/^\d{3}[A-Z]$/.test(route))
+            );
             if(_isOurRoute){
               drvMap[cleanId].promoCnt+=dcnt;
               if(rowTotal>0) drvMap[cleanId].promoAmt+=rowTotal;
             }
           } else if(isSeolNormalPromo){
             // 일반 프로모션도 우리 라우트만
-            var _isOurRoute2=route&&(RPRICE[route]!==undefined||Object.keys(RPRICE).indexOf(route)>=0);
+            var _rpriceKeys2=Object.keys(RPRICE||{});
+            var _isOurRoute2=route&&(
+              (_rpriceKeys2.length>0&&RPRICE[route]!==undefined) ||
+              (_rpriceKeys2.length===0&&/^\d{3}[A-Z]$/.test(route))
+            );
             if(_isOurRoute2){
               drvMap[cleanId].normalPromoCnt+=dcnt;
               if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
@@ -6935,10 +6944,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].retAmt+=retAmt;
         drvMap[cleanId].freshAmt+=freshInc;
         // ★ 프레시백 인센: 우리 라우트단가표에 있는 노선만 집계
-        if(freshIncInc>0&&route&&RPRICE[route]!==undefined){
-          drvMap[cleanId].freshIncAmt+=freshIncInc;
-        } else if(freshIncInc>0&&!route){
-          drvMap[cleanId].freshIncAmt+=freshIncInc; // 라우트 없는 경우 그대로
+        if(freshIncInc>0){
+          var _rk3=Object.keys(RPRICE||{});
+          var _ourFresh=!route || 
+            (_rk3.length>0&&RPRICE[route]!==undefined) ||
+            (_rk3.length===0&&/^\d{3}[A-Z]$/.test(route));
+          if(_ourFresh) drvMap[cleanId].freshIncAmt+=freshIncInc;
         }
         drvMap[cleanId].addIncAmt+=addInc*(dcnt+rcnt); // ★ col10단가 × (배송+반품)건수
         // 날짜 추출
@@ -8020,6 +8031,9 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
     dcnt:dm.dcnt||0,rcnt:dm.rcnt||0,damt:damt,ramt:ramt,fresh:freshRaw,finc:finc,inc:0,
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,
+    promoAmt:_promoAmt,promoCnt:_promoCnt,
+    normalPromoAmt:_normalPromoAmt,normalPromoCnt:_normalPromoCnt,
+    nocontPromoAmt:_nocontPromoAmt,nocontPromoCnt:_nocontPromoCnt,
     promoAmt:_promoAmt,promoCnt:_promoCnt,
     normalPromoAmt:_normalPromoAmt,normalPromoCnt:_normalPromoCnt,
     nocontPromoAmt:_nocontPromoAmt,nocontPromoCnt:_nocontPromoCnt,
