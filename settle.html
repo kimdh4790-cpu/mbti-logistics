@@ -30366,7 +30366,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   }
   var captureDiv=document.createElement('div');
   captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif;padding:0;overflow:visible';
-  var _rClone=calcNet(_xClone); var _vatClone=_rClone.totalAmt||vatIncome; captureDiv.innerHTML=_buildPayslipCaptureHTML(_xClone,_rClone,name,month,_rClone.net||net,_vatClone);
+  var _rForCapture=calcNet(x); var _vatCapture=vatIncome||_rForCapture.totalAmt; captureDiv.innerHTML=_buildPayslipCaptureHTML(x,_rForCapture,name,month,_rForCapture.net||net,_vatCapture);
   document.body.appendChild(captureDiv);
   setTimeout(async function(){
     try{
