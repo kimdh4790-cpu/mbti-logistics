@@ -7448,10 +7448,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var fd=drvMap[fid]; if(!fd)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
               if(!ts)return;
-              // ★ 시작일~종료일 범위 필터 (startDate 이상, endDate 이하 — 하루 지정 시 그날 이후 전체)
+              // ★ 날짜 범위: startDate/endDate 우선, 없으면 dates[] 배열 첫/끝값으로 범위 구성
               var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
-              var rStart=_ndFmt(rule.startDate)||'';
-              var rEnd=_ndFmt(rule.endDate)||'';
+              var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
+              var rStart=_ndFmt(rule.startDate)||(_sortedDates.length?_sortedDates[0]:'');
+              var rEnd=_ndFmt(rule.endDate)||(_sortedDates.length?_sortedDates[_sortedDates.length-1]:'');
               var tR=rule.routes||[];
               var tot=0, pts=[];
 
