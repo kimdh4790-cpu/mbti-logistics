@@ -30313,9 +30313,10 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
     // 정산 데이터 전체 저장 (로그인 없이 명세서 렌더링용)
-    var vatIncome2=x.vatIncome||x.totalSupply||x.totalPay||net||0;
+    var _r2=calcNet(x); var vatIncome2=_r2.totalAmt||x.vatIncome||net||0;
+    var _netFinal=_r2.net||net;
     var stmtData={
-      dealerId:did,driverName:name,month:month,net:net,_coName:coName,
+      dealerId:did,driverName:name,month:month,net:_netFinal,_coName:coName,
       imgUrl:imgUrl||'',createdAt:new Date().toISOString(),
       // 정산 데이터
       vatIncome:vatIncome2,
