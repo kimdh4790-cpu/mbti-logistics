@@ -6903,15 +6903,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
           } else if(isSeolNormalPromo){
             // 일반 프로모션도 우리 라우트만
-            var _rpriceKeys2=Object.keys(RPRICE||{});
-            var _isOurRoute2=route&&(
-              (_rpriceKeys2.length>0&&RPRICE[route]>0) ||
-              (_rpriceKeys2.length===0&&/^\d{3}[A-Z]$/.test(route))
-            );
-            if(_isOurRoute2){
-              drvMap[cleanId].normalPromoCnt+=dcnt;
-              if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
-            }
+            // 설 일반 프로모션은 라우트 필터 없이 전체 집계 (대구2 등 타 캠프 노선 포함)
+            drvMap[cleanId].normalPromoCnt+=dcnt;
+            if(rowTotal>0) drvMap[cleanId].normalPromoAmt+=rowTotal;
           } else if(isNocontPromo){
             // 미계약 라우트는 라우트 없이 총금액만 있으므로 그대로 집계
             drvMap[cleanId].nocontPromoCnt+=dcnt;
