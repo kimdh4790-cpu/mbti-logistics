@@ -50,8 +50,146 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </head>
 <body>
 
+<!-- ── 랜딩 화면 ── -->
+<div id="landing-screen" style="display:block;background:radial-gradient(ellipse at 20% 10%,rgba(124,58,237,.18) 0%,transparent 55%),radial-gradient(ellipse at 80% 90%,rgba(8,145,178,.12) 0%,transparent 55%),var(--bg);min-height:100dvh;overflow-y:auto">
+
+  <!-- 헤더 -->
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;position:sticky;top:0;background:rgba(15,15,19,.85);backdrop-filter:blur(12px);z-index:50;border-bottom:1px solid var(--border)">
+    <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FILO</div>
+    <button onclick="document.getElementById('landing-screen').style.display='none';document.getElementById('login-screen').style.display='flex'" style="padding:8px 18px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer">로그인 · 무료체험</button>
+  </div>
+
+  <!-- 히어로 -->
+  <div style="text-align:center;padding:60px 20px 40px">
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--acc);font-weight:700;margin-bottom:20px">✦ 업종별 맞춤 자동화 플랫폼</div>
+    <div style="font-size:clamp(28px,6vw,48px);font-weight:900;line-height:1.2;margin-bottom:16px">
+      재고·출퇴근·키오스크<br>
+      <span style="background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">하나로 연결</span>
+    </div>
+    <div style="font-size:15px;color:var(--text2);max-width:480px;margin:0 auto 32px;line-height:1.7">
+      판매하면 재고가 줄고, 재고가 부족하면 거래처에 자동 발주.<br>출퇴근 찍으면 급여가 계산되고, 매출은 실시간으로 정산까지.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button onclick="document.getElementById('landing-screen').style.display='none';document.getElementById('login-screen').style.display='flex';setTimeout(function(){_filoTab('register')},100)" style="padding:14px 28px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer">🎁 7일 무료체험 시작</button>
+      <button onclick="window.open('https://pf.kakao.com/_xkuxabX/chat','_blank')" style="padding:14px 28px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer">💬 도입 상담</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:14px">카드 등록 불필요 · 사업자번호 1회 한정</div>
+  </div>
+
+  <!-- 핵심 기능 3가지 -->
+  <div style="max-width:900px;margin:0 auto;padding:0 16px 60px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:22px;font-weight:900;margin-bottom:8px">어떤 기능인가요?</div>
+      <div style="font-size:13px;color:var(--text3)">같은 업종이라도 운영 방식은 다릅니다 — 도입 상담 시 업종에 맞게 100% 커스텀</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:40px">
+
+      <!-- 재고+키오스크 -->
+      <div style="background:var(--bg2);border:1px solid rgba(124,58,237,.25);border-radius:18px;padding:22px">
+        <div style="font-size:28px;margin-bottom:12px">📦🖥️</div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:6px;color:#a78bfa">재고 + 키오스크 콤보</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:14px">
+          ✅ POS·태블릿 판매 즉시 재고 자동 차감<br>
+          ✅ 재고 부족 감지 → 거래처 자동 발주 알림톡<br>
+          ✅ QR·무인주문 (테이블/포장/출장 모드)<br>
+          ✅ 실시간 매출 대시보드<br>
+          ✅ 발주 수량·거래처 품목별 설정<br>
+          ✅ DONWAY 정산 연동
+        </div>
+        <div style="background:rgba(124,58,237,.1);border-radius:10px;padding:10px 12px;font-size:12px">
+          <span style="color:var(--acc);font-weight:700">165,000원/월</span> <span style="color:var(--text3)">(VAT별도)</span><br>
+          <span style="font-size:10px;color:var(--text3)">DONWAY 연동 고객 110,000원/월</span>
+        </div>
+      </div>
+
+      <!-- QR+급여 -->
+      <div style="background:var(--bg2);border:1px solid rgba(8,145,178,.25);border-radius:18px;padding:22px">
+        <div style="font-size:28px;margin-bottom:12px">🔐💼</div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:6px;color:#38bdf8">QR출퇴근 + 급여 통합</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;margin-bottom:14px">
+          ✅ 동적 QR 출퇴근 (위변조 방지)<br>
+          ✅ GPS 위치 검증<br>
+          ✅ 시급·일급·월급·건당 자동 계산<br>
+          ✅ 4대보험 자동 공제<br>
+          ✅ 연장수당 자동 산출<br>
+          ✅ 급여명세서 앱 발송
+        </div>
+        <div style="background:rgba(8,145,178,.1);border-radius:10px;padding:10px 12px;font-size:12px">
+          <span style="color:#38bdf8;font-weight:700">인당 4,500원/월</span> <span style="color:var(--text3)">(VAT별도)</span><br>
+          <span style="font-size:10px;color:var(--text3)">DONWAY 연동 고객 인당 3,500원/월</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 운영 흐름 -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:40px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:20px;text-align:center">⚡ 실제 운영 흐름</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;text-align:center">
+        <div style="padding:14px;background:var(--bg3);border-radius:12px">
+          <div style="font-size:20px;margin-bottom:6px">🛒</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">고객 주문</div>
+          <div style="font-size:10px;color:var(--text3)">QR·태블릿·POS</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:20px;color:var(--text3)">→</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px">
+          <div style="font-size:20px;margin-bottom:6px">📦</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">재고 자동 차감</div>
+          <div style="font-size:10px;color:var(--text3)">실시간 연동</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:20px;color:var(--text3)">→</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px">
+          <div style="font-size:20px;margin-bottom:6px">🚨</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">부족 감지</div>
+          <div style="font-size:10px;color:var(--text3)">최소수량 이하</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:20px;color:var(--text3)">→</div>
+        </div>
+        <div style="padding:14px;background:var(--bg3);border-radius:12px">
+          <div style="font-size:20px;margin-bottom:6px">📲</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:4px">자동 발주</div>
+          <div style="font-size:10px;color:var(--text3)">거래처 알림톡</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 업종 -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:40px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px;text-align:center">🏪 어떤 업종에 맞나요?</div>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:18px">같은 업종이라도 운영 방식은 다릅니다.<br>도입 상담 시 업종·규모에 맞게 기능을 100% 맞춤 설정해 드립니다.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">☕ 카페·음료</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🍽️ 식당·분식</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🧴 미용·뷰티</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🧹 청소·파견</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🏗️ 건설·현장</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🛵 배달대행</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">📦 물류·도매</span>
+        <span style="padding:6px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:600;color:var(--acc)">🏥 요양·돌봄</span>
+        <span style="padding:6px 14px;background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.2);border-radius:20px;font-size:12px;font-weight:700;color:#38bdf8">+ 상담 시 맞춤 설정</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(8,145,178,.15));border:1px solid rgba(124,58,237,.3);border-radius:18px;padding:28px;text-align:center">
+      <div style="font-size:18px;font-weight:900;margin-bottom:8px">지금 바로 시작하세요</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:20px;line-height:1.7">7일 무료 체험 후 결정하세요.<br>업종별 운영 방식에 맞게 기능을 맞춰 드립니다.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button onclick="document.getElementById('landing-screen').style.display='none';document.getElementById('login-screen').style.display='flex';setTimeout(function(){_filoTab('register')},100)" style="padding:13px 26px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🎁 무료체험 시작</button>
+        <button onclick="window.open('https://pf.kakao.com/_xkuxabX/chat','_blank')" style="padding:13px 26px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">💬 카카오 상담</button>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text3)">📞 051-711-3103 · (유)엠비티아이</div>
+    </div>
+  </div>
+</div>
+
 <!-- ── 로그인 화면 ── -->
-<div id="login-screen" class="login-wrap">
+<div id="login-screen" class="login-wrap" style="display:none">
 <div class="login-card">
   <div style="text-align:center;margin-bottom:22px">
     <div style="width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">
@@ -59,6 +197,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FILO</div>
     <div style="font-size:11px;color:var(--text3);margin-top:2px">재고 · 출퇴근 · 키오스크</div>
+    <button onclick="document.getElementById('landing-screen').style.display='block';document.getElementById('login-screen').style.display='none'" style="margin-top:8px;background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer">← 서비스 소개 보기</button>
   </div>
 
   <!-- 탭 -->
