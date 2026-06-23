@@ -30401,9 +30401,9 @@ function sendKakao(msgEnc){
 
 async function openSendModal(x){
   var r=calcNet(x);
-  var net=r.net||0;
-  var emp=(r.emp||0)+(r.work||0);
-  var vatIncome=r.totalAmt||0;  // ★ 기사 세금계산서 합계
+  var net=x.net||r.net||0;
+  var emp=(x.emp||r.emp||0)+(x.work||r.work||0);
+  var vatIncome=x.vatIncome||x.totalAmt||r.totalAmt||0;  // ★ 기사 세금계산서 합계
   var name=x.driver||x.userId||'기사';
   var month=x.month||'';
   var phone='';
