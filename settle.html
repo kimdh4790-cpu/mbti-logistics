@@ -30308,7 +30308,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   var token=Math.random().toString(36).slice(2,10)+Date.now().toString(36);
   var stmtUrl='https://donway.ai.kr/stmt?t='+token;
   var nl=String.fromCharCode(10);
-  var vatIncome=x.vatIncome||calcNet(x).totalAmt||net||0;
+  var vatIncome=x.vatIncome||x.totalAmt||calcNet(x).totalAmt||net||0;
 
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
@@ -32295,7 +32295,7 @@ function recalcAllSettlements(){
 
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
-        totalAmt:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
+        totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
       };
