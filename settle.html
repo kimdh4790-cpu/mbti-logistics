@@ -6885,6 +6885,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         }
         // ★ 명절 프로모션 처리
         if(isSeolPromo||isSeolNormalPromo||isNocontPromo){
+          console.log('[프로모션감지]', divVal, route, 'dcnt:', dcnt, 'total:', rowTotal, 'isSeol:', isSeolPromo, 'isNormal:', isSeolNormalPromo, 'isNocont:', isNocontPromo);
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
             dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
             addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},
@@ -7185,6 +7186,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var _totalPromoRaw=Object.values(drvMap).reduce(function(s,v){
           return s+(v.promoAmt||0)+(v.normalPromoAmt||0)+(v.nocontPromoAmt||0);
         },0);
+        window._lastPromoTotal=_totalPromoRaw;
+        window._lastDrvMap=drvMap;
+        console.log('[프로모션합계]', _totalPromoRaw, '건수:', _totalPromoCnt);
         var _totalPromoCnt=Object.values(drvMap).reduce(function(s,v){
           return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
         },0);
