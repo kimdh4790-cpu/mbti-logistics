@@ -39947,6 +39947,16 @@ function _showPlanUpsell(planKey){
 function openAdminPanel(){
   if(!isSuperAdmin()){toast('❌ 접근 권한 없음');return;}
   if(!_db){toast('❌ Firebase 미연결');return;}
+  // 대기중 결제신청 / 에러로그 카운트 뱃지 업데이트
+  _db.collection('payment_requests').where('status','==','pending').get().then(function(snap){
+    var cnt=snap.size;
+    var btn=document.getElementById('admin-btn');
+    if(btn&&cnt>0) btn.innerHTML='👑 슈퍼 어드민 <span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:4px">결제+'+cnt+'</span>';
+  }).catch(function(){});
+  _db.collection('error_logs').orderBy('createdAt','desc').limit(1).get().then(function(snap){
+    var btn=document.getElementById('admin-btn');
+    if(btn&&!snap.empty) btn.innerHTML=(btn.innerHTML.includes('결제+')?btn.innerHTML:'👑 슈퍼 어드민')+' <span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:2px">에러</span>';
+  }).catch(function(){});
   var old=document.getElementById('mo-admin');if(old)old.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-admin';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -39955,7 +39965,8 @@ function openAdminPanel(){
 
   var hdr=document.createElement('div');
   hdr.style.cssText='background:#1e293b;color:#f59e0b;border-radius:10px 10px 0 0;padding:14px 20px;font-weight:700;font-size:14px;margin:-1px -1px 0';
-  hdr.innerHTML='👑 슈퍼 어드민 패널 <span id="sa-sim-badge" style="font-size:10px;background:#22c55e;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px">'+((_SA_SIM&&_SA_SIM.enabled)?'🧪 시뮬중':'')+'</span>';
+  hdr.innerHTML='👑 슈퍼 어드민 패널 <span id="sa-sim-badge" style="font-size:10px;background:#22c55e;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px">'+((_SA_SIM&&_SA_SIM.enabled)?'🧪 시뮬중':'')+'</span>'
+    +'<button onclick="window.open(\'https://donway.ai.kr/admin\',\'_blank\')" style="margin-left:auto;padding:5px 14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖥️ 어드민 페이지</button>';
   d.appendChild(hdr);
 
   // ── 탭 바 ──
