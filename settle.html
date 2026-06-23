@@ -7173,7 +7173,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
         },0);
 
-        function _doSettle(marginRate){
+        window._doSettle=function(marginRate){
           window._promoMarginRate=marginRate||10;
         _drvCache=null;  // 기사 캐시 초기화 (재로드)
         var settlements=ls('settlements');
@@ -7546,7 +7546,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         } else {
           _settleCache=null;SP('settlements',null);
         }
-        } // _doSettle 끝
+        }; // _doSettle 끝
 
         // ★ 프로모션 있으면 마진율 입력 모달, 없으면 바로 정산
         if(_totalPromoRaw>0){
