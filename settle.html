@@ -7165,12 +7165,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       // routeCampMap 구성 및 Firebase 저장
       // routeCampMap 구성 및 Firebase 저장
       var rcMap={};
+      var _fixedRouteCamp={'508B':'부산3캠프','812A':'부산2캠프','812B':'부산2캠프','812C':'부산2캠프','812D':'부산2캠프'};
       allCleanIds.forEach(function(cid){
         var dm=drvMap[cid];
         var campFull=dm.camp||'';
         if(!campFull||campFull==='기타')return;
         Object.keys(dm.routes).forEach(function(r){
-          rcMap[r]=campFull;
+          rcMap[r]=_fixedRouteCamp[r]||campFull;
         });
       });
       if(Object.keys(rcMap).length&&_db&&_CU){
