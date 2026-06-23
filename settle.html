@@ -22123,14 +22123,14 @@ function _sendInventoryAlert(did, item) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         to: item.supplierPhone,
-        templateCode: 'KA01TP260618101225825DuJHXpoC4kY',
+        templateCode: 'KA01TP260623201607025LtxVxj2AoHI',
         variables: {
-          '#{고객회사명}': coName,
-          '#{이름}': item.supplierName || '담당자',
-          '#{월}': new Date().toLocaleString('ko-KR'),
-          '#{명세서링크}': '',
-          '#{담당자명}': coName,
-          '#{문의전화}': (window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||''
+          '#{회사명}': coName,
+          '#{거래처명}': item.supplierName || '담당자',
+          '#{품목명}': item.name || '',
+          '#{수량}': String(item.autoOrderQty || 1),
+          '#{일시}': new Date().toLocaleString('ko-KR'),
+          '#{연락처}': (window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||'051-711-3103'
         },
         fallbackText: orderMsg
       })
