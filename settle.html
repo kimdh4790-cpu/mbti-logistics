@@ -7319,7 +7319,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 parts.push('설일반프로('+_nrParts.join(' ')+') ₩'+_calc(_dm2.normalPromoAmt||0).toLocaleString()+'원');
               }
               // 명절 미계약
-              if((_dm2.nocontPromoCnt||0)>0) parts.push('명절미계약 '+(_dm2.nocontPromoCnt||0)+'건 ₩'+_calc(_dm2.nocontPromoAmt||0).toLocaleString()+'원');
+              if((_dm2.nocontPromoCnt||0)>0) parts.push('명절미계약 ₩'+_calc(_dm2.nocontPromoAmt||0).toLocaleString()+'원');
               return parts.join(' / ');
             })(),
             totalAmt:taxBase+_entryPromoPayAmt,
