@@ -666,6 +666,7 @@ window.cancelSub=async function(id,name){
 };
 
 // ── ⑦ 결제 내역 로드 ──
+window._payHistFilter = window._payHistFilter || 'active';
 async function loadPayments(){
   const el=document.getElementById('payment-list');
   el.innerHTML='<div class="empty">불러오는 중...</div>';
@@ -673,18 +674,33 @@ async function loadPayments(){
     const snap=await getDocs(query(collection(db,'payments'),orderBy('createdAt','desc')));
     if(snap.empty){el.innerHTML='<div class="empty">결제 내역이 없습니다</div>';return;}
     const typeIcon={new:'🆕',extend:'🔄',trial:'🆓',cancel:'🚫'};
-    el.innerHTML=snap.docs.map(d=>{
-      const p=d.data();
+    const allDocs=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const filterVal=window._payHistFilter||'active';
+    let filtered=allDocs;
+    if(filterVal==='active') filtered=allDocs.filter(d=>d.type!=='cancel'&&d.type!=='rejected');
+    else if(filterVal==='cancel') filtered=allDocs.filter(d=>d.type==='cancel'||d.type==='rejected');
+
+    // 필터 버튼
+    const filterHtml=`<div style="display:flex;gap:6px;margin-bottom:12px">
+      <button onclick="window._payHistFilter='active';loadPayments()" style="padding:5px 14px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:${filterVal==='active'?'#1e3a8a':'#f1f5f9'};color:${filterVal==='active'?'#fff':'#64748b'}">유효 내역</button>
+      <button onclick="window._payHistFilter='all';loadPayments()" style="padding:5px 14px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:${filterVal==='all'?'#1e3a8a':'#f1f5f9'};color:${filterVal==='all'?'#fff':'#64748b'}">전체</button>
+      <button onclick="window._payHistFilter='cancel';loadPayments()" style="padding:5px 14px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:${filterVal==='cancel'?'#ef4444':'#f1f5f9'};color:${filterVal==='cancel'?'#fff':'#64748b'}">해지/거절</button>
+    </div>`;
+
+    if(!filtered.length){el.innerHTML=filterHtml+'<div class="empty">해당 내역이 없습니다</div>';return;}
+    el.innerHTML=filterHtml+filtered.map(d=>{
+      const p=d;
       const dt=p.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
       const exp=p.expireDate?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
-      return`<div class="pay-row">
+      const isCancel=p.type==='cancel'||p.type==='rejected';
+      return`<div class="pay-row" style="${isCancel?'opacity:.5':''}">
         <div>
           <span style="font-size:14px">${typeIcon[p.type]||'💳'}</span>
           <strong style="margin-left:6px">${p.dealerName||'-'}</strong>
           <span style="margin-left:8px;color:#64748b;font-size:11px">${p.note||''}</span>
         </div>
         <div style="text-align:right">
-          <div style="font-weight:700;color:#1e3a8a">${p.amount?'₩'+(p.amount/10000).toFixed(0)+'만원':'무료'}</div>
+          <div style="font-weight:700;color:${isCancel?'#94a3b8':'#1e3a8a'}">${p.amount?'₩'+(p.amount/10000).toFixed(0)+'만원':'무료'}</div>
           <div style="font-size:10px;color:#94a3b8">${dt} → 만료 ${exp}</div>
         </div>
       </div>`;
