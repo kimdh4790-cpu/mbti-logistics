@@ -32310,7 +32310,7 @@ function recalcAllSettlements(){
         }
       }
 
-      var taxBase=newDamt+newRamt+(x.fresh||0)+fincVal+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);  // ★ inc 제외
+      var taxBase=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);  // ★ inc 제외, finc x값 우선
       var supplyAmt=Math.round(taxBase/1.1);
       var monthlyWage=Math.round(supplyAmt*0.654);
       var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
