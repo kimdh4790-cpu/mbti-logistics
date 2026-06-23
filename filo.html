@@ -110,19 +110,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <label>사용할 서비스 선택 <span style="color:var(--red)">*</span></label>
       <div style="font-size:10px;color:var(--text3);margin-bottom:8px">7일 무료 체험 · 이후 월 구독</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <!-- 재고관리 -->
-        <div id="fs-inv-card" onclick="_filoToggleSvc('inventory')" style="border:2px solid var(--brand);border-radius:10px;padding:10px 12px;cursor:pointer">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:18px">📦</span>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:var(--acc)">재고관리</div>
-                <div style="font-size:10px;color:var(--text3)">입출고·자동발주·실시간차감 — 콤보로 이용</div>
-              </div>
-            </div>
-            <div id="fs-inv-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
-          </div>
-        </div>
+
         <!-- QR+급여 -->
         <div id="fs-qr-card" onclick="_filoToggleSvc('qr')" style="border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center">
@@ -136,21 +124,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
             <div id="fs-qr-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
           </div>
         </div>
-        <!-- 키오스크 -->
-        <div id="fs-kiosk-card" onclick="_filoToggleSvc('kiosk')" style="border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:18px">🖥️</span>
-              <div>
-                <div style="font-size:12px;font-weight:700;color:var(--text2)">키오스크POS</div>
-                <div style="font-size:10px;color:var(--text3)">POS결제·실시간매출·재고연동 — 콤보로 이용</div>
-              </div>
-            </div>
-            <div id="fs-kiosk-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
-          </div>
-        </div>
+
         <!-- 콤보 -->
-        <div id="fs-combo-card" onclick="_filoToggleSvc('combo')" style="border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer">
+        <div id="fs-combo-card" onclick="_filoToggleSvc('combo')" style="border:2px solid var(--brand);border-radius:10px;padding:10px 12px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:18px">🚀</span>
@@ -159,11 +135,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
                 <div style="font-size:10px;color:var(--text3)">재고+QR급여+키오스크 — 165,000원/월</div>
               </div>
             </div>
-            <div id="fs-combo-check" style="width:18px;height:18px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
+            <div id="fs-combo-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
           </div>
         </div>
       </div>
-      <input type="hidden" id="fr-service" value="inventory">
+      <input type="hidden" id="fr-service" value="combo">
     </div>
     <div class="fg"><label>대표자 이름 <span style="color:var(--red)">*</span></label>
       <input id="fr-name" type="text" placeholder="예) 김형우">
