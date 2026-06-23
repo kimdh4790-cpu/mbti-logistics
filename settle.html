@@ -7322,10 +7322,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var existing=settlements.findIndex(function(s){return s.userId===cleanId&&s.month===month;});
           if(existing>=0){
             var prev=settlements[existing];
-            // ★ fresh/finc/inc는 엑셀값으로 항상 갱신 (수동 입력값은 dmg/etcPlus/etcMinus만 보호)
-            ['dmg','etcPlus','etcMinus'].forEach(function(k){
+            // ★ fresh/finc/inc는 엑셀값으로 항상 갱신 (수동 입력값은 dmg/etcMinus만 보호)
+            // etcPlus는 프로모션 자동계산값이 있으면 항상 덮어씀
+            ['dmg','etcMinus'].forEach(function(k){
               if(prev[k]!==undefined&&prev[k]!==0)entry[k]=prev[k];
             });
+            // etcPlus: 프로모션 값이 있으면 우선, 없으면 기존값 보호
+            if(!entry.etcPlus&&prev.etcPlus&&!prev.etcPlusReason){
+              entry.etcPlus=prev.etcPlus;
+            }
             ['status','taxSent','taxSentAt','paidAt','fbId','createdAt'].forEach(function(k){
               if(prev[k]!==undefined)entry[k]=prev[k];
             });
