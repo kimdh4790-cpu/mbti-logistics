@@ -6803,6 +6803,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
       // ── Raw 시트 파싱 → drvMap 구성
       var drvMap={};  // cleanId → {camp, routes, dcnt, rcnt, ...}
+      window._rawRouteCampOverride={};  // 라우트별 실제 캠프 (엑셀 Raw 기준)
       for(var i=rawHdrIdx+1;i<raw.length;i++){
         var row=raw[i];if(!row[rColID])continue;
         var userId=String(row[rColID]).trim();
@@ -6931,6 +6932,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             drvMap[cleanId].camp=campName;
           continue;
         }
+        // ★ 라우트별 실제 캠프 수집 (기사 캠프와 다를 수 있음 - 508B 등)
+        if(route&&campName&&campName!=='기타'){
+          window._rawRouteCampOverride[route]=campName;
+        }
         // ★ basicAmt(기본배송단가금액, 추가인센 미포함) 우선 — 없으면 dcnt×unitPrc, 미계약은 col13
         var basicAmt=rColBasicAmt>=0?Number(row[rColBasicAmt])||0:0;
         var delAmt=basicAmt>0?basicAmt:(dcnt*unitPrc)||(isNocont?rowTotal:0);
@@ -6975,14 +6980,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
         if(route){
           if(!drvMap[cleanId].routes[route])
-            drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0,camp:''};
+            drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0};
           drvMap[cleanId].routes[route].cnt+=dcnt;
           drvMap[cleanId].routes[route].ret+=rcnt;
           drvMap[cleanId].routes[route].delAmt+=delAmt;
           drvMap[cleanId].routes[route].retAmt+=retAmt;
           drvMap[cleanId].routes[route].addInc+=addInc;
-          // ★ 라우트별 실제 캠프명 저장 (기사 캠프가 아닌 엑셀 Row의 캠프명)
-          if(campName&&campName!=='기타') drvMap[cleanId].routes[route].camp=campName;
           if(unitPrc>0)drvMap[cleanId].routes[route].unitPrc=unitPrc;
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
@@ -7172,12 +7175,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var campFull=dm.camp||'';
         if(!campFull||campFull==='기타')return;
         Object.keys(dm.routes).forEach(function(r){
-          // ★ 라우트별 실제 캠프 사용 (drvMap.routes에 저장된 캠프 우선)
-          var rv=dm.routes[r];
-          var routeCamp=(rv&&rv.camp&&rv.camp!=='기타')?rv.camp:campFull;
-          rcMap[r]=routeCamp;
+          rcMap[r]=campFull;
         });
       });
+      // ★ 라우트별 실제 캠프명 보정 (엑셀 Raw 캠프컬럼 기반)
+      if(window._rawRouteCampOverride){
+        Object.assign(rcMap, window._rawRouteCampOverride);
+      }
       if(Object.keys(rcMap).length&&_db&&_CU){
         Object.assign(_routeCampMap,rcMap);
         _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').set(_routeCampMap,{merge:false}).catch(function(){});
