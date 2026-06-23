@@ -34789,12 +34789,11 @@ function _selectTier(cap){
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
     else{btn.style.background='var(--bg)';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
-  // 금액 갱신
-  var rate=DW_RATE.g1;
-  var groups={settle:rate,delivery:rate};
-  var tierLabel='~'+cap+'명';
-  Object.keys(groups).forEach(function(k){
-    var amt=groups[k]*cap;
+  // 금액 갱신 (DW_TIERS_IND 기준)
+  var _indTier=DW_TIERS_IND.find(function(t){return t.cap===cap;})||{amt:0};
+  var _grpTier=DW_TIERS_GRP.find(function(t){return t.cap===cap;})||{amt:0};
+  ['settle','delivery'].forEach(function(k){
+    var amt=k==='settle'?_indTier.amt:_indTier.amt;
     document.querySelectorAll('.sub-amt-'+k).forEach(function(el){
       el.innerHTML=amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
     });
