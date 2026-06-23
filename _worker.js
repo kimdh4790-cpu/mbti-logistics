@@ -559,6 +559,7 @@ export default {
           const contactPhone = gs('contactPhone') || '051-711-3103';
           const dmgReason = gs('dmgReason');
           const etcMinusReason = gs('etcMinusReason');
+          const etcPlusReason  = gs('etcPlusReason');
           const monthLabel = month.replace('-', '년 ') + '월';
 
           // 라우트별 실적
@@ -568,94 +569,141 @@ export default {
           rdArr.forEach(rv => {
             const rf = rv.mapValue?.fields || {};
             const route = rf.route?.stringValue || '';
-            const cnt   = parseFloat(rf.cnt?.integerValue || 0);
-            const ret   = parseFloat(rf.ret?.integerValue || 0);
-            const price = parseFloat(rf.unitPrice?.integerValue || 0);
-            const amt   = cnt * price + ret * price;
+            const cnt   = parseFloat(rf.cnt?.integerValue || rf.cnt?.doubleValue || 0);
+            const ret   = parseFloat(rf.ret?.integerValue || rf.ret?.doubleValue || 0);
+            const price = parseFloat(rf.unitPrice?.integerValue || rf.unitPrice?.doubleValue || 0);
+            const dAmt  = cnt * price;
+            const rAmt  = ret * price;
+            const amt   = dAmt + rAmt;
             totalDcnt += cnt; totalRcnt += ret; totalAmt += amt;
-            routeRows += '<tr>'
-              + '<td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:600;color:#185FA5">' + route + '</td>'
-              + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">' + cnt + '</td>'
-              + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">' + ret + '</td>'
-              + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right">' + price.toLocaleString() + '</td>'
-              + '<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">₩' + amt.toLocaleString() + '</td>'
-              + '</tr>';
+            routeRows += `<tr>
+              <td class="rt">${route}</td>
+              <td class="num">${cnt}</td>
+              <td class="num">${ret}</td>
+              <td class="num">₩${price.toLocaleString()}</td>
+              <td class="num bold blue">₩${amt.toLocaleString()}</td>
+            </tr>`;
           });
 
+          // 추가 항목
           let addRows = '';
-          if(fresh>0) addRows += '<tr><td style="padding:4px 8px;font-size:12px">③ 프레시백 회수금액</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩' + fresh.toLocaleString() + '</td></tr>';
-          if(finc>0) addRows += '<tr><td style="padding:4px 8px;font-size:12px">④ 프레시백 인센티브' + (fincPer>0 ? ' <span style=\"font-size:10px;color:#94a3b8\">' + dcnt + '건 × ' + fincPer + '원</span>' : '') + '</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩' + finc.toLocaleString() + '</td></tr>';
-          if(nocont>0) addRows += '<tr><td style="padding:4px 8px;font-size:12px">⑤ 미계약건</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩' + nocont.toLocaleString() + '</td></tr>';
-          if(etcPlus>0) addRows += '<tr><td style="padding:4px 8px;font-size:12px">⑦ 기타(+)/팀장수수료</td><td style="padding:4px 8px;text-align:right;color:#059669;font-size:12px">+₩' + etcPlus.toLocaleString() + '</td></tr>';
+          if(fresh>0)    addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
+          if(finc>0)     addRows += `<tr><td class="item">④ 프레시백 인센티브${fincPer>0?' <small>('+dcnt+'건 × '+fincPer+'원)</small>':''}</td><td class="amt green">+₩${finc.toLocaleString()}</td></tr>`;
+          if(nocont>0)   addRows += `<tr><td class="item">⑤ 미계약건</td><td class="amt green">+₩${nocont.toLocaleString()}</td></tr>`;
+          if(etcPlus>0)  addRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
 
+          // 공제 항목
           let deductRows = '';
-          if(emp>0) deductRows += '<tr><td style="padding:4px 8px;font-size:12px">고용보험(0.8%,80만↑)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩' + emp.toLocaleString() + '</td></tr>';
-          if(work>0) deductRows += '<tr><td style="padding:4px 8px;font-size:12px">산재보험(0.88%)</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩' + work.toLocaleString() + '</td></tr>';
-          if(dmg>0) deductRows += '<tr><td style="padding:4px 8px;font-size:12px">⑥ 분실/파손' + (dmgReason ? ' (' + dmgReason + ')' : '') + '</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩' + dmg.toLocaleString() + '</td></tr>';
-          if(etcMinus>0) deductRows += '<tr><td style="padding:4px 8px;font-size:12px">⑧ 기타(-)' + (etcMinusReason ? ' (' + etcMinusReason + ')' : '') + '</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩' + etcMinus.toLocaleString() + '</td></tr>';
-          if(adv>0) deductRows += '<tr><td style="padding:4px 8px;font-size:12px">⑨ 가불 공제</td><td style="padding:4px 8px;text-align:right;color:#dc2626;font-size:12px">-₩' + adv.toLocaleString() + '</td></tr>';
+          if(emp>0)      deductRows += `<tr><td class="item">고용보험 (0.8%, 80만↑)</td><td class="amt red">-₩${emp.toLocaleString()}</td></tr>`;
+          if(work>0)     deductRows += `<tr><td class="item">산재보험 (0.88%)</td><td class="amt red">-₩${work.toLocaleString()}</td></tr>`;
+          if(dmg>0)      deductRows += `<tr><td class="item">⑥ 분실/파손${dmgReason?' ('+dmgReason+')':''}</td><td class="amt red">-₩${dmg.toLocaleString()}</td></tr>`;
+          if(etcMinus>0) deductRows += `<tr><td class="item">⑧ 기타(-)${etcMinusReason?' <small style="color:#94a3b8">('+etcMinusReason+')</small>':''}</td><td class="amt red">-₩${etcMinus.toLocaleString()}</td></tr>`;
+          if(adv>0)      deductRows += `<tr><td class="item">⑨ 가불 공제</td><td class="amt red">-₩${adv.toLocaleString()}</td></tr>`;
 
-          const routeSec = routeRows
-            ? '<div class="sec"><div class="sec-title">📊 라우트별 실적 (건수×단가)</div>'
-              + '<table><thead><tr style="background:#f8fafc">'
-              + '<th style="padding:5px 8px">라우트</th><th style="padding:5px 8px;text-align:right">배송건</th>'
-              + '<th style="padding:5px 8px;text-align:right">반품건</th><th style="padding:5px 8px;text-align:right">단가</th>'
-              + '<th style="padding:5px 8px;text-align:right">소계</th></tr></thead>'
-              + '<tbody>' + routeRows + '</tbody>'
-              + '<tfoot><tr style="background:#eff6ff;font-weight:700">'
-              + '<td style="padding:6px 8px">합계</td>'
-              + '<td style="padding:6px 8px;text-align:right">' + totalDcnt + '건</td>'
-              + '<td style="padding:6px 8px;text-align:right">' + totalRcnt + '건</td>'
-              + '<td></td>'
-              + '<td style="padding:6px 8px;text-align:right;color:#185FA5">₩' + totalAmt.toLocaleString() + '</td>'
-              + '</tr></tfoot></table></div>'
-            : '';
+          const routeSec = routeRows ? `
+            <div class="sec">
+              <div class="sec-title">📊 라우트별 실적 (건수×단가)</div>
+              <table>
+                <thead><tr style="background:#f8fafc">
+                  <th style="padding:5px 8px;text-align:left">라우트</th>
+                  <th style="padding:5px 8px;text-align:right">배송건</th>
+                  <th style="padding:5px 8px;text-align:right">반품건</th>
+                  <th style="padding:5px 8px;text-align:right">단가</th>
+                  <th style="padding:5px 8px;text-align:right">소계</th>
+                </tr></thead>
+                <tbody>${routeRows}</tbody>
+                <tfoot><tr style="background:#eff6ff;font-weight:700">
+                  <td style="padding:6px 8px">합계</td>
+                  <td style="padding:6px 8px;text-align:right">${totalDcnt}건</td>
+                  <td style="padding:6px 8px;text-align:right">${totalRcnt}건</td>
+                  <td></td>
+                  <td style="padding:6px 8px;text-align:right;color:#185FA5">₩${totalAmt.toLocaleString()}</td>
+                </tr></tfoot>
+              </table>
+            </div>` : '';
 
-          const addSec = (addRows || deductRows)
-            ? '<div class="sec" style="padding-top:0"><table>' + addRows + deductRows + '</table></div>'
-            : '';
+          const addSec = (addRows || deductRows) ? `
+            <div class="sec" style="padding-top:0">
+              <table>${addRows}${deductRows}</table>
+            </div>` : '';
 
-          const css = '*{margin:0;padding:0;box-sizing:border-box}'
-            + 'body{background:#f1f5f9;font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh;padding:16px}'
-            + '.wrap{max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}'
-            + '.hdr{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:18px 20px}'
-            + '.hdr .lbl{font-size:10px;opacity:.7;margin-bottom:4px}'
-            + '.hdr .ttl{font-size:18px;font-weight:800;margin-bottom:2px}'
-            + '.hdr .sub{font-size:12px;opacity:.85}'
-            + '.summary{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:2px solid #e2e8f0}'
-            + '.sbox{padding:10px;text-align:center;border-right:1px solid #e2e8f0}'
-            + '.sbox:last-child{border-right:none}'
-            + '.slbl{font-size:9px;color:#64748b;margin-bottom:3px}'
-            + '.sval{font-size:13px;font-weight:800}'
-            + '.ssub{font-size:9px;color:#94a3b8;margin-top:2px}'
-            + '.sec{padding:12px 14px}'
-            + '.sec-title{font-size:11px;font-weight:800;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0}'
-            + 'table{width:100%;border-collapse:collapse;font-size:11px}'
-            + '.net-row{background:#eff6ff;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin:0 14px 14px}'
-            + '.ft{padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}'
-            + '.logo{text-align:center;font-size:12px;font-weight:900;color:#1e3a8a;letter-spacing:.1em;padding:12px 0 4px}';
+          // 세금계산서 섹션 (버튼 탭하면 펼침)
+          const taxSec = `
+            <div class="sec" style="padding-bottom:0">
+              <button onclick="var el=document.getElementById('tax-detail');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'🧾 세금계산서 보기 ▼':'🧾 세금계산서 닫기 ▲'"
+                style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">
+                🧾 세금계산서 보기 ▼
+              </button>
+              <div id="tax-detail" style="display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;margin-bottom:12px">
+                <div style="font-size:11px;font-weight:800;color:#7c3aed;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid #e9d5ff">세금계산서 내역</div>
+                <table>
+                  <tr><td class="item" style="color:#64748b">공급가액</td><td class="amt" style="color:#7c3aed">₩${supply.toLocaleString()}</td></tr>
+                  <tr><td class="item" style="color:#64748b">부가세 (10%)</td><td class="amt" style="color:#7c3aed">₩${vat.toLocaleString()}</td></tr>
+                  <tr style="border-top:1.5px solid #e9d5ff;font-weight:800"><td class="item" style="color:#7c3aed">합계 (VAT포함)</td><td class="amt" style="color:#7c3aed;font-size:14px">₩${vatInc.toLocaleString()}</td></tr>
+                </table>
+                <div style="margin-top:10px;font-size:10px;color:#94a3b8;line-height:1.6">
+                  공급자: ${coName}<br>
+                  사업자번호: ${bizNum}<br>
+                  문의: ${contactPhone}
+                </div>
+              </div>
+            </div>`;
 
-          const html = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'
-            + '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            + '<title>' + coName + ' 정산명세서</title>'
-            + '<style>' + css + '</style></head><body>'
-            + '<div class="logo">DONWAY</div>'
-            + '<div class="wrap">'
-            + '<div class="hdr">'
-            + '<div class="lbl">OFFICIAL STATEMENT · ' + coName + '</div>'
-            + '<div class="ttl">' + monthLabel + ' 정산 명세서</div>'
-            + '<div class="sub">' + name + ' &nbsp;<span style="opacity:.6">쿠팡</span></div>'
-            + '</div>'
-            + '<div class="summary">'
-            + '<div class="sbox"><div class="slbl">세금계산서 합계</div><div class="sval" style="color:#7c3aed">₩' + vatInc.toLocaleString() + '</div><div class="ssub">공급가 ₩' + supply.toLocaleString() + ' + VAT ₩' + vat.toLocaleString() + '</div></div>'
-            + '<div class="sbox"><div class="slbl">공제 합계</div><div class="sval" style="color:#dc2626">-₩' + deduct.toLocaleString() + '</div><div class="ssub">고용+산재+파손+기타(-)+가불</div></div>'
-            + '<div class="sbox"><div class="slbl">실 지급액</div><div class="sval" style="color:#185FA5">₩' + net.toLocaleString() + '</div></div>'
-            + '</div>'
-            + routeSec
-            + addSec
-            + '<div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:20px;font-weight:900;color:#185FA5">₩' + net.toLocaleString() + '</span></div>'
-            + '<div class="ft">' + coName + ' · ' + contactPhone + ' · 사업자번호 ' + bizNum + '<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>'
-            + '</div></body></html>';
+          const css = `
+            *{margin:0;padding:0;box-sizing:border-box}
+            body{background:#f1f5f9;font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh;padding:16px}
+            .logo{text-align:center;font-size:12px;font-weight:900;color:#1e3a8a;letter-spacing:.1em;padding:12px 0 4px}
+            .wrap{max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+            .hdr{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:18px 20px}
+            .hdr .lbl{font-size:10px;opacity:.7;margin-bottom:4px}
+            .hdr .ttl{font-size:18px;font-weight:800;margin-bottom:2px}
+            .hdr .sub{font-size:12px;opacity:.85}
+            .summary{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:2px solid #e2e8f0}
+            .sbox{padding:10px;text-align:center;border-right:1px solid #e2e8f0}
+            .sbox:last-child{border-right:none}
+            .slbl{font-size:9px;color:#64748b;margin-bottom:3px}
+            .sval{font-size:13px;font-weight:800}
+            .ssub{font-size:9px;color:#94a3b8;margin-top:2px}
+            .sec{padding:12px 14px}
+            .sec-title{font-size:11px;font-weight:800;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0}
+            table{width:100%;border-collapse:collapse;font-size:11px}
+            td{padding:5px 8px}
+            .rt{border-bottom:1px solid #eee;font-weight:600;color:#185FA5}
+            .num{border-bottom:1px solid #eee;text-align:right}
+            .bold{font-weight:700}
+            .blue{color:#185FA5}
+            .item{font-size:12px;color:#374151}
+            .item small{font-size:10px}
+            .amt{text-align:right;font-size:12px;font-weight:700}
+            .green{color:#059669}
+            .red{color:#dc2626}
+            .net-row{background:#eff6ff;border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin:0 14px 14px}
+            .ft{padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center;line-height:1.8}
+          `;
+
+          const html = `<!DOCTYPE html><html lang="ko" translate="no"><head><meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta name="google" content="notranslate">
+            <title>${coName} 정산명세서</title>
+            <style>${css}</style></head><body>
+            <div class="logo">DONWAY</div>
+            <div class="wrap">
+              <div class="hdr">
+                <div class="lbl">OFFICIAL STATEMENT · ${coName}</div>
+                <div class="ttl">${monthLabel} 정산 명세서</div>
+                <div class="sub">${name} &nbsp;<span style="opacity:.6">쿠팡</span></div>
+              </div>
+              <div class="summary">
+                <div class="sbox"><div class="slbl">세금계산서 합계</div><div class="sval" style="color:#7c3aed">₩${vatInc.toLocaleString()}</div><div class="ssub">공급가 ₩${supply.toLocaleString()} + VAT ₩${vat.toLocaleString()}</div></div>
+                <div class="sbox"><div class="slbl">공제 합계</div><div class="sval" style="color:#dc2626">-₩${deduct.toLocaleString()}</div><div class="ssub">고용+산재+파손+기타(-)+가불</div></div>
+                <div class="sbox"><div class="slbl">실 지급액</div><div class="sval" style="color:#185FA5">₩${net.toLocaleString()}</div></div>
+              </div>
+              ${routeSec}
+              ${addSec}
+              ${taxSec}
+              <div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
+              <div class="ft">${coName} · ${contactPhone} · 사업자번호 ${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
+            </div></body></html>`;
 
           return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' } });
         } catch(e2) {
