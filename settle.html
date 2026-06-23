@@ -32291,7 +32291,7 @@ function recalcAllSettlements(){
       var _drvInfo=dSnap.docs.map(function(d){return d.data();}).find(function(d){return (d.userId||'')===x.userId;});
       if(_drvInfo&&_drvInfo.settleGuarantee){
         var _g=_drvInfo.settleGuarantee;
-        var _baseAmt=newDamt+newRamt+(x.fresh||0)+fincVal+(x.inc||0)+(x.nocont||0)+(x.etcPlusTL||0);
+        var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.inc||0)+(x.nocont||0)+(x.etcPlusTL||0);
         // 보장성 제외한 기존 etcPlus (보장성 외 기타+ 있으면 유지)
         var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
         var _prevReason=_recalcEtcPlusReason;
