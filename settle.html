@@ -29743,7 +29743,8 @@ function pageSettle(){
     var curMonthFilter=_settle_month||'all';
     var filteredSettles=curMonthFilter==='all'?settles:settles.filter(function(s){return s.month===curMonthFilter;});
     // 월 선택 탭 추가
-    var allMonths=[...new Set(settles.map(function(s){return s.month||''}).filter(Boolean))].sort().reverse();
+    // 실제 정산 데이터 있는 달만 표시 (빈 달 제외)
+    var allMonths=[...new Set(settles.filter(function(s){return s.month&&(s.vatIncome||s.totalAmt||s.income||s.dcnt);}).map(function(s){return s.month;}))].sort().reverse();
 
     // 집계 (필터 적용)
     var totCoupang=0,totTaxBase=0,totNet=0,totDcnt=0,totDeduct=0,totInsComp=0,totExtraOut=0,totEmpComp=0,totWorkComp=0,totEmpDrv=0,totWorkDrv=0;
