@@ -263,9 +263,9 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    // 기타 모든 컬렉션 — 인증된 사용자 읽기/쓰기
+    // 기타 모든 컬렉션 — 슈퍼어드민만 (미명시 컬렉션 일반 접근 차단)
     match /{document=**} {
-      allow read, write: if isAuth();
+      allow read, write: if isSuperAdmin();
     }
   }
 }
