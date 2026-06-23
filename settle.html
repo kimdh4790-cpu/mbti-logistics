@@ -30245,8 +30245,8 @@ function _settleRow(x){
       '</tr>';
   }
   var r=calcNet(x);
-  var net=r.net||0;
-  var vatIncome=r.totalAmt||r.income||x.totalAmt||x.vatIncome||x.income||0;  // ★ 기사 세금계산서 합계 (RPRICE 기반)
+  var net=x.net||r.net||0;
+  var vatIncome=x.totalAmt||x.vatIncome||r.totalAmt||r.income||0;  // ★ x값 우선 (재계산값 무시)
   var campCC=_getSettleCamp(x)||'기타';
   var col=_campColor(campCC)||'var(--purple)';
   var sent=x.taxSent;
