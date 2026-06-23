@@ -562,6 +562,7 @@ export default {
           const etcPlusReason  = gs('etcPlusReason');
           const etcPlusTL      = gn('etcPlusTL');
           const etcPlusTLReason = gs('etcPlusTLReason');
+          const ceoName      = gs('ceoName');
           const bizAddr       = gs('bizAddr');
           const bizType       = gs('bizType');
           const bizItem       = gs('bizItem');
@@ -648,7 +649,7 @@ export default {
                   <tr style="border-top:1.5px solid #e9d5ff;font-weight:800"><td class="item" style="color:#7c3aed">합계 (VAT포함)</td><td class="amt" style="color:#7c3aed;font-size:14px">₩${vatInc.toLocaleString()}</td></tr>
                 </table>
                 <div style="margin-top:10px;font-size:10px;color:#94a3b8;line-height:1.8">
-                  공급자: ${coName}<br>
+                  공급자: ${coName}${ceoName?' (대표: '+ceoName+')':''}<br>
                   사업자번호: ${bizNum}<br>
                   ${bizAddr?'사업장 주소: '+bizAddr+'<br>':''}                  ${bizType?'업태: '+bizType+(bizItem?' · 종목: '+bizItem:'')+'<br>':''}                  문의: ${contactPhone}
                 </div>
