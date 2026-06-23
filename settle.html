@@ -7549,7 +7549,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
             Object.keys(_fd).forEach(function(fid){
               var rules=_fd[fid];
-              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
               if(!fs)return;
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
