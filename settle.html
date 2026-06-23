@@ -30326,6 +30326,8 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       nocont:r.nocont||0, etcPlus:r.etcPlus||0, etcMinus:r.etcMinus||0,
       dmg:r.dmg||0, adv:r.adv||0,
       etcMinusReason:r.etcMinusReason||'', dmgReason:r.dmgReason||'',
+      etcPlusReason:x.etcPlusReason||'',
+      etcPlusTL:x.etcPlusTL||0, etcPlusTLReason:x.etcPlusTLReason||'',
       deduct:r.deduct||0,
       dcnt:x.dcnt||x.totalCount||0,
       fincPerUnit:r._fincPerUnit||0,
@@ -30333,7 +30335,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       companyName:coName,
       contactName:(_CU&&_CU.settlementContact)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementContact)||'',
       contactPhone:(_CU&&_CU.settlementPhone)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementPhone)||'051-711-3103',
-      bizNum:(_CU&&_CU.bizNum)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||'373-86-02536',
+      bizNum:(function(){var n=(_CU&&_CU.bizNum)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNumber)||(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||'373-86-02536';n=String(n).replace(/[^0-9]/g,'');if(n.length===10)return n.slice(0,3)+'-'+n.slice(3,5)+'-'+n.slice(5);return n;})(),
       bizAddr:(_cachedCompanyDoc&&_cachedCompanyDoc.bizAddr)||'',
       bizType:(_cachedCompanyDoc&&_cachedCompanyDoc.bizType)||'',
       bizItem:(_cachedCompanyDoc&&_cachedCompanyDoc.bizItem)||''
