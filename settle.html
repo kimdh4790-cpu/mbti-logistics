@@ -7950,7 +7950,7 @@ function cancelCp(){window._cpPending=null;goPage('settlements');}
 
 function _saveCpDriver(camp,dm,name,month,cb){
   if(!window._db){if(cb)cb();return;}
-  var uid=dm.uid;
+  var uid=dm.uid||dm.cleanId||dm.userId||'';
   var _did=_CU&&_CU.dealerId||'';
   // ★ priceOverride 먼저 동기 조회 (damt 계산에 사용)
   var _cleanUid0=(uid||'').replace(/@df$/i,'').trim();
