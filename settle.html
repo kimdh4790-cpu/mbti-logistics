@@ -22109,6 +22109,54 @@ function _sendInventoryAlert(did, item) {
     }).catch(function(){});
   });
 
+  // ★ 거래처에 알림톡 자동 발주 발송
+  if(item.supplierPhone && item.autoOrderEnabled) {
+    var orderQty = item.autoOrderQty || 1;
+    var orderMsg = '['+coName+'] 자동 발주 요청'+String.fromCharCode(10)
+      +'품목: '+item.name+String.fromCharCode(10)
+      +'발주수량: '+orderQty+'개'+String.fromCharCode(10)
+      +'현재재고: '+item.stock+'개 (최소 '+item.minStock+'개)'+String.fromCharCode(10)
+      +'발주일시: '+new Date().toLocaleString('ko-KR');
+
+    fetch('/api/send-alimtalk', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        to: item.supplierPhone,
+        templateCode: 'KA01TP260618101225825DuJHXpoC4kY',
+        variables: {
+          '#{고객회사명}': coName,
+          '#{이름}': item.supplierName || '담당자',
+          '#{월}': new Date().toLocaleString('ko-KR'),
+          '#{명세서링크}': '',
+          '#{담당자명}': coName,
+          '#{문의전화}': (window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||''
+        },
+        fallbackText: orderMsg
+      })
+    }).then(function(r){ return r.json(); })
+      .then(function(r){ 
+        if(r.ok) toast('📦 '+item.supplierName+' 발주 알림톡 발송 완료');
+      }).catch(function(){});
+
+    // 발주 이력 Firestore 저장
+    _db.collection('inventory').doc(did+'_'+(item.itemCode||item.id||'')).collection ? null :
+    _db.collection('settings').doc(did+'_inv_orders').collection ? null : null;
+    _db.collection('admin_notifications').add({
+      dealerId: did,
+      type: 'auto_order_sent',
+      itemId: item.id || '',
+      itemName: item.name || '',
+      supplierName: item.supplierName || '',
+      supplierPhone: item.supplierPhone || '',
+      orderQty: orderQty,
+      stock: item.stock,
+      message: orderMsg,
+      isRead: false,
+      createdAt: new Date().toISOString()
+    }).catch(function(){});
+  }
+
   // 알림 이력 저장
   _db.collection('admin_notifications').add({
     dealerId: did,
@@ -28303,6 +28351,7 @@ function pageInventory(){
     +'<button id="inv-tab-dash" class="btn btn-blue" onclick="_invTab(this,\'dash\')" style="font-size:12px">📊 대시보드</button>'
     +'<button id="inv-tab-stock" class="btn" onclick="_invTab(this,\'stock\')" style="font-size:12px">📦 재고 현황</button>'
     +'<button id="inv-tab-order" class="btn" onclick="_invTab(this,\'order\')" style="font-size:12px">🛒 자동발주 설정</button>'
+    +'<button id="inv-tab-history" class="btn" onclick="_invTab(this,\'history\')" style="font-size:12px">📋 발주 이력</button>'
     +'<button id="inv-tab-salary" class="btn" onclick="_invTab(this,\'salary\')" style="font-size:12px">💼 급여 연동</button>'
     +'</div>'
     +'<div id="inv-dash-area"></div>'
@@ -28323,6 +28372,7 @@ function _invTab(btn,tab){
   if(tab==='dash') _invRenderDash();
   if(tab==='stock') _invRenderStock();
   if(tab==='order') _invRenderOrder();
+  if(tab==='history') _invRenderOrderHistory();
   if(tab==='salary') _invRenderSalary();
 }
 
@@ -28456,6 +28506,37 @@ window._invSaveOrder=function(docId){
     alertEnabled:true
   }).then(function(){toast('✅ 자동발주 설정 저장');}).catch(function(e){toast('❌ '+e.message);});
 };
+
+function _invRenderOrderHistory(){
+  var area=document.getElementById('inv-tab-area');
+  if(!area)return;
+  var did=_CU.dealerId||_CU.uid;
+  area.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-size:13px;font-weight:700">📋 발주 이력</div><button onclick="window._invBulkOrder&&_invBulkOrder()" style="padding:7px 14px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🛒 부족 품목 일괄 발주</button></div><div id="inv-history-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div></div>';
+  _db.collection('admin_notifications').where('dealerId','==',did).where('type','in',['auto_order_sent','inventory_alert']).orderBy('createdAt','desc').limit(50).get().then(function(snap){
+    var listEl=document.getElementById('inv-history-list');
+    if(!listEl)return;
+    if(snap.empty){listEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3)">발주 이력 없음</div>';return;}
+    var html='<div style="display:flex;flex-direction:column;gap:8px">';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var isOrder=d.type==='auto_order_sent';
+      var dt=d.createdAt?new Date(d.createdAt).toLocaleString('ko-KR'):'';
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+      html+='<span style="font-size:12px;font-weight:800">'+(isOrder?'🛒 자동발주 발송':'📦 재고 부족 감지')+'</span>';
+      html+='<span style="font-size:10px;color:var(--text3)">'+dt+'</span></div>';
+      html+='<div style="font-size:13px;font-weight:700">'+esc(d.itemName||'')+'</div>';
+      if(isOrder) html+='<div style="font-size:11px;color:var(--text3);margin-top:4px">거래처: '+esc(d.supplierName||'-')+' · 발주수량: '+(d.orderQty||'-')+'개 · 재고: '+(d.stock||0)+'개</div>';
+      else html+='<div style="font-size:11px;color:var(--text3);margin-top:4px">현재재고: '+(d.stock||0)+'개 (최소: '+(d.minStock||0)+'개)</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    listEl.innerHTML=html;
+  }).catch(function(e){
+    var listEl=document.getElementById('inv-history-list');
+    if(listEl)listEl.innerHTML='<div style="color:#ef4444;padding:10px">'+e.message+'</div>';
+  });
+}
 
 function _invRenderSalary(){
   var area=document.getElementById('inv-salary-area');
@@ -34738,11 +34819,11 @@ function _showSubModal(){
      tl:'쿠팡 외 타업종 / 복합업종 정산',
      ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
     {key:'inventory',ic:'📦',nm:'재고관리',         up:90000,g:2,color:'#059669',badge:'FILO',ptype:'fixed',
-     tl:'filo.ai.kr 연동 — 입출고·재고현황 자동화',
-     ft:['품목 마스터 등록','입출고 엑셀 업로드','실시간 재고현황','4단계 필터 조회','filo.ai.kr 앱 연동']},
+     tl:'POS 판매 즉시 재고 자동 차감 · 부족 시 거래처 자동 발주',
+     ft:['POS·키오스크 판매 시 실시간 재고 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','발주 수량·거래처 품목별 설정','발주 이력 자동 기록','DONWAY 정산 연동']},
     {key:'kiosk',    ic:'🖥️',nm:'키오스크·POS',    up:90000,g:2,color:'#f59e0b',badge:'FILO',ptype:'fixed',
-     tl:'filo.ai.kr 연동 — 무인주문·매출 자동 정산',
-     ft:['QR 무인주문','테이블·포장 모드','매출 대시보드','카드결제 연동','filo.ai.kr 앱 연동']},
+     tl:'무인주문·실시간 매출·재고 자동 연동 올인원',
+     ft:['QR·태블릿 무인주문 (테이블·포장·출장)','결제 즉시 재고 자동 차감','실시간 매출 대시보드','재고 부족 자동 발주 알림톡','DONWAY 정산·급여 연동']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
