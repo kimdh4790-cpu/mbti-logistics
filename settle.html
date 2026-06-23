@@ -7172,6 +7172,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       // ★ 라우트-캠프 매핑: 엑셀 Raw 캠프컬럼 기반 (기사 캠프 무관)
       // 엑셀에 나온 라우트만 업데이트, 없는 라우트는 기존값 유지
       var rcMap = window._rawRouteCampOverride || {};
+      console.log('[캠프저장] rcMap 508B:', rcMap['508B'], '812A:', rcMap['812A']);
       if(Object.keys(rcMap).length&&_db&&_CU){
         Object.assign(_routeCampMap,rcMap);
         _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').update(rcMap).then(function(){
