@@ -7169,19 +7169,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       // ── 등록 후 정산서 생성
       // routeCampMap 구성 및 Firebase 저장
       // routeCampMap 구성 및 Firebase 저장
-      var rcMap={};
-      allCleanIds.forEach(function(cid){
-        var dm=drvMap[cid];
-        var campFull=dm.camp||'';
-        if(!campFull||campFull==='기타')return;
-        Object.keys(dm.routes).forEach(function(r){
-          rcMap[r]=campFull;
-        });
-      });
-      // ★ 라우트별 실제 캠프명 보정 (엑셀 Raw 캠프컬럼 기반)
-      if(window._rawRouteCampOverride){
-        Object.assign(rcMap, window._rawRouteCampOverride);
-      }
+      // ★ 라우트-캠프 매핑: 엑셀 Raw 캠프컬럼 기반 (기사 캠프 무관)
+      // 엑셀에 나온 라우트만 업데이트, 없는 라우트는 기존값 유지
+      var rcMap = window._rawRouteCampOverride || {};
       if(Object.keys(rcMap).length&&_db&&_CU){
         Object.assign(_routeCampMap,rcMap);
         _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').set(_routeCampMap,{merge:true}).catch(function(){});
