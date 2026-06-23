@@ -30069,10 +30069,16 @@ function _renderSettleList(){
     });
     lss('settlements',_settleCache.filter(function(s){return !s._driverOnly;}));
     // ★ routeCampMap 로드 후 렌더링 (캠프 탭 정확도)
-    _loadRouteCampMap(function(){
+    // ★ routeCampMap 이미 로드됐으면 재요청 안 함
+    if(Object.keys(_routeCampMap||{}).length>0){
       _buildDynCamps(_settleCache);
       _renderSettlePage(_settleCache,c);
-    });
+    } else {
+      _loadRouteCampMap(function(){
+        _buildDynCamps(_settleCache);
+        _renderSettlePage(_settleCache,c);
+      });
+    }
   }).catch(function(e){
     // fallback: 정산만 로드
     _db.collection('settlements').where('dealerId','==',cid2).get()
@@ -30421,15 +30427,21 @@ async function openSendModal(x){
   var month=x.month||'';
   var phone='';
   var did=_CU.dealerId||'', uid=x.userId||'';
-  if(did&&uid&&_db){
-    try{
-      var psnap=await _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get();
-      if(!psnap.empty){var pd=psnap.docs[0].data();phone=pd.phone||pd.tel||pd.mobile||'';}
-      if(!phone&&(x.driver||x.driverName)){
-        var nsnap=await _db.collection('drivers').where('dealerId','==',did).where('name','==',(x.driver||x.driverName||'')).limit(1).get();
-        if(!nsnap.empty){var nd=nsnap.docs[0].data();phone=nd.phone||nd.tel||nd.mobile||'';}
-      }
-    }catch(e2){console.warn('phone조회오류',e2);}
+  // ★ _drvCache 우선 사용 (Firestore 읽기 절약)
+  if(did&&uid){
+    var _cachedDrv=(_drvCache||[]).find(function(d){return d.userId===uid;});
+    if(_cachedDrv){
+      phone=_cachedDrv.phone||_cachedDrv.tel||_cachedDrv.mobile||'';
+    } else if(_db){
+      try{
+        var psnap=await _db.collection('drivers').where('dealerId','==',did).where('userId','==',uid).limit(1).get();
+        if(!psnap.empty){var pd=psnap.docs[0].data();phone=pd.phone||pd.tel||pd.mobile||'';}
+        if(!phone&&(x.driver||x.driverName)){
+          var nsnap=await _db.collection('drivers').where('dealerId','==',did).where('name','==',(x.driver||x.driverName||'')).limit(1).get();
+          if(!nsnap.empty){var nd=nsnap.docs[0].data();phone=nd.phone||nd.tel||nd.mobile||'';}
+        }
+      }catch(e2){console.warn('phone조회오류',e2);}
+    }
   }
 
 
