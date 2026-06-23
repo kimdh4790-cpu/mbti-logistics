@@ -34685,7 +34685,7 @@ function addRpCamp(cid){
 }
 // ══ 구독 플랜 선택 모달 ══
 
-// ── 구간별 정액 요금 계산 (3% 계좌이체 할인 적용) ──
+// ── 구간별 정액 요금 계산 ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
 // 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
 // 확정 요금제 (2026-06-22 개정, VAT별도)
@@ -34752,7 +34752,7 @@ function _subPayClick(btn){
   var ttl=document.createElement('div');ttl.style.cssText='font-size:15px;font-weight:900;margin-bottom:4px';ttl.textContent='💳 결제 수단 선택';
   var dsc=document.createElement('div');dsc.style.cssText='font-size:12px;color:var(--text3);margin-bottom:18px';dsc.innerHTML=pname+' · ~'+hc+'명 · <b style="color:var(--acc)">₩'+amt.toLocaleString()+'</b>/월 (VAT포함)';
   var b1=document.createElement('button');b1.style.cssText='width:100%;padding:14px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px';b1.textContent='💳 카드 결제 (토스페이먼츠)';b1.onclick=(function(k,a,h){return function(){_subTossPay(k,a,h);};})(key,amt,hc);
-  var b2=document.createElement('button');b2.style.cssText='width:100%;padding:14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px';b2.textContent='🏦 계좌이체 (3% 할인)';b2.onclick=(function(k,a,h){return function(){_subTransfer(k,a,h);};})(key,amt,hc);
+  var b2=document.createElement('button');b2.style.cssText='width:100%;padding:14px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px';b2.textContent='🏦 계좌이체 신청';b2.onclick=(function(k,a,h){return function(){_subTransfer(k,a,h);};})(key,amt,hc);
   var b3=document.createElement('button');b3.style.cssText='width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer';b3.textContent='취소';b3.onclick=function(){mo.remove();};
   box.appendChild(ttl);box.appendChild(dsc);box.appendChild(b1);box.appendChild(b2);box.appendChild(b3);mo.appendChild(box);
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -34772,8 +34772,7 @@ function _subTransfer(planKey, amt, hc){
 function _showTransferGuide(planKey, amt, hc){
   var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리',kiosk:'키오스크·POS'};
   var pname=planNames[planKey]||planKey;
-  // 계좌이체 3% 할인 금액
-  var discAmt=Math.round(amt*0.97);
+  var discAmt=amt;
   var old=document.getElementById('transfer-guide-modal');if(old)old.remove();
   var mo=document.createElement('div');
   mo.id='transfer-guide-modal';
@@ -34782,7 +34781,7 @@ function _showTransferGuide(planKey, amt, hc){
     +'<div style="font-size:15px;font-weight:900;margin-bottom:16px">🏦 계좌이체 안내</div>'
     +'<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px;line-height:2">'
     +'<div>상품: <b>'+pname+' (~'+hc+'명)</b></div>'
-    +'<div>금액: <b style="color:var(--acc)">₩'+discAmt.toLocaleString()+'원/월</b> <span style="font-size:11px;color:var(--text3)">(3% 할인 적용)</span></div>'
+    +'<div>금액: <b style="color:var(--acc)">₩'+discAmt.toLocaleString()+'원/월</b></div>'
     +'<div>은행: <b>부산은행</b></div>'
     +'<div>계좌: <b onclick="navigator.clipboard&&navigator.clipboard.writeText("30220458901");toast("계좌번호 복사됨")" style="cursor:pointer;color:var(--brand)">302-20-458901 📋</b></div>'
     +'<div>예금주: <b>(유)엠비티아이</b></div>'
@@ -34835,7 +34834,7 @@ function _showSubModal(){
     }).join('')
     +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 카드 등록 불필요</div>'
     +'</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 계좌이체 3% 할인 적용 금액입니다</div>'
+    
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:10px;padding:0 2px 12px">';
   plans.forEach(function(p){
