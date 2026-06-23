@@ -33906,6 +33906,9 @@ function pagePrices(tabMode){
 }
 function _getRouteCamp(route){
   if(!route)return '기타';
+  // 0순위: 하드코딩 고정 매핑 (라우트번호 기반 - 절대 변경 불가)
+  var _hardMap={'508B':'부산3캠프','812A':'부산2캠프','812B':'부산2캠프','812C':'부산2캠프','812D':'부산2캠프'};
+  if(_hardMap[route])return _hardMap[route];
   // 1순위: routeCampMap (엑셀 업로드 시 저장)
   if(_routeCampMap[route])return _routeCampMap[route];
   // 2순위: settlements 캐시
