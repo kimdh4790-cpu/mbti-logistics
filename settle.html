@@ -6863,6 +6863,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
           var freshVal=freshInc||(row[rColFresh]?Number(row[rColFresh])||0:0)||rowTotal||0;
           drvMap[cleanId].freshAmt+=freshVal;
+          // ★ 날짜별 프레시백 수집 (아이디지원용)
+          if(rowDate&&freshVal>0){
+            if(!drvMap[cleanId].dateFresh)drvMap[cleanId].dateFresh={};
+            drvMap[cleanId].dateFresh[rowDate]=(drvMap[cleanId].dateFresh[rowDate]||0)+freshVal;
+          }
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
           continue;
         }
@@ -6990,7 +6995,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
-            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0};
             drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
             drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
           }
@@ -7089,20 +7094,27 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       if(dmgRows.length>1){
         // 헤더: 날짜,캠프,ID,이름,유형,상세,개수,차감금액,...
         var dh=dmgRows[0]||[];
-        var dID=2,dName=3,dAmt=7;
+        var dID=2,dName=3,dAmt=7,dDate=0;
         for(var dc2=0;dc2<dh.length;dc2++){
           var dcn=String(dh[dc2]||'').replace(/\s+/g,'');
           if(dcn==='ID')dID=dc2;
           else if(dcn==='이름'||dcn==='성명')dName=dc2;
           else if(dcn.includes('차감금액')||dcn.includes('금액'))dAmt=dc2;
+          else if(dcn==='날짜'||dcn==='일자')dDate=dc2;
         }
         for(var di=1;di<dmgRows.length;di++){
           var dr=dmgRows[di];if(!dr||!dr[dID])continue;
           var did=String(dr[dID]).replace(/@[a-z0-9@._-]+$/i,'').trim();
           var dname=String(dr[dName]||'').trim();
           var damt=Number(dr[dAmt])||0;
-          if(!dmgMap[did])dmgMap[did]={dmg:0,name:''};
+          // ★ 날짜 파싱 (아이디지원 날짜별 분실 계산용)
+          var dDateRaw=dr[dDate];
+          var dDateStr='';
+          if(dDateRaw instanceof Date){var _m=dDateRaw.getMonth()+1,_d=dDateRaw.getDate();dDateStr=dDateRaw.getFullYear()+'-'+(_m<10?'0'+_m:_m)+'-'+(_d<10?'0'+_d:_d);}
+          else if(dDateRaw){dDateStr=String(dDateRaw).slice(0,10);}
+          if(!dmgMap[did])dmgMap[did]={dmg:0,name:'',dateDmg:{}};
           dmgMap[did].dmg+=damt;
+          if(dDateStr&&damt>0){dmgMap[did].dateDmg[dDateStr]=(dmgMap[did].dateDmg[dDateStr]||0)+damt;}
           if(dname&&!dmgMap[did].name)dmgMap[did].name=dname;
         }
       }
@@ -7213,6 +7225,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         window._lastPromoTotal=_totalPromoRaw;
         window._lastDrvMap=drvMap;
         window._lastDrvMapRef=drvMap; // _doSettle에서 참조용
+        window._lastDmgMap=dmgMap; // ★ 아이디지원 분실파손 날짜별 계산용
         
         var _totalPromoCnt=Object.values(drvMap).reduce(function(s,v){
           return s+(v.promoCnt||0)+(v.normalPromoCnt||0)+(v.nocontPromoCnt||0);
@@ -7458,8 +7471,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
               var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
               if(hasDateRoutes){
+                // ★ 날짜 범위 내 배송+반품
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  // ★ 날짜 범위: startDate 이상 endDate 이하 (endDate 없으면 월말까지)
                   if(rStart&&dt<rStart)return;
                   if(rEnd&&dt>rEnd)return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
@@ -7471,6 +7484,25 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
                   });
                 });
+                // ★ 날짜 범위 내 프레시백 인센티브
+                if(fd.dateFresh){
+                  Object.keys(fd.dateFresh).forEach(function(dt){
+                    if(rStart&&dt<rStart)return;
+                    if(rEnd&&dt>rEnd)return;
+                    var fv=fd.dateFresh[dt]||0;
+                    if(fv>0){tot+=fv;pts.push('프레시백 ₩'+fv.toLocaleString());}
+                  });
+                }
+                // ★ 날짜 범위 내 분실파손 차감
+                var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
+                if(_fdmg&&_fdmg.dateDmg){
+                  Object.keys(_fdmg.dateDmg).forEach(function(dt){
+                    if(rStart&&dt<rStart)return;
+                    if(rEnd&&dt>rEnd)return;
+                    var dv=_fdmg.dateDmg[dt]||0;
+                    if(dv>0){tot-=dv;pts.push('분실파손 -₩'+dv.toLocaleString());}
+                  });
+                }
               } else {
                 // fallback: routeDetails 기준
                 var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
