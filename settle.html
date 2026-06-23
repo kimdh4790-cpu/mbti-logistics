@@ -787,11 +787,13 @@ async function _loadSlugCompany(){
         // 슈퍼어드민: 슬러그 회사 dealerId로 전환 (다른 대리점 데이터 조회 가능)
         if(_CU && _slugCompany._id){
           _CU.dealerId = _slugCompany._id;
-          _CU.companyName = _slugCompany.companyName||_slugCompany.name||_companySlug;
+          _CU._visitingCompany = _slugCompany.companyName||_slugCompany.name||_companySlug;
+          _CU._visitingId = _slugCompany._id;
+          // companyName은 덮어쓰지 않고 방문 표시만
           window._CU = _CU;
           // ★ dealerId 전환 시 단가 초기화 (이전 대리점 단가 노출 방지)
           RPRICE = {}; RPRICE_ADJ = {}; SEASON_PRICES = [];
-}
+        }
       } else {
         // 일반 대리점: 자기 회사 슬러그와 URL 슬러그가 다르면 접근 차단
         if(_CU && _slugCompany._id !== _CU.dealerId){
@@ -8687,8 +8689,8 @@ function showApp(){
   setTimeout(function(){ if(typeof _startSuperAdminListener==='function') _startSuperAdminListener(); }, 1500);
   var _cn0=_CU.companyName||_CU.name||_CU.email||'?';
   document.getElementById('sb-av').textContent=_cn0[0].toUpperCase();
-  document.getElementById('sb-name').textContent=_CU.companyName||_CU.name||_CU.email||'';
-  document.getElementById('sb-role').textContent=_CU.role==='admin'?'슈퍼관리자':(_CU.role==='driver'||_CU.role==='member')?('직원 · '+(_CU.companyName||'')):(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자');
+  document.getElementById('sb-name').textContent=(_CU._visitingCompany?'👁 '+_CU._visitingCompany:(_CU.companyName||_CU.name||_CU.email||''));
+  document.getElementById('sb-role').textContent=_CU._visitingCompany?'방문중 · 슈퍼어드민':(_CU.role==='admin'?'슈퍼관리자':(_CU.role==='driver'||_CU.role==='member')?('직원 · '+(_CU.companyName||'')):(_CU.companyName?'대리점 관리자 · '+_CU.email:'대리점 관리자'));
   // 회사코드 표시 (관리자만)
   if(_CU.role!=='driver'&&_CU.role!=='member'){
     _db.collection('companies').doc(_CU.dealerId||_CU.uid).get().then(function(doc){
