@@ -30150,7 +30150,7 @@ function _renderSettleList(){
     // ★ 등록된 기사 중 이번달 정산 없는 기사 → 미정산으로 추가
     // (슈퍼어드민 방문 중에는 건너뜀 — 실제 고객 본인만 표시)
     var curMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
-    if(!_CU._visitingCompany){
+    if(!isSuperAdmin()){
       var settledUsers=new Set(_settleCache.filter(function(s){return s.month===curMonth;}).map(function(s){return s.userId||s.driver;}));
       results[1].docs.forEach(function(doc){
         var d=doc.data();
