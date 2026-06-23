@@ -30480,8 +30480,8 @@ async function openSendModal(x){
   summary.style.cssText='background:var(--bg3);border-radius:10px;padding:16px;margin-bottom:20px';
   summary.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--purple)">'+esc(name)+' · '+esc(month)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +'<div><div style="font-size:10px;color:var(--text3)">총수익(VAT포함)</div><div style="font-size:14px;font-weight:700;color:var(--green)">₩'+fmt(vatIncome)+'</div></div>'
-    +'<div><div style="font-size:10px;color:var(--text3)">실지급</div><div style="font-size:14px;font-weight:700;color:var(--purple)">₩'+fmt(net)+'</div></div>'
+    +'<div><div style="font-size:10px;color:var(--text3)">총수익(VAT포함)</div><div style="font-size:14px;font-weight:700;color:var(--green)">₩'+fmt(r.totalAmt||vatIncome)+'</div></div>'
+    +'<div><div style="font-size:10px;color:var(--text3)">실지급</div><div style="font-size:14px;font-weight:700;color:var(--purple)">₩'+fmt(r.net||net)+'</div></div>'
     +'</div>';
   box.appendChild(summary);
 
