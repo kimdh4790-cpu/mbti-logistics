@@ -30031,15 +30031,17 @@ function deleteMonthSettlements(month){
       return Promise.all(batches);
     })
     .then(function(){
-      // localStorage + 캐시도 정리
-      _settleCache=(_settleCache||[]).filter(function(x){return x.month!==month;});
+      // 캐시 완전 초기화
+      _settleCache = null;
+      window._settleMonths = null;
       var did2=(_CU&&_CU.dealerId)||'shared';
-      // localStorage도 필터링된 상태로 덮어쓰기 (removeItem 대신 확실하게)
-      lss('settlements',_settleCache);
-      localStorage.removeItem('dw_'+did2+'_settlements');
-      SP('settlements',null);
+      try{
+        localStorage.removeItem('dw_'+did2+'_settlements');
+        localStorage.removeItem('dw_settlements');
+        SP('settlements',null);
+      }catch(ex){}
       toast('✅ '+month+' 정산서 삭제 완료');
-      _reloadSettlePage();
+      setTimeout(function(){ pageSettlements(); }, 300);
     })
     .catch(function(e){toast('❌ 삭제 실패: '+e.message);});
 }
