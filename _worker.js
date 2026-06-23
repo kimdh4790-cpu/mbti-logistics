@@ -541,8 +541,8 @@ export default {
           const net      = gn('net');
           const coName   = gs('_coName') || gs('companyName') || 'DONWAY';
           const vatInc   = gn('vatIncome') || net;
-          const supply   = gn('supply') || Math.round(vatInc/1.1);
-          const vat      = gn('vat') || (vatInc - supply);
+          const supply   = Math.round(vatInc/1.1);
+          const vat      = vatInc - supply;
           const emp      = gn('emp');
           const work     = gn('work');
           const fresh    = gn('fresh');
