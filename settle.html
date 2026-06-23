@@ -6853,24 +6853,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(isEcoRow){
           // ★ 에코백 소급: col14(인센) 있으면 프레시백인센에 포함
           if(freshInc>0||freshIncInc>0){
-            if(!drvMap[cleanId])drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
+            if(!drvMap[cleanId])drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
             drvMap[cleanId].freshIncAmt+=(freshInc||freshIncInc||0);
           }
           continue;
         }
         if(isFreshRow){
-          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
-            dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
-            addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
+          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
           var freshVal=freshInc||(row[rColFresh]?Number(row[rColFresh])||0:0)||rowTotal||0;
           drvMap[cleanId].freshAmt+=freshVal;
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
           continue;
         }
         if(isSugi){
-          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
-            dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
-            addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
+          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
           var sugiCnt=(dcnt+rcnt);
           drvMap[cleanId].rcnt+=sugiCnt;
           // ★ 라우트별 반품에도 추가 → RPRICE 계산에 반영
@@ -6925,9 +6921,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         }
         if(isNocont){
           var nc=dcnt+rcnt;
-          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',
-            dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,
-            addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{}};
+          if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
           drvMap[cleanId].nocontCnt+=nc;
           if(rowTotal>0) drvMap[cleanId].nocontAmt+=rowTotal;
           // 캠프 업데이트
@@ -8035,9 +8029,6 @@ function _saveCpDriver(camp,dm,name,month,cb){
   var payload={dealerId:dealerId,driverName:name,driver:uid,camp:camp,month:month,jobsub:'쿠팡',
     dcnt:dm.dcnt||0,rcnt:dm.rcnt||0,damt:damt,ramt:ramt,fresh:freshRaw,finc:finc,inc:0,
     nocont:dm.nocontAmt||0,nocontCnt:dm.nocontCnt||0,
-    promoAmt:_promoAmt,promoCnt:_promoCnt,
-    normalPromoAmt:_normalPromoAmt,normalPromoCnt:_normalPromoCnt,
-    nocontPromoAmt:_nocontPromoAmt,nocontPromoCnt:_nocontPromoCnt,
     promoAmt:_promoAmt,promoCnt:_promoCnt,
     normalPromoAmt:_normalPromoAmt,normalPromoCnt:_normalPromoCnt,
     nocontPromoAmt:_nocontPromoAmt,nocontPromoCnt:_nocontPromoCnt,
