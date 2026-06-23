@@ -33971,13 +33971,8 @@ function pagePrices(tabMode){
     el.appendChild(_rpDiv);
 
     function rebuildAndRender(){
-      (_settleCache||[]).forEach(function(s){
-        var camp=s.camp||_getSettleCamp(s);
-        if(!camp||camp==='기타')return;
-        (s.routeDetails||[]).forEach(function(rd){
-          if(rd.route)_routeCampMap[rd.route]=camp;
-        });
-      });
+      // ★ routeCampMap은 Firestore 기준 신뢰 — settlements.camp로 덮어쓰지 않음
+      // (settlements.camp가 잘못 저장된 경우 대비)
       _renderPrices(_rpDiv);
       // 라우트 단가 자동저장 - input 이벤트 위임
       _rpDiv.addEventListener('input',function(e){
