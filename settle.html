@@ -8845,19 +8845,7 @@ function showApp(){
   var adminBtn=document.getElementById('admin-btn');
   if(adminBtn){
     adminBtn.style.display=isSuperAdmin()?'block':'none';
-    // ★ 슈퍼어드민 이벤트 버튼 추가
-    if(isSuperAdmin()){
-      var saEvBtn = document.getElementById('sa-ev-btn');
-      if(!saEvBtn){
-        saEvBtn = document.createElement('button');
-        saEvBtn.id = 'sa-ev-btn';
-        saEvBtn.className = adminBtn.className;
-        saEvBtn.style.cssText = adminBtn.style.cssText + ';background:linear-gradient(135deg,#7c3aed,#4f46e5);margin-top:4px';
-        saEvBtn.innerHTML = '🔔 이벤트 현황';
-        saEvBtn.onclick = function(){ goPage('sa_events'); };
-        adminBtn.parentNode.insertBefore(saEvBtn, adminBtn.nextSibling);
-      }
-    }
+
     if(isSuperAdmin()&&_db){
       // 오늘 기준 7일 이내 신규 trial 가입자 수 배지
       var since=new Date(Date.now()-7*24*60*60*1000).toISOString().slice(0,10);
