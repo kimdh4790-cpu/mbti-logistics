@@ -30321,7 +30321,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       vatIncome:vatIncome2,
       supply:Math.round(vatIncome2/1.1),
       vat:vatIncome2-Math.round(vatIncome2/1.1),
-      emp:r.emp||0, work:r.work||0,
+      emp:x.emp||r.emp||0, work:x.work||r.work||0,
       fresh:r.fresh||0, finc:r.finc||0,
       nocont:r.nocont||0, etcPlus:r.etcPlus||0, etcMinus:r.etcMinus||0,
       dmg:r.dmg||0, adv:r.adv||0,
