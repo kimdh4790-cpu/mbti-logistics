@@ -40349,11 +40349,41 @@ window._extendTrialByEmail=function(email, btn, days){
 function _loadPaymentRequests(container){
   if(!_db||!isSuperAdmin()) return;
   container.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
-  _db.collection('payment_requests').orderBy('createdAt','desc').limit(50).get()
+  // 상단 필터 버튼
+  var filterWrap=document.createElement('div');
+  filterWrap.style.cssText='display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap';
+  filterWrap.innerHTML='<button onclick="window._payFilter=\'all\';_loadPaymentRequests(this.closest(\'.md\').querySelector(\'.pay-area\'))" style="padding:5px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3);color:var(--text)">전체</button>'
+    +'<button onclick="window._payFilter=\'pending\';_loadPaymentRequests(this.closest(\'.md\').querySelector(\'.pay-area\'))" style="padding:5px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(245,158,11,.2);color:#f59e0b">대기중만</button>'
+    +'<button onclick="window._payFilter=\'approved\';_loadPaymentRequests(this.closest(\'.md\').querySelector(\'.pay-area\'))" style="padding:5px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(16,185,129,.2);color:#10b981">승인됨만</button>';
+  container.appendChild(filterWrap);
+  var listArea=document.createElement('div');listArea.className='pay-area';
+  container.appendChild(listArea);
+  container=listArea;
+
+  var filterVal=window._payFilter||'pending';
+  var q=_db.collection('payment_requests').orderBy('createdAt','desc').limit(100);
+  q.get()
   .then(function(snap){
     var items=[];
-    snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
-    if(!items.length){container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">📭 결제 신청 없음</div>';return;}
+    snap.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      if(filterVal==='all'||d.status===filterVal||(filterVal==='pending'&&!d.status)) items.push(d);
+    });
+    // undefined 데이터 정리 버튼
+    var badItems=items.filter(function(i){return !i.companyName&&!i.type;});
+    if(badItems.length){
+      var cleanBtn=document.createElement('button');
+      cleanBtn.style.cssText='padding:6px 14px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;margin-bottom:10px;display:block';
+      cleanBtn.textContent='🗑 undefined 항목 '+badItems.length+'개 삭제';
+      cleanBtn.onclick=function(){
+        if(!confirm(badItems.length+'개 삭제?'))return;
+        var batch=_db.batch();
+        badItems.forEach(function(i){batch.delete(_db.collection('payment_requests').doc(i.id));});
+        batch.commit().then(function(){toast('✅ 삭제 완료');_loadPaymentRequests(container.parentElement);});
+      };
+      container.appendChild(cleanBtn);
+    }
+    if(!items.length){container.innerHTML+='<div style="text-align:center;padding:30px;color:var(--text3)">📭 결제 신청 없음</div>';return;}
 
     var TYPE_LABEL={settle:'📦 AI 택배정산',qr:'🔐 QR 근태관리',payroll:'💼 급여관리',delivery:'🛵 배달대행',contract:'📝 위수탁 계약서',roster:'🗓 근무표',full:'⚡ ALL-IN-ONE'};
     var TYPE_PRICE={settle:210000,qr:59000,payroll:59000,delivery:210000,contract:9900,roster:9900,full:270000,filo_inv:90000,filo_kiosk:50000,filo_combo:150000,filo_qr:2000};
