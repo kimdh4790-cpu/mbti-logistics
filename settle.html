@@ -34719,7 +34719,8 @@ function _tierCap(hc){
 }
 function _tierAmt(pkey, hc){
   // 고정 요금 플랜
-  if(pkey==='inventory'||pkey==='kiosk') return 90000;
+  if(pkey==='filo_combo') return 110000;  // DONWAY 연동 콤보
+  if(pkey==='inventory'||pkey==='kiosk') return 90000;  // 단독 (레거시)
   // 인당 요금 플랜 (QR+급여: 3,500원/인)
   if(pkey==='qr_payroll') return (hc||30)*3500;
   // 구간 요금 플랜 (AI정산, 배달대행, 범용)
@@ -34818,12 +34819,9 @@ function _showSubModal(){
     {key:'universal',ic:'📋',nm:'범용 정산',         up:4725,g:1,color:'#7c3aed',badge:'NEW',
      tl:'쿠팡 외 타업종 / 복합업종 정산',
      ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
-    {key:'inventory',ic:'📦',nm:'재고관리',         up:90000,g:2,color:'#059669',badge:'FILO',ptype:'fixed',
-     tl:'POS 판매 즉시 재고 자동 차감 · 부족 시 거래처 자동 발주',
-     ft:['POS·키오스크 판매 시 실시간 재고 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','발주 수량·거래처 품목별 설정','발주 이력 자동 기록','DONWAY 정산 연동']},
-    {key:'kiosk',    ic:'🖥️',nm:'키오스크·POS',    up:90000,g:2,color:'#f59e0b',badge:'FILO',ptype:'fixed',
-     tl:'무인주문·실시간 매출·재고 자동 연동 올인원',
-     ft:['QR·태블릿 무인주문 (테이블·포장·출장)','결제 즉시 재고 자동 차감','실시간 매출 대시보드','재고 부족 자동 발주 알림톡','DONWAY 정산·급여 연동']},
+    {key:'filo_combo',ic:'📦🖥️',nm:'재고+키오스크 콤보',up:110000,g:1,color:'#059669',badge:'FILO',ptype:'fixed',
+     tl:'재고·무인주문·매출·발주 올인원 — DONWAY 연동 할인',
+     ft:['POS·키오스크 판매 시 실시간 재고 자동 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','QR·태블릿 무인주문 (테이블·포장·출장)','실시간 매출 대시보드','DONWAY 정산·급여 연동','단독 이용 시 165,000원/월']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
@@ -34891,7 +34889,7 @@ function _selectTier(cap){
   var _indTier=DW_TIERS_IND.find(function(t){return t.cap===cap;})||{amt:0};
   var _grpTier=DW_TIERS_GRP.find(function(t){return t.cap===cap;})||{amt:0};
   var _tierObj=_subType2==='grp'?_grpTier:_indTier;
-  ['settle','delivery','universal','qr_payroll','inventory','kiosk'].forEach(function(k){
+  ['settle','delivery','universal','qr_payroll','filo_combo'].forEach(function(k){
     var amt=_tierAmt(k,cap);
     var amtLabel=amt===0?'별도 문의':amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
     if(k==='qr_payroll') amtLabel=(cap*3500).toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span><span style="font-size:10px;color:var(--text3)"> ('+cap+'명×3,500원)</span>';
