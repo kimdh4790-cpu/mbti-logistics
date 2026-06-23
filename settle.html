@@ -30413,6 +30413,7 @@ async function openSendModal(x){
     }
   }
   var r=calcNet(_xClone);
+  window._debugXClone=_xClone; // 디버그용
   var net=_xClone.net||r.net||0;
   var emp=(_xClone.emp||r.emp||0)+(_xClone.work||r.work||0);
   var vatIncome=r.totalAmt||_xClone.vatIncome||0;  // ★ 기사 세금계산서 합계 (calcNet 재계산)
