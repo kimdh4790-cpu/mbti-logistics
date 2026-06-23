@@ -7174,9 +7174,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       var rcMap = window._rawRouteCampOverride || {};
       if(Object.keys(rcMap).length&&_db&&_CU){
         Object.assign(_routeCampMap,rcMap);
-        _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').update(rcMap).catch(function(){
-          // 문서 없으면 set으로 생성
-          _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').set(rcMap,{merge:true}).catch(function(){});
+        _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').update(rcMap).then(function(){
+          if(typeof pagePrices==='function')pagePrices();
+        }).catch(function(){
+          _db.collection('settings').doc(_CU.dealerId+'_routeCampMap').set(rcMap,{merge:true}).then(function(){
+            if(typeof pagePrices==='function')pagePrices();
+          }).catch(function(){});
         });
       }
       Promise.all(routePromises.concat(driverPromises)).then(function(){
