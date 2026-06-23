@@ -609,7 +609,7 @@ export default {
 
           const routeSec = routeRows ? `
             <div class="sec">
-              <div class="sec-title">📊 라우트별 실적 (건수×단가)</div>
+              <div class="sec-title">① 배송 ② 반품 — 라우트별 실적 (건수×단가)</div>
               <table>
                 <thead><tr style="background:#f8fafc">
                   <th style="padding:5px 8px;text-align:left">라우트</th>
