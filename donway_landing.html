@@ -166,11 +166,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="grid"></div>
   <div class="lbl">DONWAY란</div>
   <div class="ttl"><span class="gr2">직원에게 월급 주는</span><br>사업주를 위한<br>정산 자동화 SaaS</div>
-  <p class="sub" style="margin-bottom:14px">업종 무관 · 설치 없음 · 웹 브라우저로 즉시 사용<br>가입 후 7일 무료 · 이후 정산금 규모별 월정액</p>
+  <p class="sub" style="margin-bottom:14px">업종 무관 · 설치 없음 · 웹 브라우저로 즉시 사용<br>가입 후 7일 무료 · 이후 정산 인원 규모별 월정액</p>
   <div style="background:rgba(0,200,248,.07);border:1px solid var(--border);border-radius:14px;padding:14px 16px;max-width:380px;width:100%">
     <div style="font-size:11px;font-weight:700;color:var(--brand);margin-bottom:8px">DONWAY 한 줄 정의</div>
     <div style="font-size:13px;line-height:1.8;color:var(--text)">
-      직원 정보 등록 → 단가 설정 → 엑셀 업로드<br>
+      직원 정보 등록 → 업종·단가 설정 → 엑셀 업로드<br>
       → <strong style="color:var(--brand)">자동 재계산</strong> → <strong style="color:var(--brand)">카카오 명세서 발송</strong><br>
       → <strong style="color:var(--brand)">세무사 자동 공유</strong>
     </div>
@@ -218,25 +218,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
       <div class="cico" style="background:rgba(0,200,248,.1)">🤖</div>
       <div>
         <div class="ctit">AI 정산 자동화</div>
-        <div class="cdesc">엑셀 업로드 → 라우트·구간·시즌·팀장수수료 자동 계산<br>5가지 포맷 자동 인식, 오류 자동 감지</div>
+        <div class="cdesc">엑셀 업로드 → 라우트·구간·시즌·팀장수수료 자동 계산<br>고용·산재보험 자동공제 · 세금계산서 자동발행</div>
         <span class="tag" style="background:rgba(0,200,248,.12);color:var(--brand)">핵심</span>
-        <span class="tag" style="background:rgba(245,158,11,.12);color:var(--amber);margin-left:4px">📦 현 택배대리점 사용 중</span>
       </div>
     </div>
     <div class="card">
       <div class="cico" style="background:rgba(34,197,94,.1)">📱</div>
       <div>
-        <div class="ctit">카카오 명세서 + 고객 관리</div>
-        <div class="cdesc">정산 배포 클릭 → 전 직원 카카오톡 자동 발송<br>로그인 없이 링크로 명세서 확인 · 고객별 관리 대시보드</div>
+        <div class="ctit">카카오 명세서 자동 발송</div>
+        <div class="cdesc">정산 확인 클릭 → 전 직원 카카오톡 자동 발송<br>로그인 없이 링크로 명세서 확인 · 고객별 관리</div>
         <span class="tag" style="background:rgba(34,197,94,.12);color:var(--green)">자동화</span>
       </div>
     </div>
     <div class="card">
-      <div class="cico" style="background:rgba(124,58,237,.1)">📅</div>
+      <div class="cico" style="background:rgba(124,58,237,.1)">🔐</div>
       <div>
         <div class="ctit">QR 출퇴근 + 급여 연동</div>
-        <div class="cdesc">30초 갱신 동적 QR · GPS 검증 · 대리출퇴근 차단<br>출퇴근 데이터 → 급여 자동 계산 · 연차·휴가 관리</div>
-        <span class="tag" style="background:rgba(124,58,237,.12);color:#a78bfa)">출퇴근</span>
+        <div class="cdesc">30초 갱신 동적 QR · GPS 검증 · 대리출퇴근 차단<br>출퇴근 → 급여 자동계산 · 4대보험 자동공제</div>
+        <span class="tag" style="background:rgba(124,58,237,.12);color:#a78bfa">출퇴근</span>
       </div>
     </div>
     <div class="card">
@@ -256,7 +255,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="grid"></div>
   <div class="lbl">지원 업종 13개</div>
   <div class="ttl">어떤 업종이든<br><span class="gr">맞춤 용어·화면</span></div>
-  <p class="sub" style="margin-bottom:12px">업종 선택 시 화면·용어가 자동으로 바뀝니다</p>
+  <p class="sub" style="margin-bottom:8px">같은 업종이라도 운영 방식은 다릅니다<br>도입 상담 시 업종·규모에 맞게 100% 커스텀</p>
   <div class="tags" id="ind-tags">
     <span class="itag" data-ind="courier" style="cursor:pointer">📦 택배 대리점</span>
     <span class="itag" data-ind="delivery" style="cursor:pointer">🛵 배달대행</span>
@@ -267,13 +266,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
     <span class="itag" data-ind="academy" style="cursor:pointer">📚 학원·교육</span>
     <span class="itag" data-ind="beauty" style="cursor:pointer">💇 미용·뷰티</span>
     <span class="itag" data-ind="logistics" style="cursor:pointer">🚛 물류·운송</span>
-    <span class="itag" data-ind="logistics" style="cursor:pointer">🚛 물류·운송</span>
     <span class="itag" data-ind="freelance" style="cursor:pointer">💼 프리랜서·영업</span>
     <span class="itag" data-ind="care" style="cursor:pointer">🏥 요양·돌봄</span>
     <span class="itag" data-ind="restaurant" style="cursor:pointer">🍽️ 식당·프랜차이즈</span>
   </div>
   <div style="margin-top:12px;background:rgba(0,200,248,.06);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:11px;color:var(--text2);max-width:380px;text-align:center">
-    👆 업종 버튼을 누르면 불편함과 전용 기능을 확인할 수 있습니다
+    👆 업종 버튼을 누르면 전용 기능을 확인할 수 있습니다
   </div>
 </div>
 
@@ -282,7 +280,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <div class="glow" style="width:400px;height:400px;background:var(--brand);bottom:-100px;left:-100px"></div>
   <div class="grid"></div>
   <div class="lbl">요금제</div>
-  <div class="ttl">정산금 규모에 따라<br><span class="gr">합리적인 월정액</span></div>
+  <div class="ttl">정산 인원 규모에 따라<br><span class="gr">합리적인 월정액</span></div>
   <div class="tabs" id="tabs">
     <button class="tab on" onclick="switchTab(0)">개인</button>
     <button class="tab" onclick="switchTab(1)">단체 (20개사+)</button>
@@ -296,7 +294,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
         <tr><td>~300명</td><td class="hi">102만원</td><td></td></tr>
         <tr><td>~500명</td><td class="hi">170만원</td><td></td></tr>
         <tr><td>~700명</td><td class="hi">275만원</td><td></td></tr>
-        <tr><td>~1,000명</td><td class="hi">315만원</td><td></td></tr>
+        <tr><td>~1,000명</td><td class="hi">393만원</td><td></td></tr>
+        <tr><td>1,000명+</td><td class="hi" style="font-size:11px">별도 문의</td><td></td></tr>
       </tbody>
     </table>
   </div>
@@ -304,48 +303,51 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
     <table class="ptable">
       <thead><tr><th>월 정산 인원</th><th>월 정액</th><th>절감</th></tr></thead>
       <tbody>
-        <tr><td>~50명</td><td class="hi">22만원</td><td style="color:var(--green);font-size:11px">↓29%</td></tr>
-        <tr><td>~150명</td><td class="hi">52만원</td><td style="color:var(--green);font-size:11px">↓24%</td></tr>
-        <tr><td>~300명</td><td class="hi">78만원</td><td style="color:var(--green);font-size:11px">↓24%</td></tr>
-        <tr><td>~500명</td><td class="hi">131만원</td><td style="color:var(--green);font-size:11px">↓23%</td></tr>
-        <tr><td>~700명</td><td class="hi">183만원</td><td style="color:var(--green);font-size:11px">↓33%</td></tr>
-        <tr><td>~1,000명</td><td class="hi">210만원</td><td style="color:var(--green);font-size:11px">↓33%</td></tr>
+        <tr><td>~50명</td><td class="hi">25만원</td><td style="color:var(--green);font-size:11px">↓19%</td></tr>
+        <tr><td>~150명</td><td class="hi">54만원</td><td style="color:var(--green);font-size:11px">↓21%</td></tr>
+        <tr><td>~300명</td><td class="hi">82만원</td><td style="color:var(--green);font-size:11px">↓20%</td></tr>
+        <tr><td>~500명</td><td class="hi">136만원</td><td style="color:var(--green);font-size:11px">↓20%</td></tr>
+        <tr><td>~700명</td><td class="hi">220만원</td><td style="color:var(--green);font-size:11px">↓20%</td></tr>
+        <tr><td>~1,000명</td><td class="hi">314만원</td><td style="color:var(--green);font-size:11px">↓20%</td></tr>
+        <tr><td>1,000명+</td><td class="hi" style="font-size:11px">별도 문의</td><td></td></tr>
       </tbody>
     </table>
   </div>
   <div class="vat">VAT 별도 · 7일 무료 체험 · 카드 등록 불필요</div>
-  <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">
-    범용 다사업장 10만원/사업장 · 재고관리 9만원 · 키오스크 9만원 · 콤보 15만원
+  <div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:center">
+    QR+급여 인당 3,500원 · 재고+키오스크 콤보 110,000원 · 범용 100,000원/사업장
   </div>
 </div>
 
-<!-- S8 시작하기 -->
+<!-- S8 맞춤 상담 -->
 <div class="slide">
-  <div class="glow" style="width:400px;height:400px;background:var(--acc);top:-100px;left:-100px"></div>
+  <div class="glow" style="width:400px;height:400px;background:var(--green);bottom:-100px;right:-100px"></div>
   <div class="grid"></div>
-  <div class="lbl">지금 시작하기</div>
-  <div class="ttl">7일 무료<br><span class="gr">카드 등록 없이</span></div>
-  <div class="flow" style="max-width:360px">
-    <div class="fstep">
-      <div class="fnum">①</div>
-      <div><div class="ftit">가입 (1분)</div><div class="fdesc">사업자번호·이메일·정산 담당자 입력<br>즉시 7일 무료 체험 시작</div></div>
+  <div class="lbl">업종별 맞춤 도입</div>
+  <div class="ttl">같은 업종도<br><span class="gr2">운영 방식은 다릅니다</span></div>
+  <p class="sub" style="margin-bottom:16px">도입 상담 시 업종·규모·운영 방식을 파악해<br>기능을 100% 맞춤 설정해 드립니다<br>추가 기능 요청도 상담 후 반영 가능</p>
+  <div class="cards" style="margin-bottom:16px">
+    <div class="card" style="border-color:rgba(0,200,248,.2)">
+      <div class="cico" style="background:rgba(0,200,248,.1)">💬</div>
+      <div>
+        <div class="ctit">카카오 채널 상담</div>
+        <div class="cdesc">업종·인원 알려주시면<br>맞춤 견적 즉시 안내</div>
+      </div>
     </div>
-    <div class="fstep">
-      <div class="fnum">②</div>
-      <div><div class="ftit">업종 선택 + 단가 등록</div><div class="fdesc">13개 업종 중 선택 → 화면·용어 자동 변경<br>직원 정보·단가 등록 (엑셀 일괄 등록 지원)</div></div>
-    </div>
-    <div class="fstep">
-      <div class="fnum">③</div>
-      <div><div class="ftit">엑셀 업로드 → 정산 완료</div><div class="fdesc">업종별 엑셀 업로드 → 자동 재계산<br>카카오 명세서 발송 · 세무사 공유까지 한번에</div></div>
+    <div class="card" style="border-color:rgba(34,197,94,.2)">
+      <div class="cico" style="background:rgba(34,197,94,.1)">🎁</div>
+      <div>
+        <div class="ctit">7일 무료 직접 체험</div>
+        <div class="cdesc">카드 등록 없이 바로 시작<br>결제는 체험 후 결정</div>
+      </div>
     </div>
   </div>
   <div class="btns">
     <a href="https://donway.ai.kr/settle" class="btn btn-m">무료로 시작하기 →</a>
     <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-g">💬 카카오 상담</a>
   </div>
-  <div style="margin-top:12px;font-size:11px;color:var(--text3);text-align:center">
-    재고·QR·키오스크가 필요하다면 →
-    <a href="https://filo.ai.kr" target="_blank" style="color:var(--amber);font-weight:700;text-decoration:none">filo.ai.kr</a>
+  <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">
+    📞 051-711-3103 · (유)엠비티아이
   </div>
 </div>
 
