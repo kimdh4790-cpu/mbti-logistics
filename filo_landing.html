@@ -4,313 +4,307 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#7c3aed">
-<meta name="google" content="notranslate">
-<title>FILO — 현장 운영 자동화 플랫폼</title>
+<title>FILO — 현장 운영 자동화</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{
-  --bg:#0a0a0f;--bg2:#13131a;--bg3:#1c1c26;
-  --border:rgba(255,255,255,.07);
-  --text:#eeeef5;--text2:#9898b0;--text3:#55556a;
-  --brand:#7c3aed;--cyan:#0891b2;--green:#10b981;--amber:#f59e0b;
-}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;overflow-x:hidden}
+:root{--bg:#08080f;--bg2:#12121c;--bg3:#1a1a26;--border:rgba(255,255,255,.07);--text:#eeeef5;--text2:#9090aa;--text3:#4a4a60;--brand:#7c3aed;--cyan:#0891b2;--green:#10b981;--amber:#f59e0b;--red:#ef4444}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+
+/* 슬라이드 컨테이너 */
+.wrap{width:100%;height:100dvh;overflow-y:scroll;overflow-x:hidden;scroll-snap-type:y mandatory;scrollbar-width:none}
+.wrap::-webkit-scrollbar{display:none}
+.slide{width:100%;height:100dvh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 24px 40px;position:relative;overflow:hidden}
+
+/* 배경 글로우 */
+.g1{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:.5}
 
 /* 헤더 */
-.hdr{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(10,10,15,.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);z-index:100}
-.logo{font-size:21px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px}
-.hdr-btn{padding:8px 20px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.hdr{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(8,8,15,.8);backdrop-filter:blur(16px);z-index:99;border-bottom:1px solid var(--border)}
+.logo{font-size:20px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hbtn{padding:7px 18px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:18px;font-size:13px;font-weight:700;cursor:pointer}
 
-/* 섹션 공통 */
-.sec{padding:80px 20px;max-width:680px;margin:0 auto}
-.tag{display:inline-block;padding:4px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:20px;font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:.3px;margin-bottom:18px}
-.sec-ttl{font-size:clamp(26px,5.5vw,40px);font-weight:900;line-height:1.25;margin-bottom:14px}
-.sec-sub{font-size:15px;color:var(--text2);line-height:1.75}
+/* 도트 네비 */
+.dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:99}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:.3s;cursor:pointer}
+.dot.on{background:#a78bfa;transform:scale(1.4)}
+
+/* 공통 텍스트 */
+.chip{display:inline-block;padding:4px 13px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:20px;font-size:11px;font-weight:700;color:#a78bfa;margin-bottom:16px}
+.ttl{font-size:clamp(28px,6vw,46px);font-weight:900;line-height:1.2;text-align:center;margin-bottom:14px}
+.sub{font-size:15px;color:var(--text2);line-height:1.8;text-align:center;max-width:460px}
 .gr{background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .gr2{background:linear-gradient(135deg,#10b981,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gr3{background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
-/* 히어로 */
-.hero{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:100px 20px 60px;max-width:680px;margin:0 auto;position:relative}
-.hero::before{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,.2) 0%,transparent 65%);pointer-events:none}
-.hero::after{content:'';position:fixed;bottom:-200px;left:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(8,145,178,.15) 0%,transparent 65%);pointer-events:none}
-.hero-ttl{font-size:clamp(32px,7vw,52px);font-weight:900;line-height:1.2;margin-bottom:20px}
-.hero-sub{font-size:16px;color:var(--text2);line-height:1.8;margin-bottom:36px}
-.btns{display:flex;gap:10px;flex-wrap:wrap}
-.btn-p{padding:14px 28px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer}
-.btn-g{padding:14px 28px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
-.hero-note{margin-top:16px;font-size:12px;color:var(--text3)}
+/* 버튼 */
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:28px}
+.btn-p{padding:13px 26px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:13px;font-size:15px;font-weight:800;cursor:pointer}
+.btn-g{padding:13px 26px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:13px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none}
+.note{margin-top:12px;font-size:11px;color:var(--text3);text-align:center}
 
-/* 통증 포인트 */
-.pain-grid{display:flex;flex-direction:column;gap:12px;margin-top:32px}
-.pain-item{display:flex;align-items:flex-start;gap:14px;padding:16px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.12);border-radius:14px}
-.pain-ico{font-size:24px;flex-shrink:0;margin-top:2px}
-.pain-ttl{font-size:14px;font-weight:700;margin-bottom:4px;color:#f87171}
-.pain-desc{font-size:12px;color:var(--text2);line-height:1.7}
+/* 카드 그리드 */
+.cards{display:flex;flex-direction:column;gap:10px;width:100%;max-width:460px;margin-top:24px}
+.card{padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;display:flex;gap:12px;align-items:flex-start}
+.card-ico{font-size:22px;flex-shrink:0;margin-top:2px}
+.card-ttl{font-size:14px;font-weight:700;margin-bottom:3px}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.65}
 
-/* 기능 카드 */
-.feat-grid{display:flex;flex-direction:column;gap:14px;margin-top:32px}
-.feat-card{padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:18px}
-.feat-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.feat-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.feat-nm{font-size:16px;font-weight:800}
-.feat-price{font-size:12px;color:var(--text2);margin-top:2px}
-.feat-list{display:flex;flex-direction:column;gap:6px}
-.feat-list li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);line-height:1.6;list-style:none}
-.feat-list li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
-.feat-badge{display:inline-block;margin-top:12px;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:700}
-
-/* 흐름 */
-.flow{display:flex;flex-direction:column;gap:0;margin-top:32px}
-.flow-step{display:flex;gap:16px;position:relative;padding-bottom:32px}
-.flow-step:last-child{padding-bottom:0}
-.flow-step::before{content:'';position:absolute;left:19px;top:40px;bottom:0;width:2px;background:linear-gradient(to bottom,rgba(124,58,237,.4),transparent)}
-.flow-step:last-child::before{display:none}
-.flow-num{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(8,145,178,.2));border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;font-weight:900;color:#a78bfa}
-.flow-ttl{font-size:15px;font-weight:700;margin-bottom:4px}
-.flow-desc{font-size:12px;color:var(--text2);line-height:1.7}
-
-/* 업종 */
-.ind-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
-.ind-tag{padding:8px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:600;color:var(--text2)}
-.ind-cta{margin-top:12px;padding:10px 16px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;font-size:12px;color:#a78bfa;font-weight:600}
+/* 플로우 */
+.flow{display:flex;flex-direction:column;gap:0;width:100%;max-width:420px;margin-top:24px}
+.frow{display:flex;gap:14px;align-items:flex-start;position:relative;padding-bottom:24px}
+.frow:last-child{padding-bottom:0}
+.frow::after{content:'';position:absolute;left:19px;top:42px;bottom:0;width:2px;background:linear-gradient(to bottom,rgba(124,58,237,.35),transparent)}
+.frow:last-child::after{display:none}
+.fnum{width:40px;height:40px;flex-shrink:0;border-radius:12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#a78bfa}
+.fttl{font-size:14px;font-weight:700;margin-bottom:4px}
+.fdesc{font-size:12px;color:var(--text2);line-height:1.65}
 
 /* 요금 */
-.price-cards{display:flex;flex-direction:column;gap:14px;margin-top:32px}
-.price-card{padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:18px}
-.price-card.highlight{border-color:rgba(124,58,237,.4);background:rgba(124,58,237,.05)}
-.price-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
-.price-nm{font-size:15px;font-weight:800}
-.price-sub{font-size:11px;color:var(--text2);margin-top:3px}
-.price-amt{font-size:20px;font-weight:900;color:#a78bfa;white-space:nowrap;text-align:right}
-.price-amt small{font-size:12px;color:var(--text2);font-weight:400;display:block}
-.price-divider{height:1px;background:var(--border);margin:12px 0}
-.price-donway{font-size:12px;color:var(--cyan);font-weight:700}
+.pcards{display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px;margin-top:24px}
+.pcard{padding:18px;background:var(--bg2);border:1px solid var(--border);border-radius:16px}
+.pcard.hl{border-color:rgba(124,58,237,.4);background:rgba(124,58,237,.05)}
+.prow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.pnm{font-size:14px;font-weight:800}
+.psub{font-size:11px;color:var(--text2);margin-top:3px}
+.pamt{font-size:19px;font-weight:900;color:#a78bfa;text-align:right;white-space:nowrap}
+.pamt small{font-size:11px;font-weight:400;color:var(--text2);display:block}
+.phr{height:1px;background:var(--border);margin:10px 0}
+.pcyan{font-size:12px;color:#38bdf8;font-weight:600}
 
-/* CTA */
-.cta-box{padding:32px 20px;background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(8,145,178,.08));border:1px solid rgba(124,58,237,.2);border-radius:20px;text-align:center;margin-top:32px}
-.cta-ttl{font-size:22px;font-weight:900;margin-bottom:10px}
-.cta-sub{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:24px}
-.cta-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.cta-note{margin-top:14px;font-size:11px;color:var(--text3)}
+/* 업종 태그 */
+.itags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:22px;max-width:440px}
+.itag{padding:7px 15px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:600;color:var(--text2)}
 
-/* 구분선 */
-.divider{height:1px;background:var(--border);max-width:680px;margin:0 auto}
+/* 애니메이션 */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.slide .inner{opacity:0}
+.slide.vis .inner{animation:fadeUp .55s ease forwards}
+.slide.vis .inner:nth-child(2){animation-delay:.1s}
+.slide.vis .inner:nth-child(3){animation-delay:.2s}
+.slide.vis .inner:nth-child(4){animation-delay:.3s}
+.slide.vis .card:nth-child(1){animation:fadeUp .5s .05s ease both}
+.slide.vis .card:nth-child(2){animation:fadeUp .5s .15s ease both}
+.slide.vis .card:nth-child(3){animation:fadeUp .5s .25s ease both}
+.slide.vis .frow:nth-child(1){animation:fadeUp .5s .05s ease both}
+.slide.vis .frow:nth-child(2){animation:fadeUp .5s .15s ease both}
+.slide.vis .frow:nth-child(3){animation:fadeUp .5s .25s ease both}
+.slide.vis .frow:nth-child(4){animation:fadeUp .5s .35s ease both}
+.slide.vis .pcard:nth-child(1){animation:fadeUp .5s .05s ease both}
+.slide.vis .pcard:nth-child(2){animation:fadeUp .5s .2s ease both}
+.slide.vis .itag{animation:fadeIn .4s ease both}
+.slide.vis .itag:nth-child(1){animation-delay:.05s}
+.slide.vis .itag:nth-child(2){animation-delay:.1s}
+.slide.vis .itag:nth-child(3){animation-delay:.15s}
+.slide.vis .itag:nth-child(4){animation-delay:.2s}
+.slide.vis .itag:nth-child(5){animation-delay:.25s}
+.slide.vis .itag:nth-child(6){animation-delay:.3s}
+.slide.vis .itag:nth-child(7){animation-delay:.35s}
+.slide.vis .itag:nth-child(8){animation-delay:.4s}
+.pulse-btn{animation:pulse 2s infinite}
 </style>
 </head>
 <body>
 
-<!-- 헤더 -->
 <div class="hdr">
   <div class="logo">FILO</div>
-  <button class="hdr-btn" onclick="location.href='https://filo.ai.kr/app'">로그인 · 무료체험</button>
+  <button class="hbtn" onclick="location.href='https://filo.ai.kr/app'">로그인 · 무료체험</button>
 </div>
 
-<!-- 히어로 -->
-<div class="hero">
-  <div class="tag">현장 운영 자동화 플랫폼</div>
-  <div class="hero-ttl">
-    판매·출퇴근·재고<br>
-    <span class="gr">전부 자동으로</span>
-  </div>
-  <div class="hero-sub">
-    메뉴 주문받으면 재고가 줄고<br>
-    재고 부족하면 거래처에 자동 발주<br>
-    출퇴근 찍으면 급여까지 자동 계산
-  </div>
-  <div class="btns">
-    <button class="btn-p" onclick="location.href='https://filo.ai.kr/app'">🎁 7일 무료체험</button>
+<div class="dots" id="dots"></div>
+
+<div class="wrap" id="wrap">
+
+<!-- S1 히어로 -->
+<div class="slide" id="s0">
+  <div class="g1" style="width:500px;height:500px;background:rgba(124,58,237,.25);top:-150px;right:-150px"></div>
+  <div class="g1" style="width:400px;height:400px;background:rgba(8,145,178,.15);bottom:-100px;left:-100px"></div>
+  <div class="inner chip">현장 운영 자동화 플랫폼</div>
+  <div class="inner ttl">판매·출퇴근·재고<br><span class="gr">전부 자동으로</span></div>
+  <div class="inner sub">주문하면 재고가 줄고<br>재고 부족하면 거래처에 자동 발주<br>출퇴근 찍으면 급여까지 자동 계산</div>
+  <div class="inner btns">
+    <button class="btn-p pulse-btn" onclick="location.href='https://filo.ai.kr/app'">🎁 7일 무료체험</button>
     <a class="btn-g" href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 도입 상담</a>
   </div>
-  <div class="hero-note">카드 등록 불필요 · 사업자번호 1회 한정 · VAT 별도</div>
+  <div class="inner note">카드 등록 불필요 · 계약 없음 · VAT 별도</div>
 </div>
 
-<div class="divider"></div>
-
-<!-- 지금 이런 문제 있으신가요? -->
-<div class="sec">
-  <div class="tag">지금 이런 문제 있으신가요?</div>
-  <div class="sec-ttl">매일 반복되는<br><span style="color:#f87171">이 불편함</span></div>
-  <div class="pain-grid">
-    <div class="pain-item">
-      <div class="pain-ico">📋</div>
+<!-- S2 문제 -->
+<div class="slide" id="s1">
+  <div class="g1" style="width:400px;height:400px;background:rgba(239,68,68,.15);bottom:-100px;left:-100px"></div>
+  <div class="inner chip">지금 이런 불편함 있으신가요?</div>
+  <div class="inner ttl">매일 반복되는<br><span class="gr3">이 문제들</span></div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-ico">📋</div>
       <div>
-        <div class="pain-ttl">재고를 엑셀로 수기 관리</div>
-        <div class="pain-desc">판매할 때마다 직접 빼고, 발주할 때마다 거래처에 전화<br>재고 파악에 매일 30분씩 낭비</div>
+        <div class="card-ttl" style="color:#f87171">재고를 엑셀로 직접 관리</div>
+        <div class="card-desc">판매할 때마다 수기로 빼고, 발주할 때마다 거래처에 전화<br>재고 파악에 매일 시간 낭비</div>
       </div>
     </div>
-    <div class="pain-item">
-      <div class="pain-ico">⏰</div>
+    <div class="card">
+      <div class="card-ico">⏰</div>
       <div>
-        <div class="pain-ttl">출퇴근 수기 기록 → 급여 수동 계산</div>
-        <div class="pain-desc">종이 출퇴근부 → 엑셀 정리 → 급여 계산<br>직원 많아질수록 실수 반복</div>
+        <div class="card-ttl" style="color:#f87171">출퇴근 → 급여 계산 수동</div>
+        <div class="card-desc">종이 출퇴근부 → 엑셀 정리 → 급여 수동 계산<br>직원 많아질수록 실수 반복</div>
       </div>
     </div>
-    <div class="pain-item">
-      <div class="pain-ico">🖥️</div>
+    <div class="card">
+      <div class="card-ico">🖥️</div>
       <div>
-        <div class="pain-ttl">POS·재고·급여 프로그램이 따로따로</div>
-        <div class="pain-desc">포스 따로, 재고 따로, 급여 따로<br>같은 데이터를 세 곳에 나눠서 입력</div>
+        <div class="card-ttl" style="color:#f87171">POS·재고·급여 프로그램 따로따로</div>
+        <div class="card-desc">각각 따로 입력, 따로 관리<br>같은 데이터를 세 군데에 나눠 쓰는 비효율</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="divider"></div>
-
-<!-- FILO가 해결합니다 -->
-<div class="sec">
-  <div class="tag">FILO가 해결합니다</div>
-  <div class="sec-ttl">하나로 연결된<br><span class="gr">현장 운영 자동화</span></div>
-  <div class="sec-sub">주문·재고·출퇴근·급여가 실시간으로 연동됩니다</div>
-
-  <div class="feat-grid">
-    <!-- 재고+키오스크 -->
-    <div class="feat-card">
-      <div class="feat-head">
-        <div class="feat-ico" style="background:rgba(124,58,237,.12)">📦</div>
-        <div>
-          <div class="feat-nm">재고 + 키오스크 콤보</div>
-          <div class="feat-price">POS 판매 즉시 재고 자동 차감</div>
-        </div>
-      </div>
-      <ul class="feat-list">
-        <li>태블릿·POS로 주문받으면 재고 자동 차감</li>
-        <li>재고 최소수량 이하 → 거래처에 알림톡 자동 발주</li>
-        <li>테이블주문 · 포장 · 출장 모드 지원</li>
-        <li>실시간 매출 대시보드</li>
-        <li>발주 이력 자동 기록</li>
-      </ul>
-      <div class="feat-badge" style="background:rgba(124,58,237,.12);color:#a78bfa">165,000원/월 · DONWAY 연동 시 110,000원</div>
-    </div>
-
-    <!-- QR+급여 -->
-    <div class="feat-card">
-      <div class="feat-head">
-        <div class="feat-ico" style="background:rgba(8,145,178,.12)">🔐</div>
-        <div>
-          <div class="feat-nm">QR 출퇴근 + 급여</div>
-          <div class="feat-price">출퇴근 → 급여 자동 계산까지</div>
-        </div>
-      </div>
-      <ul class="feat-list">
-        <li>30초마다 바뀌는 동적 QR — 대리출퇴근 원천 차단</li>
-        <li>GPS 위치 검증 — 매장 밖 출근 불가</li>
-        <li>시급·일급·월급·건당 자동 계산</li>
-        <li>4대보험 자동 공제 · 연장수당 자동 산출</li>
-        <li>급여명세서 앱 자동 발송</li>
-      </ul>
-      <div class="feat-badge" style="background:rgba(8,145,178,.12);color:#38bdf8">인당 4,500원/월 · DONWAY 연동 시 3,500원</div>
-    </div>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- 실제 흐름 -->
-<div class="sec">
-  <div class="tag">실제 운영 흐름</div>
-  <div class="sec-ttl">이렇게<br><span class="gr2">자동으로 돌아갑니다</span></div>
-
+<!-- S3 해결 -->
+<div class="slide" id="s2">
+  <div class="g1" style="width:500px;height:500px;background:rgba(16,185,129,.15);top:-150px;right:-150px"></div>
+  <div class="inner chip">FILO가 해결합니다</div>
+  <div class="inner ttl"><span class="gr2">하나로 연결된</span><br>현장 운영 자동화</div>
+  <div class="inner sub">주문·재고·출퇴근·급여가<br>실시간으로 자동 연동됩니다</div>
   <div class="flow">
-    <div class="flow-step">
-      <div class="flow-num">①</div>
-      <div>
-        <div class="flow-ttl">고객이 QR·태블릿으로 주문</div>
-        <div class="flow-desc">테이블 QR 스캔 또는 카운터 태블릿으로 주문 접수<br>기존 POS 기기 그대로 연동 가능</div>
-      </div>
+    <div class="frow">
+      <div class="fnum">①</div>
+      <div><div class="fttl">고객이 태블릿·QR로 주문</div><div class="fdesc">기존 POS 기기 그대로 연동 가능</div></div>
     </div>
-    <div class="flow-step">
-      <div class="flow-num">②</div>
-      <div>
-        <div class="flow-ttl">결제 즉시 재고 자동 차감</div>
-        <div class="flow-desc">판매된 품목별로 재고 실시간 차감<br>별도 입력 없이 자동 처리</div>
-      </div>
+    <div class="frow">
+      <div class="fnum">②</div>
+      <div><div class="fttl">결제 즉시 재고 자동 차감</div><div class="fdesc">품목별 재고 실시간 차감 — 별도 입력 없음</div></div>
     </div>
-    <div class="flow-step">
-      <div class="flow-num">③</div>
-      <div>
-        <div class="flow-ttl">재고 부족 감지 → 거래처 자동 발주</div>
-        <div class="flow-desc">설정한 최소수량 이하 감지 시<br>거래처에 알림톡으로 자동 발주 발송</div>
-      </div>
+    <div class="frow">
+      <div class="fnum">③</div>
+      <div><div class="fttl">재고 부족 → 거래처 자동 발주</div><div class="fdesc">최소수량 이하 감지 시 알림톡으로 자동 발송</div></div>
     </div>
-    <div class="flow-step">
-      <div class="flow-num">④</div>
-      <div>
-        <div class="flow-ttl">직원 QR 출퇴근 → 급여 자동 계산</div>
-        <div class="flow-desc">매일 QR 찍으면 근무시간 자동 집계<br>월말에 급여명세서 자동 발송까지</div>
-      </div>
+    <div class="frow">
+      <div class="fnum">④</div>
+      <div><div class="fttl">출퇴근 QR → 급여 자동 계산</div><div class="fdesc">매일 QR 찍으면 급여명세서까지 자동 발송</div></div>
     </div>
   </div>
 </div>
 
-<div class="divider"></div>
-
-<!-- 업종 -->
-<div class="sec">
-  <div class="tag">어떤 업종에 맞나요?</div>
-  <div class="sec-ttl">업종·규모에 맞게<br><span class="gr">100% 맞춤 설정</span></div>
-  <div class="sec-sub">같은 업종이라도 운영 방식은 다릅니다<br>도입 상담 시 우리 매장 방식에 맞게 기능을 설정해 드립니다</div>
-  <div class="ind-grid">
-    <span class="ind-tag">☕ 카페·음료</span>
-    <span class="ind-tag">🍽️ 식당·분식</span>
-    <span class="ind-tag">🧴 미용·뷰티</span>
-    <span class="ind-tag">🧹 청소·파견</span>
-    <span class="ind-tag">🏗️ 건설·현장</span>
-    <span class="ind-tag">🛵 배달대행</span>
-    <span class="ind-tag">📦 물류·도매</span>
-    <span class="ind-tag">🏥 요양·돌봄</span>
-  </div>
-  <div class="ind-cta">💬 위 업종 외에도 도입 가능합니다 — 상담 후 기능 맞춤 설정</div>
-</div>
-
-<div class="divider"></div>
-
-<!-- 요금 -->
-<div class="sec">
-  <div class="tag">요금제</div>
-  <div class="sec-ttl">필요한 것만<br><span class="gr">골라서 구독</span></div>
-  <div class="price-cards">
-    <div class="price-card highlight">
-      <div class="price-row">
-        <div>
-          <div class="price-nm">📦 재고 + 키오스크 콤보</div>
-          <div class="price-sub">재고관리 · 무인주문 · 자동발주 통합</div>
-        </div>
-        <div class="price-amt">165,000원<small>/월 VAT별도</small></div>
+<!-- S4 기능 -->
+<div class="slide" id="s3">
+  <div class="g1" style="width:400px;height:400px;background:rgba(124,58,237,.2);top:-100px;left:-100px"></div>
+  <div class="inner chip">주요 기능</div>
+  <div class="inner ttl">필요한 기능만<br><span class="gr">골라서 사용</span></div>
+  <div class="pcards">
+    <div class="pcard hl">
+      <div class="prow">
+        <div><div class="pnm">📦 재고 + 키오스크 콤보</div><div class="psub">재고관리 · 무인주문 · 자동발주 통합</div></div>
+        <div class="pamt">165,000원<small>/월 VAT별도</small></div>
       </div>
-      <div class="price-divider"></div>
-      <div class="price-donway">DONWAY 정산 연동 고객 → 110,000원/월</div>
+      <div class="phr"></div>
+      <div class="pcyan">DONWAY 연동 고객 → 110,000원/월</div>
     </div>
-    <div class="price-card">
-      <div class="price-row">
-        <div>
-          <div class="price-nm">🔐 QR 출퇴근 + 급여</div>
-          <div class="price-sub">출퇴근 · 급여계산 · 명세서 발송</div>
-        </div>
-        <div class="price-amt">4,500원<small>/인·월 VAT별도</small></div>
+    <div class="pcard">
+      <div class="prow">
+        <div><div class="pnm">🔐 QR 출퇴근 + 급여</div><div class="psub">출퇴근 · 급여계산 · 명세서 자동 발송</div></div>
+        <div class="pamt">4,500원<small>/인·월 VAT별도</small></div>
       </div>
-      <div class="price-divider"></div>
-      <div class="price-donway">DONWAY 연동 고객 → 인당 3,500원/월</div>
+      <div class="phr"></div>
+      <div class="pcyan">DONWAY 연동 고객 → 인당 3,500원/월</div>
     </div>
   </div>
-  <div style="margin-top:14px;font-size:12px;color:var(--text3);text-align:center">7일 무료 체험 · 카드 등록 불필요 · 계약 없음</div>
+  <div class="inner note" style="margin-top:14px">7일 무료 체험 · 카드 등록 불필요 · 계약 없음</div>
 </div>
 
-<!-- CTA -->
-<div class="sec" style="padding-bottom:100px">
-  <div class="cta-box">
-    <div class="cta-ttl">지금 바로 시작하세요</div>
-    <div class="cta-sub">
-      7일 무료 체험 후 결정하세요<br>
-      업종·규모에 맞게 기능을 세팅해 드립니다
-    </div>
-    <div class="cta-btns">
-      <button class="btn-p" onclick="location.href='https://filo.ai.kr/app'">🎁 무료체험 시작</button>
-      <a class="btn-g" href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 카카오 상담</a>
-    </div>
-    <div class="cta-note">📞 051-711-3103 · (유)엠비티아이</div>
+<!-- S5 업종 -->
+<div class="slide" id="s4">
+  <div class="g1" style="width:400px;height:400px;background:rgba(8,145,178,.18);bottom:-100px;right:-100px"></div>
+  <div class="inner chip">어떤 업종에 맞나요?</div>
+  <div class="inner ttl">업종·규모에 맞게<br><span class="gr">100% 맞춤 설정</span></div>
+  <div class="inner sub">같은 업종이라도 운영 방식은 다릅니다<br>도입 상담 시 우리 매장 방식에 맞게 설정해 드립니다</div>
+  <div class="itags">
+    <span class="itag">☕ 카페·음료</span>
+    <span class="itag">🍽️ 식당·분식</span>
+    <span class="itag">🧴 미용·뷰티</span>
+    <span class="itag">🧹 청소·파견</span>
+    <span class="itag">🏗️ 건설·현장</span>
+    <span class="itag">🛵 배달대행</span>
+    <span class="itag">📦 물류·도매</span>
+    <span class="itag">🏥 요양·돌봄</span>
+  </div>
+  <div class="inner" style="margin-top:12px;padding:9px 16px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:12px;font-size:12px;color:#a78bfa;font-weight:600">
+    위 업종 외에도 도입 가능 — 상담 후 맞춤 설정
   </div>
 </div>
 
+<!-- S6 시작 -->
+<div class="slide" id="s5">
+  <div class="g1" style="width:500px;height:500px;background:rgba(124,58,237,.2);top:-150px;right:-150px"></div>
+  <div class="g1" style="width:400px;height:400px;background:rgba(16,185,129,.12);bottom:-100px;left:-100px"></div>
+  <div class="inner chip">지금 바로 시작하세요</div>
+  <div class="inner ttl">7일 무료 체험<br><span class="gr2">카드 등록 없이</span></div>
+  <div class="inner sub">체험 후 결정하세요<br>업종·규모에 맞게 기능을 세팅해 드립니다</div>
+  <div class="inner btns">
+    <button class="btn-p pulse-btn" onclick="location.href='https://filo.ai.kr/app'">🎁 무료체험 시작</button>
+    <a class="btn-g" href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 카카오 상담</a>
+  </div>
+  <div class="inner note">📞 051-711-3103 · (유)엠비티아이</div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+var wrap=document.getElementById('wrap');
+var slides=wrap.querySelectorAll('.slide');
+var total=slides.length;
+var cur=0;
+
+// 도트 생성
+var dotsEl=document.getElementById('dots');
+for(var i=0;i<total;i++){
+  var d=document.createElement('div');
+  d.className='dot'+(i===0?' on':'');
+  d.dataset.i=i;
+  d.onclick=(function(idx){return function(){goTo(idx);};})(i);
+  dotsEl.appendChild(d);
+}
+
+function goTo(n){
+  wrap.scrollTo({top:n*window.innerHeight,behavior:'smooth'});
+}
+
+function setActive(n){
+  cur=n;
+  document.querySelectorAll('.dot').forEach(function(d,i){
+    d.className='dot'+(i===n?' on':'');
+  });
+  slides.forEach(function(s,i){
+    if(i===n){
+      s.classList.remove('vis');
+      void s.offsetWidth;
+      s.classList.add('vis');
+    }
+  });
+}
+
+// 스크롤 감지
+var ticking=false;
+wrap.addEventListener('scroll',function(){
+  if(!ticking){
+    requestAnimationFrame(function(){
+      var n=Math.round(wrap.scrollTop/window.innerHeight);
+      if(n!==cur) setActive(n);
+      ticking=false;
+    });
+    ticking=true;
+  }
+});
+
+// 키보드
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowDown'||e.key==='PageDown') goTo(Math.min(cur+1,total-1));
+  if(e.key==='ArrowUp'||e.key==='PageUp') goTo(Math.max(cur-1,0));
+});
+
+// 초기
+setActive(0);
+</script>
 </body>
 </html>
