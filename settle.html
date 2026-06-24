@@ -7432,6 +7432,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 둘 다 합산
+          var _mergedIdRules=[];
+          if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
+            _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
+          }
+          if(window._idSupportRules&&window._idSupportRules.length){
+            window._idSupportRules.forEach(function(r){
+              var dup=_mergedIdRules.some(function(x){return x.fromId===r.fromId&&x.toId===r.toId;});
+              if(!dup) _mergedIdRules.push(r);
+            });
+          }
+          if(_mergedIdRules.length){
+            window._idSupportRules=_mergedIdRules;
+          }
           if(window._idSupportRules&&window._idSupportRules.length){
             function _normD(s){
               if(!s)return '';
