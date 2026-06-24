@@ -2986,58 +2986,61 @@ function _showIndustryDetail(idx){
 }
 
 // 저장 + 명세서 발송
-function _industrySettleSaveAll(did, results, month, label){
-  if(!confirm(results.length+'명 정산을 저장하고 명세서를 발송하시겠습니까?')) return;
-  var batch=_db.batch();
-  var settleRef=_db.collection('universal_settlements').doc();
-  batch.set(settleRef,{
-    dealerId:did, month:month, title:label+' '+month,
-    totalCount:results.length,
-    totalGross:results.reduce(function(s,r){return s+(r.gross||0);},0),
-    totalNet:results.reduce(function(s,r){return s+(r.net||0);},0),
-    employees:results, createdAt:new Date().toISOString()
-  });
-  batch.commit().then(function(){
-    toast('✅ 저장 완료 — 명세서 발송 중...');
-    var sent=0, total=results.length;
-    results.forEach(function(r){
-      // 카카오/이메일 발송용 메시지 구성
-      var lines=['[DONWAY 정산 명세서]',label+' '+month,''];
-      lines.push('👤 '+r.name+(r.camp?' | '+r.camp:''));
-      if(r.role) lines.push('직책: '+r.role+(r.empType?' ('+r.empType+')':''));
-      lines.push('');
-      lines.push('■ 지급 내역');
-      (r.extras||r.details||[]).forEach(function(d){
-        if(typeof d.value==='number'){
-          var sign=d.value>=0?'+':'-';
-          lines.push(sign+' '+d.label+': '+Math.abs(d.value).toLocaleString()+'원');
-        } else if(d.value) {
-          lines.push('- '+d.label+': '+d.value);
-        }
-      });
-      lines.push('');
-      lines.push('━━━━━━━━━━━━━━');
-      lines.push('✅ 실지급액: '+Math.round(r.net||0).toLocaleString()+'원');
-      if(r.holdAmt>0) lines.push('⚠️ 보류금: '+r.holdAmt.toLocaleString()+'원');
-      lines.push('');
-      lines.push('문의: 051-711-3103');
-
-      var msg=lines.join('\n');
-
-      // drivers/members에서 연락처 찾아서 발송
-      var q=_db.collection('drivers').where('dealerId','==',did).where('name','==',r.name).limit(1);
-      q.get().then(function(snap){
-        if(!snap.empty){
-          var d=snap.docs[0].data();
-          if(d.phone||d.kakaoId){
-            _sendKakaoMsg(d, msg);
-          }
-        }
-        sent++;
-        if(sent===total) toast('✅ 명세서 발송 완료 ('+total+'명)');
-      }).catch(function(){sent++;});
-    });
-  }).catch(function(e){toast('❌ '+e.message);});
+function _industrySettleSaveAll(did, results, month, label){\
+  if(!confirm(results.length+'명 정산을 저장하고 명세서를 발송하시겠습니까?')) return;\
+  toast('⏳ 저장 중...');\
+  var promises=results.map(function(r){\
+    var uid=r.userId||r.id||r.name||'';\
+    var drv=(_drvCache||[]).find(function(d){return d.name===r.name||d.userId===uid;});\
+    var isBiz=drv?(drv.insType==='contractor'||drv.isBiz===true||!!(drv.bizNum||'').replace(/[^0-9]/g,'')):false;\
+    var payload={\
+      dealerId:did, driver:r.name, userId:uid,\
+      month:month, camp:r.camp||'',\
+      totalAmt:Math.round(r.gross||0),\
+      income:Math.round(r.gross||0),\
+      net:Math.round(r.net||0),\
+      deduct:Math.round(r.deduct||0),\
+      emp:Math.round(r.emp||0),\
+      work:Math.round(r.work||0),\
+      isBiz:isBiz,\
+      bizNum:drv&&drv.bizNum||r.bizNum||'',\
+      bizName:drv&&drv.bizName||r.bizName||'',\
+      ssn:drv&&drv.ssn||r.ssn||'',\
+      joinDate:drv&&drv.joinDate||'',\
+      phone:drv&&drv.phone||r.phone||'',\
+      industryType:(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'',\
+      routeDetails:r.details||r.extras||[],\
+      status:'정산예정',\
+      taxSent:false\
+    };\
+    return _db.collection('settlements')\
+      .where('dealerId','==',did).where('driver','==',r.name).where('month','==',month).get()\
+      .then(function(snap){\
+        return snap.empty\
+          ?_db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))\
+          :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));\
+      });\
+  });\
+  Promise.all(promises).then(function(){\
+    _settleCache=null;\
+    toast('✅ '+results.length+'명 저장 완료');\
+    // 알림톡 발송\
+    var sent=0,total=results.length;\
+    results.forEach(function(r){\
+      var drv=(_drvCache||[]).find(function(d){return d.name===r.name;});\
+      var phone=(drv&&drv.phone)||r.phone||'';\
+      if(phone){\
+        var coName=(_CU&&_CU.companyName)||'DONWAY';\
+        _sendAlimtalkWithStmt(\
+          {driver:r.name,totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0,month:month,routeDetails:r.details||[]},\
+          calcNet({totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0}),\
+          r.name,month,r.net,phone,coName\
+        );\
+      }\
+      sent++;\
+      if(sent===total) goPage('settlements');\
+    });\
+  }).catch(function(e){toast('❌ '+e.message);});\
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
