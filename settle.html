@@ -11093,12 +11093,17 @@ function _importRosterExcel(input){
         var existMap={};
         snap.forEach(function(doc){
           var d=doc.data();
-          // ① 쿠팡 ID (가장 신뢰도 높음)
-          [d.coupangId,d.userId,d.driverId,d.loginId].filter(Boolean)
+          // ① 쿠팡 ID (가장 신뢰도 높음) — 모든 ID 필드 등록
+          [d.coupangId,d.userId,d.driverId,d.loginId,d.courierId,d.id,doc.id].filter(Boolean)
             .forEach(function(x){
               var k=String(x).trim().toLowerCase();
               if(k)existMap[k]=doc.id;
             });
+          // ① 이름도 등록 (이름만 있는 경우)
+          if(d.name){
+            var nm=String(d.name).trim().toLowerCase();
+            if(nm)existMap['name:'+nm]=doc.id;
+          }
           // ② 사업자등록번호 (bizNum - 하이픈 제거)
           if(d.bizNum){
             var bn=String(d.bizNum).replace(/[^0-9]/g,'');
@@ -11138,7 +11143,8 @@ function _importRosterExcel(input){
           var campKey=nmNorm+'@'+campShort;
           var docId=existMap[uidLow]
             ||existMap['nc:'+campKey]
-            ||(nmNorm?existMap['n:'+nmNorm]:null);
+            ||(nmNorm?existMap['n:'+nmNorm]:null)
+            ||(nmNorm?existMap['name:'+nmNorm]:null);
           var wv=drv.wave||((cfg2[campShort]||cfg2[drv.camp]||{}).wave||'');
 
           if(docId){
