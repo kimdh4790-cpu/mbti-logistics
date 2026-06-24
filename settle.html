@@ -1876,7 +1876,7 @@ function calcNet(x){
   var tax  = +x.tax  || (x.taxFixed ? +x.taxFixed : (_isBiz ? 0 : Math.round(income * TAX_RATE)));
   var emp  = (x.emp !== undefined && x.emp !== null && x.emp !== '' && +x.emp > 0) ? +x.emp : empCalc;
   var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
-  var work = _isBiz ? ((workStored && workCalc > 0 && workStored >= workCalc * 0.5) ? workStored : workCalc) : 0;
+  var work = _isBiz ? (workStored > 0 ? workStored : workCalc) : 0;
   // 회사 부담 보험료 (기사 공제분과 별개)
   var empComp = _isBiz ? (monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008 / 10) * 10 : 0) : 0; // 회사 부담 고용 0.8%
   var workComp = work; // 산재 전액 회사 부담 (= work와 동일 비율)
@@ -29569,8 +29569,12 @@ function pageSettle(){
     // ── Hero 섹션
     var hero=document.createElement('div');
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
-    var totMargin=totCoupang-totTaxBase;
-    // 경비 + 회사부담 보험료 차감 실순수익
+    // 마진 = 쿠팡수입 - 기사세금계산서 - 고용·산재(기사+회사) - 부가세10%
+    var totInsAll=totEmpComp+totWorkComp+totEmpDrv+totWorkDrv; // 고용·산재 전체
+    var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
+    var totVat=Math.round(totMarginBeforeVat*0.1); // 부가세 10%
+    var totMargin=totMarginBeforeVat-totVat;
+    // 경비 차감 실순수익
     var _expTotal=0;
     if(curMonthFilter==='all'){
       Object.values(expByMonth).forEach(function(v){_expTotal+=v;});
@@ -29578,7 +29582,7 @@ function pageSettle(){
     } else {
       _expTotal=(expByMonth[curMonthFilter]||0)+fixedMonthly;
     }
-    var totNetProfit=totMargin-totInsComp-_expTotal;
+    var totNetProfit=totMargin-_expTotal;
     // 선택 월 표시
     var monthLabel=curMonthFilter==='all'?'전체 누적':curMonthFilter;
     hero.innerHTML='<div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:rgba(255,255,255,.04);border-radius:50%"></div>'
@@ -29600,18 +29604,23 @@ function pageSettle(){
       +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         +'<div>'
           +'<div style="font-size:11px;opacity:.6">📈 '+((_CU&&(_CU.companyName||_CU.name))||'\uD68C\uC0AC')+' 단가 마진 (경비 전)</div>'
-          +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서</div>'
+          +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서 − 고용·산재 − 부가세10%</div>'
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
-          +'<div style="font-size:10px;opacity:.5">'            +(totEmpComp||totWorkComp?'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)+(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):''):'')            +'기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)          +'</div>'
+          +'<div style="font-size:10px;opacity:.5">'
+          +'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)
+          +(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):'')
+          +' | 기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)
+          +' | 부가세 -₩'+fmt(totVat)
+          +'</div>'
         +'</div>'
       +'</div>'
       // 실순수익 박스
       +'<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
         +'<div>'
           +'<div style="font-size:11px;opacity:.8;font-weight:700">🏢 실순수익 (경비 차감 후)</div>'
-          +'<div style="font-size:9px;opacity:.5">단가마진 − 회사보험료(₩'+fmt(totInsComp)+') − 경비'+(_expTotal>0?' (₩'+fmt(_expTotal)+')':'')+'</div>'
+          +'<div style="font-size:9px;opacity:.5">단가마진(고용·산재·부가세 차감 후)(₩'+fmt(totInsComp)+') − 경비'+(_expTotal>0?' (₩'+fmt(_expTotal)+')':'')+'</div>'
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:22px;font-weight:900;color:'+(totNetProfit>=0?'#4ade80':'#f87171')+'">'+(totNetProfit<0?'−':'')+'₩'+fmt(Math.abs(totNetProfit))+'</div>'
