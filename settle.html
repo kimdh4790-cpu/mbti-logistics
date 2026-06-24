@@ -33071,37 +33071,47 @@ window._bulkImportDrivers = function(driversJson){
   });
 };
 
-// ★ 정산 이름 일괄매칭 — drivers의 userId→name을 settlements.driver에 반영
+// ★ 정산 일괄매칭 — drivers의 전체 정보를 settlements에 반영
 function _syncDriverNamesToSettlements(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   var did=_CU.dealerId||_CU.uid;
-  toast('🔄 매칭 중...');
-  // 1. drivers 목록 로드
+  toast('🔄 전체 매칭 중...');
   _db.collection('drivers').where('dealerId','==',did).get().then(function(dSnap){
     var drvMap={};
     dSnap.docs.forEach(function(d){
       var data=d.data();
-      if(data.userId&&data.name) drvMap[data.userId]=data.name;
+      var key=data.userId||data.driverId||'';
+      if(key) drvMap[key]=data;
     });
     if(!Object.keys(drvMap).length){toast('❌ 등록된 기사 없음');return;}
-    // 2. settlements 로드
     return _db.collection('settlements').where('dealerId','==',did).get().then(function(sSnap){
       var batch=_db.batch();
       var cnt=0;
       sSnap.docs.forEach(function(doc){
         var data=doc.data();
         var uid=data.userId||data.driverId||'';
-        var newName=drvMap[uid];
-        if(newName&&(!data.driver||data.driver===uid||data.driver!==newName)){
-          batch.update(doc.ref,{driver:newName});
+        var drv=drvMap[uid];
+        if(!drv) return;
+        var update={};
+        if(drv.name) update.driver=drv.name;
+        if(drv.camp) update.camp=drv.camp;
+        if(drv.phone) update.phone=drv.phone;
+        if(drv.bankAccount) update.bankAccount=drv.bankAccount;
+        if(drv.bankName) update.bankName=drv.bankName;
+        if(drv.bizNum) update.bizNum=drv.bizNum;
+        if(drv.bizName) update.bizName=drv.bizName;
+        if(drv.isBiz!==undefined) update.isBiz=drv.isBiz;
+        if(drv.ssn) update.ssn=drv.ssn;
+        if(Object.keys(update).length){
+          batch.update(doc.ref,update);
           cnt++;
         }
       });
-      if(!cnt){toast('✅ 이미 모두 매칭됨');return;}
+      if(!cnt){toast('✅ 이미 모두 최신 상태');return;}
       return batch.commit().then(function(){
         _drvCache=null;
         _settleCache=null;
-        toast('✅ '+cnt+'건 이름 매칭 완료');
+        toast('✅ '+cnt+'건 전체 정보 매칭 완료');
       });
     });
   }).catch(function(e){toast('❌ '+e.message);});
@@ -33116,7 +33126,7 @@ function pageDrivers(){
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
   var btnSync=document.createElement('button');btnSync.className='btn btn-sm';
   btnSync.style.cssText='background:#059669;color:#fff;font-size:11px';
-  btnSync.textContent='🔄 정산 이름 일괄매칭';
+  btnSync.textContent='🔄 정산 전체 일괄저장';
   btnSync.onclick=function(){_syncDriverNamesToSettlements();};
   tr.appendChild(btnSync);
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
