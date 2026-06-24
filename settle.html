@@ -19983,9 +19983,10 @@ function _doDownloadSettleExcel(data){
   toast('✅ '+filtered.length+'명 정산 엑셀 다운로드');
 } // _doDownloadSettleExcel 끝
 
-// ── 세무사용 세금계산서 CSV (고용/산재 계산표 형식) ──
+// ── 세무사용 세금계산서 XLSX (사업자/직원 분리) ──
 function _downloadTaxCSV(){
   if(!_settleCache||!_settleCache.length){toast('❌ 정산 데이터 없음');return;}
+  if(typeof XLSX==='undefined'){toast('❌ XLSX 라이브러리 로딩 중...');return;}
   var month=window._settle_month&&window._settle_month!=='all'?window._settle_month:'';
   var filtered=month?_settleCache.filter(function(s){return s.month===month;}):_settleCache;
   filtered=filtered.filter(function(s){return !s._driverOnly;});
@@ -19998,69 +19999,71 @@ function _downloadTaxCSV(){
 
   var compName=(_CU&&_CU.companyName)||'회사명';
   var ym=month||new Date().toISOString().slice(0,7);
-  var coDoc=window._cachedCompanyDoc||{};
 
-  function _fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
+  function _n(n){return Math.round(n||0);}
 
-  var rows=[
-    ['구분','상호명','성명','입사일','주민번호','사업자번호',
-     '①공급대가','②공급가액','부가세','③필요경비(34.6%)','④월보수액',
-     '⑤고용보험(0.8%)','⑥산재보험(0.88%)','⑦급여지급액','비고']
-  ];
+  // 사업자 / 직원 분리
+  var bizList=filtered.filter(function(s){return !!(s.bizNum||s.bizNumber||'').replace(/[^0-9]/g,'');});
+  var empList=filtered.filter(function(s){return !(s.bizNum||s.bizNumber||'').replace(/[^0-9]/g,'');});
 
-  filtered.forEach(function(s,i){
+  var bizHeader=['구분','상호명','성명','입사일','주민번호','사업자번호',
+    '①공급대가','②공급가액','부가세','③필요경비(34.6%)','④월보수액',
+    '⑤고용보험(0.8%)','⑥산재보험(0.88%)','⑦급여지급액','비고'];
+
+  var empHeader=['구분','성명','입사일','주민번호',
+    '지급액','소득세(3.3%)','주민세(0.33%)','실지급액','비고'];
+
+  function _bizRow(s,i){
     var cr=calcNet(s);
     var supply=cr.supplyAmt||Math.round((cr.totalAmt||0)/1.1);
-    var vat=Math.round((cr.totalAmt||0)-supply);
+    var vat=_n((cr.totalAmt||0)-supply);
     var expense=Math.round(supply*0.346);
-    var monthlyWage=supply-expense;
-    rows.push([
-      i+1,
-      s.bizName||s.driver||'',
-      s.driver||s.name||'',
-      s.joinDate||'',
-      s.ssn||s.residentNum||'',
-      s.bizNum||'',
-      _fmt(cr.totalAmt||0),
-      _fmt(supply),
-      _fmt(vat),
-      _fmt(expense),
-      _fmt(monthlyWage),
-      _fmt(cr.emp||0),
-      _fmt(cr.work||0),
-      _fmt(cr.net||0),
-      ''
-    ]);
-  });
+    var wage=supply-expense;
+    return [i+1,s.bizName||s.driver||'',s.driver||s.name||'',s.joinDate||'',
+      s.ssn||'',s.bizNum||'',
+      _n(cr.totalAmt),_n(supply),vat,_n(expense),_n(wage),
+      _n(cr.emp),_n(cr.work),_n(cr.net),''];
+  }
 
+  function _empRow(s,i){
+    var cr=calcNet(s);
+    var gross=_n(cr.totalAmt||cr.income||0);
+    var income=Math.round(gross*0.033);
+    var local=Math.round(income*0.1);
+    var net=gross-income-local;
+    return [i+1,s.driver||s.name||'',s.joinDate||'',s.ssn||'',
+      gross,income,local,net,''];
+  }
+
+  // 사업자 시트
+  var bizData=[bizHeader];
+  bizList.forEach(function(s,i){bizData.push(_bizRow(s,i));});
   // 합계
-  rows.push([
-    '합계','','','','','',
-    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).totalAmt||0);},0)),
-    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+(r.supplyAmt||Math.round((r.totalAmt||0)/1.1));},0)),
-    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round((r.totalAmt||0)-(r.supplyAmt||Math.round((r.totalAmt||0)/1.1)));},0)),
+  bizData.push(['합계','','','','','',
+    bizList.reduce(function(a,s){return a+_n(calcNet(s).totalAmt);},0),
+    bizList.reduce(function(a,s){var r=calcNet(s);return a+(r.supplyAmt||Math.round((r.totalAmt||0)/1.1));},0),
+    bizList.reduce(function(a,s){var r=calcNet(s);var sup=r.supplyAmt||Math.round((r.totalAmt||0)/1.1);return a+_n((r.totalAmt||0)-sup);},0),
     '','',
-    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).emp||0);},0)),
-    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).work||0);},0)),
-    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).net||0);},0)),
-    ''
-  ]);
+    bizList.reduce(function(a,s){return a+_n(calcNet(s).emp);},0),
+    bizList.reduce(function(a,s){return a+_n(calcNet(s).work);},0),
+    bizList.reduce(function(a,s){return a+_n(calcNet(s).net);},0),
+    '']);
 
-  var csv=rows.map(function(row){
-    return row.map(function(cell){
-      var v=String(cell||'');
-      if(v.includes(',')||v.includes('"')||v.includes('\n'))
-        return '"'+v.replace(/"/g,'""')+'"';
-      return v;
-    }).join(',');
-  }).join('\r\n');
+  // 직원 시트
+  var empData=[empHeader];
+  empList.forEach(function(s,i){empData.push(_empRow(s,i));});
+  var empGross=empList.reduce(function(a,s){return a+_n(calcNet(s).totalAmt||calcNet(s).income||0);},0);
+  var empIncome=Math.round(empGross*0.033);
+  var empLocal=Math.round(empIncome*0.1);
+  empData.push(['합계','','','',empGross,empIncome,empLocal,empGross-empIncome-empLocal,'']);
 
-  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=compName+'_'+ym+'_세무사세금계산서.csv';
-  a.click();
-  toast('✅ '+filtered.length+'명 세무사 세금계산서 다운로드');
+  var wb=XLSX.utils.book_new();
+  var ws1=XLSX.utils.aoa_to_sheet(bizData);
+  var ws2=XLSX.utils.aoa_to_sheet(empData);
+  XLSX.utils.book_append_sheet(wb,ws1,'사업자(세금계산서)');
+  XLSX.utils.book_append_sheet(wb,ws2,'직원(원천세3.3%)');
+  XLSX.writeFile(wb,compName+'_'+ym+'_세무사자료.xlsx');
+  toast('✅ '+bizList.length+'명 사업자 / '+empList.length+'명 직원 분리 완료');
 }
 
 function _taxShareDownload(){
