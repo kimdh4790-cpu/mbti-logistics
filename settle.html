@@ -33719,11 +33719,6 @@ function editDriver(id){
         '<span id="edr-ocr-status" style="font-size:10px;color:var(--cyan)"></span>'+
       '</div>'+
       '<div class="gr"><div class="fg"><label>주민번호</label><input id="edr-ssn" value="'+esc(d.ssn||'')+'" placeholder="000000-0000000" style="font-family:monospace"></div></div>'+
-      '<div class="fg" style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">구분 <span style="color:var(--red)">*</span></label>'+
-      '<div style="display:flex;gap:6px">'+
-      '<button id="edr-type-biz" onclick="_setDriverType(\'biz\')" style="flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text3)">🏢 사업자</button>'+
-      '<button id="edr-type-emp" onclick="_setDriverType(\'emp\')" style="flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:transparent;color:var(--text3)">👤 직원(원천세3.3%)</button>'+
-      '</div><input type="hidden" id="edr-is-biz" value=""></div>'+
       '<div class="gr"><div class="fg"><label>사업자번호</label><input id="edr-biznum" value="'+esc(d.bizNum||'')+'" placeholder="000-00-00000"></div>'+
         '<div class="fg"><label>상호명</label><input id="edr-bizname" value="'+esc(d.bizName||'')+'"></div></div>'+
       '<div class="gr"><div class="fg"><label>대표자</label><input id="edr-bizrep" value="'+esc(d.bizRep||d.name||'')+'"></div>'+
@@ -34209,7 +34204,7 @@ function saveDriver(id){
     safetyEdu:gvs('edr-safetyedu')||'',
     licenseNum:gvs('edr-license')||'',
     bizKind:gvs('edr-bizitem')||'',
-    isBiz:(function(){var el=document.getElementById('edr-is-biz');if(el&&el.value!=='')return el.value==='true';return !!(gvs('edr-biznum').replace(/-/g,'').replace(/\s/g,''));})(),
+    isBiz:(function(){var ins=(document.getElementById('edr-instype')||{value:'contractor'}).value||'contractor';return ins==='contractor';})(),
     workType:gvs('edr-worktype')||'coupang',
     hourlyRate:parseFloat(gvs('edr-hourlyrate'))||10320,
     dailyRate:parseFloat(gvs('edr-dailyrate'))||82560,
