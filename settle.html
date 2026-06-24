@@ -176,14 +176,10 @@ function onBizDocSelected(input){
   reader.onload=function(e){
     var b64=e.target.result.split(',')[1];
     var mt=file.type==='application/pdf'?'application/pdf':file.type==='image/png'?'image/png':'image/jpeg';
-    fetch('https://api.anthropic.com/v1/messages',{
+    fetch('/ocr',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':window.__AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-          {type:'text',text:'이 사업자등록증에서 정보를 추출해서 아래 JSON 형식으로만 응답하세요. 다른 말 없이 JSON만: {"bizNum":"사업자번호","companyName":"상호명","repName":"대표자명","bizAddr":"사업장주소","bizType":"업태","bizItem":"종목"}'}
-        ]}]})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({imageData:b64,mediaType:mt})
     }).then(function(r){return r.json();})
     .then(function(data){
       var text=(data.content&&data.content[0]&&data.content[0].text)||'';
