@@ -414,7 +414,9 @@ async function loadDealers(){
         expireDate:expireDate,
         amount:amount,
         bizNum:u.bizNum||'-',
-        slug:u.slug||'-'
+        slug:u.slug||'-',
+        bizDocUrl:u.bizDocUrl||'',
+        bizVerified:u.bizVerified||false
       });
     });
     _all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
@@ -467,10 +469,36 @@ function renderTable(list){
         <button class="btn-sm btn-pw" onclick="openPw('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
         <button class="btn-sm" style="background:#e0f2fe;color:#0369a1" onclick="openContractStatus('${d.id}','${d.name}')">📝 계약서</button>
         <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">🚫 해지</button>
+        ${d.bizDocUrl?`<button class="btn-sm" style="background:${d.bizVerified?'#dcfce7;color:#16a34a':'#fef9c3;color:#ca8a04'}" onclick="viewBizDoc('${d.id}','${d.bizDocUrl}','${d.bizVerified}')">📄 ${d.bizVerified?'인증됨':'사업자확인'}</button>`:'<span style="font-size:10px;color:#ef4444">📄 미제출</span>'}
       </div></td>
     </tr>`;
   }).join('');
 }
+
+window.viewBizDoc=async function(id, url, verified){
+  const isVerified = verified==='true'||verified===true;
+  const html=`<div style="text-align:center">
+    <img src="${url}" style="max-width:100%;max-height:400px;border-radius:8px;margin-bottom:16px" onerror="this.style.display='none'">
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      ${!isVerified?`<button onclick="approveBizDoc('${id}')" style="padding:8px 20px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">✅ 사업자 인증 승인</button>`:'<span style="color:#16a34a;font-weight:700">✅ 이미 인증됨</span>'}
+      <button onclick="this.closest('.modal-overlay').remove()" style="padding:8px 20px;background:#e2e8f0;color:#333;border:none;border-radius:8px;cursor:pointer">닫기</button>
+    </div>
+  </div>`;
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;max-width:500px;width:90%"><h3 style="margin:0 0 16px">📄 사업자등록증 확인</h3>${html}</div>`;
+  document.body.appendChild(overlay);
+};
+
+window.approveBizDoc=async function(id){
+  try{
+    await updateDoc(doc(db,'companies',id),{bizVerified:true, bizVerifiedAt:serverTimestamp()});
+    alert('✅ 사업자 인증 승인 완료');
+    document.querySelector('.modal-overlay')?.remove();
+    loadDealers();
+  }catch(e){alert('❌ '+e.message);}
+};
 
 window.filterD=function(status,btn){
   document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
