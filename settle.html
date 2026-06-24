@@ -190,7 +190,8 @@ function onBizDocSelected(input){
       try{
         var info=JSON.parse(text.replace(/```json|```/g,'').trim());
         var flds={bizNum:'r-biznum',companyName:'r-company',repName:'r-rep',bizAddr:'r-bizaddr',bizType:'r-biztype',bizItem:'r-bizitem'};
-        Object.keys(flds).forEach(function(k){if(info[k]){var el=document.getElementById(flds[k]);if(el&&!el.value)el.value=info[k];}});
+        Object.keys(flds).forEach(function(k){if(info[k]){var el=document.getElementById(flds[k]);if(el)el.value=info[k];}});
+        console.log('[OCR]',info);
         if(msg){msg.textContent='OCR 완료';msg.style.color='green';}
       }catch(e){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}}
     }).catch(function(){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}});
