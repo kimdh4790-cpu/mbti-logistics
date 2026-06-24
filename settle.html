@@ -20007,8 +20007,20 @@ function _downloadTaxCSV(type){
     var ym=(filtered[0]&&filtered[0].month)||new Date().toISOString().slice(0,7);
     function _n(n){return Math.round(n||0);}
 
-    var bizList=filtered.filter(function(s){return !!(s.bizNum||s.bizNumber||'').replace(/[^0-9]/g,'');});
-    var empList=filtered.filter(function(s){return !(s.bizNum||s.bizNumber||'').replace(/[^0-9]/g,'');});
+    // ★ drivers 캐시에서 isBiz/insType 매핑
+    var drvIsBizMap={};
+    (_drvCache||[]).forEach(function(d){
+      var key=d.userId||d.name||'';
+      if(key) drvIsBizMap[key]=d.insType==='contractor'||(d.isBiz===true)||!!(d.bizNum||'').replace(/[^0-9]/g,'');
+    });
+    function _getIsBiz(s){
+      if(s.isBiz!==undefined) return !!s.isBiz;
+      var uid=s.userId||s.driver||'';
+      if(drvIsBizMap[uid]!==undefined) return drvIsBizMap[uid];
+      return !!(s.bizNum||s.bizNumber||'').replace(/[^0-9]/g,'');
+    }
+    var bizList=filtered.filter(function(s){return _getIsBiz(s);});
+    var empList=filtered.filter(function(s){return !_getIsBiz(s);});
 
     var bizHeader=['구분','상호명','성명','입사일','주민번호','사업자번호',
       '①공급대가','②공급가액','부가세','③필요경비(34.6%)','④월보수액',
@@ -33304,8 +33316,10 @@ function _syncDriverNamesToSettlements(){
         if(drv.bankName) update.bankName=drv.bankName;
         if(drv.bizNum) update.bizNum=drv.bizNum;
         if(drv.bizName) update.bizName=drv.bizName;
-        if(drv.isBiz!==undefined) update.isBiz=drv.isBiz;
         if(drv.ssn) update.ssn=drv.ssn;
+        // ★ isBiz: insType 기준 우선
+        var _isBiz=drv.insType==='contractor'||(drv.isBiz===true)||!!(drv.bizNum||'').replace(/[^0-9]/g,'');
+        update.isBiz=_isBiz;
         if(Object.keys(update).length){
           batch.update(doc.ref,update);
           cnt++;
