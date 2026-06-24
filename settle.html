@@ -2163,13 +2163,26 @@ function parseCoupangExcel(inp){
   if(industry==='logistics'){_parseLogisticsExcel(file,month);return;}
 
   // 기본: 쿠팡 파서
-  var fbPromise=(window._db&&window._CU)
-    ?window._db.collection('drivers').where('dealerId','==',window._CU.dealerId).get()
+  var did=window._CU&&window._CU.dealerId;
+  var driversPromise=(window._db&&window._CU)
+    ?window._db.collection('drivers').where('dealerId','==',did).get()
       .then(function(snap){var arr=[];snap.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});return arr;})
       .catch(function(){return[];})
     :Promise.resolve([]);
-  fbPromise.then(function(fbDrivers){
-    _parseCoupangExcelInner(file,fbDrivers,month);
+  // ★ settings 최신 로드 후 파싱 (라우트단가/팀장수수료/아이디지원 반영)
+  var settingsPromise=(window._db&&did)
+    ?window._db.collection('settings').doc(did+'_routePrices').get()
+      .then(function(snap){
+        if(snap.exists){
+          var data=snap.data();
+          if(!window._uCurrentRules) window._uCurrentRules={};
+          Object.assign(window._uCurrentRules, data);
+          if(data.routePrices) window.RPRICE=data.routePrices;
+        }
+      }).catch(function(){})
+    :Promise.resolve();
+  Promise.all([driversPromise, settingsPromise]).then(function(results){
+    _parseCoupangExcelInner(file, results[0], month);
   });
 }
 
@@ -8585,6 +8598,21 @@ function _applyUniversalRules(r){
 function showApp(){
   // 탈퇴/퇴직 기사 강제 로그아웃
   setTimeout(_loadUniversalRules, 800); // 범용 규칙 백그라운드 로드
+  // ★ settings 컬렉션 자동 로드 (라우트단가/팀장수수료/아이디지원 등)
+  setTimeout(function(){
+    if(_db&&_CU&&_CU.dealerId){
+      var did=_CU.dealerId;
+      _db.collection('settings').doc(did+'_routePrices').get().then(function(snap){
+        if(snap.exists){
+          var data=snap.data();
+          if(!window._uCurrentRules) window._uCurrentRules={};
+          Object.assign(window._uCurrentRules, data);
+          // RPRICE 갱신
+          if(data.routePrices) window.RPRICE=data.routePrices;
+        }
+      }).catch(function(){});
+    }
+  }, 1000);
   if(_CU&&(_CU.role==='driver'||_CU.role==='member')&&_db){
     _db.collection('users').doc(_CU.uid).get().then(function(snap){
       if(snap.exists){
