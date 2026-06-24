@@ -32733,7 +32733,7 @@ window._biLoadMulti=function(inp){
       reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});onRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}));}catch(err){done++;st.textContent='❌ '+err.message;}};
       reader.readAsArrayBuffer(file);
     } else {
-      reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';onRows(t.split('\n').map(function(l){return l.split(sep).map(function(c){return c.replace(/\r/g,'').trim();});}));}catch(err){done++;st.textContent='❌ '+err.message;}};
+      reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';onRows(t.split('\n').map(function(l){var line=l.replace(/\r/g,'').trim();if(!line)return[];return sep==='\t'?line.split('\t').map(function(c){return c.trim();}):line.split(/\s{2,}|,/).map(function(c){return c.trim();});}));}catch(err){done++;st.textContent='❌ '+err.message;}};
       reader.readAsText(file,'utf-8');
     }
   });
@@ -32748,6 +32748,17 @@ window._biParse=function(rows){
   var CAMPS=['신평','엄궁','대구','진주','1인','부산','서울','광주','인체','울산','수원','성남','안양','전주','청주','제주','여수','거제','구미','수영','사상'];
   rows.forEach(function(row){
     var cells=row.map(function(v){return String(v||'').trim();});
+    // ★ 이름+전화번호 형식 (영문 아이디 없는 경우)
+    var korCells=cells.filter(function(s){return /^[가-힣]{2,5}$/.test(s);});
+    var phoneCells=cells.filter(function(s){return /^01[0-9][\-]?[0-9]{3,4}[\-]?[0-9]{4}$/.test(s.replace(/\s/g,''));});
+    if(korCells.length&&phoneCells.length){
+      var pClean=phoneCells[0].replace(/[^0-9]/g,'');
+      if(!seen[korCells[0]+pClean]){
+        seen[korCells[0]+pClean]=true;
+        list.push({name:korCells[0],userId:'',camp:'',phone:pClean,email:'',bankName:'',bankNum:'',carNum:''});
+      }
+      return;
+    }
     // 영문 아이디 찾기
     var engId=null,engIdCol=-1;
     cells.forEach(function(s,ci){
