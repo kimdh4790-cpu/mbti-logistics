@@ -26599,12 +26599,12 @@ function _filterMenusByServices(menus){
   });
 
   return menus.map(function(section){
-    return {
-      s:section.s,
-      items:section.items.filter(function(item){
-        return allowed.has(item.plan_key||'free');
-      })
-    };
+    var items = section.items.filter(function(item){
+      return allowed.has(item.plan_key||'free');
+    });
+    // free 항목만 있는 섹션은 표시 안 함 (settle/delivery 등 실제 플랜 항목이 1개 이상 있어야)
+    var hasPaidItem = items.some(function(item){ return (item.plan_key||'free') !== 'free'; });
+    return { s:section.s, items:hasPaidItem ? items : [] };
   }).filter(function(section){return section.items.length>0;});
 }
 
@@ -26796,7 +26796,7 @@ var MENUS_SETTLE = [
 {ic:'👤',l:'직원 관리',       p:'ind_logistics_workers', plan_key:'ind_logistics'},
 {ic:'📋',l:'배치표',          p:'ind_logistics_roster',  plan_key:'ind_logistics'},
 {ic:'💸',l:'송금',            p:'payout',                plan_key:'ind_logistics'},
-{ic:'🧾',l:'세무사 연동',     p:'tax_share',             plan_key:'any_paid'},
+{ic:'🧾',l:'세무사 연동',     p:'tax_share',             plan_key:'ind_logistics'},
 ]},
 
 {s:'🧹 청소업 관리', items:[
