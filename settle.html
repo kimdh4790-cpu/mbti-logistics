@@ -19881,51 +19881,60 @@ function _doDownloadSettleExcel(data){
     :data;
   filtered=filtered.filter(function(s){return !s._driverOnly;});
 
+  // ★ ㄱㄴㄷ 이름순 정렬
+  filtered=filtered.slice().sort(function(a,b){
+    var na=(a.driver||a.name||'');
+    var nb=(b.driver||b.name||'');
+    return na.localeCompare(nb,'ko');
+  });
+
   if(!filtered.length){toast('❌ 해당 월 정산 없음');return;}
 
   var compName=(_CU&&_CU.companyName)||'회사명';
   var ym=month&&month!=='all'?month:new Date().toISOString().slice(0,7);
 
+  // 숫자 천단위 포맷
+  function _fmt(n){var v=Math.round(n||0);return v===0?'0':v.toLocaleString('ko-KR');}
+
   // 헤더
-  var rows=[
-    ['이름','캠프','정산월','지급합계','공제합계','실지급액',
-     '고용보험','산재보험','분실파손','기타공제','가불',
-     '배송건수','반품건수','총건수','사업자번호','상호명','상태']
+  var rows=[\
+    ['이름','캠프','정산월','지급합계','공제합계','실지급액',\
+     '고용보험','산재보험','분실파손','기타공제','가불',\
+     '배송건수','반품건수','총건수','사업자번호','상호명','상태']\
   ];
 
   filtered.forEach(function(s){
-    var deducts=s.deductions||{};
     var cr=calcNet(s);
-    rows.push([
-      s.driver||s.name||'',
-      s.camp||'',
-      s.month||'',
-      Math.round(cr.totalAmt||cr.vatIncome||s.totalAmt||0),
-      Math.round(cr.deduct||s.deduct||0),
-      Math.round(cr.net||s.net||0),
-      Math.round(cr.emp||0),
-      Math.round(cr.work||0),
-      Math.round(cr.dmg||0),
-      Math.round(cr.etcMinus||0),
-      Math.round(cr.adv||0),
-      cr.dcnt||s.dcnt||0,
-      cr.rcnt||s.rcnt||0,
-      (cr.dcnt||s.dcnt||0)+(cr.rcnt||s.rcnt||0),
-      s.bizNum||'',
-      s.bizName||s.driver||'',
-      s.status||''
-    ]);
+    rows.push([\
+      s.driver||s.name||'',\
+      s.camp||'',\
+      s.month||'',\
+      _fmt(cr.totalAmt||cr.vatIncome||s.totalAmt||0),\
+      _fmt(cr.deduct||s.deduct||0),\
+      _fmt(cr.net||s.net||0),\
+      _fmt(cr.emp||0),\
+      _fmt(cr.work||0),\
+      _fmt(cr.dmg||0),\
+      _fmt(cr.etcMinus||0),\
+      _fmt(cr.adv||0),\
+      cr.dcnt||s.dcnt||0,\
+      cr.rcnt||s.rcnt||0,\
+      (cr.dcnt||s.dcnt||0)+(cr.rcnt||s.rcnt||0),\
+      s.bizNum||'',\
+      s.bizName||s.driver||'',\
+      s.status||'정산예정'\
+    ]);\
   });
 
   // 합계 행
   var totals=['합계','','',
-    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.totalAmt||r.vatIncome||s.totalAmt||0);},0),
-    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.deduct||s.deduct||0);},0),
-    filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.net||s.net||0);},0),
-    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).emp||0);},0),
-    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).work||0);},0),
-    filtered.reduce(function(a,s){return a+Math.round(calcNet(s).dmg||0);},0),
-    '','',
+    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.totalAmt||r.vatIncome||s.totalAmt||0);},0)),
+    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.deduct||s.deduct||0);},0)),
+    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.net||s.net||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).emp||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).work||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).dmg||0);},0)),
+    '0','0',
     filtered.reduce(function(a,s){return a+(calcNet(s).dcnt||s.dcnt||0);},0),
     filtered.reduce(function(a,s){return a+(calcNet(s).rcnt||s.rcnt||0);},0),
     '','','',''
@@ -30338,7 +30347,7 @@ function _renderSettlePage(settles,c){
 
 
 
-     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'     +'<button onclick="_downloadSettleAllExcel()" style="padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 ?? 엑셀 다운로드</button>'     +'<button onclick="_taxShareDownload()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🧾 세무사 급여자료</button>'
+     +'<button onclick="openCoupangStatsPanel()" style="padding:8px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 건수통계·실적비교</button>'     +'<button onclick="_downloadSettleAllExcel()" style="padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📥 정산 엑셀 다운로드</button>'     +'<button onclick="_taxShareDownload()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🧾 세무사 급여자료</button>'
 
 +(isSuperAdmin()?'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>':'')
 +(isSuperAdmin()?'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>':'')
