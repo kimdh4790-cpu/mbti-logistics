@@ -11022,7 +11022,20 @@ function _importRosterExcel(input){
       // 헤더 인덱스 파악
       var hdr=rows[0];
       var iDate=hdr.indexOf('업무일'),iCamp=hdr.indexOf('캠프명');
-      var iName=hdr.indexOf('이름'),iId=hdr.indexOf('아이디');
+      var iName=hdr.indexOf('이름');
+      // ★ 아이디 컬럼: 다양한 표기 대응 (아이디/ID/id/쿠팡ID/userId 등)
+      var iId=-1;
+      var _idKeywords=['아이디','ID','id','쿠팡ID','쿠팡id','userId','loginId','courierId'];
+      for(var _ii=0;_ii<hdr.length;_ii++){
+        var _hv=String(hdr[_ii]||'').trim();
+        if(_idKeywords.indexOf(_hv)>=0){iId=_ii;break;}
+      }
+      if(iId<0){ // indexOf 실패 시 포함 검색 fallback
+        for(var _ii2=0;_ii2<hdr.length;_ii2++){
+          var _hv2=String(hdr[_ii2]||'').trim().toLowerCase();
+          if(_hv2.includes('아이디')||(_hv2==='id')||_hv2.includes('쿠팡id')){iId=_ii2;break;}
+        }
+      }
       var iVendor=hdr.indexOf('벤더명'),iBizNum=hdr.indexOf('사업자등록번호');
       var iWave=hdr.indexOf('웨이브'),iStatus=hdr.indexOf('업무상태'),iRotation=hdr.indexOf('회전'),iRoute=hdr.indexOf('업무라우트');
       if(iDate<0||iName<0||iStatus<0){toast('❌ 쿠팡 근무표 형식이 아닙니다');return;}
@@ -11085,8 +11098,7 @@ function _importRosterExcel(input){
         snap.forEach(function(doc){
           var d=doc.data();
           // ① 쿠팡 ID (가장 신뢰도 높음) — 모든 ID 필드 등록
-          // 모든 ID 필드 + 이름으로 existMap 등록
-          [d.coupangId,d.userId,d.driverId,d.loginId,d.courierId,d.couponId,doc.id].filter(Boolean)
+          [d.coupangId,d.userId,d.driverId,d.loginId,d.courierId,d.id,doc.id].filter(Boolean)
             .forEach(function(x){
               var k=String(x).trim().toLowerCase();
               if(k)existMap[k]=doc.id;
