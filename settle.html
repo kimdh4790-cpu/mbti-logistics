@@ -7448,7 +7448,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
             var _fd={};
             window._idSupportRules.forEach(function(rule){
-              var fid=rule.fromId, tid=rule.toId;
+              var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
+              var tid=(rule.toId||'').replace(/@df$/i,'').trim();
               var fd=drvMap[fid]; if(!fd)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
               if(!ts)return;
