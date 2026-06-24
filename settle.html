@@ -32968,7 +32968,56 @@ window._biParse=function(rows){
   var list=[],seen={};
   var BANKS=['하나','국민','신한','우리','농협','시티','기업','카카오','토스','케이백크','산업','수협'];
   var CAMPS=['신평','엄궁','대구','진주','1인','부산','서울','광주','인체','울산','수원','성남','안양','전주','청주','제주','여수','거제','구미','수영','사상'];
-  rows.forEach(function(row){
+
+  // ★ 헤더 감지 - 세금계산서 형식 (성명/주민번호/사업자번호 컬럼)
+  var headerRow=rows[0]||[];
+  var colMap={name:-1,ssn:-1,bizNum:-1,bizName:-1,joinDate:-1};
+  headerRow.forEach(function(h,i){
+    var s=String(h||'').trim();
+    if(s==='성명'||s==='이름') colMap.name=i;
+    else if(s.indexOf('주민')>=0) colMap.ssn=i;
+    else if(s.indexOf('사업자')>=0&&s.indexOf('번호')>=0) colMap.bizNum=i;
+    else if(s.indexOf('상호')>=0||s==='상호명') colMap.bizName=i;
+    else if(s.indexOf('입사')>=0) colMap.joinDate=i;
+  });
+  var hasTaxFormat=colMap.name>=0&&(colMap.ssn>=0||colMap.bizNum>=0);
+
+  rows.forEach(function(row,ri){
+    var cells=row.map(function(v){return String(v||'').trim();});
+    if(ri===0&&hasTaxFormat) return; // 헤더 스킵
+
+    if(hasTaxFormat){
+      // 세금계산서 형식 파싱
+      var name=colMap.name>=0?cells[colMap.name]:'';
+      if(!name||!/^[가-힣]{2,5}$/.test(name)) return;
+      var ssn=colMap.ssn>=0?cells[colMap.ssn].replace(/[^0-9\-]/g,''):'';
+      var bizNum=colMap.bizNum>=0?cells[colMap.bizNum].replace(/[^0-9\-]/g,''):'';
+      var bizName=colMap.bizName>=0?cells[colMap.bizName]:'';
+      var joinDateRaw=colMap.joinDate>=0?cells[colMap.joinDate]:'';
+      // 입사일: 엑셀 시리얼 또는 문자
+      var joinDate='';
+      if(joinDateRaw){
+        var serial=parseInt(joinDateRaw);
+        if(serial>40000&&serial<50000){
+          var d=new Date((serial-25569)*86400*1000);
+          joinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        } else if(/\d{4}[-\.]\d{2}[-\.]\d{2}/.test(joinDateRaw)){
+          joinDate=joinDateRaw.replace(/\./g,'-').trim();
+        }
+      }
+      var key=name+(bizNum||ssn);
+      if(seen[key]) return;
+      seen[key]=true;
+      list.push({name:name,userId:'',camp:'',phone:'',email:'',
+        ssn:ssn,bizNum:bizNum,bizName:bizName,joinDate:joinDate,
+        insType:bizNum?'contractor':'freelancer',
+        isBiz:!!bizNum,bankName:'',bankNum:'',carNum:''});
+      return;
+    }
+    // 기존 형식 파싱 계속
+  });
+
+  if(!hasTaxFormat) rows.forEach(function(row){
     var cells=row.map(function(v){return String(v||'').trim();});
     // ★ 이름+전화번호 형식 (영문 아이디 없는 경우)
     var korCells=cells.filter(function(s){return /^[가-힣]{2,5}$/.test(s);});
