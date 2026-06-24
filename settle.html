@@ -32617,7 +32617,7 @@ window._biParse=function(rows){
     var before=kors.filter(function(k){return k.ci<engIdCol;});
     var korName=(before.length?before[before.length-1]:kors[0]).s;
     // 연락수/이메일/통장
-    var phone='',email='',bN='',bNum='';
+    var phone='',email='',bN='',bNum='',campVal='';
     cells.forEach(function(s){
       if(!phone&&/^01[0-9]/.test(s.replace(/[^0-9]/g,''))&&s.replace(/[^0-9]/g,'').length===11)
         phone=s.replace(/[^0-9]/g,'');
@@ -32625,10 +32625,14 @@ window._biParse=function(rows){
       if(s.indexOf('\n')>=0&&BANKS.some(function(b){return s.indexOf(b)>=0;})){
         var bp=s.split('\n');bN=bp[0].trim();bNum=(bp[1]||'').replace(/[^0-9]/g,'');
       }
+      // ★ 캠프값 감지 (M_진주1, 부산1, 부산2, 대구2 등)
+      if(!campVal&&s&&/^(부산|대구|진주|M_)/.test(s)){
+        campVal=_normCamp(s).replace('캠프','').trim();
+      }
     });
     seen[engId]=true;
     var cleanName=korName.replace(/웡[0-9]+$/,'').trim();
-    list.push({name:cleanName,userId:engId,camp:'',phone:phone,email:email,bankName:bN,bankNum:bNum,carNum:''});
+    list.push({name:cleanName,userId:engId,camp:campVal,phone:phone,email:email,bankName:bN,bankNum:bNum,carNum:''});
   });
   return list.length?list:null;
 };
