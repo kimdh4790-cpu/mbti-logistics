@@ -8376,8 +8376,10 @@ function _uploadToStorage(path, file){
       } else { resolve(''); }
     }).catch(function(){resolve('');});
   });
-}function initFirebase(){
+}var _firebaseInited=false;function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
+  if(_firebaseInited){return;}
+  _firebaseInited=true;
   if(!firebase.apps.length){
     firebase.initializeApp({
       apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
