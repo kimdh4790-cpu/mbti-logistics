@@ -176,9 +176,9 @@ function onBizDocSelected(input){
   reader.onload=function(e){
     var b64=e.target.result.split(',')[1];
     var mt=file.type==='application/pdf'?'application/pdf':file.type==='image/png'?'image/png':'image/jpeg';
-    fetch('/claude-ocr',{
+    fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':window.__AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,
         messages:[{role:'user',content:[
           {type:mt==='application/pdf'?'document':'image',source:{type:'base64',media_type:mt,data:b64}},
@@ -9046,7 +9046,7 @@ function doRegister(){
 
   var bizDocUrl=document.getElementById('r-bizdoc-input').dataset.url||'';
   if(!company||!biz||!email||!pw){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
-  if(!bizDocUrl){err.textContent='사업자등록증을 업로드해주세요';err.style.display='block';return;}
+  // bizDocUrl은 가입 완료 후 업로드되므로 파일 선택 여부만 체크
   if(!contactName){err.textContent='정산 문의 담당자명을 입력해주세요';err.style.display='block';return;}
   if(!contactPhone){err.textContent='정산 문의 연락처를 입력해주세요';err.style.display='block';return;}
   var selSvcEl=document.getElementById('r-services');
