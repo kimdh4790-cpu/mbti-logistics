@@ -22511,8 +22511,8 @@ function pageHome(){
     if(hasSvc('payroll')||isSA) html += _homeQuickBtn2('🌴','연차 관리','leave','#d97706');
     // 배송앱(mbtico) 결제 시
     if(hasSvc('mbtico')||isSA) html += _homeQuickBtn2('🚚','배차 현황','drivers','#059669');
-    // 직원 가입 QR은 항상
-    html += _homeQuickBtn2('📱','직원 가입 QR','join_qr','#0066ff');
+    // 직원 가입 QR은 QR플랜 있을 때만
+    if(hasSvc('qr')||hasSvc('payroll')||isSA) html += _homeQuickBtn2('📱','직원 가입 QR','join_qr','#0066ff');
     html += '</div>';
 
     // ── 이번달 급여 카드 (급여관리 결제 시만)
