@@ -2483,6 +2483,43 @@ service cloud.firestore {
 
 
     // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
+    // ── 국세청 사업자등록정보 조회 (/api/biz-lookup) ──
+    if (path === '/api/biz-lookup' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const rawNum = (body.bizNum || '').replace(/[^0-9]/g, '');
+        if (!rawNum || rawNum.length !== 10) {
+          return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }
+        const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
+        const apiUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
+        const ntsRes = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ b_no: [rawNum] })
+        });
+        if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status);
+        const ntsData = await ntsRes.json();
+        const item = ntsData.data && ntsData.data[0];
+        if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        // b_stt_cd: '01'=계속사업자, '02'=휴업, '03'=폐업
+        const active = item.b_stt_cd === '01';
+        return new Response(JSON.stringify({
+          ok: true,
+          active,
+          status: item.b_stt || '',
+          companyName: item.b_nm || '',
+          repName: item.p_nm || '',
+          taxType: item.tax_type || ''
+        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+    }
+    if (path === '/api/biz-lookup' && method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
+    }
+
     if (path === '/api/kakao-config' && method === 'GET') {
       return new Response(JSON.stringify({
         key: env.KAKAO_JS_KEY || ''
