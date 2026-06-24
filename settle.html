@@ -33213,7 +33213,7 @@ function editDriver(id){
 '<div class="fg"><label>안전교육일</label><input id="edr-safetyedu" value="'+esc(d.safetyEdu||'')+'"></div>'+
 '</div>'+
       '<div class="gr"><div class="fg"><label>캠프</label><select id="edr-camp">'+
-        campOptions.map(function(cc){return '<option '+(d.camp===cc?'selected':'')+'>'+esc(cc)+'</option>';}).join('')+
+        campOptions.map(function(cc){var dC=(d.camp||'').replace('캠프','').trim();var ccN=cc.replace('캠프','').trim();return '<option value="'+esc(ccN)+'" '+(dC===ccN?'selected':'')+'>'+esc(ccN)+'</option>';}).join('')+
       '</select></div>'+
       '<div class="fg"><label>상태</label><select id="edr-active">'+
         '<option value="true" '+(d.is_active!==false?'selected':'')+'>재직</option>'+
