@@ -30039,7 +30039,7 @@ function _renderSettlePage(settles,c){
 +(isSuperAdmin()?'<button onclick="checkDuplicateSettlements()" style="padding:8px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔍 중복검사</button>':'')
 +(isSuperAdmin()?'<button onclick="syncFirebaseSettlements()" style="padding:8px 14px;background:#0d9488;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 동기화</button>':'')
 +(isSuperAdmin()?'<button onclick="openDeleteMonthPanel()" style="padding:8px 14px;background:#854d0e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗓 월삭제</button>':'')
-+(isSuperAdmin()?'<button onclick="openResetPanel()" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 전체초기화</button>':'')
++'<button onclick="_doFullReset(null)" style="padding:8px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🧹 전체초기화</button>'
      +'</div>'
      +'<div style="font-size:10px;color:var(--text3);margin-top:8px">💡 업로드 → 재계산 → 정산 배포 순서로 진행하세요.</div>'
     +'</div>'
@@ -38445,6 +38445,81 @@ function _endSim(dealerId){
   });
 }
 
+// ── 전체 초기화 (데모/온보딩용) — 기능/설정 코드에 영향 없음 ──
+function _doFullReset(targetDid){
+  if(!_db){toast('❌ 로그인 필요');return;}
+  var did = targetDid || (_CU&&(_CU.dealerId||_CU.uid));
+  if(!did){toast('❌ dealerId 없음');return;}
+
+  var chk = prompt('⚠️ 아래 데이터가 전부 삭제됩니다:\n\n• 정산서 전체\n• 기사 정보 전체\n• 라우트·시즌·팀장수수료 단가표\n• 인센 설정\n• 출퇴근·급여·재고 데이터\n• 달력 메모\n\n기능·코드에는 영향 없습니다.\n\n확인하려면 "전체초기화" 입력:');
+  if(chk !== '전체초기화'){toast('❌ 취소됨');return;}
+
+  toast('🗑 초기화 진행 중...');
+  var promises = [];
+
+  // ── 1. dealerId 기반 컬렉션 전체 삭제 ──
+  var dealerCols = [
+    'settlements','drivers','attendance','cal_memos',
+    'payroll_results','notifications','payouts',
+    'inventory_items','inventory_ledger','inventory_orders',
+    'kiosk_orders','work_logs','leave_records','contracts'
+  ];
+  dealerCols.forEach(function(col){
+    promises.push(
+      _db.collection(col).where('dealerId','==',did).get().then(function(snap){
+        if(!snap.size) return Promise.resolve();
+        // batch는 500건 제한 — 분할 처리
+        var batches = [];
+        var b = _db.batch(); var cnt = 0;
+        snap.forEach(function(d){
+          b.delete(d.ref); cnt++;
+          if(cnt===499){ batches.push(b.commit()); b=_db.batch(); cnt=0; }
+        });
+        if(cnt>0) batches.push(b.commit());
+        return Promise.all(batches);
+      }).catch(function(){})
+    );
+  });
+
+  // ── 2. settings 문서 삭제 ──
+  var settingIds = [
+    did+'_routePrices',     did+'_routeCampMap',
+    did+'_seasonPrices',    did+'_teamLeaderPrices',
+    did+'_incSettings',     did+'_workSettings',
+    did+'_routePricesAdj',  did+'_unitPrices',
+    did+'_nocontPrices',    did+'_deliveryPrices',
+    did+'_deliveryZones',   did+'_posItems',
+  ];
+  settingIds.forEach(function(id){
+    promises.push(_db.collection('settings').doc(id).delete().catch(function(){}));
+  });
+
+  // ── 3. 메모리 초기화 ──
+  try{
+    _settleCache=[];
+    _drvCache=null;
+    if(window.RPRICE)      Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
+    if(window.SEASON_PRICES) SEASON_PRICES=[];
+    if(window.TL_PRICES)   TL_PRICES=[];
+    if(window.G_PRICES)    Object.keys(G_PRICES).forEach(function(k){delete G_PRICES[k];});
+    if(window._routeCampMap) Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});
+    if(typeof SP==='function') SP('settlements',null);
+  }catch(e){}
+
+  // ── 4. localStorage 초기화 ──
+  var prefix = ['dw_'+did,'mbti_drivers','mbti_routes','inc_','dw_settle'];
+  Object.keys(localStorage).forEach(function(k){
+    if(prefix.some(function(p){return k.startsWith(p);})) localStorage.removeItem(k);
+  });
+
+  Promise.all(promises).then(function(){
+    toast('✅ 전체 초기화 완료! 새로고침합니다...');
+    setTimeout(function(){ location.reload(); }, 1500);
+  }).catch(function(e){
+    toast('⚠️ 일부 실패: '+e.message);
+  });
+}
+
 function openResetPanel(){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-reset';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -40159,7 +40234,7 @@ function openAdminPanel(){
     '🗑 항목별 선택 초기화</button>'+
 
     // 원클릭 전체 초기화
-    '<button onclick="_fullResetDemo()" style="padding:10px 14px;background:#1e293b;color:#ef4444;border:1px solid #ef4444;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+    '<button onclick="_doFullReset(null)" style="padding:10px 14px;background:#1e293b;color:#ef4444;border:1px solid #ef4444;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
     '⚡ 원클릭 전체 초기화 (정산+기사+설정 전부)</button>'+
 
     '<div id="demo-status" style="font-size:11px;color:var(--text3);min-height:16px"></div>'+
@@ -40211,48 +40286,7 @@ function openAdminPanel(){
   };
 
   // ── 원클릭 전체 초기화 함수 ──
-  window._fullResetDemo = function(){
-    var chk = prompt('⚠️ 정산·기사·설정 전부 삭제됩니다.\n되돌릴 수 없습니다.\n\n확인하려면 "전체초기화" 입력:');
-    if(chk !== '전체초기화'){toast('❌ 취소됨');return;}
-    if(!_db||!_CU){toast('❌ 로그인 필요');return;}
-    var did = _CU.dealerId||_CU.uid;
-    var status = document.getElementById('demo-status');
-    if(status) status.textContent = '⏳ 전체 초기화 진행 중...';
-    toast('🗑 초기화 중...');
-
-    var cols = ['settlements','drivers','attendance','cal_memos','payroll_results','notifications'];
-    var promises = cols.map(function(col){
-      return _db.collection(col).where('dealerId','==',did).get().then(function(snap){
-        if(!snap.size) return;
-        var b = _db.batch();
-        snap.forEach(function(d){ b.delete(d.ref); });
-        return b.commit();
-      });
-    });
-
-    // settings 삭제
-    var settingIds = [
-      did+'_routePrices', did+'_routeCampMap', did+'_seasonPrices',
-      did+'_teamLeaderPrices', did+'_incSettings', did+'_workSettings'
-    ];
-    settingIds.forEach(function(id){
-      promises.push(_db.collection('settings').doc(id).delete().catch(function(){}));
-    });
-
-    // localStorage 초기화
-    Object.keys(localStorage).filter(function(k){
-      return k.startsWith('dw_')||k.startsWith('mbti_')||k.startsWith('inc_');
-    }).forEach(function(k){ localStorage.removeItem(k); });
-
-    Promise.all(promises).then(function(){
-      if(status) status.textContent = '✅ 전체 초기화 완료! 새로고침합니다...';
-      toast('✅ 전체 초기화 완료!');
-      setTimeout(function(){ location.reload(); }, 1500);
-    }).catch(function(e){
-      if(status) status.textContent = '⚠️ 일부 실패: '+e.message;
-      toast('⚠️ 일부 실패: '+e.message);
-    });
-  };
+  window._fullResetDemo = function(){ _doFullReset(null); };
 
   // 탭5 — 항목별 테스트 (시뮬레이션)
   var simTab=document.createElement('div');simTab.className='admin-tab-content';simTab.id='admin-tab-5';simTab.style.cssText='padding:16px;display:none';
@@ -40400,6 +40434,18 @@ function openAdminPanel(){
           .catch(function(e){toast('❌ '+e.message);});
       };})(item.id, item.name||item.id);
       td.appendChild(delBtn);
+
+      // ★ 데이터 초기화 버튼 (회사 삭제 아님 — 데이터만)
+      var rstBtn=document.createElement('button');
+      rstBtn.className='btn btn-sm';
+      rstBtn.style.cssText='background:#fef3c7;color:#92400e;border:1px solid #f59e0b;margin-left:4px;font-size:10px';
+      rstBtn.textContent='🧹 초기화';
+      rstBtn.title='데이터만 삭제 (기능/설정 코드 영향 없음)';
+      rstBtn.onclick=(function(id){return function(){
+        mo.remove();
+        _doFullReset(id);
+      };})(item.id);
+      td.appendChild(rstBtn);
 
       // ★ 체험 연장 버튼 (만료됐거나 trial 플랜인 경우)
       if(item.plan==='trial'&&!isExpired&&item.trialEnd&&item.trialEnd>=today){
