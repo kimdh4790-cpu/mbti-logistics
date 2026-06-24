@@ -199,9 +199,8 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
     match /settings/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth();
     }
     match /contracts/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -364,7 +363,7 @@ service cloud.firestore {
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /payout_sessions/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
+      allow read, list: if isAuth();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
