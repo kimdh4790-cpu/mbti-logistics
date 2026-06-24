@@ -20028,14 +20028,31 @@ function _downloadTaxCSV(type){
     var empHeader=['구분','성명','입사일','주민번호',
       '지급액','소득세(3.3%)','주민세(0.33%)','실지급액','비고'];
 
+    // ★ drivers 캐시 맵 (이름/userId → driver 정보)
+    var drvDetailMap={};
+    (_drvCache||[]).forEach(function(d){
+      if(d.userId) drvDetailMap[d.userId]=d;
+      if(d.name) drvDetailMap[d.name]=d;
+    });
+    function _getDrvDetail(s){
+      var uid=s.userId||s.driver||s.name||'';
+      return drvDetailMap[uid]||drvDetailMap[s.driver||'']||drvDetailMap[s.name||'']||{};
+    }
+
     function _bizRow(s,i){
       var cr=calcNet(s);
       var supply=cr.supplyAmt||Math.round((cr.totalAmt||0)/1.1);
       var vat=_n((cr.totalAmt||0)-supply);
       var expense=Math.round(supply*0.346);
       var wage=supply-expense;
-      return [i+1,s.bizName||s.driver||'',s.driver||s.name||'',s.joinDate||'',
-        s.ssn||'',s.bizNum||'',_n(cr.totalAmt),_n(supply),vat,_n(expense),_n(wage),
+      var drv=_getDrvDetail(s);
+      return [i+1,
+        s.bizName||drv.bizName||drv.companyName||s.driver||'',
+        s.driver||s.name||'',
+        s.joinDate||drv.joinDate||'',
+        s.ssn||drv.ssn||'',
+        s.bizNum||drv.bizNum||'',
+        _n(cr.totalAmt),_n(supply),vat,_n(expense),_n(wage),
         _n(cr.emp),_n(cr.work),_n(cr.net),''];
     }
     function _empRow(s,i){
@@ -20043,7 +20060,10 @@ function _downloadTaxCSV(type){
       var gross=_n(cr.totalAmt||cr.income||0);
       var income=Math.round(gross*0.033);
       var local=Math.round(income*0.1);
-      return [i+1,s.driver||s.name||'',s.joinDate||'',s.ssn||'',
+      var drv=_getDrvDetail(s);
+      return [i+1,s.driver||s.name||'',
+        s.joinDate||drv.joinDate||'',
+        s.ssn||drv.ssn||'',
         gross,income,local,gross-income-local,''];
     }
 
