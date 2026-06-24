@@ -8302,7 +8302,7 @@ function _processQrAttend(){
 }
 
 
-function _fbStorage(){ return null; }
+function _fbStorage(){ try{ return (typeof firebase!=='undefined'&&firebase.storage)?firebase.storage():null; }catch(e){return null;} }
 function _uploadToStorage(path, file){
   return new Promise(function(resolve){
     if(!_auth||!_auth.currentUser){resolve('');return;}
