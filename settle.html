@@ -22410,7 +22410,7 @@ function _homeIntegWidget(did) {
   var co = window._cachedCompanyDoc || {};
   var svcs = window._svcs2 || window._svcs || [];
   var isSA = typeof isSuperAdmin==='function' && isSuperAdmin();
-  var hasSettle  = co.settlePaid || svcs.indexOf('settle')>=0 || isSA;
+  var hasSettle  = co.settlePaid || svcs.indexOf('settle')>=0 || (co.services&&co.services.indexOf('settle')>=0) || co.serviceType==='settle' || isSA;
   var hasInv     = _hasInventory ? _hasInventory(co) : (co.inventoryPaid||false);
   var hasKiosk   = _hasKiosk ? _hasKiosk(co) : (co.kioskPaid||false);
   var hasQr      = co.qrPaid || svcs.indexOf('qr')>=0 || isSA;
