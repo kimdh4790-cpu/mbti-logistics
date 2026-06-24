@@ -308,14 +308,14 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
                 <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
                 <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                  <option value="50">~50명 — 개인 31만 / 단체 25만원/월</option>
-                  <option value="150">~150명 — 개인 68만 / 단체 54만원/월</option>
-                  <option value="300">~300명 — 개인 102만 / 단체 82만원/월</option>
-                  <option value="500">~500명 — 개인 170만 / 단체 136만원/월</option>
-                  <option value="700">~700명 — 개인 275만 / 단체 220만원/월</option>
-                  <option value="1000">~1000명 — 개인 393만 / 단체 314만원/월</option>
-                  <option value="1500">~1500명 — 개인 589만 / 단체 471만원/월</option>
-                  <option value="2000">~2000명 — 개인 786만 / 단체 629만원/월</option>
+                  <option value="50">~50명 — 31만원/월</option>
+                  <option value="150">~150명 — 68만원/월</option>
+                  <option value="300">~300명 — 102만원/월</option>
+                  <option value="500">~500명 — 170만원/월</option>
+                  <option value="700">~700명 — 275만원/월</option>
+                  <option value="1000">~1000명 — 393만원/월</option>
+                  <option value="1500">~1500명 — 589만원/월</option>
+                  <option value="2000">~2000명 — 786만원/월</option>
                   <option value="9999">2000명+ — 별도 문의</option>
                 </select>
               </div>
@@ -8996,6 +8996,25 @@ function _setPlanType(type){
   } else {
     gb.style.background='#7c3aed';gb.style.color='#fff';gb.style.borderColor='#7c3aed';
     pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
+  }
+  var tiers=[
+    {v:'50',  p:'31만',  g:'25만'},
+    {v:'150', p:'68만',  g:'54만'},
+    {v:'300', p:'102만', g:'82만'},
+    {v:'500', p:'170만', g:'136만'},
+    {v:'700', p:'275만', g:'220만'},
+    {v:'1000',p:'393만', g:'314만'},
+    {v:'1500',p:'589만', g:'471만'},
+    {v:'2000',p:'786만', g:'629만'},
+    {v:'9999',p:'별도문의',g:'별도문의'}
+  ];
+  var sel=document.getElementById('settle-tier-select');
+  if(sel){
+    var cur=sel.value;
+    sel.innerHTML=tiers.map(function(t){
+      var label=t.v==='9999'?'2000명+ — 별도 문의':('~'+t.v+'명 — '+(type==='personal'?t.p:t.g)+'원/월');
+      return '<option value="'+t.v+'"'+(cur===t.v?' selected':'')+'>'+label+'</option>';
+    }).join('');
   }
 }
 
