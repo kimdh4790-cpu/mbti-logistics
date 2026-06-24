@@ -14495,6 +14495,7 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 
 // ══ 배달대행 정산 현황 ══
 function pageDeliverySettle(){
+  if(!isSuperAdmin()&&!_isPlanAllowedNow('delivery')){_renderPaywall('delivery');return;}
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산 현황';
   document.getElementById('topbar-right').innerHTML='';
@@ -28151,6 +28152,7 @@ function _copyCompanyCode(el){
 
 // 재고관리 → filo.ai.kr로 이전 (스텁)
 function pageInventory(){
+  if(!isSuperAdmin()&&!_isPlanAllowedNow('inventory')){_renderPaywall('inventory');return;}
   document.getElementById('page-title').textContent='📦 재고·매출·마진';
   var el=document.getElementById('content');
   if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
@@ -29444,6 +29446,7 @@ function SP(pg,el){
 
 // ══ 정산 현황 ══
 function pageSettle(){
+  if(!isSuperAdmin()&&!_isPlanAllowedNow('settle')){_renderPaywall('settle');return;}
   window._CU_INDUSTRY='settle';
   document.getElementById('page-title').textContent='정산 현황';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
@@ -29891,6 +29894,7 @@ function _getOverlappingSeasons(month){
 // ══ 정산 관리 (메인앱 동일 UI) ══
 var _settle_month='all',_settle_camp='all',_settleCache=null;
 function pageSettlements(){
+  if(!isSuperAdmin()&&!_isPlanAllowedNow('settlements')){_renderPaywall('settlements');return;}
   document.getElementById('page-title').textContent='정산 관리';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
   var btnNew=document.createElement('button');
@@ -39400,6 +39404,16 @@ function _loadAdminStatus(){
     }).catch(function(){
       if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0) _showInitAdminBtn();
     });
+}
+
+// ★ 동기 플랜 체크 (캐시 기반) — 페이지 진입 즉시 차단용
+function _isPlanAllowedNow(feature){
+  if(isSuperAdmin()) return true;
+  if(window._trialActive) return true;
+  var d = window._cachedCompanyDoc || {};
+  var plan = d.plan || '';
+  if(plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)) return true;
+  return _isPlanAllowed(d, feature);
 }
 
 function _requirePlan(feature,callback){
