@@ -32989,7 +32989,13 @@ function pageDrivers(){
 }
 function _getDrvCamp(d){
   if(!d)return '';
-  if(d.camp)return d.camp.replace('캠프','');
+  if(d.camp){
+    var cm={'M_진주1':'진주M','진주1M':'진주M','진주M1':'진주M','M진주':'진주M','M_진주':'진주M',
+      '진주M캠프':'진주M','부산1캠프':'부산1','부산2캠프':'부산2','부산3캠프':'부산3',
+      '대구2캠프':'대구2','대구1캠프':'대구1'};
+    var raw=d.camp.replace('캠프','').trim();
+    return cm[d.camp]||cm[raw]||raw;
+  }
   var r=d.route||'';
   var ORDER=['부산1','부산2','부산3','대구2','진주M'];
   for(var i=0;i<ORDER.length;i++){if(r.indexOf(ORDER[i])>=0)return ORDER[i];}
