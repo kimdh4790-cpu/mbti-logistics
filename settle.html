@@ -11052,16 +11052,7 @@ function _importRosterExcel(input){
         toSave.push({
           name:(row[iName]||'').trim(),
           driverId:(row[iId]||'').trim(),
-          camp:(function(c){
-            var s=String(c||'').replace(/캠프/g,'').trim();
-            if(s.indexOf('진주')>=0||s.indexOf('M_진주')>=0)return '진주M';
-            if(s.indexOf('부산1')>=0)return '부산1';
-            if(s.indexOf('부산2')>=0)return '부산2';
-            if(s.indexOf('부산3')>=0)return '부산3';
-            if(s.indexOf('대구2')>=0)return '대구2';
-            if(s.indexOf('대구1')>=0)return '대구1';
-            return s;
-          })((row[iCamp]||'').trim()),
+          camp:String(row[iCamp]||'').trim(),
           wave:iWave>=0?(row[iWave]||'').trim():'',
           dayIndex:dayIndex,
           status:status,
@@ -11132,16 +11123,7 @@ function _importRosterExcel(input){
 
           // ★ 다중 키 우선순위: coupangId > 이름+캠프 복합 > 이름 단독
           // 캠프명 정규화 함수
-          var campShort=(function(c){
-            var s=String(c||'').replace(/캠프/g,'').trim();
-            if(s.indexOf('진주')>=0||s.indexOf('M_진주')>=0)return '진주M';
-            if(s.indexOf('부산1')>=0)return '부산1';
-            if(s.indexOf('부산2')>=0)return '부산2';
-            if(s.indexOf('부산3')>=0)return '부산3';
-            if(s.indexOf('대구2')>=0)return '대구2';
-            if(s.indexOf('대구1')>=0)return '대구1';
-            return s;
-          })(String(drv.camp||'').trim());
+          var campShort=String(drv.camp||'').trim();
           var campKey=nmNorm+'@'+campShort;
           var docId=existMap[uidLow]
             ||existMap['nc:'+campKey]
