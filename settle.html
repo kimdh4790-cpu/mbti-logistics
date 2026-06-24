@@ -299,6 +299,11 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
             </div>
             <div id="svc-settle-industry" style="margin-top:10px;display:block">
+              <div style="display:flex;gap:6px;margin-bottom:8px" onclick="event.stopPropagation()">
+                <button id="btn-plan-personal" onclick="event.stopPropagation();_setPlanType('personal')" style="flex:1;padding:6px;border:2px solid var(--brand);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">👤 개인</button>
+                <button id="btn-plan-group" onclick="event.stopPropagation();_setPlanType('group')" style="flex:1;padding:6px;border:2px solid var(--border);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">🏢 단체 (20개사+, 20%↓)</button>
+              </div>
+              <input type="hidden" id="r-plan-type" value="personal">
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
                 <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
                 <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
@@ -8979,6 +8984,20 @@ function generateCompanyCode(){
   return code;
 }
 
+// ── 개인/단체 플랜 토글 ──
+function _setPlanType(type){
+  document.getElementById('r-plan-type').value=type;
+  var pb=document.getElementById('btn-plan-personal');
+  var gb=document.getElementById('btn-plan-group');
+  if(type==='personal'){
+    pb.style.background='var(--brand)';pb.style.color='#fff';pb.style.borderColor='var(--brand)';
+    gb.style.background='transparent';gb.style.color='var(--text3)';gb.style.borderColor='var(--border)';
+  } else {
+    gb.style.background='#7c3aed';gb.style.color='#fff';gb.style.borderColor='#7c3aed';
+    pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
+  }
+}
+
 // ── 회사 등록 ──
 
 // 서비스 토글 (복수 선택)
@@ -9075,12 +9094,9 @@ function doRegister(){
   // ★ 사업자등록증 확인
   if(!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
 
-  // ★ 서버측 사업자번호 이중 확인 (클라이언트 우회 방지)
-  _db.collection('companies').where('bizNumber','==',biz).get().then(function(dupSnap){
-    if(!dupSnap.empty&&!isOwner&&!OWNER_EMAIL.includes(email)){
-      err.textContent='이미 등록된 사업자번호입니다. 재가입은 불가합니다.';return;
-    }
-    _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
+  err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
+
+  _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     var uid=cred.user.uid;
     var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
     var servicesStr=(document.getElementById('r-services')||{value:'settle'}).value||'settle';
@@ -9119,6 +9135,7 @@ function doRegister(){
         bizItem:(document.getElementById('r-bizitem')||{value:''}).value.trim(),
         repName:rep,
         ceoName:rep,
+        planType:(document.getElementById('r-plan-type')||{value:'personal'}).value||'personal',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     };
@@ -9201,7 +9218,6 @@ function doRegister(){
       else err.textContent='오류: '+e.message;
       err.style.display='block';
     });
-  }).catch(function(e){err.style.display='block';err.textContent='서버 오류: '+e.message;});
 }
 
 // ── 회사코드 확인 ──
