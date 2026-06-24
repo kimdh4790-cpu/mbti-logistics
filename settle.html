@@ -162,37 +162,14 @@ document.addEventListener("DOMContentLoaded",function(){var a=document.getElemen
 var _bizDocFile=null;
 function onBizDocSelected(input){
   var file=input.files&&input.files[0];if(!file)return;
-  if(file.size>5*1024*1024){return;}
+  if(file.size>5*1024*1024){alert('파일 크기는 5MB 이하만 가능합니다.');return;}
   _bizDocFile=file;
   var prev=document.getElementById('r-bizdoc-preview');
   var nm=document.getElementById('r-bizdoc-name');
   var msg=document.getElementById('r-bizdoc-msg');
   if(prev)prev.style.display='block';
   if(nm)nm.textContent=file.name;
-  if(msg){msg.textContent='OCR 인식 중...';msg.style.color='#666';}
-  var ak=window.__AK||'';
-  if(!ak){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var b64=e.target.result.split(',')[1];
-    var mt=file.type==='application/pdf'?'application/pdf':file.type==='image/png'?'image/png':'image/jpeg';
-    fetch('/ocr',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({imageData:b64,mediaType:mt})
-    }).then(function(r){return r.json();})
-    .then(function(data){
-      var text=(data.content&&data.content[0]&&data.content[0].text)||'';
-      try{
-        var info=JSON.parse(text.replace(/```json|```/g,'').trim());
-        var flds={bizNum:'r-biznum',companyName:'r-company',repName:'r-rep',bizAddr:'r-bizaddr',bizType:'r-biztype',bizItem:'r-bizitem'};
-        Object.keys(flds).forEach(function(k){if(info[k]){var el=document.getElementById(flds[k]);if(el)el.value=info[k];}});
-        console.log('[OCR]',info);
-        if(msg){msg.textContent='OCR 완료';msg.style.color='green';}
-      }catch(e){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}}
-    }).catch(function(){if(msg){msg.textContent='파일 첨부 완료';msg.style.color='green';}});
-  };
-  reader.readAsDataURL(file);
+  if(msg){msg.textContent='✅ 파일 첨부 완료';msg.style.color='green';}
 }
 window.onBizDocSelected=onBizDocSelected;</script>
 
@@ -262,6 +239,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
         🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
       </div>
       <div class="fg"><label>회사명</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
+      <div class="fg"><label>대표자명</label><input id="r-rep" type="text" placeholder="홍길동"></div>
 <div class="fg"><label>영문 약자 <span style="color:var(--red);font-size:10px">*</span></label><input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"><div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.7">회사 영문 약자를 입력하세요 (최대 4자)<br>• 회사 전용 로그인 링크 생성에 사용 — 예) donway.ai.kr/c/<b>MBTI</b><br>• 홈화면 설치 시 앱 아이콘에 표시 — 예) 파란 배경에 <b>MBTI</b></div></div>
       <div class="fg"><label>사업자등록번호</label>
         <div style="display:flex;gap:8px">
@@ -291,10 +269,10 @@ window.onBizDocSelected=onBizDocSelected;</script>
 
       </div>
       <!-- OCR 자동입력 필드 (사업자등록증 인식 후 자동 채워짐) -->
-      <div class="fg"><label>사업장 주소 <span style="font-size:10px;color:var(--text3)">(사업자등록증 자동 인식)</span></label><input id="r-bizaddr" type="text" placeholder="부산시 수영구 수영로 668, 607호"></div>
+      <div class="fg"><label>사업장 주소</label><input id="r-bizaddr" type="text" placeholder="부산시 수영구 수영로 668, 607호"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-        <div class="fg" style="margin-bottom:0"><label>업태 <span style="font-size:10px;color:var(--text3)">(자동 인식)</span></label><input id="r-biztype" type="text" placeholder="서비스업"></div>
-        <div class="fg" style="margin-bottom:0"><label>종목 <span style="font-size:10px;color:var(--text3)">(자동 인식)</span></label><input id="r-bizitem" type="text" placeholder="기타물품운반원"></div>
+        <div class="fg" style="margin-bottom:0"><label>업태</label><input id="r-biztype" type="text" placeholder="서비스업"></div>
+        <div class="fg" style="margin-bottom:0"><label>종목</label><input id="r-bizitem" type="text" placeholder="기타물품운반원"></div>
       </div>
       <div class="fg"><label>관리자 이메일</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
       <div class="fg"><label>비밀번호</label><input id="r-pw" type="password" placeholder="8자 이상"></div>
@@ -8934,18 +8912,21 @@ var _verifiedName="";
 var _kakaoId="";
 
 function checkBizNum(){
-  var biz=document.getElementById('r-biznum').value.trim();
+  var biz=document.getElementById('r-biznum').value.replace(/-/g,'').trim();
   var msg=document.getElementById('r-biznum-msg');
-  if(!biz){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='사업자번호를 입력하세요';return;}
-  msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='확인 중...';
+  if(!biz||biz.length!==10){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='사업자번호 10자리를 입력하세요';return;}
+  msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='조회 중...';
+  document.getElementById('r-biznum').dataset.verified='';
 
   // 화이트리스트 체크
-  if(OWNER_BIZ.includes(biz)){
+  var bizFmt=biz.replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3');
+  if(OWNER_BIZ.includes(bizFmt)||OWNER_BIZ.includes(biz)){
     msg.style.color='#7c3aed';msg.textContent='✅ OWNER 계정 — 영구 무료 사용 가능';
-    document.getElementById('r-biznum').dataset.verified='owner';return;
+    document.getElementById('r-biznum').dataset.verified='owner';
+    _fetchBizInfo(biz);return;
   }
 
-  // Firestore 중복 체크
+  // Firestore 중복 체크 → 통과 시 국세청 API 조회
   _db.collection('companies').where('bizNumber','==',biz).get().then(function(snap){
     if(!snap.empty){
       var existing=snap.docs[0].data();
@@ -8959,13 +8940,42 @@ function checkBizNum(){
         document.getElementById('r-biznum').dataset.verified='blocked';
       }
     } else {
-      msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다';
-      document.getElementById('r-biznum').dataset.verified='ok';
+      // 국세청 API로 사업자 정보 자동조회
+      _fetchBizInfo(biz, function(ok){
+        if(ok){
+          msg.style.color='#059669';msg.textContent='✅ 확인 완료 — 회사명·대표자명 자동 입력됨';
+        } else {
+          msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다 (정보 직접 입력)';
+        }
+        document.getElementById('r-biznum').dataset.verified='ok';
+      });
     }
   }).catch(function(){
-    msg.style.color='#059669';msg.textContent='✅ 확인 완료';
-    document.getElementById('r-biznum').dataset.verified='ok';
+    _fetchBizInfo(biz, function(){
+      msg.style.color='#059669';msg.textContent='✅ 확인 완료';
+      document.getElementById('r-biznum').dataset.verified='ok';
+    });
   });
+}
+
+// ── 국세청 API로 사업자 정보 자동조회 ──
+function _fetchBizInfo(biz, cb){
+  fetch('/api/biz-lookup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bizNum:biz})
+  }).then(function(r){return r.json();})
+  .then(function(data){
+    if(data.ok && data.companyName){
+      var cEl=document.getElementById('r-company');
+      var rEl=document.getElementById('r-rep');
+      if(cEl && !cEl.value) cEl.value=data.companyName;
+      if(rEl && !rEl.value && data.repName) rEl.value=data.repName;
+      if(cb) cb(true);
+    } else {
+      if(cb) cb(false);
+    }
+  }).catch(function(){if(cb) cb(false);});
 }
 
 // ── 회사코드 생성 ──
@@ -9031,6 +9041,7 @@ function selectService(type){
 }
 function doRegister(){
   var company=document.getElementById('r-company').value.trim();
+  var rep=(document.getElementById('r-rep')||{value:''}).value.trim();
   var biz=document.getElementById('r-biznum').value.trim();
   var email=document.getElementById('r-email').value.trim();
   var shortLabel=(document.getElementById('r-short')||{value:''}).value.trim().toUpperCase().slice(0,4);
@@ -9113,6 +9124,8 @@ function doRegister(){
         bizAddr:(document.getElementById('r-bizaddr')||{value:''}).value.trim(),
         bizType:(document.getElementById('r-biztype')||{value:''}).value.trim(),
         bizItem:(document.getElementById('r-bizitem')||{value:''}).value.trim(),
+        repName:rep,
+        ceoName:rep,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid
     };
