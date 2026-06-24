@@ -8668,6 +8668,11 @@ function showApp(){
   }
   // 구독 상태 확인 (슈퍼어드민은 제외)
   if(_CU&&!isSuperAdmin()&&_db){
+    // ★ companies.trialEnd 유효하면 subscriptions 체크 스킵
+    var _today0=new Date().toISOString().slice(0,10);
+    var _cachedTE=(window._cachedCompanyDoc&&window._cachedCompanyDoc.trialEnd)||(_CU&&_CU.trialEnd)||'';
+    if(_cachedTE&&_cachedTE>=_today0){/* trial 유효 → subscriptions 체크 불필요 */}
+    else
     _db.collection('subscriptions').doc(_CU.dealerId||_CU.uid).get()
       .then(function(snap){
         if(snap.exists){
