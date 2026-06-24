@@ -8032,8 +8032,8 @@ function _execBulkTaxSync(payloads,ym,taxEmail,taxName,doneCb){
   };
 
   _db.collection('taxShares').doc(token).set(shareData).then(function(){
-    // ① 엑셀 자동 다운로드
-    if(typeof _txsBulkExcel==='function') _txsBulkExcel(payloads,ym);
+    // ① 엑셀 자동 다운로드 (사업자/직원 분리)
+    if(typeof _downloadTaxCSV==='function') _downloadTaxCSV();
     // ② 클립보드 복사
     if(navigator.clipboard) navigator.clipboard.writeText(url).catch(function(){});
     // ③ 결과 팝업 (링크 1개)
