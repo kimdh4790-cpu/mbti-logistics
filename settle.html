@@ -38311,6 +38311,140 @@ function openDeleteMonthPanel(){
   document.getElementById('modals').appendChild(mo);
 }
 
+// ── 플랜 시뮬레이션 모달 ──
+function _openSimModal(dealerId, dealerName, item){
+  var old2=document.getElementById('mo-sim');if(old2)old2.remove();
+  var mo=document.createElement('div');mo.className='mo show';mo.id='mo-sim';
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  var d=document.createElement('div');d.className='md';d.style.maxWidth='420px';
+
+  var plans = [
+    {key:'settle',    label:'📦 AI정산 (쿠팡)',    fields:{settlePaid:true, qrPaid:false, payrollPaid:false, deliveryPaid:false, inventoryPaid:false}},
+    {key:'delivery',  label:'🛵 배달대행 정산',     fields:{settlePaid:false, deliveryPaid:true, qrPaid:false, payrollPaid:false}},
+    {key:'qr_payroll',label:'🔐💼 QR+급여 콤보',   fields:{settlePaid:false, qrPaid:true, payrollPaid:true}},
+    {key:'qr',        label:'🔐 QR출퇴근만',        fields:{settlePaid:false, qrPaid:true, payrollPaid:false}},
+    {key:'inventory', label:'📦 재고관리',           fields:{inventoryPaid:true}},
+    {key:'full',      label:'⭐ 풀패키지 (전체)',    fields:{settlePaid:true, qrPaid:true, payrollPaid:true, deliveryPaid:true, inventoryPaid:true}},
+  ];
+
+  var planOpts = plans.map(function(p,i){
+    var cur = (item.plan===p.key||item.serviceType===p.key);
+    return '<option value="'+i+'"'+(cur?' selected':'')+'>'+p.label+'</option>';
+  }).join('');
+
+  d.innerHTML = '<div class="mdt" style="background:linear-gradient(135deg,#1e1b4b,#1e3a5f);color:#a78bfa">🧪 플랜 시뮬레이션 — '+esc(dealerName)+'</div>'
+    +'<div style="padding:16px;display:flex;flex-direction:column;gap:12px">'
+    +'<div style="font-size:12px;color:var(--text2);background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px">'
+    +'✅ DB에 실제 플랜 필드를 임시로 write → 방문 모드로 진입<br>'
+    +'종료 시 원본 플랜으로 자동 복원됩니다</div>'
+    +'<div><label style="font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">시뮬할 플랜 선택</label>'
+    +'<select id="sim-plan-sel" style="width:100%;padding:9px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'+planOpts+'</select></div>'
+    +'<div id="sim-status" style="font-size:11px;color:var(--text3);min-height:14px"></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="_closeMoSim()" class="btn" style="flex:1">취소</button>'
+    +'<button id="sim-start-btn" style="flex:2;padding:10px;background:linear-gradient(135deg,#7c3aed,#0066ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧪 시뮬 시작 → 방문 모드</button>'
+    +'</div></div>';
+
+  mo.appendChild(d);
+  document.getElementById('modals').appendChild(mo);
+}
+
+// ── 시뮬 시작 ──
+function _closeMoSim(){var m=document.getElementById('mo-sim');if(m)m.remove();}
+function _startSim(dealerId, dealerName){
+  if(!_db||!isSuperAdmin()){toast('❌ 권한 없음');return;}
+  var sel = document.getElementById('sim-plan-sel');
+  if(!sel){toast('❌ 플랜 선택 필요');return;}
+  var idx = parseInt(sel.value);
+  var plans = [
+    {key:'settle',    label:'📦 AI정산',    fields:{settlePaid:true,  qrPaid:false, payrollPaid:false, deliveryPaid:false, inventoryPaid:false, plan:'settle'}},
+    {key:'delivery',  label:'🛵 배달대행',  fields:{settlePaid:false, deliveryPaid:true, qrPaid:false, payrollPaid:false, plan:'delivery'}},
+    {key:'qr_payroll',label:'🔐💼 QR+급여', fields:{settlePaid:false, qrPaid:true, payrollPaid:true, plan:'qr_payroll'}},
+    {key:'qr',        label:'🔐 QR출퇴근',  fields:{settlePaid:false, qrPaid:true, payrollPaid:false, plan:'qr'}},
+    {key:'inventory', label:'📦 재고',       fields:{inventoryPaid:true, plan:'inventory'}},
+    {key:'full',      label:'⭐ 풀패키지',   fields:{settlePaid:true, qrPaid:true, payrollPaid:true, deliveryPaid:true, inventoryPaid:true, plan:'full'}},
+  ];
+  var chosen = plans[idx];
+  var status = document.getElementById('sim-status');
+  if(status) status.textContent = '⏳ DB 업데이트 중...';
+
+  // 현재 필드 백업 후 시뮬 필드 write
+  _db.collection('companies').doc(dealerId).get().then(function(snap){
+    var cur = snap.exists ? snap.data() : {};
+    // 백업 저장
+    var backup = {
+      _simBackup: true,
+      _simBackupPlan: cur.plan||'trial',
+      _simBackupFields: JSON.stringify({
+        settlePaid:   cur.settlePaid||false,
+        qrPaid:       cur.qrPaid||false,
+        payrollPaid:  cur.payrollPaid||false,
+        deliveryPaid: cur.deliveryPaid||false,
+        inventoryPaid:cur.inventoryPaid||false,
+      }),
+      _simLabel: chosen.label,
+      _simBy: (_CU&&_CU.email)||'superadmin',
+      _simAt: new Date().toISOString(),
+    };
+    // 시뮬 필드 + 백업 동시 write
+    return _db.collection('companies').doc(dealerId).update(
+      Object.assign({}, chosen.fields, backup)
+    );
+  }).then(function(){
+    if(status) status.textContent = '✅ DB 업데이트 완료! 방문 모드로 진입합니다...';
+    toast('🧪 '+chosen.label+' 시뮬 시작!');
+    // 방문 모드 진입 — slug 있으면 slug URL, 없으면 dealerId로
+    _db.collection('companies').doc(dealerId).get().then(function(snap){
+      var d2 = snap.exists?snap.data():{};
+      var slug = d2.slug||'';
+      var mo = document.getElementById('mo-sim');if(mo)mo.remove();
+      if(slug){
+        // slug URL로 이동
+        setTimeout(function(){
+          window.open(window.location.origin+'/c/'+slug.toLowerCase(), '_blank');
+        }, 500);
+      } else {
+        // switchDealer로 방문
+        if(typeof switchDealer==='function') switchDealer(dealerId);
+      }
+    });
+  }).catch(function(e){
+    if(status) status.textContent = '❌ 실패: '+e.message;
+    toast('❌ 시뮬 실패: '+e.message);
+  });
+}
+
+// ── 시뮬 종료 (원복) ──
+function _endSim(dealerId){
+  if(!_db||!isSuperAdmin()){toast('❌ 권한 없음');return;}
+  _db.collection('companies').doc(dealerId).get().then(function(snap){
+    if(!snap.exists||!snap.data()._simBackup){
+      toast('⚠️ 시뮬 백업 없음 — 이미 종료됐거나 시뮬한 적 없음');
+      return;
+    }
+    var d = snap.data();
+    var backup = {};
+    try{ backup = JSON.parse(d._simBackupFields||'{}'); }catch(e){}
+    backup.plan = d._simBackupPlan||'trial';
+    // 시뮬 필드 제거
+    var remove = {
+      _simBackup:      firebase.firestore.FieldValue.delete(),
+      _simBackupPlan:  firebase.firestore.FieldValue.delete(),
+      _simBackupFields:firebase.firestore.FieldValue.delete(),
+      _simLabel:       firebase.firestore.FieldValue.delete(),
+      _simBy:          firebase.firestore.FieldValue.delete(),
+      _simAt:          firebase.firestore.FieldValue.delete(),
+    };
+    return _db.collection('companies').doc(dealerId).update(
+      Object.assign({}, backup, remove)
+    );
+  }).then(function(){
+    toast('✅ 시뮬 종료 — 원본 플랜으로 복원 완료');
+  }).catch(function(e){
+    toast('❌ 복원 실패: '+e.message);
+  });
+}
+
 function openResetPanel(){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-reset';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -40229,6 +40363,31 @@ function openAdminPanel(){
       btn.onclick=(function(id){return function(){switchDealer(id);mo.remove();};})(item.id);
       td.appendChild(btn);
 
+      // ★ 시뮬 버튼
+      var simBtn=document.createElement('button');
+      simBtn.className='btn btn-sm';
+      simBtn.style.cssText='background:linear-gradient(135deg,#7c3aed,#0066ff);color:#fff;margin-left:4px;font-size:10px';
+      simBtn.textContent='🧪 시뮬';
+      simBtn.onclick=(function(id,nm,it){return function(){
+        _openSimModal(id, nm, it);
+        mo.remove();
+      };})(item.id, item.name||item.id, item);
+      td.appendChild(simBtn);
+
+      // ★ 시뮬 진행 중이면 종료 버튼 표시
+      if(item.simActive){
+        var endBtn=document.createElement('button');
+        endBtn.className='btn btn-sm';
+        endBtn.style.cssText='background:#f59e0b;color:#000;margin-left:4px;font-size:10px;font-weight:700';
+        endBtn.textContent='🔴 시뮬종료';
+        endBtn.title='현재 시뮬중: '+(item.simLabel||'');
+        endBtn.onclick=(function(id){return function(){
+          _endSim(id);
+          setTimeout(function(){mo.remove();openAdminPanel();},1200);
+        };})(item.id);
+        td.appendChild(endBtn);
+      }
+
       // ★ 삭제 버튼
       var delBtn=document.createElement('button');
       delBtn.className='btn btn-sm';
@@ -40311,7 +40470,9 @@ function openAdminPanel(){
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
-        cnt:dealerCnt[doc.id]||0
+        cnt:dealerCnt[doc.id]||0,
+        simActive:d._simBackup||false,
+        simLabel:d._simLabel||''
       });
     });
     if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
