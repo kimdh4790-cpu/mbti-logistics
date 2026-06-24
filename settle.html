@@ -2191,7 +2191,7 @@ function _sendStatementEmail(driver, monthLabel, netPay, details, settle){
   var s=settle||{};
   var gross=s.gross||s.totalPay||netPay;
   var deduct=(gross-netPay)||0;
-  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var compName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'회사명 미등록';
   var isBiz=s.isBiz||false;
   var bizName=s.bizName||driver.name||'';
   var bizNum=s.bizNum||'';
@@ -11226,11 +11226,11 @@ function _importRosterExcel(input){
           var compUpdate={rosterUploaded:true,lastRosterAt:new Date().toISOString()};
           // 벤더명에서 슬래시 앞 한글 이름만 추출 (예: "엠비티아이 유한회사/MBTIU" → "엠비티아이 유한회사")
           var vendKo=xlsVendor.split('/')[0].trim();
-          if(vendKo)compUpdate.companyName=vendKo;
-          if(xlsBizNum)compUpdate.bizNumber=xlsBizNum;
+          if(vendKo&&!(_CU&&_CU.companyName))compUpdate.companyName=vendKo;
+          if(xlsBizNum&&!(_CU&&_CU.bizNumber))compUpdate.bizNumber=xlsBizNum;
           _db.collection('companies').doc(cidU).update(compUpdate).catch(function(){});
           // _CU 메모리 업데이트
-          if(vendKo&&_CU)_CU.companyName=vendKo;
+          if(vendKo&&_CU&&!_CU.companyName)_CU.companyName=vendKo;
           if(xlsBizNum&&_CU)_CU.bizNumber=xlsBizNum;
         }
         toast('✅ 기사 '+uniqueDrivers.length+'명 + 근무표 '+toSave.length+'건 자동 등록 완료!');
@@ -20309,7 +20309,7 @@ function _txsBulkShareExec(){
 
 function _txsBulkExcel(targets, ym){
   if(typeof XLSX==='undefined'){toast('❌ 엑셀 라이브러리 없음');return;}
-  var compName=(_CU&&(_CU.companyName||_CU.name))||'엠비티아이 유한회사';
+  var compName=(_CU&&(_CU.companyName||_CU.name))||(_CU&&_CU.name)||'회사명 미등록';
   // 타이틀 행
   var rows=[
     ['[세금계산서] 특수고용직 고용·산재 계산표'],
@@ -36487,7 +36487,7 @@ function _uploadImgToStorage(base64Data, path){
 
 // ── 명세서 캡처용 HTML 생성 (관리자 화면과 동일한 레이아웃)
 function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
-  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var compName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'회사명 미등록';
   var supply=Math.round(vatIncome/1.1);
   var vat=vatIncome-supply;
   var emp=(r.emp||0)+(r.work||0);
@@ -36779,7 +36779,7 @@ function _buildTaxCaptureHTML(x, r, name, month, vatIncome){
   var drvAddr=x.bizAddr||(_drvRec&&_drvRec.bizAddr)||'(주소 미입력)';
   var bizType=x.bizType||(_drvRec&&_drvRec.bizType)||'서비스업';
   var bizItem=x.bizItem||(_drvRec&&_drvRec.bizItem)||'기타물품운반원';
-  var compName=(_CU&&_CU.companyName)||'엠비티아이 유한회사';
+  var compName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'회사명 미등록';
   var compBiz=(_CU&&_CU.bizNum)||'373-86-02536';
   var compAddr=(_CU&&_CU.bizAddr)||'부산시 수영구 수영로 668, 607호';
 
