@@ -22241,7 +22241,7 @@ function _calcDayPayFromAtt(did, ym, att, attId) {
       .where('ym','==',ym);
 
     ref.get().then(function(snap) {
-      var minWage = 9860; // 2024 최저임금
+      var minWage = (typeof LABOR_LAW_2026!=='undefined'?LABOR_LAW_2026.minWage:10320); // 2026 최저임금
       var dayPay = Math.round(normalH * minWage + overtime * minWage * 1.5);
 
       if(!snap.empty) {
