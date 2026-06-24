@@ -29608,13 +29608,13 @@ function pageSettle(){
       +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         +'<div>'
           +'<div style="font-size:11px;opacity:.6">📈 '+((_CU&&(_CU.companyName||_CU.name))||'\uD68C\uC0AC')+' 단가 마진 (경비 전)</div>'
-          +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서 − 고용·산재 − 부가세10%</div>'
+          +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서(명세서 기준) − 고용·산재 − 부가세10%</div>'
         +'</div>'
         +'<div style="text-align:right">'
           +'<div style="font-size:20px;font-weight:900;color:#a78bfa">₩'+fmt(totMargin)+'</div>'
           +'<div style="font-size:10px;opacity:.5">'
           +'회사: 고용 -₩'+fmt(totEmpComp)+' · 산재 -₩'+fmt(totWorkComp)
-          +(totExtraOut>0?' · 추가지출 -₩'+fmt(totExtraOut):'')
+          
           +' | 기사: 고용 -₩'+fmt(totEmpDrv)+' · 산재 -₩'+fmt(totWorkDrv)
           +' | 부가세 -₩'+fmt(totVat)
           +'</div>'
