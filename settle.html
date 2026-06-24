@@ -40011,6 +40011,115 @@ function openAdminPanel(){
     '</div>';
   d.appendChild(dbTab);
 
+  // 탭4 추가 — 데모 초기화 버튼
+  dbTab.innerHTML += '<hr style="margin:16px 0;border-color:var(--border)">'+
+    '<div style="font-size:13px;font-weight:800;margin-bottom:10px">🎬 데모 모드</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px">'+
+
+    // 데모 데이터 주입
+    '<button onclick="_injectDemoData()" style="padding:10px 14px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+    '🎬 데모 데이터 자동 주입 (기사 5명 + 정산 3건)</button>'+
+
+    // 항목별 선택 초기화
+    '<button onclick="openResetPanel()" style="padding:10px 14px;background:#7f1d1d;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+    '🗑 항목별 선택 초기화</button>'+
+
+    // 원클릭 전체 초기화
+    '<button onclick="_fullResetDemo()" style="padding:10px 14px;background:#1e293b;color:#ef4444;border:1px solid #ef4444;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">'+
+    '⚡ 원클릭 전체 초기화 (정산+기사+설정 전부)</button>'+
+
+    '<div id="demo-status" style="font-size:11px;color:var(--text3);min-height:16px"></div>'+
+    '</div>';
+
+  d.appendChild(dbTab);
+
+  // ── 데모 데이터 주입 함수 ──
+  window._injectDemoData = function(){
+    if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+    var did = _CU.dealerId||_CU.uid;
+    var status = document.getElementById('demo-status');
+    if(status) status.textContent = '⏳ 데모 데이터 주입 중...';
+    var today = new Date();
+    var ym = today.getFullYear()+''+(String(today.getMonth()+1).padStart(2,'0'));
+    var batch = _db.batch();
+
+    // 기사 5명 주입
+    var drivers = [
+      {name:'김택배',  courierId:'demo001', camp:'부산1캠프', phone:'01011111111', bankName:'하나은행', bankAccount:'111111111111', insType:'contractor', isBiz:false},
+      {name:'이배송',  courierId:'demo002', camp:'부산1캠프', phone:'01022222222', bankName:'국민은행', bankAccount:'222222222222', insType:'contractor', isBiz:false},
+      {name:'박라우트', courierId:'demo003', camp:'부산2캠프', phone:'01033333333', bankName:'신한은행', bankAccount:'333333333333', insType:'employee',   isBiz:false},
+      {name:'최물류',  courierId:'demo004', camp:'부산2캠프', phone:'01044444444', bankName:'우리은행', bankAccount:'444444444444', insType:'contractor', isBiz:false},
+      {name:'정기사',  courierId:'demo005', camp:'대구1캠프', phone:'01055555555', bankName:'카카오뱅크',bankAccount:'555555555555', insType:'contractor', isBiz:true},
+    ];
+    drivers.forEach(function(drv){
+      var ref = _db.collection('drivers').doc(did+'_'+drv.courierId);
+      batch.set(ref, Object.assign({}, drv, {dealerId:did, status:'active', createdAt:new Date().toISOString()}));
+    });
+
+    // 정산 3건 주입
+    var settles = [
+      {month:ym, camp:'부산1캠프', totalAmt:3250000, netAmt:2980000, dcnt:312, status:'confirmed', driverName:'김택배', courierId:'demo001'},
+      {month:ym, camp:'부산1캠프', totalAmt:2840000, netAmt:2610000, dcnt:278, status:'confirmed', driverName:'이배송', courierId:'demo002'},
+      {month:ym, camp:'부산2캠프', totalAmt:4120000, netAmt:3790000, dcnt:403, status:'pending',   driverName:'박라우트', courierId:'demo003'},
+    ];
+    settles.forEach(function(s, i){
+      var ref = _db.collection('settlements').doc(did+'_demo_'+i+'_'+ym);
+      batch.set(ref, Object.assign({}, s, {dealerId:did, createdAt:new Date().toISOString()}));
+    });
+
+    batch.commit().then(function(){
+      if(status) status.textContent = '✅ 데모 데이터 주입 완료! 기사 5명 + 정산 3건';
+      toast('✅ 데모 데이터 주입 완료!');
+    }).catch(function(e){
+      if(status) status.textContent = '❌ 실패: '+e.message;
+      toast('❌ 주입 실패: '+e.message);
+    });
+  };
+
+  // ── 원클릭 전체 초기화 함수 ──
+  window._fullResetDemo = function(){
+    var chk = prompt('⚠️ 정산·기사·설정 전부 삭제됩니다.\n되돌릴 수 없습니다.\n\n확인하려면 "전체초기화" 입력:');
+    if(chk !== '전체초기화'){toast('❌ 취소됨');return;}
+    if(!_db||!_CU){toast('❌ 로그인 필요');return;}
+    var did = _CU.dealerId||_CU.uid;
+    var status = document.getElementById('demo-status');
+    if(status) status.textContent = '⏳ 전체 초기화 진행 중...';
+    toast('🗑 초기화 중...');
+
+    var cols = ['settlements','drivers','attendance','cal_memos','payroll_results','notifications'];
+    var promises = cols.map(function(col){
+      return _db.collection(col).where('dealerId','==',did).get().then(function(snap){
+        if(!snap.size) return;
+        var b = _db.batch();
+        snap.forEach(function(d){ b.delete(d.ref); });
+        return b.commit();
+      });
+    });
+
+    // settings 삭제
+    var settingIds = [
+      did+'_routePrices', did+'_routeCampMap', did+'_seasonPrices',
+      did+'_teamLeaderPrices', did+'_incSettings', did+'_workSettings'
+    ];
+    settingIds.forEach(function(id){
+      promises.push(_db.collection('settings').doc(id).delete().catch(function(){}));
+    });
+
+    // localStorage 초기화
+    Object.keys(localStorage).filter(function(k){
+      return k.startsWith('dw_')||k.startsWith('mbti_')||k.startsWith('inc_');
+    }).forEach(function(k){ localStorage.removeItem(k); });
+
+    Promise.all(promises).then(function(){
+      if(status) status.textContent = '✅ 전체 초기화 완료! 새로고침합니다...';
+      toast('✅ 전체 초기화 완료!');
+      setTimeout(function(){ location.reload(); }, 1500);
+    }).catch(function(e){
+      if(status) status.textContent = '⚠️ 일부 실패: '+e.message;
+      toast('⚠️ 일부 실패: '+e.message);
+    });
+  };
+
   // 탭5 — 항목별 테스트 (시뮬레이션)
   var simTab=document.createElement('div');simTab.className='admin-tab-content';simTab.id='admin-tab-5';simTab.style.cssText='padding:16px;display:none';
   var simItems=[
