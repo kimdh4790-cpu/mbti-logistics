@@ -2492,24 +2492,25 @@ service cloud.firestore {
           return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
         const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
-        // 1차: validate API (상호명·대표자명 포함)
-        const validateUrl = `https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=${encodeURIComponent(apiKey)}`;
-        const ntsRes = await fetch(validateUrl, {
+        // status API로 상태 확인 (validate는 500 오류)
+        const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${apiKey}`;
+        const ntsRes = await fetch(statusUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ businesses: [{ b_no: rawNum, start_dt: '', p_nm: '', p_nm2: '', b_nm: '', corp_no: '', b_sector: '', b_type: '', b_adr: '' }] })
+          body: JSON.stringify({ b_no: [rawNum] })
         });
-        console.log('[biz-lookup] validate status:', ntsRes.status);
-        if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status);
-        const ntsData = await ntsRes.json();
-        console.log('[biz-lookup] validate response:', JSON.stringify(ntsData).slice(0, 300));
+        console.log('[biz-lookup] status:', ntsRes.status);
+        const rawText = await ntsRes.text();
+        console.log('[biz-lookup] body:', rawText.slice(0, 400));
+        if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status + ' ' + rawText.slice(0,100));
+        const ntsData = JSON.parse(rawText);
         const item = ntsData.data && ntsData.data[0];
-        if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        const active = item.valid === '01' || item.b_stt_cd === '01';
+        if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음', raw: rawText.slice(0,200) }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        const active = item.b_stt_cd === '01';
         return new Response(JSON.stringify({
           ok: true,
           active,
-          status: item.b_stt || item.valid_msg || '',
+          status: item.b_stt || '',
           companyName: item.b_nm || '',
           repName: item.p_nm || '',
           taxType: item.tax_type || ''
