@@ -1862,7 +1862,7 @@ function calcNet(x){
     supplyAmt  = Math.round(totalAmt / 1.1);
     expenseAmt = Math.round(supplyAmt * 0.346);
     monthlyWage= supplyAmt - expenseAmt;
-    empCalc    = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008  / 10) * 10 : 0;  // 기사 부담 고용 0.8%
+    empCalc    = monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.009  / 10) * 10 : 0;  // 기사 부담 고용 0.8%
     workCalc   = Math.floor(monthlyWage * 0.0088 / 10) * 10;  // 산재 0.88%
   } else {
     // 주민번호(비사업자): VAT 없음, 고용·산재 없음 → 원천세 3.3%만
@@ -1878,7 +1878,7 @@ function calcNet(x){
   var workStored = (x.work !== undefined && x.work !== null && x.work !== '' && +x.work > 0) ? +x.work : 0;
   var work = _isBiz ? (workStored > 0 ? workStored : workCalc) : 0;
   // 회사 부담 보험료 (기사 공제분과 별개)
-  var empComp = _isBiz ? (monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.008 / 10) * 10 : 0) : 0; // 회사 부담 고용 0.8%
+  var empComp = _isBiz ? (monthlyWage >= 800000 ? Math.floor(monthlyWage * 0.009 / 10) * 10 : 0) : 0; // 회사 부담 고용 0.8%
   var workComp = work; // 산재 전액 회사 부담 (= work와 동일 비율)
   var insComp = empComp + workComp; // 회사 총 부담 보험료
   var eq   = +x.eq  || 0;
@@ -7308,8 +7308,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           // 공제 계산
           var supplyAmt=Math.round(taxBase/1.1);
           var monthlyWage=Math.round(supplyAmt*0.654);
-          var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
-          var workIns=Math.floor(monthlyWage*0.0088/10)*10;
+          var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.009/10)*10:0;
+          var workIns=Math.floor(monthlyWage*0.0098/10)*10;
 
           // ★ 명절 프로모션 금액 계산 (마진율 적용)
           var _dmPromoEntry=(window._lastDrvMap&&window._lastDrvMap[cleanId])||dm;
@@ -7904,7 +7904,7 @@ function saveAllCp_orig(){
     var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0,finc=dm.addIncAmt||dm.freshIncAmt||0;
     var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);
     var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
-    var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
+    var emp=wage>=800000?Math.floor(wage*0.009/10)*10:0,work=Math.floor(wage*0.0098/10)*10;
     savedPayloads.push({
       driver:dm.uid,driverName:name,camp:item.camp,month:p.month,
       totalAmt:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,
@@ -8139,7 +8139,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
   }
   var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);  // 모두 VAT포함가nocontAmt||0);
   var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
-  var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
+  var emp=wage>=800000?Math.floor(wage*0.009/10)*10:0,work=Math.floor(wage*0.0098/10)*10;
   var routeDetails=[];
   Object.keys(dm.routes).forEach(function(r){
     var rv=dm.routes[r];
@@ -8209,8 +8209,8 @@ function _saveCpDriver(camp,dm,name,month,cb){
         payload.damt=newD; payload.ramt=newR;
         var newInc=newD+newR+(payload.fresh||0)+(payload.finc||0)+(payload.nocont||0);
         var newSa=Math.round(newInc/1.1),newWage=Math.round(newSa*0.654);
-        var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
-        var newWork=Math.floor(newWage*0.0088/10)*10;
+        var newEmp=newWage>=800000?Math.floor(newWage*0.009/10)*10:0;
+        var newWork=Math.floor(newWage*0.0098/10)*10;
         payload.totalAmt=newInc;payload.income=newInc;payload.supplyAmt=newSa;
         payload.monthlyWage=newWage;payload.emp=newEmp;payload.work=newWork;
         payload.deduct=newEmp+newWork;payload.net=newInc-(newEmp+newWork);
@@ -8251,7 +8251,7 @@ function _saveCpDriver(camp,dm,name,month,cb){
               });
               var ni=nd+nr+(x.fresh||0)+(x.finc||0)+(x.nocont||0);
               var sa=Math.round(ni/1.1),wg=Math.round(sa*0.654);
-              var em=wg>=800000?Math.floor(wg*0.008/10)*10:0,wk=Math.floor(wg*0.0088/10)*10;
+              var em=wg>=800000?Math.floor(wg*0.009/10)*10:0,wk=Math.floor(wg*0.0098/10)*10;
               sd.ref.update({routeDetails:nrds,damt:nd,ramt:nr,totalAmt:ni,income:ni,
                 supplyAmt:sa,monthlyWage:wg,emp:em,work:wk,deduct:em+wk,net:ni-(em+wk),
                 priceOverride:_ov,updatedAt:new Date().toISOString()
@@ -12373,7 +12373,7 @@ var DW_SLOTS={
 // ── 택배 정산 계산 설정 (기본값)
 var PARCEL_CALC_CFG={
   freshbag_inc: 25,    // 프레시백 인센 (원/건)
-  emp_rate:     0.008, // 고용보험 (0.8%)
+  emp_rate:     0.009, // 고용보험 (0.8%)
   work_rate:    0.0088,// 산재보험 (0.88%)
   supply_ratio: 1.1,   // VAT (공급가액 = taxBase / 1.1)
   wage_ratio:   0.654  // 월보수액 = 공급가액 × 0.654
@@ -13416,8 +13416,8 @@ window.dwRunLiveCalculations=function(){
           _totalInj=_reInj; _totalExt=_reExt;
           var preTax=Math.floor(_pfSum+_totalInj-_totalExt);
           var tax=Math.floor(preTax*0.033);
-          var sanjae2=Math.floor(preTax*0.0088);
-          var goyal2=Math.floor(preTax*0.008);
+          var sanjae2=Math.floor(preTax*0.0098);
+          var goyal2=Math.floor(preTax*0.009);
           var net2=Math.max(0,preTax-tax-sanjae2-goyal2);
           window._dwResults.push({riderId:rid,totalCount:_validCnt,pfSum:_pfSum,injected:_totalInj,extracted:_totalExt,preTax:preTax,totalTax:tax,net:net2,targetPrice:_finalTP});
           // ★ 2패스 완료 후 카드 최종값으로 업데이트
@@ -13502,8 +13502,8 @@ window.dwRunLiveCalculations=function(){
         // ★ 기사 카드 실시간 업데이트
         var preTax=Math.floor(_pfSum+_totalInj-_totalExt);
         var tax=Math.floor(preTax*0.033);
-        var sanjae=Math.floor(preTax*0.0088);
-        var goyal=Math.floor(preTax*0.008);
+        var sanjae=Math.floor(preTax*0.0098);
+        var goyal=Math.floor(preTax*0.009);
         var net=Math.max(0,preTax-tax-sanjae-goyal);
         var u=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
         u(cardId+'-cnt',_validCnt+'건');
@@ -13981,8 +13981,8 @@ function _dwAppendRiderCard(r){
   var trackColor=r.isDefault?'#6b7280':r.targetPrice>=5500?'#7c3aed':r.targetPrice>=5100?'#2563eb':r.targetPrice>=4200?'#059669':'#d97706';
   var preTax=r.preTax||0;
   var tax=r.totalTax||0;
-  var sanjae=Math.round(preTax*0.0088);
-  var goyal=Math.round(preTax*0.008);
+  var sanjae=Math.round(preTax*0.0098);
+  var goyal=Math.round(preTax*0.009);
   var totalDeduct=tax+sanjae+goyal;
   var net=Math.max(0,preTax-totalDeduct);
 
@@ -17055,8 +17055,8 @@ function _buildUniversalPayslipGeneric(emp, month, compName){
   var supply=isBiz?(isVatInc?Math.round(vatIncome/1.1):vatIncome):vatIncome;
   var vat=isBiz?(isVatInc?vatIncome-supply:Math.round(supply*0.1)):0;
   var tax=isBiz?0:Math.round(net*0.033);
-  var empIns=isBiz?Math.round(supply*0.346*0.008):0; // 고용보험
-  var workIns=isBiz?Math.round(supply*0.346*0.0088):0; // 산재
+  var empIns=isBiz?Math.round(supply*0.346*0.009):0; // 고용보험
+  var workIns=isBiz?Math.round(supply*0.346*0.0098):0; // 산재
   var totalDeduct=tax+empIns+workIns+deduct;
   var finalPay=net-totalDeduct;
 
@@ -18319,8 +18319,8 @@ function _dwRenderDriverDash(s){
     var preTax=Math.round(s.preTax||0);
     var tax=Math.round(s.tax||0);
     var sysOp=Math.round(s.leaseFee||0);
-    var sanjae=Math.round(preTax*0.0088);
-    var goyal=Math.round(preTax*0.008);
+    var sanjae=Math.round(preTax*0.0098);
+    var goyal=Math.round(preTax*0.009);
     var totalDeduct=tax+sysOp+sanjae+goyal;
     var net=Math.max(0,preTax-totalDeduct);
     return '<div style="background:var(--bg2);border-radius:14px;padding:16px;margin-bottom:14px">'
@@ -20335,8 +20335,8 @@ function _txsBulkExcel(targets, ym){
     var vat=totalAmt-supply;
     var expense=Math.round(supply*0.346);
     var monthly=supply-expense;
-    var emp=cn.emp||s.emp||(monthly>=800000?Math.floor(monthly*0.008/10)*10:0);
-    var work=cn.work||s.work||Math.floor(monthly*0.0088/10)*10;
+    var emp=cn.emp||s.emp||(monthly>=800000?Math.floor(monthly*0.009/10)*10:0);
+    var work=cn.work||s.work||Math.floor(monthly*0.0098/10)*10;
     var net=totalAmt-emp-work;
     // 입사일 (엑셀 날짜 시리얼 또는 문자)
     var joinDate=drvInfo.joinDate||s.joinDate||'';
@@ -31724,8 +31724,8 @@ function updSECalc(){
   var banner=document.getElementById('se-mismatch-banner');
   if(banner) banner.style.display='none';
   var monthlyWage=Math.round(supplyAmt*0.654);
-  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;  // 기사부담 0.8%
-  var workIns=Math.floor(monthlyWage*0.0088/10)*10;
+  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.009/10)*10:0;  // 기사부담 0.8%
+  var workIns=Math.floor(monthlyWage*0.0098/10)*10;
   var deduct=empIns+workIns+dmg+etcM+adv;  // 고용+산재+파손+기타(-)+가불
   var net=taxBase-deduct;
   // 요약 카드 갱신
@@ -31842,8 +31842,8 @@ function _saveSECurrent(){
   var taxBase=newDamt+newRamt+fresh+finc+nocont+etcPlus+(+(cached&&cached.etcPlusTL)||0);  // ★ 팀장수수료 포함
   var supplyAmt=Math.round(taxBase/1.1);
   var monthlyWage=Math.round(supplyAmt*0.654);
-  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
-  var workIns=Math.floor(monthlyWage*0.0088/10)*10;
+  var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.009/10)*10:0;
+  var workIns=Math.floor(monthlyWage*0.0098/10)*10;
   var deductTotal=empIns+workIns+dmg+etcMinus+adv;
   var netPay=taxBase-deductTotal;
   var payload={
@@ -32141,8 +32141,8 @@ function _applyPriceOverrideToMonth(month){
       });
       var ni=nd+nr+(x.fresh||0)+(x.finc||0)+(x.nocont||0);
       var sa=Math.round(ni/1.1),wg=Math.round(sa*0.654);
-      var em=wg>=800000?Math.floor(wg*0.008/10)*10:0;
-      var wk=Math.floor(wg*0.0088/10)*10;
+      var em=wg>=800000?Math.floor(wg*0.009/10)*10:0;
+      var wk=Math.floor(wg*0.0098/10)*10;
       batch.update(sd.ref,{
         routeDetails:nrds,damt:nd,ramt:nr,
         totalAmt:ni,income:ni,supplyAmt:sa,monthlyWage:wg,
@@ -32245,8 +32245,8 @@ function recalcAllSettlements(){
       var taxBase=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);  // ★ inc 제외, finc x값 우선
       var supplyAmt=Math.round(taxBase/1.1);
       var monthlyWage=Math.round(supplyAmt*0.654);
-      var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
-      var workIns=Math.floor(monthlyWage*0.0088/10)*10;
+      var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.009/10)*10:0;
+      var workIns=Math.floor(monthlyWage*0.0098/10)*10;
       var deductTotal=(x.dmg||0)+empIns+workIns+(x.adv||0)+(x.eq||0)+(x.etcMinus||0);
       var net=taxBase-deductTotal;
 
@@ -33830,8 +33830,8 @@ function saveDriver(id){
             var newIncome=newDamt+newRamt+(sdata.fresh||0)+(sdata.finc||0)+(sdata.nocont||0)+(sdata.etcPlus||0);
             var newSa=Math.round(newIncome/1.1);
             var newWage=Math.round(newSa*0.654);
-            var newEmp=newWage>=800000?Math.floor(newWage*0.008/10)*10:0;
-            var newWork=Math.floor(newWage*0.0088/10)*10;
+            var newEmp=newWage>=800000?Math.floor(newWage*0.009/10)*10:0;
+            var newWork=Math.floor(newWage*0.0098/10)*10;
             var newDeduct=(sdata.dmg||0)+newEmp+newWork+(sdata.adv||0)+(sdata.eq||0)+(sdata.etcMinus||0);
             var newNet=newIncome-newDeduct;
             batch.update(sd.ref,{
@@ -36704,8 +36704,8 @@ function _dwAutoSendPayslips(sessions, platform, periodInfo){
     if(!s.driverId||!s.net||s.net<=0)return;
     var preTax=Math.round(s.preTax||0);
     var tax=Math.round(s.tax||0);
-    var sanjae=Math.round(preTax*0.0088);
-    var goyal=Math.round(preTax*0.008);
+    var sanjae=Math.round(preTax*0.0098);
+    var goyal=Math.round(preTax*0.009);
     var totalDeduct=tax+sanjae+goyal;
     var net=Math.max(0,preTax-totalDeduct);
 
@@ -37676,7 +37676,7 @@ function pageStats(){
         // 회사부담 보험료 (고용0.9% + 산재0.88%)
         var mw=r.monthlyWage||0;
         var empComp=mw>=800000?Math.floor(mw*0.009/10)*10:0;
-        var workComp=Math.floor(mw*0.0088/10)*10;
+        var workComp=Math.floor(mw*0.0098/10)*10;
         var insComp=empComp+workComp;
         // 부가세 계산
         var driverSupply=Math.round((r.net||0)/1.1);    // 기사 세금계산서 공급가(VAT제외)
@@ -37907,7 +37907,7 @@ function _statRenderCombined(){
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       var totalVat=ct?Math.round(ct*1.1):(r.income||0);
       var mw=r.monthlyWage||0;
-      var insComp=(mw>=800000?Math.floor(mw*0.009/10)*10:0)+Math.floor(mw*0.0088/10)*10;
+      var insComp=(mw>=800000?Math.floor(mw*0.009/10)*10:0)+Math.floor(mw*0.0098/10)*10;
       if(!aiByMonth[mo])aiByMonth[mo]={revenue:0,cost:0,ins:0};
       aiByMonth[mo].revenue+=totalVat;
       aiByMonth[mo].cost+=(r.net||0);
