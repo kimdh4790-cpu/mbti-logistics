@@ -39622,7 +39622,13 @@ function _isPlanAllowedNow(feature){
   if(window._trialActive) return true;
   var d = window._cachedCompanyDoc || {};
   var plan = d.plan || '';
-  if(plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)) return true;
+  var today = new Date().toISOString().slice(0,10);
+  // trial: trialEnd 있으면 날짜 체크, 없으면 그냥 허용 (데모 계정)
+  if(plan==='trial'||(d.trialEnd&&d.trialEnd>=today)) return true;
+  // OWNER / any_paid / full 플랜 전체 허용
+  if(plan==='OWNER'||plan==='full'||plan==='any_paid') return true;
+  // settlePaid 있으면 payout도 허용 (송금 관리)
+  if(feature==='payout'&&(d.settlePaid||d.deliveryPaid||d.payrollPaid)) return true;
   return _isPlanAllowed(d, feature);
 }
 
@@ -39677,10 +39683,8 @@ var _PLAN_FEATURE_MAP={
 function _isPlanAllowed(d,feature){
   var isTrial=window._trialActive||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10));
   if(isTrial){
-    // ★ trial = AI 택배정산(settle) 범위만 허용
-    var trialOk=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
-    if(!feature||trialOk.indexOf(feature)>=0)return true;
-    return false;
+    // trial = 전체 기능 허용 (데모/체험 계정)
+    return true;
   }
   if(d.settlePaid&&(!feature||['settle','settlements','stats','prices','season','contract','roster','tax_share'].indexOf(feature)>=0))return true;
   if(d.universalPaid&&(!feature||['universal','universal_settle','universal_input','settlements','stats','prices','season','contract','roster','tax_share','drivers','expense','vehicle','schedule','evaluation','notify_history','notices'].indexOf(feature)>=0))return true;
