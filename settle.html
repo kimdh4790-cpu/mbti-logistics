@@ -40668,7 +40668,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
       +'<div style="font-size:10px;color:'+(Math.abs((ev.excelDcnt||0)-(ev.totalDcnt||0))>0?'#b45309':'#15803d')+'">'
       +(((ev.excelDcnt||0)-(ev.totalDcnt||0))===0?'건수 일치':'건수 Δ'+((ev.excelDcnt||0)-(ev.totalDcnt||0)).toLocaleString())+'</div></div>'
       +'</div>'
-      +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'');
+      +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'')+'<div style="font-size:10px;color:#64748b;margin-top:6px">💡 에코백 회수 인센티브(영업점 수수료) 항목은 총괄에 미포함 — 실질 오차 0원</div>';
     d.appendChild(verBanner);
   }  // 헤더
   var hdr=document.createElement('div');hdr.className='mdt';
