@@ -3330,6 +3330,149 @@ service cloud.firestore {
       }
     }
 
+    // ── 토스 지급대행 (페이아웃) ──
+    // POST /toss/payout  — 즉시송금(EXPRESS) or 예약송금(SCHEDULED)
+    if (path === '/toss/payout' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, adminEmail, payouts, scheduleType, payoutDate } = body;
+        const ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+
+        // 슈퍼어드민 or 해당 딜러만 허용
+        if (!adminEmail || (!ADMIN_EMAILS.includes(adminEmail) && adminEmail !== dealerId)) {
+          return new Response(JSON.stringify({ error: '권한 없음' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const TOSS_PAYOUT_SECRET = env.TOSS_PAYOUT_SECRET_KEY || env.TOSS_SECRET_KEY || '';
+        if (!TOSS_PAYOUT_SECRET) {
+          return new Response(JSON.stringify({ error: 'TOSS_PAYOUT_SECRET_KEY 미설정 — 토스 심사 완료 후 등록 필요' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        // 은행명 → 토스 은행코드 변환
+        const BANK_CODES = {
+          '국민은행':  '004', 'KB국민':    '004',
+          '신한은행':  '088', '신한':      '088',
+          '우리은행':  '020', '우리':      '020',
+          '하나은행':  '081', '하나':      '081',
+          '기업은행':  '003', 'IBK':       '003',
+          '농협은행':  '011', '농협':      '011',
+          '카카오뱅크':'090', '카카오':    '090',
+          '토스뱅크':  '092', '토스':      '092',
+          '케이뱅크':  '089',
+          '새마을금고':'045',
+          '신협':      '048',
+          '우체국':    '071',
+          '씨티은행':  '027',
+          'SC제일':    '023',
+          '부산은행':  '032',
+          '경남은행':  '039',
+          '대구은행':  '031',
+          '광주은행':  '034',
+          '전북은행':  '037',
+          '제주은행':  '035',
+        };
+
+        // payouts 배열 검증 및 bankCode 매핑
+        if (!Array.isArray(payouts) || payouts.length === 0) {
+          return new Response(JSON.stringify({ error: 'payouts 배열 필요' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const mappedPayouts = payouts.map((p, i) => {
+          const bankCode = p.bankCode || BANK_CODES[p.bankName] || '';
+          if (!bankCode) throw new Error(`${p.name}(${p.bankName}) 은행코드 매핑 실패`);
+          if (!p.accountNumber) throw new Error(`${p.name} 계좌번호 없음`);
+          if (!p.amount || p.amount < 1) throw new Error(`${p.name} 송금금액 오류`);
+          return {
+            payoutId: `DONWAY-${dealerId.slice(0,8)}-${Date.now()}-${i}`,
+            sellerId: p.driverId || p.userId || p.name,
+            sellerName: p.name,
+            bankCode,
+            accountNumber: p.accountNumber,
+            holderName: p.holderName || p.name,
+            amount: Math.round(p.amount),
+            purpose: p.purpose || `${p.month || ''} 정산금`,
+          };
+        });
+
+        const requestBody = {
+          scheduleType: scheduleType || 'EXPRESS',
+          ...(scheduleType === 'SCHEDULED' && payoutDate ? { payoutDate } : {}),
+          payouts: mappedPayouts,
+        };
+
+        // ★ 토스 페이아웃 API — JWE 암호화 필요 (심사 완료 후 보안키로 암호화 구현)
+        // 현재는 골격만 구성, TOSS_PAYOUT_SECURITY_KEY 등록 후 JWE 암호화 추가 예정
+        const encoded = btoa(TOSS_PAYOUT_SECRET + ':');
+        const tossRes = await fetch('https://api.tosspayments.com/v1/payouts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${encoded}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `DONWAY-${dealerId}-${Date.now()}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        const tossData = await tossRes.json();
+
+        if (!tossRes.ok) {
+          return new Response(JSON.stringify({ error: tossData.message || '토스 페이아웃 오류', detail: tossData }), {
+            status: tossRes.status, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, data: tossData }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // POST /toss/payout-status — 송금 상태 조회
+    if (path === '/toss/payout-status' && method === 'POST') {
+      try {
+        const { payoutId } = await request.json();
+        const TOSS_PAYOUT_SECRET = env.TOSS_PAYOUT_SECRET_KEY || env.TOSS_SECRET_KEY || '';
+        if (!TOSS_PAYOUT_SECRET) {
+          return new Response(JSON.stringify({ error: 'TOSS_PAYOUT_SECRET_KEY 미설정' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+        }
+        const encoded = btoa(TOSS_PAYOUT_SECRET + ':');
+        const res = await fetch(`https://api.tosspayments.com/v1/payouts/${payoutId}`, {
+          headers: { 'Authorization': `Basic ${encoded}` }
+        });
+        const data = await res.json();
+        return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // POST /toss/payout-webhook — 토스 페이아웃 웹훅 (payout.changed)
+    if (path === '/toss/payout-webhook' && method === 'POST') {
+      try {
+        const bodyText = await request.text();
+        const data = JSON.parse(bodyText);
+        const { payoutId, status, sellerId } = data?.data || {};
+
+        // Firestore payouts 컬렉션 업데이트
+        const fsUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/payouts/${payoutId}`;
+        await fetch(fsUrl, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: {
+            status: { stringValue: status },
+            updatedAt: { stringValue: new Date().toISOString() },
+          }})
+        });
+
+        return new Response('OK', { status: 200 });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      }
+    }
+
     // ── 임시 비밀번호 조회 (슈퍼어드민 전용) /toss/temp-pw ──
     if (path === '/toss/temp-pw' && method === 'POST') {
       try {
