@@ -41121,14 +41121,50 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         +(Math.abs(diff)>0?'<span style="font-size:11px;font-weight:700;color:'+diffColor+';margin-left:8px">'+diffSign+fmt2(diff)+'</span>':'<span style="font-size:10px;color:#15803d;margin-left:8px">✓</span>')
         +'</div></div>';
     }
+    // Raw 집계 vs 총괄 합계 비교
+    var _rawDcnt=ev.totalDcnt||0, _rawRcnt=ev.totalRcnt||0;
+    var _exDcnt=ev.excelDcnt||0,  _exRcnt=ev.excelRcnt||0;
+    var _exTotal=ev.excelTotal||0, _rawTotal=ev.rawCalc||ev.sumTotal||0;
+    var _exFresh=ev.excelFresh||0, _rawFresh=ev.sumFresh||0;
+    var _exInc=ev.excelInc||0,     _rawInc=ev.sumInc||0;
+    var _exDmg=ev.excelDmg||0,     _rawDmg=ev.sumDmg||0;
+
+    function _vRow2(label, exVal, rawVal, exCnt, rawCnt){
+      var diff=exVal-rawVal;
+      var diffSign=diff>=0?'+':'';
+      var ok=Math.abs(diff)<=THR;
+      var cntHtml='';
+      if(exCnt!==undefined){
+        var cntDiff=exCnt-rawCnt;
+        var cntOk=Math.abs(cntDiff)===0;
+        cntHtml='<div style="font-size:10px;color:#64748b;margin-top:2px">'
+          +'총괄: '+exCnt.toLocaleString()+'건 / Raw합산: '+rawCnt.toLocaleString()+'건'
+          +(cntOk?' <span style="color:#15803d">✓</span>':'<span style="color:#b45309"> Δ'+(cntDiff>=0?'+':'')+cntDiff.toLocaleString()+'</span>')
+          +'</div>';
+      }
+      return '<div style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<span style="font-size:12px;font-weight:700">'+label+'</span>'
+        +'<div style="text-align:right">'
+        +'<span style="font-size:11px;color:#64748b">총괄: </span><span style="font-size:12px;font-weight:800">₩'+fmt2(exVal)+'</span>'
+        +'<span style="font-size:11px;color:#64748b;margin-left:8px">Raw: </span><span style="font-size:12px;font-weight:800">₩'+fmt2(rawVal)+'</span>'
+        +(ok?'<span style="font-size:11px;color:#15803d;margin-left:8px">✓ 일치</span>'
+            :'<span style="font-size:11px;font-weight:800;color:#b45309;margin-left:8px">Δ'+diffSign+fmt2(diff)+'</span>')
+        +'</div></div>'
+        +cntHtml
+        +'</div>';
+    }
+
     var rows='';
-    rows+=_vRow('📦 배송+반품 합계', ev.excelTotal||0, (ev.excelDcnt||ev.totalDcnt||0)+(ev.excelRcnt||ev.totalRcnt||0)>0?(ev.excelDcnt||ev.totalDcnt||0)+(ev.excelRcnt||ev.totalRcnt||0):undefined, ev.diffTotal||0);
-    if((ev.excelFresh||0)>0||Math.abs(ev.diffFresh||0)>0)
-      rows+=_vRow('🧊 프레시백', ev.excelFresh||0, undefined, ev.diffFresh||0);
-    if((ev.excelInc||0)>0||Math.abs(ev.diffInc||0)>0)
-      rows+=_vRow('⚡ 추가인센', ev.excelInc||0, undefined, ev.diffInc||0);
-    if((ev.excelDmg||0)>0||Math.abs(ev.diffDmg||0)>0)
-      rows+=_vRow('⚠️ 분실파손', ev.excelDmg||0, undefined, ev.diffDmg||0);
+    rows+=_vRow2('📦 배송+반품 금액', _exTotal, _rawTotal, _exDcnt||_rawDcnt, _rawDcnt);
+    if(_exDcnt>0||_rawDcnt>0)
+      rows+=_vRow2('🚚 배송건수', _exDcnt, _rawDcnt, undefined, undefined).replace('₩','').replace('₩','');
+    if(_exFresh>0||_rawFresh>0)
+      rows+=_vRow2('🧊 프레시백', _exFresh, _rawFresh, undefined, undefined);
+    if(_exInc>0||_rawInc>0)
+      rows+=_vRow2('⚡ 추가인센', _exInc, _rawInc, undefined, undefined);
+    if(_exDmg>0||_rawDmg>0)
+      rows+=_vRow2('⚠️ 분실파손', _exDmg, _rawDmg, undefined, undefined);
     var totalDiff=ev.diffRaw||ev.diffTotal||0;
     var totalSign=totalDiff>=0?'+':'';
     verBanner.innerHTML=
@@ -41136,14 +41172,18 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
       +rows
       +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">'
       +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
-      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">쿠팡 지급액</div>'
-      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.excelTotal||0)+'</div></div>'
+      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">총괄 합계</div>'
+      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.excelTotal||0)+'</div>'
+      +'<div style="font-size:10px;color:#64748b">'+(ev.excelDcnt||0).toLocaleString()+'건</div></div>'
       +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
-      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">기사 합산</div>'
-      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.rawCalc||ev.sumTotal||0)+'</div></div>'
+      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">Raw 집계</div>'
+      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.rawCalc||ev.sumTotal||0)+'</div>'
+      +'<div style="font-size:10px;color:#64748b">'+(ev.totalDcnt||0).toLocaleString()+'건</div></div>'
       +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
       +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">차이</div>'
-      +'<div style="font-size:14px;font-weight:800;color:'+(Math.abs(totalDiff)>THR?'#b45309':'#15803d')+'">'+totalSign+fmt2(totalDiff)+'</div></div>'
+      +'<div style="font-size:14px;font-weight:800;color:'+(Math.abs(totalDiff)>THR?'#b45309':'#15803d')+'">'+totalSign+fmt2(totalDiff)+'</div>'
+      +'<div style="font-size:10px;color:'+(Math.abs((ev.excelDcnt||0)-(ev.totalDcnt||0))>0?'#b45309':'#15803d')+'">'
+      +(((ev.excelDcnt||0)-(ev.totalDcnt||0))===0?'건수 일치':'건수 Δ'+((ev.excelDcnt||0)-(ev.totalDcnt||0)).toLocaleString())+'</div></div>'
       +'</div>'
       +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'');
     d.appendChild(verBanner);
