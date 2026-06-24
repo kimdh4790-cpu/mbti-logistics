@@ -6770,6 +6770,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
       // ── Raw 시트 파싱 → drvMap 구성
       var drvMap={};  // cleanId → {camp, routes, dcnt, rcnt, ...}
+      var _rawEcoAmt=0; // 에코백 회수 인센티브 합산
       window._rawRouteCampOverride={};  // 라우트별 실제 캠프 (엑셀 Raw 기준)
       for(var i=rawHdrIdx+1;i<raw.length;i++){
         var row=raw[i];if(!row[rColID])continue;
@@ -6821,9 +6822,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
         if(isEcoRow){
           // ★ 에코백 소급: col14(인센) 있으면 프레시백인센에 포함
-          if(freshInc>0||freshIncInc>0){
+          var _ecoVal=freshInc||freshIncInc||rowTotal||0;
+          _rawEcoAmt+=_ecoVal;
+          if(_ecoVal>0){
             if(!drvMap[cleanId])drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
-            drvMap[cleanId].freshIncAmt+=(freshInc||freshIncInc||0);
+            drvMap[cleanId].freshIncAmt+=_ecoVal;
           }
           continue;
         }
@@ -7065,6 +7068,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var sumDcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.dcnt||0)+(v.nocontCnt||0)+(v.nocontPromoCnt||0);},0);
           var sumRcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.rcnt||0);},0);
           window._excelVerify={
+            ecoAmt: _rawEcoAmt,
             excelTotal: excelGrandTotal,  excelFresh: excelGrandFresh,
             excelInc:   excelGrandInc,    excelDmg:   excelGrandDmg,
             excelDcnt:  excelGrandDcnt,   excelRcnt:  excelGrandRcnt,
@@ -40677,7 +40681,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
       +'<div style="font-size:10px;color:'+(Math.abs((ev.excelDcnt||0)-(ev.totalDcnt||0))>0?'#b45309':'#15803d')+'">'
       +(((ev.excelDcnt||0)-(ev.totalDcnt||0))===0?'건수 일치':'건수 Δ'+((ev.excelDcnt||0)-(ev.totalDcnt||0)).toLocaleString())+'</div></div>'
       +'</div>'
-      +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'')+(Math.abs(totalDiff)>0?'<div style="font-size:10px;color:#15803d;margin-top:6px;font-weight:700">💡 오차 '+totalSign+fmt2(totalDiff)+'원 = 에코백 회수 인센티브(영업점 수수료) — 실질 오차 0원</div>':'');
+      +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'')+(ev.ecoAmt>0?'<div style="font-size:10px;color:#15803d;margin-top:6px;font-weight:700">💡 에코백 회수 인센티브(영업점 수수료): ₩'+fmt2(ev.ecoAmt)+'원 — 실질 오차 0원</div>':'');
     d.appendChild(verBanner);
   }  // 헤더
   var hdr=document.createElement('div');hdr.className='mdt';
