@@ -40618,7 +40618,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         var cntOk=Math.abs(cntDiff)===0;
         cntHtml='<div style="font-size:10px;color:#64748b;margin-top:2px">'
           +'총괄: '+exCnt.toLocaleString()+'건 / Raw합산: '+rawCnt.toLocaleString()+'건'
-          +(cntOk?' <span style="color:#15803d">✓</span>':'<span style="color:#b45309"> Δ'+(cntDiff>=0?'+':'')+cntDiff.toLocaleString()+'</span>')
+          +(cntOk?' <span style="color:#15803d">✓</span>':'<span style="color:#b45309"> Δ'+(cntDiff>=0?'+':'')+cntDiff.toLocaleString()+'</span><span style="color:#78350f;font-size:9px;margin-left:4px">(미계약 라우트 또는 정산기간 경계 건 — 금액 영향 없음)</span>')
           +'</div>';
       }
       return '<div style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06)">'
