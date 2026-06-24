@@ -6812,7 +6812,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           nocontCnt:0,nocontAmt:0,routes:{},
           promoCnt:0,promoAmt:0,promoRoutes:{},       // 설 프로모션
           normalPromoCnt:0,normalPromoAmt:0,normalPromoRoutes:{}, // 설 일반 프로모션
-          nocontPromoCnt:0,nocontPromoAmt:0  // 명절 미계약 라우트
+          nocontPromoCnt:0,nocontPromoAmt:0,  // 명절 미계약 라우트
+          rawVerifyAmt:0,rawFreshAmt:0  // ★ 검증용 col13합산, col14합산
         };
         // 캠프: 첫 번째로 발견된 캠프 우선
         if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타')
@@ -6830,6 +6831,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(!drvMap[cleanId]) drvMap[cleanId]={cleanId:cleanId,camp:campName||'기타',dcnt:0,rcnt:0,delAmt:0,retAmt:0,freshAmt:0,freshIncAmt:0,addIncAmt:0,dmgAmt:0,nocontCnt:0,nocontAmt:0,routes:{},promoCnt:0,promoAmt:0,normalPromoCnt:0,normalPromoAmt:0,nocontPromoCnt:0,nocontPromoAmt:0};
           var freshVal=freshInc||(row[rColFresh]?Number(row[rColFresh])||0:0)||rowTotal||0;
           drvMap[cleanId].freshAmt+=freshVal;
+          drvMap[cleanId].rawFreshAmt=(drvMap[cleanId].rawFreshAmt||0)+freshVal; // ★ 검증용
           // ★ 날짜별 프레시백 수집 (아이디지원용)
           if(rowDate&&freshVal>0){
             if(!drvMap[cleanId].dateFresh)drvMap[cleanId].dateFresh={};
@@ -6917,6 +6919,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         drvMap[cleanId].delAmt+=delAmt;
         drvMap[cleanId].retAmt+=retAmt;
         drvMap[cleanId].freshAmt+=freshInc;
+        drvMap[cleanId].rawVerifyAmt=(drvMap[cleanId].rawVerifyAmt||0)+rowTotal; // ★ 검증용 col13합산
         // ★ 프레시백 인센: 우리 라우트단가표에 있는 노선만 집계
         if(freshIncInc>0){
           var _rk3=Object.keys(RPRICE||{});
@@ -7057,7 +7060,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var sumFresh=Object.values(totalMap).reduce(function(s,v){return s+(v.freshAmt||0);},0);
           var sumInc  =Object.values(totalMap).reduce(function(s,v){return s+(v.incAmt||0);},0);
           var sumDmg  =Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
-          var rawCalcTotal=Object.values(drvMap).reduce(function(s,v){return s+(v.delAmt||0)+(v.nocontAmt||0)+(v.nocontPromoAmt||0);},0);
+          // ★ 검증용: col13합산+프레시백col14+미계약 - 총괄분실파손 = TOTAL기준 비교
+          var rawCalcTotal=Object.values(drvMap).reduce(function(s,v){return s+(v.rawVerifyAmt||0)+(v.rawFreshAmt||0)+(v.nocontAmt||0)+(v.nocontPromoAmt||0);},0)-(excelGrandDmg||0);
           var sumDcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.dcnt||0)+(v.nocontCnt||0)+(v.nocontPromoCnt||0);},0);
           var sumRcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.rcnt||0);},0);
           window._excelVerify={
