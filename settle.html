@@ -8940,15 +8940,8 @@ function checkBizNum(){
         document.getElementById('r-biznum').dataset.verified='blocked';
       }
     } else {
-      // 국세청 API로 사업자 정보 자동조회
-      _fetchBizInfo(biz, function(ok){
-        if(ok){
-          msg.style.color='#059669';msg.textContent='✅ 확인 완료 — 회사명·대표자명 자동 입력됨';
-        } else {
-          msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다 (정보 직접 입력)';
-        }
-        document.getElementById('r-biznum').dataset.verified='ok';
-      });
+      msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다';
+      document.getElementById('r-biznum').dataset.verified='ok';
     }
   }).catch(function(){
     _fetchBizInfo(biz, function(){
