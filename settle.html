@@ -19897,47 +19897,71 @@ function _doDownloadSettleExcel(data){
   function _fmt(n){var v=Math.round(n||0);return v===0?'0':v.toLocaleString('ko-KR');}
 
   // 헤더
-  var rows=[\
-    ['이름','캠프','정산월','지급합계','공제합계','실지급액',\
-     '고용보험','산재보험','분실파손','기타공제','가불',\
-     '배송건수','반품건수','총건수','사업자번호','상호명','상태']\
+  var rows=[
+    ['이름','캠프','정산월',
+     '배송금액','반품금액','프레시백','프레시인센','추가인센','미계약',
+     '기타(+)','팀장수수료','기타(+)사유',
+     '지급합계(VAT포함)',
+     '고용보험','산재보험','분실파손','기타(-)','가불','공제합계',
+     '실지급액',
+     '배송건수','반품건수','총건수',
+     '사업자번호','상호명','상태']
   ];
 
   filtered.forEach(function(s){
     var cr=calcNet(s);
-    rows.push([\
-      s.driver||s.name||'',\
-      s.camp||'',\
-      s.month||'',\
-      _fmt(cr.totalAmt||cr.vatIncome||s.totalAmt||0),\
-      _fmt(cr.deduct||s.deduct||0),\
-      _fmt(cr.net||s.net||0),\
-      _fmt(cr.emp||0),\
-      _fmt(cr.work||0),\
-      _fmt(cr.dmg||0),\
-      _fmt(cr.etcMinus||0),\
-      _fmt(cr.adv||0),\
-      cr.dcnt||s.dcnt||0,\
-      cr.rcnt||s.rcnt||0,\
-      (cr.dcnt||s.dcnt||0)+(cr.rcnt||s.rcnt||0),\
-      s.bizNum||'',\
-      s.bizName||s.driver||'',\
-      s.status||'정산예정'\
-    ]);\
+    rows.push([
+      s.driver||s.name||'',
+      s.camp||'',
+      s.month||'',
+      _fmt(cr.damt||0),
+      _fmt(cr.ramt||0),
+      _fmt(cr.fresh||0),
+      _fmt(cr.finc||0),
+      _fmt(cr.addInc||0),
+      _fmt(cr.nocont||0),
+      _fmt((s.etcPlus||0)-(s.etcPlusTL||0)),
+      _fmt(s.etcPlusTL||0),
+      s.etcPlusReason||s.etcPlusTLReason||'',
+      _fmt(cr.totalAmt||cr.vatIncome||s.totalAmt||0),
+      _fmt(cr.emp||0),
+      _fmt(cr.work||0),
+      _fmt(cr.dmg||0),
+      _fmt(cr.etcMinus||0),
+      _fmt(cr.adv||0),
+      _fmt(cr.deduct||s.deduct||0),
+      _fmt(cr.net||s.net||0),
+      cr.dcnt||s.dcnt||0,
+      cr.rcnt||s.rcnt||0,
+      (cr.dcnt||s.dcnt||0)+(cr.rcnt||s.rcnt||0),
+      s.bizNum||'',
+      s.bizName||s.driver||'',
+      s.status||'정산예정'
+    ]);
   });
 
   // 합계 행
   var totals=['합계','','',
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).damt||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).ramt||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).fresh||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).finc||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).addInc||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).nocont||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round((s.etcPlus||0)-(s.etcPlusTL||0));},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(s.etcPlusTL||0);},0)),
+    '',
     _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.totalAmt||r.vatIncome||s.totalAmt||0);},0)),
-    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.deduct||s.deduct||0);},0)),
-    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.net||s.net||0);},0)),
     _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).emp||0);},0)),
     _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).work||0);},0)),
     _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).dmg||0);},0)),
-    '0','0',
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).etcMinus||0);},0)),
+    _fmt(filtered.reduce(function(a,s){return a+Math.round(calcNet(s).adv||0);},0)),
+    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.deduct||s.deduct||0);},0)),
+    _fmt(filtered.reduce(function(a,s){var r=calcNet(s);return a+Math.round(r.net||s.net||0);},0)),
     filtered.reduce(function(a,s){return a+(calcNet(s).dcnt||s.dcnt||0);},0),
     filtered.reduce(function(a,s){return a+(calcNet(s).rcnt||s.rcnt||0);},0),
-    '','','',''
+    '','','','',''
   ];
   rows.push(totals);
 
