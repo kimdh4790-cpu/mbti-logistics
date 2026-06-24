@@ -11053,14 +11053,14 @@ function _importRosterExcel(input){
           name:(row[iName]||'').trim(),
           driverId:(row[iId]||'').trim(),
           camp:(function(c){
-            var raw=c.replace('캠프','').trim();
-            var m={
-              'M_진주1':'진주M캠프','진주1M':'진주M캠프','진주M1':'진주M캠프','M진주':'진주M캠프',
-              '진주M':'진주M캠프','M_진주':'진주M캠프',
-              '부산1':'부산1캠프','부산2':'부산2캠프','부산3':'부산3캠프',
-              '대구2':'대구2캠프','대구1':'대구1캠프'
-            };
-            return m[raw]||(raw?raw+'캠프':raw);
+            var s=String(c||'').replace(/캠프/g,'').trim();
+            if(s.indexOf('진주')>=0||s.indexOf('M_진주')>=0)return '진주M';
+            if(s.indexOf('부산1')>=0)return '부산1';
+            if(s.indexOf('부산2')>=0)return '부산2';
+            if(s.indexOf('부산3')>=0)return '부산3';
+            if(s.indexOf('대구2')>=0)return '대구2';
+            if(s.indexOf('대구1')>=0)return '대구1';
+            return s;
           })((row[iCamp]||'').trim()),
           wave:iWave>=0?(row[iWave]||'').trim():'',
           dayIndex:dayIndex,
@@ -11133,12 +11133,14 @@ function _importRosterExcel(input){
           // ★ 다중 키 우선순위: coupangId > 이름+캠프 복합 > 이름 단독
           // 캠프명 정규화 함수
           var campShort=(function(c){
-            var m={'M_진주1':'진주M캠프','진주1M':'진주M캠프','진주M1':'진주M캠프','M진주':'진주M캠프',
-              '진주M':'진주M캠프','M_진주':'진주M캠프',
-              '부산1':'부산1캠프','부산2':'부산2캠프','부산3':'부산3캠프',
-              '대구2':'대구2캠프','대구1':'대구1캠프'};
-            var raw=c.replace('캠프','').trim();
-            return m[raw]||m[c]||(raw?raw+'캠프':raw);
+            var s=String(c||'').replace(/캠프/g,'').trim();
+            if(s.indexOf('진주')>=0||s.indexOf('M_진주')>=0)return '진주M';
+            if(s.indexOf('부산1')>=0)return '부산1';
+            if(s.indexOf('부산2')>=0)return '부산2';
+            if(s.indexOf('부산3')>=0)return '부산3';
+            if(s.indexOf('대구2')>=0)return '대구2';
+            if(s.indexOf('대구1')>=0)return '대구1';
+            return s;
           })(String(drv.camp||'').trim());
           var campKey=nmNorm+'@'+campShort;
           var docId=existMap[uidLow]
