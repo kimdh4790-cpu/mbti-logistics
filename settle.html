@@ -33248,6 +33248,13 @@ window._biApply=function(list){
         if(d.bankNum&&!od.bankAccount)upd.bankAccount=d.bankNum;
         if(d.bankName&&!od.bankName)  upd.bankName=d.bankName;
         if(d.carNum &&!od.carNum)     upd.carNum=d.carNum;
+        // ★ 세금계산서 필드
+        if(d.ssn    &&!od.ssn)        upd.ssn=d.ssn;
+        if(d.bizNum &&!od.bizNum)     upd.bizNum=d.bizNum;
+        if(d.bizName&&!od.bizName)    upd.bizName=d.bizName;
+        if(d.joinDate&&!od.joinDate)  upd.joinDate=d.joinDate;
+        if(d.insType)                  upd.insType=d.insType;
+        if(d.isBiz!==undefined)        upd.isBiz=d.isBiz;
         if(!Object.keys(upd).length)return Promise.resolve();
         return m.ref.update(upd);
       } else {
@@ -33255,6 +33262,10 @@ window._biApply=function(list){
           dealerId:did,name:d.name,userId:d.userId||d.name,
           camp:d.camp||'',phone:d.phone||'',email:d.email||'',
           bankAccount:d.bankNum||'',bankName:d.bankName||'',carNum:d.carNum||'',
+          ssn:d.ssn||'',bizNum:d.bizNum||'',bizName:d.bizName||'',
+          joinDate:d.joinDate||'',
+          insType:d.insType||'contractor',
+          isBiz:d.isBiz!==undefined?d.isBiz:!!d.bizNum,
           is_active:true,status:'재직',jobsub:'쿠팡',workType:'coupang',
           createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
