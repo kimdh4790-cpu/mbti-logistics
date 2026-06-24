@@ -199,9 +199,25 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
     match /settings/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
+      // settings docId = "{dealerId}_{key}" 형태 — dealerId 필드 없을 수 있음
+      allow read: if isAuth() && (
+        docId.matches(request.auth.uid + '_.*') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
+        isSuperAdmin()
+      );
+      allow create, update: if isAuth() && (
+        docId.matches(request.auth.uid + '_.*') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
+        isSuperAdmin()
+      );
+      allow delete: if isAuth() && (
+        docId.matches(request.auth.uid + '_.*') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
+        isSuperAdmin()
+      );
     }
     match /contracts/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -401,6 +417,26 @@ service cloud.firestore {
     match /universal_settlements/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /stats/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payouts/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payroll_results/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /notifications/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isAuth();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /open_event/{docId} {
