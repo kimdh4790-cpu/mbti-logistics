@@ -39151,8 +39151,11 @@ async function _doDeploySettlements(ids) {
         var _kakaoSent = false;
 
         if(_phone){
-          var _kakaoResult = await _sendAlimtalk(
-            _phone, _driverLabel, _monthLabel, _grossPay, _deductPay, _netPay
+          // ★ 1차 카카오 알림톡 → 실패 시 2차 SMS 자동 대체
+          var _coName=(_CU&&_CU.companyName)||'DONWAY';
+          var _stmtUrl=window.location.origin+(window._COMPANY_SLUG?'/'+window._COMPANY_SLUG:'/');
+          var _kakaoResult = await _sendAlimtalkWithStmt(
+            settle, calcNet(settle), _driverLabel, _monthLabel, _netPay, _phone, _coName
           );
           _kakaoSent = _kakaoResult && _kakaoResult.ok;
         }
