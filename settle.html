@@ -179,10 +179,10 @@ function onBizDocSelected(input){
     fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':window.__AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,
         messages:[{role:'user',content:[
-          {type:mt==='application/pdf'?'document':'image',source:{type:'base64',media_type:mt,data:b64}},
-          {type:'text',text:'사업자등록증 정보 JSON: {bizNum,companyName,repName,bizAddr,bizType,bizItem}'}
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+          {type:'text',text:'이 사업자등록증에서 정보를 추출해서 아래 JSON 형식으로만 응답하세요. 다른 말 없이 JSON만: {"bizNum":"사업자번호","companyName":"상호명","repName":"대표자명","bizAddr":"사업장주소","bizType":"업태","bizItem":"종목"}'}
         ]}]})
     }).then(function(r){return r.json();})
     .then(function(data){
