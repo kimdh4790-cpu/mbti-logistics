@@ -29591,7 +29591,7 @@ function pageSettle(){
           +'<div style="font-size:9px;opacity:.45">VAT포함</div></div>'
         +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">🧾 기사 세금계산서</div>'
           +'<div style="font-size:18px;font-weight:900;color:#fbbf24">₩'+fmt(totTaxBase)+'</div>'
-          +'<div style="font-size:9px;opacity:.45">MBTI→기사 발행금액</div></div>'
+          +'<div style="font-size:9px;opacity:.45">'+((_CU&&(_CU.companyName||_CU.name))||'\uD68C\uC0AC')+'→기사 발행금액</div></div>'
         +'<div><div style="font-size:10px;opacity:.6;margin-bottom:3px">💰 기사 실지급액</div>'
           +'<div style="font-size:18px;font-weight:900;color:#60a5fa">₩'+fmt(totNet)+'</div>'
           +'<div style="font-size:9px;opacity:.45">'+fmt(totDcnt)+'건 · 보험 공제 후</div></div>'
@@ -29599,7 +29599,7 @@ function pageSettle(){
       // 구분선 — 단가 마진
       +'<div style="border-top:1px solid rgba(255,255,255,.12);padding-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         +'<div>'
-          +'<div style="font-size:11px;opacity:.6">📈 MBTI 단가 마진 (경비 전)</div>'
+          +'<div style="font-size:11px;opacity:.6">📈 '+((_CU&&(_CU.companyName||_CU.name))||'\uD68C\uC0AC')+' 단가 마진 (경비 전)</div>'
           +'<div style="font-size:9px;opacity:.4">쿠팡수입 − 기사세금계산서</div>'
         +'</div>'
         +'<div style="text-align:right">'
