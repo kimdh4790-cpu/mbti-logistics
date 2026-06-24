@@ -2492,22 +2492,24 @@ service cloud.firestore {
           return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
         const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
-        const apiUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
-        const ntsRes = await fetch(apiUrl, {
+        // 1차: validate API (상호명·대표자명 포함)
+        const validateUrl = `https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=${encodeURIComponent(apiKey)}`;
+        const ntsRes = await fetch(validateUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ b_no: [rawNum] })
+          body: JSON.stringify({ businesses: [{ b_no: rawNum, start_dt: '', p_nm: '', p_nm2: '', b_nm: '', corp_no: '', b_sector: '', b_type: '', b_adr: '' }] })
         });
+        console.log('[biz-lookup] validate status:', ntsRes.status);
         if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status);
         const ntsData = await ntsRes.json();
+        console.log('[biz-lookup] validate response:', JSON.stringify(ntsData).slice(0, 300));
         const item = ntsData.data && ntsData.data[0];
         if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        // b_stt_cd: '01'=계속사업자, '02'=휴업, '03'=폐업
-        const active = item.b_stt_cd === '01';
+        const active = item.valid === '01' || item.b_stt_cd === '01';
         return new Response(JSON.stringify({
           ok: true,
           active,
-          status: item.b_stt || '',
+          status: item.b_stt || item.valid_msg || '',
           companyName: item.b_nm || '',
           repName: item.p_nm || '',
           taxType: item.tax_type || ''
