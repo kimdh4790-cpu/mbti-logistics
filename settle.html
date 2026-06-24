@@ -29447,11 +29447,7 @@ function pageSettle(){
   window._CU_INDUSTRY='settle';
   document.getElementById('page-title').textContent='정산 현황';
   var tr=document.getElementById('topbar-right');tr.innerHTML='';
-  var dlBtn=document.createElement('button');
-  dlBtn.textContent='📥 정산 엑셀';
-  dlBtn.style.cssText='margin-left:6px;padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
-  dlBtn.onclick=function(){_txsBulkExcelDownload();};
-  tr.appendChild(dlBtn);
+
 
 
   var c=document.getElementById('content');
