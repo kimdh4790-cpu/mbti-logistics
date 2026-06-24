@@ -199,10 +199,9 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
     match /settings/{docId} {
-      // settings docId = "{dealerId}_{key}" 형태 — dealerId 필드 없을 수 있음
-      // 인증된 사용자면 읽기 허용, 쓰기는 본인 dealerId prefix만
-      allow read: if isAuth();
-      allow create, update, delete: if isAuth();
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /contracts/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -365,10 +364,9 @@ service cloud.firestore {
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /payout_sessions/{docId} {
-      allow read: if isDealer(resource.data.dealerId) || isSuperAdmin();
-      allow list: if isAuth();
+      allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if isDealer(resource.data.dealerId) || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /roster_week/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -403,26 +401,6 @@ service cloud.firestore {
     match /universal_settlements/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /stats/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /payouts/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /payroll_results/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /notifications/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isAuth();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /open_event/{docId} {
