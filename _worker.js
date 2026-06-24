@@ -517,6 +517,51 @@ export default {
     const path     = url.pathname;
     const method   = request.method;
     const hostname = url.hostname;
+
+    // ★ /ocr — 사업자등록증 OCR (서버사이드 Anthropic API 호출)
+    if (path === '/ocr' && method === 'POST') {
+      try {
+        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (!checkRateLimit(ip, 10, 60000)) {
+          return new Response(JSON.stringify({error:'요청이 너무 많습니다'}),{status:429,headers:{'Content-Type':'application/json'}});
+        }
+        const body = await request.json();
+        const { imageData, mediaType } = body;
+        if (!imageData) return new Response(JSON.stringify({error:'이미지 없음'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const ak = env.ANTHROPIC_KEY || env.AK || '';
+        if (!ak) return new Response(JSON.stringify({error:'API 키 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'x-api-key': ak,
+            'anthropic-version':'2023-06-01'
+          },
+          body: JSON.stringify({
+            model:'claude-haiku-4-5-20251001',
+            max_tokens:500,
+            messages:[{role:'user',content:[
+              {type:'image',source:{type:'base64',media_type:mediaType||'image/jpeg',data:imageData}},
+              {type:'text',text:'이 사업자등록증에서 정보를 추출해서 아래 JSON 형식으로만 응답하세요. 다른 말 없이 JSON만 출력하세요: {"bizNum":"사업자번호(숫자10자리)","companyName":"상호명","repName":"대표자명","bizAddr":"사업장주소","bizType":"업태","bizItem":"종목"}'}
+            ]}]
+          })
+        });
+        const aiData = await aiRes.json();
+        const text = aiData.content?.[0]?.text || '';
+        try {
+          const info = JSON.parse(text.replace(/```json|```/g,'').trim());
+          return new Response(JSON.stringify({ok:true,...info}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,raw:text}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      } catch(e) {
+        return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+    if (path === '/ocr' && method === 'OPTIONS') {
+      return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST','Access-Control-Allow-Headers':'Content-Type'}});
+    }
+
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
       if (path === '/' || path === '') {
@@ -720,50 +765,6 @@ export default {
       }
 
             if (path === '/settle' || path === '/settle.html') return serveKVFile(env, 'settle.html', 'text/html');
-
-    // ★ /ocr — 사업자등록증 OCR (서버사이드 Anthropic API 호출)
-    if (path === '/ocr' && method === 'POST') {
-      try {
-        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-        if (!checkRateLimit(ip, 10, 60000)) {
-          return new Response(JSON.stringify({error:'요청이 너무 많습니다'}),{status:429,headers:{'Content-Type':'application/json'}});
-        }
-        const body = await request.json();
-        const { imageData, mediaType } = body;
-        if (!imageData) return new Response(JSON.stringify({error:'이미지 없음'}),{status:400,headers:{'Content-Type':'application/json'}});
-        const ak = env.ANTHROPIC_KEY || env.AK || '';
-        if (!ak) return new Response(JSON.stringify({error:'API 키 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
-        const aiRes = await fetch('https://api.anthropic.com/v1/messages',{
-          method:'POST',
-          headers:{
-            'Content-Type':'application/json',
-            'x-api-key': ak,
-            'anthropic-version':'2023-06-01'
-          },
-          body: JSON.stringify({
-            model:'claude-haiku-4-5-20251001',
-            max_tokens:500,
-            messages:[{role:'user',content:[
-              {type:'image',source:{type:'base64',media_type:mediaType||'image/jpeg',data:imageData}},
-              {type:'text',text:'이 사업자등록증에서 정보를 추출해서 아래 JSON 형식으로만 응답하세요. 다른 말 없이 JSON만 출력하세요: {"bizNum":"사업자번호(숫자10자리)","companyName":"상호명","repName":"대표자명","bizAddr":"사업장주소","bizType":"업태","bizItem":"종목"}'}
-            ]}]
-          })
-        });
-        const aiData = await aiRes.json();
-        const text = aiData.content?.[0]?.text || '';
-        try {
-          const info = JSON.parse(text.replace(/```json|```/g,'').trim());
-          return new Response(JSON.stringify({ok:true,...info}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,raw:text}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-      } catch(e) {
-        return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-      }
-    }
-    if (path === '/ocr' && method === 'OPTIONS') {
-      return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST','Access-Control-Allow-Headers':'Content-Type'}});
-    }
 
     // ★ slug 기반 동적 manifest + 아이콘
     // /c/{slug}/manifest.json → 회사명으로 동적 생성
