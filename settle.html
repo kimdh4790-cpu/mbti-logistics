@@ -32970,21 +32970,29 @@ window._biParse=function(rows){
   var CAMPS=['신평','엄궁','대구','진주','1인','부산','서울','광주','인체','울산','수원','성남','안양','전주','청주','제주','여수','거제','구미','수영','사상'];
 
   // ★ 헤더 감지 - 세금계산서 형식 (성명/주민번호/사업자번호 컬럼)
-  var headerRow=rows[0]||[];
+  // 첫 5행 중 헤더 행 탐색
   var colMap={name:-1,ssn:-1,bizNum:-1,bizName:-1,joinDate:-1};
-  headerRow.forEach(function(h,i){
-    var s=String(h||'').trim();
-    if(s==='성명'||s==='이름') colMap.name=i;
-    else if(s.indexOf('주민')>=0) colMap.ssn=i;
-    else if(s.indexOf('사업자')>=0&&s.indexOf('번호')>=0) colMap.bizNum=i;
-    else if(s.indexOf('상호')>=0||s==='상호명') colMap.bizName=i;
-    else if(s.indexOf('입사')>=0) colMap.joinDate=i;
-  });
+  var headerRowIdx=0;
+  for(var _hi=0;_hi<Math.min(5,rows.length);_hi++){
+    var _hr=rows[_hi]||[];
+    var _tmp={name:-1,ssn:-1,bizNum:-1,bizName:-1,joinDate:-1};
+    _hr.forEach(function(h,i){
+      var s=String(h||'').replace(/[\n\r\s]/g,'').trim();
+      if(s==='성명'||s==='이름') _tmp.name=i;
+      else if(s.indexOf('주민')>=0) _tmp.ssn=i;
+      else if(s.indexOf('사업자')>=0) _tmp.bizNum=i;
+      else if(s.indexOf('상호')>=0) _tmp.bizName=i;
+      else if(s.indexOf('입사')>=0) _tmp.joinDate=i;
+    });
+    if(_tmp.name>=0&&(_tmp.ssn>=0||_tmp.bizNum>=0)){
+      colMap=_tmp; headerRowIdx=_hi; break;
+    }
+  }
   var hasTaxFormat=colMap.name>=0&&(colMap.ssn>=0||colMap.bizNum>=0);
 
   rows.forEach(function(row,ri){
     var cells=row.map(function(v){return String(v||'').trim();});
-    if(ri===0&&hasTaxFormat) return; // 헤더 스킵
+    if(ri<=headerRowIdx&&hasTaxFormat) return; // 헤더 및 그 이전 행 스킵
 
     if(hasTaxFormat){
       // 세금계산서 형식 파싱
@@ -32994,7 +33002,7 @@ window._biParse=function(rows){
       var bizNum=colMap.bizNum>=0?cells[colMap.bizNum].replace(/[^0-9\-]/g,''):'';
       var bizName=colMap.bizName>=0?cells[colMap.bizName]:'';
       var joinDateRaw=colMap.joinDate>=0?cells[colMap.joinDate]:'';
-      // 입사일: 엑셀 시리얼 또는 문자
+      // 입사일: 엑셀 시리얼 또는 문자 또는 Date객체
       var joinDate='';
       if(joinDateRaw){
         var serial=parseInt(joinDateRaw);
@@ -33002,7 +33010,9 @@ window._biParse=function(rows){
           var d=new Date((serial-25569)*86400*1000);
           joinDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
         } else if(/\d{4}[-\.]\d{2}[-\.]\d{2}/.test(joinDateRaw)){
-          joinDate=joinDateRaw.replace(/\./g,'-').trim();
+          joinDate=joinDateRaw.replace(/\./g,'-').split(' ')[0].trim();
+        } else if(joinDateRaw instanceof Date){
+          joinDate=joinDateRaw.getFullYear()+'-'+String(joinDateRaw.getMonth()+1).padStart(2,'0')+'-'+String(joinDateRaw.getDate()).padStart(2,'0');
         }
       }
       var key=name+(bizNum||ssn);
