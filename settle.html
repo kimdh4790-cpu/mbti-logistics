@@ -7081,12 +7081,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var sumInc  =Object.values(totalMap).reduce(function(s,v){return s+(v.incAmt||0);},0);
           var sumDmg  =Object.values(totalMap).reduce(function(s,v){return s+(v.dmgAmt||0);},0);
           var rawCalcTotal=Object.values(drvMap).reduce(function(s,v){return s+(v.delAmt||0);},0);
+          var sumDcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.dcnt||0);},0);
+          var sumRcnt=Object.values(drvMap).reduce(function(s,v){return s+(v.rcnt||0);},0);
           window._excelVerify={
             excelTotal: excelGrandTotal,  excelFresh: excelGrandFresh,
             excelInc:   excelGrandInc,    excelDmg:   excelGrandDmg,
             sumTotal:   sumTotal,         sumFresh:   sumFresh,
             sumInc:     sumInc,           sumDmg:     sumDmg,
             rawCalc:    rawCalcTotal,
+            totalDcnt:  sumDcnt,          totalRcnt:  sumRcnt,
             diffTotal: excelGrandTotal - sumTotal,
             diffFresh: excelGrandFresh - sumFresh,
             diffInc:   excelGrandInc   - sumInc,
@@ -41082,70 +41085,61 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
   var d=document.createElement('div');d.className='md';d.style.maxWidth='480px';d.style.maxHeight='85vh';d.style.overflowY='auto';
 
   if(excelVerify){
-    var ev=excelVerify;var fmt2=function(n){return Math.round(n||0).toLocaleString('ko-KR');};
-    // 항목별 오차 체크 (1,000원 초과)
+    var ev=excelVerify;
+    var fmt2=function(n){return Math.round(n||0).toLocaleString('ko-KR');};
     var THR=1000;
-    var checks=[
-      {label:'TOTAL 합계',    excel:ev.excelTotal, sum:ev.sumTotal, diff:ev.diffTotal},
-      {label:'프레시백',       excel:ev.excelFresh, sum:ev.sumFresh, diff:ev.diffFresh},
-      {label:'추가인센(가중요인)',excel:ev.excelInc,  sum:ev.sumInc,  diff:ev.diffInc},
-      {label:'분실파손',       excel:ev.excelDmg,   sum:ev.sumDmg,  diff:ev.diffDmg},
-    ];
-    var errItems=checks.filter(function(ch){return Math.abs(ch.diff)>THR;});
-    var hasRawErr=Math.abs(ev.diffRaw)>THR;
-    var hasErr=errItems.length>0||hasRawErr;
-    if(hasErr){
-      // ★ v9.26: 쿠팡 합계행 vs 개별 합산 불일치 → 소리 알림 (트리플 경보음)
-      try{
-        var _ac=new (window.AudioContext||window.webkitAudioContext)();
-        [[880,0],[660,0.18],[440,0.36],[880,0.6],[660,0.78],[440,0.96]].forEach(function(pair){
-          var o=_ac.createOscillator();var g=_ac.createGain();
-          o.connect(g);g.connect(_ac.destination);
-          o.frequency.value=pair[0];o.type='triangle';
-          g.gain.setValueAtTime(0,_ac.currentTime+pair[1]);
-          g.gain.linearRampToValueAtTime(0.4,_ac.currentTime+pair[1]+0.04);
-          g.gain.linearRampToValueAtTime(0,_ac.currentTime+pair[1]+0.14);
-          o.start(_ac.currentTime+pair[1]);o.stop(_ac.currentTime+pair[1]+0.15);
-        });
-      }catch(e){}
-      var errBanner=document.createElement('div');
-      errBanner.style.cssText='background:#fef9c3;border:2px solid #f59e0b;border-radius:10px;padding:14px;margin-bottom:12px';
-      var errLines='<table style="width:100%;font-size:10px;border-collapse:collapse;margin-top:8px">'        +'<tr style="background:#fde68a"><th style="padding:4px 6px;text-align:left">항목</th>'        +'<th style="padding:4px 6px;text-align:right">엑셀 합계행</th>'        +'<th style="padding:4px 6px;text-align:right">개별 합산</th>'        +'<th style="padding:4px 6px;text-align:right">차이</th></tr>';
-      errItems.forEach(function(ch){
-        var sign=ch.diff>=0?'+':'';
-        var color=Math.abs(ch.diff)>10000?'#b45309':'#92400e';
-        errLines+='<tr style="border-top:1px solid #fde68a">'          +'<td style="padding:4px 6px;font-weight:700">'+ch.label+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ch.excel)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ch.sum)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace;font-weight:800;color:'+color+'">'+sign+fmt2(ch.diff)+'</td>'          +'</tr>';
-      });
-      if(hasRawErr){
-        var rs=ev.diffRaw>=0?'+':'';
-        errLines+='<tr style="border-top:2px solid #f59e0b;background:#fef3c7">'          +'<td style="padding:4px 6px;font-weight:700">Raw 시트 계산</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.excelTotal)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace">₩'+fmt2(ev.rawCalc)+'</td>'          +'<td style="padding:4px 6px;text-align:right;font-family:monospace;font-weight:800;color:#b45309">'+rs+fmt2(ev.diffRaw)+'</td>'          +'</tr>';
-      }
-      errLines+='</table>';
-      errBanner.innerHTML='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:2px">🔔 쿠팡↔대리점 금액 불일치! ('+errItems.length+'개 항목)</div>'        +'<div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:4px">엑셀 합계행(쿠팡 기준) ≠ 개별 기사 합산 — 쿠팡 수취액을 확인하세요</div>'        +'<div style="font-size:10px;color:#78350f;margin-bottom:4px">📌 원인: ① 반품/취소 건이 별도 집계 ② 기간이 두 달에 걸침 ③ 엑셀 수동 수정</div>'        +errLines;
-      d.appendChild(errBanner);
-    } else {
-      var okBanner=document.createElement('div');
-      okBanner.style.cssText='background:#f0fdf4;border:1.5px solid #22c55e;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px';
-      okBanner.innerHTML='<span style="font-size:20px">✅</span>'        +'<div><div style="font-size:12px;font-weight:800;color:#15803d">엑셀 전 항목 검증 통과</div>'        +'<div style="font-size:10px;color:#16a34a">TOTAL / 프레시백 / 추가인센 / 분실파손 — 모두 일치</div></div>';
-      d.appendChild(okBanner);
+    var hasErr=Math.abs(ev.diffTotal||0)>THR||Math.abs(ev.diffFresh||0)>THR||Math.abs(ev.diffInc||0)>THR||Math.abs(ev.diffDmg||0)>THR||Math.abs(ev.diffRaw||0)>THR;
+    var verBanner=document.createElement('div');
+    verBanner.style.cssText='border-radius:10px;padding:14px;margin-bottom:12px;border:2px solid '+(hasErr?'#f59e0b':'#22c55e')+';background:'+(hasErr?'#fef9c3':'#f0fdf4');
+    // 항목 행 생성
+    function _vRow(label, amt, cnt, diff){
+      var diffSign=diff>=0?'+':'';
+      var diffColor=Math.abs(diff)>THR?'#b45309':'#15803d';
+      var cntHtml=cnt!==undefined?'<span style="font-size:10px;color:#64748b;margin-left:4px">('+cnt+'건)</span>':'';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06)">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--text)">'+label+'</span>'
+        +'<div style="text-align:right">'
+        +'<span style="font-size:13px;font-weight:800">₩'+fmt2(amt)+'</span>'+cntHtml
+        +(Math.abs(diff)>0?'<span style="font-size:11px;font-weight:700;color:'+diffColor+';margin-left:8px">'+diffSign+fmt2(diff)+'</span>':'<span style="font-size:10px;color:#15803d;margin-left:8px">✓</span>')
+        +'</div></div>';
     }
-  }
-  // 헤더
+    var rows='';
+    rows+=_vRow('📦 배송+반품 합계', ev.excelTotal||0, ev.totalDcnt!==undefined?(ev.totalDcnt||0)+(ev.totalRcnt||0):undefined, ev.diffTotal||0);
+    if((ev.excelFresh||0)>0||Math.abs(ev.diffFresh||0)>0)
+      rows+=_vRow('🧊 프레시백', ev.excelFresh||0, undefined, ev.diffFresh||0);
+    if((ev.excelInc||0)>0||Math.abs(ev.diffInc||0)>0)
+      rows+=_vRow('⚡ 추가인센', ev.excelInc||0, undefined, ev.diffInc||0);
+    if((ev.excelDmg||0)>0||Math.abs(ev.diffDmg||0)>0)
+      rows+=_vRow('⚠️ 분실파손', ev.excelDmg||0, undefined, ev.diffDmg||0);
+    var totalDiff=ev.diffRaw||ev.diffTotal||0;
+    var totalSign=totalDiff>=0?'+':'';
+    verBanner.innerHTML=
+      '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:'+(hasErr?'#92400e':'#15803d')+'">'+(hasErr?'🔔 금액 불일치 확인 필요':'✅ 전 항목 검증 통과')+'</div>'
+      +rows
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">'
+      +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
+      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">쿠팡 지급액</div>'
+      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.excelTotal||0)+'</div></div>'
+      +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
+      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">기사 합산</div>'
+      +'<div style="font-size:14px;font-weight:800">₩'+fmt2(ev.rawCalc||ev.sumTotal||0)+'</div></div>'
+      +'<div style="text-align:center;background:rgba(0,0,0,.04);border-radius:8px;padding:8px">'
+      +'<div style="font-size:10px;color:#64748b;margin-bottom:2px">차이</div>'
+      +'<div style="font-size:14px;font-weight:800;color:'+(Math.abs(totalDiff)>THR?'#b45309':'#15803d')+'">'+totalSign+fmt2(totalDiff)+'</div></div>'
+      +'</div>'
+      +(hasErr?'<div style="font-size:10px;color:#78350f;margin-top:8px">📌 반품/취소 별도 집계 또는 두 달에 걸친 정산인 경우 발생합니다</div>':'');
+    d.appendChild(verBanner);
+  }  // 헤더
   var hdr=document.createElement('div');hdr.className='mdt';
   hdr.textContent='✅ '+month+' 정산 업로드 완료';d.appendChild(hdr);
 
   // 집계 카드
+  var _ev2=excelVerify||{};
+  var _totD=_ev2.totalDcnt||0, _totR=_ev2.totalRcnt||0;
   var stats=document.createElement('div');
-  stats.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:12px';
-  stats.innerHTML='<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'
-    +'<div style="font-size:10px;color:var(--text3)">신규 등록</div>'
-    +'<div style="font-size:18px;font-weight:800;color:var(--blue)">'+added+'건</div></div>'
-    +'<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'
-    +'<div style="font-size:10px;color:var(--text3)">갱신</div>'
-    +'<div style="font-size:18px;font-weight:800">'+updated+'건</div></div>'
-    +'<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'
-    +'<div style="font-size:10px;color:var(--text3)">신규 단가</div>'
-    +'<div style="font-size:18px;font-weight:800;color:var(--teal)">'+routeCnt+'개</div></div>';
+  stats.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:12px';
+  stats.innerHTML=
+    '<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'    +'<div style="font-size:10px;color:var(--text3)">신규 기사</div>'    +'<div style="font-size:18px;font-weight:800;color:var(--blue)">'+added+'명</div></div>'    +'<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'    +'<div style="font-size:10px;color:var(--text3)">갱신</div>'    +'<div style="font-size:18px;font-weight:800">'+updated+'명</div></div>'    +'<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'    +'<div style="font-size:10px;color:var(--text3)">배송</div>'    +'<div style="font-size:18px;font-weight:800;color:#0891b2">'+(_totD?_totD.toLocaleString():'-')+'건</div></div>'    +'<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:8px">'    +'<div style="font-size:10px;color:var(--text3)">반품</div>'    +'<div style="font-size:18px;font-weight:800;color:#f97316">'+(_totR?_totR.toLocaleString():'-')+'건</div></div>';
   d.appendChild(stats);
 
   // 신규 기사
