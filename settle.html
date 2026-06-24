@@ -1476,46 +1476,6 @@ async function _useCompLeave(docId) {
 }
 
 // ── ④ 출퇴근 자동승인 설정
-function _leaveAutoApproveSettings() {
-  var did = _CU.dealerId;
-  var mo = document.createElement('div');
-  mo.id='mo-auto-approve';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  mo.onclick = function(e){ if(e.target===mo) mo.remove(); };
-
-  var box = document.createElement('div');
-  box.style.cssText = 'background:var(--bg2);border-radius:16px;padding:22px;width:100%;max-width:400px';
-
-  _db.collection('companies').doc(did).collection('settings').doc('leaveSettings')
-    .get().then(function(snap) {
-      var ls = snap.exists ? snap.data() : {};
-      box.innerHTML = '<div style="font-size:15px;font-weight:800;margin-bottom:16px">⚡ 자동 승인 설정</div>'
-        +'<div style="margin-bottom:12px">'
-        +'<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'
-        +'<input type="checkbox" id="auto-approve-all" '+(ls.autoApproveAll?'checked':'')+' style="width:18px;height:18px">'
-        +'<div><div style="font-size:13px;font-weight:700">모든 휴가 자동 승인</div>'
-        +'<div style="font-size:11px;color:var(--text3)">신청 즉시 자동으로 승인됩니다</div></div>'
-        +'</label></div>'
-        +'<div style="margin-bottom:16px">'
-        +'<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'
-        +'<input type="checkbox" id="auto-approve-annual" '+(ls.autoApproveAnnual?'checked':'')+' style="width:18px;height:18px">'
-        +'<div><div style="font-size:13px;font-weight:700">연차만 자동 승인</div>'
-        +'<div style="font-size:11px;color:var(--text3)">연차는 자동, 나머지는 수동 승인</div></div>'
-        +'</label></div>'
-        +'<div style="margin-bottom:16px">'
-        +'<label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;font-weight:600">사전 신청 최소 일수</label>'
-        +'<input type="number" id="auto-advance-days" value="'+(ls.advanceDays||1)+'" min="0" max="30" '
-        +'style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:4px">0 = 당일 신청도 허용</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:8px">'
-        +'<button onclick="document.getElementById(\'mo-auto-approve\').remove()" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:10px;font-size:13px;cursor:pointer">취소</button>'
-        +'<button onclick="_saveLeaveAutoApprove()" style="flex:1;padding:11px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">저장</button>'
-        +'</div>';
-      mo.appendChild(box);
-      document.body.appendChild(mo);
-    });
-}
 
 function _saveLeaveAutoApprove() {
   var did = _CU.dealerId;
@@ -2986,61 +2946,61 @@ function _showIndustryDetail(idx){
 }
 
 // 저장 + 명세서 발송
-function _industrySettleSaveAll(did, results, month, label){\
-  if(!confirm(results.length+'명 정산을 저장하고 명세서를 발송하시겠습니까?')) return;\
-  toast('⏳ 저장 중...');\
-  var promises=results.map(function(r){\
-    var uid=r.userId||r.id||r.name||'';\
-    var drv=(_drvCache||[]).find(function(d){return d.name===r.name||d.userId===uid;});\
-    var isBiz=drv?(drv.insType==='contractor'||drv.isBiz===true||!!(drv.bizNum||'').replace(/[^0-9]/g,'')):false;\
-    var payload={\
-      dealerId:did, driver:r.name, userId:uid,\
-      month:month, camp:r.camp||'',\
-      totalAmt:Math.round(r.gross||0),\
-      income:Math.round(r.gross||0),\
-      net:Math.round(r.net||0),\
-      deduct:Math.round(r.deduct||0),\
-      emp:Math.round(r.emp||0),\
-      work:Math.round(r.work||0),\
-      isBiz:isBiz,\
-      bizNum:drv&&drv.bizNum||r.bizNum||'',\
-      bizName:drv&&drv.bizName||r.bizName||'',\
-      ssn:drv&&drv.ssn||r.ssn||'',\
-      joinDate:drv&&drv.joinDate||'',\
-      phone:drv&&drv.phone||r.phone||'',\
-      industryType:(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'',\
-      routeDetails:r.details||r.extras||[],\
-      status:'정산예정',\
-      taxSent:false\
-    };\
-    return _db.collection('settlements')\
-      .where('dealerId','==',did).where('driver','==',r.name).where('month','==',month).get()\
-      .then(function(snap){\
-        return snap.empty\
-          ?_db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))\
-          :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));\
-      });\
-  });\
-  Promise.all(promises).then(function(){\
-    _settleCache=null;\
-    toast('✅ '+results.length+'명 저장 완료');\
-    // 알림톡 발송\
-    var sent=0,total=results.length;\
-    results.forEach(function(r){\
-      var drv=(_drvCache||[]).find(function(d){return d.name===r.name;});\
-      var phone=(drv&&drv.phone)||r.phone||'';\
-      if(phone){\
-        var coName=(_CU&&_CU.companyName)||'DONWAY';\
-        _sendAlimtalkWithStmt(\
-          {driver:r.name,totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0,month:month,routeDetails:r.details||[]},\
-          calcNet({totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0}),\
-          r.name,month,r.net,phone,coName\
-        );\
-      }\
-      sent++;\
-      if(sent===total) goPage('settlements');\
-    });\
-  }).catch(function(e){toast('❌ '+e.message);});\
+function _industrySettleSaveAll(did, results, month, label){
+  if(!confirm(results.length+'명 정산을 저장하고 명세서를 발송하시겠습니까?')) return;
+  toast('⏳ 저장 중...');
+  var promises=results.map(function(r){
+    var uid=r.userId||r.id||r.name||'';
+    var drv=(_drvCache||[]).find(function(d){return d.name===r.name||d.userId===uid;});
+    var isBiz=drv?(drv.insType==='contractor'||drv.isBiz===true||!!(drv.bizNum||'').replace(/[^0-9]/g,'')):false;
+    var payload={
+      dealerId:did, driver:r.name, userId:uid,
+      month:month, camp:r.camp||'',
+      totalAmt:Math.round(r.gross||0),
+      income:Math.round(r.gross||0),
+      net:Math.round(r.net||0),
+      deduct:Math.round(r.deduct||0),
+      emp:Math.round(r.emp||0),
+      work:Math.round(r.work||0),
+      isBiz:isBiz,
+      bizNum:drv&&drv.bizNum||r.bizNum||'',
+      bizName:drv&&drv.bizName||r.bizName||'',
+      ssn:drv&&drv.ssn||r.ssn||'',
+      joinDate:drv&&drv.joinDate||'',
+      phone:drv&&drv.phone||r.phone||'',
+      industryType:(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'',
+      routeDetails:r.details||r.extras||[],
+      status:'정산예정',
+      taxSent:false
+    };
+    return _db.collection('settlements')
+      .where('dealerId','==',did).where('driver','==',r.name).where('month','==',month).get()
+      .then(function(snap){
+        return snap.empty
+          ?_db.collection('settlements').add(Object.assign({},payload,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
+          :snap.docs[0].ref.update(Object.assign({},payload,{updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+      });
+  });
+  Promise.all(promises).then(function(){
+    _settleCache=null;
+    toast('✅ '+results.length+'명 저장 완료');
+    // 알림톡 발송
+    var sent=0,total=results.length;
+    results.forEach(function(r){
+      var drv=(_drvCache||[]).find(function(d){return d.name===r.name;});
+      var phone=(drv&&drv.phone)||r.phone||'';
+      if(phone){
+        var coName=(_CU&&_CU.companyName)||'DONWAY';
+        _sendAlimtalkWithStmt(
+          {driver:r.name,totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0,month:month,routeDetails:r.details||[]},
+          calcNet({totalAmt:r.gross,net:r.net,emp:r.emp||0,work:r.work||0}),
+          r.name,month,r.net,phone,coName
+        );
+      }
+      sent++;
+      if(sent===total) goPage('settlements');
+    });
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -21271,37 +21231,6 @@ function _submitHourlyLeave() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ② 보상휴가 관리
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _leaveRenderCompLeave(el) {
-  var did=_CU.dealerId||'';
-  el.innerHTML='<div class="empty">⏳ 로딩 중...</div>';
-  _db.collection('comp_leaves').where('dealerId','==',did)
-    .orderBy('createdAt','desc').limit(100).get()
-    .then(function(snap) {
-      var rows='';
-      snap.forEach(function(doc) {
-        var d=doc.data();
-        var statusC=d.status==='active'?'✅ 사용가능':'🔴 소진';
-        rows+='<tr style="border-bottom:1px solid var(--border)">'
-          +'<td style="padding:8px 10px;font-weight:700">'+esc(d.name||d.userId||'')+'</td>'
-          +'<td style="padding:8px;text-align:center">'+esc(d.reason||'연장근무')+'</td>'
-          +'<td style="padding:8px;text-align:center;font-weight:700;color:var(--blue)">'+( d.hours||0)+'h</td>'
-          +'<td style="padding:8px;text-align:center">'+(d.usedHours||0)+'h</td>'
-          +'<td style="padding:8px;text-align:center">'+esc(d.expiry||'-')+'</td>'
-          +'<td style="padding:8px;text-align:center;font-size:11px">'+statusC+'</td>'
-          +'</tr>';
-      });
-      el.innerHTML='<div style="margin-bottom:10px;display:flex;justify-content:flex-end">'
-        +'<button onclick="_addCompLeaveModal()" class="btn btn-blue" style="font-size:12px">➕ 보상휴가 부여</button>'
-        +'</div>'
-        +(rows?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-          +'<tr style="background:var(--bg3)"><th style="padding:8px 10px;text-align:left">직원</th>'
-          +'<th style="padding:8px">사유</th><th style="padding:8px">부여</th>'
-          +'<th style="padding:8px">사용</th><th style="padding:8px">만료</th>'
-          +'<th style="padding:8px">상태</th></tr>'+rows
-          +'</table></div>'
-        :'<div class="empty">보상휴가 내역 없음</div>');
-    });
-}
 
 function _addCompLeaveModal() {
   var did=_CU.dealerId||'';
@@ -21339,26 +21268,6 @@ function _addCompLeaveModal() {
     });
 }
 
-function _saveCompLeave() {
-  var did=_CU.dealerId||'';
-  var selVal=(document.getElementById('cl-uid')||{}).value||'';
-  var parts=selVal.split('|');
-  var uid=parts[0]; var name=parts[1]||uid;
-  var hours=parseFloat((document.getElementById('cl-hours')||{}).value)||0;
-  var reason=(document.getElementById('cl-reason')||{}).value||'';
-  var expiry=(document.getElementById('cl-expiry')||{}).value||'';
-  if(!uid||!hours){toast('직원과 시간을 입력하세요');return;}
-  _db.collection('comp_leaves').add({
-    dealerId:did, userId:uid, name:name,
-    hours:hours, usedHours:0, reason:reason,
-    expiry:expiry, status:'active',
-    createdAt:new Date().toISOString()
-  }).then(function(){
-    toast('✅ 보상휴가 '+hours+'h 부여 완료');
-    document.getElementById('mo-comp-leave').remove();
-    _leaveTab('comp');
-  }).catch(function(e){toast('❌ '+e.message);});
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ③ 근무일정 PDF 다운로드
@@ -22794,73 +22703,12 @@ function _homeQuickBtn(icon, label, page, color, bg){
 
 
 // ★ 고객 서비스에 따라 정산 페이지 결정
-function _getMainSettlePage() {
-  var co = window._cachedCompanyDoc || {};
-  var svcs = co.services || [];
-  var sub = (co.subscriptions||{}).donway||{};
-  var plan = sub.plan || co.plan || '';
 
-  // SA는 쿠팡 정산
-  if(typeof isSuperAdmin === 'function' && isSuperAdmin()) return 'settle';
-
-  // services 배열 기반
-  if(svcs.indexOf('settle') >= 0) return 'settle';           // 쿠팡 정산
-  if(svcs.indexOf('universal') >= 0) return 'universal_settle'; // 범용 정산
-  if(svcs.indexOf('delivery') >= 0) return 'delivery_settle';   // 배달대행
-  if(svcs.indexOf('payroll') >= 0) return 'hourly_settle';      // 급여 계산
-
-  // plan 기반 폴백
-  if(plan === 'settle' || plan === 'trial') return 'settle';
-  if(plan === 'universal') return 'universal_settle';
-
-  // 기본값: 쿠팡 정산
-  return 'settle';
-}
-
-function _goMainSettle() {
-  var page = _getMainSettlePage();
-  goPage(page);
-}
 
 
 // ★ 업종별 용어 자동 설정
-function _applyIndustryTerms(industry) {
-  var INDUSTRY_MAP = {
-    food:     {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
-    beauty:   {worker:'직원', attend:'출퇴근', camp:'지점', rate:'건단가', unit:'건'},
-    health:   {worker:'강사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
-    academy:  {worker:'강사', attend:'출퇴근', camp:'학원', rate:'시급', unit:'시간'},
-    laundry:  {worker:'직원', attend:'출퇴근', camp:'매장', rate:'건단가', unit:'건'},
-    stay:     {worker:'직원', attend:'출퇴근', camp:'지점', rate:'일급', unit:'일'},
-    retail:   {worker:'직원', attend:'출퇴근', camp:'매장', rate:'시급', unit:'시간'},
-    delivery: {worker:'기사', attend:'출퇴근', camp:'캠프', rate:'건단가', unit:'건'},
-    const:    {worker:'인부', attend:'출퇴근', camp:'현장', rate:'일급', unit:'일'},
-    insurance:{worker:'설계사', attend:'출퇴근', camp:'지점', rate:'수수료', unit:'건'},
-    care:     {worker:'요양사', attend:'출퇴근', camp:'센터', rate:'시급', unit:'시간'},
-  };
-  var t = INDUSTRY_MAP[industry] || INDUSTRY_MAP['delivery'];
-  // terms 전역 변수 업데이트 (이미 있는 terms 객체)
-  if(typeof terms !== 'undefined') {
-    Object.assign(terms, t);
-  }
-  window._currentIndustry = industry;
-  var badge = document.getElementById('dash-industry-badge');
-  var EMOJIS = {food:'🍽️',beauty:'💇',health:'💪',academy:'📚',laundry:'👕',stay:'🏨',retail:'🛍️',delivery:'🚚',const:'🏗️',insurance:'🛡️',care:'💊'};
-  var NAMES = {food:'음식점·카페',beauty:'미용실·네일',health:'헬스·요가',academy:'학원·교습',laundry:'세탁·수선',stay:'숙박·펜션',retail:'소매·잡화',delivery:'배달·물류',const:'건설·일용직',insurance:'보험·영업',care:'요양·돌봄'};
-  if(badge) badge.innerHTML = '<span style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;font-size:10px">'+(EMOJIS[industry]||'🏢')+' '+(NAMES[industry]||industry)+'</span>';
-}
 
 // 로그인 후 회사 industry 로드 → terms 자동 적용
-function _loadIndustrySettings(did) {
-  if(!_db||!did) return;
-  _db.collection('companies').doc(did).get().then(function(snap) {
-    if(!snap.exists) return;
-    var co = snap.data();
-    var ind = co.industry || 'delivery';
-    _applyIndustryTerms(ind);
-    window._cachedCompanyDoc = co;
-  }).catch(function(){});
-}
 
 // ═══════════════════════════════════════════════════
 // ★ 기능 고도화 패키지
@@ -22871,369 +22719,20 @@ function _loadIndustrySettings(did) {
 // ═══════════════════════════════════════════════════
 
 // ── ① 출퇴근 EXCEL 다운로드
-function _attDownloadExcel(ym) {
-  var did = _CU.dealerId;
-  if(!_db||!did) return;
-  var parts = (ym||'').split('-');
-  var y = parts[0], m = parts[1];
-  toast('📊 엑셀 생성 중...');
-
-  _db.collection('attendance')
-    .where('dealerId','==',did)
-    .where('date','>=',y+'-'+m+'-01')
-    .where('date','<=',y+'-'+m+'-31')
-    .orderBy('date','asc').get()
-    .then(function(snap) {
-      if(snap.empty) { toast('❌ 데이터 없음'); return; }
-      _loadWorkSettings(did, function(ws) {
-        var rows = [['날짜','이름','출근','퇴근','근무시간','지각여부','야간','GPS','메모']];
-        snap.forEach(function(doc) {
-          var d = doc.data();
-          var qr = calcWorkHoursFromQR(d.checkIn||'', d.checkOut||'');
-          var st = _judgeAttStatus(d, ws);
-          rows.push([
-            d.date||'',
-            d.driverName||d.name||d.userId||'',
-            d.checkIn||'',
-            d.checkOut||'',
-            qr.hours ? qr.hours.toFixed(1)+'h' : '-',
-            st.label||'',
-            qr.nightH ? qr.nightH.toFixed(1)+'h' : '0h',
-            d.gpsOk===false?'불일치':d.gpsOk?'정상':'-',
-            d.memo||''
-          ]);
-        });
-        // CSV 생성 (EXCEL 호환 UTF-8 BOM)
-        var csv = '﻿' + rows.map(function(r){
-          return r.map(function(c){ return '"'+(String(c||'').replace(/"/g,'""'))+'"'; }).join(',');
-        }).join('\n');
-        var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url; a.download = ym+' 출퇴근기록.csv';
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
-        toast('✅ 엑셀 다운로드 완료 ('+snap.size+'건)');
-      });
-    }).catch(function(e){ toast('❌ '+e.message); });
-}
 
 // ── ② 출퇴근 누락 직원 조회 + FCM 알림
-async function _attCheckMissing(did, today) {
-  if(!_db||!did) return;
-  try {
-    // 오늘 출근 직원 목록
-    var attSnap = await _db.collection('attendance')
-      .where('dealerId','==',did).where('date','==',today).get();
-    var checkedIn = new Set();
-    attSnap.forEach(function(d){ checkedIn.add(d.data().userId||d.data().driverName); });
-
-    // 전체 직원 목록
-    var drvSnap = await _db.collection('drivers')
-      .where('dealerId','==',did).where('is_active','==',true).get();
-
-    var ws = window._workSettings || _DEFAULT_WORK_SETTINGS;
-    var now = new Date();
-    var nowH = now.getHours() + now.getMinutes()/60;
-    var stdInH = parseFloat((ws.startTime||'09:00').split(':')[0]) + parseFloat((ws.startTime||'09:00').split(':')[1])/60;
-
-    // 출근 기준시간 +30분 지났는데 미출근
-    if(nowH < stdInH + 0.5) { toast('아직 출근 시간이 지나지 않았습니다'); return; }
-
-    var missing = [];
-    drvSnap.forEach(function(doc) {
-      var d = doc.data();
-      var uid = d.userId||d.name||'';
-      if(uid && !checkedIn.has(uid)) missing.push(d);
-    });
-
-    if(!missing.length) { toast('✅ 전원 출근 완료'); return; }
-
-    // 결과 표시
-    var msg = '⚠️ 미출근 '+missing.length+'명: '+missing.map(function(d){return d.name||d.userId;}).join(', ');
-    toast(msg, '#f59e0b');
-
-    // FCM 푸시 알림 (기사 앱 설치 직원에게)
-    var batch = _db.batch();
-    missing.forEach(function(d) {
-      if(d.fcmToken) {
-        var nRef = _db.collection('driver_notifications').doc();
-        batch.set(nRef, {
-          dealerId: did, userId: d.userId||'', name: d.name||'',
-          title: '⏰ 출근 확인',
-          body: (d.name||'직원')+'님, 출근 체크를 잊지 마세요!',
-          type: 'attendance_missing',
-          date: today, sentAt: new Date().toISOString(), read: false
-        });
-      }
-    });
-    await batch.commit();
-    toast('📱 미출근 '+missing.length+'명에게 알림 발송');
-  } catch(e) { toast('❌ '+e.message); }
-}
 
 // ── ③-A 휴가 일괄 승인
-function _leaveApproveAll(did) {
-  if(!_db||!did) return;
-  if(!confirm('대기 중인 모든 휴가 신청을 승인하시겠습니까?')) return;
-  _db.collection('leaves').where('dealerId','==',did).where('status','==','pending').get()
-    .then(function(snap) {
-      if(snap.empty) { toast('대기 중인 휴가 없음'); return; }
-      var batch = _db.batch();
-      var now = new Date().toISOString();
-      snap.forEach(function(doc) {
-        batch.update(doc.ref, {
-          status:'approved', approvedAt:now,
-          approvedBy:_CU.name||_CU.userId||'관리자'
-        });
-      });
-      return batch.commit().then(function() {
-        toast('✅ '+snap.size+'건 일괄 승인 완료');
-        _leaveTab('pending');
-      });
-    }).catch(function(e){ toast('❌ '+e.message); });
-}
 
 // ── ③-B 자동 승인 설정
-function _leaveAutoApproveSettings() {
-  var did = _CU.dealerId;
-  _db.collection('companies').doc(did).collection('settings').doc('leaveSettings')
-    .get().then(function(snap) {
-      var s = snap.exists ? snap.data() : {};
-      var modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-      modal.innerHTML = '<div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:360px;width:100%">'
-        +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">⚡ 자동 승인 설정</div>'
-        +'<div style="margin-bottom:12px">'
-        +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer">'
-        +'<input type="checkbox" id="la-auto" '+(s.autoApprove?'checked':'')+' style="width:16px;height:16px">'
-        +'<span style="font-size:13px;font-weight:600">연차 자동 승인 활성화</span>'
-        +'</label>'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:4px;margin-left:24px">신청 즉시 자동으로 승인됩니다</div>'
-        +'</div>'
-        +'<div style="margin-bottom:16px">'
-        +'<label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">사전 신청 필요 일수</label>'
-        +'<input type="number" id="la-days" value="'+(s.advanceDays||1)+'" min="0" max="30" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text)">'
-        +'<div style="font-size:10px;color:var(--text3);margin-top:3px">예: 3 = 3일 전 신청분만 자동 승인</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:8px">'
-        +'<button onclick="_mcClose(this)" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:8px;cursor:pointer;font-size:13px">취소</button>'
-        +'<button onclick="_saveLeaveAutoSettings(this)" style="flex:1;padding:11px;background:#0066ff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">저장</button>'
-        +'</div>'
-        +'</div>';
-      document.body.appendChild(modal);
-    }).catch(function(){});
-}
 
-function _saveLeaveAutoSettings(btn) {
-  var did = _CU.dealerId;
-  var modal = btn.closest('div[style*="position:fixed"]');
-  var auto = document.getElementById('la-auto').checked;
-  var days = parseInt(document.getElementById('la-days').value)||1;
-  _db.collection('companies').doc(did).collection('settings').doc('leaveSettings')
-    .set({autoApprove:auto, advanceDays:days, updatedAt:new Date().toISOString()}, {merge:true})
-    .then(function(){ toast('✅ 자동 승인 설정 저장'); if(modal) modal.remove(); })
-    .catch(function(e){ toast('❌ '+e.message); });
-}
 
 // ── ③-C 보상휴가 관리
-function _leaveCompView() {
-  var did = _CU.dealerId;
-  var el = document.getElementById('leave-tab-content');
-  if(!el) return;
-  el.innerHTML = '<div class="empty">⏳ 로딩 중...</div>';
-  _db.collection('comp_leaves').where('dealerId','==',did).orderBy('createdAt','desc').limit(50).get()
-    .then(function(snap) {
-      if(snap.empty) {
-        el.innerHTML = '<div class="empty"><div class="empty-icon">💰</div>'
-          +'<div>보상휴가 내역이 없습니다</div>'
-          +'<button onclick="_leaveAddComp()" class="btn btn-teal" style="margin-top:12px;font-size:12px">+ 보상휴가 부여</button></div>';
-        return;
-      }
-      var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        +'<div style="font-size:13px;font-weight:800">💰 보상휴가 내역</div>'
-        +'<button onclick="_leaveAddComp()" class="btn btn-teal" style="font-size:11px">+ 부여</button>'
-        +'</div>'
-        +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-        +'<tr style="background:var(--bg3)"><th style="padding:8px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">일수</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">사유</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">만료일</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">상태</th>'
-        +'</tr>';
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        var exp = d.expiryDate ? new Date(d.expiryDate) : null;
-        var isExp = exp && exp < new Date();
-        html += '<tr style="border-bottom:1px solid var(--border)">'
-          +'<td style="padding:8px;font-weight:700">'+esc(d.name||d.userId||'')+'</td>'
-          +'<td style="padding:8px;text-align:center;color:var(--blue);font-weight:700">'+d.days+'일</td>'
-          +'<td style="padding:8px;color:var(--text3)">'+esc(d.reason||'')+'</td>'
-          +'<td style="padding:8px;text-align:center;font-size:11px">'+(d.expiryDate||'-')+'</td>'
-          +'<td style="padding:8px;text-align:center">'
-          +'<span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;'
-          +(isExp?'color:#6b7280;background:rgba(107,114,128,.1)':'color:#22c55e;background:rgba(34,197,94,.1)')+'">'
-          +(isExp?'만료':'유효')+'</span></td>'
-          +'</tr>';
-      });
-      el.innerHTML = html + '</table>';
-    }).catch(function(e){ el.innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; });
-}
 
-function _leaveAddComp() {
-  var modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  var expDate = new Date(); expDate.setFullYear(expDate.getFullYear()+1);
-  modal.innerHTML = '<div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:360px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">💰 보상휴가 부여</div>'
-    +'<div style="display:grid;gap:12px;margin-bottom:16px">'
-    +'<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">직원 이름</label>'
-    +'<input type="text" id="comp-name" placeholder="홍길동" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text)"></div>'
-    +'<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">부여 일수</label>'
-    +'<input type="number" id="comp-days" value="1" min="0.5" step="0.5" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text)"></div>'
-    +'<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">사유</label>'
-    +'<input type="text" id="comp-reason" placeholder="휴일근무 보상" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text)"></div>'
-    +'<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:4px">만료일</label>'
-    +'<input type="date" id="comp-exp" value="'+expDate.toISOString().slice(0,10)+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text)"></div>'
-    +'</div>'
-    +'<div style="display:flex;gap:8px">'
-    +'<button onclick="_mcClose(this)" style="flex:1;padding:11px;background:var(--bg3);border:none;border-radius:8px;cursor:pointer">취소</button>'
-    +'<button onclick="_saveCompLeave(this)" style="flex:1;padding:11px;background:#059669;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">부여</button>'
-    +'</div></div>';
-  document.body.appendChild(modal);
-}
 
-function _saveCompLeave(btn) {
-  var did = _CU.dealerId;
-  var name = document.getElementById('comp-name').value.trim();
-  var days = parseFloat(document.getElementById('comp-days').value)||1;
-  var reason = document.getElementById('comp-reason').value.trim();
-  var exp = document.getElementById('comp-exp').value;
-  if(!name){ toast('직원 이름을 입력하세요'); return; }
-  _db.collection('comp_leaves').add({
-    dealerId:did, name:name, days:days, reason:reason,
-    expiryDate:exp, createdAt:new Date().toISOString(),
-    grantedBy:_CU.name||'관리자', used:0
-  }).then(function(){
-    toast('✅ 보상휴가 '+days+'일 부여');
-    var modal = btn.closest('div[style*="position:fixed"]');
-    if(modal) modal.remove();
-    _leaveCompView();
-  }).catch(function(e){ toast('❌ '+e.message); });
-}
 
 // ── ④ 급여-출퇴근 자동 연동
-async function _payAutoCalcFromAtt(did, ym) {
-  if(!_db||!did||!ym) return;
-  toast('🔄 출퇴근 → 급여 자동 계산 중...');
-  try {
-    _loadWorkSettings(did, async function(ws) {
-      // 출퇴근 데이터 로드
-      var attSnap = await _db.collection('attendance')
-        .where('dealerId','==',did)
-        .where('date','>=',ym+'-01')
-        .where('date','<=',ym+'-31').get();
 
-      // 직원별 집계
-      var byDriver = {};
-      attSnap.forEach(function(doc) {
-        var d = doc.data();
-        var uid = d.userId||d.driverName||'';
-        if(!uid) return;
-        if(!byDriver[uid]) byDriver[uid] = {
-          name: d.driverName||d.name||uid,
-          userId: uid,
-          totalH: 0, normalH: 0, nightH: 0,
-          days: 0, lateCount: 0
-        };
-        var qr = calcWorkHoursFromQR(d.checkIn||'', d.checkOut||'');
-        byDriver[uid].totalH += qr.hours;
-        byDriver[uid].nightH += qr.nightH;
-        byDriver[uid].normalH += Math.max(0, qr.hours - qr.nightH);
-        if(d.checkIn) byDriver[uid].days++;
-        var st = _judgeAttStatus(d, ws);
-        if(st.code==='late'||st.code==='late_early') byDriver[uid].lateCount++;
-      });
-
-      // 직원별 급여 계산 후 표시
-      var minWage = (typeof LABOR_LAW_2026 !== 'undefined') ? LABOR_LAW_2026.minHourly : 10030;
-      var results = Object.values(byDriver).map(function(s) {
-        var normalPay = Math.round(s.normalH * minWage);
-        var nightPay = Math.round(s.nightH * minWage * 0.5); // 야간 할증 50%
-        var totalPay = normalPay + nightPay;
-        return Object.assign(s, { normalPay:normalPay, nightPay:nightPay, totalPay:totalPay });
-      });
-
-      // 결과 모달 표시
-      var modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;overflow-y:auto;padding:20px';
-      var rows = results.map(function(r) {
-        return '<tr style="border-bottom:1px solid var(--border)">'
-          +'<td style="padding:10px;font-weight:700">'+esc(r.name)+'</td>'
-          +'<td style="padding:8px;text-align:center">'+r.days+'일</td>'
-          +'<td style="padding:8px;text-align:center">'+r.totalH.toFixed(1)+'h</td>'
-          +'<td style="padding:8px;text-align:center;color:#f59e0b">'+r.nightH.toFixed(1)+'h</td>'
-          +'<td style="padding:8px;text-align:center;color:#22c55e;font-weight:700">'+r.totalPay.toLocaleString()+'원</td>'
-          +'<td style="padding:8px;text-align:center">'+(r.lateCount?'<span style="color:#f59e0b;font-size:11px">지각 '+r.lateCount+'회</span>':'-')+'</td>'
-          +'</tr>';
-      }).join('');
-
-      var total = results.reduce(function(s,r){return s+r.totalPay;},0);
-      modal.innerHTML = '<div style="max-width:700px;margin:0 auto;background:var(--bg2);border-radius:16px;padding:24px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-        +'<div style="font-size:16px;font-weight:800">💼 '+ym+' 자동 급여 계산</div>'
-        +'<button onclick="_mcClose(this)" style="background:var(--bg3);border:none;padding:6px 14px;border-radius:8px;cursor:pointer">닫기</button>'
-        +'</div>'
-        +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-        +'<tr style="background:var(--bg3)">'
-        +'<th style="padding:10px;text-align:left;border-bottom:2px solid var(--border)">직원</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">출근</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">근무시간</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">야간</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">급여(최저)</th>'
-        +'<th style="padding:8px;border-bottom:2px solid var(--border)">특이</th>'
-        +'</tr>'+rows+'</table></div>'
-        +'<div style="margin-top:14px;padding:12px;background:rgba(0,102,255,.1);border-radius:10px;display:flex;justify-content:space-between;align-items:center">'
-        +'<span style="font-size:13px;font-weight:700">총 인건비 (최저임금 기준)</span>'
-        +'<span style="font-size:20px;font-weight:900;color:#00d4ff">'+total.toLocaleString()+'원</span>'
-        +'</div>'
-        +'<div style="margin-top:8px;font-size:11px;color:var(--text3)">* 최저임금 기준 자동 계산. 실제 급여는 급여 설정에서 개별 조정 가능.</div>'
-        +'</div>';
-      document.body.appendChild(modal);
-      toast('✅ 급여 자동 계산 완료 ('+results.length+'명)');
-    });
-  } catch(e) { toast('❌ '+e.message); }
-}
-
-function _homeLoadSettleSummary(did, ym) {
-  if(!_db||!did) return;
-  var cntEl = document.getElementById('h-total-cnt');
-  var payEl = document.getElementById('h-total-pay');
-  var drvEl = document.getElementById('h-driver-cnt');
-
-  _db.collection('incomes').where('dealerId','==',did).where('ym','==',ym)
-    .get().then(function(snap) {
-      if(snap.empty) {
-        if(cntEl) cntEl.textContent = '0';
-        if(payEl) payEl.textContent = '0';
-        if(drvEl) drvEl.textContent = '0';
-        return;
-      }
-      var totalCnt = 0, totalPay = 0;
-      var drivers = new Set();
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        totalCnt += parseInt(d.totalCnt||d.cnt||0);
-        totalPay += parseInt(d.driverPay||d.totalPay||d.pay||0);
-        if(d.driver||d.driverName) drivers.add(d.driver||d.driverName);
-      });
-      if(cntEl) cntEl.textContent = totalCnt.toLocaleString();
-      if(payEl) payEl.textContent = (totalPay/10000).toFixed(0)+'만';
-      if(drvEl) drvEl.textContent = drivers.size || snap.size;
-    }).catch(function() {
-      if(cntEl) cntEl.textContent = '-';
-    });
-}
 
 
 
@@ -28664,19 +28163,6 @@ function pageInventory(){
   _invTab(document.getElementById('inv-tab-dash'),'dash');
 }
 
-function _invTab(btn,tab){
-  ['dash','stock','order','salary'].forEach(function(t){
-    var b=document.getElementById('inv-tab-'+t);
-    var a=document.getElementById('inv-'+t+'-area');
-    if(b) b.className=t===tab?'btn btn-blue':'btn';
-    if(a) a.style.display=t===tab?'':'none';
-  });
-  if(tab==='dash') _invRenderDash();
-  if(tab==='stock') _invRenderStock();
-  if(tab==='order') _invRenderOrder();
-  if(tab==='history') _invRenderOrderHistory();
-  if(tab==='salary') _invRenderSalary();
-}
 
 function _invRenderDash(){
   var area=document.getElementById('inv-dash-area');
@@ -30938,8 +30424,6 @@ async function openSendModal(x){
   ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
 }
 
-function sendKakaoStatement(x,r,name,month,net,vatIncome){var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';var did=_CU.dealerId||'';var phone=(r&&(r.phone||r.driverPhone))||'';toast('📋 명세서 링크 생성 중...');var token=Math.random().toString(36).slice(2,10)+Date.now().toString(36);var stmtUrl='https://donway.ai.kr/stmt?t='+token;var nl=String.fromCharCode(10);var msg='['+coName+'] '+name+'님 '+month+' 정산명세서'+nl+'실지급: ₩'+Math.round(net||0).toLocaleString()+'원'+nl+'명세서 확인: '+stmtUrl;if(_db)_db.collection('statement_share').doc(token).set({dealerId:did,driverName:name,month:month,net:net,_coName:coName,createdAt:new Date().toISOString()}).catch(function(){});var phoneClean=phone.replace(/[^0-9]/g,'');if(phoneClean){window.location.href='sms:'+phoneClean+'?body='+encodeURIComponent(msg);toast('📱 문자 앱이 열립니다');}else{navigator.clipboard&&navigator.clipboard.writeText(msg).then(function(){toast('📋 복사됨 — 카카오톡이나 문자에 붙여넣기 하세요');}).catch(function(){var mo=document.createElement('div');mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';mo.onclick=function(e){if(e.target===mo)mo.remove();};mo.innerHTML='<div style="background:var(--bg2);border-radius:16px;padding:20px;max-width:380px;width:100%"><div style="font-size:14px;font-weight:800;margin-bottom:12px">📋 명세서 링크</div><textarea style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px" rows="5">'+msg+'</textarea><button onclick="_mcClose(this)" class="btn btn-blue" style="width:100%;margin-top:10px">닫기</button></div>';document.body.appendChild(mo);});}}
-function sendKakaoStatement_orig(x,r,name,month,net,vatIncome){var coName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'DONWAY';var did=_CU.dealerId||'';toast('📸 명세서 이미지 생성 중...');var captureDiv=document.createElement('div');captureDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif';captureDiv.innerHTML=_buildPayslipCaptureHTML(x,r,name,month,net,vatIncome||net);document.body.appendChild(captureDiv);setTimeout(function(){if(typeof html2canvas==='undefined'){if(captureDiv.parentNode)document.body.removeChild(captureDiv);_kakaoShareFallback(coName,name,month,net);return;}html2canvas(captureDiv,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){if(captureDiv.parentNode)document.body.removeChild(captureDiv);var dataUrl=canvas.toDataURL('image/jpeg',0.85);if(dataUrl.length>900000)dataUrl=canvas.toDataURL('image/jpeg',0.7);var path='stmt_kakao/'+did+'/'+month+'_'+(x.userId||'u')+'_'+Date.now()+'.jpg';_uploadImgToStorage(dataUrl,path).then(function(imgUrl){var token=Math.random().toString(36).slice(2,10)+Date.now().toString(36);var stmtUrl='https://donway.ai.kr/stmt?t='+token;if(_db)_db.collection('statement_share').doc(token).set({dealerId:did,driverName:name,month:month,net:net,imgUrl:imgUrl,createdAt:new Date().toISOString()}).catch(function(){});_kakaoShareWithImage(coName,name,month,net,imgUrl,stmtUrl);});}).catch(function(){if(captureDiv.parentNode)document.body.removeChild(captureDiv);_kakaoShareFallback(coName,name,month,net);});},300);}
 function _kakaoShareWithImage(coName,name,month,net,imgUrl,stmtUrl){var title='['+coName+'] '+month+' 정산명세서';var desc=name+'님 · 실지급 ₩'+Math.round(net||0).toLocaleString()+'원';if(window.Kakao&&window.Kakao.isInitialized()){window.Kakao.Share.sendDefault({objectType:'feed',content:{title:title,description:desc,imageUrl:imgUrl||'https://donway.ai.kr/og_banner.jpg',link:{mobileWebUrl:stmtUrl,webUrl:stmtUrl}},buttons:[{title:'📋 명세서 전체 보기',link:{mobileWebUrl:stmtUrl,webUrl:stmtUrl}}]});toast('✅ 카카오톡으로 명세서 전송!');}else{navigator.clipboard&&navigator.clipboard.writeText(stmtUrl).then(function(){toast('📋 명세서 링크 복사됨 — 카카오톡에 붙여넣기');});}}
 function _kakaoShareFallback(coName,name,month,net){var nl=String.fromCharCode(10);var msg='['+coName+'] '+name+'님 '+month+' 정산명세서'+nl+'실지급 ₩'+Math.round(net||0).toLocaleString()+'원'+nl+'donway.ai.kr';if(window.Kakao&&window.Kakao.isInitialized()){window.Kakao.Share.sendDefault({objectType:'text',text:msg,link:{mobileWebUrl:'https://donway.ai.kr',webUrl:'https://donway.ai.kr'}});}else{navigator.clipboard&&navigator.clipboard.writeText(msg).then(function(){toast('📋 복사됨 — 카카오톡에 붙여넣기');});}}
 
