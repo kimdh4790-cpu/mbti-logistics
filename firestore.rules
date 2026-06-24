@@ -200,24 +200,9 @@ service cloud.firestore {
     }
     match /settings/{docId} {
       // settings docId = "{dealerId}_{key}" 형태 — dealerId 필드 없을 수 있음
-      allow read: if isAuth() && (
-        docId.matches(request.auth.uid + '_.*') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
-        isSuperAdmin()
-      );
-      allow create, update: if isAuth() && (
-        docId.matches(request.auth.uid + '_.*') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
-        isSuperAdmin()
-      );
-      allow delete: if isAuth() && (
-        docId.matches(request.auth.uid + '_.*') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
-        isSuperAdmin()
-      );
+      // 인증된 사용자면 읽기 허용, 쓰기는 본인 dealerId prefix만
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth();
     }
     match /contracts/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -380,9 +365,10 @@ service cloud.firestore {
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /payout_sessions/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
+      allow read: if isDealer(resource.data.dealerId) || isSuperAdmin();
+      allow list: if isAuth();
       allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
+      allow update, delete: if isDealer(resource.data.dealerId) || isSuperAdmin();
     }
     match /roster_week/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
