@@ -298,8 +298,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
                 <span style="font-size:20px">🤖</span>
                 <div>
                   <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                  <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 31만 · 150명 68만 · 300명 102만 · 500명 170만 · 700명 275만 · 1000명 393만 · 1500명 589만 · 2000명 786만원/월</div>
-                  <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 25만 · 150명 54만 · 300명 82만 · 500명 136만 · 700명 220만 · 1000명 314만 · 1500명 471만 · 2000명 629만원/월 (VAT별도)</div>
+                  <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 32.5만 · 100명 62만 · 200명 114만 · 300명 159만 · 500명 240만 · 700명 315만 · 700명+ 인당4,500원/월</div>
+                  <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 26.5만 · 100명 50만 · 200명 92만 · 300명 126만 · 500명 190만 · 700명 245만 · 700명+ 인당3,300원 (VAT별도)</div>
                 </div>
               </div>
               <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -308,7 +308,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
                 <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
                 <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                  <option value="50">~50명 — 31만원/월</option>
+                  <option value="50">~50명 — 32.5만원/월 (인당 6,500원)</option>
+              <option value="100">~100명 — 62만원/월 (인당 6,200원)</option>
                   <option value="150">~150명 — 68만원/월</option>
                   <option value="300">~300명 — 102만원/월</option>
                   <option value="500">~500명 — 170만원/월</option>
@@ -9048,7 +9049,7 @@ function _setPlanType(type){
     pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
   }
   var tiers=[
-    {v:'50',  p:'31만',  g:'25만'},
+    {v:'50',  p:'32.5만',  g:'26.5만'},
     {v:'150', p:'68만',  g:'54만'},
     {v:'300', p:'102만', g:'82만'},
     {v:'500', p:'170만', g:'136만'},
@@ -10220,10 +10221,10 @@ function doLogout(){
 
 // ══ 토스페이먼츠 결제 ══
 var PLAN_INFO={
-  settle:      {label:'📦 AI 정산',       unitPrice:17000, amount:510000, group:1, field:'settlePaid',      desc:'쿠팡 전용 AI 정산'},
+  settle:      {label:'📦 AI 정산',       unitPrice:6500,  amount:325000, group:1, field:'settlePaid',      desc:'쿠팡 전용 AI 정산'},
   qr:          {label:'🔐 QR 근태',       unitPrice:12000, amount:360000, group:2, field:'qrPaid',          desc:'QR출퇴근·근무표'},
   payroll:     {label:'💼 급여관리',      unitPrice:12000, amount:360000, group:2, field:'payrollPaid',     desc:'급여·4대보험'},
-  qr_payroll:  {label:'🔐💼 QR+급여',    unitPrice:17000, amount:510000, group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여 통합'},
+  qr_payroll:  {label:'🔐💼 QR+급여',    unitPrice:3200,  amount:160000, group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여 통합'},
   delivery:    {label:'🛵 배달대행',      unitPrice:17000, amount:510000, group:1, field:'deliveryPaid',    desc:'배달대행 정산'},
   universal:   {label:'📋 범용 정산',     unitPrice:25000, amount:750000, group:1, field:'universalPaid',   desc:'타업종·복합업종 정산'},
   inventory:   {label:'📦 재고관리',      unitPrice:15000, amount:150000, group:1, field:'inventoryPaid',   desc:'입고/출고/재고현황 관리'},
