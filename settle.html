@@ -11083,7 +11083,7 @@ function _importRosterExcel(input){
         var key=item.driverId||item.name;
         if(key&&!driverSet[key]) driverSet[key]={
           userId:item.driverId,name:item.name,
-          camp:item.camp.replace('캠프','').trim(),
+          camp:_normCamp(item.camp).replace('캠프','').trim(),
           wave:item.wave||'',rotation:item.rotation||''
         };
       });
@@ -11211,7 +11211,7 @@ function _importRosterExcel(input){
             dayIndex:item.dayIndex,
             status:item.status,route:String(item.route||''),
             rotation:String(item.rotation||''),
-            name:item.name,camp:item.camp,
+            name:item.name,camp:_normCamp(item.camp).replace('캠프','').trim(),
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
           });
         });
