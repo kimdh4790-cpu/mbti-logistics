@@ -11085,7 +11085,8 @@ function _importRosterExcel(input){
         snap.forEach(function(doc){
           var d=doc.data();
           // ① 쿠팡 ID (가장 신뢰도 높음) — 모든 ID 필드 등록
-          [d.coupangId,d.userId,d.driverId,d.loginId,d.courierId,d.id,doc.id].filter(Boolean)
+          // 모든 ID 필드 + 이름으로 existMap 등록
+          [d.coupangId,d.userId,d.driverId,d.loginId,d.courierId,d.couponId,doc.id].filter(Boolean)
             .forEach(function(x){
               var k=String(x).trim().toLowerCase();
               if(k)existMap[k]=doc.id;
