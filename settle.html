@@ -8589,7 +8589,27 @@ function showApp(){
   }
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('idSupport').where('dealerId','==',_CU.dealerId).get()
-      .then(function(snap){var r=[];snap.forEach(function(d){r.push(Object.assign({_id:d.id},d.data()));});window._idSupportRules=r;})
+      .then(function(snap){
+        var r=[];
+        snap.forEach(function(d){
+          var data=Object.assign({_id:d.id},d.data());
+          // startDate/endDate 없으면 dates 배열에서 보정
+          if(!data.startDate&&data.dates&&data.dates.length){
+            var sorted=data.dates.slice().sort();
+            data.startDate=sorted[0];
+            data.endDate=sorted[sorted.length-1];
+          }
+          // 그래도 없으면 이번 달 전체
+          if(!data.startDate){
+            var now=new Date();
+            var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
+            data.startDate=ym+'-01';
+            data.endDate=ym+'-31';
+          }
+          r.push(data);
+        });
+        window._idSupportRules=r;
+      })
       .catch(function(){});
   }
   // 구독 상태 확인 (슈퍼어드민은 제외)
@@ -34105,7 +34125,12 @@ function _saveIdSupport(){
   var rRaw=(document.getElementById('ids-routes')||{value:''}).value.trim();
   var dates=dRaw?dRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
   var routes=rRaw?rRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
-  _db.collection('idSupport').add({dealerId:did,fromId:from,toId:to,dates:dates,routes:routes,createdAt:new Date().toISOString()})
+  var sortedDates=dates.slice().sort();
+  var startDate=sortedDates[0]||'';
+  var endDate=sortedDates[sortedDates.length-1]||'';
+  // 날짜가 없으면 이번 달 전체
+  if(!startDate){var now=new Date();var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);startDate=ym+'-01';endDate=ym+'-31';}
+  _db.collection('idSupport').add({dealerId:did,fromId:from,toId:to,dates:dates,startDate:startDate,endDate:endDate,routes:routes,createdAt:new Date().toISOString()})
     .then(function(){
       toast('✅ 등록 완료');
       ['ids-from','ids-to','ids-dates','ids-routes'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
