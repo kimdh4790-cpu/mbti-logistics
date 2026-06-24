@@ -40129,7 +40129,11 @@ function openAdminPanel(){
           +'<span style="font-size:10px;color:'+expColor+';font-weight:700">'+(isExpired?'❌ 만료 ':'⏳ ~')+(item.trialEnd||'-')+'</span>';
       } else {dateHtml='<span style="font-size:10px;color:var(--text3)">-</span>';}
       tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong><br>'
-        +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span></td>'
+        +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span>'
+        +(item.bizDocUrl
+          ?'<br><a href="'+item.bizDocUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:3px;margin-top:4px;font-size:10px;color:var(--primary);text-decoration:none;background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:4px;padding:2px 6px">📄 사업자등록증 보기</a>'
+          :'<br><span style="font-size:10px;color:var(--red);margin-top:4px;display:inline-block">📄 미첨부</span>')
+        +'</td>'
         +'<td style="padding:8px 10px;text-align:center"><span style="background:'+planColor+'22;color:'+planColor+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+planLabel+'</span></td>'
         +'<td style="padding:8px 6px;font-size:10px">'
         +(item.slug
