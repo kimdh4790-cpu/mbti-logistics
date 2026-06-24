@@ -7039,7 +7039,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         }
         if(tHdrIdx>=0){
           var thRow=total[tHdrIdx];
-          var tID=3,tFresh=8,tInc=9,tDmg=10,tTotal=11;
+          var tID=3,tFresh=8,tInc=9,tDmg=10,tTotal=11,tDcnt=4,tRcnt=5;
           for(var tc=0;tc<thRow.length;tc++){
             var tcn=String(thRow[tc]||'').replace(/\s+/g,'');
             if(tcn==='ID')tID=tc;
@@ -7047,6 +7047,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             else if(tcn.includes('가중요인')||tcn.includes('추가인센'))tInc=tc;
             else if(tcn.includes('분실파손'))tDmg=tc;
             else if(tcn.includes('총합계')||tcn.includes('TOTAL'))tTotal=tc;
+            else if(tcn.includes('배송')&&tcn.includes('parcel'))tDcnt=tc;
+            else if(tcn.includes('반품')&&tcn.includes('parcel'))tRcnt=tc;
           }
           for(var tj=tHdrIdx+1;tj<total.length;tj++){
             var tr=total[tj];if(!tr||!tr[tID])continue;
@@ -7062,18 +7064,33 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             };
           }
           // ★ 엑셀 자체 교차검증
-          // ★ 엑셀 합계행에서 각 항목 총합 추출 (TOTAL>1M 인 행)
+          // ★ 합계행 추출 - 헤더(tHdrIdx) 위에서 숫자값 있는 행 찾기 (수식 미계산 대비)
           var excelGrandTotal=0,excelGrandFresh=0,excelGrandInc=0,excelGrandDmg=0;
+          var excelGrandDcnt=0,excelGrandRcnt=0;
+          // 방법1: tHdrIdx 위 행에서 직접 탐색 (행2→행3 패턴)
           for(var gtr=0;gtr<tHdrIdx;gtr++){
             var gRow=total[gtr]||[];
+            // 배송건수/반품건수/TOTAL 컬럼에서 숫자 찾기
+            var gDcnt=Number(gRow[tDcnt>=0?tDcnt:4])||0;
+            var gRcnt=Number(gRow[tRcnt>=0?tRcnt:5])||0;
             var gVal=Number(gRow[tTotal])||0;
-            if(gVal>1000000){
+            var gFresh=Number(gRow[tFresh])||0;
+            var gInc=Number(gRow[tInc])||0;
+            var gDmg=Number(gRow[tDmg])||0;
+            // 건수 or 금액 중 하나라도 있으면 합계행
+            if(gVal>100000||gDcnt>100){
               excelGrandTotal=gVal;
-              excelGrandFresh=Number(gRow[tFresh])||0;
-              excelGrandInc  =Number(gRow[tInc]  )||0;
-              excelGrandDmg  =Number(gRow[tDmg]  )||0;
+              excelGrandFresh=gFresh;
+              excelGrandInc=gInc;
+              excelGrandDmg=gDmg;
+              excelGrandDcnt=gDcnt;
+              excelGrandRcnt=gRcnt;
               break;
             }
+          }
+          // 방법2: 못 찾으면 Raw 시트에서 직접 집계
+          if(!excelGrandTotal){
+            excelGrandTotal=Object.values(drvMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
           }
           // 개별 합산 (저장값은 ×1.1 됐으므로 ÷1.1 해서 VAT제외로 비교)
           var sumTotal=Object.values(totalMap).reduce(function(s,v){return s+(v.totalAmt||0);},0);
@@ -7086,6 +7103,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           window._excelVerify={
             excelTotal: excelGrandTotal,  excelFresh: excelGrandFresh,
             excelInc:   excelGrandInc,    excelDmg:   excelGrandDmg,
+            excelDcnt:  excelGrandDcnt,   excelRcnt:  excelGrandRcnt,
             sumTotal:   sumTotal,         sumFresh:   sumFresh,
             sumInc:     sumInc,           sumDmg:     sumDmg,
             rawCalc:    rawCalcTotal,
@@ -41104,7 +41122,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
         +'</div></div>';
     }
     var rows='';
-    rows+=_vRow('📦 배송+반품 합계', ev.excelTotal||0, ev.totalDcnt!==undefined?(ev.totalDcnt||0)+(ev.totalRcnt||0):undefined, ev.diffTotal||0);
+    rows+=_vRow('📦 배송+반품 합계', ev.excelTotal||0, (ev.excelDcnt||ev.totalDcnt||0)+(ev.excelRcnt||ev.totalRcnt||0)>0?(ev.excelDcnt||ev.totalDcnt||0)+(ev.excelRcnt||ev.totalRcnt||0):undefined, ev.diffTotal||0);
     if((ev.excelFresh||0)>0||Math.abs(ev.diffFresh||0)>0)
       rows+=_vRow('🧊 프레시백', ev.excelFresh||0, undefined, ev.diffFresh||0);
     if((ev.excelInc||0)>0||Math.abs(ev.diffInc||0)>0)
@@ -41135,7 +41153,7 @@ function _showUploadResult(month,added,updated,newDrvCnt,routeCnt,newDrivers,lef
 
   // 집계 카드
   var _ev2=excelVerify||{};
-  var _totD=_ev2.totalDcnt||0, _totR=_ev2.totalRcnt||0;
+  var _totD=_ev2.excelDcnt||_ev2.totalDcnt||0, _totR=_ev2.excelRcnt||_ev2.totalRcnt||0;
   var stats=document.createElement('div');
   stats.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 0;border-bottom:1px solid var(--border);margin-bottom:12px';
   stats.innerHTML=
