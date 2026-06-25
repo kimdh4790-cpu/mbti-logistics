@@ -22518,7 +22518,7 @@ function pageHome(){
     // AI정산 공통
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📊','정산하기','settle','#0066ff');
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('👤','기사 관리','drivers','#0891b2');
-    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📈','통계','stats','#7c3aed');
+    // 통계 퀵버튼 제거
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('🧾','세무사 연동','tax_share','#059669');
     // QR출퇴근 결제 시
     if(hasSvc('qr')||isSA) html += _homeQuickBtn2('🔐','출퇴근 현황','attendance','#0891b2');
@@ -26428,7 +26428,6 @@ var MENUS_SETTLE = [
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
     {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
@@ -26607,7 +26606,6 @@ var MENUS_UNIVERSAL = [
     {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
     {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
     {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'universal'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'}
   ]},
@@ -26681,7 +26679,6 @@ var MENUS_FULL = [
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
-    {ic:'📈',l:'통계',             p:'stats',            plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
