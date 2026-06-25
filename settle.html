@@ -29569,13 +29569,45 @@ function pageSettle(){
       totEmpDrv+=(r.emp||0);        // 기사부담 고용
       totWorkDrv+=(r.work||0);      // 기사부담 산재
       var cc=_getSettleCamp(s)||'기타';
-      if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0};
+      var ct2=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+      var cTotalVat2=ct2?Math.round(ct2*1.1):(r.income||0);
+      var taxBase2=r.income||r.totalAmt||0;
+      var mw2=r.monthlyWage||0;
+      var ins2=(mw2>=800000?Math.floor(mw2*0.008/10)*10:0)+Math.floor(mw2*0.0088/10)*10+
+               (mw2>=800000?Math.floor(mw2*0.009/10)*10:0)+Math.floor(mw2*0.0007/10)*10;
+      var mbv2=cTotalVat2-taxBase2-ins2;
+      var campProfit2=mbv2-Math.round(mbv2*0.1);
+      if(!byCamp[cc])byCamp[cc]={cnt:0,net:0,dcnt:0,totalVat:0,profit:0};
       byCamp[cc].cnt++;byCamp[cc].net+=r.net||0;byCamp[cc].dcnt+=(s.dcnt||0);
+      byCamp[cc].totalVat+=cTotalVat2;byCamp[cc].profit+=campProfit2;
     });
     var byMonth={};
     filteredSettles.forEach(function(s){var m=s.month||'';if(!byMonth[m])byMonth[m]={cnt:0,net:0};byMonth[m].cnt++;byMonth[m].net+=(calcNet(s).net||0);});
     var months=Object.keys(byMonth).sort().reverse().slice(0,6);
     var campKeys=Object.keys(byCamp).sort();
+
+    // 전월 캠프별 데이터 집계 (특정 월 선택 시)
+    var prevCamp={};
+    if(curMonthFilter!=='all'&&allMonths.length>1){
+      var prevMoIdx=allMonths.indexOf(curMonthFilter);
+      var prevMo=prevMoIdx>=0&&prevMoIdx<allMonths.length-1?allMonths[prevMoIdx+1]:null;
+      if(prevMo){
+        settles.filter(function(s){return s.month===prevMo;}).forEach(function(s){
+          var r=calcNet(s);
+          var cc=_getSettleCamp(s)||'기타';
+          var ct3=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+          var ctv3=ct3?Math.round(ct3*1.1):(r.income||0);
+          var tb3=r.income||r.totalAmt||0;
+          var mw3=r.monthlyWage||0;
+          var ins3=(mw3>=800000?Math.floor(mw3*0.008/10)*10:0)+Math.floor(mw3*0.0088/10)*10+
+                   (mw3>=800000?Math.floor(mw3*0.009/10)*10:0)+Math.floor(mw3*0.0007/10)*10;
+          var mbv3=ctv3-tb3-ins3;
+          var cp3=mbv3-Math.round(mbv3*0.1);
+          if(!prevCamp[cc])prevCamp[cc]={dcnt:0,profit:0};
+          prevCamp[cc].dcnt+=(s.dcnt||0);prevCamp[cc].profit+=cp3;
+        });
+      }
+    }
 
     c.innerHTML='';
     // ★ 월 선택 탭 UI
@@ -29663,13 +29695,28 @@ function pageSettle(){
       var card=document.createElement('div');
       card.style.cssText='background:var(--bg);border:1.5px solid '+col+'44;border-radius:12px;padding:14px 16px;cursor:pointer;transition:all .2s;border-top:3px solid '+col;
       card.onclick=function(){goPage('settlements');setTimeout(function(){filterSettleC(cc);},200);};
-      card.innerHTML='<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">'
-        +'<span style="background:'+col+';color:#fff;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span>'
-        +'<span style="font-size:11px;color:var(--text3)">'+bc.cnt+'명</span>'
-        +'</div>'
-        +'<div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:2px">₩'+fmt(bc.net)+'</div>'
-        +'<div style="font-size:10px;color:var(--text3)">실지급 합계</div>'
-        +'<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)">배송 '+fmt(bc.dcnt)+'건</div>';
+      var marginRate=bc.totalVat>0?((bc.profit/bc.totalVat)*100).toFixed(1):0;
+      var prevBc=prevCamp[cc]||null;
+      var dcntDiff=prevBc?bc.dcnt-prevBc.dcnt:null;
+      var dcntPct=prevBc&&prevBc.dcnt>0?((dcntDiff/prevBc.dcnt)*100).toFixed(0):null;
+      var profitDiff=prevBc?bc.profit-prevBc.profit:null;
+      var profitPct=prevBc&&Math.abs(prevBc.profit)>0?((profitDiff/Math.abs(prevBc.profit))*100).toFixed(0):null;
+      var mrc=parseFloat(marginRate)>=0?'#059669':'#dc2626';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<div style="display:flex;align-items:center;gap:6px">'+
+        '<span style="background:'+col+';color:#fff;padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700">'+esc(cc)+'</span>'+
+        '<span style="font-size:11px;color:var(--text3)">'+bc.cnt+'명</span></div>'+
+        '<div style="background:'+(parseFloat(marginRate)>=0?'rgba(5,150,105,.12)':'rgba(220,38,38,.1)')+';color:'+mrc+';font-size:12px;font-weight:900;padding:2px 8px;border-radius:8px">'+marginRate+'%</div>'+
+        '</div>'+
+        '<div style="font-size:17px;font-weight:900;color:var(--text);margin-bottom:2px">&#x20A9;'+fmt(bc.net)+'</div>'+
+        '<div style="font-size:10px;color:var(--text3)">실지급 합계</div>'+
+        '<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border)">'+
+        '<div style="font-size:10px;color:var(--text3)">배송 '+fmt(bc.dcnt)+'건'+
+        (dcntPct!==null?' <span style="color:'+(parseInt(dcntPct)>=0?'#059669':'#dc2626')+';font-weight:700">'+(parseInt(dcntPct)>=0?'▲':'▼')+Math.abs(dcntPct)+'%</span>':'')+
+        '</div>'+
+        (profitPct!==null?'<div style="font-size:10px;color:var(--text3);margin-top:3px">마진 <span style="color:'+(parseInt(profitPct)>=0?'#059669':'#dc2626')+';font-weight:700">'+(parseInt(profitPct)>=0?'▲':'▼')+Math.abs(profitPct)+'%</span></div>':'')+
+        '</div>';
       campGrid.appendChild(card);
     });
     campSec.appendChild(campGrid);
