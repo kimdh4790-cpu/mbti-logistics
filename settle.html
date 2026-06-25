@@ -8764,6 +8764,8 @@ function showApp(){
       // ★ services 배열 기반 메뉴 필터링
       var cfg=_COMPANY_CFG||{};
       var services=cfg.services||[sType||'settle'];
+      // payout은 settle 포함 시 자동 허용
+      if(services.indexOf('settle')>=0&&services.indexOf('payout')<0) services=services.concat(['payout']);
       // 기존 호환성 유지
       if(!cfg.services){
         if(sType==='delivery') services=['delivery'];
@@ -26355,6 +26357,7 @@ function _filterMenusByServices(menus){
 
   var svcPlanMap={
     settle:['settle','any_paid','free'],
+    payout:['payout','settle','any_paid','free'],
     delivery:['delivery','any_paid','free'],
     universal:['universal','any_paid','free'],
     inventory:['inventory','free'],
