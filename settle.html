@@ -37705,7 +37705,12 @@ function pageStats(){
           }
         });
 
-        // 경비 미반영 (정산현황과 동일 기준)
+        // 경비 반영 (등록된 경비 있으면 차감)
+        Object.keys(byMonth).forEach(function(mo){
+          var totalExp=(byMonthExp[mo]||0)+fixedMonthlyTotal;
+          byMonth[mo].expense=totalExp;
+          byMonth[mo].profit=byMonth[mo].profit-totalExp;
+        });
 
         var months=Object.keys(byMonth).sort().reverse();
         var curData=byMonth[curMo]||null;
