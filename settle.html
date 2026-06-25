@@ -37672,16 +37672,21 @@ function pageStats(){
           var n=s.driverName||s.driver||s.userId||'';
           var r=calcNet(s);
           var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-          var totalVat=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1);
-          var supplyAmt=Math.round(totalVat/1.1);
-          var vat=totalVat-supplyAmt;
+          var totalVat=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡수입(VAT포함)
+          var taxBase=r.net||0; // 기사 세금계산서(실지급)
           var mw=r.monthlyWage||0;
+          // 회사부담 보험료
           var empComp=mw>=800000?Math.floor(mw*0.008/10)*10:0;
           var workComp=Math.floor(mw*0.0088/10)*10;
           var insComp=empComp+workComp;
-          var driverVat=totalVat>0?(r.net||0)-Math.round((r.net||0)/1.1):0;
-          var payVat=vat-(driverVat>0?driverVat:0);if(payVat<0)payVat=0;
-          var netProfit=totalVat-(r.net||0)-insComp-payVat;
+          // 기사부담 보험료 (정산현황과 동일)
+          var empDrv=mw>=800000?Math.floor(mw*0.009/10)*10:0;
+          var workDrv=Math.floor(mw*0.0007/10)*10;
+          var insAll=insComp+empDrv+workDrv;
+          // 정산현황과 동일한 마진 계산
+          var marginBeforeVat=totalVat-taxBase-insAll;
+          var payVat=Math.round(marginBeforeVat*0.1);
+          var netProfit=marginBeforeVat-payVat;
 
           if(!byMonth[mo])byMonth[mo]={cnt:0,dcnt:0,totalVat:0,net:0,insComp:0,payVat:0,profit:0,expense:0};
           byMonth[mo].cnt++;byMonth[mo].dcnt+=(s.dcnt||0);
