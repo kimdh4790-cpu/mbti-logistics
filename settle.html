@@ -9218,6 +9218,7 @@ function doRegister(){
       role:'dealer',
       dealerId:uid,
       serviceType:serviceType,
+      services:services,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(){});
     return _db.collection('companies').doc(uid).set(companyDoc);
@@ -22505,7 +22506,10 @@ function pageHome(){
   // ── services 기반 동적 퀵버튼 + 카드
   +(function(){
     var co = window._cachedCompanyDoc || {};
-    var svcs = co.services || ['settle'];
+    var svcs = (co.services && co.services.length) ? co.services :
+      (co.settlePaid||co.serviceType==='settle'||co.plan==='trial' ?
+        ['settle','delivery','qr_payroll','contract','tax_share','roster','drivers','prices','season','expense','dispatch','notices','payout'] :
+        ['settle']);
     var hasSvc = function(s){ return svcs.indexOf(s)>=0; };
     var isSA = typeof isSuperAdmin==='function' && isSuperAdmin();
     // ★ SA가 고객 방 방문 중이면 고객 services 기준으로 표시
