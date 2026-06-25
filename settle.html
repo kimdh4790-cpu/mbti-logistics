@@ -37673,7 +37673,7 @@ function pageStats(){
           var r=calcNet(s);
           var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
           var totalVat=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡수입(VAT포함)
-          var taxBase=r.net||0; // 기사 세금계산서(실지급)
+          var taxBase=r.income||r.totalAmt||0; // 기사 세금계산서(정산현황과 동일)
           var mw=r.monthlyWage||0;
           // 회사부담 보험료
           var empComp=mw>=800000?Math.floor(mw*0.008/10)*10:0;
