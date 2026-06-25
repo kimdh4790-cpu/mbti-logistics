@@ -37781,55 +37781,6 @@ function pageStats(){
       // 기본 월별
       document.getElementById('stat-content').innerHTML='';
       document.getElementById('stat-content').appendChild(mCard);
-      // 기사별 순위
-      var rankCard=document.createElement('div');rankCard.className='card';rankCard.style.marginTop='14px';
-      var by={};
-      settles.forEach(function(s){
-        var n=s.driver||s.userId||'';var cc=_getSettleCamp(s)||'기타';
-        if(!by[n])by[n]={dcnt:0,net:0,cnt:0,camp:cc};
-        by[n].dcnt+=(s.dcnt||0);by[n].net+=calcNet(s).net;by[n].cnt++;
-      });
-      var sorted=Object.keys(by).sort(function(a,b){return (by[b].dcnt||0)-(by[a].dcnt||0)||(by[b].net||0)-(by[a].net||0);}); // 건수→금액 내림차순
-      var medals=['🥇','🥈','🥉'];
-      // 시상대
-      var podium=document.createElement('div');
-      podium.style.cssText='display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:20px 16px 8px;background:linear-gradient(180deg,#fafafa,var(--bg));border-radius:10px;margin-bottom:12px';
-      [1,0,2].forEach(function(i){
-        var n=sorted[i];if(!n)return;
-        var bd=by[n];var col=_campColor(bd.camp);
-        var h=[90,110,75][i];
-        var p=document.createElement('div');p.style.cssText='text-align:center;flex:1;max-width:150px';
-        p.innerHTML='<div style="font-size:24px;margin-bottom:3px">'+medals[i]+'</div>'
-          +'<div style="font-size:12px;font-weight:800;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n)+'</div>'
-          +'<div style="margin-bottom:5px"><span style="background:'+col+';color:#fff;padding:1px 7px;border-radius:100px;font-size:9px;font-weight:700">'+esc(bd.camp)+'</span></div>'
-          +'<div style="background:'+col+';color:#fff;border-radius:8px 8px 0 0;height:'+h+'px;display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:0 2px 8px '+col+'66">'
-            +'<div style="font-size:15px;font-weight:900">'+fmt(bd.dcnt)+'건</div>'
-            +'<div style="font-size:9px;opacity:.8">₩'+fmt(Math.round(bd.net/10000))+'만</div>'
-          +'</div>';
-        podium.appendChild(p);
-      });
-      rankCard.innerHTML='<div class="ch"><span class="ct">🏆 기사별 순위</span></div>';
-      rankCard.appendChild(podium);
-      var rtbl=document.createElement('div');rtbl.style.overflowX='auto';
-      rtbl.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'
-        +'<thead><tr style="background:var(--bg3)">'
-        +'<th style="padding:8px;text-align:center">#</th><th style="padding:8px">기사</th>'
-        +'<th style="padding:8px">캠프</th><th style="padding:8px;text-align:right">배송건</th>'
-        +'<th style="padding:8px;text-align:right">실지급 합계</th>'
-        +'</tr></thead><tbody>'
-        +sorted.map(function(n,i){
-          var bd=by[n];var col=_campColor(bd.camp);var rank=i+1;
-          var medal=rank<=3?medals[rank-1]:'';
-          var rowBg=rank===1?'background:#fef9c3':rank===2?'background:#f8f8ff':rank===3?'background:#fdf4ff':'';
-          return '<tr style="border-bottom:1px solid var(--border);'+rowBg+'">'
-            +'<td style="padding:8px;text-align:center;font-size:'+(rank<=3?'18px':'12px')+'">'+(medal||rank)+'</td>'
-            +'<td style="padding:8px"><strong>'+esc(n)+'</strong></td>'
-            +'<td style="padding:8px"><span style="background:'+col+';color:#fff;padding:1px 6px;border-radius:100px;font-size:10px;font-weight:700">'+esc(bd.camp)+'</span></td>'
-            +'<td style="padding:8px;text-align:right">'+fmt(bd.dcnt)+'건</td>'
-            +'<td style="padding:8px;text-align:right;font-weight:800;color:var(--purple)">₩'+fmt(bd.net)+'</td>'
-            +'</tr>';
-        }).join('')+'</tbody></table>';
-      rankCard.appendChild(rtbl);el.appendChild(rankCard);
     }).catch(function(e){logError('통계',e.message);el.innerHTML='<div class="empty">❌ '+e.message+'</div>';});
 }
 
