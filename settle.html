@@ -10217,10 +10217,6 @@ function doLogin(){
       err.textContent=(errMsgs[e.code]||('로그인 실패: '+e.message))+(remain>0&&remain<5?' ('+remain+'회 남음)':'');
       err.style.display='block';
     });
-        if(btn){btn.disabled=false;btn.textContent='로그인';}
-        err.textContent=errMsgs[e.code]||('로그인 실패: '+e.message);
-        err.style.display='block';
-      });
   }
   // 이메일 형식이면 바로 로그인
   if(input.indexOf('@')>=0){
