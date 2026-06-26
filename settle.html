@@ -8350,6 +8350,22 @@ function _uploadToStorage(path, file){
       } else { resolve(''); }
     }).catch(function(){resolve('');});
   });
+// ★ 세션 타임아웃 (30분 미사용 시 자동 로그아웃)
+var _sessionTimer=null;
+function _resetSessionTimeout(){
+  if(_sessionTimer)clearTimeout(_sessionTimer);
+  _sessionTimer=setTimeout(function(){
+    if(_auth&&_auth.currentUser){
+      toast('⏰ 30분 동안 사용하지 않아 자동 로그아웃됩니다');
+      setTimeout(function(){_auth.signOut().then(function(){location.reload();});},3000);
+    }
+  },30*60*1000);
+}
+// 사용자 활동 감지 시 타이머 리셋
+['click','keydown','touchstart'].forEach(function(ev){
+  document.addEventListener(ev,function(){if(_auth&&_auth.currentUser)_resetSessionTimeout();},{passive:true});
+});
+
 }var _firebaseInited=false;function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   if(_firebaseInited){return;}
@@ -10146,6 +10162,15 @@ function doLogin(){
     setTimeout(doLogin, 800);
     return;
   }
+
+  // ★ 로그인 실패 횟수 체크 (5회 잠금)
+  var _failKey='dw_login_fail_'+input;
+  var _failData=JSON.parse(sessionStorage.getItem(_failKey)||'{"cnt":0,"until":0}');
+  if(_failData.until>Date.now()){
+    var _remain=Math.ceil((_failData.until-Date.now())/60000);
+    err.textContent='로그인 시도 횟수 초과. '+_remain+'분 후 다시 시도하세요';err.style.display='block';return;
+  }
+
   var btn=document.querySelector('.login-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
   var errMsgs={
@@ -10156,8 +10181,24 @@ function doLogin(){
     'auth/too-many-requests':'잠시 후 다시 시도하세요'
   };
   function _tryLogin(email){
-    _auth.signInWithEmailAndPassword(email,pw)
-      .catch(function(e){
+    // ★ SESSION 지속성 — 브라우저 닫으면 자동 로그아웃
+    _auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).then(function(){
+      return _auth.signInWithEmailAndPassword(email,pw);
+    }).then(function(){
+      // 로그인 성공 — 실패 카운터 초기화
+      sessionStorage.removeItem(_failKey);
+      // ★ 세션 타임아웃 30분 설정
+      _resetSessionTimeout();
+    }).catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
+      // 실패 카운터 증가
+      _failData.cnt=(_failData.cnt||0)+1;
+      if(_failData.cnt>=5){_failData.until=Date.now()+30*60*1000;_failData.cnt=0;}
+      sessionStorage.setItem(_failKey,JSON.stringify(_failData));
+      var remain=5-_failData.cnt;
+      err.textContent=(errMsgs[e.code]||('로그인 실패: '+e.message))+(remain>0&&remain<5?' ('+remain+'회 남음)':'');
+      err.style.display='block';
+    });
         if(btn){btn.disabled=false;btn.textContent='로그인';}
         err.textContent=errMsgs[e.code]||('로그인 실패: '+e.message);
         err.style.display='block';
