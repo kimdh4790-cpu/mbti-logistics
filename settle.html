@@ -22523,7 +22523,7 @@ function pageSupport(){
             '<button class="btn" style="font-size:12px;color:#dc2626" onclick="window._rejectSupport(&quot;'+id+'&quot;)">❌ 거절</button>'+
             '</div>':
           (r.status==='approved'?
-            '<button class="btn" style="font-size:12px;margin-top:8px" onclick="window._closeSupport(&quot;'+id+'&quot;,&quot;'+esc(r.dealerId)+'&quot;)">🔒 방문 종료</button>':'')+
+            '<button class="btn" style="font-size:12px;margin-top:8px" onclick="window._closeSupport(&quot;'+id+'&quot;,&quot;'+esc(r.dealerId)+'&quot;)">🔒 방문 종료</button>':''))+
           '</div>';
       });
       html+='</div>';
