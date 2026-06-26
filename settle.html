@@ -39326,7 +39326,6 @@ async function _doDeploySettlements(ids) {
   // (일괄 발송 제거 — 위에서 개별 발송으로 처리)
   toast('✅ 정산 배포 완료! ' + done + '명 처리 · 알림 ' + fcmDone + '명 발송');
   _renderSettleList();
-}
 
 function syncFirebaseSettlements(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
