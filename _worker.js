@@ -713,7 +713,51 @@ export default {
               ${taxSec}
               <div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
               <div class="ft">${coName} · ${contactPhone} · 사업자번호 ${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
-            </div></body></html>`;
+              <!-- 계좌 등록 폼 -->
+              <div id="bank-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+                <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
+                  <div style="font-size:12px;font-weight:800;color:#1e3a8a">🏦 계좌 정보 등록</div>
+                  <div style="font-size:10px;color:#64748b;margin-top:2px">등록된 계좌로 급여가 이체됩니다</div>
+                </div>
+                <div id="bank-form" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+                  <select id="bank-name" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff">
+                    <option value="">은행 선택</option>
+                    <option>국민은행</option><option>신한은행</option><option>우리은행</option>
+                    <option>하나은행</option><option>농협은행</option><option>기업은행</option>
+                    <option>카카오뱅크</option><option>토스뱅크</option><option>케이뱅크</option>
+                    <option>SC제일은행</option><option>새마을금고</option><option>신협</option>
+                    <option>우체국</option><option>부산은행</option><option>경남은행</option>
+                    <option>대구은행</option><option>광주은행</option>
+                  </select>
+                  <input id="bank-num" type="tel" placeholder="계좌번호 (- 없이 숫자만)" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
+                  <button onclick="submitBank()" style="padding:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 계좌 등록</button>
+                  <div id="bank-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
+                </div>
+                <div id="bank-done" style="display:none;padding:14px;text-align:center">
+                  <div style="font-size:24px;margin-bottom:6px">✅</div>
+                  <div style="font-size:13px;font-weight:700;color:#059669">계좌가 등록되었습니다</div>
+                  <div style="font-size:11px;color:#64748b;margin-top:4px">관리자에게 전달되었습니다</div>
+                </div>
+              </div>
+            </div>
+            <script>
+            var _stmtToken="${token}", _stmtDealer="${gs('dealerId')}", _stmtName="${name}";
+            async function submitBank(){
+              var bn=document.getElementById("bank-name").value;
+              var bnum=document.getElementById("bank-num").value.replace(/[^0-9]/g,"");
+              var msg=document.getElementById("bank-msg");
+              if(!bn){msg.style.color="#dc2626";msg.textContent="은행을 선택해주세요";return;}
+              if(!bnum||bnum.length<10){msg.style.color="#dc2626";msg.textContent="올바른 계좌번호를 입력해주세요";return;}
+              msg.style.color="#64748b";msg.textContent="확인 중...";
+              try{
+                var res=await fetch("/api/register-bank",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:_stmtToken,bankName:bn,bankNum:bnum,driverName:_stmtName,dealerId:_stmtDealer})});
+                var data=await res.json();
+                if(data.ok){document.getElementById("bank-form").style.display="none";document.getElementById("bank-done").style.display="block";}
+                else{msg.style.color="#dc2626";msg.textContent=data.error||"등록 실패. 관리자에게 문의하세요.";}
+              }catch(e){msg.style.color="#dc2626";msg.textContent="오류가 발생했습니다";}
+            }
+            </script>
+            </body></html>`;
 
           return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' } });
         } catch(e2) {
@@ -2484,6 +2528,78 @@ service cloud.firestore {
       return new Response(JSON.stringify({
         key: env.KAKAO_JS_KEY || ''
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+    }
+
+    // ── 계좌 등록 (/api/register-bank) ──
+    if (path === '/api/register-bank' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { token, bankName, bankNum, driverName, dealerId } = body;
+        if (!token || !bankName || !bankNum || !driverName || !dealerId) {
+          return new Response(JSON.stringify({ok:false,error:'필수 항목이 누락되었습니다'}), {headers:{'Content-Type':'application/json'}});
+        }
+        const fsToken = await getAccessToken(env);
+        const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const headers = {'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'};
+
+        // 기사 정보에서 등록된 계좌번호 확인
+        const drvRes = await fetch(`${fsBase}/drivers?pageSize=50`, {headers});
+        // dealerId + driverName으로 쿼리
+        const queryUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`;
+        const queryBody = {
+          structuredQuery: {
+            from: [{collectionId:'drivers'}],
+            where: {
+              compositeFilter: {
+                op: 'AND',
+                filters: [
+                  {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},
+                  {fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:driverName}}}
+                ]
+              }
+            },
+            limit: 1
+          }
+        };
+        const qRes = await fetch(queryUrl, {method:'POST', headers, body:JSON.stringify(queryBody)});
+        const qData = await qRes.json();
+        const doc = qData[0]?.document;
+
+        if (!doc) {
+          return new Response(JSON.stringify({ok:false,error:'기사 정보를 찾을 수 없습니다'}), {headers:{'Content-Type':'application/json'}});
+        }
+
+        const registeredBank = doc.fields?.bankAccount?.stringValue || '';
+        const registeredBankNum = registeredBank.replace(/[^0-9]/g,'');
+
+        // 1차 검증: 기사수정에 등록된 계좌번호와 대조
+        if (registeredBankNum && registeredBankNum !== bankNum) {
+          return new Response(JSON.stringify({ok:false,error:'등록된 계좌번호와 일치하지 않습니다. 관리자에게 문의하세요.'}), {headers:{'Content-Type':'application/json'}});
+        }
+
+        // 계좌 저장 (drivers 문서 업데이트)
+        const docPath = doc.name;
+        const updateBody = {
+          fields: {
+            bankAccount: {stringValue: bankNum},
+            bankName: {stringValue: bankName},
+            bankRegisteredAt: {stringValue: new Date().toISOString()},
+            bankRegisteredVia: {stringValue: 'stmt_link'}
+          }
+        };
+        const updateMask = 'updateMask.fieldPaths=bankAccount&updateMask.fieldPaths=bankName&updateMask.fieldPaths=bankRegisteredAt&updateMask.fieldPaths=bankRegisteredVia';
+        await fetch(`${docPath}?${updateMask}`, {method:'PATCH', headers, body:JSON.stringify(updateBody)});
+
+        // statement_share 토큰 문서에도 기록
+        await fetch(`${fsBase}/statement_share/${token}?updateMask.fieldPaths=bankRegistered&updateMask.fieldPaths=bankRegisteredAt`, {
+          method:'PATCH', headers,
+          body:JSON.stringify({fields:{bankRegistered:{booleanValue:true},bankRegisteredAt:{stringValue:new Date().toISOString()}}})
+        });
+
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
     }
 
     // ── 카카오 알림톡 (/api/send-alimtalk) ──
