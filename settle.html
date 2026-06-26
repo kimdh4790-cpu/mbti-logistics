@@ -38682,6 +38682,10 @@ function _openCompanyInfoModal(){
   document.body.appendChild(mo);
   _renderLoginAllowed();
 }
+
+function _saveCompanyInfo(){
+  var did=_CU&&_CU.dealerId;if(!did||!_db)return;
+  var data={
     companyName:(document.getElementById('ci-name')||{value:''}).value.trim(),
     name:(document.getElementById('ci-name')||{value:''}).value.trim(),
     bizNumber:(document.getElementById('ci-biznum')||{value:''}).value.trim(),
