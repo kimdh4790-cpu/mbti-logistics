@@ -8442,6 +8442,24 @@ function _resetSessionTimeout(){
               else if(cd.settlePaid)_CU.serviceType='settle';
             }
             var _today=new Date().toISOString().slice(0,10);
+            // ★ 허용 인원 체크
+            var _loginAllowed=cd.loginAllowed||[];
+            if(_loginAllowed.length>0&&!isSuperAdmin()){
+              var _userEmail=user.email||'';
+              var _allowed=_loginAllowed.some(function(a){
+                return a.phone&&_userEmail.indexOf(a.phone)>=0;
+              });
+              // users 컬렉션에서 전화번호 확인
+              var _userPhone=(snap.exists?snap.data().phone:'')||'';
+              _allowed=_allowed||_loginAllowed.some(function(a){
+                return a.phone&&_userPhone.replace(/[^0-9]/g,'')===a.phone.replace(/[^0-9]/g,'');
+              });
+              if(!_allowed){
+                toast('⛔ 이 계정은 로그인이 허용되지 않습니다. 관리자에게 문의하세요.');
+                setTimeout(function(){_auth.signOut();},2000);
+                return;
+              }
+            }
             var trialExp=cd.trialExpiry||cd.trialEnd||'';
             if(trialExp&&trialExp>=_today&&(cd.plan==='trial'||cd.status==='trial')){
               window._cachedHasPaid=true;
@@ -38659,16 +38677,15 @@ function _openCompanyInfoModal(){
   var co=window._cachedCompanyDoc||{};
   var did=_CU&&_CU.dealerId;
   if(!did||!_db){toast('❌ 로그인 필요');return;}
+  // 허용 인원 초기화
+  window._loginAllowed=JSON.parse(JSON.stringify(co.loginAllowed||[]));
   var old2=document.getElementById('mo-company-info');if(old2)old2.remove();
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-company-info';
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  mo.innerHTML='<div class="md" style="max-width:460px;width:95vw">'    +'<div class="mdt">🏢 회사 정보 수정 <button onclick="var _m=document.getElementById(&quot;mo-company-info&quot;);if(_m)_m.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button></div>'    +'<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'    +'<div class="fg"><label>회사명</label><input id="ci-name" value="'+esc(co.companyName||co.name||'')+'" placeholder="엠비티아이 유한회사"></div>'    +'<div class="fg"><label>사업자번호</label><input id="ci-biznum" value="'+esc(co.bizNumber||co.bizNum||'')+'" placeholder="000-00-00000"></div>'    +'<div class="fg"><label>사업장 주소</label><input id="ci-bizaddr" value="'+esc(co.bizAddr||'')+'" placeholder="부산시 수영구 수영로 668, 607호"></div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'      +'<div class="fg" style="margin-bottom:0"><label>업태</label><input id="ci-biztype" value="'+esc(co.bizType||'')+'" placeholder="서비스업"></div>'      +'<div class="fg" style="margin-bottom:0"><label>종목</label><input id="ci-bizitem" value="'+esc(co.bizItem||co.bizKind||'')+'" placeholder="기타물품운반원"></div>'    +'</div>'    +'<div class="fg"><label>대표자명</label><input id="ci-ceo" value="'+esc(co.ceoName||co.repName||'')+'" placeholder="홍길동"></div>'    +'<div class="fg"><label>정산 담당자명</label><input id="ci-contact-name" value="'+esc(co.settlementContact||'')+'" placeholder="홍길동 대표"></div>'    +'<div class="fg"><label>정산 문의 연락처</label><input id="ci-contact-phone" value="'+esc(co.settlementPhone||'')+'" placeholder="051-711-3103"></div>'    +'<button onclick="_saveCompanyInfo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💾 저장</button>'    +'</div></div>';
+  mo.innerHTML='<div class="md" style="max-width:460px;width:95vw">'    +'<div class="mdt">🏢 회사 정보 수정 <button onclick="var _m=document.getElementById(&quot;mo-company-info&quot;);if(_m)_m.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:auto">✕</button></div>'    +'<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'    +'<div class="fg"><label>회사명</label><input id="ci-name" value="'+esc(co.companyName||co.name||'')+'" placeholder="엠비티아이 유한회사"></div>'    +'<div class="fg"><label>사업자번호</label><input id="ci-biznum" value="'+esc(co.bizNumber||co.bizNum||'')+'" placeholder="000-00-00000"></div>'    +'<div class="fg"><label>사업장 주소</label><input id="ci-bizaddr" value="'+esc(co.bizAddr||'')+'" placeholder="부산시 수영구 수영로 668, 607호"></div>'    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'      +'<div class="fg" style="margin-bottom:0"><label>업태</label><input id="ci-biztype" value="'+esc(co.bizType||'')+'" placeholder="서비스업"></div>'      +'<div class="fg" style="margin-bottom:0"><label>종목</label><input id="ci-bizitem" value="'+esc(co.bizItem||co.bizKind||'')+'" placeholder="기타물품운반원"></div>'    +'</div>'    +'<div class="fg"><label>대표자명</label><input id="ci-ceo" value="'+esc(co.ceoName||co.repName||'')+'" placeholder="홍길동"></div>'    +'<div class="fg"><label>정산 담당자명</label><input id="ci-contact-name" value="'+esc(co.settlementContact||'')+'" placeholder="홍길동 대표"></div>'    +'<div class="fg"><label>정산 문의 연락처</label><input id="ci-contact-phone" value="'+esc(co.settlementPhone||'')+'" placeholder="051-711-3103"></div>'    +'<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:12px">'+'<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px">🔐 로그인 허용 인원 (최대 3명)</div>'+'<div id="ci-allowed-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>'+'<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px">'+'<input id="ci-al-name" placeholder="이름" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'+'<input id="ci-al-phone" type="tel" placeholder="전화번호" style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">'+'<button onclick="_addLoginAllowed()" style="padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>'+'</div>'+'<div style="font-size:10px;color:var(--text3);margin-top:4px">등록된 인원만 로그인 가능합니다. 비어있으면 제한 없음.</div>'+'</div>'+'<button onclick="_saveCompanyInfo()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💾 저장</button>'    +'</div></div>';
   document.body.appendChild(mo);
+  _renderLoginAllowed();
 }
-
-function _saveCompanyInfo(){
-  var did=_CU&&_CU.dealerId;if(!did||!_db)return;
-  var data={
     companyName:(document.getElementById('ci-name')||{value:''}).value.trim(),
     name:(document.getElementById('ci-name')||{value:''}).value.trim(),
     bizNumber:(document.getElementById('ci-biznum')||{value:''}).value.trim(),
@@ -38680,6 +38697,7 @@ function _saveCompanyInfo(){
     bizItem:(document.getElementById('ci-bizitem')||{value:''}).value.trim(),
     settlementContact:(document.getElementById('ci-contact-name')||{value:''}).value.trim(),
     settlementPhone:(document.getElementById('ci-contact-phone')||{value:''}).value.trim(),
+    loginAllowed:window._loginAllowed||[],
     updatedAt:new Date().toISOString()
   };
   _db.collection('companies').doc(did).update(data).then(function(){
@@ -38688,6 +38706,39 @@ function _saveCompanyInfo(){
     toast('✅ 회사 정보 저장 완료');
     var mo=document.getElementById('mo-company-info');if(mo)mo.remove();
   }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _renderLoginAllowed(){
+  var list=document.getElementById('ci-allowed-list');
+  if(!list)return;
+  var arr=window._loginAllowed||[];
+  if(!arr.length){list.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 0">등록된 인원 없음 (제한 없음)</div>';return;}
+  list.innerHTML=arr.map(function(a,i){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:8px;padding:6px 10px">'
+      +'<span style="font-size:12px"><strong>'+esc(a.name)+'</strong> <span style="color:var(--text3)">'+esc(a.phone)+'</span></span>'
+      +'<button onclick="_removeLoginAllowed('+i+')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">삭제</button>'
+      +'</div>';
+  }).join('');
+}
+
+function _addLoginAllowed(){
+  var name=(document.getElementById('ci-al-name')||{value:''}).value.trim();
+  var phone=(document.getElementById('ci-al-phone')||{value:''}).value.replace(/[^0-9]/g,'');
+  if(!name||!phone||phone.length<10){toast('이름과 전화번호를 입력하세요');return;}
+  if(!window._loginAllowed)window._loginAllowed=[];
+  if(window._loginAllowed.length>=3){toast('최대 3명까지 등록 가능합니다');return;}
+  if(window._loginAllowed.find(function(a){return a.phone===phone;})){toast('이미 등록된 번호입니다');return;}
+  window._loginAllowed.push({name:name,phone:phone});
+  document.getElementById('ci-al-name').value='';
+  document.getElementById('ci-al-phone').value='';
+  _renderLoginAllowed();
+}
+
+function _removeLoginAllowed(idx){
+  if(!window._loginAllowed)return;
+  window._loginAllowed.splice(idx,1);
+  _renderLoginAllowed();
+}
 }
 
 function openChangePw(forced){
