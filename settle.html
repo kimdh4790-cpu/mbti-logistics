@@ -10207,6 +10207,33 @@ function doLogin(){
       sessionStorage.removeItem(_failKey);
       // ★ 세션 타임아웃 30분 설정
       _resetSessionTimeout();
+      // ★ 로그인 알림 푸시 (loginAllowed 인원 전체)
+      setTimeout(function(){
+        try{
+          var co=window._cachedCompanyDoc||{};
+          var allowed=co.loginAllowed||[];
+          if(!allowed.length||!_db)return;
+          var phones=allowed.map(function(a){return (a.phone||'').replace(/[^0-9]/g,'');}).filter(Boolean);
+          if(!phones.length)return;
+          var now=new Date();
+          var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
+          var loginName=email.split('@')[0]||'관리자';
+          phones.forEach(function(phone){
+            _db.collection('users').where('phone','==',phone).limit(1).get().then(function(snap){
+              if(snap.empty)return;
+              var u=snap.docs[0].data();
+              var tokens=[];
+              if(u.fcmTokens)u.fcmTokens.forEach(function(t){if(t.token)tokens.push(t.token);});
+              else if(u.fcmToken)tokens.push(u.fcmToken);
+              tokens.forEach(function(tok){
+                fetch('/api/send-push',{method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({token:tok,title:'🔐 로그인 알림',body:loginName+'님이 '+timeStr+'에 로그인하였습니다'})
+                }).catch(function(){});
+              });
+            }).catch(function(){});
+          });
+        }catch(e){}
+      },3000);
     }).catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
       // 실패 카운터 증가
