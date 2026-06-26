@@ -22458,6 +22458,172 @@ function _homeIntegWidget(did) {
     +'</div>';
 }
 
+
+
+window._checkVisitPermit = function(dealerId){
+  _db.collection('companies').doc(dealerId).get().then(function(doc){
+    var vp = doc.exists ? (doc.data().visitPermit||null) : null;
+    var now = new Date();
+    if(vp && vp.status==='approved' && vp.expireAt && vp.expireAt.toDate() > now){
+      // 허가 있음 — 방문 로그 기록 후 입장
+      _db.collection('visit_logs').add({
+        dealerId:dealerId,
+        adminEmail:_CU.email,
+        visitedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        expireAt:vp.expireAt
+      });
+      window._adminViewDealerId=dealerId;
+      goPage('settle');
+    } else {
+      // 허가 없음
+      if(confirm('⚠️ 이 고객의 방문 허가가 없습니다.\n\n고객이 고객지원 페이지에서 방문 허가를 신청해야 접근 가능합니다.\n\n긴급 상황이라면 확인을 눌러 접근하세요 (로그 기록됨)')){
+        _db.collection('visit_logs').add({
+          dealerId:dealerId,
+          adminEmail:_CU.email,
+          visitedAt:firebase.firestore.FieldValue.serverTimestamp(),
+          type:'emergency'
+        });
+        window._adminViewDealerId=dealerId;
+        goPage('settle');
+      }
+    }
+  });
+};
+// ══ 고객지원 (오류신청 & 방문허가) ══
+function pageSupport(){
+  document.getElementById('page-title').textContent='고객지원';
+  var el=document.getElementById('content');
+  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId;
+  var isSA=typeof isSuperAdmin==='function'&&isSuperAdmin();
+
+  if(isSA){
+    // 슈퍼어드민: 신청 목록
+    el.innerHTML='<div class="card"><div class="ch"><span class="ct">🆘 방문 허가 신청 목록</span></div><div id="support-list"><div class="loading">로딩 중...</div></div></div>';
+    _db.collection('support_requests').orderBy('createdAt','desc').limit(50).get().then(function(snap){
+      var list=document.getElementById('support-list');
+      if(snap.empty){list.innerHTML='<div class="empty">신청 없음</div>';return;}
+      var html='<div style="display:flex;flex-direction:column;gap:8px">';
+      snap.forEach(function(d){
+        var r=d.data();var id=d.id;
+        var statusColor=r.status==='approved'?'#059669':r.status==='closed'?'#6b7280':'#f59e0b';
+        var statusLabel=r.status==='approved'?'승인됨':r.status==='closed'?'종료':'대기중';
+        var expStr=r.expireAt?new Date(r.expireAt.toDate()).toLocaleString('ko-KR'):'';
+        html+='<div style="background:var(--bg3);border-radius:12px;padding:14px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<div><strong>'+esc(r.companyName||'')+'</strong><span style="font-size:10px;color:var(--text3);margin-left:8px">'+esc(r.dealerId||'')+'</span></div>'+
+          '<span style="background:'+statusColor+';color:#fff;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:700">'+statusLabel+'</span>'+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">📋 '+esc(r.type||'')+'</div>'+
+          '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+esc(r.desc||'')+'</div>'+
+          (expStr?'<div style="font-size:11px;color:#f59e0b">⏰ 허가 만료: '+expStr+'</div>':'')+
+          (r.status==='pending'?
+            '<div style="display:flex;gap:8px;margin-top:10px">'+
+            '<button class="btn btn-blue" style="font-size:12px" onclick="window._approveSupport(''+id+'',''+esc(r.dealerId)+'')">✅ 승인 (24시간)</button>'+
+            '<button class="btn" style="font-size:12px;color:#dc2626" onclick="window._rejectSupport(''+id+'')">❌ 거절</button>'+
+            '</div>':
+          (r.status==='approved'?
+            '<button class="btn" style="font-size:12px;margin-top:8px" onclick="window._closeSupport(''+id+'',''+esc(r.dealerId)+'')">🔒 방문 종료</button>':''))+
+          '</div>';
+      });
+      html+='</div>';
+      list.innerHTML=html;
+    });
+
+    window._approveSupport=function(id,dealerId){
+      var now=new Date();
+      var expire=new Date(now.getTime()+24*60*60*1000);
+      _db.collection('support_requests').doc(id).update({
+        status:'approved',
+        approvedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        expireAt:firebase.firestore.Timestamp.fromDate(expire)
+      }).then(function(){
+        _db.collection('companies').doc(dealerId).update({
+          visitPermit:{status:'approved',expireAt:firebase.firestore.Timestamp.fromDate(expire),requestId:id}
+        }).then(function(){toast('✅ 승인 완료 — 24시간 방문 허가');pageSupport();});
+      });
+    };
+    window._rejectSupport=function(id){
+      _db.collection('support_requests').doc(id).update({status:'closed',rejectedAt:firebase.firestore.FieldValue.serverTimestamp()})
+      .then(function(){toast('거절 완료');pageSupport();});
+    };
+    window._closeSupport=function(id,dealerId){
+      _db.collection('support_requests').doc(id).update({status:'closed',closedAt:firebase.firestore.FieldValue.serverTimestamp()})
+      .then(function(){
+        _db.collection('companies').doc(dealerId).update({'visitPermit.status':'closed'})
+        .then(function(){toast('🔒 방문 종료');pageSupport();});
+      });
+    };
+    return;
+  }
+
+  // 일반 고객: 신청 폼 + 내 신청 목록
+  el.innerHTML='<div style="display:grid;gap:14px">'+
+    '<div class="card">'+
+    '<div class="ch"><span class="ct">🆘 관리자 방문 허가 신청</span></div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6">'+
+    '오류·문의 해결을 위해 DONWAY 관리자의 일시적 접근을 허용할 수 있습니다.<br>'+
+    '승인 후 24시간 동안만 접근 가능하며, 접근 기록이 남습니다.</div>'+
+    '<div style="display:flex;flex-direction:column;gap:10px">'+
+    '<select id="support-type" style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px">'+
+    '<option value="오류/버그 신고">🐛 오류/버그 신고</option>'+
+    '<option value="기능 문의">❓ 기능 문의</option>'+
+    '<option value="데이터 확인 요청">📊 데이터 확인 요청</option>'+
+    '<option value="기타">📝 기타</option>'+
+    '</select>'+
+    '<textarea id="support-desc" placeholder="문제 내용을 자세히 입력해주세요" style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;height:100px;resize:vertical"></textarea>'+
+    '<button class="btn btn-blue" onclick="window._submitSupport()">📨 방문 허가 신청</button>'+
+    '</div></div>'+
+    '<div class="card"><div class="ch"><span class="ct">📋 내 신청 내역</span></div><div id="my-support-list"><div class="loading">로딩 중...</div></div></div>'+
+    '</div>';
+
+  window._submitSupport=function(){
+    var type=document.getElementById('support-type').value;
+    var desc=document.getElementById('support-desc').value.trim();
+    if(!desc){toast('내용을 입력해주세요');return;}
+    _db.collection('support_requests').add({
+      dealerId:did,
+      companyName:_CU.companyName||_CU.name||'',
+      type:type,
+      desc:desc,
+      status:'pending',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      toast('✅ 신청 완료 — 승인 후 24시간 접근 허가됩니다');
+      document.getElementById('support-desc').value='';
+      loadMySupport();
+    });
+  };
+
+  function loadMySupport(){
+    _db.collection('support_requests').where('dealerId','==',did).orderBy('createdAt','desc').limit(10).get().then(function(snap){
+      var list=document.getElementById('my-support-list');
+      if(!list)return;
+      if(snap.empty){list.innerHTML='<div class="empty">신청 내역 없음</div>';return;}
+      var html='<div style="display:flex;flex-direction:column;gap:8px">';
+      snap.forEach(function(d){
+        var r=d.data();
+        var statusColor=r.status==='approved'?'#059669':r.status==='closed'?'#6b7280':'#f59e0b';
+        var statusLabel=r.status==='approved'?'✅ 승인됨':r.status==='closed'?'종료':'⏳ 검토중';
+        var expStr=r.expireAt?'허가 만료: '+new Date(r.expireAt.toDate()).toLocaleString('ko-KR'):'';
+        var createdStr=r.createdAt?new Date(r.createdAt.toDate()).toLocaleDateString('ko-KR'):'';
+        html+='<div style="background:var(--bg3);border-radius:10px;padding:12px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<span style="font-size:12px;font-weight:700">'+esc(r.type||'')+'</span>'+
+          '<span style="background:'+statusColor+';color:#fff;padding:1px 8px;border-radius:100px;font-size:10px">'+statusLabel+'</span>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+esc(r.desc||'')+'</div>'+
+          (expStr?'<div style="font-size:11px;color:#f59e0b;margin-top:4px">⏰ '+expStr+'</div>':'')+
+          '<div style="font-size:10px;color:var(--text3);margin-top:4px">신청일: '+createdStr+'</div>'+
+          '</div>';
+      });
+      html+='</div>';
+      list.innerHTML=html;
+    });
+  }
+  loadMySupport();
+}
+
 function pageHome(){
   document.getElementById('page-title').textContent='🏠 대시보드';
   document.getElementById('topbar-right').innerHTML=isSuperAdmin()?'<button onclick="runDealerPatch()" style="padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔧 dealerId 패치</button>':'';
@@ -26406,7 +26572,8 @@ function _filterMenusByServices(menus){
 
 var MENUS_DELIVERY = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'🆘',l:'고객지원',          p:'support',          plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
@@ -26430,7 +26597,8 @@ var MENUS_DELIVERY = [
 
 var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'🆘',l:'고객지원',          p:'support',          plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -26606,7 +26774,8 @@ var MENUS_SETTLE = [
 
 var MENUS_UNIVERSAL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'🆘',l:'고객지원',          p:'support',          plan_key:'free'}
   ]},
   {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
@@ -26651,7 +26820,8 @@ var MENUS_QR_PAYROLL = [
 ];
 var MENUS_QR = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'🆘',l:'고객지원',          p:'support',          plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
@@ -26681,7 +26851,8 @@ var MENUS_QR = [
 // ALL-IN-ONE (풀패키지)
 var MENUS_FULL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'🆘',l:'고객지원',          p:'support',          plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
