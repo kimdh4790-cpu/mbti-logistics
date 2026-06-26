@@ -22519,11 +22519,11 @@ function pageSupport(){
           (expStr?'<div style="font-size:11px;color:#f59e0b">⏰ 허가 만료: '+expStr+'</div>':'')+
           (r.status==='pending'?
             '<div style="display:flex;gap:8px;margin-top:10px">'+
-            '<button class="btn btn-blue" style="font-size:12px" onclick="window._approveSupport(''+id+'',''+esc(r.dealerId)+'')">✅ 승인 (24시간)</button>'+
-            '<button class="btn" style="font-size:12px;color:#dc2626" onclick="window._rejectSupport(''+id+'')">❌ 거절</button>'+
+            '<button class="btn btn-blue" style="font-size:12px" onclick="window._approveSupport(&quot;'+id+'&quot;,&quot;'+esc(r.dealerId)+'&quot;)">✅ 승인 (24시간)</button>'+
+            '<button class="btn" style="font-size:12px;color:#dc2626" onclick="window._rejectSupport(&quot;'+id+'&quot;)">❌ 거절</button>'+
             '</div>':
           (r.status==='approved'?
-            '<button class="btn" style="font-size:12px;margin-top:8px" onclick="window._closeSupport(''+id+'',''+esc(r.dealerId)+'')">🔒 방문 종료</button>':''))+
+            '<button class="btn" style="font-size:12px;margin-top:8px" onclick="window._closeSupport(&quot;'+id+'&quot;,&quot;'+esc(r.dealerId)+'&quot;)">🔒 방문 종료</button>':'')+
           '</div>';
       });
       html+='</div>';
