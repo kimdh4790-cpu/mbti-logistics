@@ -32465,9 +32465,11 @@ var _drvCache=null,_drvCampFilter='all';
 function _retireDriver(docId, name){
   if(!confirm(name+'님을 퇴직 처리하시겠습니까?\n\n앱 접속이 제한됩니다.'))return;
   var did=_CU.dealerId;
+  var retireExpire=new Date();retireExpire.setMonth(retireExpire.getMonth()+1);
   _db.collection('drivers').doc(docId).update({
     is_active:false, status:'퇴직',
-    retiredAt:new Date().toISOString(), retiredBy:_CU.name||_CU.email
+    retiredAt:new Date().toISOString(), retiredBy:_CU.name||_CU.email,
+    expireAt:firebase.firestore.Timestamp.fromDate(retireExpire)
   }).then(function(){
     // users 컬렉션도 비활성화
     _db.collection('users').where('dealerId','==',did).where('driverId','==',docId).limit(1).get()
