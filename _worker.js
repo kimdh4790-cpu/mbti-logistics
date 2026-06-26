@@ -27,6 +27,24 @@ function checkRateLimit(ip, limit = 60, windowMs = 60000) {
   return timestamps.length <= limit;
 }
 
+// ── Firebase ID 토큰 검증 ──────────────────────────────────────────────────
+async function verifyFirebaseToken(request) {
+  try {
+    const auth = request.headers.get('Authorization') || '';
+    const token = auth.replace('Bearer ', '').trim();
+    if (!token) return null;
+    // Firebase 공개 키로 토큰 검증
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyD2xXxX913CGUTP2wugsPOn6mW7MaGRKRH`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({idToken: token})
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.users?.[0] || null;
+  } catch(e) { return null; }
+}
+
 // 보안 헤더 적용 헬퍼
 function addSecurityHeaders(response, allowIframe = false) {
   const newHeaders = new Headers(response.headers);
@@ -2157,6 +2175,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     
     // ── Firestore Rules 자동 배포 (/api/deploy-rules) ──
     if (path === '/api/deploy-rules' && method === 'POST') {
+      const authUser2 = await verifyFirebaseToken(request);
+      if (!authUser2) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         if (body.secret !== (env.CRON_SECRET || '')) {
@@ -2535,6 +2555,7 @@ service cloud.firestore {
 
     // ── 계좌 등록 (/api/register-bank) ──
     if (path === '/api/register-bank' && method === 'POST') {
+      // 인증 불필요 — 명세서 토큰으로 검증
       try {
         const body = await request.json();
         const { token, bankName, bankNum, driverName, dealerId } = body;
@@ -2607,6 +2628,8 @@ service cloud.firestore {
 
     // ── 카카오 알림톡 (/api/send-alimtalk) ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
+      const authUser = await verifyFirebaseToken(request);
+      if (!authUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
