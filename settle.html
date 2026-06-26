@@ -1774,6 +1774,19 @@ function calcNetByIndustry(x){
 
 // ██ calcNet (쿠팡 물류 기본) ██
 
+// ★ Firebase 토큰 자동 첨부 API 헬퍼
+async function _apiPost(path, body) {
+  var headers = {'Content-Type': 'application/json'};
+  try {
+    var user = firebase.auth().currentUser;
+    if (user) {
+      var token = await user.getIdToken();
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+  } catch(e) {}
+  return fetch(path, {method: 'POST', headers: headers, body: JSON.stringify(body)});
+}
+
 function _settlementExpireAt(){
   var d=new Date();
   d.setMonth(d.getMonth()+6);
@@ -2159,9 +2172,11 @@ function parseCoupangExcel(inp){
 // ── 카카오 알림톡 발송 ──
 function _sendAlimtalk_orig(phone, name, month, gross, deduct, net, stmtUrl, coName){
   if(!phone) return Promise.resolve({ok:false,reason:'번호없음'});
+  var _headers={'Content-Type':'application/json'};
+  try{var u=firebase.auth().currentUser;if(u)u.getIdToken().then(function(t){_headers['Authorization']='Bearer '+t;});}catch(e){}
   return fetch('/api/send-alimtalk',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:_headers,
     body:JSON.stringify({
       to: phone.replace(/[^0-9]/g,''),
       templateCode: 'KA01TP260618101225825DuJHXpoC4kY',
