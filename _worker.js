@@ -1470,13 +1470,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const body = await request.json();
         const { name, phone, msg } = body;
         if (!name || !phone) return new Response(JSON.stringify({ok:false,error:'필수 항목 누락'}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const result = await sendWelcomeEmail(env, {
-          email: 'kimdh4790@gmail.com',
-          companyName: `[DONWAY 문의] ${name}`,
-          tempPassword: `연락처: ${phone}\n\n문의내용:\n${msg||''}`,
-          loginUrl: 'https://donway.ai.kr',
-          planType: 'inquiry',
-          planLabel: '랜딩 문의'
+        const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
+        const html = `<h2>📩 DONWAY 랜딩 문의</h2>
+          <p><b>이름/회사:</b> ${name}</p>
+          <p><b>연락처:</b> ${phone}</p>
+          <p><b>문의내용:</b><br>${(msg||'').replace(/\n/g,'<br>')}</p>
+          <hr><p style="color:#888;font-size:12px">donway.ai.kr 랜딩페이지 문의폼</p>`;
+        await fetch('https://api.resend.com/emails', {
+          method:'POST',
+          headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com'], subject:`[DONWAY 문의] ${name}`, html})
         });
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       } catch(e) {
