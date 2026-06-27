@@ -1464,6 +1464,80 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
     }
+    // ── 회사 승인 요청 (/api/approval-request) ──
+    if (path === '/api/approval-request' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { uid, companyName, email, phone, serviceType, services } = body;
+        const approveLink = `https://donway.ai.kr/api/approve?uid=${uid}&key=${env.FIREBASE_SA_KEY?'ok':''}`;
+        const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
+        const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
+            <div style="font-size:24px;font-weight:900;color:#fff">🆕 DONWAY 신규 가입 신청</div>
+          </div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;width:120px">회사명</td><td style="padding:12px 16px">${companyName}</td></tr>
+            <tr><td style="padding:12px 16px;font-weight:700">이메일</td><td style="padding:12px 16px">${email}</td></tr>
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700">전화번호</td><td style="padding:12px 16px">${phone||'-'}</td></tr>
+            <tr><td style="padding:12px 16px;font-weight:700">서비스</td><td style="padding:12px 16px">${(services||[serviceType]).join(', ')}</td></tr>
+          </table>
+          <div style="text-align:center;margin-top:24px">
+            <a href="https://donway.ai.kr/api/approve?uid=${uid}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:800">✅ 승인하기</a>
+          </div>
+          <p style="text-align:center;color:#888;font-size:12px;margin-top:16px">승인 버튼 클릭 시 즉시 로그인 가능합니다</p>
+        </body></html>`;
+        
+        // 이메일 발송
+        await fetch('https://api.resend.com/emails', {
+          method:'POST',
+          headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com'], subject:`[DONWAY 신규가입] ${companyName}`, html})
+        });
+        
+        // FCM 푸시 (슈퍼어드민)
+        const fsToken2 = await getAccessToken(env);
+        const adminDoc = await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/9XD2K3W1tIhIs6XM74YT0xfRFEP2`,
+          {headers:{'Authorization':`Bearer ${fsToken2}`}}
+        ).then(r=>r.json());
+        const adminFcmToken = adminDoc.fields?.fcmToken?.stringValue;
+        if (adminFcmToken) {
+          const accessToken = await getAccessToken(env);
+          await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
+            method:'POST',
+            headers:{'Authorization':`Bearer ${accessToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify({message:{token:adminFcmToken,notification:{title:'🆕 신규 가입 신청',body:`${companyName}님이 가입 신청했습니다. 승인이 필요합니다.`},android:{priority:'high'}}})
+          });
+        }
+        
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+    // ── 회사 승인 처리 (/api/approve) ──
+    if (path === '/api/approve' && method === 'GET') {
+      try {
+        const uid = url.searchParams.get('uid');
+        if (!uid) return new Response('uid 없음', {status:400});
+        const fsToken3 = await getAccessToken(env);
+        await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}?updateMask.fieldPaths=status&updateMask.fieldPaths=approvedAt`,
+          {method:'PATCH', headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
+           body:JSON.stringify({fields:{status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}})}
+        );
+        return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px">
+          <div style="font-size:60px">✅</div>
+          <h2 style="color:#059669">승인 완료!</h2>
+          <p>고객이 이제 로그인할 수 있습니다.</p>
+          <p style="color:#888;font-size:13px">UID: ${uid}</p>
+        </body></html>`, {headers:{'Content-Type':'text/html'}});
+      } catch(e) {
+        return new Response('오류: '+e.message, {status:500});
+      }
+    }
+
     // ── 문의 접수 (/api/inquiry) ──
     if (path === '/api/inquiry' && method === 'POST') {
       try {
