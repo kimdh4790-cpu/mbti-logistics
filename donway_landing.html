@@ -446,18 +446,10 @@ async function submitInquiry(){
   if(!name||!phone){alert('이름과 연락처를 입력해주세요');return;}
   if(!msg){alert('문의 내용을 입력해주세요');return;}
   try{
-    var res=await fetch('https://donway.ai.kr/api/send-email',{
+    var res=await fetch('https://donway.ai.kr/api/inquiry',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        to:'kimdh4790@gmail.com',
-        subject:'[DONWAY 문의] '+name,
-        html:'<h3>DONWAY 랜딩 문의</h3>'
-          +'<p><b>이름/회사:</b> '+name+'</p>'
-          +'<p><b>연락처:</b> '+phone+'</p>'
-          +'<p><b>문의내용:</b><br>'+msg.replace(/\n/g,'<br>')+'</p>'
-          +'<hr><p style="color:#888;font-size:12px">donway.ai.kr 랜딩페이지 문의폼</p>'
-      })
+      body:JSON.stringify({name:name, phone:phone, msg:msg})
     });
     result.style.display='block';
     document.getElementById('inq-name').value='';
