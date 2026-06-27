@@ -9293,7 +9293,7 @@ function doRegister(){
     _regNext(4);
     // ★ 승인 요청 이메일 + FCM 발송
     fetch('/api/approval-request',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({uid:uid,companyName:company,email:email,phone:_verifiedPhone||'',serviceType:serviceType,services:services})
+      body:JSON.stringify({uid:uid,companyName:company,email:email,phone:_verifiedPhone||'',serviceType:serviceType,services:services,bizNumber:biz})
     }).catch(function(){});
     try{_db.collection('open_event').doc('counter').set(
       {count:firebase.firestore.FieldValue.increment(1),updatedAt:new Date().toISOString()},
