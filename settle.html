@@ -9482,6 +9482,23 @@ function _requestFcmAfterJoin(){
         firebase.firestore().collection('users').doc(uid).update({
           fcmToken:token, fcmUpdatedAt:new Date().toISOString()
         }).catch(function(){});
+        // ★ loginAllowed 배열에 FCM 토큰 저장
+        var did2=(_CU&&(_CU.uid||_CU.dealerId))||uid;
+        if(did2&&_db){
+          _db.collection('companies').doc(did2).get().then(function(doc){
+            if(!doc.exists)return;
+            var allowed=doc.data().loginAllowed||[];
+            if(!allowed.length)return;
+            // 토큰 없는 첫 번째 항목에 저장, 없으면 첫 번째 업데이트
+            var updated=false;
+            allowed=allowed.map(function(a){
+              if(!updated&&!a.fcmToken){updated=true;return Object.assign({},a,{fcmToken:token});}
+              return a;
+            });
+            if(!updated)allowed[0]=Object.assign({},allowed[0],{fcmToken:token});
+            _db.collection('companies').doc(did2).update({loginAllowed:allowed,fcmToken:token}).catch(function(){});
+          }).catch(function(){});
+        }
         // ★ companies.loginAllowed에도 FCM 토큰 저장
         var did=_CU&&_CU.dealerId;
         if(did){
