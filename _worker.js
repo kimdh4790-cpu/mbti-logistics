@@ -2818,13 +2818,42 @@ service cloud.firestore {
         const item = ntsData.data && ntsData.data[0];
         if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음', raw: rawText.slice(0,200) }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         const active = item.b_stt_cd === '01';
+
+        // ★ 서버사이드 companies 중복체크 (클라이언트 권한 없음 대응)
+        let alreadyRegistered = false;
+        let trialUsed = false;
+        try {
+          const fsToken4 = await getAccessToken(env);
+          const dupRes = await fetch(
+            `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,
+            {
+              method: 'POST',
+              headers: {'Authorization':`Bearer ${fsToken4}`,'Content-Type':'application/json'},
+              body: JSON.stringify({structuredQuery:{
+                from:[{collectionId:'companies'}],
+                where:{fieldFilter:{field:{fieldPath:'bizNumber'},op:'EQUAL',value:{stringValue:rawNum.replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')}}},
+                limit: 1
+              }})
+            }
+          );
+          const dupData = await dupRes.json();
+          const existing = dupData.filter(d=>d.document);
+          if (existing.length > 0) {
+            const exFields = existing[0].document.fields || {};
+            alreadyRegistered = true;
+            trialUsed = !!(exFields.trialUsed?.booleanValue || exFields.plan?.stringValue === 'trial');
+          }
+        } catch(e2) { /* 중복체크 실패해도 계속 진행 */ }
+
         return new Response(JSON.stringify({
           ok: true,
           active,
           status: item.b_stt || '',
           companyName: item.b_nm || '',
           repName: item.p_nm || '',
-          taxType: item.tax_type || ''
+          taxType: item.tax_type || '',
+          alreadyRegistered,
+          trialUsed
         }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
       } catch (e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
