@@ -8403,7 +8403,7 @@ if(window.location.hash==='#join'){
         _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
           if(!cSnap.exists && !isSuperAdmin()){
             // companies 문서 없음 = 미등록/삭제 계정
-            document.getElementById('login-box').innerHTML=
+            (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
               '<div style="text-align:center;padding:30px 20px">'
               +'<div style="font-size:40px;margin-bottom:12px">🚫</div>'
               +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">등록되지 않은 계정</div>'
@@ -8435,7 +8435,7 @@ if(window.location.hash==='#join'){
             var _today=new Date().toISOString().slice(0,10);
             // ★ 승인 대기 체크
             if(cd.status==='pending'&&!isSuperAdmin()){
-              document.getElementById('login-box').innerHTML=
+              (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
                 '<div style="text-align:center;padding:30px 20px">'
                 +'<div style="font-size:40px;margin-bottom:12px">⏳</div>'
                 +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">승인 대기 중</div>'
@@ -8496,7 +8496,7 @@ if(window.location.hash==='#join'){
         }).catch(function(e){
           // companies 문서 읽기 실패 = 미승인/미등록 계정 → 로그아웃
           console.warn('[auth] companies 읽기 실패:', e && e.message);
-          document.getElementById('login-box').innerHTML=
+          (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
             '<div style="text-align:center;padding:30px 20px">'
             +'<div style="font-size:40px;margin-bottom:12px">⚠️</div>'
             +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">등록되지 않은 계정</div>'
@@ -9269,8 +9269,9 @@ function doRegister(){
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
+  var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
-    var uid=cred.user.uid;
+    uid=cred.user.uid;
     var serviceType=(document.getElementById('r-service')||{value:'full'}).value||'full';
     var servicesStr=(document.getElementById('r-services')||{value:'settle'}).value||'settle';
     var services=servicesStr.split(',').filter(Boolean);
@@ -10141,8 +10142,9 @@ function doJoin(){
   if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
 
   err.textContent='가입 중...';err.style.color='var(--text3)';err.style.display='block';
+  var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
-    var uid=cred.user.uid;
+    uid=cred.user.uid;
     var userDoc={
       name:name,driverId:driverId,email:email,
       companyId:companyId,dealerId:companyId,companyName:companyName,
