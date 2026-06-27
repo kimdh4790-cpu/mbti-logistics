@@ -2803,11 +2803,11 @@ service cloud.firestore {
           return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
         const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
-        // status API로 상태 확인 (validate는 500 오류)
-        const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${apiKey}`;
+        // status API (serviceKey URL 인코딩 필수)
+        const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
         const ntsRes = await fetch(statusUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Accept': 'application/json' },
           body: JSON.stringify({ b_no: [rawNum] })
         });
         console.log('[biz-lookup] status:', ntsRes.status);
