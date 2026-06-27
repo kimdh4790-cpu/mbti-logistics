@@ -40508,6 +40508,25 @@ function openAdminPanel(){
       btn.onclick=(function(id){return function(){switchDealer(id);mo.remove();};})(item.id);
       td.appendChild(btn);
 
+      // ★ 승인 버튼 (pending 상태일 때만)
+      if(item.status==='pending'){
+        var appBtn=document.createElement('button');
+        appBtn.className='btn btn-sm';
+        appBtn.style.cssText='background:#059669;color:#fff;margin-left:4px;font-size:10px';
+        appBtn.textContent='✅ 승인';
+        appBtn.onclick=(function(id,nm,email){return function(){
+          if(!confirm(nm+' 가입을 승인하시겠습니까?'))return;
+          fetch('/api/approve?uid='+id)
+            .then(function(r){return r.text();})
+            .then(function(){
+              toast('✅ '+nm+' 승인 완료! 알림톡/이메일 발송됨');
+              mo.remove();
+              openAdminPanel();
+            }).catch(function(e){toast('❌ '+e.message);});
+        };})(item.id, item.name||item.id, item.email||'');
+        td.appendChild(appBtn);
+      }
+
       // ★ 삭제 버튼
       var delBtn=document.createElement('button');
       delBtn.className='btn btn-sm';
