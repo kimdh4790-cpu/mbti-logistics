@@ -546,12 +546,18 @@ export default {
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
       // /join → settle.html 서빙 + register 탭 자동 활성화
       if (path === '/join') {
-        const html = await env.DONWAY_ASSETS.get('settle.html');
-        if (html) {
-          const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
-          const lastBody = html.lastIndexOf('</body>');
-          const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
-          return new Response(modified, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+        try {
+          const html = await env.DONWAY_ASSETS.get('settle.html');
+          if (html) {
+            const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
+            const lastBody = html.lastIndexOf('</body>');
+            const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
+            return new Response(modified, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+          }
+          return await serveKVFile(env, 'settle.html', 'text/html');
+        } catch(e) {
+          console.warn('[/join] 오류:', e.message);
+          return await serveKVFile(env, 'settle.html', 'text/html');
         }
       }
       if (path === '/' || path === '') {
