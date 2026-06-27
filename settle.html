@@ -39743,8 +39743,14 @@ function _requirePlan(feature,callback){
   var _cd=window._cachedCompanyDoc||{};
   var _plan=_cd.plan||'';
   var _isTrialOrAnyPaid=window._trialActive||_plan==='any_paid'||_plan==='trial'||_plan==='OWNER';
-  if(_isTrialOrAnyPaid){callback();return;}
-  // trial 전체 기능 허용됨
+  if(_isTrialOrAnyPaid){
+    // ★ trial도 선택한 services 범위 내에서만 허용
+    var _svcs=(window._cachedCompanyDoc&&window._cachedCompanyDoc.services)||[];
+    var _isSA=typeof isSuperAdmin==='function'&&isSuperAdmin();
+    if(_isSA||_plan==='OWNER'||_plan==='any_paid'){callback();return;}
+    if(_isPlanAllowed(_cd,feature)){callback();return;}
+    else{_renderPaywall(feature);return;}
+  }
 
 
   var did=_CU.uid||_CU.dealerId||_CU.companyId||'';
