@@ -1673,12 +1673,42 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }
         }
 
+        // 5) 카카오 알림톡 발송 (승인 완료)
+        const custPhone = f.phone?.stringValue || f.settlementPhone?.stringValue || '';
+        if (custPhone && env.SOLAPI_KEY && env.SOLAPI_SECRET) {
+          const pfId      = env.KAKAO_PF_ID || 'KA01PF260618094439788FzuY2GxDiSW';
+          const date2     = new Date().toISOString();
+          const salt2     = Math.random().toString(36).slice(2);
+          const enc2      = new TextEncoder();
+          const ck2       = await crypto.subtle.importKey('raw', enc2.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+          const sg2       = await crypto.subtle.sign('HMAC', ck2, enc2.encode(date2+salt2));
+          const sig2      = Array.from(new Uint8Array(sg2)).map(b=>b.toString(16).padStart(2,'0')).join('');
+          const authHdr2  = `HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${date2}, salt=${salt2}, signature=${sig2}`;
+          const fallback  = `[DONWAY] ${custName}님, 가입이 승인되었습니다. 로그인: ${loginUrl}`;
+          await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json', 'Authorization': authHdr2},
+            body: JSON.stringify({messages:[{
+              to: custPhone.replace(/[^0-9]/g,''),
+              from: '05171133103',
+              type: 'ATA',
+              text: fallback,
+              kakaoOptions: {
+                pfId,
+                templateId: 'KA01TP260627140546788gz4m68aBSRn',
+                variables: { '#{회사명}': custName, '#{로그인URL}': loginUrl },
+                disableSms: false
+              }
+            }]})
+          }).catch(()=>{});
+        }
+
         return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f8fafc">
           <div style="max-width:400px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,.08)">
             <div style="font-size:56px;margin-bottom:16px">✅</div>
             <h2 style="color:#059669;margin:0 0 8px">승인 완료!</h2>
             <p style="color:#374151;margin:0 0 6px"><strong>${custName}</strong></p>
-            <p style="color:#888;font-size:13px;margin:0 0 20px">이메일 및 앱 푸시 알림을 발송했습니다</p>
+            <p style="color:#888;font-size:13px;margin:0 0 20px">이메일 · 앱 푸시 · 카카오 알림톡 발송 완료</p>
             <a href="${loginUrl}" style="display:inline-block;padding:12px 28px;background:#0066ff;color:#fff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700">로그인 페이지 열기</a>
           </div>
         </body></html>`, {headers:{'Content-Type':'text/html'}});
