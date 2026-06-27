@@ -8401,6 +8401,18 @@ if(window.location.hash==='#join'){
 
         // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능 동기적 처리
         _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
+          if(!cSnap.exists && !isSuperAdmin()){
+            // companies 문서 없음 = 미등록/삭제 계정
+            document.getElementById('login-box').innerHTML=
+              '<div style="text-align:center;padding:30px 20px">'
+              +'<div style="font-size:40px;margin-bottom:12px">🚫</div>'
+              +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">등록되지 않은 계정</div>'
+              +'<div style="font-size:13px;color:var(--text3);line-height:1.6">회사 등록이 완료되지 않았습니다.<br>donway.ai.kr/join 에서 가입해 주세요.<br><br>문의: 051-711-3103</div>'
+              +'<button onclick="_auth.signOut()" style="margin-top:16px;padding:10px 24px;background:var(--bg3);border:none;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)">로그아웃</button>'
+              +'</div>';
+            setTimeout(function(){_auth.signOut();}, 5000);
+            return;
+          }
           if(cSnap.exists){
             var cd=cSnap.data();
             _CU.plan=cd.plan||'';
@@ -8481,7 +8493,18 @@ if(window.location.hash==='#join'){
           }
           }
           showApp();
-        }).catch(function(){showApp();});
+        }).catch(function(e){
+          // companies 문서 읽기 실패 = 미승인/미등록 계정 → 로그아웃
+          console.warn('[auth] companies 읽기 실패:', e && e.message);
+          document.getElementById('login-box').innerHTML=
+            '<div style="text-align:center;padding:30px 20px">'
+            +'<div style="font-size:40px;margin-bottom:12px">⚠️</div>'
+            +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">등록되지 않은 계정</div>'
+            +'<div style="font-size:13px;color:var(--text3);line-height:1.6">회사 등록이 완료되지 않았거나<br>승인 대기 중입니다.<br><br>문의: 051-711-3103</div>'
+            +'<button onclick="_auth.signOut()" style="margin-top:16px;padding:10px 24px;background:var(--bg3);border:none;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)">로그아웃</button>'
+            +'</div>';
+          setTimeout(function(){_auth.signOut();}, 5000);
+        });
       }).catch(function(){
         _CU={uid:user.uid,email:user.email,name:'',role:'dealer',dealerId:user.uid,termsVersion:''};
         window._CU=_CU; showApp();
