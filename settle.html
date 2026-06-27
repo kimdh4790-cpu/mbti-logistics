@@ -8441,6 +8441,17 @@ function _uploadToStorage(path, file){
               else if(cd.settlePaid)_CU.serviceType='settle';
             }
             var _today=new Date().toISOString().slice(0,10);
+            // ★ 승인 대기 체크
+            if(cd.status==='pending'&&!isSuperAdmin()){
+              document.getElementById('login-box').innerHTML=
+                '<div style="text-align:center;padding:30px 20px">'
+                +'<div style="font-size:40px;margin-bottom:12px">⏳</div>'
+                +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">승인 대기 중</div>'
+                +'<div style="font-size:13px;color:var(--text3);line-height:1.6">가입 신청이 접수되었습니다.<br>담당자 확인 후 승인 시 로그인 가능합니다.<br><br>문의: 051-711-3103</div>'
+                +'<button onclick="_auth.signOut()" style="margin-top:16px;padding:10px 24px;background:var(--bg3);border:none;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)">로그아웃</button>'
+                +'</div>';
+              return;
+            }
             // ★ 허용 인원 체크
             var _loginAllowed=cd.loginAllowed||[];
             if(_loginAllowed.length>0&&!isSuperAdmin()){
@@ -9234,6 +9245,7 @@ function doRegister(){
       trialStart:now.toISOString().slice(0,10),
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
+      status:'pending',
       isOwner:isOwner,
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
@@ -9265,7 +9277,11 @@ function doRegister(){
     return _db.collection('companies').doc(uid).set(companyDoc);
   }).then(function(){
     var myUrl=window.location.origin+'/'+slugVal;
-    toast('✅ 등록 완료! 사업자등록증 업로드 중...');
+    toast('✅ 등록 완료! 담당자 승인 후 로그인 가능합니다.');
+    // ★ 승인 요청 이메일 + FCM 발송
+    fetch('/api/approval-request',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:uid,companyName:company,email:email,phone:_verifiedPhone||'',serviceType:serviceType,services:services})
+    }).catch(function(){});
     try{_db.collection('open_event').doc('counter').set(
       {count:firebase.firestore.FieldValue.increment(1),updatedAt:new Date().toISOString()},
       {merge:true});
