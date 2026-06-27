@@ -544,11 +544,13 @@ export default {
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
-      // /join → settle.html 서빙 + #join 해시 자동 처리
+      // /join → settle.html 서빙 + register 탭 자동 활성화
       if (path === '/join') {
         const html = await env.DONWAY_ASSETS.get('settle.html');
         if (html) {
-          const modified = html.replace('</body>', '<script>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</script></body>');
+          const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
+          const lastBody = html.lastIndexOf('</body>');
+          const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
           return new Response(modified, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
         }
       }
