@@ -546,8 +546,6 @@ function fmt(n){return Math.round(n||0).toLocaleString('ko-KR');}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function toast(m){var t=document.getElementById('toast');if(!t)return;t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show');},3000);}
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('ln_dark',document.body.classList.contains('dark')?1:0);}
-function curMonth(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-function stripDf(uid){return(uid||'').trim().replace(/@[a-z0-9]+$/i,'').trim();}
 if(localStorage.getItem('ln_dark')==='1') document.body.classList.add('dark');
 
 // ██ 물류앱 이식: RPRICE, CAMP_NAMES, DEFAULT_UNIT_PRICES, G_PRICES ██
@@ -2221,29 +2219,6 @@ function parseCoupangExcel(inp){
 
 
 // ── 카카오 알림톡 발송 ──
-function _sendAlimtalk_orig(phone, name, month, gross, deduct, net, stmtUrl, coName){
-  if(!phone) return Promise.resolve({ok:false,reason:'번호없음'});
-  var _headers={'Content-Type':'application/json'};
-  try{var u=firebase.auth().currentUser;if(u)u.getIdToken().then(function(t){_headers['Authorization']='Bearer '+t;});}catch(e){}
-  return fetch('/api/send-alimtalk',{
-    method:'POST',
-    headers:_headers,
-    body:JSON.stringify({
-      to: phone.replace(/[^0-9]/g,''),
-      templateCode: 'KA01TP260618101225825DuJHXpoC4kY',
-      variables: {
-          '#{이름}': name||'',
-          '#{고객회사명}': ((_CU&&_CU.companyName)||coName||''),
-          '#{월}': month||'',
-          '#{명세서링크}': stmtUrl||'',
-          '#{담당자명}': ((_CU&&_CU.settlementContact)||''),
-          '#{문의전화}': ((_CU&&_CU.settlementPhone)||'')
-      },
-          fallbackText: '['+( (_CU&&_CU.companyName)||coName||'DONWAY')+'] '+name+'님 '+month+' 정산명세서: '+(stmtUrl||'donway.ai.kr'),
-    })
-  }).then(function(r){return r.json();})
-  .catch(function(e){return {ok:false,error:e.message};});
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📧 Resend 이메일 발송
@@ -2415,25 +2390,6 @@ function _sendStatementEmail(driver, monthLabel, netPay, details, settle){
 }
 
 // 카카오 발송 → 실패 시 이메일 자동 대체
-function _sendWithFallback(driver, monthLabel, netPay, details, kakaoFn){
-  // 카카오 먼저 시도
-  return kakaoFn().then(function(result){
-    if(result&&result.ok){
-      return {ok:true, channel:'kakao'};
-    }
-    // 카카오 실패 → 이메일 시도
-    return _sendStatementEmail(driver, monthLabel, netPay, details)
-      .then(function(r){
-        return {ok:r&&r.ok, channel:'email', reason:r&&r.reason};
-      });
-  }).catch(function(){
-    // 카카오 오류 → 이메일 시도
-    return _sendStatementEmail(driver, monthLabel, netPay, details)
-      .then(function(r){
-        return {ok:r&&r.ok, channel:'email'};
-      });
-  });
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ⌨️ 바코드 스캐너 입력 (USB/블루투스 기계)
@@ -7960,43 +7916,6 @@ function saveCampCp(){
   });
 }
 
-function saveAllCp_orig(){
-  var p=window._cpPending; if(!p) return;
-  var all=[],total=0;
-  var savedPayloads=[]; // 저장된 정산 payload 수집 (세무사 연동용)
-  Object.keys(_campColorCache).forEach(function(camp){
-    if(p.byCamp[camp])p.byCamp[camp].forEach(function(dm,i){all.push({camp:camp,dm:dm,i:i});total++;});
-  });
-  if(!total){toast('❌ 저장할 데이터 없음');return;}
-  var n=0;
-  all.forEach(function(item){
-    var name=(document.getElementById('cpn-'+item.i)||{value:''}).value.trim()||item.dm.drvName||'';
-    // 세무사 연동용 payload 미리 구성
-    var dm=item.dm;
-    var damt=dm.delAmt||0,ramt=dm.retAmt||0,freshRaw=dm.freshAmt||0,finc=dm.addIncAmt||dm.freshIncAmt||0;
-    var income=damt+ramt+freshRaw+finc+(dm.nocontAmt||0);
-    var sa=Math.round(income/1.1),wage=Math.round(sa*(1-0.346));
-    var emp=wage>=800000?Math.floor(wage*0.008/10)*10:0,work=Math.floor(wage*0.0088/10)*10;
-    savedPayloads.push({
-      driver:dm.uid,driverName:name,camp:item.camp,month:p.month,
-      totalAmt:income,supplyAmt:sa,monthlyWage:wage,emp:emp,work:work,
-      net:income-(emp+work),dcnt:dm.dcnt||0,bizNum:dm.bizNum||''
-    });
-    _saveCpDriver(item.camp,item.dm,name,p.month,function(){
-      n++;
-      if(n===total){
-        toast('✅ 전체 '+n+'명 저장 완료!');
-        window._cpPending=null;
-        // ── 저장 완료 후 세무사 연동 자동 실행
-        _autoTaxSyncAfterSave(savedPayloads, p.month, function(){
-          var _mo=p.month;
-          goPage('settlements');
-          setTimeout(function(){_applyPriceOverrideToMonth(_mo);}, 1500);
-        });
-      }
-    });
-  });
-}
 
 // ── 전체 저장 후 세무사 자동 연동 + 링크 복사 + 엑셀
 function _autoTaxSyncAfterSave(payloads, ym, doneCb){
@@ -9228,22 +9147,6 @@ function _toggleSvc(svc){
   });
 }
 
-function selectService(type){
-  ['settle','delivery','universal','qr','qr_payroll','full','hourly'].forEach(function(t){
-    var el=document.getElementById('svc-'+t+'-label');
-    if(!el) return;
-    if(t===type){
-      el.style.borderColor='var(--brand)';
-      el.style.background='var(--brand-l)';
-      var el2=el.querySelector('div:nth-child(2)');if(el2)el2.style.color='var(--brand)';
-    } else {
-      el.style.borderColor='var(--border)';
-      el.style.background='';
-      var el2=el.querySelector('div:nth-child(2)');if(el2)el2.style.color='var(--text2)';
-    }
-  });
-  document.getElementById('r-service').value=type;
-}
 function _regNext(n){
   var cur=0;
   [1,2,3,4].forEach(function(i){if(document.getElementById('reg-step'+i)&&document.getElementById('reg-step'+i).style.display!=='none')cur=i;});
@@ -12683,60 +12586,6 @@ function _dwTrack(cnt, defPrice){
 }
 
 // ── 핵심 정산 계산 엔진
-function calcDonWaySettlement_orig(orders, cfg){
-  if(!orders||!orders.length) return null;
-  // ★ [방어2] 주차 필터 락: periodStart~periodEnd 범위 외 데이터 제외
-  var ps=cfg&&cfg.periodStart?new Date(cfg.periodStart):null;
-  var pe=cfg&&cfg.periodEnd?new Date(cfg.periodEnd):null;
-  if(ps&&pe){
-    orders=orders.filter(function(o){
-      if(!o.completedAt)return true;
-      var t=new Date(o.completedAt);
-      return t>=ps&&t<=pe;
-    });
-  }
-  // ★ validCount: 취소건(price≤0) 제외한 실 배달 건수
-  var cnt=orders.filter(function(o){return (o.platformPrice||0)>0;}).length;
-  var track=_dwTrack(cnt, cfg.defaultPrice||2900);
-  var target=track.price;
-  var pfSum=0, injected=0, extracted=0;
-  var slotStat={};
-  Object.keys(DW_SLOTS).forEach(function(k){slotStat[k]={cnt:0,pfSum:0,inject:0,extract:0};});
-
-  var details=orders.map(function(o){
-    var price=o.platformPrice||0;
-    // ★ [방어1] 취소/패널티 건: platformPrice≤0 → 보전·환수·카운트 완전 제외
-    if(price<=0){
-      return Object.assign({},o,{slot:'midnight',inject:0,extract:0,cancelled:true});
-    }
-    pfSum+=price;
-    var slot=_dwSlot(o.hour||0);
-    slotStat[slot].cnt++;
-    slotStat[slot].pfSum+=price;
-    var inj=0,ext=0;
-    if(slot!=='midnight'){   // 06:00~24:00만 밸런싱 적용
-      if(price<target){inj=Math.floor(target-price); injected+=inj; slotStat[slot].inject+=inj;}
-      else if(price>target){ext=Math.floor(price-target); extracted+=ext; slotStat[slot].extract+=ext;}
-    }
-    return Object.assign({},o,{slot:slot,inject:inj,extract:ext});
-  });
-
-  var preTax=Math.floor(pfSum+injected-extracted); // ★ 원단위 절사
-  var tax3=Math.floor(preTax*0.033);               // ★ [방어3] 3.3% 정확히 (30+3)
-  var totalTax=tax3;
-  var deduct=Math.floor((cfg.leaseFee||0)+(cfg.programFee||0)+(cfg.insuranceFee||0));
-  var net=Math.max(0,Math.floor(preTax-totalTax-deduct)); // ★ 최종 절사
-
-  return{
-    trackLabel:track.label, targetPrice:target, isDefault:track.isDefault,
-    totalCount:cnt, pfSum:pfSum,
-    injected:injected, extracted:extracted, agencyMargin:extracted-injected,
-    preTax:preTax, tax3:tax3, tax03:0, totalTax:totalTax,
-    leaseFee:cfg.leaseFee||0, programFee:cfg.programFee||0, insuranceFee:cfg.insuranceFee||0,
-    deduct:deduct, net:net, slotStat:slotStat, details:details,
-    riderName:cfg.riderName||'', riderId:cfg.riderId||'', period:cfg.period||''
-  };
-}
 
 // ── 엑셀 플랫폼 자동 감지
 function _dwDetectPlatform(headers){
@@ -20102,34 +19951,6 @@ function _taxShareLink(){
 
 
 // ── 정산 현황 전체 엑셀 다운로드 ──
-function _downloadSettleAllExcel_orig(){
-  var data=window._settleCache||[];
-  if(!data.length){toast('❌ 정산 데이터 없음');return;}
-  // drivers 컬렉션에서 bizName 보완
-  var did=(_CU&&(_CU.dealerId||_CU.uid))||'';
-  if(did&&_db){
-    _db.collection('clean_workers').where('dealerId','==',did).get().then(function(snap){
-      var drvMap={};
-      snap.docs.forEach(function(doc){
-        var d=doc.data();
-        var key=d.userId||d.name||'';
-        if(key) drvMap[key]=d;
-      });
-      // _settleCache에 bizName/bizNum 보완
-      data.forEach(function(s){
-        var uid=s.userId||s.driver||'';
-        var drv=drvMap[uid]||drvMap[s.driver]||null;
-        if(drv){
-          if(!s.bizName&&drv.bizName) s.bizName=drv.bizName;
-          if(!s.bizNum&&drv.bizNum) s.bizNum=drv.bizNum;
-        }
-      });
-      _doDownloadSettleExcel(data);
-    }).catch(function(){_doDownloadSettleExcel(data);});
-  } else {
-    _doDownloadSettleExcel(data);
-  }
-}
 function _doDownloadSettleExcel(data){
 
   // 현재 월 필터 적용
