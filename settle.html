@@ -40603,11 +40603,14 @@ function openAdminPanel(){
         id:doc.id,
         name:d.companyName||d.name||doc.id,
         email:d.email||d.adminEmail||'',
+        phone:d.phone||d.settlementPhone||'',
         slug:d.slug||'',
         plan:d.plan||(d.trialEnd?'trial':'unknown'),
         serviceType:d.serviceType||'settle',
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
+        status:d.status||'approved',
+        bizDocUrl:d.bizDocUrl||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
         cnt:dealerCnt[doc.id]||0
       });
