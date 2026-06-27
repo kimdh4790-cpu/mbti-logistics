@@ -146,7 +146,6 @@ tr:hover>td{background:var(--bg3)}
   function _initKakao(key){
     if(window.Kakao && key && !window.Kakao.isInitialized()){
       window.Kakao.init(key);
-      console.log('[Kakao] SDK 초기화 완료');
     }
   }
   fetch('/api/kakao-config')
@@ -10464,6 +10463,11 @@ function doLogout(){
   // 인증 초기화
   sessionStorage.removeItem('donway_auth_token');
   sessionStorage.removeItem('donway_auth_expire');
+  // ★ 실시간 연동 리스너 해제
+  if(window._integListeners){
+    Object.values(window._integListeners).forEach(function(unsub){if(typeof unsub==='function')unsub();});
+    window._integListeners={};
+  }
   if(_auth)_auth.signOut();
 }
 
@@ -22399,7 +22403,6 @@ function _initIntegration(did) {
     _startInventoryAlertSync(did);
   }
 
-  console.log('[통합연동] 초기화 완료 — dealerId:', did);
 }
 
 // ── 1) POS 결제 → 재고 자동 차감 ──
@@ -22423,7 +22426,6 @@ function _startPosToInventorySync(did) {
       });
     }, function(e){ console.warn('[POS→재고]', e.message); });
 
-  console.log('[연동] POS→재고 실시간 감지 시작');
 }
 
 function _deductInventoryFromSale(did, saleId, items) {
@@ -22463,7 +22465,7 @@ function _deductInventoryFromSale(did, saleId, items) {
   });
 
   batch.commit()
-    .then(function(){ console.log('[재고차감] 완료:', saleId); })
+    .then(function(){ })
     .catch(function(e){ console.warn('[재고차감] 오류:', e.message); });
 }
 
@@ -22488,7 +22490,6 @@ function _startQrToPayrollSync(did) {
       });
     }, function(e){ console.warn('[QR→급여]', e.message); });
 
-  console.log('[연동] QR→급여 실시간 감지 시작');
 }
 
 function _calcDayPayFromAtt(did, ym, att, attId) {
@@ -22533,6 +22534,9 @@ function _calcDayPayFromAtt(did, ym, att, attId) {
 // ── 3) 정산 → 대시보드 실시간 업데이트 ──
 function _startSettleSync(did) {
   if(_integListeners['settle_dash']) return;
+  var co = window._cachedCompanyDoc || {};
+  var hasSettle = co.settlePaid || co.serviceType==='settle' || co.plan==='trial' || co.plan==='OWNER' || isSuperAdmin();
+  if(!hasSettle) return;
   var ym = new Date().toISOString().slice(0,7);
 
   _integListeners['settle_dash'] = _db.collection('settlements')
@@ -22669,7 +22673,6 @@ function _stopIntegration() {
     }
   });
   _integListeners = {};
-  console.log('[통합연동] 리스너 해제');
 }
 
 // ── 통합 대시보드 위젯 — 홈에 연동 상태 표시 ──
