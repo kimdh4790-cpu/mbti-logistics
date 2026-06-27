@@ -1000,18 +1000,14 @@ export default {
         }
         // /inventory → 재고관리
         if (url.pathname === '/inventory' || url.pathname === '/inventory.html') {
-          console.log('[DEBUG] inventory 요청 처리 시작');
           const e2 = env || _env_ref;
-          console.log('[DEBUG] DONWAY_ASSETS:', e2 && e2.DONWAY_ASSETS ? 'OK' : 'MISSING');
           if (e2 && e2.DONWAY_ASSETS) {
             const kvVal = await e2.DONWAY_ASSETS.get('inventory.html', {type:'text'});
-            console.log('[DEBUG] KV inventory.html:', kvVal ? kvVal.length+'자' : 'NULL');
             if (kvVal) {
               return new Response(kvVal, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
             }
           }
           const r = await fetchAsset('/inventory.html', request, env);
-          console.log('[DEBUG] fetchAsset status:', r.status);
           const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
           Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
           return new Response(r.body, {status:r.status, headers:h});
@@ -2825,9 +2821,7 @@ service cloud.firestore {
           headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Accept': 'application/json' },
           body: JSON.stringify({ b_no: [rawNum] })
         });
-        console.log('[biz-lookup] status:', ntsRes.status);
         const rawText = await ntsRes.text();
-        console.log('[biz-lookup] body:', rawText.slice(0, 400));
         if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status + ' ' + rawText.slice(0,100));
         const ntsData = JSON.parse(rawText);
         const item = ntsData.data && ntsData.data[0];
