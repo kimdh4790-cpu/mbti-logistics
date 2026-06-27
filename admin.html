@@ -333,7 +333,7 @@ const app=initializeApp(FB);
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let _all=[], _extTarget=null, _trialTarget=null, _pwTarget=null;
+window.window._all=[]; let _extTarget=null, _trialTarget=null, _pwTarget=null;
 
 // ── 유틸 ──
 function toast(msg){
@@ -397,7 +397,7 @@ window.loadDealers = async function loadDealers(){
   try{
     // companies 컬렉션 기준 (DONWAY 실제 데이터)
     const compSnap=await getDocs(collection(db,'companies'));
-    _all=[];
+    window._all=[];
     compSnap.forEach(d=>{
       const u=d.data();
       // 구독 상태 판단
@@ -424,7 +424,7 @@ window.loadDealers = async function loadDealers(){
           }
         });
       }
-      _all.push({
+      window._all.push({
         id:d.id,
         name:u.companyName||u.name||'-',
         manager:u.name||u.managerName||'-',
@@ -450,8 +450,8 @@ window.loadDealers = async function loadDealers(){
         trialEnd:u.trialEnd||''
       });
     });
-    _all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-    updateStats(_all);applyFilters();
+    window._all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+    updateStats(window._all);applyFilters();
   }catch(e){
     document.getElementById('dealer-tbody').innerHTML=
       `<tr><td colspan="6" class="empty">⚠️ ${e.message}</td></tr>`;
@@ -559,7 +559,7 @@ window.approveBizDoc=async function(id){
 window.filterD=function(status,btn){
   document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderTable(status==='all'?_all:_all.filter(d=>d.status===status));
+  renderTable(status==='all'?window._all:window._all.filter(d=>d.status===status));
 };
 
 // 서브탭 전환
@@ -575,18 +575,18 @@ window.switchSubTab=function(v,btn){
 
 window.applyFilters = function applyFilters(){
   const q=(document.getElementById('dealer-search')||{value:''}).value.toLowerCase();
-  let list=_all;
+  let list=window._all;
   if(_curSubTab==='trial') list=list.filter(d=>d.status==='trial'&&d.companyStatus!=='pending');
   else if(_curSubTab==='active') list=list.filter(d=>d.status==='active');
   else if(_curSubTab==='pending') list=list.filter(d=>d.companyStatus==='pending');
   else if(_curSubTab==='expired') list=list.filter(d=>d.status==='expired');
   if(q) list=list.filter(d=>(d.name+d.email).toLowerCase().includes(q));
   renderTable(list);
-  document.getElementById('cnt-all').textContent=_all.length;
-  document.getElementById('cnt-trial').textContent=_all.filter(d=>d.status==='trial'&&d.companyStatus!=='pending').length;
-  document.getElementById('cnt-active').textContent=_all.filter(d=>d.status==='active').length;
-  document.getElementById('cnt-pending').textContent=_all.filter(d=>d.companyStatus==='pending').length;
-  document.getElementById('cnt-expired').textContent=_all.filter(d=>d.status==='expired').length;
+  document.getElementById('cnt-all').textContent=window._all.length;
+  document.getElementById('cnt-trial').textContent=window._all.filter(d=>d.status==='trial'&&d.companyStatus!=='pending').length;
+  document.getElementById('cnt-active').textContent=window._all.filter(d=>d.status==='active').length;
+  document.getElementById('cnt-pending').textContent=window._all.filter(d=>d.companyStatus==='pending').length;
+  document.getElementById('cnt-expired').textContent=window._all.filter(d=>d.status==='expired').length;
 }
 
 window.searchDealers=function(q){ applyFilters(); };
@@ -615,7 +615,7 @@ const FEAT_BUNDLES=[
 ];
 
 window.openFeatureModal=function(cid,cname){
-  const item=_all.find(d=>d.id===cid);
+  const item=window._all.find(d=>d.id===cid);
   if(!item) return;
   const mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
@@ -753,7 +753,7 @@ window.openExt=function(id,name){
   document.getElementById('mo-ext').classList.add('open');
 };
 window.updateExtPreview=function(){
-  const d=_all.find(x=>x.id===(_extTarget?.id));
+  const d=window._all.find(x=>x.id===(_extTarget?.id));
   const months=+document.getElementById('ext-months').value||1;
   const base=Math.max(+(d?.expireDate||0),Date.now());
   const newExp=new Date(base+months*30*24*60*60*1000);
@@ -1061,7 +1061,7 @@ window.openContractStatus = async function(id, name) {
 
 window.resendContract = async function() {
   if(!_contractTarget) return;
-  const d = _all.find(x => x.id === _contractTarget.id);
+  const d = window._all.find(x => x.id === _contractTarget.id);
   if(!d) return;
   toast('📧 계약서 재발송 중...');
   const res = await sendContractRequest(d.id, d.name, d.email, d.manager);
