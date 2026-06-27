@@ -2628,6 +2628,19 @@ service cloud.firestore {
       }
     }
 
+    // ── 로그인 알림 푸시 (/api/send-push) ──
+    if (path === '/api/send-push' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { token, title, body: msgBody } = body;
+        if (!token) return new Response(JSON.stringify({ok:false,error:'token 필요'}), {headers:{'Content-Type':'application/json'}});
+        const result = await sendFCMPush(token, title||'DONWAY 알림', msgBody||'');
+        return new Response(JSON.stringify({ok:result.sent, reason:result.reason}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
     // ── 카카오 알림톡 (/api/send-alimtalk) ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
       const authUser = await verifyFirebaseToken(request);
