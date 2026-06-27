@@ -393,7 +393,7 @@ async function showDash(){
 }
 
 // ── ① 대리점 목록 로드 (users 컬렉션 기준) ──
-async function loadDealers(){
+window.loadDealers = async function loadDealers(){
   try{
     // companies 컬렉션 기준 (DONWAY 실제 데이터)
     const compSnap=await getDocs(collection(db,'companies'));
@@ -458,7 +458,7 @@ async function loadDealers(){
   }
 }
 
-function updateStats(list){
+window.updateStats = function updateStats(list){
   const now=new Date();const in7=new Date(+now+7*864e5);
   const active=list.filter(d=>d.status==='active');
   const expired=list.filter(d=>d.status==='expired');
@@ -477,7 +477,7 @@ const IND_LABEL={coupang:'🚚쿠팡',delivery:'🛵배달대행',cleaning:'🧹
   construction:'🏗️건설',golf:'⛳골프',academy:'📚학원',beauty:'💇뷰티',
   logistics:'🚛물류',freelance:'💼프리랜서',care:'🏥요양',restaurant:'🍽️식당',universal:'📋범용'};
 
-function renderTable(list){
+window.renderTable = function renderTable(list){
   const tbody=document.getElementById('dealer-tbody');
   if(!list.length){tbody.innerHTML='<tr><td colspan="7" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
   const now=new Date();const in7=new Date(+now+7*864e5);
@@ -573,7 +573,7 @@ window.switchSubTab=function(v,btn){
   applyFilters();
 };
 
-function applyFilters(){
+window.applyFilters = function applyFilters(){
   const q=(document.getElementById('dealer-search')||{value:''}).value.toLowerCase();
   let list=_all;
   if(_curSubTab==='trial') list=list.filter(d=>d.status==='trial'&&d.companyStatus!=='pending');
@@ -855,7 +855,7 @@ window.cancelSub=async function(id,name){
 
 // ── ⑦ 결제 내역 로드 ──
 window._payHistFilter = window._payHistFilter || 'active';
-async function loadPayments(){
+window.loadPayments = async function loadPayments(){
   const el=document.getElementById('payment-list');
   el.innerHTML='<div class="empty">불러오는 중...</div>';
   try{
