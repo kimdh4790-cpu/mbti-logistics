@@ -8368,6 +8368,14 @@ function _uploadToStorage(path, file){
       } else { resolve(''); }
     }).catch(function(){resolve('');});
   });
+// ★ #join 해시로 접속 시 회사 등록 탭 자동 활성화
+if(window.location.hash==='#join'){
+  setTimeout(function(){
+    var btn=document.getElementById('tab-register');
+    if(btn)btn.click();
+  },500);
+}
+
 }var _firebaseInited=false;function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   if(_firebaseInited){return;}
