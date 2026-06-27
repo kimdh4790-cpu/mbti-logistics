@@ -9298,6 +9298,7 @@ function doRegister(){
       trialEnd:isOwner?'9999-12-31':trialEnd.toISOString().slice(0,10),
       trialUsed:true,
       status:'pending',
+      role:'dealer',
       isOwner:isOwner,
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
