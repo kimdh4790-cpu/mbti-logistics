@@ -1471,11 +1471,20 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const { name, phone, msg } = body;
         if (!name || !phone) return new Response(JSON.stringify({ok:false,error:'필수 항목 누락'}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
-        const html = `<h2>📩 DONWAY 랜딩 문의</h2>
-          <p><b>이름/회사:</b> ${name}</p>
-          <p><b>연락처:</b> ${phone}</p>
-          <p><b>문의내용:</b><br>${(msg||'').replace(/\n/g,'<br>')}</p>
-          <hr><p style="color:#888;font-size:12px">donway.ai.kr 랜딩페이지 문의폼</p>`;
+        const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+          <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:900;color:#fff">📩 DONWAY</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.8);margin-top:4px">랜딩페이지 문의 접수</div>
+          </div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;width:120px">이름/회사</td><td style="padding:12px 16px;color:#111">${name}</td></tr>
+            <tr><td style="padding:12px 16px;font-weight:700;color:#374151">연락처</td><td style="padding:12px 16px;color:#111">${phone}</td></tr>
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;vertical-align:top">문의내용</td><td style="padding:12px 16px;color:#111;line-height:1.6">${(msg||'-').replace(/\n/g,'<br>')}</td></tr>
+          </table>
+          <div style="margin-top:20px;padding:12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#6b7280;text-align:center">
+            donway.ai.kr 랜딩페이지 문의폼 · ${new Date().toLocaleString('ko-KR')}
+          </div>
+        </body></html>`;
         await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
