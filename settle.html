@@ -9482,20 +9482,26 @@ function _requestFcmAfterJoin(){
         firebase.firestore().collection('users').doc(uid).update({
           fcmToken:token, fcmUpdatedAt:new Date().toISOString()
         }).catch(function(){});
-        // ★ loginAllowed 배열에 FCM 토큰 저장
+        // ★ loginAllowed 배열에 FCM 토큰 누적 저장 (기기별)
         var did2=(_CU&&(_CU.uid||_CU.dealerId))||uid;
         if(did2&&_db){
           _db.collection('companies').doc(did2).get().then(function(doc){
             if(!doc.exists)return;
             var allowed=doc.data().loginAllowed||[];
             if(!allowed.length)return;
-            // 토큰 없는 첫 번째 항목에 저장, 없으면 첫 번째 업데이트
+            // 각 항목에 fcmTokens 배열로 누적 저장
             var updated=false;
-            allowed=allowed.map(function(a){
-              if(!updated&&!a.fcmToken){updated=true;return Object.assign({},a,{fcmToken:token});}
+            allowed=allowed.map(function(a,i){
+              if(!updated){
+                updated=true;
+                var toks=a.fcmTokens||[];
+                if(toks.indexOf(token)<0)toks=toks.concat([token]);
+                // 최대 3개 유지
+                if(toks.length>3)toks=toks.slice(-3);
+                return Object.assign({},a,{fcmTokens:toks,fcmToken:token});
+              }
               return a;
             });
-            if(!updated)allowed[0]=Object.assign({},allowed[0],{fcmToken:token});
             _db.collection('companies').doc(did2).update({loginAllowed:allowed,fcmToken:token}).catch(function(){});
           }).catch(function(){});
         }
