@@ -9063,14 +9063,36 @@ function checkBizNum(){
         document.getElementById('r-biznum').dataset.verified='blocked';
       }
     } else {
-      msg.style.color='#059669';msg.textContent='✅ 사용 가능한 사업자번호입니다';
-      document.getElementById('r-biznum').dataset.verified='ok';
+      // ★ 국세청 API 실검증
+      msg.style.color='var(--text3)';msg.textContent='🔍 국세청 검증 중...';
+      fetch('/api/biz-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bizNum:biz})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok && d.active){
+          msg.style.color='#059669';
+          msg.textContent='✅ 사용 가능'+(d.companyName?' ('+d.companyName+')':'');
+          document.getElementById('r-biznum').dataset.verified='ok';
+          if(d.companyName&&!document.getElementById('r-company').value) document.getElementById('r-company').value=d.companyName;
+          if(d.repName&&!document.getElementById('r-rep').value) document.getElementById('r-rep').value=d.repName;
+        } else if(d.ok && !d.active){
+          msg.style.color='var(--red)';
+          msg.textContent='❌ 폐업 또는 유효하지 않은 사업자번호 ('+(d.status||'확인불가')+')';
+          document.getElementById('r-biznum').dataset.verified='blocked';
+        } else {
+          msg.style.color='var(--red)';
+          msg.textContent='❌ 확인 실패 — 다시 시도해주세요';
+          document.getElementById('r-biznum').dataset.verified='';
+        }
+      }).catch(function(){
+        msg.style.color='var(--red)';
+        msg.textContent='❌ 네트워크 오류 — 잠시 후 다시 시도해주세요';
+        document.getElementById('r-biznum').dataset.verified='';
+      });
     }
   }).catch(function(){
-    _fetchBizInfo(biz, function(){
-      msg.style.color='#059669';msg.textContent='✅ 확인 완료';
-      document.getElementById('r-biznum').dataset.verified='ok';
-    });
+    msg.style.color='var(--red)';
+    msg.textContent='❌ 서버 연결 오류 — 잠시 후 다시 시도해주세요';
+    document.getElementById('r-biznum').dataset.verified='';
   });
 }
 
