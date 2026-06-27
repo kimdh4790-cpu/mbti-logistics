@@ -1484,7 +1484,65 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     if (path === '/api/approval-request' && method === 'POST') {
       try {
         const body = await request.json();
-        const { uid, companyName, email, phone, serviceType, services } = body;
+        const { uid, companyName, email, phone, serviceType, services, bizNumber } = body;
+
+        // ★ 서버사이드 사업자번호 이중 검증
+        if (bizNumber) {
+          const fsToken0 = await getAccessToken(env);
+          const bizClean = bizNumber.replace(/-/g,'');
+
+          // 1) 블랙리스트 확인
+          const blRes = await fetch(
+            `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/used_biz_numbers/${bizClean}`,
+            {headers:{'Authorization':`Bearer ${fsToken0}`}}
+          );
+          if (blRes.ok) {
+            const blData = await blRes.json();
+            if (blData.fields) {
+              // 블랙리스트에 있음 → Auth 계정 삭제 + 거부
+              await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts/${uid}`, {
+                method:'DELETE',
+                headers:{'Authorization':`Bearer ${fsToken0}`,'Content-Type':'application/json'}
+              }).catch(()=>{});
+              await fetch(
+                `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}`,
+                {method:'DELETE', headers:{'Authorization':`Bearer ${fsToken0}`}}
+              ).catch(()=>{});
+              return new Response(JSON.stringify({ok:false,error:'blocked_biz'}),{status:403,headers:{'Content-Type':'application/json'}});
+            }
+          }
+
+          // 2) companies 컬렉션 기존 가입 이력 확인
+          const compRes = await fetch(
+            `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,
+            {
+              method:'POST',
+              headers:{'Authorization':`Bearer ${fsToken0}`,'Content-Type':'application/json'},
+              body: JSON.stringify({structuredQuery:{
+                from:[{collectionId:'companies'}],
+                where:{fieldFilter:{field:{fieldPath:'bizNumber'},op:'EQUAL',value:{stringValue:bizNumber}}},
+                limit:2
+              }})
+            }
+          );
+          const compData = await compRes.json();
+          const existing = compData.filter(d=>d.document&&d.document.name&&!d.document.name.endsWith('/'+uid));
+          if (existing.length > 0) {
+            const exFields = existing[0].document.fields || {};
+            if (exFields.trialUsed?.booleanValue || exFields.plan?.stringValue === 'trial') {
+              // 이미 체험 이력 → 신규 계정 삭제
+              await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts/${uid}`, {
+                method:'DELETE',
+                headers:{'Authorization':`Bearer ${fsToken0}`,'Content-Type':'application/json'}
+              }).catch(()=>{});
+              await fetch(
+                `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}`,
+                {method:'DELETE', headers:{'Authorization':`Bearer ${fsToken0}`}}
+              ).catch(()=>{});
+              return new Response(JSON.stringify({ok:false,error:'trial_already_used'}),{status:403,headers:{'Content-Type':'application/json'}});
+            }
+          }
+        }
         const approveLink = `https://donway.ai.kr/api/approve?uid=${uid}&key=${env.FIREBASE_SA_KEY?'ok':''}`;
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
         const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
