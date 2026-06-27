@@ -388,13 +388,18 @@ async function loadDealers(){
       const subs=u.subscriptions||{};
       const subKeys=Object.keys(subs);
       let status='none',plan='-',expireDate=null,amount=0;
-      if(u.role==='admin'||u.role==='dealer'){
-        // 체험 여부
-        const hasTrial=subKeys.some(k=>subs[k]&&subs[k].active&&subs[k].plan==='trial');
-        const hasPaid=subKeys.some(k=>subs[k]&&subs[k].active&&subs[k].plan!=='trial');
+      // role 조건 제거 - companies 문서엔 role 필드 없음
+      {
+        // 체험/유료 여부 판단
+        const hasTrial = u.plan==='trial' || u.trialEnd;
+        const hasPaid = u.settlePaid||u.qrPaid||u.payrollPaid||u.universalPaid||u.deliveryPaid;
+        const today = new Date().toISOString().slice(0,10);
+        const trialActive = u.trialEnd && u.trialEnd >= today;
         if(hasPaid){status='active';plan='유료';}
-        else if(hasTrial){status='trial';plan='체험';}
+        else if(hasTrial&&trialActive){status='trial';plan='체험';}
+        else if(hasTrial&&!trialActive){status='expired';plan='만료';}
         // 만료일
+        if(u.trialEnd) expireDate=new Date(u.trialEnd);
         subKeys.forEach(k=>{
           const s=subs[k];
           if(s&&s.expiry){
