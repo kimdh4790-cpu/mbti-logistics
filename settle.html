@@ -567,6 +567,8 @@ var G_PRICES = Object.assign({}, DEFAULT_UNIT_PRICES);
 // 슈퍼어드민 이메일 (Firestore admins 컬렉션 마이그레이션 전 임시 유지)
 var SUPER_ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
 var SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAILS[0];
+window.SUPER_ADMIN_EMAILS = SUPER_ADMIN_EMAILS;
+window.SUPER_ADMIN_EMAIL  = SUPER_ADMIN_EMAIL;
 var _SUPER_ADMIN_CACHE = null;
 var _SA_TEST_INDUSTRY = null; // 슈퍼어드민 테스트 업종 오버라이드
 // ── 슈퍼어드민 항목별 시뮬레이션 (DB 건드리지 않음)
@@ -26423,7 +26425,7 @@ function _filterMenusByServices(menus){
   var cfg=_COMPANY_CFG||{};
   var services=cfg.services||[cfg.serviceType||'settle'];
   // 슈퍼어드민은 전체 허용
-  if(SUPER_ADMIN_EMAILS.includes(_CU&&_CU.email)) return menus;
+  if(_getSAE().includes(_CU&&_CU.email)) return menus;
 
   var svcPlanMap={
     settle:['settle','any_paid','free'],
@@ -34139,7 +34141,7 @@ if(navigator.serviceWorker){
   });
 }
 
-function _isGuardExempt(){return isSuperAdmin()||(SUPER_ADMIN_EMAILS.indexOf((_CU&&_CU.email)||'')>=0);}
+function _isGuardExempt(){return isSuperAdmin()||(_getSAE().indexOf((_CU&&_CU.email)||'')>=0);}
 function _guardLog(type,detail,severity){
   if(_isGuardExempt())return;
   if(!_db||!_CU)return;
@@ -39654,17 +39656,17 @@ function _saveNotice(){
   }
 }
 // ══ 슈퍼 어드민 ══
-// SUPER_ADMIN_EMAILS/EMAIL 상단에서 선언됨
+// _getSAE()/EMAIL 상단에서 선언됨
 // isSuperAdmin: 이메일 즉시 판단 (동기)
+function _getSAE(){ return (typeof SUPER_ADMIN_EMAILS!=='undefined') ? SUPER_ADMIN_EMAILS : (window.SUPER_ADMIN_EMAILS||[]); }
 function isSuperAdmin(){
-  return !!((_CU&&_CU.email&&SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0)
-    ||(_SUPER_ADMIN_CACHE===true));
+  return !!(_getSAE().indexOf((_CU&&_CU.email)||'')>=0 || _SUPER_ADMIN_CACHE===true);
 }
 
 function _initSuperAdminDocs(){
   if(!_db||!_CU){toast('❌ Firebase 미연결');return;}
-  if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)<0){toast('❌ 권한 없음');return;}
-  var emails = SUPER_ADMIN_EMAILS;
+  if(_getSAE().indexOf(_CU.email)<0){toast('❌ 권한 없음');return;}
+  var emails = _getSAE();
   var done = 0;
   emails.forEach(function(email){
     // 원본 이메일로 문서 ID 저장
@@ -39685,7 +39687,7 @@ function _initSuperAdminDocs(){
 
 function _showInitAdminBtn(){
   var btn = document.getElementById('btn-init-admin');
-  if(btn && _CU && SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0){
+  if(btn && _CU && _getSAE().indexOf(_CU.email)>=0){
     btn.style.display='block';
   }
 }
@@ -39707,13 +39709,13 @@ function _loadAdminStatus(){
               _SUPER_ADMIN_CACHE=true;
               var btn=document.getElementById('admin-btn');
               if(btn)btn.style.display='block';
-            } else if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0){
+            } else if(_getSAE().indexOf(_CU.email)>=0){
               _showInitAdminBtn();
             }
           });
       }
     }).catch(function(){
-      if(SUPER_ADMIN_EMAILS.indexOf(_CU.email)>=0) _showInitAdminBtn();
+      if(_getSAE().indexOf(_CU.email)>=0) _showInitAdminBtn();
     });
 }
 
