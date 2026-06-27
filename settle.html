@@ -8365,22 +8365,6 @@ function _uploadToStorage(path, file){
       } else { resolve(''); }
     }).catch(function(){resolve('');});
   });
-// ★ 세션 타임아웃 (30분 미사용 시 자동 로그아웃)
-var _sessionTimer=null;
-function _resetSessionTimeout(){
-  if(_sessionTimer)clearTimeout(_sessionTimer);
-  _sessionTimer=setTimeout(function(){
-    if(_auth&&_auth.currentUser){
-      toast('⏰ 30분 동안 사용하지 않아 자동 로그아웃됩니다');
-      setTimeout(function(){_auth.signOut().then(function(){location.reload();});},3000);
-    }
-  },30*60*1000);
-}
-// 사용자 활동 감지 시 타이머 리셋
-['click','keydown','touchstart'].forEach(function(ev){
-  document.addEventListener(ev,function(){if(_auth&&_auth.currentUser)_resetSessionTimeout();},{passive:true});
-});
-
 }var _firebaseInited=false;function initFirebase(){
   if(typeof firebase==='undefined'){setTimeout(initFirebase,300);return;}
   if(_firebaseInited){return;}
@@ -38720,6 +38704,22 @@ function _openCompanyInfoModal(){
   document.body.appendChild(mo);
   _renderLoginAllowed();
 }
+
+// ★ 세션 타임아웃 (30분 미사용 시 자동 로그아웃)
+var _sessionTimer=null;
+function _resetSessionTimeout(){
+  if(_sessionTimer)clearTimeout(_sessionTimer);
+  _sessionTimer=setTimeout(function(){
+    if(_auth&&_auth.currentUser){
+      toast('⏰ 30분 동안 사용하지 않아 자동 로그아웃됩니다');
+      setTimeout(function(){_auth.signOut().then(function(){location.reload();});},3000);
+    }
+  },30*60*1000);
+}
+// 사용자 활동 감지 시 타이머 리셋
+['click','keydown','touchstart'].forEach(function(ev){
+  document.addEventListener(ev,function(){if(_auth&&_auth.currentUser)_resetSessionTimeout();},{passive:true});
+});
 
 function _saveCompanyInfo(){
   var did=_CU&&_CU.dealerId;if(!did||!_db)return;
