@@ -98,6 +98,9 @@ tr:hover td{background:#f8fafc}
 </head>
 <body>
 <script>
+function doLogin(){ if(window._doLoginFn) window._doLoginFn(); }
+function doLogout(){ if(window._doLogoutFn) window._doLogoutFn(); }
+
 (function(){
   document.addEventListener("contextmenu",function(e){e.preventDefault();});
   document.addEventListener("keydown",function(e){
@@ -349,7 +352,7 @@ window.switchTab=function(tab,btn){
 };
 
 // ── 로그인 ──
-window.doLogin=async function(){
+window._doLoginFn = window.doLogin = async function(){
   const email=document.getElementById('a-email').value.trim();
   const pw=document.getElementById('a-pw').value;
   if(!email||!pw){showErr('이메일과 비밀번호를 입력하세요');return;}
@@ -620,7 +623,7 @@ window.openFeatureModal=function(cid,cname){
   box.style.cssText='background:#fff;border-radius:14px;padding:20px;width:360px;max-width:95vw;max-height:80vh;overflow-y:auto';
   box.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:14px">⚙️ '+cname+' 기능 관리</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="feat-btns-'+cid+'"></div>'
-    +'<div style="display:flex;gap:8px"><button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:8px;background:#f1f5f9;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
+    +'<div style="display:flex;gap:8px"><button onclick="this.parentElement.parentElement.parentElement.remove()" style="flex:1;padding:8px;background:#f1f5f9;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
   const btnArea=box.querySelector('#feat-btns-'+cid);
   FEAT_BUNDLES.forEach(b=>{
     const on=item[b.field];
