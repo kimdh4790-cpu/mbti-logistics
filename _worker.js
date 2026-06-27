@@ -1596,16 +1596,91 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const uid = url.searchParams.get('uid');
         if (!uid) return new Response('uid 없음', {status:400});
         const fsToken3 = await getAccessToken(env);
+
+        // 1) Firestore status → approved
         await fetch(
           `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}?updateMask.fieldPaths=status&updateMask.fieldPaths=approvedAt`,
           {method:'PATCH', headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
            body:JSON.stringify({fields:{status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}})}
         );
-        return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px">
-          <div style="font-size:60px">✅</div>
-          <h2 style="color:#059669">승인 완료!</h2>
-          <p>고객이 이제 로그인할 수 있습니다.</p>
-          <p style="color:#888;font-size:13px">UID: ${uid}</p>
+
+        // 2) 고객 정보 조회 (이메일, FCM토큰, 회사명)
+        const compRes = await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}`,
+          {headers:{'Authorization':`Bearer ${fsToken3}`}}
+        );
+        const compData = await compRes.json();
+        const f = compData.fields || {};
+        const custEmail = f.email?.stringValue || '';
+        const custName  = f.companyName?.stringValue || f.name?.stringValue || '고객';
+        const custFcm   = f.fcmToken?.stringValue || '';
+        const slug      = f.slug?.stringValue || '';
+        const loginUrl  = slug ? `https://donway.ai.kr/c/${slug}` : 'https://donway.ai.kr/settle';
+        const emailKey  = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
+
+        // 3) 고객 이메일 발송
+        if (custEmail && emailKey) {
+          const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:20px">
+            <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:28px;border-radius:14px;text-align:center;margin-bottom:24px">
+              <div style="font-size:36px;margin-bottom:8px">🎉</div>
+              <div style="font-size:22px;font-weight:900;color:#fff">가입 승인 완료!</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:6px">DONWAY 서비스를 이용하실 수 있습니다</div>
+            </div>
+            <p style="font-size:15px;color:#111;line-height:1.7"><strong>${custName}</strong>님, 가입 신청이 승인되었습니다.<br>아래 버튼을 눌러 바로 로그인하세요!</p>
+            <div style="text-align:center;margin:28px 0">
+              <a href="${loginUrl}" style="display:inline-block;padding:16px 36px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;text-decoration:none;border-radius:12px;font-size:16px;font-weight:800">🚀 지금 로그인하기</a>
+            </div>
+            <div style="background:#f8fafc;border-radius:10px;padding:14px 18px;font-size:13px;color:#6b7280">
+              <div>📌 로그인 주소: <a href="${loginUrl}" style="color:#0066ff">${loginUrl}</a></div>
+              <div style="margin-top:6px">📞 문의: 051-711-3103</div>
+            </div>
+          </body></html>`;
+          await fetch('https://api.resend.com/emails', {
+            method:'POST',
+            headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
+            body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:[custEmail], subject:`[DONWAY] ${custName}님, 가입이 승인되었습니다 🎉`, html})
+          }).catch(()=>{});
+        }
+
+        // 4) 고객 FCM 앱 푸시
+        if (custFcm) {
+          await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
+            method:'POST',
+            headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
+            body:JSON.stringify({message:{
+              token: custFcm,
+              notification:{title:'🎉 가입 승인 완료!', body:`${custName}님, DONWAY 서비스 이용이 가능합니다. 지금 로그인하세요!`},
+              android:{priority:'high', notification:{sound:'default', channelId:'donway_admin'}},
+              apns:{payload:{aps:{sound:'default', badge:1}}}
+            }})
+          }).catch(()=>{});
+        }
+
+        // 5) loginAllowed FCM 토큰들에도 푸시 (등록된 담당자 다수)
+        const loginAllowed = f.loginAllowed?.arrayValue?.values || [];
+        for (const la of loginAllowed) {
+          const laFcm = la.mapValue?.fields?.fcmToken?.stringValue || '';
+          if (laFcm && laFcm !== custFcm) {
+            await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
+              method:'POST',
+              headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
+              body:JSON.stringify({message:{
+                token: laFcm,
+                notification:{title:'✅ 가입 승인', body:'DONWAY 로그인이 가능합니다'},
+                android:{priority:'high'}
+              }})
+            }).catch(()=>{});
+          }
+        }
+
+        return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f8fafc">
+          <div style="max-width:400px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,.08)">
+            <div style="font-size:56px;margin-bottom:16px">✅</div>
+            <h2 style="color:#059669;margin:0 0 8px">승인 완료!</h2>
+            <p style="color:#374151;margin:0 0 6px"><strong>${custName}</strong></p>
+            <p style="color:#888;font-size:13px;margin:0 0 20px">이메일 및 앱 푸시 알림을 발송했습니다</p>
+            <a href="${loginUrl}" style="display:inline-block;padding:12px 28px;background:#0066ff;color:#fff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700">로그인 페이지 열기</a>
+          </div>
         </body></html>`, {headers:{'Content-Type':'text/html'}});
       } catch(e) {
         return new Response('오류: '+e.message, {status:500});
