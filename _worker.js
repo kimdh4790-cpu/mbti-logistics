@@ -544,6 +544,14 @@ export default {
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
+      // /join → settle.html 서빙 + #join 해시 자동 처리
+      if (path === '/join') {
+        const html = await env.DONWAY_ASSETS.get('settle.html');
+        if (html) {
+          const modified = html.replace('</body>', '<script>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</script></body>');
+          return new Response(modified, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+        }
+      }
       if (path === '/' || path === '') {
     const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
     const html = await ghRaw.text();
