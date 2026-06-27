@@ -9482,6 +9482,28 @@ function _requestFcmAfterJoin(){
         firebase.firestore().collection('users').doc(uid).update({
           fcmToken:token, fcmUpdatedAt:new Date().toISOString()
         }).catch(function(){});
+        // ★ companies.loginAllowed에도 FCM 토큰 저장
+        var did=_CU&&_CU.dealerId;
+        if(did){
+          _db.collection('companies').doc(did).get().then(function(doc){
+            if(!doc.exists)return;
+            var allowed=doc.data().loginAllowed||[];
+            if(!allowed.length)return;
+            // 현재 로그인 이메일로 매칭 (또는 첫 번째 미등록 토큰)
+            var curEmail=(_CU&&_CU.email)||'';
+            var updated=false;
+            allowed=allowed.map(function(a){
+              // 이메일 또는 첫번째 빈 토큰에 저장
+              if(!updated&&(!a.fcmToken||a.fcmToken===token)){
+                updated=true;
+                return Object.assign({},a,{fcmToken:token});
+              }
+              return a;
+            });
+            if(!updated) allowed[0]=Object.assign({},allowed[0],{fcmToken:token});
+            _db.collection('companies').doc(did).update({loginAllowed:allowed}).catch(function(){});
+          }).catch(function(){});
+        }
         toast('🔔 알림이 허용되었습니다');
       }).catch(function(){});
     }).catch(function(){});
