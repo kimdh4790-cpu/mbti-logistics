@@ -380,7 +380,7 @@ async function showDash(){
 async function loadDealers(){
   try{
     // companies 컬렉션 기준 (DONWAY 실제 데이터)
-    const compSnap=await getDocs(query(collection(db,'companies'),orderBy('createdAt','desc')));
+    const compSnap=await getDocs(collection(db,'companies'));
     _all=[];
     compSnap.forEach(d=>{
       const u=d.data();
