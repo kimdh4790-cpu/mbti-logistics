@@ -161,7 +161,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <nav class="nav">
   <div class="nav-logo">DONWAY</div>
   <div class="nav-space"></div>
-  <button class="nav-btn" onclick="location.href='https://donway.ai.kr/c/demo'">무료 체험 →</button>
+  <button class="nav-btn" onclick="location.href='https://donway.ai.kr'">무료 체험 →</button>
 </nav>
 
 <div class="dots" id="dots"></div>
@@ -173,10 +173,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="g" style="width:500px;height:500px;background:rgba(0,102,255,.2);top:-180px;right:-150px"></div>
   <div class="g" style="width:350px;height:350px;background:rgba(124,58,237,.15);bottom:-100px;left:-80px"></div>
   <div class="inner chip">🚀 업종 무관 정산 자동화</div>
-  <div class="inner ttl">엑셀 한 번으로<br><span class="gr">정산 끝</span></div>
-  <div class="inner sub">쿠팡 대리점부터 배달·청소·보험·골프까지<br>라우트 단가·세금계산서·알림톡 명세서<br>전부 자동으로</div>
+  <div class="inner ttl">직원 급여 정산<br><span class="gr">5분으로 끝</span></div>
+  <div class="inner sub">택배·배달·청소·건설·보험·뷰티·요양·골프까지<br>업종 상관없이 근무표 올리면<br>급여계산·명세서발송·세무사연동 전부 자동</div>
   <div class="inner btns">
-    <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr/c/demo'">🎁 7일 무료체험</button>
+    <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr'">🎁 7일 무료체험</button>
     <a class="btn-g" href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 도입 상담</a>
   </div>
   <div class="inner note">카드 등록 불필요 · 계약 없음 · 언제든 해지 · VAT 별도</div>
@@ -191,8 +191,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="card">
       <div class="card-ico">📊</div>
       <div>
-        <div class="card-ttl" style="color:#f87171">쿠팡 엑셀 → 수작업 단가 계산</div>
-        <div class="card-desc">라우트별 단가 직접 입력, 시즌 단가 따로 계산<br>기사 30명이면 하루 종일 걸리는 정산</div>
+        <div class="card-ttl" style="color:#f87171">업종별 복잡한 급여 계산</div>
+        <div class="card-desc">택배 라우트 단가, 청소 시급, 건설 일당<br>업종마다 달라서 엑셀로 매달 수작업</div>
       </div>
     </div>
     <div class="card">
@@ -215,34 +215,113 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- S2 기능 -->
 <div class="slide" id="s2">
   <div class="g" style="width:400px;height:400px;background:rgba(0,102,255,.15);top:-100px;right:-100px"></div>
-  <div class="inner chip">⚡ DONWAY 핵심 기능</div>
-  <div class="inner ttl">정산부터 이체까지<br><span class="gr">원클릭 자동화</span></div>
-  <div class="fgrid">
-    <div class="fitem">
-      <div class="fitem-ico">📊</div>
-      <div><div class="fitem-ttl">AI 정산 자동화</div><div class="fitem-desc">엑셀 업로드 → 라우트·구간·시즌 자동 계산</div></div>
-    </div>
-    <div class="fitem">
-      <div class="fitem-ico">🔍</div>
-      <div><div class="fitem-ttl">검증 화면</div><div class="fitem-desc">RAW vs 총괄 비교 오차 0원 확인 후 확정</div></div>
-    </div>
-    <div class="fitem">
-      <div class="fitem-ico">📋</div>
-      <div><div class="fitem-ttl">세금계산서 자동</div><div class="fitem-desc">정산 확정 즉시 사업자별 자동 발행</div></div>
-    </div>
-    <div class="fitem">
-      <div class="fitem-ico">💬</div>
-      <div><div class="fitem-ttl">알림톡 명세서</div><div class="fitem-desc">카카오로 기사별 명세서 자동 발송</div></div>
-    </div>
-    <div class="fitem">
-      <div class="fitem-ico">🧾</div>
-      <div><div class="fitem-ttl">세무사 연동</div><div class="fitem-desc">90일 링크·월 리포트 자동 발송</div></div>
-    </div>
-    <div class="fitem">
-      <div class="fitem-ico">💸</div>
-      <div><div class="fitem-ttl">자동 이체</div><div class="fitem-desc">정산 완료 → 기사 계좌 자동 송금 <span style="color:var(--gold);font-size:10px">출시예정</span></div></div>
-    </div>
+  <div class="inner chip">⚡ 업종별 맞춤 기능</div>
+  <div class="inner ttl">내 업종에 맞게<br><span class="gr">자동 설정</span></div>
+
+  <!-- 업종 탭 -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0">
+    <button onclick="showIndustry('courier')" id="tab-courier" style="padding:7px 14px;border-radius:100px;border:1.5px solid #0066ff;background:#0066ff;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📦 택배</button>
+    <button onclick="showIndustry('delivery')" id="tab-delivery" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">🛵 배달대행</button>
+    <button onclick="showIndustry('cleaning')" id="tab-cleaning" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">🧹 청소</button>
+    <button onclick="showIndustry('construction')" id="tab-construction" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">🏗️ 건설</button>
+    <button onclick="showIndustry('insurance')" id="tab-insurance" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">🛡️ 보험</button>
+    <button onclick="showIndustry('beauty')" id="tab-beauty" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">💄 뷰티</button>
+    <button onclick="showIndustry('care')" id="tab-care" style="padding:7px 14px;border-radius:100px;border:1.5px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.7);font-size:12px;font-weight:700;cursor:pointer">🏥 요양</button>
   </div>
+
+  <!-- 업종별 기능 -->
+  <div id="industry-content" class="fgrid">
+    <div class="fitem"><div class="fitem-ico">📊</div><div><div class="fitem-ttl">쿠팡 엑셀 자동 파싱</div><div class="fitem-desc">5가지 쿠팡 엑셀 포맷 자동 인식 → 라우트·구간·시즌 자동 계산</div></div></div>
+    <div class="fitem"><div class="fitem-ico">💬</div><div><div class="fitem-ttl">카카오 명세서 발송</div><div class="fitem-desc">기사별 실지급 명세서 카카오 알림톡 자동 발송</div></div></div>
+    <div class="fitem"><div class="fitem-ico">🧾</div><div><div class="fitem-ttl">세금계산서 자동</div><div class="fitem-desc">정산 확정 즉시 사업자별 세금계산서 자동 발행</div></div></div>
+    <div class="fitem"><div class="fitem-ico">📈</div><div><div class="fitem-ttl">캠프별 마진 분석</div><div class="fitem-desc">캠프별 마진율·건수 실시간 비교, 이탈 기사 자동 감지</div></div></div>
+    <div class="fitem"><div class="fitem-ico">👨‍💼</div><div><div class="fitem-ttl">세무사 연동</div><div class="fitem-desc">더존 CSV 자동 생성, 90일 공유 링크 발송</div></div></div>
+    <div class="fitem"><div class="fitem-ico">💸</div><div><div class="fitem-ttl">자동 이체 <span style="color:var(--gold);font-size:10px">출시예정</span></div><div class="fitem-desc">정산 완료 → 기사 계좌 자동 송금</div></div></div>
+  </div>
+
+<script>
+var industryData = {
+  courier: [
+    {ico:'📊',ttl:'쿠팡 엑셀 자동 파싱',desc:'5가지 쿠팡 엑셀 포맷 자동 인식 → 라우트·구간·시즌 자동 계산'},
+    {ico:'💬',ttl:'카카오 명세서 발송',desc:'기사별 실지급 명세서 카카오 알림톡 자동 발송'},
+    {ico:'🧾',ttl:'세금계산서 자동',desc:'정산 확정 즉시 사업자별 세금계산서 자동 발행'},
+    {ico:'📈',ttl:'캠프별 마진 분석',desc:'캠프별 마진율·건수 실시간 비교, 이탈 기사 자동 감지'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'더존 CSV 자동 생성, 90일 공유 링크'},
+    {ico:'💸',ttl:'자동 이체 <span style="color:#fbbf24;font-size:10px">출시예정</span>',desc:'정산 완료 → 기사 계좌 자동 송금'}
+  ],
+  delivery: [
+    {ico:'🛵',ttl:'배달대행 정산',desc:'쿠팡이츠·배민·바로고 등 플랫폼별 정산 자동화'},
+    {ico:'💬',ttl:'라이더 명세서',desc:'라이더별 실지급 명세서 카카오 자동 발송'},
+    {ico:'📊',ttl:'차액 정산',desc:'플랫폼 수수료 자동 차감, 실수령액 계산'},
+    {ico:'🧾',ttl:'세금계산서',desc:'정산 확정 즉시 자동 발행'},
+    {ico:'📈',ttl:'일별 건수 분석',desc:'라이더별·지역별 배달 건수 통계'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 정산 자료 자동 전달'}
+  ],
+  cleaning: [
+    {ico:'🧹',ttl:'청소 직원 급여',desc:'시급·일급·건당 혼용 자동 계산'},
+    {ico:'💬',ttl:'직원 명세서',desc:'급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'근무표 관리',desc:'주간 근무표 업로드 → 급여 자동 계산'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산'},
+    {ico:'📈',ttl:'지점별 실적',desc:'지점별 매출·마진 실시간 비교'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+  ],
+  construction: [
+    {ico:'🏗️',ttl:'일용직 급여',desc:'날별 인원·금액 다른 일용직 자동 계산'},
+    {ico:'💬',ttl:'작업자 명세서',desc:'일별 작업 내역 명세서 카카오 발송'},
+    {ico:'📋',ttl:'현장별 관리',desc:'현장별 인원·비용 통합 관리'},
+    {ico:'🧾',ttl:'일용직 세금',desc:'일용근로소득세 자동 계산'},
+    {ico:'📈',ttl:'현장 수익 분석',desc:'현장별 마진율 실시간 확인'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'일용직 지급명세서 자동 생성'}
+  ],
+  insurance: [
+    {ico:'🛡️',ttl:'설계사 수수료',desc:'상품별 수수료 자동 계산, 환수 처리'},
+    {ico:'💬',ttl:'설계사 명세서',desc:'월 수수료 명세서 카카오 자동 발송'},
+    {ico:'📊',ttl:'실적 관리',desc:'설계사별 신계약·유지·환수 통합 관리'},
+    {ico:'🧾',ttl:'세금계산서',desc:'수수료 세금계산서 자동 발행'},
+    {ico:'📈',ttl:'팀별 실적',desc:'팀장별 팀 실적 통합 분석'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 지급 자료 자동 전달'}
+  ],
+  beauty: [
+    {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산'},
+    {ico:'💬',ttl:'직원 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'근태 관리',desc:'QR 출퇴근 연동 자동 급여 계산'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
+    {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+  ],
+  care: [
+    {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산'},
+    {ico:'💬',ttl:'요양보호사 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'방문 기록',desc:'어르신별 방문 일정·시간 자동 집계'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산'},
+    {ico:'📈',ttl:'센터별 실적',desc:'센터별 방문건수·매출 통계'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+  ]
+};
+
+function showIndustry(type) {
+  var tabs = ['courier','delivery','cleaning','construction','insurance','beauty','care'];
+  tabs.forEach(function(t) {
+    var btn = document.getElementById('tab-'+t);
+    if (btn) {
+      if (t === type) {
+        btn.style.background = '#0066ff';
+        btn.style.borderColor = '#0066ff';
+        btn.style.color = '#fff';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.borderColor = 'rgba(255,255,255,.3)';
+        btn.style.color = 'rgba(255,255,255,.7)';
+      }
+    }
+  });
+  var data = industryData[type] || industryData.courier;
+  var html = data.map(function(d) {
+    return '<div class="fitem"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
+  }).join('');
+  document.getElementById('industry-content').innerHTML = html;
+}
+</script>
 </div>
 
 <!-- S3 경쟁사 비교 -->
