@@ -46,6 +46,14 @@ tr:hover td{background:#f8fafc}
 .b-active{background:#d1fae5;color:#065f46}.b-expired{background:#fee2e2;color:#991b1b}
 .b-trial{background:#dbeafe;color:#1e40af}.b-none{background:#f1f5f9;color:#64748b}
 .b-starter{background:#f1f5f9;color:#374151}.b-basic{background:#dbeafe;color:#1e40af}.b-pro{background:#ede9fe;color:#5b21b6}
+.sub-tab-btn{padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;color:#718096;transition:.15s}
+.sub-tab-btn.active{background:#1e3a8a;color:#fff;border-color:#1e3a8a}
+.stab-cnt{display:inline-block;background:rgba(255,255,255,.25);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:3px}
+.sub-tab-btn:not(.active) .stab-cnt{background:#f1f5f9;color:#718096}
+.feature-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;margin:1px;cursor:pointer}
+.feat-on{background:#d1fae5;color:#065f46}
+.feat-off{background:#f1f5f9;color:#94a3b8}
+.ind-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;background:#dbeafe;color:#1e40af;font-weight:600}
 .action-btns{display:flex;gap:4px;flex-wrap:wrap}
 .btn-sm{padding:4px 8px;border-radius:5px;border:none;font-size:10px;font-weight:700;cursor:pointer;font-family:'Pretendard',sans-serif;white-space:nowrap}
 .btn-ext{background:#d1fae5;color:#065f46}.btn-ext:hover{background:#065f46;color:#fff}
@@ -138,25 +146,30 @@ tr:hover td{background:#f8fafc}
         <div class="sc orange"><div class="lbl">만료 임박</div><div class="val" id="s-expiring">-</div><div class="sub">7일 이내</div></div>
         <div class="sc red"><div class="lbl">만료됨</div><div class="val" id="s-expired">-</div><div class="sub">갱신 필요</div></div>
       </div>
+      <!-- 서브탭: 7일체험 / 유료결제 / 만료 / 전체 -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="sub-tab-btn active" id="stab-all" onclick="switchSubTab('all',this)">전체 <span class="stab-cnt" id="cnt-all">0</span></button>
+          <button class="sub-tab-btn" id="stab-trial" onclick="switchSubTab('trial',this)">🎁 7일 체험 <span class="stab-cnt" id="cnt-trial">0</span></button>
+          <button class="sub-tab-btn" id="stab-active" onclick="switchSubTab('active',this)">💳 유료결제 <span class="stab-cnt" id="cnt-active">0</span></button>
+          <button class="sub-tab-btn" id="stab-pending" onclick="switchSubTab('pending',this)">⏳ 승인대기 <span class="stab-cnt" id="cnt-pending">0</span></button>
+          <button class="sub-tab-btn" id="stab-expired" onclick="switchSubTab('expired',this)">❌ 만료 <span class="stab-cnt" id="cnt-expired">0</span></button>
+        </div>
+        <button class="btn-add" onclick="openAdd()">＋ 대리점 등록</button>
+      </div>
+
       <div class="section">
         <div class="sec-hdr">
-          <h2>대리점 구독 현황</h2>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <div class="filter-row">
-              <button class="fb active" onclick="filterD('all',this)">전체</button>
-              <button class="fb" onclick="filterD('active',this)">구독중</button>
-              <button class="fb" onclick="filterD('trial',this)">체험중</button>
-              <button class="fb" onclick="filterD('expired',this)">만료</button>
-            </div>
-            <button class="btn-add" onclick="openAdd()">＋ 대리점 등록</button>
-          </div>
+          <h2 id="subtab-title">전체 대리점</h2>
+          <input id="dealer-search" type="text" placeholder="🔍 회사명·이메일 검색" onInput="searchDealers(this.value)"
+            style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;width:200px">
         </div>
         <div style="overflow-x:auto">
           <table>
             <thead><tr>
-              <th>대리점명</th><th>플랜</th><th>상태</th><th>만료일</th><th>연락처</th><th>관리</th>
+              <th>대리점명</th><th>업종</th><th>서비스</th><th>상태</th><th>만료일</th><th>연락처</th><th>관리</th>
             </tr></thead>
-            <tbody id="dealer-tbody"><tr><td colspan="6" class="empty">불러오는 중...</td></tr></tbody>
+            <tbody id="dealer-tbody"><tr><td colspan="7" class="empty">불러오는 중...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -416,16 +429,26 @@ async function loadDealers(){
         email:u.email||'-',
         plan:plan,
         status:status,
+        companyStatus:u.status||'',
         expireDate:expireDate,
         amount:amount,
-        bizNum:u.bizNum||'-',
+        bizNum:u.bizNum||u.bizNumber||'-',
         slug:u.slug||'-',
         bizDocUrl:u.bizDocUrl||'',
-        bizVerified:u.bizVerified||false
+        bizVerified:u.bizVerified||false,
+        industryType:u.industryType||'',
+        settlePaid:u.settlePaid||false,
+        deliveryPaid:u.deliveryPaid||false,
+        qrPaid:u.qrPaid||false,
+        payrollPaid:u.payrollPaid||false,
+        inventoryPaid:u.inventoryPaid||false,
+        kioskPaid:u.kioskPaid||false,
+        universalPaid:u.universalPaid||false,
+        trialEnd:u.trialEnd||''
       });
     });
     _all.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
-    updateStats(_all);renderTable(_all);
+    updateStats(_all);applyFilters();
   }catch(e){
     document.getElementById('dealer-tbody').innerHTML=
       `<tr><td colspan="6" class="empty">⚠️ ${e.message}</td></tr>`;
@@ -444,37 +467,62 @@ function updateStats(list){
   document.getElementById('s-expired').textContent=expired.length+'곳';
 }
 
+// 서비스 레이블 맵
+const SVC_LABEL={settle:'AI정산',delivery:'배달대행',qr:'QR출퇴근',payroll:'급여관리',
+  inventory:'재고관리',kiosk:'키오스크',universal:'범용정산',contract:'계약서',roster:'근무표'};
+const IND_LABEL={coupang:'🚚쿠팡',delivery:'🛵배달대행',cleaning:'🧹청소',insurance:'🛡️보험',
+  construction:'🏗️건설',golf:'⛳골프',academy:'📚학원',beauty:'💇뷰티',
+  logistics:'🚛물류',freelance:'💼프리랜서',care:'🏥요양',restaurant:'🍽️식당',universal:'📋범용'};
+
 function renderTable(list){
   const tbody=document.getElementById('dealer-tbody');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="6" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7" class="empty">등록된 대리점이 없습니다</td></tr>';return;}
   const now=new Date();const in7=new Date(+now+7*864e5);
   const sb={
-    active:'<span class="badge b-active">구독중</span>',
-    trial:'<span class="badge b-trial">체험중</span>',
+    active:'<span class="badge b-active">유료</span>',
+    trial:'<span class="badge b-trial">7일체험</span>',
+    pending:'<span class="badge" style="background:#fef3c7;color:#92400e">승인대기</span>',
     expired:'<span class="badge b-expired">만료</span>',
     none:'<span class="badge b-none">미등록</span>'
   };
   tbody.innerHTML=list.map(d=>{
     const exp=d.expireDate
-      ?`<span class="${d.expireDate<=in7&&d.status==='active'?'expire-soon':''}">${d.expireDate.toLocaleDateString('ko-KR')}</span>`
+      ?`<span style="color:${d.expireDate<=in7&&d.status==='active'?'#dc2626':'#059669'};font-weight:700">${d.expireDate.toLocaleDateString('ko-KR')}</span>`
       :'-';
-    const plan=d.plan&&d.plan!=='-'?`<span class="badge b-${d.plan}">${d.plan.toUpperCase()}</span>`:'-';
+    // 업종
+    const indHtml=d.industryType?(IND_LABEL[d.industryType]||d.industryType):'<span style="color:#a0aec0">-</span>';
+    // 서비스 ON 태그
+    const svcOn=[];
+    if(d.settlePaid) svcOn.push('AI정산');
+    if(d.deliveryPaid) svcOn.push('배달대행');
+    if(d.qrPaid) svcOn.push('QR출퇴근');
+    if(d.payrollPaid) svcOn.push('급여관리');
+    if(d.inventoryPaid) svcOn.push('재고관리');
+    if(d.kioskPaid) svcOn.push('키오스크');
+    if(d.universalPaid) svcOn.push('범용정산');
+    if(d.plan==='trial'&&!svcOn.length) svcOn.push('체험중');
+    const svcHtml=svcOn.length
+      ?svcOn.map(s=>`<span class="feature-tag feat-on">${s}</span>`).join('')
+      :'<span style="color:#a0aec0;font-size:10px">미활성</span>';
     return`<tr>
-      <td><strong>${d.name}</strong><br>
+      <td>
+        <strong style="font-size:12px">${d.name}</strong><br>
         <span style="color:#a0aec0;font-size:10px">${d.email}</span><br>
-        <span style="color:#94a3b8;font-size:10px">담당: ${d.manager}</span>
+        <span style="color:#94a3b8;font-size:10px">${d.phone}</span>
+        ${d.bizDocUrl?`<br><a href="${d.bizDocUrl}" target="_blank" style="font-size:10px;color:#0369a1">📄 사업자등록증</a>`:'<br><span style="font-size:10px;color:#ef4444">📄 미첨부</span>'}
       </td>
-      <td>${plan}</td>
-      <td>${sb[d.status]||sb.none}</td>
+      <td><span class="ind-tag">${indHtml}</span></td>
+      <td>${svcHtml}</td>
+      <td>${sb[d.companyStatus]||sb[d.status]||sb.none}</td>
       <td>${exp}</td>
       <td style="font-size:11px">${d.phone}</td>
       <td><div class="action-btns">
+        ${d.companyStatus==='pending'?`<button class="btn-sm" style="background:#d1fae5;color:#065f46" onclick="approveDealer('${d.id}','${d.name}')">✅ 승인</button>`:''}
+        <button class="btn-sm" style="background:#dbeafe;color:#1e40af" onclick="openFeatureModal('${d.id}','${d.name}')">⚙️ 기능</button>
         <button class="btn-sm btn-ext" onclick="openExt('${d.id}','${d.name}')">🔄 연장</button>
         <button class="btn-sm btn-trial" onclick="openTrial('${d.id}','${d.name}')">🆓 체험</button>
         <button class="btn-sm btn-pw" onclick="openPw('${d.id}','${d.name}','${d.email}')">🔑 비번</button>
-        <button class="btn-sm" style="background:#e0f2fe;color:#0369a1" onclick="openContractStatus('${d.id}','${d.name}')">📝 계약서</button>
         <button class="btn-sm btn-cancel" onclick="cancelSub('${d.id}','${d.name}')">🚫 해지</button>
-        ${d.bizDocUrl?`<button class="btn-sm" style="background:${d.bizVerified?'#dcfce7;color:#16a34a':'#fef9c3;color:#ca8a04'}" onclick="viewBizDoc('${d.id}','${d.bizDocUrl}','${d.bizVerified}')">📄 ${d.bizVerified?'인증됨':'사업자확인'}</button>`:'<span style="font-size:10px;color:#ef4444">📄 미제출</span>'}
       </div></td>
     </tr>`;
   }).join('');
@@ -509,6 +557,94 @@ window.filterD=function(status,btn){
   document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderTable(status==='all'?_all:_all.filter(d=>d.status===status));
+};
+
+// 서브탭 전환
+var _curSubTab='all';
+window.switchSubTab=function(v,btn){
+  _curSubTab=v;
+  document.querySelectorAll('.sub-tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const titles={all:'전체 대리점',trial:'7일 체험 중',active:'유료 결제',pending:'승인 대기',expired:'만료'};
+  document.getElementById('subtab-title').textContent=titles[v]||'대리점 목록';
+  applyFilters();
+};
+
+function applyFilters(){
+  const q=(document.getElementById('dealer-search')||{value:''}).value.toLowerCase();
+  let list=_all;
+  if(_curSubTab==='trial') list=list.filter(d=>d.status==='trial'&&d.companyStatus!=='pending');
+  else if(_curSubTab==='active') list=list.filter(d=>d.status==='active');
+  else if(_curSubTab==='pending') list=list.filter(d=>d.companyStatus==='pending');
+  else if(_curSubTab==='expired') list=list.filter(d=>d.status==='expired');
+  if(q) list=list.filter(d=>(d.name+d.email).toLowerCase().includes(q));
+  renderTable(list);
+  document.getElementById('cnt-all').textContent=_all.length;
+  document.getElementById('cnt-trial').textContent=_all.filter(d=>d.status==='trial'&&d.companyStatus!=='pending').length;
+  document.getElementById('cnt-active').textContent=_all.filter(d=>d.status==='active').length;
+  document.getElementById('cnt-pending').textContent=_all.filter(d=>d.companyStatus==='pending').length;
+  document.getElementById('cnt-expired').textContent=_all.filter(d=>d.status==='expired').length;
+}
+
+window.searchDealers=function(q){ applyFilters(); };
+
+// 승인 처리
+window.approveDealer=async function(uid,name){
+  if(!confirm(name+' 가입을 승인하시겠습니까?')) return;
+  try{
+    await fetch('/api/approve?uid='+uid);
+    alert('✅ '+name+' 승인 완료!');
+    loadDealers();
+  }catch(e){alert('❌ '+e.message);}
+};
+
+// 기능 ON/OFF 모달
+const FEAT_BUNDLES=[
+  {id:'settle',    label:'📦 AI정산',    field:'settlePaid',    color:'#0891b2'},
+  {id:'delivery',  label:'🛵 배달대행',  field:'deliveryPaid',  color:'#dc2626'},
+  {id:'qr',        label:'🔐 QR출퇴근',  field:'qrPaid',        color:'#7c3aed'},
+  {id:'payroll',   label:'💰 급여관리',  field:'payrollPaid',   color:'#059669'},
+  {id:'inventory', label:'📦 재고관리',  field:'inventoryPaid', color:'#f59e0b'},
+  {id:'kiosk',     label:'🖥️ 키오스크', field:'kioskPaid',     color:'#0066ff'},
+  {id:'universal', label:'📋 범용정산',  field:'universalPaid', color:'#8b5cf6'},
+  {id:'contract',  label:'📝 계약서',    field:'contractPaid',  color:'#10b981'},
+  {id:'roster',    label:'🗓️ 근무표',    field:'rosterPaid',    color:'#f97316'},
+];
+
+window.openFeatureModal=function(cid,cname){
+  const item=_all.find(d=>d.id===cid);
+  if(!item) return;
+  const mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:14px;padding:20px;width:360px;max-width:95vw;max-height:80vh;overflow-y:auto';
+  box.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:14px">⚙️ '+cname+' 기능 관리</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px" id="feat-btns-'+cid+'"></div>'
+    +'<div style="display:flex;gap:8px"><button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:8px;background:#f1f5f9;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
+  const btnArea=box.querySelector('#feat-btns-'+cid);
+  FEAT_BUNDLES.forEach(b=>{
+    const on=item[b.field];
+    const btn=document.createElement('button');
+    btn.style.cssText='padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:'+(on?b.color:'#f1f5f9')+';color:'+(on?'#fff':'#374151');
+    btn.textContent=(on?'✅ ':'')+b.label;
+    btn.onclick=()=>window.toggleFeat(cid,b.field,!item[b.field],btn,item,b);
+    btnArea.appendChild(btn);
+  });
+  mo.appendChild(box);
+  mo.onclick=e=>{if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+};
+
+window.toggleFeat=async function(cid,field,val,btn,item,bundle){
+  try{
+    const update={};update[field]=val;update.updatedAt=new Date().toISOString();
+    await updateDoc(doc(db,'companies',cid),update);
+    item[field]=val;
+    btn.style.background=val?(bundle?bundle.color:'#059669'):'#f1f5f9';
+    btn.style.color=val?'#fff':'#374151';
+    btn.textContent=(val?'✅ ':'')+bundle.label;
+    applyFilters();
+  }catch(e){alert('❌ '+e.message);}
 };
 
 // ── ② 대리점 신규 등록 ──
