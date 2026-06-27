@@ -9035,7 +9035,19 @@ function checkBizNum(){
   }
 
   // Firestore 중복 체크 → 통과 시 국세청 API 조회
-  _db.collection('companies').where('bizNumber','==',biz).get().then(function(snap){
+  var bizClean=biz.replace(/-/g,'');
+  // ★ 영구 블랙리스트 먼저 확인
+  _db.collection('used_biz_numbers').doc(bizClean).get().then(function(bzDoc){
+    if(bzDoc.exists){
+      msg.style.color='var(--red)';
+      msg.textContent='❌ 이미 체험 이력이 있는 사업자번호입니다. 결제 후 이용 가능합니다.';
+      document.getElementById('r-biznum').dataset.verified='blocked';
+      return;
+    }
+    // 기존 companies 중복 체크
+    return _db.collection('companies').where('bizNumber','==',biz).get();
+  }).then(function(snap){
+    if(!snap)return;
     if(!snap.empty){
       var existing=snap.docs[0].data();
       if(existing.plan==='trial'||existing.trialUsed){
@@ -9276,6 +9288,11 @@ function doRegister(){
     }).catch(function(){});
     return _db.collection('companies').doc(uid).set(companyDoc);
   }).then(function(){
+    // ★ 사업자번호 영구 블랙리스트 저장 (삭제해도 재가입 불가)
+    if(biz) _db.collection('used_biz_numbers').doc(biz.replace(/-/g,'')).set({
+      bizNumber:biz, companyName:company, email:email,
+      uid:uid, usedAt:new Date().toISOString()
+    }, {merge:true}).catch(function(){});
     var myUrl=window.location.origin+'/'+slugVal;
     toast('✅ 등록 완료! 담당자 승인 후 로그인 가능합니다.');
     // ★ 승인 요청 이메일 + FCM 발송
