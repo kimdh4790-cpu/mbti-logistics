@@ -1529,7 +1529,13 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           const existing = compData.filter(d=>d.document&&d.document.name&&!d.document.name.endsWith('/'+uid));
           if (existing.length > 0) {
             const exFields = existing[0].document.fields || {};
-            if (exFields.trialUsed?.booleanValue || exFields.plan?.stringValue === 'trial') {
+            const exStatus = exFields.status?.stringValue || '';
+            // approved 상태면 이미 정상 가입 완료 → 중복 차단
+            // pending/trial 상태면서 trialUsed=true인 경우만 차단
+            if (exStatus === 'approved') {
+              return new Response(JSON.stringify({ok:false,error:'already_registered'}),{status:403,headers:{'Content-Type':'application/json'}});
+            }
+            if (exFields.trialUsed?.booleanValue && exStatus !== 'approved') {
               // 이미 체험 이력 → 신규 계정 삭제
               await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts/${uid}`, {
                 method:'DELETE',
