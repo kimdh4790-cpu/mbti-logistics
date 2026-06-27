@@ -39792,9 +39792,35 @@ var _PLAN_FEATURE_MAP={
 function _isPlanAllowed(d,feature){
   var isTrial=window._trialActive||(d.plan==='trial'&&d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10));
   if(isTrial){
-    // ★ trial = AI 택배정산(settle) 범위만 허용
-    var trialOk=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers','free',''];
-    if(!feature||trialOk.indexOf(feature)>=0)return true;
+    // ★ trial = 선택한 services 기반으로만 허용
+    var svcs=d.services||[];
+    var freeFeatures=['free',''];
+    if(!feature||freeFeatures.indexOf(feature)>=0)return true;
+    // services에 settle 있으면 settle 계열 허용
+    if(svcs.indexOf('settle')>=0){
+      var settleFeatures=['settle','settlements','stats','prices','season','contract','tax_share','roster','evaluation','drivers'];
+      if(settleFeatures.indexOf(feature)>=0)return true;
+    }
+    // services에 qr 있으면 qr 계열 허용
+    if(svcs.indexOf('qr')>=0){
+      var qrFeatures=['qr','attendance','roster','work_settings'];
+      if(qrFeatures.indexOf(feature)>=0)return true;
+    }
+    // services에 payroll 있으면 급여 계열 허용
+    if(svcs.indexOf('payroll')>=0){
+      var payrollFeatures=['payroll','hourly_settle','leave','overtime','evaluation'];
+      if(payrollFeatures.indexOf(feature)>=0)return true;
+    }
+    // services에 delivery 있으면 배달 계열 허용
+    if(svcs.indexOf('delivery')>=0){
+      var deliveryFeatures=['delivery','delivery_platform'];
+      if(deliveryFeatures.indexOf(feature)>=0)return true;
+    }
+    // services에 universal 있으면 범용 허용
+    if(svcs.indexOf('universal')>=0){
+      var universalFeatures=['universal','universal_settle','universal_input'];
+      if(universalFeatures.indexOf(feature)>=0)return true;
+    }
     return false;
   }
   if(d.settlePaid&&(!feature||['settle','settlements','stats','prices','season','contract','roster','tax_share'].indexOf(feature)>=0))return true;
