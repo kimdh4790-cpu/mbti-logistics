@@ -1464,6 +1464,26 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         return addSecurityHeaders(assetResp2, isSimulator2);
       } catch(e) {}
     }
+    // ── 문의 접수 (/api/inquiry) ──
+    if (path === '/api/inquiry' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { name, phone, msg } = body;
+        if (!name || !phone) return new Response(JSON.stringify({ok:false,error:'필수 항목 누락'}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const result = await sendWelcomeEmail(env, {
+          email: 'kimdh4790@gmail.com',
+          companyName: `[DONWAY 문의] ${name}`,
+          tempPassword: `연락처: ${phone}\n\n문의내용:\n${msg||''}`,
+          loginUrl: 'https://donway.ai.kr',
+          planType: 'inquiry',
+          planLabel: '랜딩 문의'
+        });
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
     // /api/send-email
     if (path === '/api/send-email') {
       if (method !== 'POST') return new Response('Method Not Allowed', {status:405});
