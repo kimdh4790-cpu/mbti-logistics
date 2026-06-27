@@ -2634,8 +2634,8 @@ service cloud.firestore {
         const body = await request.json();
         const { token, title, body: msgBody } = body;
         if (!token) return new Response(JSON.stringify({ok:false,error:'token 필요'}), {headers:{'Content-Type':'application/json'}});
-        const result = await sendFCMPush(token, title||'DONWAY 알림', msgBody||'');
-        return new Response(JSON.stringify({ok:result.sent, reason:result.reason}), {headers:{'Content-Type':'application/json'}});
+        const result = await sendAdminFCM(env, token, {title: title||'DONWAY 알림', body: msgBody||'', type:'login_notify'});
+        return new Response(JSON.stringify({ok: result?.ok !== false}), {headers:{'Content-Type':'application/json'}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
       }
