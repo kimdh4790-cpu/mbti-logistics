@@ -413,8 +413,51 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr/c/demo'">🎁 무료체험 시작</button>
     <a class="btn-g" href="https://pf.kakao.com/_xkuxabX/chat" target="_blank">💬 카카오 상담</a>
   </div>
+
+  <!-- 문의 폼 -->
+  <div style="width:100%;max-width:480px;margin-top:24px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:20px;backdrop-filter:blur(10px)">
+    <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:14px;text-align:center">📩 문의사항 남기기</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input id="inq-name" placeholder="이름 또는 회사명" style="padding:11px 14px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;outline:none" />
+      <input id="inq-phone" type="tel" placeholder="연락처 (전화번호 또는 이메일)" style="padding:11px 14px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;outline:none" />
+      <textarea id="inq-msg" placeholder="문의 내용을 입력해주세요 (업종, 인원수, 궁금한 점 등)" rows="3" style="padding:11px 14px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;outline:none;resize:none"></textarea>
+      <button onclick="submitInquiry()" style="padding:13px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">📨 문의 접수</button>
+      <div id="inq-msg-result" style="font-size:12px;text-align:center;color:#86efac;display:none">✅ 문의가 접수되었습니다. 빠르게 연락드리겠습니다!</div>
+    </div>
+  </div>
+
   <div class="inner note">📞 051-711-3103 · (유)엠비티아이 · donway.ai.kr</div>
 </div>
+
+<script>
+async function submitInquiry(){
+  var name=document.getElementById('inq-name').value.trim();
+  var phone=document.getElementById('inq-phone').value.trim();
+  var msg=document.getElementById('inq-msg').value.trim();
+  var result=document.getElementById('inq-msg-result');
+  if(!name||!phone){alert('이름과 연락처를 입력해주세요');return;}
+  if(!msg){alert('문의 내용을 입력해주세요');return;}
+  try{
+    var res=await fetch('https://donway.ai.kr/api/send-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        to:'kimdh4790@gmail.com',
+        subject:'[DONWAY 문의] '+name,
+        html:'<h3>DONWAY 랜딩 문의</h3>'
+          +'<p><b>이름/회사:</b> '+name+'</p>'
+          +'<p><b>연락처:</b> '+phone+'</p>'
+          +'<p><b>문의내용:</b><br>'+msg.replace(/\n/g,'<br>')+'</p>'
+          +'<hr><p style="color:#888;font-size:12px">donway.ai.kr 랜딩페이지 문의폼</p>'
+      })
+    });
+    result.style.display='block';
+    document.getElementById('inq-name').value='';
+    document.getElementById('inq-phone').value='';
+    document.getElementById('inq-msg').value='';
+  }catch(e){alert('오류가 발생했습니다. 전화로 문의해주세요.');}
+}
+</script>
 
 </div>
 
