@@ -1574,21 +1574,13 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com'], subject:`[DONWAY 신규가입] ${companyName}`, html})
         });
         
-        // FCM 푸시 (슈퍼어드민)
+        // FCM 푸시 (슈퍼어드민 전체 기기 - admin_tokens 컬렉션 사용)
         const fsToken2 = await getAccessToken(env);
-        const adminDoc = await fetch(
-          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/9XD2K3W1tIhIs6XM74YT0xfRFEP2`,
-          {headers:{'Authorization':`Bearer ${fsToken2}`}}
-        ).then(r=>r.json());
-        const adminFcmToken = adminDoc.fields?.fcmToken?.stringValue;
-        if (adminFcmToken) {
-          const accessToken = await getAccessToken(env);
-          await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
-            method:'POST',
-            headers:{'Authorization':`Bearer ${accessToken}`,'Content-Type':'application/json'},
-            body:JSON.stringify({message:{token:adminFcmToken,notification:{title:'🆕 신규 가입 신청',body:`${companyName}님이 가입 신청했습니다. 승인이 필요합니다.`},android:{priority:'high'}}})
-          });
-        }
+        await notifyAdmins(env, fsToken2, {
+          title: '🆕 신규 가입 신청',
+          body: `${companyName}님이 가입 신청했습니다. 승인이 필요합니다.`,
+          type: 'new_signup'
+        });
         
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
       } catch(e) {
