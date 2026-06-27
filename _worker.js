@@ -2628,6 +2628,64 @@ service cloud.firestore {
       }
     }
 
+    // ── 로그인 알림 (/api/login-notify) ──
+    if (path === '/api/login-notify' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, loginName, timeStr } = body;
+        if (!dealerId) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json'}});
+        
+        // Firestore에서 FCM 토큰 가져오기
+        const fsToken = await getAccessToken(env);
+        const fsRes = await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${dealerId}`,
+          {headers: {'Authorization': `Bearer ${fsToken}`}}
+        );
+        if (!fsRes.ok) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json'}});
+        const fsData = await fsRes.json();
+        const fields = fsData.fields || {};
+        
+        // FCM 토큰 추출
+        const tokens = [];
+        if (fields.fcmToken?.stringValue) tokens.push(fields.fcmToken.stringValue);
+        if (fields.fcmTokens?.arrayValue?.values) {
+          fields.fcmTokens.arrayValue.values.forEach(v => {
+            if (v.mapValue?.fields?.token?.stringValue) tokens.push(v.mapValue.fields.token.stringValue);
+          });
+        }
+        
+        if (!tokens.length) return new Response(JSON.stringify({ok:false,reason:'no tokens'}), {headers:{'Content-Type':'application/json'}});
+        
+        // FCM 발송
+        const accessToken = await getAccessToken(env);
+        const title = '🔐 로그인 알림';
+        const msgBody = `${loginName||'관리자'}님이 ${timeStr||''}에 로그인하였습니다`;
+        
+        const results = await Promise.all(tokens.map(async tok => {
+          const r = await fetch(
+            `https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,
+            {
+              method: 'POST',
+              headers: {'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                message: {
+                  token: tok,
+                  notification: {title, body: msgBody},
+                  android: {priority: 'high'},
+                  webpush: {notification: {icon: '/icon-192.png', requireInteraction: true}}
+                }
+              })
+            }
+          );
+          return r.ok;
+        }));
+        
+        return new Response(JSON.stringify({ok:true, sent:results.filter(Boolean).length}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
     // ── 로그인 알림 푸시 (/api/send-push) ──
     if (path === '/api/send-push' && method === 'POST') {
       try {
