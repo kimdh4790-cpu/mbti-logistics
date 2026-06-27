@@ -10225,21 +10225,26 @@ function doLogin(){
       // ★ 로그인 알림 푸시 (loginAllowed 인원 전체)
       setTimeout(function(){
         try{
-          // ★ companies 컬렉션에서 FCM 토큰 가져오기
-          var co2=window._cachedCompanyDoc||{};
-          var tokens=[];
-          if(co2.fcmTokens)co2.fcmTokens.forEach(function(t){if(t.token)tokens.push(t.token);});
-          else if(co2.fcmToken)tokens.push(co2.fcmToken);
-          var now=new Date();
-          var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
-          var loginName=email.split('@')[0]||'관리자';
-          tokens.forEach(function(tok){
-            fetch('/api/send-push',{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({token:tok,title:'🔐 로그인 알림',body:loginName+'님이 '+timeStr+'에 로그인하였습니다'})
-            }).catch(function(){});
-          });
+          var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
+          if(!uid||!_db)return;
+          _db.collection('companies').doc(uid).get().then(function(doc){
+            if(!doc.exists)return;
+            var co2=doc.data();
+            var tokens=[];
+            if(co2.fcmTokens)co2.fcmTokens.forEach(function(t){if(t.token)tokens.push(t.token);});
+            else if(co2.fcmToken)tokens.push(co2.fcmToken);
+            if(!tokens.length)return;
+            var now=new Date();
+            var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
+            var loginName=(co2.companyName||co2.name||email.split('@')[0]||'관리자');
+            tokens.forEach(function(tok){
+              fetch('/api/send-push',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({token:tok,title:'🔐 로그인 알림',body:loginName+'님이 '+timeStr+'에 로그인하였습니다'})
+              }).catch(function(){});
+            });
+          }).catch(function(){});
         }catch(e){}
-      },3000);
+      },2000);
     }).catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
       // 실패 카운터 증가
