@@ -8418,7 +8418,7 @@ function _resetSessionTimeout(){
         var _dealerId=d.dealerId||user.uid;
         _CU={uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
-          serviceType:d.serviceType||'full',
+          serviceType:d.serviceType||'settle',
           role:d.role||'dealer',dealerId:_dealerId,
           termsVersion:d.termsVersion||''};
         window._CU=_CU;
@@ -8811,7 +8811,7 @@ function showApp(){
   } else if(_CU.role==='driver'||_CU.role==='member'){
     MENUS=MENUS_DRIVER;
   } else {
-    var sType = _CU.serviceType||'full';
+    var sType = _CU.serviceType||'settle';
     // ★ sType 디버그 로그 (슈퍼어드민용)
     if(isSuperAdmin()){
       MENUS=MENUS_SETTLE;
@@ -40516,7 +40516,7 @@ function openAdminPanel(){
         email:d.email||d.adminEmail||'',
         slug:d.slug||'',
         plan:d.plan||(d.trialEnd?'trial':'unknown'),
-        serviceType:d.serviceType||'full',
+        serviceType:d.serviceType||'settle',
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
