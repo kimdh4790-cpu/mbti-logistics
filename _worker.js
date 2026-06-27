@@ -2635,7 +2635,6 @@ service cloud.firestore {
         const { dealerId, loginName, timeStr } = body;
         if (!dealerId) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json'}});
         
-        // Firestore에서 FCM 토큰 가져오기
         const fsToken = await getAccessToken(env);
         const fsRes = await fetch(
           `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${dealerId}`,
@@ -2645,23 +2644,26 @@ service cloud.firestore {
         const fsData = await fsRes.json();
         const fields = fsData.fields || {};
         
-        // FCM 토큰 추출
-        const tokens = [];
-        if (fields.fcmToken?.stringValue) tokens.push(fields.fcmToken.stringValue);
-        if (fields.fcmTokens?.arrayValue?.values) {
-          fields.fcmTokens.arrayValue.values.forEach(v => {
-            if (v.mapValue?.fields?.token?.stringValue) tokens.push(v.mapValue.fields.token.stringValue);
-          });
-        }
+        // loginAllowed 배열에서 FCM 토큰 수집
+        const tokens = new Set();
         
-        if (!tokens.length) return new Response(JSON.stringify({ok:false,reason:'no tokens'}), {headers:{'Content-Type':'application/json'}});
+        // loginAllowed 배열
+        const loginAllowed = fields.loginAllowed?.arrayValue?.values || [];
+        loginAllowed.forEach(v => {
+          const tok = v.mapValue?.fields?.fcmToken?.stringValue;
+          if (tok && tok.length > 20) tokens.add(tok);
+        });
         
-        // FCM 발송
+        // companies.fcmToken도 포함
+        if (fields.fcmToken?.stringValue) tokens.add(fields.fcmToken.stringValue);
+        
+        if (!tokens.size) return new Response(JSON.stringify({ok:false,reason:'no tokens'}), {headers:{'Content-Type':'application/json'}});
+        
         const accessToken = await getAccessToken(env);
         const title = '🔐 로그인 알림';
         const msgBody = `${loginName||'관리자'}님이 ${timeStr||''}에 로그인하였습니다`;
         
-        const results = await Promise.all(tokens.map(async tok => {
+        const results = await Promise.all([...tokens].map(async tok => {
           const r = await fetch(
             `https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,
             {
@@ -2680,7 +2682,7 @@ service cloud.firestore {
           return r.ok;
         }));
         
-        return new Response(JSON.stringify({ok:true, sent:results.filter(Boolean).length}), {headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:true, sent:results.filter(Boolean).length, total:tokens.size}), {headers:{'Content-Type':'application/json'}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
       }
