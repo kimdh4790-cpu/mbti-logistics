@@ -2650,8 +2650,15 @@ service cloud.firestore {
         // loginAllowed 배열
         const loginAllowed = fields.loginAllowed?.arrayValue?.values || [];
         loginAllowed.forEach(v => {
-          const tok = v.mapValue?.fields?.fcmToken?.stringValue;
-          if (tok && tok.length > 20) tokens.add(tok);
+          const f = v.mapValue?.fields;
+          // 단일 토큰
+          if (f?.fcmToken?.stringValue) tokens.add(f.fcmToken.stringValue);
+          // 누적 토큰 배열
+          if (f?.fcmTokens?.arrayValue?.values) {
+            f.fcmTokens.arrayValue.values.forEach(t => {
+              if (t.stringValue) tokens.add(t.stringValue);
+            });
+          }
         });
         
         // companies.fcmToken도 포함
