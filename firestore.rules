@@ -116,9 +116,9 @@ service cloud.firestore {
 
     // ─── 회사/사용자/구독 ───
     match /companies/{dealerId} {
-      allow read: if isDealer(dealerId) || isAdminUser();
+      allow read: if isAuth();
       allow create: if isAuth();
-      allow update: if isDealer(dealerId) || isAdminUser();
+      allow update: if isAuth();
       allow delete: if isSuperAdmin();
     }
     match /users/{userId} {
