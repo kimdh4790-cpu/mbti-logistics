@@ -1680,11 +1680,15 @@ function getCampByRoute(route){
 
 // _getIncSetting 간단 대체 (settle.html용)
 function _getIncSetting(driver,route){
+  // ★ 라우트별 글로벌 설정 우선 조회
+  var rk=_incKey('__route__',route);
+  var rStored=localStorage.getItem(rk);
+  if(rStored){try{var rp=JSON.parse(rStored);if(rp&&typeof rp.rate!=='undefined')return rp;}catch(e){}}
+  if(window._incSettingsCache&&window._incSettingsCache[rk])return window._incSettingsCache[rk];
+  // 기사별 설정 (하위 호환)
   var k=_incKey(driver,route);
-  // localStorage 우선
   var stored=localStorage.getItem(k);
   if(stored){try{var p=JSON.parse(stored);if(p&&typeof p.rate!=='undefined')return p;}catch(e){}}
-  // window._incSettingsCache (FB 로드 캐시)
   if(window._incSettingsCache&&window._incSettingsCache[k])return window._incSettingsCache[k];
   return{on:true,rate:G_PRICES&&G_PRICES.freshbag_inc||25};
 }
@@ -38362,87 +38366,70 @@ function openIncPanel(){
     return;
   }
 
-  // 기사별 라우트 수집
-  var panelData={};
+  // ★ 라우트만 수집 (기사 무관)
+  var routeSet=[];
   settle.forEach(function(s){
-    var drv=s.userId||s.driver||'';
-    if(!drv)return;
-    if(!panelData[drv])panelData[drv]=[];
     (s.routeDetails||[]).forEach(function(rd){
-      if(rd.route&&panelData[drv].indexOf(rd.route)<0)panelData[drv].push(rd.route);
+      if(rd.route&&routeSet.indexOf(rd.route)<0)routeSet.push(rd.route);
     });
-    if(!panelData[drv].length&&s.route)panelData[drv].push(s.route);
+    if(s.route&&routeSet.indexOf(s.route)<0)routeSet.push(s.route);
   });
-  var drivers=Object.keys(panelData).sort();
-  if(!drivers.length){toast('정산서에 라우트 정보가 없습니다. 엑셀 업로드 후 시도하세요.');return;}
+  routeSet.sort();
+  if(!routeSet.length){toast('정산서에 라우트 정보가 없습니다. 엑셀 업로드 후 시도하세요.');return;}
 
   // 캠프 목록 (동적)
   var campSet={};
-  Object.keys(panelData).forEach(function(drv){
-    panelData[drv].forEach(function(route){
-      var camp=_routeCampMap[route]||'기타';
-      campSet[camp]=_campColor(camp);
-    });
+  routeSet.forEach(function(route){
+    var camp=_routeCampMap[route]||'기타';
+    campSet[camp]=_campColor(camp);
   });
   var campNames=Object.keys(campSet).sort();
 
-  // 테이블 행 생성
-  var rows=drivers.map(function(drv){
-    return panelData[drv].sort().map(function(route){
-      var s2=_getIncSetting(drv,route);
-      var camp=_routeCampMap[route]||'기타';
-      var col=campSet[camp]||'#64748b';
-      var drvSafe=drv.replace(/\s/g,'_');
-      var togKey=_incNewKey(drv,route);
-      var rateOpts=[10,15,25].map(function(r){
-        var on=(s2.rate===r);
-        var bg=on?'#2563eb':'#f1f5f9';
-        var fg=on?'#fff':'#374151';
-        var bd=on?'#2563eb':'#d1d5db';
-        return '<button class="inc-rate-btn" data-k="'+togKey+'" data-rate="'+r+'" onclick="_incRate2(this)" style="padding:3px 8px;border-radius:6px;border:1.5px solid '+bd+';background:'+bg+';color:'+fg+';font-size:11px;font-weight:700;cursor:pointer;min-width:36px">x'+r+'</button>';
-      }).join('');
-      var togBg=s2.on?'#059669':'#6b7280';
-      var customVal=([10,15,25].indexOf(s2.rate)<0)?s2.rate:'';
-      return '<tr class="inc-row" data-camp="'+camp+'" style="border-bottom:1px solid var(--border)">'
-        +'<td style="padding:7px 8px;font-weight:600;font-size:12px">'+esc(s2.name||drv)+'<br><small style="color:var(--text3);font-family:monospace;font-size:10px">'+esc(drv)+'</small></td>'
-        +'<td style="padding:7px 8px;font-size:12px;font-weight:700;color:'+col+'">'+route+'</td>'
-        +'<td style="padding:7px 8px"><button class="inc-tog-btn" data-k="'+togKey+'" onclick="_incToggle2(this)" style="padding:3px 10px;border-radius:100px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:'+togBg+';color:#fff">'+(s2.on?'ON':'OFF')+'</button></td>'
-        +'<td style="padding:7px 8px"><div style="display:flex;gap:4px;align-items:center">'
-          +rateOpts
-          +'<input class="inc-custom-inp" data-k="'+togKey+'" type="number" value="'+customVal+'" placeholder="직접" oninput="_incCustom2(this)" style="width:52px;padding:3px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text)">'
-          +'<span style="font-size:11px;color:var(--text3)">원</span>'
-        +'</div></td>'
-        +'</tr>';
+  var rows=routeSet.map(function(route){
+    var s2=_getIncSetting('__route__',route);
+    var camp=_routeCampMap[route]||'기타';
+    var col=campSet[camp]||'#64748b';
+    var togKey=_incKey('__route__',route);
+    var rateOpts=[10,15,25].map(function(r){
+      var on=(s2.rate===r);
+      var bg=on?'#2563eb':'#f1f5f9';
+      var fg=on?'#fff':'#374151';
+      var bd=on?'#2563eb':'#d1d5db';
+      return '<button class="inc-rate-btn" data-k="'+togKey+'" data-rate="'+r+'" onclick="_incRate2(this)" style="padding:3px 8px;border-radius:6px;border:1.5px solid '+bd+';background:'+bg+';color:'+fg+';font-size:11px;font-weight:700;cursor:pointer;min-width:36px">x'+r+'</button>';
     }).join('');
+    var togBg=s2.on?'#059669':'#6b7280';
+    var customVal=([10,15,25].indexOf(s2.rate)<0)?s2.rate:'';
+    return '<tr class="inc-row" data-camp="'+camp+'" style="border-bottom:1px solid var(--border)">'  
+      +'<td style="padding:7px 8px;font-size:13px;font-weight:700;color:'+col+'">'+route+'</td>'
+      +'<td style="padding:7px 8px"><button class="inc-tog-btn" data-k="'+togKey+'" onclick="_incToggle2(this)" style="padding:3px 10px;border-radius:100px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:'+togBg+';color:#fff">'+(s2.on?'ON':'OFF')+'</button></td>'
+      +'<td style="padding:7px 8px"><div style="display:flex;gap:4px;align-items:center">'
+        +rateOpts
+        +'<input class="inc-custom-inp" data-k="'+togKey+'" type="number" value="'+customVal+'" placeholder="직접" oninput="_incCustom2(this)" style="width:52px;padding:3px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg);color:var(--text)">'
+        +'<span style="font-size:11px;color:var(--text3)">원</span>'
+        +'</div></td>'
+        +'<td style="padding:7px 6px;font-size:10px;color:var(--text3);max-width:180px">'
+        +(settle.filter(function(s){return (s.routeDetails||[]).some(function(rd){return rd.route===route;});}).map(function(s){return s.name||s.userId||'';}).filter(Boolean).slice(0,5).join(', ')+(settle.filter(function(s){return (s.routeDetails||[]).some(function(rd){return rd.route===route;});}).length>5?'...':''))
+        +'</td></tr>';
+  // ★ 캠프별 일괄 버튼 - 라우트 기준
   }).join('');
-
-  // 캠프별 일괄 버튼
-  // 캠프 일괄 버튼: _INC_MAP 키 방식으로 생성 (onclick 이스케이프 제거)
   var _campBulkKeys={};
   campNames.forEach(function(camp){
-    var routes=[...new Set(Object.keys(panelData).reduce(function(arr,drv){
-      panelData[drv].forEach(function(r){if((_routeCampMap[r]||'기타')===camp)arr.push(r);});
-      return arr;
-    },[]))];
-    if(routes.length){var k='cb_'+camp;_INC_MAP[k]={camp:camp,routes:routes};_campBulkKeys[camp]=k;}
+    var routes=routeSet.filter(function(r){return (_routeCampMap[r]||'기타')===camp;});
+    if(routes.length){var k='cb_'+camp;_INC_MAP[k]={camp:camp,routes:routes.map(function(r){return {route:r};})};_campBulkKeys[camp]=k;}
   });
   var bulkBtns=campNames.map(function(camp){
     var col=campSet[camp]||'#64748b';
-    var campRoutes=[];
-    Object.keys(panelData).forEach(function(drv){
-      panelData[drv].forEach(function(r){if((_routeCampMap[r]||'기타')===camp)campRoutes.push({drv:drv,route:r});});
-    });
+    var campRoutes=routeSet.filter(function(r){return (_routeCampMap[r]||'기타')===camp;});
     if(!campRoutes.length)return '';
-    var onCnt=campRoutes.filter(function(x){return _getIncSetting(x.drv,x.route).on;}).length;
+    var onCnt=campRoutes.filter(function(r){return _getIncSetting('__route__',r).on;}).length;
     var allOn=onCnt===campRoutes.length,allOff=onCnt===0;
     var k=_campBulkKeys[camp]||'';
-    return '<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 10px;border-radius:100px;border:2px solid '+col+';background:'+col+'14">'
+    return '<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 10px;border-radius:100px;border:1.5px solid '+col+';background:rgba(0,0,0,.03)">'
       +'<span style="font-size:11px;font-weight:700;color:'+col+'">'+camp+'</span>'
-      +'<button class="inc-bulk-btn" data-k="'+k+'" data-on="true" style="padding:2px 8px;border:none;border-radius:100px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOn?col:'var(--bg3)')+';color:'+(allOn?'#fff':'var(--text3)')+'">ON</button>'
-      +'<button class="inc-bulk-btn" data-k="'+k+'" data-on="false" style="padding:2px 8px;border:none;border-radius:100px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOff?'#6b7280':'var(--bg3)')+';color:'+(allOff?'#fff':'var(--text3)')+'">OFF</button>'
+      +'<button class="inc-bulk-btn" data-k="'+k+'" data-on="true" style="padding:2px 8px;border:none;border-radius:100px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOn?'#059669':'#d1fae5')+';color:'+(allOn?'#fff':'#059669')+'">전체ON</button>'
+      +'<button class="inc-bulk-btn" data-k="'+k+'" data-on="false" style="padding:2px 8px;border:none;border-radius:100px;font-size:10px;font-weight:700;cursor:pointer;background:'+(allOff?'#dc2626':'#fee2e2')+';color:'+(allOff?'#fff':'#dc2626')+'">전체OFF</button>'
       +'</div>';
   }).join('');
-
   // 캠프 필터 버튼
   var filterBtns=campNames.map(function(camp){
     var col=campSet[camp]||'#64748b';
@@ -38510,8 +38497,9 @@ function openIncPanel(){
     +filterBtns+'</div>'
     +'<table style="width:100%;border-collapse:collapse;min-width:560px">'
     +'<thead><tr style="background:var(--bg3);font-size:11px;color:var(--text3);position:sticky;top:0">'
-    +'<th style="padding:8px 12px;text-align:left">기사/ID</th><th style="padding:8px 12px;text-align:left">라우트</th>'
+    +'<th style="padding:8px 12px;text-align:left">라우트</th>'
     +'<th style="padding:8px 12px;text-align:left">ON/OFF</th><th style="padding:8px 12px;text-align:left">단가</th>'
+    +'<th style="padding:8px 12px;text-align:left">해당 기사</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>';
   inner.appendChild(bodyDiv);
   mo.appendChild(inner);
