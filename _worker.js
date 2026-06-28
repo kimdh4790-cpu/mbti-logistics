@@ -78,10 +78,14 @@ async function fetchAsset(path, request, env) {
   const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
   const bust = Date.now() + Math.random().toString(36).slice(2);
-  return await fetch(GITHUB_RAW + encodedPath + '?bust=' + bust, {
+  const ghResp = await fetch(GITHUB_RAW + encodedPath + '?bust=' + bust, {
     cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
     headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
   });
+  const ghText = await ghResp.text();
+  const ext2 = fileName.split('.').pop().toLowerCase();
+  const types2 = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json' };
+  return new Response(ghText, { status: ghResp.status, headers: { 'Content-Type': types2[ext2]||'text/plain', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'GitHub' } });
 }
 
 // ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
