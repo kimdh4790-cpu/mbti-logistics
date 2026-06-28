@@ -6781,20 +6781,19 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           rColTotal=13;
       for(var c2=0;c2<rh.length;c2++){
         var cn=String(rh[c2]||'').replace(/\s+/g,'');
-        if(cn==='구분')rColDiv=c2;
+        if(cn==='구분'||cn.startsWith('구분'))rColDiv=c2;
         else if(cn==='ID'||cn==='id'||cn.startsWith('ID')||cn.startsWith('id'))rColID=c2;
-        else if(cn.includes('Route')||cn.includes('라우트'))rColRoute=c2;
+        else if(cn.includes('Route')||cn.includes('라우트')||cn.includes('route'))rColRoute=c2;
         else if(cn.includes('캠프'))rColCamp=c2;
-        else if(cn.includes('배송일자')||cn.includes('작업일'))rColDate=c2;
-        else if(cn.includes('배송건수')||cn.includes('배송(parcel)'))rColDcnt=c2;
-        else if(cn.includes('반품')&&(cn.includes('운송장')||cn.includes('parcel')||cn.includes('건수')||cn==='반품건수'))rColRcnt=c2;
+        else if(cn.includes('배송일자')||cn.includes('작업일')||cn.includes('배송일'))rColDate=c2;
+        else if(cn.includes('배송건수')||cn.includes('배송(parcel)')||cn.includes('배송수'))rColDcnt=c2;
+        else if(cn.includes('반품'))rColRcnt=c2;
         else if(cn.includes('단가')&&!cn.includes('금액')&&!cn.includes('기본')&&!cn.includes('인센'))rColUnit=c2;
-        else if(cn.includes('추가인센')&&!cn.includes('금액'))rColAddInc=c2;
-        // 프레시백: 회수금액 vs 인센티브 분리
+        else if((cn.includes('추가')&&cn.includes('인센'))&&!cn.includes('금액'))rColAddInc=c2;
         else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('인센')||cn.includes('incentive')))rColFreshInc=c2;
         else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('회수')||cn.includes('금액')))rColFresh=c2;
-        else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c2; // 단일 컬럼
-        else if(cn==='총금액')rColTotal=c2;
+        else if(cn.includes('프레시백')||cn.includes('프레쉬백'))rColFresh=c2;
+        else if(cn==='총금액'||cn.includes('총금액'))rColTotal=c2;
         else if(cn.includes('기본')&&cn.includes('배송')&&cn.includes('금액'))rColBasicAmt=c2;
       }
 
