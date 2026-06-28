@@ -13,7 +13,13 @@ service cloud.firestore {
       );
     }
 
-    // dealerId 확인 — uid 직접비교 + users 문서 조회 둘 다
+    function isAdminUser() {
+      return isAuth() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
     function isDealer(dealerId) {
       return isAuth() && (
         request.auth.uid == dealerId ||
@@ -41,6 +47,23 @@ service cloud.firestore {
       );
     }
 
+    function ownsSettingsDoc(docId) {
+      return isAuth() && (
+        docId == request.auth.uid ||
+        docId.matches(request.auth.uid + '_.*') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         docId.matches(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId + '_.*')) ||
+        isSuperAdmin()
+      );
+    }
+
+    // ─── 시스템/공통 ───
+    match /used_biz_numbers/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
     match /admins/{docId} {
       allow read: if isAuth();
       allow write: if isSuperAdmin();
@@ -77,15 +100,30 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if isSuperAdmin();
     }
-    match /companies/{dealerId} {
-      allow read: if isDealer(dealerId);
+    match /open_event/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+    match /visitors/{docId} {
+      allow read: if true;
+      allow write: if isAuth();
+    }
+    match /statement_share/{docId} {
+      allow read: if true;
       allow create: if isAuth();
-      allow update: if isDealer(dealerId);
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // ─── 회사/사용자/구독 ───
+    match /companies/{dealerId} {
+      allow read: if isDealer(dealerId) || isAdminUser();
+      allow create: if isAuth();
+      allow update: if isDealer(dealerId) || isAdminUser();
       allow delete: if isSuperAdmin();
     }
     match /users/{userId} {
       allow read: if isAuth() && (
-        request.auth.uid == userId || ownsDoc() || isSuperAdmin()
+        request.auth.uid == userId || ownsDoc() || isSuperAdmin() || isAdminUser()
       );
       allow create: if isAuth();
       allow update, delete: if isAuth() && (
@@ -94,18 +132,18 @@ service cloud.firestore {
     }
     match /subscriptions/{uid} {
       allow read: if isAuth() && (
-        request.auth.uid == uid || isDealer(uid) || isSuperAdmin()
+        request.auth.uid == uid || isDealer(uid) || isSuperAdmin() || isAdminUser()
       );
-      allow write: if isSuperAdmin();
+      allow write: if isSuperAdmin() || isAdminUser();
     }
     match /payments/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow write: if isSuperAdmin();
+      allow read: if ownsDoc() || isSuperAdmin() || isAdminUser();
+      allow write: if isSuperAdmin() || isAdminUser();
     }
     match /payment_requests/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
+      allow read: if ownsDoc() || isSuperAdmin() || isAdminUser();
       allow create: if ownsNewDoc();
-      allow update, delete: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin() || isAdminUser();
     }
     match /mbetco_subscriptions/{docId} {
       allow read: if isAuth() && (
@@ -113,21 +151,58 @@ service cloud.firestore {
       );
       allow write: if isSuperAdmin();
     }
-    match /plan_guards/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
+    match /settings/{docId} {
+      allow read, create, update, delete: if ownsSettingsDoc(docId) || isSuperAdmin();
     }
-    match /plan_guard_alerts/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
+
+    // ─── DONWAY 정산 ───
     match /settlements/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
+    match /settlements_universal/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /universal_settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /driver_settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /hourly_settlements/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payout_sessions/{docId} {
+      allow read, list: if isAuth();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /payslips/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /tax_docs/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /taxShares/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+
+    // ─── 기사/직원 ───
     match /drivers/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
@@ -138,6 +213,28 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
+    match /ind_workers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /universal_employees/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /driverDocs/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /driver_notifications/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+
+    // ─── 근태/휴가 ───
     match /attendance/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
@@ -153,21 +250,33 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
+    match /comp_leaves/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /leave_payments/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
     match /overtimes/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /payslips/{docId} {
+    match /roster_week/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /notices/{docId} {
+    match /biometrics/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
+
+    // ─── 재고 ───
     match /inventory/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
@@ -183,7 +292,98 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /mbetco_sales/{docId} {
+    match /inv_change_log/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /inv_edit_log/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+
+    // ─── FILO 키오스크/매출 (mbetco_ → filo_ 교체) ───
+    match /filo_sales/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_customers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_services/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_bookings/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_settings/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_point_log/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_mb_types/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /filo_memberships/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+
+    // ─── 업종별 ───
+    match /beauty_sales/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /clean_dispatch/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /clean_orders/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /clean_workers/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /delivery_sessions/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+
+    // ─── 기타 ───
+    match /plan_guards/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /plan_guard_alerts/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
+    match /notices/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
@@ -192,15 +392,6 @@ service cloud.firestore {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /statement_share/{docId} {
-      allow read: if true;
-      allow create: if isAuth();
-      allow update, delete: if isSuperAdmin();
-    }
-    match /settings/{docId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isAuth();
     }
     match /contracts/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
@@ -222,22 +413,12 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /taxShares/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
     match /documents/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
     match /dispatch_results/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /driver_settlements/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
@@ -262,82 +443,12 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /beauty_sales/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /biometrics/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
     match /cal_memos/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /clean_dispatch/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /clean_orders/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /clean_workers/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /comp_leaves/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /delivery_sessions/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
     match /devices/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /driverDocs/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /driver_notifications/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /hourly_settlements/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /ind_workers/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /inv_change_log/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /inv_edit_log/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /leave_payments/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
@@ -362,32 +473,7 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /payout_sessions/{docId} {
-      allow read, list: if isAuth();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /roster_week/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /settlements_universal/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /tax_docs/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
     match /universal_companies/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /universal_employees/{docId} {
       allow read: if ownsDoc() || isSuperAdmin();
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
@@ -397,20 +483,8 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
-    match /universal_settlements/{docId} {
-      allow read: if ownsDoc() || isSuperAdmin();
-      allow create: if ownsNewDoc() || isSuperAdmin();
-      allow update, delete: if ownsDoc() || isSuperAdmin();
-    }
-    match /open_event/{docId} {
-      allow read: if true;
-      allow write: if isAuth();
-    }
-    match /visitors/{docId} {
-      allow read: if true;
-      allow write: if isAuth();
-    }
-    // 기타 모든 컬렉션 — 슈퍼어드민만 (미명시 컬렉션 일반 접근 차단)
+
+    // ─── catch-all (슈퍼어드민만) ───
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
