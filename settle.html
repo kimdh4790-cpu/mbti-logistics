@@ -8411,6 +8411,11 @@ if(window.location.hash==='#join'){
           role:d.role||'dealer',dealerId:_dealerId,
           termsVersion:d.termsVersion||''});
         window._CU=_CU;
+        // ★ companies 문서에서 추가 유료 플랜 필드 병합 (shoppingPaid 등)
+        _db.doc('companies/'+_dealerId).get().then(function(cSnap){
+          if(cSnap.exists) Object.assign(_CU, cSnap.data());
+          window._CU=_CU;
+        }).catch(function(){});
 
         _db.doc('settings/prices_'+_CU.dealerId).get().then(function(ps){if(ps.exists)Object.assign(G_PRICES,ps.data());}).catch(function(){});
         // ★ drivers 미리 로드 — 기사별 priceOverride 적용을 위해 (로그인 즉시)
