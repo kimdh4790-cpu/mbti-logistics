@@ -76,7 +76,7 @@ async function fetchAsset(path, request, env) {
   const KV_ONLY = ['settle.html','filo.html'];
   if (e && e.DONWAY_ASSETS && KV_ONLY.includes(fileName)) {
     try {
-      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
+      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'text' });
       if (val) {
         const ext = fileName.split('.').pop().toLowerCase();
         const types = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json', png:'image/png', jpg:'image/jpeg', pdf:'application/pdf' };
