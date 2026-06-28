@@ -26716,9 +26716,9 @@ var MENUS_SETTLE = [
     {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
   ]},
   {s:'🛒 쇼핑몰 정산', items:[
-    {ic:'🏪',l:'스마트스토어',     p:'shop_smartstore',  plan_key:'settle'},
-    {ic:'📦',l:'쿠팡마켓',         p:'shop_coupang',     plan_key:'settle'},
-    {ic:'📊',l:'멀티채널 현황',    p:'shop_dashboard',   plan_key:'settle'},
+    {ic:'🏪',l:'스마트스토어',     p:'shop_smartstore',  plan_key:'shopping'},
+    {ic:'📦',l:'쿠팡마켓',         p:'shop_coupang',     plan_key:'shopping'},
+    {ic:'📊',l:'멀티채널 현황',    p:'shop_dashboard',   plan_key:'shopping'},
   ]}
 ];
 
@@ -40139,6 +40139,7 @@ function _buildNavRender(nav,cur,companyDoc){
     if(plan_key==='qr')          return hasQr;
     if(plan_key==='payroll')     return hasPayroll;
     if(plan_key==='premium')     return hasPremium;
+    if(plan_key==='shopping')    return isSuperAdmin()||!!(d.shoppingPaid||hasPremium);
     if(plan_key==='any_paid')    return hasAnyPaid;
     if(plan_key==='common')      return hasAnyPaid; // 공통기능 = 어떤플랜이든 결제시
     // 업종별 AI정산 플랜
