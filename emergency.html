@@ -13824,7 +13824,19 @@ async function emerSave(){
       }
         docId = docRef.id;
         record._fbId = docId;
-      }
+
+        // ★ 오배송 감지: 현재 GPS vs 저장된 주소 GPS 비교
+        if(record.gps && record.gps.lat && record.addrGps && record.addrGps.lat){
+          _checkMisdelivery(record.gps, record.addrGps).then(function(misResult){
+            if(misResult && misResult.warn){
+              toast('⚠️ 오배송 의심! GPS 오차 '+misResult.dist+'m — 주소 확인 필요');
+              _db.collection('emergency_deliveries').doc(docId).update({
+                _misdelivery_warn: true,
+                _misdelivery_dist: misResult.dist
+              }).catch(function(){});
+            }
+          });
+        }
       // 로컬 마지막 항목에도 fbId 기록
       try{
         var el2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
@@ -14172,6 +14184,199 @@ function _saveApiKey(type) {
   if(inp) inp.type = 'password';
 }
 
+</script>
+<script>
+// ══ v9 이식: 지도핀 / 오배송감지 / GPS / 운행메모 ══
+
+// GPS 거리 계산 (Haversine)
+function gpsDistance(lat1,lng1,lat2,lng2){
+  if(lat1==null||lng1==null||lat2==null||lng2==null)return Infinity;
+  var R=6371000,toRad=function(d){return d*Math.PI/180;};
+  var dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// GPS 취득
+function _getGPS(){
+  return new Promise(function(res){
+    if(!navigator.geolocation){res({lat:35.1796,lng:129.0756,_denied:true});return;}
+    var done=false;
+    var t=setTimeout(function(){if(!done){done=true;res({lat:35.1796,lng:129.0756,_denied:true,_reason:'timeout'});}},6000);
+    navigator.geolocation.getCurrentPosition(function(pos){
+      if(done)return;done=true;clearTimeout(t);
+      res({lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy||0),ts:new Date().toISOString()});
+    },function(err){
+      if(done)return;done=true;clearTimeout(t);
+      res({lat:35.1796,lng:129.0756,_denied:true,_reason:err&&err.code===1?'denied':'unavailable'});
+    },{enableHighAccuracy:true,timeout:6000,maximumAge:30000});
+  });
+}
+
+// 오배송 감지 (저장 시 GPS vs 주소 GPS 비교)
+async function _checkMisdelivery(savedGps, addrGps){
+  if(!savedGps||!addrGps) return null;
+  if(!savedGps.lat||!addrGps.lat) return null;
+  var dist = gpsDistance(savedGps.lat, savedGps.lng, addrGps.lat, addrGps.lng);
+  if(dist > 500){ // 500m 이상이면 오배송 의심
+    return {dist: Math.round(dist), warn: true};
+  }
+  return {dist: Math.round(dist), warn: false};
+}
+
+// 배송 핀 지도 열기 (카카오맵)
+function openDeliveryMap(){
+  var kakaoKey = window._cachedKakaoApiKey || localStorage.getItem('mbti_kakao_api_key') || '';
+  var did = localStorage.getItem('mbti_emer_dealerId') || (_CU&&_CU.uid) || '';
+  var driver = localStorage.getItem('mbti_emer_driver') || '';
+  var today = new Date().toISOString().slice(0,10);
+
+  // 오늘 배송 기록 가져오기
+  _db.collection('emergency_deliveries')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .orderBy('savedAt','desc')
+    .limit(50).get()
+    .then(function(snap){
+      var locs=[];
+      snap.forEach(function(d){
+        var x=d.data();
+        if(x.gps&&x.gps.lat) locs.push(x);
+      });
+      _showDeliveryMapModal(locs, kakaoKey);
+    }).catch(function(e){
+      toast('❌ 지도 로드 실패: '+e.message);
+    });
+}
+
+function _showDeliveryMapModal(locs, kakaoKey){
+  document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
+  var html='<div id="delivery-map-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)this.remove()">'
+    +'<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px;padding:20px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
+    +'<span style="font-size:20px">📍</span>'
+    +'<div style="font-size:16px;font-weight:800">오늘 배송 핀 지도</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-left:4px">'+locs.length+'건</div>'
+    +'<button onclick="document.getElementById(\'delivery-map-mo\').remove()" style="margin-left:auto;padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--text)">닫기</button>'
+    +'</div>';
+
+  if(!kakaoKey){
+    html+='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;font-size:12px;color:var(--red);margin-bottom:12px">⚠️ 카카오 API 키 없음 — API 설정에서 입력해주세요</div>';
+  }
+
+  if(locs.length===0){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3)">오늘 등록된 배송 핀이 없습니다</div>';
+  } else {
+    // 배송 목록
+    html+='<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">';
+    locs.forEach(function(x,i){
+      var misWarn = x._misdelivery_warn ? '<span style="background:#dc2626;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">⚠️ 오배송 의심</span>' : '';
+      var dist = x._misdelivery_dist ? '<span style="font-size:10px;color:var(--text3)"> (GPS 오차 '+x._misdelivery_dist+'m)</span>' : '';
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer" onclick="window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
+        +'<div style="font-size:13px;font-weight:700">'+(x.recipient||'수령인 미확인')+misWarn+'</div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text2);margin-left:32px">'+(x.addr||'주소 없음')+dist+'</div>'
+        +'<div style="font-size:10px;color:var(--text3);margin-left:32px;margin-top:2px">운송장: '+(x.tracking||x.trackings&&x.trackings[0]||'—')+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+
+    // 카카오맵 링크
+    if(kakaoKey && locs.length > 0){
+      var first = locs[0];
+      html+='<a href="https://map.kakao.com/link/map/배송위치,'+first.gps.lat+','+first.gps.lng+'" target="_blank" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#3b82f6,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none">🗺️ 카카오맵으로 보기</a>';
+    }
+  }
+  html+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 운행 메모 저장
+function saveDrivingMemo(){
+  var mo = document.getElementById('driving-memo-mo');
+  if(!mo) return;
+  var txt = (document.getElementById('memo-text')||{}).value.trim();
+  if(!txt){ toast('메모 내용을 입력하세요'); return; }
+  var did = localStorage.getItem('mbti_emer_dealerId') || (_CU&&_CU.uid) || '';
+  var driver = localStorage.getItem('mbti_emer_driver') || '';
+  var camp = localStorage.getItem('mbti_emer_camp') || '';
+  var today = new Date().toISOString().slice(0,10);
+  var now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+
+  _db.collection('driving_memos').add({
+    dealerId: did,
+    driver: driver,
+    camp: camp,
+    date: today,
+    time: now,
+    memo: txt,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    toast('✅ 메모 저장 완료');
+    mo.remove();
+  }).catch(function(e){
+    toast('❌ 저장 실패: '+e.message);
+  });
+}
+
+// 운행 메모 모달 열기
+function openDrivingMemo(){
+  document.getElementById('driving-memo-mo')&&document.getElementById('driving-memo-mo').remove();
+  var driver = localStorage.getItem('mbti_emer_driver') || '';
+  var today = new Date().toISOString().slice(0,10);
+
+  // 오늘 메모 목록 불러오기
+  var did = localStorage.getItem('mbti_emer_dealerId') || (_CU&&_CU.uid) || '';
+  _db.collection('driving_memos')
+    .where('dealerId','==',did)
+    .where('driver','==',driver)
+    .where('date','==',today)
+    .orderBy('createdAt','desc')
+    .limit(20).get()
+    .then(function(snap){
+      var memos=[];
+      snap.forEach(function(d){ memos.push(d.data()); });
+      _showMemoModal(memos);
+    }).catch(function(){
+      _showMemoModal([]);
+    });
+}
+
+function _showMemoModal(memos){
+  var memoList = memos.length ? memos.map(function(m){
+    return '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px">'
+      +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">'+m.time+'</div>'
+      +'<div style="font-size:13px">'+m.memo+'</div>'
+      +'</div>';
+  }).join('') : '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">오늘 작성한 메모가 없습니다</div>';
+
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="driving-memo-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)this.remove()">'
+    +'<div onclick="event.stopPropagation()" style="background:var(--bg);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">📝 운행 메모</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:14px">특이사항·사고·민원 등 기록</div>'
+    +'<textarea id="memo-text" placeholder="운행 중 특이사항을 입력하세요..." style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;margin-bottom:10px"></textarea>'
+    +'<button onclick="saveDrivingMemo()" style="width:100%;padding:12px;background:linear-gradient(135deg,#3b82f6,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">✅ 메모 저장</button>'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">오늘 메모 ('+memos.length+'건)</div>'
+    +memoList
+    +'</div></div>'
+  );
+}
+
+// 메인 화면에 지도·메모 버튼 추가
+(function(){
+  var mainArea = document.querySelector('.main-area');
+  if(!mainArea) return;
+  var btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'display:flex;gap:8px;margin-top:8px;flex-wrap:wrap';
+  btnWrap.innerHTML =
+    '<button class="btn" onclick="openDeliveryMap()" style="flex:1;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer">📍 배송 핀 지도</button>'
+    +'<button class="btn" onclick="openDrivingMemo()" style="flex:1;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer">📝 운행 메모</button>';
+  mainArea.appendChild(btnWrap);
+})();
 </script>
 </body>
 </html>
