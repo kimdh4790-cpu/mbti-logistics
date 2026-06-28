@@ -6782,12 +6782,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
       for(var c2=0;c2<rh.length;c2++){
         var cn=String(rh[c2]||'').replace(/\s+/g,'');
         if(cn==='구분')rColDiv=c2;
-        else if(cn==='ID'||cn==='id')rColID=c2;
+        else if(cn==='ID'||cn==='id'||cn.startsWith('ID')||cn.startsWith('id'))rColID=c2;
         else if(cn.includes('Route')||cn.includes('라우트'))rColRoute=c2;
         else if(cn.includes('캠프'))rColCamp=c2;
         else if(cn.includes('배송일자')||cn.includes('작업일'))rColDate=c2;
         else if(cn.includes('배송건수')||cn.includes('배송(parcel)'))rColDcnt=c2;
-        else if(cn.includes('반품')&&(cn.includes('운송장')||cn.includes('parcel')))rColRcnt=c2;
+        else if(cn.includes('반품')&&(cn.includes('운송장')||cn.includes('parcel')||cn.includes('건수')||cn==='반품건수'))rColRcnt=c2;
         else if(cn.includes('단가')&&!cn.includes('금액')&&!cn.includes('기본')&&!cn.includes('인센'))rColUnit=c2;
         else if(cn.includes('추가인센')&&!cn.includes('금액'))rColAddInc=c2;
         // 프레시백: 회수금액 vs 인센티브 분리
