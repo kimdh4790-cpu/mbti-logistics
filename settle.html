@@ -45864,7 +45864,245 @@ window._ssDownload = function() {
   XLSX.writeFile(wb, '스마트스토어_정산_' + new Date().toISOString().slice(0,10) + '.xlsx');
 };
 
-// ─── 멀티채널 대시보드 ───
+// ─── 쿠팡마켓(Wing) 엑셀 파서 ───
+function _parseCoupangWing(file, onDone) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if(rows.length < 2) { alert('데이터가 없습니다'); return; }
+
+      // 헤더 찾기
+      var headerRow = 0;
+      for(var h=0; h<Math.min(5,rows.length); h++){
+        if(rows[h].some(function(c){ return String(c).includes('주문번호') || String(c).includes('상품ID'); })){
+          headerRow = h; break;
+        }
+      }
+      var headers = rows[headerRow].map(function(c){ return String(c).trim(); });
+
+      function ci(names){
+        for(var n=0; n<names.length; n++){
+          var idx = headers.findIndex(function(h){ return h.includes(names[n]); });
+          if(idx >= 0) return idx;
+        }
+        return -1;
+      }
+
+      var COL = {
+        orderNo:     ci(['주문번호']),
+        orderDate:   ci(['주문일','결제일']),
+        productId:   ci(['상품ID','상품 ID']),
+        productName: ci(['상품명']),
+        option:      ci(['옵션','옵션명']),
+        qty:         ci(['수량','주문수량']),
+        unitPrice:   ci(['판매단가','판매가','단가']),
+        totalAmt:    ci(['판매금액','결제금액','주문금액']),
+        commission:  ci(['판매수수료','수수료']),
+        delivFee:    ci(['배송비']),
+        recipient:   ci(['수취인명','수령인']),
+        phone:       ci(['수취인연락처','전화번호']),
+        address:     ci(['배송지','주소']),
+        status:      ci(['주문상태','배송상태']),
+        invoiceNo:   ci(['운송장번호','송장번호']),
+      };
+
+      var orders = [];
+      for(var r = headerRow+1; r < rows.length; r++){
+        var row = rows[r];
+        if(!row[COL.orderNo]) continue;
+
+        var totalAmt   = parseFloat(String(row[COL.totalAmt]||0).replace(/,/g,''))||0;
+        var unitPrice  = parseFloat(String(row[COL.unitPrice]||0).replace(/,/g,''))||0;
+        var qty        = parseInt(row[COL.qty]||1)||1;
+        var commission = parseFloat(String(row[COL.commission]||0).replace(/,/g,''))||0;
+        var delivFee   = parseFloat(String(row[COL.delivFee]||0).replace(/,/g,''))||0;
+
+        if(!totalAmt) totalAmt = unitPrice * qty;
+        // 쿠팡 수수료 없으면 카테고리별 평균 10.8% 적용
+        if(!commission && totalAmt) commission = Math.round(totalAmt * 0.108);
+
+        var net = totalAmt - commission;
+
+        orders.push({
+          orderNo:     String(row[COL.orderNo]||'').trim(),
+          orderDate:   row[COL.orderDate] instanceof Date ? row[COL.orderDate].toISOString().slice(0,10) : String(row[COL.orderDate]||'').slice(0,10),
+          productId:   String(row[COL.productId]||'').trim(),
+          productName: String(row[COL.productName]||'').trim(),
+          option:      String(row[COL.option]||'').trim(),
+          qty:         qty,
+          unitPrice:   unitPrice,
+          totalAmt:    totalAmt,
+          commission:  commission,
+          delivFee:    delivFee,
+          net:         net,
+          recipient:   String(row[COL.recipient]||'').trim(),
+          phone:       String(row[COL.phone]||'').trim(),
+          address:     String(row[COL.address]||'').trim(),
+          status:      String(row[COL.status]||'').trim(),
+          invoiceNo:   String(row[COL.invoiceNo]||'').trim(),
+          platform:    'coupang',
+        });
+      }
+      onDone(orders);
+    } catch(err) {
+      alert('파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── 쿠팡마켓 페이지 ───
+function _pageShopCoupang(c) {
+  c.innerHTML =
+    '<div style="padding:16px">' +
+    '<h3 style="margin:0 0 4px;font-size:15px">📦 쿠팡마켓 정산</h3>' +
+    '<p style="margin:0 0 16px;font-size:12px;color:var(--text3)">쿠팡 Wing 주문 엑셀을 업로드하면 수수료·실수령액을 자동 계산합니다.</p>' +
+
+    '<div id="cw-upload-box" style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;margin-bottom:16px" onclick="document.getElementById(\'cw-file-inp\').click()">' +
+    '<div style="font-size:32px;margin-bottom:8px">📦</div>' +
+    '<div style="font-size:13px;color:var(--text2)">쿠팡 Wing 주문 엑셀 업로드</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-top:4px">주문관리 > 발주요청 > 엑셀 다운로드</div>' +
+    '<input type="file" id="cw-file-inp" accept=".xlsx,.xls" style="display:none" onchange="window._cwFileLoaded(this)">' +
+    '</div>' +
+
+    // 수수료율 설정
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px">' +
+    '<div style="font-size:12px;font-weight:600;margin-bottom:8px">⚙️ 수수료율 설정 (카테고리별 다름)</div>' +
+    '<div style="display:flex;gap:8px;align-items:center">' +
+    '<input id="cw-commission-rate" type="number" value="10.8" step="0.1" min="0" max="30" style="width:80px;padding:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;text-align:center">%' +
+    '<span style="font-size:11px;color:var(--text3)">※ 의류14% / 가전10% / 식품8% / 생활용품11%</span>' +
+    '</div></div>' +
+
+    '<div id="cw-result" style="display:none">' +
+    '<div id="cw-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px"></div>' +
+    '<div id="cw-table-wrap" style="overflow-x:auto;margin-bottom:12px"></div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button onclick="window._cwSave()" style="flex:1;padding:11px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 정산 저장</button>' +
+    '<button onclick="window._cwDownload()" style="flex:1;padding:11px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">📥 엑셀 다운로드</button>' +
+    '</div>' +
+    '<div id="cw-save-result" style="margin-top:8px;font-size:12px;text-align:center"></div>' +
+    '</div></div>';
+
+  // 드래그앤드롭
+  var box = document.getElementById('cw-upload-box');
+  box.addEventListener('dragover', function(e){ e.preventDefault(); box.style.borderColor='var(--pink)'; });
+  box.addEventListener('dragleave', function(){ box.style.borderColor='var(--border)'; });
+  box.addEventListener('drop', function(e){
+    e.preventDefault(); box.style.borderColor='var(--border)';
+    var f = e.dataTransfer.files[0];
+    if(f) _cwProcess(f);
+  });
+}
+
+window._cwOrders = [];
+
+window._cwFileLoaded = function(inp) {
+  var f = inp.files[0];
+  if(f) _cwProcess(f);
+};
+
+function _cwProcess(file) {
+  var rate = parseFloat(document.getElementById('cw-commission-rate').value||'10.8')/100;
+  _parseCoupangWing(file, function(orders) {
+    // 수수료율 재계산
+    orders = orders.map(function(o){
+      if(!o.commission && o.totalAmt) o.commission = Math.round(o.totalAmt * rate);
+      o.net = o.totalAmt - o.commission;
+      return o;
+    });
+    window._cwOrders = orders;
+    _cwRender(orders);
+  });
+}
+
+function _cwRender(orders) {
+  if(!orders.length){ alert('주문 데이터가 없습니다'); return; }
+
+  function comma(n){ return Math.round(n).toLocaleString(); }
+
+  var totalAmt  = orders.reduce(function(s,o){ return s+o.totalAmt; },0);
+  var totalComm = orders.reduce(function(s,o){ return s+o.commission; },0);
+  var totalNet  = orders.reduce(function(s,o){ return s+o.net; },0);
+
+  document.getElementById('cw-summary').innerHTML = [
+    {label:'총 주문', value:orders.length+'건', color:'var(--blue)'},
+    {label:'총 판매금액', value:comma(totalAmt)+'원', color:'var(--green)'},
+    {label:'쿠팡 수수료', value:comma(totalComm)+'원', color:'var(--red)'},
+    {label:'실수령(추정)', value:comma(totalNet)+'원', color:'var(--pink)'},
+  ].map(function(s){
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">'
+      +'<div style="font-size:18px;font-weight:800;color:'+s.color+'">'+s.value+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+s.label+'</div></div>';
+  }).join('');
+
+  document.getElementById('cw-table-wrap').innerHTML =
+    '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">'
+    +'<thead><tr style="background:var(--bg3)">'
+    +'<th style="padding:6px 8px;border:1px solid var(--border);text-align:left">주문번호</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">주문일</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border);text-align:left">상품명</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">수량</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">판매가</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">수수료</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">실수령</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">수취인</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">운송장</th>'
+    +'<th style="padding:6px 8px;border:1px solid var(--border)">상태</th>'
+    +'</tr></thead><tbody>'
+    + orders.slice(0,100).map(function(o){
+      return '<tr>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);font-family:monospace;font-size:10px">'+o.orderNo+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:center;white-space:nowrap">'+o.orderDate+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+o.productName+(o.option?' ('+o.option+')':'')+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:center">'+o.qty+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:right">'+comma(o.totalAmt)+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--red)">'+comma(o.commission)+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:right;color:var(--green);font-weight:700">'+comma(o.net)+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border)">'+o.recipient+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);font-family:monospace;font-size:10px">'+o.invoiceNo+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid var(--border);text-align:center;font-size:10px">'+o.status+'</td>'
+        +'</tr>';
+    }).join('')
+    +(orders.length>100?'<tr><td colspan="10" style="padding:8px;text-align:center;color:var(--text3)">... 상위 100건만 표시</td></tr>':'')
+    +'</tbody></table>';
+
+  document.getElementById('cw-upload-box').style.display='none';
+  document.getElementById('cw-result').style.display='block';
+}
+
+window._cwSave = function(){
+  var did=_did(), orders=window._cwOrders;
+  if(!orders.length) return;
+  var result=document.getElementById('cw-save-result');
+  result.textContent='저장 중...';
+  var batch=firebase.firestore().batch();
+  orders.forEach(function(o){
+    var ref=firebase.firestore().collection('shop_orders').doc();
+    batch.set(ref, Object.assign({},o,{dealerId:did, month:o.orderDate.slice(0,7), savedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+  });
+  batch.commit().then(function(){
+    result.style.color='var(--green)';
+    result.textContent='✅ '+orders.length+'건 저장 완료!';
+  }).catch(function(e){
+    result.style.color='red';
+    result.textContent='❌ 저장 실패: '+e.message;
+  });
+};
+
+window._cwDownload = function(){
+  var orders=window._cwOrders;
+  if(!orders.length) return;
+  var ws_data=[['주문번호','주문일','상품명','옵션','수량','판매가','수수료(추정)','실수령(추정)','수취인','연락처','배송지','운송장번호','상태']]
+    .concat(orders.map(function(o){
+      return [o.orderNo,o.orderDate,o.productName,o.option,o.qty,o.totalAmt,o.commission,o.net,o.recipient,o.phone,o.address,o.invoiceNo,o.status];
+    }));
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ws_data),'쿠팡정산');
+  XLSX.writeFile(wb,'쿠팡마켓_정산_'+new Date().toISOString().slice(0,10)+'.xlsx');
+};
 function _pageShopDashboard(c) {
   var did = _did();
   c.innerHTML = '<div style="padding:16px"><h3 style="margin:0 0 16px;font-size:15px">📊 멀티채널 매출 현황</h3><div id="shop-dash-content"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로딩 중...</div></div></div>';
@@ -45936,6 +46174,7 @@ function _pageShopDashboard(c) {
   var _origNav = window._navPage || null;
   var _shopPages = {
     'shop_smartstore': _pageShopSmartstore,
+    'shop_coupang':    _pageShopCoupang,
     'shop_dashboard':  _pageShopDashboard,
   };
   // 기존 _goPage 함수에 쇼핑몰 페이지 추가
