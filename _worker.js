@@ -74,9 +74,11 @@ async function fetchAsset(path, request, env) {
 
   // ★ 1순위: KV — settle.html만 (나머지는 GitHub Raw)
   const KV_ONLY = ['settle.html','filo.html'];
+  console.log('[KV DEBUG] fileName:', fileName, 'e:', !!e, 'DONWAY_ASSETS:', !!(e&&e.DONWAY_ASSETS), 'includes:', KV_ONLY.includes(fileName));
   if (e && e.DONWAY_ASSETS && KV_ONLY.includes(fileName)) {
     try {
       const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
+      console.log('[KV DEBUG] val:', val ? val.byteLength : null);
       if (val) {
         const ext = fileName.split('.').pop().toLowerCase();
         const types = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json', png:'image/png', jpg:'image/jpeg', pdf:'application/pdf' };
