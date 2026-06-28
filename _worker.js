@@ -91,11 +91,13 @@ async function fetchAsset(path, request, env) {
 // ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
 async function serveKVFile(env, fileName, contentType) {
   try {
-    // GitHub Raw 직접 서빙 (KV 제거)
-    const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
-    const encoded = encodeURIComponent(fileName);
+    // Pages CDN 서빙 (settle.html/filo.html), 나머지는 GitHub Raw
+    const PAGES_FILES = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
     const bust = Date.now() + Math.random().toString(36).slice(2);
-    const resp = await fetch(GITHUB_RAW + '/' + encoded + '?bust=' + bust, {
+    const fileUrl = PAGES_FILES[fileName]
+      ? PAGES_FILES[fileName] + '?bust=' + bust
+      : 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/' + encodeURIComponent(fileName) + '?bust=' + bust;
+    const resp = await fetch(fileUrl, {
       cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
     });
