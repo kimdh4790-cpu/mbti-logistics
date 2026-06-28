@@ -477,7 +477,7 @@ window.updateStats = function updateStats(list){
 
 // 서비스 레이블 맵
 const SVC_LABEL={settle:'AI정산',delivery:'배달대행',qr:'QR출퇴근',payroll:'급여관리',
-  inventory:'재고관리',kiosk:'키오스크',universal:'범용정산',contract:'계약서',roster:'근무표'};
+  inventory:'재고관리',kiosk:'키오스크',universal:'범용정산',contract:'계약서',roster:'근무표',shopping:'쇼핑몰정산'};
 const IND_LABEL={coupang:'🚚쿠팡',delivery:'🛵배달대행',cleaning:'🧹청소',insurance:'🛡️보험',
   construction:'🏗️건설',golf:'⛳골프',academy:'📚학원',beauty:'💇뷰티',
   logistics:'🚛물류',freelance:'💼프리랜서',care:'🏥요양',restaurant:'🍽️식당',universal:'📋범용'};
@@ -508,6 +508,7 @@ window.renderTable = function renderTable(list){
     if(d.inventoryPaid) svcOn.push('재고관리');
     if(d.kioskPaid) svcOn.push('키오스크');
     if(d.universalPaid) svcOn.push('범용정산');
+    if(d.shoppingPaid) svcOn.push('쇼핑몰정산');
     if(d.plan==='trial'&&!svcOn.length) svcOn.push('체험중');
     const svcHtml=svcOn.length
       ?svcOn.map(s=>`<span class="feature-tag feat-on">${s}</span>`).join('')
