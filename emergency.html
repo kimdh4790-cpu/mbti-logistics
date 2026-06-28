@@ -10210,6 +10210,13 @@ var _fbReady=true;
 var _st=_storage; // v9 호환
 var _CU=null,FB=true;
 window._geoCacheMem={}; // 지오코딩 캐시
+// did URL 파라미터 즉시 저장
+(function(){
+  var urlDid=new URLSearchParams(location.search).get('did');
+  if(urlDid) localStorage.setItem('mbti_emer_dealerId',urlDid);
+})();
+// 페이지 로드 시 로그인 화면 초기화
+document.addEventListener('DOMContentLoaded',function(){ _emerInitLogin(); });
 // 물류앱 전역 상태 스텁 (로그인 전 빈값, 로그인 후 업데이트)
 var S={curDriver:'', curPlate:'', curJobtype:'택배', curJobsub:'쿠팡',
   curMode:'admin', curAdminName:''};
