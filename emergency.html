@@ -13822,21 +13822,21 @@ async function emerSave(){
           }catch(e){ console.debug('[BG사진]',e.message); }
         })();
       }
-        docId = docRef.id;
-        record._fbId = docId;
+      docId = docRef.id;
+      record._fbId = docId;
 
-        // ★ 오배송 감지: 현재 GPS vs 저장된 주소 GPS 비교
-        if(record.gps && record.gps.lat && record.addrGps && record.addrGps.lat){
-          _checkMisdelivery(record.gps, record.addrGps).then(function(misResult){
-            if(misResult && misResult.warn){
-              toast('⚠️ 오배송 의심! GPS 오차 '+misResult.dist+'m — 주소 확인 필요');
-              _db.collection('emergency_deliveries').doc(docId).update({
-                _misdelivery_warn: true,
-                _misdelivery_dist: misResult.dist
-              }).catch(function(){});
-            }
-          });
-        }
+      // ★ 오배송 감지: 현재 GPS vs 저장된 주소 GPS 비교
+      if(record.gps && record.gps.lat && record.addrGps && record.addrGps.lat){
+        _checkMisdelivery(record.gps, record.addrGps).then(function(misResult){
+          if(misResult && misResult.warn){
+            toast('⚠️ 오배송 의심! GPS 오차 '+misResult.dist+'m — 주소 확인 필요');
+            _db.collection('emergency_deliveries').doc(docId).update({
+              _misdelivery_warn: true,
+              _misdelivery_dist: misResult.dist
+            }).catch(function(){});
+          }
+        });
+      }
       // 로컬 마지막 항목에도 fbId 기록
       try{
         var el2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
