@@ -536,6 +536,7 @@ export default {
         try {
           const ghJoin = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
           const html = await ghJoin.text();
+          if (html) {
             const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
             const lastBody = html.lastIndexOf('</body>');
             const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
