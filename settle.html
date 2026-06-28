@@ -33903,8 +33903,10 @@ async function _ocrCompressImage(file, maxW, quality){
   });
 }
 
+function stripDf(s){return (s||"").replace(/\s+/g,"").trim();}
 function saveDriver(id){
   function gvs(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
+  function stripDf(s){return (s||''). replace(/\s+/g,'').trim();}
   var payload={
     name:gvs('edr-name')||'',
     userId:stripDf(gvs('edr-uid')||''),
