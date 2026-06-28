@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>회사 등록 — 엠비티아이 배송앱</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;--text:#e2e8f0;--text2:#94a3b8;--text3:#475569;--brand:#0066ff;--acc:#00d4ff;--green:#22c55e;--red:#ef4444;--border:rgba(0,102,255,.2)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:460px}
+.logo{text-align:center;margin-bottom:28px}
+.logo h1{font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* 스텝퍼 */
+.stepper{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px}
+.step{display:flex;flex-direction:column;align-items:center;gap:4px}
+.step-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text3);transition:.3s}
+.step-circle.active{border-color:var(--brand);background:var(--brand);color:#fff}
+.step-circle.done{border-color:var(--green);background:var(--green);color:#fff}
+.step-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.step-line{width:40px;height:2px;background:var(--border);margin-bottom:16px;transition:.3s}
+.step-line.done{background:var(--green)}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px}
+.card-title{font-size:16px;font-weight:800;margin-bottom:6px}
+.card-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-weight:600}
+.field input,.field select{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:.2s;font-family:inherit}
+.field input:focus,.field select:focus{border-color:var(--brand)}
+.field input::placeholder{color:var(--text3)}
+.field-row{display:flex;gap:8px}
+.field-row .field{flex:1}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);margin-bottom:8px}
+.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
+.biz-check{display:flex;gap:8px;margin-top:6px}
+.biz-check input{flex:1}
+.biz-check button{padding:0 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.plan-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:.2s;text-align:center}
+.plan-card.active{border-color:var(--brand);background:rgba(0,102,255,.08)}
+.plan-card .icon{font-size:22px;margin-bottom:6px}
+.plan-card .name{font-size:12px;font-weight:800}
+.plan-card .price{font-size:11px;color:var(--text3);margin-top:3px}
+.divider{text-align:center;font-size:11px;color:var(--text3);margin:16px 0}
+.back-link{text-align:center;font-size:12px;color:var(--text3);margin-top:16px;cursor:pointer}
+.back-link a{color:var(--acc);text-decoration:none}
+
+/* 완료 화면 */
+.complete{text-align:center;padding:32px 0}
+.complete-icon{font-size:56px;margin-bottom:16px}
+.complete-title{font-size:20px;font-weight:900;margin-bottom:8px}
+.complete-sub{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="logo">
+    <h1>엠비티아이 배송앱</h1>
+    <p>쿠팡·택배 배송기사 전용 통합 솔루션</p>
+  </div>
+
+  <!-- 스텝퍼 -->
+  <div class="stepper">
+    <div class="step">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label">회사 정보</div>
+    </div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label">서비스 선택</div>
+    </div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label">계정 설정</div>
+    </div>
+    <div class="step-line" id="sl3"></div>
+    <div class="step">
+      <div class="step-circle" id="sc4">4</div>
+      <div class="step-label">완료</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: 회사 정보 -->
+  <div id="step1" class="card">
+    <div class="card-title">🏢 회사 정보</div>
+    <div class="card-sub">배송앱을 사용할 회사 정보를 입력하세요</div>
+    <div id="err1" class="err"></div>
+    <div class="field">
+      <label>회사명 (상호) *</label>
+      <input id="s1-company" placeholder="예: ○○물류, ○○배송">
+    </div>
+    <div class="field">
+      <label>사업자번호 *</label>
+      <div class="biz-check">
+        <input id="s1-biz" placeholder="000-00-00000" maxlength="12" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
+        <button onclick="_checkBiz()">인증</button>
+      </div>
+      <div id="biz-result" style="font-size:11px;margin-top:4px"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>대표자명 *</label>
+        <input id="s1-ceo" placeholder="홍길동">
+      </div>
+      <div class="field">
+        <label>연락처 *</label>
+        <input id="s1-phone" placeholder="010-0000-0000" type="tel">
+      </div>
+    </div>
+    <div class="field">
+      <label>캠프 목록 (쉼표로 구분)</label>
+      <input id="s1-camps" placeholder="예: 부산1,부산2,부산3" value="부산1,부산2,부산3,대구2,진주M">
+    </div>
+    <button class="btn btn-primary" onclick="_step1Next()">다음 →</button>
+  </div>
+
+  <!-- STEP 2: 서비스 선택 -->
+  <div id="step2" class="card" style="display:none">
+    <div class="card-title">📦 서비스 선택</div>
+    <div class="card-sub">필요한 기능을 선택하세요 (중복 선택 가능)</div>
+    <div id="err2" class="err"></div>
+    <div class="plan-grid">
+      <div class="plan-card active" id="svc-emergency" onclick="_toggleSvc('emergency',this)">
+        <div class="icon">🚨</div>
+        <div class="name">긴급배송</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-scan" onclick="_toggleSvc('scan',this)">
+        <div class="icon">📷</div>
+        <div class="name">QR 스캔</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-label" onclick="_toggleSvc('label',this)">
+        <div class="icon">🏷️</div>
+        <div class="name">라벨 출력</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-checkin" onclick="_toggleSvc('checkin',this)">
+        <div class="icon">⏰</div>
+        <div class="name">QR 출퇴근</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card" id="svc-settle" onclick="_toggleSvc('settle',this)">
+        <div class="icon">🤖</div>
+        <div class="name">DONWAY 정산</div>
+        <div class="price">별도 요금</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>업종</label>
+      <select id="s2-industry">
+        <option value="courier">쿠팡 택배</option>
+        <option value="delivery">배달대행</option>
+        <option value="logistics">물류·창고</option>
+        <option value="other">기타</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>기사 인원</label>
+      <select id="s2-headcount">
+        <option value="~10">10명 이하</option>
+        <option value="~30" selected>~30명</option>
+        <option value="~50">~50명</option>
+        <option value="~100">~100명</option>
+        <option value="100+">100명 이상</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="_step2Next()">다음 →</button>
+    <button class="btn btn-outline" onclick="_goStep(1)">← 이전</button>
+  </div>
+
+  <!-- STEP 3: 계정 설정 -->
+  <div id="step3" class="card" style="display:none">
+    <div class="card-title">🔐 계정 설정</div>
+    <div class="card-sub">관리자 로그인 계정을 만드세요</div>
+    <div id="err3" class="err"></div>
+    <div class="field">
+      <label>이메일 (로그인 ID) *</label>
+      <input id="s3-email" type="email" placeholder="company@email.com">
+    </div>
+    <div class="field">
+      <label>비밀번호 * (8자 이상)</label>
+      <input id="s3-pw" type="password" placeholder="비밀번호 입력">
+    </div>
+    <div class="field">
+      <label>비밀번호 확인 *</label>
+      <input id="s3-pw2" type="password" placeholder="비밀번호 재입력">
+    </div>
+    <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text3);line-height:1.6">
+      ✅ 가입 후 관리자 검토(1~2 영업일) 후 서비스가 활성화됩니다<br>
+      ✅ 7일 무료 체험 후 유료 전환 여부를 선택하실 수 있습니다<br>
+      ✅ 승인 시 이메일 + 카카오 알림톡으로 안내됩니다
+    </div>
+    <button class="btn btn-primary" id="s3-btn" onclick="_step3Submit()">✅ 가입 신청 완료</button>
+    <button class="btn btn-outline" onclick="_goStep(2)">← 이전</button>
+  </div>
+
+  <!-- STEP 4: 완료 -->
+  <div id="step4" class="card" style="display:none">
+    <div class="complete">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">가입 신청 완료!</div>
+      <div class="complete-sub">
+        관리자 검토 후 1~2 영업일 내에<br>
+        이메일과 카카오 알림톡으로 승인 안내를 드립니다.<br><br>
+        승인 후 배송앱을 바로 사용하실 수 있습니다.
+      </div>
+      <a href="/mbtico_hub" class="btn btn-primary" style="display:block;text-decoration:none">앱 로그인하기</a>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3)">
+        문의: 051-711-3103 · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--acc)" target="_blank">카카오 채널</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="back-link">
+    이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.firebasestorage.app',
+  messagingSenderId:'40761160761',
+  appId:'1:40761160761:web:20545b610f03f534e949e8'
+});
+var _db=firebase.firestore();
+var _auth=firebase.auth();
+var _curStep=1;
+var _bizVerified=false;
+var _selectedSvcs=['emergency','scan','label','checkin'];
+
+function _goStep(n){
+  for(var i=1;i<=4;i++){
+    var el=document.getElementById('step'+i);
+    if(el) el.style.display=(i===n?'block':'none');
+    var sc=document.getElementById('sc'+i);
+    if(sc){
+      sc.className='step-circle'+(i<n?' done':i===n?' active':'');
+      if(i<n) sc.textContent='✓';
+      else sc.textContent=i;
+    }
+    var sl=document.getElementById('sl'+i);
+    if(sl) sl.className='step-line'+(i<n?' done':'');
+  }
+  _curStep=n;
+  window.scrollTo(0,0);
+}
+
+function _showErr(id,msg){ var el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function _hideErr(id){ document.getElementById(id).style.display='none'; }
+
+async function _checkBiz(){
+  var biz=document.getElementById('s1-biz').value.replace(/-/g,'');
+  var res=document.getElementById('biz-result');
+  if(biz.length!==10){ res.style.color='var(--red)'; res.textContent='❌ 사업자번호 10자리를 입력하세요'; return; }
+  res.style.color='var(--text3)'; res.textContent='확인 중...';
+  try{
+    var r=await fetch('/api/biz-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bizNo:biz})});
+    var d=await r.json();
+    if(d.valid){
+      res.style.color='var(--green)'; res.textContent='✅ 정상 사업자입니다';
+      _bizVerified=true;
+    } else {
+      res.style.color='var(--red)'; res.textContent='❌ '+(d.message||'유효하지 않은 사업자번호입니다');
+      _bizVerified=false;
+    }
+  }catch(e){
+    // API 오류 시 통과
+    res.style.color='var(--text3)'; res.textContent='⚠️ 인증 서버 오류 — 계속 진행합니다';
+    _bizVerified=true;
+  }
+}
+
+function _toggleSvc(svc,el){
+  var forced=['emergency','scan','label','checkin'];
+  if(forced.includes(svc)){ return; } // 필수 항목
+  var idx=_selectedSvcs.indexOf(svc);
+  if(idx>=0){ _selectedSvcs.splice(idx,1); el.classList.remove('active'); }
+  else{ _selectedSvcs.push(svc); el.classList.add('active'); }
+}
+
+function _step1Next(){
+  _hideErr('err1');
+  var co=document.getElementById('s1-company').value.trim();
+  var biz=document.getElementById('s1-biz').value.trim();
+  var ceo=document.getElementById('s1-ceo').value.trim();
+  var phone=document.getElementById('s1-phone').value.trim();
+  if(!co){ _showErr('err1','회사명을 입력하세요'); return; }
+  if(!biz){ _showErr('err1','사업자번호를 입력하세요'); return; }
+  if(!ceo){ _showErr('err1','대표자명을 입력하세요'); return; }
+  if(!phone){ _showErr('err1','연락처를 입력하세요'); return; }
+  _goStep(2);
+}
+
+function _step2Next(){
+  _hideErr('err2');
+  _goStep(3);
+}
+
+async function _step3Submit(){
+  _hideErr('err3');
+  var email=document.getElementById('s3-email').value.trim();
+  var pw=document.getElementById('s3-pw').value;
+  var pw2=document.getElementById('s3-pw2').value;
+  if(!email){ _showErr('err3','이메일을 입력하세요'); return; }
+  if(pw.length<8){ _showErr('err3','비밀번호는 8자 이상이어야 합니다'); return; }
+  if(pw!==pw2){ _showErr('err3','비밀번호가 일치하지 않습니다'); return; }
+
+  var btn=document.getElementById('s3-btn');
+  btn.disabled=true; btn.textContent='처리 중...';
+
+  try{
+    // Firebase Auth 계정 생성
+    var uc=await _auth.createUserWithEmailAndPassword(email,pw);
+    var uid=uc.user.uid;
+
+    var co=document.getElementById('s1-company').value.trim();
+    var biz=document.getElementById('s1-biz').value.replace(/-/g,'');
+    var ceo=document.getElementById('s1-ceo').value.trim();
+    var phone=document.getElementById('s1-phone').value.trim();
+    var camps=document.getElementById('s1-camps').value.split(',').map(function(c){return c.trim();}).filter(Boolean);
+    var industry=document.getElementById('s2-industry').value;
+    var headcount=document.getElementById('s2-headcount').value;
+
+    // companies 문서 생성
+    await _db.collection('companies').doc(uid).set({
+      companyName: co,
+      bizNum: biz,
+      ceoName: ceo,
+      phone: phone,
+      email: email,
+      camps: camps,
+      industryType: industry,
+      headcount: headcount,
+      services: _selectedSvcs,
+      platform: 'mbtico',
+      status: 'pending',
+      plan: 'trial',
+      trialEnd: new Date(Date.now()+7*864e5).toISOString().slice(0,10),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // users 문서 생성
+    await _db.collection('users').doc(uid).set({
+      email: email,
+      dealerId: uid,
+      role: 'owner',
+      platform: 'mbtico',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 사업자번호 블랙리스트 등록
+    await _db.collection('used_biz_numbers').doc(biz).set({
+      email: email, dealerId: uid,
+      registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 슈퍼어드민에게 알림 (Worker API)
+    fetch('/api/approval-request',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:uid,companyName:co,email:email,platform:'mbtico'})
+    }).catch(function(){});
+
+    _goStep(4);
+  }catch(e){
+    btn.disabled=false; btn.textContent='✅ 가입 신청 완료';
+    if(e.code==='auth/email-already-in-use'){
+      _showErr('err3','이미 등록된 이메일입니다. 로그인해주세요.');
+    } else {
+      _showErr('err3','오류: '+e.message);
+    }
+  }
+}
+</script>
+</body>
+</html>
