@@ -845,6 +845,7 @@ export default {
         const ghSlug = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
         const html = await ghSlug.text();
         if (html) {
+          const modified = html.replace(
             '<head>',
             `<head><link rel="manifest" href="/c/${slug}/manifest.json"><meta name="apple-mobile-web-app-title" content="${compName}"><link rel="apple-touch-icon" href="/c/${slug}/icon.svg">`
           );
