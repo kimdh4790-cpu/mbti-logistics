@@ -72,13 +72,13 @@ async function fetchAsset(path, request, env) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const fileName = filePath.replace(/^\//, '');
 
-  // ★ GitHub Raw 직접 서빙 (KV 제거)
-
-  // 폴백: GitHub Raw (캐시 완전 우회)
-  const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
-  const encodedPath = filePath.split('/').map(seg => seg ? encodeURIComponent(seg) : '').join('/');
+  // ★ Pages CDN 서빙 (settle.html), 나머지는 GitHub Raw
+  const PAGES_MAP = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
   const bust = Date.now() + Math.random().toString(36).slice(2);
-  const ghResp = await fetch(GITHUB_RAW + encodedPath + '?bust=' + bust, {
+  const fetchUrl = PAGES_MAP[fileName]
+    ? PAGES_MAP[fileName] + '?bust=' + bust
+    : 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main' + filePath + '?bust=' + bust;
+  const ghResp = await fetch(fetchUrl, {
     cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
     headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
   });
