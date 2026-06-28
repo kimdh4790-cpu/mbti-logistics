@@ -1,4 +1,4 @@
-// DONWAY Worker v20260613185004
+// DONWAY Worker v20260629000000
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ async function serveKVFile(env, fileName, contentType) {
     if (e && e.DONWAY_ASSETS) {
       const val = await e.DONWAY_ASSETS.get(fileName, { type: 'text' });
       if (val) return new Response(val, {
-        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
+        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', ...SECURITY_HEADERS }
       });
     }
     // GitHub Raw 폴백
@@ -115,7 +115,7 @@ async function serveKVFile(env, fileName, contentType) {
     if (resp.ok) {
       const text = await resp.text();
       return new Response(text, {
-        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
+        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, max-age=0', ...SECURITY_HEADERS }
       });
     }
     return new Response(fileName + ' not found', { status: 404 });
