@@ -6837,7 +6837,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(isSkipRow)continue;
         var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백');
         var isEcoRow=divVal.includes('에코백');
-        var isSugi=divVal.includes('수기')&&(divVal.includes('반품')||divVal.includes('회수'));
+        // ★ 수기반영 행: '수기반품'/'수기회수' 외에 '수기반영'(반품건수>0,배송건수=0)도 포함
+        var _dcntRaw=Number(row[rColDcnt])||0;
+        var _rcntRaw=Number(row[rColRcnt])||0;
+        var isSugi=divVal.includes('수기')&&(
+          divVal.includes('반품')||divVal.includes('회수')||
+          (divVal==='수기반영'&&_rcntRaw>0&&_dcntRaw===0)
+        );
         // ★ 명절 프로모션 행 감지
         var isSeolPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('프로모션')&&!divVal.includes('베이스')&&!divVal.includes('일반'));
         var isSeolNormalPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('일반 프로모션'));
