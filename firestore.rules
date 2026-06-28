@@ -344,6 +344,11 @@ service cloud.firestore {
       allow create: if ownsNewDoc() || isSuperAdmin();
       allow update, delete: if ownsDoc() || isSuperAdmin();
     }
+    match /shop_orders/{docId} {
+      allow read: if ownsDoc() || isSuperAdmin();
+      allow create: if ownsNewDoc() || isSuperAdmin();
+      allow update, delete: if ownsDoc() || isSuperAdmin();
+    }
 
     // ─── 업종별 ───
     match /beauty_sales/{docId} {
