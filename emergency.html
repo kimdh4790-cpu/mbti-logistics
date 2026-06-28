@@ -14218,7 +14218,7 @@ async function _checkMisdelivery(savedGps, addrGps){
   if(!savedGps||!addrGps) return null;
   if(!savedGps.lat||!addrGps.lat) return null;
   var dist = gpsDistance(savedGps.lat, savedGps.lng, addrGps.lat, addrGps.lng);
-  if(dist > 500){ // 500m 이상이면 오배송 의심
+  if(dist > 100){ // 100m 이상이면 오배송 의심
     return {dist: Math.round(dist), warn: true};
   }
   return {dist: Math.round(dist), warn: false};
