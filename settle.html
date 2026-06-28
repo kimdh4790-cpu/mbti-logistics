@@ -6807,7 +6807,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         else if(cn.includes('캠프'))rColCamp=c2;
         else if(cn.includes('배송일자')||cn.includes('작업일')||cn.includes('배송일'))rColDate=c2;
         else if(cn.includes('배송건수')||cn.includes('배송(parcel)')||cn.includes('배송수'))rColDcnt=c2;
-        else if(cn.includes('반품'))rColRcnt=c2;
+        else if(cn.includes('반품')&&!cn.includes('단가')&&!cn.includes('금액'))rColRcnt=c2;
         else if(cn.includes('단가')&&!cn.includes('금액')&&!cn.includes('기본')&&!cn.includes('인센'))rColUnit=c2;
         else if((cn.includes('추가')&&cn.includes('인센'))&&!cn.includes('금액'))rColAddInc=c2;
         else if((cn.includes('프레시백')||cn.includes('프레쉬백'))&&(cn.includes('인센')||cn.includes('incentive')))rColFreshInc=c2;
@@ -6837,13 +6837,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(isSkipRow)continue;
         var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백');
         var isEcoRow=divVal.includes('에코백');
-        // ★ 수기반영 행: '수기반품'/'수기회수' 외에 '수기반영'(반품건수>0,배송건수=0)도 포함
-        var _dcntRaw=Number(row[rColDcnt])||0;
-        var _rcntRaw=Number(row[rColRcnt])||0;
-        var isSugi=divVal.includes('수기')&&(
-          divVal.includes('반품')||divVal.includes('회수')||
-          (divVal==='수기반영'&&_rcntRaw>0&&_dcntRaw===0)
-        );
+        var isSugi=divVal.includes('수기')&&(divVal.includes('반품')||divVal.includes('회수'));
         // ★ 명절 프로모션 행 감지
         var isSeolPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('프로모션')&&!divVal.includes('베이스')&&!divVal.includes('일반'));
         var isSeolNormalPromo=(!isFreshRow&&!isEcoRow&&!isSugi&&divVal.includes('일반 프로모션'));
