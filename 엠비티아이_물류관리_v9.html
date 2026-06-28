@@ -10477,6 +10477,16 @@ if(typeof window !== 'undefined' && typeof jsQR !== 'undefined') window.jsQR = j
     </button>
     <a href="https://donway.ai.kr/settle" target="_blank" style="display:block;text-align:center;padding:10px;color:rgba(255,255,255,.4);font-size:12px;text-decoration:none;margin-top:4px">🤖 DONWAY 정산 →</a>
   </div>
+
+<!-- splash-action-select (splashBack 에러 방지) -->
+<div id="splash-action-select" style="display:none;margin-top:20px">
+  <div id="splash-action-title" style="font-size:14px;font-weight:700;color:#fff;text-align:center;margin-bottom:12px"></div>
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:300px;margin:0 auto">
+    <button onclick="doSplashReg()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer">✅ 가입하기</button>
+    <button onclick="splashBack()" style="width:100%;padding:12px;background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:14px;font-size:14px;font-weight:700;cursor:pointer">← 뒤로</button>
+  </div>
+</div>
+
 </div>
 
 <!-- ══ 로그인 ══ -->
