@@ -90,25 +90,19 @@ async function fetchAsset(path, request, env) {
 
 // ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
 async function serveKVFile(env, fileName, contentType) {
-  const e = env || _env_ref;
   try {
-    // KV 먼저 시도
-    if (e && e.DONWAY_ASSETS) {
-      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'text' });
-      if (val) return new Response(val, {
-        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
-      });
-    }
-    // GitHub Raw 폴백
+    // GitHub Raw 직접 서빙 (KV 제거)
     const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
     const encoded = encodeURIComponent(fileName);
-    const resp = await fetch(GITHUB_RAW + '/' + encoded + '?bust=' + Date.now(), {
-      headers: { 'Cache-Control': 'no-cache' }
+    const bust = Date.now() + Math.random().toString(36).slice(2);
+    const resp = await fetch(GITHUB_RAW + '/' + encoded + '?bust=' + bust, {
+      cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
+      headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
     });
     if (resp.ok) {
       const text = await resp.text();
       return new Response(text, {
-        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY_HEADERS }
+        headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'GitHub', ...SECURITY_HEADERS }
       });
     }
     return new Response(fileName + ' not found', { status: 404 });
