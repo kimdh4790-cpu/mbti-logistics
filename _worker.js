@@ -76,11 +76,11 @@ async function fetchAsset(path, request, env) {
   const KV_ONLY = ['settle.html','filo.html'];
   if (e && e.DONWAY_ASSETS && KV_ONLY.includes(fileName)) {
     try {
-      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'text' });
+      const val = await e.DONWAY_ASSETS.get(fileName, { type: 'arrayBuffer' });
       if (val) {
         const ext = fileName.split('.').pop().toLowerCase();
         const types = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json', png:'image/png', jpg:'image/jpeg', pdf:'application/pdf' };
-        return new Response(val, { headers: { 'Content-Type': types[ext]||'text/plain', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'KV', 'X-KV-Size': String(val.length) } });
+        return new Response(val, { headers: { 'Content-Type': types[ext]||'text/plain', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'KV', 'X-KV-Size': String(val.byteLength) } });
       }
     } catch(err) { console.error('KV read error:', err); }
   }
