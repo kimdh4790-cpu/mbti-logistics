@@ -10308,8 +10308,9 @@ function _emerInitLogin() {
 }
 
 function _emerLoadCoName() {
-  var did = new URLSearchParams(location.search).get('did')
-          || localStorage.getItem('mbti_emer_dealerId') || '';
+  var urlDid = new URLSearchParams(location.search).get('did');
+  if(urlDid) localStorage.setItem('mbti_emer_dealerId', urlDid); // URL에 있으면 즉시 저장
+  var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   if(!did) {
     // did 없으면 기본 CAMPS 사용
     return;
@@ -10380,13 +10381,16 @@ function doLogout(){_auth.signOut();}
 function loadApiKeys(){
   var kKey=(localStorage.getItem('mbti_kakao_api_key')||'').trim();
   var gKey=(localStorage.getItem('mbti_google_api_key')||'').trim();
-  if(kKey){window._cachedKakaoApiKey=kKey;document.getElementById('kakao-key-input').value=kKey;}
-  if(gKey){window._googleApiKey=gKey;document.getElementById('google-key-input').value=gKey;}
+  var kInp=document.getElementById('kakao-key-input');
+  var gInp=document.getElementById('google-key-input');
+  if(kKey){window._cachedKakaoApiKey=kKey;if(kInp)kInp.value=kKey;}
+  if(gKey){window._googleApiKey=gKey;if(gInp)gInp.value=gKey;}
   _db.collection('settings').doc('claude_config').get().then(function(snap){
     if(!snap.exists)return;
     var d=snap.data();
-    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;localStorage.setItem('mbti_kakao_api_key',d.kakaoApiKey);document.getElementById('kakao-key-input').value=d.kakaoApiKey;}
-    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;localStorage.setItem('mbti_google_api_key',d.googleApiKey);document.getElementById('google-key-input').value=d.googleApiKey;}
+    if(d.claudeApiKey){window._claudeApiKey=d.claudeApiKey;localStorage.setItem('mbti_claude_api_key',d.claudeApiKey);}
+    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;localStorage.setItem('mbti_kakao_api_key',d.kakaoApiKey);if(kInp)kInp.value=d.kakaoApiKey;}
+    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;localStorage.setItem('mbti_google_api_key',d.googleApiKey);if(gInp)gInp.value=d.googleApiKey;}
   }).catch(function(){});
 }
 function saveKakaoKey(){
