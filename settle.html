@@ -6754,7 +6754,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           || wb.Sheets[sn.find(function(n){return n.replace(/\s/g,'').toLowerCase().includes(keyword.toLowerCase());})]
           || (sn[idx]?wb.Sheets[sn[idx]]:null);
       }
-      var rawSheet   = findSheet('정산Raw',   'raw',   2);
+      var rawSheet   = findSheet('정산Raw',   'raw',   2) || findSheet('정산원천데이터','원천데이터', 3);
       var totalSheet = findSheet('정산총괄',  '총괄',  1);
       var dmgSheet   = findSheet('분실파손List','분실', 3);
       if(!rawSheet){
