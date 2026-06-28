@@ -38389,7 +38389,7 @@ function openIncPanel(){
     var s2=_getIncSetting('__route__',route);
     var camp=_routeCampMap[route]||'기타';
     var col=campSet[camp]||'#64748b';
-    var togKey=_incKey('__route__',route);
+    var togKey=_incNewKey('__route__',route);
     var rateOpts=[10,15,25].map(function(r){
       var on=(s2.rate===r);
       var bg=on?'#2563eb':'#f1f5f9';
