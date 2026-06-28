@@ -5,32 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>배송 — DONWAY</title>
 <style>
-:root{--bg:#f8f7f4;--bg2:#fff;--bg3:#f0efe9;--text:#2C2C2A;--text2:#5F5E5A;--text3:#888780;--border:rgba(0,0,0,.1);--r:10px;--rl:14px;--blue:#185FA5;--blue-l:#E6F1FB;--red:#A32D2D;--red-l:#FCEBEB;--green:#3B6D11;--green-l:#EAF3DE;--teal:#0F6E56;--teal-l:#E1F5EE;--amber:#854F0B;--amber-l:#FAEEDA;--gray:#5F5E5A;--gray-l:#F1EFE8;--gray-m:#D3D1C7;}
+:root{--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--border:rgba(255,255,255,.12);rgba(0,0,0,.1);--r:10px;--rl:14px;--blue:#185FA5;--blue-l:#E6F1FB;--red:#A32D2D;--red-l:#FCEBEB;--green:#3B6D11;--green-l:#EAF3DE;--teal:#0F6E56;--teal-l:#E1F5EE;--amber:#854F0B;--amber-l:#FAEEDA;--gray:#5F5E5A;--gray-l:#F1EFE8;--gray-m:#D3D1C7;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;min-height:100vh}
-.top-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
-.top-logo{font-size:13px;font-weight:800;letter-spacing:1px;color:#185FA5}
-.top-title{font-size:16px;font-weight:700;flex:1}
-.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
-.btn-blue{background:#185FA5;color:#fff;border-color:#185FA5}
-.btn-teal{background:#0F6E56;color:#fff;border-color:#0F6E56}
-.btn-red{background:#A32D2D;color:#fff;border-color:#A32D2D}
+.top-bar{position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.top-logo{font-size:13px;font-weight:800;letter-spacing:1px;color:#60a5fa}
+.top-title{font-size:16px;font-weight:700;flex:1;color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-blue{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.btn-teal{background:#0d9488;color:#fff;border-color:#0d9488}
+.btn-red{background:#dc2626;color:#fff;border-color:#dc2626}
 .main-area{padding:16px;max-width:600px;margin:0 auto}
-.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
 .card-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px}
 .stat-row{display:flex;gap:10px;margin-bottom:12px}
 .stat-box{flex:1;background:var(--bg3);border-radius:8px;padding:10px;text-align:center}
-.stat-num{font-size:24px;font-weight:800;color:#185FA5}
+.stat-num{font-size:24px;font-weight:800;color:#60a5fa}
 .stat-label{font-size:11px;color:var(--text3);margin-top:2px}
 .action-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .action-btns .btn{flex:1;min-width:140px;justify-content:center;padding:14px;font-size:14px}
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.login-box{background:#fff;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-box{background:var(--bg2);border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.3)}
 .login-logo{text-align:center;margin-bottom:20px}
-.login-logo .logo-text{font-size:20px;font-weight:900;color:#185FA5;letter-spacing:2px}
+.login-logo .logo-text{font-size:20px;font-weight:900;color:#60a5fa;letter-spacing:2px}
 .login-logo .sub{font-size:12px;color:var(--text3);margin-top:4px}
-input[type=email],input[type=password],input[type=text],input[type=tel]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:#fff;transition:.15s}
-input:focus{border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+input[type=email],input[type=password],input[type=text],input[type=tel]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;background:var(--bg3);color:var(--text);transition:.15s}
+input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2)}
 .form-group{margin-bottom:12px}
 label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
 /* 토스트 */
@@ -10288,7 +10288,7 @@ function _emerInitLogin() {
     btn.textContent = c;
     btn.setAttribute('data-camp', c);
     var isSel = c === _emerSelCamp;
-    btn.style.cssText = 'flex:1;min-width:60px;padding:10px 4px;background:'+(isSel?'rgba(59,130,246,.2)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#3b82f6':'rgba(255,255,255,.15)')+';border-radius:8px;color:'+(isSel?'#3b82f6':'rgba(255,255,255,.6)')+';font-size:12px;font-weight:700;cursor:pointer';
+    btn.style.cssText = 'flex:1;min-width:60px;padding:10px 4px;background:'+(isSel?'rgba(59,130,246,.3)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#3b82f6':'rgba(255,255,255,.2)')+';border-radius:8px;color:'+(isSel?'#93c5fd':'#e2e8f0')+';font-size:12px;font-weight:700;cursor:pointer';
     btn.onclick = function() {
       _emerSelCamp = this.getAttribute('data-camp');
       _emerInitLogin(); // 리렌더
