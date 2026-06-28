@@ -8454,6 +8454,10 @@ if(window.location.hash==='#join'){
             _CU.payrollPaid=cd.payrollPaid||false;
             _CU.deliveryPaid=cd.deliveryPaid||false;
             _CU.onestopPaid=cd.onestopPaid||false;
+            _CU.shoppingPaid=cd.shoppingPaid||false;
+            _CU.inventoryPaid=cd.inventoryPaid||false;
+            _CU.kioskPaid=cd.kioskPaid||false;
+            _CU.universalPaid=cd.universalPaid||false;
             if(cd.serviceType)_CU.serviceType=cd.serviceType;
             if(!_CU.serviceType||_CU.serviceType==='full'){
               if(cd.deliveryPaid&&!cd.settlePaid&&!cd.qrPaid)_CU.serviceType='delivery';
