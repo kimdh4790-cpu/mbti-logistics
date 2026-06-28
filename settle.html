@@ -7054,14 +7054,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var tHdrIdx=-1;
         for(var th=0;th<Math.min(total.length,10);th++){
           var hr=total[th];
-          if(hr&&(String(hr[3]||'').toLowerCase()==='id'||String(hr[0]||'').toLowerCase()==='no')){tHdrIdx=th;break;}
+          if(hr&&(String(hr[3]||'').toLowerCase()==='id'||String(hr[0]||'').toLowerCase()==='no'
+            ||String(hr[3]||'').toLowerCase().startsWith('id')
+            ||String(hr[0]||'').includes('순번'))){tHdrIdx=th;break;}
         }
         if(tHdrIdx>=0){
           var thRow=total[tHdrIdx];
           var tID=3,tFresh=8,tInc=9,tDmg=10,tTotal=11,tDcnt=4,tRcnt=5;
           for(var tc=0;tc<thRow.length;tc++){
             var tcn=String(thRow[tc]||'').replace(/\s+/g,'');
-            if(tcn==='ID')tID=tc;
+            if(tcn==='ID'||tcn.startsWith('ID')||tcn.startsWith('id'))tID=tc;
             else if(tcn.includes('프레시백')||tcn.includes('프레쉬백'))tFresh=tc;
             else if(tcn.includes('가중요인')||tcn.includes('추가인센'))tInc=tc;
             else if(tcn.includes('분실파손'))tDmg=tc;
