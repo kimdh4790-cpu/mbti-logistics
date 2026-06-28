@@ -146,6 +146,7 @@ tr:hover td{background:var(--bg3)}
         </div>
         <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')"><span class="nav-icon">💆</span>서비스 메뉴</div>
         <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
+        <div class="nav-item" id="nav-pos-upload" onclick="_nav(this,'pos_upload')"><span class="nav-icon">📤</span>POS 매출 업로드</div>
     <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
         <div class="nav-section">연결</div>
         <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
@@ -300,6 +301,7 @@ function _nav(el,page){
   else if(page==='menu') _pageMenu(c);
   else if(page==='customer') _pageCustomer(c);
   else if(page==='stats') _statsPage(c,_getDid(),'mbetco_sales','date','finalPrice','💰 매출');
+  else if(page==='pos_upload') _pagePosUpload(c);
   else if(page==='monthly') _pageMonthly(c);
   else if(page==='payroll') _pagePayroll(c);
   else if(page==='crm') _pageCustomerCRM(c);
@@ -1753,7 +1755,7 @@ var _saCompanyId = '';    // SA가 선택한 회사 ID
 var MODULE_DEF = {
   // kiosk 모듈별 메뉴
   kiosk: {
-    base:    ['nav-input','nav-today','nav-staff','nav-bookings','nav-menu','nav-customer','nav-stats','nav-monthly','nav-link'],
+    base:    ['nav-input','nav-today','nav-staff','nav-bookings','nav-menu','nav-customer','nav-stats','nav-pos-upload','nav-monthly','nav-link'],
     crm:     ['nav-crm'],
     points:  ['nav-points'],
     membership: ['nav-membership'],
@@ -1953,5 +1955,212 @@ function _showModuleStore() {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 </script>
-</body>
-</html>
+<script>
+// ─── POS 매출 엑셀 업로드 ───
+function _pagePosUpload(c) {
+  var did = _getDid();
+  c.innerHTML =
+    '<div style="padding:16px">' +
+    '<h3 style="margin:0 0 4px;font-size:15px">📤 POS 매출 업로드</h3>' +
+    '<p style="margin:0 0 16px;font-size:12px;color:var(--text3)">토스포스·배민·스마트로 등 어떤 POS 엑셀이든 업로드하면 매출로 자동 집계됩니다.</p>' +
+
+    // 업로드 박스
+    '<div id="pos-upload-box" style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;margin-bottom:16px" onclick="document.getElementById(\'pos-file-inp\').click()">' +
+    '<div style="font-size:32px;margin-bottom:8px">📊</div>' +
+    '<div style="font-size:13px;color:var(--text2)">엑셀 파일을 클릭하거나 드래그해서 업로드</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx / .xls / .csv 지원</div>' +
+    '<input type="file" id="pos-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="_posFileLoaded(this)">' +
+    '</div>' +
+
+    // 미리보기 영역
+    '<div id="pos-preview" style="display:none">' +
+    '<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:12px">' +
+    '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📋 컬럼 매핑 설정</div>' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">각 항목에 맞는 컬럼을 선택해주세요</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+    '<div><label style="font-size:11px;color:var(--text3)">📅 날짜</label>' +
+    '<select id="map-date" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">선택</option></select></div>' +
+    '<div><label style="font-size:11px;color:var(--text3)">💰 금액</label>' +
+    '<select id="map-amount" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">선택</option></select></div>' +
+    '<div><label style="font-size:11px;color:var(--text3)">💳 결제수단 (선택)</label>' +
+    '<select id="map-pay" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">없음</option></select></div>' +
+    '<div><label style="font-size:11px;color:var(--text3)">🍽️ 메뉴/품목 (선택)</label>' +
+    '<select id="map-menu" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">없음</option></select></div>' +
+    '</div></div>' +
+
+    // 데이터 미리보기 테이블
+    '<div style="font-size:12px;font-weight:600;margin-bottom:6px">👀 데이터 미리보기 (상위 5행)</div>' +
+    '<div id="pos-table-wrap" style="overflow-x:auto;margin-bottom:12px"></div>' +
+
+    // 저장 버튼
+    '<button onclick="_posSaveData()" style="width:100%;padding:12px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">✅ 매출 데이터 저장</button>' +
+    '<div id="pos-save-result" style="margin-top:8px;font-size:12px;text-align:center"></div>' +
+    '</div>' + // pos-preview
+    '</div>';
+
+  // 드래그앤드롭
+  var box = document.getElementById('pos-upload-box');
+  box.addEventListener('dragover', function(e){ e.preventDefault(); box.style.borderColor='var(--pink)'; });
+  box.addEventListener('dragleave', function(){ box.style.borderColor='var(--border)'; });
+  box.addEventListener('drop', function(e){
+    e.preventDefault();
+    box.style.borderColor='var(--border)';
+    var f = e.dataTransfer.files[0];
+    if(f) _parsePosFile(f);
+  });
+}
+
+window._posRows = [];
+window._posHeaders = [];
+
+function _posFileLoaded(inp) {
+  var f = inp.files[0];
+  if(f) _parsePosFile(f);
+}
+
+function _parsePosFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      if(rows.length < 2) { alert('데이터가 부족합니다.'); return; }
+
+      // 헤더 추출 (빈 헤더 처리)
+      var headers = rows[0].map(function(h,i){ return h ? String(h).trim() : 'col_'+i; });
+      window._posHeaders = headers;
+      window._posRows = rows.slice(1).filter(function(r){ return r.some(function(v){ return v!==''; }); });
+
+      // 셀렉트 옵션 채우기
+      ['map-date','map-amount','map-pay','map-menu'].forEach(function(id) {
+        var sel = document.getElementById(id);
+        var firstOpt = sel.options[0].outerHTML;
+        sel.innerHTML = firstOpt;
+        headers.forEach(function(h,i){
+          var opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = h;
+          sel.appendChild(opt);
+        });
+      });
+
+      // 자동 매핑 (키워드로 추측)
+      var dateKw = ['날짜','일자','date','거래일','결제일','주문일'];
+      var amtKw  = ['금액','매출','결제금액','총금액','amount','price','합계','실매출'];
+      var payKw  = ['결제수단','결제방법','payment','pay','수단'];
+      var menuKw = ['메뉴','품목','상품','item','menu','서비스'];
+      function autoMap(selId, kwList) {
+        var sel = document.getElementById(selId);
+        headers.forEach(function(h,i){
+          if(kwList.some(function(k){ return h.toLowerCase().includes(k.toLowerCase()); })){
+            sel.value = i;
+          }
+        });
+      }
+      autoMap('map-date', dateKw);
+      autoMap('map-amount', amtKw);
+      autoMap('map-pay', payKw);
+      autoMap('map-menu', menuKw);
+
+      // 미리보기 테이블
+      var preview = window._posRows.slice(0,5);
+      var tableHtml = '<table style="width:100%;border-collapse:collapse;font-size:11px">' +
+        '<tr>' + headers.map(function(h){ return '<th style="padding:4px 6px;background:var(--bg3);border:1px solid var(--border);white-space:nowrap">'+h+'</th>'; }).join('') + '</tr>' +
+        preview.map(function(row){
+          return '<tr>' + row.map(function(v){ return '<td style="padding:4px 6px;border:1px solid var(--border);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">'+String(v).slice(0,30)+'</td>'; }).join('') + '</tr>';
+        }).join('') +
+        '</table>';
+      document.getElementById('pos-table-wrap').innerHTML = tableHtml;
+
+      // 미리보기 표시
+      document.getElementById('pos-upload-box').style.display = 'none';
+      document.getElementById('pos-preview').style.display = 'block';
+
+    } catch(err) {
+      alert('파일 파싱 오류: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _posSaveData() {
+  var did = _getDid();
+  var dateIdx = parseInt(document.getElementById('map-date').value);
+  var amtIdx  = parseInt(document.getElementById('map-amount').value);
+  var payIdx  = document.getElementById('map-pay').value;
+  var menuIdx = document.getElementById('map-menu').value;
+
+  if(isNaN(dateIdx) || document.getElementById('map-date').value === '') { alert('날짜 컬럼을 선택해주세요.'); return; }
+  if(isNaN(amtIdx)  || document.getElementById('map-amount').value === '') { alert('금액 컬럼을 선택해주세요.'); return; }
+
+  var rows = window._posRows;
+  var batch = _db.batch();
+  var count = 0;
+  var skipped = 0;
+
+  rows.forEach(function(row) {
+    var rawDate = row[dateIdx];
+    var rawAmt  = row[amtIdx];
+
+    // 날짜 파싱
+    var dateStr = '';
+    if(rawDate instanceof Date) {
+      dateStr = rawDate.toISOString().slice(0,10);
+    } else {
+      var s = String(rawDate).trim().replace(/\./g,'-').replace(/\//g,'-');
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)) dateStr = s.slice(0,10);
+      else if(/^\d{8}$/.test(s.replace(/-/g,''))) {
+        var d = s.replace(/-/g,'');
+        dateStr = d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);
+      }
+    }
+    if(!dateStr) { skipped++; return; }
+
+    // 금액 파싱
+    var amt = parseFloat(String(rawAmt).replace(/,/g,'').replace(/[^0-9.-]/g,''));
+    if(isNaN(amt) || amt <= 0) { skipped++; return; }
+
+    var ym = dateStr.slice(0,7);
+    var payMethod = payIdx !== '' ? String(row[parseInt(payIdx)]||'기타').trim() : 'pos';
+    var menuName  = menuIdx !== '' ? String(row[parseInt(menuIdx)]||'').trim() : '';
+
+    var ref = _db.collection('mbetco_sales').doc();
+    batch.set(ref, {
+      dealerId: did,
+      date: dateStr,
+      ym: ym,
+      finalPrice: amt,
+      payMethod: payMethod,
+      serviceNames: menuName || 'POS 매출',
+      source: 'pos_upload',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    count++;
+
+    if(count % 400 === 0) {
+      batch.commit();
+      batch = _db.batch();
+    }
+  });
+
+  var result = document.getElementById('pos-save-result');
+  result.style.color = 'var(--text3)';
+  result.textContent = '저장 중...';
+
+  batch.commit().then(function() {
+    result.style.color = 'var(--green)';
+    result.textContent = '✅ ' + count + '건 저장 완료! (스킵: ' + skipped + '건)';
+    setTimeout(function(){
+      // 매출통계로 이동
+      var statsNav = document.getElementById('nav-stats');
+      if(statsNav) statsNav.click();
+    }, 1500);
+  }).catch(function(err) {
+    result.style.color = 'red';
+    result.textContent = '❌ 저장 실패: ' + err.message;
+  });
+}
+</script>
