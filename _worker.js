@@ -80,9 +80,9 @@ async function fetchAsset(path, request, env) {
       if (val) {
         const ext = fileName.split('.').pop().toLowerCase();
         const types = { html:'text/html; charset=utf-8', js:'application/javascript', css:'text/css', json:'application/json', png:'image/png', jpg:'image/jpeg', pdf:'application/pdf' };
-        return new Response(val, { headers: { 'Content-Type': types[ext]||'text/plain', 'Cache-Control': 'no-cache' } });
+        return new Response(val, { headers: { 'Content-Type': types[ext]||'text/plain', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'KV', 'X-KV-Size': String(val.length) } });
       }
-    } catch(err) {}
+    } catch(err) { console.error('KV read error:', err); }
   }
 
   // 폴백: GitHub Raw (캐시 완전 우회)
