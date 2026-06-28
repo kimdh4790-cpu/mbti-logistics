@@ -332,6 +332,7 @@ const FB={
 const app=initializeApp(FB);
 const auth=getAuth(app);
 const db=getFirestore(app);
+window.db=db; window.auth=auth;
 
 window.window._all=[]; let _extTarget=null, _trialTarget=null, _pwTarget=null;
 
