@@ -6754,7 +6754,28 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           || wb.Sheets[sn.find(function(n){return n.replace(/\s/g,'').toLowerCase().includes(keyword.toLowerCase());})]
           || (sn[idx]?wb.Sheets[sn[idx]]:null);
       }
-      var rawSheet   = findSheet('정산Raw',   'raw',   2) || findSheet('정산원천데이터','원천데이터', 3);
+      // ★ 정산 Raw 시트 탐지 — 키워드 우선, 인덱스 폴백
+      function findRawSheet(){
+        // 1순위: 정확한 이름
+        if(wb.Sheets['정산Raw']) return wb.Sheets['정산Raw'];
+        if(wb.Sheets['정산원천데이터']) return wb.Sheets['정산원천데이터'];
+        // 2순위: 키워드 포함
+        var n1=sn.find(function(n){return n.replace(/\s/g,'').toLowerCase().includes('raw');});
+        if(n1) return wb.Sheets[n1];
+        var n2=sn.find(function(n){return n.includes('원천데이터');});
+        if(n2) return wb.Sheets[n2];
+        var n3=sn.find(function(n){return n.includes('원천');});
+        if(n3) return wb.Sheets[n3];
+        // 3순위: 가장 행수 많은 시트 (정산 데이터가 제일 많음)
+        var maxRows=0, maxSheet=null;
+        sn.forEach(function(n){
+          var r=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1}).length;
+          if(r>maxRows){maxRows=r;maxSheet=wb.Sheets[n];}
+        });
+        return maxSheet;
+      }
+      var rawSheet = findRawSheet();
+      console.log('[쿠팡파서] 시트목록:', sn, '선택시트:', sn.find(function(n){return wb.Sheets[n]===rawSheet;}));
       var totalSheet = findSheet('정산총괄',  '총괄',  1);
       var dmgSheet   = findSheet('분실파손List','분실', 3);
       if(!rawSheet){
