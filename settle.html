@@ -18007,11 +18007,7 @@ window._uDoParseMulti = function(files, status){
                 _uIdFd[fid]+=tot;
                 fromR.gross=Math.max(0,(fromR.gross||0)-tot);
               });
-              // fromId 차감
-              Object.keys(_uIdFd).forEach(function(fid){
-                var fromR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fid;});
-                if(fromR) fromR._etcMinus=(fromR._etcMinus||0)+_uIdFd[fid];
-              });
+              // fromId 차감 — gross만 차감, 기타-에는 표기 안 함 (건수 차감으로 이미 반영됨)
             }
 
           });
