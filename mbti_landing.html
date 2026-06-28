@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>엠비티아이 배송앱 — 쿠팡 기사 전용 통합 솔루션</title>
+<title>물류배송앱 — 쿠팡·택배 배송기사 전용 통합 솔루션</title>
 <meta name="description" content="긴급배송·QR스캔·라벨출력·출퇴근 관리 — 쿠팡 배송기사 전용 앱">
 <meta name="theme-color" content="#0066ff">
 <style>
@@ -15,254 +15,372 @@
   --red:#ef4444;--purple:#7b2fff;--yellow:#f59e0b;
   --border:rgba(0,102,255,.2)
 }
-html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif;line-height:1.6}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif;overflow:hidden;height:100vh;width:100vw}
 
 /* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,15,30,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,15,30,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
 .nav-logo{font-size:17px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .nav-btns{display:flex;gap:8px}
-.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;border:none;display:inline-block;text-align:center}
+.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;border:none;display:inline-block;text-align:center;transition:.2s}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
 .btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
 .btn-lg{padding:14px 28px;font-size:15px;border-radius:12px}
+.btn-white{background:#fff;color:#0066ff;font-weight:800}
 
-/* HERO */
-.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px 60px;text-align:center;position:relative;overflow:hidden}
-.hero-glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,102,255,.15),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.hero-badge{display:inline-block;padding:5px 14px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:999px;font-size:11px;font-weight:700;color:var(--acc);margin-bottom:20px;letter-spacing:.5px}
-.hero-title{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:16px}
-.hero-title span{background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-sub{font-size:15px;color:var(--text2);max-width:400px;margin:0 auto 32px;line-height:1.8}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.hero-apps{display:flex;gap:12px;justify-content:center;margin-top:48px;flex-wrap:wrap}
-.app-chip{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600}
+/* SLIDES */
+.slides{display:flex;width:100%;height:100vh;overflow-x:scroll;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{min-width:100vw;height:100vh;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 40px;overflow:hidden}
 
-/* FEATURES */
-.section{padding:80px 20px;max-width:900px;margin:0 auto}
-.section-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--acc);margin-bottom:8px}
-.section-title{font-size:26px;font-weight:900;margin-bottom:12px}
-.section-sub{font-size:14px;color:var(--text2);margin-bottom:40px;line-height:1.7}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
-.feature-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;transition:.2s}
-.feature-card:hover{border-color:var(--brand);transform:translateY(-2px)}
-.feature-icon{font-size:32px;margin-bottom:12px}
-.feature-name{font-size:15px;font-weight:800;margin-bottom:6px}
-.feature-desc{font-size:12px;color:var(--text2);line-height:1.6}
+/* 배경 효과 */
+.glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:.6}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,102,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,102,255,.04) 1px,transparent 1px);background-size:40px 40px}
 
-/* HOW IT WORKS */
-.steps{display:flex;flex-direction:column;gap:0}
-.step{display:flex;gap:20px;padding:24px 0;border-bottom:1px solid var(--border);align-items:flex-start}
-.step:last-child{border-bottom:none}
-.step-num{min-width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--acc));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;flex-shrink:0}
-.step-title{font-size:15px;font-weight:800;margin-bottom:4px}
-.step-desc{font-size:13px;color:var(--text2);line-height:1.6}
+/* 점 네비 */
+.dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:.3s;cursor:pointer;border:none;padding:0}
+.dot.active{background:var(--brand);transform:scale(1.5)}
 
-/* PRICING */
-.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
-.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;position:relative}
-.pricing-card.featured{border-color:var(--brand);background:linear-gradient(135deg,rgba(0,102,255,.08),rgba(0,212,255,.05))}
-.pricing-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;font-size:10px;font-weight:700;padding:3px 12px;border-radius:999px;white-space:nowrap}
-.pricing-name{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:8px}
-.pricing-price{font-size:28px;font-weight:900;margin-bottom:4px}
-.pricing-price span{font-size:13px;font-weight:400;color:var(--text2)}
-.pricing-desc{font-size:12px;color:var(--text3);margin-bottom:20px}
-.pricing-features{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
-.pricing-features li{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px}
-.pricing-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+/* 슬라이드 카운터 */
+.counter{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);z-index:100;background:rgba(10,15,30,.7);padding:4px 12px;border-radius:20px}
 
-/* CTA */
-.cta{padding:80px 20px;text-align:center;background:linear-gradient(135deg,rgba(0,102,255,.05),rgba(0,212,255,.03));border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.cta-title{font-size:28px;font-weight:900;margin-bottom:12px}
-.cta-sub{font-size:14px;color:var(--text2);margin-bottom:32px}
+/* 텍스트 */
+.badge{display:inline-block;padding:5px 14px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:999px;font-size:11px;font-weight:700;color:var(--acc);margin-bottom:20px;letter-spacing:.5px}
+.s-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--acc);margin-bottom:8px;text-transform:uppercase}
+.s-title{font-size:32px;font-weight:900;line-height:1.2;margin-bottom:14px;text-align:center}
+.s-title span{background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.s-sub{font-size:14px;color:var(--text2);max-width:420px;text-align:center;line-height:1.8;margin-bottom:28px}
 
-/* FOOTER */
-.footer{padding:32px 20px;text-align:center;font-size:12px;color:var(--text3)}
-.footer a{color:var(--text3);text-decoration:none}
-.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:12px}
+/* 카드 */
+.card-grid{display:grid;gap:12px;width:100%;max-width:560px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.feat-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:18px;transition:.2s}
+.feat-card:hover{border-color:var(--brand);background:rgba(0,102,255,.06)}
+.feat-icon{font-size:28px;margin-bottom:10px}
+.feat-name{font-size:13px;font-weight:800;margin-bottom:6px}
+.feat-desc{font-size:11px;color:var(--text2);line-height:1.6}
+.feat-tag{display:inline-block;margin-top:8px;font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(0,212,255,.1);color:var(--acc);font-weight:700}
 
-/* DIVIDER */
-.divider{width:100%;height:1px;background:var(--border);margin:0}
+/* 스텝 */
+.steps{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px}
+.step-item{display:flex;gap:16px;align-items:flex-start}
+.step-num{min-width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--acc));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.step-body h3{font-size:14px;font-weight:800;margin-bottom:4px}
+.step-body p{font-size:12px;color:var(--text2);line-height:1.6}
 
-/* DONWAY 연동 배너 */
-.donway-banner{background:linear-gradient(135deg,rgba(123,47,255,.1),rgba(0,102,255,.1));border:1px solid rgba(123,47,255,.3);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:40px}
-.donway-banner-text h3{font-size:15px;font-weight:800;margin-bottom:4px}
-.donway-banner-text p{font-size:12px;color:var(--text2)}
+/* 요금 */
+.price-cards{display:flex;gap:16px;width:100%;max-width:560px;flex-wrap:wrap;justify-content:center}
+.price-card{flex:1;min-width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative}
+.price-card.hot{border-color:var(--brand);background:linear-gradient(135deg,rgba(0,102,255,.1),rgba(0,212,255,.05))}
+.price-hot-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;font-size:10px;font-weight:700;padding:3px 14px;border-radius:999px;white-space:nowrap}
+.price-name{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px}
+.price-val{font-size:26px;font-weight:900;margin-bottom:4px}
+.price-val span{font-size:12px;font-weight:400;color:var(--text2)}
+.price-desc{font-size:11px;color:var(--text3);margin-bottom:16px}
+.price-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.price-list li{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.price-list li::before{content:'✓';color:var(--green);font-weight:700}
+
+/* 커스텀 섹션 */
+.custom-box{background:linear-gradient(135deg,rgba(123,47,255,.15),rgba(0,102,255,.1));border:1px solid rgba(123,47,255,.4);border-radius:20px;padding:32px;width:100%;max-width:500px;text-align:center}
+.custom-box h2{font-size:24px;font-weight:900;margin-bottom:12px}
+.custom-box p{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:20px}
+.custom-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px}
+.custom-tag{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:999px;font-size:11px;font-weight:600;color:var(--text2)}
+
+/* CTA 섹션 */
+.cta-box{text-align:center;width:100%;max-width:480px}
+.cta-box h2{font-size:28px;font-weight:900;margin-bottom:12px}
+.cta-box p{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.8}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* 화살표 힌트 */
+.arrow{position:absolute;bottom:24px;right:24px;font-size:11px;color:var(--text3);animation:pulse 2s infinite;display:flex;align-items:center;gap:4px}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* 애니 */
+.anim-1{animation:fadeUp .5s .1s both}
+.anim-2{animation:fadeUp .5s .2s both}
+.anim-3{animation:fadeUp .5s .3s both}
+.anim-4{animation:fadeUp .5s .4s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* 앱 칩 */
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:24px}
+.chip{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600}
+
+/* 푸터 */
+.footer-bar{position:fixed;bottom:0;left:0;right:0;padding:8px 20px;background:rgba(10,15,30,.8);backdrop-filter:blur(8px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3);z-index:100}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo">엠비티아이</div>
+  <div class="nav-logo">물류배송앱</div>
   <div class="nav-btns">
     <a href="/mbtico_hub" class="btn btn-outline">앱 로그인</a>
     <a href="/mbtico-join" class="btn btn-primary">무료 체험</a>
   </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-glow"></div>
-  <div class="hero-badge">🚚 쿠팡·택배 배송기사 전용</div>
-  <h1 class="hero-title">배송의 모든 것을<br><span>하나의 앱</span>으로</h1>
-  <p class="hero-sub">긴급배송 등록부터 QR스캔, 라벨출력, 출퇴근 관리까지<br>현장에서 바로 쓰는 배송기사 전용 통합 솔루션</p>
-  <div class="hero-btns">
-    <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
-    <a href="/mbtico_hub" class="btn btn-outline btn-lg">앱 바로가기</a>
-  </div>
-  <div class="hero-apps">
-    <div class="app-chip">📷 QR 스캔</div>
-    <div class="app-chip">🚨 긴급배송</div>
-    <div class="app-chip">🏷️ 라벨 출력</div>
-    <div class="app-chip">⏰ QR 출퇴근</div>
-    <div class="app-chip">🤖 AI OCR</div>
-  </div>
-</section>
+<!-- 점 네비 -->
+<div class="dots" id="dots"></div>
 
-<div class="divider"></div>
+<!-- 슬라이드 카운터 -->
+<div class="counter" id="counter">1 / 7</div>
 
-<!-- FEATURES -->
-<div style="max-width:900px;margin:0 auto;padding:80px 20px">
-  <div class="section-label">핵심 기능</div>
-  <div class="section-title">현장에서 바로 쓰는<br>5가지 기능</div>
-  <div class="section-sub">스마트폰 하나로 모든 배송 업무를 처리하세요</div>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🚨</div>
-      <div class="feature-name">긴급배송 등록</div>
-      <div class="feature-desc">쿠팡앱 오류 시 대응. 송장 촬영 → AI OCR → 주소+GPS 자동 입력 → 자동 저장</div>
+<!-- 슬라이드 컨테이너 -->
+<div class="slides" id="slides">
+
+  <!-- SLIDE 1: 히어로 -->
+  <div class="slide">
+    <div class="glow" style="width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="grid-bg"></div>
+    <div class="badge anim-1">🚚 쿠팡·택배 배송기사 전용</div>
+    <h1 class="s-title anim-2">배송의 모든 것을<br><span>하나의 앱</span>으로</h1>
+    <p class="s-sub anim-3">긴급배송 등록부터 QR스캔, 라벨출력, 출퇴근 관리까지<br>현장에서 바로 쓰는 배송기사 전용 통합 솔루션</p>
+    <div class="anim-4" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
+      <a href="/mbtico_hub" class="btn btn-outline btn-lg">앱 바로가기</a>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">📷</div>
-      <div class="feature-name">QR / 바코드 스캔</div>
-      <div class="feature-desc">간선차 하차 시 실시간 스캔. 라이브 카메라 또는 갤러리 업로드 지원</div>
+    <div class="chips anim-4">
+      <div class="chip">📷 QR 스캔</div>
+      <div class="chip">🚨 긴급배송</div>
+      <div class="chip">🏷️ 라벨 출력</div>
+      <div class="chip">⏰ QR 출퇴근</div>
+      <div class="chip">🤖 AI OCR</div>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">🏷️</div>
-      <div class="feature-name">라벨 출력</div>
-      <div class="feature-desc">블루투스 프린터 연동. AI 번역 지원. 중국어·영어 송장도 한국어로 변환</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⏰</div>
-      <div class="feature-name">QR 출퇴근</div>
-      <div class="feature-desc">GPS 반경 체크인. 캠프별 출퇴근 기록. 근태 데이터 자동 집계</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🚗</div>
-      <div class="feature-name">사고 접수</div>
-      <div class="feature-desc">현장에서 즉시 사고 접수. 사진 첨부 → 관리자 실시간 알림</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🤖</div>
-      <div class="feature-name">AI OCR</div>
-      <div class="feature-desc">Claude AI 기반 송장 인식. 주소·수령인·운송장번호 자동 추출</div>
-    </div>
+    <div class="arrow">스와이프 →</div>
   </div>
 
-  <!-- DONWAY 연동 -->
-  <div class="donway-banner">
-    <div class="donway-banner-text">
-      <h3>🤖 DONWAY 정산 연동</h3>
-      <p>배송 데이터가 자동으로 정산에 반영됩니다. 별도 입력 없이 클릭 한 번으로 정산 완료.</p>
-    </div>
-    <a href="https://donway.ai.kr" class="btn btn-primary" target="_blank">DONWAY 보기 →</a>
-  </div>
-</div>
-
-<div class="divider"></div>
-
-<!-- HOW IT WORKS -->
-<div style="max-width:900px;margin:0 auto;padding:80px 20px">
-  <div class="section-label">시작하기</div>
-  <div class="section-title">3단계로 시작하세요</div>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div>
-        <div class="step-title">회사 등록</div>
-        <div class="step-desc">사장님이 회사 정보를 등록합니다. 사업자번호 인증 후 7일 무료 체험 시작.</div>
+  <!-- SLIDE 2: 핵심기능 1 (배송) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(239,68,68,.15),transparent 70%);top:30%;right:10%"></div>
+    <div class="s-label">핵심 기능 01</div>
+    <h2 class="s-title">🚨 긴급배송 등록</h2>
+    <p class="s-sub">쿠팡앱 오류 시에도 배송을 멈추지 마세요.<br>송장 촬영 한 번으로 모든 정보가 자동 입력됩니다.</p>
+    <div class="card-grid g2" style="max-width:480px">
+      <div class="feat-card">
+        <div class="feat-icon">📸</div>
+        <div class="feat-name">AI 송장 인식</div>
+        <div class="feat-desc">카메라로 촬영하면 Claude AI가 주소·수령인·운송장번호를 자동 추출합니다</div>
+        <div class="feat-tag">AI OCR</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📍</div>
+        <div class="feat-name">GPS 자동 입력</div>
+        <div class="feat-desc">주소 인식 즉시 GPS 좌표 자동 변환. 카카오맵 연동으로 정확한 위치 저장</div>
+        <div class="feat-tag">GPS 연동</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎥</div>
+        <div class="feat-name">라이브 QR 스캔</div>
+        <div class="feat-desc">카메라를 대면 실시간으로 QR·바코드 인식. 운송장 훼손 시에도 정확하게</div>
+        <div class="feat-tag">실시간</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">☁️</div>
+        <div class="feat-name">자동 저장·동기화</div>
+        <div class="feat-desc">스캔 즉시 클라우드 저장. 60일 기록 보관. 관리자도 실시간 확인 가능</div>
+        <div class="feat-tag">클라우드</div>
       </div>
     </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div>
-        <div class="step-title">기사 가입</div>
-        <div class="step-desc">기사가 회사 코드로 가입합니다. 캠프 선택 후 바로 앱 사용 가능.</div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 3: 핵심기능 2 (스캔·라벨) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(0,212,255,.15),transparent 70%);top:20%;left:10%"></div>
+    <div class="s-label">핵심 기능 02</div>
+    <h2 class="s-title">📷 스캔 · 🏷️ 라벨</h2>
+    <p class="s-sub">간선차 하차부터 라벨 출력까지<br>현장 업무를 스마트하게 처리하세요.</p>
+    <div class="card-grid g3" style="max-width:560px">
+      <div class="feat-card">
+        <div class="feat-icon">📷</div>
+        <div class="feat-name">바코드 스캔</div>
+        <div class="feat-desc">간선차 하차 시 실시간 바코드 스캔. jsQR 내장으로 오프라인도 작동</div>
+        <div class="feat-tag">오프라인 지원</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏷️</div>
+        <div class="feat-name">라벨 출력</div>
+        <div class="feat-desc">블루투스 프린터 연동. 커스텀 라벨 디자인. 대량 출력 지원</div>
+        <div class="feat-tag">BT 프린터</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌐</div>
+        <div class="feat-name">AI 번역</div>
+        <div class="feat-desc">중국어·영어 송장도 한국어로 자동 번역. 해외직구 배송도 문제없음</div>
+        <div class="feat-tag">다국어</div>
       </div>
     </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div>
-        <div class="step-title">현장에서 바로 사용</div>
-        <div class="step-desc">긴급배송 등록, QR 스캔, 라벨 출력 — 현장에서 스마트폰으로 즉시 처리.</div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 4: 핵심기능 3 (출퇴근·사고) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(34,197,94,.12),transparent 70%);bottom:20%;right:10%"></div>
+    <div class="s-label">핵심 기능 03</div>
+    <h2 class="s-title">⏰ 출퇴근 · 🚗 사고접수</h2>
+    <p class="s-sub">기사 근태 관리와 사고 대응을<br>실시간으로 처리하세요.</p>
+    <div class="card-grid g2" style="max-width:480px">
+      <div class="feat-card">
+        <div class="feat-icon">⏰</div>
+        <div class="feat-name">QR 출퇴근</div>
+        <div class="feat-desc">GPS 300m 반경 체크인. 캠프별 출퇴근 기록. 근태 데이터 자동 집계</div>
+        <div class="feat-tag">GPS 반경 인증</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-name">캠프별 현황</div>
+        <div class="feat-desc">주간·야간 출근 현황 실시간 확인. 캠프별 배송 합계 자동 집계</div>
+        <div class="feat-tag">실시간</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🚨</div>
+        <div class="feat-name">사고 즉시 접수</div>
+        <div class="feat-desc">현장에서 즉시 사고 접수. 사진 첨부·유형 선택 후 관리자에게 실시간 알림</div>
+        <div class="feat-tag">즉시 알림</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💰</div>
+        <div class="feat-name">DONWAY 정산 연동</div>
+        <div class="feat-desc">배송 데이터가 자동으로 정산에 반영. 별도 입력 없이 클릭 한 번으로 정산 완료</div>
+        <div class="feat-tag">자동 연동</div>
+      </div>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 5: 100% 맞춤 제작 -->
+  <div class="slide">
+    <div class="glow" style="width:500px;height:500px;background:radial-gradient(circle,rgba(123,47,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="s-label">맞춤 제작</div>
+    <div class="custom-box">
+      <div style="font-size:40px;margin-bottom:12px">🛠️</div>
+      <h2>100% 맞춤 제작 가능</h2>
+      <p>기본 기능 외에도 업체별 특수 요구사항을<br>전부 맞춤 개발해드립니다.<br>어떤 업종이든, 어떤 기능이든 구현 가능합니다.</p>
+      <div class="custom-tags">
+        <div class="custom-tag">🏭 업종별 커스텀</div>
+        <div class="custom-tag">📱 전용 앱 UI</div>
+        <div class="custom-tag">🔗 외부 시스템 연동</div>
+        <div class="custom-tag">📊 맞춤 통계/리포트</div>
+        <div class="custom-tag">🖨️ 프린터 연동</div>
+        <div class="custom-tag">💳 결제 시스템</div>
+        <div class="custom-tag">🗺️ 지도 연동</div>
+        <div class="custom-tag">🤖 AI 자동화</div>
+        <div class="custom-tag">📦 재고 관리</div>
+        <div class="custom-tag">👥 다중 캠프 관리</div>
+      </div>
+      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-primary btn-lg" style="display:inline-block">💬 맞춤 제작 문의</a>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 6: 시작하기 -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(0,102,255,.15),transparent 70%);top:30%;left:20%"></div>
+    <div class="s-label">시작하기</div>
+    <h2 class="s-title">3단계로 <span>바로 시작</span></h2>
+    <p class="s-sub">복잡한 설치 없이 스마트폰으로 즉시 사용</p>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>회사 등록 (사장님)</h3>
+          <p>회사 정보 입력 → 사업자번호 인증 → 7일 무료 체험 시작. 승인 후 dealerId 발급.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>기사 가입</h3>
+          <p>회사 코드 입력 → 캠프 선택 → 이름 입력 → 바로 앱 사용. 앱 설치 불필요.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>현장에서 즉시 사용</h3>
+          <p>긴급배송 등록, QR 스캔, 라벨 출력 — 스마트폰 하나로 모든 배송 업무 처리.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px">
+      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 지금 시작하기</a>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 7: CTA -->
+  <div class="slide">
+    <div class="glow" style="width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="cta-box">
+      <div style="font-size:48px;margin-bottom:16px">🚚</div>
+      <h2 class="s-title">지금 바로 <span>무료 체험</span></h2>
+      <p class="s-sub" style="margin:0 auto 28px">7일 무료 · 신용카드 불필요 · 언제든 해지<br>승인 후 즉시 모든 기능 사용 가능</p>
+      <div class="cta-btns">
+        <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험 시작</a>
+        <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-outline btn-lg">💬 카카오 문의</a>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--text3)">
+        <span>📞 051-711-3103</span>
+        <span>🕐 평일 09:00~18:00</span>
+        <span>📧 kimdh4790@gmail.com</span>
+      </div>
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.8">
+        엠비티아이 유한회사 · 부산광역시 수영구 수영로 668, 607호<br>
+        사업자번호 373-86-02536 · 대표 김형우<br>
+        <a href="https://donway.ai.kr" style="color:var(--acc);text-decoration:none">🤖 DONWAY 정산 연동</a>
       </div>
     </div>
   </div>
+
 </div>
 
-<div class="divider"></div>
-
-<!-- PRICING -->
-<div style="max-width:900px;margin:0 auto;padding:80px 20px">
-  <div class="section-label">요금제</div>
-  <div class="section-title">합리적인 가격</div>
-  <div class="section-sub">VAT 별도 · 7일 무료 체험 후 결제</div>
-  <div class="pricing-grid">
-    <div class="pricing-card">
-      <div class="pricing-name">배송앱 기본</div>
-      <div class="pricing-price">문의<span>/월</span></div>
-      <div class="pricing-desc">소규모 캠프 (기사 ~30명)</div>
-      <ul class="pricing-features">
-        <li>긴급배송 등록</li>
-        <li>QR/바코드 스캔</li>
-        <li>라벨 출력</li>
-        <li>QR 출퇴근</li>
-        <li>사고 접수</li>
-      </ul>
-      <a href="/mbtico-join" class="btn btn-outline" style="width:100%;display:block">7일 무료 체험</a>
-    </div>
-    <div class="pricing-card featured">
-      <div class="pricing-badge">추천</div>
-      <div class="pricing-name">배송앱 + DONWAY 정산</div>
-      <div class="pricing-price">문의<span>/월</span></div>
-      <div class="pricing-desc">배송 + 정산 통합 패키지</div>
-      <ul class="pricing-features">
-        <li>배송앱 기본 기능 전체</li>
-        <li>DONWAY 정산 자동화</li>
-        <li>AI OCR 정산 엑셀 파싱</li>
-        <li>카카오 알림톡 명세서</li>
-        <li>세무사 연동</li>
-      </ul>
-      <a href="https://donway.ai.kr/join" class="btn btn-primary" style="width:100%;display:block">패키지 신청</a>
-    </div>
-  </div>
+<!-- 하단바 -->
+<div class="footer-bar">
+  <span>물류배송앱 · 엠비티아이</span>
+  <span>📞 051-711-3103</span>
 </div>
 
-<!-- CTA -->
-<div class="cta">
-  <div class="cta-title">지금 바로 시작하세요</div>
-  <div class="cta-sub">7일 무료 체험 · 신용카드 불필요 · 언제든 해지 가능</div>
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 무료 체험 시작</a>
-    <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-outline btn-lg">💬 카카오로 문의</a>
-  </div>
-  <div style="margin-top:20px;font-size:12px;color:var(--text3)">
-    📞 051-711-3103 &nbsp;|&nbsp; 평일 09:00~18:00
-  </div>
-</div>
+<script>
+var slides=document.getElementById('slides');
+var dotsEl=document.getElementById('dots');
+var counterEl=document.getElementById('counter');
+var total=document.querySelectorAll('.slide').length;
 
-<!-- FOOTER -->
-<footer class="footer">
-  <div class="footer-links">
-    <a href="/mbtico_hub">앱 로그인</a>
-    <a href="/mbtico-join">회사 등록</a>
-    <a href="https://donway.ai.kr">DONWAY 정산</a>
-    <a href="https://pf.kakao.com/_xkuxabX/chat">카카오 문의</a>
-  </div>
-  <div>엠비티아이 유한회사 · 부산광역시 수영구 수영로 668, 607호</div>
-  <div style="margin-top:4px">사업자번호 373-86-02536 · 대표 김형우 · 051-711-3103</div>
-  <div style="margin-top:8px;color:#334155">© 2026 엠비티아이. All rights reserved.</div>
-</footer>
+// 점 생성
+for(var i=0;i<total;i++){
+  var d=document.createElement('button');
+  d.className='dot'+(i===0?' active':'');
+  d.setAttribute('data-i',i);
+  d.onclick=(function(idx){return function(){scrollToSlide(idx);};})(i);
+  dotsEl.appendChild(d);
+}
 
+function scrollToSlide(i){
+  slides.scrollTo({left:i*window.innerWidth,behavior:'smooth'});
+}
+
+function updateDots(){
+  var idx=Math.round(slides.scrollLeft/window.innerWidth);
+  document.querySelectorAll('.dot').forEach(function(d,i){
+    d.className='dot'+(i===idx?' active':'');
+  });
+  counterEl.textContent=(idx+1)+' / '+total;
+}
+
+slides.addEventListener('scroll',updateDots);
+
+// 키보드
+document.addEventListener('keydown',function(e){
+  var idx=Math.round(slides.scrollLeft/window.innerWidth);
+  if(e.key==='ArrowRight'&&idx<total-1) scrollToSlide(idx+1);
+  if(e.key==='ArrowLeft'&&idx>0) scrollToSlide(idx-1);
+});
+</script>
 </body>
 </html>
