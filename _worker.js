@@ -534,8 +534,8 @@ export default {
       // /join → settle.html 서빙 + register 탭 자동 활성화
       if (path === '/join') {
         try {
-          const html = await env.DONWAY_ASSETS.get('settle.html');
-          if (html) {
+          const ghJoin = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
+          const html = await ghJoin.text();
             const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
             const lastBody = html.lastIndexOf('</body>');
             const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
@@ -841,9 +841,9 @@ export default {
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const html = await env.DONWAY_ASSETS.get('settle.html');
+        const ghSlug = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
+        const html = await ghSlug.text();
         if (html) {
-          const modified = html.replace(
             '<head>',
             `<head><link rel="manifest" href="/c/${slug}/manifest.json"><meta name="apple-mobile-web-app-title" content="${compName}"><link rel="apple-touch-icon" href="/c/${slug}/icon.svg">`
           );
