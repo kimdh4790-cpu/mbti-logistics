@@ -13821,7 +13821,6 @@ async function emerSave(){
             if(_pu) await _db.collection('emergency_deliveries').doc(_did).update({photos:[_pu]});
           }catch(e){ console.debug('[BG사진]',e.message); }
         })();
-      }
       docId = docRef.id;
       record._fbId = docId;
 
@@ -13836,7 +13835,6 @@ async function emerSave(){
             }).catch(function(){});
           }
         });
-      }
       // 로컬 마지막 항목에도 fbId 기록
       try{
         var el2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
@@ -13861,11 +13859,11 @@ async function emerSave(){
     }catch(e){
       console.error('긴급배송 Firebase 저장 실패:', e);
       window._emerSaving = false;
-      var saveBtn2=document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
+      var saveBtn2=document.querySelector('[data-action=emerSave]');
       if(saveBtn2){saveBtn2.disabled=false;saveBtn2.textContent='🗺️ 지도에 배송핀 생성 + 저장';}
       toast('⚠️ Firebase 저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨');
     }
-  }
+  } // end if(FB&&_db)
 
   // ★ v9.25: 로컬 저장 — docId 포함하여 재저장 (위에서 _fbId 업데이트됐으므로)
   try{
