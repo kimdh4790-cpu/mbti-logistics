@@ -6775,7 +6775,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         return maxSheet;
       }
       var rawSheet = findRawSheet();
-      console.log('[쿠팡파서] 시트목록:', sn, '선택시트:', sn.find(function(n){return wb.Sheets[n]===rawSheet;}));
       var totalSheet = findSheet('정산총괄',  '총괄',  1);
       var dmgSheet   = findSheet('분실파손List','분실', 3);
       if(!rawSheet){
@@ -6794,8 +6793,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(raw[h]&&(String(raw[h][0]||'').includes('구분')||String(raw[h][1]||'').toLowerCase()==='id')){rawHdrIdx=h;break;}
       }
       var rh=raw[rawHdrIdx]||[];
-      console.log('[쿠팡파서] 헤더:', JSON.stringify(rh));
-      console.log('[쿠팡파서] 헤더 정규화:', rh.map(function(c){return String(c||'').replace(/\s+/g,'');}));
       var rColDiv=0,rColID=1,rColRoute=2,rColDate=3,rColCamp=4,
           rColDcnt=7,rColRcnt=8,rColUnit=9,rColAddInc=10,
           rColFresh=14,    // 프레시백 회수금액
