@@ -527,8 +527,8 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
-    // /api/* → 기존 mbti-logistics Worker로 프록시
-    if (path.startsWith('/api/')) {
+    // /api/*, /stmt → 기존 mbti-logistics Worker로 프록시
+    if (path.startsWith('/api/') || path.startsWith('/stmt')) {
       const proxyUrl = 'https://mbti-logistics.kimdh4790.workers.dev' + url.pathname + url.search;
       const proxyReq = new Request(proxyUrl, {
         method: request.method,
