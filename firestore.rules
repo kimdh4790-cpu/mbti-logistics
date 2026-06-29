@@ -90,9 +90,7 @@ service cloud.firestore {
       );
     }
     match /subscriptions/{uid} {
-      allow read: if isAuth() && (
-        request.auth.uid == uid || isDealer(uid) || isSuperAdmin()
-      );
+      allow read: if isAuth();
       allow write: if isSuperAdmin();
     }
     match /payments/{docId} {
