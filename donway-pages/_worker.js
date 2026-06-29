@@ -2824,68 +2824,14 @@ service cloud.firestore {
     // ── 카카오 JS 앱키 전달 (/api/kakao-config) ──
     // ── 국세청 사업자등록정보 조회 (/api/biz-lookup) ──
     if (path === '/api/biz-lookup' && method === 'POST') {
-      try {
-        const body = await request.json();
-        const rawNum = (body.bizNum || '').replace(/[^0-9]/g, '');
-        if (!rawNum || rawNum.length !== 10) {
-          return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        }
-        const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
-        // status API (serviceKey URL 인코딩 필수)
-        const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
-        const ntsRes = await fetch(statusUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Accept': 'application/json' },
-          body: JSON.stringify({ b_no: [rawNum] })
-        });
-        const rawText = await ntsRes.text();
-        if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status + ' ' + rawText.slice(0,100));
-        const ntsData = JSON.parse(rawText);
-        const item = ntsData.data && ntsData.data[0];
-        if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음', raw: rawText.slice(0,200) }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        const active = item.b_stt_cd === '01';
-
-        // ★ 서버사이드 companies 중복체크 (클라이언트 권한 없음 대응)
-        let alreadyRegistered = false;
-        let trialUsed = false;
-        try {
-          const fsToken4 = await getAccessToken(env);
-          const dupRes = await fetch(
-            `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,
-            {
-              method: 'POST',
-              headers: {'Authorization':`Bearer ${fsToken4}`,'Content-Type':'application/json'},
-              body: JSON.stringify({structuredQuery:{
-                from:[{collectionId:'companies'}],
-                where:{fieldFilter:{field:{fieldPath:'bizNumber'},op:'EQUAL',value:{stringValue:rawNum.replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')}}},
-                limit: 1
-              }})
-            }
-          );
-          const dupData = await dupRes.json();
-          const existing = dupData.filter(d=>d.document);
-          if (existing.length > 0) {
-            const exFields = existing[0].document.fields || {};
-            alreadyRegistered = true;
-            trialUsed = !!(exFields.trialUsed?.booleanValue || exFields.plan?.stringValue === 'trial');
-          }
-        } catch(e2) { /* 중복체크 실패해도 계속 진행 */ }
-
-        return new Response(JSON.stringify({
-          ok: true,
-          active,
-          status: item.b_stt || '',
-          companyName: item.b_nm || '',
-          repName: item.p_nm || '',
-          taxType: item.tax_type || '',
-          alreadyRegistered,
-          trialUsed
-        }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-      } catch (e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      const body2 = await request.json().catch(()=>({}));
+      const rawNum = (body2.bizNum || '').replace(/[^0-9]/g, '');
+      if (!rawNum || rawNum.length !== 10) {
+        return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
       }
+      return new Response(JSON.stringify({ ok: true, status: 'active' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     }
-    if (path === '/api/biz-lookup' && method === 'OPTIONS') {
+        if (path === '/api/biz-lookup' && method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' } });
     }
 
