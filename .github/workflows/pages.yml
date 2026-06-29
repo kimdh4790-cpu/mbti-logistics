@@ -12,15 +12,9 @@ jobs:
 
       - name: donway-pages 파일 동기화
         run: |
-          cp settle.html donway-pages/index.html
-          cp donway_landing.html donway-pages/donway_landing.html
+          cp donway_landing.html donway-pages/index.html
+          cp settle.html donway-pages/settle.html
           cp -f join.html donway-pages/join.html 2>/dev/null || true
-          cp -f company-register.html donway-pages/company-register.html 2>/dev/null || true
-          cp -f admin.html donway-pages/admin.html 2>/dev/null || true
-          cp -f admin_sub.html donway-pages/admin_sub.html 2>/dev/null || true
-          cp -f portal.html donway-pages/portal.html 2>/dev/null || true
-          cp -f notice.html donway-pages/notice.html 2>/dev/null || true
-          cp -f register.html donway-pages/register.html 2>/dev/null || true
           cp -f manifest.json donway-pages/manifest.json 2>/dev/null || true
           cp -f favicon.ico donway-pages/favicon.ico 2>/dev/null || true
           cp -f icon-192.png donway-pages/icon-192.png 2>/dev/null || true
