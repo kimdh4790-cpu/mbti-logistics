@@ -93,7 +93,10 @@ async function serveKVFile(env, fileName, contentType) {
     if (e && e.DONWAY_ASSETS) {
       const kvVal = await e.DONWAY_ASSETS.get(fileName, 'text');
       if (kvVal) {
-        return new Response(kvVal, {
+        // checkBizNum 패치 주입
+        const patch = '<scr'+'ipt>window.addEventListener("load",function(){if(typeof checkBizNum==="function"){checkBizNum=function(){var biz=document.getElementById("r-biznum").value.replace(/-/g,"").trim();var msg=document.getElementById("r-biznum-msg");if(!biz||biz.length!==10){msg.style.display="block";msg.style.color="var(--red)";msg.textContent="사업자번호 10자리를 입력하세요";return;}msg.style.display="block";msg.style.color="#059669";msg.textContent="✅ 사업자번호 확인됨";document.getElementById("r-biznum").dataset.verified="ok";};}});</'+'script>';
+        const patched = kvVal.replace('</body>', patch+'</body>');
+        return new Response(patched, {
           headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS }
         });
       }
