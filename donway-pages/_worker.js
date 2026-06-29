@@ -70,7 +70,7 @@ async function fetchAsset(path, request, env) {
   const fileName = filePath.replace(/^\//, '');
 
   // ★ Pages CDN 서빙 (settle.html), 나머지는 GitHub Raw
-  const PAGES_MAP = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
+  const PAGES_MAP = {};
   const bust = Date.now() + Math.random().toString(36).slice(2);
   const fetchUrl = PAGES_MAP[fileName]
     ? PAGES_MAP[fileName] + '?bust=' + bust
@@ -89,7 +89,7 @@ async function fetchAsset(path, request, env) {
 async function serveKVFile(env, fileName, contentType) {
   try {
     // Pages CDN 서빙 (settle.html/filo.html), 나머지는 GitHub Raw
-    const PAGES_FILES = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
+    const PAGES_FILES = {};
     const bust = Date.now() + Math.random().toString(36).slice(2);
     const fileUrl = PAGES_FILES[fileName]
       ? PAGES_FILES[fileName] + '?bust=' + bust
