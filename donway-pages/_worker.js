@@ -527,6 +527,17 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // /api/* → 기존 mbti-logistics Worker로 프록시
+    if (path.startsWith('/api/')) {
+      const proxyUrl = 'https://mbti-logistics.kimdh4790.workers.dev' + url.pathname + url.search;
+      const proxyReq = new Request(proxyUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body
+      });
+      return fetch(proxyReq);
+    }
+
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
