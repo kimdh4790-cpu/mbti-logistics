@@ -855,6 +855,9 @@ export default {
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      // /api/* → donway 블록에서 처리하지 않고 하단 API 핸들러로 fall-through
+      if (path.startsWith('/api/')) { /* fall-through */ }
+      else { return serveKVFile(env, 'settle.html', 'text/html'); }
     }
 
     // ★ filo.ai.kr 라우팅
