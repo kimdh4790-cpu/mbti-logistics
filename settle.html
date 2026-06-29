@@ -32740,7 +32740,7 @@ window._biParse=function(rows){
 
   // ★ 헤더 감지 - 세금계산서 형식 (성명/주민번호/사업자번호 컬럼)
   // 첫 5행 중 헤더 행 탐색
-  var colMap={name:-1,ssn:-1,bizNum:-1,bizName:-1,joinDate:-1};
+  var colMap={name:-1,ssn:-1,bizNum:-1,bizName:-1,joinDate:-1,userId:-1,camp:-1,phone:-1,bankNum:-1};
   var headerRowIdx=0;
   for(var _hi=0;_hi<Math.min(5,rows.length);_hi++){
     var _hr=rows[_hi]||[];
@@ -32752,8 +32752,12 @@ window._biParse=function(rows){
       else if(s.indexOf('사업자')>=0) _tmp.bizNum=i;
       else if(s.indexOf('상호')>=0) _tmp.bizName=i;
       else if(s.indexOf('입사')>=0) _tmp.joinDate=i;
+      else if(s==='아이디'||s==='ID') _tmp.userId=i;
+      else if(s.indexOf('캠프')>=0||s==='열1') _tmp.camp=i;
+      else if(s.indexOf('휴대')>=0||s.indexOf('전화')>=0) _tmp.phone=i;
+      else if(s.indexOf('통장')>=0||s.indexOf('계좌')>=0) _tmp.bankNum=i;
     });
-    if(_tmp.name>=0&&(_tmp.ssn>=0||_tmp.bizNum>=0)){
+    if(_tmp.name>=0&&(_tmp.ssn>=0||_tmp.bizNum>=0||_tmp.userId>=0)){
       colMap=_tmp; headerRowIdx=_hi; break;
     }
   }
@@ -32787,10 +32791,14 @@ window._biParse=function(rows){
       var key=name+(bizNum||ssn);
       if(seen[key]) return;
       seen[key]=true;
-      list.push({name:name,userId:'',camp:'',phone:'',email:'',
+      var userId2=colMap.userId>=0?cells[colMap.userId]:'';
+      var camp2=colMap.camp>=0?cells[colMap.camp]:'';
+      var phone2=colMap.phone>=0?cells[colMap.phone].replace(/[^0-9]/g,''):'';
+      var bankNum2=colMap.bankNum>=0?cells[colMap.bankNum].replace(/[^0-9]/g,''):'';
+      list.push({name:name,userId:userId2,camp:camp2,phone:phone2,email:'',
         ssn:ssn,bizNum:bizNum,bizName:bizName,joinDate:joinDate,
         insType:bizNum?'contractor':'freelancer',
-        isBiz:!!bizNum,bankName:'',bankNum:'',carNum:''});
+        isBiz:!!bizNum,bankName:'',bankNum:bankNum2,carNum:''});
       return;
     }
     // 기존 형식 파싱 계속
@@ -36710,6 +36718,7 @@ function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
   // 라우트별 실적 rows
   var routeRows='';
   var totalDcnt=0,totalRcnt=0,totalAmt=0;
+  routes.sort(function(a,b){return (a.route||'').localeCompare(b.route||'');});
   routes.forEach(function(rd){
     var price=rd.unitPrice||RPRICE[rd.route]||0;
     var dAmt=(rd.cnt||0)*price;
