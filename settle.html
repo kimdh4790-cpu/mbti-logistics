@@ -38597,8 +38597,7 @@ function _promoImportFromExcel(file){
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
       if(rate>0){
-        var btn=document.querySelector('.inc-rate-btn[data-k=+k+][data-rate=+rate+]');
-        if(btn){btn.click();cnt++;}
+        var btn=document.querySelector('..inc-rate-btn[data-k="'+k+'"][data-rate="'+rate+'"]n.click();cnt++;}
       }
     });
     toast('✅ 가중요인 적용 '+cnt+'건');
