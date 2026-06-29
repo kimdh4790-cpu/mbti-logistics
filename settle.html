@@ -16082,13 +16082,13 @@ window._uExtractIds = function(input){
 
       // 양식 엑셀 생성 — ID+캠프 자동입력, 이름만 입력하면 됨
       var outWb=XLSX.utils.book_new();
-      var outData=[['ID (수정금지)','캠프 (자동입력)','이름만 입력하세요 ★','계약유형 (비사업자/사업자)']];
+      var outData=[['ID (수정금지)','캠프 (자동입력)','이름 ★','연락처 (알림톡용)','계약유형 (비사업자/사업자)','사업자번호 (사업자만)','주민번호 (비사업자만)','상호명 (사업자만)','입사일']];
       ids.forEach(function(id){
         var info=allIds[id]||{};
-        outData.push([id, info.camp||'', '', '비사업자']);
+        outData.push([id, info.camp||'', '', '', '비사업자', '', '', '', '']);
       });
       var ws2=XLSX.utils.aoa_to_sheet(outData);
-      ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:20}];
+      ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:18},{wch:16},{wch:16},{wch:15},{wch:12}];
       XLSX.utils.book_append_sheet(outWb,ws2,'직원등록양식');
 
       // 다운로드
@@ -16115,31 +16115,58 @@ window._uBulkFromTemplate = function(input, did){
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
 
-      // 헤더 찾기
+      // ★ 헤더 자동인식 (엑셀/csv/txt 포괄 인식)
       var hdr=rows[0].map(function(h){return String(h).trim();});
-      var idCol=0, campCol=1, nameCol=2, typeCol=3;
+      var idCol=-1,campCol=-1,nameCol=-1,typeCol=-1,phoneCol=-1,bizNoCol=-1,ssnCol=-1,bizNameCol=-1,joinDateCol=-1;
       hdr.forEach(function(h,i){
-        var hl=h.toLowerCase();
-        if(hl.includes('id')||hl.includes('수정금지'))idCol=i;
-        else if(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력'))campCol=i;
-        else if(hl.includes('이름')||hl.includes('성명')||hl.includes('입력'))nameCol=i;
-        else if(hl.includes('계약')||hl.includes('유형'))typeCol=i;
+        var hl=h.toLowerCase().replace(/\s/g,'');
+        // ID
+        if(idCol<0&&(hl.includes('id')||hl.includes('사번')||hl.includes('아이디')||hl.includes('수정금지')||hl.includes('코드')||hl.includes('직원코드')))idCol=i;
+        // 캠프
+        else if(campCol<0&&(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력')||hl.includes('소속')||hl.includes('부서')))campCol=i;
+        // 이름
+        else if(nameCol<0&&(hl.includes('이름')||hl.includes('성명')||hl.includes('입력')||hl.includes('name')||hl.includes('기사명')||hl.includes('직원명')))nameCol=i;
+        // 계약유형
+        else if(typeCol<0&&(hl.includes('계약')||hl.includes('유형')||hl.includes('구분')))typeCol=i;
+        // 연락처 ★ 알림톡용
+        if(phoneCol<0&&(hl.includes('연락처')||hl.includes('전화')||hl.includes('휴대폰')||hl.includes('핸드폰')||hl.includes('phone')||hl.includes('mobile')||hl.includes('번호')))phoneCol=i;
+        // 사업자번호 ★ 세무사 연동용
+        if(bizNoCol<0&&(hl.includes('사업자번호')||hl.includes('사업자등록')||hl.includes('bizno')||hl.includes('biz_no')))bizNoCol=i;
+        // 주민번호 ★ 세무사 연동용
+        if(ssnCol<0&&(hl.includes('주민번호')||hl.includes('주민등록')||hl.includes('ssn')||hl.includes('jumin')))ssnCol=i;
+        // 상호명 ★ 세무사 연동용
+        if(bizNameCol<0&&(hl.includes('상호')||hl.includes('업체명')||hl.includes('회사명')||hl.includes('상호명')))bizNameCol=i;
+        // 입사일
+        if(joinDateCol<0&&(hl.includes('입사')||hl.includes('입사일')||hl.includes('joindate')||hl.includes('시작일')))joinDateCol=i;
       });
+      // ID/이름 못찾으면 0,2번 컬럼 기본값
+      if(idCol<0)idCol=0;
+      if(nameCol<0)nameCol=2;
+      if(campCol<0)campCol=1;
 
       var valid=[];
       rows.slice(1).forEach(function(row){
         var empId=String(row[idCol]||'').trim();
         var name=String(row[nameCol]||'').trim();
-        var camp=String(row[campCol]||'').trim();
-        var ctypeRaw=String(row[typeCol]||'비사업자').trim();
+        var camp=campCol>=0?String(row[campCol]||'').trim():'';
+        var ctypeRaw=typeCol>=0?String(row[typeCol]||'비사업자').trim():'비사업자';
+        var phone=phoneCol>=0?String(row[phoneCol]||'').trim().replace(/[^0-9]/g,''):'';
+        var bizNo=bizNoCol>=0?String(row[bizNoCol]||'').trim().replace(/[^0-9]/g,''):'';
+        var ssn=ssnCol>=0?String(row[ssnCol]||'').trim().replace(/[^0-9]/g,''):'';
+        var bizName=bizNameCol>=0?String(row[bizNameCol]||'').trim():'';
+        var joinDate=joinDateCol>=0?String(row[joinDateCol]||'').trim():'';
         // 계약유형 정규화
         var ctype='비사업자';
-        if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat포함')||ctypeRaw==='사업자') ctype='사업자_VAT포함';
-        else if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat별도')) ctype='사업자_VAT포함';
-        else if(ctypeRaw.includes('사업자')) ctype='사업자_VAT포함';
+        if(ctypeRaw.includes('사업자'))ctype='사업자_VAT포함';
         if(!name||!empId)return;
-        if(name==='이름 *'||empId==='ID (수정금지)')return;
-        valid.push({dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()});
+        if(name==='이름 *'||empId==='ID (수정금지)'||name.includes('입력하세요'))return;
+        var emp={dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()};
+        if(phone)emp.phone=phone;
+        if(bizNo)emp.bizNo=bizNo;
+        if(ssn)emp.ssn=ssn;
+        if(bizName)emp.bizName=bizName;
+        if(joinDate)emp.joinDate=joinDate;
+        valid.push(emp);
       });
 
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
