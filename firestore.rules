@@ -133,8 +133,8 @@ service cloud.firestore {
     // ── ownsDoc/ownsNewDoc 기반 표준 컬렉션 ──
     match /plan_guards/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /plan_guard_alerts/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /settlements/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /drivers/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /settlements/{docId}             { allow read: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /drivers/{docId}                 { allow read: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /members/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /attendance/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaves/{docId}                  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -186,7 +186,7 @@ service cloud.firestore {
     match /universal_employees/{docId}    { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /universal_rules/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /universal_settlements/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /payout_sessions/{docId}        { allow read, list: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /payout_sessions/{docId}        { allow read: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /shop_orders/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_sales/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_customers/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
