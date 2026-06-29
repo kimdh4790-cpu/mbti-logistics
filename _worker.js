@@ -5,13 +5,10 @@
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'SAMEORIGIN',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  'X-XSS-Protection': '1; mode=block',
   'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.tosspayments.com https://cdn.iamport.kr https://static.cloudflareinsights.com https://t1.kakaocdn.net https://developers.kakao.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https://app.donway.ai.kr https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://api.anthropic.com https://api.toss.im https://api.tosspayments.com https://www.gstatic.com https://api.ipify.org https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'none';",
 };
 
@@ -1863,8 +1860,10 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // 기사 자체 가입
-    if (path === '/join' || path === '/join/') {
+    // 기사 자체 가입 (mbtico.kr 전용 - donway는 537줄에서 처리)
+    // /join은 donway.ai.kr 블록(줄537)에서 회사가입 stepper로 처리됨
+    // 여기서는 mbtico.kr 등 다른 도메인에서만 join.html 서빙
+    if ((path === '/join' || path === '/join/') && hostname !== 'donway.ai.kr' && hostname !== 'www.donway.ai.kr') {
       const resp = await fetchAsset('/join.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
