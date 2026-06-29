@@ -1,4 +1,6 @@
 /settle /index.html 200
 /settle.html /index.html 200
+/join /index.html 200
+/join.html /index.html 200
 /c/:slug /index.html 200
 /stmt/* /index.html 200
