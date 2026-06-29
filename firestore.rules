@@ -94,7 +94,7 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
     match /payments/{docId} {
-      allow read: if isAuth();
+      allow read: if canRead();
       allow write: if isSuperAdmin();
     }
     match /payment_requests/{docId} {
@@ -113,9 +113,9 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update, delete: if isSuperAdmin();
     }
-    // settings: dealerId 격리 적용
+    // settings: 미존재 문서 접근 허용 (wallet 등)
     match /settings/{docId} {
-      allow read: if canRead() || (isAuth() && request.auth.uid == resource.data.dealerId);
+      allow read: if isAuth();
       allow create: if canWrite() || (isAuth() && request.auth.uid == request.resource.data.dealerId);
       allow update, delete: if canOwn() || (isAuth() && request.auth.uid == resource.data.dealerId);
     }
@@ -196,7 +196,8 @@ service cloud.firestore {
     match /filo_memberships/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /activity/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /audit_logs/{docId}             { allow read: if isSuperAdmin(); allow create: if isAuth(); }
     // used_biz_numbers: 미인증도 read/write 허용 (가입 중복체크)
     match /used_biz_numbers/{docId}       { allow read, write: if true; }
