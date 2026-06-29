@@ -31,8 +31,10 @@ jobs:
           cp -f qrcode.min.js donway-pages/qrcode.min.js 2>/dev/null || true
           cp -f xlsx.full.min.js donway-pages/xlsx.full.min.js 2>/dev/null || true
 
+      - name: Install Wrangler
+        run: npm install -g wrangler@4
+
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          command: pages deploy donway-pages --project-name=donway-pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: wrangler pages deploy donway-pages --project-name=donway-pages
