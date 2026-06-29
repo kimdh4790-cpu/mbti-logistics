@@ -812,7 +812,7 @@ export default {
         }
       }
 
-            if (path === '/settle' || path === '/settle.html') return serveKVFile(env, 'settle.html', 'text/html');
+      if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/join', 302);
 
     // ★ slug 기반 동적 manifest + 아이콘
     // /c/{slug}/manifest.json → 회사명으로 동적 생성
@@ -1861,14 +1861,14 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
     } // end mbtico.kr slug 제외
 
-    if (path === '/settle.html' || path === '/settle' || path === '/settle/') {
-      const resp = await fetchAsset('/settle.html', request, env);
-      const html = await resp.text();
-      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const storageTag = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
-      const injected = html.replace('</head>', storageTag + '\n<script>window.__AK=' + JSON.stringify(key) + ';</script>\n</head>');
-      return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
-    }
+    if (path === '/settle.html' || path === '/settle' || path === '/settle/') return Response.redirect('https://donway.ai.kr/join', 302);
+
+
+
+
+
+
+
 
 
     // ── Phase 2: 신규 라우트 ──────────────────────────────────────────────
