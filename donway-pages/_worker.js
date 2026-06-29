@@ -530,9 +530,12 @@ export default {
     // /api/*, /stmt → 기존 mbti-logistics Worker로 프록시
     if (path.startsWith('/api/') || path.startsWith('/stmt')) {
       const proxyUrl = 'https://mbti-logistics.kimdh4790.workers.dev' + url.pathname + url.search;
+      const newHeaders = new Headers(request.headers);
+      newHeaders.set('Host', 'donway.ai.kr');
+      newHeaders.set('X-Forwarded-Host', 'donway.ai.kr');
       const proxyReq = new Request(proxyUrl, {
         method: request.method,
-        headers: request.headers,
+        headers: newHeaders,
         body: request.body
       });
       return fetch(proxyReq);
