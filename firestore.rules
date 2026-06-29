@@ -122,8 +122,8 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
         isSuperAdmin()
       );
-      allow create: if canWrite() || (isAuth() && request.auth.uid == request.resource.data.dealerId);
-      allow update, delete: if canOwn() || (isAuth() && request.auth.uid == resource.data.dealerId);
+      allow create, update: if isAuth();
+      allow delete: if canOwn() || isSuperAdmin();
     }
     match /open_event/{docId} {
       allow read: if true;
