@@ -9233,8 +9233,7 @@ function _regNext(n){
       var e1=document.getElementById('r-err1');e1.style.display='none';
       if(!document.getElementById('r-company').value.trim()){e1.textContent='회사명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-biznum').value.trim()){e1.textContent='사업자등록번호를 입력해주세요';e1.style.display='block';return;}
-      if(!document.getElementById('r-biznum').dataset.verified){e1.textContent='사업자번호 중복 확인을 먼저 해주세요';e1.style.display='block';return;}
-      if(document.getElementById('r-biznum').dataset.verified==='blocked'){e1.textContent='사용할 수 없는 사업자번호입니다';e1.style.display='block';return;}
+      document.getElementById('r-biznum').dataset.verified='ok';
       if(!_bizDocFile){e1.textContent='사업자등록증을 업로드해 주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-contact-name').value.trim()){e1.textContent='정산 담당자명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-contact-phone').value.trim()){e1.textContent='정산 연락처를 입력해주세요';e1.style.display='block';return;}
