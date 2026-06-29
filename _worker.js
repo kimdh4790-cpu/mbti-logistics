@@ -88,7 +88,13 @@ async function fetchAsset(path, request, env) {
 // ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
 async function serveKVFile(env, fileName, contentType) {
   try {
-    // Pages CDN 서빙 (settle.html/filo.html), 나머지는 GitHub Raw
+    // KV 우선 서빙
+    const _e = env || _env_ref;
+    if (_e && _e.DONWAY_ASSETS) {
+      const kvVal = await _e.DONWAY_ASSETS.get(fileName, 'text');
+      if (kvVal) return new Response(kvVal, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
+    }
+    // KV 없으면 GitHub Raw
     const PAGES_FILES = {};
     const bust = Date.now() + Math.random().toString(36).slice(2);
     const fileUrl = PAGES_FILES[fileName]
