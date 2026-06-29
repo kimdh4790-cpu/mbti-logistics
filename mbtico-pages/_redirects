@@ -1,0 +1,13 @@
+/api/* https://mbtico.kr/api/:splat 200
+/ /mbti_landing.html 200
+/app /엠비티아이_물류관리_v9.html 200
+/hub /mbtico_hub.html 200
+/label /label.html 200
+/scan /scan.html 200
+/truck /truck.html 200
+/order /order.html 200
+/join /mbtico_join.html 200
+/emergency /emergency.html 200
+/checkin /checkin.html 200
+/admin /admin.html 200
+/register /register.html 200
