@@ -16123,7 +16123,7 @@ window._uBulkFromTemplate = function(input, did){
         // ID
         if(idCol<0&&(hl.includes('id')||hl.includes('사번')||hl.includes('아이디')||hl.includes('수정금지')||hl.includes('코드')||hl.includes('직원코드')))idCol=i;
         // 캠프
-        else if(campCol<0&&(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력')||hl.includes('소속')||hl.includes('부서')))campCol=i;
+        else if(campCol<0&&(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력')||hl.includes('소속')||hl.includes('부서')||hl.includes('열1')||hl.includes('지역')||hl.includes('센터')))campCol=i;
         // 이름
         else if(nameCol<0&&(hl.includes('이름')||hl.includes('성명')||hl.includes('입력')||hl.includes('name')||hl.includes('기사명')||hl.includes('직원명')))nameCol=i;
         // 계약유형
@@ -16131,13 +16131,17 @@ window._uBulkFromTemplate = function(input, did){
         // 연락처 ★ 알림톡용
         if(phoneCol<0&&(hl.includes('연락처')||hl.includes('전화')||hl.includes('휴대폰')||hl.includes('핸드폰')||hl.includes('phone')||hl.includes('mobile')||hl.includes('번호')))phoneCol=i;
         // 사업자번호 ★ 세무사 연동용
-        if(bizNoCol<0&&(hl.includes('사업자번호')||hl.includes('사업자등록')||hl.includes('bizno')||hl.includes('biz_no')))bizNoCol=i;
+        if(bizNoCol<0&&(hl.includes('사업자번호')||hl.includes('사업자등록')||hl.includes('사업자')||hl.includes('bizno')||hl.includes('biz_no')))bizNoCol=i;
         // 주민번호 ★ 세무사 연동용
-        if(ssnCol<0&&(hl.includes('주민번호')||hl.includes('주민등록')||hl.includes('ssn')||hl.includes('jumin')))ssnCol=i;
+        if(ssnCol<0&&(hl.includes('주민번호')||hl.includes('주민등록')||hl.includes('주민')||hl.includes('ssn')||hl.includes('jumin')))ssnCol=i;
         // 상호명 ★ 세무사 연동용
         if(bizNameCol<0&&(hl.includes('상호')||hl.includes('업체명')||hl.includes('회사명')||hl.includes('상호명')))bizNameCol=i;
+        // 통장/은행 정보
+        if(bizNameCol<0&&(hl.includes('통장')||hl.includes('계좌')||hl.includes('은행'))){}// 별도 필드로 추가 가능
         // 입사일
         if(joinDateCol<0&&(hl.includes('입사')||hl.includes('입사일')||hl.includes('joindate')||hl.includes('시작일')))joinDateCol=i;
+        // 이메일
+        if(phoneCol<0&&(hl.includes('메일')||hl.includes('email')||hl.includes('이메일'))){}// phone과 별도
       });
       // ID/이름 못찾으면 0,2번 컬럼 기본값
       if(idCol<0)idCol=0;
