@@ -118,9 +118,9 @@ async function serveKVFile(env, fileName, contentType) {
         const j = await resp.json();
         rawText = j.content ? atob(j.content.replace(/\n/g,'')) : await resp.text();
       } else { rawText = await resp.text(); }
-      const BIZ_CHK1 = "  var verified=document.getElementById('r-biznum').dataset.verified;\n  if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}";
-      const BIZ_CHK2 = "  if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}";
-      const text = fileName==='settle.html' ? rawText.replace(BIZ_CHK1,'').replace(BIZ_CHK2,'') : rawText;
+      const text = rawText;
+
+
       return new Response(text, {
         headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'GitHub', ...SECURITY_HEADERS }
       });
