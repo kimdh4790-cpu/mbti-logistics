@@ -16106,6 +16106,49 @@ window._uBulkFromTemplate = function(input, did){
   input.value='';
   var status=document.getElementById('u-extract-status');
   if(status)status.textContent='⏳ 업로드 중...';
+
+  // ★ txt/csv 파일 처리 (이름+연락처 형식)
+  var ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='txt'||ext==='csv'){
+    var tr=new FileReader();
+    tr.onload=function(e){
+      try{
+        var lines=e.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
+        var valid=[];
+        lines.forEach(function(line){
+          var parts=line.trim().split(/\s{2,}|\t/);
+          if(parts.length<2)parts=line.trim().split(/\s+/);
+          var name=parts[0]||'';
+          var phone=(parts[1]||'').replace(/[^0-9]/g,'');
+          var camp=parts[2]||'';
+          if(!name||name.length<2)return;
+          if(name==='이름'||name==='성명')return;
+          var emp={dealerId:did,name:name,camp:camp,contractType:'비사업자',createdAt:new Date()};
+          if(phone&&phone.length>=10)emp.phone=phone;
+          valid.push(emp);
+        });
+        if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
+        if(status)status.textContent='⏳ '+valid.length+'명 저장 중...';
+        _db.collection('universal_employees').where('dealerId','==',did).get()
+          .then(function(snap){
+            var existingNames={};
+            snap.docs.forEach(function(d){var n=(d.data().name||'').trim();if(n)existingNames[n]=true;});
+            var deduped=valid.filter(function(v){return !existingNames[v.name];});
+            var skipped=valid.length-deduped.length;
+            if(!deduped.length){if(status)status.textContent='⚠️ 전원 이미 등록됨';return;}
+            var batch=_db.batch();
+            deduped.forEach(function(emp){batch.set(_db.collection('universal_employees').doc(),emp);});
+            batch.commit().then(function(){
+              if(status)status.textContent='✅ '+deduped.length+'명 등록'+(skipped?' ('+skipped+'명 중복 스킵)':'');
+              setTimeout(function(){pageUniversalEmp();},800);
+            }).catch(function(e){if(status)status.textContent='❌ '+e.message;});
+          });
+      }catch(err){if(status)status.textContent='❌ '+err.message;}
+    };
+    tr.readAsText(file,'UTF-8');
+    return;
+  }
+
   if(typeof XLSX==='undefined'){if(status)status.textContent='❌ 라이브러리 로딩 중...';return;}
 
   var reader=new FileReader();
