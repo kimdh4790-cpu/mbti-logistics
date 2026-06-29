@@ -7618,9 +7618,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!fs)return;
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
               var pvm=fs.etcMinusReason||'';
-              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
 
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
@@ -46201,3 +46199,4 @@ function _pageShopDashboard(c) {
 </script>
 </body>
 </html
+
