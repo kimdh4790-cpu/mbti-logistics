@@ -69,12 +69,20 @@ async function fetchAsset(path, request, env) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const fileName = filePath.replace(/^\//, '');
 
-  // ★ Pages CDN 서빙 (settle.html), 나머지는 GitHub Raw
-  const PAGES_MAP = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
+  // KV 우선 서빙
+  if (e && e.DONWAY_ASSETS) {
+    const kvVal = await e.DONWAY_ASSETS.get(fileName, 'text');
+    if (kvVal) {
+      const BIZ_CHK1 = "  var verified=document.getElementById('r-biznum').dataset.verified;
+  if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}";
+      const BIZ_CHK2 = "  if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}";
+      const patched = fileName==='settle.html' ? kvVal.replace(BIZ_CHK1,'').replace(BIZ_CHK2,'') : kvVal;
+      return new Response(patched, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
+    }
+  }
+  // KV 없으면 GitHub Raw
   const bust = Date.now() + Math.random().toString(36).slice(2);
-  const fetchUrl = PAGES_MAP[fileName]
-    ? PAGES_MAP[fileName] + '?bust=' + bust
-    : 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main' + filePath + '?bust=' + bust;
+  const fetchUrl = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main' + filePath + '?bust=' + bust;
   const ghResp = await fetch(fetchUrl, {
     cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
     headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
