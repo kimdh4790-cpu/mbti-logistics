@@ -1,26 +1,38 @@
-name: Pages 배포
+name: Pages 자동배포
+
 on:
   push:
-    paths:
-      - 'settle.html'
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  copy-to-pages:
+  deploy-donway-pages:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: donway-pages 파일 동기화
+        run: |
+          cp settle.html donway-pages/index.html
+          cp donway_landing.html donway-pages/donway_landing.html
+          cp -f join.html donway-pages/join.html 2>/dev/null || true
+          cp -f company-register.html donway-pages/company-register.html 2>/dev/null || true
+          cp -f admin.html donway-pages/admin.html 2>/dev/null || true
+          cp -f admin_sub.html donway-pages/admin_sub.html 2>/dev/null || true
+          cp -f portal.html donway-pages/portal.html 2>/dev/null || true
+          cp -f notice.html donway-pages/notice.html 2>/dev/null || true
+          cp -f register.html donway-pages/register.html 2>/dev/null || true
+          cp -f manifest.json donway-pages/manifest.json 2>/dev/null || true
+          cp -f favicon.ico donway-pages/favicon.ico 2>/dev/null || true
+          cp -f icon-192.png donway-pages/icon-192.png 2>/dev/null || true
+          cp -f icon-512.png donway-pages/icon-512.png 2>/dev/null || true
+          cp -f sw.js donway-pages/sw.js 2>/dev/null || true
+          cp -f donway-sound.js donway-pages/donway-sound.js 2>/dev/null || true
+          cp -f jsQR.min.js donway-pages/jsQR.min.js 2>/dev/null || true
+          cp -f qrcode.min.js donway-pages/qrcode.min.js 2>/dev/null || true
+          cp -f xlsx.full.min.js donway-pages/xlsx.full.min.js 2>/dev/null || true
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: settle.html → settle-pages/index.html 복사
-        run: |
-          mkdir -p settle-pages
-          cp settle.html settle-pages/index.html
-      - name: 커밋 및 푸시
-        run: |
-          git config user.email "action@github.com"
-          git config user.name "GitHub Action"
-          git add settle-pages/index.html
-          git diff --staged --quiet || git commit -m "auto: settle-pages/index.html 업데이트"
-          git push
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: pages deploy donway-pages --project-name=donway-pages
