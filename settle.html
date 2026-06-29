@@ -8386,7 +8386,7 @@ if(window.location.hash==='#join'){
   }
   _db=firebase.firestore();
   // ★ Cloudflare Workers 환경에서 WebChannel 400 에러 방지
-  try{_db.settings({experimentalAutoDetectLongPolling:true, merge:true});}catch(e){}
+  try{_db.settings({experimentalForceLongPolling:true, merge:true});}catch(e){}
   window._db=_db;
   _auth=firebase.auth();
 
