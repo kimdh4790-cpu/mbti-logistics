@@ -533,7 +533,7 @@ export default {
       // /join → settle.html 서빙 + register 탭 자동 활성화
       if (path === '/join') {
         try {
-          const ghJoin = await fetch('https://app.donway.ai.kr/index.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
+          const ghJoin = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
           const html = await ghJoin.text();
           if (html) {
             const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
@@ -841,7 +841,7 @@ export default {
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const ghSlug = await fetch('https://app.donway.ai.kr/index.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
+        const ghSlug = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
         const html = await ghSlug.text();
         if (html) {
           const modified = html.replace(
