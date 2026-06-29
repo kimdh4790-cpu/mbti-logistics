@@ -31730,7 +31730,7 @@ function _showSEModal(s){
     +'</tr></thead>';
   var tbody=document.createElement('tbody');tbody.id='se-rd-tbody';
 
-  (s.routeDetails||[]).forEach(function(rd,idx){
+  (s.routeDetails||[]).sort(function(a,b){return (a.route||'').localeCompare(b.route||'');}).forEach(function(rd,idx){
     var price=rd.unitPrice||RPRICE[rd.route]||0;
     var dAmt=(rd.cnt||0)*price;var rAmt=(rd.ret||0)*price;
     var tr=document.createElement('tr');
