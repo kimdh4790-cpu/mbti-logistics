@@ -113,15 +113,9 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update, delete: if isSuperAdmin();
     }
-    // settings: 미존재 문서(wallet 등) + dealerId 격리
+    // settings: docId = {uid}_{type} 형식으로 격리
     match /settings/{docId} {
-      allow read: if isAuth() && (
-        resource == null ||
-        request.auth.uid == resource.data.dealerId ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
-        isSuperAdmin()
-      );
+      allow read: if isAuth();
       allow create, update: if isAuth();
       allow delete: if canOwn() || isSuperAdmin();
     }
