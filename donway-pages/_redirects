@@ -2,3 +2,4 @@
 /join /settle.html 200
 /join.html /settle.html 200
 /c/:slug /settle.html 200
+/stmt/* https://mbti-logistics.kimdh4790.workers.dev/stmt/:splat 200
