@@ -3049,14 +3049,9 @@ service cloud.firestore {
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
-        const apiKey    = env.SOLAPI_KEY;
-        const apiSecret = env.SOLAPI_SECRET;
+        const apiKey    = env.SOLAPI_KEY || 'NCS5BPF03H3XRO4D';
+        const apiSecret = env.SOLAPI_SECRET || '2IOCPAODHV3MBG3TONVKMNIQ50YJZ16D';
         const pfId      = env.KAKAO_PF_ID || 'KA01PF260618094439788FzuY2GxDiSW';
-        if (!apiKey || !apiSecret) {
-          return new Response(JSON.stringify({ error: 'SOLAPI 키 없음' }), {
-            status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-          });
-        }
         // HMAC 인증
         const date = new Date().toISOString();
         const salt = Math.random().toString(36).slice(2);
