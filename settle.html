@@ -16218,6 +16218,42 @@ window._uBulkFromTemplate = function(input, did){
 
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
+
+      // ★ drivers 컬렉션에 연락처/사업자번호 업데이트 (empId=driverId 매칭)
+      _db.collection('drivers').where('dealerId','==',did).get().then(function(dSnap){
+        var driverMap={};
+        dSnap.docs.forEach(function(d){
+          var dd=d.data();
+          var key=(dd.driverId||dd.empId||'').trim();
+          if(key)driverMap[key]=d.ref;
+        });
+        var dBatch=_db.batch(); var dUpdated=0;
+        valid.forEach(function(emp){
+          var ref=driverMap[emp.empId||''];
+          if(!ref)return;
+          var upd={};
+          if(emp.phone)upd.phone=emp.phone;
+          if(emp.bizNo)upd.bizNo=emp.bizNo;
+          if(emp.ssn)upd.ssn=emp.ssn;
+          if(emp.bizName)upd.bizName=emp.bizName;
+          if(emp.joinDate)upd.joinDate=emp.joinDate;
+          if(Object.keys(upd).length){dBatch.update(ref,upd);dUpdated++;}
+        });
+        if(dUpdated>0){
+          dBatch.commit().then(function(){
+            if(status)status.textContent='✅ '+dUpdated+'명 기사 정보 업데이트 완료 (연락처/사업자 등록)';
+            if(window._drivers){
+              window._drivers.forEach(function(dr){
+                var emp=valid.find(function(v){return v.empId===(dr.driverId||dr.empId||'');});
+                if(emp){if(emp.phone)dr.phone=emp.phone;if(emp.bizNo)dr.bizNo=emp.bizNo;}
+              });
+            }
+            setTimeout(function(){if(typeof pageDrivers==='function')pageDrivers();},800);
+          }).catch(function(e){if(status)status.textContent='❌ '+e.message;});
+        } else {
+          // drivers에 매칭 없으면 기존 universal_employees 저장
+        }
+      });
       if(status)status.textContent='⏳ 중복 확인 중...';
 
       // 기존 empId 조회 → 중복 제거
