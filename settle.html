@@ -38576,7 +38576,7 @@ function _promoImportFromExcel(file){
     var routeMap={};
     for(var ri=hdrIdx+1;ri<rows.length;ri++){
       var row=rows[ri];
-      var route=String(row[colRoute]||'').trim();
+      var route=String(row[colRoute]||'').trim().replace(/_/g,'');
       if(!route)continue;
       var v1=colP1>=0?String(row[colP1]||'').trim():'';
       var v2=colP2>=0?String(row[colP2]||'').trim():'';
