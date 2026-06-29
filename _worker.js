@@ -3057,8 +3057,6 @@ service cloud.firestore {
 
     // ── 카카오 알림톡 (/api/send-alimtalk) ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
-      const authUser = await verifyFirebaseToken(request);
-      if (!authUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
