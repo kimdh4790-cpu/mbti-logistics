@@ -1,6 +1,8 @@
 /api/* https://donway.ai.kr/api/:splat 200
-/donway_landing.html /donway_landing.html 200
 / /donway_landing.html 200
+/donway /donway_landing.html 200
+/donway/ /donway_landing.html 200
+/donway_landing.html /donway_landing.html 200
 /settle /index.html 200
 /settle.html /index.html 200
 /c/:slug /index.html 200
