@@ -89,7 +89,7 @@ async function fetchAsset(path, request, env) {
 async function serveKVFile(env, fileName, contentType) {
   try {
     // Pages CDN 서빙 (settle.html/filo.html), 나머지는 GitHub Raw
-    const PAGES_FILES = { 'settle.html': 'https://app.donway.ai.kr/index.html' };
+    const PAGES_FILES = {};
     const bust = Date.now() + Math.random().toString(36).slice(2);
     const fileUrl = PAGES_FILES[fileName]
       ? PAGES_FILES[fileName] + '?bust=' + bust
@@ -99,7 +99,9 @@ async function serveKVFile(env, fileName, contentType) {
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
     });
     if (resp.ok) {
-      const text = await resp.text();
+      const rawText = await resp.text();
+      const BZPATCH = '<scr'+'ipt>window.addEventListener("load",function(){if(typeof checkBizNum==="function"){checkBizNum=function(){var biz=document.getElementById("r-biznum").value.replace(/-/g,"").trim();var msg=document.getElementById("r-biznum-msg");if(!biz||biz.length!==10){msg.style.display="block";msg.style.color="var(--red)";msg.textContent="사업자번호 10자리를 입력하세요";return;}msg.style.display="block";msg.style.color="#059669";msg.textContent="✅ 사업자번호 확인됨";document.getElementById("r-biznum").dataset.verified="ok";};}});</'+'script>';
+      const text = fileName==='settle.html' ? rawText.replace('</body>', BZPATCH+'</body>') : rawText;
       return new Response(text, {
         headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'X-Served-From': 'GitHub', ...SECURITY_HEADERS }
       });
