@@ -93,13 +93,18 @@ async function serveKVFile(env, fileName, contentType) {
     const bust = Date.now() + Math.random().toString(36).slice(2);
     const fileUrl = PAGES_FILES[fileName]
       ? PAGES_FILES[fileName] + '?bust=' + bust
-      : 'https://cdn.jsdelivr.net/gh/kimdh4790-cpu/mbti-logistics@main/' + encodeURIComponent(fileName) + '?v=' + bust;
+      : 'https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/contents/' + encodeURIComponent(fileName);
     const resp = await fetch(fileUrl, {
       cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
     });
     if (resp.ok) {
-      const rawText = await resp.text();
+      let rawText;
+      const ct = resp.headers.get('Content-Type')||'';
+      if (ct.includes('application/json')) {
+        const j = await resp.json();
+        rawText = j.content ? atob(j.content.replace(/\n/g,'')) : await resp.text();
+      } else { rawText = await resp.text(); }
       const BZPATCH = '<scr'+'ipt>window.addEventListener("load",function(){if(typeof checkBizNum==="function"){checkBizNum=function(){var biz=document.getElementById("r-biznum").value.replace(/-/g,"").trim();var msg=document.getElementById("r-biznum-msg");if(!biz||biz.length!==10){msg.style.display="block";msg.style.color="var(--red)";msg.textContent="사업자번호 10자리를 입력하세요";return;}msg.style.display="block";msg.style.color="#059669";msg.textContent="✅ 사업자번호 확인됨";document.getElementById("r-biznum").dataset.verified="ok";};}});</'+'script>';
       const text = fileName==='settle.html' ? rawText.replace('</body>', BZPATCH+'</body>') : rawText;
       return new Response(text, {
