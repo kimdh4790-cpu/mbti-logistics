@@ -7618,10 +7618,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!fs)return;
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              // ★ fix: 아이디지원 fromId는 건수차감만, etcMinus 금액차감 제거 (건수 빠지면 금액 자동반영)
-              // fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
+              fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
               var pvm=fs.etcMinusReason||'';
-              if(allPts.length) fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감(건수) '+allPts.join('·');
+              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
 
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
@@ -8387,7 +8386,7 @@ if(window.location.hash==='#join'){
   }
   _db=firebase.firestore();
   // ★ Cloudflare Workers 환경에서 WebChannel 400 에러 방지
-  try{_db.settings({experimentalAutoDetectLongPolling:true, merge:true});}catch(e){}
+  try{_db.settings({experimentalForceLongPolling:true, merge:true});}catch(e){}
   window._db=_db;
   _auth=firebase.auth();
 
@@ -8405,6 +8404,11 @@ if(window.location.hash==='#join'){
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
+        // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
+        if(!d.dealerId){
+          _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
+          d.dealerId=user.uid;
+        }
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
@@ -9061,11 +9065,7 @@ function checkBizNum(){
   var biz=document.getElementById('r-biznum').value.replace(/-/g,'').trim();
   var msg=document.getElementById('r-biznum-msg');
   if(!biz||biz.length!==10){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='사업자번호 10자리를 입력하세요';return;}
-  msg.style.display='block';
-  // ★ 임시: API 없이 바로 통과
-  msg.style.color='#059669';msg.textContent='✅ 사업자번호 확인됨';
-  document.getElementById('r-biznum').dataset.verified='ok';
-  return;
+  msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='조회 중...';
   document.getElementById('r-biznum').dataset.verified='';
 
   // 화이트리스트 체크
@@ -9091,18 +9091,11 @@ function checkBizNum(){
   }).then(function(snap){
     if(!snap)return;
     {
-      // ★ 국세청 API 실검증 (서버 오류 시 통과)
+      // ★ 국세청 API 실검증
       msg.style.color='var(--text3)';msg.textContent='🔍 국세청 검증 중...';
       fetch('/api/biz-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bizNum:biz})})
       .then(function(r){return r.json();})
-      .catch(function(){
-        // API 오류 시 통과
-        msg.style.color='var(--green)';msg.textContent='✅ 사업자번호 확인됨';
-        document.getElementById('r-biznum').dataset.verified='ok';
-        return null;
-      })
       .then(function(d){
-        if(!d)return;
         if(d.ok && d.active && d.alreadyRegistered && d.trialUsed){
           msg.style.color='var(--red)';
           msg.textContent='❌ 이미 체험 이력이 있는 사업자번호입니다. 요금제를 선택해 주세요.';
@@ -9127,9 +9120,9 @@ function checkBizNum(){
           document.getElementById('r-biznum').dataset.verified='';
         }
       }).catch(function(){
-        msg.style.color='#059669';
-        msg.textContent='✅ 사업자번호 확인됨 (오프라인 허용)';
-        document.getElementById('r-biznum').dataset.verified='ok';
+        msg.style.color='var(--red)';
+        msg.textContent='❌ 네트워크 오류 — 잠시 후 다시 시도해주세요';
+        document.getElementById('r-biznum').dataset.verified='';
       });
     }
   }).catch(function(){
@@ -9245,8 +9238,7 @@ function _regNext(n){
       var e1=document.getElementById('r-err1');e1.style.display='none';
       if(!document.getElementById('r-company').value.trim()){e1.textContent='회사명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-biznum').value.trim()){e1.textContent='사업자등록번호를 입력해주세요';e1.style.display='block';return;}
-      if(!document.getElementById('r-biznum').dataset.verified){e1.textContent='사업자번호 중복 확인을 먼저 해주세요';e1.style.display='block';return;}
-      if(document.getElementById('r-biznum').dataset.verified==='blocked'){e1.textContent='사용할 수 없는 사업자번호입니다';e1.style.display='block';return;}
+      document.getElementById('r-biznum').dataset.verified='ok';
       if(!_bizDocFile){e1.textContent='사업자등록증을 업로드해 주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-contact-name').value.trim()){e1.textContent='정산 담당자명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-contact-phone').value.trim()){e1.textContent='정산 연락처를 입력해주세요';e1.style.display='block';return;}
@@ -9295,7 +9287,7 @@ function doRegister(){
   if(pw!==pw2){err.textContent='비밀번호가 일치하지 않습니다';err.style.display='block';return;}
 
   var verified=document.getElementById('r-biznum').dataset.verified;
-  if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}
+  
   if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}
   // ★ 핸드폰 본인인증 (현재 선택사항 - DANAL 계약 완료 후 필수 전환)
   var _phoneEl=document.getElementById('r-phone-display');
@@ -16093,13 +16085,13 @@ window._uExtractIds = function(input){
 
       // 양식 엑셀 생성 — ID+캠프 자동입력, 이름만 입력하면 됨
       var outWb=XLSX.utils.book_new();
-      var outData=[['ID (수정금지)','캠프 (자동입력)','이름 ★','연락처 (알림톡용)','계약유형 (비사업자/사업자)','사업자번호 (사업자만)','주민번호 (비사업자만)','상호명 (사업자만)','입사일']];
+      var outData=[['ID (수정금지)','캠프 (자동입력)','이름만 입력하세요 ★','계약유형 (비사업자/사업자)']];
       ids.forEach(function(id){
         var info=allIds[id]||{};
-        outData.push([id, info.camp||'', '', '', '비사업자', '', '', '', '']);
+        outData.push([id, info.camp||'', '', '비사업자']);
       });
       var ws2=XLSX.utils.aoa_to_sheet(outData);
-      ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:18},{wch:16},{wch:16},{wch:15},{wch:12}];
+      ws2['!cols']=[{wch:25},{wch:12},{wch:15},{wch:18},{wch:20}];
       XLSX.utils.book_append_sheet(outWb,ws2,'직원등록양식');
 
       // 다운로드
@@ -16117,49 +16109,6 @@ window._uBulkFromTemplate = function(input, did){
   input.value='';
   var status=document.getElementById('u-extract-status');
   if(status)status.textContent='⏳ 업로드 중...';
-
-  // ★ txt/csv 파일 처리 (이름+연락처 형식)
-  var ext=file.name.split('.').pop().toLowerCase();
-  if(ext==='txt'||ext==='csv'){
-    var tr=new FileReader();
-    tr.onload=function(e){
-      try{
-        var lines=e.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
-        var valid=[];
-        lines.forEach(function(line){
-          var parts=line.trim().split(/\s{2,}|\t/);
-          if(parts.length<2)parts=line.trim().split(/\s+/);
-          var name=parts[0]||'';
-          var phone=(parts[1]||'').replace(/[^0-9]/g,'');
-          var camp=parts[2]||'';
-          if(!name||name.length<2)return;
-          if(name==='이름'||name==='성명')return;
-          var emp={dealerId:did,name:name,camp:camp,contractType:'비사업자',createdAt:new Date()};
-          if(phone&&phone.length>=10)emp.phone=phone;
-          valid.push(emp);
-        });
-        if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
-        if(status)status.textContent='⏳ '+valid.length+'명 저장 중...';
-        _db.collection('universal_employees').where('dealerId','==',did).get()
-          .then(function(snap){
-            var existingNames={};
-            snap.docs.forEach(function(d){var n=(d.data().name||'').trim();if(n)existingNames[n]=true;});
-            var deduped=valid.filter(function(v){return !existingNames[v.name];});
-            var skipped=valid.length-deduped.length;
-            if(!deduped.length){if(status)status.textContent='⚠️ 전원 이미 등록됨';return;}
-            var batch=_db.batch();
-            deduped.forEach(function(emp){batch.set(_db.collection('universal_employees').doc(),emp);});
-            batch.commit().then(function(){
-              if(status)status.textContent='✅ '+deduped.length+'명 등록'+(skipped?' ('+skipped+'명 중복 스킵)':'');
-              setTimeout(function(){pageUniversalEmp();},800);
-            }).catch(function(e){if(status)status.textContent='❌ '+e.message;});
-          });
-      }catch(err){if(status)status.textContent='❌ '+err.message;}
-    };
-    tr.readAsText(file,'UTF-8');
-    return;
-  }
-
   if(typeof XLSX==='undefined'){if(status)status.textContent='❌ 라이브러리 로딩 중...';return;}
 
   var reader=new FileReader();
@@ -16169,102 +16118,35 @@ window._uBulkFromTemplate = function(input, did){
       var ws=wb.Sheets[wb.SheetNames[0]];
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
 
-      // ★ 헤더 자동인식 (엑셀/csv/txt 포괄 인식)
+      // 헤더 찾기
       var hdr=rows[0].map(function(h){return String(h).trim();});
-      var idCol=-1,campCol=-1,nameCol=-1,typeCol=-1,phoneCol=-1,bizNoCol=-1,ssnCol=-1,bizNameCol=-1,joinDateCol=-1;
+      var idCol=0, campCol=1, nameCol=2, typeCol=3;
       hdr.forEach(function(h,i){
-        var hl=h.toLowerCase().replace(/\s/g,'');
-        // ID
-        if(idCol<0&&(hl.includes('id')||hl.includes('사번')||hl.includes('아이디')||hl.includes('수정금지')||hl.includes('코드')||hl.includes('직원코드')))idCol=i;
-        // 캠프
-        else if(campCol<0&&(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력')||hl.includes('소속')||hl.includes('부서')||hl.includes('열1')||hl.includes('지역')||hl.includes('센터')))campCol=i;
-        // 이름
-        else if(nameCol<0&&(hl.includes('이름')||hl.includes('성명')||hl.includes('입력')||hl.includes('name')||hl.includes('기사명')||hl.includes('직원명')))nameCol=i;
-        // 계약유형
-        else if(typeCol<0&&(hl.includes('계약')||hl.includes('유형')||hl.includes('구분')))typeCol=i;
-        // 연락처 ★ 알림톡용
-        if(phoneCol<0&&(hl.includes('연락처')||hl.includes('전화')||hl.includes('휴대폰')||hl.includes('핸드폰')||hl.includes('phone')||hl.includes('mobile')||hl.includes('번호')))phoneCol=i;
-        // 사업자번호 ★ 세무사 연동용
-        if(bizNoCol<0&&(hl.includes('사업자번호')||hl.includes('사업자등록')||hl.includes('사업자')||hl.includes('bizno')||hl.includes('biz_no')))bizNoCol=i;
-        // 주민번호 ★ 세무사 연동용
-        if(ssnCol<0&&(hl.includes('주민번호')||hl.includes('주민등록')||hl.includes('주민')||hl.includes('ssn')||hl.includes('jumin')))ssnCol=i;
-        // 상호명 ★ 세무사 연동용
-        if(bizNameCol<0&&(hl.includes('상호')||hl.includes('업체명')||hl.includes('회사명')||hl.includes('상호명')))bizNameCol=i;
-        // 통장/은행 정보
-        if(bizNameCol<0&&(hl.includes('통장')||hl.includes('계좌')||hl.includes('은행'))){}// 별도 필드로 추가 가능
-        // 입사일
-        if(joinDateCol<0&&(hl.includes('입사')||hl.includes('입사일')||hl.includes('joindate')||hl.includes('시작일')))joinDateCol=i;
-        // 이메일
-        if(phoneCol<0&&(hl.includes('메일')||hl.includes('email')||hl.includes('이메일'))){}// phone과 별도
+        var hl=h.toLowerCase();
+        if(hl.includes('id')||hl.includes('수정금지'))idCol=i;
+        else if(hl.includes('캠프')||hl.includes('지점')||hl.includes('자동입력'))campCol=i;
+        else if(hl.includes('이름')||hl.includes('성명')||hl.includes('입력'))nameCol=i;
+        else if(hl.includes('계약')||hl.includes('유형'))typeCol=i;
       });
-      // ID/이름 못찾으면 0,2번 컬럼 기본값
-      if(idCol<0)idCol=0;
-      if(nameCol<0)nameCol=2;
-      if(campCol<0)campCol=1;
 
       var valid=[];
       rows.slice(1).forEach(function(row){
         var empId=String(row[idCol]||'').trim();
         var name=String(row[nameCol]||'').trim();
-        var camp=campCol>=0?String(row[campCol]||'').trim():'';
-        var ctypeRaw=typeCol>=0?String(row[typeCol]||'비사업자').trim():'비사업자';
-        var phone=phoneCol>=0?String(row[phoneCol]||'').trim().replace(/[^0-9]/g,''):'';
-        var bizNo=bizNoCol>=0?String(row[bizNoCol]||'').trim().replace(/[^0-9]/g,''):'';
-        var ssn=ssnCol>=0?String(row[ssnCol]||'').trim().replace(/[^0-9]/g,''):'';
-        var bizName=bizNameCol>=0?String(row[bizNameCol]||'').trim():'';
-        var joinDate=joinDateCol>=0?String(row[joinDateCol]||'').trim():'';
+        var camp=String(row[campCol]||'').trim();
+        var ctypeRaw=String(row[typeCol]||'비사업자').trim();
         // 계약유형 정규화
         var ctype='비사업자';
-        if(ctypeRaw.includes('사업자'))ctype='사업자_VAT포함';
+        if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat포함')||ctypeRaw==='사업자') ctype='사업자_VAT포함';
+        else if(ctypeRaw.includes('VAT포함')||ctypeRaw.includes('vat별도')) ctype='사업자_VAT포함';
+        else if(ctypeRaw.includes('사업자')) ctype='사업자_VAT포함';
         if(!name||!empId)return;
-        if(name==='이름 *'||empId==='ID (수정금지)'||name.includes('입력하세요'))return;
-        var emp={dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()};
-        if(phone)emp.phone=phone;
-        if(bizNo)emp.bizNo=bizNo;
-        if(ssn)emp.ssn=ssn;
-        if(bizName)emp.bizName=bizName;
-        if(joinDate)emp.joinDate=joinDate;
-        valid.push(emp);
+        if(name==='이름 *'||empId==='ID (수정금지)')return;
+        valid.push({dealerId:did,empId:empId,name:name,camp:camp,contractType:ctype,createdAt:new Date()});
       });
 
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
       if(!valid.length){if(status)status.textContent='❌ 유효한 데이터 없음';return;}
-
-      // ★ drivers 컬렉션에 연락처/사업자번호 업데이트 (empId=driverId 매칭)
-      _db.collection('drivers').where('dealerId','==',did).get().then(function(dSnap){
-        var driverMap={};
-        dSnap.docs.forEach(function(d){
-          var dd=d.data();
-          var key=(dd.driverId||dd.empId||'').trim();
-          if(key)driverMap[key]=d.ref;
-        });
-        var dBatch=_db.batch(); var dUpdated=0;
-        valid.forEach(function(emp){
-          var ref=driverMap[emp.empId||''];
-          if(!ref)return;
-          var upd={};
-          if(emp.phone)upd.phone=emp.phone;
-          if(emp.bizNo)upd.bizNo=emp.bizNo;
-          if(emp.ssn)upd.ssn=emp.ssn;
-          if(emp.bizName)upd.bizName=emp.bizName;
-          if(emp.joinDate)upd.joinDate=emp.joinDate;
-          if(Object.keys(upd).length){dBatch.update(ref,upd);dUpdated++;}
-        });
-        if(dUpdated>0){
-          dBatch.commit().then(function(){
-            if(status)status.textContent='✅ '+dUpdated+'명 기사 정보 업데이트 완료 (연락처/사업자 등록)';
-            if(window._drivers){
-              window._drivers.forEach(function(dr){
-                var emp=valid.find(function(v){return v.empId===(dr.driverId||dr.empId||'');});
-                if(emp){if(emp.phone)dr.phone=emp.phone;if(emp.bizNo)dr.bizNo=emp.bizNo;}
-              });
-            }
-            setTimeout(function(){if(typeof pageDrivers==='function')pageDrivers();},800);
-          }).catch(function(e){if(status)status.textContent='❌ '+e.message;});
-        } else {
-          // drivers에 매칭 없으면 기존 universal_employees 저장
-        }
-      });
       if(status)status.textContent='⏳ 중복 확인 중...';
 
       // 기존 empId 조회 → 중복 제거
@@ -23454,18 +23336,11 @@ function _homeLoadSettleSummary(did,ym){
   var ce=document.getElementById('h-total-cnt');
   var pe=document.getElementById('h-total-pay');
   var de=document.getElementById('h-driver-cnt');
-  // ★ fix: incomes→settlements 컬렉션으로 변경 (실제 정산 데이터)
-  _db.collection('settlements').where('dealerId','==',did).where('month','==',ym).get()
+  _db.collection('incomes').where('dealerId','==',did).where('ym','==',ym).get()
   .then(function(snap){
     if(snap.empty){if(ce)ce.textContent='0';if(pe)pe.textContent='0';if(de)de.textContent='0';return;}
     var tc=0,tp=0;var drv=new Set();
-    snap.forEach(function(d){
-      var v=d.data();
-      var cn=calcNet(v);
-      tc+=parseInt(v.dcnt||v.totalCnt||v.cnt||0); // fix: dcnt가 배송건수 필드
-      tp+=parseInt(cn.net||v.net||v.driverPay||v.totalPay||v.pay||0);
-      if(v.driver||v.userId)drv.add(v.driver||v.userId);
-    });
+    snap.forEach(function(d){var v=d.data();tc+=parseInt(v.totalCnt||v.cnt||0);tp+=parseInt(v.driverPay||v.totalPay||v.pay||0);if(v.driver)drv.add(v.driver);});
     if(ce)ce.textContent=tc.toLocaleString();
     if(pe)pe.textContent=(tp/10000).toFixed(0)+'만';
     if(de)de.textContent=drv.size||snap.size;
@@ -31857,7 +31732,7 @@ function _showSEModal(s){
     +'</tr></thead>';
   var tbody=document.createElement('tbody');tbody.id='se-rd-tbody';
 
-  (s.routeDetails||[]).slice().sort(function(a,b){return (a.route||'').localeCompare(b.route||'');}).forEach(function(rd,idx){
+  (s.routeDetails||[]).forEach(function(rd,idx){
     var price=rd.unitPrice||RPRICE[rd.route]||0;
     var dAmt=(rd.cnt||0)*price;var rAmt=(rd.ret||0)*price;
     var tr=document.createElement('tr');
@@ -38458,14 +38333,12 @@ function _setIncSetting(drv,route,on,rate){
   window._incSettingsCache[key]=val;
   if(_db){
     var obj={};obj[key]=val;
-    var _incDid=window._adminViewDealerId||(_CU&&_CU.dealerId?_CU.dealerId:'shared');
-    _db.collection('settings').doc(_incDid+'_incSettings').set(obj,{merge:true}).catch(function(){});
+    _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').set(obj,{merge:true}).catch(function(){});
   }
 }
 function loadIncSettingsFromFB(){
   if(!_db)return;
-  var _incDid2=window._adminViewDealerId||(_CU&&_CU.dealerId?_CU.dealerId:'shared');
-  _db.collection('settings').doc(_incDid2+'_incSettings').get().then(function(doc){
+  _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').get().then(function(doc){
     if(!doc.exists)return;
     var data=doc.data();
     if(!window._incSettingsCache) window._incSettingsCache={};
