@@ -862,12 +862,14 @@ export default {
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const ghSlug = await fetch('https://app.donway.ai.kr/index.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
-        const html = await ghSlug.text();
+        const kvHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
+        const html = kvHtml || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
         if (html) {
+          const akKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
+          const slugScript = '<script>window.__AK='+JSON.stringify(akKey)+';window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
           const modified = html.replace(
-            '<head>',
-            `<head><link rel="manifest" href="/c/${slug}/manifest.json"><meta name="apple-mobile-web-app-title" content="${compName}"><link rel="apple-touch-icon" href="/c/${slug}/icon.svg">`
+            '</head>',
+            '<link rel="manifest" href="/c/'+slug+'/manifest.json"><meta name="apple-mobile-web-app-title" content="'+compName+'"><link rel="apple-touch-icon" href="/c/'+slug+'/icon.svg">\n'+slugScript+'\n</head>'
           );
           return new Response(modified, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
         }
