@@ -94,7 +94,7 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
     match /payments/{docId} {
-      allow read: if canRead();
+      allow read: if isAuth();
       allow write: if isSuperAdmin();
     }
     match /payment_requests/{docId} {
