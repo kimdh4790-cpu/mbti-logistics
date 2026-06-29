@@ -1,0 +1,26 @@
+name: Pages 배포
+on:
+  push:
+    paths:
+      - 'settle.html'
+    branches:
+      - main
+
+jobs:
+  copy-to-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: settle.html → settle-pages/index.html 복사
+        run: |
+          mkdir -p settle-pages
+          cp settle.html settle-pages/index.html
+      - name: 커밋 및 푸시
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add settle-pages/index.html
+          git diff --staged --quiet || git commit -m "auto: settle-pages/index.html 업데이트"
+          git push
