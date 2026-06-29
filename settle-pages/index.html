@@ -23341,7 +23341,7 @@ function _homeLoadSettleSummary(did,ym){
     snap.forEach(function(d){
       var v=d.data();
       var cn=calcNet(v);
-      tc+=parseInt(v.totalCnt||v.cnt||cn.ramt||0); // fix: damt는 금액, 건수 필드로 변경
+      tc+=parseInt(v.dcnt||v.totalCnt||v.cnt||0); // fix: dcnt가 배송건수 필드
       tp+=parseInt(cn.net||v.net||v.driverPay||v.totalPay||v.pay||0);
       if(v.driver||v.userId)drv.add(v.driver||v.userId);
     });
