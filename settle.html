@@ -38485,6 +38485,15 @@ function openIncPanel(){
   var closeBtn2=document.createElement('button');
   closeBtn2.style.cssText='padding:5px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer';
   closeBtn2.textContent='닫기';closeBtn2.onclick=function(){mo.remove();};
+  var promoUploadBtn=document.createElement('button');
+  promoUploadBtn.style.cssText='padding:5px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:6px';
+  promoUploadBtn.textContent='📊 가중요인 업로드';
+  promoUploadBtn.onclick=function(){
+    var inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls';
+    inp.onchange=function(){if(inp.files[0])_promoImportFromExcel(inp.files[0]);};
+    inp.click();
+  };
+  incHdr.appendChild(promoUploadBtn);
   incHdr.appendChild(closeBtn2);inner.appendChild(incHdr);
   // 캠프별 일괄
   if(bulkBtns){
@@ -38541,6 +38550,61 @@ function _filterIncCamp2(camp){
   });
 }
 // 인센 글로벌 맵 (HTML 이스케이프 없이 drv/route 저장)
+
+function _promoImportFromExcel(file){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var data=new Uint8Array(e.target.result);
+    var wb=XLSX.read(data,{type:'array',cellText:true,cellDates:true});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    // 헤더행 찾기 (Wave,Camp,Route 컬럼)
+    var hdrIdx=-1,colWave=-1,colCamp=-1,colRoute=-1,colP1=-1,colP2=-1;
+    for(var i=0;i<Math.min(10,rows.length);i++){
+      var r=rows[i];
+      r.forEach(function(v,ci){
+        var s=String(v||'').replace(/\s/g,'').toLowerCase();
+        if(s==='wave') colWave=ci;
+        else if(s==='camp') colCamp=ci;
+        else if(s==='route'||s==='라우트') colRoute=ci;
+        else if(s.indexOf('가중요인1')>=0&&s.indexOf('%')>=0&&colP1<0) colP1=ci+1; // 해당/미해당 컬럼
+        else if(s.indexOf('가중요인2')>=0&&s.indexOf('%')>=0&&colP2<0) colP2=ci+1;
+      });
+      if(colRoute>=0&&colP1>=0){hdrIdx=i;break;}
+    }
+    if(hdrIdx<0||colRoute<0){toast('❌ 헤더 인식 실패 (Wave/Camp/Route/가중요인 컬럼 필요)');return;}
+    var routeMap={};
+    for(var ri=hdrIdx+1;ri<rows.length;ri++){
+      var row=rows[ri];
+      var route=String(row[colRoute]||'').trim();
+      if(!route)continue;
+      var v1=colP1>=0?String(row[colP1]||'').trim():'';
+      var v2=colP2>=0?String(row[colP2]||'').trim():'';
+      var h1=v1==='해당';
+      var h2=v2==='해당';
+      if(!routeMap[route]){routeMap[route]={h1:false,h2:false};}
+      if(h1)routeMap[route].h1=true;
+      if(h2)routeMap[route].h2=true;
+    }
+    // 라우트별 버튼 자동 클릭
+    var cnt=0;
+    Object.keys(_INC_MAP).forEach(function(k){
+      var m=_INC_MAP[k];
+      var rm=routeMap[m.route];
+      if(!rm)return;
+      var rate=0;
+      if(rm.h1&&rm.h2)rate=25;
+      else if(rm.h1)rate=15;
+      else if(rm.h2)rate=10;
+      if(rate>0){
+        var btn=document.querySelector('.inc-rate-btn[data-k=+k+][data-rate=+rate+]');
+        if(btn){btn.click();cnt++;}
+      }
+    });
+    toast('✅ 가중요인 적용 '+cnt+'건');
+  };
+  reader.readAsArrayBuffer(file);
+}
 var _INC_MAP={};
 var _INC_KEY_IDX=0;
 function _incNewKey(drv,route){
