@@ -1,2 +1,0 @@
-<div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 31만 · 150명 68만 · 300명 102만 · 500명 170만 · 700명 275만 · 1000명 315만원/월</div>
-                  <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 22만 · 150명 52만 · 300명 78만 · 500명 131만 · 700명 183만 · 1000명 210만원/월 (VAT별도)</div>
