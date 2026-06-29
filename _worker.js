@@ -73,10 +73,10 @@ async function fetchAsset(path, request, env) {
   if (e && e.DONWAY_ASSETS) {
     const kvVal = await e.DONWAY_ASSETS.get(fileName, 'text');
     if (kvVal) {
-      const BIZ_CHK1 = "  var verified=document.getElementById('r-biznum').dataset.verified;  if(!verified){err.textContent='사업자번호 중복 확인을 먼저 해주세요';err.style.display='block';return;}";
-      const BIZ_CHK2 = "  if(verified==='blocked'){err.textContent='사용할 수 없는 사업자번호입니다';err.style.display='block';return;}";
-      const patched = fileName==='settle.html' ? kvVal.replace(BIZ_CHK1,'').replace(BIZ_CHK2,'') : kvVal;
-      return new Response(patched, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
+      return new Response(kvVal, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
+
+
+
     }
   }
   // KV 없으면 GitHub Raw
