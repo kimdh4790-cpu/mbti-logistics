@@ -8404,6 +8404,11 @@ if(window.location.hash==='#join'){
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
+        // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
+        if(!d.dealerId){
+          _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
+          d.dealerId=user.uid;
+        }
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
