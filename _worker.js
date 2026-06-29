@@ -93,7 +93,7 @@ async function serveKVFile(env, fileName, contentType) {
     const bust = Date.now() + Math.random().toString(36).slice(2);
     const fileUrl = PAGES_FILES[fileName]
       ? PAGES_FILES[fileName] + '?bust=' + bust
-      : 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/' + encodeURIComponent(fileName) + '?bust=' + bust;
+      : 'https://cdn.jsdelivr.net/gh/kimdh4790-cpu/mbti-logistics@main/' + encodeURIComponent(fileName) + '?v=' + bust;
     const resp = await fetch(fileUrl, {
       cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
       headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
