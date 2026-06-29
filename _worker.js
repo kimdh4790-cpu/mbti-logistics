@@ -81,7 +81,7 @@ async function fetchAsset(path, request, env) {
   }
   // KV 없으면 GitHub Raw
   const bust = Date.now() + Math.random().toString(36).slice(2);
-  const fetchUrl = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main' + filePath + '?bust=' + bust;
+  const fetchUrl = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/' + fileName + '?bust=' + bust;
   const ghResp = await fetch(fetchUrl, {
     cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
     headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' }
