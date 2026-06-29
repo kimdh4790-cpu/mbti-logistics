@@ -534,6 +534,11 @@ export default {
       return Response.redirect('https://' + hostname + url.pathname + url.search, 301);
     }
 
+    // ── filo.ai.kr 전용 라우팅 ──
+    if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      if (path === '/' || path === '') return fetchAsset('/filo_landing.html', request, env);
+      if (path === '/app' || path === '/app.html') return fetchAsset('/filo.html', request, env);
+    }
 
     // ── Rate Limiting (API 엔드포인트만) ──
     const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
