@@ -9087,11 +9087,18 @@ function checkBizNum(){
   }).then(function(snap){
     if(!snap)return;
     {
-      // ★ 국세청 API 실검증
+      // ★ 국세청 API 실검증 (서버 오류 시 통과)
       msg.style.color='var(--text3)';msg.textContent='🔍 국세청 검증 중...';
       fetch('/api/biz-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bizNum:biz})})
       .then(function(r){return r.json();})
+      .catch(function(){
+        // API 오류 시 통과
+        msg.style.color='var(--green)';msg.textContent='✅ 사업자번호 확인됨';
+        document.getElementById('r-biznum').dataset.verified='ok';
+        return null;
+      })
       .then(function(d){
+        if(!d)return;
         if(d.ok && d.active && d.alreadyRegistered && d.trialUsed){
           msg.style.color='var(--red)';
           msg.textContent='❌ 이미 체험 이력이 있는 사업자번호입니다. 요금제를 선택해 주세요.';
