@@ -1,0 +1,10 @@
+/api/* https://filo.ai.kr/api/:splat 200
+/ /filo_landing.html 200
+/inventory /inventory.html 200
+/qr /qrpos.html 200
+/qrpos /qrpos.html 200
+/kiosk /kiosk.html 200
+/app /filo.html 200
+/universal /universal_settle.html 200
+/register /register.html 200
+/admin-sub /admin_sub.html 200
