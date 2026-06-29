@@ -38364,12 +38364,14 @@ function _setIncSetting(drv,route,on,rate){
   window._incSettingsCache[key]=val;
   if(_db){
     var obj={};obj[key]=val;
-    _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').set(obj,{merge:true}).catch(function(){});
+    var _incDid=window._adminViewDealerId||(_CU&&_CU.dealerId?_CU.dealerId:'shared');
+    _db.collection('settings').doc(_incDid+'_incSettings').set(obj,{merge:true}).catch(function(){});
   }
 }
 function loadIncSettingsFromFB(){
   if(!_db)return;
-  _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_incSettings').get().then(function(doc){
+  var _incDid2=window._adminViewDealerId||(_CU&&_CU.dealerId?_CU.dealerId:'shared');
+  _db.collection('settings').doc(_incDid2+'_incSettings').get().then(function(doc){
     if(!doc.exists)return;
     var data=doc.data();
     if(!window._incSettingsCache) window._incSettingsCache={};
