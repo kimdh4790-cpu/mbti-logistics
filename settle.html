@@ -6835,6 +6835,28 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         // 유효하지 않은 ID 스킵 (한글 포함, 공백, 특수단어)
         if(!cleanId||/[ㄱ-ㅎ가-힣]/.test(cleanId)||cleanId.length>30)continue;
         var divVal=String(row[rColDiv]||'').trim();
+        var rowDateRaw=row[rColDate];
+        var rowDate='';
+        if(rowDateRaw instanceof Date){
+          // XLSX.js 날짜 파싱 버그: 23:59:xx로 오는 경우 다음날로 보정
+          var _rd=new Date(rowDateRaw);
+          if(_rd.getHours()>=23&&_rd.getMinutes()>=58) _rd=new Date(_rd.getTime()+120000);
+          var _y=_rd.getFullYear();
+          var _m=String(_rd.getMonth()+1).padStart(2,'0');
+          var _d=String(_rd.getDate()).padStart(2,'0');
+          rowDate=_y+'-'+_m+'-'+_d;
+        } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
+          // Excel 날짜 시리얼 → JS Date
+          var _xd=new Date(Math.round((rowDateRaw-25569)*86400*1000));
+          var _y=_xd.getUTCFullYear();
+          var _m=String(_xd.getUTCMonth()+1).padStart(2,'0');
+          var _d=String(_xd.getUTCDate()).padStart(2,'0');
+          rowDate=_y+'-'+_m+'-'+_d;
+        } else if(rowDateRaw){
+          var _rs=String(rowDateRaw).trim();
+          // yyyy-mm-dd 또는 yyyy/mm/dd 처리
+          rowDate=_rs.replace(/\//g,'-').slice(0,10);
+        }
         // ★ 주간/야간 인센 행은 회사 단가 기준 항목 → 기사 정산 제외 (건수/반품만 합산용)
         var isSkipRow=divVal.includes('주간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
         if(!isSkipRow) isSkipRow=divVal.includes('야간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
@@ -6986,29 +7008,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         }
         drvMap[cleanId].addIncAmt+=addInc*(dcnt+rcnt); // ★ col10단가 × (배송+반품)건수
         // 날짜 추출
-        var rowDateRaw=row[rColDate];
-        var rowDate='';
-        if(rowDateRaw instanceof Date){
-          // XLSX.js 날짜 파싱 버그: 23:59:xx로 오는 경우 다음날로 보정
-          var _rd=new Date(rowDateRaw);
-          if(_rd.getHours()>=23&&_rd.getMinutes()>=58) _rd=new Date(_rd.getTime()+120000);
-          var _y=_rd.getFullYear();
-          var _m=String(_rd.getMonth()+1).padStart(2,'0');
-          var _d=String(_rd.getDate()).padStart(2,'0');
-          rowDate=_y+'-'+_m+'-'+_d;
-        } else if(typeof rowDateRaw==='number'&&rowDateRaw>40000){
-          // Excel 날짜 시리얼 → JS Date
-          var _xd=new Date(Math.round((rowDateRaw-25569)*86400*1000));
-          var _y=_xd.getUTCFullYear();
-          var _m=String(_xd.getUTCMonth()+1).padStart(2,'0');
-          var _d=String(_xd.getUTCDate()).padStart(2,'0');
-          rowDate=_y+'-'+_m+'-'+_d;
-        } else if(rowDateRaw){
-          var _rs=String(rowDateRaw).trim();
-          // yyyy-mm-dd 또는 yyyy/mm/dd 처리
-          rowDate=_rs.replace(/\//g,'-').slice(0,10);
-        }
-
         if(route){
           if(!drvMap[cleanId].routes[route])
             drvMap[cleanId].routes[route]={cnt:0,ret:0,unitPrc:0,delAmt:0,retAmt:0,addInc:0};
