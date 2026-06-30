@@ -640,6 +640,51 @@ export default {
             </tr>`;
           });
 
+          // 일일 상세 내역 (날짜별 배송/반품/프레시백)
+          const drFields = f['dateRoutes']?.mapValue?.fields || {};
+          const dfFields = f['dateFresh']?.mapValue?.fields || {};
+          const dateSet = new Set([...Object.keys(drFields), ...Object.keys(dfFields)]);
+          const dailyDates = Array.from(dateSet).sort();
+          let dailyRows = '';
+          let dailyTotalFresh = 0;
+          dailyDates.forEach(dt => {
+            const routesMap = drFields[dt]?.mapValue?.fields || {};
+            const routeKeys = Object.keys(routesMap).sort();
+            let dayDcnt = 0, dayRcnt = 0;
+            const routeParts = [];
+            routeKeys.forEach(rt => {
+              const rf2 = routesMap[rt]?.mapValue?.fields || {};
+              const c = parseFloat(rf2.cnt?.integerValue || rf2.cnt?.doubleValue || 0);
+              const rr = parseFloat(rf2.ret?.integerValue || rf2.ret?.doubleValue || 0);
+              dayDcnt += c; dayRcnt += rr;
+              routeParts.push(rt + '(' + c + (rr ? '/반' + rr : '') + ')');
+            });
+            const dayFresh = parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
+            dailyTotalFresh += dayFresh;
+            dailyRows += `<tr>
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">${dt}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">${routeParts.join(', ') || '-'}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayDcnt}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayRcnt}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;${dayFresh>0?'color:#059669':'color:#94a3b8'}">${dayFresh>0?'+'+dayFresh.toLocaleString():'-'}</td>
+            </tr>`;
+          });
+          const dailySec = dailyRows ? `
+            <div class="sec">
+              <div class="sec-title">📅 일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
+              <table>
+                <thead><tr style="background:#f8fafc">
+                  <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th>
+                  <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">프레시백</th>
+                </tr></thead>
+                <tbody>${dailyRows}</tbody>
+                ${dailyTotalFresh>0?`<tfoot><tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">프레시백 합계</td><td style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">+${dailyTotalFresh.toLocaleString()}원</td></tr></tfoot>` : ''}
+              </table>
+            </div>` : '';
+
           // 추가 항목
           let addRows = '';
           addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
@@ -756,6 +801,7 @@ export default {
                 <div class="sbox"><div class="slbl">실 지급액</div><div class="sval" style="color:#185FA5">₩${net.toLocaleString()}</div></div>
               </div>
               ${routeSec}
+              ${dailySec}
               ${addSec}
               ${taxSec}
               <div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
