@@ -30517,13 +30517,13 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       if(dataUrl.length>900000)dataUrl=canvas.toDataURL('image/jpeg',0.7);
       var path='stmt_kakao/'+did+'/'+month+'_'+(x.userId||'u')+'_'+Date.now()+'.jpg';
       var imgUrl=await _uploadImgToStorage(dataUrl,path);
-      // 일일상세내역표 캡처 (있으면 추가 발송)
+      // 일일상세내역표 캡처 (있으면 추가 발송, 10일씩 페이지 분할)
       try{
-        var dailyHTML=_buildDailyDetailCaptureHTML(x,name,month);
-        if(dailyHTML){
+        var dailyHTMLs=_buildDailyDetailCaptureHTML(x,name,month);
+        for(var dpi=0;dpi<dailyHTMLs.length;dpi++){
           var dailyDiv=document.createElement('div');
           dailyDiv.style.cssText='position:fixed;left:-9999px;top:0;width:600px;background:#fff;font-family:sans-serif;padding:0;overflow:visible';
-          dailyDiv.innerHTML=dailyHTML;
+          dailyDiv.innerHTML=dailyHTMLs[dpi];
           document.body.appendChild(dailyDiv);
           await new Promise(function(res){setTimeout(res,200);});
           var dailyFullH=Math.max(dailyDiv.scrollHeight, dailyDiv.offsetHeight, dailyDiv.getBoundingClientRect().height)||1000;
@@ -30532,10 +30532,10 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
           if(dailyDiv.parentNode)document.body.removeChild(dailyDiv);
           var dailyDataUrl=dailyCanvas.toDataURL('image/jpeg',0.85);
           if(dailyDataUrl.length>900000)dailyDataUrl=dailyCanvas.toDataURL('image/jpeg',0.7);
-          var dailyPath='stmt_kakao/'+did+'/'+month+'_'+(x.userId||'u')+'_daily_'+Date.now()+'.jpg';
+          var dailyPath='stmt_kakao/'+did+'/'+month+'_'+(x.userId||'u')+'_daily'+(dpi+1)+'_'+Date.now()+'.jpg';
           var dailyImgUrl=await _uploadImgToStorage(dailyDataUrl,dailyPath);
           if(_db&&dailyImgUrl) _db.collection('message_history').add({dealerId:did,to:phone,name:name,channel:'daily_detail',
-            text:'일일상세내역표',stmtUrl:dailyImgUrl,sentAt:new Date().toISOString()}).catch(function(){});
+            text:'일일상세내역표 '+(dpi+1)+'/'+dailyHTMLs.length,stmtUrl:dailyImgUrl,sentAt:new Date().toISOString()}).catch(function(){});
         }
       }catch(eDaily){/* 일일내역표 실패해도 명세서 발송은 계속 진행 */}
       await _doSendWithImg(imgUrl);
@@ -36829,41 +36829,50 @@ function _buildDailyDetailCaptureHTML(x, name, month){
   var compName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'회사명 미등록';
   var dr=x.dateRoutes||{};
   var dates=Object.keys(dr).sort();
-  if(!dates.length) return '';
-  var rows='';
-  dates.forEach(function(dt){
-    var routesObj=dr[dt]||{};
-    var routeKeys=Object.keys(routesObj).sort();
-    var dayDcnt=0,dayRcnt=0,dayFresh=0;
-    routeKeys.forEach(function(rt){
-      var v=routesObj[rt]||{};
-      dayDcnt+=(v.cnt||0);dayRcnt+=(v.ret||0);dayFresh+=(v.fresh||0);
+  if(!dates.length) return [];
+  var PAGE_SIZE=10;
+  var pages=[];
+  for(var pi=0;pi<dates.length;pi+=PAGE_SIZE){
+    pages.push(dates.slice(pi,pi+PAGE_SIZE));
+  }
+  var totalPages=pages.length;
+  var htmlList=pages.map(function(pageDates,pageIdx){
+    var rows='';
+    pageDates.forEach(function(dt){
+      var routesObj=dr[dt]||{};
+      var routeKeys=Object.keys(routesObj).sort();
+      var dayDcnt=0,dayRcnt=0;
+      routeKeys.forEach(function(rt){
+        var v=routesObj[rt]||{};
+        dayDcnt+=(v.cnt||0);dayRcnt+=(v.ret||0);
+      });
+      var routeStr=routeKeys.map(function(rt){
+        var v=routesObj[rt]||{};
+        return rt+'('+(v.cnt||0)+(v.ret?'/반'+v.ret:'')+')';
+      }).join(', ');
+      rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">'+dt+'</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">'+esc(routeStr)+'</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayDcnt+'</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayRcnt+'</td>'
+        +'</tr>';
     });
-    var routeStr=routeKeys.map(function(rt){
-      var v=routesObj[rt]||{};
-      return rt+'('+(v.cnt||0)+(v.ret?'/반'+v.ret:'')+')';
-    }).join(', ');
-    rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">'+dt+'</td>'
-      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">'+esc(routeStr)+'</td>'
-      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayDcnt+'</td>'
-      +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayRcnt+'</td>'
-      +(dayFresh>0?'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;color:#059669">+'+dayFresh.toLocaleString()+'</td>':'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;color:#94a3b8">-</td>')
-      +'</tr>';
+    var pageLabel=totalPages>1?' ('+(pageIdx+1)+'/'+totalPages+')':'';
+    return '<div style="width:600px;background:#fff;font-family:sans-serif">'
+      +'<div style="background:linear-gradient(135deg,#0a1628,#1e3a5f);padding:16px 18px;color:#fff">'
+      +'<div style="font-size:10px;opacity:.7;margin-bottom:4px">DAILY DETAIL · '+esc(compName)+'</div>'
+      +'<div style="font-size:17px;font-weight:800">'+month+' 일일 상세 내역'+pageLabel+'</div>'
+      +'<div style="font-size:12px;margin-top:2px;opacity:.85">'+esc(name)+'</div>'
+      +'</div>'
+      +'<table style="width:100%;border-collapse:collapse">'
+      +'<tr style="background:#f8fafc"><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th></tr>'
+      +rows
+      +'</table>'
+      +'<div style="padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center">'
+      +compName+' · 051-711-3103 · 사업자번호 373-86-02536'
+      +'</div>'
+      +'</div>';
   });
-  return '<div style="width:600px;background:#fff;font-family:sans-serif">'
-    +'<div style="background:linear-gradient(135deg,#0a1628,#1e3a5f);padding:16px 18px;color:#fff">'
-    +'<div style="font-size:10px;opacity:.7;margin-bottom:4px">DAILY DETAIL · '+esc(compName)+'</div>'
-    +'<div style="font-size:17px;font-weight:800">'+month+' 일일 상세 내역</div>'
-    +'<div style="font-size:12px;margin-top:2px;opacity:.85">'+esc(name)+'</div>'
-    +'</div>'
-    +'<table style="width:100%;border-collapse:collapse">'
-    +'<tr style="background:#f8fafc"><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">프레시백</th></tr>'
-    +rows
-    +'</table>'
-    +'<div style="padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center">'
-    +compName+' · 051-711-3103 · 사업자번호 373-86-02536'
-    +'</div>'
-    +'</div>';
+  return htmlList;
 }
 
 function _sendPayslipPush(x,r,name,month,net,vatIncome,docId){
