@@ -9113,14 +9113,14 @@ function checkBizNum(){
           msg.textContent='❌ 폐업 또는 유효하지 않은 사업자번호 ('+(d.status||'확인불가')+')';
           document.getElementById('r-biznum').dataset.verified='blocked';
         } else {
-          msg.style.color='var(--red)';
-          msg.textContent='❌ 확인 실패 — 다시 시도해주세요';
-          document.getElementById('r-biznum').dataset.verified='';
+          msg.style.color='#f59e0b';
+          msg.textContent='⚠️ 국세청 검증 일시 오류 — 가입은 진행 가능합니다';
+          document.getElementById('r-biznum').dataset.verified='ok';
         }
       }).catch(function(){
-        msg.style.color='var(--red)';
-        msg.textContent='❌ 네트워크 오류 — 잠시 후 다시 시도해주세요';
-        document.getElementById('r-biznum').dataset.verified='';
+        msg.style.color='#f59e0b';
+        msg.textContent='⚠️ 검증 서버 오류 — 가입은 진행 가능합니다';
+        document.getElementById('r-biznum').dataset.verified='ok';
       });
     }
   }).catch(function(){
