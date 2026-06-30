@@ -2856,7 +2856,10 @@ service cloud.firestore {
           body: JSON.stringify({ b_no: [rawNum] })
         });
         const rawText = await ntsRes.text();
-        if (!ntsRes.ok) throw new Error('국세청 API 오류: ' + ntsRes.status + ' ' + rawText.slice(0,100));
+        if (!ntsRes.ok) {
+          // 국세청 API 장애 시 임시 우회: 형식만 맞으면 통과
+          return new Response(JSON.stringify({ ok: true, active: true, bizName: '', fallback: true }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }
         const ntsData = JSON.parse(rawText);
         const item = ntsData.data && ntsData.data[0];
         if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음', raw: rawText.slice(0,200) }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
