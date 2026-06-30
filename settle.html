@@ -38597,8 +38597,19 @@ function _promoImportFromExcel(file){
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
       if(rate>0){
-        var btn=document.querySelector('.inc-rate-btn[data-k="'+k+'"][data-rate="'+rate+'"]');
-        if(btn){btn.click();cnt++;}
+        var s=_getIncSetting(m.drv,m.route);
+        if(!s.on)_setIncSetting(m.drv,m.route,true,rate);
+        else _setIncSetting(m.drv,m.route,true,rate);
+        var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
+        if(togBtn){togBtn.textContent='ON';togBtn.style.background='#059669';}
+        var rateBtns=document.querySelectorAll('.inc-rate-btn[data-k="'+k+'"]');
+        rateBtns.forEach(function(rb){
+          var on=(+rb.dataset.rate===rate);
+          rb.style.background=on?'#2563eb':'#f1f5f9';
+          rb.style.color=on?'#fff':'#475569';
+          rb.style.borderColor=on?'#2563eb':'#d1d5db';
+        });
+        cnt++;
       }
     });
     toast('✅ 가중요인 적용 '+cnt+'건');
