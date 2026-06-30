@@ -7421,6 +7421,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             status:'정산예정',
             routeDetails:routeDetails,
             dateRoutes:dm.dateRoutes||{},
+            dateFresh:dm.dateFresh||{},
             updatedAt:new Date().toISOString(),
             createdAt:new Date().toISOString()
           };
@@ -36828,7 +36829,11 @@ function _buildPayslipCaptureHTML(x, r, name, month, net, vatIncome){
 function _buildDailyDetailCaptureHTML(x, name, month){
   var compName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'회사명 미등록';
   var dr=x.dateRoutes||{};
-  var dates=Object.keys(dr).sort();
+  var dFresh=x.dateFresh||{};
+  var dateSet={};
+  Object.keys(dr).forEach(function(d){dateSet[d]=1;});
+  Object.keys(dFresh).forEach(function(d){dateSet[d]=1;});
+  var dates=Object.keys(dateSet).sort();
   if(!dates.length) return [];
   var PAGE_SIZE=10;
   var pages=[];
@@ -36838,6 +36843,7 @@ function _buildDailyDetailCaptureHTML(x, name, month){
   var totalPages=pages.length;
   var htmlList=pages.map(function(pageDates,pageIdx){
     var rows='';
+    var pageFreshSum=0;
     pageDates.forEach(function(dt){
       var routesObj=dr[dt]||{};
       var routeKeys=Object.keys(routesObj).sort();
@@ -36849,14 +36855,18 @@ function _buildDailyDetailCaptureHTML(x, name, month){
       var routeStr=routeKeys.map(function(rt){
         var v=routesObj[rt]||{};
         return rt+'('+(v.cnt||0)+(v.ret?'/반'+v.ret:'')+')';
-      }).join(', ');
+      }).join(', ')||'-';
+      var dayFresh=dFresh[dt]||0;
+      pageFreshSum+=dayFresh;
       rows+='<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">'+dt+'</td>'
         +'<td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">'+esc(routeStr)+'</td>'
         +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayDcnt+'</td>'
         +'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">'+dayRcnt+'</td>'
+        +(dayFresh>0?'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;color:#059669">+'+dayFresh.toLocaleString()+'</td>':'<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;color:#94a3b8">-</td>')
         +'</tr>';
     });
     var pageLabel=totalPages>1?' ('+(pageIdx+1)+'/'+totalPages+')':'';
+    var sumRow=pageFreshSum>0?('<tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">이 페이지 프레시백 합계 +'+pageFreshSum.toLocaleString()+'원</td></tr>'):'';
     return '<div style="width:600px;background:#fff;font-family:sans-serif">'
       +'<div style="background:linear-gradient(135deg,#0a1628,#1e3a5f);padding:16px 18px;color:#fff">'
       +'<div style="font-size:10px;opacity:.7;margin-bottom:4px">DAILY DETAIL · '+esc(compName)+'</div>'
@@ -36864,8 +36874,9 @@ function _buildDailyDetailCaptureHTML(x, name, month){
       +'<div style="font-size:12px;margin-top:2px;opacity:.85">'+esc(name)+'</div>'
       +'</div>'
       +'<table style="width:100%;border-collapse:collapse">'
-      +'<tr style="background:#f8fafc"><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th></tr>'
+      +'<tr style="background:#f8fafc"><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th><th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th><th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">프레시백</th></tr>'
       +rows
+      +sumRow
       +'</table>'
       +'<div style="padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center">'
       +compName+' · 051-711-3103 · 사업자번호 373-86-02536'
