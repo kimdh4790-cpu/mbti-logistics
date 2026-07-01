@@ -7492,6 +7492,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          // ★ 아이디지원 계산 전 etcPlus/etcMinus 초기화 (재계산 중복 방지)
+          settlements.forEach(function(s){
+            if((s.etcPlusReason||'').indexOf('아이디지원')>=0){s.etcPlus=0;s.etcPlusReason='';}
+            if((s.etcMinusReason||'').indexOf('아이디지원')>=0){s.etcMinus=0;s.etcMinusReason='';}
+          });
           // ★ 아이디지원 정산 (단일 블록)
           (function(){
             // rules 수집: Firestore idSupport + settings.idSupportRules (중복 제거)
