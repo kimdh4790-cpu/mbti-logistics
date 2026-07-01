@@ -32481,9 +32481,12 @@ function recalcAllSettlements(){
         var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
         var _prevReason=_recalcEtcPlusReason;
         if(_prevReason.indexOf('정산보장')>=0){
-          // 기존 보장성 차액 제거하고 순수 기타+만 남김
-          _prevEtcPlusNoGuarantee=0;
-          _prevReason='';
+          // 정산보장 사유만 제거, 아이디지원 등 다른 사유/금액은 유지
+          var _rParts=_prevReason.split(' / ').filter(function(p){return p.indexOf('정산보장')<0;});
+          _prevReason=_rParts.join(' / ');
+          // 보장성 차액 = max(0, 보장금액 - 기준금액), 나머지가 순수 기타+
+          var _prevGuaranteeAmt=Math.max(0,_g-_baseAmt);
+          _prevEtcPlusNoGuarantee=Math.max(0,_recalcEtcPlus-_prevGuaranteeAmt);
         }
         var _baseWithEtc=_baseAmt+_prevEtcPlusNoGuarantee;
         if(_g>_baseWithEtc){
