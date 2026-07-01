@@ -7658,6 +7658,67 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
               }
             });
+
+            // ★ toId(지원받는 기사)에 건수 추가
+            window._idSupportRules.forEach(function(rule){
+              var fid=(rule.fromId||'').trim();
+              var tid=(rule.toId||'').trim();
+              var fd=drvMap[fid]; if(!fd)return;
+              var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
+              var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
+              var rStart=_ndFmt(rule.startDate)||(_sortedDates.length?_sortedDates[0]:'');
+              var rEnd=_ndFmt(rule.endDate)||(_sortedDates.length?_sortedDates[_sortedDates.length-1]:'');
+              var tR=rule.routes||[];
+              // toId 정산 찾기 — 없으면 새로 생성
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
+              if(!ts){
+                ts={userId:tid,driver:tid,month:month,dcnt:0,rcnt:0,damt:0,ramt:0,
+                  fresh:0,finc:0,inc:0,net:0,routeDetails:[],dateRoutes:{},dateFresh:{},
+                  status:'정산예정',dealerId:settlements[0]&&settlements[0].dealerId||''};
+                settlements.push(ts);
+              }
+              if(!ts.dateRoutes) ts.dateRoutes={};
+              if(!ts.routeDetails) ts.routeDetails=[];
+              // fromId dateRoutes에서 날짜 범위 내 건수 toId로 이전
+              if(fd.dateRoutes){
+                Object.keys(fd.dateRoutes).forEach(function(dt){
+                  if(rStart&&dt<rStart)return;
+                  if(rEnd&&dt>rEnd)return;
+                  Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd=fd.dateRoutes[dt];
+                    var rtd=rd[rt]||{};
+                    var cnt=rtd.cnt||0, ret=rtd.ret||0;
+                    if(!cnt&&!ret)return;
+                    // toId dateRoutes에 추가
+                    if(!ts.dateRoutes[dt])ts.dateRoutes[dt]={};
+                    if(!ts.dateRoutes[dt][rt])ts.dateRoutes[dt][rt]={cnt:0,ret:0,fresh:0};
+                    ts.dateRoutes[dt][rt].cnt+=(cnt);
+                    ts.dateRoutes[dt][rt].ret+=(ret);
+                    // toId routeDetails에 추가
+                    var ri=ts.routeDetails.findIndex(function(r){return r.route===rt;});
+                    if(ri<0){ts.routeDetails.push({route:rt,cnt:cnt,ret:ret,price:RPRICE[rt]||0});ri=ts.routeDetails.length-1;}
+                    else{ts.routeDetails[ri].cnt=(ts.routeDetails[ri].cnt||0)+cnt;ts.routeDetails[ri].ret=(ts.routeDetails[ri].ret||0)+ret;}
+                  });
+                });
+              }
+              // dateFresh도 이전
+              if(fd.dateFresh){
+                Object.keys(fd.dateFresh).forEach(function(dt){
+                  if(rStart&&dt<rStart)return;
+                  if(rEnd&&dt>rEnd)return;
+                  if(!ts.dateFresh)ts.dateFresh={};
+                  ts.dateFresh[dt]=(ts.dateFresh[dt]||0)+(fd.dateFresh[dt]||0);
+                });
+              }
+              // toId dcnt/rcnt/금액 재계산
+              ts.dcnt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+              ts.rcnt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
+              ts.damt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0)*(r.price||RPRICE[r.route]||0);},0);
+              ts.ramt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0)*(r.price||RPRICE[r.route]||0);},0);
+              ts.fresh=(ts.dateFresh&&Object.values(ts.dateFresh).reduce(function(s,v){return s+v;},0))||0;
+              ts.inc=ts.damt-ts.ramt;
+            });
           }
           // 정산 보장금액 자동 채움 (동기)
           (function(){
