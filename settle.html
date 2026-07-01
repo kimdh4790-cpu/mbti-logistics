@@ -7580,7 +7580,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(_totalFresh > 0){ tot += _totalFresh; pts.push('프레시백 ₩'+_totalFresh.toLocaleString()); }
               if(!tot) return;
 
-              // ③ fromId: routeDetails 건수차감 + etcMinus
+              // ③ fromId: routeDetails 건수차감 + 프레시백 차감 + 사유 기록
               var fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
               if(fs){
                 if(fs.routeDetails && fs.routeDetails.length){
@@ -7600,6 +7600,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.dcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.cnt||0); }, 0);
                   fs.rcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.ret||0); }, 0);
                 }
+                // ★ 지원 사유 기타(+) 사유란에 표기 (금액 없이 사유만)
+                var pvp = fs.etcPlusReason||'';
+                fs.etcPlusReason = (pvp?pvp+' / ':'') + '아이디지원 지원('+tid+') '+pts.join('·');
+                // ★ 프레시백도 실제 배송한 기사(toId)에게 귀속 → fromId에서 차감
+                if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
               }
 
               // ④ toId: 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
