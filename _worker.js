@@ -772,7 +772,6 @@ async function submitReserve(){
             dailyTotalFresh += parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
           });
 
-          // 모든 페이지 미리 렌더링 후 show/hide
           let allPages = '';
           for (let pi = 0; pi < _dTotalPages; pi++) {
             const pageDates = dailyDates.slice(pi * _DS, (pi + 1) * _DS);
@@ -801,7 +800,7 @@ async function submitReserve(){
             const freshFoot = (pi === _dTotalPages - 1 && dailyTotalFresh > 0)
               ? `<tfoot><tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">프레시백 합계</td><td style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">+${dailyTotalFresh.toLocaleString()}원</td></tr></tfoot>`
               : '';
-            allPages += `<div class="dp-page" data-page="${pi}" style="display:${pi===0?'block':'none'}">
+            allPages += `<div id="dp-page-${pi}" style="display:${pi===0?'block':'none'}">
               <table>
                 <thead><tr style="background:#f8fafc">
                   <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th>
@@ -818,18 +817,17 @@ async function submitReserve(){
 
           const nav = _dTotalPages > 1 ? `
             <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px">
-              <button onclick="(function(){var c=this.closest('.dp-wrap');var cur=parseInt(c.dataset.cur||0);if(cur>0){c.querySelectorAll('.dp-page').forEach(function(p){p.style.display='none';});c.querySelector('[data-page=\''+(cur-1)+'\']').style.display='block';c.dataset.cur=cur-1;c.querySelector('.dp-label').textContent=cur+'/${_dTotalPages}';}}).call(this)" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">◀</button>
-              <span class="dp-label" style="font-size:11px;color:#64748b">1/${_dTotalPages}</span>
-              <button onclick="(function(){var c=this.closest('.dp-wrap');var cur=parseInt(c.dataset.cur||0);var tp=${_dTotalPages};if(cur<tp-1){c.querySelectorAll('.dp-page').forEach(function(p){p.style.display='none';});c.querySelector('[data-page=\''+(cur+1)+'\']').style.display='block';c.dataset.cur=cur+1;c.querySelector('.dp-label').textContent=(cur+2)+'/'+tp;}}).call(this)" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">▶</button>
+              <button id="dp-prev" onclick="var cur=parseInt(document.getElementById('dp-cur').value);if(cur>0){document.getElementById('dp-page-'+cur).style.display='none';document.getElementById('dp-page-'+(cur-1)).style.display='block';document.getElementById('dp-cur').value=cur-1;document.getElementById('dp-label').textContent=cur+'/${_dTotalPages}';}" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">◀</button>
+              <span id="dp-label" style="font-size:11px;color:#64748b">1/${_dTotalPages}</span>
+              <button id="dp-next" onclick="var cur=parseInt(document.getElementById('dp-cur').value);if(cur<${_dTotalPages}-1){document.getElementById('dp-page-'+cur).style.display='none';document.getElementById('dp-page-'+(cur+1)).style.display='block';document.getElementById('dp-cur').value=cur+1;document.getElementById('dp-label').textContent=(cur+2)+'/${_dTotalPages}';}" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">▶</button>
+              <input type="hidden" id="dp-cur" value="0">
             </div>` : '';
 
           const dailySec = dailyDates.length ? `
             <div class="sec">
               <div class="sec-title">📅 일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
-              <div class="dp-wrap" data-cur="0">
-                ${allPages}
-                ${nav}
-              </div>
+              ${allPages}
+              ${nav}
             </div>` : '';
 
           // 아이디지원 섹션
