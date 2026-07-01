@@ -7524,7 +7524,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var fid = (rule.fromId||'').replace(/@df$/i,'').trim();
               var tid = (rule.toId||'').replace(/@df$/i,'').trim();
               var fd = drvMap[fid]; if(!fd) return;
-              console.log('[IDS2] fid='+fid+' tid='+tid+' dateFresh='+JSON.stringify(fd.dateFresh));
 
               // 날짜 목록 (dates 배열 정규화)
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
@@ -7598,9 +7597,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.dcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.cnt||0); }, 0);
                   fs.rcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.ret||0); }, 0);
                 }
-                // ★ toId가 엑셀에 없는 기사(용차)인 경우에만 fromId 프레시백 차감
-                var _tsExists = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
-                if(!_tsExists && _totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
+                // ★ 해당 날짜 프레시백 fromId에서 차감 (실제 배송한 기사에게 귀속)
+                if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
               }
 
               // ④ toId: 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
