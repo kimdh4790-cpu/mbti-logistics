@@ -30485,6 +30485,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       routeDetails:x.routeDetails||[],
       dateRoutes:x.dateRoutes||{},
       dateFresh:x.dateFresh||{},
+      idSupportRules:(window._idSupportRules||[]).filter(function(r){return r.fromId===(x.userId||x.driver)||r.toId===(x.userId||x.driver);})||[],
       companyName:coName,
       contactName:(_CU&&_CU.settlementContact)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementContact)||'',
       contactPhone:(_CU&&_CU.settlementPhone)||(_cachedCompanyDoc&&_cachedCompanyDoc.settlementPhone)||'051-711-3103',
