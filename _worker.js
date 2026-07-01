@@ -574,361 +574,6 @@ export default {
     return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
   }
       // ── 고객 공개 예약 페이지 ──
-      // ── 캠프 근무표 공개 페이지 ──
-      if (path === '/roster') {
-        const c = url.searchParams.get('c') || '';
-        const camp = url.searchParams.get('camp') || '';
-        const m = url.searchParams.get('m') || new Date().toISOString().slice(0,7);
-        if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
-
-        // POST: 교체 요청 생성
-        if (request.method === 'POST') {
-          try {
-            const body = await request.json();
-            const fsToken = await getAccessToken(env);
-            const now = new Date().toISOString();
-            const addUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_swaps';
-            const addBody = JSON.stringify({fields:{
-              dealerId:{stringValue:body.dealerId||''},
-              camp:{stringValue:body.camp||''},
-              month:{stringValue:body.month||''},
-              date:{stringValue:body.date||''},
-              route:{stringValue:body.route||''},
-              rotation:{stringValue:body.rotation||''},
-              driverName:{stringValue:body.driverName||''},
-              driverId:{stringValue:body.driverId||''},
-              weekStart:{stringValue:body.weekStart||''},
-              dayIndex:{integerValue:body.dayIndex||0},
-              fbId:{stringValue:body.fbId||''},
-              status:{stringValue:'대기'},
-              createdAt:{stringValue:now}
-            }});
-            const addRes = await fetch(addUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:addBody});
-            if(!addRes.ok) throw new Error('저장 실패');
-            const addData = await addRes.json();
-            const swapId = addData.name.split('/').pop();
-            return new Response(JSON.stringify({ok:true,swapId}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          } catch(e) {
-            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-          }
-        }
-
-        // GET: 근무표 페이지
-        try {
-          const fsToken = await getAccessToken(env);
-          // 회사 정보
-          const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}},limit:1}});
-          const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-          const qData = await qRes.json();
-          const coFields = qData[0]?.document?.fields || {};
-          const coName = coFields.companyName?.stringValue || 'DONWAY';
-          const dealerId = coFields.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
-
-          // 해당 월의 주차 계산 (월요일 기준)
-          const [yr, mo] = m.split('-').map(Number);
-          const firstDay = new Date(yr, mo-1, 1);
-          const lastDay = new Date(yr, mo, 0);
-          // 월에 포함된 weekStart 목록 생성
-          const weekStarts = [];
-          let d = new Date(firstDay);
-          d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1));
-          while(d <= lastDay) {
-            weekStarts.push(d.toISOString().slice(0,10));
-            d = new Date(d.getTime() + 7*86400000);
-          }
-
-          // roster_week 데이터 조회
-          const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const rBody = JSON.stringify({structuredQuery:{
-            from:[{collectionId:'roster_week'}],
-            where:{compositeFilter:{op:'AND',filters:[
-              {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},
-              {fieldFilter:{field:{fieldPath:'weekStart'},op:'IN',value:{arrayValue:{values:weekStarts.map(w=>({stringValue:w}))}}}}
-            ]}},
-            limit:500
-          }});
-          const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
-          const rData = await rRes.json();
-
-          // 기사별 데이터 정리
-          const byDriver = {};
-          (rData||[]).filter(r=>r.document).forEach(r=>{
-            const f = r.document.fields || {};
-            const did2 = f.driverId?.stringValue || '';
-            const dname = f.driverName?.stringValue || did2;
-            const dcamp = f.camp?.stringValue || '';
-            const ws = f.weekStart?.stringValue || '';
-            const di = parseInt(f.dayIndex?.integerValue || 0);
-            const status = f.status?.stringValue || '';
-            const route = f.route?.stringValue || '';
-            const rotation = f.rotation?.stringValue || '';
-            const fbId = r.document.name.split('/').pop();
-            if(!byDriver[did2]) byDriver[did2] = {name:dname, camp:dcamp, days:{}};
-            // 날짜 계산
-            const wsDate = new Date(ws);
-            wsDate.setDate(wsDate.getDate() + di);
-            const dateStr = wsDate.toISOString().slice(0,10);
-            byDriver[did2].days[dateStr] = {status, route, rotation, weekStart:ws, dayIndex:di, fbId, driverId:did2};
-          });
-
-          // 캠프 필터
-          const filteredDrivers = camp
-            ? Object.entries(byDriver).filter(([k,v])=>v.camp===camp)
-            : Object.entries(byDriver);
-
-          // 날짜 목록
-          const dates = [];
-          for(let i=1; i<=lastDay.getDate(); i++) {
-            const ds = yr+'-'+String(mo).padStart(2,'0')+'-'+String(i).padStart(2,'0');
-            dates.push(ds);
-          }
-
-          const dayLabels = ['일','월','화','수','목','금','토'];
-
-          const tableRows = filteredDrivers.map(([did2, drv]) => {
-            const cells = dates.map(date => {
-              const day = drv.days[date];
-              const dow = new Date(date).getDay();
-              const isWeekend = dow===0||dow===6;
-              if(!day) return `<td style="text-align:center;padding:4px 2px;border:1px solid #334155;background:${isWeekend?'#1a2535':''}"></td>`;
-              const isOff = day.status==='휴무'||day.status==='off';
-              const color = isOff ? '#64748b' : day.rotation==='야간' ? '#818cf8' : '#34d399';
-              const bg = isOff ? '#1e293b' : day.rotation==='야간' ? '#1e1b4b' : '#052e16';
-              const label = isOff ? '휴무' : (day.route||'').slice(0,4);
-              return `<td style="text-align:center;padding:4px 2px;border:1px solid #334155;background:${bg};cursor:pointer" onclick="openSwap('${date}','${did2}','${encodeURIComponent(drv.name)}','${encodeURIComponent(day.route||'')}','${encodeURIComponent(day.rotation||'')}','${day.weekStart}',${day.dayIndex},'${day.fbId}')"><span style="font-size:10px;font-weight:700;color:${color}">${label||'-'}</span></td>`;
-            }).join('');
-            return `<tr><td style="padding:6px 8px;font-size:12px;font-weight:700;border:1px solid #334155;white-space:nowrap;color:#f1f5f9">${drv.name}<br><span style="font-size:10px;color:#64748b">${drv.camp}</span></td>${cells}</tr>`;
-          }).join('');
-
-          const dateHeaders = dates.map(date => {
-            const d2 = new Date(date);
-            const dow = d2.getDay();
-            const color = dow===0?'#f87171':dow===6?'#60a5fa':'#94a3b8';
-            return `<th style="padding:4px 2px;font-size:10px;border:1px solid #334155;min-width:32px;color:${color}">${parseInt(date.slice(8))}<br>${dayLabels[dow]}</th>`;
-          }).join('');
-
-          const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${coName} ${m} 근무표</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;padding:16px}
-.header{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:16px;padding:20px;margin-bottom:16px}
-.header h1{font-size:18px;font-weight:900}
-.header p{font-size:12px;opacity:.8;margin-top:4px}
-.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #1e293b}
-table{border-collapse:collapse;font-size:11px;min-width:600px}
-th{background:#1e293b;padding:6px 2px;font-size:10px;border:1px solid #334155;color:#94a3b8}
-.legend{display:flex;gap:12px;margin:12px 0;font-size:11px;flex-wrap:wrap}
-.legend span{display:flex;align-items:center;gap:4px}
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
-.modal.show{display:flex}
-.modal-box{background:#1e293b;border-radius:16px;padding:20px;max-width:360px;width:90%;border:1px solid #334155}
-.btn{padding:12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;width:100%}
-.btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;margin-bottom:8px}
-.btn-gray{background:#0f172a;border:1px solid #334155;color:#94a3b8}
-</style></head><body>
-<div class="header">
-  <h1>🗓 ${coName}</h1>
-  <p>${m} ${camp ? camp+' 캠프 ' : '전체 '}근무표</p>
-  <p style="margin-top:8px;font-size:11px;opacity:.7">셀 탭 → 교체 요청 링크 생성</p>
-</div>
-<div class="legend">
-  <span><span style="color:#34d399">■</span> 주간 출근</span>
-  <span><span style="color:#818cf8">■</span> 야간 출근</span>
-  <span><span style="color:#64748b">■</span> 휴무</span>
-</div>
-<div class="table-wrap">
-  <table>
-    <thead><tr><th style="padding:6px 8px;text-align:left;background:#1e293b;border:1px solid #334155;color:#94a3b8">이름</th>${dateHeaders}</tr></thead>
-    <tbody>${tableRows||'<tr><td colspan="32" style="text-align:center;padding:20px;color:#64748b">근무표 데이터 없음</td></tr>'}</tbody>
-  </table>
-</div>
-
-<div class="modal" id="swap-modal">
-  <div class="modal-box">
-    <div style="font-size:16px;font-weight:900;margin-bottom:4px">🔄 교체 요청</div>
-    <div id="swap-info" style="font-size:13px;color:#94a3b8;margin-bottom:16px;line-height:1.6"></div>
-    <button class="btn btn-blue" onclick="createSwapLink()">🔗 교체 요청 링크 생성</button>
-    <button class="btn btn-gray" onclick="closeSwap()">취소</button>
-  </div>
-</div>
-
-<div class="modal" id="link-modal">
-  <div class="modal-box">
-    <div style="font-size:16px;font-weight:900;margin-bottom:8px">✅ 링크 생성됨!</div>
-    <div style="font-size:12px;color:#94a3b8;margin-bottom:12px">동료에게 이 링크를 카톡으로 전송하세요</div>
-    <div id="swap-link-url" style="font-size:11px;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;word-break:break-all;color:#60a5fa;margin-bottom:12px"></div>
-    <button class="btn btn-blue" onclick="copySwapLink()">📋 링크 복사</button>
-    <button class="btn btn-gray" onclick="document.getElementById('link-modal').classList.remove('show')" style="margin-top:8px">닫기</button>
-  </div>
-</div>
-
-<script>
-var _swapData = null;
-var _dealerId = '${dealerId}';
-var _c = '${c}';
-var _camp = '${camp}';
-var _month = '${m}';
-
-function openSwap(date,driverId,driverName,route,rotation,weekStart,dayIndex,fbId){
-  _swapData = {date,driverId,driverName:decodeURIComponent(driverName),route:decodeURIComponent(route),rotation:decodeURIComponent(rotation),weekStart,dayIndex:parseInt(dayIndex),fbId};
-  var rot = _swapData.rotation||'주간';
-  document.getElementById('swap-info').innerHTML =
-    '<b>날짜:</b> '+date+'<br>'+
-    '<b>기사:</b> '+_swapData.driverName+'<br>'+
-    '<b>라우트:</b> '+(_swapData.route||'-')+'<br>'+
-    '<b>주야간:</b> '+rot;
-  document.getElementById('swap-modal').classList.add('show');
-}
-function closeSwap(){document.getElementById('swap-modal').classList.remove('show');}
-
-async function createSwapLink(){
-  if(!_swapData)return;
-  var btn=document.querySelector('#swap-modal .btn-blue');
-  btn.disabled=true;btn.textContent='생성 중...';
-  try{
-    var res=await fetch('/roster?c='+_c,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(Object.assign({},_swapData,{dealerId:_dealerId,camp:_camp,month:_month}))});
-    var data=await res.json();
-    if(data.ok){
-      var swapUrl='https://donway.ai.kr/swap?id='+data.swapId;
-      document.getElementById('swap-link-url').textContent=swapUrl;
-      window._swapUrl=swapUrl;
-      document.getElementById('swap-modal').classList.remove('show');
-      document.getElementById('link-modal').classList.add('show');
-    } else {
-      alert('오류: '+(data.error||'다시 시도'));
-    }
-  }catch(e){alert('오류: '+e.message);}
-  btn.disabled=false;btn.textContent='🔗 교체 요청 링크 생성';
-}
-function copySwapLink(){
-  navigator.clipboard.writeText(window._swapUrl||'').then(function(){alert('✅ 복사됨! 동료에게 카톡으로 전송하세요');});
-}
-</script>
-</body></html>`;
-          return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
-        } catch(e) {
-          return new Response('오류: '+e.message,{status:500});
-        }
-      }
-
-      // ── 근무 교체 수락 페이지 ──
-      if (path === '/swap') {
-        const swapId = url.searchParams.get('id') || '';
-        if (!swapId) return new Response('잘못된 접근입니다.', { status: 400 });
-
-        // POST: 교체 수락
-        if (request.method === 'POST') {
-          try {
-            const body = await request.json();
-            const fsToken = await getAccessToken(env);
-            // swap 문서 업데이트
-            const upUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_swaps/${swapId}?updateMask.fieldPaths=status&updateMask.fieldPaths=acceptorName&updateMask.fieldPaths=acceptorId&updateMask.fieldPaths=acceptedAt`;
-            const upBody = JSON.stringify({fields:{
-              status:{stringValue:'수락'},
-              acceptorName:{stringValue:body.acceptorName||''},
-              acceptorId:{stringValue:body.acceptorId||''},
-              acceptedAt:{stringValue:new Date().toISOString()}
-            }});
-            await fetch(upUrl,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:upBody});
-            return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
-          } catch(e) {
-            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-          }
-        }
-
-        // GET: 교체 수락 페이지
-        try {
-          const fsToken = await getAccessToken(env);
-          const docUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_swaps/${swapId}`;
-          const docRes = await fetch(docUrl,{headers:{'Authorization':'Bearer '+fsToken}});
-          if(!docRes.ok) throw new Error('교체 요청을 찾을 수 없습니다');
-          const docData = await docRes.json();
-          const f = docData.fields || {};
-          const gs = k => f[k]?.stringValue || '';
-          const gi = k => parseInt(f[k]?.integerValue || 0);
-          const status = gs('status');
-          const driverName = gs('driverName');
-          const date = gs('date');
-          const route = gs('route');
-          const rotation = gs('rotation');
-          const camp = gs('camp');
-          const month = gs('month');
-          const dealerId = gs('dealerId');
-
-          const isExpired = status === '수락' || status === '취소';
-
-          const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>근무 교체 요청</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:16px;display:flex;align-items:center;justify-content:center}
-.wrap{max-width:400px;width:100%}
-.header{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:16px;padding:24px;text-align:center;margin-bottom:16px;color:#fff}
-.card{background:#1e293b;border-radius:14px;padding:16px;margin-bottom:12px}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155;font-size:13px}
-.row:last-child{border:none}
-.row .label{color:#64748b}
-.row .value{font-weight:700;color:#f1f5f9}
-.btn{width:100%;padding:16px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;border:none;margin-bottom:8px}
-.btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff}
-.btn-gray{background:#1e293b;border:1px solid #334155;color:#94a3b8}
-input{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-top:6px}
-label{font-size:12px;font-weight:700;color:#94a3b8;display:block}
-</style></head><body>
-<div class="wrap">
-  <div class="header">
-    <div style="font-size:32px;margin-bottom:8px">🔄</div>
-    <h1 style="font-size:20px;font-weight:900">근무 교체 요청</h1>
-    <p style="font-size:13px;opacity:.8;margin-top:4px">${camp} · ${month}</p>
-  </div>
-  ${isExpired ? `
-  <div class="card" style="text-align:center;padding:30px">
-    <div style="font-size:48px;margin-bottom:12px">${status==='수락'?'✅':'❌'}</div>
-    <div style="font-size:16px;font-weight:800">${status==='수락'?'이미 수락된 요청입니다':'취소된 요청입니다'}</div>
-  </div>
-  ` : `
-  <div class="card">
-    <div style="font-size:13px;font-weight:800;margin-bottom:12px;color:#60a5fa">📋 교체 요청 내용</div>
-    <div class="row"><span class="label">요청 기사</span><span class="value">${driverName}</span></div>
-    <div class="row"><span class="label">날짜</span><span class="value">${date}</span></div>
-    <div class="row"><span class="label">라우트</span><span class="value">${route||'-'}</span></div>
-    <div class="row"><span class="label">주야간</span><span class="value">${rotation||'주간'}</span></div>
-  </div>
-  <div class="card">
-    <label>내 이름 입력</label>
-    <input type="text" id="acceptor-name" placeholder="이름을 입력하세요">
-  </div>
-  <button class="btn btn-blue" onclick="acceptSwap()">✅ 교체 수락</button>
-  <button class="btn btn-gray" onclick="history.back()">취소</button>
-  `}
-</div>
-<script>
-async function acceptSwap(){
-  var name=document.getElementById('acceptor-name').value.trim();
-  if(!name){alert('이름을 입력해주세요');return;}
-  var btn=document.querySelector('.btn-blue');
-  btn.disabled=true;btn.textContent='처리 중...';
-  try{
-    var res=await fetch('/swap?id=${swapId}',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({acceptorName:name,acceptorId:''})});
-    var data=await res.json();
-    if(data.ok){
-      document.body.innerHTML='<div style="text-align:center;padding:60px 20px;color:#f1f5f9"><div style="font-size:64px;margin-bottom:16px">✅</div><h2 style="font-size:22px;font-weight:900;color:#34d399;margin-bottom:8px">교체 수락 완료!</h2><p style="color:#64748b;font-size:14px">${driverName}님과의 근무 교체가<br>관리자에게 전달됐습니다.</p></div>';
-    } else {
-      alert('오류: '+(data.error||'다시 시도'));
-      btn.disabled=false;btn.textContent='✅ 교체 수락';
-    }
-  }catch(e){alert('오류');btn.disabled=false;btn.textContent='✅ 교체 수락';}
-}
-</script>
-</body></html>`;
-          return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
-        } catch(e) {
-          return new Response('오류: '+e.message,{status:500});
-        }
-      }
-
       if (path === '/reserve') {
         const c = url.searchParams.get('c') || '';
         if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
@@ -1160,6 +805,28 @@ async function submitReserve(){
               </table>
             </div>` : '';
 
+          // 아이디지원 섹션
+          const idsArr = (f['idSupportRules']?.arrayValue?.values || []).map(v => {
+            const vf = v.mapValue?.fields || {};
+            return {
+              fromId: vf.fromId?.stringValue || '',
+              toId: vf.toId?.stringValue || '',
+              dates: (vf.dates?.arrayValue?.values || []).map(dv => dv.stringValue || '').sort()
+            };
+          }).filter(r => r.fromId || r.toId);
+          const driverUid = gs('userId') || gs('driver') || '';
+          const idsSec = idsArr.length ? `
+            <div class="sec" style="margin-top:12px">
+              <div class="sec-title" style="font-size:12px;font-weight:800;color:#166534;margin-bottom:8px">🔄 아이디 지원 내역</div>
+              ${idsArr.map(r => {
+                const isFrom = r.fromId === driverUid;
+                const other = isFrom ? r.toId : r.fromId;
+                const arrow = isFrom ? r.fromId + ' → ' + r.toId : r.fromId + ' → ' + r.toId;
+                const badge = isFrom ? '<span style="font-size:9px;background:#dcfce7;color:#166534;padding:1px 5px;border-radius:8px;margin-left:4px">지원</span>' : '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;margin-left:4px">수혜</span>';
+                return '<div style="font-size:11px;color:#374151;margin-bottom:4px">' + arrow + badge + '<span style="color:#64748b;margin-left:6px">' + r.dates.join(', ') + '</span></div>';
+              }).join('')}
+            </div>` : '';
+
           // 추가 항목
           let addRows = '';
           addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
@@ -1276,7 +943,7 @@ async function submitReserve(){
                 <div class="sbox"><div class="slbl">실 지급액</div><div class="sval" style="color:#185FA5">₩${net.toLocaleString()}</div></div>
               </div>
               ${routeSec}
-              ${dailySec}
+              ${dailySec}${idsSec}
               ${addSec}
               ${taxSec}
               <div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
