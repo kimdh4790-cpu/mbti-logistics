@@ -10785,6 +10785,7 @@ function _loadRoster(){
     '<button onclick="_loadPrevWeekRoster()" style="padding:6px 12px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📋 이전 스케줄 불러오기</button>'+
     '<button onclick="_downloadRosterExcel()" style="padding:6px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📥 엑셀 다운로드</button>'+
     '<label style="padding:6px 12px;background:#3b82f6;color:#fff;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">📂 쿠팡 업로드<input type="file" accept=".xlsx,.xls" style="display:none" onchange="_importRosterExcel(this)"></label>'+
+    '<button onclick="_rosterShareLink()" style="padding:6px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔗 공유 링크</button>'+
     '</div>'+
     '<div id="roster-content"><div style="text-align:center;padding:30px;color:var(--text3)">⏳ 로딩 중...</div></div>'+
     '</div>';
@@ -11051,6 +11052,17 @@ function _saveRosterCell(driverId,dayIndex,status,route,rotation){
         if(window._rosterData[driverId][dayIndex])window._rosterData[driverId][dayIndex].fbId=ref.id;
       }).catch(function(){});
   }
+}
+
+function _rosterShareLink(){
+  var slug=(_cachedCompanyDoc&&_cachedCompanyDoc.slug)||(_CU&&_CU.slug)||'';
+  if(!slug){toast('❌ 회사 슬러그 없음 — 회사정보에서 설정해주세요');return;}
+  var camp=(document.getElementById('roster-camp-filter')||{value:'all'}).value;
+  var weekStart=window._rosterWeekStart;
+  var ymd=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  var m=weekStart?ymd(weekStart):new Date().toISOString().slice(0,10);
+  var link='https://donway.ai.kr/roster?c='+slug+(camp&&camp!=='all'?'&camp='+encodeURIComponent(camp):'')+'&m='+m;
+  navigator.clipboard.writeText(link).then(function(){toast('✅ 링크 복사됨 — 카카오톡으로 공유하세요');}).catch(function(){prompt('링크 복사',link);});
 }
 
 // 이전 주 스케줄 불러오기
