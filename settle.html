@@ -30400,7 +30400,7 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
     // ★ dateFresh/dateRoutes 없으면 Firestore에서 직접 보강
-    if((!x.dateFresh||!Object.keys(x.dateFresh||{}).length) && (x.id||x.fbId) && _db){
+    if((!x.dateFresh||!Object.keys(x.dateFresh||{}).length || !x.dateRoutes||!Object.keys(x.dateRoutes||{}).length) && (x.id||x.fbId) && _db){
       try {
         var _fsDoc = await _db.collection('settlements').doc(x.id||x.fbId).get();
         if(_fsDoc.exists){
