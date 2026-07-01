@@ -7526,7 +7526,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var tid=(rule.toId||'').replace(/@df$/i,'').trim();
               var fd=drvMap[fid]; if(!fd)return;
               var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
-              if(!ts)return;
+              // toId 정산 없어도 fromId 차감은 진행 (더미 객체 생성)
+              var _tsDummy=false;
+              if(!ts){ts={userId:tid,driver:tid,month:month,etcPlus:0,etcPlusReason:'',etcMinus:0,etcMinusReason:''};_tsDummy=true;}
               // ★ 날짜 범위: startDate/endDate 우선, 없으면 dates[] 배열 첫/끝값으로 범위 구성
               var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
               var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
@@ -7605,9 +7607,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
 
               if(!tot)return;
+              if(!_tsDummy){
               ts.etcPlus=(ts.etcPlus||0)+tot;
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+              }
               if(!_fd[fid]) _fd[fid]=[];
               _fd[fid].push({tot:tot,pts:pts,tR:tR,rStart:rStart,rEnd:rEnd,hasDateRoutes:hasDateRoutes});
             });
