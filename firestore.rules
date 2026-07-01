@@ -195,6 +195,8 @@ service cloud.firestore {
     match /filo_mb_types/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_memberships/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /beauty_reserves/{docId}         { allow read: if true; allow create: if true; allow update, delete: if canOwn(); }
+    match /roster_swaps/{docId}            { allow read: if true; allow create: if true; allow update: if true; allow delete: if canOwn(); }
     match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
