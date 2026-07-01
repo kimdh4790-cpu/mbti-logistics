@@ -760,39 +760,53 @@ async function submitReserve(){
             </tr>`;
           });
 
-          // 일일 상세 내역 (날짜별 배송/반품/프레시백)
+          // 일일 상세 내역 (5일씩 페이지네이션)
           const drFields = f['dateRoutes']?.mapValue?.fields || {};
           const dfFields = f['dateFresh']?.mapValue?.fields || {};
           const dateSet = new Set([...Object.keys(drFields), ...Object.keys(dfFields)]);
           const dailyDates = Array.from(dateSet).sort();
-          let dailyRows = '';
+          const _DS = 5;
+          const _dTotalPages = Math.ceil(dailyDates.length / _DS);
           let dailyTotalFresh = 0;
-          dailyDates.forEach(dt => {
-            const routesMap = drFields[dt]?.mapValue?.fields || {};
-            const routeKeys = Object.keys(routesMap).sort();
-            let dayDcnt = 0, dayRcnt = 0;
-            const routeParts = [];
-            routeKeys.forEach(rt => {
-              const rf2 = routesMap[rt]?.mapValue?.fields || {};
-              const c = parseFloat(rf2.cnt?.integerValue || rf2.cnt?.doubleValue || 0);
-              const rr = parseFloat(rf2.ret?.integerValue || rf2.ret?.doubleValue || 0);
-              dayDcnt += c; dayRcnt += rr;
-              routeParts.push(rt + '(' + c + (rr ? '/반' + rr : '') + ')');
-            });
-            const dayFresh = parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
-            dailyTotalFresh += dayFresh;
-            dailyRows += `<tr>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">${dt}</td>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">${routeParts.join(', ') || '-'}</td>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayDcnt}</td>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayRcnt}</td>
-              <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;${dayFresh>0?'color:#059669':'color:#94a3b8'}">${dayFresh>0?'+'+dayFresh.toLocaleString():'-'}</td>
-            </tr>`;
+          Object.keys(dfFields).forEach(dt => {
+            dailyTotalFresh += parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
           });
-          const dailySec = dailyRows ? `
-            <div class="sec">
-              <div class="sec-title">📅 일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
-              <table>
+
+          function renderDailyPage(pg) {
+            const pageDates = dailyDates.slice(pg * _DS, (pg + 1) * _DS);
+            let rows = '';
+            pageDates.forEach(dt => {
+              const routesMap = drFields[dt]?.mapValue?.fields || {};
+              const routeKeys = Object.keys(routesMap).sort();
+              let dayDcnt = 0, dayRcnt = 0;
+              const routeParts = [];
+              routeKeys.forEach(rt => {
+                const rf2 = routesMap[rt]?.mapValue?.fields || {};
+                const c = parseFloat(rf2.cnt?.integerValue || rf2.cnt?.doubleValue || 0);
+                const rr = parseFloat(rf2.ret?.integerValue || rf2.ret?.doubleValue || 0);
+                dayDcnt += c; dayRcnt += rr;
+                routeParts.push(rt + '(' + c + (rr ? '/반' + rr : '') + ')');
+              });
+              const dayFresh = parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
+              rows += `<tr>
+                <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">${dt}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">${routeParts.join(', ') || '-'}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayDcnt}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayRcnt}</td>
+                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;${dayFresh>0?'color:#059669':'color:#94a3b8'}">${dayFresh>0?'+'+dayFresh.toLocaleString():'-'}</td>
+              </tr>`;
+            });
+            const freshFoot = (pg === _dTotalPages - 1 && dailyTotalFresh > 0)
+              ? `<tfoot><tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">프레시백 합계</td><td style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">+${dailyTotalFresh.toLocaleString()}원</td></tr></tfoot>`
+              : '';
+            const nav = _dTotalPages > 1
+              ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px">
+                  <button onclick="(function(){var el=this.closest('.daily-paged');var p=parseInt(el.dataset.pg||0);if(p>0){el.dataset.pg=p-1;el.innerHTML=window._rdp(p-1);}}).call(this)" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">◀</button>
+                  <span style="font-size:11px;color:#64748b">${pg+1}/${_dTotalPages}</span>
+                  <button onclick="(function(){var el=this.closest('.daily-paged');var p=parseInt(el.dataset.pg||0);var tp=${_dTotalPages};if(p<tp-1){el.dataset.pg=p+1;el.innerHTML=window._rdp(p+1);}}).call(this)" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">▶</button>
+                </div>`
+              : '';
+            return `<table>
                 <thead><tr style="background:#f8fafc">
                   <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th>
                   <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th>
@@ -800,10 +814,21 @@ async function submitReserve(){
                   <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th>
                   <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">프레시백</th>
                 </tr></thead>
-                <tbody>${dailyRows}</tbody>
-                ${dailyTotalFresh>0?`<tfoot><tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">프레시백 합계</td><td style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">+${dailyTotalFresh.toLocaleString()}원</td></tr></tfoot>` : ''}
-              </table>
-            </div>` : '';
+                <tbody>${rows}</tbody>
+                ${freshFoot}
+              </table>${nav}`;
+          }
+
+          const dailySec = dailyDates.length ? `
+            <div class="sec">
+              <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between">
+                <span>📅 일일 상세 내역 (날짜별 배송/반품/프레시백)</span>
+              </div>
+              <div class="daily-paged" data-pg="0" id="daily-paged-sec">
+                ${renderDailyPage(0)}
+              </div>
+            </div>
+            <script>window._rdp=${renderDailyPage.toString()}<\/script>` : '';
 
           // 아이디지원 섹션
           const idsArr = (f['idSupportRules']?.arrayValue?.values || []).map(v => {
