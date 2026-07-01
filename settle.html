@@ -7492,10 +7492,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
-          // ★ 아이디지원 계산 전 etcPlus/etcMinus 초기화 (재계산 중복 방지)
+          // ★ 아이디지원 계산 전 etcPlus 초기화 (재계산 중복 방지)
           settlements.forEach(function(s){
             if((s.etcPlusReason||'').indexOf('아이디지원')>=0){s.etcPlus=0;s.etcPlusReason='';}
-            if((s.etcMinusReason||'').indexOf('아이디지원')>=0){s.etcMinus=0;s.etcMinusReason='';}
           });
           // ★ 아이디지원 정산 (단일 블록)
           (function(){
@@ -7601,9 +7600,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.dcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.cnt||0); }, 0);
                   fs.rcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.ret||0); }, 0);
                 }
-                fs.etcMinus = (fs.etcMinus||0) + tot;
-                var pvm = fs.etcMinusReason||'';
-                fs.etcMinusReason = (pvm?pvm+' / ':'') + '아이디지원 차감('+tid+') '+pts.join('·');
               }
 
               // ④ toId: etcPlus 추가 (정산 없으면 새로 생성)
