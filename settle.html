@@ -7602,18 +7602,32 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 }
               }
 
-              // ④ toId: etcPlus 추가 (정산 없으면 새로 생성)
+              // ④ toId: 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
               var ts = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
               if(!ts){
-                ts = {userId:tid, driver:tid, month:month, dcnt:0, rcnt:0, damt:0, ramt:0,
-                  fresh:0, finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
-                  etcMinus:0, etcMinusReason:'', routeDetails:[], status:'정산예정',
+                // 엑셀에 없는 기사(용차 등) — fromId 건수를 그대로 흡수해서 정산 생성
+                var _newRds = [];
+                var _newDamt = 0, _newRamt = 0, _newDcnt = 0, _newRcnt = 0;
+                Object.keys(_rtAgg).forEach(function(rt){
+                  var a = _rtAgg[rt];
+                  var dAmt = a.cnt * a.price;
+                  var rAmt = a.ret * a.price;
+                  _newDamt += dAmt; _newRamt += rAmt;
+                  _newDcnt += a.cnt; _newRcnt += a.ret;
+                  _newRds.push({route:rt, cnt:a.cnt, ret:a.ret, unitPrice:a.price, amt:dAmt, retAmt:rAmt});
+                });
+                ts = {userId:tid, driver:tid, month:month,
+                  dcnt:_newDcnt, rcnt:_newRcnt, damt:_newDamt, ramt:_newRamt,
+                  fresh:_totalFresh, finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
+                  etcMinus:0, etcMinusReason:'', routeDetails:_newRds, status:'정산예정',
                   dealerId:settlements[0]&&settlements[0].dealerId||''};
                 settlements.push(ts);
+              } else {
+                // 엑셀에 있는 기사 — etcPlus로 가산
+                ts.etcPlus = (ts.etcPlus||0) + tot;
+                var pv = ts.etcPlusReason||'';
+                ts.etcPlusReason = (pv?pv+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
               }
-              ts.etcPlus = (ts.etcPlus||0) + tot;
-              var pv = ts.etcPlusReason||'';
-              ts.etcPlusReason = (pv?pv+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
             });
           })();
           // 정산 보장금액 자동 채움 (동기)
