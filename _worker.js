@@ -812,6 +812,20 @@ async function submitReserve(){
           try {
             const fsToken = await getAccessToken(env);
             const body = await request.json();
+            // 휴무↔휴무 날짜 교환
+            if (body.mode === 'exchange') {
+              const fsToken2 = await getAccessToken(env);
+              const now2 = new Date().toISOString();
+              // 요청자(from) docId → off로
+              const p1u = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
+              await fetch(p1u,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'off'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+              // 수락자(to) myDocId → work로
+              if (body.myDocId) {
+                const p2u = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+body.myDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
+                await fetch(p2u,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+              }
+              return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+            }
             const did = url.searchParams.get('did') || '';
             const ws = url.searchParams.get('ws') || '';
             const di = parseInt(url.searchParams.get('di') || '0');
@@ -850,38 +864,126 @@ async function submitReserve(){
           }
         }
 
+        // action=myoff: 수락자 휴무 날짜 조회
+        if (url.searchParams.get('action') === 'myoff') {
+          const name = url.searchParams.get('name') || '';
+          const did = url.searchParams.get('did') || '';
+          const ws = url.searchParams.get('ws') || '';
+          try {
+            const fsToken = await getAccessToken(env);
+            // 이름으로 driverId 찾기
+            const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+            const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:name}}}]}},limit:1}});
+            const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
+            const qData = await qRes.json();
+            const toDriverId = qData[0]?.document?.fields?.userId?.stringValue || '';
+            if (!toDriverId) return new Response(JSON.stringify({ok:false,error:'기사를 찾을 수 없습니다'}),{headers:{'Content-Type':'application/json'}});
+            // 해당 주 휴무 날짜 조회
+            const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+            const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},{fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'off'}}}]}},limit:7}});
+            const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
+            const rData = await rRes.json();
+            const offDocs = {};
+            const weekDays2 = [];
+            const sun2 = new Date(ws);
+            for (let i=0;i<7;i++){const d=new Date(sun2);d.setDate(sun2.getDate()+i);weekDays2.push(d.toISOString().slice(0,10));}
+            (rData||[]).filter(r=>r.document).forEach(r=>{
+              const f=r.document.fields||{};
+              const di=parseInt(f.dayIndex?.integerValue||f.dayIndex?.doubleValue||0);
+              const docId2=r.document.name.split('/').pop();
+              if(weekDays2[di]) offDocs[weekDays2[di]]=docId2;
+            });
+            return new Response(JSON.stringify({ok:true,offDocs}),{headers:{'Content-Type':'application/json'}});
+          } catch(e) {
+            return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json'}});
+          }
+        }
+
+        // 수락자 이름 입력 후 본인 휴무 날짜 조회
         const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>근무 교체 요청</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}.icon{font-size:48px;margin-bottom:16px}.title{font-size:18px;font-weight:900;margin-bottom:8px}.desc{font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.6}input{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:12px}input:focus{border-color:#3b82f6}.btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}.success{display:none;padding:20px}.success .icon{font-size:64px}</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}.icon{font-size:48px;margin-bottom:16px}.title{font-size:18px;font-weight:900;margin-bottom:8px}.desc{font-size:13px;color:#94a3b8;margin-bottom:20px;line-height:1.6}input,select{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:12px}input:focus,select:focus{border-color:#3b82f6}.btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px}.btn2{width:100%;padding:14px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}.label{font-size:11px;color:#64748b;text-align:left;margin-bottom:4px}.off-list{display:none;margin-top:4px}.off-btn{width:100%;padding:10px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left}.off-btn.selected{border-color:#10b981;background:#052e16;color:#10b981;font-weight:700}</style>
 </head><body>
 <div class="card">
   <div id="form-wrap">
     <div class="icon">🔄</div>
     <div class="title">근무 교체 요청</div>
-    <div class="desc">${fromName}님의 ${date} 근무를<br>교체하려고 합니다.<br><br>교체 수락하시면 이름을 입력해주세요.</div>
-    <input type="text" id="swap-name" placeholder="내 이름 입력">
-    <button class="btn" onclick="acceptSwap()">✅ 교체 수락</button>
+    <div class="desc">${fromName}님의 <b>${date}</b> 근무를 교체하려고 합니다.<br><br>이름을 입력하고 교체 방식을 선택하세요.</div>
+    <div class="label">내 이름</div>
+    <input type="text" id="swap-name" placeholder="이름 입력 후 조회">
+    <button class="btn" onclick="loadMyOff()">🔍 조회</button>
+    <div class="off-list" id="off-list">
+      <div class="label" style="margin-top:8px">내 휴무 날짜 선택 (교환할 날짜)</div>
+      <div id="off-dates"></div>
+      <button class="btn2" id="btn-exchange" onclick="acceptExchange()" style="display:none">🔄 휴무 날짜 교환</button>
+      <div style="margin:10px 0;color:#475569;font-size:12px">— 또는 —</div>
+      <button class="btn" onclick="acceptSwap()">✅ 출근↔휴무 교체 수락</button>
+    </div>
   </div>
-  <div class="success" id="success-wrap">
+  <div id="success-wrap" style="display:none">
     <div class="icon">🎉</div>
     <div class="title">교체 완료!</div>
     <div class="desc" id="success-msg"></div>
   </div>
 </div>
 <script>
+var _myOffDocs={};
+var _selectedDate='';
+async function loadMyOff(){
+  var name=document.getElementById('swap-name').value.trim();
+  if(!name){alert('이름을 입력해주세요');return;}
+  try{
+    var res=await fetch('/swap?id=${docId}&action=myoff&name='+encodeURIComponent(name),{method:'GET'});
+    var data=await res.json();
+    if(!data.ok){alert(data.error||'조회 실패');return;}
+    _myOffDocs=data.offDocs||{};
+    var dates=Object.keys(_myOffDocs).sort();
+    var el=document.getElementById('off-dates');
+    el.innerHTML='';
+    if(!dates.length){
+      el.innerHTML='<div style="font-size:12px;color:#64748b;margin-bottom:8px">이번 주 휴무 없음</div>';
+    } else {
+      dates.forEach(function(d){
+        var b=document.createElement('button');
+        b.className='off-btn';
+        b.textContent='🌴 '+d+' 휴무';
+        b.onclick=function(){
+          document.querySelectorAll('.off-btn').forEach(function(x){x.classList.remove('selected');});
+          b.classList.add('selected');
+          _selectedDate=d;
+          document.getElementById('btn-exchange').style.display='block';
+        };
+        el.appendChild(b);
+      });
+    }
+    document.getElementById('off-list').style.display='block';
+  }catch(e){alert('오류: '+e.message);}
+}
+async function acceptExchange(){
+  var name=document.getElementById('swap-name').value.trim();
+  if(!_selectedDate){alert('교환할 날짜를 선택해주세요');return;}
+  try{
+    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_myOffDocs[_selectedDate]})});
+    var data=await res.json();
+    if(data.ok){showSuccess('${date}(${fromName})↔'+_selectedDate+'('+name+') 휴무 교환 완료!');}
+    else{alert('오류: '+(data.error||'다시 시도해주세요'));}
+  }catch(e){alert('오류가 발생했습니다');}
+}
 async function acceptSwap(){
   var name=document.getElementById('swap-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
   try{
-    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})});
+    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,mode:'swap'})});
     var data=await res.json();
-    if(data.ok){
-      document.getElementById('form-wrap').style.display='none';
-      var sw=document.getElementById('success-wrap');sw.style.display='block';
-      document.getElementById('success-msg').textContent='${date} 근무가 '+name+'님으로 교체됐습니다.';
-    }else{alert('오류: '+(data.error||'다시 시도해주세요'));}
+    if(data.ok){showSuccess('${date} 근무가 '+name+'님으로 교체됐습니다.');}
+    else{alert('오류: '+(data.error||'다시 시도해주세요'));}
   }catch(e){alert('오류가 발생했습니다');}
+}
+function showSuccess(msg){
+  document.getElementById('form-wrap').style.display='none';
+  document.getElementById('success-wrap').style.display='block';
+  document.getElementById('success-msg').textContent=msg;
 }
 </script>
 </body></html>`;
