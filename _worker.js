@@ -641,9 +641,30 @@ export default {
     <div class="card"><label>📝 메모 (선택)</label><input type="text" id="r-memo" placeholder="요청사항 등"></div>
     <button class="btn-submit" id="r-submit" onclick="submitReserve()">예약 신청</button>
   </div>
-  <div class="success" id="success-wrap"><div class="icon">🎉</div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p></div>
+  <div class="success" id="success-wrap"><div class="icon">🎉</div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p>
+<button onclick="addToHome()" style="margin-top:16px;width:100%;padding:14px;background:#1e293b;border:1.5px solid #C2185B;border-radius:12px;color:#C2185B;font-size:14px;font-weight:700;cursor:pointer">📱 홈 화면에 추가하기</button>
+<p style="margin-top:8px;font-size:11px;color:#475569">다음 예약을 더 편하게!</p></div>
 </div>
 <script>
+function addToHome(){
+  if(window.matchMedia('(display-mode: standalone)').matches){
+    alert('이미 홈 화면에 추가되어 있어요!');return;
+  }
+  var ua=navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(ua)){
+    alert('홈 화면 추가 방법\n\n① 하단 공유 버튼(□↑) 탭\n② "홈 화면에 추가" 선택\n③ 추가 버튼 탭');
+  } else if(/Android/.test(ua)){
+    if(window._deferredPrompt){
+      window._deferredPrompt.prompt();
+      window._deferredPrompt.userChoice.then(function(){window._deferredPrompt=null;});
+    } else {
+      alert('홈 화면 추가 방법\n\n① 브라우저 우측 상단 메뉴(⋮) 탭\n② "홈 화면에 추가" 선택');
+    }
+  } else {
+    alert('브라우저 주소창의 설치 버튼을 눌러 홈 화면에 추가하세요.');
+  }
+}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._deferredPrompt=e;});
 function selectMenu(btn,name){document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('r-menu').value=name;}
 async function submitReserve(){
   var date=document.getElementById('r-date').value;
