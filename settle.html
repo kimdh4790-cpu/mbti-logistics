@@ -30451,6 +30451,17 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
 
   // 세금계산서 캡처 후 발송
   async function _doSendWithImg(imgUrl){
+    // ★ dateFresh/dateRoutes 없으면 Firestore에서 직접 보강
+    if((!x.dateFresh||!Object.keys(x.dateFresh||{}).length) && (x.id||x.fbId) && _db){
+      try {
+        var _fsDoc = await _db.collection('settlements').doc(x.id||x.fbId).get();
+        if(_fsDoc.exists){
+          var _fsData = _fsDoc.data();
+          if(_fsData.dateFresh && Object.keys(_fsData.dateFresh).length) x.dateFresh = _fsData.dateFresh;
+          if(_fsData.dateRoutes && Object.keys(_fsData.dateRoutes).length) x.dateRoutes = _fsData.dateRoutes;
+        }
+      } catch(e2) {}
+    }
     // 정산 데이터 전체 저장 (로그인 없이 명세서 렌더링용)
     var vatIncome2=x.totalAmt||x.vatIncome||net||0;
     var _netFinal=x.net||net;
