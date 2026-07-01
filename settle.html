@@ -7539,12 +7539,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
               var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
               if(hasDateRoutes){
-                // ★ 라우트별 합산 (날짜 범위 내)
+                // ★ 라우트별 합산 (dates 배열 있으면 정확 매칭, 없으면 범위)
                 var _rtAgg={};  // {rt: {cnt,ret}}
                 var _totalFresh=0, _totalDmg=0;
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  if(rStart&&dt<rStart)return;
-                  if(rEnd&&dt>rEnd)return;
+                  if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
+                  else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
@@ -7559,8 +7559,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 // ★ 프레시백
                 if(fd.dateFresh){
                   Object.keys(fd.dateFresh).forEach(function(dt){
-                    if(rStart&&dt<rStart)return;
-                    if(rEnd&&dt>rEnd)return;
+                    if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
+                    else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
                     _totalFresh+=(fd.dateFresh[dt]||0);
                   });
                 }
@@ -7568,8 +7568,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
                 if(_fdmg&&_fdmg.dateDmg){
                   Object.keys(_fdmg.dateDmg).forEach(function(dt){
-                    if(rStart&&dt<rStart)return;
-                    if(rEnd&&dt>rEnd)return;
+                    if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
+                    else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
                     _totalDmg+=(_fdmg.dateDmg[dt]||0);
                   });
                 }
