@@ -113,9 +113,14 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update, delete: if isSuperAdmin();
     }
-    // settings: docId = {uid}_{type} 형식으로 격리
     match /settings/{docId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (
+        resource == null ||
+        request.auth.uid == resource.data.dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
+        isSuperAdmin()
+      );
       allow create, update: if isAuth();
       allow delete: if canOwn() || isSuperAdmin();
     }
@@ -158,12 +163,14 @@ service cloud.firestore {
     match /reservations/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /idSupport/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /beauty_sales/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /beauty_reserves/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /biometrics/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /cal_memos/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /clean_dispatch/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /clean_orders/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /clean_workers/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /comp_leaves/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /daily_detail/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /delivery_sessions/{docId}      { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /devices/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driverDocs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -178,6 +185,7 @@ service cloud.firestore {
     match /maintenance/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /memberships/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /roster_week/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /roster_swaps/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /settlements_universal/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /tax_docs/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /universal_companies/{docId}    { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -195,16 +203,12 @@ service cloud.firestore {
     match /filo_mb_types/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_memberships/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /beauty_reserves/{docId}         { allow read: if true; allow create: if true; allow update, delete: if canOwn(); }
-    match /roster_swaps/{docId}            { allow read: if true; allow create: if true; allow update: if true; allow delete: if canOwn(); }
     match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /audit_logs/{docId}             { allow read: if isSuperAdmin(); allow create: if isAuth(); }
-    // used_biz_numbers: 미인증도 read/write 허용 (가입 중복체크)
     match /used_biz_numbers/{docId}       { allow read, write: if true; }
 
-    // 미명시 컬렉션 — 슈퍼어드민만
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
