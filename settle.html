@@ -7613,7 +7613,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
               }
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tR:tR,rStart:rStart,rEnd:rEnd,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,pts:pts,tR:tR,rStart:rStart,rEnd:rEnd,hasDateRoutes:hasDateRoutes,dates:_sortedDates});
             });
 
             Object.keys(_fd).forEach(function(fid){
@@ -7623,6 +7623,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
               var pvm=fs.etcMinusReason||'';
+              if(totalDeduct>0){fs.etcMinus=(fs.etcMinus||0)+totalDeduct;fs.etcMinusReason=(pvm?pvm+' / ':'')+'아이디지원 차감 '+allPts.join('·');}
 
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
@@ -7630,9 +7631,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var fdm=drvMap[fid];
                     if(fdm&&fdm.dateRoutes){
                       Object.keys(fdm.dateRoutes).forEach(function(dt){
-                        // ★ 동일 범위 필터 (toId 쪽과 동일 기준)
-                        if(rule.rStart&&dt<rule.rStart)return;
-                        if(rule.rEnd&&dt>rule.rEnd)return;
+                      // ★ 동일 범위 필터 (dates 배열 있으면 정확 매칭, 없으면 범위)
+                        if(rule.dates&&rule.dates.length){if(rule.dates.indexOf(dt)<0)return;}
+                        else{if(rule.rStart&&dt<rule.rStart)return;if(rule.rEnd&&dt>rule.rEnd)return;}
                         Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                           if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                           var rd=fdm.dateRoutes[dt][rt];
