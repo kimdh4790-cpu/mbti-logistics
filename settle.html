@@ -7683,8 +7683,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var _totalFresh=0;
               if(fd.dateRoutes){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  if(rStart&&dt<rStart)return;
-                  if(rEnd&&dt>rEnd)return;
+                  // ★ dates 배열이 있으면 정확히 매칭, 없으면 범위로
+                  if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
+                  else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt]||{};
@@ -7697,8 +7698,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(rStart&&dt<rStart)return;
-                  if(rEnd&&dt>rEnd)return;
+                  if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
+                  else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
                   _totalFresh+=(fd.dateFresh[dt]||0);
                 });
               }
