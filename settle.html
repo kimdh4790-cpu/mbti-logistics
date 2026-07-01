@@ -28995,6 +28995,29 @@ function pageBeautyReserve(){
   _brRender();
 }
 
+function _brShowQR(){
+  var did=_CU&&(_CU.dealerId||_CU.uid)||'';
+  var slug=(window._cachedCompanyDoc&&window._cachedCompanyDoc.slug)||did;
+  if(!slug){toast('❌ 회사코드 없음');return;}
+  var reserveUrl='https://donway.ai.kr/reserve?c='+encodeURIComponent(slug);
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(reserveUrl);
+  var mo=document.createElement('div');mo.className='mo show';
+  var md=document.createElement('div');md.className='md';md.style.maxWidth='360px';
+  md.innerHTML='<div class="mdt">📱 고객 예약 QR</div>'+
+    '<div style="padding:20px;text-align:center">'+
+      '<div style="background:#fff;border-radius:16px;padding:16px;display:inline-block;margin-bottom:16px">'+
+        '<img src="'+qrUrl+'" width="200" height="200" alt="예약 QR" style="display:block">'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:14px;word-break:break-all;line-height:1.5">'+esc(reserveUrl)+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+        '<button onclick="navigator.clipboard.writeText(\''+reserveUrl+'\').then(function(){toast(\'✅ 링크 복사됨!\');})" style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:700;cursor:pointer">🔗 링크 복사</button>'+
+        '<a href="'+qrUrl+'" download="예약QR.png" target="_blank" style="display:block;padding:12px;background:#C2185B;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">⬇️ QR 이미지 저장</a>'+
+      '</div>'+
+      '<div style="margin-top:12px;font-size:11px;color:var(--text3)">📌 매장에 출력해서 붙여두세요!</div>'+
+    '</div>'+
+    '<div class="mdf"><button class="btn" onclick="this.closest(\'.mo\').remove()">닫기</button></div>';
+  mo.appendChild(md);document.body.appendChild(mo);
+}
 function _brRender(){
   var wrap=document.getElementById('br-wrap');
   if(!wrap)return;
@@ -29034,7 +29057,10 @@ function _brRender(){
     '</div>';
   }
   html+='</div>'+
-  '<button onclick="_brAddReserve()" style="width:100%;padding:14px;background:#C2185B;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">+ 예약 추가</button>';
+  '<div style="display:flex;gap:8px">'+
+  '<button onclick="_brAddReserve()" style="flex:1;padding:14px;background:#C2185B;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">+ 예약 추가</button>'+
+  '<button onclick="_brShowQR()" style="padding:14px 18px;background:#1e293b;border:1.5px solid #C2185B;color:#C2185B;border-radius:12px;font-size:20px;cursor:pointer" title="예약 QR 생성">📱</button>'+
+  '</div>';
 
   wrap.innerHTML=html;
 
