@@ -693,6 +693,173 @@ async function submitReserve(){
         }
       }
 
+      if (path === '/roster') {
+        const c = url.searchParams.get('c') || '';
+        const camp = url.searchParams.get('camp') || '';
+        const m = url.searchParams.get('m') || new Date().toISOString().slice(0,10);
+        if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
+        try {
+          const fsToken = await getAccessToken(env);
+          // 회사 정보 조회
+          const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+          const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}},limit:1}});
+          const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
+          const qData = await qRes.json();
+          const coFields = qData[0]?.document?.fields || {};
+          const dealerId = coFields.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
+          const coName = coFields.companyName?.stringValue || 'DONWAY';
+          if (!dealerId) return new Response('업체를 찾을 수 없습니다.', { status: 404 });
+
+          // 주간 시작일 계산 (m 기준 해당 주 일요일)
+          const baseDate = new Date(m);
+          const day = baseDate.getDay();
+          const sunday = new Date(baseDate);
+          sunday.setDate(baseDate.getDate() - day);
+          const weekStart = sunday.toISOString().slice(0,10);
+          const weekDays = [];
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(sunday);
+            d.setDate(sunday.getDate() + i);
+            weekDays.push(d.toISOString().slice(0,10));
+          }
+          const dayLabels = ['일','월','화','수','목','금','토'];
+
+          // 기사 목록 조회
+          const dUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+          const dFilters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},{fieldFilter:{field:{fieldPath:'is_active'},op:'NOT_EQUAL',value:{booleanValue:false}}}];
+          if (camp) dFilters.push({fieldFilter:{field:{fieldPath:'camp'},op:'EQUAL',value:{stringValue:camp}}});
+          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:dFilters}},limit:100}});
+          const dRes = await fetch(dUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:dBody});
+          const dData = await dRes.json();
+          const drivers = (dData||[]).filter(r=>r.document).map(r=>{
+            const f = r.document.fields||{};
+            return {id:r.document.name.split('/').pop(), name:f.name?.stringValue||'', camp:f.camp?.stringValue||'', userId:f.userId?.stringValue||''};
+          });
+
+          // 근무표 데이터 조회
+          const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+          const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:weekStart}}}]}},limit:500}});
+          const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
+          const rData = await rRes.json();
+          const rosterMap = {};
+          (rData||[]).filter(r=>r.document).forEach(r=>{
+            const f = r.document.fields||{};
+            const did = f.driverId?.stringValue||'';
+            const di = parseInt(f.dayIndex?.integerValue||f.dayIndex?.doubleValue||0);
+            if (!rosterMap[did]) rosterMap[did] = {};
+            rosterMap[did][di] = {status:f.status?.stringValue||'work', route:f.route?.stringValue||'', docId:r.document.name.split('/').pop()};
+          });
+
+          const prevSun = new Date(sunday); prevSun.setDate(sunday.getDate()-7);
+          const nextSun = new Date(sunday); nextSun.setDate(sunday.getDate()+7);
+          const prevM = prevSun.toISOString().slice(0,10);
+          const nextM = nextSun.toISOString().slice(0,10);
+          const baseUrl = '/roster?c='+c+(camp?'&camp='+encodeURIComponent(camp):'');
+
+          let rows = '';
+          drivers.forEach(drv => {
+            const rd = rosterMap[drv.userId] || rosterMap[drv.id] || {};
+            let cells = '';
+            for (let i = 0; i < 7; i++) {
+              const e = rd[i] || {};
+              const st = e.status || 'work';
+              const route = e.route || '';
+              const docId = e.docId || '';
+              const isOff = st === 'off';
+              const bg = isOff ? '#fee2e2' : '#f0fdf4';
+              const color = isOff ? '#dc2626' : '#16a34a';
+              const label = isOff ? '휴무' : (route || '출근');
+              const swapUrl = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i] : '';
+              cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
+                <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
+                ${!isOff && swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#3b82f6;text-decoration:none">🔄 교체</a>` : ''}
+              </td>`;
+            }
+            rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
+          });
+
+          const html = `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${coName} 근무표</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f8fafc;color:#1e293b;padding:12px}.header{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:14px;padding:16px;text-align:center;margin-bottom:16px;color:#fff}.header h1{font-size:18px;font-weight:900}.header p{font-size:12px;opacity:.85;margin-top:4px}.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.nav a{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;color:#1e40af;text-decoration:none}.nav span{font-size:13px;font-weight:700;color:#374151}.wrap{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;min-width:600px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}.tbl th{padding:10px 6px;background:#1e40af;color:#fff;font-size:12px;text-align:center}.tbl td{vertical-align:middle}</style>
+</head><body>
+<div class="header"><h1>📋 ${coName}</h1><p>${camp||'전체'} 캠프 근무표</p></div>
+<div class="nav">
+  <a href="${baseUrl}&m=${prevM}">‹ 이전주</a>
+  <span>${weekDays[0].slice(5)} ~ ${weekDays[6].slice(5)}</span>
+  <a href="${baseUrl}&m=${nextM}">다음주 ›</a>
+</div>
+<div class="wrap">
+<table class="tbl">
+  <thead><tr><th>이름</th>${weekDays.map((d,i)=>`<th>${d.slice(5)}<br>(${dayLabels[i]})</th>`).join('')}</tr></thead>
+  <tbody>${rows || '<tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8">등록된 기사가 없습니다</td></tr>'}</tbody>
+</table>
+</div>
+</body></html>`;
+          return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
+        } catch(e) {
+          return new Response('오류: '+e.message, {status:500});
+        }
+      }
+
+      if (path === '/swap') {
+        const docId = url.searchParams.get('id') || '';
+        const fromName = url.searchParams.get('from') || '';
+        const date = url.searchParams.get('date') || '';
+        if (!docId) return new Response('잘못된 접근입니다.', { status: 400 });
+
+        if (request.method === 'POST') {
+          try {
+            const fsToken = await getAccessToken(env);
+            const body = await request.json();
+            const patchUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId+'?updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapStatus&updateMask.fieldPaths=swapAt';
+            const patchBody = JSON.stringify({fields:{swapWith:{stringValue:body.name||''},swapStatus:{stringValue:'accepted'},swapAt:{stringValue:new Date().toISOString()}}});
+            const pRes = await fetch(patchUrl,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:patchBody});
+            if (!pRes.ok) throw new Error('저장 실패');
+            return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+          } catch(e) {
+            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+          }
+        }
+
+        const html = `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>근무 교체 요청</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}.icon{font-size:48px;margin-bottom:16px}.title{font-size:18px;font-weight:900;margin-bottom:8px}.desc{font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.6}input{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:12px}input:focus{border-color:#3b82f6}.btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}.success{display:none;padding:20px}.success .icon{font-size:64px}</style>
+</head><body>
+<div class="card">
+  <div id="form-wrap">
+    <div class="icon">🔄</div>
+    <div class="title">근무 교체 요청</div>
+    <div class="desc">${fromName}님의 ${date} 근무를<br>교체하려고 합니다.<br><br>교체 수락하시면 이름을 입력해주세요.</div>
+    <input type="text" id="swap-name" placeholder="내 이름 입력">
+    <button class="btn" onclick="acceptSwap()">✅ 교체 수락</button>
+  </div>
+  <div class="success" id="success-wrap">
+    <div class="icon">🎉</div>
+    <div class="title">교체 완료!</div>
+    <div class="desc" id="success-msg"></div>
+  </div>
+</div>
+<script>
+async function acceptSwap(){
+  var name=document.getElementById('swap-name').value.trim();
+  if(!name){alert('이름을 입력해주세요');return;}
+  try{
+    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})});
+    var data=await res.json();
+    if(data.ok){
+      document.getElementById('form-wrap').style.display='none';
+      var sw=document.getElementById('success-wrap');sw.style.display='block';
+      document.getElementById('success-msg').textContent='${date} 근무가 '+name+'님으로 교체됐습니다.';
+    }else{alert('오류: '+(data.error||'다시 시도해주세요'));}
+  }catch(e){alert('오류가 발생했습니다');}
+}
+</script>
+</body></html>`;
+        return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
+      }
+
       if (path === '/stmt') {
         const token = url.searchParams.get('t') || '';
         if (!token) return new Response('잘못된 접근입니다.', { status: 400 });
