@@ -934,7 +934,7 @@ async function loadMyOff(){
   var name=document.getElementById('swap-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
   try{
-    var res=await fetch('/swap?id=${docId}&action=myoff&name='+encodeURIComponent(name),{method:'GET'});
+    var params=new URLSearchParams(window.location.search);var did=params.get('did')||'';var ws=params.get('ws')||'';var res=await fetch('/swap?id=${docId}&action=myoff&name='+encodeURIComponent(name)+'&did='+did+'&ws='+ws,{method:'GET'});
     var data=await res.json();
     if(!data.ok){alert(data.error||'조회 실패');return;}
     _myOffDocs=data.offDocs||{};
