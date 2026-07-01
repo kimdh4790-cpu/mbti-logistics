@@ -7658,68 +7658,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
             });
 
-            // ★ toId(지원받는 기사) etcPlus에 금액+사유 추가
-            _activeIdRules.forEach(function(rule){
-              var fid=(rule.fromId||'').trim();
-              var tid=(rule.toId||'').trim();
-              var fd=drvMap[fid]; if(!fd)return;
-              var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
-              var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
-              var rStart=_ndFmt(rule.startDate)||(_sortedDates.length?_sortedDates[0]:'');
-              var rEnd=_ndFmt(rule.endDate)||(_sortedDates.length?_sortedDates[_sortedDates.length-1]:'');
-              var tR=rule.routes||[];
-              // toId 정산 찾기 — 없으면 새로 생성
-              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
-              if(!ts){
-                ts={userId:tid,driver:tid,month:month,dcnt:0,rcnt:0,damt:0,ramt:0,
-                  fresh:0,finc:0,inc:0,net:0,etcPlus:0,etcPlusReason:'',
-                  routeDetails:[],status:'정산예정',
-                  dealerId:settlements[0]&&settlements[0].dealerId||''};
-                settlements.push(ts);
-              }
-              // fromId dateRoutes에서 날짜 범위 내 건수/금액 집계
-              var _rtAgg={};
-              var _totalFresh=0;
-              if(fd.dateRoutes){
-                Object.keys(fd.dateRoutes).forEach(function(dt){
-                  // ★ dates 배열이 있으면 정확히 매칭, 없으면 범위로
-                  if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
-                  else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
-                  Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
-                    if(tR.length&&tR.indexOf(rt)<0)return;
-                    var rd=fd.dateRoutes[dt][rt]||{};
-                    var up=RPRICE[rt]||0; if(!up)return;
-                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,price:up};
-                    _rtAgg[rt].cnt+=(rd.cnt||0);
-                    _rtAgg[rt].ret+=(rd.ret||0);
-                  });
-                });
-              }
-              if(fd.dateFresh){
-                Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(_sortedDates.length){if(_sortedDates.indexOf(dt)<0)return;}
-                  else{if(rStart&&dt<rStart)return;if(rEnd&&dt>rEnd)return;}
-                  _totalFresh+=(fd.dateFresh[dt]||0);
-                });
-              }
-              // 금액 계산
-              var tot=0;
-              var pts=[];
-              Object.keys(_rtAgg).sort().forEach(function(rt){
-                var a=_rtAgg[rt];
-                var amt=(a.cnt*a.price)-(a.ret*a.price);
-                tot+=amt;
-                var s=rt+'*'+a.cnt+'건';
-                if(a.ret>0)s+=', '+rt+'반품*'+a.ret+'건';
-                pts.push(s);
-              });
-              if(_totalFresh>0){tot+=_totalFresh;pts.push('프레시백 ₩'+_totalFresh.toLocaleString());}
-              if(!tot)return;
-              // toId etcPlus 추가
-              ts.etcPlus=(ts.etcPlus||0)+tot;
-              var pv=ts.etcPlusReason||'';
-              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join(', ');
-            });
           }
           // 정산 보장금액 자동 채움 (동기)
           (function(){
