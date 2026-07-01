@@ -573,6 +573,105 @@ export default {
     const html = await ghRaw.text();
     return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
   }
+      // ── 고객 공개 예약 페이지 ──
+      if (path === '/reserve') {
+        const c = url.searchParams.get('c') || '';
+        if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const fsToken = await getAccessToken(env);
+            const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+            const qBody = JSON.stringify({ structuredQuery: { from:[{collectionId:'companies'}], where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}}, limit:1 }});
+            const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
+            const qData = await qRes.json();
+            const dealerId = qData[0]?.document?.fields?.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
+            if (!dealerId) return new Response(JSON.stringify({ok:false,error:'업체를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
+            const now = new Date().toISOString();
+            const ym = (body.date||'').slice(0,7);
+            const addUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/beauty_reserves';
+            const addBody = JSON.stringify({fields:{
+              dealerId:{stringValue:dealerId}, date:{stringValue:body.date||''}, time:{stringValue:body.time||''},
+              ym:{stringValue:ym}, customerName:{stringValue:body.customerName||''}, phone:{stringValue:body.phone||''},
+              designer:{stringValue:body.designer||''}, menu:{stringValue:body.menu||''}, memo:{stringValue:body.memo||''},
+              status:{stringValue:'예약'}, source:{stringValue:'customer'}, createdAt:{stringValue:now}
+            }});
+            const addRes = await fetch(addUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:addBody});
+            if (!addRes.ok) throw new Error('저장 실패');
+            return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          } catch(e) {
+            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+          }
+        }
+        // GET: 예약 페이지
+        try {
+          const fsToken = await getAccessToken(env);
+          const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+          const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}},limit:1}});
+          const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
+          const qData = await qRes.json();
+          const coFields = qData[0]?.document?.fields || {};
+          const coName = coFields.companyName?.stringValue || 'DONWAY 뷰티';
+          const dealerId = coFields.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
+          const wUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+          const wBody = JSON.stringify({structuredQuery:{from:[{collectionId:'ind_workers'}],where:{compositeFilter:{op:'AND',filters:[
+            {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},
+            {fieldFilter:{field:{fieldPath:'industryType'},op:'EQUAL',value:{stringValue:'beauty'}}}
+          ]}},limit:20}});
+          const wRes = await fetch(wUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:wBody});
+          const wData = await wRes.json();
+          const designers = (wData||[]).filter(r=>r.document).map(r=>r.document.fields?.name?.stringValue||'').filter(Boolean);
+          const todayStr = new Date().toISOString().slice(0,10);
+          const timeOpts = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'].map(t=>`<option value="${t}">${t}</option>`).join('');
+          const designerSel = designers.length ? `<div class="card"><label>👤 담당 디자이너</label><select id="r-designer"><option value="">-- 선택 (상관없음) --</option>${designers.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>` : '';
+          const menus = ['시그니처펌','복구매직','디자인컷','본드케어','발레아쥬','뿌리염색','볼륨매직','남성펌','두피케어','네일'];
+          const html = `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${coName} 예약</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:16px}.wrap{max-width:480px;margin:0 auto}.header{background:linear-gradient(135deg,#C2185B,#E91E63);border-radius:16px;padding:24px;text-align:center;margin-bottom:20px;color:#fff}.header h1{font-size:22px;font-weight:900;margin-bottom:4px}.header p{font-size:13px;opacity:.85}.card{background:#1e293b;border-radius:14px;padding:16px;margin-bottom:12px}label{font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#94a3b8}input,select{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none}input:focus,select:focus{border-color:#C2185B}.menus{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.menu-btn{padding:7px 14px;border:1.5px solid #334155;border-radius:20px;background:#0f172a;color:#94a3b8;font-size:12px;cursor:pointer}.menu-btn.active{border-color:#C2185B;background:#C2185B22;color:#C2185B;font-weight:700}.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,#C2185B,#E91E63);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px}.btn-submit:disabled{opacity:.5}.success{text-align:center;padding:40px 20px;display:none}.success .icon{font-size:64px;margin-bottom:16px}.success h2{font-size:22px;font-weight:900;color:#C2185B;margin-bottom:8px}.success p{font-size:14px;color:#94a3b8;line-height:1.6}</style></head><body>
+<div class="wrap">
+  <div class="header"><div style="font-size:32px;margin-bottom:8px">💄</div><h1>${coName}</h1><p>온라인 예약</p></div>
+  <div id="form-wrap">
+    <div class="card"><label>📅 날짜</label><input type="date" id="r-date" min="${todayStr}"></div>
+    <div class="card"><label>⏰ 시간</label><select id="r-time">${timeOpts}</select></div>
+    ${designerSel}
+    <div class="card"><label>💆 시술 메뉴</label><div class="menus">${menus.map(m=>`<button class="menu-btn" onclick="selectMenu(this,'${m}')">${m}</button>`).join('')}</div><input type="text" id="r-menu" placeholder="직접 입력 또는 위에서 선택"></div>
+    <div class="card"><label>👤 고객명 *</label><input type="text" id="r-name" placeholder="이름을 입력하세요"></div>
+    <div class="card"><label>📞 연락처 *</label><input type="tel" id="r-phone" placeholder="010-0000-0000"></div>
+    <div class="card"><label>📝 메모 (선택)</label><input type="text" id="r-memo" placeholder="요청사항 등"></div>
+    <button class="btn-submit" id="r-submit" onclick="submitReserve()">예약 신청</button>
+  </div>
+  <div class="success" id="success-wrap"><div class="icon">🎉</div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p></div>
+</div>
+<script>
+function selectMenu(btn,name){document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('r-menu').value=name;}
+async function submitReserve(){
+  var date=document.getElementById('r-date').value;
+  var time=document.getElementById('r-time').value;
+  var name=document.getElementById('r-name').value.trim();
+  var phone=document.getElementById('r-phone').value.trim();
+  var designer=(document.getElementById('r-designer')||{}).value||'';
+  var menu=document.getElementById('r-menu').value.trim();
+  var memo=document.getElementById('r-memo').value.trim();
+  if(!date){alert('날짜를 선택해주세요');return;}
+  if(!name){alert('고객명을 입력해주세요');return;}
+  if(!phone){alert('연락처를 입력해주세요');return;}
+  var btn=document.getElementById('r-submit');
+  btn.disabled=true;btn.textContent='예약 중...';
+  try{
+    var res=await fetch('/reserve?c=${c}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,time,customerName:name,phone,designer,menu,memo})});
+    var data=await res.json();
+    if(data.ok){document.getElementById('form-wrap').style.display='none';var sw=document.getElementById('success-wrap');sw.style.display='block';document.getElementById('success-msg').textContent=date+' '+time+' '+name+'님 예약이 완료됐습니다.';}
+    else{alert('오류: '+(data.error||'다시 시도해주세요'));btn.disabled=false;btn.textContent='예약 신청';}
+  }catch(e){alert('오류가 발생했습니다');btn.disabled=false;btn.textContent='예약 신청';}
+}
+</script></body></html>`;
+          return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
+        } catch(e) {
+          return new Response('오류: '+e.message,{status:500});
+        }
+      }
+
       if (path === '/stmt') {
         const token = url.searchParams.get('t') || '';
         if (!token) return new Response('잘못된 접근입니다.', { status: 400 });
