@@ -29024,12 +29024,13 @@ function _brRender(){
   for(var d=1;d<=lastDate;d++){
     var dateStr=ym+'-'+String(d).padStart(2,'0');
     var isToday=dateStr===today;
-    html+='<div data-date="'+dateStr+'" onclick="_brOpenDay(\''+dateStr+'\')" style="min-height:52px;border-radius:10px;padding:4px;cursor:pointer;background:'+(isToday?'#C2185B':'var(--bg2)')+';border:1px solid '+(isToday?'#C2185B':'var(--border)')+';color:'+(isToday?'#fff':'var(--text1)')+'">'+'<div style="font-size:12px;font-weight:700;margin-bottom:2px">'+d+'</div>'+'<div id="br-cnt-'+dateStr+'" style="font-size:10px;opacity:.7"></div>'+'</div>';
+    html+='<div class="br-day" data-date="'+dateStr+'" style="min-height:52px;border-radius:10px;padding:4px;cursor:pointer;background:'+(isToday?'#C2185B':'var(--bg2)')+';border:1px solid '+(isToday?'#C2185B':'var(--border)')+';color:'+(isToday?'#fff':'var(--text1)')+'">'+'<div style="font-size:12px;font-weight:700;margin-bottom:2px">'+d+'</div>'+'<div id="br-cnt-'+dateStr+'" style="font-size:10px;opacity:.7"></div>'+'</div>';
   }
   html+='</div>'+
   '<button onclick="_brAddReserve()" style="width:100%;padding:14px;background:#C2185B;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">+ 예약 추가</button>';
 
   wrap.innerHTML=html;
+  wrap.querySelectorAll('.br-day').forEach(function(el){el.addEventListener('click',function(){_brOpenDay(this.dataset.date);});});
 
   // 예약 건수 로드
   var did=window._brDid;
