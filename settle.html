@@ -7493,10 +7493,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
-          // ★ 아이디지원 계산 전 etcPlus 초기화 (재계산 중복 방지)
-          settlements.forEach(function(s){
-            if((s.etcPlusReason||'').indexOf('아이디지원')>=0){s.etcPlus=0;s.etcPlusReason='';}
-          });
           // ★ 아이디지원 정산 (단일 블록)
           (function(){
             // rules 수집: Firestore idSupport + settings.idSupportRules (중복 제거)
@@ -7527,7 +7523,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             _rules.forEach(function(rule){
               var fid = (rule.fromId||'').replace(/@df$/i,'').trim();
               var tid = (rule.toId||'').replace(/@df$/i,'').trim();
-              var fd = drvMap[fid]; console.log('[IDS] fid='+fid+' fd='+!!fd+' dateRoutes='+JSON.stringify(fd&&fd.dateRoutes)); if(!fd) return;
+              var fd = drvMap[fid]; if(!fd) return;
 
               // 날짜 목록 (dates 배열 정규화)
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
