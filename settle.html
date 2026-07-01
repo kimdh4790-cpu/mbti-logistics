@@ -7512,16 +7512,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             (window._idSupportRules||[]).forEach(_addRule);
             if(!_rules.length) return;
 
-            // 날짜 정규화
+            // 날짜 정규화 ("2026-04-29" / "2026. 04. 29." / "2026/04/29" 모두 처리)
             var _nd = function(d){
               if(!d) return '';
-              d = String(d).trim();
-              var p = d.split('-');
+              var s = String(d).trim().replace(/[./]/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
+              var p = s.split('-').map(function(x){return x.trim();}).filter(Boolean);
               if(p.length >= 3){
                 var m = p[1].replace(/^0+/,'')||'0', dd = p[2].replace(/^0+/,'')||'0';
                 return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);
               }
-              return d;
+              return '';
             };
 
             _rules.forEach(function(rule){
@@ -7529,15 +7529,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var tid = (rule.toId||'').replace(/@df$/i,'').trim();
               var fd = drvMap[fid]; if(!fd) return;
 
-              // 날짜 목록 (dates 배열 우선, 없으면 startDate~endDate 범위)
+              // 날짜 목록 (dates 배열 정규화)
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
               var rStart = _nd(rule.startDate) || (_dates.length ? _dates[0] : '');
               var rEnd   = _nd(rule.endDate)   || (_dates.length ? _dates[_dates.length-1] : '');
               var tR = rule.routes || [];
 
-              // 날짜 필터 함수
+              // 날짜 필터: dates 배열 있으면 exact match, 없으면 startDate~endDate 범위
+              // dates도 없고 startDate도 없으면 → 룰 무효 (전체 건수 방지)
               var _dateOk = function(dt){
                 if(_dates.length) return _dates.indexOf(dt) >= 0;
+                if(!rStart && !rEnd) return false; // 날짜 정보 없음 → 무효
                 return (!rStart || dt >= rStart) && (!rEnd || dt <= rEnd);
               };
 
@@ -8669,21 +8671,7 @@ function showApp(){
       .then(function(snap){
         var r=[];
         snap.forEach(function(d){
-          var data=Object.assign({_id:d.id},d.data());
-          // startDate/endDate 없으면 dates 배열에서 보정
-          if(!data.startDate&&data.dates&&data.dates.length){
-            var sorted=data.dates.slice().sort();
-            data.startDate=sorted[0];
-            data.endDate=sorted[sorted.length-1];
-          }
-          // 그래도 없으면 이번 달 전체
-          if(!data.startDate){
-            var now=new Date();
-            var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
-            data.startDate=ym+'-01';
-            data.endDate=ym+'-31';
-          }
-          r.push(data);
+          r.push(Object.assign({_id:d.id},d.data()));
         });
         window._idSupportRules=r;
       })
@@ -17870,16 +17858,14 @@ window._uDoParseMulti = function(files, status){
           var idSupportRules=_rawIdRules.map(function(rule){
             function _fixDate(d){
               if(!d) return '';
-              // "2026. 04. 29." → "2026-04-29"
-              var s=String(d).trim().replace(/[.]+/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
+              var s=String(d).trim().replace(/[./]/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
               var p=s.split('-').map(function(x){return x.trim();}).filter(Boolean);
               if(p.length>=3) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);
-              return s;
+              return '';
             }
             var sd=_fixDate(rule.startDate);
             var ed=_fixDate(rule.endDate)||sd;
-            var dates=(rule.dates&&rule.dates.length)?rule.dates.map(_fixDate).filter(Boolean):[sd];
-            if(ed&&ed!==sd&&dates.indexOf(ed)<0) dates.push(ed);
+            var dates=(rule.dates&&rule.dates.length)?rule.dates.map(_fixDate).filter(Boolean):[];
             return {fromId:rule.fromId,toId:rule.toId,startDate:sd,endDate:ed,dates:dates,routes:rule.routes||[]};
           });
           var priceData = window._uPriceData||{};
@@ -17912,52 +17898,45 @@ window._uDoParseMulti = function(files, status){
             // ★ 팀장수수료 — 이 기사가 팀장이면 스킵 (3차 패스에서 처리)
             // 이 기사의 라우트로 leaderMap 탐색 (본인 라우트 기준 아님)
 
-            // ★ 아이디지원 — AI정산 코드 직접 이식
+            // ★ 아이디지원 — AI정산과 동일 로직
             if(idSupportRules.length){
-              function _uDateYM(s){
-                if(!s) return '';
-                var p=String(s).trim().split('-');
-                if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
-                return '';
-              }
-              var _uIdFd={};
               idSupportRules.forEach(function(rule){
-                var fid=(rule.fromId||'').replace('@df','').toLowerCase();
-                var tid=(rule.toId||'').replace('@df','').toLowerCase();
-                var fromR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===fid;});
-                var toR=results.find(function(r){return (r.empId||'').replace('@df','').toLowerCase()===tid;});
+                var fid=(rule.fromId||'').replace(/@df$/i,'').toLowerCase();
+                var tid=(rule.toId||'').replace(/@df$/i,'').toLowerCase();
+                var fromR=results.find(function(r){return (r.empId||'').replace(/@df$/i,'').toLowerCase()===fid;});
+                var toR=results.find(function(r){return (r.empId||'').replace(/@df$/i,'').toLowerCase()===tid;});
                 if(!fromR||!toR) return;
 
-                // dates 배열 구성
-                // dates + startDate/endDate 모두 합산
-                var tDFull=[];
-                (rule.dates||[]).forEach(function(d){
-                  if(d) tDFull.push(String(d).trim());
-                });
-                if(rule.startDate&&tDFull.indexOf(String(rule.startDate).trim())<0) tDFull.push(String(rule.startDate).trim());
-                if(rule.endDate&&tDFull.indexOf(String(rule.endDate).trim())<0) tDFull.push(String(rule.endDate).trim());
-                // 빈 값 제거
-                tDFull=tDFull.filter(function(d){return d&&d.length>=8;});
-                var tDYM=tDFull.map(function(d){return _uDateYM(d);}).filter(Boolean);
+                // 날짜 정규화
+                var _ndU=function(d){
+                  if(!d) return '';
+                  var s=String(d).trim().replace(/[./]/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
+                  var p=s.split('-').map(function(x){return x.trim();}).filter(Boolean);
+                  if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}
+                  return '';
+                };
+                var _datesU=(rule.dates||[]).map(_ndU).filter(Boolean).sort();
+                var rStartU=_ndU(rule.startDate)||(_datesU.length?_datesU[0]:'');
+                var rEndU=_ndU(rule.endDate)||(_datesU.length?_datesU[_datesU.length-1]:'');
                 var tR=rule.routes||[];
-                var tot=0;
+                var _dateOkU=function(dt){
+                  if(_datesU.length) return _datesU.indexOf(dt)>=0;
+                  if(!rStartU&&!rEndU) return false;
+                  return (!rStartU||dt>=rStartU)&&(!rEndU||dt<=rEndU);
+                };
 
-                var dr=fromR._dateRoutes||{};
+                var tot=0;
+                var dr=fromR.dateRoutes||{}; // ★ dateRoutes (not _dateRoutes)
                 Object.keys(dr).forEach(function(dt){
-                  var dtYM=_uDateYM(dt);
-                  // AI정산 방식 날짜 필터
-                  if(tDFull.length&&tDFull.indexOf(dt)<0) return;
-                  else if(!tDFull.length&&tDYM.length&&tDYM.indexOf(dtYM)<0) return;
+                  if(!_dateOkU(dt)) return;
                   Object.keys(dr[dt]).forEach(function(route){
                     if(tR.length&&tR.indexOf(route)<0) return;
                     var rd=dr[dt][route];
-                    var price=(window._uPriceData[route]&&window._uPriceData[route].price)||
-                              (fromR._routes&&fromR._routes[route]&&fromR._routes[route].price)||0;
+                    var price=(window._uPriceData[route]&&window._uPriceData[route].price)||0;
                     if(!price) return;
-                    var amt=(rd.cnt||0)*price+(rd.ret||0)*price;
-                    if(!amt) return;
+                    var amt=((rd.cnt||0)-(rd.ret||0))*price; // ★ ret는 차감
+                    if(amt<=0) return;
                     tot+=amt;
-                    // fromR 라우트 차감
                     if(fromR._routes&&fromR._routes[route]){
                       fromR._routes[route].cnt=Math.max(0,(fromR._routes[route].cnt||0)-(rd.cnt||0));
                       fromR._routes[route].ret=Math.max(0,(fromR._routes[route].ret||0)-(rd.ret||0));
@@ -17968,11 +17947,8 @@ window._uDoParseMulti = function(files, status){
                 if(!tot) return;
                 toR._idSupportGross=(toR._idSupportGross||0)+tot;
                 toR._etcPlus=(toR._etcPlus||0)+tot;
-                if(!_uIdFd[fid]) _uIdFd[fid]=0;
-                _uIdFd[fid]+=tot;
                 fromR.gross=Math.max(0,(fromR.gross||0)-tot);
               });
-              // fromId 차감 — gross만 차감, 기타-에는 표기 안 함 (건수 차감으로 이미 반영됨)
             }
 
           });
@@ -34255,12 +34231,11 @@ function _saveIdSupport(){
   var dRaw=(document.getElementById('ids-dates')||{value:''}).value.trim();
   var rRaw=(document.getElementById('ids-routes')||{value:''}).value.trim();
   var dates=dRaw?dRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
+  if(!dates.length){toast('❌ 날짜를 입력하세요 (예: 2026-04-29, 2026-05-16)');return;}
   var routes=rRaw?rRaw.split(',').map(function(s){return s.trim();}).filter(Boolean):[];
   var sortedDates=dates.slice().sort();
   var startDate=sortedDates[0]||'';
   var endDate=sortedDates[sortedDates.length-1]||'';
-  // 날짜가 없으면 이번 달 전체
-  if(!startDate){var now=new Date();var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);startDate=ym+'-01';endDate=ym+'-31';}
   _db.collection('idSupport').add({dealerId:did,fromId:from,toId:to,dates:dates,startDate:startDate,endDate:endDate,routes:routes,createdAt:new Date().toISOString()})
     .then(function(){
       toast('✅ 등록 완료');
