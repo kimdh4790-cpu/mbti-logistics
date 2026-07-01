@@ -26622,7 +26622,6 @@ var MENUS_SETTLE = [
     {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_beauty'},
     {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',   plan_key:'ind_beauty'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_beauty'},
-    {ic:'📅',l:'예약 달력',       p:'beauty_reserve',       plan_key:'ind_beauty'},
   ]},
   {s:'🏥 요양·돌봄', items:[
     {ic:'📊',l:'정산 현황',       p:'ind_care_settle',    plan_key:'ind_care'},
@@ -28608,7 +28607,6 @@ function pageBeautyKiosk(){
         '<button id="bk-tab-input" class="btn btn-blue" onclick="_bkTab(\'input\')" style="flex:1;font-size:13px">✍️ 시술 입력</button>'+
         '<button id="bk-tab-today" class="btn" onclick="_bkTab(\'today\')" style="flex:1;font-size:13px">📊 오늘 매출</button>'+
         '<button id="bk-tab-staff" class="btn" onclick="_bkTab(\'staff\')" style="flex:1;font-size:13px">👤 직원별</button>'+
-        '<button id="bk-tab-rank" class="btn" onclick="_bkTab(\'rank\')" style="flex:1;font-size:13px">🏆 랭킹</button>'+
       '</div>'+
       '<div id="bk-content"></div>'+
     '</div>';
@@ -28617,7 +28615,7 @@ function pageBeautyKiosk(){
 }
 
 function _bkTab(tab){
-  ['input','today','staff','rank'].forEach(function(t){
+  ['input','today','staff'].forEach(function(t){
     var btn=document.getElementById('bk-tab-'+t);
     if(btn){btn.className=t===tab?'btn btn-blue':'btn';btn.style.flex='1';btn.style.fontSize='13px';}
   });
@@ -28626,7 +28624,6 @@ function _bkTab(tab){
   if(tab==='input')_bkRenderInput(c);
   else if(tab==='today')_bkRenderToday(c);
   else if(tab==='staff')_bkRenderStaff(c);
-  else if(tab==='rank')_bkRenderRank(c);
 }
 
 function _bkRenderInput(c){
@@ -28756,52 +28753,6 @@ function _bkRemoveService(idx){
   _bkRenderServiceList();
 }
 
-function _bkRenderRank(c){
-  var did=window._bkDid;
-  var ym=window._bkYm;
-  c.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div>';
-  _db.collection('beauty_sales').where('dealerId','==',did).where('ym','==',ym).get()
-  .then(function(snap){
-    if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">💄</div>이번달 기록 없음</div>';return;}
-    var byD={};
-    snap.forEach(function(doc){
-      var v=doc.data();var n=v.designerName||'미지정';
-      if(!byD[n])byD[n]={name:n,sales:0,net:0,cnt:0,mat:0};
-      byD[n].sales+=v.totalSales||0;
-      byD[n].net+=v.net||0;
-      byD[n].cnt+=(v.services||[]).length||1;
-      byD[n].mat+=v.totalMat||0;
-    });
-    var arr=Object.values(byD).sort(function(a,b){return b.net-a.net;});
-    var medals=['🥇','🥈','🥉'];
-    var total=arr.reduce(function(s,x){return s+x.net;},0);
-    var html='<div style="font-size:12px;color:var(--text3);margin-bottom:12px">'+ym+' 월 스타일리스트 랭킹</div>';
-    // 전체 합계
-    html+='<div style="background:linear-gradient(135deg,#C2185B,#E91E63);border-radius:12px;padding:14px;margin-bottom:14px;color:#fff;text-align:center">'+
-      '<div style="font-size:11px;opacity:.8">이번달 총 수당</div>'+
-      '<div style="font-size:24px;font-weight:900">₩'+total.toLocaleString()+'</div>'+
-      '<div style="font-size:11px;opacity:.8;">'+arr.length+'명 · 총 '+arr.reduce(function(s,x){return s+x.cnt;},0)+'건</div>'+
-    '</div>';
-    arr.forEach(function(d,i){
-      var pct=total>0?Math.round(d.net/total*100):0;
-      html+='<div style="background:var(--bg2);border-radius:12px;padding:14px;margin-bottom:10px">'+
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
-          '<div style="font-size:24px">'+(medals[i]||'🎖️')+'</div>'+
-          '<div style="flex:1">'+
-            '<div style="font-size:14px;font-weight:800">'+esc(d.name)+'</div>'+
-            '<div style="font-size:11px;color:var(--text3)">'+d.cnt+'건 · 부자재 ₩'+d.mat.toLocaleString()+'</div>'+
-          '</div>'+
-          '<div style="font-size:18px;font-weight:900;color:#C2185B">₩'+d.net.toLocaleString()+'</div>'+
-        '</div>'+
-        '<div style="background:var(--bg3);border-radius:6px;height:8px;overflow:hidden">'+
-          '<div style="height:100%;border-radius:6px;background:linear-gradient(90deg,#C2185B,#E91E63);width:'+pct+'%;transition:width .5s"></div>'+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:3px">매출 점유 '+pct+'%</div>'+
-      '</div>';
-    });
-    c.innerHTML=html;
-  }).catch(function(e){c.innerHTML='<div class="empty">'+esc(e.message)+'</div>';});
-}
 function _bkSave(){
   var designer=window._bkSelectedDesigner;
   var services=window._bkServices||[];
@@ -28973,195 +28924,6 @@ function _bkExportToSettle(designerName){
     }).then(function(){toast('✅ '+designerName+' 정산 생성 완료!');})
     .catch(function(e){toast('❌ '+e.message);});
   });
-}
-
-function pageBeautyReserve(){
-  document.getElementById('page-title').textContent='📅 예약 달력';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId||_CU.uid;
-  var today=new Date();
-  var curYear=today.getFullYear();
-  var curMonth=today.getMonth();
-  window._brYear=curYear; window._brMonth=curMonth; window._brDid=did;
-
-  el.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'+
-    '<div style="background:linear-gradient(135deg,#C2185B,#E91E63);border-radius:16px;padding:20px;color:#fff;margin-bottom:16px">'+
-      '<div style="font-size:24px">📅</div>'+
-      '<div style="font-size:18px;font-weight:900">예약 달력</div>'+
-    '</div>'+
-    '<div id="br-wrap"></div>'+
-  '</div>';
-  _brRender();
-}
-
-function _brRender(){
-  var wrap=document.getElementById('br-wrap');
-  if(!wrap)return;
-  var y=window._brYear, m=window._brMonth;
-  var monthNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  var firstDay=new Date(y,m,1).getDay();
-  var lastDate=new Date(y,m+1,0).getDate();
-  var ym=y+'-'+String(m+1).padStart(2,'0');
-  var today=new Date().toISOString().slice(0,10);
-
-  var html=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-      '<button onclick="window._brMonth--;if(window._brMonth<0){window._brMonth=11;window._brYear--;}window._brReservations=null;_brRender();" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);cursor:pointer;font-size:16px">◀</button>'+
-      '<div style="font-size:16px;font-weight:900">'+y+'년 '+monthNames[m]+'</div>'+
-      '<button onclick="window._brMonth++;if(window._brMonth>11){window._brMonth=0;window._brYear++;}window._brReservations=null;_brRender();" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);cursor:pointer;font-size:16px">▶</button>'+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">'+
-    ['일','월','화','수','목','금','토'].map(function(d,i){
-      return '<div style="text-align:center;font-size:11px;font-weight:700;padding:6px 0;color:'+(i===0?'#ef4444':i===6?'#3b82f6':'var(--text2)')+'">' + d + '</div>';
-    }).join('')+
-    '</div>'+
-    '<div id="br-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px">';
-
-  // 빈칸
-  for(var i=0;i<firstDay;i++) html+='<div></div>';
-  // 날짜
-  for(var d=1;d<=lastDate;d++){
-    var dateStr=ym+'-'+String(d).padStart(2,'0');
-    var isToday=dateStr===today;
-    html+='<div class="br-day" data-date="'+dateStr+'" style="min-height:52px;border-radius:10px;padding:4px;cursor:pointer;background:'+(isToday?'#C2185B':'var(--bg2)')+';border:1px solid '+(isToday?'#C2185B':'var(--border)')+';color:'+(isToday?'#fff':'var(--text1)')+'">'+'<div style="font-size:12px;font-weight:700;margin-bottom:2px">'+d+'</div>'+'<div id="br-cnt-'+dateStr+'" style="font-size:10px;opacity:.7"></div>'+'</div>';
-  }
-  html+='</div>'+
-  '<button onclick="_brAddReserve()" style="width:100%;padding:14px;background:#C2185B;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">+ 예약 추가</button>';
-
-  wrap.innerHTML=html;
-  wrap.querySelectorAll('.br-day').forEach(function(el){el.addEventListener('click',function(){_brOpenDay(this.dataset.date);});});
-
-  // 예약 건수 로드
-  var did=window._brDid;
-  _db.collection('beauty_reserves').where('dealerId','==',did).where('ym','==',ym).get()
-  .then(function(snap){
-    window._brReservations=[];
-    snap.forEach(function(doc){window._brReservations.push(Object.assign({id:doc.id},doc.data()));});
-    // 날짜별 건수 표시
-    var byCnt={};
-    window._brReservations.forEach(function(r){
-      byCnt[r.date]=(byCnt[r.date]||0)+1;
-    });
-    Object.keys(byCnt).forEach(function(date){
-      var el=document.getElementById('br-cnt-'+date);
-      if(el) el.innerHTML='<span style="background:rgba(255,255,255,.3);border-radius:4px;padding:1px 4px">'+byCnt[date]+'건</span>';
-    });
-  }).catch(function(){});
-}
-
-function _brOpenDay(date){
-  var reserves=(window._brReservations||[]).filter(function(r){return r.date===date;});
-  var mo=document.createElement('div');mo.className='mo show';
-  var md=document.createElement('div');md.className='md';md.style.maxWidth='420px';
-  var dateLabel=date.slice(5).replace('-','/');
-  md.innerHTML='<div class="mdt">📅 '+dateLabel+' 예약 현황</div>'+
-    '<div style="padding:16px">'+
-    (reserves.length?
-      reserves.map(function(r){
-        return '<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">'+
-          '<div style="display:flex;justify-content:space-between;align-items:center">'+
-            '<div>'+
-              '<div style="font-size:13px;font-weight:800">'+esc(r.time||'')+'  '+esc(r.customerName||'')+'</div>'+
-              '<div style="font-size:11px;color:var(--text3)">'+esc(r.designer||'')+' · '+esc(r.menu||'')+'</div>'+
-              (r.phone?'<div style="font-size:11px;color:var(--text3)">📞 '+esc(r.phone)+'</div>':'')+
-            '</div>'+
-            '<div style="display:flex;gap:6px">'+
-              '<span style="font-size:10px;padding:3px 8px;border-radius:20px;background:'+(r.status==='완료'?'#059669':'r.status==='취소'?'#ef4444':'#C2185B')+'11;color:'+(r.status==='완료'?'#059669':r.status==='취소'?'#ef4444':'#C2185B')+'">'+esc(r.status||'예약')+'</span>'+
-              '<button data-id="'+r.id+'" onclick="_brDeleteReserve(this.dataset.id)" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);cursor:pointer">삭제</button>'+
-            '</div>'+
-          '</div>'+
-        '</div>';
-      }).join(''):
-      '<div style="text-align:center;color:var(--text3);padding:20px">예약 없음</div>'
-    )+
-    '</div>'+
-    '<div class="mdf">'+
-      '<button class="btn" onclick="this.closest('.mo').remove()">닫기</button>'+
-      '<button class="btn btn-blue" onclick="this.closest('.mo').remove();_brAddReserve(''+date+'');">+ 예약 추가</button>'+
-    '</div>';
-  mo.appendChild(md);document.body.appendChild(mo);
-}
-
-function _brAddReserve(defaultDate){
-  var did=window._brDid;
-  var designers=(window._bkDesigners||[]);
-  var mo=document.createElement('div');mo.className='mo show';
-  var md=document.createElement('div');md.className='md';md.style.maxWidth='420px';
-  md.innerHTML='<div class="mdt">+ 예약 추가</div>'+
-    '<div style="padding:16px;display:flex;flex-direction:column;gap:10px">'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">날짜</label>'+
-      '<input id="br-date" type="date" value="'+(defaultDate||new Date().toISOString().slice(0,10))+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">시간</label>'+
-      '<input id="br-time" type="time" value="10:00" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">고객명</label>'+
-      '<input id="br-cname" placeholder="고객 이름" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">연락처</label>'+
-      '<input id="br-cphone" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">담당 디자이너</label>'+
-      '<select id="br-designer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)">'+
-        '<option value="">선택</option>'+
-        designers.map(function(d){return '<option value="'+esc(d.name||'')+'">'+esc(d.name||'')+'</option>';}).join('')+
-      '</select></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">시술 메뉴</label>'+
-      '<input id="br-menu" placeholder="시술명" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-      '<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px">메모</label>'+
-      '<input id="br-memo" placeholder="메모 (선택)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text)"></div>'+
-    '</div>'+
-    '<div class="mdf">'+
-      '<button class="btn" onclick="this.closest('.mo').remove()">취소</button>'+
-      '<button class="btn btn-blue" onclick="_brSaveReserve(this)">저장</button>'+
-    '</div>';
-  mo.appendChild(md);document.body.appendChild(mo);
-  // 디자이너 없으면 로드
-  if(!window._bkDesigners||!window._bkDesigners.length){
-    _db.collection('ind_workers').where('dealerId','==',did).where('industryType','==','beauty').get()
-    .then(function(snap){
-      window._bkDesigners=[];
-      snap.forEach(function(d){window._bkDesigners.push(Object.assign({id:d.id},d.data()));});
-      var sel=document.getElementById('br-designer');
-      if(sel){
-        sel.innerHTML='<option value="">선택</option>'+
-          window._bkDesigners.map(function(d){return '<option value="'+esc(d.name||'')+'">'+esc(d.name||'')+'</option>';}).join('');
-      }
-    }).catch(function(){});
-  }
-}
-
-function _brSaveReserve(btn){
-  var did=window._brDid;
-  var date=(document.getElementById('br-date')||{}).value||'';
-  var time=(document.getElementById('br-time')||{}).value||'';
-  var cname=(document.getElementById('br-cname')||{}).value||'';
-  var cphone=(document.getElementById('br-cphone')||{}).value||'';
-  var designer=(document.getElementById('br-designer')||{}).value||'';
-  var menu=(document.getElementById('br-menu')||{}).value||'';
-  var memo=(document.getElementById('br-memo')||{}).value||'';
-  if(!date||!cname){toast('날짜와 고객명은 필수입니다');return;}
-  var ym=date.slice(0,7);
-  btn.disabled=true;btn.textContent='저장 중...';
-  _db.collection('beauty_reserves').add({
-    dealerId:did,date:date,time:time,ym:ym,
-    customerName:cname,phone:cphone,
-    designer:designer,menu:menu,memo:memo,
-    status:'예약',createdAt:new Date().toISOString()
-  }).then(function(){
-    toast('✅ 예약 저장 완료!');
-    btn.closest('.mo').remove();
-    window._brReservations=null;
-    _brRender();
-  }).catch(function(e){toast('❌ '+e.message);btn.disabled=false;btn.textContent='저장';});
-}
-
-function _brDeleteReserve(id){
-  if(!confirm('예약을 삭제하시겠습니까?'))return;
-  _db.collection('beauty_reserves').doc(id).delete()
-  .then(function(){
-    toast('✅ 삭제 완료');
-    document.querySelectorAll('.mo').forEach(function(m){m.remove();});
-    window._brReservations=null;
-    _brRender();
-  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function buildNav(){
@@ -29785,7 +29547,7 @@ comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);
   ind_sales:function(){pageIndustry('sales','💼 영업직');},
   ind_freelance:function(){pageIndustry('freelance','🖥️ 프리랜서');},
   ind_restaurant:function(){pageIndustry('restaurant','🍽️ 음식점·카페');},
-  subscription:pageSubscription,beauty_kiosk:pageBeautyKiosk,beauty_reserve:pageBeautyReserve,
+  subscription:pageSubscription,beauty_kiosk:pageBeautyKiosk,
   ind_golf_settle:    function(){pageIndSettle('golf','🏌️ 골프장·캐디');},
   ind_golf_list:      function(){pageIndList('golf','🏌️ 골프장·캐디');},
   ind_golf_workers:   function(){pageIndWorkers('golf','🏌️ 골프장·캐디');},
