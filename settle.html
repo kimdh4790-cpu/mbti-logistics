@@ -7503,10 +7503,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!dup) _mergedIdRules.push(r);
             });
           }
-          if(_mergedIdRules.length){
-            window._idSupportRules=_mergedIdRules;
-          }
-          if(window._idSupportRules&&window._idSupportRules.length){
+          var _activeIdRules=_mergedIdRules.length?_mergedIdRules:(window._idSupportRules||[]);
+          if(_activeIdRules&&_activeIdRules.length){
             function _normD(s){
               if(!s)return '';
               var p=String(s).trim().split('-');
@@ -7521,7 +7519,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               return '';
             }
             var _fd={};
-            window._idSupportRules.forEach(function(rule){
+            _activeIdRules.forEach(function(rule){
               var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
               var tid=(rule.toId||'').replace(/@df$/i,'').trim();
               var fd=drvMap[fid]; if(!fd)return;
@@ -7661,7 +7659,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             });
 
             // ★ toId(지원받는 기사) etcPlus에 금액+사유 추가
-            window._idSupportRules.forEach(function(rule){
+            _activeIdRules.forEach(function(rule){
               var fid=(rule.fromId||'').trim();
               var tid=(rule.toId||'').trim();
               var fd=drvMap[fid]; if(!fd)return;
