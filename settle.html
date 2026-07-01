@@ -7527,7 +7527,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             _rules.forEach(function(rule){
               var fid = (rule.fromId||'').replace(/@df$/i,'').trim();
               var tid = (rule.toId||'').replace(/@df$/i,'').trim();
-              var fd = drvMap[fid]; if(!fd) return;
+              var fd = drvMap[fid]; console.log('[IDS] fid='+fid+' fd='+!!fd+' dateRoutes='+JSON.stringify(fd&&fd.dateRoutes)); if(!fd) return;
 
               // 날짜 목록 (dates 배열 정규화)
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
