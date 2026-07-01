@@ -726,9 +726,9 @@ async function submitReserve(){
 
           // 기사 목록 조회
           const dUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const dFilters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},{fieldFilter:{field:{fieldPath:'is_active'},op:'NOT_EQUAL',value:{booleanValue:false}}}];
+          const dFilters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}];
           if (camp) dFilters.push({fieldFilter:{field:{fieldPath:'camp'},op:'EQUAL',value:{stringValue:camp}}});
-          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:dFilters}},limit:100}});
+          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:dFilters}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}],limit:200}});
           const dRes = await fetch(dUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:dBody});
           const dData = await dRes.json();
           const drivers = (dData||[]).filter(r=>r.document).map(r=>{
