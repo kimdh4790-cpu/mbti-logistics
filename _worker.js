@@ -816,14 +816,31 @@ async function submitReserve(){
             if (body.mode === 'exchange') {
               const fsToken2 = await getAccessToken(env);
               const now2 = new Date().toISOString();
-              // 요청자(from) docId → off로
-              const p1u = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
-              await fetch(p1u,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'off'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-              // 수락자(to) myDocId → work로
-              if (body.myDocId) {
-                const p2u = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+body.myDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
-                await fetch(p2u,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
-              }
+              const ws2 = url.searchParams.get('ws') || '';
+              const did2 = url.searchParams.get('did') || '';
+              // 요청자 docId 원본 조회 (driverId, dayIndex, route 필요)
+              const fromDocUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId;
+              const fromDocRes = await fetch(fromDocUrl,{headers:{'Authorization':'Bearer '+fsToken2}});
+              const fromDoc = await fromDocRes.json();
+              const fromFields = fromDoc.fields||{};
+              const fromDriverId = fromFields.driverId?.stringValue||'';
+              const fromDayIndex = fromFields.dayIndex?.integerValue||fromFields.dayIndex?.doubleValue||0;
+              // 수락자 docId 원본 조회
+              const toDocUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+body.myDocId;
+              const toDocRes = await fetch(toDocUrl,{headers:{'Authorization':'Bearer '+fsToken2}});
+              const toDoc = await toDocRes.json();
+              const toFields = toDoc.fields||{};
+              const toDriverId = toFields.driverId?.stringValue||'';
+              const toDayIndex = toFields.dayIndex?.integerValue||toFields.dayIndex?.doubleValue||0;
+              const baseUrl2 = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week';
+              // 요청자: 원래 휴무일(fromDayIndex) → 출근, 수락자 휴무일(toDayIndex) → 휴무 추가
+              await fetch(fromDocUrl+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+              // 수락자: 원래 휴무일(toDayIndex) → 출근, 요청자 휴무일(fromDayIndex) → 휴무 추가
+              await fetch(toDocUrl+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+              // 요청자의 새 휴무 (수락자 날짜)
+              await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:parseInt(toDayIndex)},status:{stringValue:'off'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+              // 수락자의 새 휴무 (요청자 날짜)
+              await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:parseInt(fromDayIndex)},status:{stringValue:'off'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
               return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
             }
             const did = url.searchParams.get('did') || '';
