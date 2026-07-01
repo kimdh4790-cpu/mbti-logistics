@@ -769,10 +769,10 @@ async function submitReserve(){
               const bg = isOff ? '#fee2e2' : '#f0fdf4';
               const color = isOff ? '#dc2626' : '#16a34a';
               const label = isOff ? '휴무' : (route || '출근');
-              const swapUrl = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i] : '';
+              const swapUrl = isOff ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i : '';
               cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
                 <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
-                ${!isOff && swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#3b82f6;text-decoration:none">🔄 교체</a>` : ''}
+                ${isOff && swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
               </td>`;
             }
             rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
@@ -812,10 +812,38 @@ async function submitReserve(){
           try {
             const fsToken = await getAccessToken(env);
             const body = await request.json();
-            const patchUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId+'?updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapStatus&updateMask.fieldPaths=swapAt';
-            const patchBody = JSON.stringify({fields:{swapWith:{stringValue:body.name||''},swapStatus:{stringValue:'accepted'},swapAt:{stringValue:new Date().toISOString()}}});
-            const pRes = await fetch(patchUrl,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:patchBody});
-            if (!pRes.ok) throw new Error('저장 실패');
+            const did = url.searchParams.get('did') || '';
+            const ws = url.searchParams.get('ws') || '';
+            const di = parseInt(url.searchParams.get('di') || '0');
+            // 1. 휴무자 docId → 출근으로 변경
+            const p1Url = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId;
+            const p1Res = await fetch(p1Url, {headers:{'Authorization':'Bearer '+fsToken}});
+            const p1Data = await p1Res.json();
+            const offRoute = p1Data.fields?.route?.stringValue || '';
+            const patch1Url = p1Url+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
+            await fetch(patch1Url,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},
+              body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:new Date().toISOString()}}})});
+            // 2. 수락자(출근) → 휴무로 변경 (drivers에서 이름으로 driverId 찾기)
+            if (did && ws) {
+              const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+              const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:body.name||''}}}]}},limit:1}});
+              const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
+              const qData = await qRes.json();
+              const toDriverId = qData[0]?.document?.fields?.userId?.stringValue || '';
+              if (toDriverId) {
+                // 수락자의 해당 날짜 roster_week 문서 찾기
+                const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
+                const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},{fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:di}}}]}},limit:1}});
+                const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
+                const rData = await rRes.json();
+                const toDocId = rData[0]?.document?.name?.split('/').pop() || '';
+                if (toDocId) {
+                  const p2Url = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+toDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
+                  await fetch(p2Url,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},
+                    body:JSON.stringify({fields:{status:{stringValue:'off'},swapWith:{stringValue:fromName},swapAt:{stringValue:new Date().toISOString()}}})});
+                }
+              }
+            }
             return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
           } catch(e) {
             return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
