@@ -727,14 +727,14 @@ async function submitReserve(){
           // 기사 목록 조회
           const dUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
           const dFilters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}];
-          if (camp) dFilters.push({fieldFilter:{field:{fieldPath:'camp'},op:'EQUAL',value:{stringValue:camp}}});
-          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:dFilters}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}],limit:200}});
+          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}],limit:300}});
           const dRes = await fetch(dUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:dBody});
           const dData = await dRes.json();
-          const drivers = (dData||[]).filter(r=>r.document).map(r=>{
+          let drivers = (dData||[]).filter(r=>r.document).map(r=>{
             const f = r.document.fields||{};
-            return {id:r.document.name.split('/').pop(), name:f.name?.stringValue||'', camp:f.camp?.stringValue||'', userId:f.userId?.stringValue||''};
-          });
+            return {id:r.document.name.split('/').pop(), name:f.name?.stringValue||'', camp:(f.camp?.stringValue||'').replace('캠프','').trim(), userId:f.userId?.stringValue||'', isActive:f.is_active?.booleanValue!==false, status:f.status?.stringValue||''};
+          }).filter(d=>d.isActive && d.status!=='탈퇴' && d.status!=='퇴직');
+          if (camp) drivers = drivers.filter(d=>d.camp===camp);
 
           // 근무표 데이터 조회
           const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
