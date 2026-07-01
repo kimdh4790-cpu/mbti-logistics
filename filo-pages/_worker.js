@@ -101,6 +101,15 @@ async function serveKVFile(env, fileName, contentType) {
       const kvVal = await _e.DONWAY_ASSETS.get(fileName, 'text');
       if (kvVal) return new Response(kvVal, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
     }
+    // KV 바인딩 없거나 파일 없으면 GitHub Raw 직접
+    const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/' + fileName + '?bust=' + Date.now(), {
+      cf: { cacheEverything: false, cacheTtl: 0 },
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (ghRaw.ok) {
+      const txt = await ghRaw.text();
+      return new Response(txt, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'GH-Raw', ...SECURITY_HEADERS } });
+    }
     // KV 없으면 GitHub Raw
     const PAGES_FILES = {};
     const bust = Date.now() + Math.random().toString(36).slice(2);
