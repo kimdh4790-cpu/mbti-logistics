@@ -31831,43 +31831,65 @@ if(idsSupport.length){
   body.appendChild(idsSec);
 }
 
-// ── 일일 상세 내역
+// ── 일일 상세 내역 (5일씩 페이지네이션)
 if(s.dateRoutes&&Object.keys(s.dateRoutes).length){
   var dailySec2=document.createElement("div");
   dailySec2.style.cssText="margin-top:10px;padding:10px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px";
-  var dHtml='<div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:8px">📅 일일 상세 내역</div>';
-  dHtml+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
-  dHtml+='<thead><tr style="background:rgba(59,130,246,.1)"><th style="padding:4px 6px;text-align:left">날짜</th><th style="padding:4px 6px;text-align:left">라우트</th><th style="padding:4px 6px;text-align:right">배송</th><th style="padding:4px 6px;text-align:right">반품</th><th style="padding:4px 6px;text-align:right">프레시백</th></tr></thead><tbody>';
   var dRoutes=s.dateRoutes||{};
   var dFresh=s.dateFresh||{};
   var dDates=Object.keys(dRoutes).sort();
-  var totalFresh2=0;
-  dDates.forEach(function(dt){
-    var routeMap=dRoutes[dt]||{};
-    var rKeys=Object.keys(routeMap).sort();
-    var dayDcnt=0,dayRcnt=0;
-    var rParts=[];
-    rKeys.forEach(function(rt){
-      var rf=routeMap[rt]||{};
-      var c=rf.cnt||0,r=rf.ret||0;
-      dayDcnt+=c;dayRcnt+=r;
-      rParts.push(rt+"("+c+(r?"/반"+r:"")+")");
+  var _DS=5;
+  var _dTotalPages=Math.ceil(dDates.length/_DS);
+  var _dSecId='daily-sec-'+Date.now();
+  var _totalFreshAll=0;
+  Object.values(dFresh).forEach(function(v){_totalFreshAll+=v||0;});
+
+  function _renderDailyPage(pg){
+    var pageDates=dDates.slice(pg*_DS,(pg+1)*_DS);
+    var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+    html+='<div style="font-size:11px;font-weight:800;color:#1e40af">📅 일일 상세 내역</div>';
+    if(_dTotalPages>1){
+      html+='<div style="display:flex;align-items:center;gap:6px">';
+      html+='<button onclick="(function(){var s=document.getElementById(\''+_dSecId+'\');if(s&&s._pg>0){s._pg--;s.innerHTML=s._render(s._pg);}})();" style="border:none;background:rgba(59,130,246,.15);color:#1e40af;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer">◀</button>';
+      html+='<span style="font-size:11px;color:#64748b">'+(pg+1)+'/'+_dTotalPages+'</span>';
+      html+='<button onclick="(function(){var s=document.getElementById(\''+_dSecId+'\');if(s&&s._pg<s._tp-1){s._pg++;s.innerHTML=s._render(s._pg);}})();" style="border:none;background:rgba(59,130,246,.15);color:#1e40af;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer">▶</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html+='<thead><tr style="background:rgba(59,130,246,.1)"><th style="padding:4px 6px;text-align:left">날짜</th><th style="padding:4px 6px;text-align:left">라우트</th><th style="padding:4px 6px;text-align:right">배송</th><th style="padding:4px 6px;text-align:right">반품</th><th style="padding:4px 6px;text-align:right">프레시백</th></tr></thead><tbody>';
+    pageDates.forEach(function(dt){
+      var routeMap=dRoutes[dt]||{};
+      var rKeys=Object.keys(routeMap).sort();
+      var dayDcnt=0,dayRcnt=0;
+      var rParts=[];
+      rKeys.forEach(function(rt){
+        var rf=routeMap[rt]||{};
+        var c=rf.cnt||0,r=rf.ret||0;
+        dayDcnt+=c;dayRcnt+=r;
+        rParts.push(rt+"("+c+(r?"/반"+r:"")+")");
+      });
+      var dayFresh=dFresh[dt]||0;
+      html+='<tr style="border-bottom:1px solid rgba(59,130,246,.1)">';
+      html+='<td style="padding:4px 6px;color:#1d4ed8;font-weight:600">'+dt+'</td>';
+      html+='<td style="padding:4px 6px;color:#374151">'+rParts.join(", ")+'</td>';
+      html+='<td style="padding:4px 6px;text-align:right">'+dayDcnt+'</td>';
+      html+='<td style="padding:4px 6px;text-align:right">'+dayRcnt+'</td>';
+      html+='<td style="padding:4px 6px;text-align:right;color:#059669;font-weight:700">'+(dayFresh>0?"+"+dayFresh.toLocaleString():"-")+'</td>';
+      html+='</tr>';
     });
-    var dayFresh=dFresh[dt]||0;
-    totalFresh2+=dayFresh;
-    dHtml+='<tr style="border-bottom:1px solid rgba(59,130,246,.1)">';
-    dHtml+='<td style="padding:4px 6px;color:#1d4ed8;font-weight:600">'+dt+'</td>';
-    dHtml+='<td style="padding:4px 6px;color:#374151">'+rParts.join(", ")+'</td>';
-    dHtml+='<td style="padding:4px 6px;text-align:right">'+dayDcnt+'</td>';
-    dHtml+='<td style="padding:4px 6px;text-align:right">'+dayRcnt+'</td>';
-    dHtml+='<td style="padding:4px 6px;text-align:right;color:#059669;font-weight:700">'+( dayFresh>0?"+"+dayFresh.toLocaleString():"-")+'</td>';
-    dHtml+='</tr>';
-  });
-  if(totalFresh2>0){
-    dHtml+='<tr style="background:rgba(5,150,105,.08)"><td colspan="4" style="padding:4px 6px;font-weight:700;color:#059669">프레시백 합계</td><td style="padding:4px 6px;text-align:right;font-weight:900;color:#059669">+'+totalFresh2.toLocaleString()+'원</td></tr>';
+    if(pg===_dTotalPages-1&&_totalFreshAll>0){
+      html+='<tr style="background:rgba(5,150,105,.08)"><td colspan="4" style="padding:4px 6px;font-weight:700;color:#059669">프레시백 합계</td><td style="padding:4px 6px;text-align:right;font-weight:900;color:#059669">+'+_totalFreshAll.toLocaleString()+'원</td></tr>';
+    }
+    html+='</tbody></table>';
+    return html;
   }
-  dHtml+='</tbody></table>';
-  dailySec2.innerHTML=dHtml;
+
+  dailySec2.id=_dSecId;
+  dailySec2._pg=0;
+  dailySec2._tp=_dTotalPages;
+  dailySec2._render=_renderDailyPage;
+  dailySec2.innerHTML=_renderDailyPage(0);
   body.appendChild(dailySec2);
 }
 
