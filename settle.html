@@ -31862,6 +31862,68 @@ function _showSEModal(s){
   });
   body.appendChild(itemSec);
 
+// ── 아이디지원 내역
+var idsSupport=(window._idSupportRules||[]).filter(function(r){
+  var uid=s.userId||s.driver||"";
+  return r.fromId===uid||r.toId===uid;
+});
+if(idsSupport.length){
+  var idsSec=document.createElement("div");
+  idsSec.style.cssText="margin-top:10px;padding:10px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:10px";
+  var idsHtml='<div style="font-size:11px;font-weight:800;color:#065f46;margin-bottom:8px">🔄 아이디 지원 내역</div>';
+  idsSupport.forEach(function(r){
+    var uid=s.userId||s.driver||"";
+    var isFrom=r.fromId===uid;
+    var arrow=r.fromId+" → "+r.toId;
+    var badge=isFrom?'<span style="font-size:9px;background:#dcfce7;color:#166534;padding:1px 5px;border-radius:8px;margin-left:4px">지원</span>':'<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;margin-left:4px">수혜</span>';
+    var dates=(r.dates||[]).slice().sort().join(", ");
+    idsHtml+='<div style="font-size:11px;color:#374151;margin-bottom:4px">'+arrow+badge+'<span style="color:#64748b;margin-left:6px">'+dates+'</span></div>';
+  });
+  idsSec.innerHTML=idsHtml;
+  body.appendChild(idsSec);
+}
+
+// ── 일일 상세 내역
+if(s.dateRoutes&&Object.keys(s.dateRoutes).length){
+  var dailySec2=document.createElement("div");
+  dailySec2.style.cssText="margin-top:10px;padding:10px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px";
+  var dHtml='<div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:8px">📅 일일 상세 내역</div>';
+  dHtml+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  dHtml+='<thead><tr style="background:rgba(59,130,246,.1)"><th style="padding:4px 6px;text-align:left">날짜</th><th style="padding:4px 6px;text-align:left">라우트</th><th style="padding:4px 6px;text-align:right">배송</th><th style="padding:4px 6px;text-align:right">반품</th><th style="padding:4px 6px;text-align:right">프레시백</th></tr></thead><tbody>';
+  var dRoutes=s.dateRoutes||{};
+  var dFresh=s.dateFresh||{};
+  var dDates=Object.keys(dRoutes).sort();
+  var totalFresh2=0;
+  dDates.forEach(function(dt){
+    var routeMap=dRoutes[dt]||{};
+    var rKeys=Object.keys(routeMap).sort();
+    var dayDcnt=0,dayRcnt=0;
+    var rParts=[];
+    rKeys.forEach(function(rt){
+      var rf=routeMap[rt]||{};
+      var c=rf.cnt||0,r=rf.ret||0;
+      dayDcnt+=c;dayRcnt+=r;
+      rParts.push(rt+"("+c+(r?"/반"+r:"")+")");
+    });
+    var dayFresh=dFresh[dt]||0;
+    totalFresh2+=dayFresh;
+    dHtml+='<tr style="border-bottom:1px solid rgba(59,130,246,.1)">';
+    dHtml+='<td style="padding:4px 6px;color:#1d4ed8;font-weight:600">'+dt+'</td>';
+    dHtml+='<td style="padding:4px 6px;color:#374151">'+rParts.join(", ")+'</td>';
+    dHtml+='<td style="padding:4px 6px;text-align:right">'+dayDcnt+'</td>';
+    dHtml+='<td style="padding:4px 6px;text-align:right">'+dayRcnt+'</td>';
+    dHtml+='<td style="padding:4px 6px;text-align:right;color:#059669;font-weight:700">'+( dayFresh>0?"+"+dayFresh.toLocaleString():"-")+'</td>';
+    dHtml+='</tr>';
+  });
+  if(totalFresh2>0){
+    dHtml+='<tr style="background:rgba(5,150,105,.08)"><td colspan="4" style="padding:4px 6px;font-weight:700;color:#059669">프레시백 합계</td><td style="padding:4px 6px;text-align:right;font-weight:900;color:#059669">+'+totalFresh2.toLocaleString()+'원</td></tr>';
+  }
+  dHtml+='</tbody></table>';
+  dailySec2.innerHTML=dHtml;
+  body.appendChild(dailySec2);
+}
+
+
   // ── 세금계산서 합계 + 공제
   var calcSec=document.createElement('div');calcSec.id='se-calc-sec';
   body.appendChild(calcSec);
