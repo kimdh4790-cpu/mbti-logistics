@@ -843,7 +843,7 @@ async function submitReserve(){
               const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:body.name||''}}}]}},limit:1}});
               const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
               const qData = await qRes.json();
-              const toDriverId = qData[0]?.document?.fields?.userId?.stringValue || '';
+              const toDriverId = qData[0]?.document?.name?.split('/')?.pop() || '';
               if (toDriverId) {
                 // 수락자의 해당 날짜 roster_week 문서 찾기
                 const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
@@ -876,7 +876,7 @@ async function submitReserve(){
             const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:name}}}]}},limit:1}});
             const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
             const qData = await qRes.json();
-            const toDriverId = qData[0]?.document?.fields?.userId?.stringValue || '';
+            const toDriverId = qData[0]?.document?.name?.split('/')?.pop() || '';
             if (!toDriverId) return new Response(JSON.stringify({ok:false,error:'기사를 찾을 수 없습니다'}),{headers:{'Content-Type':'application/json'}});
             // 해당 주 휴무 날짜 조회
             const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
