@@ -32628,22 +32628,6 @@ function recalcAllSettlements(){
           promises.push(_db.collection('settlements').doc(toS.id).update({
             etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
           }).catch(function(){}));
-        } else {
-          // ★ toId 기사가 settlements에 없는 경우 — 신규 문서 생성
-          var did2=_CU.dealerId||_CU.uid;
-          var month=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
-          var newRef=_db.collection('settlements').doc();
-          var newDoc={
-            dealerId:did2, driver:tid, userId:tid, name:tid,
-            month:month, gross:0, net:tot, etcPlus:tot,
-            etcPlusReason:'아이디지원('+fid+') '+tot+'원',
-            etcMinus:0, adv:0, dmg:0, tax:0, emp:0, work:0,
-            cnt:0, income:tot, vatIncome:tot, supplyAmt:tot,
-            createdAt:new Date().toISOString(),
-            expireAt:_settlementExpireAt?_settlementExpireAt():null
-          };
-          promises.push(_db.collection('settlements').doc(newRef.id).set(newDoc).catch(function(){}));
-          toast('⚠️ '+tid+' 기사 settlements 신규 생성');
         }
       });
     }
