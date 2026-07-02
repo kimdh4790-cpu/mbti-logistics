@@ -146,7 +146,7 @@ service cloud.firestore {
     match /leaveBalance/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /payslips/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /notices/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /notices/{docId}                 { allow read: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /chats/{dealerId} {
       allow read, write: if isAuth() && (
         isSuperAdmin() ||
