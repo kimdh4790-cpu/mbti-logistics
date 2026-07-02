@@ -116,7 +116,9 @@ service cloud.firestore {
     match /settings/{docId} {
       allow read: if isAuth() && (
         resource == null ||
+        resource.data.dealerId == null ||
         request.auth.uid == resource.data.dealerId ||
+        docId.matches(request.auth.uid + '_.*') ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == resource.data.dealerId) ||
         isSuperAdmin()
