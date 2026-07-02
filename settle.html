@@ -32536,9 +32536,11 @@ function recalcAllSettlements(){
         if(s.on&&s.rate>0)fincVal+=(rd.cnt||0)*s.rate;
       });
 
-      // ★ 보장성 재적용
-      var _recalcEtcPlus=x.etcPlus||0;
-      var _recalcEtcPlusReason=x.etcPlusReason||'';
+      // ★ 보장성 재적용 (아이디지원 금액 제외한 순수 etcPlus만 사용)
+      var _idSupportAmt=(x.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')>=0;})
+        .reduce(function(sum,p){var m=p.match(/(\d+)원$/);return sum+(m?parseInt(m[1]):0);},0);
+      var _recalcEtcPlus=Math.max(0,(x.etcPlus||0)-_idSupportAmt);
+      var _recalcEtcPlusReason=(x.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')<0;}).join(' / ');
       var _drvInfo=dSnap.docs.map(function(d){return d.data();}).find(function(d){return (d.userId||'')===x.userId;});
       if(_drvInfo&&_drvInfo.settleGuarantee){
         var _g=_drvInfo.settleGuarantee;
