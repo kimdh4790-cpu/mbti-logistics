@@ -32620,7 +32620,7 @@ function recalcAllSettlements(){
           });
         });
         if(!tot) return;
-        if(toS){
+        if(toS&&!toS.isIdSupportCreated){
           // ★ etcPlusReason 중복 방지 — 기존 아이디지원 항목 제거 후 재설정
           var pv=(toS.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
           toS.etcPlus=(toS.etcPlus||0)+tot;
@@ -32628,7 +32628,7 @@ function recalcAllSettlements(){
           promises.push(_db.collection('settlements').doc(toS.id).update({
             etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
           }).catch(function(){}));
-        } else {
+        } else if(!toS){
           // ★ toId가 엑셀에 없는 용차 기사 — 건수/금액 기반 신규 settlement 생성
           var did2=_CU.dealerId||_CU.uid;
           var month2=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
@@ -32667,6 +32667,7 @@ function recalcAllSettlements(){
             etcPlus:0, etcPlusReason:'', etcMinus:0, adv:0, dmg:0, tax:0, emp:0, work:0,
             income:newGross, vatIncome:newGross, supplyAmt:Math.round(newGross/1.1),
             jobsub:'쿠팡', camp:fromS.camp||'',
+            isIdSupportCreated:true,
             createdAt:new Date().toISOString(),
             expireAt:_settlementExpireAt?_settlementExpireAt():null
           };
