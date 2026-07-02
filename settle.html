@@ -32544,7 +32544,8 @@ function recalcAllSettlements(){
       var _drvInfo=dSnap.docs.map(function(d){return d.data();}).find(function(d){return (d.userId||'')===x.userId;});
       if(_drvInfo&&_drvInfo.settleGuarantee){
         var _g=_drvInfo.settleGuarantee;
-        var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+(x.etcPlusTL||0);  // ★ inc 제외
+        // ★ 아이디지원 금액도 기준금액에 포함
+        var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+(x.etcPlusTL||0)+_idSupportAmt;
         // 보장성 제외한 기존 etcPlus (보장성 외 기타+ 있으면 유지)
         var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
         var _prevReason=_recalcEtcPlusReason;
@@ -32565,6 +32566,10 @@ function recalcAllSettlements(){
           _recalcEtcPlusReason=_prevReason;
         }
       }
+      // ★ 최종 etcPlus = 보장성 + 아이디지원 합산
+      _recalcEtcPlus=_recalcEtcPlus+_idSupportAmt;
+      _recalcEtcPlusReason=(_recalcEtcPlusReason&&_idSupportAmt>0?_recalcEtcPlusReason+' / ':_recalcEtcPlusReason||'')
+        +((x.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')>=0;}).join(' / '));
 
       var taxBase=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);
       var supplyAmt=Math.round(taxBase/1.1);
