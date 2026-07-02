@@ -11207,12 +11207,12 @@ function _downloadRosterExcel(){
   }
 
   if(typeof ExcelJS!=='undefined'){
-    _doExcelDownload(ExcelJS);
+    _doExcelDownload_orig(ExcelJS);
   }else{
     toast('⏳ 라이브러리 로딩 중...');
     var s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
-    s.onload=function(){_doExcelDownload(ExcelJS);};
+    s.onload=function(){_doExcelDownload_orig(ExcelJS);};
     s.onerror=function(){toast('❌ 라이브러리 로드 실패');};
     document.head.appendChild(s);
   }
