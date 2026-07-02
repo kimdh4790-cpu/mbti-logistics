@@ -40223,26 +40223,34 @@ function pageNotices(){
   c.innerHTML='<div class="loading">로딩 중...</div>';
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">📢</div>로그인 후 이용하세요</div>';return;}
   var isDriver=_CU&&(_CU.role==='driver'||_CU.role==='member');
-  var form=isDriver?'':('<div class="card" style="margin-bottom:16px">'
-    +'<div style="font-size:14px;font-weight:700;margin-bottom:12px">📢 새 공지 작성</div>'
-    +'<div class="fg"><label>유형</label>'
-    +'<select id="n-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
-    +'<option value="info">📢 공지</option><option value="update">🔄 업데이트</option>'
-    +'<option value="warning">⚠️ 점검</option><option value="event">🎉 이벤트</option>'
-    +'<option value="payslip">💰 명세서 발송</option><option value="tax">🧾 세금계산서</option>'
-    +'</select></div>'
-    +'<div class="fg"><label>제목 *</label><input id="n-title" type="text" placeholder="공지 제목"></div>'
-    +'<div class="fg"><label>내용</label><textarea id="n-body" rows="3" placeholder="내용 입력..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical"></textarea></div>'
-    +'<div class="fg"><label>첨부파일 (명세서·세금계산서·PDF)</label>'
-    +'<input id="n-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
-    +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
-    +'<div style="display:flex;gap:8px;margin-top:4px">'+'<button onclick="_saveNotice()" class="btn btn-blue" style="flex:1;padding:10px;font-weight:700">📢 앱 푸시+공지 발송</button>'+'<button onclick="_saveNoticeAlimtalk()" class="btn" style="flex:1;padding:10px;font-weight:700;background:linear-gradient(135deg,#fee500,#f5c800);color:#000">💬 알림톡 발송</button>'+'</div>'+'</button>'
-    +'</div>');
+  var isSA=isSuperAdmin();
+  // 작성 폼은 슈퍼어드민만
+  var form='';
+  if(!isDriver&&isSA){
+    form='<div class="card" style="margin-bottom:16px">'
+      +'<div style="font-size:14px;font-weight:700;margin-bottom:12px">📢 새 공지 작성</div>'
+      +'<div class="fg"><label>유형</label>'
+      +'<select id="n-type" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
+      +'<option value="info">📢 공지</option><option value="update">🔄 업데이트</option>'
+      +'<option value="warning">⚠️ 점검</option><option value="event">🎉 이벤트</option>'
+      +'<option value="payslip">💰 명세서 발송</option><option value="tax">🧾 세금계산서</option>'
+      +'</select></div>'
+      +'<div class="fg"><label>제목 *</label><input id="n-title" type="text" placeholder="공지 제목"></div>'
+      +'<div class="fg"><label>내용</label><textarea id="n-body" rows="3" placeholder="내용 입력..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);resize:vertical"></textarea></div>'
+      +'<div class="fg"><label>첨부파일 (명세서·세금계산서·PDF)</label>'
+      +'<input id="n-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">'
+      +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
+      +'<div style="display:flex;gap:8px;margin-top:4px">'
+      +'<button onclick="_saveNotice()" class="btn btn-blue" style="flex:1;padding:10px;font-weight:700">📢 앱 푸시+공지 발송</button>'
+      +'<button onclick="_saveNoticeAlimtalk()" class="btn" style="flex:1;padding:10px;font-weight:700;background:linear-gradient(135deg,#fee500,#f5c800);color:#000">💬 알림톡 발송</button>'
+      +'</div>'
+      +'</div>';
+  }
   var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
   var myDid=_CU.dealerId||_CU.uid;
-  var q1=_db.collection('notices').where('dealerId','==',myDid).orderBy('createdAt','desc').get();
+  var q1=_db.collection('notices').where('dealerId','==',myDid).get();
   var q2=(!isSuperAdmin()&&myDid!==SA_UID)
-    ?_db.collection('notices').where('dealerId','==',SA_UID).orderBy('createdAt','desc').limit(10).get()
+    ?_db.collection('notices').where('dealerId','==',SA_UID).limit(20).get()
     :Promise.resolve({forEach:function(){}});
   Promise.all([q1,q2]).then(function(results){
     var allDocs=[];
