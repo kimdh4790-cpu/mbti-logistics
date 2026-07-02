@@ -3503,6 +3503,56 @@ service cloud.firestore {
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
     }
 
+    // ── 채팅 FCM 알림 (/api/chat-notify) ──
+    if (path === '/api/chat-notify' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, text, sender, companyName } = body;
+        if (!dealerId || !text) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json'}});
+        const fsToken = await getAccessToken(env);
+        const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const headers = {'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'};
+        const tokens = [];
+
+        if (sender === 'customer') {
+          // 고객 → 슈퍼어드민에게 알림 (admin_tokens)
+          const r = await fetch(`${fsBase}/admin_tokens?pageSize=50`, {headers});
+          const d = await r.json();
+          (d.documents||[]).forEach(doc=>{
+            const t=doc.fields?.token?.stringValue;
+            if(t) tokens.push(t);
+          });
+        } else {
+          // 슈퍼어드민 → 고객사에게 알림
+          const r = await fetch(`${fsBase}/companies/${dealerId}`, {headers});
+          const d = await r.json();
+          const f = d.fields||{};
+          if(f.fcmToken?.stringValue) tokens.push(f.fcmToken.stringValue);
+          (f.loginAllowed?.arrayValue?.values||[]).forEach(v=>{
+            const t=v.mapValue?.fields?.fcmToken?.stringValue;
+            if(t&&!tokens.includes(t)) tokens.push(t);
+          });
+        }
+
+        const title = sender==='customer'?`💬 ${companyName||'고객'} 문의`:'💬 DONWAY 답변';
+        for (const token of tokens) {
+          await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
+            method:'POST', headers,
+            body:JSON.stringify({message:{
+              token,
+              notification:{title, body:text.slice(0,80)},
+              android:{priority:'high', notification:{sound:'default', channelId:'donway_chat'}},
+              apns:{payload:{aps:{sound:'default', badge:1}}},
+              data:{type:'chat', dealerId, url:'/settle?page=chat'}
+            }})
+          }).catch(()=>{});
+        }
+        return new Response(JSON.stringify({ok:true, sent:tokens.length}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
     // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
     if (path === '/api/send-notice' && method === 'POST') {
       try {
