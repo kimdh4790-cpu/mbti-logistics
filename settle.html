@@ -32597,7 +32597,7 @@ function recalcAllSettlements(){
 
     Promise.all(promises).then(function(){
       toast('✅ 재계산 완료 ('+changed+'건)');
-      _reloadSettlePage();
+      setTimeout(_reloadSettlePage, 1500);
     });
   }).catch(function(e){toast('❌ 기사 정보 로딩 실패: '+e.message);});
 }
