@@ -931,17 +931,29 @@ async function loadNotices(){
     const typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉'};
     el.innerHTML=snap.docs.map(d=>{
       const n=d.data();const dt=n.createdAt?.toDate?.()?.toLocaleDateString('ko-KR')||'-';
+      const nid=d.id;
       return`<div class="notice-item">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
-          <strong>${typeIcon[n.type]||'📢'} ${n.title}</strong>
-          <span style="font-size:10px;color:#94a3b8;white-space:nowrap;margin-left:8px">${dt}</span>
+          <strong style="cursor:pointer" onclick="this.parentNode.nextElementSibling.style.display=this.parentNode.nextElementSibling.style.display==='none'?'block':'none'">${typeIcon[n.type]||'📢'} ${n.title}</strong>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+            <span style="font-size:10px;color:#94a3b8;white-space:nowrap">${dt}</span>
+            <button onclick="deleteNotice('${nid}')" style="padding:2px 7px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:10px;cursor:pointer">🗑</button>
+          </div>
         </div>
-        <div style="font-size:12px;color:#64748b;line-height:1.5">${n.body}</div>
+        <div style="font-size:12px;color:#64748b;line-height:1.5;display:none;white-space:pre-wrap">${n.body}</div>
       </div>`;
     }).join('');
   }catch(e){el.innerHTML=`<div class="empty">⚠️ ${e.message}</div>`;}
 }
 
+
+async function deleteNotice(id){
+  if(!confirm('이 공지를 삭제하시겠습니까?')) return;
+  try{
+    await deleteDoc(doc(db,'notices',id));
+    loadNotices();
+  }catch(e){alert('삭제 실패: '+e.message);}
+}
 
 // ── 약관 내용 ──
 const TERMS = {
