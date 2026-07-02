@@ -29717,7 +29717,7 @@ function pageSettle(){
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
       var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
-      totCoupang+=ct?ct:(r.income||0);
+      totCoupang+=ct?ct:Math.round((r.income||0)/1.1);
       // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
       totTaxBase+=(r.income||r.totalAmt||0);
       // 추가 지출 (팀장수수료 + 기타+ — 쿠팡수입 초과분)
