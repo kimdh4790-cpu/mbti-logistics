@@ -26503,7 +26503,9 @@ function _filterMenusByServices(menus){
     var items = section.items.filter(function(item){
       return allowed.has(item.plan_key||'free');
     });
-    // free 항목만 있는 섹션은 표시 안 함 (settle/delivery 등 실제 플랜 항목이 1개 이상 있어야)
+    // 🏠 홈 섹션은 항상 표시 (free 항목만 있어도)
+    if(section.s&&section.s.indexOf('🏠')>=0) return {s:section.s, items:items};
+    // 나머지는 유료 항목이 1개 이상 있어야
     var hasPaidItem = items.some(function(item){ return (item.plan_key||'free') !== 'free'; });
     return { s:section.s, items:hasPaidItem ? items : [] };
   }).filter(function(section){return section.items.length>0;});
