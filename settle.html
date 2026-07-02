@@ -32566,7 +32566,7 @@ function recalcAllSettlements(){
         }
       }
 
-      var taxBase=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);  // ★ inc 제외, finc x값 우선
+      var taxBase=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+_recalcEtcPlus+(x.etcPlusTL||0);
       var supplyAmt=Math.round(taxBase/1.1);
       var monthlyWage=Math.round(supplyAmt*0.654);
       var empIns=monthlyWage>=800000?Math.floor(monthlyWage*0.008/10)*10:0;
@@ -32574,6 +32574,8 @@ function recalcAllSettlements(){
       var deductTotal=(x.dmg||0)+empIns+workIns+(x.adv||0)+(x.eq||0)+(x.etcMinus||0);
       var net=taxBase-deductTotal;
 
+      // ★ etcPlus/etcPlusReason은 아이디지원 재계산에서 별도 처리
+      // 기본 재계산에서는 보장성만 저장 (아이디지원 제외 금액 기준)
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
         etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
@@ -32582,6 +32584,8 @@ function recalcAllSettlements(){
         updatedAt:new Date().toISOString()
       };
       if(Object.keys(_xOv).length) update.priceOverride=_xOv;
+      // _baseForIdSupport 저장 (아이디지원 재계산 후 net 재계산용)
+      x._baseForIdSupport={newDamt:newDamt,newRamt:newRamt,fincVal:fincVal,empIns:empIns,workIns:workIns,guarantee:_recalcEtcPlus,guaranteeReason:_recalcEtcPlusReason};
 
       promises.push(_db.collection('settlements').doc(x.id).update(update)
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
@@ -32695,8 +32699,30 @@ function recalcAllSettlements(){
     }
 
     Promise.all(idPromises).then(function(){
-      toast('✅ 재계산 완료 ('+changed+'건)');
-      _reloadSettlePage();
+      // ★ 아이디지원 포함한 최종 net 재계산 후 저장
+      var finalPromises=[];
+      _settleCache.forEach(function(s){
+        if(!s.id||s.isIdSupportCreated) return;
+        var b=s._baseForIdSupport;
+        if(!b) return;
+        var finalEtcPlus=s.etcPlus||0;
+        var finalTaxBase=(b.newDamt||0)+(b.newRamt||0)+(s.fresh||0)+(b.fincVal||0)+(s.nocont||0)+finalEtcPlus+(s.etcPlusTL||0);
+        var finalSupply=Math.round(finalTaxBase/1.1);
+        var finalWage=Math.round(finalSupply*0.654);
+        var finalEmp=finalWage>=800000?Math.floor(finalWage*0.008/10)*10:0;
+        var finalWork=Math.floor(finalWage*0.0088/10)*10;
+        var finalDeduct=(s.dmg||0)+finalEmp+finalWork+(s.adv||0)+(s.eq||0)+(s.etcMinus||0);
+        var finalNet=finalTaxBase-finalDeduct;
+        finalPromises.push(_db.collection('settlements').doc(s.id).update({
+          totalAmt:finalTaxBase, vatIncome:finalTaxBase, supplyAmt:finalSupply,
+          monthlyWage:finalWage, emp:finalEmp, work:finalWork,
+          deduct:finalDeduct, net:finalNet
+        }).catch(function(){}));
+      });
+      Promise.all(finalPromises).then(function(){
+        toast('✅ 재계산 완료 ('+changed+'건)');
+        _reloadSettlePage();
+      });
     });
     }); // resetPromises end
   }).catch(function(e){toast('❌ 기사 정보 로딩 실패: '+e.message);});
