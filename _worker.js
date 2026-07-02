@@ -879,14 +879,11 @@ async function submitReserve(){
               await fetch(baseUrl2+'/'+body.myDocId,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
                 body:JSON.stringify({fields:Object.assign({},toDocFields,{status:{stringValue:'work'},route:{stringValue:toNewRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}})})});
 
-              // 요청자: 수락자 날짜에 휴무 (기존 출근 문서 off로)
+              // 요청자: 수락자 날짜에 휴무
               if(fromToDayDocId){
                 await fetch(baseUrl2+'/'+fromToDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
                   {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
                   body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-              } else {
-                await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:String(toDayIndex)},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
               }
 
               // 수락자: 요청자 날짜에 휴무
@@ -894,9 +891,6 @@ async function submitReserve(){
                 await fetch(baseUrl2+'/'+toFromDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
                   {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
                   body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
-              } else {
-                await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:String(fromDayIndex)},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
               }
 
               return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
