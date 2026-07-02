@@ -832,33 +832,39 @@ async function submitReserve(){
               const toDriverId = toFields.driverId?.stringValue||'';
               const toDayIndex = parseInt(toFields.dayIndex?.integerValue||toFields.dayIndex?.doubleValue||0);
 
-              // 요청자의 수락자 날짜 출근 문서 조회 (라우트 가져오기)
-              const rq = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
+              // 요청자의 해당 주 전체 문서 조회 → JS에서 dayIndex 필터링
+              const rqAll = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
                 {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
                 {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
-                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:fromDriverId}}},
-                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:String(toDayIndex)}}}
-              ]}},limit:1}});
-              const rqRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq});
-              const rqData = await rqRes.json();
-              const fromToDay = rqData[0]?.document?.fields||{};
+                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:fromDriverId}}}
+              ]}},limit:7}});
+              const rqAllRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rqAll});
+              const rqAllData = await rqAllRes.json();
+              const fromDoc2 = (rqAllData||[]).filter(r=>r.document).find(r=>{
+                const di=parseInt(r.document.fields?.dayIndex?.integerValue||r.document.fields?.dayIndex?.doubleValue||0);
+                return di===toDayIndex;
+              });
+              const fromToDay = fromDoc2?.document?.fields||{};
               const fromToDayRoute = fromToDay.route?.stringValue||'';
               const fromToDayRot = fromToDay.rotation?.stringValue||'';
-              const fromToDayDocId = rqData[0]?.document?.name?.split('/')?.pop()||'';
+              const fromToDayDocId = fromDoc2?.document?.name?.split('/')?.pop()||'';
 
-              // 수락자의 요청자 날짜 출근 문서 조회 (라우트 가져오기)
-              const rq2 = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
+              // 수락자의 해당 주 전체 문서 조회 → JS에서 dayIndex 필터링
+              const rq2All = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
                 {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
                 {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
-                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},
-                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:String(fromDayIndex)}}}
-              ]}},limit:1}});
-              const rq2Res = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq2});
-              const rq2Data = await rq2Res.json();
-              const toFromDay = rq2Data[0]?.document?.fields||{};
+                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}}
+              ]}},limit:7}});
+              const rq2AllRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq2All});
+              const rq2AllData = await rq2AllRes.json();
+              const toDoc2 = (rq2AllData||[]).filter(r=>r.document).find(r=>{
+                const di=parseInt(r.document.fields?.dayIndex?.integerValue||r.document.fields?.dayIndex?.doubleValue||0);
+                return di===fromDayIndex;
+              });
+              const toFromDay = toDoc2?.document?.fields||{};
               const toFromDayRoute = toFromDay.route?.stringValue||'';
               const toFromDayRot = toFromDay.rotation?.stringValue||'';
-              const toFromDayDocId = rq2Data[0]?.document?.name?.split('/')?.pop()||'';
+              const toFromDayDocId = toDoc2?.document?.name?.split('/')?.pop()||'';
 
               // 요청자: 휴무일 → 출근 (수락자 라우트로)
               await fetch(baseUrl2+'/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
