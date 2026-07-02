@@ -3543,12 +3543,28 @@ service cloud.firestore {
           return new Response(JSON.stringify({ok:false,error:'기사 정보를 찾을 수 없습니다'}), {headers:{'Content-Type':'application/json'}});
         }
 
-        const registeredBank = doc.fields?.bankAccount?.stringValue || '';
+        const registeredBank = doc.fields?.accountNumber?.stringValue || doc.fields?.bankAccount?.stringValue || '';
         const registeredBankNum = registeredBank.replace(/[^0-9]/g,'');
+        const submittedBankNum = bankNum.replace(/[^0-9]/g,'');
 
         // 1차 검증: 기사수정에 등록된 계좌번호와 대조
-        if (registeredBankNum && registeredBankNum !== bankNum) {
-          return new Response(JSON.stringify({ok:false,error:'등록된 계좌번호와 일치하지 않습니다. 관리자에게 문의하세요.'}), {headers:{'Content-Type':'application/json'}});
+        const isMismatch = registeredBankNum && registeredBankNum !== submittedBankNum;
+        if (isMismatch) {
+          // 불일치 알림 저장 (관리자 확인용)
+          const alertBody = {fields:{
+            dealerId:{stringValue:dealerId},
+            type:{stringValue:'account_mismatch'},
+            driverName:{stringValue:driverName},
+            registeredAccount:{stringValue:registeredBankNum},
+            submittedAccount:{stringValue:submittedBankNum},
+            bankName:{stringValue:bankName},
+            createdAt:{stringValue:new Date().toISOString()},
+            isRead:{booleanValue:false}
+          }};
+          await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/plan_guard_alerts`, {
+            method:'POST', headers, body:JSON.stringify(alertBody)
+          }).catch(()=>{});
+          return new Response(JSON.stringify({ok:false,error:'등록된 계좌번호와 일치하지 않습니다. 관리자에게 문의하세요.',mismatch:true}), {headers:{'Content-Type':'application/json'}});
         }
 
         // 계좌 저장 (drivers 문서 업데이트)
