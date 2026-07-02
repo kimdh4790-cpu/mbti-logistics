@@ -3666,6 +3666,23 @@ service cloud.firestore {
           await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/plan_guard_alerts`, {
             method:'POST', headers, body:JSON.stringify(alertBody)
           }).catch(()=>{});
+          // settlements 문서에 accountMismatch:true 업데이트 (송금관리 ⚠️ 표시용)
+          const smQuery = {structuredQuery:{from:[{collectionId:'settlements'}],where:{compositeFilter:{op:'AND',filters:[
+            {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},
+            {fieldFilter:{field:{fieldPath:'driverName'},op:'EQUAL',value:{stringValue:driverName}}}
+          ]}},limit:5}};
+          const smRes = await fetch(queryUrl,{method:'POST',headers,body:JSON.stringify(smQuery)}).catch(()=>null);
+          if(smRes&&smRes.ok){
+            const smData = await smRes.json();
+            for(const row of smData){
+              if(row.document){
+                await fetch(`${row.document.name}?updateMask.fieldPaths=accountMismatch`,{
+                  method:'PATCH',headers,
+                  body:JSON.stringify({fields:{accountMismatch:{booleanValue:true}}})
+                }).catch(()=>{});
+              }
+            }
+          }
           return new Response(JSON.stringify({ok:false,error:'등록된 계좌번호와 일치하지 않습니다. 관리자에게 문의하세요.',mismatch:true}), {headers:{'Content-Type':'application/json'}});
         }
 
