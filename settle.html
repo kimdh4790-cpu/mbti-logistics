@@ -317,8 +317,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <span style="font-size:20px">🤖</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 31만 · 150명 68만 · 300명 102만 · 500명 170만 · 700명 275만 · 1000명 393만원/월</div>
-                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 25만 · 150명 54만 · 300명 82만 (VAT별도)</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 32.5만 · 100명 62만 · 200명 114만 · 300명 159만 · 500명 240만 · 700명 315만원/월</div>
+                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 26.5만 · 100명 50만 · 200명 92만 · 300명 126만 (VAT별도)</div>
               </div>
             </div>
             <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -327,13 +327,14 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
               <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
               <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                <option value="50">~50명 — 31만원/월</option>
-                <option value="150">~150명 — 68만원/월</option>
-                <option value="300">~300명 — 102만원/월</option>
-                <option value="500">~500명 — 170만원/월</option>
-                <option value="700">~700명 — 275만원/월</option>
-                <option value="1000">~1000명 — 393만원/월</option>
-                <option value="1500">~1500명 — 589만원/월</option>
+                <option value="50">~50명 — 32.5만원/월</option>
+                <option value="100">~100명 — 62만원/월</option>
+                <option value="200">~200명 — 114만원/월</option>
+                <option value="300">~300명 — 159만원/월</option>
+                <option value="500">~500명 — 240만원/월</option>
+                <option value="700">~700명 — 315만원/월</option>
+                <option value="1000">~1000명 — 450만원/월</option>
+                <option value="1500">~1500명 — 675만원/월</option>
                 <option value="2000">~2000명 — 786만원/월</option>
                 <option value="9999">2000명+ — 별도 문의</option>
               </select>
@@ -9131,14 +9132,15 @@ function _setPlanType(type){
     pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
   }
   var tiers=[
-    {v:'50',  p:'31만',  g:'25만'},
-    {v:'150', p:'68만',  g:'54만'},
-    {v:'300', p:'102만', g:'82만'},
-    {v:'500', p:'170만', g:'136만'},
-    {v:'700', p:'275만', g:'220만'},
-    {v:'1000',p:'393만', g:'314만'},
-    {v:'1500',p:'589만', g:'471만'},
-    {v:'2000',p:'786만', g:'629만'},
+    {v:'50',  p:'32.5만', g:'26.5만'},
+    {v:'100', p:'62만',   g:'50만'},
+    {v:'200', p:'114만',  g:'92만'},
+    {v:'300', p:'159만',  g:'126만'},
+    {v:'500', p:'240만',  g:'190만'},
+    {v:'700', p:'315만',  g:'245만'},
+    {v:'1000',p:'450만',  g:'330만'},
+    {v:'1500',p:'675만',  g:'495만'},
+    {v:'2000',p:'900만',  g:'660만'},
     {v:'9999',p:'별도문의',g:'별도문의'}
   ];
   var sel=document.getElementById('settle-tier-select');
@@ -34997,29 +34999,30 @@ function addRpCamp(cid){
 
 // ── 구간별 정액 요금 계산 ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
-// 구간: 50/100/200/300/400/500명 고정 (AI정산·배달대행: 9,000원/인)
-// 확정 요금제 (2026-06-22 개정, VAT별도)
-// 개인: 700명 이상 인당 3,929원 고정 / 단체: 개인 대비 20% 할인, 700명 이상 인당 3,143원 고정
+// 구간: 50/100/200/300/500/700명 (AI정산 확정 요금제 2026-07-02 개정, VAT별도)
+// 개인: 700명 이상 인당 4,500원 고정 / 단체: 개인 대비 ~19~27% 할인, 700명 이상 인당 3,300원 고정
 var DW_TIERS_IND=[
-  {cap:50,  amt:310000, label:'~50명'},
-  {cap:150, amt:680000, label:'~150명'},
-  {cap:300, amt:1020000,label:'~300명'},
-  {cap:500, amt:1700000,label:'~500명'},
-  {cap:700, amt:2750000,label:'~700명'},
-  {cap:1000,amt:3930000,label:'~1000명'},
-  {cap:1500,amt:5890000,label:'~1500명'},
-  {cap:2000,amt:7860000,label:'~2000명'},
+  {cap:50,  amt:325000, label:'~50명'},
+  {cap:100, amt:620000, label:'~100명'},
+  {cap:200, amt:1140000,label:'~200명'},
+  {cap:300, amt:1590000,label:'~300명'},
+  {cap:500, amt:2400000,label:'~500명'},
+  {cap:700, amt:3150000,label:'~700명'},
+  {cap:1000,amt:4500000,label:'~1000명'},
+  {cap:1500,amt:6750000,label:'~1500명'},
+  {cap:2000,amt:9000000,label:'~2000명'},
   {cap:9999,amt:0,       label:'2000명+'},
 ];
 var DW_TIERS_GRP=[
-  {cap:50,  amt:250000, label:'~50명'},
-  {cap:150, amt:540000, label:'~150명'},
-  {cap:300, amt:820000, label:'~300명'},
-  {cap:500, amt:1360000,label:'~500명'},
-  {cap:700, amt:2200000,label:'~700명'},
-  {cap:1000,amt:3140000,label:'~1000명'},
-  {cap:1500,amt:4710000,label:'~1500명'},
-  {cap:2000,amt:6290000,label:'~2000명'},
+  {cap:50,  amt:265000, label:'~50명'},
+  {cap:100, amt:500000, label:'~100명'},
+  {cap:200, amt:920000, label:'~200명'},
+  {cap:300, amt:1260000,label:'~300명'},
+  {cap:500, amt:1900000,label:'~500명'},
+  {cap:700, amt:2450000,label:'~700명'},
+  {cap:1000,amt:3300000,label:'~1000명'},
+  {cap:1500,amt:4950000,label:'~1500명'},
+  {cap:2000,amt:6600000,label:'~2000명'},
   {cap:9999,amt:0,       label:'2000명+'},
 ];
 function _tierCap(hc){
@@ -35138,7 +35141,7 @@ function _showSubModal(){
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
     +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[50,150,300,500,700,1000,1500,2000,9999].map(function(n,i){
+    +[50,100,200,300,500,700,1000,1500,2000,9999].map(function(n,i){
       var active=i===0;
       var lbl=n===9999?'2000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
