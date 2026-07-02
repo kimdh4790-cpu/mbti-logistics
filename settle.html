@@ -32873,7 +32873,7 @@ window._biLoadMulti=function(inp){
       reader.onload=function(e){try{
         var t=e.target.result;
         // ★ 계좌번호 형식 감지 (이름 계좌번호(은행) 패턴)
-        if(/[가-힣]{2,4}\s+\d{8,}\([가-힣a-zA-Z]+\)/.test(t)){
+        if(/[가-힣]{2,4}\s+\d{8,}\s*\([가-힣a-zA-Z]+\)/.test(t)){
           var bankParsed=_parseBankTxt(t);
           if(bankParsed&&bankParsed.length){
             bankParsed.forEach(function(d){
@@ -32922,7 +32922,7 @@ window._parseBankTxt=function(text){
     line=line.trim();
     if(!line) return;
     if(/^(부산|대구|진주|경남|울산|서울|인천|광주|대전)/.test(line)&&line.length<=10){currentCamp=line;return;}
-    var m=line.match(/^([가-힣]{2,5})\s+(\d{8,})\(([^)]+)\)(.*)/);
+    var m=line.match(/^([가-힣]{2,5})\s+(\d{8,})\s*\(([^)]+)\)(.*)/);
     if(m){
       var name=m[1].trim(),account=m[2].trim(),bankRaw=m[3].trim(),flag=(m[4]||'').trim();
       var isMain=flag.indexOf('o')>=0||flag.indexOf('O')>=0;
@@ -32933,7 +32933,7 @@ window._parseBankTxt=function(text){
       return;
     }
     // 들여쓰기 보조계좌
-    var m2=line.match(/^(\s+)(\d{8,})\(([^)]+)\)(.*)/);
+    var m2=line.match(/^(\s+)(\d{8,})\s*\(([^)]+)\)(.*)/);
     if(m2&&parsed.length>0){
       var isMain2=(m2[4]||'').indexOf('o')>=0||(m2[4]||'').indexOf('O')>=0;
       var bankRaw2=m2[3].trim(),bankCode2=BMAP[bankRaw2]||BMAP[bankRaw2.replace('뱅크','')]||'';
