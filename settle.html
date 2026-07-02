@@ -45593,13 +45593,13 @@ function _loadPayoutPreview(month, did){
     var missingCount=0;
 
     var rows=settles.map(function(s){
-      var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.name]||{};
+      var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.driver||s.name]||{};
       var hasAccount=!!(w.account&&w.bankCode);
       if(!hasAccount) missingCount++;
       var bankName=(typeof BANK_CODES!=='undefined'&&BANK_CODES[w.bankCode])||w.bankCode||'-';
       var isPaid=s.payoutStatus==='PAID';
       return '<tr style="'+(isPaid?'opacity:.5':'')+'">'+
-        '<td style="padding:7px;font-weight:600">'+esc(s.driverName||s.name||s.userId||'')+(isPaid?' <span style="font-size:9px;color:#10b981">✅완료</span>':'')+' </td>'+
+        '<td style="padding:7px;font-weight:600">'+esc(s.driverName||s.driver||s.name||s.userId||'')+(isPaid?' <span style="font-size:9px;color:#10b981">✅완료</span>':'')+' </td>'+
         '<td style="padding:7px;text-align:right;color:#10b981;font-weight:700">₩'+(s.net||0).toLocaleString()+'</td>'+
         '<td style="padding:7px;text-align:center">'+
           (isPaid?'<span style="color:#10b981;font-size:10px">완료</span>':
@@ -45661,7 +45661,7 @@ function _executePayout(month, settles, workerMap, totalNeeded, did){
     settles.forEach(function(s){
       chain=chain.then(function(){
         if(s.payoutStatus==='PAID') return;
-        var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.name]||{};
+        var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.driver||s.name]||{};
         var amt=s.net||0;
         if(!amt||amt<=0){logs.push({name:s.driverName||s.name,amount:amt,status:'FAILED',reason:'금액 오류'});failedCount++;return;}
         if(!w.account||!w.bankCode){logs.push({name:s.driverName||s.name,amount:amt,status:'FAILED',reason:'계좌 미등록'});failedCount++;return;}
