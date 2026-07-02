@@ -865,10 +865,10 @@ async function submitReserve(){
                 {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
                 body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:toFromDayRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
 
-              // 수락자: 휴무일 → 출근 (요청자 라우트로)
-              await fetch(baseUrl2+'/'+body.myDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
-                {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:fromToDayRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+              // 수락자: 휴무일 → 출근 (요청자 라우트로) - updateMask 없이 전체 업데이트
+              const toDocFields = (await (await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}})).json()).fields||{};
+              await fetch(baseUrl2+'/'+body.myDocId,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                body:JSON.stringify({fields:Object.assign({},toDocFields,{status:{stringValue:'work'},route:{stringValue:fromToDayRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}})})});
 
               // 요청자: 수락자 날짜에 휴무 (기존 출근 문서 off로)
               if(fromToDayDocId){
