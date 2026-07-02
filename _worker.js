@@ -837,7 +837,7 @@ async function submitReserve(){
                 {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
                 {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
                 {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:fromDriverId}}},
-                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:toDayIndex}}}
+                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:String(toDayIndex)}}}
               ]}},limit:1}});
               const rqRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq});
               const rqData = await rqRes.json();
@@ -851,7 +851,7 @@ async function submitReserve(){
                 {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
                 {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
                 {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},
-                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:fromDayIndex}}}
+                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:String(fromDayIndex)}}}
               ]}},limit:1}});
               const rq2Res = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq2});
               const rq2Data = await rq2Res.json();
@@ -877,7 +877,7 @@ async function submitReserve(){
                   body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
               } else {
                 await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:toDayIndex},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:String(toDayIndex)},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
               }
 
               // 수락자: 요청자 날짜에 휴무
@@ -887,7 +887,7 @@ async function submitReserve(){
                   body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
               } else {
                 await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:fromDayIndex},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:String(fromDayIndex)},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
               }
 
               return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
