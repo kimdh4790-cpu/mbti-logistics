@@ -32541,17 +32541,14 @@ function recalcAllSettlements(){
       var _idSupportParts=(x.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')>=0;});
       var _idSupportAmt=_idSupportParts.reduce(function(sum,p){var m=p.match(/(\d+)원$/);return sum+(m?parseInt(m[1]):0);},0);
       var _idSupportReason=_idSupportParts.join(' / ');
-      // ② 아이디지원/정산보장 제외한 순수 기타+ (수동입력분)
-      var _manualEtcPlus=0;
+      // ② 수동기타+ = 전체 etcPlus - 아이디지원 - 기존보장성 (Firestore _guaranteeAmt 필드 사용)
+      var _storedGuaranteeAmt=x._guaranteeAmt||0;
+      var _manualEtcPlus=Math.max(0,(x.etcPlus||0)-_idSupportAmt-_storedGuaranteeAmt);
       var _manualEtcReason=(x.etcPlusReason||'').split(' / ').filter(function(p){
         return p.indexOf('아이디지원')<0 && p.indexOf('정산보장')<0;
       }).join(' / ');
-      // 수동 etcPlus = 전체 etcPlus - 아이디지원 - 기존 보장성
-      var _oldGuaranteeAmt=0;
-      var _oldGuaranteePart=(x.etcPlusReason||'').split(' / ').find(function(p){return p.indexOf('정산보장')>=0;});
-      if(_oldGuaranteePart){var _gm=_oldGuaranteePart.match(/(\d+)원/);if(_gm){}}// 사유에서 금액 역산 불가 → 아래에서 재계산
-      _manualEtcPlus=Math.max(0,(x.etcPlus||0)-_idSupportAmt-(x._guaranteeAmt||0));
-      // ③ 보장성 재계산
+      // ③ 보장성 새로 계산
+      var _newGuaranteeAmt=0;
       var _recalcEtcPlus=_manualEtcPlus;
       var _recalcEtcPlusReason=_manualEtcReason;
       var _drvInfo=dSnap.docs.map(function(d){return d.data();}).find(function(d){return (d.userId||'')===x.userId;});
@@ -32560,10 +32557,11 @@ function recalcAllSettlements(){
         // 기준금액 = 배송+반품+프레시백+인센+야간+팀장수수료+아이디지원+수동기타+
         var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+(x.etcPlusTL||0)+_idSupportAmt+_manualEtcPlus;
         if(_g>_baseAmt){
-          var _guaranteeDiff=_g-_baseAmt;
-          _recalcEtcPlus=_manualEtcPlus+_guaranteeDiff;
+          _newGuaranteeAmt=_g-_baseAmt;
+          _recalcEtcPlus=_manualEtcPlus+_newGuaranteeAmt;
           _recalcEtcPlusReason=(_manualEtcReason?_manualEtcReason+' / ':'')+'정산보장('+Math.round(_g/10000)+'만원 보장)';
         } else {
+          _newGuaranteeAmt=0;
           _recalcEtcPlus=_manualEtcPlus;
           _recalcEtcPlusReason=_manualEtcReason;
         }
@@ -32583,6 +32581,7 @@ function recalcAllSettlements(){
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
         etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
+        _guaranteeAmt:_newGuaranteeAmt,
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
