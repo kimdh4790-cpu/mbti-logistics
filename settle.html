@@ -7656,8 +7656,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var diff=guarantee-currentAmt;
               if(diff>0){
                 settle.etcPlus=(settle.etcPlus||0)+diff;
+                settle._guaranteeAmt=(settle._guaranteeAmt||0)+diff;
                 var prev=settle.etcPlusReason||'';
                 settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
+              } else {
+                settle._guaranteeAmt=0;
               }
             });
           })();
