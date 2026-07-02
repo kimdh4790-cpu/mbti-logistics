@@ -26523,7 +26523,8 @@ function _filterMenusByServices(menus){
 var MENUS_DELIVERY = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
@@ -26548,7 +26549,8 @@ var MENUS_DELIVERY = [
 var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -26730,7 +26732,8 @@ var MENUS_SETTLE = [
 var MENUS_UNIVERSAL = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
   ]},
   {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
@@ -26781,7 +26784,8 @@ var MENUS_QR_PAYROLL = [
 var MENUS_QR = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
@@ -26812,7 +26816,8 @@ var MENUS_QR = [
 var MENUS_FULL = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
+    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -29439,7 +29444,7 @@ work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
 message:pageMessage,
 customer:pageCustomer,
-comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);},delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
+comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);},delivery_settle:pageDeliverySettle,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,season:pageSeason,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,chat:pageChat,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,hourly_settle:pageHourlySettle,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,ind_rules:pageIndustryRules,
   ind_construction_rules:function(){pageIndRules('construction','🏗️ 건설·일용직');},
   ind_insurance_rules:function(){pageIndRules('insurance','🛡️ 보험설계사');},
   ind_beauty_rules:function(){pageIndRules('beauty','💄 뷰티·미용');},
@@ -40086,6 +40091,127 @@ function _showNoticePopup(notices, did){
       goPage('notices');
     };
   },100);
+}
+
+// ══ 1:1 채팅 ══
+function pageChat(){
+  document.getElementById('page-title').textContent='1:1 문의';
+  document.getElementById('topbar-right').innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid;
+  var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+  var isSA=isSuperAdmin();
+
+  // 슈퍼어드민: 전체 채팅방 목록
+  if(isSA){
+    c.innerHTML='<div class="loading">로딩 중...</div>';
+    _db.collection('chats').orderBy('lastAt','desc').get().then(function(snap){
+      if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">💬</div>문의 없음</div>';return;}
+      var html='<div style="max-width:600px;margin:0 auto">';
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var unread=d.unreadSA||0;
+        var last=d.lastMsg||'';
+        var dt=d.lastAt&&d.lastAt.toDate?d.lastAt.toDate().toLocaleDateString('ko-KR'):'-';
+        html+='<div onclick="_openChatRoom(\''+doc.id+'\',\''+esc(d.companyName||doc.id)+'\')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg2);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid var(--border)">'
+          +'<div style="width:40px;height:40px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#000;flex-shrink:0">'+(d.companyName||'?')[0]+'</div>'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:13px;font-weight:700">'+esc(d.companyName||doc.id)+'</div>'
+            +'<div style="font-size:11px;color:var(--text3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+esc(last)+'</div>'
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0">'
+            +'<div style="font-size:10px;color:var(--text3)">'+dt+'</div>'
+            +(unread?'<div style="background:#ef4444;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:2px 7px;margin-top:3px">'+unread+'</div>':'')
+          +'</div>'
+        +'</div>';
+      });
+      html+='</div>';
+      c.innerHTML=html;
+    }).catch(function(e){c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
+    return;
+  }
+
+  // 고객사: 본인 채팅방 입장
+  _openChatRoom(did, _CU.companyName||_CU.email||did, true);
+}
+
+function _openChatRoom(dealerId, companyName, isCustomer){
+  var c=document.getElementById('content');
+  var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+  var isSA=isSuperAdmin();
+  document.getElementById('page-title').textContent=isCustomer?'1:1 문의':'💬 '+companyName;
+
+  c.innerHTML=
+    '<div style="display:flex;flex-direction:column;height:calc(100vh - 110px);max-width:680px;margin:0 auto">'
+    +(!isCustomer?'<button onclick="pageChat()" style="align-self:flex-start;margin-bottom:8px;padding:5px 10px;background:var(--bg3);border:none;border-radius:6px;font-size:11px;cursor:pointer;color:var(--text2)">← 목록</button>':'')
+    +'<div id="chat-msgs" style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px"></div>'
+    +'<div style="display:flex;gap:8px;padding:8px 0;border-top:1px solid var(--border);margin-top:8px">'
+      +'<input id="chat-input" placeholder="메시지 입력..." style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text1);font-size:13px" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_sendChat(\''+dealerId+'\',\''+esc(companyName)+'\');}">'
+      +'<button onclick="_sendChat(\''+dealerId+'\',\''+esc(companyName)+'\')" style="padding:10px 18px;background:var(--acc);color:#000;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer">전송</button>'
+    +'</div>'
+    +'</div>';
+
+  // 미읽음 초기화
+  var unreadField=isSA?'unreadSA':'unreadCustomer';
+  _db.collection('chats').doc(dealerId).set({[unreadField]:0},{merge:true}).catch(function(){});
+
+  // 실시간 메시지 구독
+  if(window._chatUnsub) window._chatUnsub();
+  window._chatUnsub=_db.collection('chats').doc(dealerId).collection('messages')
+    .orderBy('createdAt','asc').onSnapshot(function(snap){
+      var msgs=document.getElementById('chat-msgs');
+      if(!msgs) return;
+      msgs.innerHTML='';
+      snap.forEach(function(doc){
+        var m=doc.data();
+        var isMine=(isSA&&m.sender==='sa')||(!isSA&&m.sender==='customer');
+        var dt=m.createdAt&&m.createdAt.toDate?m.createdAt.toDate().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-';
+        msgs.innerHTML+=
+          '<div style="display:flex;flex-direction:'+(isMine?'row-reverse':'row')+';gap:8px;align-items:flex-end">'
+          +'<div style="max-width:70%;padding:10px 14px;border-radius:'+(isMine?'16px 4px 16px 16px':'4px 16px 16px 16px')+';background:'+(isMine?'var(--acc)':'var(--bg3)')+';color:'+(isMine?'#000':'var(--text1)')+';font-size:13px;white-space:pre-wrap;word-break:break-word">'+esc(m.text||'')+'</div>'
+          +'<div style="font-size:9px;color:var(--text3);white-space:nowrap">'+dt+'</div>'
+          +'</div>';
+      });
+      // 최신 메시지로 스크롤
+      setTimeout(function(){if(msgs)msgs.scrollTop=msgs.scrollHeight;},50);
+      // 읽음 처리
+      _db.collection('chats').doc(dealerId).set({[unreadField]:0},{merge:true}).catch(function(){});
+    }, function(e){console.warn('chat error',e.message);});
+}
+
+function _sendChat(dealerId, companyName){
+  var input=document.getElementById('chat-input');
+  if(!input) return;
+  var text=(input.value||'').trim();
+  if(!text) return;
+  input.value='';
+  var isSA=isSuperAdmin();
+  var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+  var sender=isSA?'sa':'customer';
+  var senderName=isSA?'DONWAY':(_CU.companyName||_CU.email||'고객');
+
+  var batch=_db.batch();
+  var msgRef=_db.collection('chats').doc(dealerId).collection('messages').doc();
+  batch.set(msgRef,{
+    text:text,sender:sender,senderName:senderName,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  // 채팅방 메타 업데이트
+  var unreadField=isSA?'unreadCustomer':'unreadSA';
+  batch.set(_db.collection('chats').doc(dealerId),{
+    companyName:companyName,dealerId:dealerId,
+    lastMsg:text,lastAt:firebase.firestore.FieldValue.serverTimestamp(),
+    [unreadField]:firebase.firestore.FieldValue.increment(1)
+  },{merge:true});
+  batch.commit().then(function(){
+    // FCM 푸시 발송
+    fetch('https://donway.ai.kr/api/chat-notify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dealerId:dealerId,text:text,sender:sender,companyName:companyName})
+    }).catch(function(){});
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function pageNotices(){
