@@ -35108,7 +35108,7 @@ function _showTransferGuide(planKey, amt, hc){
 }
 
 function _closeSubModal(){var m=document.getElementById("mo-sub");if(m)m.remove();}
-function _showSubModal(){
+function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
   var mo=document.getElementById('mo-sub');if(mo)mo.remove();
   var moEl=document.createElement('div');moEl.className='mo show';moEl.id='mo-sub';
   var _hc=30;
