@@ -32628,6 +32628,49 @@ function recalcAllSettlements(){
           promises.push(_db.collection('settlements').doc(toS.id).update({
             etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
           }).catch(function(){}));
+        } else {
+          // ★ toId가 엑셀에 없는 용차 기사 — 건수/금액 기반 신규 settlement 생성
+          var did2=_CU.dealerId||_CU.uid;
+          var month2=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+          // fromS dateRoutes에서 해당 날짜/라우트 건수 집계
+          var toCnt=0,toRet=0,toDamt=0,toRamt=0,toFresh=0;
+          var _dates3=(rule.dates||[]).map(_ndR).filter(Boolean);
+          var rStart3=_ndR(rule.startDate)||(_dates3.length?_dates3[0]:'');
+          var rEnd3=_ndR(rule.endDate)||(_dates3.length?_dates3[_dates3.length-1]:'');
+          var tR3=rule.routes||[];
+          var _dateOk3=function(dt){
+            if(_dates3.length) return _dates3.indexOf(dt)>=0;
+            return (!rStart3||dt>=rStart3)&&(!rEnd3||dt<=rEnd3);
+          };
+          Object.keys(fromS.dateRoutes||{}).forEach(function(dt){
+            if(!_dateOk3(dt)) return;
+            Object.keys(fromS.dateRoutes[dt]).forEach(function(rt){
+              if(tR3.length&&tR3.indexOf(rt)<0) return;
+              var rd=fromS.dateRoutes[dt][rt]||{};
+              var price=RPRICE[rt]||0;
+              toCnt+=(rd.cnt||0); toRet+=(rd.ret||0);
+              toDamt+=(rd.cnt||0)*price; toRamt+=(rd.ret||0)*price;
+            });
+          });
+          // fromS dateFresh에서 해당 날짜 프레시백 집계
+          Object.keys(fromS.dateFresh||{}).forEach(function(dt){
+            if(!_dateOk3(dt)) return;
+            toFresh+=(fromS.dateFresh[dt]||0);
+          });
+          var newGross=toDamt+toRamt+toFresh;
+          var newRef2=_db.collection('settlements').doc();
+          var newDoc={
+            dealerId:did2, driver:tid, userId:tid, name:tid,
+            month:month2,
+            gross:newGross, net:newGross,
+            cnt:toCnt, rcnt:toRet, damt:toDamt, ramt:toRamt, fresh:toFresh,
+            etcPlus:0, etcPlusReason:'', etcMinus:0, adv:0, dmg:0, tax:0, emp:0, work:0,
+            income:newGross, vatIncome:newGross, supplyAmt:Math.round(newGross/1.1),
+            jobsub:'쿠팡', camp:fromS.camp||'',
+            createdAt:new Date().toISOString(),
+            expireAt:_settlementExpireAt?_settlementExpireAt():null
+          };
+          promises.push(_db.collection('settlements').doc(newRef2.id).set(newDoc).catch(function(){}));
         }
       });
     }
