@@ -3503,6 +3503,58 @@ service cloud.firestore {
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
     }
 
+    // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
+    if (path === '/api/send-notice' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { title, body: msgBody, type } = body;
+        if (!title) return new Response(JSON.stringify({ok:false,error:'title 없음'}), {headers:{'Content-Type':'application/json'}});
+        const fsToken = await getAccessToken(env);
+        const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const headers = {'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'};
+
+        // 전체 companies 조회하여 FCM 토큰 수집
+        const compRes = await fetch(`${fsBase}/companies?pageSize=200`, {headers});
+        const compData = await compRes.json();
+        const docs = compData.documents || [];
+        const tokens = new Set();
+        for (const doc of docs) {
+          const f = doc.fields || {};
+          const status = f.status?.stringValue || '';
+          if (status !== 'approved') continue;
+          // 대표 FCM 토큰
+          if (f.fcmToken?.stringValue) tokens.add(f.fcmToken.stringValue);
+          // loginAllowed 배열의 FCM 토큰
+          const la = f.loginAllowed?.arrayValue?.values || [];
+          for (const v of la) {
+            const t = v.mapValue?.fields?.fcmToken?.stringValue;
+            if (t) tokens.add(t);
+          }
+        }
+
+        // FCM 발송
+        let sent = 0, failed = 0;
+        for (const token of tokens) {
+          const r = await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
+            method:'POST',
+            headers,
+            body:JSON.stringify({message:{
+              token,
+              notification:{title, body: msgBody || '내용을 확인하세요'},
+              android:{priority:'high', notification:{sound:'default', channelId:'donway_admin'}},
+              apns:{payload:{aps:{sound:'default', badge:1}}},
+              data:{type: type || 'notice', url: '/settle'}
+            }})
+          }).catch(()=>({ok:false}));
+          if (r.ok) sent++; else failed++;
+        }
+
+        return new Response(JSON.stringify({ok:true, sent, failed, total:tokens.size}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {headers:{'Content-Type':'application/json'}});
+      }
+    }
+
     // ── 계좌 등록 (/api/register-bank) ──
     if (path === '/api/register-bank' && method === 'POST') {
       // 인증 불필요 — 명세서 토큰으로 검증
