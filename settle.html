@@ -40250,12 +40250,23 @@ function pageNotices(){
   var myDid=_CU.dealerId||_CU.uid;
   var q1=_db.collection('notices').where('dealerId','==',myDid).get();
   var q2=(!isSuperAdmin()&&myDid!==SA_UID)
-    ?_db.collection('notices').where('dealerId','==',SA_UID).limit(20).get()
+    ?_db.collection('notices').limit(30).get()
     :Promise.resolve({forEach:function(){}});
   Promise.all([q1,q2]).then(function(results){
     var allDocs=[];
     results[0].forEach(function(doc){allDocs.push(doc);});
     results[1].forEach(function(doc){allDocs.push(doc);});
+    // 고객사 본인 공지 + 슈퍼어드민/dealerId없는 공지만 포함
+    allDocs = allDocs.filter(function(doc){
+      var did=doc.data().dealerId;
+      return !did || did===myDid || did===SA_UID;
+    });
+    // 중복 제거
+    var seen={};
+    allDocs = allDocs.filter(function(doc){
+      if(seen[doc.id]) return false;
+      seen[doc.id]=true; return true;
+    });
     allDocs.sort(function(a,b){
       var ta=a.data().createdAt&&a.data().createdAt.seconds?a.data().createdAt.seconds:0;
       var tb=b.data().createdAt&&b.data().createdAt.seconds?b.data().createdAt.seconds:0;
