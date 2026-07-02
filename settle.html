@@ -31641,7 +31641,22 @@ function openSE(id){
   var cached=(_settleCache||[]).find(function(x){
     return x.id===id||x.fbId===id||(x.userId+'_'+x.month)===id;
   });
-  if(cached){_showSEModal(cached);return;}
+  if(cached){
+    // dateRoutes 없으면 Firestore에서 보완 후 열기
+    if(!cached.dateRoutes||!Object.keys(cached.dateRoutes||{}).length){
+      _db.collection('settlements').doc(id).get().then(function(snap){
+        if(snap.exists){
+          var fresh=snap.data();
+          if(fresh.dateRoutes) cached.dateRoutes=fresh.dateRoutes;
+          if(fresh.dateFresh) cached.dateFresh=fresh.dateFresh;
+        }
+        _showSEModal(cached);
+      }).catch(function(){_showSEModal(cached);});
+    } else {
+      _showSEModal(cached);
+    }
+    return;
+  }
   // Firebase에서 조회
   _db.collection('settlements').doc(id).get()
     .then(function(snap){
