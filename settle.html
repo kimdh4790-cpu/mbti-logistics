@@ -45808,11 +45808,14 @@ function _loadPayoutPreview(month, did){
       if(!hasAccount) missingCount++;
       var bankName=(typeof BANK_CODES!=='undefined'&&BANK_CODES[w.bankCode])||w.bankCode||'-';
       var isPaid=s.payoutStatus==='PAID';
+      var isMismatch=s.accountMismatch===true;
+      if(isMismatch) missingCount++;
       return '<tr style="'+(isPaid?'opacity:.5':'')+'">'+
         '<td style="padding:7px;font-weight:600">'+esc(s.driverName||s.driver||s.name||s.userId||'')+(isPaid?' <span style="font-size:9px;color:#10b981">✅완료</span>':'')+' </td>'+
         '<td style="padding:7px;text-align:right;color:#10b981;font-weight:700">₩'+(s.net||0).toLocaleString()+'</td>'+
         '<td style="padding:7px;text-align:center">'+
           (isPaid?'<span style="color:#10b981;font-size:10px">완료</span>':
+          isMismatch?'<span style="color:#f59e0b;font-size:10px">⚠️ 계좌불일치</span>':
           hasAccount?'<span style="color:#10b981;font-size:10px">✅ '+esc(bankName)+'</span>':
           '<span style="color:#ef4444;font-size:10px">❌ 미등록</span>')+
         '</td>'+
