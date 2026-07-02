@@ -40272,8 +40272,9 @@ function pageNotices(){
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
     var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
     var typeLabel={info:'공지',update:'업데이트',warning:'점검',event:'이벤트',payslip:'명세서',tax:'세금계산서'};
-    var list='<div style="display:flex;flex-direction:column;gap:10px">';
+    var list='<div style="display:flex;flex-direction:column;gap:8px">';
     if(snap.empty){list+='<div class="empty"><div class="empty-icon">📢</div>아직 공지가 없습니다</div>';}
+    var _nIdx=0;
     snap.forEach(function(doc){
       var n=doc.data();
       var dt=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate().toLocaleDateString('ko-KR'):'-';
@@ -40281,18 +40282,25 @@ function pageNotices(){
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
-      var delBtn=(isSA&&!isDriver)?'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
-      var nid='notice-'+doc.id;
-      list+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;" onclick="var b=document.getElementById(\'nb-'+doc.id+'\');b.style.display=b.style.display===\'none\'?\'block\':\'none\'">'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      var delBtn=(isSA&&!isDriver)?'<button onclick="event.stopPropagation();_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
+      var bodyOpen=(_nIdx===0)?'block':'none';
+      var arrChar=(_nIdx===0)?'▲':'▼';
+      list+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">'
+        +'<div style="padding:14px;cursor:pointer" onclick="(function(hd){var bd=hd.nextElementSibling;if(!bd)return;var op=bd.style.display===\'block\';bd.style.display=op?\'none\':\'block\';hd.querySelector(\'.narr\').textContent=op?\'▼\':\'▲\';})(this)">'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
         +'<span style="background:'+bg+';color:'+tc+';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
         +'<span style="font-size:10px;color:var(--text3);margin-left:auto">'+dt+'</span>'
+        +'<span class="narr" style="font-size:11px;color:var(--text3);margin-left:6px">'+arrChar+'</span>'
         +delBtn
         +'</div>'
         +'<div style="font-size:13px;font-weight:700;color:var(--text);word-break:keep-all;line-height:1.4">'+esc(n.title||'')+'</div>'
-        +(n.body?'<div id="nb-'+doc.id+'" style="display:block;margin-top:8px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:8px">'+esc(n.body||'')+'</div>':'')
-        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--brand)">📎 첨부파일</a>':'')
+        +'</div>'
+        +((n.body||n.fileUrl)?'<div style="display:'+bodyOpen+';padding:0 14px 14px 14px;border-top:1px solid var(--border)">'
+          +(n.body?'<div style="padding-top:10px;font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">'+esc(n.body||'')+'</div>':'')
+          +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--brand)">📎 첨부파일</a>':'')
+          +'</div>':'')
         +'</div>';
+      _nIdx++;
     });
     list+='</div>';
     c.innerHTML=form+list;
