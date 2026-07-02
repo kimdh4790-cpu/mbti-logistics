@@ -32562,63 +32562,6 @@ function recalcAllSettlements(){
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
 
-    // ★ 아이디지원 재계산 전 기존 값 초기화
-    _settleCache.forEach(function(s){
-      if((s.etcPlusReason||'').indexOf('아이디지원')>=0&&(s.etcPlusReason||'').indexOf('재계산')>=0){
-        s.etcPlus=0;s.etcPlusReason='';
-      }
-    });
-
-    // ★ 아이디지원 재계산 (_settleCache dateRoutes 기반)
-    var _idRules=window._idSupportRules||[];
-    if(_idRules.length){
-      function _ndR(d){
-        if(!d) return '';
-        var s=String(d).trim().replace(/[.\/]/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
-        var p=s.split('-').map(function(xi){return xi.trim();}).filter(Boolean);
-        if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}
-        return '';
-      }
-      _idRules.forEach(function(rule){
-        var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
-        var tid=(rule.toId||'').replace(/@df$/i,'').trim();
-        var fromS=_settleCache.find(function(s){return (s.userId||s.driver||'').replace(/@df$/i,'').trim()===fid;});
-        var toS=_settleCache.find(function(s){return (s.userId||s.driver||'').replace(/@df$/i,'').trim()===tid;});
-        if(!fromS||!fromS.dateRoutes) return;
-        var _dates=(rule.dates||[]).map(_ndR).filter(Boolean).sort();
-        var rStart=_ndR(rule.startDate)||(_dates.length?_dates[0]:'');
-        var rEnd=_ndR(rule.endDate)||(_dates.length?_dates[_dates.length-1]:'');
-        var tR=rule.routes||[];
-        var _dateOkR=function(dt){
-          if(_dates.length) return _dates.indexOf(dt)>=0;
-          if(!rStart&&!rEnd) return false;
-          return (!rStart||dt>=rStart)&&(!rEnd||dt<=rEnd);
-        };
-        var tot=0;
-        Object.keys(fromS.dateRoutes).forEach(function(dt){
-          if(!_dateOkR(dt)) return;
-          Object.keys(fromS.dateRoutes[dt]).forEach(function(rt){
-            if(tR.length&&tR.indexOf(rt)<0) return;
-            var rd=fromS.dateRoutes[dt][rt]||{};
-            var price=RPRICE[rt]||0;
-            if(!price) return;
-            var amt=((rd.cnt||0)-(rd.ret||0))*price;
-            if(amt<=0) return;
-            tot+=amt;
-          });
-        });
-        if(!tot) return;
-        if(toS){
-          toS.etcPlus=(toS.etcPlus||0)+tot;
-          var pv=toS.etcPlusReason||'';
-          toS.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') 재계산';
-          promises.push(_db.collection('settlements').doc(toS.id).update({
-            etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
-          }).catch(function(){}));
-        }
-      });
-    }
-
     Promise.all(promises).then(function(){
       toast('✅ 재계산 완료 ('+changed+'건)');
       _reloadSettlePage();
