@@ -40254,18 +40254,13 @@ function pageNotices(){
     :Promise.resolve({forEach:function(){}});
   Promise.all([q1,q2]).then(function(results){
     var allDocs=[];
-    results[0].forEach(function(doc){allDocs.push(doc);});
-    results[1].forEach(function(doc){allDocs.push(doc);});
+    var seen={};
+    results[0].forEach(function(doc){allDocs.push(doc);seen[doc.id]=true;});
+    results[1].forEach(function(doc){if(!seen[doc.id])allDocs.push(doc);});
     // 고객사 본인 공지 + 슈퍼어드민/dealerId없는 공지만 포함
     allDocs = allDocs.filter(function(doc){
       var did=doc.data().dealerId;
       return !did || did===myDid || did===SA_UID;
-    });
-    // 중복 제거
-    var seen={};
-    allDocs = allDocs.filter(function(doc){
-      if(seen[doc.id]) return false;
-      seen[doc.id]=true; return true;
     });
     allDocs.sort(function(a,b){
       var ta=a.data().createdAt&&a.data().createdAt.seconds?a.data().createdAt.seconds:0;
@@ -40286,7 +40281,7 @@ function pageNotices(){
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
-      var delBtn=isDriver?'':'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>';
+      var delBtn=(isSA&&!isDriver)?'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
       list+='<div class="card" style="border-left:4px solid '+tc+';'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
         +'<div style="display:flex;align-items:center;gap:8px">'
