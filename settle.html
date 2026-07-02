@@ -26522,7 +26522,8 @@ function _filterMenusByServices(menus){
 
 var MENUS_DELIVERY = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
@@ -26546,7 +26547,8 @@ var MENUS_DELIVERY = [
 
 var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -26727,7 +26729,8 @@ var MENUS_SETTLE = [
 
 var MENUS_UNIVERSAL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]},
   {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
@@ -26777,7 +26780,8 @@ var MENUS_QR_PAYROLL = [
 ];
 var MENUS_QR = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
@@ -26807,7 +26811,8 @@ var MENUS_QR = [
 // ALL-IN-ONE (풀패키지)
 var MENUS_FULL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
+    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -39979,7 +39984,14 @@ function checkTermsAgreement(){
   // 슈퍼어드민은 생략
   var _fp=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
   if(isSuperAdmin()){goPage('home');return;}
-  if(_CU&&_CU.termsVersion===TERMS_VER){goPage(_fp);return;}
+  if(_CU&&_CU.termsVersion===TERMS_VER){
+    goPage(_fp);
+    // ★ 고객사 관리자이면 새 공지 팝업 체크
+    if(_CU.role!=='driver'&&_CU.role!=='member'){
+      setTimeout(function(){_checkNewNotices();},1500);
+    }
+    return;
+  }
   var mo=document.getElementById('mo-terms-agree');
   if(!mo){goPage(_fp);return;}
   document.getElementById('ta-terms-body').innerHTML=esc(TERMS_CONTENT.terms).replace(/\n/g,'<br>');
@@ -40009,6 +40021,73 @@ function agreeTerms(){
 }
 
 // ══ 관리자 공지 ══
+
+// 로그인 후 새 공지 팝업 체크
+function _checkNewNotices(){
+  if(!_db||!_CU) return;
+  var did=_CU.dealerId||_CU.uid;
+  var lastRead=parseInt(localStorage.getItem('lastNoticeRead_'+did)||'0');
+  // 슈퍼어드민이 보낸 공지 (dealerId가 슈퍼어드민 uid인 것)
+  var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+  _db.collection('notices').where('dealerId','==',SA_UID)
+    .orderBy('createdAt','desc').limit(5).get()
+  .then(function(snap){
+    var newNotices=[];
+    snap.forEach(function(doc){
+      var n=doc.data();
+      var ts=n.createdAt&&n.createdAt.seconds?n.createdAt.seconds*1000:(n.createdAt||0);
+      if(ts>lastRead) newNotices.push(Object.assign({id:doc.id},n));
+    });
+    if(!newNotices.length) return;
+    _showNoticePopup(newNotices, did);
+  }).catch(function(){});
+}
+
+function _showNoticePopup(notices, did){
+  var old=document.getElementById('mo-notice-popup');
+  if(old) old.remove();
+  var mo=document.createElement('div');
+  mo.id='mo-notice-popup';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px';
+  var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉',payslip:'💰',tax:'🧾'};
+  var rows=notices.map(function(n){
+    var dt=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate().toLocaleDateString('ko-KR'):'-';
+    var ic=typeIcon[n.type]||'📢';
+    return '<div style="border-bottom:1px solid var(--border);padding:10px 0">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+        '<span style="font-size:12px">'+ic+'</span>'+
+        '<strong style="font-size:13px">'+esc(n.title||'')+'</strong>'+
+        '<span style="font-size:10px;color:var(--text3);margin-left:auto">'+dt+'</span>'+
+      '</div>'+
+      (n.body?'<div style="font-size:12px;color:var(--text2);white-space:pre-wrap">'+esc(n.body)+'</div>':'')+
+    '</div>';
+  }).join('');
+  mo.innerHTML=
+    '<div style="background:var(--bg2);border-radius:14px;padding:20px;width:100%;max-width:480px;max-height:70vh;overflow-y:auto">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+
+        '<span style="font-size:20px">📢</span>'+
+        '<div style="font-size:14px;font-weight:800">새 공지사항 '+notices.length+'건</div>'+
+      '</div>'+
+      rows+
+      '<div style="display:flex;gap:8px;margin-top:16px">'+
+        '<button id="notice-popup-more" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:12px;cursor:pointer">📋 전체 보기</button>'+
+        '<button id="notice-popup-close" style="flex:2;padding:10px;background:var(--acc);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 확인</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(mo);
+  setTimeout(function(){
+    document.getElementById('notice-popup-close').onclick=function(){
+      mo.remove();
+      localStorage.setItem('lastNoticeRead_'+did, Date.now().toString());
+    };
+    document.getElementById('notice-popup-more').onclick=function(){
+      mo.remove();
+      localStorage.setItem('lastNoticeRead_'+did, Date.now().toString());
+      goPage('notices');
+    };
+  },100);
+}
+
 function pageNotices(){
   document.getElementById('page-title').textContent='공지사항';
   document.getElementById('topbar-right').innerHTML='';
@@ -40031,7 +40110,22 @@ function pageNotices(){
     +'<div id="n-file-status" style="font-size:11px;color:var(--text3);margin-top:4px"></div></div>'
     +'<div style="display:flex;gap:8px;margin-top:4px">'+'<button onclick="_saveNotice()" class="btn btn-blue" style="flex:1;padding:10px;font-weight:700">📢 앱 푸시+공지 발송</button>'+'<button onclick="_saveNoticeAlimtalk()" class="btn" style="flex:1;padding:10px;font-weight:700;background:linear-gradient(135deg,#fee500,#f5c800);color:#000">💬 알림톡 발송</button>'+'</div>'+'</button>'
     +'</div>');
-  _db.collection('notices').where('dealerId','==',_CU.dealerId||_CU.uid).orderBy('createdAt','desc').get().then(function(snap){
+  var SA_UID='9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+  var myDid=_CU.dealerId||_CU.uid;
+  var q1=_db.collection('notices').where('dealerId','==',myDid).orderBy('createdAt','desc').get();
+  var q2=(!isSuperAdmin()&&myDid!==SA_UID)
+    ?_db.collection('notices').where('dealerId','==',SA_UID).orderBy('createdAt','desc').limit(10).get()
+    :Promise.resolve({forEach:function(){}});
+  Promise.all([q1,q2]).then(function(results){
+    var allDocs=[];
+    results[0].forEach(function(doc){allDocs.push(doc);});
+    results[1].forEach(function(doc){allDocs.push(doc);});
+    allDocs.sort(function(a,b){
+      var ta=a.data().createdAt&&a.data().createdAt.seconds?a.data().createdAt.seconds:0;
+      var tb=b.data().createdAt&&b.data().createdAt.seconds?b.data().createdAt.seconds:0;
+      return tb-ta;
+    });
+    var snap={empty:!allDocs.length,forEach:function(fn){allDocs.forEach(fn);}};
     var typeIcon={info:'📢',update:'🔄',warning:'⚠️',event:'🎉',payslip:'💰',tax:'🧾'};
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
     var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
