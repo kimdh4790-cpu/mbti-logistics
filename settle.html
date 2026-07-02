@@ -30314,7 +30314,7 @@ function _renderSettlePage(settles,c){
       +'<span style="display:flex;align-items:center;gap:8px"><button onclick="event.stopPropagation();deleteMonthSettlements(\''+mo+'\')" style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 월 삭제</button><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
-      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?Math.round(ct*1.1):(calcNet(x).income||0));},0))+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(Math.round(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.finc||0)+(x.inc||0)+(x.nocont||0)+(x.etcPlus||0)-(x.dmg||0)))||0;return s+(ct||calcNet(x).totalAmt||0);},0)*1.1))+'</span>'
       // ★ 프레시백/추가인센/분실파손 — 모두 VAT포함으로 표시 (×1.1)
       +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0)*1.1))+'</span>'
       +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)*1.1))+'</span>':'')
