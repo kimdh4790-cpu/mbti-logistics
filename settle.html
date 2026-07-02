@@ -32562,6 +32562,13 @@ function recalcAllSettlements(){
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
 
+    // ★ 아이디지원 재계산 전 기존 값 초기화
+    _settleCache.forEach(function(s){
+      if((s.etcPlusReason||'').indexOf('아이디지원')>=0&&(s.etcPlusReason||'').indexOf('재계산')>=0){
+        s.etcPlus=0;s.etcPlusReason='';
+      }
+    });
+
     // ★ 아이디지원 재계산 (_settleCache dateRoutes 기반)
     var _idRules=window._idSupportRules||[];
     if(_idRules.length){
