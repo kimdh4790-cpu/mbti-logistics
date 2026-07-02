@@ -32597,6 +32597,7 @@ function recalcAllSettlements(){
 
     Promise.all(resetPromises).then(function(){
     // ★ 아이디지원 재계산 (_settleCache dateRoutes 기반)
+    var idPromises=[];
     var _idRules=window._idSupportRules||[];
     if(_idRules.length){
       function _ndR(d){
@@ -32640,7 +32641,7 @@ function recalcAllSettlements(){
           var pv=(toS.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
           toS.etcPlus=(toS.etcPlus||0)+tot;
           toS.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+tot+'원';
-          promises.push(_db.collection('settlements').doc(toS.id).update({
+          idPromises.push(_db.collection('settlements').doc(toS.id).update({
             etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
           }).catch(function(){}));
         } else if(!toS){
@@ -32686,12 +32687,12 @@ function recalcAllSettlements(){
             createdAt:new Date().toISOString(),
             expireAt:_settlementExpireAt?_settlementExpireAt():null
           };
-          promises.push(_db.collection('settlements').doc(newRef2.id).set(newDoc).catch(function(){}));
+          idPromises.push(_db.collection('settlements').doc(newRef2.id).set(newDoc).catch(function(){}));
         }
       });
     }
 
-    Promise.all(promises).then(function(){
+    Promise.all(idPromises).then(function(){
       toast('✅ 재계산 완료 ('+changed+'건)');
       _reloadSettlePage();
     });
