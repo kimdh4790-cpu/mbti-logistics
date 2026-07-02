@@ -7188,7 +7188,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var dpId=(_CU.dealerId||'shared')+'_routePrices';
           // ★ 신규 라우트만 0으로 추가 (기존 단가 절대 덮어쓰지 않음)
           routePromises.push(
-            _db.collection('settings').doc(dpId).set(newPriceObj,{merge:true}).catch(function(){})
+            _db.collection('settings').doc(dpId).set(Object.assign({dealerId:_CU.dealerId||''},newPriceObj),{merge:true}).catch(function(){})
           );
         }
       }
@@ -35031,7 +35031,7 @@ function saveNocontPrice(){
   RPRICE['nocont_w1']=w1; RPRICE['nocont_w2']=w2;
   if(_db&&_CU){
     var obj=Object.assign({},RPRICE);
-    _db.collection('settings').doc(_CU.dealerId+'_routePrices').set(obj,{merge:true})
+    _db.collection('settings').doc(_CU.dealerId+'_routePrices').set(Object.assign({dealerId:_CU.dealerId},obj),{merge:true})
       .then(function(){_showAutoSaved('미계약 단가 저장됨');})
       .catch(function(e){toast('❌ '+e.message);});
   }
@@ -37743,7 +37743,7 @@ function saveRprice(){
   Object.keys(RPRICE).forEach(function(k){delete RPRICE[k];});
   Object.assign(RPRICE,newPrices);
   Promise.all([
-    _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_routePrices').set(newPrices,{merge:false}),
+    _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_routePrices').set(Object.assign({dealerId:_CU&&_CU.dealerId||''},newPrices),{merge:false}),
     _db.collection('settings').doc((_CU&&_CU.dealerId?_CU.dealerId:'shared')+'_unitPrices').set({routePrices:newPrices},{merge:true})
   ]).then(function(){
     _showAutoSaved('라우트 단가 저장됨');
