@@ -33282,6 +33282,10 @@ function pageDrivers(){
   var btnBulk=document.createElement('button');btnBulk.className='btn btn-sm';
   btnBulk.style.cssText='background:#7c3aed;color:#fff;font-size:11px';
   btnBulk.textContent='📂 일괄 등록';btnBulk.onclick=_openBulkDriverRegister;tr.appendChild(btnBulk);
+  var btnBank=document.createElement('label');btnBank.className='btn btn-sm';
+  btnBank.style.cssText='background:#f59e0b;color:#000;font-size:11px;cursor:pointer';
+  btnBank.innerHTML='🏦 계좌 일괄 등록<input type="file" accept=".txt" style="display:none" onchange="_importBankAccounts(this)">';
+  tr.appendChild(btnBank);
   var btnSync=document.createElement('button');btnSync.className='btn btn-sm';
   btnSync.style.cssText='background:#059669;color:#fff;font-size:11px';
   btnSync.textContent='🔄 정산 전체 일괄저장';
@@ -33303,6 +33307,85 @@ function pageDrivers(){
       }
     }, function(e){logError('기사관리',e.message);c.innerHTML='<div class="empty">⚠️ '+e.message+'</div>';});
 }
+// 은행명 → 은행코드 매핑
+var BANK_NAME_MAP={
+  '하나':'081','신한':'088','국민':'004','기업':'003','농협':'011','우리':'020','카카오':'090','카카오뱅크':'090',
+  '토스':'092','toss':'092','케이뱅크':'089','SC':'023','sc':'023','씨티':'027','시티':'027',
+  '부산':'032','경남':'039','대구':'031','광주':'034','전북':'037','제주':'035','수협':'007',
+  '신협':'048','우체국':'071','새마을':'045','저축은행':'050','아이엠뱅크':'031','im':'031','iM':'031',
+  'iM뱅크':'031','IBK':'003','ibk':'003','KB':'004','kb':'004','NH':'011','nh':'011',
+  'KEB':'081','keb':'081'
+};
+
+function _importBankAccounts(input){
+  var file=input.files[0];
+  if(!file){return;}
+  input.value='';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var text=e.target.result;
+    var lines=text.split(/\r?\n/);
+    var parsed=[];
+    var currentCamp='';
+    lines.forEach(function(line){
+      line=line.trim();
+      if(!line) return;
+      if(/^(부산|대구|진주|경남|울산|서울|인천|광주|대전)/.test(line)&&line.length<=10){currentCamp=line;return;}
+      var m=line.match(/^([가-힣a-zA-Z]{2,6})\s+(\d+)\(([^)]+)\)(.*)/);
+      if(m){
+        var name=m[1].trim(),account=m[2].trim(),bankRaw=m[3].trim(),flag=(m[4]||'').trim();
+        var isMain=flag.indexOf('o')>=0||flag.indexOf('O')>=0;
+        var bankCode=BANK_NAME_MAP[bankRaw]||BANK_NAME_MAP[bankRaw.replace('뱅크','')]||'';
+        var existing=parsed.find(function(p){return p.name===name;});
+        if(existing){if(isMain){existing.account=account;existing.bankCode=bankCode;existing.bankName=bankRaw;}}
+        else{parsed.push({name:name,account:account,bankCode:bankCode,bankName:bankRaw,isMain:isMain,camp:currentCamp});}
+        return;
+      }
+      // 들여쓰기 보조계좌
+      var m2=line.match(/^(\s+)(\d+)\(([^)]+)\)(.*)/);
+      if(m2&&parsed.length>0){
+        var account2=m2[2].trim(),bankRaw2=m2[3].trim(),flag2=(m2[4]||'').trim();
+        var isMain2=flag2.indexOf('o')>=0||flag2.indexOf('O')>=0;
+        var bankCode2=BANK_NAME_MAP[bankRaw2]||BANK_NAME_MAP[bankRaw2.replace('뱅크','')]||'';
+        if(isMain2){var last=parsed[parsed.length-1];last.account=account2;last.bankCode=bankCode2;last.bankName=bankRaw2;}
+      }
+    });
+    if(!parsed.length){toast('❌ 파싱된 계좌 없음');return;}
+    var modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    var rows=parsed.map(function(p){return '<tr><td style="padding:5px 8px">'+esc(p.name)+'</td><td style="padding:5px 8px">'+esc(p.account)+'</td><td style="padding:5px 8px">'+esc(p.bankName)+(p.bankCode?'':'⚠️')+'</td><td style="padding:5px 8px;color:var(--text3);font-size:10px">'+esc(p.camp)+'</td></tr>';}).join('');
+    var box=document.createElement('div');
+    box.style.cssText='background:var(--bg2);border-radius:14px;padding:20px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto';
+    var tbl='<table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:var(--bg3)"><th style="padding:5px 8px;text-align:left">이름</th><th style="padding:5px 8px;text-align:left">계좌번호</th><th style="padding:5px 8px;text-align:left">은행</th><th style="padding:5px 8px;text-align:left">캠프</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    var btns='<div style="display:flex;gap:8px;margin-top:14px"><button id="bank-cancel-btn" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-size:12px;cursor:pointer">취소</button><button id="bank-confirm-btn" style="flex:2;padding:10px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 등록 실행 ('+parsed.length+'명)</button></div>';
+    box.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:12px">🏦 계좌 일괄 등록 미리보기 ('+parsed.length+'명)</div>'+tbl+btns;
+    modal.appendChild(box);
+        document.body.appendChild(modal);
+    document.getElementById('bank-cancel-btn').onclick=function(){modal.remove();};
+    document.getElementById('bank-confirm-btn').onclick=function(){modal.remove();_executeBankImport(parsed);};
+  };
+  reader.readAsText(file,'utf-8');
+}
+
+function _executeBankImport(parsed){
+  var did=_CU.dealerId;
+  var done=0,notFound=0;
+  var chain=Promise.resolve();
+  parsed.forEach(function(p){
+    chain=chain.then(function(){
+      return _db.collection('drivers').where('dealerId','==',did).where('name','==',p.name).get()
+      .then(function(snap){
+        if(snap.empty){notFound++;return;}
+        return snap.docs[0].ref.update({accountNumber:p.account,bankCode:p.bankCode,bankName:p.bankName}).then(function(){done++;});
+      });
+    });
+  });
+  chain.then(function(){
+    toast('✅ 계좌 등록 완료: '+done+'명'+(notFound>0?' / 미매칭 '+notFound+'명':''));
+    pageDrivers();
+  }).catch(function(e){toast('❌ 오류: '+e.message);});
+}
+
 function _getDrvCamp(d){
   if(!d)return '';
   if(d.camp){
