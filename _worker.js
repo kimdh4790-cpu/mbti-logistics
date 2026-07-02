@@ -769,10 +769,11 @@ async function submitReserve(){
               const bg = isOff ? '#fee2e2' : '#f0fdf4';
               const color = isOff ? '#dc2626' : '#16a34a';
               const label = isOff ? '휴무' : (route || '출근');
-              const swapUrl = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i : '';
+              const swapBase = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i+'&fromRoute='+encodeURIComponent(e.route||'') : '';
+              const swapOnClick = swapBase ? `onclick="(function(){var r=prompt('내가 배송할 라우트 입력 (없으면 빈칸)','');if(r===null)return;location.href='${swapBase}&myRoute='+encodeURIComponent(r);})();return false;"` : '';
               cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
                 <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
-                ${swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
+                ${swapBase ? `<a href="#" ${swapOnClick} style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
               </td>`;
             }
             rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
@@ -868,6 +869,7 @@ async function submitReserve(){
 
               // 요청자: 기존날짜 → 수락자 라우트로 출근 (수락자가 입력한 myRoute 우선)
               const fromNewRoute = body.myRoute||toFromDayRoute||'';
+              const toNewRoute = body.fromRoute||fromToDayRoute||'';
               await fetch(baseUrl2+'/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
                 {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
                 body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:fromNewRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
@@ -875,7 +877,7 @@ async function submitReserve(){
               // 수락자: 휴무일 → 출근 (요청자 라우트로) - updateMask 없이 전체 업데이트
               const toDocFields = (await (await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}})).json()).fields||{};
               await fetch(baseUrl2+'/'+body.myDocId,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                body:JSON.stringify({fields:Object.assign({},toDocFields,{status:{stringValue:'work'},route:{stringValue:fromToDayRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}})})});
+                body:JSON.stringify({fields:Object.assign({},toDocFields,{status:{stringValue:'work'},route:{stringValue:toNewRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}})})});
 
               // 요청자: 수락자 날짜에 휴무 (기존 출근 문서 off로)
               if(fromToDayDocId){
@@ -974,8 +976,8 @@ async function submitReserve(){
           }
         }
 
-        const fromStatus = url.searchParams.get('status') || 'off';
-        const fromRoute = url.searchParams.get('route') || '';
+        const fromRoute = url.searchParams.get('fromRoute') || '';
+        const myRouteParam = url.searchParams.get('myRoute') || '';
         const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>근무 교체 요청</title>
@@ -985,7 +987,7 @@ async function submitReserve(){
   <div id="form-wrap">
     <div class="icon">🔄</div>
     <div class="title">근무 교체 요청</div>
-    <div class="desc">${fromName}님의 <b>${date}</b> 근무 교체 요청입니다.<br>이름을 입력하고 교체 날짜를 선택하세요.</div>
+    <div class="desc">${fromName}님의 <b>${date}</b>${fromRoute?' ('+fromRoute+')':''} 교체 요청<br>이름 입력 후 교체할 날짜를 선택하세요.</div>
     <div class="label">내 이름</div>
     <input type="text" id="swap-name" placeholder="이름 입력 후 조회">
     <button class="btn" onclick="loadMyDays()">🔍 조회</button>
@@ -993,8 +995,10 @@ async function submitReserve(){
       <div class="label">교체할 날짜 선택</div>
       <div id="day-list"></div>
       <div id="route-wrap" style="display:none">
-        <div class="label">내가 배송할 라우트 <span style="color:#64748b">(선택사항)</span></div>
-        <input type="text" id="my-route" placeholder="예: 101C, 215D (없으면 빈칸)">
+        <div class="label">${fromName}님 라우트 <span style="color:#64748b">(교체 후 ${fromName}이 배송할 라우트)</span></div>
+        <input type="text" id="from-route" placeholder="예: 101C" value="${myRouteParam}">
+        <div class="label" style="margin-top:8px">내 라우트 <span style="color:#64748b">(교체 후 내가 배송할 라우트)</span></div>
+        <input type="text" id="my-route" placeholder="예: 215D (없으면 빈칸)">
         <button class="btn btn-green" onclick="acceptExchange()">🔄 교체 수락</button>
       </div>
     </div>
@@ -1056,7 +1060,7 @@ async function acceptExchange(){
     var params=new URLSearchParams(window.location.search);
     var res=await fetch('/swap?id=${docId}&did='+params.get('did')+'&ws='+params.get('ws')+'&di='+params.get('di'),
       {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_selectedDocId,myRoute:myRoute})});
+      body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_selectedDocId,myRoute:document.getElementById('my-route').value.trim(),fromRoute:document.getElementById('from-route').value.trim()})});
     var data=await res.json();
     if(data.ok){
       document.getElementById('form-wrap').style.display='none';
