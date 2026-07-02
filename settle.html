@@ -29765,7 +29765,7 @@ function pageSettle(){
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     // 마진 = 쿠팡수입 - 기사세금계산서 - 고용·산재(기사+회사) - 부가세10%
     var totInsAll=totEmpComp+totWorkComp+totEmpDrv+totWorkDrv; // 고용·산재 전체
-    var totCoupang=Math.round(totCoupang*1.1);var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
+    totCoupang=Math.round(totCoupang*1.1);var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
     var totVat=Math.round(totMarginBeforeVat*0.1); // 부가세 10%
     var totMargin=totMarginBeforeVat-totVat;
     // 경비 차감 실순수익
