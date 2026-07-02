@@ -147,6 +147,22 @@ service cloud.firestore {
     match /overtimes/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /payslips/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /notices/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /chats/{dealerId} {
+      allow read, write: if isAuth() && (
+        isSuperAdmin() ||
+        request.auth.uid == dealerId ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == dealerId)
+      );
+      match /messages/{msgId} {
+        allow read, write: if isAuth() && (
+          isSuperAdmin() ||
+          request.auth.uid == dealerId ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dealerId == dealerId)
+        );
+      }
+    }
     match /inventory/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /inventory_in/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /inventory_out/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
