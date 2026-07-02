@@ -40246,15 +40246,22 @@ function pageNotices(){
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
-      var delBtn=(isSA&&!isDriver)?'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
-      list+='<div class="card" style="border-left:4px solid '+tc+';'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap">'
-        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      var nid='notice-'+doc.id;
+      var delBtn=(isSA&&!isDriver)?'<button onclick="event.stopPropagation();_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
+      var hasBody=!!(n.body||n.fileUrl);
+      list+='<div class="card" style="border-left:4px solid '+tc+';padding:12px 14px;cursor:'+(hasBody?'pointer':'default')+';" onclick="_toggleNotice(\''+nid+'\')">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0">'
         +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap">'+ic+' '+lb+'</span>'
-        +'<strong style="font-size:14px">'+esc(n.title||'')+'</strong></div>'
-        +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span>'+delBtn+'</div></div>'
+        +'<strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(n.title||'')+'</strong></div>'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+        +'<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span>'
+        +(hasBody?'<span style="font-size:11px;color:var(--text3)" id="'+nid+'-arrow">▼</span>':'')
+        +delBtn+'</div></div>'
+        +'<div id="'+nid+'" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">'
         +(n.body?'<div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+esc(n.body||'')+'</div>':'')
-        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--brand)">📎 첨부파일 보기</a>':'')+'</div>';
+        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--brand)">📎 첨부파일 보기</a>':'')
+        +'</div></div>';
     });
     list+='</div>';
     c.innerHTML=form+list;
@@ -40263,6 +40270,14 @@ function pageNotices(){
   });
 }
 
+function _toggleNotice(id){
+  var el=document.getElementById(id);
+  var arrow=document.getElementById(id+'-arrow');
+  if(!el)return;
+  var open=el.style.display==='block';
+  el.style.display=open?'none':'block';
+  if(arrow)arrow.textContent=open?'▼':'▲';
+}
 function _saveNoticeAlimtalk(){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   var title=((document.getElementById('n-title')||{}).value||'').trim();
