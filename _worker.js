@@ -1308,7 +1308,7 @@ async function acceptExchange(){
             .slbl{font-size:9px;color:#64748b;margin-bottom:3px}
             .sval{font-size:13px;font-weight:800}
             .ssub{font-size:9px;color:#94a3b8;margin-top:2px}
-            .sec{padding:12px 14px}
+            .sec{padding:12px 14px;overflow-x:auto}
             .sec-title{font-size:11px;font-weight:800;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0}
             table{width:100%;border-collapse:collapse;font-size:11px}
             td{padding:5px 8px}
