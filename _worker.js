@@ -769,10 +769,10 @@ async function submitReserve(){
               const bg = isOff ? '#fee2e2' : '#f0fdf4';
               const color = isOff ? '#dc2626' : '#16a34a';
               const label = isOff ? '휴무' : (route || '출근');
-              const swapUrl = isOff ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i : '';
+              const swapUrl = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i : '';
               cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
                 <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
-                ${isOff && swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
+                ${swapUrl ? `<a href="${swapUrl}" style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
               </td>`;
             }
             rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
@@ -866,10 +866,11 @@ async function submitReserve(){
               const toFromDayRot = toFromDay.rotation?.stringValue||'';
               const toFromDayDocId = toDoc2?.document?.name?.split('/')?.pop()||'';
 
-              // 요청자: 휴무일 → 출근 (수락자 라우트로)
+              // 요청자: 기존날짜 → 수락자 라우트로 출근 (수락자가 입력한 myRoute 우선)
+              const fromNewRoute = body.myRoute||toFromDayRoute||'';
               await fetch(baseUrl2+'/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
                 {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:toFromDayRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:fromNewRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
 
               // 수락자: 휴무일 → 출근 (요청자 라우트로) - updateMask 없이 전체 업데이트
               const toDocFields = (await (await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}})).json()).fields||{};
@@ -937,7 +938,7 @@ async function submitReserve(){
         }
 
         // action=myoff: 수락자 휴무 날짜 조회
-        if (url.searchParams.get('action') === 'myoff') {
+        if (url.searchParams.get('action') === 'mydays') {
           const name = url.searchParams.get('name') || '';
           const did = url.searchParams.get('did') || '';
           const ws = url.searchParams.get('ws') || '';
@@ -950,12 +951,12 @@ async function submitReserve(){
             const qData = await qRes.json();
             const toDriverId = qData[0]?.document?.name?.split('/')?.pop() || '';
             if (!toDriverId) return new Response(JSON.stringify({ok:false,error:'기사를 찾을 수 없습니다'}),{headers:{'Content-Type':'application/json'}});
-            // 해당 주 휴무 날짜 조회
+            // 해당 주 전체 날짜 조회
             const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-            const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},{fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'off'}}}]}},limit:7}});
+            const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}}]}},limit:7}});
             const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
             const rData = await rRes.json();
-            const offDocs = {};
+            const dayDocs = {};
             const weekDays2 = [];
             const sun2 = new Date(ws);
             for (let i=0;i<7;i++){const d=new Date(sun2);d.setDate(sun2.getDate()+i);weekDays2.push(d.toISOString().slice(0,10));}
@@ -963,99 +964,106 @@ async function submitReserve(){
               const f=r.document.fields||{};
               const di=parseInt(f.dayIndex?.integerValue||f.dayIndex?.doubleValue||0);
               const docId2=r.document.name.split('/').pop();
-              if(weekDays2[di]) offDocs[weekDays2[di]]=docId2;
+              const status=f.status?.stringValue||'work';
+              const route=f.route?.stringValue||'';
+              if(weekDays2[di]) dayDocs[weekDays2[di]]={docId:docId2,status,route};
             });
-            return new Response(JSON.stringify({ok:true,offDocs}),{headers:{'Content-Type':'application/json'}});
+            return new Response(JSON.stringify({ok:true,dayDocs}),{headers:{'Content-Type':'application/json'}});
           } catch(e) {
             return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json'}});
           }
         }
 
-        // 수락자 이름 입력 후 본인 휴무 날짜 조회
+        const fromStatus = url.searchParams.get('status') || 'off';
+        const fromRoute = url.searchParams.get('route') || '';
         const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>근무 교체 요청</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:400px;width:100%;text-align:center}.icon{font-size:48px;margin-bottom:16px}.title{font-size:18px;font-weight:900;margin-bottom:8px}.desc{font-size:13px;color:#94a3b8;margin-bottom:20px;line-height:1.6}input,select{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:12px}input:focus,select:focus{border-color:#3b82f6}.btn{width:100%;padding:14px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px}.btn2{width:100%;padding:14px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}.label{font-size:11px;color:#64748b;text-align:left;margin-bottom:4px}.off-list{display:none;margin-top:4px}.off-btn{width:100%;padding:10px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:13px;cursor:pointer;margin-bottom:6px;text-align:left}.off-btn.selected{border-color:#10b981;background:#052e16;color:#10b981;font-weight:700}</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:420px;width:100%}.icon{font-size:40px;text-align:center;margin-bottom:12px}.title{font-size:17px;font-weight:900;text-align:center;margin-bottom:6px}.desc{font-size:12px;color:#94a3b8;text-align:center;margin-bottom:20px;line-height:1.6}.label{font-size:11px;color:#64748b;margin-bottom:4px;margin-top:12px}input,select{width:100%;padding:11px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:4px}input:focus,select:focus{border-color:#3b82f6}.btn{width:100%;padding:13px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.btn-green{background:linear-gradient(135deg,#059669,#10b981)}.day-btn{width:100%;padding:10px 12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:12px;cursor:pointer;margin-bottom:6px;text-align:left;display:flex;justify-content:space-between;align-items:center}.day-btn.selected{border-color:#10b981;background:#052e16}.day-btn .badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700}.off-badge{background:#fee2e2;color:#dc2626}.work-badge{background:#dcfce7;color:#16a34a}.divider{text-align:center;color:#475569;font-size:12px;margin:12px 0}</style>
 </head><body>
 <div class="card">
   <div id="form-wrap">
     <div class="icon">🔄</div>
     <div class="title">근무 교체 요청</div>
-    <div class="desc">${fromName}님의 <b>${date}</b> 근무를 교체하려고 합니다.<br><br>이름을 입력하고 교체 방식을 선택하세요.</div>
+    <div class="desc">${fromName}님의 <b>${date}</b> 근무 교체 요청입니다.<br>이름을 입력하고 교체 날짜를 선택하세요.</div>
     <div class="label">내 이름</div>
     <input type="text" id="swap-name" placeholder="이름 입력 후 조회">
-    <button class="btn" onclick="loadMyOff()">🔍 조회</button>
-    <div class="off-list" id="off-list">
-      <div class="label" style="margin-top:8px">내 휴무 날짜 선택 (교환할 날짜)</div>
-      <div id="off-dates"></div>
-      <button class="btn2" id="btn-exchange" onclick="acceptExchange()" style="display:none">🔄 휴무 날짜 교환</button>
-      <div style="margin:10px 0;color:#475569;font-size:12px">— 또는 —</div>
-      <button class="btn" onclick="acceptSwap()">✅ 출근↔휴무 교체 수락</button>
+    <button class="btn" onclick="loadMyDays()">🔍 조회</button>
+    <div id="days-wrap" style="display:none">
+      <div class="label">교체할 날짜 선택</div>
+      <div id="day-list"></div>
+      <div id="route-wrap" style="display:none">
+        <div class="label">내가 배송할 라우트 <span style="color:#64748b">(선택사항)</span></div>
+        <input type="text" id="my-route" placeholder="예: 101C, 215D (없으면 빈칸)">
+        <button class="btn btn-green" onclick="acceptExchange()">🔄 교체 수락</button>
+      </div>
     </div>
   </div>
-  <div id="success-wrap" style="display:none">
-    <div class="icon">🎉</div>
-    <div class="title">교체 완료!</div>
-    <div class="desc" id="success-msg"></div>
+  <div id="success-wrap" style="display:none;text-align:center;padding:20px">
+    <div style="font-size:56px;margin-bottom:16px">🎉</div>
+    <div style="font-size:18px;font-weight:900;margin-bottom:8px">교체 완료!</div>
+    <div id="success-msg" style="font-size:13px;color:#94a3b8;line-height:1.6"></div>
   </div>
 </div>
 <script>
-var _myOffDocs={};
+var _myDays={};
 var _selectedDate='';
-async function loadMyOff(){
+var _selectedDocId='';
+
+async function loadMyDays(){
   var name=document.getElementById('swap-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
+  var params=new URLSearchParams(window.location.search);
+  var did=params.get('did')||'';
+  var ws=params.get('ws')||'';
   try{
-    var params=new URLSearchParams(window.location.search);var did=params.get('did')||'';var ws=params.get('ws')||'';var res=await fetch('/swap?id=${docId}&action=myoff&name='+encodeURIComponent(name)+'&did='+did+'&ws='+ws,{method:'GET'});
+    var res=await fetch('/swap?id=${docId}&action=mydays&name='+encodeURIComponent(name)+'&did='+did+'&ws='+ws);
     var data=await res.json();
     if(!data.ok){alert(data.error||'조회 실패');return;}
-    _myOffDocs=data.offDocs||{};
-    var dates=Object.keys(_myOffDocs).sort();
-    var el=document.getElementById('off-dates');
+    _myDays=data.dayDocs||{};
+    var dates=Object.keys(_myDays).sort();
+    var el=document.getElementById('day-list');
     el.innerHTML='';
     if(!dates.length){
-      el.innerHTML='<div style="font-size:12px;color:#64748b;margin-bottom:8px">이번 주 휴무 없음</div>';
+      el.innerHTML='<div style="font-size:12px;color:#64748b;padding:8px 0">이번 주 일정이 없습니다</div>';
     } else {
       dates.forEach(function(d){
+        var info=_myDays[d];
+        var isOff=info.status==='off';
+        var badge='<span class="badge '+(isOff?'off-badge':'work-badge')+'">'+(isOff?'휴무':(info.route||'출근'))+'</span>';
         var b=document.createElement('button');
-        b.className='off-btn';
-        b.textContent='🌴 '+d+' 휴무';
+        b.className='day-btn';
+        b.innerHTML='<span>'+d+'</span>'+badge;
         b.onclick=function(){
-          document.querySelectorAll('.off-btn').forEach(function(x){x.classList.remove('selected');});
+          document.querySelectorAll('.day-btn').forEach(function(x){x.classList.remove('selected');});
           b.classList.add('selected');
           _selectedDate=d;
-          document.getElementById('btn-exchange').style.display='block';
+          _selectedDocId=info.docId;
+          document.getElementById('route-wrap').style.display='block';
         };
         el.appendChild(b);
       });
     }
-    document.getElementById('off-list').style.display='block';
+    document.getElementById('days-wrap').style.display='block';
   }catch(e){alert('오류: '+e.message);}
 }
+
 async function acceptExchange(){
   var name=document.getElementById('swap-name').value.trim();
-  if(!_selectedDate){alert('교환할 날짜를 선택해주세요');return;}
+  var myRoute=document.getElementById('my-route').value.trim();
+  if(!_selectedDate||!_selectedDocId){alert('날짜를 선택해주세요');return;}
   try{
-    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_myOffDocs[_selectedDate]})});
+    var params=new URLSearchParams(window.location.search);
+    var res=await fetch('/swap?id=${docId}&did='+params.get('did')+'&ws='+params.get('ws')+'&di='+params.get('di'),
+      {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_selectedDocId,myRoute:myRoute})});
     var data=await res.json();
-    if(data.ok){showSuccess('${date}(${fromName})↔'+_selectedDate+'('+name+') 휴무 교환 완료!');}
-    else{alert('오류: '+(data.error||'다시 시도해주세요'));}
+    if(data.ok){
+      document.getElementById('form-wrap').style.display='none';
+      document.getElementById('success-wrap').style.display='block';
+      document.getElementById('success-msg').textContent='${date}(${fromName}) ↔ '+_selectedDate+'('+name+') 교체 완료!';
+    }else{alert('오류: '+(data.error||'다시 시도해주세요'));}
   }catch(e){alert('오류가 발생했습니다');}
-}
-async function acceptSwap(){
-  var name=document.getElementById('swap-name').value.trim();
-  if(!name){alert('이름을 입력해주세요');return;}
-  try{
-    var res=await fetch('/swap?id=${docId}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,mode:'swap'})});
-    var data=await res.json();
-    if(data.ok){showSuccess('${date} 근무가 '+name+'님으로 교체됐습니다.');}
-    else{alert('오류: '+(data.error||'다시 시도해주세요'));}
-  }catch(e){alert('오류가 발생했습니다');}
-}
-function showSuccess(msg){
-  document.getElementById('form-wrap').style.display='none';
-  document.getElementById('success-wrap').style.display='block';
-  document.getElementById('success-msg').textContent=msg;
 }
 </script>
 </body></html>`;
