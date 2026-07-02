@@ -40154,6 +40154,14 @@ function _saveNotice(){
             body:JSON.stringify({tokens:fcmTokens,title:title,body:body||'내용을 확인하세요',type:type})
           }).catch(function(){});
         }
+        // ★ 슈퍼어드민이면 전체 고객사 관리자에게도 FCM 발송
+        if(window._isSA){
+          fetch('https://donway.ai.kr/api/send-notice',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({title:title,body:body||'내용을 확인하세요',type:type})
+          }).catch(function(){});
+        }
         return batch.commit().then(function(){return snap.size;});
       });
     }).then(function(cnt){
