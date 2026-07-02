@@ -8562,7 +8562,7 @@ function _downloadSettleAllExcel(){
 }
 function _doExcelDownload(){
   if(_isLocked('download')){_showLockPopup('엑셀 다운로드');return;}
-  return _doExcelDownload_orig.apply(this,arguments);
+  return _downloadRosterExcel.apply(this,arguments);
 }
 function _sendAlimtalk(){
   if(_isLocked('alimtalk')){_showLockPopup('알림톡 발송');return;}
