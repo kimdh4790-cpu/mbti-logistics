@@ -32813,11 +32813,77 @@ window._biLoadMulti=function(inp){
       reader.onload=function(e){try{var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});onRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}));}catch(err){done++;st.textContent='❌ '+err.message;}};
       reader.readAsArrayBuffer(file);
     } else {
-      reader.onload=function(e){try{var t=e.target.result;var sep=t.indexOf('\t')>=0?'\t':',';onRows(t.split('\n').map(function(l){var line=l.replace(/\r/g,'').trim();if(!line)return[];return sep==='\t'?line.split('\t').map(function(c){return c.trim();}):line.split(/\s{2,}|,/).map(function(c){return c.trim();});}));}catch(err){done++;st.textContent='❌ '+err.message;}};
+      reader.onload=function(e){try{
+        var t=e.target.result;
+        // ★ 계좌번호 형식 감지 (이름 계좌번호(은행) 패턴)
+        if(/[가-힣]{2,4}\s+\d{8,}\([가-힣a-zA-Z]+\)/.test(t)){
+          var bankParsed=_parseBankTxt(t);
+          if(bankParsed&&bankParsed.length){
+            bankParsed.forEach(function(d){
+              var key=d.name;
+              if(key&&!allList[key]) allList[key]=d;
+              else if(key&&allList[key]){
+                if(d.accountNumber) allList[key].accountNumber=d.accountNumber;
+                if(d.bankCode) allList[key].bankCode=d.bankCode;
+                if(d.bankName) allList[key].bankName=d.bankName;
+              }
+            });
+            done++;
+            if(done>=files.length){
+              var list=Object.values(allList);
+              if(!list.length){st.textContent='❌ 인식 실패';return;}
+              window._biList=list;
+              if(ok){ok.disabled=false;ok.onclick=function(){_biApply(list);};}
+              st.style.color='var(--green)';
+              st.textContent='✅ '+list.length+'명 계좌 인식 — 업데이트 누르세요';
+              var html='<table style="width:100%;font-size:10px;border-collapse:collapse"><tr style="background:var(--bg3)"><th style="padding:3px 6px;text-align:left">이름</th><th>계좌번호</th><th>은행</th></tr>';
+              list.forEach(function(d){html+='<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px;font-weight:700">'+esc(d.name)+'</td><td style="padding:3px 6px;color:var(--brand)">'+esc(d.accountNumber||'')+'</td><td style="padding:3px 6px">'+esc(d.bankName||'')+'</td></tr>';});
+              prev.innerHTML=html+'</table>';
+            }
+            return;
+          }
+        }
+        // 일반 txt/csv 처리
+        var sep=t.indexOf('\t')>=0?'\t':',';onRows(t.split('\n').map(function(l){var line=l.replace(/\r/g,'').trim();if(!line)return[];return sep==='\t'?line.split('\t').map(function(c){return c.trim();}):line.split(/\s{2,}|,/).map(function(c){return c.trim();});}));
+      }catch(err){done++;st.textContent='❌ '+err.message;}};
       reader.readAsText(file,'utf-8');
     }
   });
   inp.value='';
+};
+
+// 계좌번호 txt 파싱
+window._parseBankTxt=function(text){
+  var BMAP={'하나':'081','신한':'088','국민':'004','기업':'003','농협':'011','우리':'020',
+    '카카오':'090','카카오뱅크':'090','토스':'092','케이뱅크':'089','부산':'032','경남':'039',
+    '대구':'031','아이엠뱅크':'031','iM뱅크':'031','수협':'007','신협':'048','우체국':'071',
+    '새마을':'045','SC':'023','씨티':'027','광주':'034','전북':'037','제주':'035'};
+  var lines=text.split(/\r?\n/);
+  var parsed=[];
+  var currentCamp='';
+  lines.forEach(function(line){
+    line=line.trim();
+    if(!line) return;
+    if(/^(부산|대구|진주|경남|울산|서울|인천|광주|대전)/.test(line)&&line.length<=10){currentCamp=line;return;}
+    var m=line.match(/^([가-힣]{2,5})\s+(\d{8,})\(([^)]+)\)(.*)/);
+    if(m){
+      var name=m[1].trim(),account=m[2].trim(),bankRaw=m[3].trim(),flag=(m[4]||'').trim();
+      var isMain=flag.indexOf('o')>=0||flag.indexOf('O')>=0;
+      var bankCode=BMAP[bankRaw]||BMAP[bankRaw.replace('뱅크','')]||'';
+      var existing=parsed.find(function(p){return p.name===name;});
+      if(existing){if(isMain){existing.accountNumber=account;existing.bankCode=bankCode;existing.bankName=bankRaw;}}
+      else{parsed.push({name:name,accountNumber:account,bankCode:bankCode,bankName:bankRaw,isMain:isMain,camp:currentCamp});}
+      return;
+    }
+    // 들여쓰기 보조계좌
+    var m2=line.match(/^(\s+)(\d{8,})\(([^)]+)\)(.*)/);
+    if(m2&&parsed.length>0){
+      var isMain2=(m2[4]||'').indexOf('o')>=0||(m2[4]||'').indexOf('O')>=0;
+      var bankRaw2=m2[3].trim(),bankCode2=BMAP[bankRaw2]||BMAP[bankRaw2.replace('뱅크','')]||'';
+      if(isMain2){var last=parsed[parsed.length-1];last.accountNumber=m2[2].trim();last.bankCode=bankCode2;last.bankName=bankRaw2;}
+    }
+  });
+  return parsed;
 };
 
 // parse 분리 함수
@@ -33116,6 +33182,8 @@ window._biApply=function(list){
         if(d.phone  &&!od.phone)      upd.phone=d.phone;
         if(d.email  &&!od.email)      upd.email=d.email;
         if(d.bankNum&&!od.bankAccount)upd.bankAccount=d.bankNum;
+        if(d.accountNumber)           upd.accountNumber=d.accountNumber;
+        if(d.bankCode)                upd.bankCode=d.bankCode;
         if(d.bankName&&!od.bankName)  upd.bankName=d.bankName;
         if(d.carNum &&!od.carNum)     upd.carNum=d.carNum;
         // ★ 세금계산서 필드
