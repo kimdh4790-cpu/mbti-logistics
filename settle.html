@@ -32576,8 +32576,13 @@ function recalcAllSettlements(){
 
     // ★ 아이디지원 재계산 전 기존 값 초기화
     _settleCache.forEach(function(s){
-      if((s.etcPlusReason||'').indexOf('아이디지원')>=0&&(s.etcPlusReason||'').indexOf('재계산')>=0){
-        s.etcPlus=0;s.etcPlusReason='';
+      if((s.etcPlusReason||'').indexOf('아이디지원')>=0){
+        // 아이디지원 항목만 제거, 나머지(보장성 등) 유지
+        var parts=(s.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')<0;});
+        var idAmt=(s.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')>=0;})
+          .reduce(function(sum,p){var m=p.match(/(\d+)원$/);return sum+(m?parseInt(m[1]):0);},0);
+        s.etcPlus=Math.max(0,(s.etcPlus||0)-idAmt);
+        s.etcPlusReason=parts.join(' / ');
       }
     });
 
