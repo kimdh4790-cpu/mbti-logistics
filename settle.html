@@ -32585,15 +32585,14 @@ function recalcAllSettlements(){
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
 
-    // ★ 아이디지원 재계산 전 기존 값 초기화
+    // ★ 아이디지원 재계산 전 — etcPlus/etcPlusReason Firestore 완전 리셋
+    var resetPromises=[];
     _settleCache.forEach(function(s){
-      if((s.etcPlusReason||'').indexOf('아이디지원')>=0){
-        // 아이디지원 항목만 제거, 나머지(보장성 등) 유지
-        var parts=(s.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')<0;});
-        var idAmt=(s.etcPlusReason||'').split(' / ').filter(function(p){return p.indexOf('아이디지원')>=0;})
-          .reduce(function(sum,p){var m=p.match(/(\d+)원$/);return sum+(m?parseInt(m[1]):0);},0);
-        s.etcPlus=Math.max(0,(s.etcPlus||0)-idAmt);
-        s.etcPlusReason=parts.join(' / ');
+      if(!s.id||s.isIdSupportCreated) return;
+      if((s.etcPlusReason||'').indexOf('아이디지원')>=0||(s.etcPlusReason||'').indexOf('정산보장')>=0){
+        // 아이디지원/보장성 모두 제거 후 재계산에서 다시 붙임
+        s.etcPlus=0; s.etcPlusReason='';
+        resetPromises.push(_db.collection('settlements').doc(s.id).update({etcPlus:0,etcPlusReason:''}).catch(function(){}));
       }
     });
 
