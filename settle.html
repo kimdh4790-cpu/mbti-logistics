@@ -40272,7 +40272,7 @@ function pageNotices(){
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
     var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
     var typeLabel={info:'공지',update:'업데이트',warning:'점검',event:'이벤트',payslip:'명세서',tax:'세금계산서'};
-    var list='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+    var list='<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg2)">';
     if(snap.empty){list+='<div class="empty"><div class="empty-icon">📢</div>아직 공지가 없습니다</div>';}
     snap.forEach(function(doc){
       var n=doc.data();
@@ -40282,16 +40282,15 @@ function pageNotices(){
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
       var delBtn=(isSA&&!isDriver)?'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
-      list+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;border-left:4px solid '+tc+';padding:12px 14px;margin-bottom:0;height:180px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:7px;flex-shrink:0">'
-        +'<div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">'
-        +'<span style="background:'+bg+';color:'+tc+';padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;flex-shrink:0">'+ic+' '+lb+'</span>'
-        +'<strong style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.title||'')+'</strong></div>'
-        +'<span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">'+dt+'</span>'
-        +'</div>'
-        +(n.body?'<div style="font-size:11px;color:var(--text2);line-height:1.6;overflow:hidden;flex:1">'+esc(n.body||'')+'</div>':'')
-        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--brand);flex-shrink:0">📎 첨부파일 보기</a>':'')
+      list+='<div style="padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
+        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
+        +'<span style="background:'+bg+';color:'+tc+';padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
+        +'<span style="font-size:10px;color:var(--text3);margin-left:auto">'+dt+'</span>'
         +delBtn
+        +'</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.title||'')+'</div>'
+        +(n.body?'<div style="font-size:12px;color:var(--text3);line-height:1.55;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all">'+esc((n.body||'').slice(0,80))+'</div>':'')
+        +(n.fileUrl?'<div style="margin-top:6px;font-size:11px;color:var(--brand)">📎 첨부파일</div>':'')
         +'</div>';
     });
     list+='</div>';
