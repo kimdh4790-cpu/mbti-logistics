@@ -32574,17 +32574,14 @@ function recalcAllSettlements(){
       var deductTotal=(x.dmg||0)+empIns+workIns+(x.adv||0)+(x.eq||0)+(x.etcMinus||0);
       var net=taxBase-deductTotal;
 
-      // ★ etcPlus/etcPlusReason은 아이디지원 재계산에서 별도 처리
-      // 기본 재계산에서는 보장성만 저장 (아이디지원 제외 금액 기준)
+      // ★ etcPlus/etcPlusReason은 마지막 finalPromises에서만 저장
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
-        etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
       };
       if(Object.keys(_xOv).length) update.priceOverride=_xOv;
-      // _baseForIdSupport 저장 (아이디지원 재계산 후 net 재계산용)
       x._baseForIdSupport={newDamt:newDamt,newRamt:newRamt,fincVal:fincVal,empIns:empIns,workIns:workIns,guarantee:_recalcEtcPlus,guaranteeReason:_recalcEtcPlusReason};
 
       promises.push(_db.collection('settlements').doc(x.id).update(update)
@@ -32697,14 +32694,17 @@ function recalcAllSettlements(){
     }
 
     Promise.all(idPromises).then(function(){
-      // ★ 아이디지원 포함한 최종 net 재계산 후 저장
+      // ★ 아이디지원 포함 최종 etcPlus + net 한 번만 저장
       var finalPromises=[];
       _settleCache.forEach(function(s){
         if(!s.id||s.isIdSupportCreated) return;
         var b=s._baseForIdSupport;
         if(!b) return;
-        var finalEtcPlus=s.etcPlus||0;
-        var finalTaxBase=(b.newDamt||0)+(b.newRamt||0)+(s.fresh||0)+(b.fincVal||0)+(s.nocont||0)+finalEtcPlus+(s.etcPlusTL||0);
+        // 보장성 + 아이디지원 합산
+        var idAmt=s.etcPlus||0; // 아이디지원 재계산에서 메모리에 저장된 값
+        var totalEtcPlus=(b.guarantee||0)+idAmt;
+        var totalEtcPlusReason=[b.guaranteeReason,s.etcPlusReason].filter(Boolean).join(' / ');
+        var finalTaxBase=(b.newDamt||0)+(b.newRamt||0)+(s.fresh||0)+(b.fincVal||0)+(s.nocont||0)+totalEtcPlus+(s.etcPlusTL||0);
         var finalSupply=Math.round(finalTaxBase/1.1);
         var finalWage=Math.round(finalSupply*0.654);
         var finalEmp=finalWage>=800000?Math.floor(finalWage*0.008/10)*10:0;
@@ -32712,6 +32712,7 @@ function recalcAllSettlements(){
         var finalDeduct=(s.dmg||0)+finalEmp+finalWork+(s.adv||0)+(s.eq||0)+(s.etcMinus||0);
         var finalNet=finalTaxBase-finalDeduct;
         finalPromises.push(_db.collection('settlements').doc(s.id).update({
+          etcPlus:totalEtcPlus, etcPlusReason:totalEtcPlusReason,
           totalAmt:finalTaxBase, vatIncome:finalTaxBase, supplyAmt:finalSupply,
           monthlyWage:finalWage, emp:finalEmp, work:finalWork,
           deduct:finalDeduct, net:finalNet
