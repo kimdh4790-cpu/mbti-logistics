@@ -40283,8 +40283,8 @@ function pageNotices(){
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
       var delBtn=(isSA&&!isDriver)?'<button onclick="event.stopPropagation();_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
-      var bodyOpen=(_nIdx===0)?'block':'none';
-      var arrChar=(_nIdx===0)?'▲':'▼';
+      var bodyOpen='none';
+      var arrChar='▼';
       list+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">'
         +'<div style="padding:14px;cursor:pointer" onclick="(function(hd){var bd=hd.nextElementSibling;if(!bd)return;var op=bd.style.display===\'block\';bd.style.display=op?\'none\':\'block\';hd.querySelector(\'.narr\').textContent=op?\'▼\':\'▲\';})(this)">'
         +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
