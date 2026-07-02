@@ -32585,17 +32585,17 @@ function recalcAllSettlements(){
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
 
-    // ★ 아이디지원 재계산 전 — etcPlus/etcPlusReason Firestore 완전 리셋
+    // ★ 아이디지원 재계산 전 — etcPlus/etcPlusReason Firestore 완전 리셋 후 재계산
     var resetPromises=[];
     _settleCache.forEach(function(s){
       if(!s.id||s.isIdSupportCreated) return;
       if((s.etcPlusReason||'').indexOf('아이디지원')>=0||(s.etcPlusReason||'').indexOf('정산보장')>=0){
-        // 아이디지원/보장성 모두 제거 후 재계산에서 다시 붙임
         s.etcPlus=0; s.etcPlusReason='';
         resetPromises.push(_db.collection('settlements').doc(s.id).update({etcPlus:0,etcPlusReason:''}).catch(function(){}));
       }
     });
 
+    Promise.all(resetPromises).then(function(){
     // ★ 아이디지원 재계산 (_settleCache dateRoutes 기반)
     var _idRules=window._idSupportRules||[];
     if(_idRules.length){
@@ -32695,6 +32695,7 @@ function recalcAllSettlements(){
       toast('✅ 재계산 완료 ('+changed+'건)');
       _reloadSettlePage();
     });
+    }); // resetPromises end
   }).catch(function(e){toast('❌ 기사 정보 로딩 실패: '+e.message);});
 }
 
