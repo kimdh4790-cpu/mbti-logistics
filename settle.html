@@ -7623,10 +7623,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   dealerId:settlements[0]&&settlements[0].dealerId||''};
                 settlements.push(ts);
               } else {
-                // 엑셀에 있는 기사 — etcPlus로 가산
+                // 엑셀에 있는 기사 — etcPlus로 가산 (중복 방지)
+                var pv2=(ts.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
                 ts.etcPlus = (ts.etcPlus||0) + tot;
-                var pv = ts.etcPlusReason||'';
-                ts.etcPlusReason = (pv?pv+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
+                ts.etcPlusReason = (pv2?pv2+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
               }
             });
           })();
@@ -28224,7 +28224,7 @@ function _mgrLoadTodayIn(did, store){
         '</td>'+
       '</tr>';
     });
-    html+='</tbody></table></div>';
+    html+='</tbody></table>';
     list.innerHTML=html;
 
     // 수정 버튼
@@ -31641,22 +31641,7 @@ function openSE(id){
   var cached=(_settleCache||[]).find(function(x){
     return x.id===id||x.fbId===id||(x.userId+'_'+x.month)===id;
   });
-  if(cached){
-    // dateRoutes 없으면 Firestore에서 보완 후 열기
-    if(!cached.dateRoutes||!Object.keys(cached.dateRoutes||{}).length){
-      _db.collection('settlements').doc(id).get().then(function(snap){
-        if(snap.exists){
-          var fresh=snap.data();
-          if(fresh.dateRoutes) cached.dateRoutes=fresh.dateRoutes;
-          if(fresh.dateFresh) cached.dateFresh=fresh.dateFresh;
-        }
-        _showSEModal(cached);
-      }).catch(function(){_showSEModal(cached);});
-    } else {
-      _showSEModal(cached);
-    }
-    return;
-  }
+  if(cached){_showSEModal(cached);return;}
   // Firebase에서 조회
   _db.collection('settlements').doc(id).get()
     .then(function(snap){
@@ -31902,7 +31887,7 @@ if(s.dateRoutes&&Object.keys(s.dateRoutes).length){
       html+='</div>';
     }
     html+='</div>';
-    html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:320px">';
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
     html+='<thead><tr style="background:rgba(59,130,246,.1)"><th style="padding:4px 6px;text-align:left">날짜</th><th style="padding:4px 6px;text-align:left">라우트</th><th style="padding:4px 6px;text-align:right">배송</th><th style="padding:4px 6px;text-align:right">반품</th><th style="padding:4px 6px;text-align:right">프레시백</th></tr></thead><tbody>';
     pageDates.forEach(function(dt){
       var routeMap=dRoutes[dt]||{};
@@ -32636,12 +32621,29 @@ function recalcAllSettlements(){
         });
         if(!tot) return;
         if(toS){
+          // ★ etcPlusReason 중복 방지 — 기존 아이디지원 항목 제거 후 재설정
+          var pv=(toS.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
           toS.etcPlus=(toS.etcPlus||0)+tot;
-          var pv=toS.etcPlusReason||'';
-          toS.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') 재계산';
+          toS.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+tot+'원';
           promises.push(_db.collection('settlements').doc(toS.id).update({
             etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
           }).catch(function(){}));
+        } else {
+          // ★ toId 기사가 settlements에 없는 경우 — 신규 문서 생성
+          var did2=_CU.dealerId||_CU.uid;
+          var month=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
+          var newRef=_db.collection('settlements').doc();
+          var newDoc={
+            dealerId:did2, driver:tid, userId:tid, name:tid,
+            month:month, gross:0, net:tot, etcPlus:tot,
+            etcPlusReason:'아이디지원('+fid+') '+tot+'원',
+            etcMinus:0, adv:0, dmg:0, tax:0, emp:0, work:0,
+            cnt:0, income:tot, vatIncome:tot, supplyAmt:tot,
+            createdAt:new Date().toISOString(),
+            expireAt:_settlementExpireAt?_settlementExpireAt():null
+          };
+          promises.push(_db.collection('settlements').doc(newRef.id).set(newDoc).catch(function(){}));
+          toast('⚠️ '+tid+' 기사 settlements 신규 생성');
         }
       });
     }
@@ -40287,9 +40289,8 @@ function pageNotices(){
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
     var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
     var typeLabel={info:'공지',update:'업데이트',warning:'점검',event:'이벤트',payslip:'명세서',tax:'세금계산서'};
-    var list='<div style="display:flex;flex-direction:column;gap:8px">';
+    var list='<div style="display:flex;flex-direction:column;gap:10px">';
     if(snap.empty){list+='<div class="empty"><div class="empty-icon">📢</div>아직 공지가 없습니다</div>';}
-    var _nIdx=0;
     snap.forEach(function(doc){
       var n=doc.data();
       var dt=n.createdAt&&n.createdAt.toDate?n.createdAt.toDate().toLocaleDateString('ko-KR'):'-';
@@ -40297,25 +40298,15 @@ function pageNotices(){
       var bg=typeColor[n.type]||'#dbeafe';
       var tc=typeTxtColor[n.type]||'#1e40af';
       var lb=typeLabel[n.type]||n.type;
-      var delBtn=(isSA&&!isDriver)?'<button onclick="event.stopPropagation();_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
-      var bodyOpen='none';
-      var arrChar='▼';
-      list+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">'
-        +'<div style="padding:14px;cursor:pointer" onclick="(function(hd){var bd=hd.nextElementSibling;if(!bd)return;var op=bd.style.display===\'block\';bd.style.display=op?\'none\':\'block\';hd.querySelector(\'.narr\').textContent=op?\'▼\':\'▲\';})(this)">'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
-        +'<span style="background:'+bg+';color:'+tc+';padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
-        +'<span style="font-size:10px;color:var(--text3);margin-left:auto">'+dt+'</span>'
-        +'<span class="narr" style="font-size:11px;color:var(--text3);margin-left:6px">'+arrChar+'</span>'
-        +delBtn
-        +'</div>'
-        +'<div style="font-size:13px;font-weight:700;color:var(--text);word-break:keep-all;line-height:1.4">'+esc(n.title||'')+'</div>'
-        +'</div>'
-        +((n.body||n.fileUrl)?'<div style="display:'+bodyOpen+';padding:0 14px 14px 14px;border-top:1px solid var(--border)">'
-          +(n.body?'<div style="padding-top:10px;font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap">'+esc(n.body||'')+'</div>':'')
-          +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:11px;color:var(--brand)">📎 첨부파일</a>':'')
-          +'</div>':'')
-        +'</div>';
-      _nIdx++;
+      var delBtn=(isSA&&!isDriver)?'<button onclick="_deleteNotice(\''+doc.id+'\')" style="padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>':'';
+      list+='<div class="card" style="border-left:4px solid '+tc+';'+(isDriver?'cursor:pointer':'')+';" '+(isDriver?'onclick="goPage(\'my_statements\')"':'')+'>'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="background:'+bg+';color:'+tc+';padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">'+ic+' '+lb+'</span>'
+        +'<strong style="font-size:14px">'+esc(n.title||'')+'</strong></div>'
+        +'<div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--text3);white-space:nowrap">'+dt+'</span>'+delBtn+'</div>'
+        +(n.body?'<div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;max-height:80px;overflow:hidden">'+esc((n.body||'').slice(0,200)+((n.body||'').length>200?'…':''))+'</div>':'')
+        +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--brand)">📎 첨부파일 보기</a>':'')+'</div>';
     });
     list+='</div>';
     c.innerHTML=form+list;
