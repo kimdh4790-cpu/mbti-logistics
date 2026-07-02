@@ -40272,7 +40272,7 @@ function pageNotices(){
     var typeColor={info:'#dbeafe',update:'#d1fae5',warning:'#fef3c7',event:'#fce7f3',payslip:'#d1fae5',tax:'#ede9fe'};
     var typeTxtColor={info:'#1e40af',update:'#065f46',warning:'#92400e',event:'#9d174d',payslip:'#065f46',tax:'#5b21b6'};
     var typeLabel={info:'공지',update:'업데이트',warning:'점검',event:'이벤트',payslip:'명세서',tax:'세금계산서'};
-    var list='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    var list='<div style="display:flex;flex-direction:column;gap:10px">';
     if(snap.empty){list+='<div class="empty"><div class="empty-icon">📢</div>아직 공지가 없습니다</div>';}
     snap.forEach(function(doc){
       var n=doc.data();
@@ -40289,8 +40289,8 @@ function pageNotices(){
         +'<span style="font-size:10px;color:var(--text3);margin-left:auto">'+dt+'</span>'
         +delBtn
         +'</div>'
-        +'<div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.title||'')+'</div>'
-        +(n.body?'<div id="nb-'+doc.id+'" style="display:none;margin-top:8px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:8px">'+esc(n.body||'')+'</div>':'')
+        +'<div style="font-size:13px;font-weight:700;color:var(--text);word-break:keep-all;line-height:1.4">'+esc(n.title||'')+'</div>'
+        +(n.body?'<div id="nb-'+doc.id+'" style="display:block;margin-top:8px;font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:8px">'+esc(n.body||'')+'</div>':'')
         +(n.fileUrl?'<a href="'+n.fileUrl+'" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--brand)">📎 첨부파일</a>':'')
         +'</div>';
     });
