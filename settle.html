@@ -28224,7 +28224,7 @@ function _mgrLoadTodayIn(did, store){
         '</td>'+
       '</tr>';
     });
-    html+='</tbody></table>';
+    html+='</tbody></table></div>';
     list.innerHTML=html;
 
     // 수정 버튼
@@ -31887,7 +31887,7 @@ if(s.dateRoutes&&Object.keys(s.dateRoutes).length){
       html+='</div>';
     }
     html+='</div>';
-    html+='<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:320px">';
     html+='<thead><tr style="background:rgba(59,130,246,.1)"><th style="padding:4px 6px;text-align:left">날짜</th><th style="padding:4px 6px;text-align:left">라우트</th><th style="padding:4px 6px;text-align:right">배송</th><th style="padding:4px 6px;text-align:right">반품</th><th style="padding:4px 6px;text-align:right">프레시백</th></tr></thead><tbody>';
     pageDates.forEach(function(dt){
       var routeMap=dRoutes[dt]||{};
