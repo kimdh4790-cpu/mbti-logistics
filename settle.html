@@ -45526,13 +45526,171 @@ function pagePayout(){
 function pagePayoutNew(){
   var did=_CU.dealerId||_CU.uid;
   var c=document.getElementById('content');
-  c.innerHTML='<div class="loading">⏳ 정산 데이터 로드 중...</div>';
 
-  // 미송금 정산 데이터 로드 (status: CALCULATED 또는 APPROVED)
-  _db.collection('settlements').where('dealerId','==',did)
-    .where('payoutStatus','in',['CALCULATED','APPROVED'])
-    .limit(5).get()
+  // 월 선택 UI 먼저 표시
+  var now=new Date();
+  var months=[];
+  for(var i=0;i<6;i++){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  var monthOpts=months.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
+
+  c.innerHTML=
+    '<div style="max-width:680px;margin:0 auto;padding:16px">'+
+      '<button onclick="pagePayout()" style="margin-bottom:12px;padding:6px 12px;background:var(--bg3);color:var(--text2);border:none;border-radius:6px;font-size:11px;cursor:pointer">← 뒤로</button>'+
+      '<div class="card">'+
+        '<div style="font-size:13px;font-weight:800;margin-bottom:12px">💸 송금 실행</div>'+
+        '<div style="margin-bottom:10px">'+
+          '<label style="font-size:11px;color:var(--text3)">정산 월 선택</label>'+
+          '<select id="pout-month" style="width:100%;margin-top:3px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text1);font-size:12px">'+
+            monthOpts+
+          '</select>'+
+        '</div>'+
+        '<button id="pout-preview-btn" style="width:100%;padding:12px;background:var(--acc);color:#000;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">🔍 실지급액 조회</button>'+
+      '</div>'+
+      '<div id="pout-preview"></div>'+
+    '</div>';
+
+  setTimeout(function(){
+    var btn=document.getElementById('pout-preview-btn');
+    if(btn) btn.onclick=function(){
+      var month=document.getElementById('pout-month').value;
+      _loadPayoutPreview(month, did);
+    };
+  },100);
+}
+
+function _loadPayoutPreview(month, did){
+  var preview=document.getElementById('pout-preview');
+  if(!preview) return;
+  preview.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
+
+  _db.collection('settlements').where('dealerId','==',did).where('month','==',month).get()
   .then(function(snap){
+    var settles=[];
+    snap.forEach(function(d){settles.push(Object.assign({id:d.id},d.data()));});
+    settles=settles.filter(function(s){return (s.net||0)>0;});
+
+    if(!settles.length){
+      preview.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">📋 '+month+' 정산 데이터 없음</div>';
+      return;
+    }
+
+    // 기사 계좌 조회
+    _db.collection('drivers').where('dealerId','==',did).get().then(function(dSnap){
+      var workerMap={};
+      dSnap.forEach(function(d){
+        var w=d.data();
+        var uid=w.userId||w.driverId||'';
+        if(uid) workerMap[uid]={bankCode:w.bankCode||'',account:w.accountNumber||'',holder:w.name||''};
+        if(w.name) workerMap[w.name]={bankCode:w.bankCode||'',account:w.accountNumber||'',holder:w.name||''};
+      });
+
+      var TRANSFER_FEE=200;
+      var totalAmt=settles.reduce(function(s,r){return s+(r.net||0);},0);
+      var totalFee=settles.length*TRANSFER_FEE;
+      var totalNeeded=totalAmt+totalFee;
+      var missingCount=0;
+
+      var rows=settles.map(function(s){
+        var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.name]||{};
+        var hasAccount=w.account&&w.bankCode;
+        if(!hasAccount) missingCount++;
+        var bankName=BANK_CODES&&BANK_CODES[w.bankCode]||w.bankCode||'-';
+        var isPaid=s.payoutStatus==='PAID';
+        return '<tr style="'+(isPaid?'opacity:.5':'')+'">'+
+          '<td style="padding:7px;font-weight:600">'+(s.driverName||s.name||s.userId||'')+(isPaid?' <span style="font-size:9px;color:#10b981">✅송금완료</span>':'')+' </td>'+
+          '<td style="padding:7px;text-align:right;color:#10b981;font-weight:700">₩'+(s.net||0).toLocaleString()+'</td>'+
+          '<td style="padding:7px;text-align:center">'+
+            (isPaid?'<span style="color:#10b981;font-size:10px">완료</span>':
+            hasAccount?'<span style="color:#10b981;font-size:10px">✅ '+esc(bankName)+'</span>':
+            '<span style="color:#ef4444;font-size:10px">❌ 미등록</span>')+
+          '</td>'+
+        '</tr>';
+      }).join('');
+
+      preview.innerHTML=
+        '<div class="card" style="margin-top:10px">'+
+          '<div style="font-size:11px;font-weight:700;margin-bottom:8px">📋 '+month+' 송금 대상 목록</div>'+
+          '<div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px">'+
+            '<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900">'+settles.length+'</div><div style="font-size:9px;color:var(--text3)">총 인원</div></div>'+
+            '<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#10b981">₩'+totalAmt.toLocaleString()+'</div><div style="font-size:9px;color:var(--text3)">실지급 총액</div></div>'+
+            '<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:var(--acc)">₩'+totalNeeded.toLocaleString()+'</div><div style="font-size:9px;color:var(--text3)">필요 예치금(수수료포함)</div></div>'+
+          '</div>'+
+          (missingCount>0?'<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:10px;color:#ef4444">⚠️ 계좌 미등록 '+missingCount+'명 — 기사 관리에서 계좌 등록하세요</div>':'')+
+          '<div style="overflow-x:auto">'+
+            '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+              '<thead><tr style="background:var(--bg3)">'+
+                '<th style="padding:7px;text-align:left">이름</th>'+
+                '<th style="padding:7px;text-align:right">실지급액</th>'+
+                '<th style="padding:7px;text-align:center">계좌</th>'+
+              '</tr></thead>'+
+              '<tbody>'+rows+'</tbody>'+
+            '</table>'+
+          '</div>'+
+          (missingCount===0?
+            '<button id="pout-execute-btn" style="width:100%;margin-top:12px;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💸 전체 송금 실행 ('+settles.length+'명 · ₩'+totalAmt.toLocaleString()+')</button>':
+            '<button disabled style="width:100%;margin-top:12px;padding:14px;background:var(--bg3);color:var(--text3);border:none;border-radius:10px;font-size:13px;cursor:not-allowed">계좌 미등록 인원 해결 후 가능</button>'
+          )+
+        '</div>';
+
+      setTimeout(function(){
+        var execBtn=document.getElementById('pout-execute-btn');
+        if(execBtn) execBtn.onclick=function(){
+          if(!confirm(month+' 정산 '+settles.length+'명 · ₩'+totalAmt.toLocaleString()+'원 송금을 실행합니다. 진행할까요?')) return;
+          _executePayout2(month, settles, workerMap, totalNeeded, did);
+        };
+      },100);
+    });
+  }).catch(function(e){
+    preview.innerHTML='<div style="color:var(--red)">오류: '+e.message+'</div>';
+  });
+}
+
+function _executePayout2(month, settles, workerMap, totalNeeded, did){
+  var TRANSFER_FEE=200;
+  _db.collection('settings').doc(did+'_wallet').get().then(function(snap){
+    var wallet=snap.exists?snap.data():{balance:0};
+    var balance=wallet.balance||0;
+    if(balance<totalNeeded){
+      toast('❌ 예치금 부족! 필요: ₩'+totalNeeded.toLocaleString()+' / 잔액: ₩'+balance.toLocaleString());
+      return;
+    }
+    var masterKey='SETTLE_'+Date.now()+'_'+Math.random().toString(36).slice(2,8).toUpperCase();
+    var logs=[]; var successCount=0,failedCount=0,totalAmt=0;
+    var chain=Promise.resolve();
+    settles.forEach(function(s){
+      chain=chain.then(function(){
+        if(s.payoutStatus==='PAID') return;
+        var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.name]||{};
+        var amt=s.net||0;
+        if(!amt||amt<=0){logs.push({name:s.driverName||s.name,amount:amt,status:'FAILED',reason:'금액 오류'});failedCount++;return;}
+        if(!w.account||!w.bankCode){logs.push({name:s.driverName||s.name,amount:amt,status:'FAILED',reason:'계좌 미등록'});failedCount++;return;}
+        var txId='TX_'+Math.random().toString(36).slice(2,10).toUpperCase();
+        logs.push({name:s.driverName||s.name,amount:amt,status:'SUCCESS',txId:txId,bankCode:w.bankCode,account:w.account});
+        successCount++; totalAmt+=amt;
+        return _db.collection('settlements').doc(s.id).update({payoutStatus:'PAID',payoutAt:new Date().toISOString(),payoutTxId:txId});
+      });
+    });
+    chain.then(function(){
+      var spent=totalAmt+(successCount*TRANSFER_FEE);
+      var batch=_db.batch();
+      batch.set(_db.collection('settings').doc(did+'_wallet'),{balance:balance-spent},{merge:true});
+      batch.set(_db.collection('payout_sessions').doc(),{
+        dealerId:did,month:month,masterKey:masterKey,
+        totalCount:settles.length,successCount:successCount,failedCount:failedCount,
+        totalAmount:totalAmt,totalFee:successCount*TRANSFER_FEE,
+        status:failedCount===0?'COMPLETED':successCount>0?'PARTIAL':'FAILED',
+        logs:logs,createdAt:new Date().toISOString()
+      });
+      return batch.commit();
+    }).then(function(){
+      toast('✅ 송금 완료: '+successCount+'명 성공'+(failedCount>0?' / '+failedCount+'명 실패':''));
+      pagePayout();
+    }).catch(function(e){toast('❌ 오류: '+e.message);});
+  });
+}
     var settles=[];
     snap.forEach(function(d){settles.push(Object.assign({id:d.id},d.data()));});
 
