@@ -32574,156 +32574,23 @@ function recalcAllSettlements(){
       var deductTotal=(x.dmg||0)+empIns+workIns+(x.adv||0)+(x.eq||0)+(x.etcMinus||0);
       var net=taxBase-deductTotal;
 
-      // ★ etcPlus/etcPlusReason은 마지막 finalPromises에서만 저장
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
+        etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
       };
       if(Object.keys(_xOv).length) update.priceOverride=_xOv;
-      x._baseForIdSupport={newDamt:newDamt,newRamt:newRamt,fincVal:fincVal,empIns:empIns,workIns:workIns,guarantee:_recalcEtcPlus,guaranteeReason:_recalcEtcPlusReason};
 
       promises.push(_db.collection('settlements').doc(x.id).update(update)
         .then(function(){changed++;Object.assign(x,update);}).catch(function(e){console.warn(e);}));
     });
 
-    // ★ 재계산 전 모든 기사 etcPlus/etcPlusReason 완전 리셋
-    var resetPromises=[];
-    _settleCache.forEach(function(s){
-      if(!s.id||s.isIdSupportCreated) return;
-      s.etcPlus=0; s.etcPlusReason='';
-      resetPromises.push(_db.collection('settlements').doc(s.id).update({etcPlus:0,etcPlusReason:''}).catch(function(){}));
+    Promise.all(promises).then(function(){
+      toast('✅ 재계산 완료 ('+changed+'건)');
+      _reloadSettlePage();
     });
-
-    Promise.all(resetPromises).then(function(){
-    // ★ 아이디지원 재계산 (_settleCache dateRoutes 기반)
-    var idPromises=[];
-    var _idRules=window._idSupportRules||[];
-    if(_idRules.length){
-      function _ndR(d){
-        if(!d) return '';
-        var s=String(d).trim().replace(/[.\/]/g,'-').replace(/-\s*/g,'-').replace(/\s*-/g,'-').replace(/-+$/,'').trim();
-        var p=s.split('-').map(function(xi){return xi.trim();}).filter(Boolean);
-        if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}
-        return '';
-      }
-      _idRules.forEach(function(rule){
-        var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
-        var tid=(rule.toId||'').replace(/@df$/i,'').trim();
-        var fromS=_settleCache.find(function(s){return (s.userId||s.driver||'').replace(/@df$/i,'').trim()===fid;});
-        var toS=_settleCache.find(function(s){return (s.userId||s.driver||'').replace(/@df$/i,'').trim()===tid;});
-        if(!fromS||!fromS.dateRoutes) return;
-        var _dates=(rule.dates||[]).map(_ndR).filter(Boolean).sort();
-        var rStart=_ndR(rule.startDate)||(_dates.length?_dates[0]:'');
-        var rEnd=_ndR(rule.endDate)||(_dates.length?_dates[_dates.length-1]:'');
-        var tR=rule.routes||[];
-        var _dateOkR=function(dt){
-          if(_dates.length) return _dates.indexOf(dt)>=0;
-          if(!rStart&&!rEnd) return false;
-          return (!rStart||dt>=rStart)&&(!rEnd||dt<=rEnd);
-        };
-        var tot=0;
-        Object.keys(fromS.dateRoutes).forEach(function(dt){
-          if(!_dateOkR(dt)) return;
-          Object.keys(fromS.dateRoutes[dt]).forEach(function(rt){
-            if(tR.length&&tR.indexOf(rt)<0) return;
-            var rd=fromS.dateRoutes[dt][rt]||{};
-            var price=RPRICE[rt]||0;
-            if(!price) return;
-            var amt=((rd.cnt||0)-(rd.ret||0))*price;
-            if(amt<=0) return;
-            tot+=amt;
-          });
-        });
-        if(!tot) return;
-        if(toS&&!toS.isIdSupportCreated){
-          // ★ etcPlusReason 중복 방지 — 기존 아이디지원 항목 제거 후 재설정
-          var pv=(toS.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
-          toS.etcPlus=(toS.etcPlus||0)+tot;
-          toS.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+tot+'원';
-          idPromises.push(_db.collection('settlements').doc(toS.id).update({
-            etcPlus:toS.etcPlus,etcPlusReason:toS.etcPlusReason
-          }).catch(function(){}));
-        } else if(!toS){
-          // ★ toId가 엑셀에 없는 용차 기사 — 건수/금액 기반 신규 settlement 생성
-          var did2=_CU.dealerId||_CU.uid;
-          var month2=(_settleCache[0]&&_settleCache[0].month)||new Date().toISOString().slice(0,7);
-          // fromS dateRoutes에서 해당 날짜/라우트 건수 집계
-          var toCnt=0,toRet=0,toDamt=0,toRamt=0,toFresh=0;
-          var _dates3=(rule.dates||[]).map(_ndR).filter(Boolean);
-          var rStart3=_ndR(rule.startDate)||(_dates3.length?_dates3[0]:'');
-          var rEnd3=_ndR(rule.endDate)||(_dates3.length?_dates3[_dates3.length-1]:'');
-          var tR3=rule.routes||[];
-          var _dateOk3=function(dt){
-            if(_dates3.length) return _dates3.indexOf(dt)>=0;
-            return (!rStart3||dt>=rStart3)&&(!rEnd3||dt<=rEnd3);
-          };
-          Object.keys(fromS.dateRoutes||{}).forEach(function(dt){
-            if(!_dateOk3(dt)) return;
-            Object.keys(fromS.dateRoutes[dt]).forEach(function(rt){
-              if(tR3.length&&tR3.indexOf(rt)<0) return;
-              var rd=fromS.dateRoutes[dt][rt]||{};
-              var price=RPRICE[rt]||0;
-              toCnt+=(rd.cnt||0); toRet+=(rd.ret||0);
-              toDamt+=(rd.cnt||0)*price; toRamt+=(rd.ret||0)*price;
-            });
-          });
-          // fromS dateFresh에서 해당 날짜 프레시백 집계
-          Object.keys(fromS.dateFresh||{}).forEach(function(dt){
-            if(!_dateOk3(dt)) return;
-            toFresh+=(fromS.dateFresh[dt]||0);
-          });
-          var newGross=toDamt+toRamt+toFresh;
-          var newRef2=_db.collection('settlements').doc();
-          var newDoc={
-            dealerId:did2, driver:tid, userId:tid, name:tid,
-            month:month2,
-            gross:newGross, net:newGross,
-            cnt:toCnt, rcnt:toRet, damt:toDamt, ramt:toRamt, fresh:toFresh,
-            etcPlus:0, etcPlusReason:'', etcMinus:0, adv:0, dmg:0, tax:0, emp:0, work:0,
-            income:newGross, vatIncome:newGross, supplyAmt:Math.round(newGross/1.1),
-            jobsub:'쿠팡', camp:fromS.camp||'',
-            isIdSupportCreated:true,
-            createdAt:new Date().toISOString(),
-            expireAt:_settlementExpireAt?_settlementExpireAt():null
-          };
-          idPromises.push(_db.collection('settlements').doc(newRef2.id).set(newDoc).catch(function(){}));
-        }
-      });
-    }
-
-    Promise.all(idPromises).then(function(){
-      // ★ 아이디지원 포함 최종 etcPlus + net 한 번만 저장
-      var finalPromises=[];
-      _settleCache.forEach(function(s){
-        if(!s.id||s.isIdSupportCreated) return;
-        var b=s._baseForIdSupport;
-        if(!b) return;
-        // 보장성 + 아이디지원 합산
-        var idAmt=s.etcPlus||0; // 아이디지원 재계산에서 메모리에 저장된 값
-        var totalEtcPlus=(b.guarantee||0)+idAmt;
-        var totalEtcPlusReason=[b.guaranteeReason,s.etcPlusReason].filter(Boolean).join(' / ');
-        var finalTaxBase=(b.newDamt||0)+(b.newRamt||0)+(s.fresh||0)+(b.fincVal||0)+(s.nocont||0)+totalEtcPlus+(s.etcPlusTL||0);
-        var finalSupply=Math.round(finalTaxBase/1.1);
-        var finalWage=Math.round(finalSupply*0.654);
-        var finalEmp=finalWage>=800000?Math.floor(finalWage*0.008/10)*10:0;
-        var finalWork=Math.floor(finalWage*0.0088/10)*10;
-        var finalDeduct=(s.dmg||0)+finalEmp+finalWork+(s.adv||0)+(s.eq||0)+(s.etcMinus||0);
-        var finalNet=finalTaxBase-finalDeduct;
-        finalPromises.push(_db.collection('settlements').doc(s.id).update({
-          etcPlus:totalEtcPlus, etcPlusReason:totalEtcPlusReason,
-          totalAmt:finalTaxBase, vatIncome:finalTaxBase, supplyAmt:finalSupply,
-          monthlyWage:finalWage, emp:finalEmp, work:finalWork,
-          deduct:finalDeduct, net:finalNet
-        }).catch(function(){}));
-      });
-      Promise.all(finalPromises).then(function(){
-        toast('✅ 재계산 완료 ('+changed+'건)');
-        _reloadSettlePage();
-      });
-    });
-    }); // resetPromises end
   }).catch(function(e){toast('❌ 기사 정보 로딩 실패: '+e.message);});
 }
 
