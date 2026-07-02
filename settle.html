@@ -11140,6 +11140,9 @@ function _downloadRosterExcel(){
   if(!weekStart||!(weekStart instanceof Date)){toast('❌ 주간 데이터 없음');return;}
   var drivers=window._rosterDrivers||[];
   if(!drivers.length){toast('⚠️ 기사 데이터 없음');return;}
+  // ★ 현재 선택된 캠프 필터 적용
+  var campFilter=(document.getElementById('roster-camp-filter')||{value:'all'}).value;
+  if(campFilter&&campFilter!=='all') drivers=drivers.filter(function(d){return d.camp===campFilter;});
 
   // ★ 물류앱과 동일: ExcelJS 동적 로드
   function _doExcelDownload_orig(ExcelJS){
