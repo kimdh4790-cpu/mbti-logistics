@@ -947,7 +947,7 @@ async function loadNotices(){
 }
 
 
-async function deleteNotice(id){
+window.deleteNotice = async function deleteNotice(id){
   if(!confirm('이 공지를 삭제하시겠습니까?')) return;
   try{
     await deleteDoc(doc(db,'notices',id));
