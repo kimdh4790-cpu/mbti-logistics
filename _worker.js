@@ -818,29 +818,78 @@ async function submitReserve(){
               const now2 = new Date().toISOString();
               const ws2 = url.searchParams.get('ws') || '';
               const did2 = url.searchParams.get('did') || '';
-              // 요청자 docId 원본 조회 (driverId, dayIndex, route 필요)
-              const fromDocUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId;
-              const fromDocRes = await fetch(fromDocUrl,{headers:{'Authorization':'Bearer '+fsToken2}});
-              const fromDoc = await fromDocRes.json();
-              const fromFields = fromDoc.fields||{};
-              const fromDriverId = fromFields.driverId?.stringValue||'';
-              const fromDayIndex = fromFields.dayIndex?.integerValue||fromFields.dayIndex?.doubleValue||0;
-              // 수락자 docId 원본 조회
-              const toDocUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+body.myDocId;
-              const toDocRes = await fetch(toDocUrl,{headers:{'Authorization':'Bearer '+fsToken2}});
-              const toDoc = await toDocRes.json();
-              const toFields = toDoc.fields||{};
-              const toDriverId = toFields.driverId?.stringValue||'';
-              const toDayIndex = toFields.dayIndex?.integerValue||toFields.dayIndex?.doubleValue||0;
               const baseUrl2 = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week';
-              // 요청자: 원래 휴무일(fromDayIndex) → 출근, 수락자 휴무일(toDayIndex) → 휴무 추가
-              await fetch(fromDocUrl+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-              // 수락자: 원래 휴무일(toDayIndex) → 출근, 요청자 휴무일(fromDayIndex) → 휴무 추가
-              await fetch(toDocUrl+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
-              // 요청자의 새 휴무 (수락자 날짜)
-              await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:parseInt(toDayIndex)},status:{stringValue:'off'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-              // 수락자의 새 휴무 (요청자 날짜)
-              await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:parseInt(fromDayIndex)},status:{stringValue:'off'},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+
+              // 요청자 휴무 문서 조회
+              const fromDocRes = await fetch(baseUrl2+'/'+docId,{headers:{'Authorization':'Bearer '+fsToken2}});
+              const fromFields = (await fromDocRes.json()).fields||{};
+              const fromDriverId = fromFields.driverId?.stringValue||'';
+              const fromDayIndex = parseInt(fromFields.dayIndex?.integerValue||fromFields.dayIndex?.doubleValue||0);
+
+              // 수락자 휴무 문서 조회
+              const toDocRes = await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}});
+              const toFields = (await toDocRes.json()).fields||{};
+              const toDriverId = toFields.driverId?.stringValue||'';
+              const toDayIndex = parseInt(toFields.dayIndex?.integerValue||toFields.dayIndex?.doubleValue||0);
+
+              // 요청자의 수락자 날짜 출근 문서 조회 (라우트 가져오기)
+              const rq = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
+                {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
+                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:fromDriverId}}},
+                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:toDayIndex}}}
+              ]}},limit:1}});
+              const rqRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq});
+              const rqData = await rqRes.json();
+              const fromToDay = rqData[0]?.document?.fields||{};
+              const fromToDayRoute = fromToDay.route?.stringValue||'';
+              const fromToDayRot = fromToDay.rotation?.stringValue||'';
+              const fromToDayDocId = rqData[0]?.document?.name?.split('/')?.pop()||'';
+
+              // 수락자의 요청자 날짜 출근 문서 조회 (라우트 가져오기)
+              const rq2 = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
+                {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
+                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},
+                {fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:fromDayIndex}}}
+              ]}},limit:1}});
+              const rq2Res = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq2});
+              const rq2Data = await rq2Res.json();
+              const toFromDay = rq2Data[0]?.document?.fields||{};
+              const toFromDayRoute = toFromDay.route?.stringValue||'';
+              const toFromDayRot = toFromDay.rotation?.stringValue||'';
+              const toFromDayDocId = rq2Data[0]?.document?.name?.split('/')?.pop()||'';
+
+              // 요청자: 휴무일 → 출근 (수락자 라우트로)
+              await fetch(baseUrl2+'/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
+                {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:toFromDayRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+
+              // 수락자: 휴무일 → 출근 (요청자 라우트로)
+              await fetch(baseUrl2+'/'+body.myDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
+                {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:fromToDayRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+
+              // 요청자: 수락자 날짜에 휴무 (기존 출근 문서 off로)
+              if(fromToDayDocId){
+                await fetch(baseUrl2+'/'+fromToDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
+                  {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                  body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+              } else {
+                await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:fromDriverId},dayIndex:{integerValue:toDayIndex},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
+              }
+
+              // 수락자: 요청자 날짜에 휴무
+              if(toFromDayDocId){
+                await fetch(baseUrl2+'/'+toFromDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
+                  {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                  body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+              } else {
+                await fetch(baseUrl2,{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
+                  body:JSON.stringify({fields:{dealerId:{stringValue:did2},weekStart:{stringValue:ws2},driverId:{stringValue:toDriverId},dayIndex:{integerValue:fromDayIndex},status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
+              }
+
               return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
             }
             const did = url.searchParams.get('did') || '';
