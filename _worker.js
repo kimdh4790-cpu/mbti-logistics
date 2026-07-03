@@ -94,12 +94,17 @@ async function fetchAsset(path, request, env) {
 
 // ★ serveKVFile — fetchAsset 래퍼 (도메인별 라우팅용)
 async function serveKVFile(env, fileName, contentType) {
+  const _NAVER_META = '<meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />';
+  const _injectMeta = (html) => html.replace('<head>', '<head>' + _NAVER_META);
   try {
     // KV 우선 서빙
     const _e = env || _env_ref;
     if (_e && _e.DONWAY_ASSETS) {
       const kvVal = await _e.DONWAY_ASSETS.get(fileName, 'text');
-      if (kvVal) return new Response(kvVal, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
+      if (kvVal) {
+        const body = contentType === 'text/html' ? _injectMeta(kvVal) : kvVal;
+        return new Response(body, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
+      }
     }
     // KV 없으면 GitHub Raw
     const PAGES_FILES = {};
@@ -2086,6 +2091,31 @@ Crawl-delay: 1
 Sitemap: https://donway.ai.kr/sitemap.xml`,
         { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } }
       );
+    }
+
+    // ── sitemap.xml 직접 반환 ──
+    if (path === '/sitemap.xml') {
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://donway.ai.kr/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://donway.ai.kr/join</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://donway.ai.kr/register</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>`;
+      return new Response(sitemap, {
+        headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' }
+      });
     }
 
     // .html 파일은 슬러그 라우팅 제외 (정적 파일 직접 서빙)
