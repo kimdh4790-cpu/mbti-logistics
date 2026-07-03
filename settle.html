@@ -46118,8 +46118,7 @@ function _downloadPayoutExcel(month, settles, workerMap){
       if(sv.indexOf(',')>=0||sv.indexOf('"')>=0) sv='"'+sv.replace(/"/g,'""')+'"';
       return sv;
     }).join(',');
-  }).join('
-');
+  }).join('\r\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
