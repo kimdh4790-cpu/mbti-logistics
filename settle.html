@@ -41697,9 +41697,31 @@ function _toggleBundle(companyId, bundleId, value){
   // 업종 필드도 저장
   if(value) update.industryType=bundleId;
   fields.forEach(function(f){update[f]=value;});
+
+  // ★ services 배열 자동 연동 (DONWAY/FILO/mbtico 통합 아이디)
+  var SVC_MAP={
+    settle:'settle', delivery:'delivery', cleaning:'cleaning',
+    insurance:'insurance', construction:'construction', golf:'golf',
+    academy:'academy', beauty:'beauty', logistics:'logistics',
+    freelance:'freelance', care:'care', restaurant:'restaurant',
+    universal:'universal', qr_payroll:'qr', filo_combo:'filo', shopping:'shopping'
+  };
+  var svcKey=SVC_MAP[bundleId];
+  if(svcKey){
+    if(value){
+      update.services=firebase.firestore.FieldValue.arrayUnion(svcKey);
+    } else {
+      update.services=firebase.firestore.FieldValue.arrayRemove(svcKey);
+    }
+  }
+  // filo_combo 활성화 시 filo.ai.kr 연동 플래그
+  if(bundleId==='filo_combo'&&value) update.filoLinked=true;
+  // qr_payroll 활성화 시 QR 연동 플래그
+  if(bundleId==='qr_payroll'&&value){ update.services=firebase.firestore.FieldValue.arrayUnion('qr','payroll'); }
+
   _db.collection('companies').doc(companyId).set(update,{merge:true})
   .then(function(){
-    toast((value?'✅ ':'⛔ ')+bundleId+' '+(value?'활성화':'비활성화')+' 완료');
+    toast((value?'✅ ':'⛔ ')+bundleId+' '+(value?'활성화 — 통합 아이디 연동 완료':'비활성화')+' 완료');
     var featTab=document.getElementById('admin-tab-2');
     if(featTab) _loadFeaturePanel(featTab);
   }).catch(function(e){toast('❌ '+e.message);});
