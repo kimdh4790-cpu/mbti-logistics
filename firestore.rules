@@ -67,7 +67,7 @@ service cloud.firestore {
       allow read, create: if isSuperAdmin();
     }
     match /alimtalk_queue/{docId} {
-      allow create: if true;
+      allow create: if isAuth();
       allow read, update: if isSuperAdmin();
     }
     match /join_requests/{docId} {
@@ -202,8 +202,9 @@ service cloud.firestore {
     match /lunch_alerts/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /maintenance/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /memberships/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /roster_week/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /roster_week/{docId}            { allow read: if true; allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /roster_swaps/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /shift_swap_requests/{docId}    { allow read: if true; allow create: if isAuth(); allow update, delete: if canOwn(); }
     match /settlements_universal/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /tax_docs/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /universal_companies/{docId}    { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -225,7 +226,7 @@ service cloud.firestore {
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /audit_logs/{docId}             { allow read: if isSuperAdmin(); allow create: if isAuth(); }
-    match /used_biz_numbers/{docId}       { allow read, write: if true; }
+    match /used_biz_numbers/{docId}       { allow read: if true; allow write: if isAuth(); }
 
     match /{document=**} {
       allow read, write: if isSuperAdmin();
