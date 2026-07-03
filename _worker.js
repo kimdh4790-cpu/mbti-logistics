@@ -575,7 +575,8 @@ export default {
       }
       if (path === '/' || path === '') {
     const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
-    const html = await ghRaw.text();
+    let html = await ghRaw.text();
+    html = html.replace('<head>', '<head><meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />');
     return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
   }
       // ── 고객 공개 예약 페이지 ──
