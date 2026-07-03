@@ -1470,7 +1470,7 @@ async function acceptExchange(){
       }
     }
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
       if (!path.startsWith('/api/') && method === 'GET') {
