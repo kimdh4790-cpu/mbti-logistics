@@ -1,7 +1,8 @@
-/settle /settle.html 200
-/join /settle.html 200
-/join.html /settle.html 200
-/admin /settle.html 200
-/admin.html /settle.html 200
-/c/:slug /settle.html 200
+/settle https://mbti-logistics.kimdh4790.workers.dev/settle 200
+/join https://mbti-logistics.kimdh4790.workers.dev/join 200
+/join.html https://mbti-logistics.kimdh4790.workers.dev/join 200
+/admin https://mbti-logistics.kimdh4790.workers.dev/admin 200
+/admin.html https://mbti-logistics.kimdh4790.workers.dev/admin 200
+/c/:slug https://mbti-logistics.kimdh4790.workers.dev/c/:slug 200
 /stmt/* https://mbti-logistics.kimdh4790.workers.dev/stmt/:splat 200
+/:slug https://mbti-logistics.kimdh4790.workers.dev/:slug 200
