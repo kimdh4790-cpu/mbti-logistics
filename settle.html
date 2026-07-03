@@ -46065,16 +46065,22 @@ function _loadPayoutPreview(month, did){
             '<tbody>'+rows+'</tbody>'+
           '</table>'+
         '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:12px">'+
+        '<button id="pout-excel-btn" style="flex:1;padding:14px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📥 하나은행 대량이체 파일</button>'+
         (missingCount===0?
-          '<button id="pout-execute-btn" style="width:100%;margin-top:12px;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💸 전체 송금 실행 ('+settles.length+'명 · ₩'+totalAmt.toLocaleString()+')</button>':
-          '<button disabled style="width:100%;margin-top:12px;padding:14px;background:var(--bg3);color:var(--text3);border:none;border-radius:10px;font-size:13px;cursor:not-allowed">계좌 미등록 인원 해결 후 가능</button>'
+          '<button id="pout-execute-btn" style="flex:1;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">✅ 송금 완료 처리</button>':
+          '<button disabled style="flex:1;padding:14px;background:var(--bg3);color:var(--text3);border:none;border-radius:10px;font-size:12px;cursor:not-allowed">계좌 미등록 인원 해결 후 가능</button>'
         )+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">① 파일 다운로드 → ② 하나은행 기업뱅킹 대량이체 업로드 → ③ 이체 후 완료 처리</div>'+
       '</div>';
 
     setTimeout(function(){
+      var excelBtn=document.getElementById('pout-excel-btn');
+      if(excelBtn) excelBtn.onclick=function(){ _downloadPayoutExcel(month, settles, workerMap); };
       var execBtn=document.getElementById('pout-execute-btn');
       if(execBtn) execBtn.onclick=function(){
-        if(!confirm(month+' 정산 '+settles.length+'명 · ₩'+totalAmt.toLocaleString()+'원 송금을 실행합니다. 진행할까요?')) return;
+        if(!confirm(month+' 정산 '+settles.length+'명 송금 완료 처리합니다.\n하나은행 기업뱅킹에서 이체 완료 후 클릭하세요.')) return;
         _executePayout(month, settles, workerMap, totalNeeded, did);
       };
     },100);
@@ -46083,6 +46089,45 @@ function _loadPayoutPreview(month, did){
   });
 }
 
+
+function _downloadPayoutExcel(month, settles, workerMap){
+  var BMAP={'004':'국민은행','011':'농협은행','020':'우리은행','023':'SC제일은행','027':'씨티은행',
+    '032':'부산은행','034':'광주은행','035':'제주은행','037':'전북은행','039':'경남은행',
+    '045':'새마을금고','048':'신협','050':'저축은행','071':'우체국','081':'하나은행',
+    '088':'신한은행','089':'케이뱅크','090':'카카오뱅크','092':'토스뱅크',
+    '209':'동양증권','238':'미래에셋증권','240':'삼성증권','243':'한국투자증권',
+    '247':'NH투자증권','264':'키움증권','267':'대신증권','270':'하나금융투자',
+    '278':'신한금융투자','288':'카카오페이증권'};
+  var rows=[['입금은행','입금계좌번호','이체금액','예금주명','적요(통장표시)']];
+  var skipped=[];
+  settles.forEach(function(s){
+    if(s.payoutStatus==='PAID') return;
+    var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.driver||s.name]||{};
+    var name=s.driverName||s.driver||s.name||s.userId||'';
+    var amt=s.net||0;
+    if(!amt||amt<=0) return;
+    if(!w.account||!w.bankCode){skipped.push(name);return;}
+    var bankName=BMAP[w.bankCode]||w.bankCode||'';
+    rows.push([bankName,w.account,amt,w.holder||name,month+'급여']);
+  });
+  if(skipped.length) toast('⚠️ 계좌 미등록 '+skipped.length+'명 제외: '+skipped.slice(0,3).join(', ')+(skipped.length>3?'...':''));
+  if(rows.length<=1){toast('❌ 이체 대상 없음');return;}
+  var csv=rows.map(function(r){
+    return r.map(function(v){
+      var sv=String(v||'');
+      if(sv.indexOf(',')>=0||sv.indexOf('"')>=0) sv='"'+sv.replace(/"/g,'""')+'"';
+      return sv;
+    }).join(',');
+  }).join('
+');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='하나은행_대량이체_'+month+'_'+(rows.length-1)+'명.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('✅ 대량이체 파일 다운로드 ('+(rows.length-1)+'명)');
+}
 function _executePayout(month, settles, workerMap, totalNeeded, did){
   var TRANSFER_FEE=200;
   _db.collection('settings').doc(did+'_wallet').get().then(function(snap){
