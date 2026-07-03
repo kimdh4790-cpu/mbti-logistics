@@ -8399,7 +8399,9 @@ if(window.location.hash==='#join'){
         // ★ 마지막 로그인 시각 + 로그인 횟수 자동 업데이트
         _db.doc('users/'+user.uid).update({
           lastLoginAt:new Date().toISOString(),
-          loginCount:firebase.firestore.FieldValue.increment(1)
+          loginCount:firebase.firestore.FieldValue.increment(1),
+          email:user.email||'',
+          dealerId:d.dealerId||user.uid
         }).catch(function(){});
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
@@ -9336,6 +9338,7 @@ function doRegister(){
     _db.collection('users').doc(uid).set({
       uid:uid,
       email:email,
+      phone:_verifiedPhone||'',
       name:company,
       companyName:company,
       role:'dealer',
@@ -9343,11 +9346,17 @@ function doRegister(){
       serviceType:serviceType,
       services:services,
       camp:'',
+      wave:'',
+      slug:slugVal||'',
       platform:'donway',
       is_active:true,
       status:'active',
+      fcmToken:'',
+      fcmTokens:[],
+      profileImg:'',
       loginCount:0,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      joinedAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(){});
     return _db.collection('companies').doc(uid).set(companyDoc);
   }).then(function(){
@@ -9543,7 +9552,12 @@ function doQuickJoin(){
         role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
         bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
         ssn:ssn,joinDate:joinDate,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
+        camp:'',wave:'',slug:'',platform:'donway',
+        is_active:true,status:'active',
+        fcmToken:'',fcmTokens:[],profileImg:'',
+        loginCount:0,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        joinedAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
           userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
@@ -9577,7 +9591,9 @@ function _requestFcmAfterJoin(){
         var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
         if(!uid) return;
         firebase.firestore().collection('users').doc(uid).update({
-          fcmToken:token, fcmUpdatedAt:new Date().toISOString()
+          fcmToken:token,
+          fcmTokens:firebase.firestore.FieldValue.arrayUnion({token:token,updatedAt:new Date().toISOString(),ua:navigator.userAgent.slice(0,80)}),
+          fcmUpdatedAt:new Date().toISOString()
         }).catch(function(){});
         // ★ loginAllowed 배열에 FCM 토큰 누적 저장 (기기별)
         var did2=(_CU&&(_CU.uid||_CU.dealerId))||uid;
@@ -10171,14 +10187,20 @@ function doJoin(){
     var userDoc={
       uid:uid,
       name:name,driverId:driverId,email:email,
+      phone:'',
       companyId:companyId,dealerId:companyId,companyName:companyName,
       role:joinRole,
       store:joinStore,
       bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
       camp:'',
+      wave:'',
+      slug:'',
       platform:'donway',
       is_active:true,
       status:'active',
+      fcmToken:'',
+      fcmTokens:[],
+      profileImg:'',
       loginCount:0,
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       joinedAt:firebase.firestore.FieldValue.serverTimestamp()
