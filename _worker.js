@@ -560,22 +560,9 @@ export default {
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
       }
-      // /join → settle.html 서빙 + register 탭 자동 활성화
-      if (path === '/join') {
-        try {
-          const ghJoin = await fetch('https://app.donway.ai.kr/index.html?bust='+Date.now()+Math.random().toString(36).slice(2),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}});
-          const html = await ghJoin.text();
-          if (html) {
-            const injectScript = '<scr'+'ipt>window.addEventListener("load",function(){setTimeout(function(){var btn=document.getElementById("tab-register");if(btn)btn.click();},800);});</scr'+'ipt>';
-            const lastBody = html.lastIndexOf('</body>');
-            const modified = lastBody !== -1 ? html.slice(0, lastBody) + injectScript + html.slice(lastBody) : html + injectScript;
-            return new Response(modified, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
-          }
-          return await serveKVFile(env, 'settle.html', 'text/html');
-        } catch(e) {
-          console.warn('[/join] 오류:', e.message);
-          return await serveKVFile(env, 'settle.html', 'text/html');
-        }
+      // /join → settle.html 서빙 (settle+join 통합)
+      if (path === '/join' || path === '/join/') {
+        return serveKVFile(env, 'settle.html', 'text/html');
       }
       if (path === '/' || path === '') {
     const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
