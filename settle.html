@@ -41358,65 +41358,108 @@ function openAdminPanel(){
       });
     });
     if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
-    items.sort(function(a,b){return b.createdAt-a.createdAt;});// 최신 가입순
-    
-    // ★ 무료/유료 분리
+    items.sort(function(a,b){return b.createdAt-a.createdAt;});
+
     var today=new Date().toISOString().slice(0,10);
     var freeItems=items.filter(function(i){return i.plan==='trial'&&i.trialEnd>=today;});
     var expiredItems=items.filter(function(i){return i.plan==='trial'&&(!i.trialEnd||i.trialEnd<today);});
     var paidItems=items.filter(function(i){return i.plan!=='trial';});
-    
-    var wrapper=document.createElement('div');
-    
-    // 유료 고객
-    if(paidItems.length){
-      var ph=document.createElement('div');
-      ph.style.cssText='font-size:12px;font-weight:800;color:#10b981;margin:12px 0 6px;padding:6px 10px;background:rgba(16,185,129,.1);border-radius:8px;';
-      ph.textContent='💳 유료 고객 ('+paidItems.length+'개사)';
-      wrapper.appendChild(ph);
-      var pt=buildDealerRowsEl(paidItems);
-      wrapper.appendChild(pt);
+
+    var _dlrFilter='all';
+    var _dlrPage=0;
+    var PAGE_SIZE=10;
+
+    function _getDlrList(){
+      if(_dlrFilter==='paid') return paidItems;
+      if(_dlrFilter==='free') return freeItems;
+      if(_dlrFilter==='expired') return expiredItems;
+      return items;
     }
-    
-    // 무료체험 고객
-    if(freeItems.length){
-      var fh=document.createElement('div');
-      fh.style.cssText='font-size:12px;font-weight:800;color:#f59e0b;margin:12px 0 6px;padding:6px 10px;background:rgba(245,158,11,.1);border-radius:8px;';
-      fh.textContent='🎁 무료체험 중 ('+freeItems.length+'개사)';
-      wrapper.appendChild(fh);
-      var ft=buildDealerRowsEl(freeItems);
-      wrapper.appendChild(ft);
-    }
-    
-    // 만료 고객
-    if(expiredItems.length){
-      var eh=document.createElement('div');
-      eh.style.cssText='font-size:12px;font-weight:800;color:var(--text3);margin:12px 0 6px;padding:6px 10px;background:var(--bg3);border-radius:8px;';
-      eh.textContent='⏰ 만료 ('+expiredItems.length+'개사)';
-      wrapper.appendChild(eh);
-      var et=buildDealerRowsEl(expiredItems);
-      wrapper.appendChild(et);
-    }
-    
-    body.innerHTML='';
-    body.appendChild(wrapper);
-    
-    function buildDealerRowsEl(list){
-      var tbl=buildDealerRows(list);
-      return tbl;
-    }
-    // 복사 버튼 이벤트 바인딩
-    setTimeout(function(){
-      items.forEach(function(item){
-        var btn=document.getElementById('slug-copy-'+item.id);
-        if(btn&&item.slug){
-          var url=window.location.origin+'/'+item.slug;
-          btn.onclick=function(){
-            navigator.clipboard.writeText(url).then(function(){toast('✅ URL 복사됨');}).catch(function(){});
-          };
-        }
+
+    function _renderDlrList(){
+      var list=_getDlrList();
+      var total=list.length;
+      var totalPages=Math.ceil(total/PAGE_SIZE)||1;
+      if(_dlrPage>=totalPages)_dlrPage=totalPages-1;
+      var pageItems=list.slice(_dlrPage*PAGE_SIZE,(_dlrPage+1)*PAGE_SIZE);
+
+      var wrapper=document.createElement('div');
+
+      // 탭 버튼
+      var tabDiv=document.createElement('div');
+      tabDiv.style.cssText='display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;';
+      [
+        {key:'all',   label:'전체 ('+items.length+')', color:'#6366f1'},
+        {key:'paid',  label:'💳 유료 ('+paidItems.length+')', color:'#10b981'},
+        {key:'free',  label:'🎁 무료체험 ('+freeItems.length+')', color:'#f59e0b'},
+        {key:'expired',label:'⏰ 만료 ('+expiredItems.length+')', color:'#6b7280'},
+      ].forEach(function(tab){
+        var btn=document.createElement('button');
+        btn.textContent=tab.label;
+        var isActive=_dlrFilter===tab.key;
+        btn.style.cssText='padding:5px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:'+(isActive?tab.color:'var(--bg3)')+';color:'+(isActive?'#fff':'var(--text)');
+        btn.onclick=function(){_dlrFilter=tab.key;_dlrPage=0;_renderDlrList();};
+        tabDiv.appendChild(btn);
       });
-    },100);
+      wrapper.appendChild(tabDiv);
+
+      // 테이블
+      var tbl=buildDealerRows(pageItems);
+      wrapper.appendChild(tbl);
+
+      // 페이지네이션
+      if(totalPages>1){
+        var pgDiv=document.createElement('div');
+        pgDiv.style.cssText='display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;';
+        var prevBtn=document.createElement('button');
+        prevBtn.textContent='◀';
+        prevBtn.disabled=_dlrPage===0;
+        prevBtn.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;background:var(--bg3);font-size:12px;';
+        prevBtn.onclick=function(){if(_dlrPage>0){_dlrPage--;_renderDlrList();}};
+        pgDiv.appendChild(prevBtn);
+        for(var pi=0;pi<totalPages;pi++){
+          (function(p){
+            var pb=document.createElement('button');
+            pb.textContent=p+1;
+            pb.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;background:'+(p===_dlrPage?'var(--brand)':'var(--bg3)')+';color:'+(p===_dlrPage?'#fff':'var(--text)');
+            pb.onclick=function(){_dlrPage=p;_renderDlrList();};
+            pgDiv.appendChild(pb);
+          })(pi);
+        }
+        var nextBtn=document.createElement('button');
+        nextBtn.textContent='▶';
+        nextBtn.disabled=_dlrPage>=totalPages-1;
+        nextBtn.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;background:var(--bg3);font-size:12px;';
+        nextBtn.onclick=function(){if(_dlrPage<totalPages-1){_dlrPage++;_renderDlrList();}};
+        pgDiv.appendChild(nextBtn);
+        var pageInfo=document.createElement('span');
+        pageInfo.textContent=(_dlrPage*PAGE_SIZE+1)+'~'+Math.min((_dlrPage+1)*PAGE_SIZE,total)+' / '+total+'개';
+        pageInfo.style.cssText='font-size:10px;color:var(--text3);margin-left:6px;';
+        pgDiv.appendChild(pageInfo);
+        wrapper.appendChild(pgDiv);
+      }
+
+      body.innerHTML='';
+      body.appendChild(wrapper);
+
+      // 복사 버튼 이벤트
+      setTimeout(function(){
+        pageItems.forEach(function(item){
+          var btn=document.getElementById('slug-copy-'+item.id);
+          if(btn&&item.slug){
+            var url=window.location.origin+'/'+item.slug;
+            btn.onclick=function(){navigator.clipboard.writeText(url).then(function(){toast('✅ URL 복사됨');}).catch(function(){});};
+          }
+        });
+      },100);
+    }
+
+    _renderDlrList();
+
+    function buildDealerRowsEl(list){
+      return buildDealerRows(list);
+    }
+    // 복사 버튼 이벤트는 _renderDlrList 내부에서 처리
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
 
