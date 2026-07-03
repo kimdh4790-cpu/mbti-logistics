@@ -21130,7 +21130,8 @@ window._txsDownloadCsv=function(){
   } else {
     csv+='"데이터 없음. 먼저 급여 현황에서 계산해 주세요."\n';
   }
-  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var bom=String.fromCharCode(0xFEFF);
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=compName+'_'+(ym||'정산')+'_세무자료.csv';a.click();
   toast('✅ CSV 다운로드');
