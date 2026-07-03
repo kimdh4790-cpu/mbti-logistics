@@ -2093,6 +2093,13 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       );
     }
 
+    // ── 네이버 소유확인 HTML 파일 ──
+    if (path === '/naver335e547bce1645ef18a6f68fac7f87eb.html') {
+      return new Response('naver-site-verification', {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }
+      });
+    }
+
     // ── sitemap.xml 직접 반환 ──
     if (path === '/sitemap.xml') {
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
