@@ -46110,23 +46110,21 @@ function _downloadPayoutExcel(month, settles, workerMap){
     if(!amt||amt<=0) return;
     if(!w.account||!w.bankCode){skipped.push(name);return;}
     var bankName=BMAP[w.bankCode]||w.bankCode||'';
-    rows.push([bankName,w.account,amt,w.holder||name,month+'급여']);
+    rows.push([bankName,String(w.account),amt,w.holder||name,month+'급여']);
   });
   if(skipped.length) toast('⚠️ 계좌 미등록 '+skipped.length+'명 제외: '+skipped.slice(0,3).join(', ')+(skipped.length>3?'...':''));
   if(rows.length<=1){toast('❌ 이체 대상 없음');return;}
-  var csv=rows.map(function(r){
-    return r.map(function(v){
-      var sv=String(v||'');
-      if(sv.indexOf(',')>=0||sv.indexOf('"')>=0) sv='"'+sv.replace(/"/g,'""')+'"';
-      return sv;
-    }).join(',');
-  }).join('\r\n');
-  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='하나은행_대량이체_'+month+'_'+(rows.length-1)+'명.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
+  if(typeof XLSX==='undefined'){toast('❌ XLSX 라이브러리 없음');return;}
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var range=XLSX.utils.decode_range(ws['!ref']);
+  for(var R=1;R<=range.e.r;R++){
+    var cell=ws[XLSX.utils.encode_cell({r:R,c:1})];
+    if(cell){cell.t='s';cell.z='@';}
+  }
+  ws['!cols']=[{wch:12},{wch:22},{wch:12},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'대량이체');
+  XLSX.writeFile(wb,'하나은행_대량이체_'+month+'_'+(rows.length-1)+'명.xlsx');
   toast('✅ 대량이체 파일 다운로드 ('+(rows.length-1)+'명)');
 }
 function _executePayout(month, settles, workerMap, totalNeeded, did){
