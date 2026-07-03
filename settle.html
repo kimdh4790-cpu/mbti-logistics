@@ -41747,7 +41747,6 @@ function _loadFeaturePanel(container){
       var tb=e.target.closest('.tb-btn');
       if(tb) _toggleBundle(tb.dataset.cid,tb.dataset.bundle,tb.dataset.val==='true');
     };
-    };
   }).catch(function(e){container.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
 
