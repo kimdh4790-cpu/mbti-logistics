@@ -2589,11 +2589,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
-    // ★ 관리자 종합 대시보드
+    // ★ 관리자 종합 대시보드 → settle.html로 서빙 (DONWAY 통합)
     if (path === '/admin' || path === '/admin/') {
-      // 슈퍼어드민 접근 로그 기록 (선택적)
-      const resp = await fetchAsset('/admin.html', request);
-      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } });
+      return serveKVFile(env, 'settle.html', 'text/html');
     }
 
     if (path === '/dashboard' || path === '/dashboard/') {
