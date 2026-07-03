@@ -8396,6 +8396,11 @@ if(window.location.hash==='#join'){
           _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
           d.dealerId=user.uid;
         }
+        // ★ 마지막 로그인 시각 + 로그인 횟수 자동 업데이트
+        _db.doc('users/'+user.uid).update({
+          lastLoginAt:new Date().toISOString(),
+          loginCount:firebase.firestore.FieldValue.increment(1)
+        }).catch(function(){});
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
@@ -9337,6 +9342,11 @@ function doRegister(){
       dealerId:uid,
       serviceType:serviceType,
       services:services,
+      camp:'',
+      platform:'donway',
+      is_active:true,
+      status:'active',
+      loginCount:0,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(){});
     return _db.collection('companies').doc(uid).set(companyDoc);
@@ -10159,12 +10169,19 @@ function doJoin(){
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     uid=cred.user.uid;
     var userDoc={
+      uid:uid,
       name:name,driverId:driverId,email:email,
       companyId:companyId,dealerId:companyId,companyName:companyName,
       role:joinRole,
       store:joinStore,
       bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      camp:'',
+      platform:'donway',
+      is_active:true,
+      status:'active',
+      loginCount:0,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      joinedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     // users 컬렉션 저장
       // ★ members 컬렉션 자동 저장 — 관리자 직원목록·기사관리 즉시 표시
