@@ -556,6 +556,10 @@ export default {
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
+      // /admin → settle.html 서빙 (DONWAY 통합 어드민)
+      if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
+        return serveKVFile(env, 'settle.html', 'text/html');
+      }
       // /join → settle.html 서빙 + register 탭 자동 활성화
       if (path === '/join') {
         try {
