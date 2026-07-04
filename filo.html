@@ -220,7 +220,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <div id="nav-menu"></div>
     <div style="margin:12px 6px 0;border-top:1px solid var(--border);padding-top:10px">
-      <button onclick="_filoGoPage(\'subscription\')" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 기능 추가하기</button>
+      <button onclick="_filoGoPage('subscription')" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 기능 추가하기</button>
     </div>
   </div>
   <div class="main" id="content"></div>
@@ -296,7 +296,7 @@ function _showApp(){
   document.getElementById('nav-company').textContent=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
   document.getElementById('nav-role').textContent=_CU.role==='member'?'직원':'관리자';
   _buildFiloNav();
-  _filoGoPage(\'home\');
+  _filoGoPage('home');
 }
 
 // ── 네비게이션 ──
@@ -977,7 +977,7 @@ function _filoPageInventory(el){
       low.innerHTML='<div class="card" style="border-left:3px solid #ef4444;margin-bottom:10px">'+
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
         '<div style="font-size:13px;font-weight:800;color:#ef4444">⚠️ 재고 부족 '+lowStock.length+'개</div>'+
-        '<button onclick="_filoGoPage(\'expiry\')" style="font-size:11px;padding:4px 10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer">상세보기</button>'+
+        '<button onclick="_filoGoPage('expiry')" style="font-size:11px;padding:4px 10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer">상세보기</button>'+
         '</div>'+
         lowStock.slice(0,3).map(function(d){
           var pct=d.minStock>0?Math.round(d.stock/d.minStock*100):0;
