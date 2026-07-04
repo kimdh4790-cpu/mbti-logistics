@@ -803,7 +803,12 @@ function checkDispatchBalance(dispatchResult, drivers) {
 }
 
 /* ── 회사 슬러그 모드 ── */
-var _companySlug = window._COMPANY_SLUG || null;
+// slug: Worker inject 우선, 없으면 URL pathname에서 자동 추출
+var _companySlug = window._COMPANY_SLUG || (function(){
+  var p = window.location.pathname.replace(/^\//, '').split('/')[0];
+  var known = ['join','settle','register','admin','admin-sub','stmt','c','manifest.json','api','sw.js','firebase-messaging-sw.js','icon','filo','mbtico'];
+  return (p && p.length > 1 && known.indexOf(p) < 0) ? p : null;
+})();
 var _slugCompany = null; // 슬러그로 조회한 회사 정보
 
 async function _loadSlugCompany(){
