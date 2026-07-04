@@ -1788,8 +1788,8 @@ function _filoRenderKiosk(menus){
   // 카테고리 버튼
   var catEl=document.getElementById('kiosk-cats');
   if(catEl){
-    catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>'+
-    cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:var(--bg3)">'+c+'</button>';}).join('');
+    catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>'+cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:var(--bg3)">'+c+'</button>';}).join('');
+
   }
   // 메뉴 그리드
   var menuEl=document.getElementById('kiosk-menu');
