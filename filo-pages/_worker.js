@@ -1494,10 +1494,19 @@ async function acceptExchange(){
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
-  if (env && env.DONWAY_ASSETS) {
-    const st = await env.DONWAY_ASSETS.get('filo.html', 'stream');
-    if (st) return new Response(st, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV-ST' } });
-  }
+  try {
+    const ghUrl = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/filo.html?bust=' + Date.now();
+    const ghRes = await fetch(ghUrl, {
+      headers: { 'Accept-Encoding': 'identity', 'Cache-Control': 'no-cache' },
+      cf: { cacheEverything: false, cacheTtl: 0 }
+    });
+    if (ghRes.ok) {
+      const body = await ghRes.arrayBuffer();
+      return new Response(body, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'GH-AB' } });
+    }
+  } catch(e) {}
+  const st = env && env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('filo.html', 'stream') : null;
+  if (st) return new Response(st, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
   return serveKVFile(env, 'filo.html', 'text/html');
 }
   if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
