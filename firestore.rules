@@ -71,7 +71,7 @@ service cloud.firestore {
       allow read, create: if isSuperAdmin();
     }
     match /alimtalk_queue/{docId} {
-      allow create: if isAuth();
+      allow create: if true;
       allow read, update: if isSuperAdmin();
     }
     match /join_requests/{docId} {
