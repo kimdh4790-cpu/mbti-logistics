@@ -1483,12 +1483,12 @@ async function acceptExchange(){
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
-  if (env && env.DONWAY_ASSETS) {
-    const filoStream = await env.DONWAY_ASSETS.get('filo.html', 'stream');
-    if (filoStream) return new Response(filoStream, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-  }
-  return serveKVFile(env, 'filo.html', 'text/html');
-}
+        if (env && env.DONWAY_ASSETS) {
+          const filoSt = await env.DONWAY_ASSETS.get('filo.html', 'stream');
+          if (filoSt) return new Response(filoSt, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'filo-stream' } });
+        }
+        return serveKVFile(env, 'filo.html', 'text/html');
+      }
   if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
     }
