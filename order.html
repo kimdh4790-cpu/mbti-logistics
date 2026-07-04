@@ -194,7 +194,54 @@ function _orderSubmit(){
     _renderMenus();
     _showToast('✅ 주문이 접수됐습니다!');
     document.getElementById('status-badge').innerHTML='<span class="badge badge-green">주문 완료</span>';
+    _askReceipt(items, total);
   }).catch(function(e){_showToast('❌ '+e.message);});
+}
+
+function _askReceipt(items, total){
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:20px';
+  var box=document.createElement('div');
+  box.style.cssText='background:#18182e;border:1px solid rgba(255,255,255,.1);border-radius:24px 24px 20px 20px;width:100%;max-width:420px;padding:24px;box-shadow:0 -8px 40px rgba(0,0,0,.4)';
+  box.innerHTML='<div style="font-size:15px;font-weight:900;text-align:center;margin-bottom:6px">📱 영수증 받기</div>'+
+  '<div style="font-size:12px;color:#a0a0c0;text-align:center;margin-bottom:16px">카카오톡으로 영수증을 받으시겠어요?</div>'+
+  '<div style="margin-bottom:12px"><label style="font-size:10px;color:#606080;font-weight:700;display:block;margin-bottom:6px">휴대폰 번호</label>'+
+  '<input id="receipt-phone-order" type="tel" placeholder="010-0000-0000" style="width:100%;padding:12px 14px;background:#1e1e36;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f2f2ff;font-size:15px;outline:none;letter-spacing:1px"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<button id="skip-receipt" style="flex:1;padding:12px;background:#1e1e36;border:none;border-radius:12px;color:#a0a0c0;font-size:13px;cursor:pointer">건너뛰기</button>'+
+  '<button id="send-receipt" style="flex:2;padding:12px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:800;cursor:pointer">📨 발송</button>'+
+  '</div>';
+  var phoneInp=box.querySelector('#receipt-phone-order');
+  phoneInp.oninput=function(){var v=this.value.replace(/[^0-9]/g,'');if(v.length>=8)v=v.substring(0,3)+'-'+v.substring(3,7)+'-'+v.substring(7,11);this.value=v;};
+  box.querySelector('#skip-receipt').onclick=function(){mo.remove();};
+  box.querySelector('#send-receipt').onclick=function(){
+    var phone=phoneInp.value.replace(/-/g,'');
+    if(phone.length<10){_showToast('연락처를 입력해 주세요');return;}
+    _sendReceiptAlimtalk(phone, items, total);
+    mo.remove();
+  };
+  mo.appendChild(box);
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+  setTimeout(function(){phoneInp.focus();},200);
+}
+
+function _sendReceiptAlimtalk(phone, items, total){
+  var now=new Date();
+  var kst=new Date(now.getTime()+9*3600000);
+  var dateStr=(kst.getUTCMonth()+1)+'/'+kst.getUTCDate()+' '+kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+  _db.collection('alimtalk_queue').add({
+    type:'filo_receipt',phone:phone,dealerId:_did,
+    templateData:{
+      date:dateStr,
+      table:_tName,
+      items:items.map(function(it){return it.name+' x'+it.qty+' ₩'+(it.price*it.qty).toLocaleString();}).join(', '),
+      total:'₩'+total.toLocaleString(),
+      method:'테이블 주문'
+    },
+    createdAt:now.toISOString(),status:'pending'
+  }).then(function(){_showToast('✅ 알림톡 발송됩니다!');})
+  .catch(function(e){_showToast('❌ '+e.message);});
 }
 
 function _showToast(msg){
