@@ -1733,41 +1733,22 @@ function _filoPageKiosk(el){
   // 메뉴 로드 (inventory에서 판매품목)
   _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).orderBy('category').orderBy('name').get()
   .then(function(snap){
-    if(true){
-      // 항상 샘플 메뉴 사용 (Firestore 품목은 추후 연동)
-      var sampleMenus=[
-        {_id:'s1',name:'아이스 아메리카노',price:1800,category:'커피',emoji:'☕'},
-        {_id:'s2',name:'아메리카노(HOT)',price:2500,category:'커피',emoji:'☕'},
-        {_id:'s3',name:'카페라떼',price:4000,category:'커피',emoji:'🥛'},
-        {_id:'s4',name:'바닐라라떼',price:4300,category:'커피',emoji:'🥛'},
-        {_id:'s5',name:'헤이즐넛라떼',price:4300,category:'커피',emoji:'🥛'},
-        {_id:'s6',name:'카라멜마끼아또',price:4300,category:'커피',emoji:'🥛'},
-        {_id:'s7',name:'카페모카',price:4500,category:'커피',emoji:'🍫'},
-        {_id:'s8',name:'달고나라떼',price:5000,category:'커피',emoji:'🍯'},
-        {_id:'s9',name:'더치아메리카노',price:4300,category:'커피',emoji:'☕'},
-        {_id:'s10',name:'더치라떼',price:4800,category:'커피',emoji:'🥛'},
-        {_id:'s11',name:'녹차라떼',price:4500,category:'베버리지',emoji:'🍵'},
-        {_id:'s12',name:'초코라떼',price:4500,category:'베버리지',emoji:'🍫'},
-        {_id:'s13',name:'흑당밀크티',price:4500,category:'베버리지',emoji:'🧋'},
-        {_id:'s14',name:'딸기라떼',price:4800,category:'베버리지',emoji:'🍓'},
-        {_id:'s15',name:'망고라떼',price:4800,category:'베버리지',emoji:'🥭'},
-        {_id:'s16',name:'고구마라떼',price:4500,category:'베버리지',emoji:'🍠'},
-        {_id:'s17',name:'밀크쉐이크',price:5200,category:'밀크쉐이크',emoji:'🥤'},
-        {_id:'s18',name:'딸기스무디',price:4800,category:'스무디',emoji:'🍓'},
-        {_id:'s19',name:'망고스무디',price:4800,category:'스무디',emoji:'🥭'},
-        {_id:'s20',name:'자바칩프라페',price:5000,category:'스무디',emoji:'☕'},
-        {_id:'s21',name:'자몽에이드',price:4500,category:'에이드',emoji:'🍊'},
-        {_id:'s22',name:'레몬에이드',price:4500,category:'에이드',emoji:'🍋'},
-        {_id:'s23',name:'망고에이드',price:4500,category:'에이드',emoji:'🥭'},
-        {_id:'s24',name:'복숭아아이스티',price:4000,category:'티',emoji:'🍑'},
-        {_id:'s25',name:'자몽티',price:5000,category:'티',emoji:'🍊'},
-        {_id:'s26',name:'치즈케이크',price:4500,category:'디저트',emoji:'🍰'},
-        {_id:'s27',name:'티라미수',price:4000,category:'디저트',emoji:'🎂'},
-        {_id:'s28',name:'마카롱',price:2800,category:'디저트',emoji:'🍭'},
-        {_id:'s29',name:'크룽지',price:2500,category:'디저트',emoji:'🥐'},
-        {_id:'s30',name:'수박주스',price:4900,category:'시즌',emoji:'🍉'},
-      ];
-      _filoRenderKiosk(sampleMenus);
+    if(snap.empty){
+      // 메뉴 없으면 엑셀 업로드 안내
+      // 메뉴 등록 안내
+      var menuEl2=document.getElementById('kiosk-menu');
+      var catEl2=document.getElementById('kiosk-cats');
+      if(catEl2) catEl2.innerHTML='';
+      if(menuEl2) menuEl2.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px">'+
+        '<div style="font-size:40px;margin-bottom:12px">📋</div>'+
+        '<div style="font-size:16px;font-weight:800;margin-bottom:8px">등록된 메뉴가 없습니다</div>'+
+        '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">엑셀 파일로 메뉴를 일괄 등록하세요</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">📌 엑셀 형식: 메뉴명 / 가격 / 카테고리 / 이모지(선택)</div>'+
+        '<label class="btn btn-brand" style="cursor:pointer;display:inline-block" data-did="'+did+'">'+
+        '📊 메뉴 엑셀 업로드'+
+        '<input type="file" accept=".xlsx,.xls,.csv" style="display:none" class="menu-xlsx-input">'+
+        '</label></div>';
+      return;
     } else {
       var menus=[];
       snap.forEach(function(doc){menus.push(Object.assign({_id:doc.id},doc.data()));});
@@ -2007,6 +1988,15 @@ document.addEventListener('click',function(e){
   if(mc)_filoShowMemberDetail(mc.dataset.id);
   var db=e.target.closest('.del-btn[data-id]');
   if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
+  // 메뉴 엑셀 업로드 label 클릭
+  var ml=e.target.closest('label[data-did]');
+  if(ml){var inp=ml.querySelector('.menu-xlsx-input');if(inp){ml._did=ml.dataset.did;inp.click();}}
+});
+document.addEventListener('change',function(e){
+  if(e.target.classList.contains('menu-xlsx-input')){
+    var did=e.target.closest('label[data-did]') ? e.target.closest('label[data-did]').dataset.did : (_CU&&(_CU.dealerId||_CU.uid)||'');
+    _filoImportMenuExcel(e.target,did);
+  }
 });
 
 </script>
