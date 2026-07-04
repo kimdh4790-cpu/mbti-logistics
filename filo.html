@@ -84,7 +84,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .ni-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 
 /* ── 메인 콘텐츠 ── */
-#content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h)}
+#content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0}
 #content{padding:20px;min-height:calc(100dvh - var(--topbar-h))}
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%)}
@@ -867,18 +867,18 @@ function _filoPageMemberQR(el){
  '<div style="font-size:17px;font-weight:900;margin-bottom:4px">🎁 회원 QR</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-bottom:16px">회원 가입 · 스탬프 적립 · 할인 쿠폰</div>'+
 
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'+
+ '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px">'+
  /* 회원 가입 QR */
- '<div class="card" style="text-align:center">'+
+ '<div class="card" style="text-align:center;overflow:hidden;min-width:0">'+
  '<div style="font-size:13px;font-weight:800;color:#a78bfa;margin-bottom:10px">👋 회원 가입 QR</div>'+
- '<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(joinUrl)+'" style="width:160px;height:160px;border-radius:10px;background:#fff;padding:6px">'+
+ '<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(joinUrl)+'" style="width:100%;max-width:160px;height:auto;border-radius:10px;background:#fff;padding:6px">'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">스캔 → 이름/전화번호 입력 → 회원 등록</div>'+
  '<button onclick="window.open(\''+joinUrl+'\',\'_blank\')" style="margin-top:8px;width:100%;padding:7px;background:var(--b3);border:none;border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer">🔗 링크 복사</button>'+
  '</div>'+
  /* 스탬프 적립 QR */
  '<div class="card" style="text-align:center">'+
  '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:10px">⭐ 스탬프 적립 QR</div>'+
- '<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(stampUrl)+'" style="width:160px;height:160px;border-radius:10px;background:#fff;padding:6px">'+
+ '<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(stampUrl)+'" style="width:100%;max-width:160px;height:auto;border-radius:10px;background:#fff;padding:6px">'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">결제 후 스캔 → 스탬프 자동 적립</div>'+
  '<button onclick="window.open(\''+stampUrl+'\',\'_blank\')" style="margin-top:8px;width:100%;padding:7px;background:var(--b3);border:none;border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer">🔗 링크 복사</button>'+
  '</div>'+
