@@ -1106,11 +1106,12 @@ function _filoPageHome(el){
  '<div style="font-size:18px;font-weight:900">안녕하세요, '+(d.companyName||d.name||'')+'님 👋</div>'+
  '<div style="font-size:12px;color:var(--t3);margin-top:3px">'+today+' · FILO 통합 운영 현황</div></div>'+
 
- '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="home-stats">'+
- ['오늘 매출','이번달 매출','재고 부족'].map(function(t,i){
- return '<div class="stat-card fade-up-'+(i+1)+'" style="text-align:center">'+
- '<div style="font-size:10px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">'+t+'</div>'+
- '<div id="hs-'+i+'" style="font-size:20px;font-weight:900;color:'+['#60a5fa','#a78bfa','#ef4444'][i]+';min-height:28px">—</div></div>';
+ '<div class="kpi-grid" id="home-stats">'+
+ [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa'},{t:'이번달 매출',c:'kpi-profit',vc:'#22c55e'},{t:'재고 부족',c:'kpi-cost',vc:'#ef4444'},{t:'오늘 마진율',c:'kpi-margin',vc:'#f59e0b'}].map(function(s,i){
+ return '<div class="kpi-card '+s.c+'">'+
+ '<div class="kpi-label">'+s.t+'</div>'+
+ '<div class="kpi-val" id="hs-'+i+'" style="color:'+s.vc+'">—</div>'+
+ '</div>';
  }).join('')+'</div>'+
 
  '<div class="card fade-up-2" style="margin-bottom:12px">'+
@@ -1126,7 +1127,7 @@ function _filoPageHome(el){
 
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
- '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+ '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
  [{ic:'📊',l:'재고현황',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},{ic:'📤',l:'출고',p:'stock_out'},
  {ic:'💰',l:'매출입력',p:'sales_report'},{ic:'📈',l:'매출분석',p:'sales_report'},{ic:'⏰',l:'유통기한',p:'expiry'},
  {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🖥️',l:'POS',p:'kiosk'}].map(function(m){
