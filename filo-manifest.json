@@ -1,81 +1,17 @@
 {
-  "name": "BICO - 재고·QR·키오스크",
-  "short_name": "BICO",
-  "description": "재고관리 · QR출퇴근 · 키오스크POS | bico.kr",
-  "start_url": "/",
+  "name": "FILO - 재고·QR·키오스크",
+  "short_name": "FILO",
+  "description": "재고관리 · QR출퇴근 · 키오스크POS | filo.ai.kr",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0f1e",
   "theme_color": "#7b2fff",
   "lang": "ko",
-  "categories": [
-    "business",
-    "productivity"
-  ],
+  "categories": ["business", "productivity"],
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "재고관리",
-      "short_name": "재고",
-      "url": "/inventory",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "QR 출퇴근",
-      "short_name": "QR",
-      "url": "/qr",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "키오스크 POS",
-      "short_name": "키오스크",
-      "url": "/kiosk",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "회사 등록",
-      "short_name": "등록",
-      "url": "/register",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }
