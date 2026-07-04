@@ -1263,14 +1263,19 @@ function _filoPageHome(el){
  }).join('')+'</div>'+
 
  '<div class="card fade-up-2" style="margin-bottom:12px">'+
- '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">구독 플랜</div>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
- [{k:'inventory',l:'재고관리',ic:'📦',c:'#7c3aed'},{k:'qr',l:'QR+급여',ic:'🔐',c:'#0891b2'},{k:'kiosk',l:'키오스크',ic:'🖥️',c:'#059669'},{k:'combo',l:'전체콤보',ic:'🚀',c:'#f59e0b'}].map(function(p){
- var on=hasSub(p.k);
- return '<div style="padding:10px 12px;border-radius:10px;border:1px solid '+(on?p.c+'60':'var(--bd)')+';background:'+(on?p.c+'10':'var(--bg3)')+';display:flex;align-items:center;gap:8px;transition:.2s">'+
- '<span style="font-size:18px">'+p.ic+'</span>'+
- '<div><div style="font-size:11px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+p.l+'</div>'+
- '<div style="font-size:10px;color:'+(on?p.c+';opacity:.8':'var(--t3)')+'">'+(on?'✅ 이용중':'미구독')+'</div></div></div>';
+ '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+ '<div style="font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">이용 중인 기능</div>'+
+ '<button onclick="_filoGoPage(\'subscription\')" style="font-size:10px;color:var(--br);background:none;border:none;cursor:pointer;font-weight:700">관리 →</button>'+
+ '</div>'+
+ '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
+ [{k:'inventory',l:'재고',ic:'📦',c:'#7c3aed'},{k:'qr',l:'QR급여',ic:'🔐',c:'#0891b2'},
+  {k:'kiosk',l:'POS',ic:'🖥️',c:'#059669'},{k:'combo',l:'통합',ic:'🚀',c:'#f59e0b'}].map(function(p){
+  var on=hasSub(p.k);
+  return '<div style="padding:10px 8px;border-radius:10px;border:1px solid '+(on?p.c+'60':'var(--bd)')+';background:'+(on?p.c+'12':'var(--surface2)')+';text-align:center">'+
+  '<div style="font-size:20px;margin-bottom:4px">'+p.ic+'</div>'+
+  '<div style="font-size:10px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+p.l+'</div>'+
+  '<div style="font-size:9px;margin-top:2px;color:'+(on?p.c:'var(--t4)')+'">'+(on?'✅ ON':'OFF')+'</div>'+
+  '</div>';
  }).join('')+'</div></div>'+
 
  '<div class="card fade-up-3">'+
