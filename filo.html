@@ -650,7 +650,7 @@ function _filoSalesInput(did){
     '<div id="si-menu-list"></div>'+
     '<button onclick="_filoAddMenu()" style="width:100%;padding:8px;background:var(--bg3);color:var(--text);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:12px">+ 메뉴 추가</button>'+
     '<div class="fg"><label>메모 (선택)</label><input type="text" id="si-memo" placeholder="특이사항" class="inp"></div>'+
-    '<button onclick="_filoSaleSave(''+did+'')" style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px">💾 저장</button>'+
+    '<button onclick="_filoSaleSave(\''+did+'\')" style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px">💾 저장</button>'+
     '</div>'+
     '<div id="si-recent" style="margin-top:12px"></div>';
   window._filoMenuCount=0;
@@ -668,7 +668,7 @@ window._filoAddMenu=function(){
     '<input type="text" placeholder="메뉴명" class="inp" id="fsi-mname-'+n+'" style="font-size:12px">'+
     '<input type="number" placeholder="판매수" class="inp" id="fsi-mcount-'+n+'" style="font-size:12px">'+
     '<input type="number" placeholder="단가(원)" class="inp" id="fsi-mprice-'+n+'" style="font-size:12px">'+
-    '<button onclick="document.getElementById('fsi-menu-'+n+'').remove()" style="padding:6px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
+    '<button onclick="document.getElementById(\'fsi-menu-'+n+'\')).remove()" style="padding:6px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
   var list=document.getElementById('si-menu-list');
   if(list) list.appendChild(div);
 };
@@ -714,7 +714,7 @@ function _filoLoadRecent(did){
         '<div style="font-size:10px;color:var(--text3)">'+(d.menus&&d.menus.length?d.menus.map(function(m){return m.name+'×'+m.count;}).join(' · '):'메뉴 미입력')+'</div></div>'+
         '<div style="text-align:right">'+
         '<div style="font-size:14px;font-weight:900;color:var(--brand)">'+(d.totalAmount||0).toLocaleString()+'원</div>'+
-        '<button onclick="_filoDelSale(''+doc.id+'',''+did+'')" style="font-size:10px;color:#dc2626;background:none;border:none;cursor:pointer">삭제</button>'+
+        '<button onclick="_filoDelSale(\''+doc.id+'\',\''+did+'\')" style="font-size:10px;color:#dc2626;background:none;border:none;cursor:pointer">삭제</button>'+
         '</div></div>';
     });
     html+='</div>';
@@ -819,7 +819,7 @@ function _filoPageExpiry(el){
     snap.forEach(function(doc){html+='<option value="'+doc.id+'">'+(doc.data().name||'')+'</option>';});
     html+='</select></div>'+
       '<div class="fg"><label>유통기한</label><input type="date" id="exp-date" class="inp"></div>'+
-      '<button onclick="_filoExpSave(''+did+'')" style="padding:10px 12px;background:var(--brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">저장</button>'+
+      '<button onclick="_filoExpSave(\''+did+'\')" style="padding:10px 12px;background:var(--brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">저장</button>'+
       '</div></div>';
     if(expired.length){
       html+='<div class="card" style="border:2px solid #ef4444;margin-bottom:10px">'+
