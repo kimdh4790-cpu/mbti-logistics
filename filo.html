@@ -1318,9 +1318,13 @@ function _filoPageHome(el){
  }
 
  el.innerHTML='<div style="max-width:900px;margin:0 auto">'+
- '<div class="fade-up" style="margin-bottom:20px">'+
- '<div style="font-size:18px;font-weight:900">안녕하세요, '+(d.companyName||d.name||'')+'님 👋</div>'+
- '<div style="font-size:12px;color:var(--t3);margin-top:3px">'+today+' · FILO 통합 운영 현황</div></div>'+
+ '<div class="fade-up hero-card" style="margin-bottom:16px">'+
+ '<div style="position:relative;z-index:1"><div style="font-size:10px;font-weight:700;color:rgba(167,139,250,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">FILO · 실시간 운영</div>'+
+ '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.8px">'+(d.companyName||d.name||'')+'</div>'+
+ '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'+
+ '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+today+'</span>'+
+ '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#22c55e"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
+ '</div></div></div>'+
 
  '<div class="kpi-grid" id="home-stats">'+
  [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'💰',id:'hs-0'},
