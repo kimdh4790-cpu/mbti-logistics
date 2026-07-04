@@ -1443,16 +1443,9 @@ async function acceptExchange(){
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const kvBuf = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','arrayBuffer') : null;
-        const html = kvBuf ? new TextDecoder().decode(kvBuf) : await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
-        if (html) {
-          const akKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-          const slugScript = '<script>window.__AK='+JSON.stringify(akKey)+';window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
-          const modified = html.replace(
-            '</head>',
-            '<link rel="manifest" href="/c/'+slug+'/manifest.json"><meta name="apple-mobile-web-app-title" content="'+compName+'"><link rel="apple-touch-icon" href="/c/'+slug+'/icon.svg">\n'+slugScript+'\n</head>'
-          );
-          return new Response(modified, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
+        const kvStream_c = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
+        if (kvStream_c) {
+          return new Response(kvStream_c, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
         }
       }
     }
@@ -1466,13 +1459,9 @@ async function acceptExchange(){
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {
-            const kvBuf2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','arrayBuffer') : null;
-            const html2 = kvBuf2 ? new TextDecoder().decode(kvBuf2) : await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
-            if (html2) {
-              const akKey2 = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-              const slugScript2 = '<script>window.__AK='+JSON.stringify(akKey2)+';window._COMPANY_SLUG='+JSON.stringify(slug2)+';window._SLUG_MODE=true;</script>';
-              const modified2 = html2.replace('</head>', slugScript2+'\n</head>');
-              return new Response(modified2, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
+            const kvStream_s = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
+            if (kvStream_s) {
+              return new Response(kvStream_s, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
             }
           } catch(e) {}
         }
