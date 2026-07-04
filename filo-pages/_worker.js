@@ -71,12 +71,9 @@ async function fetchAsset(path, request, env) {
 
   // KV 우선 서빙
   if (e && e.DONWAY_ASSETS) {
-    const kvVal = await e.DONWAY_ASSETS.get(fileName, 'text');
-    if (kvVal) {
-      return new Response(kvVal, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
-
-
-
+    const kvVal_fa = await e.DONWAY_ASSETS.get(fileName, 'text');
+    if (kvVal_fa) {
+      return new Response(kvVal_fa, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
     }
   }
   // KV 없으면 GitHub Raw
@@ -100,10 +97,10 @@ async function serveKVFile(env, fileName, contentType) {
     // KV 우선 서빙
     const _e = env || _env_ref;
     if (_e && _e.DONWAY_ASSETS) {
-      const kvVal = await _e.DONWAY_ASSETS.get(fileName, 'text');
-      if (kvVal) {
-        const body = contentType === 'text/html' ? _injectMeta(kvVal) : kvVal;
-        return new Response(body, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
+      const kvVal_sf = await _e.DONWAY_ASSETS.get(fileName, 'text');
+      if (kvVal_sf) {
+        const body_sf = contentType === 'text/html' ? _injectMeta(kvVal_sf) : kvVal_sf;
+        return new Response(body_sf, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
       }
     }
     // KV 없으면 GitHub Raw
@@ -1088,6 +1085,7 @@ async function acceptExchange(){
           const work     = gn('work');
           const fresh    = gn('fresh');
           const finc     = gn('finc');
+        const incReason  = gs('incReason') || '';
           const nocont   = gn('nocont');
           const etcPlus  = gn('etcPlus');
           const etcMinus = gn('etcMinus');
@@ -1228,6 +1226,7 @@ async function acceptExchange(){
           let addRows = '';
           addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
           addRows += `<tr><td class="item">④ 프레시백 인센티브${fincPer>0?' <small>('+dcnt+'건 × '+fincPer+'원)</small>':''}</td><td class="amt green">+₩${finc.toLocaleString()}</td></tr>`;
+          if(incReason) addRows += `<tr><td class="item" style="padding-left:16px;color:#6b7280;font-size:11px">└ 가중요인: ${incReason}</td><td class="amt green" style="font-size:11px"></td></tr>`;
           addRows += `<tr><td class="item">⑤ 미계약건</td><td class="amt green">+₩${nocont.toLocaleString()}</td></tr>`;
           if(etcPlus>0)  addRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
           if(etcPlusTL>0) addRows += `<tr><td class="item">팀장수수료${etcPlusTLReason?' <small style="color:#94a3b8">('+etcPlusTLReason+')</small>':''}</td><td class="amt green">+₩${etcPlusTL.toLocaleString()}</td></tr>`;
@@ -1447,16 +1446,9 @@ async function acceptExchange(){
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const kvHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
-        const html = kvHtml || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
-        if (html) {
-          const akKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-          const slugScript = '<script>window.__AK='+JSON.stringify(akKey)+';window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
-          const modified = html.replace(
-            '</head>',
-            '<link rel="manifest" href="/c/'+slug+'/manifest.json"><meta name="apple-mobile-web-app-title" content="'+compName+'"><link rel="apple-touch-icon" href="/c/'+slug+'/icon.svg">\n'+slugScript+'\n</head>'
-          );
-          return new Response(modified, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
+        const kvStream_c = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
+        if (kvStream_c) {
+          return new Response(kvStream_c, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
         }
       }
     }
@@ -1470,13 +1462,9 @@ async function acceptExchange(){
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {
-            const kvHtml2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
-            const html2 = kvHtml2 || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
-            if (html2) {
-              const akKey2 = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-              const slugScript2 = '<script>window.__AK='+JSON.stringify(akKey2)+';window._COMPANY_SLUG='+JSON.stringify(slug2)+';window._SLUG_MODE=true;</script>';
-              const modified2 = html2.replace('</head>', slugScript2+'\n</head>');
-              return new Response(modified2, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
+            const kvStream_s = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
+            if (kvStream_s) {
+              return new Response(kvStream_s, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
             }
           } catch(e) {}
         }
