@@ -85,7 +85,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── 메인 콘텐츠 ── */
 #content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0;width:calc(100% - var(--sidebar-w))}
-#content{padding:16px;min-height:calc(100dvh - var(--topbar-h));box-sizing:border-box}
+#content{padding:16px;min-height:calc(100dvh - var(--topbar-h));box-sizing:border-box;margin-left:var(--sidebar-w);padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;width:calc(100% - var(--sidebar-w))}
+
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%)}
   #sidebar.open{transform:translateX(0)}
