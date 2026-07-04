@@ -38982,12 +38982,12 @@ function _promoImportFromExcel(file){
       if(rm.h1&&rm.h2)rate=25;
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
+      // ★ 가중요인1+2 둘 다 해당일 때만 ON
+      var isOn=(rm.h1&&rm.h2);
+      _setIncSetting(m.drv,m.route,isOn,rate>0?rate:10);
       if(rate>0){
-        var s=_getIncSetting(m.drv,m.route);
-        if(!s.on)_setIncSetting(m.drv,m.route,true,rate);
-        else _setIncSetting(m.drv,m.route,true,rate);
         var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
-        if(togBtn){togBtn.textContent='ON';togBtn.style.background='#059669';}
+        if(togBtn){togBtn.textContent=isOn?'ON':'OFF';togBtn.style.background=isOn?'#059669':'#94a3b8';}
         var rateBtns=document.querySelectorAll('.inc-rate-btn[data-k="'+k+'"]');
         rateBtns.forEach(function(rb){
           var on=(+rb.dataset.rate===rate);
