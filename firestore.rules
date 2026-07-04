@@ -37,6 +37,10 @@ service cloud.firestore {
     function canRead()  { return ownsDoc() || isSuperAdmin(); }
     function canWrite() { return ownsNewDoc() || isSuperAdmin(); }
     function canOwn()   { return ownsDoc() || isSuperAdmin(); }
+    /* 비로그인 포털: dealerId 기반 공개 읽기 (직원/회원 포털용) */
+    function portalRead() {
+      return resource.data.dealerId != null;
+    }
 
     match /admins/{docId} {
       allow read: if isAuth();
@@ -140,13 +144,13 @@ service cloud.firestore {
     match /plan_guard_alerts/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /settlements/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /drivers/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /members/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /attendance/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /members/{docId}                 { allow read: if canRead() || resource.data.dealerId != null; allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /attendance/{docId}              { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
     match /leaves/{docId}                  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaveBalance/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /payslips/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /notices/{docId}                 { allow read: if isAuth(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /payslips/{docId}                { allow read: if canRead() || resource.data.dealerId != null; allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /notices/{docId}                 { allow read: if isAuth() || resource.data.dealerId != null; allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /chats/{dealerId} {
       allow read, write: if isAuth() && (
         isSuperAdmin() ||
@@ -213,16 +217,16 @@ service cloud.firestore {
     match /universal_settlements/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /payout_sessions/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /shop_orders/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_sales/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_sales/{docId}             { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
     match /menu_recipes/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /menu_costs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_menus/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_menu_costs/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_customers/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_customers/{docId}         { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
     match /filo_services/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_bookings/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_bookings/{docId}          { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn() || true; }
     match /filo_settings/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_point_log/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_point_log/{docId}         { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update, delete: if canOwn(); }
     match /filo_mb_types/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_memberships/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
