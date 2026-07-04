@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7c3aed">
+<title>FILO — 회원 가입</title>
+<style>
+:root{
+  --bg:#07071a;--surface:#14142a;--surface2:#1a1a32;--surface3:#20203a;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);
+  --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;
+  --br:#7c3aed;--br2:#0891b2;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --r:12px;--r-lg:18px;--r-xl:24px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(ellipse at 20% 0%,rgba(124,58,237,.2) 0%,transparent 60%),
+  radial-gradient(ellipse at 80% 100%,rgba(8,145,178,.15) 0%,transparent 60%),var(--bg);
+  color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.wrap{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:var(--r-xl);width:100%;max-width:420px;padding:28px 24px;box-shadow:0 24px 80px rgba(0,0,0,.5),0 0 0 1px rgba(124,58,237,.08)}
+.logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px;box-shadow:0 4px 20px rgba(124,58,237,.4)}
+.store-name{font-size:20px;font-weight:900;text-align:center;margin-bottom:4px}
+.store-sub{font-size:12px;color:var(--t3);text-align:center;margin-bottom:24px}
+.step{display:none}
+.step.active{display:block;animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
+input,select{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:14px;outline:none;transition:.2s;-webkit-appearance:none}
+input:focus,select:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15);background:var(--surface3)}
+.fg{margin-bottom:14px}
+.btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,.35);transition:.2s;letter-spacing:.2px}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.5)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer;margin-top:8px;transition:.2s}
+.benefit-card{background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(8,145,178,.06));border:1px solid rgba(124,58,237,.2);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px}
+.benefit-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.benefit-icon{font-size:20px;flex-shrink:0}
+.progress-bar{display:flex;gap:4px;margin-bottom:20px}
+.progress-dot{flex:1;height:4px;border-radius:4px;background:var(--surface3);transition:.3s}
+.progress-dot.active{background:linear-gradient(90deg,#7c3aed,#9f5ef8)}
+.progress-dot.done{background:var(--green)}
+.birthday-hint{font-size:11px;color:var(--t3);margin-top:4px}
+.gender-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.gender-btn{padding:12px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:.2s}
+.gender-btn.selected{border-color:#7c3aed;background:rgba(124,58,237,.12);color:#a78bfa}
+.agree-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer}
+.agree-row input[type=checkbox]{width:18px;height:18px;border-radius:4px;margin-top:1px;flex-shrink:0;accent-color:#7c3aed}
+.agree-text{font-size:12px;color:var(--t2);line-height:1.5}
+.agree-link{color:#a78bfa;text-decoration:underline}
+.success-wrap{text-align:center;padding:20px 0}
+.success-icon{font-size:56px;margin-bottom:16px;animation:bounce .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes bounce{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.stamp-area{background:var(--surface2);border-radius:var(--r-lg);padding:16px;margin:16px 0}
+.stamp-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+.stamp{width:36px;height:36px;border-radius:50%;border:2px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:16px;transition:.3s}
+.stamp.filled{background:rgba(245,158,11,.15);border-color:#f59e0b}
+.err{font-size:11px;color:var(--red);margin-top:5px;display:none}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(30,30,60,.95);backdrop-filter:blur(16px);color:var(--tx);padding:11px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:100;transition:.35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;border:1px solid var(--bd2)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+  <!-- 로고 -->
+  <div class="logo">🎁</div>
+  <div class="store-name" id="store-name">매장 불러오는 중...</div>
+  <div class="store-sub" id="store-sub">회원이 되시면 다양한 혜택을 드려요</div>
+
+  <!-- 진행 바 -->
+  <div class="progress-bar">
+    <div class="progress-dot active" id="dot-1"></div>
+    <div class="progress-dot" id="dot-2"></div>
+    <div class="progress-dot" id="dot-3"></div>
+  </div>
+
+  <!-- Step 1: 혜택 소개 -->
+  <div class="step active" id="step-1">
+    <div class="benefit-card">
+      <div style="font-size:13px;font-weight:800;margin-bottom:10px">🎉 회원 가입 혜택</div>
+      <div class="benefit-item"><span class="benefit-icon">⭐</span><div><div style="font-weight:700">스탬프 적립</div><div style="font-size:11px;color:var(--t3)">결제마다 스탬프 1개 적립</div></div></div>
+      <div class="benefit-item"><span class="benefit-icon">🎁</span><div><div style="font-weight:700">포인트 혜택</div><div style="font-size:11px;color:var(--t3)">결제금액의 5% 포인트 적립</div></div></div>
+      <div class="benefit-item"><span class="benefit-icon">🎂</span><div><div style="font-weight:700">생일 쿠폰</div><div style="font-size:11px;color:var(--t3)">생일월 10% 할인 쿠폰 자동 발송</div></div></div>
+      <div class="benefit-item"><span class="benefit-icon">📱</span><div><div style="font-weight:700">카카오 알림</div><div style="font-size:11px;color:var(--t3)">이벤트·할인 소식을 바로 받아요</div></div></div>
+    </div>
+    <button class="btn-primary" onclick="_goStep(2)">회원 가입 시작하기 →</button>
+  </div>
+
+  <!-- Step 2: 기본 정보 -->
+  <div class="step" id="step-2">
+    <div style="font-size:15px;font-weight:900;margin-bottom:16px">기본 정보 입력</div>
+    <div class="fg">
+      <label>이름 <span style="color:#ef4444">*</span></label>
+      <input id="f-name" type="text" placeholder="홍길동" maxlength="20">
+      <div class="err" id="err-name">이름을 입력해 주세요</div>
+    </div>
+    <div class="fg">
+      <label>휴대폰 번호 <span style="color:#ef4444">*</span></label>
+      <input id="f-phone" type="tel" placeholder="010-0000-0000" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3').substring(0,13)">
+      <div class="err" id="err-phone">올바른 번호를 입력해 주세요</div>
+    </div>
+    <div class="fg">
+      <label>생년월일 <span style="color:var(--t3)">(선택)</span></label>
+      <input id="f-birth" type="date" max="">
+      <div class="birthday-hint">🎂 생일월에 특별 쿠폰을 드려요</div>
+    </div>
+    <div class="fg">
+      <label>성별 <span style="color:var(--t3)">(선택)</span></label>
+      <div class="gender-grid">
+        <button class="gender-btn" id="g-male" onclick="_selectGender('male')">👨 남성</button>
+        <button class="gender-btn" id="g-female" onclick="_selectGender('female')">👩 여성</button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="_goStep(3)">다음 →</button>
+    <button class="btn-secondary" onclick="_goStep(1)">← 이전</button>
+  </div>
+
+  <!-- Step 3: 약관 동의 + 완료 -->
+  <div class="step" id="step-3">
+    <div style="font-size:15px;font-weight:900;margin-bottom:16px">약관 동의</div>
+    <label class="agree-row" onclick="_toggleAgree('all')">
+      <input type="checkbox" id="agree-all">
+      <span class="agree-text" style="font-weight:700;color:var(--tx)">전체 동의</span>
+    </label>
+    <div style="height:1px;background:var(--bd);margin:10px 0"></div>
+    <label class="agree-row">
+      <input type="checkbox" id="agree-privacy" onclick="_syncAgree()">
+      <span class="agree-text">[필수] 개인정보 수집 및 이용 동의 <a class="agree-link" onclick="event.preventDefault();_showPrivacy()">보기</a></span>
+    </label>
+    <label class="agree-row">
+      <input type="checkbox" id="agree-marketing" onclick="_syncAgree()">
+      <span class="agree-text">[선택] 마케팅 정보 수신 동의 (카카오 알림톡, 문자)</span>
+    </label>
+    <div class="err" id="err-agree" style="margin-bottom:10px">필수 약관에 동의해 주세요</div>
+    <button class="btn-primary" onclick="_submitJoin()" id="join-btn" style="margin-top:8px">🎁 회원 가입 완료</button>
+    <button class="btn-secondary" onclick="_goStep(2)">← 이전</button>
+  </div>
+
+  <!-- Step 4: 완료 -->
+  <div class="step" id="step-4">
+    <div class="success-wrap">
+      <div class="success-icon">🎉</div>
+      <div style="font-size:20px;font-weight:900;margin-bottom:6px">가입 완료!</div>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:16px" id="success-msg">회원이 되신 것을 환영합니다</div>
+      <div class="stamp-area">
+        <div style="font-size:12px;font-weight:700;color:var(--t3);text-align:center;margin-bottom:4px">스탬프 현황</div>
+        <div class="stamp-grid" id="stamp-grid"></div>
+        <div style="font-size:11px;color:var(--t3);text-align:center;margin-top:8px" id="stamp-hint"></div>
+      </div>
+      <button class="btn-primary" onclick="window.close()">완료</button>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var _db=null,_did='',_gender='',_storeData={};
+
+function _init(){
+  var cfg={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'862900137263',appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'};
+  firebase.initializeApp(cfg);
+  _db=firebase.firestore();
+
+  var params=new URLSearchParams(location.search);
+  _did=params.get('did')||'';
+
+  /* 생년월일 최대값 */
+  document.getElementById('f-birth').max=new Date().toISOString().slice(0,10);
+
+  if(!_did){
+    document.getElementById('store-name').textContent='잘못된 링크입니다';
+    return;
+  }
+
+  /* 매장 정보 로드 */
+  _db.collection('companies').doc(_did).get().then(function(doc){
+    if(doc.exists){
+      _storeData=doc.data();
+      var name=_storeData.companyName||_storeData.name||'매장';
+      document.getElementById('store-name').textContent=name;
+      document.getElementById('store-sub').textContent=name+' 회원이 되시면 다양한 혜택을 드려요 🎁';
+    }
+  });
+}
+
+function _goStep(n){
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('step-'+n).classList.add('active');
+  /* 진행 바 */
+  for(var i=1;i<=3;i++){
+    var dot=document.getElementById('dot-'+i);
+    if(!dot)continue;
+    dot.className='progress-dot'+(i<n?' done':i===n?' active':'');
+  }
+  window.scrollTo(0,0);
+}
+
+function _selectGender(g){
+  _gender=g;
+  document.getElementById('g-male').className='gender-btn'+(g==='male'?' selected':'');
+  document.getElementById('g-female').className='gender-btn'+(g==='female'?' selected':'');
+}
+
+function _toggleAgree(type){
+  var all=document.getElementById('agree-all');
+  var privacy=document.getElementById('agree-privacy');
+  var marketing=document.getElementById('agree-marketing');
+  if(type==='all'){
+    var v=all.checked;
+    privacy.checked=v;
+    marketing.checked=v;
+  }
+}
+function _syncAgree(){
+  var privacy=document.getElementById('agree-privacy').checked;
+  var marketing=document.getElementById('agree-marketing').checked;
+  document.getElementById('agree-all').checked=privacy&&marketing;
+}
+
+function _showPrivacy(){
+  _toast('개인정보처리방침: 성명, 연락처, 생년월일을 회원관리 목적으로 수집합니다');
+}
+
+function _submitJoin(){
+  var name=(document.getElementById('f-name').value||'').trim();
+  var phone=(document.getElementById('f-phone').value||'').trim();
+  var birth=document.getElementById('f-birth').value||'';
+  var privacy=document.getElementById('agree-privacy').checked;
+
+  /* 유효성 검사 */
+  var ok=true;
+  if(!name){document.getElementById('err-name').style.display='block';ok=false;}
+  else document.getElementById('err-name').style.display='none';
+  if(!phone||phone.replace(/-/g,'').length<10){document.getElementById('err-phone').style.display='block';ok=false;}
+  else document.getElementById('err-phone').style.display='none';
+  if(!privacy){document.getElementById('err-agree').style.display='block';ok=false;}
+  else document.getElementById('err-agree').style.display='none';
+  if(!ok)return;
+
+  var btn=document.getElementById('join-btn');
+  btn.textContent='가입 중...';btn.disabled=true;
+
+  var now=new Date();
+  var marketing=document.getElementById('agree-marketing').checked;
+
+  /* 중복 체크 */
+  _db.collection('filo_customers')
+    .where('dealerId','==',_did)
+    .where('phone','==',phone.replace(/-/g,''))
+    .get().then(function(snap){
+      if(!snap.empty){
+        _toast('이미 가입된 번호입니다 😊');
+        btn.textContent='🎁 회원 가입 완료';btn.disabled=false;
+        /* 기존 회원 정보로 완료 화면 */
+        var d=snap.docs[0].data();
+        _showSuccess(d.name,d.stampCount||0);
+        return;
+      }
+      /* 신규 가입 */
+      return _db.collection('filo_customers').add({
+        dealerId:_did,
+        name:name,
+        phone:phone.replace(/-/g,''),
+        birth:birth,
+        gender:_gender,
+        agreeMarketing:marketing,
+        stampCount:0,
+        point:0,
+        visitCount:1,
+        joinedAt:now.toISOString(),
+        lastVisit:now.toISOString().slice(0,10),
+        source:'qr'
+      });
+    }).then(function(ref){
+      if(!ref)return;
+      /* 카카오 알림톡 발송 (마케팅 동의 시) */
+      if(marketing){
+        _db.collection('alimtalk_queue').add({
+          type:'member_welcome',
+          phone:phone.replace(/-/g,''),
+          dealerId:_did,
+          templateData:{
+            name:name,
+            store:_storeData.companyName||_storeData.name||'매장',
+            benefit:'스탬프 10개 적립 시 무료 음료 1잔'
+          },
+          createdAt:now.toISOString(),
+          status:'pending'
+        });
+      }
+      _showSuccess(name,0);
+    }).catch(function(e){
+      _toast('❌ '+e.message);
+      btn.textContent='🎁 회원 가입 완료';btn.disabled=false;
+    });
+}
+
+function _showSuccess(name,stampCount){
+  document.getElementById('success-msg').textContent=name+'님, 환영합니다! 🎉';
+  /* 스탬프 그리드 (10개 목표) */
+  var grid=document.getElementById('stamp-grid');
+  var total=10,filled=stampCount||0;
+  grid.innerHTML='';
+  for(var i=0;i<total;i++){
+    var s=document.createElement('div');
+    s.className='stamp'+(i<filled?' filled':'');
+    s.textContent=i<filled?'⭐':'○';
+    grid.appendChild(s);
+  }
+  document.getElementById('stamp-hint').textContent=
+    filled>0?filled+'/'+total+'개 적립 · '+(total-filled)+'개 더 모으면 무료 음료!':
+    '첫 결제 시 스탬프 1개 적립됩니다';
+  _goStep(4);
+}
+
+function _toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+window.addEventListener('DOMContentLoaded',_init);
+</script>
+</body>
+</html>
