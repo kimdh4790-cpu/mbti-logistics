@@ -326,7 +326,7 @@ function _filoGoPage(p){
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
  auto_order:'자동 발주',sales_report:'매출·마진',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
- kiosk:'POS 키오스크',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
+ kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
@@ -1767,6 +1767,107 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
   '<button onclick="document.querySelector('.mo').remove()" style="flex:1;padding:12px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">닫기</button>'+
   '</div></div>';
  _filoShowModal(html);
+}
+
+
+// ── 주문 대기 페이지 (실시간) ──
+var _ordersUnsub = null;
+function _filoPageOrders(el){
+ var did=_CU.dealerId||_CU.uid;
+ el.innerHTML='<div class="slide-up">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div style="font-size:17px;font-weight:900">🔔 주문 대기</div>'+
+  '<div class="live-dot"></div></div>'+
+  '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">⏳ 로딩 중...</div></div>'+
+  '</div>';
+ if(_ordersUnsub) _ordersUnsub();
+ var today=new Date().toISOString().slice(0,10);
+ _ordersUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did)
+  .where('date','==',today)
+  .where('source','==','table')
+  .onSnapshot(function(snap){
+   var orders=[];
+   snap.forEach(function(doc){orders.push(Object.assign({_id:doc.id},doc.data()));});
+   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+   var listEl=document.getElementById('orders-list');
+   if(!listEl)return;
+   if(!orders.length){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📭 대기 중인 주문 없음</div>';return;}
+   listEl.innerHTML=orders.map(function(o){
+    var statusColor=o.status==='done'?'#22c55e':o.status==='cancel'?'#ef4444':'#f59e0b';
+    var statusLabel=o.status==='done'?'완료':o.status==='cancel'?'취소':'대기중';
+    return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+statusColor+'">'+
+     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+     '<div style="font-size:13px;font-weight:900">🪑 테이블 '+(o.tableId||'?')+'</div>'+
+     '<span class="badge" style="background:'+statusColor+'20;color:'+statusColor+'">'+statusLabel+'</span></div>'+
+     '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">'+
+     (o.items||[]).map(function(it){return it.name+' x'+it.qty;}).join(' / ')+'</div>'+
+     '<div style="display:flex;justify-content:space-between;align-items:center">'+
+     '<div style="font-size:15px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</div>'+
+     (o.status!=='done'?
+      '<div style="display:flex;gap:6px">'+
+      '<button onclick="_filoOrderStatus(''+o._id+'','done')" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
+      '<button onclick="_filoOrderStatus(''+o._id+'','cancel')" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
+      '</div>':'')+
+     '</div></div>';
+   }).join('');
+   // 새 주문 알림음
+   if(snap.docChanges().some(function(c){return c.type==='added'&&c.doc.data().status!=='done';})){
+    try{var a=new AudioContext();var o2=a.createOscillator();o2.connect(a.destination);o2.frequency.value=880;o2.start();o2.stop(a.currentTime+0.15);}catch(e){}
+   }
+  });
+}
+
+function _filoOrderStatus(orderId, status){
+ _db.collection('filo_sales').doc(orderId).update({status:status});
+}
+
+// ── 테이블 QR 생성 ──
+function _filoPageTableQR(el){
+ var did=_CU.dealerId||_CU.uid;
+ var baseUrl='https://filo.ai.kr/order?did='+did+'&tid=';
+ el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">📋 테이블 QR 생성</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="display:flex;gap:10px;align-items:center">'+
+  '<div class="fg" style="margin:0;flex:1"><label>테이블 수</label>'+
+  '<input id="table-count" type="number" value="10" min="1" max="50" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
+  '<button onclick="_filoGenQRs()" class="btn btn-brand" style="margin-top:18px">QR 생성</button>'+
+  '</div></div>'+
+  '<div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>'+
+  '</div>';
+
+ // QRCode 라이브러리 로드
+ if(!window.QRCode){
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  s.onload=function(){_filoGenQRs();};
+  document.head.appendChild(s);
+ } else {
+  _filoGenQRs();
+ }
+}
+
+function _filoGenQRs(){
+ var did=_CU.dealerId||_CU.uid;
+ var count=parseInt(document.getElementById('table-count').value)||10;
+ var grid=document.getElementById('qr-grid');
+ if(!grid)return;
+ grid.innerHTML='';
+ for(var i=1;i<=count;i++){
+  var url='https://filo.ai.kr/order?did='+did+'&tid='+i;
+  var div=document.createElement('div');
+  div.className='card';
+  div.style.cssText='text-align:center;padding:16px;cursor:pointer';
+  div.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:10px">테이블 '+i+'</div>'+
+   '<div id="qr-'+i+'" style="background:#fff;padding:8px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;word-break:break-all">'+url+'</div>'+
+   '<button onclick="window.open(''+url+'','_blank')" style="padding:4px 10px;background:var(--br);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">미리보기</button>';
+  grid.appendChild(div);
+  if(window.QRCode){
+   new QRCode(document.getElementById('qr-'+i),{text:url,width:100,height:100,colorDark:'#000000',colorLight:'#ffffff'});
+  }
+ }
 }
 
 function _filoShowModal(html){
