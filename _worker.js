@@ -1443,8 +1443,8 @@ async function acceptExchange(){
 
       // /c/{slug} → settle.html 서빙 + manifest 링크 주입
       if (!subPath || subPath === '/') {
-        const kvHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
-        const html = kvHtml || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
+        const kvBuf = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','arrayBuffer') : null;
+        const html = kvBuf ? new TextDecoder().decode(kvBuf) : await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
         if (html) {
           const akKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
           const slugScript = '<script>window.__AK='+JSON.stringify(akKey)+';window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
@@ -1466,8 +1466,8 @@ async function acceptExchange(){
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {
-            const kvHtml2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
-            const html2 = kvHtml2 || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
+            const kvBuf2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','arrayBuffer') : null;
+            const html2 = kvBuf2 ? new TextDecoder().decode(kvBuf2) : await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
             if (html2) {
               const akKey2 = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
               const slugScript2 = '<script>window.__AK='+JSON.stringify(akKey2)+';window._COMPANY_SLUG='+JSON.stringify(slug2)+';window._SLUG_MODE=true;</script>';
