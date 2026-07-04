@@ -249,6 +249,178 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 }
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ── 로그인 화면 ── -->
+<div id="login-screen" class="login-wrap">
+<div class="login-card">
+ <div style="text-align:center;margin-bottom:22px">
+ <div style="width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">
+ <span style="font-size:22px">📦</span>
+ </div>
+ <div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FILO</div>
+ <div style="font-size:11px;color:var(--t3);margin-top:2px">재고 · 출퇴근 · 키오스크</div>
+ <button onclick="document.getElementById('landing-screen').style.display='block';document.getElementById('login-screen').style.display='none'" style="margin-top:8px;background:none;border:none;font-size:11px;color:var(--t3);cursor:pointer">← 서비스 소개 보기</button>
+ </div>
+
+ <!-- 탭 -->
+ <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--b3);border-radius:10px;padding:4px">
+ <button class="tab-btn on" id="tab-login" onclick="_filoTab('login')">로그인</button>
+ <button class="tab-btn" id="tab-register" onclick="_filoTab('register')">회사 등록</button>
+ <button class="tab-btn" id="tab-join" onclick="_filoTab('join')">직원 가입</button>
+ </div>
+
+ <!-- ── 로그인 폼 ── -->
+ <div id="form-login">
+ <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
+ 💡 <strong style="color:var(--acc)">이메일</strong> 또는 <strong style="color:var(--acc)">아이디·전화번호</strong>로 로그인
+ </div>
+ <div class="fg"><label>이메일 또는 아이디</label>
+ <input id="fl-id" type="text" placeholder="예) kim001 · kim@email.com" onkeydown="if(event.key==='Enter')_filoLogin()">
+ </div>
+ <div class="fg"><label>비밀번호</label>
+ <div style="position:relative">
+ <input id="fl-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')_filoLogin()" style="padding-right:40px">
+ <button type="button" onclick="_filoTogglePw('fl-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
+ </div>
+ </div>
+ <div id="fl-err" class="err"></div>
+ <button class="btn btn-brand" onclick="_filoLogin()">로그인</button>
+ <div style="margin-top:12px;text-align:center">
+ <button onclick="_filoFindPw()" style="background:none;border:none;font-size:11px;color:var(--t3);cursor:pointer">비밀번호 찾기</button>
+ </div>
+ </div>
+
+ <!-- ── 회사 등록 폼 ── -->
+ <div id="form-register" style="display:none">
+ <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
+ 🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
+ </div>
+ <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
+ <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
+ </div>
+ <div class="fg"><label>사업자등록번호 <span style="color:var(--red)">*</span></label>
+ <div style="display:flex;gap:8px">
+ <input id="fr-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')">
+ <button class="btn btn-sm" onclick="_filoBizCheck()" style="background:var(--br);color:#fff;white-space:nowrap">중복확인</button>
+ </div>
+ <div id="fr-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
+ </div>
+ <!-- 사용 서비스 선택 -->
+ <div class="fg">
+ <label>사용할 서비스 선택 <span style="color:var(--red)">*</span></label>
+ <div style="font-size:10px;color:var(--t3);margin-bottom:8px">7일 무료 체험 · 이후 월 구독</div>
+ <div style="display:flex;flex-direction:column;gap:8px">
+
+ <!-- QR+급여 -->
+ <div id="fs-qr-card" onclick="_filoToggleSvc('qr')" style="border:2px solid var(--bd);border-radius:10px;padding:10px 12px;cursor:pointer">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:18px">🔐</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--t2)">QR출퇴근+급여</div>
+ <div style="font-size:10px;color:var(--t3)">동적QR·GPS검증·급여자동계산 — 인당 4,500원/월</div>
+ </div>
+ </div>
+ <div id="fs-qr-check" style="width:18px;height:18px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
+ </div>
+ </div>
+
+ <!-- 콤보 -->
+ <div id="fs-combo-card" onclick="_filoToggleSvc('combo')" style="border:2px solid var(--br);border-radius:10px;padding:10px 12px;cursor:pointer">
+ <div style="display:flex;justify-content:space-between;align-items:center">
+ <div style="display:flex;align-items:center;gap:8px">
+ <span style="font-size:18px">🚀</span>
+ <div>
+ <div style="font-size:12px;font-weight:700;color:var(--t2)">재고+키오스크 콤보</div>
+ <div style="font-size:10px;color:var(--t3)">재고관리+키오스크POS — 165,000원/월</div>
+ </div>
+ </div>
+ <div id="fs-combo-check" style="width:18px;height:18px;border-radius:50%;background:var(--br);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
+ </div>
+ </div>
+ </div>
+ <input type="hidden" id="fr-service" value="combo">
+ </div>
+ <div class="fg"><label>대표자 이름 <span style="color:var(--red)">*</span></label>
+ <input id="fr-name" type="text" placeholder="예) 김형우">
+ </div>
+ <div class="fg"><label>이메일 (아이디) <span style="color:var(--red)">*</span></label>
+ <input id="fr-email" type="email" placeholder="로그인 이메일">
+ </div>
+ <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label>
+ <div style="position:relative">
+ <input id="fr-pw" type="password" placeholder="8자 이상" style="padding-right:40px">
+ <button type="button" onclick="_filoTogglePw('fr-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
+ </div>
+ </div>
+ <div class="fg"><label>전화번호</label>
+ <input id="fr-phone" type="tel" placeholder="01012345678">
+ </div>
+ <div id="fr-err" class="err"></div>
+ <button class="btn btn-brand" onclick="_filoRegister()">7일 무료체험 시작</button>
+ </div>
+
+ <!-- ── 직원 가입 폼 ── -->
+ <div id="form-join" style="display:none">
+ <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
+ 💡 관리자에게 받은 <strong style="color:var(--acc)">회사 코드</strong> 또는 <strong style="color:var(--acc)">QR 스캔</strong>으로 가입
+ </div>
+ <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label>
+ <input id="fj-name" type="text" placeholder="실명 입력">
+ </div>
+ <div class="fg"><label>전화번호 <span style="color:var(--red)">*</span></label>
+ <input id="fj-phone" type="tel" placeholder="01012345678 (- 없이)" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+ </div>
+ <div class="fg"><label>회사 코드 <span style="color:var(--red)">*</span></label>
+ <input id="fj-code" type="text" placeholder="관리자에게 받은 코드" style="text-transform:uppercase">
+ </div>
+ <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label>
+ <div style="position:relative">
+ <input id="fj-pw" type="password" placeholder="4자 이상" style="padding-right:40px">
+ <button type="button" onclick="_filoTogglePw('fj-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
+ </div>
+ </div>
+ <div id="fj-err" class="err"></div>
+ <button class="btn btn-brand" onclick="_filoJoin()">직원 가입</button>
+ </div>
+
+</div>
+</div>
+
+<!-- ── 앱 화면 ── -->
+<div id="app">
+ <div class="topbar">
+ <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:4px">☰</button>
+ <div class="topbar-logo">FILO</div>
+ <div id="topbar-title">대시보드</div>
+ <div id="topbar-right" style="display:flex;gap:6px;margin-left:auto"></div>
+ <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer">로그아웃</button>
+ </div>
+ <div id="sidebar" class="sidebar">
+ <div style="padding:12px 16px 8px">
+ <div id="nav-company" style="font-size:13px;font-weight:800;color:var(--tx)"></div>
+ <div id="nav-role" style="font-size:10px;color:var(--t3);margin-top:2px"></div>
+ </div>
+ <div id="nav-menu"></div>
+ <div style="margin:12px 6px 0;border-top:1px solid var(--bd);padding-top:10px">
+ <button onclick="_filoGoPage('subscription')" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 기능 추가하기</button>
+ </div>
+ </div>
+ <div class="main" id="content"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+
 /* ══════════════════════════════════════════
    🍽 레시피 관리 페이지
    재료 + 사용량 + 단위 등록
@@ -734,177 +906,6 @@ function _filoPageMemberQR(el){
  });
 }
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-</head>
-<body>
-
-<!-- ── 로그인 화면 ── -->
-<div id="login-screen" class="login-wrap">
-<div class="login-card">
- <div style="text-align:center;margin-bottom:22px">
- <div style="width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">
- <span style="font-size:22px">📦</span>
- </div>
- <div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FILO</div>
- <div style="font-size:11px;color:var(--t3);margin-top:2px">재고 · 출퇴근 · 키오스크</div>
- <button onclick="document.getElementById('landing-screen').style.display='block';document.getElementById('login-screen').style.display='none'" style="margin-top:8px;background:none;border:none;font-size:11px;color:var(--t3);cursor:pointer">← 서비스 소개 보기</button>
- </div>
-
- <!-- 탭 -->
- <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--b3);border-radius:10px;padding:4px">
- <button class="tab-btn on" id="tab-login" onclick="_filoTab('login')">로그인</button>
- <button class="tab-btn" id="tab-register" onclick="_filoTab('register')">회사 등록</button>
- <button class="tab-btn" id="tab-join" onclick="_filoTab('join')">직원 가입</button>
- </div>
-
- <!-- ── 로그인 폼 ── -->
- <div id="form-login">
- <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
- 💡 <strong style="color:var(--acc)">이메일</strong> 또는 <strong style="color:var(--acc)">아이디·전화번호</strong>로 로그인
- </div>
- <div class="fg"><label>이메일 또는 아이디</label>
- <input id="fl-id" type="text" placeholder="예) kim001 · kim@email.com" onkeydown="if(event.key==='Enter')_filoLogin()">
- </div>
- <div class="fg"><label>비밀번호</label>
- <div style="position:relative">
- <input id="fl-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')_filoLogin()" style="padding-right:40px">
- <button type="button" onclick="_filoTogglePw('fl-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
- </div>
- </div>
- <div id="fl-err" class="err"></div>
- <button class="btn btn-brand" onclick="_filoLogin()">로그인</button>
- <div style="margin-top:12px;text-align:center">
- <button onclick="_filoFindPw()" style="background:none;border:none;font-size:11px;color:var(--t3);cursor:pointer">비밀번호 찾기</button>
- </div>
- </div>
-
- <!-- ── 회사 등록 폼 ── -->
- <div id="form-register" style="display:none">
- <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
- 🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
- </div>
- <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
- <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
- </div>
- <div class="fg"><label>사업자등록번호 <span style="color:var(--red)">*</span></label>
- <div style="display:flex;gap:8px">
- <input id="fr-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')">
- <button class="btn btn-sm" onclick="_filoBizCheck()" style="background:var(--br);color:#fff;white-space:nowrap">중복확인</button>
- </div>
- <div id="fr-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
- </div>
- <!-- 사용 서비스 선택 -->
- <div class="fg">
- <label>사용할 서비스 선택 <span style="color:var(--red)">*</span></label>
- <div style="font-size:10px;color:var(--t3);margin-bottom:8px">7일 무료 체험 · 이후 월 구독</div>
- <div style="display:flex;flex-direction:column;gap:8px">
-
- <!-- QR+급여 -->
- <div id="fs-qr-card" onclick="_filoToggleSvc('qr')" style="border:2px solid var(--bd);border-radius:10px;padding:10px 12px;cursor:pointer">
- <div style="display:flex;justify-content:space-between;align-items:center">
- <div style="display:flex;align-items:center;gap:8px">
- <span style="font-size:18px">🔐</span>
- <div>
- <div style="font-size:12px;font-weight:700;color:var(--t2)">QR출퇴근+급여</div>
- <div style="font-size:10px;color:var(--t3)">동적QR·GPS검증·급여자동계산 — 인당 4,500원/월</div>
- </div>
- </div>
- <div id="fs-qr-check" style="width:18px;height:18px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
- </div>
- </div>
-
- <!-- 콤보 -->
- <div id="fs-combo-card" onclick="_filoToggleSvc('combo')" style="border:2px solid var(--br);border-radius:10px;padding:10px 12px;cursor:pointer">
- <div style="display:flex;justify-content:space-between;align-items:center">
- <div style="display:flex;align-items:center;gap:8px">
- <span style="font-size:18px">🚀</span>
- <div>
- <div style="font-size:12px;font-weight:700;color:var(--t2)">재고+키오스크 콤보</div>
- <div style="font-size:10px;color:var(--t3)">재고관리+키오스크POS — 165,000원/월</div>
- </div>
- </div>
- <div id="fs-combo-check" style="width:18px;height:18px;border-radius:50%;background:var(--br);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff">✓</div>
- </div>
- </div>
- </div>
- <input type="hidden" id="fr-service" value="combo">
- </div>
- <div class="fg"><label>대표자 이름 <span style="color:var(--red)">*</span></label>
- <input id="fr-name" type="text" placeholder="예) 김형우">
- </div>
- <div class="fg"><label>이메일 (아이디) <span style="color:var(--red)">*</span></label>
- <input id="fr-email" type="email" placeholder="로그인 이메일">
- </div>
- <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label>
- <div style="position:relative">
- <input id="fr-pw" type="password" placeholder="8자 이상" style="padding-right:40px">
- <button type="button" onclick="_filoTogglePw('fr-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
- </div>
- </div>
- <div class="fg"><label>전화번호</label>
- <input id="fr-phone" type="tel" placeholder="01012345678">
- </div>
- <div id="fr-err" class="err"></div>
- <button class="btn btn-brand" onclick="_filoRegister()">7일 무료체험 시작</button>
- </div>
-
- <!-- ── 직원 가입 폼 ── -->
- <div id="form-join" style="display:none">
- <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
- 💡 관리자에게 받은 <strong style="color:var(--acc)">회사 코드</strong> 또는 <strong style="color:var(--acc)">QR 스캔</strong>으로 가입
- </div>
- <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label>
- <input id="fj-name" type="text" placeholder="실명 입력">
- </div>
- <div class="fg"><label>전화번호 <span style="color:var(--red)">*</span></label>
- <input id="fj-phone" type="tel" placeholder="01012345678 (- 없이)" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
- </div>
- <div class="fg"><label>회사 코드 <span style="color:var(--red)">*</span></label>
- <input id="fj-code" type="text" placeholder="관리자에게 받은 코드" style="text-transform:uppercase">
- </div>
- <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label>
- <div style="position:relative">
- <input id="fj-pw" type="password" placeholder="4자 이상" style="padding-right:40px">
- <button type="button" onclick="_filoTogglePw('fj-pw',this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:16px">👁</button>
- </div>
- </div>
- <div id="fj-err" class="err"></div>
- <button class="btn btn-brand" onclick="_filoJoin()">직원 가입</button>
- </div>
-
-</div>
-</div>
-
-<!-- ── 앱 화면 ── -->
-<div id="app">
- <div class="topbar">
- <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:4px">☰</button>
- <div class="topbar-logo">FILO</div>
- <div id="topbar-title">대시보드</div>
- <div id="topbar-right" style="display:flex;gap:6px;margin-left:auto"></div>
- <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer">로그아웃</button>
- </div>
- <div id="sidebar" class="sidebar">
- <div style="padding:12px 16px 8px">
- <div id="nav-company" style="font-size:13px;font-weight:800;color:var(--tx)"></div>
- <div id="nav-role" style="font-size:10px;color:var(--t3);margin-top:2px"></div>
- </div>
- <div id="nav-menu"></div>
- <div style="margin:12px 6px 0;border-top:1px solid var(--bd);padding-top:10px">
- <button onclick="_filoGoPage('subscription')" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 기능 추가하기</button>
- </div>
- </div>
- <div class="main" id="content"></div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<script>
 var _fbApp=null,_db=null,_auth=null,_CU=null,_cachedCompanyDoc=null;
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
 function _initFirebase(){
