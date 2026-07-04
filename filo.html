@@ -1053,6 +1053,7 @@ function _buildFiloNav(){
  if(isSA||hasSub('kiosk')||hasSub('combo')){
  menus.push({s:'🖥️ 키오스크',items:[
  {ic:'🖥️',l:'POS 결제',p:'kiosk'},
+ {ic:'🪑',l:'테이블 관리',p:'table_mgmt'},
  {ic:'📋',l:'테이블 QR',p:'table_qr'},
  {ic:'🎁',l:'회원 QR',p:'member_qr'},
  {ic:'⭐',l:'포인트 관리',p:'points'},
@@ -1087,7 +1088,7 @@ function _filoGoPage(p){
  var el=document.getElementById('content');
  var titles={home:'대시보드',members:'직원 관리',schedule:'달력',
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
- auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',member_qr:'회원 QR',cost_mgmt:'원가 관리',
+ auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
@@ -1117,6 +1118,7 @@ function _filoGoPage(p){
  else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='qr_staff') _filoPageStaffQR(el);
  else if(p==='table_qr') _filoPageTableQR(el);
+ else if(p==='table_mgmt') _filoPageTableMgmt(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
  /* 페이지 전환 애니메이션 */
  if(el){el.style.animation='none';el.offsetHeight;el.style.animation='pageEnter .25s ease both';}
@@ -2972,8 +2974,11 @@ function _filoConfirmPay(method, methodLabel){
  var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
  var now=new Date();
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
+ var tableId=window._selectedTableId||null;
+ var tableName=tableId?'테이블 '+tableId:'카운터';
  _db.collection('filo_sales').add({
   dealerId:did,items:items,total:total,
+  tableId:tableId,tableName:tableName,
   createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
   type:'pos',payMethod:method,createdBy:_CU.name||_CU.userId||''
  }).then(function(ref){
@@ -3230,6 +3235,191 @@ document.addEventListener('click',function(e){
  if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
 });
 
+
+/* ══════════════════════════════════
+   🪑 테이블 관리 페이지
+   테이블 수 설정, 상태 관리, 실시간
+   ══════════════════════════════════ */
+function _filoPageTableMgmt(el){
+ var did=_CU.dealerId||_CU.uid;
+ el.innerHTML='<div class="slide-up" style="max-width:800px;margin:0 auto">';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ wrap.style.cssText='max-width:800px;margin:0 auto';
+
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+ hdr.innerHTML='<div><div class="page-title">🪑 테이블 관리</div><div class="page-sub">실시간 테이블 현황 및 설정</div></div>';
+ var setupBtn=document.createElement('button');
+ setupBtn.className='btn btn-primary btn-sm';
+ setupBtn.textContent='+ 테이블 설정';
+ setupBtn.onclick=function(){_filoTableSetup(did);};
+ hdr.appendChild(setupBtn);
+ wrap.appendChild(hdr);
+
+ /* 실시간 현황 */
+ var liveWrap=document.createElement('div');
+ liveWrap.id='table-live';
+ liveWrap.innerHTML='<div class="card"><div style="text-align:center;padding:20px;color:var(--t3)">⏳ 로딩 중...</div></div>';
+ wrap.appendChild(liveWrap);
+
+ el.innerHTML='';
+ el.appendChild(wrap);
+ _filoLoadTableMgmt(did);
+}
+
+var _tableMgmtUnsub=null;
+function _filoLoadTableMgmt(did){
+ if(_tableMgmtUnsub){_tableMgmtUnsub();_tableMgmtUnsub=null;}
+ _tableMgmtUnsub=_db.collection('filo_tables')
+  .where('dealerId','==',did)
+  .onSnapshot(function(snap){
+   var tables=[];
+   snap.forEach(function(doc){tables.push(Object.assign({_id:doc.id},doc.data()));});
+   tables.sort(function(a,b){return (a.tableId||0)-(b.tableId||0);});
+   _filoRenderTableMgmt(did,tables);
+  });
+}
+
+function _filoRenderTableMgmt(did,tables){
+ var wrap=document.getElementById('table-live');
+ if(!wrap)return;
+
+ if(!tables.length){
+  wrap.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">'+
+  '<div style="font-size:32px;margin-bottom:8px">🪑</div>'+
+  '<div style="font-size:14px;font-weight:700;color:var(--t2);margin-bottom:6px">테이블이 없습니다</div>'+
+  '<div style="font-size:12px;margin-bottom:16px">테이블 설정 버튼을 눌러 테이블을 추가하세요</div>'+
+  '</div>';
+  return;
+ }
+
+ var empty=tables.filter(function(t){return t.status==='empty';}).length;
+ var occupied=tables.filter(function(t){return t.status==='occupied';}).length;
+ var reserved=tables.filter(function(t){return t.status==='reserved';}).length;
+
+ var html='<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">'+
+ [{label:'전체',val:tables.length+'개',c:'#a78bfa',cls:'kpi-revenue'},
+  {label:'빈 테이블',val:empty+'개',c:'#22c55e',cls:'kpi-profit'},
+  {label:'사용중',val:occupied+'개',c:'#ef4444',cls:'kpi-cost'},
+  {label:'예약',val:reserved+'개',c:'#f59e0b',cls:'kpi-margin'}
+ ].map(function(s){
+  return '<div class="kpi-card '+s.cls+'">'+
+  '<div class="kpi-label">'+s.label+'</div>'+
+  '<div class="kpi-val" style="color:'+s.c+'">'+s.val+'</div></div>';
+ }).join('')+'</div>';
+
+ /* 테이블 맵 */
+ html+='<div class="card"><div class="section-header"><h3>테이블 맵</h3>'+
+ '<span style="font-size:10px;color:var(--t3)">클릭으로 상태 변경</span></div>'+
+ '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px">';
+
+ var statusMap={
+  empty:{label:'빈자리',color:'#22c55e',bg:'rgba(34,197,94,.1)',bd:'rgba(34,197,94,.25)',icon:'🟢'},
+  occupied:{label:'사용중',color:'#ef4444',bg:'rgba(239,68,68,.1)',bd:'rgba(239,68,68,.25)',icon:'🔴'},
+  reserved:{label:'예약',color:'#f59e0b',bg:'rgba(245,158,11,.1)',bd:'rgba(245,158,11,.25)',icon:'🟡'},
+  cleaning:{label:'청소중',color:'#60a5fa',bg:'rgba(96,165,250,.1)',bd:'rgba(96,165,250,.25)',icon:'🔵'}
+ };
+
+ tables.forEach(function(t){
+  var s=statusMap[t.status||'empty'];
+  var since=t.since&&t.status==='occupied'?Math.floor((Date.now()-new Date(t.since))/60000)+'분':'';
+  html+='<div onclick="_filoTableStatusChange(\''+did+'\',\''+t._id+'\',\''+t.status+'\')" '+
+  'style="padding:14px 8px;text-align:center;border-radius:var(--r);cursor:pointer;transition:.2s;'+
+  'background:'+s.bg+';border:2px solid '+s.bd+'">'+
+  '<div style="font-size:20px">'+s.icon+'</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-top:4px">'+t.tableId+'번</div>'+
+  '<div style="font-size:10px;color:'+s.color+';font-weight:700">'+s.label+'</div>'+
+  (since?'<div style="font-size:9px;color:var(--t3)">'+since+'</div>':'')+
+  '</div>';
+ });
+ html+='</div></div>';
+
+ wrap.innerHTML=html;
+}
+
+function _filoTableStatusChange(did,docId,currentStatus){
+ var next={empty:'occupied',occupied:'cleaning',cleaning:'empty',reserved:'empty'};
+ var nextStatus=next[currentStatus]||'empty';
+ var update={status:nextStatus,updatedAt:new Date().toISOString()};
+ if(nextStatus==='occupied')update.since=new Date().toISOString();
+ else if(nextStatus==='empty')update.since=null;
+ _db.collection('filo_tables').doc(docId).update(update).then(function(){
+  _filoToast('✅ 상태 변경: '+nextStatus);
+ });
+}
+
+function _filoTableSetup(did){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:24px;width:100%;max-width:420px';
+
+ var title=document.createElement('div');
+ title.style.cssText='font-size:16px;font-weight:900;margin-bottom:16px';
+ title.textContent='🪑 테이블 설정';
+ box.appendChild(title);
+
+ var g1=document.createElement('div');g1.className='input-group';
+ var l1=document.createElement('label');l1.textContent='테이블 수 (최대 50개)';
+ var inp1=document.createElement('input');inp1.id='ts-count';inp1.type='number';
+ inp1.value='10';inp1.min='1';inp1.max='50';
+ inp1.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none';
+ g1.appendChild(l1);g1.appendChild(inp1);box.appendChild(g1);
+
+ var g2=document.createElement('div');g2.className='input-group';
+ var l2=document.createElement('label');l2.textContent='테이블당 좌석 수';
+ var inp2=document.createElement('input');inp2.id='ts-seats';inp2.type='number';
+ inp2.value='4';inp2.min='1';inp2.max='20';
+ inp2.style.cssText=inp1.style.cssText;
+ g2.appendChild(l2);g2.appendChild(inp2);box.appendChild(g2);
+
+ var note=document.createElement('div');
+ note.style.cssText='font-size:11px;color:var(--t3);margin-bottom:16px;padding:8px 12px;background:rgba(245,158,11,.08);border-radius:8px;border:1px solid rgba(245,158,11,.15)';
+ note.textContent='⚠️ 기존 테이블 데이터를 초기화하고 새로 생성합니다';
+ box.appendChild(note);
+
+ var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px';
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer';
+ cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
+ var saveBtn=document.createElement('button');
+ saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-weight:700;cursor:pointer';
+ saveBtn.textContent='✅ 생성';
+ saveBtn.onclick=function(){
+  var cnt=parseInt(document.getElementById('ts-count').value)||10;
+  var seats=parseInt(document.getElementById('ts-seats').value)||4;
+  _filoCreateTables(did,cnt,seats);
+  mo.remove();
+ };
+ btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
+ box.appendChild(btnRow);
+
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+function _filoCreateTables(did,count,seats){
+ /* 기존 삭제 후 재생성 */
+ _filoToast('⏳ 테이블 생성 중...');
+ _db.collection('filo_tables').where('dealerId','==',did).get().then(function(snap){
+  var deletes=snap.docs.map(function(doc){return doc.ref.delete();});
+  return Promise.all(deletes);
+ }).then(function(){
+  var creates=[];
+  for(var i=1;i<=count;i++){
+   creates.push(_db.collection('filo_tables').add({
+    dealerId:did,tableId:i,seats:seats,
+    status:'empty',since:null,
+    createdAt:new Date().toISOString()
+   }));
+  }
+  return Promise.all(creates);
+ }).then(function(){
+  _filoToast('✅ 테이블 '+count+'개 생성 완료!');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
+}
 </script>
 </body>
 </html>
