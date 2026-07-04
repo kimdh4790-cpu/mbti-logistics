@@ -2,361 +2,182 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>도입 신청 — DONWAY</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7c3aed">
+<title>FILO — 매장 현황</title>
 <style>
-:root{--bg:#0f1117;--bg2:#171a24;--bg3:#1e2130;--border:#2e3250;--text:#e8eaf6;--text2:#9da3c8;--text3:#5a5f7a;--acc:#00d4ff;--green:#00ff94;--red:#ff4d6d;--pink:#e91e63;}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.wrap{width:100%;max-width:480px}
-.logo{text-align:center;margin-bottom:32px}
-.logo-title{font-size:28px;font-weight:900;background:linear-gradient(90deg,var(--acc),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
-.logo-sub{font-size:13px;color:var(--text3)}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px}
-.step-bar{display:flex;gap:6px;margin-bottom:24px}
-.step-dot{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s}
-.step-dot.done{background:var(--green)}
-.step-dot.active{background:var(--acc)}
-.step-title{font-size:16px;font-weight:900;margin-bottom:6px}
-.step-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
-.field{margin-bottom:16px}
-.field-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;display:block}
-.field-req{color:var(--acc);margin-left:2px}
-.inp{width:100%;padding:13px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;transition:border-color .2s}
-.inp:focus{outline:none;border-color:var(--acc)}
-.inp.error{border-color:var(--red)}
-.inp-hint{font-size:11px;color:var(--text3);margin-top:4px}
-.inp-hint.err{color:var(--red)}
-select.inp{cursor:pointer}
-.industry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px}
-.ind-btn{padding:10px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-size:11px;text-align:center;cursor:pointer;transition:all .2s}
-.ind-btn.selected{background:rgba(0,212,255,.1);border-color:var(--acc);color:var(--acc);font-weight:700}
-.btn-main{width:100%;padding:15px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--acc),var(--pink));color:#fff;font-size:15px;font-weight:900;cursor:pointer;transition:all .2s;margin-top:8px}
-.btn-main:disabled{opacity:.4;cursor:not-allowed}
-.btn-main:active{transform:scale(.98)}
-.btn-back{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;cursor:pointer;margin-top:8px}
-.success-wrap{text-align:center;padding:20px 0}
-.success-icon{font-size:64px;margin-bottom:16px;animation:pop .4s ease}
-@keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
-.success-title{font-size:20px;font-weight:900;margin-bottom:10px}
-.success-sub{font-size:13px;color:var(--text2);line-height:1.7}
-.info-box{background:var(--bg3);border-radius:12px;padding:14px;font-size:12px;color:var(--text3);line-height:1.7;margin:16px 0}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
-#toast.show{opacity:1}
+:root{
+  --bg:#0d0d1a;--surface:#1a1a2e;--surface2:#20203a;--surface3:#262642;
+  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);
+  --tx:#f2f2ff;--t2:#a0a0c0;--t3:#606080;
+  --br:#7c3aed;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#60a5fa;
+  --r:12px;--r-lg:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:rgba(13,13,26,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
+.topbar-logo{font-size:17px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.content{padding:70px 16px 24px}
+.card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.status-card{background:var(--surface2);border-radius:var(--r);padding:14px 10px;text-align:center;border:1px solid var(--bd)}
+.table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px}
+.table-card{border-radius:var(--r);padding:14px 8px;text-align:center;cursor:pointer;transition:.2s;border:2px solid transparent;position:relative}
+.table-card.empty{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25)}
+.table-card.empty:hover{background:rgba(34,197,94,.18);transform:translateY(-2px)}
+.table-card.occupied{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25)}
+.table-card.reserved{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25)}
+.table-card.cleaning{background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.25)}
+.live-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.slide-up{animation:slideUp .3s ease both}
+.btn-brand{background:linear-gradient(135deg,#7c3aed,#9f5ef8);color:#fff;border:none;border-radius:var(--r);padding:13px;width:100%;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.3);margin-top:10px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="logo">
-    <div class="logo-title">DONWAY</div>
-    <div class="logo-sub">정산 자동화 · 도입 신청</div>
-  </div>
-  <div class="card" id="card">
-    <div class="step-bar">
-      <div class="step-dot active" id="dot0"></div>
-      <div class="step-dot" id="dot1"></div>
-      <div class="step-dot" id="dot2"></div>
-    </div>
-    <div id="step-content"></div>
-  </div>
-  <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text3)">
-    이미 계정이 있으신가요?
-    <a href="https://donway.ai.kr/settle" style="color:var(--acc);text-decoration:none;font-weight:700">로그인 →</a>
+<div class="topbar">
+  <div class="topbar-logo">FILO</div>
+  <div id="store-name" style="font-size:13px;font-weight:700;color:var(--t2)">매장 현황</div>
+  <div style="margin-left:auto;display:flex;align-items:center;font-size:11px;color:var(--t3)">
+    <span class="live-dot" style="background:#22c55e"></span>실시간
   </div>
 </div>
-<div id="toast"></div>
 
+<div class="content">
+  <!-- 요약 -->
+  <div class="status-grid slide-up">
+    <div class="status-card">
+      <div style="font-size:24px;font-weight:900;color:#22c55e" id="cnt-empty">-</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:4px">빈 테이블</div>
+    </div>
+    <div class="status-card">
+      <div style="font-size:24px;font-weight:900;color:#ef4444" id="cnt-occupied">-</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:4px">사용중</div>
+    </div>
+    <div class="status-card">
+      <div style="font-size:24px;font-weight:900;color:#f59e0b" id="cnt-reserved">-</div>
+      <div style="font-size:10px;color:var(--t3);margin-top:4px">예약</div>
+    </div>
+  </div>
+
+  <!-- 테이블 맵 -->
+  <div class="card">
+    <div style="font-size:13px;font-weight:800;margin-bottom:14px">🗺 테이블 현황</div>
+    <div class="table-grid" id="table-map">
+      <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>
+    </div>
+  </div>
+
+  <!-- 범례 -->
+  <div class="card">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:14px;height:14px;border-radius:4px;background:rgba(34,197,94,.2);border:1px solid rgba(34,197,94,.3)"></div>
+        <span style="font-size:12px;color:var(--t2)">빈 테이블</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:14px;height:14px;border-radius:4px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.3)"></div>
+        <span style="font-size:12px;color:var(--t2)">사용중</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:14px;height:14px;border-radius:4px;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.3)"></div>
+        <span style="font-size:12px;color:var(--t2)">예약</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:14px;height:14px;border-radius:4px;background:rgba(96,165,250,.2);border:1px solid rgba(96,165,250,.3)"></div>
+        <span style="font-size:12px;color:var(--t2)">청소중</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회원가입 유도 -->
+  <div class="card" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(8,145,178,.06));border-color:rgba(124,58,237,.2)">
+    <div style="font-size:14px;font-weight:800;margin-bottom:6px">🎁 회원 혜택</div>
+    <div style="font-size:12px;color:var(--t2);line-height:1.6">스탬프 적립, 할인 쿠폰, 우선 예약<br>회원가입 후 즉시 혜택을 받으세요</div>
+    <button class="btn-brand" id="join-btn" onclick="_goJoin()">회원 가입하기</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-firebase.initializeApp({
-  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
-  authDomain:'mbti-logistics.firebaseapp.com',
-  projectId:'mbti-logistics',
-  storageBucket:'mbti-logistics.firebasestorage.app',
-  messagingSenderId:'424881832661',
-  appId:'1:40761160761:web:20545b610f03f534e949e8'
-});
-var _db=firebase.firestore();
+var _db=null,_did='',_unsub=null;
 
-function toast(msg,dur){
-  var t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},dur||2500);
-}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _init(){
+  var cfg={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'862900137263',appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'};
+  firebase.initializeApp(cfg);
+  _db=firebase.firestore();
 
-// 상태
-var _state={step:0,companyName:'',repName:'',email:'',phone:'',industry:'',personCount:'',memo:''};
+  var params=new URLSearchParams(location.search);
+  _did=params.get('did')||'';
 
-var INDUSTRIES=[
-  {id:'ai_settle',icon:'🤖',name:'쿠팡·물류'},
-  {id:'delivery', icon:'🛵',name:'배달대행'},
-  {id:'beauty',   icon:'💄',name:'뷰티·미용'},
-  {id:'construction',icon:'🏗️',name:'건설·현장'},
-  {id:'insurance',icon:'🛡️',name:'보험'},
-  {id:'care',     icon:'🏥',name:'요양·돌봄'},
-  {id:'academy',  icon:'🎓',name:'학원·교육'},
-  {id:'restaurant',icon:'🍽️',name:'음식점·카페'},
-  {id:'golf',     icon:'🏌️',name:'골프장'},
-  {id:'warehouse',icon:'📦',name:'물류창고'},
-  {id:'freelance',icon:'🖥️',name:'프리랜서'},
-  {id:'etc',      icon:'📋',name:'기타'},
-];
-
-function _setDots(step){
-  for(var i=0;i<3;i++){
-    var d=document.getElementById('dot'+i);
-    if(!d)continue;
-    d.className='step-dot'+(i<step?' done':i===step?' active':'');
+  if(!_did){
+    document.getElementById('table-map').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">❌ 잘못된 링크입니다</div>';
+    return;
   }
-}
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STEP 0 — 회사 정보
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _step0(){
-  _state.step=0;_setDots(0);
-  document.getElementById('step-content').innerHTML=
-    '<div class="step-title">회사 정보</div>'+
-    '<div class="step-sub">서비스 도입을 위한 기본 정보를 입력해주세요</div>'+
-    '<div class="field">'+
-      '<label class="field-label">회사명 <span class="field-req">*</span></label>'+
-      '<input class="inp" id="f-company" placeholder="예) (주)엠비티아이" value="'+esc(_state.companyName)+'">'+
-    '</div>'+
-    '<div class="field">'+
-      '<label class="field-label">대표자명 <span class="field-req">*</span></label>'+
-      '<input class="inp" id="f-rep" placeholder="예) 김형우" value="'+esc(_state.repName)+'">'+
-    '</div>'+
-    '<div class="field">'+
-      '<label class="field-label">연락처 <span class="field-req">*</span></label>'+
-      '<input class="inp" id="f-phone" type="tel" placeholder="010-0000-0000" value="'+esc(_state.phone)+'">'+
-    '</div>'+
-    '<div class="field">'+
-      '<label class="field-label">이메일 <span class="field-req">*</span></label>'+
-      '<input class="inp" id="f-email" type="email" placeholder="업무용 이메일 주소" value="'+esc(_state.email)+'">'+
-      '<div class="inp-hint">승인 후 이 이메일로 로그인 안내가 발송됩니다</div>'+
-    '</div>'+
-    '<button class="btn-main" onclick="_next0()">다음 →</button>';
-}
-
-function _next0(){
-  var company=(document.getElementById('f-company')||{}).value||'';
-  var rep=(document.getElementById('f-rep')||{}).value||'';
-  var phone=(document.getElementById('f-phone')||{}).value||'';
-  var email=(document.getElementById('f-email')||{}).value||'';
-  if(!company){toast('회사명을 입력하세요');return;}
-  if(!rep){toast('대표자명을 입력하세요');return;}
-  if(!phone){toast('연락처를 입력하세요');return;}
-  if(!email||email.indexOf('@')<0){toast('이메일을 올바르게 입력하세요');return;}
-  _state.companyName=company;_state.repName=rep;
-  _state.phone=phone;_state.email=email;
-  _step1();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STEP 1 — 업종·인원
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _step1(){
-  _state.step=1;_setDots(1);
-  var indGrid=INDUSTRIES.map(function(ind){
-    return '<div class="ind-btn'+(ind.id===_state.industry?' selected':'')+'" data-id="'+ind.id+'" onclick="_selInd(this)">'+
-      '<div style="font-size:18px;margin-bottom:4px">'+ind.icon+'</div>'+
-      '<div>'+ind.name+'</div>'+
-    '</div>';
-  }).join('');
-
-  document.getElementById('step-content').innerHTML=
-    '<div class="step-title">업종 · 인원</div>'+
-    '<div class="step-sub">업종에 맞는 기능을 안내해드립니다</div>'+
-    '<div class="field">'+
-      '<label class="field-label">업종 선택 <span class="field-req">*</span></label>'+
-      '<div class="industry-grid">'+indGrid+'</div>'+
-    '</div>'+
-    '<div class="field">'+
-      '<label class="field-label">직원 수 <span class="field-req">*</span></label>'+
-      '<select class="inp" id="f-person">'+
-        '<option value="">인원 선택</option>'+
-        '<option value="10" '  +(_state.personCount==='10'?'selected':'')+'>~10명</option>'+
-        '<option value="50" '  +(_state.personCount==='50'?'selected':'')+'>~50명</option>'+
-        '<option value="150" ' +(_state.personCount==='150'?'selected':'')+'>~150명</option>'+
-        '<option value="300" ' +(_state.personCount==='300'?'selected':'')+'>~300명</option>'+
-        '<option value="500" ' +(_state.personCount==='500'?'selected':'')+'>~500명</option>'+
-        '<option value="700" ' +(_state.personCount==='700'?'selected':'')+'>~700명</option>'+
-        '<option value="1000" '+(_state.personCount==='1000'?'selected':'')+'>~1000명</option>'+
-      '</select>'+
-    '</div>'+
-    '<div class="field">'+
-      '<label class="field-label">문의 사항 (선택)</label>'+
-      '<textarea class="inp" id="f-memo" rows="3" placeholder="도입 목적, 현재 사용 중인 툴, 궁금한 점 등" style="resize:none">'+esc(_state.memo)+'</textarea>'+
-    '</div>'+
-    '<button class="btn-main" onclick="_next1()">다음 →</button>'+
-    '<button class="btn-back" onclick="_step0()">← 이전</button>';
-}
-
-function _selInd(el){
-  document.querySelectorAll('.ind-btn').forEach(function(b){b.classList.remove('selected');});
-  el.classList.add('selected');
-  _state.industry=el.dataset.id;
-}
-
-function _next1(){
-  var person=(document.getElementById('f-person')||{}).value||'';
-  var memo=(document.getElementById('f-memo')||{}).value||'';
-  if(!_state.industry){toast('업종을 선택하세요');return;}
-  if(!person){toast('인원을 선택하세요');return;}
-  _state.personCount=person;_state.memo=memo;
-  _step2();
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STEP 2 — 확인 · 신청
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _step2(){
-  _state.step=2;_setDots(2);
-  var ind=INDUSTRIES.find(function(i){return i.id===_state.industry;})||{icon:'📋',name:_state.industry};
-  document.getElementById('step-content').innerHTML=
-    '<div class="step-title">신청 확인</div>'+
-    '<div class="step-sub">아래 내용으로 도입 신청하시겠습니까?</div>'+
-    '<div class="info-box">'+
-      '<div style="display:flex;flex-direction:column;gap:8px">'+
-        _row('🏢 회사명', _state.companyName)+
-        _row('👤 대표자', _state.repName)+
-        _row('📞 연락처', _state.phone)+
-        _row('📧 이메일', _state.email)+
-        _row('🏷️ 업종', ind.icon+' '+ind.name)+
-        _row('👥 인원', _state.personCount+'명 이하')+
-        (_state.memo?_row('💬 문의', _state.memo):'')+
-      '</div>'+
-    '</div>'+
-    '<div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px;font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:16px">'+
-      '📋 <b>신청 후 절차</b><br>'+
-      '① 담당자 확인 후 1영업일 내 연락드립니다<br>'+
-      '② 승인 완료 시 이메일로 로그인 안내 발송<br>'+
-      '③ <b>7일 무료 체험</b> 즉시 시작'+
-    '</div>'+
-    '<button class="btn-main" id="submit-btn" onclick="_submit()">✅ 도입 신청하기</button>'+
-    '<button class="btn-back" onclick="_step1()">← 이전</button>';
-}
-
-function _row(label, value){
-  return '<div style="display:flex;gap:8px"><span style="width:80px;flex-shrink:0">'+label+'</span><span style="font-weight:700;color:var(--text)">'+esc(value)+'</span></div>';
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 신청 제출
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function _submit(){
-  var btn=document.getElementById('submit-btn');
-  if(btn){btn.textContent='⏳ 신청 중...';btn.disabled=true;}
-
-  // 중복 이메일 체크
-  _db.collection('join_requests').where('email','==',_state.email).limit(1).get()
-  .then(function(snap){
-    if(!snap.empty){
-      toast('이미 신청된 이메일입니다');
-      if(btn){btn.textContent='✅ 도입 신청하기';btn.disabled=false;}
-      return;
+  /* 매장명 */
+  _db.collection('companies').doc(_did).get().then(function(doc){
+    if(doc.exists){
+      var name=doc.data().companyName||doc.data().name||'매장';
+      document.getElementById('store-name').textContent=name+' 현황';
     }
-    // 신청 저장
-    return _db.collection('join_requests').add({
-      companyName: _state.companyName,
-      repName:     _state.repName,
-      email:       _state.email,
-      phone:       _state.phone,
-      industry:    _state.industry,
-      personCount: parseInt(_state.personCount)||0,
-      memo:        _state.memo,
-      status:      'pending',  // pending → approved → rejected
-      createdAt:   new Date().toISOString(),
-      source:      'join_form',
-    });
-  }).then(function(ref){
-    if(!ref)return;
-    // 슈퍼어드민 알림 (alimtalk_queue)
-    _db.collection('alimtalk_queue').add({
-      type:'new_join_request',
-      to:'admin',
-      companyName:_state.companyName,
-      email:_state.email,
-      phone:_state.phone,
-      industry:_state.industry,
-      personCount:_state.personCount,
-      status:'pending',
-      createdAt:new Date().toISOString(),
-    }).catch(function(){});
-
-    // FCM 푸시 — 대표 폰 즉시 알림
-    _db.collection('admins').get().then(function(snap){
-      snap.forEach(function(d){
-        var tokens=d.data().fcmTokens||[];
-        tokens.forEach(function(token){
-          fetch('/fcm/notify-drivers',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-              token:token,
-              title:'🚀 새 도입 신청!',
-              body:(_state.companyName||'')+'·'+(_state.repName||'')+' 신청 접수',
-              type:'join_request'
-            })
-          }).catch(function(){});
-        });
-      });
-    }).catch(function(){});
-
-    // 이메일 알림
-    fetch('/api/send-email',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        to:'kimdh4790@gmail.com',
-        subject:'[DONWAY] 새 도입 신청 — '+(_state.companyName||''),
-        html:'<h2>새 도입 신청 접수!</h2>'+
-          '<table style="border-collapse:collapse;width:100%">'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">회사명</td><td style="padding:8px;border:1px solid #ddd">'+(_state.companyName||'')+'</td></tr>'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">담당자</td><td style="padding:8px;border:1px solid #ddd">'+(_state.repName||'')+'</td></tr>'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">이메일</td><td style="padding:8px;border:1px solid #ddd">'+(_state.email||'')+'</td></tr>'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">연락처</td><td style="padding:8px;border:1px solid #ddd">'+(_state.phone||'')+'</td></tr>'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">업종</td><td style="padding:8px;border:1px solid #ddd">'+(_state.industry||'')+'</td></tr>'+
-          '<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">인원</td><td style="padding:8px;border:1px solid #ddd">'+(_state.personCount||'')+'명</td></tr>'+
-          '</table>'+
-          '<p><a href="https://donway.ai.kr/admin_sub" style="background:#f59e0b;color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">어드민에서 확인 →</a></p>'
-      })
-    }).catch(function(){});
-
-    _showSuccess();
-  }).catch(function(e){
-    toast('❌ '+e.message);
-    if(btn){btn.textContent='✅ 도입 신청하기';btn.disabled=false;}
   });
+
+  /* 테이블 실시간 구독 */
+  _unsub=_db.collection('filo_tables')
+    .where('dealerId','==',_did)
+    .onSnapshot(function(snap){
+      var tables=[];
+      snap.forEach(function(doc){tables.push(Object.assign({_id:doc.id},doc.data()));});
+      tables.sort(function(a,b){return (a.tableId||0)-(b.tableId||0);});
+
+      /* 없으면 기본 테이블 생성 유도 */
+      if(!tables.length){
+        document.getElementById('table-map').innerHTML=
+          '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">테이블이 설정되지 않았습니다</div>';
+        return;
+      }
+
+      var empty=tables.filter(function(t){return t.status==='empty';}).length;
+      var occupied=tables.filter(function(t){return t.status==='occupied';}).length;
+      var reserved=tables.filter(function(t){return t.status==='reserved';}).length;
+
+      document.getElementById('cnt-empty').textContent=empty;
+      document.getElementById('cnt-occupied').textContent=occupied;
+      document.getElementById('cnt-reserved').textContent=reserved;
+
+      var statusIcon={empty:'🟢',occupied:'🔴',reserved:'🟡',cleaning:'🔵'};
+      var statusLabel={empty:'빈자리',occupied:'사용중',reserved:'예약',cleaning:'청소중'};
+      var statusColor={empty:'#22c55e',occupied:'#ef4444',reserved:'#f59e0b',cleaning:'#60a5fa'};
+
+      document.getElementById('table-map').innerHTML=tables.map(function(t){
+        var s=t.status||'empty';
+        var since=t.since?Math.floor((Date.now()-new Date(t.since))/60000)+'분':'';
+        return '<div class="table-card '+s+'" onclick="_tableClick(\''+t._id+'\',\''+t.tableId+'\',\''+s+'\')">' +
+        '<div style="font-size:18px">'+statusIcon[s]+'</div>'+
+        '<div style="font-size:12px;font-weight:800;margin-top:4px">'+t.tableId+'번</div>'+
+        '<div style="font-size:9px;color:'+statusColor[s]+';margin-top:2px;font-weight:700">'+statusLabel[s]+'</div>'+
+        (since&&s==='occupied'?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+since+'</div>':'')+
+        '</div>';
+      }).join('');
+    });
 }
 
-function _showSuccess(){
-  document.getElementById('step-content').innerHTML=
-    '<div class="success-wrap">'+
-      '<div class="success-icon">🎉</div>'+
-      '<div class="success-title">도입 신청 완료!</div>'+
-      '<div class="success-sub">'+
-        '<b>'+esc(_state.companyName)+'</b> 신청이 접수되었습니다.<br><br>'+
-        '담당자 확인 후 <b>1영업일 내</b>에<br>'+
-        '<b>'+esc(_state.email)+'</b>로 안내드리겠습니다.'+
-      '</div>'+
-      '<div class="info-box" style="margin-top:16px;text-align:left">'+
-        '📞 문의: 051-711-3103<br>'+
-        '📧 이메일: kimdh4790@gmail.com<br>'+
-        '⏰ 영업시간: 평일 09:00~18:00'+
-      '</div>'+
-    '</div>';
-  // dots 모두 done
-  for(var i=0;i<3;i++){
-    var d=document.getElementById('dot'+i);
-    if(d)d.className='step-dot done';
+function _tableClick(docId,tableId,status){
+  if(status==='empty'){
+    /* 빈 테이블 → 주문 페이지로 */
+    location.href='/order?did='+_did+'&tid='+tableId;
   }
 }
 
-// 시작
-_step0();
+function _goJoin(){
+  location.href='/member-join?did='+_did;
+}
+
+window.addEventListener('DOMContentLoaded',_init);
+window.addEventListener('beforeunload',function(){if(_unsub)_unsub();});
 </script>
 </body>
 </html>
