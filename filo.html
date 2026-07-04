@@ -1079,7 +1079,7 @@ function _buildFiloNav(){
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
 
  var menus=[];
- menus.push({s:'🏠 홈',items:[{ic:'🏠',l:'대시보드',p:'home'},{ic:'👤',l:'직원 관리',p:'members'},{ic:'📅',l:'달력',p:'schedule'}]});
+ menus.push({s:'🏠 홈',items:[{ic:'🏠',l:'대시보드',p:'home'},{ic:'👤',l:'직원 관리',p:'members'}]});
 
  if(isSA||hasSub('inventory')||hasSub('combo')){
  menus.push({s:'📦 재고관리',items:[
@@ -1113,7 +1113,6 @@ function _buildFiloNav(){
  ]});
  }
  menus.push({s:'⚙️ 설정',items:[
- {ic:'🧾',l:'세무사 연동',p:'tax_share'},
  {ic:'📢',l:'공지사항',p:'notices'},
  {ic:'⚙️',l:'설정',p:'settings'},
  ]});
@@ -1574,7 +1573,9 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   if(d.date===today)todayRev+=(d.revenue||0);
  });
 
- /* POS 실시간 매출 + 원가 자동 계산 */
+ /* POS 실시간 매출 + 원가 + 메뉴통계 + 시간대 */
+ var menuStats={};  /* 메뉴별 {qty,rev} */
+ var hourStats={};  /* 시간대별 매출 */
  posSnap.forEach(function(doc){
   var d=doc.data();
   var posTotal=d.total||0;
@@ -1582,6 +1583,10 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   (d.items||[]).forEach(function(it){
    var c=_marginCostMap[it.name]||{};
    posCost+=((c.cost||0)*(it.qty||1));
+   /* 메뉴별 통계 */
+   if(!menuStats[it.name])menuStats[it.name]={qty:0,rev:0};
+   menuStats[it.name].qty+=(it.qty||1);
+   menuStats[it.name].rev+=(it.price||0)*(it.qty||1);
   });
   monthRev+=posTotal;
   monthCost+=posCost;
@@ -1589,6 +1594,11 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
    todayRev+=posTotal;
    todayCost+=posCost;
    todayCnt++;
+   /* 시간대별 집계 */
+   if(d.createdAt){
+    var kstH=new Date(new Date(d.createdAt).getTime()+9*3600000).getUTCHours();
+    hourStats[kstH]=(hourStats[kstH]||0)+posTotal;
+   }
   }
  });
 
