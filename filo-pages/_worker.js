@@ -1493,7 +1493,18 @@ async function acceptExchange(){
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
-      if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
+      if (path === '/app' || path === '/app.html') {
+  const bust = Date.now();
+  const ghRes = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/filo.html?bust='+bust, {
+    cf: { cacheEverything: false, cacheTtl: 0, bypassCache: true },
+    headers: { 'Cache-Control': 'no-cache, no-store' }
+  });
+  if (ghRes.ok) {
+    const html = await ghRes.text();
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'GitHub' } });
+  }
+  return serveKVFile(env, 'filo.html', 'text/html');
+}
   if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
     }
