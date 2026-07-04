@@ -38982,12 +38982,13 @@ function _promoImportFromExcel(file){
       if(rm.h1&&rm.h2)rate=25;
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
-      // ★ 가중요인1+2 둘 다 해당일 때만 ON
-      var isOn=(rm.h1&&rm.h2);
+      // ★ rate>0이면 ON, rate=0이면 OFF (하나라도 해당이면 ON)
+      var isOn=(rate>0);
       _setIncSetting(m.drv,m.route,isOn,rate>0?rate:10);
+      // OFF인 경우도 명시적으로 버튼 반영
+      var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
+      if(togBtn){togBtn.textContent=isOn?'ON':'OFF';togBtn.style.background=isOn?'#059669':'#94a3b8';}
       if(rate>0){
-        var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
-        if(togBtn){togBtn.textContent=isOn?'ON':'OFF';togBtn.style.background=isOn?'#059669':'#94a3b8';}
         var rateBtns=document.querySelectorAll('.inc-rate-btn[data-k="'+k+'"]');
         rateBtns.forEach(function(rb){
           var on=(+rb.dataset.rate===rate);
