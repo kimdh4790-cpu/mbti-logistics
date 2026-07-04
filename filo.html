@@ -1161,6 +1161,8 @@ function _buildFiloNav(){
 
  /* ── 설정 ── */
  menus.push({s:'⚙️ 설정',items:[
+  {ic:'🗓',l:'예약·달력',p:'schedule'},
+  {ic:'🧾',l:'세무사 연동',p:'tax_share'},
   {ic:'📢',l:'공지사항',p:'notices'},
   {ic:'⚙️',l:'설정',p:'settings'},
   {ic:'💳',l:'구독 관리',p:'subscription'},
@@ -1187,7 +1189,7 @@ function _filoGoPage(p){
  var el=document.getElementById('content');
  var titles={home:'대시보드',members:'직원 관리',schedule:'달력',
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
- auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',member_qr:'회원 QR',cost_mgmt:'원가 관리',
+ auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
@@ -1217,6 +1219,7 @@ function _filoGoPage(p){
  else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='qr_staff') _filoPageStaffQR(el);
  else if(p==='table_qr') _filoPageTableQR(el);
+ else if(p==='schedule') _filoPageSchedule(el);
  else if(p==='table_mgmt') _filoPageTableMgmt(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
  /* 페이지 전환 애니메이션 */
@@ -3456,10 +3459,232 @@ function _filoPageMembership(el){
 }
 function _filoPagePosReport(el){_filoPageSales(el);}
 function _filoPageSchedule(el){
- el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
- '<div style="font-size:40px;margin-bottom:12px">📅</div>'+
- '<div style="font-size:16px;font-weight:800;margin-bottom:6px">달력</div>'+
- '<div style="font-size:12px;color:var(--t3)">일정 관리 기능 곧 추가됩니다</div></div>';
+ var did=_CU.dealerId||_CU.uid;
+ var now=new Date();
+ window._calYear=now.getFullYear();
+ window._calMonth=now.getMonth();
+ el.innerHTML='';
+
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ wrap.style.cssText='max-width:900px;margin:0 auto';
+
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+ hdr.innerHTML='<div><div class="page-title">🗓 예약 · 달력</div><div class="page-sub">고객 예약 및 일정 관리</div></div>';
+ var addBtn=document.createElement('button');
+ addBtn.className='btn btn-primary btn-sm';
+ addBtn.textContent='+ 예약 추가';
+ addBtn.onclick=function(){_filoReservationAdd(did);};
+ hdr.appendChild(addBtn);
+ wrap.appendChild(hdr);
+
+ /* 달력 컨테이너 */
+ var calWrap=document.createElement('div');
+ calWrap.id='cal-wrap';
+ calWrap.className='card';
+ wrap.appendChild(calWrap);
+
+ /* 예약 목록 */
+ var listWrap=document.createElement('div');
+ listWrap.id='reservation-list';
+ wrap.appendChild(listWrap);
+
+ el.appendChild(wrap);
+ _filoRenderCalendar(did);
+}
+
+function _filoRenderCalendar(did){
+ var wrap=document.getElementById('cal-wrap');
+ if(!wrap)return;
+ var year=window._calYear;
+ var month=window._calMonth;
+ var today=new Date();
+ var firstDay=new Date(year,month,1).getDay();
+ var daysInMonth=new Date(year,month+1,0).getDate();
+ var monthNames=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+ /* 이 달 예약 로드 */
+ var startStr=year+'-'+(month+1).toString().padStart(2,'0')+'-01';
+ var endStr=year+'-'+(month+1).toString().padStart(2,'0')+'-'+daysInMonth.toString().padStart(2,'0');
+
+ _db.collection('filo_bookings').where('dealerId','==',did)
+  .where('date','>=',startStr).where('date','<=',endStr)
+  .get().then(function(snap){
+   var bookingMap={};
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(!bookingMap[d.date])bookingMap[d.date]=[];
+    bookingMap[d.date].push(Object.assign({_id:doc.id},d));
+   });
+
+   /* 달력 렌더 */
+   var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+    '<button onclick="window._calMonth--;if(window._calMonth<0){window._calMonth=11;window._calYear--;}_filoRenderCalendar(\''+did+'\')" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:8px;color:var(--tx);cursor:pointer">◀</button>'+
+    '<div style="font-size:17px;font-weight:900">'+year+'년 '+monthNames[month]+'</div>'+
+    '<button onclick="window._calMonth++;if(window._calMonth>11){window._calMonth=0;window._calYear++;}_filoRenderCalendar(\''+did+'\')" style="padding:6px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:8px;color:var(--tx);cursor:pointer">▶</button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">'+
+    ['일','월','화','수','목','금','토'].map(function(d,i){
+     return '<div style="text-align:center;font-size:11px;font-weight:700;color:'+(i===0?'#ef4444':i===6?'#60a5fa':'var(--t3)')+';padding:4px">'+d+'</div>';
+    }).join('')+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+
+   /* 빈칸 */
+   for(var i=0;i<firstDay;i++) html+='<div></div>';
+
+   /* 날짜 */
+   for(var day=1;day<=daysInMonth;day++){
+    var dateStr=year+'-'+(month+1).toString().padStart(2,'0')+'-'+day.toString().padStart(2,'0');
+    var isToday=today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===day;
+    var bookings=bookingMap[dateStr]||[];
+    var dow=new Date(year,month,day).getDay();
+    html+='<div onclick="_filoCalDayClick(\''+did+'\',\''+dateStr+'\')" style="'+
+     'min-height:60px;padding:4px;border-radius:8px;cursor:pointer;border:1px solid '+(isToday?'var(--br)':'var(--bd)')+';'+
+     'background:'+(isToday?'rgba(124,58,237,.1)':'var(--surface2)')+';transition:.15s" '+
+     'onmouseover="this.style.borderColor=\'rgba(124,58,237,.4)\'" onmouseout="this.style.borderColor=\''+(isToday?'var(--br)':'var(--bd)')+'\'">'+
+     '<div style="font-size:12px;font-weight:700;color:'+(isToday?'#a78bfa':dow===0?'#ef4444':dow===6?'#60a5fa':'var(--tx)')+'">'+day+'</div>'+
+     bookings.slice(0,2).map(function(b){
+      return '<div style="font-size:9px;background:rgba(124,58,237,.15);border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a78bfa">'+
+       (b.time?b.time+' ':'')+esc(b.customerName||b.title||'예약')+'</div>';
+     }).join('')+
+     (bookings.length>2?'<div style="font-size:9px;color:var(--t3);margin-top:1px">+'+( bookings.length-2)+'개</div>':'')+
+     '</div>';
+   }
+   html+='</div>';
+   wrap.innerHTML=html;
+
+   /* 오늘 예약 목록 */
+   _filoRenderTodayReservations(did, today.toISOString().slice(0,10), bookingMap[today.toISOString().slice(0,10)]||[]);
+  });
+}
+
+function _filoCalDayClick(did,dateStr){
+ var d=new Date(dateStr);
+ var label=(d.getMonth()+1)+'월 '+d.getDate()+'일';
+ _filoReservationAdd(did,dateStr,label);
+}
+
+function _filoRenderTodayReservations(did,todayStr,bookings){
+ var wrap=document.getElementById('reservation-list');
+ if(!wrap)return;
+ wrap.innerHTML='';
+
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:16px';
+ hdr.innerHTML='<div style="font-size:13px;font-weight:800">오늘 예약 ('+bookings.length+'건)</div>';
+ wrap.appendChild(hdr);
+
+ if(!bookings.length){
+  var empty=document.createElement('div');
+  empty.className='card';
+  empty.style.cssText='text-align:center;padding:24px;color:var(--t3)';
+  empty.innerHTML='<div style="font-size:24px;margin-bottom:8px">📅</div><div>오늘 예약이 없습니다</div>';
+  wrap.appendChild(empty);
+  return;
+ }
+
+ bookings.sort(function(a,b){return (a.time||'').localeCompare(b.time||'');}).forEach(function(b){
+  var card=document.createElement('div');
+  card.className='list-item';
+  var statusColor={confirmed:'#22c55e',pending:'#f59e0b',cancelled:'#ef4444'}[b.status||'confirmed']||'#22c55e';
+  card.innerHTML='<div class="list-item-icon" style="background:rgba(124,58,237,.1)">'+
+   (b.type==='beauty'?'💇':b.type==='fitness'?'💪':'📋')+'</div>'+
+   '<div style="flex:1;min-width:0">'+
+   '<div style="font-size:13px;font-weight:700">'+esc(b.customerName||'고객')+'</div>'+
+   '<div style="font-size:11px;color:var(--t3)">'+(b.time||'')+' · '+(b.service||'예약')+' · '+(b.phone||'')+'</div>'+
+   '</div>'+
+   '<div style="text-align:right">'+
+   '<span class="chip" style="background:'+statusColor+'18;color:'+statusColor+';border-color:'+statusColor+'40">'+(b.status==='confirmed'?'확정':b.status==='pending'?'대기':'취소')+'</span>'+
+   '<div style="margin-top:4px;display:flex;gap:4px">'+
+   '<button onclick="_filoReservationEdit(\''+b._id+'\',\''+did+'\')" style="padding:4px 8px;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--t2);font-size:10px;cursor:pointer">수정</button>'+
+   '<button onclick="_filoReservationDelete(\''+b._id+'\')" style="padding:4px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#ef4444;font-size:10px;cursor:pointer">삭제</button>'+
+   '</div></div>';
+  wrap.appendChild(card);
+ });
+}
+
+function _filoReservationAdd(did,dateStr,dateLabel){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:22px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto';
+
+ var title=document.createElement('div');
+ title.style.cssText='font-size:15px;font-weight:900;margin-bottom:16px';
+ title.textContent='📋 예약 추가'+(dateLabel?' — '+dateLabel:'');
+ box.appendChild(title);
+
+ var fields=[
+  {id:'rsv-name',l:'고객명 *',type:'text',ph:'홍길동'},
+  {id:'rsv-phone',l:'연락처',type:'tel',ph:'010-0000-0000'},
+  {id:'rsv-date',l:'날짜 *',type:'date',ph:'',val:dateStr||new Date().toISOString().slice(0,10)},
+  {id:'rsv-time',l:'시간',type:'time',ph:'',val:'10:00'},
+  {id:'rsv-service',l:'서비스/내용',type:'text',ph:'예: 커트, 컬러, 마사지...'},
+  {id:'rsv-memo',l:'메모',type:'text',ph:'특이사항'},
+ ];
+ fields.forEach(function(f){
+  var g=document.createElement('div');g.style.marginBottom='12px';
+  var l=document.createElement('label');
+  l.style.cssText='font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px';
+  l.textContent=f.l;
+  var inp=document.createElement('input');
+  inp.id=f.id;inp.type=f.type;inp.placeholder=f.ph||'';
+  if(f.val)inp.value=f.val;
+  inp.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none';
+  g.appendChild(l);g.appendChild(inp);box.appendChild(g);
+ });
+
+ var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;margin-top:4px';
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer';
+ cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
+ var saveBtn=document.createElement('button');
+ saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-weight:700;cursor:pointer';
+ saveBtn.textContent='✅ 예약 등록';
+ saveBtn.onclick=function(){
+  var name=(document.getElementById('rsv-name').value||'').trim();
+  var date=(document.getElementById('rsv-date').value||'').trim();
+  if(!name||!date){_filoToast('고객명과 날짜는 필수입니다');return;}
+  _db.collection('filo_bookings').add({
+   dealerId:did,customerName:name,
+   phone:document.getElementById('rsv-phone').value||'',
+   date:date,time:document.getElementById('rsv-time').value||'',
+   service:document.getElementById('rsv-service').value||'',
+   memo:document.getElementById('rsv-memo').value||'',
+   status:'confirmed',type:window._filoIndustry||'cafe',
+   createdAt:new Date().toISOString()
+  }).then(function(){
+   _filoToast('✅ 예약이 등록됐습니다!');
+   mo.remove();
+   _filoRenderCalendar(did);
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+ };
+ btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
+ box.appendChild(btnRow);
+
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+ setTimeout(function(){document.getElementById('rsv-name').focus();},100);
+}
+
+function _filoReservationDelete(id){
+ if(!confirm('예약을 삭제하시겠습니까?'))return;
+ var did=_CU.dealerId||_CU.uid;
+ _db.collection('filo_bookings').doc(id).delete().then(function(){
+  _filoToast('🗑 예약이 삭제됐습니다');
+  _filoRenderCalendar(did);
+ });
+}
+
+function _filoReservationEdit(id,did){
+ _db.collection('filo_bookings').doc(id).get().then(function(snap){
+  if(!snap.exists)return;
+  var d=snap.data();
+  _filoReservationAdd(did,d.date);
+  /* TODO: 기존 데이터 채우기 */
+ });
 }
 function _filoPageSettings(el){
  var did=_CU.dealerId||_CU.uid;
@@ -3491,10 +3716,147 @@ function _filoPageSubscription(el){
  '</div></div></div>';
 }
 function _filoPageTaxShare(el){
- el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
- '<div style="font-size:40px;margin-bottom:12px">📊</div>'+
- '<div style="font-size:16px;font-weight:800;margin-bottom:6px">세무사 연동</div>'+
- '<div style="font-size:12px;color:var(--t3)">DONWAY와 연동하여 이용하세요</div></div>';
+ var did=_CU.dealerId||_CU.uid;
+ var d=_cachedCompanyDoc||{};
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ wrap.style.cssText='max-width:700px;margin:0 auto';
+
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='margin-bottom:20px';
+ hdr.innerHTML='<div class="page-title">🧾 세무사 연동</div>'+
+  '<div class="page-sub">매출 데이터를 세무사에게 자동 공유합니다</div>';
+ wrap.appendChild(hdr);
+
+ /* 현황 카드 */
+ var statusCard=document.createElement('div');
+ statusCard.className='hero-card';
+ statusCard.style.marginBottom='16px';
+ statusCard.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1">'+
+  '<div><div style="font-size:11px;color:rgba(167,139,250,.7);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">연동 현황</div>'+
+  '<div style="font-size:20px;font-weight:900" id="tax-status-txt">설정 안됨</div>'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px" id="tax-status-sub">세무사 이메일을 등록하면 매월 매출 리포트를 자동 발송합니다</div>'+
+  '</div>'+
+  '<div style="font-size:36px;opacity:.6">📊</div></div>';
+ wrap.appendChild(statusCard);
+
+ /* 세무사 이메일 등록 */
+ var card1=document.createElement('div');
+ card1.className='card';
+ card1.innerHTML='<div class="sec-title" style="margin-bottom:12px">세무사 이메일 등록</div>'+
+  '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+  '<input id="tax-email-inp" type="email" placeholder="세무사 이메일 주소" style="flex:1;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">'+
+  '<button onclick="_filoTaxSaveEmail()" style="padding:11px 16px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">저장</button>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--t3)">💡 매월 1일 전월 매출 리포트가 자동 발송됩니다</div>';
+ wrap.appendChild(card1);
+
+ /* 매출 데이터 공유 설정 */
+ var card2=document.createElement('div');
+ card2.className='card';
+ card2.innerHTML='<div class="sec-title" style="margin-bottom:12px">공유 항목 설정</div>'+
+  [
+   {id:'tax-share-sales',l:'일별 매출 합계',d:'매일 총 매출액'},
+   {id:'tax-share-items',l:'메뉴별 판매량',d:'품목별 판매 내역'},
+   {id:'tax-share-pay',l:'결제수단별 내역',d:'카드/현금/간편결제 구분'},
+   {id:'tax-share-refund',l:'취소/환불 내역',d:'환불 처리 내역 포함'},
+  ].map(function(item){
+   return '<div class="stat-row"><div>'+
+    '<div style="font-size:13px;font-weight:700">'+item.l+'</div>'+
+    '<div style="font-size:11px;color:var(--t3)">'+item.d+'</div>'+
+    '</div>'+
+    '<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">'+
+    '<input type="checkbox" id="'+item.id+'" checked style="opacity:0;width:0;height:0">'+
+    '<span style="position:absolute;inset:0;background:#7c3aed;border-radius:24px;transition:.3s" onclick="this.style.background=this.previousElementSibling.checked?\'#7c3aed\':\'var(--surface3)\'"></span>'+
+    '<span style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>'+
+    '</label></div>';
+  }).join('');
+ wrap.appendChild(card2);
+
+ /* 즉시 리포트 발송 */
+ var card3=document.createElement('div');
+ card3.className='card';
+ card3.innerHTML='<div class="sec-title" style="margin-bottom:12px">즉시 리포트 발송</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+  ['이번달 리포트','지난달 리포트','분기 리포트','연간 리포트'].map(function(t,i){
+   return '<button onclick="_filoTaxSendReport(\''+['thisMonth','lastMonth','quarter','year'][i]+'\')" style="padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor=\'rgba(124,58,237,.4)\'" onmouseout="this.style.borderColor=\'var(--bd2)\'">'+t+'</button>';
+  }).join('')+'</div>';
+ wrap.appendChild(card3);
+
+ /* 세금계산서 안내 */
+ var card4=document.createElement('div');
+ card4.className='card-brand';
+ card4.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:8px">💡 세금계산서 발행 안내</div>'+
+  '<div style="font-size:12px;color:var(--t2);line-height:1.7">'+
+  '• POS 결제 내역이 자동으로 세무사에게 공유됩니다<br>'+
+  '• 카드 매출은 카드사 자동 집계와 대조 가능합니다<br>'+
+  '• DONWAY와 연동 시 부가세 신고 자료를 자동 생성합니다<br>'+
+  '• 문의: <a href="tel:051-711-3103" style="color:#a78bfa">051-711-3103</a>'+
+  '</div>';
+ wrap.appendChild(card4);
+
+ el.appendChild(wrap);
+
+ /* 기존 설정 로드 */
+ _db.collection('settings').doc(did+'_tax').get().then(function(snap){
+  if(snap.exists){
+   var data=snap.data();
+   if(data.taxEmail){
+    document.getElementById('tax-email-inp').value=data.taxEmail;
+    document.getElementById('tax-status-txt').textContent='✅ 연동 중';
+    document.getElementById('tax-status-sub').textContent=data.taxEmail+' · 매월 자동 발송';
+   }
+  }
+ });
+}
+
+function _filoTaxSaveEmail(){
+ var email=(document.getElementById('tax-email-inp').value||'').trim();
+ if(!email||!email.includes('@')){_filoToast('올바른 이메일을 입력하세요');return;}
+ var did=_CU.dealerId||_CU.uid;
+ _db.collection('settings').doc(did+'_tax').set({
+  dealerId:did,taxEmail:email,updatedAt:new Date().toISOString()
+ },{merge:true}).then(function(){
+  _filoToast('✅ 세무사 이메일이 등록됐습니다');
+  document.getElementById('tax-status-txt').textContent='✅ 연동 중';
+  document.getElementById('tax-status-sub').textContent=email+' · 매월 자동 발송';
+ });
+}
+
+function _filoTaxSendReport(type){
+ var did=_CU.dealerId||_CU.uid;
+ var email=(document.getElementById('tax-email-inp')&&document.getElementById('tax-email-inp').value)||'';
+ if(!email){_filoToast('먼저 세무사 이메일을 등록하세요');return;}
+ _filoToast('⏳ 리포트 준비 중...');
+ /* 매출 데이터 수집 */
+ var now=new Date();
+ var startDate,endDate;
+ if(type==='thisMonth'){startDate=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-01';endDate=now.toISOString().slice(0,10);}
+ else if(type==='lastMonth'){var lm=new Date(now.getFullYear(),now.getMonth()-1,1);startDate=lm.toISOString().slice(0,7)+'-01';endDate=new Date(now.getFullYear(),now.getMonth(),0).toISOString().slice(0,10);}
+ else{startDate=now.getFullYear()+'-01-01';endDate=now.toISOString().slice(0,10);}
+
+ _db.collection('filo_sales').where('dealerId','==',did)
+  .where('date','>=',startDate).where('date','<=',endDate).get()
+  .then(function(snap){
+   var total=0,cnt=0,menuMap={};
+   snap.forEach(function(doc){
+    var d=doc.data();
+    total+=d.total||0;cnt++;
+    (d.items||[]).forEach(function(it){
+     menuMap[it.name]=(menuMap[it.name]||0)+(it.qty||1);
+    });
+   });
+   var topMenus=Object.entries(menuMap).sort(function(a,b){return b[1]-a[1];}).slice(0,5)
+    .map(function(kv){return kv[0]+' '+kv[1]+'건';}).join(', ');
+
+   _db.collection('alimtalk_queue').add({
+    type:'tax_report',to:email,dealerId:did,
+    reportData:{period:startDate+'~'+endDate,total:total,cnt:cnt,topMenus:topMenus},
+    createdAt:new Date().toISOString(),status:'pending'
+   }).then(function(){_filoToast('✅ 리포트가 발송됐습니다!');});
+  });
 }
 function _filoPageNotices(el){
  var did=_CU.dealerId||_CU.uid;
