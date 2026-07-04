@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7c3aed">
+<title>FILO — 직원 포털</title>
+<style>
+:root{--bg:#07071a;--surface:#14142a;--surface2:#1a1a32;--surface3:#20203a;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);--tx:#f0f0ff;--t2:#9898c0;--t3:#565678;--br:#7c3aed;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--blue:#60a5fa;--r:12px;--r-lg:18px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:radial-gradient(ellipse at 20% 0%,rgba(124,58,237,.18) 0%,transparent 55%),var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.topbar{height:52px;background:rgba(7,7,26,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(124,58,237,.1);display:flex;align-items:center;padding:0 16px;gap:10px;position:fixed;top:0;left:0;right:0;z-index:100}
+.logo{font-size:17px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.content{padding:68px 16px 24px;max-width:480px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:18px;margin-bottom:12px}
+.hero{background:linear-gradient(135deg,#0f0a2a,#1a0e3a,#0a1628);border:1px solid rgba(124,58,237,.2);border-radius:var(--r-lg);padding:22px;margin-bottom:14px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,.2),transparent 70%);pointer-events:none}
+.avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--br),#0891b2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;gap:4px}
+.chip-green{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.chip-purple{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+.chip-yellow{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)}
+.stat-row:last-child{border-bottom:none}
+.stat-label{font-size:12px;color:var(--t2)}
+.stat-val{font-size:14px;font-weight:800}
+.btn-brand{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,.35);transition:.2s;margin-bottom:8px}
+.btn-brand:active{transform:scale(.98)}
+.btn-secondary{width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer;transition:.2s}
+.attend-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)}
+.attend-item:last-child{border-bottom:none}
+.tab-row{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;padding:9px;border:1px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:.2s}
+.tab.active{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.3);color:#a78bfa}
+.salary-big{font-size:32px;font-weight:900;letter-spacing:-1px;color:#22c55e;line-height:1}
+.login-wrap{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:24px;width:100%;max-width:380px;padding:28px 24px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+input{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:14px;outline:none;transition:.2s}
+input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
+.fg{margin-bottom:14px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(20,20,42,.95);backdrop-filter:blur(16px);color:var(--tx);padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:200;transition:.35s cubic-bezier(.34,1.56,.64,1);border:1px solid var(--bd2);white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .3s ease both}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:5px;animation:pulse 2s infinite;vertical-align:middle}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="login-screen" class="login-wrap">
+<div class="login-card">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#0891b2);display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 12px">👤</div>
+    <div style="font-size:19px;font-weight:900;margin-bottom:4px">직원 포털</div>
+    <div style="font-size:12px;color:var(--t3)">아이디와 비밀번호로 로그인하세요</div>
+  </div>
+  <div class="fg"><label>아이디 (직원번호)</label>
+    <input id="l-id" type="text" placeholder="예) staff001">
+  </div>
+  <div class="fg"><label>비밀번호</label>
+    <input id="l-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')_staffLogin()">
+  </div>
+  <div id="l-err" style="font-size:11px;color:#ef4444;margin-bottom:10px;display:none"></div>
+  <button class="btn-brand" onclick="_staffLogin()">로그인</button>
+</div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="app" style="display:none">
+<div class="topbar">
+  <div class="logo">FILO</div>
+  <div style="font-size:13px;font-weight:700;color:var(--t2)" id="topbar-name"></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+    <div id="clock" style="font-size:11px;color:var(--t3);font-variant-numeric:tabular-nums;letter-spacing:.5px"></div>
+    <button onclick="_logout()" style="background:none;border:1px solid var(--bd2);border-radius:8px;color:var(--t3);font-size:11px;cursor:pointer;padding:4px 10px">로그아웃</button>
+  </div>
+</div>
+<div class="content">
+
+  <!-- 직원 프로필 -->
+  <div class="hero fade-up">
+    <div class="avatar" id="emp-avatar">?</div>
+    <div style="font-size:18px;font-weight:900;margin-bottom:4px" id="emp-name">-</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="chip chip-purple" id="emp-role">-</span>
+      <span class="chip chip-yellow" id="emp-type">-</span>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,.4)" id="emp-store">-</div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tab-row">
+    <div class="tab active" onclick="_switchTab('attend')" id="tab-attend">📋 출퇴근</div>
+    <div class="tab" onclick="_switchTab('salary')" id="tab-salary">💼 급여</div>
+    <div class="tab" onclick="_switchTab('schedule')" id="tab-schedule">🗓 근무표</div>
+  </div>
+
+  <!-- 출퇴근 탭 -->
+  <div id="pane-attend">
+    <!-- 오늘 현황 -->
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">오늘 출퇴근</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">출근 시간</div>
+          <div style="font-size:18px;font-weight:900;color:#60a5fa" id="today-in">-</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">퇴근 시간</div>
+          <div style="font-size:18px;font-weight:900;color:#a78bfa" id="today-out">-</div>
+        </div>
+      </div>
+      <div id="work-status" style="text-align:center;padding:10px;border-radius:10px;background:var(--surface2);margin-bottom:12px;font-size:13px;font-weight:700;color:var(--t3)">-</div>
+      <button class="btn-brand" id="attend-btn" onclick="_attendAction()">출근하기</button>
+    </div>
+
+    <!-- 이번달 출퇴근 기록 -->
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">이번달 기록</div>
+      <div id="attend-list"><div style="text-align:center;padding:20px;color:var(--t3)">⏳</div></div>
+    </div>
+  </div>
+
+  <!-- 급여 탭 -->
+  <div id="pane-salary" style="display:none">
+    <!-- 실시간 급여 -->
+    <div class="hero" id="salary-hero">
+      <div style="font-size:10px;color:rgba(167,139,250,.7);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px">이번달 예상 급여</div>
+      <div class="salary-big" id="salary-amount">₩0</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px" id="salary-sub">계산 중...</div>
+    </div>
+    <!-- 공제 내역 -->
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">급여 명세</div>
+      <div id="salary-detail">
+        <div style="text-align:center;padding:20px;color:var(--t3)">⏳</div>
+      </div>
+    </div>
+    <!-- 최근 지급 내역 -->
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">지급 내역</div>
+      <div id="payslip-list"><div style="text-align:center;padding:20px;color:var(--t3)">⏳</div></div>
+    </div>
+  </div>
+
+  <!-- 근무표 탭 -->
+  <div id="pane-schedule" style="display:none">
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">이번주 근무 일정</div>
+      <div id="roster-view"><div style="text-align:center;padding:20px;color:var(--t3)">⏳</div></div>
+    </div>
+    <!-- 공지사항 -->
+    <div class="card">
+      <div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">📢 공지사항</div>
+      <div id="notice-list"><div style="text-align:center;padding:20px;color:var(--t3)">⏳</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var _db=null,_did='',_uid='',_empData={},_todayAttend=null,_clockInt=null;
+
+function _init(){
+  var cfg={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'862900137263',appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'};
+  firebase.initializeApp(cfg);
+  _db=firebase.firestore();
+
+  var params=new URLSearchParams(location.search);
+  _did=params.get('did')||'';
+
+  /* 세션 복원 */
+  var saved=sessionStorage.getItem('filo_staff');
+  if(saved){
+    var s=JSON.parse(saved);
+    _did=s.did||_did;_uid=s.uid;_empData=s.emp;
+    _showApp();
+  }
+}
+
+function _staffLogin(){
+  var id=(document.getElementById('l-id').value||'').trim();
+  var pw=(document.getElementById('l-pw').value||'').trim();
+  if(!id||!pw){_showErr('아이디와 비밀번호를 입력하세요');return;}
+  if(!_did){_showErr('URL에 매장 정보가 없습니다 (did=필요)');return;}
+
+  _db.collection('members')
+    .where('dealerId','==',_did)
+    .where('userId','==',id)
+    .where('password','==',pw)
+    .get().then(function(snap){
+      if(snap.empty){_showErr('아이디 또는 비밀번호가 올바르지 않습니다');return;}
+      var doc=snap.docs[0];
+      _uid=doc.id;
+      _empData=doc.data();
+      sessionStorage.setItem('filo_staff',JSON.stringify({did:_did,uid:_uid,emp:_empData}));
+      _showApp();
+    }).catch(function(e){_showErr(e.message);});
+}
+
+function _showErr(msg){
+  var el=document.getElementById('l-err');
+  el.textContent=msg;el.style.display='block';
+}
+
+function _showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+
+  /* 프로필 */
+  var name=_empData.name||'직원';
+  document.getElementById('emp-avatar').textContent=name.slice(0,1);
+  document.getElementById('emp-name').textContent=name;
+  document.getElementById('topbar-name').textContent=name+'님';
+  document.getElementById('emp-role').textContent={admin:'관리자',staff:'정직원',part:'알바'}[_empData.role||'staff']||'직원';
+  document.getElementById('emp-type').textContent={hourly:'시급제',daily:'일급제',monthly:'월급제'}[_empData.payType||'hourly']||'시급제';
+
+  /* 매장명 */
+  _db.collection('companies').doc(_did).get().then(function(doc){
+    if(doc.exists) document.getElementById('emp-store').textContent=(doc.data().companyName||doc.data().name||'')+'  📍';
+  });
+
+  /* 실시간 시계 */
+  _clockInt=setInterval(function(){
+    var now=new Date();
+    document.getElementById('clock').textContent=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    /* 시급제는 실시간 급여 업데이트 */
+    if(_empData.payType==='hourly')_updateLiveSalary();
+  },1000);
+
+  _loadTodayAttend();
+  _loadMonthAttend();
+  _loadSalary();
+  _loadRoster();
+  _loadNotices();
+}
+
+function _loadTodayAttend(){
+  var today=new Date().toISOString().slice(0,10);
+  _db.collection('attendance')
+    .where('dealerId','==',_did)
+    .where('memberId','==',_uid)
+    .where('date','==',today)
+    .get().then(function(snap){
+      if(!snap.empty){
+        _todayAttend=Object.assign({_id:snap.docs[0].id},snap.docs[0].data());
+        _renderTodayAttend();
+      } else {
+        _todayAttend=null;
+        document.getElementById('today-in').textContent='-';
+        document.getElementById('today-out').textContent='-';
+        document.getElementById('work-status').textContent='오늘 출근 기록 없음';
+        document.getElementById('attend-btn').textContent='출근하기';
+        document.getElementById('attend-btn').style.background='linear-gradient(135deg,#7c3aed,#9f5ef8)';
+      }
+    });
+}
+
+function _renderTodayAttend(){
+  if(!_todayAttend)return;
+  var d=_todayAttend;
+  var inTime=d.inTime?_kstTime(d.inTime):'-';
+  var outTime=d.outTime?_kstTime(d.outTime):'-';
+  document.getElementById('today-in').textContent=inTime;
+  document.getElementById('today-out').textContent=outTime;
+
+  if(d.inTime&&!d.outTime){
+    /* 출근중 - 경과시간 */
+    var elapsed=Math.floor((Date.now()-new Date(d.inTime).getTime())/60000);
+    var h=Math.floor(elapsed/60),m=elapsed%60;
+    document.getElementById('work-status').innerHTML=
+      '<span class="live-dot"></span>근무중 '+h+'시간 '+m+'분 경과';
+    document.getElementById('work-status').style.color='#22c55e';
+    document.getElementById('attend-btn').textContent='퇴근하기';
+    document.getElementById('attend-btn').style.background='linear-gradient(135deg,#ef4444,#f97316)';
+  } else if(d.inTime&&d.outTime){
+    var diff=Math.floor((new Date(d.outTime)-new Date(d.inTime))/60000);
+    var dh=Math.floor(diff/60),dm=diff%60;
+    document.getElementById('work-status').textContent='근무 완료 · '+dh+'시간 '+dm+'분';
+    document.getElementById('work-status').style.color='#a78bfa';
+    document.getElementById('attend-btn').textContent='오늘 근무 완료';
+    document.getElementById('attend-btn').disabled=true;
+    document.getElementById('attend-btn').style.opacity='.5';
+  }
+}
+
+function _attendAction(){
+  var now=new Date();
+  var today=now.toISOString().slice(0,10);
+  var kstNow=new Date(now.getTime()+9*3600000);
+  var timeStr=kstNow.getUTCHours().toString().padStart(2,'0')+':'+kstNow.getUTCMinutes().toString().padStart(2,'0');
+
+  if(!_todayAttend){
+    /* 출근 */
+    _db.collection('attendance').add({
+      dealerId:_did,memberId:_uid,memberName:_empData.name||'',
+      date:today,inTime:now.toISOString(),outTime:null,
+      payType:_empData.payType||'hourly',hourlyWage:_empData.hourlyWage||0,
+      createdAt:now.toISOString()
+    }).then(function(){
+      _toast('✅ 출근 완료! '+timeStr);
+      _loadTodayAttend();
+      _loadMonthAttend();
+    });
+  } else if(_todayAttend.inTime&&!_todayAttend.outTime){
+    /* 퇴근 */
+    var diff=Math.floor((now-new Date(_todayAttend.inTime))/60000);
+    _db.collection('attendance').doc(_todayAttend._id).update({
+      outTime:now.toISOString(),
+      workMinutes:diff
+    }).then(function(){
+      _toast('✅ 퇴근 완료! '+timeStr);
+      _loadTodayAttend();
+      _loadMonthAttend();
+      _loadSalary();
+    });
+  }
+}
+
+function _loadMonthAttend(){
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
+  _db.collection('attendance')
+    .where('dealerId','==',_did)
+    .where('memberId','==',_uid)
+    .where('date','>=',ym+'-01')
+    .orderBy('date','desc')
+    .get().then(function(snap){
+      var list=document.getElementById('attend-list');
+      if(snap.empty){list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">이번달 기록이 없습니다</div>';return;}
+      list.innerHTML=snap.docs.map(function(doc){
+        var d=doc.data();
+        var inT=d.inTime?_kstTime(d.inTime):'-';
+        var outT=d.outTime?_kstTime(d.outTime):'-';
+        var mins=d.workMinutes||0;
+        var h=Math.floor(mins/60),m=mins%60;
+        return '<div class="attend-item">'+
+          '<div><div style="font-size:13px;font-weight:700">'+d.date+'</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+inT+' ~ '+outT+'</div></div>'+
+          '<div style="text-align:right">'+
+          (mins>0?'<div style="font-size:13px;font-weight:800;color:#a78bfa">'+h+'h '+m+'m</div>':'<span style="font-size:11px;color:var(--yellow)">진행중</span>')+
+          '</div></div>';
+      }).join('');
+    });
+}
+
+function _loadSalary(){
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0');
+  _db.collection('attendance')
+    .where('dealerId','==',_did)
+    .where('memberId','==',_uid)
+    .where('date','>=',ym+'-01')
+    .get().then(function(snap){
+      var totalMins=0,dayCnt=0;
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(d.workMinutes){totalMins+=d.workMinutes;dayCnt++;}
+      });
+      var wage=_empData.hourlyWage||0;
+      var payType=_empData.payType||'hourly';
+      var gross=0;
+      if(payType==='hourly') gross=Math.round(wage*(totalMins/60));
+      else if(payType==='daily') gross=wage*dayCnt;
+      else gross=_empData.monthlyWage||0;
+
+      var h=Math.floor(totalMins/60),m=totalMins%60;
+      document.getElementById('salary-amount').textContent='₩'+gross.toLocaleString();
+      document.getElementById('salary-sub').textContent=
+        (payType==='hourly'?'시급 ₩'+wage.toLocaleString()+' × '+h+'시간 '+m+'분':
+        payType==='daily'?'일급 ₩'+wage.toLocaleString()+' × '+dayCnt+'일':
+        '월급 고정');
+
+      /* 공제 내역 */
+      var ins=_empData.insuranceType==='4대보험';
+      var tax33=_empData.insuranceType==='3.3%';
+      var deduct=ins?Math.round(gross*0.0899):tax33?Math.round(gross*0.033):0;
+      var net=gross-deduct;
+
+      document.getElementById('salary-detail').innerHTML=
+        '<div class="stat-row"><span class="stat-label">총 근무시간</span><span class="stat-val">'+h+'시간 '+m+'분</span></div>'+
+        '<div class="stat-row"><span class="stat-label">근무일수</span><span class="stat-val">'+dayCnt+'일</span></div>'+
+        '<div class="stat-row"><span class="stat-label">기본급</span><span class="stat-val" style="color:#22c55e">₩'+gross.toLocaleString()+'</span></div>'+
+        (deduct>0?'<div class="stat-row"><span class="stat-label">공제 ('+(ins?'4대보험':'3.3%')+')</span><span class="stat-val" style="color:#ef4444">−₩'+deduct.toLocaleString()+'</span></div>':'')+ 
+        '<div class="stat-row"><span class="stat-label" style="font-weight:800;color:var(--tx)">실수령액</span><span class="stat-val" style="font-size:18px;color:#22c55e">₩'+net.toLocaleString()+'</span></div>';
+    });
+
+  /* 이전 급여 명세서 */
+  _db.collection('payslips').where('dealerId','==',_did).where('memberId','==',_uid)
+    .orderBy('month','desc').limit(3).get().then(function(snap){
+      var el=document.getElementById('payslip-list');
+      if(snap.empty){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--t3)">지급 내역이 없습니다</div>';return;}
+      el.innerHTML=snap.docs.map(function(doc){
+        var d=doc.data();
+        return '<div class="stat-row"><span class="stat-label">'+d.month+'</span>'+
+          '<span class="stat-val" style="color:#22c55e">₩'+(d.netPay||0).toLocaleString()+'</span></div>';
+      }).join('');
+    }).catch(function(){});
+}
+
+function _updateLiveSalary(){
+  if(!_todayAttend||!_todayAttend.inTime||_todayAttend.outTime)return;
+  var elapsed=(Date.now()-new Date(_todayAttend.inTime).getTime())/3600000;
+  var wage=_empData.hourlyWage||0;
+  var live=Math.floor(wage*elapsed);
+  /* 기존 급여에 실시간 추가분 */
+}
+
+function _loadRoster(){
+  var now=new Date();
+  var weekStart=new Date(now);
+  weekStart.setDate(now.getDate()-now.getDay());
+  var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+  var s=weekStart.toISOString().slice(0,10);
+  var e=weekEnd.toISOString().slice(0,10);
+
+  _db.collection('roster_week')
+    .where('dealerId','==',_did)
+    .where('memberId','==',_uid)
+    .where('date','>=',s).where('date','<=',e)
+    .get().then(function(snap){
+      var el=document.getElementById('roster-view');
+      if(snap.empty){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--t3)">이번주 근무 일정이 없습니다</div>';return;}
+      var days=['일','월','화','수','목','금','토'];
+      el.innerHTML=snap.docs.map(function(doc){
+        var d=doc.data();
+        var dt=new Date(d.date+'T00:00:00');
+        return '<div class="stat-row">'+
+          '<div><div style="font-size:13px;font-weight:700">'+days[dt.getDay()]+'요일 ('+d.date.slice(5)+')</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+(d.startTime||'-')+' ~ '+(d.endTime||'-')+'</div></div>'+
+          '<span style="font-size:11px;background:rgba(124,58,237,.12);color:#a78bfa;padding:3px 8px;border-radius:20px;font-weight:700">'+(d.position||'')+'</span></div>';
+      }).join('');
+    });
+}
+
+function _loadNotices(){
+  _db.collection('notices').where('dealerId','==',_did)
+    .orderBy('createdAt','desc').limit(3).get().then(function(snap){
+      var el=document.getElementById('notice-list');
+      if(snap.empty){el.innerHTML='<div style="text-align:center;padding:16px;color:var(--t3)">공지사항이 없습니다</div>';return;}
+      el.innerHTML=snap.docs.map(function(doc){
+        var d=doc.data();
+        return '<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+          '<div style="font-size:13px;font-weight:700;margin-bottom:3px">'+d.title+'</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+(d.createdAt||'').slice(0,10)+'</div></div>';
+      }).join('');
+    }).catch(function(){});
+}
+
+function _switchTab(tab){
+  ['attend','salary','schedule'].forEach(function(t){
+    document.getElementById('pane-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t).className='tab'+(t===tab?' active':'');
+  });
+}
+
+function _kstTime(iso){
+  var kst=new Date(new Date(iso).getTime()+9*3600000);
+  return kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+}
+
+function _logout(){
+  sessionStorage.removeItem('filo_staff');
+  clearInterval(_clockInt);
+  location.reload();
+}
+
+function _toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+window.addEventListener('DOMContentLoaded',_init);
+</script>
+</body>
+</html>
