@@ -292,6 +292,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <script>
 // ── Firebase 초기화 ──
 var _fbApp=null,_db=null,_auth=null,_CU=null,_cachedCompanyDoc=null;
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function _initFirebase(){
   if(_fbApp)return;
   try{
@@ -1638,7 +1639,7 @@ function _filoLoadPayroll(){
   var endDate=ym+'-31';
   // 해당 월 출퇴근 기록
   Promise.all([
-    _db.collection('attendance').where('dealerId','==',did).where('date','>=',startDate).where('date','<=',endDate).orderBy('date').orderBy('time').get(),
+    _db.collection('attendance').where('dealerId','==',did).where('date','>=',startDate).where('date','<=',endDate).get(),
     _db.collection('members').where('dealerId','==',did).orderBy('name').get()
   ]).then(function(results){
     var attendSnap=results[0], memberSnap=results[1];
