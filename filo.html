@@ -977,7 +977,7 @@ function _filoPageInventory(el){
       low.innerHTML='<div class="card" style="border-left:3px solid #ef4444;margin-bottom:10px">'+
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
         '<div style="font-size:13px;font-weight:800;color:#ef4444">⚠️ 재고 부족 '+lowStock.length+'개</div>'+
-        '<button onclick="_filoGoPage('expiry')" style="font-size:11px;padding:4px 10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer">상세보기</button>'+
+        '<button onclick="_filoGoPage(&quot;expiry&quot;)" style="font-size:11px;padding:4px 10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer">상세보기</button>'+
         '</div>'+
         lowStock.slice(0,3).map(function(d){
           var pct=d.minStock>0?Math.round(d.stock/d.minStock*100):0;
