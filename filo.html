@@ -3040,30 +3040,94 @@ function _filoConfirmPay(method, methodLabel){
 }
 
 function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
+ _lastReceiptData={orderId:orderId,items:items,total:total,method:method,methodLabel:methodLabel,now:now};
  var companyName=(_cachedCompanyDoc&&(_cachedCompanyDoc.companyName||_cachedCompanyDoc.name))||'';
- var timeStr=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
- var html='<div style="padding:24px;font-family:monospace">'+
-  '<div style="text-align:center;margin-bottom:16px">'+
-  '<div style="font-size:18px;font-weight:900">🧾 영수증</div>'+
-  '<div style="font-size:13px;color:var(--t3)">'+companyName+'</div>'+
-  '<div style="font-size:11px;color:var(--t3)">'+timeStr+'</div>'+
-  '</div>'+
-  '<div style="border-top:1px dashed var(--bd);border-bottom:1px dashed var(--bd);padding:12px 0;margin-bottom:12px">'+
-  items.map(function(it){
-   return '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">'+
-    '<span>'+it.name+' x'+it.qty+'</span>'+
-    '<span>₩'+(it.price*it.qty).toLocaleString()+'</span></div>';
-  }).join('')+
-  '</div>'+
-  '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin-bottom:6px">'+
-  '<span>합계</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div>'+
-  '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">결제수단: '+methodLabel+'</div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<button onclick="window.print()" style="flex:1;padding:12px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">🖨 인쇄</button>'+
-  '<button onclick="document.querySelector(&quot;.mo&quot;).remove()" style="flex:1;padding:12px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">닫기</button>'+
-  '</div></div>';
- _filoShowModal(html);
+ /* KST 시간 */
+ var kst=new Date(now.getTime()+9*3600000);
+ var timeStr=kst.getUTCFullYear()+'.'
+  +(kst.getUTCMonth()+1).toString().padStart(2,'0')+'.'
+  +kst.getUTCDate().toString().padStart(2,'0')+' '
+  +kst.getUTCHours().toString().padStart(2,'0')+':'
+  +kst.getUTCMinutes().toString().padStart(2,'0');
+
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:0;width:100%;max-width:380px;overflow:hidden';
+
+ /* 영수증 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='background:linear-gradient(135deg,#1a0e3a,#0a1628);padding:20px 24px 16px;text-align:center;position:relative';
+ hdr.innerHTML='<div style="font-size:11px;color:rgba(167,139,250,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">RECEIPT</div>'+
+  '<div style="font-size:20px;font-weight:900;color:#fff">🧾 영수증</div>'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">'+companyName+'</div>'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:2px">'+timeStr+'</div>';
+ box.appendChild(hdr);
+
+ /* 바디 */
+ var body=document.createElement('div');
+ body.style.cssText='padding:16px 24px;background:var(--surface)';
+
+ /* 테이블 번호 */
+ var tName=window._selectedTableId?'테이블 '+window._selectedTableId:'카운터';
+ var tRow=document.createElement('div');
+ tRow.style.cssText='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--bd);margin-bottom:8px';
+ tRow.innerHTML='<span style="font-size:11px;color:var(--t3)">주문 위치</span><span style="font-size:12px;font-weight:700;color:#f59e0b">'+tName+'</span>';
+ body.appendChild(tRow);
+
+ /* 메뉴 목록 */
+ items.forEach(function(it){
+  var row=document.createElement('div');
+  row.style.cssText='display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;align-items:center';
+  row.innerHTML='<span style="color:var(--t2)">'+it.name+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
+   '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span>';
+  body.appendChild(row);
+ });
+
+ /* 구분선 */
+ var div=document.createElement('div');
+ div.style.cssText='border-top:1px dashed var(--bd);margin:10px 0 12px';
+ body.appendChild(div);
+
+ /* 합계 */
+ var total_row=document.createElement('div');
+ total_row.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
+ total_row.innerHTML='<span style="font-size:13px;font-weight:700">합계</span>'+
+  '<span style="font-size:22px;font-weight:900;color:#22c55e;letter-spacing:-.5px">₩'+total.toLocaleString()+'</span>';
+ body.appendChild(total_row);
+
+ var method_row=document.createElement('div');
+ method_row.style.cssText='font-size:11px;color:var(--t3);margin-bottom:16px';
+ method_row.textContent='결제 수단: '+methodLabel;
+ body.appendChild(method_row);
+
+ /* 버튼 3개 */
+ /* 카카오 알림톡 */
+ var talkBtn=document.createElement('button');
+ talkBtn.style.cssText='width:100%;padding:12px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px';
+ talkBtn.textContent='📱 카카오로 영수증 받기';
+ talkBtn.onclick=function(){mo.remove();_filoReceiptTalk();};
+ body.appendChild(talkBtn);
+
+ /* 인쇄 + 닫기 */
+ var btnRow=document.createElement('div');
+ btnRow.style.cssText='display:flex;gap:8px';
+ var printBtn=document.createElement('button');
+ printBtn.style.cssText='flex:1;padding:11px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer';
+ printBtn.textContent='🖨 인쇄';
+ printBtn.onclick=function(){window.print();};
+ var closeBtn=document.createElement('button');
+ closeBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer';
+ closeBtn.textContent='닫기';
+ closeBtn.onclick=function(){mo.remove();};
+ btnRow.appendChild(printBtn);btnRow.appendChild(closeBtn);
+ body.appendChild(btnRow);
+
+ box.appendChild(body);
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
 }
+
 
 
 // ── 주문 대기 페이지 (실시간) ──
