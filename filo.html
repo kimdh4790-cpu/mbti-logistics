@@ -17,6 +17,7 @@
 .pos-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100dvh - 90px)}.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px;overflow-y:auto}.menu-item{background:var(--b2);border:1px solid var(--bd);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.15s;text-align:center}.menu-item:hover{border-color:var(--br);background:rgba(124,58,237,.08);transform:scale(1.02)}.menu-item:active{transform:scale(.96)}.cart-panel{background:var(--b2);border-left:1px solid var(--bd);display:flex;flex-direction:column}.cart-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd)}.qty-btn{width:28px;height:28px;border:1px solid var(--bd);border-radius:8px;background:var(--b3);color:var(--tx);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}.qty-btn:hover{background:var(--br);border-color:var(--br)}.pay-btn{padding:16px;background:linear-gradient(135deg,var(--br),var(--br2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;width:100%;transition:.15s}.pay-btn:hover{opacity:.9;transform:translateY(-1px)}.pay-btn:active{transform:scale(.97)}/* ── 직원관리 ── */
 .member-card{background:var(--b2);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;cursor:pointer}.member-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}/* ── 애니메이션 ── */
 @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}.slide-up{animation:slideUp .35s cubic-bezier(.34,1.56,.64,1) both}.fade-in{animation:fadeIn .3s ease both}.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1512,7 +1513,11 @@ var _cartItems=[];
 function _filoPageKiosk(el){
  var did=_CU.dealerId||_CU.uid;
  _cartItems=[];
- el.innerHTML='<div class="pos-wrap">'+
+ el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">'+
+ '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px">📊 메뉴 엑셀 업로드</button>'+
+ '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
+ '</div>'+
+ '<div class="pos-wrap">'+
  '<div style="display:flex;flex-direction:column">'+
  '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
  '<div class="menu-grid" id="kiosk-menu">'+
@@ -1576,6 +1581,43 @@ function _filoPageKiosk(el){
  {_id:'s3',name:'바닐라라떼',price:4300,category:'커피',emoji:'🥛'},
  ]);
  });
+}
+
+function _filoImportMenuExcel(input){
+ var file=input.files[0];
+ if(!file)return;
+ var did=_CU.dealerId||_CU.uid;
+ var reader=new FileReader();
+ reader.onload=function(e){
+  try{
+   var wb=XLSX.read(e.target.result,{type:'array'});
+   var ws=wb.Sheets[wb.SheetNames[0]];
+   var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+   if(!rows.length){alert('데이터가 없습니다.');return;}
+   var batch=[];
+   rows.forEach(function(r){
+    var name=r['메뉴명']||r['name']||'';
+    var price=parseInt(r['가격']||r['price']||0);
+    var category=r['카테고리']||r['category']||'기타';
+    var emoji=r['이모지']||r['emoji']||'🍽';
+    if(!name||!price)return;
+    batch.push({name:name,price:price,category:category,emoji:emoji,forSale:true,dealerId:did,stock:null,minStock:null});
+   });
+   if(!batch.length){alert('유효한 메뉴가 없습니다.');return;}
+   var db=firebase.firestore();
+   var bw=db.batch();
+   batch.forEach(function(m){
+    var ref=db.collection('inventory').doc();
+    bw.set(ref,m);
+   });
+   bw.commit().then(function(){
+    alert(batch.length+'개 메뉴 등록 완료!');
+    _filoPageKiosk(document.getElementById('content'));
+   }).catch(function(e){alert('저장 오류: '+e.message);});
+  }catch(e){alert('파일 읽기 오류: '+e.message);}
+ };
+ reader.readAsArrayBuffer(file);
+ input.value='';
 }
 
 function _filoRenderKiosk(menus){
