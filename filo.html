@@ -41,9 +41,10 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:20px;
   background:radial-gradient(ellipse at 20% 10%,rgba(124,58,237,.18) 0%,transparent 60%),
              radial-gradient(ellipse at 80% 90%,rgba(8,145,178,.12) 0%,transparent 60%),var(--bg)}
+.login-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-xl);padding:32px 28px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(124,58,237,.08)}
 .login-box{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-xl);padding:32px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(124,58,237,.08)}
 .login-logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:var(--shadow-brand)}
-.tab-btn{flex:1;min-width:0;padding:9px 4px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--t3);transition:.2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab-btn{padding:9px 4px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--t3);transition:.2s;text-align:center;width:100%}
 .tab-btn.on{background:var(--surface3);color:var(--tx);box-shadow:0 2px 8px rgba(0,0,0,.3)}
 .btn-brand{background:linear-gradient(135deg,var(--br),var(--br-l));color:#fff;border:none;border-radius:var(--r);padding:13px;width:100%;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;box-shadow:var(--shadow-brand);letter-spacing:.2px}
 .btn-brand:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,.45)}
@@ -266,7 +267,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
  </div>
 
  <!-- 탭 -->
- <div style="display:flex;gap:2px;margin-bottom:20px;background:var(--b3);border-radius:10px;padding:4px">
+ <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:20px;background:var(--surface2);border-radius:12px;padding:4px">
  <button class="tab-btn on" id="tab-login" onclick="_filoTab('login')">로그인</button>
  <button class="tab-btn" id="tab-register" onclick="_filoTab('register')">회사 등록</button>
  <button class="tab-btn" id="tab-join" onclick="_filoTab('join')">직원 가입</button>
