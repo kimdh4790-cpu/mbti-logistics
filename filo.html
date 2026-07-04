@@ -1114,6 +1114,7 @@ function _buildFiloNav(){
  if(hasAll||hasSub('kiosk')){
   menus.push({s:'🛒 판매관리',items:[
    {ic:'🖥️',l:'POS 결제',p:'kiosk'},
+   {ic:'🛵',l:'배달 주문',p:'delivery'},
    {ic:'🔔',l:'주문 대기',p:'orders'},
    {ic:'🪑',l:'테이블 관리',p:'table_mgmt'},
    {ic:'📊',l:'매출·분석',p:'sales_report'},
@@ -1189,7 +1190,7 @@ function _filoGoPage(p){
  var el=document.getElementById('content');
  var titles={home:'대시보드',members:'직원 관리',schedule:'달력',
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
- auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
+ auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
@@ -1221,6 +1222,7 @@ function _filoGoPage(p){
  else if(p==='table_qr') _filoPageTableQR(el);
  else if(p==='schedule') _filoPageSchedule(el);
  else if(p==='table_mgmt') _filoPageTableMgmt(el);
+ else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
  /* 페이지 전환 애니메이션 */
  if(el){el.style.animation='none';el.offsetHeight;el.style.animation='pageEnter .25s ease both';}
@@ -3324,6 +3326,7 @@ function _filoPageOrders(el){
  el.innerHTML='<div class="slide-up">'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
   '<div style="font-size:17px;font-weight:900">🔔 주문 대기</div>'+
+  '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+(_CU.dealerId||_CU.uid),\'_blank\')" style="padding:6px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">🍳 주방화면 열기</button>'+
   '<div class="live-dot"></div></div>'+
   '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">⏳ 로딩 중...</div></div>'+
   '</div>';
@@ -4094,6 +4097,274 @@ function _filoCreateTables(did,count,seats){
  }).then(function(){
   _filoToast('✅ 테이블 '+count+'개 생성 완료!');
  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+/* ══════════════════════════════════════
+   🛵 배달 주문 관리 페이지
+   배민/쿠팡이츠/요기요 주문 수동 접수
+   ══════════════════════════════════════ */
+function _filoPageDelivery(el){
+ var did=_CU.dealerId||_CU.uid;
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ wrap.style.cssText='max-width:900px;margin:0 auto';
+
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+ hdr.innerHTML='<div><div class="page-title">🛵 배달 주문 관리</div>'+
+  '<div class="page-sub">배달앱 주문을 한곳에서 접수·관리합니다</div></div>';
+ var addBtn=document.createElement('button');
+ addBtn.className='btn btn-primary btn-sm';
+ addBtn.textContent='+ 주문 접수';
+ addBtn.onclick=function(){_filoDeliveryAdd(did);};
+ hdr.appendChild(addBtn);
+ wrap.appendChild(hdr);
+
+ /* 오늘 배달 현황 KPI */
+ var kpiWrap=document.createElement('div');
+ kpiWrap.id='delivery-kpi';
+ kpiWrap.className='kpi-grid';
+ kpiWrap.style.cssText='grid-template-columns:repeat(4,1fr);margin-bottom:14px';
+ kpiWrap.innerHTML='<div class="kpi-card kpi-revenue"><div class="kpi-label">오늘 배달 건수</div><div class="kpi-val" id="dkpi-cnt" style="color:#a78bfa">-</div></div>'+
+  '<div class="kpi-card kpi-profit"><div class="kpi-label">배달 매출</div><div class="kpi-val" id="dkpi-rev" style="color:#22c55e">-</div></div>'+
+  '<div class="kpi-card kpi-cost"><div class="kpi-label">배달비 합계</div><div class="kpi-val" id="dkpi-fee" style="color:#ef4444">-</div></div>'+
+  '<div class="kpi-card kpi-margin"><div class="kpi-label">앱별 비중</div><div class="kpi-val" id="dkpi-top" style="color:#f59e0b;font-size:14px">-</div></div>';
+ wrap.appendChild(kpiWrap);
+
+ /* 주문 목록 */
+ var listWrap=document.createElement('div');
+ listWrap.id='delivery-list';
+ listWrap.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
+ wrap.appendChild(listWrap);
+
+ el.appendChild(wrap);
+ _filoLoadDelivery(did);
+}
+
+var _deliveryUnsub=null;
+function _filoLoadDelivery(did){
+ if(_deliveryUnsub){_deliveryUnsub();_deliveryUnsub=null;}
+ var today=new Date().toISOString().slice(0,10);
+ _deliveryUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did)
+  .where('date','==',today)
+  .where('type','==','delivery')
+  .onSnapshot(function(snap){
+   var orders=[];
+   snap.forEach(function(doc){orders.push(Object.assign({_id:doc.id},doc.data()));});
+   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+   _filoRenderDelivery(did,orders);
+  });
+}
+
+function _filoRenderDelivery(did,orders){
+ /* KPI */
+ var cnt=orders.length;
+ var rev=orders.reduce(function(s,o){return s+(o.total||0);},0);
+ var fee=orders.reduce(function(s,o){return s+(o.deliveryFee||0);},0);
+ var appMap={};
+ orders.forEach(function(o){var a=o.deliveryApp||'기타';appMap[a]=(appMap[a]||0)+1;});
+ var topApp=Object.entries(appMap).sort(function(a,b){return b[1]-a[1];})[0];
+
+ var e=function(id){return document.getElementById(id);};
+ if(e('dkpi-cnt'))e('dkpi-cnt').textContent=cnt+'건';
+ if(e('dkpi-rev'))e('dkpi-rev').textContent='₩'+rev.toLocaleString();
+ if(e('dkpi-fee'))e('dkpi-fee').textContent='₩'+fee.toLocaleString();
+ if(e('dkpi-top'))e('dkpi-top').textContent=topApp?topApp[0]+' '+topApp[1]+'건':'-';
+
+ var wrap=document.getElementById('delivery-list');
+ if(!wrap)return;
+ wrap.innerHTML='';
+
+ /* 앱별 필터 */
+ var apps=['전체','배민','쿠팡이츠','요기요','기타'];
+ var filterWrap=document.createElement('div');
+ filterWrap.style.cssText='display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap';
+ apps.forEach(function(app){
+  var btn=document.createElement('button');
+  btn.style.cssText='padding:6px 14px;border-radius:20px;border:1px solid var(--bd2);background:var(--surface2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;transition:.15s';
+  btn.textContent=app==='전체'?app+'('+cnt+')':app;
+  btn.onclick=function(){
+   document.querySelectorAll('.delivery-filter-btn').forEach(function(b){
+    b.style.background='var(--surface2)';b.style.color='var(--t2)';b.style.borderColor='var(--bd2)';
+   });
+   this.style.background='var(--br)';this.style.color='#fff';this.style.borderColor='var(--br)';
+   var filtered=app==='전체'?orders:orders.filter(function(o){return (o.deliveryApp||'기타')===app;});
+   _filoRenderDeliveryCards(did,filtered,wrap.querySelector('#delivery-cards'));
+  };
+  btn.className='delivery-filter-btn';
+  filterWrap.appendChild(btn);
+ });
+ wrap.appendChild(filterWrap);
+
+ var cardsWrap=document.createElement('div');
+ cardsWrap.id='delivery-cards';
+ wrap.appendChild(cardsWrap);
+ _filoRenderDeliveryCards(did,orders,cardsWrap);
+}
+
+function _filoRenderDeliveryCards(did,orders,wrap){
+ if(!wrap)return;
+ if(!orders.length){
+  wrap.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">'+
+   '<div style="font-size:32px;margin-bottom:8px">🛵</div>'+
+   '<div>오늘 배달 주문이 없습니다</div>'+
+   '<div style="font-size:11px;margin-top:6px">+ 주문 접수 버튼으로 배달 주문을 등록하세요</div></div>';
+  return;
+ }
+ var appIcon={'배민':'🟢','쿠팡이츠':'🔴','요기요':'🟣','기타':'🛵'};
+ var statusColor={pending:'#f59e0b',cooking:'#60a5fa',ready:'#a78bfa',delivered:'#22c55e',cancelled:'#ef4444'};
+ var statusLabel={pending:'접수',cooking:'조리중',ready:'픽업대기',delivered:'배달완료',cancelled:'취소'};
+
+ wrap.innerHTML=orders.map(function(o){
+  var sc=statusColor[o.deliveryStatus||'pending'];
+  var sl=statusLabel[o.deliveryStatus||'pending'];
+  var kst=o.createdAt?new Date(new Date(o.createdAt).getTime()+9*3600000):new Date();
+  var timeStr=kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+  return '<div class="card card-hover" style="margin-bottom:10px;border-left:3px solid '+sc+'">'+
+   '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+   '<div>'+
+   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'+
+   '<span style="font-size:16px">'+(appIcon[o.deliveryApp||'기타']||'🛵')+'</span>'+
+   '<span style="font-size:14px;font-weight:900">'+(o.deliveryApp||'배달')+'</span>'+
+   '<span style="font-size:11px;color:var(--t3)">'+timeStr+'</span>'+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--t2)">'+(o.customerName||'고객')+(o.phone?' · '+o.phone:'')+'</div>'+
+   '</div>'+
+   '<div style="text-align:right">'+
+   '<span class="chip" style="background:'+sc+'18;color:'+sc+';border-color:'+sc+'40">'+sl+'</span>'+
+   '<div style="font-size:16px;font-weight:900;color:#22c55e;margin-top:4px">₩'+(o.total||0).toLocaleString()+'</div>'+
+   (o.deliveryFee?'<div style="font-size:10px;color:var(--t3)">배달비 ₩'+o.deliveryFee.toLocaleString()+'</div>':'')+
+   '</div></div>'+
+   '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+
+   (o.items||[]).map(function(it){return it.name+' x'+it.qty;}).join(' / ')+'</div>'+
+   (o.address?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">📍 '+o.address+'</div>':'')+
+   '<div style="display:flex;gap:6px">'+
+   ['cooking','ready','delivered'].map(function(s){
+    var active=(o.deliveryStatus||'pending')===s;
+    return '<button data-id="'+o._id+'" data-s="'+s+'" onclick="_filoDeliveryStatus(this.dataset.id,this.dataset.s)" '+
+     'style="flex:1;padding:7px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid '+(active?statusColor[s]:'var(--bd2)')+';background:'+(active?statusColor[s]+'18':'var(--surface2)')+';color:'+(active?statusColor[s]:'var(--t2)')+'">'+
+     {cooking:'🍳 조리중',ready:'✅ 픽업대기',delivered:'🛵 완료'}[s]+'</button>';
+   }).join('')+
+   '<button data-id="'+o._id+'" onclick="_filoDeliveryCancel(this.dataset.id)" style="padding:7px 10px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.08);color:#ef4444">취소</button>'+
+   '</div></div>';
+ }).join('');
+}
+
+function _filoDeliveryStatus(id,status){
+ _db.collection('filo_sales').doc(id).update({deliveryStatus:status,updatedAt:new Date().toISOString()})
+  .then(function(){_filoToast('✅ 상태 변경: '+{cooking:'조리중',ready:'픽업대기',delivered:'배달완료'}[status]);});
+}
+
+function _filoDeliveryCancel(id){
+ if(!confirm('주문을 취소하시겠습니까?'))return;
+ _db.collection('filo_sales').doc(id).update({deliveryStatus:'cancelled',status:'cancel'})
+  .then(function(){_filoToast('🗑 주문이 취소됐습니다');});
+}
+
+function _filoDeliveryAdd(did){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:22px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto';
+
+ var title=document.createElement('div');
+ title.style.cssText='font-size:15px;font-weight:900;margin-bottom:16px';
+ title.textContent='🛵 배달 주문 접수';
+ box.appendChild(title);
+
+ /* 배달앱 선택 */
+ var appRow=document.createElement('div');
+ appRow.style.marginBottom='14px';
+ var appLabel=document.createElement('label');
+ appLabel.style.cssText='font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px';
+ appLabel.textContent='배달앱';
+ var appGrid=document.createElement('div');
+ appGrid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:6px';
+ ['배민','쿠팡이츠','요기요','기타'].forEach(function(app){
+  var btn=document.createElement('button');
+  btn.className='delivery-app-btn';
+  btn.dataset.app=app;
+  btn.style.cssText='padding:10px 4px;border:2px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;transition:.15s;text-align:center';
+  var icons={'배민':'🟢','쿠팡이츠':'🔴','요기요':'🟣','기타':'🛵'};
+  btn.innerHTML='<div style="font-size:18px;margin-bottom:3px">'+icons[app]+'</div>'+app;
+  btn.onclick=function(){
+   document.querySelectorAll('.delivery-app-btn').forEach(function(b){
+    b.style.borderColor='var(--bd2)';b.style.background='var(--surface2)';b.style.color='var(--t2)';
+   });
+   this.style.borderColor='#7c3aed';this.style.background='rgba(124,58,237,.1)';this.style.color='#a78bfa';
+   window._selectedDeliveryApp=this.dataset.app;
+  };
+  appGrid.appendChild(btn);
+ });
+ appRow.appendChild(appLabel);appRow.appendChild(appGrid);
+ box.appendChild(appRow);
+
+ /* 필드들 */
+ [
+  {id:'dv-customer',l:'고객명',type:'text',ph:'홍길동'},
+  {id:'dv-phone',l:'연락처',type:'tel',ph:'010-0000-0000'},
+  {id:'dv-address',l:'배달 주소',type:'text',ph:'부산시 수영구...'},
+  {id:'dv-total',l:'주문 금액 *',type:'number',ph:'15000'},
+  {id:'dv-fee',l:'배달비',type:'number',ph:'3000'},
+  {id:'dv-memo',l:'메모 (요청사항)',type:'text',ph:'문 앞에 놔주세요'},
+ ].forEach(function(f){
+  var g=document.createElement('div');g.style.marginBottom='10px';
+  var l=document.createElement('label');
+  l.style.cssText='font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px';
+  l.textContent=f.l;
+  var inp=document.createElement('input');
+  inp.id=f.id;inp.type=f.type;inp.placeholder=f.ph;
+  inp.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none';
+  g.appendChild(l);g.appendChild(inp);box.appendChild(g);
+ });
+
+ /* 메뉴 빠른 추가 */
+ var menuNote=document.createElement('div');
+ menuNote.style.cssText='font-size:11px;color:var(--t3);margin-bottom:14px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px';
+ menuNote.textContent='💡 주문금액만 입력해도 매출 집계됩니다. 상세 메뉴는 생략 가능합니다.';
+ box.appendChild(menuNote);
+
+ var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;margin-top:4px';
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer';
+ cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();window._selectedDeliveryApp=null;};
+ var saveBtn=document.createElement('button');
+ saveBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-weight:800;cursor:pointer';
+ saveBtn.textContent='🛵 접수';
+ saveBtn.onclick=function(){
+  var total=parseInt(document.getElementById('dv-total').value)||0;
+  if(!total){_filoToast('주문 금액을 입력하세요');return;}
+  var now=new Date();
+  _db.collection('filo_sales').add({
+   dealerId:did,
+   type:'delivery',
+   deliveryApp:window._selectedDeliveryApp||'기타',
+   deliveryStatus:'pending',
+   customerName:document.getElementById('dv-customer').value||'',
+   phone:document.getElementById('dv-phone').value||'',
+   address:document.getElementById('dv-address').value||'',
+   total:total,
+   deliveryFee:parseInt(document.getElementById('dv-fee').value)||0,
+   memo:document.getElementById('dv-memo').value||'',
+   items:[{name:'배달주문',price:total,qty:1}],
+   status:'pending',
+   createdAt:now.toISOString(),
+   date:now.toISOString().slice(0,10),
+   payMethod:'delivery'
+  }).then(function(){
+   _filoToast('✅ 배달 주문이 접수됐습니다!');
+   mo.remove();
+   window._selectedDeliveryApp=null;
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+ };
+ btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
+ box.appendChild(btnRow);
+
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
 }
 </script>
 </body>
