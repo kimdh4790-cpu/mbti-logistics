@@ -6,9 +6,9 @@ export default {
     const KV = env.DONWAY_ASSETS;
 
     async function serveKV(key, ct) {
-      const val = await KV.get(key, 'text');
+      const val = await KV.get(key, 'arrayBuffer');
       if (!val) return new Response(key + ' not found', { status: 404 });
-      return new Response(val, { headers: { 'Content-Type': ct + '; charset=utf-8', 'Cache-Control': 'no-cache' } });
+      return new Response(val, { headers: { 'Content-Type': ct + '; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } });
     }
 
     // filo.ai.kr 라우팅
