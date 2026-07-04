@@ -30,6 +30,12 @@ export default {
       return fetch(new Request(target.toString(), { method: request.method, headers: newHeaders, body: request.body }));
     }
 
+    if (path === '/filo-manifest.json') return serveKV('filo-manifest.json', 'application/manifest+json');
+    if (path === '/firebase-app-compat.js' || path === '/firebase-firestore-compat.js' || path === '/firebase-auth-compat.js') {
+      // Firebase CDN으로 리다이렉트
+      const cdnBase = 'https://www.gstatic.com/firebasejs/10.12.2';
+      return Response.redirect(cdnBase + path, 302);
+    }
     return new Response('Not found', { status: 404 });
   }
 };
