@@ -1695,18 +1695,68 @@ function _cartQty(idx,delta){
 function _cartClear(){_cartItems=[];_cartRender();}
 
 function _filoPay(){
- var did=_CU.dealerId||_CU.uid;
  if(!_cartItems.length){_filoToast('주문 내역이 없습니다');return;}
  var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ // 결제 수단 선택 모달
+ var methods=[
+  {k:'card',l:'💳 카드',c:'#3b82f6'},
+  {k:'cash',l:'💵 현금',c:'#22c55e'},
+  {k:'samsung',l:'📱 삼성페이',c:'#1428a0'},
+  {k:'kakao',l:'🟡 카카오페이',c:'#f9e000'},
+ ];
+ var html='<div style="padding:24px">'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:4px">결제 수단 선택</div>'+
+  '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:20px">₩'+total.toLocaleString()+'</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+
+  methods.map(function(m){
+   return '<button onclick="_filoConfirmPay(''+m.k+'',''+m.l+'')" style="padding:18px;border:2px solid '+m.c+'40;border-radius:14px;background:'+m.c+'15;color:var(--tx);font-size:15px;font-weight:800;cursor:pointer;transition:.15s" onmouseover="this.style.background=''+m.c+'30'" onmouseout="this.style.background=''+m.c+'15'">'+m.l+'</button>';
+  }).join('')+
+  '</div>'+
+  '<button onclick="document.querySelector('.mo').remove()" style="width:100%;padding:10px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
+  '</div>';
+ _filoShowModal(html);
+}
+
+function _filoConfirmPay(method, methodLabel){
+ document.querySelector('.mo') && document.querySelector('.mo').remove();
+ var did=_CU.dealerId||_CU.uid;
+ var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
  var now=new Date();
+ var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  _db.collection('filo_sales').add({
- dealerId:did,items:_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};}),
- total:total,createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
- type:'pos',createdBy:_CU.name||_CU.userId||''
- }).then(function(){
- _filoToast('✅ 결제 완료 ₩'+total.toLocaleString());
- _cartClear();
+  dealerId:did,items:items,total:total,
+  createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
+  type:'pos',payMethod:method,createdBy:_CU.name||_CU.userId||''
+ }).then(function(ref){
+  _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
+  _cartClear();
  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
+ var companyName=(_cachedCompanyDoc&&(_cachedCompanyDoc.companyName||_cachedCompanyDoc.name))||'';
+ var timeStr=now.getFullYear()+'-'+(now.getMonth()+1).toString().padStart(2,'0')+'-'+now.getDate().toString().padStart(2,'0')+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+ var html='<div style="padding:24px;font-family:monospace">'+
+  '<div style="text-align:center;margin-bottom:16px">'+
+  '<div style="font-size:18px;font-weight:900">🧾 영수증</div>'+
+  '<div style="font-size:13px;color:var(--t3)">'+companyName+'</div>'+
+  '<div style="font-size:11px;color:var(--t3)">'+timeStr+'</div>'+
+  '</div>'+
+  '<div style="border-top:1px dashed var(--bd);border-bottom:1px dashed var(--bd);padding:12px 0;margin-bottom:12px">'+
+  items.map(function(it){
+   return '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">'+
+    '<span>'+it.name+' x'+it.qty+'</span>'+
+    '<span>₩'+(it.price*it.qty).toLocaleString()+'</span></div>';
+  }).join('')+
+  '</div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin-bottom:6px">'+
+  '<span>합계</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">결제수단: '+methodLabel+'</div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<button onclick="window.print()" style="flex:1;padding:12px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">🖨 인쇄</button>'+
+  '<button onclick="document.querySelector('.mo').remove()" style="flex:1;padding:12px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">닫기</button>'+
+  '</div></div>';
+ _filoShowModal(html);
 }
 
 function _filoShowModal(html){
