@@ -1458,23 +1458,14 @@ async function acceptExchange(){
     // ★ filo.ai.kr 라우팅
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       const e = env || _env_ref;
-      if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
+      if (path === '/' || path === '') return serveKVFile(env, 'filo_backup.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
-        const _e2 = env || _env_ref;
-        if (_e2 && _e2.DONWAY_ASSETS) {
-          const fv = await _e2.DONWAY_ASSETS.get('filo.html', 'text');
-          if (fv && fv.length < 400000 && fv.includes('_filoGoPage')) {
-            return new Response(fv, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-          }
-          const fv2 = await _e2.DONWAY_ASSETS.get('filo_backup.html', 'text');
-          if (fv2) return new Response(fv2, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-        }
-        return serveKVFile(env, 'filo.html', 'text/html');
+        return serveKVFile(env, 'filo_backup.html', 'text/html');
       }
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
@@ -1483,7 +1474,7 @@ async function acceptExchange(){
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
       // filo.ai.kr 내부 경로는 모두 filo.html로 서빙 (slug 라우팅 방지)
-      return serveKVFile(env, 'filo.html', 'text/html');
+      return serveKVFile(env, 'filo_backup.html', 'text/html');
     }
 
 
@@ -1529,7 +1520,7 @@ async function acceptExchange(){
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
-      if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
+      if (path === '/' || path === '') return serveKVFile(env, 'filo_backup.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
