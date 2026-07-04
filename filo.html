@@ -240,6 +240,44 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .notice-body{padding:0 16px 14px;font-size:12px;color:var(--t2);line-height:1.7;display:none}
 .notice-body.open{display:block}
 
+/* ── 고도화 추가 스타일 ── */
+html{scroll-behavior:smooth}
+.page-enter{animation:pageEnter .3s cubic-bezier(.4,0,.2,1) both}
+@keyframes pageEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.glass{background:rgba(22,22,42,.7);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08)}
+.btn-primary{background:linear-gradient(135deg,var(--br),var(--br-l));color:#fff;border:none;border-radius:var(--r);padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(124,58,237,.3);position:relative;overflow:hidden}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(124,58,237,.45)}
+.btn-primary:active{transform:translateY(0);box-shadow:0 2px 8px rgba(124,58,237,.3)}
+.btn-secondary{background:var(--surface2);color:var(--t2);border:1px solid var(--bd2);border-radius:var(--r);padding:11px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-secondary:hover{background:var(--surface3);color:var(--tx);border-color:var(--bd3)}
+.input-group{position:relative;margin-bottom:16px}
+.input-group label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none;transition:.2s}
+.input-group input:focus,.input-group select:focus{border-color:var(--br);box-shadow:0 0 0 3px rgba(124,58,237,.12);background:var(--surface3)}
+.tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;gap:4px}
+.tag-purple{background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+.tag-green{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
+.tag-red{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+.tag-yellow{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.tag-blue{background:rgba(96,165,250,.12);color:#60a5fa;border:1px solid rgba(96,165,250,.2)}
+.divider{height:1px;background:var(--bd);margin:16px 0}
+.empty-state{text-align:center;padding:48px 20px;color:var(--t3)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.empty-state .empty-title{font-size:15px;font-weight:700;color:var(--t2);margin-bottom:6px}
+.empty-state .empty-desc{font-size:12px;line-height:1.6}
+.progress-bar{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.list-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:6px;transition:.2s;cursor:pointer}
+.list-item:hover{border-color:var(--bd2);background:var(--surface2);transform:translateX(2px)}
+.list-item-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-header h3{font-size:14px;font-weight:800;color:var(--tx)}
+.section-header a,.section-header button.link{background:none;border:none;font-size:11px;color:var(--br);cursor:pointer;font-weight:600}
+.number-large{font-size:32px;font-weight:900;letter-spacing:-1px;line-height:1}
+.number-medium{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.trend-up{color:var(--green);font-size:11px;font-weight:700}
+.trend-down{color:var(--red);font-size:11px;font-weight:700}
+.topbar-badge{background:var(--br);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.3px;animation:pulse 2s infinite}
 /* ── 영수증 인쇄 ── */
 @media print{
   body>*:not(.mo){display:none!important}
@@ -1399,7 +1437,7 @@ function _filoPageSales(el){
 
  /* ── 탭 ── */
  '<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:12px">'+
- ['📊 마진 분석','💰 매출 입력','🍽 원가 등록','💡 AI 인사이트'].map(function(t,i){
+ ['📊 마진 분석','🍽 원가 등록','💡 AI 인사이트'].map(function(t,i){
   return '<button id="mgt-'+i+'" onclick="_filoMgTab('+i+')" style="padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;background:'+(i===0?'var(--br)':'var(--b3)')+';color:'+(i===0?'#fff':'var(--t2)')+'">'+t+'</button>';
  }).join('')+
  '</div>'+
@@ -1414,7 +1452,7 @@ function _filoPageSales(el){
 var _mgTabIdx=0;
 function _filoMgTab(idx){
  _mgTabIdx=idx;
- [0,1,2,3].forEach(function(i){
+ [0,1,2].forEach(function(i){
   var b=document.getElementById('mgt-'+i);
   if(b){b.style.background=i===idx?'var(--br)':'var(--b3)';b.style.color=i===idx?'#fff':'var(--t2)';}
  });
@@ -1422,8 +1460,7 @@ function _filoMgTab(idx){
  var ymEl=document.getElementById('mg-ym');
  var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
  if(idx===0)_filoRenderMarginAnalysis(did,ym);
- else if(idx===1)_filoSalesInput(did);
- else if(idx===2)_filoRenderCostMgmt(did);
+ else if(idx===1)_filoRenderCostMgmt(did);
  else _filoRenderInsights(did,ym);
 }
 
