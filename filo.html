@@ -6,120 +6,16 @@
 <meta name="theme-color" content="#7c3aed">
 <title>FILO — 재고·출퇴근·키오스크</title>
 <link rel="manifest" href="/filo-manifest.json">
-<style>
-:root{
-  --bg:#0f0f13;--bg2:#1a1a22;--bg3:#22222e;--border:rgba(255,255,255,.08);
-  --text:#f0f0f5;--text2:#b0b0c0;--text3:#707088;
-  --brand:#7c3aed;--brand2:#0891b2;--red:#ef4444;--green:#22c55e;
-  --blue:#0066ff;--acc:#a78bfa;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh}
-
-/* ── 로그인 ── */
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:16px;background:radial-gradient(ellipse at 30% 20%,rgba(124,58,237,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(8,145,178,.1) 0%,transparent 60%),var(--bg)}
-.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:400px;max-width:95vw}
-.tab-btn{flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:none;color:var(--text2);transition:.15s}
-.tab-btn.on{background:var(--bg);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}
-.fg{margin-bottom:14px}
-.fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}
-.fg input,.fg select{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:.15s}
-.fg input:focus,.fg select:focus{border-color:var(--brand)}
-.btn{padding:10px 18px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
-.btn-brand{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;width:100%;padding:12px;font-size:14px}
-.btn-sm{padding:6px 14px;font-size:12px}
-.err{color:var(--red);font-size:12px;margin-bottom:8px;display:none}
-
-/* ── 앱 ── */
-#app{display:none;flex-direction:column;min-height:100dvh}
-.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:100}
-.topbar-logo{font-size:17px;font-weight:900;background:linear-gradient(135deg,var(--brand),var(--brand2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-#topbar-title{flex:1;font-size:14px;font-weight:700;color:var(--text)}
-.sidebar{position:fixed;top:52px;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:10px 0;z-index:90;transform:translateX(-100%);transition:.25s}
-.sidebar.open{transform:none}
-.main{margin-top:52px;padding:16px;min-height:calc(100dvh - 52px)}
-@media(min-width:700px){.sidebar{transform:none}.main{margin-left:220px}}
-.ni{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;border-radius:8px;margin:1px 8px;transition:.15s}
-.ni:hover,.ni.on{background:rgba(124,58,237,.12);color:var(--acc)}
-.ns-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;padding:8px 16px 4px;text-transform:uppercase}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f0f0f5;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:.3s;pointer-events:none;max-width:90vw;text-align:center}
-.toast.show{opacity:1}
-
-/* ── 애니메이션 ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes barFill{from{width:0}to{width:var(--w)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-.fade-up{animation:fadeUp .4s ease both}
-.fade-up-1{animation:fadeUp .4s .1s ease both;opacity:0}
-.fade-up-2{animation:fadeUp .4s .2s ease both;opacity:0}
-.fade-up-3{animation:fadeUp .4s .3s ease both;opacity:0}
-.fade-up-4{animation:fadeUp .4s .4s ease both;opacity:0}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden;transition:.2s}
-.stat-card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,.02) 50%,transparent 100%);pointer-events:none}
-.chart-bar{height:100%;border-radius:4px 4px 0 0;transition:height .8s cubic-bezier(.34,1.56,.64,1);position:relative;cursor:pointer}
-.chart-bar:hover::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text2);white-space:nowrap;background:var(--bg3);padding:2px 6px;border-radius:4px}
-.metric-ring{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-
-/* ── 입고/출고 폼 ── */
-.stock-form{max-width:600px;margin:0 auto}
-.stock-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;transition:.2s}
-.stock-item:hover{border-color:rgba(124,58,237,.3)}
-.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700}
-.badge-in{background:rgba(34,197,94,.15);color:#22c55e}
-.badge-out{background:rgba(239,68,68,.15);color:#ef4444}
-.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b}
-
-/* ── QR 출퇴근 ── */
-.qr-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;text-align:center}
-.qr-wrap{width:200px;height:200px;margin:16px auto;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.attend-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);transition:.15s}
-.attend-row:hover{background:var(--bg3)}
-.attend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dot-in{background:#22c55e;box-shadow:0 0 6px #22c55e}
-.dot-out{background:#94a3b8}
-.dot-late{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
-
-/* ── 급여 현황 ── */
-.pay-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;transition:.2s}
-.pay-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}
-.pay-amount{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-
-/* ── POS 키오스크 ── */
-.pos-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100dvh - 90px)}
-.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px;overflow-y:auto}
-.menu-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.15s;text-align:center}
-.menu-item:hover{border-color:var(--brand);background:rgba(124,58,237,.08);transform:scale(1.02)}
-.menu-item:active{transform:scale(.96)}
-.cart-panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
-.cart-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
-.qty-btn{width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}
-.qty-btn:hover{background:var(--brand);border-color:var(--brand)}
-.pay-btn{padding:16px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;width:100%;transition:.15s}
-.pay-btn:hover{opacity:.9;transform:translateY(-1px)}
-.pay-btn:active{transform:scale(.97)}
-
-/* ── 직원관리 ── */
-.member-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;cursor:pointer}
-.member-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}
-.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
-
-/* ── 애니메이션 ── */
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
-.slide-up{animation:slideUp .35s cubic-bezier(.34,1.56,.64,1) both}
-.fade-in{animation:fadeIn .3s ease both}
-.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}
-.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}
-.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}
-
-</style>
+<style>:root{--bg:#0f0f13;--bg2:#1a1a22;--bg3:#22222e;--border:rgba(255,255,255,.08);--text:#f0f0f5;--text2:#b0b0c0;--text3:#707088;--brand:#7c3aed;--brand2:#0891b2;--red:#ef4444;--green:#22c55e;--blue:#0066ff;--acc:#a78bfa;}*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh}/* ── 로그인 ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:16px;background:radial-gradient(ellipse at 30% 20%,rgba(124,58,237,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 80%,rgba(8,145,178,.1) 0%,transparent 60%),var(--bg)}.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:400px;max-width:95vw}.tab-btn{flex:1;padding:9px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:none;color:var(--text2);transition:.15s}.tab-btn.on{background:var(--bg);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}.fg{margin-bottom:14px}.fg label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px}.fg input,.fg select{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:.15s}.fg input:focus,.fg select:focus{border-color:var(--brand)}.btn{padding:10px 18px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}.btn-brand{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;width:100%;padding:12px;font-size:14px}.btn-sm{padding:6px 14px;font-size:12px}.err{color:var(--red);font-size:12px;margin-bottom:8px;display:none}/* ── 앱 ── */
+#app{display:none;flex-direction:column;min-height:100dvh}.topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;z-index:100}.topbar-logo{font-size:17px;font-weight:900;background:linear-gradient(135deg,var(--brand),var(--brand2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}#topbar-title{flex:1;font-size:14px;font-weight:700;color:var(--text)}.sidebar{position:fixed;top:52px;left:0;bottom:0;width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:10px 0;z-index:90;transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-top:52px;padding:16px;min-height:calc(100dvh - 52px)}@media(min-width:700px){.sidebar{transform:none}.main{margin-left:220px}}.ni{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;border-radius:8px;margin:1px 8px;transition:.15s}.ni:hover,.ni.on{background:rgba(124,58,237,.12);color:var(--acc)}.ns-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;padding:8px 16px 4px;text-transform:uppercase}.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f0f0f5;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;opacity:0;transition:.3s;pointer-events:none;max-width:90vw;text-align:center}.toast.show{opacity:1}/* ── 애니메이션 ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes barFill{from{width:0}to{width:var(--w)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}.fade-up{animation:fadeUp .4s ease both}.fade-up-1{animation:fadeUp .4s .1s ease both;opacity:0}.fade-up-2{animation:fadeUp .4s .2s ease both;opacity:0}.fade-up-3{animation:fadeUp .4s .3s ease both;opacity:0}.fade-up-4{animation:fadeUp .4s .4s ease both;opacity:0}.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden;transition:.2s}.stat-card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}.stat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 0%,rgba(255,255,255,.02) 50%,transparent 100%);pointer-events:none}.chart-bar{height:100%;border-radius:4px 4px 0 0;transition:height .8s cubic-bezier(.34,1.56,.64,1);position:relative;cursor:pointer}.chart-bar:hover::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text2);white-space:nowrap;background:var(--bg3);padding:2px 6px;border-radius:4px}.metric-ring{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}/* ── 입고/출고 폼 ── */
+.stock-form{max-width:600px;margin:0 auto}.stock-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;transition:.2s}.stock-item:hover{border-color:rgba(124,58,237,.3)}.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700}.badge-in{background:rgba(34,197,94,.15);color:#22c55e}.badge-out{background:rgba(239,68,68,.15);color:#ef4444}.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b}/* ── QR 출퇴근 ── */
+.qr-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;text-align:center}.qr-wrap{width:200px;height:200px;margin:16px auto;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}.attend-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);transition:.15s}.attend-row:hover{background:var(--bg3)}.attend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.dot-in{background:#22c55e;box-shadow:0 0 6px #22c55e}.dot-out{background:#94a3b8}.dot-late{background:#f59e0b;box-shadow:0 0 6px #f59e0b}/* ── 급여 현황 ── */
+.pay-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;transition:.2s}.pay-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}.pay-amount{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}/* ── POS 키오스크 ── */
+.pos-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100dvh - 90px)}.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px;overflow-y:auto}.menu-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.15s;text-align:center}.menu-item:hover{border-color:var(--brand);background:rgba(124,58,237,.08);transform:scale(1.02)}.menu-item:active{transform:scale(.96)}.cart-panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}.cart-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}.qty-btn{width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}.qty-btn:hover{background:var(--brand);border-color:var(--brand)}.pay-btn{padding:16px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;width:100%;transition:.15s}.pay-btn:hover{opacity:.9;transform:translateY(-1px)}.pay-btn:active{transform:scale(.97)}/* ── 직원관리 ── */
+.member-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;cursor:pointer}.member-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}/* ── 애니메이션 ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}.slide-up{animation:slideUp .35s cubic-bezier(.34,1.56,.64,1) both}.fade-in{animation:fadeIn .3s ease both}.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}</style>
 </head>
 <body>
 
@@ -290,7 +186,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-// ── Firebase 초기화 ──
 var _fbApp=null,_db=null,_auth=null,_CU=null,_cachedCompanyDoc=null;
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function _initFirebase(){
@@ -320,7 +215,6 @@ function _initFirebase(){
   }catch(e){console.error('Firebase init:',e);}
 }
 
-// ── 회사 정보 로드 ──
 function _loadCompany(uid){
   _db.collection('companies').doc(uid).get().then(function(snap){
     var data=snap.exists?snap.data():{};
@@ -328,7 +222,6 @@ function _loadCompany(uid){
     _CU.dealerId=data.dealerId||uid;
     _CU.role=data.role||'dealer';
     _CU.companyName=data.companyName||data.name||'';
-    // 직원인 경우 dealerId 다를 수 있음
     if(!snap.exists){
       _db.collection('members').where('uid','==',uid).limit(1).get().then(function(ms){
         if(!ms.empty){
@@ -346,7 +239,6 @@ function _loadCompany(uid){
   }).catch(function(){ _showApp(); });
 }
 
-// ── 앱 표시 ──
 function _showApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
@@ -356,7 +248,6 @@ function _showApp(){
   _filoGoPage('home');
 }
 
-// ── 네비게이션 ──
 function _buildFiloNav(){
   var d=_cachedCompanyDoc||{};
   var subs=d.subscriptions||{};
@@ -366,10 +257,8 @@ function _buildFiloNav(){
   var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
 
   var menus=[];
-  // 공통
   menus.push({s:'🏠 홈',items:[{ic:'🏠',l:'대시보드',p:'home'},{ic:'👤',l:'직원 관리',p:'members'},{ic:'📅',l:'달력',p:'schedule'}]});
 
-  // 재고관리
   if(isSA||hasSub('inventory')||hasSub('combo')){
     menus.push({s:'📦 재고관리',items:[
       {ic:'📊',l:'재고 대시보드',p:'inventory'},
@@ -380,7 +269,6 @@ function _buildFiloNav(){
       {ic:'⏰',l:'유통기한',p:'expiry'},
     ]});
   }
-  // QR+급여
   if(isSA||hasSub('qr')||hasSub('payroll')||hasSub('combo')){
     menus.push({s:'🔐 QR·급여',items:[
       {ic:'🔐',l:'QR 출퇴근',p:'attendance'},
@@ -389,7 +277,6 @@ function _buildFiloNav(){
       {ic:'🗓',l:'근무표',p:'roster'},
     ]});
   }
-  // 키오스크
   if(isSA||hasSub('kiosk')||hasSub('combo')){
     menus.push({s:'🖥️ 키오스크',items:[
       {ic:'🖥️',l:'POS 결제',p:'kiosk'},
@@ -398,7 +285,6 @@ function _buildFiloNav(){
       {ic:'📊',l:'매출 집계',p:'pos_report'},
     ]});
   }
-  // 공통 하단
   menus.push({s:'⚙️ 설정',items:[
     {ic:'🧾',l:'세무사 연동',p:'tax_share'},
     {ic:'📢',l:'공지사항',p:'notices'},
@@ -417,9 +303,7 @@ function _buildFiloNav(){
   document.getElementById('nav-menu').innerHTML=html;
 }
 
-// ── 페이지 라우팅 ──
 function _filoGoPage(p){
-  // nav 하이라이트
   document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');});
   var nav=document.getElementById('nav-'+p);
   if(nav)nav.classList.add('on');
@@ -458,7 +342,6 @@ function _filoGoPage(p){
   else el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🚧</div><div style="font-weight:700;margin-bottom:6px">'+(titles[p]||p)+'</div><div style="font-size:12px">준비 중입니다</div></div>';
 }
 
-// ── 숫자 카운팅 애니메이션 ──
 function _countUp(el, target, duration, prefix, suffix){
   prefix=prefix||''; suffix=suffix||'';
   var start=0, startTime=null;
@@ -474,7 +357,6 @@ function _countUp(el, target, duration, prefix, suffix){
   requestAnimationFrame(step);
 }
 
-// ── 홈 대시보드 ──
 function _filoPageHome(el){
   var d=_cachedCompanyDoc||{};
   var subs=d.subscriptions||{};
@@ -482,13 +364,11 @@ function _filoPageHome(el){
   var did=d.dealerId||d.uid||'';
   function hasSub(k){var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));}
 
-  // 스켈레톤 UI 먼저 표시
   el.innerHTML='<div style="max-width:900px;margin:0 auto">'+
     '<div class="fade-up" style="margin-bottom:20px">'+
     '<div style="font-size:18px;font-weight:900">안녕하세요, '+(d.companyName||d.name||'')+'님 👋</div>'+
     '<div style="font-size:12px;color:var(--text3);margin-top:3px">'+today+' · FILO 통합 운영 현황</div></div>'+
 
-    // 실시간 지표
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px" id="home-stats">'+
     ['오늘 매출','이번달 매출','재고 부족'].map(function(t,i){
       return '<div class="stat-card fade-up-'+(i+1)+'" style="text-align:center">'+
@@ -496,7 +376,6 @@ function _filoPageHome(el){
         '<div id="hs-'+i+'" style="font-size:20px;font-weight:900;color:'+['#60a5fa','#a78bfa','#ef4444'][i]+';min-height:28px">—</div></div>';
     }).join('')+'</div>'+
 
-    // 구독 현황
     '<div class="card fade-up-2" style="margin-bottom:12px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">구독 플랜</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
@@ -508,7 +387,6 @@ function _filoPageHome(el){
         '<div style="font-size:10px;color:'+(on?p.c+';opacity:.8':'var(--text3)')+'">'+(on?'✅ 이용중':'미구독')+'</div></div></div>';
     }).join('')+'</div></div>'+
 
-    // 빠른 메뉴
     '<div class="card fade-up-3">'+
     '<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
@@ -520,7 +398,6 @@ function _filoPageHome(el){
         '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
     }).join('')+'</div></div></div>';
 
-  // 실시간 데이터 로드
   if(did){
     var ym=today.slice(0,7);
     Promise.all([
@@ -540,7 +417,6 @@ function _filoPageHome(el){
   }
 }
 
-// ── 탭 전환 ──
 function _filoTab(t){
   ['login','register','join'].forEach(function(x){
     document.getElementById('tab-'+x).classList.toggle('on',x===t);
@@ -548,7 +424,6 @@ function _filoTab(t){
   });
 }
 
-// ── 비밀번호 보기 ──
 function _filoTogglePw(id,btn){
   var el=document.getElementById(id);
   if(!el)return;
@@ -556,14 +431,12 @@ function _filoTogglePw(id,btn){
   btn.textContent=el.type==='password'?'👁':'🙈';
 }
 
-// ── 로그인 ──
 function _filoLogin(){
   var id=(document.getElementById('fl-id').value||'').trim();
   var pw=(document.getElementById('fl-pw').value||'').trim();
   var errEl=document.getElementById('fl-err');
   if(!id||!pw){errEl.textContent='아이디와 비밀번호를 입력해 주세요';errEl.style.display='block';return;}
   errEl.style.display='none';
-  // 이메일 형식이면 바로, 아니면 아이디·전화번호로 이메일 조회
   var email=id.indexOf('@')>0?id:null;
   function doSignIn(em){
     _auth.signInWithEmailAndPassword(em,pw).catch(function(e){
@@ -573,7 +446,6 @@ function _filoLogin(){
     });
   }
   if(email){ doSignIn(email); return; }
-  // 아이디/전화번호 조회
   _db.collection('companies').where('loginId','==',id).limit(1).get().then(function(snap){
     if(!snap.empty){ doSignIn(snap.docs[0].data().email); return; }
     return _db.collection('members').where('phone','==',id).limit(1).get();
@@ -586,7 +458,6 @@ function _filoLogin(){
   });
 }
 
-// ── 사업자번호 중복확인 ──
 function _filoBizCheck(){
   var biz=(document.getElementById('fr-biznum').value||'').replace(/-/g,'');
   var msg=document.getElementById('fr-biznum-msg');
@@ -598,12 +469,10 @@ function _filoBizCheck(){
   });
 }
 
-// ── 서비스 토글 ──
 var _filoSelectedSvcs=['inventory'];
 function _filoToggleSvc(k){
   var idx=_filoSelectedSvcs.indexOf(k);
   if(k==='combo'||k==='inventory'||k==='kiosk'){
-    // 재고/키오스크는 콤보로만 제공
     _filoSelectedSvcs=['combo'];
     if(k!=='combo') setTimeout(function(){alert('재고관리·키오스크는 콤보 플랜으로만 제공됩니다 (165,000원/월)');},100);
   } else {
@@ -622,7 +491,6 @@ function _filoToggleSvc(k){
   document.getElementById('fr-service').value=_filoSelectedSvcs.join(',');
 }
 
-// ── 회사 등록 ──
 function _filoRegister(){
   var company=(document.getElementById('fr-company').value||'').trim();
   var biznum=(document.getElementById('fr-biznum').value||'').replace(/-/g,'');
@@ -655,7 +523,6 @@ function _filoRegister(){
   });
 }
 
-// ── 직원 가입 ──
 function _filoJoin(){
   var name=(document.getElementById('fj-name').value||'').trim();
   var phone=(document.getElementById('fj-phone').value||'').trim();
@@ -665,7 +532,6 @@ function _filoJoin(){
   if(!name||!phone||!code||!pw){errEl.textContent='모든 항목을 입력해 주세요';errEl.style.display='block';return;}
   if(pw.length<4){errEl.textContent='비밀번호는 4자 이상';errEl.style.display='block';return;}
   errEl.style.display='none';
-  // 회사 코드 조회
   _db.collection('companies').where('companyCode','==',code).limit(1).get().then(function(snap){
     if(snap.empty){errEl.textContent='❌ 존재하지 않는 회사 코드';errEl.style.display='block';return;}
     var company=snap.docs[0].data();
@@ -680,9 +546,7 @@ function _filoJoin(){
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),
         joinedAt:firebase.firestore.FieldValue.serverTimestamp()
       };
-      // ① members 컬렉션 — 관리자 직원 목록에 즉시 표시
       return _db.collection('members').doc(uid).set(memberDoc).then(function(){
-        // ② users 컬렉션 — 로그인 권한용
         return _db.collection('users').doc(uid).set({
           uid:uid, name:name, phone:phone, email:email,
           dealerId:did, role:'member', platform:'filo',
@@ -691,7 +555,6 @@ function _filoJoin(){
       });
     });
   }).then(function(){
-    // ★ 서버사이드 백업 저장
     fetch('/api/join-member',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({uid:_auth.currentUser&&_auth.currentUser.uid||'',
         name:document.getElementById('fj-name').value.trim(),
@@ -708,7 +571,6 @@ function _filoJoin(){
   });
 }
 
-// ── 비밀번호 찾기 ──
 function _filoFindPw(){
   var id=prompt('가입 이메일을 입력하세요');
   if(!id)return;
@@ -717,25 +579,20 @@ function _filoFindPw(){
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
-// ── 로그아웃 ──
 function _filoLogout(){
   if(!confirm('로그아웃 하시겠습니까?'))return;
   _auth.signOut();
 }
 
-// ── 토스트 ──
 function _filoToast(msg){
   var el=document.getElementById('toast');
   el.textContent=msg;el.classList.add('show');
   setTimeout(function(){el.classList.remove('show');},2800);
 }
 
-// ── 슈퍼어드민 ──
 var SUPER_ADMIN_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
-// ── 초기화 ──
 window.addEventListener('DOMContentLoaded',function(){_initFirebase();});
-// ── 매출·마진 페이지 ──
 function _filoPageSales(el){
   var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
   if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">로그인 후 이용하세요</div>';return;}
@@ -880,13 +737,11 @@ function _filoSalesAnalysis(did,ym){
     menuList.sort(function(a,b){return b.count-a.count;});
     var weekMax=Math.max.apply(null,Object.values(weekMap))||1;
     var html='';
-    // 요약
     html+='<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
       '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#60a5fa">'+totalRev.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">총 매출</div></div>'+
       '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#22c55e">'+avgDay.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">일 평균</div></div>'+
       '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#f59e0b">'+totalDays+'일</div><div style="font-size:10px;color:var(--text3)">영업일</div></div>'+
       '</div></div>';
-    // 요일별 바차트 (애니메이션)
     var bestDay=['월','화','수','목','금','토','일'].reduce(function(a,b){return (weekMap[a]||0)>(weekMap[b]||0)?a:b;});
     html+='<div class="card fade-up-2" style="margin-top:10px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
@@ -904,7 +759,6 @@ function _filoSalesAnalysis(did,ym){
         '<div style="font-size:10px;font-weight:700;color:'+(isBest?'#f59e0b':isWE?'var(--acc)':'var(--text2)')+'">'+wd+'</div></div>';
     });
     html+='</div></div>';
-    // 메뉴 TOP5
     if(menuList.length){
       var maxCnt=menuList[0].count||1;
       html+='<div class="card" style="margin-top:10px"><div style="font-size:13px;font-weight:800;margin-bottom:10px">🏆 잘 팔리는 메뉴</div>';
@@ -929,7 +783,6 @@ function _filoSalesAnalysis(did,ym){
   }).catch(function(e){area.innerHTML='<div class="card" style="color:#ef4444">'+e.message+'</div>';});
 }
 
-// ── 유통기한 페이지 ──
 function _filoPageExpiry(el){
   var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
   if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">로그인 후 이용하세요</div>';return;}
@@ -945,7 +798,6 @@ function _filoPageExpiry(el){
       else ok.push(d);
     });
     var html='<div style="max-width:860px;margin:0 auto">';
-    // 등록 폼
     html+='<div class="card" style="margin-bottom:10px">'+
       '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📝 유통기한 등록</div>'+
       '<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end">'+
@@ -1000,7 +852,6 @@ window._filoExpSave=function(did){
   .catch(function(e){_filoToast('❌ '+e.message);});
 };
 
-// ── 재고 대시보드 ──
 function _filoPageInventory(el){
   var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
   if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">로그인 후 이용하세요</div>';return;}
@@ -1034,7 +885,6 @@ function _filoPageInventory(el){
     });
     var marginRate=monthRev>0?Math.round((monthRev-monthCost)/monthRev*100):0;
 
-    // 카운팅 애니메이션
     var stats=[todayRev,todayCnt,lowStock.length,marginRate];
     var suffixes=['원','건','개','%'];
     stats.forEach(function(v,i){
@@ -1042,7 +892,6 @@ function _filoPageInventory(el){
       if(el2) _countUp(el2,v,800,'',suffixes[i]);
     });
 
-    // 재고 부족 카드
     var low=document.getElementById('fi-low-stock');
     if(low&&lowStock.length){
       low.innerHTML='<div class="card" style="border-left:3px solid #ef4444;margin-bottom:10px">'+
@@ -1063,7 +912,6 @@ function _filoPageInventory(el){
         '</div>';
     }
 
-    // 유통기한 경고
     var exp=document.getElementById('fi-expiry-warn');
     if(exp&&expirySoon.length){
       exp.innerHTML='<div class="card" style="border-left:3px solid #f59e0b">'+
@@ -1078,12 +926,6 @@ function _filoPageInventory(el){
   }).catch(function(e){console.warn(e);});
 }
 
-
-// ── 입고/출고 stub ──
-
-// ══════════════════════════════════════
-// ★ 입고 등록
-// ══════════════════════════════════════
 function _filoPageStockIn(el){
   var did=_CU.dealerId||_CU.uid;
   el.innerHTML='<div class="stock-form slide-up">'+
@@ -1108,9 +950,7 @@ function _filoPageStockIn(el){
   '<div id="si-history">'+
   '<div style="text-align:center;padding:30px;color:var(--text3)"><div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">⏳</div></div>'+
   '</div></div>';
-  // 품목 로드
   _filoLoadInventoryItems(did, 'si-item');
-  // 이력 로드
   _filoLoadStockHistory(did, 'si-history', 'in');
 }
 
@@ -1131,7 +971,6 @@ function _filoDoStockIn(){
     createdAt:now.toISOString(), date:now.toISOString().slice(0,10),
     createdBy:_CU.name||_CU.userId||''
   }).then(function(){
-    // 재고 업데이트
     return _db.collection('inventory').doc(itemId).update({
       stock:firebase.firestore.FieldValue.increment(qty),
       updatedAt:now.toISOString()
@@ -1145,9 +984,6 @@ function _filoDoStockIn(){
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
-// ══════════════════════════════════════
-// ★ 출고 등록
-// ══════════════════════════════════════
 function _filoPageStockOut(el){
   var did=_CU.dealerId||_CU.uid;
   el.innerHTML='<div class="stock-form slide-up">'+
@@ -1185,7 +1021,6 @@ function _filoDoStockOut(){
   if(!itemId){_filoToast('품목을 선택하세요');return;}
   if(qty<=0){_filoToast('수량을 입력하세요');return;}
   var now=new Date();
-  // 재고 확인 후 출고
   _db.collection('inventory').doc(itemId).get().then(function(snap){
     var cur=snap.exists?(snap.data().stock||0):0;
     if(cur<qty){_filoToast('❌ 재고 부족 (현재 '+cur+'개)');return Promise.reject('재고부족');}
@@ -1207,7 +1042,6 @@ function _filoDoStockOut(){
   }).catch(function(e){if(e!=='재고부족')_filoToast('❌ '+(e.message||e));});
 }
 
-// 공통: 품목 셀렉트 로드
 function _filoLoadInventoryItems(did, selectId){
   _db.collection('inventory').where('dealerId','==',did).orderBy('name').get()
   .then(function(snap){
@@ -1222,7 +1056,6 @@ function _filoLoadInventoryItems(did, selectId){
   }).catch(function(){});
 }
 
-// 공통: 입출고 이력 로드
 function _filoLoadStockHistory(did, elId, type){
   var col=type==='in'?'inventory_in':'inventory_out';
   _db.collection(col).where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
@@ -1232,7 +1065,6 @@ function _filoLoadStockHistory(did, elId, type){
     el.innerHTML=snap.docs.map(function(doc){
       var d=doc.data();
       var itemName=d.itemName||d.itemId||'';
-      // 품목명 조회 필요하면 캐시에서
       var icon=type==='in'?'📥':'📤';
       var color=type==='in'?'#22c55e':'#ef4444';
       var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
@@ -1248,20 +1080,15 @@ function _filoLoadStockHistory(did, elId, type){
       '</div></div>';
     }).join('');
   }).catch(function(){});
-  // 품목명 별도로 채워넣기
   _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
     var map={};
     snap.forEach(function(doc){map[doc.id]=doc.data().name||doc.id;});
     var el=document.getElementById(elId);if(!el)return;
     el.querySelectorAll('.stock-item').forEach(function(row,i){
-      // 간단히 itemId를 name으로 교체
     });
   }).catch(function(){});
 }
 
-// ══════════════════════════════════════
-// ★ 자동 발주
-// ══════════════════════════════════════
 function _filoPageAutoOrder(el){
   var did=_CU.dealerId||_CU.uid;
   el.innerHTML='<div class="stock-form slide-up">'+
@@ -1318,9 +1145,6 @@ function _filoSendOrderAlert(did){
   _filoToast('📲 알림 발송 기능은 거래처 전화번호 등록 후 이용 가능합니다');
 }
 
-// ══════════════════════════════════════
-// ★ 직원 관리
-// ══════════════════════════════════════
 function _filoPageMembers(el){
   var did=_CU.dealerId||_CU.uid;
   var isSA=_CU.role==='superadmin'||SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
@@ -1425,14 +1249,10 @@ function _filoDeleteMember(docId,name){
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
-// ══════════════════════════════════════
-// ★ QR 출퇴근
-// ══════════════════════════════════════
 var _attendUnsub=null;
 function _filoPageAttendance(el){
   var did=_CU.dealerId||_CU.uid;
   var today=new Date().toISOString().slice(0,10);
-  // QR코드 생성 (URL 방식)
   var qrUrl='https://donway.ai.kr/qr?did='+did+'&action=checkin';
   var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(qrUrl);
   el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
@@ -1464,13 +1284,11 @@ function _filoPageAttendance(el){
   '<div class="fg"><label>시각</label><input id="mc-time" type="datetime-local" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px"></div>'+
   '<button onclick="_filoDoManualCheckin()" class="btn btn-brand" style="width:100%">체크인 저장</button></div>';
 
-  // 기본 시각 설정
   var now=new Date();
   var localISO=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
   var mcTime=document.getElementById('mc-time');
   if(mcTime)mcTime.value=localISO;
 
-  // 직원 로드
   _db.collection('members').where('dealerId','==',did).orderBy('name').get()
   .then(function(snap){
     var sel=document.getElementById('mc-member');if(!sel)return;
@@ -1481,7 +1299,6 @@ function _filoPageAttendance(el){
     });
   }).catch(function(){});
 
-  // 실시간 오늘 출퇴근 목록
   if(_attendUnsub)_attendUnsub();
   _attendUnsub=_db.collection('attendance')
     .where('dealerId','==',did)
@@ -1529,9 +1346,6 @@ function _filoDoManualCheckin(){
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
-// ══════════════════════════════════════
-// ★ 출퇴근 현황 (실시간)
-// ══════════════════════════════════════
 function _filoPageAttendDash(el){
   var did=_CU.dealerId||_CU.uid;
   var today=new Date().toISOString().slice(0,10);
@@ -1560,14 +1374,12 @@ function _filoLoadAttendDash(){
     .onSnapshot(function(snap){
       var records=[];
       snap.forEach(function(doc){records.push(Object.assign({_id:doc.id},doc.data()));});
-      // 직원별 집계
       var memberMap={};
       records.forEach(function(r){
         if(!memberMap[r.memberId])memberMap[r.memberId]={name:r.memberName||r.memberId,ins:[],outs:[],workMin:0};
         if(r.type==='in')memberMap[r.memberId].ins.push(r.time);
         else memberMap[r.memberId].outs.push(r.time);
       });
-      // 근무시간 계산
       Object.values(memberMap).forEach(function(m){
         m.ins.sort();m.outs.sort();
         var total=0;
@@ -1582,7 +1394,6 @@ function _filoLoadAttendDash(){
       var inCount=members.filter(function(m){return m.status==='in';}).length;
       var outCount=members.filter(function(m){return m.status==='out'&&m.ins.length;}).length;
       var totalMin=members.reduce(function(s,m){return s+m.workMin;},0);
-      // 요약
       var sum=document.getElementById('ad-summary');
       if(sum)sum.innerHTML=[
         {label:'현재 출근',val:inCount+'명',color:'#22c55e',icon:'🟢'},
@@ -1594,7 +1405,6 @@ function _filoLoadAttendDash(){
         '<div style="font-size:22px;font-weight:900;color:'+s.color+'">'+s.val+'</div>'+
         '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+s.label+'</div></div>';
       }).join('');
-      // 목록
       var list=document.getElementById('ad-list');
       if(!list)return;
       if(!members.length){list.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">기록 없음</div>';return;}
@@ -1614,9 +1424,6 @@ function _filoLoadAttendDash(){
     },function(){});
 }
 
-// ══════════════════════════════════════
-// ★ 급여 현황 (실시간 집계)
-// ══════════════════════════════════════
 function _filoPagePayroll(el){
   var did=_CU.dealerId||_CU.uid;
   var now=new Date();
@@ -1637,16 +1444,13 @@ function _filoLoadPayroll(){
   var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
   var startDate=ym+'-01';
   var endDate=ym+'-31';
-  // 해당 월 출퇴근 기록
   Promise.all([
     _db.collection('attendance').where('dealerId','==',did).where('date','>=',startDate).where('date','<=',endDate).get(),
     _db.collection('members').where('dealerId','==',did).orderBy('name').get()
   ]).then(function(results){
     var attendSnap=results[0], memberSnap=results[1];
-    // 직원 맵
     var memberMap={};
     memberSnap.forEach(function(doc){memberMap[doc.id]=Object.assign({_id:doc.id},doc.data());});
-    // 출퇴근 집계
     var payMap={};
     attendSnap.forEach(function(doc){
       var d=doc.data();
@@ -1655,7 +1459,6 @@ function _filoLoadPayroll(){
       if(d.type==='in'){payMap[mid].ins.push({time:d.time,date:d.date});}
       else{payMap[mid].outs.push({time:d.time,date:d.date});}
     });
-    // 근무시간 계산
     Object.values(payMap).forEach(function(p){
       p.ins.sort(function(a,b){return a.time>b.time?1:-1;});
       p.outs.sort(function(a,b){return a.time>b.time?1:-1;});
@@ -1668,7 +1471,6 @@ function _filoLoadPayroll(){
       p.workMin=Math.round(total);
       p.workHour=p.workMin/60;
       p.dayCount=p.days.size;
-      // 급여 계산
       var member=Object.values(memberMap).find(function(m){return m._id===p.memberId||m.name===p.name;})||{};
       p.wage=member.wage||0;
       p.wageType=member.wageType||'hourly';
@@ -1677,7 +1479,6 @@ function _filoLoadPayroll(){
     var members=Object.values(payMap);
     var totalPay=members.reduce(function(s,m){return s+m.pay;},0);
     var totalHour=members.reduce(function(s,m){return s+m.workHour;},0);
-    // 요약
     var sum=document.getElementById('pay-summary');
     if(sum)sum.innerHTML=[
       {label:'총 예상 급여',val:'₩'+totalPay.toLocaleString(),color:'#22c55e',icon:'💰'},
@@ -1689,7 +1490,6 @@ function _filoLoadPayroll(){
       '<div style="font-size:20px;font-weight:900;color:'+s.color+'">'+s.val+'</div>'+
       '<div style="font-size:11px;color:var(--text3)">'+s.label+'</div></div>';
     }).join('');
-    // 목록
     var list=document.getElementById('pay-list');
     if(!list)return;
     if(!members.length){list.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">'+ym+'월 출퇴근 기록 없음</div>';return;}
@@ -1707,9 +1507,6 @@ function _filoLoadPayroll(){
   });
 }
 
-// ══════════════════════════════════════
-// ★ POS 키오스크
-// ══════════════════════════════════════
 var _cartItems=[];
 function _filoPageKiosk(el){
   var did=_CU.dealerId||_CU.uid;
@@ -1730,32 +1527,48 @@ function _filoPageKiosk(el){
   '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
   '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--bg3);font-size:12px">🗑 초기화</button>'+
   '</div></div></div>';
-  // 메뉴 로드 (inventory에서 판매품목)
   _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).orderBy('category').orderBy('name').get()
   .then(function(snap){
-    if(snap.empty){
-      // 메뉴 없으면 엑셀 업로드 안내
-      // 메뉴 등록 안내
-      var menuEl2=document.getElementById('kiosk-menu');
-      var catEl2=document.getElementById('kiosk-cats');
-      if(catEl2) catEl2.innerHTML='';
-      if(menuEl2) menuEl2.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px">'+
-        '<div style="font-size:40px;margin-bottom:12px">📋</div>'+
-        '<div style="font-size:16px;font-weight:800;margin-bottom:8px">등록된 메뉴가 없습니다</div>'+
-        '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">엑셀 파일로 메뉴를 일괄 등록하세요</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">📌 엑셀 형식: 메뉴명 / 가격 / 카테고리 / 이모지(선택)</div>'+
-        '<label class="btn btn-brand" style="cursor:pointer;display:inline-block" data-did="'+did+'">'+
-        '📊 메뉴 엑셀 업로드'+
-        '<input type="file" accept=".xlsx,.xls,.csv" style="display:none" class="menu-xlsx-input">'+
-        '</label></div>';
-      return;
+    if(true){
+      var sampleMenus=[
+        {_id:'s1',name:'아이스 아메리카노',price:1800,category:'커피',emoji:'☕'},
+        {_id:'s2',name:'아메리카노(HOT)',price:2500,category:'커피',emoji:'☕'},
+        {_id:'s3',name:'카페라떼',price:4000,category:'커피',emoji:'🥛'},
+        {_id:'s4',name:'바닐라라떼',price:4300,category:'커피',emoji:'🥛'},
+        {_id:'s5',name:'헤이즐넛라떼',price:4300,category:'커피',emoji:'🥛'},
+        {_id:'s6',name:'카라멜마끼아또',price:4300,category:'커피',emoji:'🥛'},
+        {_id:'s7',name:'카페모카',price:4500,category:'커피',emoji:'🍫'},
+        {_id:'s8',name:'달고나라떼',price:5000,category:'커피',emoji:'🍯'},
+        {_id:'s9',name:'더치아메리카노',price:4300,category:'커피',emoji:'☕'},
+        {_id:'s10',name:'더치라떼',price:4800,category:'커피',emoji:'🥛'},
+        {_id:'s11',name:'녹차라떼',price:4500,category:'베버리지',emoji:'🍵'},
+        {_id:'s12',name:'초코라떼',price:4500,category:'베버리지',emoji:'🍫'},
+        {_id:'s13',name:'흑당밀크티',price:4500,category:'베버리지',emoji:'🧋'},
+        {_id:'s14',name:'딸기라떼',price:4800,category:'베버리지',emoji:'🍓'},
+        {_id:'s15',name:'망고라떼',price:4800,category:'베버리지',emoji:'🥭'},
+        {_id:'s16',name:'고구마라떼',price:4500,category:'베버리지',emoji:'🍠'},
+        {_id:'s17',name:'밀크쉐이크',price:5200,category:'밀크쉐이크',emoji:'🥤'},
+        {_id:'s18',name:'딸기스무디',price:4800,category:'스무디',emoji:'🍓'},
+        {_id:'s19',name:'망고스무디',price:4800,category:'스무디',emoji:'🥭'},
+        {_id:'s20',name:'자바칩프라페',price:5000,category:'스무디',emoji:'☕'},
+        {_id:'s21',name:'자몽에이드',price:4500,category:'에이드',emoji:'🍊'},
+        {_id:'s22',name:'레몬에이드',price:4500,category:'에이드',emoji:'🍋'},
+        {_id:'s23',name:'망고에이드',price:4500,category:'에이드',emoji:'🥭'},
+        {_id:'s24',name:'복숭아아이스티',price:4000,category:'티',emoji:'🍑'},
+        {_id:'s25',name:'자몽티',price:5000,category:'티',emoji:'🍊'},
+        {_id:'s26',name:'치즈케이크',price:4500,category:'디저트',emoji:'🍰'},
+        {_id:'s27',name:'티라미수',price:4000,category:'디저트',emoji:'🎂'},
+        {_id:'s28',name:'마카롱',price:2800,category:'디저트',emoji:'🍭'},
+        {_id:'s29',name:'크룽지',price:2500,category:'디저트',emoji:'🥐'},
+        {_id:'s30',name:'수박주스',price:4900,category:'시즌',emoji:'🍉'},
+      ];
+      _filoRenderKiosk(sampleMenus);
     } else {
       var menus=[];
       snap.forEach(function(doc){menus.push(Object.assign({_id:doc.id},doc.data()));});
       _filoRenderKiosk(menus);
     }
   }).catch(function(){
-    // 에러시 샘플
     _filoRenderKiosk([
       {_id:'s1',name:'아이스 아메리카노',price:1800,category:'커피',emoji:'☕'},
       {_id:'s2',name:'카페라떼',price:4000,category:'커피',emoji:'🥛'},
@@ -1766,13 +1579,11 @@ function _filoPageKiosk(el){
 
 function _filoRenderKiosk(menus){
   var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
-  // 카테고리 버튼
   var catEl=document.getElementById('kiosk-cats');
   if(catEl){
     catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>'+
     cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:var(--bg3)">'+c+'</button>';}).join('');
   }
-  // 메뉴 그리드
   var menuEl=document.getElementById('kiosk-menu');
   if(menuEl){
     menuEl.innerHTML=menus.map(function(m,i){
@@ -1801,7 +1612,6 @@ function _cartAdd(id,name,price){
   if(existing){existing.qty++;}
   else{_cartItems.push({id:id,name:name,price:price,qty:1});}
   _cartRender();
-  // 팝 애니메이션
   var btn=event&&event.target?event.target.closest('.menu-item'):null;
   if(btn){btn.style.transform='scale(.92)';setTimeout(function(){btn.style.transform='';},150);}
 }
@@ -1828,7 +1638,6 @@ function _cartRender(){
   }).join('');
   if(totalEl){
     totalEl.textContent='₩'+total.toLocaleString();
-    // 카운팅 애니메이션
     totalEl.style.transform='scale(1.1)';
     setTimeout(function(){totalEl.style.transform='';},200);
   }
@@ -1857,9 +1666,6 @@ function _filoPay(){
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
-// ══════════════════════════════════════
-// ★ 모달 헬퍼
-// ══════════════════════════════════════
 function _filoShowModal(html){
   var mo=document.createElement('div');
   mo.className='mo';
@@ -1869,9 +1675,6 @@ function _filoShowModal(html){
   document.body.appendChild(mo);
 }
 
-// ══════════════════════════════════════
-// ★ 기타 페이지 (간단 버전)
-// ══════════════════════════════════════
 function _filoPageRoster(el){
   el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
   '<div style="font-size:40px;margin-bottom:12px">🗓</div>'+
@@ -1951,10 +1754,6 @@ function _filoPageNotices(el){
   }).catch(function(){});
 }
 
-
-
-
-// ── onclick data-* 헬퍼 ──
 function _cartAddFromEl(el){
   var id=el.dataset.id||'';
   var name=el.dataset.name||'';
@@ -1968,7 +1767,6 @@ function _cartAddFromEl(el){
   setTimeout(function(){el.style.transform='';},150);
 }
 
-// _filoFilterKiosk - data-cat 지원
 var _origFilterKiosk = _filoFilterKiosk;
 function _filoFilterKiosk(catOrEl, btn){
   var cat = typeof catOrEl==='string' ? catOrEl : catOrEl.dataset&&catOrEl.dataset.cat||'전체';
@@ -1982,21 +1780,11 @@ function _filoFilterKiosk(catOrEl, btn){
   });
 }
 
-// member-list 이벤트 위임
 document.addEventListener('click',function(e){
   var mc=e.target.closest('.member-card[data-id]');
   if(mc)_filoShowMemberDetail(mc.dataset.id);
   var db=e.target.closest('.del-btn[data-id]');
   if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
-  // 메뉴 엑셀 업로드 label 클릭
-  var ml=e.target.closest('label[data-did]');
-  if(ml){var inp=ml.querySelector('.menu-xlsx-input');if(inp){ml._did=ml.dataset.did;inp.click();}}
-});
-document.addEventListener('change',function(e){
-  if(e.target.classList.contains('menu-xlsx-input')){
-    var did=e.target.closest('label[data-did]') ? e.target.closest('label[data-did]').dataset.did : (_CU&&(_CU.dealerId||_CU.uid)||'');
-    _filoImportMenuExcel(e.target,did);
-  }
 });
 
 </script>
