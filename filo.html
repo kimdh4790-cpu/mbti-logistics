@@ -1806,8 +1806,8 @@ function _filoPageOrders(el){
      '<div style="font-size:15px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</div>'+
      (o.status!=='done'?
       '<div style="display:flex;gap:6px">'+
-      '<button onclick="_filoOrderStatus(''+o._id+'','done')" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
-      '<button onclick="_filoOrderStatus(''+o._id+'','cancel')" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
+      '<button data-oid="'+o._id+'" data-st="done" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
+      '<button data-oid="'+o._id+'" data-st="cancel" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
       '</div>':'')+
      '</div></div>';
    }).join('');
@@ -1862,7 +1862,7 @@ function _filoGenQRs(){
   div.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:10px">테이블 '+i+'</div>'+
    '<div id="qr-'+i+'" style="background:#fff;padding:8px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
    '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;word-break:break-all">'+url+'</div>'+
-   '<button onclick="window.open(''+url+'','_blank')" style="padding:4px 10px;background:var(--br);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">미리보기</button>';
+   '<button data-url="'+url+'" onclick="window.open(this.dataset.url,\'_blank\')" style="padding:4px 10px;background:var(--br);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">미리보기</button>';
   grid.appendChild(div);
   if(window.QRCode){
    new QRCode(document.getElementById('qr-'+i),{text:url,width:100,height:100,colorDark:'#000000',colorLight:'#ffffff'});
