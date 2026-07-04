@@ -47,7 +47,7 @@
 .insight-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
 .today-profit-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
 .ring-label{position:absolute;text-align:center;}
-@keyframes countUp{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes countUp{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
 .count-anim{animation:countUp .5s cubic-bezier(.34,1.56,.64,1) both;}
 /* ── 영수증 인쇄 스타일 ── */
 @media print {
@@ -444,20 +444,40 @@ function _filoPageHome(el){
 
  if(did){
  var ym=today.slice(0,7);
- Promise.all([
- firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
- firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
- firebase.firestore().collection('inventory').where('dealerId','==',did).get()
- ]).then(function(res){
- var todayRev=0,monthRev=0,low=0;
- res[0].forEach(function(doc){todayRev+=(doc.data().totalAmount||0);});
- res[1].forEach(function(doc){monthRev+=(doc.data().totalAmount||0);});
- res[2].forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)low++;});
- var e0=document.getElementById('hs-0'),e1=document.getElementById('hs-1'),e2=document.getElementById('hs-2');
- if(e0)_countUp(e0,todayRev,600,'','원');
- if(e1)_countUp(e1,monthRev,800,'','원');
- if(e2)_countUp(e2,low,400,'','개');
- }).catch(function(){});
+ /* POS 실시간 onSnapshot → 홈 KPI 즉시 갱신 */
+ _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
+ .onSnapshot(function(posSnap){
+  Promise.all([
+   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
+   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+   firebase.firestore().collection('filo_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+   firebase.firestore().collection('inventory').where('dealerId','==',did).get(),
+   firebase.firestore().collection('menu_costs').where('dealerId','==',did).get()
+  ]).then(function(res){
+   var costMap={};
+   res[4].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
+   var todayRev=0,monthRev=0,low=0,todayCost=0;
+   /* 오늘 POS */
+   posSnap.forEach(function(doc){
+    var d=doc.data();todayRev+=(d.total||0);
+    (d.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
+   });
+   /* 오늘 수동 매출 */
+   res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
+   /* 월 수동 매출 */
+   res[1].forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
+   /* 월 POS 매출 */
+   res[2].forEach(function(doc){monthRev+=(doc.data().total||0);});
+   /* 재고 부족 */
+   res[3].forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)low++;});
+   var todayMargin=todayRev>0?Math.round((todayRev-todayCost)/todayRev*100):0;
+   var e0=document.getElementById('hs-0'),e1=document.getElementById('hs-1'),e2=document.getElementById('hs-2'),e3=document.getElementById('hs-3');
+   if(e0)_countUp(e0,todayRev,400,'₩','');
+   if(e1)_countUp(e1,monthRev,600,'₩','');
+   if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
+   if(e3){e3.textContent=todayMargin+'%';e3.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
+  }).catch(function(){});
+ });
  }
 }
 
@@ -667,6 +687,7 @@ function _filoPageSales(el){
  '</div>'+
 
  /* ── KPI 카드 4개 ── */
+ '<div id="margin-live" style="margin-bottom:12px"></div>'+
  '<div class="kpi-grid" id="kpi-grid">'+
  ['revenue','cost','profit','margin'].map(function(k,i){
   var labels=['이번달 매출','이번달 원가','이번달 순이익','마진율'];
@@ -711,58 +732,127 @@ function _filoMgTab(idx){
 }
 
 /* ── 데이터 로드 ── */
+/* ── 실시간 마진 리스너 ── */
+var _marginUnsub=null,_marginCostMap={},_marginDid='';
+
 function _filoMarginLoad(){
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ if(!did)return;
+ _marginDid=did;
  var ymEl=document.getElementById('mg-ym');
  var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+
+ /* 원가 맵 먼저 로드 후 실시간 리스너 시작 */
+ _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
+  _marginCostMap={};
+  snap.forEach(function(doc){var d=doc.data();_marginCostMap[d.name||doc.id]=d;});
+  _filoStartMarginLive(did,ym);
+ });
+}
+
+function _filoStartMarginLive(did,ym){
+ /* 기존 리스너 해제 */
+ if(_marginUnsub){_marginUnsub();_marginUnsub=null;}
  var start=ym+'-01',end=ym+'-31';
  var today=new Date().toISOString().slice(0,10);
 
- Promise.all([
-  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('menu_costs').where('dealerId','==',did).get(),
-  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get()
- ]).then(function(res){
-  var manualSnap=res[0],posSnap=res[1],costSnap=res[2],todaySnap=res[3];
-  /* 메뉴 원가 맵 */
-  var costMap={};
-  costSnap.forEach(function(doc){var d=doc.data();costMap[d.name||doc.id]=d;});
-  /* 월 매출 집계 */
-  var monthRev=0,monthCost=0;
-  manualSnap.forEach(function(doc){var d=doc.data();monthRev+=(d.revenue||0);monthCost+=(d.cost||0);});
-  /* POS 매출 + 원가 자동 계산 */
-  posSnap.forEach(function(doc){
-   var d=doc.data();
-   monthRev+=(d.total||0);
-   (d.items||[]).forEach(function(it){
-    var c=costMap[it.name]||{};
-    monthCost+=((c.cost||0)*it.qty);
+ /* filo_sales(POS) 실시간 onSnapshot */
+ _marginUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did)
+  .where('date','>=',start)
+  .where('date','<=',end)
+  .onSnapshot(function(posSnap){
+   /* 수동 매출도 같이 조회 */
+   _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
+   .then(function(manSnap){
+    _filoCalcAndRender(posSnap,manSnap,today,ym,did);
    });
+  },function(e){console.error('margin listener:',e);});
+}
+
+function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
+ var todayRev=0,todayCost=0,todayCnt=0;
+ var monthRev=0,monthCost=0;
+
+ /* 수동 매출 */
+ manSnap.forEach(function(doc){
+  var d=doc.data();
+  monthRev+=(d.revenue||0);
+  monthCost+=(d.cost||0);
+  if(d.date===today)todayRev+=(d.revenue||0);
+ });
+
+ /* POS 실시간 매출 + 원가 자동 계산 */
+ posSnap.forEach(function(doc){
+  var d=doc.data();
+  var posTotal=d.total||0;
+  var posCost=0;
+  (d.items||[]).forEach(function(it){
+   var c=_marginCostMap[it.name]||{};
+   posCost+=((c.cost||0)*(it.qty||1));
   });
-  var monthProfit=monthRev-monthCost;
-  var marginRate=monthRev>0?Math.round(monthProfit/monthRev*100):0;
-  /* 오늘 */
-  var todayRev=0;
-  todaySnap.forEach(function(doc){todayRev+=(doc.data().revenue||0);});
+  monthRev+=posTotal;
+  monthCost+=posCost;
+  if(d.date===today){
+   todayRev+=posTotal;
+   todayCost+=posCost;
+   todayCnt++;
+  }
+ });
 
-  /* KPI 업데이트 */
-  var kv={revenue:'₩'+monthRev.toLocaleString(),cost:'₩'+monthCost.toLocaleString(),profit:'₩'+monthProfit.toLocaleString(),margin:marginRate+'%'};
-  Object.keys(kv).forEach(function(k){var el=document.getElementById('kpi-'+k);if(el){el.textContent=kv[k];el.classList.remove('count-anim');void el.offsetWidth;el.classList.add('count-anim');}});
-  /* 마진 색상 */
-  var profitEl=document.getElementById('kpi-profit');
-  if(profitEl)profitEl.style.color=monthProfit>=0?'#22c55e':'#ef4444';
+ var todayProfit=todayRev-todayCost;
+ var todayMargin=todayRev>0?Math.round(todayProfit/todayRev*100):0;
+ var monthProfit=monthRev-monthCost;
+ var monthMargin=monthRev>0?Math.round(monthProfit/monthRev*100):0;
 
-  /* 히어로 서브텍스트 */
-  var heroSub=document.getElementById('hero-sub');
-  if(heroSub)heroSub.textContent=ym+'월 기준 · 오늘 매출 ₩'+todayRev.toLocaleString()+' · 마진율 '+marginRate+'%';
+ /* ── KPI 카드 실시간 업데이트 ── */
+ function setKpi(id,val,color){
+  var el=document.getElementById(id);
+  if(!el)return;
+  if(el.textContent!==val){
+   el.textContent=val;
+   el.classList.remove('count-anim');
+   void el.offsetWidth;
+   el.classList.add('count-anim');
+   if(color)el.style.color=color;
+  }
+ }
+ setKpi('kpi-revenue','₩'+monthRev.toLocaleString());
+ setKpi('kpi-cost','₩'+monthCost.toLocaleString());
+ setKpi('kpi-profit','₩'+monthProfit.toLocaleString(),monthProfit>=0?'#22c55e':'#ef4444');
+ setKpi('kpi-margin',monthMargin+'%');
 
-  /* 7일 바 차트 */
-  _filoRenderHeroChart(did);
+ /* ── 오늘 실시간 섹션 ── */
+ var liveEl=document.getElementById('margin-live');
+ if(liveEl){
+  var pulse=todayCnt>0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;animation:pulse 1.5s infinite"></span>':'';
+  liveEl.innerHTML=
+  '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
+  [
+   {label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#60a5fa',sub:todayCnt+'건'},
+   {label:'오늘 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:'식재료'},
+   {label:'오늘 순이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
+   {label:'이번달 마진율',val:monthMargin+'%',color:monthMargin>=60?'#22c55e':monthMargin>=40?'#f59e0b':'#ef4444',sub:'목표 60%'}
+  ].map(function(s){
+   return '<div style="background:var(--b3);border-radius:12px;padding:12px 10px;text-align:center;border:1px solid var(--bd)">'+
+   '<div style="font-size:9px;color:var(--t3);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:5px">'+s.label+'</div>'+
+   '<div style="font-size:18px;font-weight:900;color:'+s.color+';letter-spacing:-.5px" class="count-anim">'+s.val+'</div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-top:3px">'+s.sub+'</div></div>';
+  }).join('')+
+  '</div>'+
+  (todayCnt>0?'<div style="margin-top:8px;padding:8px 12px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:8px;font-size:11px;color:#22c55e">'+
+  pulse+'POS 실시간 연동 중 · 방금 업데이트됨</div>':'');
+ }
 
-  /* 기본 탭 렌더 */
-  if(_mgTabIdx===0)_filoRenderMarginAnalysis(did,ym);
- }).catch(function(e){console.error(e);});
+ /* 히어로 서브 */
+ var heroSub=document.getElementById('hero-sub');
+ if(heroSub)heroSub.textContent=ym+'월 기준 · 오늘 '+todayCnt+'건 · 마진율 '+todayMargin+'%';
+
+ /* 7일 바 차트 */
+ _filoRenderHeroChart(did);
+
+ /* 분석 탭이면 리렌더 */
+ if(_mgTabIdx===0)_filoRenderMarginAnalysis(did,ym);
 }
 
 /* ── 7일 바 차트 ── */
