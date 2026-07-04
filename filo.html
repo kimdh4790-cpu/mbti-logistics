@@ -63,6 +63,62 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .chart-bar{height:100%;border-radius:4px 4px 0 0;transition:height .8s cubic-bezier(.34,1.56,.64,1);position:relative;cursor:pointer}
 .chart-bar:hover::after{content:attr(data-val);position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--text2);white-space:nowrap;background:var(--bg3);padding:2px 6px;border-radius:4px}
 .metric-ring{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+
+/* ── 입고/출고 폼 ── */
+.stock-form{max-width:600px;margin:0 auto}
+.stock-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;transition:.2s}
+.stock-item:hover{border-color:rgba(124,58,237,.3)}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700}
+.badge-in{background:rgba(34,197,94,.15);color:#22c55e}
+.badge-out{background:rgba(239,68,68,.15);color:#ef4444}
+.badge-warn{background:rgba(245,158,11,.15);color:#f59e0b}
+
+/* ── QR 출퇴근 ── */
+.qr-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;text-align:center}
+.qr-wrap{width:200px;height:200px;margin:16px auto;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.attend-row{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);transition:.15s}
+.attend-row:hover{background:var(--bg3)}
+.attend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-in{background:#22c55e;box-shadow:0 0 6px #22c55e}
+.dot-out{background:#94a3b8}
+.dot-late{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+
+/* ── 급여 현황 ── */
+.pay-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;transition:.2s}
+.pay-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}
+.pay-amount{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ── POS 키오스크 ── */
+.pos-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100dvh - 90px)}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px;overflow-y:auto}
+.menu-item{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.15s;text-align:center}
+.menu-item:hover{border-color:var(--brand);background:rgba(124,58,237,.08);transform:scale(1.02)}
+.menu-item:active{transform:scale(.96)}
+.cart-panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.cart-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.qty-btn{width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.qty-btn:hover{background:var(--brand);border-color:var(--brand)}
+.pay-btn{padding:16px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;width:100%;transition:.15s}
+.pay-btn:hover{opacity:.9;transform:translateY(-1px)}
+.pay-btn:active{transform:scale(.97)}
+
+/* ── 직원관리 ── */
+.member-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;cursor:pointer}
+.member-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}
+
+/* ── 애니메이션 ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+.slide-up{animation:slideUp .35s cubic-bezier(.34,1.56,.64,1) both}
+.fade-in{animation:fadeIn .3s ease both}
+.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}
+.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}
+
 </style>
 </head>
 <body>
@@ -384,7 +440,21 @@ function _filoGoPage(p){
   else if(p==='stock_in') _filoPageStockIn(el);
   else if(p==='stock_out') _filoPageStockOut(el);
   else if(p==='auto_order') _filoPageAutoOrder(el);
-  else el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">⏳ '+(titles[p]||p)+' 준비 중...</div>';
+  else if(p==='members') _filoPageMembers(el);
+  else if(p==='attendance') _filoPageAttendance(el);
+  else if(p==='attend_dash') _filoPageAttendDash(el);
+  else if(p==='payroll') _filoPagePayroll(el);
+  else if(p==='roster') _filoPageRoster(el);
+  else if(p==='kiosk') _filoPageKiosk(el);
+  else if(p==='points') _filoPagePoints(el);
+  else if(p==='membership') _filoPageMembership(el);
+  else if(p==='pos_report') _filoPagePosReport(el);
+  else if(p==='schedule') _filoPageSchedule(el);
+  else if(p==='settings') _filoPageSettings(el);
+  else if(p==='subscription') _filoPageSubscription(el);
+  else if(p==='tax_share') _filoPageTaxShare(el);
+  else if(p==='notices') _filoPageNotices(el);
+  else el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🚧</div><div style="font-weight:700;margin-bottom:6px">'+(titles[p]||p)+'</div><div style="font-size:12px">준비 중입니다</div></div>';
 }
 
 // ── 숫자 카운팅 애니메이션 ──
@@ -1009,10 +1079,910 @@ function _filoPageInventory(el){
 
 
 // ── 입고/출고 stub ──
-function _filoPageStockIn(el){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">⏳ 입고 등록 준비 중...</div>';}
-function _filoPageStockOut(el){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">⏳ 출고 등록 준비 중...</div>';}
-function _filoPageAutoOrder(el){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)">⏳ 자동 발주 준비 중...</div>';}
 
+// ══════════════════════════════════════
+// ★ 입고 등록
+// ══════════════════════════════════════
+function _filoPageStockIn(el){
+  var did=_CU.dealerId||_CU.uid;
+  el.innerHTML='<div class="stock-form slide-up">'+
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'+
+  '<div style="font-size:22px">📥</div>'+
+  '<div><div style="font-size:17px;font-weight:900">입고 등록</div>'+
+  '<div style="font-size:11px;color:var(--text3)">재고를 입고합니다</div></div></div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div class="fg"><label>품목 선택</label>'+
+  '<select id="si-item" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">'+
+  '<option value="">품목을 선택하세요</option></select></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+  '<div class="fg"><label>수량</label><input id="si-qty" type="number" min="1" placeholder="0" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>입고 단가</label><input id="si-price" type="number" min="0" placeholder="0" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '</div>'+
+  '<div class="fg"><label>유통기한 (선택)</label><input id="si-expiry" type="date" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>거래처 (선택)</label><input id="si-supplier" type="text" placeholder="거래처명" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>메모 (선택)</label><input id="si-memo" type="text" placeholder="메모" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<button onclick="_filoDoStockIn()" class="btn btn-brand" style="width:100%">📥 입고 등록</button>'+
+  '</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--text2)">최근 입고 이력</div>'+
+  '<div id="si-history">'+
+  '<div style="text-align:center;padding:30px;color:var(--text3)"><div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">⏳</div></div>'+
+  '</div></div>';
+  // 품목 로드
+  _filoLoadInventoryItems(did, 'si-item');
+  // 이력 로드
+  _filoLoadStockHistory(did, 'si-history', 'in');
+}
+
+function _filoDoStockIn(){
+  var did=_CU.dealerId||_CU.uid;
+  var itemId=document.getElementById('si-item').value;
+  var qty=parseInt(document.getElementById('si-qty').value)||0;
+  var price=parseInt(document.getElementById('si-price').value)||0;
+  var expiry=document.getElementById('si-expiry').value||'';
+  var supplier=document.getElementById('si-supplier').value.trim();
+  var memo=document.getElementById('si-memo').value.trim();
+  if(!itemId){_filoToast('품목을 선택하세요');return;}
+  if(qty<=0){_filoToast('수량을 입력하세요');return;}
+  var now=new Date();
+  _db.collection('inventory_in').add({
+    dealerId:did, itemId:itemId, qty:qty, price:price,
+    expiry:expiry, supplier:supplier, memo:memo,
+    createdAt:now.toISOString(), date:now.toISOString().slice(0,10),
+    createdBy:_CU.name||_CU.userId||''
+  }).then(function(){
+    // 재고 업데이트
+    return _db.collection('inventory').doc(itemId).update({
+      stock:firebase.firestore.FieldValue.increment(qty),
+      updatedAt:now.toISOString()
+    });
+  }).then(function(){
+    _filoToast('✅ 입고 완료 (+'+qty+'개)');
+    document.getElementById('si-qty').value='';
+    document.getElementById('si-price').value='';
+    document.getElementById('si-memo').value='';
+    _filoLoadStockHistory(did,'si-history','in');
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+// ══════════════════════════════════════
+// ★ 출고 등록
+// ══════════════════════════════════════
+function _filoPageStockOut(el){
+  var did=_CU.dealerId||_CU.uid;
+  el.innerHTML='<div class="stock-form slide-up">'+
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'+
+  '<div style="font-size:22px">📤</div>'+
+  '<div><div style="font-size:17px;font-weight:900">출고 등록</div>'+
+  '<div style="font-size:11px;color:var(--text3)">재고를 출고합니다</div></div></div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div class="fg"><label>품목 선택</label>'+
+  '<select id="so-item" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">'+
+  '<option value="">품목을 선택하세요</option></select></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+  '<div class="fg"><label>수량</label><input id="so-qty" type="number" min="1" placeholder="0" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>출고 유형</label>'+
+  '<select id="so-type" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">'+
+  '<option value="sale">판매</option><option value="use">사용</option><option value="waste">폐기</option><option value="return">반품</option><option value="etc">기타</option>'+
+  '</select></div></div>'+
+  '<div class="fg"><label>메모 (선택)</label><input id="so-memo" type="text" placeholder="메모" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<button onclick="_filoDoStockOut()" class="btn" style="width:100%;background:var(--red);color:#fff">📤 출고 등록</button>'+
+  '</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--text2)">최근 출고 이력</div>'+
+  '<div id="so-history">'+
+  '<div style="text-align:center;padding:30px;color:var(--text3)">⏳</div>'+
+  '</div></div>';
+  _filoLoadInventoryItems(did,'so-item');
+  _filoLoadStockHistory(did,'so-history','out');
+}
+
+function _filoDoStockOut(){
+  var did=_CU.dealerId||_CU.uid;
+  var itemId=document.getElementById('so-item').value;
+  var qty=parseInt(document.getElementById('so-qty').value)||0;
+  var type=document.getElementById('so-type').value;
+  var memo=document.getElementById('so-memo').value.trim();
+  if(!itemId){_filoToast('품목을 선택하세요');return;}
+  if(qty<=0){_filoToast('수량을 입력하세요');return;}
+  var now=new Date();
+  // 재고 확인 후 출고
+  _db.collection('inventory').doc(itemId).get().then(function(snap){
+    var cur=snap.exists?(snap.data().stock||0):0;
+    if(cur<qty){_filoToast('❌ 재고 부족 (현재 '+cur+'개)');return Promise.reject('재고부족');}
+    return _db.collection('inventory_out').add({
+      dealerId:did,itemId:itemId,qty:qty,type:type,memo:memo,
+      createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
+      createdBy:_CU.name||_CU.userId||''
+    }).then(function(){
+      return _db.collection('inventory').doc(itemId).update({
+        stock:firebase.firestore.FieldValue.increment(-qty),
+        updatedAt:now.toISOString()
+      });
+    });
+  }).then(function(){
+    _filoToast('✅ 출고 완료 (-'+qty+'개)');
+    document.getElementById('so-qty').value='';
+    document.getElementById('so-memo').value='';
+    _filoLoadStockHistory(did,'so-history','out');
+  }).catch(function(e){if(e!=='재고부족')_filoToast('❌ '+(e.message||e));});
+}
+
+// 공통: 품목 셀렉트 로드
+function _filoLoadInventoryItems(did, selectId){
+  _db.collection('inventory').where('dealerId','==',did).orderBy('name').get()
+  .then(function(snap){
+    var sel=document.getElementById(selectId);if(!sel)return;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var opt=document.createElement('option');
+      opt.value=doc.id;
+      opt.textContent=d.name+(d.stock!=null?' ('+d.stock+'개)':'');
+      sel.appendChild(opt);
+    });
+  }).catch(function(){});
+}
+
+// 공통: 입출고 이력 로드
+function _filoLoadStockHistory(did, elId, type){
+  var col=type==='in'?'inventory_in':'inventory_out';
+  _db.collection(col).where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
+  .then(function(snap){
+    var el=document.getElementById(elId);if(!el)return;
+    if(snap.empty){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">이력 없음</div>';return;}
+    el.innerHTML=snap.docs.map(function(doc){
+      var d=doc.data();
+      var itemName=d.itemName||d.itemId||'';
+      // 품목명 조회 필요하면 캐시에서
+      var icon=type==='in'?'📥':'📤';
+      var color=type==='in'?'#22c55e':'#ef4444';
+      var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
+      return '<div class="stock-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px">'+
+      '<div style="font-size:18px">'+icon+'</div>'+
+      '<div style="flex:1">'+
+      '<div style="font-size:13px;font-weight:700">'+esc(d.itemId||'')+(typeLabel?' · '+typeLabel:'')+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+(d.supplier||d.memo||'')+(d.expiry?' · 유통기한:'+d.expiry:'')+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-size:15px;font-weight:900;color:'+color+'">'+(type==='in'?'+':'-')+d.qty+'개</div>'+
+      '<div style="font-size:10px;color:var(--text3)">'+(d.date||'')+'</div>'+
+      '</div></div>';
+    }).join('');
+  }).catch(function(){});
+  // 품목명 별도로 채워넣기
+  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+    var map={};
+    snap.forEach(function(doc){map[doc.id]=doc.data().name||doc.id;});
+    var el=document.getElementById(elId);if(!el)return;
+    el.querySelectorAll('.stock-item').forEach(function(row,i){
+      // 간단히 itemId를 name으로 교체
+    });
+  }).catch(function(){});
+}
+
+// ══════════════════════════════════════
+// ★ 자동 발주
+// ══════════════════════════════════════
+function _filoPageAutoOrder(el){
+  var did=_CU.dealerId||_CU.uid;
+  el.innerHTML='<div class="stock-form slide-up">'+
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'+
+  '<div style="font-size:22px">🔔</div>'+
+  '<div><div style="font-size:17px;font-weight:900">자동 발주</div>'+
+  '<div style="font-size:11px;color:var(--text3)">최소 재고 이하 품목 알림</div></div></div>'+
+  '<div id="ao-list"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로딩 중...</div></div></div>';
+  _db.collection('inventory').where('dealerId','==',did).orderBy('name').get()
+  .then(function(snap){
+    var el2=document.getElementById('ao-list');if(!el2)return;
+    var items=[],warns=[];
+    snap.forEach(function(doc){
+      var d=doc.data();d._id=doc.id;
+      items.push(d);
+      if(d.minStock!=null&&d.stock<=d.minStock)warns.push(d);
+    });
+    if(!items.length){el2.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">등록된 품목이 없습니다</div>';return;}
+    var html='';
+    if(warns.length){
+      html+='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:14px;padding:14px 16px;margin-bottom:14px">'+
+      '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:10px">⚠️ 발주 필요 '+warns.length+'개</div>'+
+      warns.map(function(d){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(239,68,68,.1)">'+
+        '<div><div style="font-size:13px;font-weight:700">'+esc(d.name||d._id)+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">'+(d.supplier||'거래처 미설정')+'</div></div>'+
+        '<div style="text-align:right">'+
+        '<div style="font-size:14px;font-weight:900;color:#ef4444">'+d.stock+'개 남음</div>'+
+        '<div style="font-size:10px;color:var(--text3)">최소 '+d.minStock+'개</div></div></div>';
+      }).join('')+
+      '<button onclick="_filoSendOrderAlert(\''+did+'\')" class="btn" style="width:100%;background:#ef4444;color:#fff;margin-top:10px">📲 거래처 알림 발송</button>'+
+      '</div>';
+    }
+    html+='<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px">전체 품목 ('+items.length+'개)</div>'+
+    items.map(function(d){
+      var pct=d.minStock>0?Math.round(d.stock/d.minStock*100):100;
+      var isLow=d.minStock!=null&&d.stock<=d.minStock;
+      var barColor=isLow?'#ef4444':pct<70?'#f59e0b':'#22c55e';
+      return '<div class="stock-item">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+      '<div style="font-size:13px;font-weight:700">'+esc(d.name||d._id)+'</div>'+
+      '<div style="font-size:14px;font-weight:900;color:'+barColor+'">'+d.stock+'개</div></div>'+
+      '<div style="background:var(--bg3);border-radius:4px;height:4px">'+
+      '<div style="background:'+barColor+';border-radius:4px;height:4px;width:'+Math.min(pct,100)+'%;transition:width .8s ease"></div></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:4px">'+
+      '<div style="font-size:10px;color:var(--text3)">'+(d.supplier||'')+'</div>'+
+      '<div style="font-size:10px;color:var(--text3)">최소 '+(d.minStock||0)+'개</div></div></div>';
+    }).join('');
+    el2.innerHTML=html;
+  }).catch(function(e){document.getElementById('ao-list').innerHTML='<div style="color:var(--red)">'+e.message+'</div>';});
+}
+
+function _filoSendOrderAlert(did){
+  _filoToast('📲 알림 발송 기능은 거래처 전화번호 등록 후 이용 가능합니다');
+}
+
+// ══════════════════════════════════════
+// ★ 직원 관리
+// ══════════════════════════════════════
+function _filoPageMembers(el){
+  var did=_CU.dealerId||_CU.uid;
+  var isSA=_CU.role==='superadmin'||SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
+  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div style="font-size:17px;font-weight:900">👤 직원 관리</div>'+
+  '<button onclick="_filoShowAddMember()" class="btn btn-brand btn-sm">+ 직원 추가</button></div>'+
+  '<div id="member-list"><div style="text-align:center;padding:30px;color:var(--text3)">⏳</div></div></div>';
+  _filoLoadMembers(did);
+}
+
+function _filoLoadMembers(did){
+  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
+  .then(function(snap){
+    var el=document.getElementById('member-list');if(!el)return;
+    if(snap.empty){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">👥</div><div>직원이 없습니다</div><button onclick="_filoShowAddMember()" class="btn btn-brand" style="margin-top:12px">첫 직원 추가</button></div>';return;}
+    el.innerHTML=snap.docs.map(function(doc,idx){
+      var d=doc.data();
+      var roleLabel={'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원';
+      var roleColor={'admin':'#7c3aed','staff':'#0891b2','part':'#f59e0b'}[d.role]||'#94a3b8';
+      var initials=(d.name||'?').slice(0,1);
+      return '<div class="member-card slide-up stagger-'+Math.min(idx+1,4)+'" data-id="'+doc.id+'" style="cursor:pointer">'+
+      '<div class="avatar">'+initials+'</div>'+
+      '<div style="flex:1">'+
+      '<div style="font-size:14px;font-weight:800">'+esc(d.name||'')+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+(d.phone||'')+(d.dept?' · '+d.dept:'')+'</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-size:11px;font-weight:700;color:'+roleColor+';background:'+roleColor+'22;padding:2px 8px;border-radius:100px">'+roleLabel+'</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-top:4px">'+(d.wage?d.wage.toLocaleString()+'원':'시급 미설정')+'</div>'+
+      '</div></div>';
+    }).join('');
+  }).catch(function(e){var el=document.getElementById('member-list');if(el)el.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>';});
+}
+
+function _filoShowAddMember(){
+  var did=_CU.dealerId||_CU.uid;
+  var html='<div style="padding:20px;max-width:400px;margin:0 auto">'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:16px">직원 추가</div>'+
+  '<div class="fg"><label>이름</label><input id="nm-name" type="text" placeholder="이름" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>전화번호</label><input id="nm-phone" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>역할</label>'+
+  '<select id="nm-role" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">'+
+  '<option value="staff">직원</option><option value="admin">관리자</option><option value="part">알바</option></select></div>'+
+  '<div class="fg"><label>시급/일급 (원)</label><input id="nm-wage" type="number" placeholder="10030" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div class="fg"><label>부서 (선택)</label><input id="nm-dept" type="text" placeholder="부서명" style="width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px"></div>'+
+  '<div style="display:flex;gap:8px;margin-top:4px">'+
+  '<button onclick="this.closest(".mo").remove()" class="btn" style="flex:1;background:var(--bg3)">취소</button>'+
+  '<button onclick="_filoAddMember()" class="btn btn-brand" style="flex:1">추가</button></div></div>';
+  _filoShowModal(html);
+}
+
+function _filoAddMember(){
+  var did=_CU.dealerId||_CU.uid;
+  var name=document.getElementById('nm-name').value.trim();
+  var phone=document.getElementById('nm-phone').value.trim();
+  var role=document.getElementById('nm-role').value;
+  var wage=parseInt(document.getElementById('nm-wage').value)||0;
+  var dept=document.getElementById('nm-dept').value.trim();
+  if(!name){_filoToast('이름을 입력하세요');return;}
+  _db.collection('members').add({
+    dealerId:did,name:name,phone:phone,role:role,wage:wage,dept:dept,
+    createdAt:new Date().toISOString(),is_active:true
+  }).then(function(){
+    document.querySelector('.mo')&&document.querySelector('.mo').remove();
+    _filoToast('✅ '+name+' 추가 완료');
+    _filoLoadMembers(did);
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+function _filoShowMemberDetail(docId){
+  _db.collection('members').doc(docId).get().then(function(snap){
+    if(!snap.exists)return;
+    var d=snap.data();
+    var did=_CU.dealerId||_CU.uid;
+    var html='<div style="padding:20px;max-width:400px;margin:0 auto">'+
+    '<div style="text-align:center;margin-bottom:16px">'+
+    '<div class="avatar" style="width:60px;height:60px;font-size:24px;margin:0 auto 8px">'+d.name.slice(0,1)+'</div>'+
+    '<div style="font-size:17px;font-weight:900">'+esc(d.name)+'</div>'+
+    '<div style="font-size:12px;color:var(--text3)">'+(d.dept||'')+'</div></div>'+
+    '<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px">'+
+    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
+    '<span style="font-size:12px;color:var(--text3)">전화번호</span><span style="font-size:13px;font-weight:700">'+(d.phone||'-')+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
+    '<span style="font-size:12px;color:var(--text3)">역할</span><span style="font-size:13px;font-weight:700">'+({'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원')+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;padding:6px 0">'+
+    '<span style="font-size:12px;color:var(--text3)">시급</span><span style="font-size:13px;font-weight:700">'+(d.wage?(d.wage.toLocaleString()+'원'):'-')+'</span></div></div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="this.closest(".mo").remove()" class="btn" style="flex:1;background:var(--bg3)">닫기</button>'+
+    '<button class="btn del-btn" data-id="'+docId+'" data-name="'+esc(d.name)+'" style="flex:1;background:var(--red);color:#fff">삭제</button></div></div>';
+    _filoShowModal(html);
+  });
+}
+
+function _filoDeleteMember(docId,name){
+  if(!confirm(name+' 직원을 삭제하시겠습니까?'))return;
+  var did=_CU.dealerId||_CU.uid;
+  _db.collection('members').doc(docId).delete().then(function(){
+    document.querySelector('.mo')&&document.querySelector('.mo').remove();
+    _filoToast('✅ 삭제 완료');
+    _filoLoadMembers(did);
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+// ══════════════════════════════════════
+// ★ QR 출퇴근
+// ══════════════════════════════════════
+var _attendUnsub=null;
+function _filoPageAttendance(el){
+  var did=_CU.dealerId||_CU.uid;
+  var today=new Date().toISOString().slice(0,10);
+  // QR코드 생성 (URL 방식)
+  var qrUrl='https://donway.ai.kr/qr?did='+did+'&action=checkin';
+  var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(qrUrl);
+  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🔐 QR 출퇴근</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+  '<div class="qr-card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:4px">출근 QR</div>'+
+  '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">직원이 스캔하면 출근 체크</div>'+
+  '<div class="qr-wrap"><img src="'+qrImg+'" style="width:180px;height:180px"></div>'+
+  '<div style="font-size:10px;color:var(--text3);margin-top:8px">'+today+'</div>'+
+  '<button onclick="_filoManualCheckin()" class="btn btn-brand btn-sm" style="margin-top:10px;width:100%">수동 출근 체크</button>'+
+  '</div>'+
+  '<div class="qr-card" style="text-align:left">'+
+  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">'+
+  '<div class="live-dot"></div>'+
+  '<div style="font-size:13px;font-weight:800">오늘 출퇴근 현황</div></div>'+
+  '<div id="attend-today" style="max-height:280px;overflow-y:auto">'+
+  '<div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>'+
+  '</div></div>'+
+  '<div id="manual-checkin" style="display:none" class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:10px">수동 출퇴근 체크</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  '<div class="fg"><label>직원 선택</label>'+
+  '<select id="mc-member" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+  '<option value="">선택</option></select></div>'+
+  '<div class="fg"><label>유형</label>'+
+  '<select id="mc-type" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+  '<option value="in">출근</option><option value="out">퇴근</option></select></div></div>'+
+  '<div class="fg"><label>시각</label><input id="mc-time" type="datetime-local" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px"></div>'+
+  '<button onclick="_filoDoManualCheckin()" class="btn btn-brand" style="width:100%">체크인 저장</button></div>';
+
+  // 기본 시각 설정
+  var now=new Date();
+  var localISO=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  var mcTime=document.getElementById('mc-time');
+  if(mcTime)mcTime.value=localISO;
+
+  // 직원 로드
+  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
+  .then(function(snap){
+    var sel=document.getElementById('mc-member');if(!sel)return;
+    snap.forEach(function(doc){
+      var opt=document.createElement('option');
+      opt.value=doc.id;opt.textContent=doc.data().name||doc.id;
+      sel.appendChild(opt);
+    });
+  }).catch(function(){});
+
+  // 실시간 오늘 출퇴근 목록
+  if(_attendUnsub)_attendUnsub();
+  _attendUnsub=_db.collection('attendance')
+    .where('dealerId','==',did)
+    .where('date','==',today)
+    .orderBy('time','desc')
+    .onSnapshot(function(snap){
+      var el2=document.getElementById('attend-today');if(!el2)return;
+      if(snap.empty){el2.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px">오늘 기록 없음</div>';return;}
+      el2.innerHTML=snap.docs.map(function(doc){
+        var d=doc.data();
+        var isIn=d.type==='in';
+        var time=(d.time||'').slice(11,16);
+        return '<div class="attend-row">'+
+        '<div class="attend-dot '+(isIn?'dot-in':'dot-out')+'"></div>'+
+        '<div style="flex:1">'+
+        '<div style="font-size:13px;font-weight:700">'+esc(d.memberName||d.memberId||'')+'</div>'+
+        '<div style="font-size:10px;color:var(--text3)">'+(isIn?'출근':'퇴근')+'</div></div>'+
+        '<div style="font-size:13px;font-weight:800;color:'+(isIn?'#22c55e':'#94a3b8')+'">'+time+'</div></div>';
+      }).join('');
+    },function(){});
+}
+
+function _filoManualCheckin(){
+  var mc=document.getElementById('manual-checkin');
+  if(mc)mc.style.display=mc.style.display==='none'?'block':'none';
+}
+
+function _filoDoManualCheckin(){
+  var did=_CU.dealerId||_CU.uid;
+  var memberId=document.getElementById('mc-member').value;
+  var type=document.getElementById('mc-type').value;
+  var timeVal=document.getElementById('mc-time').value;
+  if(!memberId){_filoToast('직원을 선택하세요');return;}
+  if(!timeVal){_filoToast('시각을 입력하세요');return;}
+  var memberSel=document.getElementById('mc-member');
+  var memberName=memberSel.options[memberSel.selectedIndex].text;
+  var dt=new Date(timeVal);
+  _db.collection('attendance').add({
+    dealerId:did,memberId:memberId,memberName:memberName,
+    type:type,time:dt.toISOString(),date:dt.toISOString().slice(0,10),
+    createdBy:_CU.name||_CU.userId||'',manual:true
+  }).then(function(){
+    _filoToast('✅ '+(type==='in'?'출근':'퇴근')+' 체크 완료');
+    document.getElementById('manual-checkin').style.display='none';
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+// ══════════════════════════════════════
+// ★ 출퇴근 현황 (실시간)
+// ══════════════════════════════════════
+function _filoPageAttendDash(el){
+  var did=_CU.dealerId||_CU.uid;
+  var today=new Date().toISOString().slice(0,10);
+  el.innerHTML='<div class="slide-up" style="max-width:800px;margin:0 auto">'+
+  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
+  '<div class="live-dot"></div>'+
+  '<div style="font-size:17px;font-weight:900">출퇴근 현황</div>'+
+  '<div style="font-size:12px;color:var(--text3);margin-left:4px">실시간</div></div>'+
+  '<div style="margin-bottom:14px">'+
+  '<input type="date" id="ad-date" value="'+today+'" onchange="_filoLoadAttendDash()" '+
+  'style="padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">'+
+  '</div>'+
+  '<div id="ad-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>'+
+  '<div id="ad-list"></div></div>';
+  _filoLoadAttendDash();
+}
+
+function _filoLoadAttendDash(){
+  var did=_CU.dealerId||_CU.uid;
+  var dateEl=document.getElementById('ad-date');
+  var date=dateEl?dateEl.value:new Date().toISOString().slice(0,10);
+  if(_attendUnsub)_attendUnsub();
+  _attendUnsub=_db.collection('attendance')
+    .where('dealerId','==',did).where('date','==',date)
+    .orderBy('time','asc')
+    .onSnapshot(function(snap){
+      var records=[];
+      snap.forEach(function(doc){records.push(Object.assign({_id:doc.id},doc.data()));});
+      // 직원별 집계
+      var memberMap={};
+      records.forEach(function(r){
+        if(!memberMap[r.memberId])memberMap[r.memberId]={name:r.memberName||r.memberId,ins:[],outs:[],workMin:0};
+        if(r.type==='in')memberMap[r.memberId].ins.push(r.time);
+        else memberMap[r.memberId].outs.push(r.time);
+      });
+      // 근무시간 계산
+      Object.values(memberMap).forEach(function(m){
+        m.ins.sort();m.outs.sort();
+        var total=0;
+        for(var i=0;i<Math.min(m.ins.length,m.outs.length);i++){
+          total+=(new Date(m.outs[i])-new Date(m.ins[i]))/60000;
+        }
+        m.workMin=Math.max(0,Math.round(total));
+        m.status=m.ins.length>m.outs.length?'in':'out';
+        m.lastTime=(m.status==='in'?m.ins:m.outs).slice(-1)[0]||'';
+      });
+      var members=Object.values(memberMap);
+      var inCount=members.filter(function(m){return m.status==='in';}).length;
+      var outCount=members.filter(function(m){return m.status==='out'&&m.ins.length;}).length;
+      var totalMin=members.reduce(function(s,m){return s+m.workMin;},0);
+      // 요약
+      var sum=document.getElementById('ad-summary');
+      if(sum)sum.innerHTML=[
+        {label:'현재 출근',val:inCount+'명',color:'#22c55e',icon:'🟢'},
+        {label:'퇴근 완료',val:outCount+'명',color:'#94a3b8',icon:'⚪'},
+        {label:'총 근무',val:Math.floor(totalMin/60)+'h '+totalMin%60+'m',color:'#a78bfa',icon:'⏱'},
+      ].map(function(s,i){
+        return '<div class="stat-card slide-up stagger-'+(i+1)+'">'+
+        '<div style="font-size:20px;margin-bottom:6px">'+s.icon+'</div>'+
+        '<div style="font-size:22px;font-weight:900;color:'+s.color+'">'+s.val+'</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+s.label+'</div></div>';
+      }).join('');
+      // 목록
+      var list=document.getElementById('ad-list');
+      if(!list)return;
+      if(!members.length){list.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">기록 없음</div>';return;}
+      list.innerHTML=members.map(function(m,i){
+        var inTime=m.ins[0]?(new Date(m.ins[0])).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'--:--';
+        var outTime=m.outs.slice(-1)[0]?(new Date(m.outs.slice(-1)[0])).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'--:--';
+        return '<div class="pay-card slide-up stagger-'+Math.min(i+1,4)+'">'+
+        '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div class="attend-dot '+(m.status==='in'?'dot-in':'dot-out')+'"></div>'+
+        '<div><div style="font-size:13px;font-weight:800">'+esc(m.name)+'</div>'+
+        '<div style="font-size:11px;color:var(--text3)">출근 '+inTime+' · 퇴근 '+outTime+'</div></div></div>'+
+        '<div style="text-align:right">'+
+        '<div style="font-size:14px;font-weight:900;color:#a78bfa">'+
+        (m.workMin>0?Math.floor(m.workMin/60)+'h '+m.workMin%60+'m':m.status==='in'?'근무중':'--')+'</div>'+
+        '<div style="font-size:10px;color:var(--text3)">'+(m.status==='in'?'🟢 출근중':'⚪ 퇴근')+'</div></div></div>';
+      }).join('');
+    },function(){});
+}
+
+// ══════════════════════════════════════
+// ★ 급여 현황 (실시간 집계)
+// ══════════════════════════════════════
+function _filoPagePayroll(el){
+  var did=_CU.dealerId||_CU.uid;
+  var now=new Date();
+  var ym=now.toISOString().slice(0,7);
+  el.innerHTML='<div class="slide-up" style="max-width:800px;margin:0 auto">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div style="font-size:17px;font-weight:900">💼 급여 현황</div>'+
+  '<select id="pay-ym" onchange="_filoLoadPayroll()" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px">'+
+  (function(){var opts='';for(var i=0;i<6;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var v=d.toISOString().slice(0,7);opts+='<option value="'+v+'"'+(i===0?' selected':'')+'>'+v+'</option>';}return opts;})()+'</select></div>'+
+  '<div id="pay-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>'+
+  '<div id="pay-list"></div></div>';
+  _filoLoadPayroll();
+}
+
+function _filoLoadPayroll(){
+  var did=_CU.dealerId||_CU.uid;
+  var ymEl=document.getElementById('pay-ym');
+  var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+  var startDate=ym+'-01';
+  var endDate=ym+'-31';
+  // 해당 월 출퇴근 기록
+  Promise.all([
+    _db.collection('attendance').where('dealerId','==',did).where('date','>=',startDate).where('date','<=',endDate).orderBy('date').orderBy('time').get(),
+    _db.collection('members').where('dealerId','==',did).orderBy('name').get()
+  ]).then(function(results){
+    var attendSnap=results[0], memberSnap=results[1];
+    // 직원 맵
+    var memberMap={};
+    memberSnap.forEach(function(doc){memberMap[doc.id]=Object.assign({_id:doc.id},doc.data());});
+    // 출퇴근 집계
+    var payMap={};
+    attendSnap.forEach(function(doc){
+      var d=doc.data();
+      var mid=d.memberId;
+      if(!payMap[mid])payMap[mid]={memberId:mid,name:d.memberName||mid,workMin:0,days:new Set(),ins:[],outs:[]};
+      if(d.type==='in'){payMap[mid].ins.push({time:d.time,date:d.date});}
+      else{payMap[mid].outs.push({time:d.time,date:d.date});}
+    });
+    // 근무시간 계산
+    Object.values(payMap).forEach(function(p){
+      p.ins.sort(function(a,b){return a.time>b.time?1:-1;});
+      p.outs.sort(function(a,b){return a.time>b.time?1:-1;});
+      var total=0;
+      for(var i=0;i<Math.min(p.ins.length,p.outs.length);i++){
+        var diff=(new Date(p.outs[i].time)-new Date(p.ins[i].time))/60000;
+        if(diff>0&&diff<720)total+=diff;
+        p.days.add(p.ins[i].date);
+      }
+      p.workMin=Math.round(total);
+      p.workHour=p.workMin/60;
+      p.dayCount=p.days.size;
+      // 급여 계산
+      var member=Object.values(memberMap).find(function(m){return m._id===p.memberId||m.name===p.name;})||{};
+      p.wage=member.wage||0;
+      p.wageType=member.wageType||'hourly';
+      p.pay=p.wageType==='daily'?Math.round(p.dayCount*p.wage):Math.round(p.workHour*p.wage);
+    });
+    var members=Object.values(payMap);
+    var totalPay=members.reduce(function(s,m){return s+m.pay;},0);
+    var totalHour=members.reduce(function(s,m){return s+m.workHour;},0);
+    // 요약
+    var sum=document.getElementById('pay-summary');
+    if(sum)sum.innerHTML=[
+      {label:'총 예상 급여',val:'₩'+totalPay.toLocaleString(),color:'#22c55e',icon:'💰'},
+      {label:'총 근무시간',val:Math.round(totalHour)+'h',color:'#a78bfa',icon:'⏱'},
+      {label:'인원',val:members.length+'명',color:'#38bdf8',icon:'👥'},
+    ].map(function(s,i){
+      return '<div class="stat-card pop-in stagger-'+(i+1)+'">'+
+      '<div style="font-size:20px;margin-bottom:4px">'+s.icon+'</div>'+
+      '<div style="font-size:20px;font-weight:900;color:'+s.color+'">'+s.val+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+s.label+'</div></div>';
+    }).join('');
+    // 목록
+    var list=document.getElementById('pay-list');
+    if(!list)return;
+    if(!members.length){list.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">'+ym+'월 출퇴근 기록 없음</div>';return;}
+    list.innerHTML=members.sort(function(a,b){return b.pay-a.pay;}).map(function(m,i){
+      return '<div class="pay-card slide-up stagger-'+Math.min(i+1,4)+'">'+
+      '<div><div style="font-size:14px;font-weight:800">'+esc(m.name)+'</div>'+
+      '<div style="font-size:11px;color:var(--text3)">'+m.dayCount+'일 · '+Math.round(m.workHour)+'h '+m.workMin%60+'m</div></div>'+
+      '<div style="text-align:right">'+
+      '<div class="pay-amount">₩'+m.pay.toLocaleString()+'</div>'+
+      '<div style="font-size:10px;color:var(--text3)">'+(m.wage?m.wage.toLocaleString()+'원/'+(m.wageType==='daily'?'일':'시'):'시급 미설정')+'</div></div></div>';
+    }).join('');
+  }).catch(function(e){
+    var list=document.getElementById('pay-list');
+    if(list)list.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>';
+  });
+}
+
+// ══════════════════════════════════════
+// ★ POS 키오스크
+// ══════════════════════════════════════
+var _cartItems=[];
+function _filoPageKiosk(el){
+  var did=_CU.dealerId||_CU.uid;
+  _cartItems=[];
+  el.innerHTML='<div class="pos-wrap">'+
+  '<div style="display:flex;flex-direction:column">'+
+  '<div style="padding:10px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
+  '<div class="menu-grid" id="kiosk-menu">'+
+  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--text3)">⏳ 메뉴 로딩 중...</div>'+
+  '</div></div>'+
+  '<div class="cart-panel">'+
+  '<div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:900">🛒 주문 내역</div>'+
+  '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
+  '<div style="padding:14px 16px;border-top:1px solid var(--border)">'+
+  '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
+  '<span style="font-size:13px;font-weight:700">합계</span>'+
+  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
+  '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
+  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--bg3);font-size:12px">🗑 초기화</button>'+
+  '</div></div></div>';
+  // 메뉴 로드 (inventory에서 판매품목)
+  _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).orderBy('category').orderBy('name').get()
+  .then(function(snap){
+    if(snap.empty){
+      // 샘플 메뉴로 데모
+      var sampleMenus=[
+        {_id:'s1',name:'아메리카노',price:3000,category:'커피',emoji:'☕'},
+        {_id:'s2',name:'카페라떼',price:4000,category:'커피',emoji:'🥛'},
+        {_id:'s3',name:'녹차라떼',price:4500,category:'음료',emoji:'🍵'},
+        {_id:'s4',name:'오렌지주스',price:4000,category:'음료',emoji:'🍊'},
+        {_id:'s5',name:'크로와상',price:3500,category:'베이커리',emoji:'🥐'},
+        {_id:'s6',name:'치즈케이크',price:5500,category:'베이커리',emoji:'🍰'},
+      ];
+      _filoRenderKiosk(sampleMenus);
+    } else {
+      var menus=[];
+      snap.forEach(function(doc){menus.push(Object.assign({_id:doc.id},doc.data()));});
+      _filoRenderKiosk(menus);
+    }
+  }).catch(function(){
+    // 에러시 샘플
+    _filoRenderKiosk([
+      {_id:'s1',name:'아메리카노',price:3000,category:'커피',emoji:'☕'},
+      {_id:'s2',name:'카페라떼',price:4000,category:'커피',emoji:'🥛'},
+      {_id:'s3',name:'아이스티',price:3500,category:'음료',emoji:'🍹'},
+    ]);
+  });
+}
+
+function _filoRenderKiosk(menus){
+  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
+  // 카테고리 버튼
+  var catEl=document.getElementById('kiosk-cats');
+  if(catEl){
+    catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>'+
+    cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:var(--bg3)">'+c+'</button>';}).join('');
+  }
+  // 메뉴 그리드
+  var menuEl=document.getElementById('kiosk-menu');
+  if(menuEl){
+    menuEl.innerHTML=menus.map(function(m,i){
+      return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
+      '<div style="font-size:28px;margin-bottom:8px">'+(m.emoji||'🍽')+'</div>'+
+      '<div style="font-size:13px;font-weight:800;margin-bottom:4px">'+esc(m.name)+'</div>'+
+      '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+m.price.toLocaleString()+'</div>'+
+      (m.stock!=null?'<div style="font-size:10px;color:var(--text3);margin-top:3px">재고 '+m.stock+'개</div>':'')+'</div>';
+    }).join('');
+  }
+  window._kioskMenus=menus;
+}
+
+function _filoFilterKiosk(cat,btn){
+  document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
+    b.style.background=b===btn?'var(--brand)':'var(--bg3)';
+    b.style.color=b===btn?'#fff':'var(--text)';
+  });
+  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
+    el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
+  });
+}
+
+function _cartAdd(id,name,price){
+  var existing=_cartItems.find(function(c){return c.id===id;});
+  if(existing){existing.qty++;}
+  else{_cartItems.push({id:id,name:name,price:price,qty:1});}
+  _cartRender();
+  // 팝 애니메이션
+  var btn=event&&event.target?event.target.closest('.menu-item'):null;
+  if(btn){btn.style.transform='scale(.92)';setTimeout(function(){btn.style.transform='';},150);}
+}
+
+function _cartRender(){
+  var list=document.getElementById('cart-list');
+  var totalEl=document.getElementById('cart-total');
+  if(!list)return;
+  if(!_cartItems.length){
+    list.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">메뉴를 선택하세요</div>';
+    if(totalEl)totalEl.textContent='₩0';
+    return;
+  }
+  var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+  list.innerHTML=_cartItems.map(function(c,i){
+    return '<div class="cart-item">'+
+    '<div style="flex:1">'+
+    '<div style="font-size:13px;font-weight:700">'+esc(c.name)+'</div>'+
+    '<div style="font-size:12px;color:var(--text3)">₩'+c.price.toLocaleString()+'</div></div>'+
+    '<div style="display:flex;align-items:center;gap:6px">'+
+    '<button class="qty-btn" onclick="_cartQty('+i+',-1)">−</button>'+
+    '<span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">'+c.qty+'</span>'+
+    '<button class="qty-btn" onclick="_cartQty('+i+',1)">+</button></div></div>';
+  }).join('');
+  if(totalEl){
+    totalEl.textContent='₩'+total.toLocaleString();
+    // 카운팅 애니메이션
+    totalEl.style.transform='scale(1.1)';
+    setTimeout(function(){totalEl.style.transform='';},200);
+  }
+}
+
+function _cartQty(idx,delta){
+  _cartItems[idx].qty+=delta;
+  if(_cartItems[idx].qty<=0)_cartItems.splice(idx,1);
+  _cartRender();
+}
+
+function _cartClear(){_cartItems=[];_cartRender();}
+
+function _filoPay(){
+  var did=_CU.dealerId||_CU.uid;
+  if(!_cartItems.length){_filoToast('주문 내역이 없습니다');return;}
+  var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+  var now=new Date();
+  _db.collection('filo_sales').add({
+    dealerId:did,items:_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};}),
+    total:total,createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
+    type:'pos',createdBy:_CU.name||_CU.userId||''
+  }).then(function(){
+    _filoToast('✅ 결제 완료 ₩'+total.toLocaleString());
+    _cartClear();
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+// ══════════════════════════════════════
+// ★ 모달 헬퍼
+// ══════════════════════════════════════
+function _filoShowModal(html){
+  var mo=document.createElement('div');
+  mo.className='mo';
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  mo.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;max-width:440px;width:100%;max-height:90dvh;overflow-y:auto">'+html+'</div>';
+  mo.addEventListener('click',function(e){if(e.target===mo)mo.remove();});
+  document.body.appendChild(mo);
+}
+
+// ══════════════════════════════════════
+// ★ 기타 페이지 (간단 버전)
+// ══════════════════════════════════════
+function _filoPageRoster(el){
+  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
+  '<div style="font-size:40px;margin-bottom:12px">🗓</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">근무표</div>'+
+  '<div style="font-size:12px;color:var(--text3)">주간 근무표 기능 곧 추가됩니다</div></div>';
+}
+function _filoPagePoints(el){
+  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
+  '<div style="font-size:40px;margin-bottom:12px">⭐</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">포인트 관리</div>'+
+  '<div style="font-size:12px;color:var(--text3)">회원 포인트 관리 기능 곧 추가됩니다</div></div>';
+}
+function _filoPageMembership(el){
+  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
+  '<div style="font-size:40px;margin-bottom:12px">🎫</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">회원권</div>'+
+  '<div style="font-size:12px;color:var(--text3)">회원권 관리 기능 곧 추가됩니다</div></div>';
+}
+function _filoPagePosReport(el){_filoPageSales(el);}
+function _filoPageSchedule(el){
+  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
+  '<div style="font-size:40px;margin-bottom:12px">📅</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">달력</div>'+
+  '<div style="font-size:12px;color:var(--text3)">일정 관리 기능 곧 추가됩니다</div></div>';
+}
+function _filoPageSettings(el){
+  var did=_CU.dealerId||_CU.uid;
+  var d=_cachedCompanyDoc||{};
+  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">⚙️ 설정</div>'+
+  '<div class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">회사 정보</div>'+
+  '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'+
+  '<span style="font-size:12px;color:var(--text3)">회사명</span>'+
+  '<span style="font-size:13px;font-weight:700">'+(d.companyName||d.name||'')+'</span></div>'+
+  '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'+
+  '<span style="font-size:12px;color:var(--text3)">이메일</span>'+
+  '<span style="font-size:13px;font-weight:700">'+(_CU.email||'')+'</span></div>'+
+  '<div style="display:flex;justify-content:space-between;padding:8px 0">'+
+  '<span style="font-size:12px;color:var(--text3)">역할</span>'+
+  '<span style="font-size:13px;font-weight:700">'+(_CU.role||'관리자')+'</span></div>'+
+  '</div></div>';
+}
+function _filoPageSubscription(el){
+  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🚀 구독 관리</div>'+
+  '<div class="card">'+
+  '<div style="text-align:center;padding:20px">'+
+  '<div style="font-size:40px;margin-bottom:12px">💎</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">FILO 플랜</div>'+
+  '<div style="font-size:12px;color:var(--text3);margin-bottom:16px">재고관리 · QR출퇴근 · 키오스크POS 통합 솔루션</div>'+
+  '<a href="https://filo.ai.kr" target="_blank" class="btn btn-brand" style="display:inline-block;text-decoration:none">요금제 보기</a>'+
+  '</div></div></div>';
+}
+function _filoPageTaxShare(el){
+  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
+  '<div style="font-size:40px;margin-bottom:12px">📊</div>'+
+  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">세무사 연동</div>'+
+  '<div style="font-size:12px;color:var(--text3)">DONWAY와 연동하여 이용하세요</div></div>';
+}
+function _filoPageNotices(el){
+  var did=_CU.dealerId||_CU.uid;
+  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">📢 공지사항</div>'+
+  '<div id="notices-list"><div style="text-align:center;padding:30px;color:var(--text3)">⏳</div></div></div>';
+  _db.collection('notices').where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
+  .then(function(snap){
+    var el2=document.getElementById('notices-list');if(!el2)return;
+    if(snap.empty){el2.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--text3)">공지사항이 없습니다</div>';return;}
+    el2.innerHTML=snap.docs.map(function(doc){
+      var d=doc.data();
+      return '<div class="card" style="margin-bottom:10px">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+esc(d.title||'')+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">'+(d.createdAt||'').slice(0,10)+'</div>'+
+      '<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+esc(d.content||'')+'</div></div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+
+
+
+// ── onclick data-* 헬퍼 ──
+function _cartAddFromEl(el){
+  var id=el.dataset.id||'';
+  var name=el.dataset.name||'';
+  var price=parseInt(el.dataset.price)||0;
+  if(!id||!price)return;
+  var existing=_cartItems.find(function(c){return c.id===id;});
+  if(existing){existing.qty++;}
+  else{_cartItems.push({id:id,name:name,price:price,qty:1});}
+  _cartRender();
+  el.style.transform='scale(.92)';
+  setTimeout(function(){el.style.transform='';},150);
+}
+
+// _filoFilterKiosk - data-cat 지원
+var _origFilterKiosk = _filoFilterKiosk;
+function _filoFilterKiosk(catOrEl, btn){
+  var cat = typeof catOrEl==='string' ? catOrEl : catOrEl.dataset&&catOrEl.dataset.cat||'전체';
+  var activeBtn = btn||catOrEl;
+  document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
+    b.style.background=b===activeBtn?'var(--brand)':'var(--bg3)';
+    b.style.color=b===activeBtn?'#fff':'var(--text)';
+  });
+  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
+    el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
+  });
+}
+
+// member-list 이벤트 위임
+document.addEventListener('click',function(e){
+  var mc=e.target.closest('.member-card[data-id]');
+  if(mc)_filoShowMemberDetail(mc.dataset.id);
+  var db=e.target.closest('.del-btn[data-id]');
+  if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
+});
 
 </script>
 </body>
