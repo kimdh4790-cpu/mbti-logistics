@@ -1084,6 +1084,7 @@ async function acceptExchange(){
           const work     = gn('work');
           const fresh    = gn('fresh');
           const finc     = gn('finc');
+        const incReason  = gs('incReason') || '';
           const nocont   = gn('nocont');
           const etcPlus  = gn('etcPlus');
           const etcMinus = gn('etcMinus');
@@ -1224,6 +1225,7 @@ async function acceptExchange(){
           let addRows = '';
           addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
           addRows += `<tr><td class="item">④ 프레시백 인센티브${fincPer>0?' <small>('+dcnt+'건 × '+fincPer+'원)</small>':''}</td><td class="amt green">+₩${finc.toLocaleString()}</td></tr>`;
+          if(incReason) addRows += `<tr><td class="item" style="padding-left:16px;color:#6b7280;font-size:11px">└ 가중요인: ${incReason}</td><td class="amt green" style="font-size:11px"></td></tr>`;
           addRows += `<tr><td class="item">⑤ 미계약건</td><td class="amt green">+₩${nocont.toLocaleString()}</td></tr>`;
           if(etcPlus>0)  addRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
           if(etcPlusTL>0) addRows += `<tr><td class="item">팀장수수료${etcPlusTLReason?' <small style="color:#94a3b8">('+etcPlusTLReason+')</small>':''}</td><td class="amt green">+₩${etcPlusTL.toLocaleString()}</td></tr>`;
