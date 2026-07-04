@@ -551,7 +551,7 @@ export default {
     const url      = new URL(request.url);
     const path     = url.pathname;
     const method   = request.method;
-    const hostname = url.hostname;
+    const hostname = request.headers.get('CF-Original-Host') || request.headers.get('X-Forwarded-Host') || url.hostname;
 
 
     // ★ donway.ai.kr 라우팅 (명시적)
