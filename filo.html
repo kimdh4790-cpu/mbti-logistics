@@ -166,7 +166,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── POS ── */
 .pos-wrap{display:grid;grid-template-columns:1fr 340px;gap:14px;height:calc(100dvh - var(--topbar-h) - 40px);overflow:hidden}
-.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;overflow-y:auto;padding:2px;align-content:start}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;overflow-y:auto;padding:2px;align-content:start}
 .menu-item{background:var(--surface2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:16px 12px;text-align:center;cursor:pointer;transition:.2s;user-select:none}
 .menu-item:hover{border-color:rgba(124,58,237,.3);background:var(--surface3);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .menu-item:active{transform:translateY(0);scale:.98}
@@ -1522,7 +1522,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
  if(liveEl){
   var pulse=todayCnt>0?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;animation:pulse 1.5s infinite"></span>':'';
   liveEl.innerHTML=
-  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+
+  '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">'+
   [
    {label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#60a5fa',sub:todayCnt+'건'},
    {label:'오늘 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:'식재료'},
@@ -2180,7 +2180,7 @@ function _filoLoadMembers(did){
  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
  .then(function(snap){
  var el=document.getElementById('member-list');if(!el)return;
- if(snap.empty){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:32px;margin-bottom:8px">👥</div><div>직원이 없습니다</div><button onclick="_filoShowAddMember()" class="btn btn-brand" style="margin-top:12px">첫 직원 추가</button></div>';return;}
+ if(snap.empty){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:32px;margin-bottom:8px">👥</div><div>직원이 없습니다</div><button onclick="_filoShowAddMember()" class="btn btn-brand" style="margin-top:12px;padding:10px 24px;width:auto">첫 직원 추가</button></div>';return;}
  el.innerHTML=snap.docs.map(function(doc,idx){
  var d=doc.data();
  var roleLabel={'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원';
