@@ -384,6 +384,15 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
  <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
  </div>
+  <div class="fg"><label>업종 선택 <span style="color:var(--red)">*</span></label>
+  <select id="fr-industry" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">
+  <option value="cafe">☕ 카페·베이커리</option>
+  <option value="restaurant">🍜 식당·분식</option>
+  <option value="beauty">💇 미용실·뷰티</option>
+  <option value="retail">🛒 편의점·소매</option>
+  <option value="fitness">💪 헬스·필라테스</option>
+  <option value="other">🏪 기타</option>
+  </select></div>
  <div class="fg"><label>사업자등록번호 <span style="color:var(--red)">*</span></label>
  <div style="display:flex;gap:8px">
  <input id="fr-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')">
@@ -1417,6 +1426,7 @@ function _filoToggleSvc(k){
 function _filoRegister(){
  var company=(document.getElementById('fr-company').value||'').trim();
  var biznum=(document.getElementById('fr-biznum').value||'').replace(/-/g,'');
+ var industry=document.getElementById('fr-industry')?document.getElementById('fr-industry').value:'cafe';
  var name=(document.getElementById('fr-name').value||'').trim();
  var email=(document.getElementById('fr-email').value||'').trim();
  var pw=(document.getElementById('fr-pw').value||'').trim();
@@ -3095,7 +3105,10 @@ function _cartRender(){
  if(totalEl)totalEl.textContent='₩0';
  return;
  }
- var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var rawTotal=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var discount=window._posDiscount||0;
+ var total=Math.max(0,rawTotal-discount);
+ window._posDiscount=0; /* 결제 후 초기화 */
  list.innerHTML=_cartItems.map(function(c,i){
  return '<div class="cart-item">'+
  '<div style="flex:1">'+
@@ -3123,31 +3136,78 @@ function _cartClear(){_cartItems=[];_cartRender();}
 
 function _filoPay(){
  if(!_cartItems.length){_filoToast('주문 내역이 없습니다');return;}
- var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
- // 결제 수단 선택 모달
- var methods=[
-  {k:'card',l:'💳 카드',c:'#3b82f6'},
-  {k:'cash',l:'💵 현금',c:'#22c55e'},
-  {k:'samsung',l:'📱 삼성페이',c:'#1428a0'},
-  {k:'kakao',l:'🟡 카카오페이',c:'#f9e000'},
- ];
- var html='<div style="padding:24px">'+
-  '<div style="font-size:16px;font-weight:900;margin-bottom:4px">결제 수단 선택</div>'+
-  '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:20px">₩'+total.toLocaleString()+'</div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+
-  methods.map(function(m){
-   return '<button onclick="_filoConfirmPay(&quot;'+m.k+'&quot;,&quot;'+m.l+'&quot;)" style="padding:18px;border:2px solid '+m.c+'40;border-radius:14px;background:'+m.c+'15;color:var(--tx);font-size:15px;font-weight:800;cursor:pointer;transition:.15s">'+m.l+'</button>';
-  }).join('')+
-  '</div>'+
-  '<button onclick="document.querySelector(&quot;.mo&quot;).remove()" style="width:100%;padding:10px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
+ var rawTotal=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var discount=window._posDiscount||0;
+ var total=Math.max(0,rawTotal-discount);
+
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:22px;width:100%;max-width:440px';
+
+ /* 헤더 */
+ var hdrDiv=document.createElement('div');
+ hdrDiv.style.cssText='margin-bottom:14px';
+ hdrDiv.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:10px">💳 결제하기</div>'+
+  '<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px">'+
+  '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:4px">'+
+  '<span>소계 ('+_cartItems.length+'종)</span><span>₩'+rawTotal.toLocaleString()+'</span></div>'+
+  (discount>0?'<div style="display:flex;justify-content:space-between;font-size:12px;color:#ef4444;margin-bottom:4px"><span>할인</span><span>−₩'+discount.toLocaleString()+'</span></div>':'')+
+  '<div style="display:flex;justify-content:space-between;font-size:18px;font-weight:900;border-top:1px solid var(--bd);padding-top:8px;margin-top:4px">'+
+  '<span>결제금액</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div></div>';
+ box.appendChild(hdrDiv);
+
+ /* 할인 */
+ var discDiv=document.createElement('div');
+ discDiv.style.cssText='background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);padding:11px 12px;margin-bottom:14px';
+ discDiv.innerHTML='<div style="font-size:10px;color:var(--t3);font-weight:700;letter-spacing:.6px;margin-bottom:8px">할인 적용</div>'+
+  '<div style="display:flex;gap:6px">'+
+  '<input id="pay-disc-inp" type="number" placeholder="할인금액 입력" style="flex:1;padding:9px 10px;background:var(--bg3);border:1px solid var(--bd2);border-radius:8px;color:var(--tx);font-size:13px;outline:none">'+
+  '<button onclick="(function(){window._posDiscount=parseInt(document.getElementById(\'pay-disc-inp\').value)||0;document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_filoPay();})()" style="padding:9px 14px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">적용</button>'+
+  '<button onclick="(function(){var r='+rawTotal+';window._posDiscount=Math.round(r*0.1);document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_filoPay();})()" style="padding:9px 10px;background:var(--surface3);border:1px solid var(--bd2);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">10%</button>'+
+  '<button onclick="(function(){var r='+rawTotal+';window._posDiscount=Math.round(r*0.2);document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_filoPay();})()" style="padding:9px 10px;background:var(--surface3);border:1px solid var(--bd2);border-radius:8px;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">20%</button>'+
   '</div>';
- _filoShowModal(html);
+ box.appendChild(discDiv);
+
+ /* 결제 수단 버튼 */
+ var methods=[
+  {k:'card',l:'카드',ic:'💳'},{k:'cash',l:'현금',ic:'💵'},
+  {k:'kakao',l:'카카오페이',ic:'🟡'},{k:'samsung',l:'삼성페이',ic:'📱'},
+  {k:'naver',l:'네이버페이',ic:'🟢'},{k:'zero',l:'서비스/무료',ic:'🎁'},
+ ];
+ var grid=document.createElement('div');
+ grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px';
+ methods.forEach(function(m){
+  var btn=document.createElement('button');
+  btn.style.cssText='padding:14px 6px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;transition:.15s;text-align:center';
+  btn.innerHTML='<div style="font-size:22px;margin-bottom:4px">'+m.ic+'</div><div style="font-size:11px;font-weight:700">'+m.l+'</div>';
+  btn.onmouseover=function(){this.style.borderColor='#7c3aed';this.style.background='var(--surface3)';};
+  btn.onmouseout=function(){this.style.borderColor='var(--bd2)';this.style.background='var(--surface2)';};
+  (function(mk,ml){btn.onclick=function(){
+   document.querySelectorAll('.mo').forEach(function(e){e.remove();});
+   _filoConfirmPay(mk,ml);
+  };})(m.k,m.l+' '+m.ic);
+  grid.appendChild(btn);
+ });
+ box.appendChild(grid);
+
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='width:100%;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer';
+ cancelBtn.textContent='취소';
+ cancelBtn.onclick=function(){mo.remove();window._posDiscount=0;};
+ box.appendChild(cancelBtn);
+
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo){mo.remove();window._posDiscount=0;}};
+ document.body.appendChild(mo);
 }
 
 function _filoConfirmPay(method, methodLabel){
  document.querySelector('.mo') && document.querySelector('.mo').remove();
  var did=_CU.dealerId||_CU.uid;
- var total=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var rawTotal=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var discount=window._posDiscount||0;
+ var total=Math.max(0,rawTotal-discount);
+ window._posDiscount=0; /* 결제 후 초기화 */
  var now=new Date();
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  var tableId=window._selectedTableId||null;
