@@ -1467,6 +1467,7 @@ async function acceptExchange(){
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      if (path === '/join' || path === '/join.html' || path === '/table-status') return serveKVFile(env, 'join.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
         if (env && env.DONWAY_ASSETS) {
           const filoSt = await env.DONWAY_ASSETS.get('filo.html', 'stream');
