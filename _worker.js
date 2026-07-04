@@ -71,9 +71,9 @@ async function fetchAsset(path, request, env) {
 
   // KV 우선 서빙
   if (e && e.DONWAY_ASSETS) {
-    const kvStream2 = await e.DONWAY_ASSETS.get(fileName, 'stream');
-    if (kvStream2) {
-      return new Response(kvStream2, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
+    const kvVal_fa = await e.DONWAY_ASSETS.get(fileName, 'text');
+    if (kvVal_fa) {
+      return new Response(kvVal_fa, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
     }
   }
   // KV 없으면 GitHub Raw
@@ -97,9 +97,10 @@ async function serveKVFile(env, fileName, contentType) {
     // KV 우선 서빙
     const _e = env || _env_ref;
     if (_e && _e.DONWAY_ASSETS) {
-      const kvStream = await _e.DONWAY_ASSETS.get(fileName, 'stream');
-      if (kvStream) {
-        return new Response(kvStream, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
+      const kvVal_sf = await _e.DONWAY_ASSETS.get(fileName, 'text');
+      if (kvVal_sf) {
+        const body_sf = contentType === 'text/html' ? _injectMeta(kvVal_sf) : kvVal_sf;
+        return new Response(body_sf, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
       }
     }
     // KV 없으면 GitHub Raw
