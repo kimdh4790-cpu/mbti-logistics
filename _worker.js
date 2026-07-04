@@ -1455,27 +1455,6 @@ async function acceptExchange(){
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
-    // ★ filo.ai.kr 라우팅
-    if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
-      const e = env || _env_ref;
-      if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
-      if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
-      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
-      if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
-      if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
-      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
-      if (path === '/app' || path === '/app.html') {
-        return serveKVFile(env, 'filo.html', 'text/html');
-      }
-      if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
-      if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
-      if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
-      if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
-      if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
-      if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
-      // filo.ai.kr 내부 경로는 모두 filo.html로 서빙 (slug 라우팅 방지)
-      return serveKVFile(env, 'filo.html', 'text/html');
-    }
 
 
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
@@ -1494,7 +1473,25 @@ async function acceptExchange(){
       }
     }
 
-    // ★ mbtico.kr → 엠비티아이 배송앱
+    // ★ filo.ai.kr 라우팅
+    if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
+      if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
+      if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
+      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
+      if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
+      if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
+      if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
+      if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
+      if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
+      if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
+      return serveKVFile(env, 'filo.html', 'text/html');
+    }
+
+        // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
