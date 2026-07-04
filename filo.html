@@ -1719,10 +1719,10 @@ function _filoPay(){
   '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:20px">₩'+total.toLocaleString()+'</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'+
   methods.map(function(m){
-   return '<button onclick="_filoConfirmPay(''+m.k+'',''+m.l+'')" style="padding:18px;border:2px solid '+m.c+'40;border-radius:14px;background:'+m.c+'15;color:var(--tx);font-size:15px;font-weight:800;cursor:pointer;transition:.15s" onmouseover="this.style.background=''+m.c+'30'" onmouseout="this.style.background=''+m.c+'15'">'+m.l+'</button>';
+   return '<button onclick="_filoConfirmPay(&quot;'+m.k+'&quot;,&quot;'+m.l+'&quot;)" style="padding:18px;border:2px solid '+m.c+'40;border-radius:14px;background:'+m.c+'15;color:var(--tx);font-size:15px;font-weight:800;cursor:pointer;transition:.15s">'+m.l+'</button>';
   }).join('')+
   '</div>'+
-  '<button onclick="document.querySelector('.mo').remove()" style="width:100%;padding:10px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
+  '<button onclick="document.querySelector(&quot;.mo&quot;).remove()" style="width:100%;padding:10px;background:var(--b3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
   '</div>';
  _filoShowModal(html);
 }
