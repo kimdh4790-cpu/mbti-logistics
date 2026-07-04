@@ -1,6 +1,7 @@
 name = "filo-pages"
 pages_build_output_dir = "."
 compatibility_date = "2025-11-01"
+# slim worker build
 
 [[kv_namespaces]]
 binding = "DONWAY_ASSETS"
