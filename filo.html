@@ -17,6 +17,38 @@
 .pos-wrap{display:grid;grid-template-columns:1fr 320px;gap:12px;height:calc(100dvh - 90px)}.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:12px;overflow-y:auto}.menu-item{background:var(--b2);border:1px solid var(--bd);border-radius:14px;padding:14px 12px;cursor:pointer;transition:.15s;text-align:center}.menu-item:hover{border-color:var(--br);background:rgba(124,58,237,.08);transform:scale(1.02)}.menu-item:active{transform:scale(.96)}.cart-panel{background:var(--b2);border-left:1px solid var(--bd);display:flex;flex-direction:column}.cart-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd)}.qty-btn{width:28px;height:28px;border:1px solid var(--bd);border-radius:8px;background:var(--b3);color:var(--tx);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center}.qty-btn:hover{background:var(--br);border-color:var(--br)}.pay-btn{padding:16px;background:linear-gradient(135deg,var(--br),var(--br2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;width:100%;transition:.15s}.pay-btn:hover{opacity:.9;transform:translateY(-1px)}.pay-btn:active{transform:scale(.97)}/* ── 직원관리 ── */
 .member-card{background:var(--b2);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;cursor:pointer}.member-card:hover{border-color:rgba(124,58,237,.3);transform:translateX(2px)}.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0}/* ── 애니메이션 ── */
 @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes popIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}.slide-up{animation:slideUp .35s cubic-bezier(.34,1.56,.64,1) both}.fade-in{animation:fadeIn .3s ease both}.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) both}.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}.live-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite}
+/* ── 마진 대시보드 고도화 스타일 ── */
+.dash-hero{background:linear-gradient(135deg,#0f0c29 0%,#1a1040 50%,#0f1a2e 100%);border-radius:20px;padding:28px 24px;margin-bottom:16px;position:relative;overflow:hidden;}
+.dash-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,.25) 0%,transparent 70%);pointer-events:none;}
+.dash-hero::after{content:'';position:absolute;bottom:-40px;left:20%;width:160px;height:160px;background:radial-gradient(circle,rgba(8,145,178,.15) 0%,transparent 70%);pointer-events:none;}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.kpi-card{background:var(--b2);border:1px solid var(--bd);border-radius:16px;padding:16px 14px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s;}
+.kpi-card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-2px);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;}
+.kpi-card.kpi-revenue::before{background:linear-gradient(90deg,#7c3aed,#a855f7);}
+.kpi-card.kpi-cost::before{background:linear-gradient(90deg,#ef4444,#f97316);}
+.kpi-card.kpi-profit::before{background:linear-gradient(90deg,#22c55e,#10b981);}
+.kpi-card.kpi-margin::before{background:linear-gradient(90deg,#f59e0b,#eab308);}
+.kpi-val{font-size:22px;font-weight:900;letter-spacing:-.5px;margin:8px 0 4px;}
+.kpi-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+.kpi-delta{font-size:11px;font-weight:700;margin-top:6px;}
+.kpi-delta.up{color:#22c55e;}
+.kpi-delta.down{color:#ef4444;}
+.chart-bar-wrap{display:flex;align-items:flex-end;gap:6px;height:80px;margin-top:10px;}
+.chart-bar{flex:1;border-radius:4px 4px 0 0;min-width:0;transition:height .6s cubic-bezier(.34,1.56,.64,1);position:relative;cursor:pointer;}
+.chart-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;font-size:10px;white-space:nowrap;color:var(--tx);z-index:10;}
+.menu-cost-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:10px 14px;border-radius:10px;background:var(--b2);border:1px solid var(--bd);margin-bottom:6px;transition:border-color .15s;}
+.menu-cost-row:hover{border-color:rgba(124,58,237,.3);}
+.margin-badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.3px;}
+.margin-badge.high{background:rgba(34,197,94,.15);color:#22c55e;}
+.margin-badge.mid{background:rgba(245,158,11,.15);color:#f59e0b;}
+.margin-badge.low{background:rgba(239,68,68,.15);color:#ef4444;}
+.insight-card{background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(8,145,178,.06));border:1px solid rgba(124,58,237,.2);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;}
+.insight-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+.today-profit-ring{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+.ring-label{position:absolute;text-align:center;}
+@keyframes countUp{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.count-anim{animation:countUp .5s cubic-bezier(.34,1.56,.64,1) both;}
 /* ── 영수증 인쇄 스타일 ── */
 @media print {
   body > *:not(.mo) { display: none !important; }
@@ -612,187 +644,372 @@ function _filoPageSales(el){
  var ym=today.slice(0,7);
 
  el.innerHTML=
- '<div style="max-width:860px;margin:0 auto">'+
- '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="filo-sales-tabs">'+
- '<button onclick="_filoSalesTab(\'input\')" id="fst-input" style="padding:8px 14px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--br);color:#fff">💰 매출 입력</button>'+
- '<button onclick="_filoSalesTab(\'analysis\')" id="fst-analysis" style="padding:8px 14px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--b3);color:var(--tx)">📈 매출 분석</button>'+
+ '<div style="max-width:920px;margin:0 auto">'+
+
+ /* ── 헤더 ── */
+ '<div class="dash-hero">'+
+ '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">'+
+ '<div>'+
+ '<div style="font-size:11px;font-weight:700;color:rgba(167,139,250,.7);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px">실시간 수익 분석</div>'+
+ '<div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-.5px">오늘 얼마 벌었나요?</div>'+
+ '<div id="hero-sub" style="font-size:13px;color:rgba(255,255,255,.5);margin-top:6px">데이터 로딩 중...</div>'+
  '</div>'+
- '<div id="filo-sales-content"></div>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+ '<select id="mg-ym" onchange="_filoMarginLoad()" style="padding:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:12px;font-weight:700">'+
+ (function(){var opts='';var now=new Date();for(var i=0;i<6;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var v=d.toISOString().slice(0,7);opts+='<option value="'+v+'"'+(i===0?' selected':'')+'>'+v+'</option>';}return opts;})()+'</select>'+
+ '<button onclick="_filoGoPage(\'cost_mgmt\')" style="padding:8px 14px;background:rgba(124,58,237,.3);border:1px solid rgba(124,58,237,.5);border-radius:10px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer">⚙️ 원가 설정</button>'+
+ '</div></div>'+
+ /* 오늘 미니 바 차트 */
+ '<div style="margin-top:20px">'+
+ '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:6px;letter-spacing:.8px">최근 7일 매출</div>'+
+ '<div class="chart-bar-wrap" id="hero-chart" style="height:60px"></div>'+
+ '</div>'+
+ '</div>'+
+
+ /* ── KPI 카드 4개 ── */
+ '<div class="kpi-grid" id="kpi-grid">'+
+ ['revenue','cost','profit','margin'].map(function(k,i){
+  var labels=['이번달 매출','이번달 원가','이번달 순이익','마진율'];
+  var colors=['#a78bfa','#f97316','#22c55e','#f59e0b'];
+  var icons=['💰','🛒','📈','%'];
+  return '<div class="kpi-card kpi-'+k+'">'+
+  '<div style="font-size:10px;color:var(--t3);font-weight:700;letter-spacing:.8px;text-transform:uppercase">'+labels[i]+'</div>'+
+  '<div class="kpi-val count-anim" id="kpi-'+k+'" style="color:'+colors[i]+'">—</div>'+
+  '<div class="kpi-delta" id="kpi-'+k+'-d"></div>'+
+  '</div>';
+ }).join('')+
+ '</div>'+
+
+ /* ── 탭 ── */
+ '<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:12px">'+
+ ['📊 마진 분석','💰 매출 입력','🍽 원가 등록','💡 AI 인사이트'].map(function(t,i){
+  return '<button id="mgt-'+i+'" onclick="_filoMgTab('+i+')" style="padding:7px 14px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;background:'+(i===0?'var(--br)':'var(--b3)')+';color:'+(i===0?'#fff':'var(--t2)')+'">'+t+'</button>';
+ }).join('')+
+ '</div>'+
+
+ '<div id="mg-content"></div>'+
  '</div>';
 
- window._filoSalesTab=function(t){
- document.querySelectorAll('[id^="fst-"]').forEach(function(b){b.style.background='var(--bg3)';b.style.color='var(--text)';});
- document.getElementById('fst-'+t).style.background='var(--br)';
- document.getElementById('fst-'+t).style.color='#fff';
- if(t==='input') _filoSalesInput(did);
- else _filoSalesAnalysis(did,ym);
- };
- _filoSalesInput(did);
+ _filoMarginLoad();
 }
 
-function _filoSalesInput(did){
- var area=document.getElementById('filo-sales-content');
- if(!area)return;
+/* ── 탭 전환 ── */
+var _mgTabIdx=0;
+function _filoMgTab(idx){
+ _mgTabIdx=idx;
+ [0,1,2,3].forEach(function(i){
+  var b=document.getElementById('mgt-'+i);
+  if(b){b.style.background=i===idx?'var(--br)':'var(--b3)';b.style.color=i===idx?'#fff':'var(--t2)';}
+ });
+ var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var ymEl=document.getElementById('mg-ym');
+ var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+ if(idx===0)_filoRenderMarginAnalysis(did,ym);
+ else if(idx===1)_filoSalesInput(did);
+ else if(idx===2)_filoRenderCostMgmt(did);
+ else _filoRenderInsights(did,ym);
+}
+
+/* ── 데이터 로드 ── */
+function _filoMarginLoad(){
+ var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var ymEl=document.getElementById('mg-ym');
+ var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+ var start=ym+'-01',end=ym+'-31';
  var today=new Date().toISOString().slice(0,10);
- area.innerHTML=
- '<div class="card">'+
- '<div style="font-size:14px;font-weight:800;margin-bottom:14px">💰 일별 매출 입력</div>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
- '<div class="fg"><label>날짜</label><input type="date" id="si-date" value="'+today+'" class="inp"></div>'+
- '<div class="fg"><label>총 매출액(원)</label><input type="number" id="si-total" placeholder="예) 350000" class="inp"></div>'+
- '</div>'+
- '<div style="font-size:12px;font-weight:700;margin-bottom:8px">📋 메뉴별 판매량</div>'+
- '<div id="si-menu-list"></div>'+
- '<button onclick="_filoAddMenu()" style="width:100%;padding:8px;background:var(--b3);color:var(--tx);border:1px dashed var(--bd);border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:12px">+ 메뉴 추가</button>'+
- '<div class="fg"><label>메모 (선택)</label><input type="text" id="si-memo" placeholder="특이사항" class="inp"></div>'+
- '<button onclick="_filoSaleSave(\''+did+'\')" style="width:100%;padding:12px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px">💾 저장</button>'+
- '</div>'+
- '<div id="si-recent" style="margin-top:12px"></div>';
- window._filoMenuCount=0;
- _filoAddMenu();
- _filoLoadRecent(did);
+
+ Promise.all([
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get(),
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get()
+ ]).then(function(res){
+  var manualSnap=res[0],posSnap=res[1],costSnap=res[2],todaySnap=res[3];
+  /* 메뉴 원가 맵 */
+  var costMap={};
+  costSnap.forEach(function(doc){var d=doc.data();costMap[d.name||doc.id]=d;});
+  /* 월 매출 집계 */
+  var monthRev=0,monthCost=0;
+  manualSnap.forEach(function(doc){var d=doc.data();monthRev+=(d.revenue||0);monthCost+=(d.cost||0);});
+  /* POS 매출 + 원가 자동 계산 */
+  posSnap.forEach(function(doc){
+   var d=doc.data();
+   monthRev+=(d.total||0);
+   (d.items||[]).forEach(function(it){
+    var c=costMap[it.name]||{};
+    monthCost+=((c.cost||0)*it.qty);
+   });
+  });
+  var monthProfit=monthRev-monthCost;
+  var marginRate=monthRev>0?Math.round(monthProfit/monthRev*100):0;
+  /* 오늘 */
+  var todayRev=0;
+  todaySnap.forEach(function(doc){todayRev+=(doc.data().revenue||0);});
+
+  /* KPI 업데이트 */
+  var kv={revenue:'₩'+monthRev.toLocaleString(),cost:'₩'+monthCost.toLocaleString(),profit:'₩'+monthProfit.toLocaleString(),margin:marginRate+'%'};
+  Object.keys(kv).forEach(function(k){var el=document.getElementById('kpi-'+k);if(el){el.textContent=kv[k];el.classList.remove('count-anim');void el.offsetWidth;el.classList.add('count-anim');}});
+  /* 마진 색상 */
+  var profitEl=document.getElementById('kpi-profit');
+  if(profitEl)profitEl.style.color=monthProfit>=0?'#22c55e':'#ef4444';
+
+  /* 히어로 서브텍스트 */
+  var heroSub=document.getElementById('hero-sub');
+  if(heroSub)heroSub.textContent=ym+'월 기준 · 오늘 매출 ₩'+todayRev.toLocaleString()+' · 마진율 '+marginRate+'%';
+
+  /* 7일 바 차트 */
+  _filoRenderHeroChart(did);
+
+  /* 기본 탭 렌더 */
+  if(_mgTabIdx===0)_filoRenderMarginAnalysis(did,ym);
+ }).catch(function(e){console.error(e);});
 }
 
-window._filoAddMenu=function(){
- window._filoMenuCount=(window._filoMenuCount||0)+1;
- var n=window._filoMenuCount;
- var div=document.createElement('div');
- div.id='fsi-menu-'+n;
- div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
- div.innerHTML=
- '<input type="text" placeholder="메뉴명" class="inp" id="fsi-mname-'+n+'" style="font-size:12px">'+
- '<input type="number" placeholder="판매수" class="inp" id="fsi-mcount-'+n+'" style="font-size:12px">'+
- '<input type="number" placeholder="단가(원)" class="inp" id="fsi-mprice-'+n+'" style="font-size:12px">'+
- '<button onclick="document.getElementById(\'fsi-menu-'+n+'\')).remove()" style="padding:6px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>';
- var list=document.getElementById('si-menu-list');
- if(list) list.appendChild(div);
-};
+/* ── 7일 바 차트 ── */
+function _filoRenderHeroChart(did){
+ var days=[];
+ for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+ Promise.all(days.map(function(dt){
+  return _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',dt).get();
+ })).then(function(snaps){
+  var vals=snaps.map(function(s){var t=0;s.forEach(function(d){t+=d.data().revenue||0;});return t;});
+  var maxV=Math.max.apply(null,vals)||1;
+  var chart=document.getElementById('hero-chart');
+  if(!chart)return;
+  chart.innerHTML=vals.map(function(v,i){
+   var pct=Math.round(v/maxV*100);
+   var isToday=i===6;
+   return '<div class="chart-bar" data-tip="'+days[i].slice(5)+' ₩'+(v/10000).toFixed(0)+'만" '+
+   'style="height:'+Math.max(pct,4)+'%;background:'+(isToday?'linear-gradient(180deg,#a78bfa,#7c3aed)':'rgba(255,255,255,.12)')+';border-radius:4px 4px 0 0;flex:1;transition:height .8s cubic-bezier(.34,1.56,.64,1) '+(i*.05)+'s"></div>';
+  }).join('');
+ }).catch(function(){});
+}
 
-window._filoSaleSave=function(did){
- var date=document.getElementById('si-date').value;
- var total=parseInt(document.getElementById('si-total').value||0);
- var memo=document.getElementById('si-memo').value||'';
- if(!date||!total){_filoToast('날짜와 총 매출액을 입력해주세요');return;}
- var menus=[];
- document.querySelectorAll('[id^="fsi-mname-"]').forEach(function(el){
- var n=el.id.split('-')[2];
- var name=el.value.trim();
- var count=parseInt(document.getElementById('fsi-mcount-'+n).value||0);
- var price=parseInt(document.getElementById('fsi-mprice-'+n).value||0);
- if(name&&count>0) menus.push({name:name,count:count,price:price,amount:count*price});
+/* ── 마진 분석 탭 ── */
+function _filoRenderMarginAnalysis(did,ym){
+ var content=document.getElementById('mg-content');
+ if(!content)return;
+ content.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"><div style="font-size:28px;margin-bottom:8px">⏳</div>분석 중...</div>';
+ var start=ym+'-01',end=ym+'-31';
+ Promise.all([
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get()
+ ]).then(function(res){
+  var manSnap=res[0],posSnap=res[1],costSnap=res[2];
+  var costMap={};
+  costSnap.forEach(function(doc){var d=doc.data();costMap[d.name||doc.id]=d;});
+
+  /* 날짜별 집계 */
+  var dayMap={};
+  manSnap.forEach(function(doc){
+   var d=doc.data();
+   if(!dayMap[d.date])dayMap[d.date]={rev:0,cost:0,items:{}};
+   dayMap[d.date].rev+=(d.revenue||0);
+   dayMap[d.date].cost+=(d.cost||0);
+   (d.menuItems||[]).forEach(function(it){
+    if(!dayMap[d.date].items[it.name])dayMap[d.date].items[it.name]=0;
+    dayMap[d.date].items[it.name]+=it.qty;
+   });
+  });
+  posSnap.forEach(function(doc){
+   var d=doc.data();
+   if(!dayMap[d.date])dayMap[d.date]={rev:0,cost:0,items:{}};
+   dayMap[d.date].rev+=(d.total||0);
+   (d.items||[]).forEach(function(it){
+    var c=costMap[it.name]||{};
+    dayMap[d.date].cost+=((c.cost||0)*it.qty);
+    if(!dayMap[d.date].items[it.name])dayMap[d.date].items[it.name]=0;
+    dayMap[d.date].items[it.name]+=it.qty;
+   });
+  });
+
+  /* 메뉴별 마진 집계 */
+  var menuMap={};
+  Object.values(dayMap).forEach(function(day){
+   Object.keys(day.items).forEach(function(name){
+    var c=costMap[name]||{};
+    var qty=day.items[name];
+    var price=c.price||0,cost=c.cost||0;
+    if(!menuMap[name])menuMap[name]={name:name,qty:0,rev:0,cost:0,price:price,costPer:cost};
+    menuMap[name].qty+=qty;
+    menuMap[name].rev+=price*qty;
+    menuMap[name].cost+=cost*qty;
+   });
+  });
+
+  var days=Object.keys(dayMap).sort();
+  var totalRev=days.reduce(function(s,d){return s+dayMap[d].rev;},0);
+  var totalCost=days.reduce(function(s,d){return s+dayMap[d].cost;},0);
+  var totalProfit=totalRev-totalCost;
+  var marginRate=totalRev>0?Math.round(totalProfit/totalRev*100):0;
+
+  var html='';
+
+  /* 월별 일별 차트 */
+  html+='<div class="card" style="margin-bottom:12px">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+  '<div style="font-size:13px;font-weight:800">📅 일별 매출 vs 순이익</div>'+
+  '<div style="font-size:11px;color:var(--t3)">'+ym+'</div></div>'+
+  '<div style="display:flex;align-items:flex-end;gap:3px;height:100px;overflow-x:auto">';
+  if(days.length){
+   var maxRev=Math.max.apply(null,days.map(function(d){return dayMap[d].rev;}))||1;
+   html+=days.map(function(d){
+    var rv=dayMap[d].rev,pr=Math.max(dayMap[d].rev-dayMap[d].cost,0);
+    var rvH=Math.round(rv/maxRev*100),prH=Math.round(pr/maxRev*100);
+    var dt=d.slice(8);
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:24px">'+
+    '<div style="width:100%;position:relative;height:84px;display:flex;align-items:flex-end;gap:1px">'+
+    '<div style="flex:1;height:'+rvH+'%;background:rgba(167,139,250,.3);border-radius:3px 3px 0 0;min-height:2px" title="매출 ₩'+rv.toLocaleString()+'"></div>'+
+    '<div style="flex:1;height:'+prH+'%;background:linear-gradient(180deg,#22c55e,#10b981);border-radius:3px 3px 0 0;min-height:2px" title="순이익 ₩'+pr.toLocaleString()+'"></div>'+
+    '</div>'+
+    '<div style="font-size:9px;color:var(--t3)">'+dt+'</div></div>';
+   }).join('');
+  }else{html+='<div style="color:var(--t3);font-size:12px;padding:20px">매출 데이터 없음</div>';}
+  html+='</div>'+
+  '<div style="display:flex;gap:12px;margin-top:10px">'+
+  '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(167,139,250,.4)"></div><span style="font-size:10px;color:var(--t3)">매출</span></div>'+
+  '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:2px;background:#22c55e"></div><span style="font-size:10px;color:var(--t3)">순이익</span></div>'+
+  '</div></div>';
+
+  /* 메뉴별 마진 테이블 */
+  var menus=Object.values(menuMap).sort(function(a,b){
+   var mA=a.rev>0?(a.rev-a.cost)/a.rev:0,mB=b.rev>0?(b.rev-b.cost)/b.rev:0;
+   return mB-mA;
+  });
+  if(menus.length){
+   html+='<div class="card" style="margin-bottom:12px">'+
+   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🍽 메뉴별 마진 분석</div>'+
+   '<div style="display:grid;grid-template-columns:1fr 60px 70px 60px;gap:6px;padding:0 4px 8px;border-bottom:1px solid var(--bd)">'+
+   ['메뉴','판매수','순이익','마진율'].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')+'</div>'+
+   menus.map(function(m){
+    var profit=m.rev-m.cost;
+    var rate=m.rev>0?Math.round(profit/m.rev*100):0;
+    var badge=rate>=60?'high':rate>=40?'mid':'low';
+    return '<div class="menu-cost-row">'+
+    '<div style="font-size:12px;font-weight:700">'+esc(m.name)+'<div style="font-size:10px;color:var(--t3)">판매가 ₩'+m.price.toLocaleString()+' · 원가 ₩'+m.costPer.toLocaleString()+'</div></div>'+
+    '<div style="font-size:12px;font-weight:800;text-align:right">'+m.qty+'개</div>'+
+    '<div style="font-size:12px;font-weight:800;color:'+(profit>=0?'#22c55e':'#ef4444')+';text-align:right">₩'+profit.toLocaleString()+'</div>'+
+    '<div style="text-align:right"><span class="margin-badge '+badge+'">'+rate+'%</span></div>'+
+    '</div>';
+   }).join('')+'</div>';
+  }
+
+  /* 인건비 vs 매출 비율 */
+  html+='<div class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📊 원가 구조 분석</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'+
+  [
+   {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
+   {label:'순이익',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
+   {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'✅':'⚠️',c:totalProfit>=0?'#22c55e':'#ef4444'}
+  ].map(function(s){
+   return '<div style="background:var(--b3);border-radius:12px;padding:14px 10px">'+
+   '<div style="font-size:10px;color:var(--t3);margin-bottom:6px">'+s.label+'</div>'+
+   '<div style="font-size:16px;font-weight:900;color:'+s.c+'">'+s.val+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.sub+'</div></div>';
+  }).join('')+
+  '</div></div>';
+
+  content.innerHTML=html;
+ }).catch(function(e){
+  var c=document.getElementById('mg-content');
+  if(c)c.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>';
  });
- var hour=new Date().getHours();
- var timeSlot=hour<11?'아침(~11시)':hour<14?'점심(11~14시)':hour<17?'오후(14~17시)':hour<21?'저녁(17~21시)':'야간(21시~)';
- firebase.firestore().collection('mbetco_sales').add({
- dealerId:did,date:date,totalAmount:total,menus:menus,memo:memo,timeSlot:timeSlot,
- createdAt:new Date().toISOString()
- }).then(function(){
- _filoToast('✅ 매출 저장 완료');
- document.getElementById('si-total').value='';
- document.getElementById('si-memo').value='';
- document.getElementById('si-menu-list').innerHTML='';
- window._filoMenuCount=0; _filoAddMenu();
- _filoLoadRecent(did);
+}
+
+/* ── 원가 등록 탭 ── */
+function _filoRenderCostMgmt(did){
+ var content=document.getElementById('mg-content');
+ if(!content)return;
+ _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
+  var items=[];
+  snap.forEach(function(doc){items.push(Object.assign({_id:doc.id},doc.data()));});
+  var html='<div class="card" style="margin-bottom:12px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">⚙️ 메뉴 원가 등록</div>'+
+  '<div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:10px;align-items:end">'+
+  '<div><label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px">메뉴명</label>'+
+  '<input id="mc-name" placeholder="아이스 아메리카노" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+  '<div><label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px">판매가(원)</label>'+
+  '<input id="mc-price" type="number" placeholder="4500" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+  '<div><label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px">원가(원)</label>'+
+  '<input id="mc-cost" type="number" placeholder="800" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+  '<button onclick="_filoSaveCost(\''+did+'\')" style="padding:9px 16px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ 추가</button>'+
+  '</div>'+
+  '<div style="font-size:10px;color:var(--t3);padding:6px 0">💡 원가 등록 시 POS 결제에서 자동으로 마진 계산됩니다</div>'+
+  '</div>';
+
+  if(items.length){
+   html+='<div class="card">'+
+   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">등록된 메뉴 원가 ('+items.length+'개)</div>'+
+   '<div style="display:grid;grid-template-columns:1fr 70px 70px 60px auto;gap:6px;padding:0 4px 8px;border-bottom:1px solid var(--bd)">'+
+   ['메뉴명','판매가','원가','마진율',''].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')+'</div>'+
+   items.map(function(m){
+    var rate=m.price>0?Math.round((m.price-m.cost)/m.price*100):0;
+    var badge=rate>=60?'high':rate>=40?'mid':'low';
+    return '<div class="menu-cost-row">'+
+    '<div style="font-size:12px;font-weight:700">'+esc(m.name)+'</div>'+
+    '<div style="font-size:12px;color:var(--t2)">₩'+Number(m.price||0).toLocaleString()+'</div>'+
+    '<div style="font-size:12px;color:#ef4444">₩'+Number(m.cost||0).toLocaleString()+'</div>'+
+    '<span class="margin-badge '+badge+'">'+rate+'%</span>'+
+    '<button onclick="_filoDelCost(\''+did+'\',\''+m._id+'\')" style="padding:4px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#ef4444;font-size:10px;cursor:pointer">삭제</button>'+
+    '</div>';
+   }).join('')+'</div>';
+  }
+  content.innerHTML=html;
+ });
+}
+
+function _filoSaveCost(did){
+ var name=(document.getElementById('mc-name').value||'').trim();
+ var price=parseInt(document.getElementById('mc-price').value)||0;
+ var cost=parseInt(document.getElementById('mc-cost').value)||0;
+ if(!name){_filoToast('메뉴명을 입력하세요');return;}
+ _db.collection('menu_costs').add({dealerId:did,name:name,price:price,cost:cost,createdAt:new Date().toISOString()}).then(function(){
+  _filoToast('✅ 원가 등록 완료');
+  document.getElementById('mc-name').value='';
+  document.getElementById('mc-price').value='';
+  document.getElementById('mc-cost').value='';
+  _filoRenderCostMgmt(did);
  }).catch(function(e){_filoToast('❌ '+e.message);});
-};
+}
 
-function _filoLoadRecent(did){
- var area=document.getElementById('si-recent');
- if(!area)return;
- firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).orderBy('date','desc').limit(7).get().then(function(snap){
- if(!snap.size){area.innerHTML='<div class="card" style="text-align:center;color:var(--t3);font-size:13px">아직 입력된 매출이 없습니다</div>';return;}
- var html='<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px">📋 최근 입력 내역</div>';
- snap.forEach(function(doc){
- var d=doc.data();
- html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
- '<div><div style="font-size:13px;font-weight:700">'+d.date+'</div>'+
- '<div style="font-size:10px;color:var(--t3)">'+(d.menus&&d.menus.length?d.menus.map(function(m){return m.name+'×'+m.count;}).join(' · '):'메뉴 미입력')+'</div></div>'+
- '<div style="text-align:right">'+
- '<div style="font-size:14px;font-weight:900;color:var(--br)">'+(d.totalAmount||0).toLocaleString()+'원</div>'+
- '<button onclick="_filoDelSale(\''+doc.id+'\',\''+did+'\')" style="font-size:10px;color:#dc2626;background:none;border:none;cursor:pointer">삭제</button>'+
- '</div></div>';
- });
- html+='</div>';
- area.innerHTML=html;
+function _filoDelCost(did,id){
+ if(!confirm('삭제할까요?'))return;
+ _db.collection('menu_costs').doc(id).delete().then(function(){
+  _filoToast('삭제 완료');_filoRenderCostMgmt(did);
  });
 }
 
-window._filoDelSale=function(id,did){
- if(!confirm('삭제할까요?'))return;
- firebase.firestore().collection('mbetco_sales').doc(id).delete().then(function(){_filoToast('삭제됨');_filoLoadRecent(did);});
-};
-
-function _filoSalesAnalysis(did,ym){
- var area=document.getElementById('filo-sales-content');
- if(!area)return;
- area.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">'+
- '<div style="width:40px;height:40px;border:3px solid var(--br);border-top-color:transparent;border-radius:50%;margin:0 auto 12px;animation:pulse 1s infinite"></div>'+
- '<div style="font-size:13px">분석 중...</div></div>';
- firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get().then(function(snap){
- if(!snap.size){area.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--t3)">이번 달 데이터가 없습니다<br><small>매출 입력 탭에서 먼저 입력해주세요</small></div>';return;}
- var totalRev=0,totalDays=0,menuMap={},weekMap={'월':0,'화':0,'수':0,'목':0,'금':0,'토':0,'일':0},timeMap={};
- var weekDays=['일','월','화','수','목','금','토'];
- snap.forEach(function(doc){
- var d=doc.data();
- totalRev+=d.totalAmount||0; totalDays++;
- if(d.menus) d.menus.forEach(function(m){
- if(!menuMap[m.name]) menuMap[m.name]={count:0,amount:0};
- menuMap[m.name].count+=m.count||0; menuMap[m.name].amount+=m.amount||0;
+/* ── AI 인사이트 탭 ── */
+function _filoRenderInsights(did,ym){
+ var content=document.getElementById('mg-content');
+ if(!content)return;
+ var start=ym+'-01',end=ym+'-31';
+ Promise.all([
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get()
+ ]).then(function(res){
+  var rev=0,cost=0,posRev=0;
+  res[0].forEach(function(d){rev+=d.data().revenue||0;cost+=d.data().cost||0;});
+  res[1].forEach(function(d){posRev+=d.data().total||0;});
+  var costMap={};res[2].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
+  var margin=rev>0?Math.round((rev-cost)/rev*100):0;
+  var insights=[];
+  if(margin<40)insights.push({icon:'🚨',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
+  else if(margin>=60)insights.push({icon:'✅',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
+  if(posRev>0&&rev===0)insights.push({icon:'💡',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
+  if(Object.keys(costMap).length===0)insights.push({icon:'⚙️',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(124,58,237,.08)',border:'rgba(124,58,237,.25)'});
+  if(!insights.length)insights.push({icon:'🎯',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
+  content.innerHTML='<div style="max-width:700px">'+
+  insights.map(function(ins){
+   return '<div class="insight-card" style="background:'+ins.color+';border-color:'+ins.border+'">'+
+   '<div class="insight-icon">'+ins.icon+'</div>'+
+   '<div><div style="font-size:13px;font-weight:800;margin-bottom:4px">'+ins.title+'</div>'+
+   '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+ins.desc+'</div></div></div>';
+  }).join('')+'</div>';
  });
- var dt=new Date(d.date);
- weekMap[weekDays[dt.getDay()]]=(weekMap[weekDays[dt.getDay()]]||0)+(d.totalAmount||0);
- var ts=d.timeSlot||'미분류';
- timeMap[ts]=(timeMap[ts]||0)+(d.totalAmount||0);
- });
- var avgDay=totalDays>0?Math.round(totalRev/totalDays):0;
- var menuList=Object.keys(menuMap).map(function(k){return{name:k,count:menuMap[k].count,amount:menuMap[k].amount};});
- menuList.sort(function(a,b){return b.count-a.count;});
- var weekMax=Math.max.apply(null,Object.values(weekMap))||1;
- var html='';
- html+='<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
- '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#60a5fa">'+totalRev.toLocaleString()+'</div><div style="font-size:10px;color:var(--t3)">총 매출</div></div>'+
- '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#22c55e">'+avgDay.toLocaleString()+'</div><div style="font-size:10px;color:var(--t3)">일 평균</div></div>'+
- '<div style="text-align:center"><div style="font-size:16px;font-weight:900;color:#f59e0b">'+totalDays+'일</div><div style="font-size:10px;color:var(--t3)">영업일</div></div>'+
- '</div></div>';
- var bestDay=['월','화','수','목','금','토','일'].reduce(function(a,b){return (weekMap[a]||0)>(weekMap[b]||0)?a:b;});
- html+='<div class="card fade-up-2" style="margin-top:10px">'+
- '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
- '<div style="font-size:13px;font-weight:800">📅 요일별 매출 패턴</div>'+
- '<div style="font-size:11px;color:var(--t3)">최고 <span style="color:#f59e0b;font-weight:700">'+bestDay+'요일</span></div></div>'+
- '<div style="display:flex;gap:6px;align-items:flex-end;height:80px;padding-bottom:20px;position:relative">';
- ['월','화','수','목','금','토','일'].forEach(function(wd){
- var val=weekMap[wd]||0,pct=Math.round(val/weekMax*100);
- var isWE=(wd==='토'||wd==='일');
- var isBest=(wd===bestDay);
- var color=isBest?'linear-gradient(180deg,#f59e0b,#d97706)':isWE?'linear-gradient(180deg,#a78bfa,#7c3aed)':'linear-gradient(180deg,#60a5fa,#2563eb)';
- html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative">'+
- '<div style="font-size:8px;color:var(--t3);height:14px;display:flex;align-items:center">'+(val>0?Math.round(val/10000)+'만':'')+'</div>'+
- '<div data-val="'+val.toLocaleString()+'원" class="chart-bar" style="width:100%;background:'+color+';height:'+(pct||2)+'%;min-height:3px;border-radius:4px 4px 0 0"></div>'+
- '<div style="font-size:10px;font-weight:700;color:'+(isBest?'#f59e0b':isWE?'var(--acc)':'var(--t2)')+'">'+wd+'</div></div>';
- });
- html+='</div></div>';
- if(menuList.length){
- var maxCnt=menuList[0].count||1;
- html+='<div class="card" style="margin-top:10px"><div style="font-size:13px;font-weight:800;margin-bottom:10px">🏆 잘 팔리는 메뉴</div>';
- menuList.slice(0,5).forEach(function(m,i){
- var pct=Math.round(m.count/maxCnt*100);
- html+='<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:3px">'+
- '<span style="font-size:12px;font-weight:700">'+(i+1)+'. '+m.name+'</span>'+
- '<span style="font-size:11px;color:var(--t3)">'+m.count+'개</span></div>'+
- '<div style="background:var(--b3);border-radius:4px;height:5px"><div style="background:var(--br);border-radius:4px;height:5px;width:'+pct+'%"></div></div></div>';
- });
- if(menuList.length>3){
- html+='<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)"><div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:6px">📉 안 팔리는 메뉴</div>';
- menuList.slice(-3).reverse().forEach(function(m){
- html+='<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bd)">'+
- '<span>'+m.name+'</span><span style="color:#ef4444">'+m.count+'개</span></div>';
- });
- html+='</div>';
- }
- html+='</div>';
- }
- area.innerHTML=html;
- }).catch(function(e){area.innerHTML='<div class="card" style="color:#ef4444">'+e.message+'</div>';});
 }
 
 function _filoPageExpiry(el){
