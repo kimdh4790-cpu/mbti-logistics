@@ -12,25 +12,38 @@
    대기업 수준 UI
    ══════════════════════ */
 :root{
-  --bg:#0b0b18;--bg2:#101020;--bg3:#151528;
-  --surface:#18182e;--surface2:#1e1e36;--surface3:#24243e;
-  --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.1);--bd3:rgba(255,255,255,.18);
-  --tx:#f2f2ff;--t2:#a0a0c0;--t3:#606080;--t4:#3a3a58;
-  --br:#7c3aed;--br-l:#9f5ef8;--br-d:#5b21b6;--br-glow:rgba(124,58,237,.4);
-  --br2:#0891b2;--br2-glow:rgba(8,145,178,.3);
-  --green:#22c55e;--green-bg:rgba(34,197,94,.1);--green-bd:rgba(34,197,94,.22);
-  --red:#ef4444;--red-bg:rgba(239,68,68,.1);--red-bd:rgba(239,68,68,.22);
-  --yellow:#f59e0b;--yellow-bg:rgba(245,158,11,.1);--yellow-bd:rgba(245,158,11,.22);
-  --blue:#60a5fa;--purple:#a78bfa;
-  --topbar-h:56px;--sidebar-w:232px;
-  --r:12px;--r-lg:18px;--r-xl:26px;
-  --shadow:0 4px 28px rgba(0,0,0,.45);--shadow-lg:0 8px 48px rgba(0,0,0,.55);
-  --shadow-brand:0 4px 24px rgba(124,58,237,.35);
-  /* 호환 별칭 */
+  /* ── 배경 레이어 ── */
+  --bg:#07071a;--bg2:#0c0c22;--bg3:#111128;
+  --surface:#14142a;--surface2:#1a1a32;--surface3:#20203a;--surface4:#262646;
+  --bd:rgba(255,255,255,.055);--bd2:rgba(255,255,255,.1);--bd3:rgba(255,255,255,.16);
+  /* ── 텍스트 ── */
+  --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;--t4:#323250;
+  /* ── 브랜드 컬러 ── */
+  --br:#7c3aed;--br-l:#9f5ef8;--br-ll:#c084fc;--br-d:#5b21b6;
+  --br-glow:rgba(124,58,237,.45);--br-glow2:rgba(124,58,237,.2);
+  --br2:#0891b2;--br2-l:#38bdf8;--br2-glow:rgba(8,145,178,.35);
+  /* ── 시맨틱 ── */
+  --green:#22c55e;--green-l:#4ade80;--green-bg:rgba(34,197,94,.08);--green-bd:rgba(34,197,94,.2);
+  --red:#ef4444;--red-l:#f87171;--red-bg:rgba(239,68,68,.08);--red-bd:rgba(239,68,68,.2);
+  --yellow:#f59e0b;--yellow-l:#fbbf24;--yellow-bg:rgba(245,158,11,.08);--yellow-bd:rgba(245,158,11,.2);
+  --blue:#60a5fa;--blue-bg:rgba(96,165,250,.08);--blue-bd:rgba(96,165,250,.2);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,.08);--purple-bd:rgba(167,139,250,.2);
+  --orange:#f97316;--orange-bg:rgba(249,115,22,.08);
+  /* ── 레이아웃 ── */
+  --topbar-h:56px;--sidebar-w:236px;
+  --r:10px;--r-lg:16px;--r-xl:22px;--r-2xl:28px;
+  /* ── 그림자 ── */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 48px rgba(0,0,0,.55);
+  --shadow-xl:0 16px 64px rgba(0,0,0,.65);
+  --shadow-brand:0 4px 20px rgba(124,58,237,.4);
+  --shadow-green:0 4px 20px rgba(34,197,94,.3);
+  /* ── 별칭 ── */
   --b2:var(--surface);--b3:var(--surface2);--b4:var(--surface3);
   --gn:var(--green);--acc:var(--purple);--border:var(--bd);
   --text:var(--tx);--text2:var(--t2);--text3:var(--t3);
-  --brand:var(--br);--brand2:var(--br2);--bg-g:var(--bg);
+  --brand:var(--br);--brand2:var(--br2);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased}
@@ -44,12 +57,14 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
              radial-gradient(ellipse at 50% 50%,rgba(124,58,237,.06) 0%,transparent 70%),var(--bg)}
 .login-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-xl);padding:32px 28px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(124,58,237,.08)}
 .login-box{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-xl);padding:32px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(124,58,237,.08)}
-.login-logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:var(--shadow-brand)}
+.login-logo{width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:var(--shadow-brand),0 0 40px rgba(124,58,237,.25);animation:float 4s ease-in-out infinite}
 .tab-btn{padding:9px 4px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--t3);transition:.2s;text-align:center;width:100%}
 .tab-btn.on{background:var(--surface3);color:var(--tx);box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.btn-brand{background:linear-gradient(135deg,var(--br),var(--br-l));color:#fff;border:none;border-radius:var(--r);padding:13px;width:100%;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;box-shadow:var(--shadow-brand);letter-spacing:.2px}
-.btn-brand:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,.45)}
-.btn-brand:active{transform:translateY(0)}
+.btn-brand{background:linear-gradient(135deg,var(--br),var(--br-l));color:#fff;border:none;border-radius:var(--r);padding:13px;width:100%;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow-brand);letter-spacing:.2px;position:relative;overflow:hidden}
+.btn-brand::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1),transparent);opacity:0;transition:opacity .2s}
+.btn-brand:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.5)}
+.btn-brand:hover::before{opacity:1}
+.btn-brand:active{transform:translateY(0);box-shadow:var(--shadow-brand)}
 label{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:6px}
 input[type=text],input[type=password],input[type=number],input[type=email],input[type=date],select,textarea{
   width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);
@@ -65,23 +80,31 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── 탑바 ── */
 .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);
-  background:rgba(8,8,16,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200}
+  background:rgba(7,7,26,.88);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-bottom:1px solid rgba(124,58,237,.12);
+  display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200;
+  box-shadow:0 1px 0 rgba(124,58,237,.08),0 4px 24px rgba(0,0,0,.3)}
 .topbar-logo{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,var(--br2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px}
 #topbar-title{flex:1;font-size:14px;font-weight:700;color:var(--tx);letter-spacing:-.2px}
 .topbar-badge{background:var(--br);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px;letter-spacing:.3px}
 
 /* ── 사이드바 ── */
 #sidebar{position:fixed;top:var(--topbar-h);left:0;bottom:0;width:var(--sidebar-w);
-  background:var(--bg2);border-right:1px solid var(--bd);overflow-y:auto;z-index:150;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+  background:linear-gradient(180deg,var(--bg2) 0%,rgba(7,7,26,.95) 100%);
+  border-right:1px solid rgba(124,58,237,.1);
+  overflow-y:auto;z-index:150;transition:transform .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:4px 0 24px rgba(0,0,0,.3)}
 #sidebar::-webkit-scrollbar{display:none}
 .sidebar-profile{padding:16px 14px 10px;border-bottom:1px solid var(--bd);margin-bottom:6px}
 .sidebar-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;margin-bottom:8px}
-.ns-label{font-size:9px;font-weight:800;color:var(--t4);letter-spacing:1px;padding:12px 18px 4px;text-transform:uppercase}
-.ni{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;border-radius:10px;margin:1px 8px;transition:.15s;position:relative}
-.ni:hover{background:var(--surface2);color:var(--tx)}
-.ni.active{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(8,145,178,.08));color:var(--tx);box-shadow:inset 0 0 0 1px rgba(124,58,237,.2),0 2px 8px rgba(124,58,237,.1)}
-.ni.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:linear-gradient(180deg,var(--br),var(--br2));border-radius:0 3px 3px 0}
+.ns-label{font-size:9px;font-weight:800;color:var(--t4);letter-spacing:1.2px;padding:14px 18px 5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--t2);cursor:pointer;border-radius:10px;margin:1px 8px;transition:all .18s cubic-bezier(.4,0,.2,1);position:relative;letter-spacing:-.1px}
+.ni:hover{background:var(--surface2);color:var(--tx);transform:translateX(2px)}
+.ni.active{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(8,145,178,.1));color:var(--tx);box-shadow:inset 0 0 0 1px rgba(124,58,237,.25),0 2px 12px rgba(124,58,237,.15)}
+.ni.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:65%;background:linear-gradient(180deg,var(--br-ll),var(--br2));border-radius:0 3px 3px 0;box-shadow:0 0 8px var(--br-glow)}
+.ni-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;transition:transform .18s}
+.ni:hover .ni-icon{transform:scale(1.1)}
+.ni.active .ni-icon{filter:drop-shadow(0 0 4px var(--br-glow))}
 .ni-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 
 /* ── 메인 콘텐츠 ── */
@@ -127,13 +150,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── KPI 카드 ── */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px}
-.kpi-card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-lg);padding:16px 14px;position:relative;overflow:hidden;transition:.2s}
-.kpi-card:hover{border-color:var(--bd2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.kpi-card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px 14px;position:relative;overflow:hidden;transition:all .25s cubic-bezier(.4,0,.2,1)}
+.kpi-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.025),transparent);pointer-events:none}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow),0 0 0 1px rgba(124,58,237,.12)}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:0}
-.kpi-card.kpi-revenue::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
-.kpi-card.kpi-cost::before{background:linear-gradient(90deg,#ef4444,#f97316)}
-.kpi-card.kpi-profit::before{background:linear-gradient(90deg,#22c55e,#10b981)}
-.kpi-card.kpi-margin::before{background:linear-gradient(90deg,#f59e0b,#eab308)}
+.kpi-card.kpi-revenue{border-color:rgba(124,58,237,.18)}.kpi-card.kpi-revenue::before{background:linear-gradient(90deg,#7c3aed,#c084fc)}
+.kpi-card.kpi-cost{border-color:rgba(239,68,68,.18)}.kpi-card.kpi-cost::before{background:linear-gradient(90deg,#ef4444,#f97316)}
+.kpi-card.kpi-profit{border-color:rgba(34,197,94,.18)}.kpi-card.kpi-profit::before{background:linear-gradient(90deg,#22c55e,#10b981)}
+.kpi-card.kpi-margin{border-color:rgba(245,158,11,.18)}.kpi-card.kpi-margin::before{background:linear-gradient(90deg,#f59e0b,#eab308)}
 .kpi-label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
 .kpi-val{font-size:24px;font-weight:900;letter-spacing:-.8px;margin:10px 0 4px;line-height:1}
 .kpi-delta{font-size:11px;font-weight:700}.kpi-delta.up{color:var(--green)}.kpi-delta.down{color:var(--red)}
@@ -169,10 +193,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 /* ── POS ── */
 .pos-wrap{display:grid;grid-template-columns:1fr 340px;gap:14px;height:calc(100dvh - var(--topbar-h) - 40px);overflow:hidden}
 .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;overflow-y:auto;padding:2px;align-content:start}
-.menu-item{background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px 12px;text-align:center;cursor:pointer;transition:.2s;user-select:none;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.menu-item:hover{border-color:rgba(124,58,237,.3);background:var(--surface3);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.menu-item:active{transform:translateY(0);scale:.98}
-.cart-panel{background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden}
+.menu-item{background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s cubic-bezier(.34,1.3,.64,1);user-select:none;position:relative;overflow:hidden}
+.menu-item::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,58,237,.06),transparent);opacity:0;transition:opacity .2s}
+.menu-item:hover{border-color:rgba(124,58,237,.35);background:var(--surface3);transform:translateY(-3px) scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 1px rgba(124,58,237,.15)}
+.menu-item:hover::before{opacity:1}
+.menu-item:active{transform:translateY(0) scale(.97);transition-duration:.1s}
+.cart-panel{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow)}
 
 /* ── 직원/회원 카드 ── */
 .member-card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;position:relative;z-index:1}
@@ -190,7 +216,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── 모달 ── */
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
-.mo>div{background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-xl);width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(124,58,237,.08);animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
+.mo>div{background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:var(--r-xl);width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 0 1px rgba(124,58,237,.1),0 0 60px rgba(124,58,237,.08);animation:slideUp .32s cubic-bezier(.34,1.56,.64,1)}
 
 /* ── 토스트 ── */
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(30,30,60,.95);backdrop-filter:blur(20px);color:var(--tx);padding:12px 22px;border-radius:40px;font-size:13px;font-weight:600;z-index:1000;transition:.35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 32px rgba(0,0,0,.4)}
@@ -198,6 +224,29 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 
 /* ── 애니메이션 ── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeLeft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes zoomIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@keyframes ripple{0%{transform:scale(0);opacity:.6}100%{transform:scale(4);opacity:0}}
+@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px var(--br-glow2)}50%{box-shadow:0 0 24px var(--br-glow),0 0 48px var(--br-glow2)}}
+@keyframes numberRoll{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes successPop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes progressFill{from{width:0}to{width:var(--w)}}
+.fade-up{animation:fadeUp .4s ease both}
+.fade-up-1{animation:fadeUp .4s .06s ease both;opacity:0}
+.fade-up-2{animation:fadeUp .4s .12s ease both;opacity:0}
+.fade-up-3{animation:fadeUp .4s .18s ease both;opacity:0}
+.fade-up-4{animation:fadeUp .4s .24s ease both;opacity:0}
+.fade-up-5{animation:fadeUp .4s .30s ease both;opacity:0}
+.zoom-in{animation:zoomIn .35s cubic-bezier(.34,1.56,.64,1) both}
+.slide-right{animation:slideInRight .3s ease both}
+.float{animation:float 3s ease-in-out infinite}
+.glow-anim{animation:glow 2s ease-in-out infinite}
+.number-roll{animation:numberRoll .4s cubic-bezier(.34,1.56,.64,1) both}
+.success-pop{animation:successPop .5s cubic-bezier(.34,1.56,.64,1) both}
 @keyframes slideUp{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes countUp{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -496,11 +545,18 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 <!-- ── 앱 화면 ── -->
 <div id="app">
  <div class="topbar">
- <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:4px">☰</button>
- <div class="topbar-logo">FILO</div>
- <div id="topbar-title">대시보드</div>
- <div id="topbar-right" style="display:flex;gap:6px;margin-left:auto"></div>
- <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer">로그아웃</button>
+  <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">☰</button>
+  <div class="topbar-logo">FILO</div>
+  <div style="width:1px;height:18px;background:var(--bd2);margin:0 2px"></div>
+  <div id="topbar-title" style="font-size:13px;font-weight:700;color:var(--tx)">대시보드</div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+   <div id="topbar-clock" style="font-size:12px;font-weight:700;color:var(--t3);letter-spacing:.8px;font-variant-numeric:tabular-nums"></div>
+   <button onclick="_filoGoPage('orders')" style="background:none;border:none;cursor:pointer;font-size:18px;position:relative;padding:2px" title="주문 대기">
+    🔔<span id="topbar-order-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:16px"></span>
+   </button>
+   <div id="topbar-right" style="display:flex;gap:6px"></div>
+   <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--t3)' ">로그아웃</button>
+  </div>
  </div>
  <div id="sidebar" class="sidebar">
  <div style="padding:12px 16px 8px">
@@ -1069,6 +1125,19 @@ function _showApp(){
  var role=_CU.role==='member'?'직원':'관리자';
  document.getElementById('nav-company').textContent=company;
  document.getElementById('nav-role').textContent=role;
+ /* 실시간 시계 */
+ if(!window._clockInterval){
+  window._clockInterval=setInterval(function(){
+   var now=new Date();
+   var hh=now.getHours().toString().padStart(2,'0');
+   var mm=now.getMinutes().toString().padStart(2,'0');
+   var ss=now.getSeconds().toString().padStart(2,'0');
+   var el=document.getElementById('sidebar-clock');
+   if(el)el.textContent=hh+':'+mm+':'+ss;
+   var topClock=document.getElementById('topbar-clock');
+   if(topClock)topClock.textContent=hh+':'+mm;
+  },1000);
+ }
  var prof=document.getElementById('sidebar-profile');
  if(prof){
   var now2=new Date();
@@ -1203,12 +1272,25 @@ function _filoGoPage(p){
  else if(p==='table_mgmt') _filoPageTableMgmt(el);
  else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
- /* 페이지 전환 애니메이션 */
- if(el){el.style.animation='none';el.offsetHeight;el.style.animation='pageEnter .25s ease both';}
+ /* 프리미엄 페이지 전환 */
+ if(el){
+  el.style.opacity='0';
+  el.style.transform='translateY(10px)';
+  el.style.transition='none';
+  requestAnimationFrame(function(){
+   requestAnimationFrame(function(){
+    el.style.transition='opacity .22s ease,transform .22s cubic-bezier(.4,0,.2,1)';
+    el.style.opacity='1';
+    el.style.transform='translateY(0)';
+    setTimeout(function(){el.style.transition='';},250);
+   });
+  });
+ }
 
  else el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">🚧</div><div style="font-weight:700;margin-bottom:6px">'+(titles[p]||p)+'</div><div style="font-size:12px">준비 중입니다</div></div>';
 }
 
+/* 프리미엄 숫자 카운팅 */
 function _countUp(el, target, duration, prefix, suffix){
  prefix=prefix||''; suffix=suffix||'';
  var start=0, startTime=null;
@@ -3076,8 +3158,24 @@ function _cartAdd(id,name,price){
  if(existing){existing.qty++;}
  else{_cartItems.push({id:id,name:name,price:price,qty:1});}
  _cartRender();
+ /* Ripple + 바운스 효과 */
  var btn=event&&event.target?event.target.closest('.menu-item'):null;
- if(btn){btn.style.transform='scale(.92)';setTimeout(function(){btn.style.transform='';},150);}
+ if(btn){
+  btn.style.transform='scale(.94)';
+  btn.style.borderColor='rgba(124,58,237,.6)';
+  /* Ripple */
+  var ripple=document.createElement('div');
+  ripple.style.cssText='position:absolute;border-radius:50%;background:rgba(124,58,237,.3);width:10px;height:10px;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease both;pointer-events:none;z-index:10';
+  btn.appendChild(ripple);
+  setTimeout(function(){
+   btn.style.transform='';
+   btn.style.borderColor='';
+   if(ripple.parentNode)ripple.parentNode.removeChild(ripple);
+  },500);
+  /* 카트 총액 바운스 */
+  var tot=document.getElementById('cart-total');
+  if(tot){tot.style.animation='none';tot.offsetHeight;tot.style.animation='successPop .3s cubic-bezier(.34,1.56,.64,1)';}
+ }
 }
 
 function _cartRender(){
