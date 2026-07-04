@@ -393,8 +393,19 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  </div>
  <!-- 사용 서비스 선택 -->
  <div class="fg">
- <label>사용할 서비스 선택 <span style="color:var(--red)">*</span></label>
- <div style="font-size:10px;color:var(--t3);margin-bottom:8px">7일 무료 체험 · 이후 월 구독</div>
+ <label>업종 선택 <span style="color:var(--red)">*</span></label>
+ <select id="fr-industry" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none;margin-bottom:12px">
+  <option value="">업종을 선택하세요</option>
+  <option value="cafe">☕ 카페·베이커리</option>
+  <option value="restaurant">🍽 음식점·식당</option>
+  <option value="beauty">💄 미용·뷰티샵</option>
+  <option value="retail">🛒 소매·편의점</option>
+  <option value="fitness">💪 피트니스·학원</option>
+  <option value="unmanned">🤖 무인매장</option>
+  <option value="other">🏢 기타</option>
+ </select>
+ <label>플랜 선택 <span style="color:var(--red)">*</span></label>
+ <div style="font-size:10px;color:var(--t3);margin-bottom:8px">30일 무료 체험 · 이후 월 구독</div>
  <div style="display:flex;flex-direction:column;gap:8px">
 
  <!-- QR+급여 -->
@@ -1074,47 +1085,76 @@ function _buildFiloNav(){
  var d=_cachedCompanyDoc||{};
  var subs=d.subscriptions||{};
  var today=new Date().toISOString().slice(0,10);
- function hasSub(k){var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));}
+ function hasSub(k){
+  /* combo = 전체 포함 */
+  if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
+  var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
+ }
  var isAdmin=(_CU.role!=='member');
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
 
  var menus=[];
- menus.push({s:'🏠 홈',items:[{ic:'🏠',l:'대시보드',p:'home'},{ic:'👤',l:'직원 관리',p:'members'}]});
+ var hasAll=isSA||hasSub('combo');
 
- if(isSA||hasSub('inventory')||hasSub('combo')){
- menus.push({s:'📦 재고관리',items:[
- {ic:'📊',l:'재고 대시보드',p:'inventory'},
- {ic:'📥',l:'입고 등록',p:'stock_in'},
- {ic:'📤',l:'출고 등록',p:'stock_out'},
- {ic:'🍽',l:'레시피 관리',p:'recipe'},
- {ic:'🔔',l:'자동 발주',p:'auto_order'},
- {ic:'📈',l:'매출·마진',p:'sales_report'},
- {ic:'⏰',l:'유통기한',p:'expiry'},
+ /* ── 홈 ── */
+ menus.push({s:'🏠 홈',items:[
+  {ic:'🏠',l:'대시보드',p:'home'},
  ]});
+
+ /* ── 판매관리 (POS+테이블+매출) ── */
+ if(hasAll||hasSub('kiosk')){
+  menus.push({s:'🛒 판매관리',items:[
+   {ic:'🖥️',l:'POS 결제',p:'kiosk'},
+   {ic:'🔔',l:'주문 대기',p:'orders'},
+   {ic:'🪑',l:'테이블 관리',p:'table_mgmt'},
+   {ic:'📊',l:'매출·분석',p:'sales_report'},
+  ]});
  }
- if(isSA||hasSub('qr')||hasSub('payroll')||hasSub('combo')){
- menus.push({s:'🔐 QR·급여',items:[
- {ic:'👤',l:'직원 QR (동적)',p:'qr_staff'},
- {ic:'🔐',l:'QR 출퇴근',p:'attendance'},
- {ic:'📋',l:'출퇴근 현황',p:'attend_dash'},
- {ic:'💼',l:'급여 현황',p:'payroll'},
- {ic:'🗓',l:'근무표',p:'roster'},
- ]});
+
+ /* ── 재고관리 ── */
+ if(hasAll||hasSub('inventory')){
+  menus.push({s:'📦 재고관리',items:[
+   {ic:'📊',l:'재고 현황',p:'inventory'},
+   {ic:'📥',l:'입고',p:'stock_in'},
+   {ic:'📤',l:'출고',p:'stock_out'},
+   {ic:'🍽',l:'레시피·원가',p:'recipe'},
+   {ic:'⏰',l:'유통기한',p:'expiry'},
+   {ic:'🔔',l:'자동 발주',p:'auto_order'},
+  ]});
  }
- if(isSA||hasSub('kiosk')||hasSub('combo')){
- menus.push({s:'🖥️ 키오스크',items:[
- {ic:'🖥️',l:'POS 결제',p:'kiosk'},
- {ic:'🪑',l:'테이블 관리',p:'table_mgmt'},
- {ic:'📋',l:'테이블 QR',p:'table_qr'},
- {ic:'🎁',l:'회원 QR',p:'member_qr'},
- {ic:'⭐',l:'포인트 관리',p:'points'},
- {ic:'🎫',l:'회원권',p:'membership'},
- {ic:'📊',l:'매출 집계',p:'pos_report'},
- ]});
+
+ /* ── 인사관리 ── */
+ if(hasAll||hasSub('qr')||hasSub('payroll')){
+  menus.push({s:'👥 인사관리',items:[
+   {ic:'👤',l:'직원 관리',p:'members'},
+   {ic:'🔐',l:'QR 출퇴근',p:'attendance'},
+   {ic:'📋',l:'출퇴근 현황',p:'attend_dash'},
+   {ic:'💼',l:'급여 현황',p:'payroll'},
+   {ic:'🗓',l:'근무표',p:'roster'},
+   {ic:'👤',l:'직원 QR',p:'qr_staff'},
+  ]});
+ } else {
+  /* 기본 직원관리 */
+  menus.push({s:'👥 인사관리',items:[
+   {ic:'👤',l:'직원 관리',p:'members'},
+  ]});
  }
+
+ /* ── 고객관리 ── */
+ if(hasAll||hasSub('kiosk')){
+  menus.push({s:'🎁 고객관리',items:[
+   {ic:'🎁',l:'회원 QR',p:'member_qr'},
+   {ic:'📋',l:'테이블 QR',p:'table_qr'},
+   {ic:'⭐',l:'포인트 관리',p:'points'},
+   {ic:'🎫',l:'회원권',p:'membership'},
+  ]});
+ }
+
+ /* ── 설정 ── */
  menus.push({s:'⚙️ 설정',items:[
- {ic:'📢',l:'공지사항',p:'notices'},
- {ic:'⚙️',l:'설정',p:'settings'},
+  {ic:'📢',l:'공지사항',p:'notices'},
+  {ic:'⚙️',l:'설정',p:'settings'},
+  {ic:'💳',l:'구독 관리',p:'subscription'},
  ]});
 
  var html='';
@@ -1196,7 +1236,11 @@ function _filoPageHome(el){
  var subs=d.subscriptions||{};
  var today=new Date().toISOString().slice(0,10);
  var did=d.dealerId||d.uid||'';
- function hasSub(k){var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));}
+ function hasSub(k){
+  /* combo = 전체 포함 */
+  if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
+  var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
+ }
 
  el.innerHTML='<div style="max-width:900px;margin:0 auto">'+
  '<div class="fade-up" style="margin-bottom:20px">'+
@@ -1204,10 +1248,17 @@ function _filoPageHome(el){
  '<div style="font-size:12px;color:var(--t3);margin-top:3px">'+today+' · FILO 통합 운영 현황</div></div>'+
 
  '<div class="kpi-grid" id="home-stats">'+
- [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa'},{t:'이번달 매출',c:'kpi-profit',vc:'#22c55e'},{t:'재고 부족',c:'kpi-cost',vc:'#ef4444'},{t:'오늘 마진율',c:'kpi-margin',vc:'#f59e0b'}].map(function(s,i){
- return '<div class="kpi-card '+s.c+'">'+
+ [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'💰',id:'hs-0'},
+  {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'🔔',id:'hs-1'},
+  {t:'재고 부족',c:'kpi-margin',vc:'#f59e0b',ic:'⚠️',id:'hs-2'},
+  {t:'출근 인원',c:'kpi-profit',vc:'#22c55e',ic:'👥',id:'hs-3'}
+ ].map(function(s){
+ return '<div class="kpi-card '+s.c+' card-hover">'+ 
+ '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
  '<div class="kpi-label">'+s.t+'</div>'+
- '<div class="kpi-val" id="hs-'+i+'" style="color:'+s.vc+'">—</div>'+
+ '<div style="font-size:18px;opacity:.8">'+s.ic+'</div>'+
+ '</div>'+
+ '<div class="kpi-val count-anim" id="'+s.id+'" style="color:'+s.vc+'">—</div>'+
  '</div>';
  }).join('')+'</div>'+
 
@@ -1225,10 +1276,10 @@ function _filoPageHome(el){
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'📊',l:'재고',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},{ic:'📤',l:'출고',p:'stock_out'},
- {ic:'📈',l:'매출·마진',p:'sales_report'},{ic:'⏰',l:'유통기한',p:'expiry'},{ic:'🍽',l:'레시피',p:'recipe'},
- {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🖥️',l:'POS',p:'kiosk'},
- {ic:'🪑',l:'테이블',p:'table_mgmt'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'📈',l:'매출집계',p:'pos_report'}].map(function(m){
+ [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🪑',l:'테이블',p:'table_mgmt'},
+ {ic:'📊',l:'매출분석',p:'sales_report'},{ic:'📦',l:'재고',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},
+ {ic:'📤',l:'출고',p:'stock_out'},{ic:'⏰',l:'유통기한',p:'expiry'},{ic:'🔐',l:'QR출퇴근',p:'attendance'},
+ {ic:'💼',l:'급여',p:'payroll'},{ic:'🎁',l:'회원QR',p:'member_qr'},{ic:'⚙️',l:'설정',p:'settings'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
  '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
@@ -1264,6 +1315,17 @@ function _filoPageHome(el){
    res[3].forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)low++;});
    var todayMargin=todayRev>0?Math.round((todayRev-todayCost)/todayRev*100):0;
    var e0=document.getElementById('hs-0'),e1=document.getElementById('hs-1'),e2=document.getElementById('hs-2'),e3=document.getElementById('hs-3');
+  /* 미완료 주문 실시간 */
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
+   .onSnapshot(function(snap){if(e1){e1.textContent=snap.size+'건';if(snap.size>0){e1.classList.add('bounce-in');setTimeout(function(){e1.classList.remove('bounce-in');},500);}}});
+  /* 재고 부족 */
+  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+   var low=0;snap.forEach(function(doc){var d=doc.data();if((d.stock||0)<=(d.minStock||5))low++;});
+   if(e2)e2.textContent=low+'개';
+  });
+  /* 출근 인원 (오늘) */
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('status','==','in')
+   .get().then(function(snap){if(e3)e3.textContent=snap.size+'명';});
    if(e0)_countUp(e0,todayRev,400,'₩','');
    if(e1)_countUp(e1,monthRev,600,'₩','');
    if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
