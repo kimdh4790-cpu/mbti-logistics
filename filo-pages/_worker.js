@@ -1495,8 +1495,8 @@ async function acceptExchange(){
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
   if (env && env.DONWAY_ASSETS) {
-    const ab = await env.DONWAY_ASSETS.get('filo.html', 'arrayBuffer');
-    if (ab) return new Response(ab, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV-AB' } });
+    const st = await env.DONWAY_ASSETS.get('filo.html', 'stream');
+    if (st) return new Response(st, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV-ST' } });
   }
   return serveKVFile(env, 'filo.html', 'text/html');
 }
