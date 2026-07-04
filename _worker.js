@@ -1473,8 +1473,10 @@ async function acceptExchange(){
         }
         return serveKVFile(env, 'filo.html', 'text/html');
       }
-  if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
+      if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      // filo.ai.kr 내부 경로는 모두 filo.html로 서빙 (slug 라우팅 방지)
+      return serveKVFile(env, 'filo.html', 'text/html');
     }
 
 
