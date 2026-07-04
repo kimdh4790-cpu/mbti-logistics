@@ -1530,7 +1530,7 @@ function _filoPageKiosk(el){
  '</div></div></div>';
  _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).orderBy('category').orderBy('name').get()
  .then(function(snap){
- if(true){
+ if(!snap.empty){
  var sampleMenus=[
  {_id:'s1',name:'아이스 아메리카노',price:1800,category:'커피',emoji:'☕'},
  {_id:'s2',name:'아메리카노(HOT)',price:2500,category:'커피',emoji:'☕'},
