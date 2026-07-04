@@ -1533,7 +1533,7 @@ function _filoPageKiosk(el){
  '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">🗑 초기화</button>'+
  '</div></div></div>';
- _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).orderBy('category').orderBy('name').get()
+ _db.collection('inventory').where('dealerId','==',did).where('forSale','==',true).get()
  .then(function(snap){
  if(!snap.empty){
  var sampleMenus=[
