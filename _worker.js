@@ -1469,6 +1469,8 @@ async function acceptExchange(){
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
+      if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
+      if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
       if (path === '/join' || path === '/join.html' || path === '/table-status') return serveKVFile(env, 'join.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
         if (env && env.DONWAY_ASSETS) {
