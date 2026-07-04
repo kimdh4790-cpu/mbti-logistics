@@ -3040,7 +3040,15 @@ function _filoPageOrders(el){
     listEl.innerHTML=orders.map(function(o){
      var statusColor=o.status==='done'?'#22c55e':o.status==='cancel'?'#ef4444':'#f59e0b';
      var statusLabel=o.status==='done'?'완료':o.status==='cancel'?'취소':'대기중';
-     var timeStr=o.createdAt?new Date(o.createdAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
+     var timeStr=o.createdAt?(function(){
+      var d=new Date(o.createdAt);
+      var kst=new Date(d.getTime()+9*3600000);
+      var mm=(kst.getUTCMonth()+1).toString().padStart(2,'0');
+      var dd=kst.getUTCDate().toString().padStart(2,'0');
+      var hh=kst.getUTCHours().toString().padStart(2,'0');
+      var mi=kst.getUTCMinutes().toString().padStart(2,'0');
+      return mm+'/'+dd+' '+hh+':'+mi;
+     })():'';
      var tName=o.tableName||(o.tableId?'🪑 테이블 '+o.tableId:'🏪 카운터');
      return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+statusColor+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
