@@ -1,2 +1,1 @@
 /api/* https://filo.ai.kr/api/:splat 200
-/:path https://mbti-logistics.kimdh4790.workers.dev/:path 200
