@@ -1465,6 +1465,15 @@ async function acceptExchange(){
       if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') {
+        const _e2 = env || _env_ref;
+        if (_e2 && _e2.DONWAY_ASSETS) {
+          const fv = await _e2.DONWAY_ASSETS.get('filo.html', 'text');
+          if (fv && fv.length < 400000 && fv.includes('_filoGoPage')) {
+            return new Response(fv, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+          }
+          const fv2 = await _e2.DONWAY_ASSETS.get('filo_backup.html', 'text');
+          if (fv2) return new Response(fv2, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+        }
         return serveKVFile(env, 'filo.html', 'text/html');
       }
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
