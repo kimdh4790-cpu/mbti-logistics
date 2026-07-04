@@ -12,8 +12,8 @@
    대기업 수준 UI
    ══════════════════════ */
 :root{
-  --bg:#0d0d1a;--bg2:#121220;--bg3:#17172a;
-  --surface:#1a1a2e;--surface2:#20203a;--surface3:#262642;
+  --bg:#0b0b18;--bg2:#101020;--bg3:#151528;
+  --surface:#18182e;--surface2:#1e1e36;--surface3:#24243e;
   --bd:rgba(255,255,255,.06);--bd2:rgba(255,255,255,.1);--bd3:rgba(255,255,255,.18);
   --tx:#f2f2ff;--t2:#a0a0c0;--t3:#606080;--t4:#3a3a58;
   --br:#7c3aed;--br-l:#9f5ef8;--br-d:#5b21b6;--br-glow:rgba(124,58,237,.4);
@@ -80,7 +80,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .ns-label{font-size:9px;font-weight:800;color:var(--t4);letter-spacing:1px;padding:12px 18px 4px;text-transform:uppercase}
 .ni{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;border-radius:10px;margin:1px 8px;transition:.15s;position:relative}
 .ni:hover{background:var(--surface2);color:var(--tx)}
-.ni.active{background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(8,145,178,.1));color:var(--tx);border:1px solid rgba(124,58,237,.2)}
+.ni.active{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(8,145,178,.08));color:var(--tx);box-shadow:inset 0 0 0 1px rgba(124,58,237,.2),0 2px 8px rgba(124,58,237,.1)}
 .ni.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:linear-gradient(180deg,var(--br),var(--br2));border-radius:0 3px 3px 0}
 .ni-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 
@@ -97,7 +97,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 }
 
 /* ── 카드 컴포넌트 ── */
-.card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;transition:border-color .2s,box-shadow .2s}
+.card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;transition:border-color .2s,box-shadow .2s,transform .2s}
 .card:hover{border-color:var(--bd2)}
 .card-glass{background:rgba(22,22,42,.6);backdrop-filter:blur(12px);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:18px}
 .card-brand{background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(8,145,178,.06));border:1px solid rgba(124,58,237,.2);border-radius:var(--r-lg);padding:18px}
@@ -189,11 +189,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .insight-icon{font-size:22px;flex-shrink:0;margin-top:2px}
 
 /* ── 모달 ── */
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
-.mo>div{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-xl);width:100%;max-width:480px;box-shadow:var(--shadow-lg);animation:slideUp .25s cubic-bezier(.34,1.56,.64,1)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
+.mo>div{background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-xl);width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(124,58,237,.08);animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
 
 /* ── 토스트 ── */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface3);color:var(--tx);padding:11px 20px;border-radius:40px;font-size:13px;font-weight:600;z-index:1000;transition:.3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;border:1px solid var(--bd2);box-shadow:var(--shadow)}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(30,30,60,.95);backdrop-filter:blur(20px);color:var(--tx);padding:12px 22px;border-radius:40px;font-size:13px;font-weight:600;z-index:1000;transition:.35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 32px rgba(0,0,0,.4)}
 #toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ── 애니메이션 ── */
@@ -279,6 +279,48 @@ html{scroll-behavior:smooth}
 .trend-up{color:var(--green);font-size:11px;font-weight:700}
 .trend-down{color:var(--red);font-size:11px;font-weight:700}
 .topbar-badge{background:var(--br);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.3px;animation:pulse 2s infinite}
+
+/* ── 프리미엄 UI 추가 스타일 ── */
+.shimmer{background:linear-gradient(90deg,var(--surface2) 0%,var(--surface3) 50%,var(--surface2) 100%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+.glow-purple{box-shadow:0 0 20px rgba(124,58,237,.3),0 0 60px rgba(124,58,237,.1)}
+.glow-green{box-shadow:0 0 16px rgba(34,197,94,.25)}
+.gradient-text{background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gradient-text-green{background:linear-gradient(135deg,#22c55e,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.card-hover:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.3);border-color:rgba(124,58,237,.25)!important}
+.btn-yellow{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:var(--r);padding:11px 20px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(245,158,11,.3)}
+.btn-yellow:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(245,158,11,.4)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 2s infinite;vertical-align:middle}
+.number-xl{font-size:36px;font-weight:900;letter-spacing:-1.5px;line-height:1}
+.chip{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;gap:5px;letter-spacing:.2px}
+.chip-purple{background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.2)}
+.chip-teal{background:rgba(8,145,178,.12);color:#38bdf8;border:1px solid rgba(8,145,178,.2)}
+.chip-green{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.18)}
+.chip-red{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.18)}
+.chip-yellow{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.18)}
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)}
+.stat-row:last-child{border-bottom:none}
+.hero-card{background:linear-gradient(135deg,#0f0a2a 0%,#1a0e3a 50%,#0a1628 100%);border:1px solid rgba(124,58,237,.2);border-radius:var(--r-xl);padding:24px;position:relative;overflow:hidden}
+.hero-card::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,.25),transparent 70%);pointer-events:none}
+.hero-card::after{content:'';position:absolute;bottom:-40px;left:20%;width:160px;height:160px;background:radial-gradient(circle,rgba(8,145,178,.15),transparent 70%);pointer-events:none}
+@keyframes countUp{from{opacity:0;transform:scale(.7) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes bounceIn{0%{transform:scale(.3);opacity:0}50%{transform:scale(1.05)}70%{transform:scale(.95)}100%{transform:scale(1);opacity:1}}
+.bounce-in{animation:bounceIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.slide-right{animation:slideRight .3s ease both}
+/* POS 메뉴 카드 고도화 */
+.menu-item:hover .menu-item-emoji{transform:scale(1.2);transition:transform .2s}
+.menu-item-emoji{display:block;font-size:28px;margin-bottom:8px;transition:transform .2s}
+/* 입력 필드 고급 스타일 */
+input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input[type=tel]:focus,input[type=date]:focus,select:focus,textarea:focus{
+  border-color:var(--br)!important;
+  box-shadow:0 0 0 3px rgba(124,58,237,.15),0 1px 3px rgba(0,0,0,.2)!important;
+  background:var(--surface3)!important}
+/* 스크롤바 */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(124,58,237,.3);border-radius:3px}
+/* 선택 효과 */
+::selection{background:rgba(124,58,237,.3)}
+
 /* ── 영수증 인쇄 ── */
 @media print{
   body>*:not(.mo){display:none!important}
@@ -1009,11 +1051,20 @@ function _showApp(){
  document.getElementById('nav-role').textContent=role;
  var prof=document.getElementById('sidebar-profile');
  if(prof){
-  prof.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:14px 16px 10px">'+
-  '<div class="sidebar-avatar">'+esc(company.slice(0,1))+'</div>'+
-  '<div style="min-width:0"><div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(company)+'</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:1px">'+role+'</div></div></div>'+
-  '<div style="height:1px;background:var(--bd);margin:0 14px 6px"></div>';
+  var now2=new Date();
+  var hh=now2.getHours().toString().padStart(2,'0');
+  var mi2=now2.getMinutes().toString().padStart(2,'0');
+  prof.innerHTML='<div style="padding:14px 16px 12px">'+
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+  '<div class="sidebar-avatar" style="background:linear-gradient(135deg,var(--br),var(--br2))">'+esc(company.slice(0,1))+'</div>'+
+  '<div style="min-width:0;flex:1">'+
+  '<div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(company)+'</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:1px">'+role+'</div>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--t3);font-weight:700;letter-spacing:.5px">'+hh+':'+mi2+'</div>'+
+  '</div>'+
+  '<div style="height:1px;background:var(--bd)"></div>'+
+  '</div>';
  }
  _buildFiloNav();
  _filoGoPage('home');
@@ -1175,9 +1226,10 @@ function _filoPageHome(el){
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'📊',l:'재고현황',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},{ic:'📤',l:'출고',p:'stock_out'},
- {ic:'💰',l:'매출입력',p:'sales_report'},{ic:'📈',l:'매출분석',p:'sales_report'},{ic:'⏰',l:'유통기한',p:'expiry'},
- {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🖥️',l:'POS',p:'kiosk'}].map(function(m){
+ [{ic:'📊',l:'재고',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},{ic:'📤',l:'출고',p:'stock_out'},
+ {ic:'📈',l:'매출·마진',p:'sales_report'},{ic:'⏰',l:'유통기한',p:'expiry'},{ic:'🍽',l:'레시피',p:'recipe'},
+ {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🖥️',l:'POS',p:'kiosk'},
+ {ic:'🪑',l:'테이블',p:'table_mgmt'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'📈',l:'매출집계',p:'pos_report'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
  '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
