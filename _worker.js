@@ -1455,22 +1455,6 @@ async function acceptExchange(){
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
-      // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
-      if (!path.startsWith('/api/') && method === 'GET') {
-        const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
-        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
-        if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
-          const slug2 = slugDirect[1];
-          try {
-            const kvStream_s = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
-            if (kvStream_s) {
-              return new Response(kvStream_s, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
-            }
-          } catch(e) {}
-        }
-      }
-    }
-
     // ★ filo.ai.kr 라우팅
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       const e = env || _env_ref;
@@ -1491,6 +1475,23 @@ async function acceptExchange(){
       }
   if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+    }
+
+
+      // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
+      if (!path.startsWith('/api/') && method === 'GET') {
+        const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
+        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
+        if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
+          const slug2 = slugDirect[1];
+          try {
+            const kvStream_s = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
+            if (kvStream_s) {
+              return new Response(kvStream_s, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
+            }
+          } catch(e) {}
+        }
+      }
     }
 
     // ★ mbtico.kr → 엠비티아이 배송앱
