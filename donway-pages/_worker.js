@@ -1481,7 +1481,8 @@ async function acceptExchange(){
       }
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
-      // filo.ai.kr 내부 경로는 모두 filo.html로 서빙 (slug 라우팅 방지)
+      // filo.ai.kr 루트 → 랜딩, 나머지는 filo.html
+      if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       return serveKVFile(env, 'filo.html', 'text/html');
     }
 
