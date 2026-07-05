@@ -117,11 +117,11 @@ function _init(){
     return;
   }
 
-  /* 테이블 occupied 처리 */
+  /* 테이블 occupied 처리 (권한 없어도 무시) */
   if(_tid){
     _db.collection('filo_tables').where('dealerId','==',_did).where('tableId','==',parseInt(_tid)).get().then(function(snap){
       if(!snap.empty) snap.docs[0].ref.update({status:'occupied',since:new Date().toISOString()});
-    });
+    }).catch(function(){});
   }
 
   _loadMenus();
@@ -248,6 +248,7 @@ function _orderSubmit(){
     _updateCart();
     _showSuccess(items,total);
   }).catch(function(e){
+    console.error('주문 오류:',e);
     _showToast('❌ 오류: '+e.message);
     btn.disabled=false;btn.textContent='주문하기';
   });
