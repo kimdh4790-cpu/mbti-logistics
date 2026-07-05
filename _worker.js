@@ -1484,6 +1484,7 @@ async function acceptExchange(){
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
