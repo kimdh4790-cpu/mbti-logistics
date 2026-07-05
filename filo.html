@@ -1253,33 +1253,34 @@ function _filoGoPage(p){
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
  if(p==='home') _filoPageHome(el);
+ else if(p==='kiosk') _filoPageKiosk(el);
+ else if(p==='orders') _filoPageOrders(el);
+ else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='sales_report') _filoPageSales(el);
- else if(p==='expiry') _filoPageExpiry(el);
+ else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='inventory') _filoPageInventory(el);
  else if(p==='stock_in') _filoPageStockIn(el);
  else if(p==='stock_out') _filoPageStockOut(el);
  else if(p==='auto_order') _filoPageAutoOrder(el);
+ else if(p==='recipe') _filoPageRecipe(el);
+ else if(p==='expiry') _filoPageExpiry(el);
  else if(p==='members') _filoPageMembers(el);
  else if(p==='attendance') _filoPageAttendance(el);
  else if(p==='attend_dash') _filoPageAttendDash(el);
  else if(p==='payroll') _filoPagePayroll(el);
  else if(p==='roster') _filoPageRoster(el);
- else if(p==='kiosk') _filoPageKiosk(el);
+ else if(p==='qr_staff') _filoPageStaffQR(el);
+ else if(p==='member_qr') _filoPageMemberQR(el);
+ else if(p==='table_qr') _filoPageTableQR(el);
+ else if(p==='table_mgmt') _filoPageTableMgmt(el);
  else if(p==='points') _filoPagePoints(el);
  else if(p==='membership') _filoPageMembership(el);
- else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='schedule') _filoPageSchedule(el);
- else if(p==='settings') _filoPageSettings(el);
- else if(p==='subscription') _filoPageSubscription(el);
  else if(p==='tax_share') _filoPageTaxShare(el);
  else if(p==='notices') _filoPageNotices(el);
- else if(p==='recipe') _filoPageRecipe(el);
- else if(p==='qr_staff') _filoPageStaffQR(el);
- else if(p==='table_qr') _filoPageTableQR(el);
- else if(p==='schedule') _filoPageSchedule(el);
- else if(p==='table_mgmt') _filoPageTableMgmt(el);
- else if(p==='delivery') _filoPageDelivery(el);
- else if(p==='member_qr') _filoPageMemberQR(el);
+ else if(p==='settings') _filoPageSettings(el);
+ else if(p==='subscription') _filoPageSubscription(el);
+ else if(p==='cost_mgmt') _filoPageCostMgmt(el);
  /* 프리미엄 페이지 전환 */
  if(el){
   el.style.opacity='0';
