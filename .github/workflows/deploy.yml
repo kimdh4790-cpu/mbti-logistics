@@ -21,20 +21,12 @@ jobs:
 
       - name: Upload filo.html to KV
         env:
-          CF_EMAIL: kimdh4790@gmail.com
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: |
-          ACCOUNT="02709cbec18d848913b4246015b9148f"
+          npm install -g wrangler@4 --silent
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/filo.html" \
-            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-            --data-binary @filo.html)
-          echo "$RESULT" | grep -q '"success":true' && echo "✅ filo.html KV 업로드 성공" || echo "❌ 실패: $RESULT"
-          RESULT2=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/filo_backup.html" \
-            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-            --data-binary @filo.html)
-          echo "$RESULT2" | grep -q '"success":true' && echo "✅ filo_backup.html KV 업로드 성공" || echo "❌ 실패: $RESULT2"
-
+          npx wrangler kv key put --namespace-id=$NS_ID "filo.html" --path=filo.html --remote && echo "✅ filo.html OK"
+          npx wrangler kv key put --namespace-id=$NS_ID "filo_backup.html" --path=filo.html --remote && echo "✅ filo_backup.html OK"
       - name: Upload settle.html to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
