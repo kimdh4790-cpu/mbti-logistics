@@ -3985,17 +3985,6 @@ function _cartAddFromEl(el){
 }
 
 var _origFilterKiosk = _filoFilterKiosk;
-function _filoFilterKiosk(catOrEl, btn){
- var cat = typeof catOrEl==='string' ? catOrEl : catOrEl.dataset&&catOrEl.dataset.cat||'전체';
- var activeBtn = btn||catOrEl;
- document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
- b.style.background=b===activeBtn?'var(--br)':'var(--bg3)';
- b.style.color=b===activeBtn?'#fff':'var(--text)';
- });
- document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
- el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
- });
-}
 
 document.addEventListener('click',function(e){
  var mc=e.target.closest('.member-card[data-id]');
