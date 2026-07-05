@@ -112,8 +112,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 #content{padding:16px;min-height:calc(100dvh - var(--topbar-h));box-sizing:border-box;padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;margin-left:var(--sidebar-w);width:calc(100% - var(--sidebar-w))}
 
 @media(max-width:768px){
-  #sidebar{transform:translateX(-100%)}
-  #sidebar.open{transform:translateX(0)}
+  #sidebar{transform:translateX(-100%);z-index:200}
+  #sidebar.open{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.6)}
   #content-wrap{margin-left:0!important;width:100%!important}
   #content{margin-left:0!important;width:100%!important;padding:12px!important}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -566,7 +566,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
    <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--t3)' ">로그아웃</button>
   </div>
  </div>
- <div id="sidebar" class="sidebar">
+ <div id="sidebar">
  <div style="padding:12px 16px 8px">
  <div id="nav-company" style="font-size:13px;font-weight:800;color:var(--tx)"></div>
  <div id="nav-role" style="font-size:10px;color:var(--t3);margin-top:2px"></div>
