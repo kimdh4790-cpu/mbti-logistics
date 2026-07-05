@@ -309,7 +309,7 @@ function _payWithToss(){
 }
 
 function _tossCheckout(method,orderId,orderName,total,items){
-  var tossPayments=window.TossPayments('test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eo2');
+  var tossPayments=window.TossPayments('test_ck_mBZ1gQ4YVXQwywWXyyKXrl2KPoqN');
   var now=new Date();
   _db.collection('filo_sales').add({
     dealerId:_did,tableId:_tid?parseInt(_tid):null,tableName:_tName,
