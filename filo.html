@@ -553,7 +553,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 <!-- ── 앱 화면 ── -->
 <div id="app">
  <div class="topbar">
-  <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">☰</button>
+  <button id="sidebar-toggle" onclick="_toggleSidebar()" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s;width:36px;justify-content:center" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">☰</button>
   <div class="topbar-logo">FILO</div>
   <div style="width:1px;height:18px;background:var(--bd2);margin:0 2px"></div>
   <div id="topbar-title" style="font-size:13px;font-weight:700;color:var(--tx)">대시보드</div>
@@ -566,6 +566,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
    <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--t3)' ">로그아웃</button>
   </div>
  </div>
+ <div id="sidebar-overlay" onclick="_toggleSidebar()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;backdrop-filter:blur(2px)"></div>
  <div id="sidebar">
  <div style="padding:12px 16px 8px">
  <div id="nav-company" style="font-size:13px;font-weight:800;color:var(--tx)"></div>
@@ -1235,6 +1236,15 @@ function _buildFiloNav(){
  });
  });
  document.getElementById('nav-menu').innerHTML=html;
+}
+
+function _toggleSidebar(){
+ var sb=document.getElementById('sidebar');
+ var btn=document.getElementById('sidebar-toggle');
+ var ov=document.getElementById('sidebar-overlay');
+ var isOpen=sb.classList.toggle('open');
+ if(btn) btn.textContent=isOpen?'✕':'☰';
+ if(ov) ov.style.display=isOpen?'block':'none';
 }
 
 function _filoGoPage(p){
