@@ -239,24 +239,47 @@ function _orderSubmit(){
 }
 
 function _showPayModal(items,total){
+  window._pendingItems=items;
+  window._pendingTotal=total;
   var mo=document.createElement('div');mo.className='mo';
   var box=document.createElement('div');box.className='mo-box';
   var methods=[{k:'카드',ic:'💳'},{k:'카카오페이',ic:'🟡'},{k:'네이버페이',ic:'🟢'},{k:'현금',ic:'💵'}];
-  var itemsJson=JSON.stringify(items).replace(/'/g,"\\'");
-  box.innerHTML=
-    '<div style="font-size:16px;font-weight:900;margin-bottom:6px">💳 결제 수단 선택</div>'+
-    '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:16px">₩'+total.toLocaleString()+'</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
-    methods.map(function(m){
-      return '<button onclick="window._payMethod=\''+m.k+'\';window._payItems='+JSON.stringify(items)+';window._payTotal='+total+';document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_payWithToss();" '+
-        'style="padding:16px 8px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;text-align:center">'+
-        '<div style="font-size:24px;margin-bottom:4px">'+m.ic+'</div>'+
-        '<div style="font-size:12px;font-weight:700">'+m.k+'</div></button>';
-    }).join('')+
-    '</div>'+
-    '<button onclick="window._payItems='+JSON.stringify(items)+';window._payTotal='+total+';document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_saveOrderOnly();" '+
-      'style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer;margin-bottom:8px">🏪 카운터에서 결제</button>'+
-    '<button onclick="this.closest(\'.mo\').remove()" style="width:100%;padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer">취소</button>';
+  var grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px';
+  methods.forEach(function(m){
+    var btn=document.createElement('button');
+    btn.style.cssText='padding:16px 8px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;text-align:center;transition:.15s';
+    btn.innerHTML='<div style="font-size:24px;margin-bottom:4px">'+m.ic+'</div><div style="font-size:12px;font-weight:700">'+m.k+'</div>';
+    (function(method){
+      btn.onclick=function(){
+        window._payMethod=method;
+        mo.remove();
+        _payWithToss();
+      };
+    })(m.k);
+    btn.onmouseover=function(){this.style.borderColor='#7c3aed';};
+    btn.onmouseout=function(){this.style.borderColor='var(--bd2)';};
+    grid.appendChild(btn);
+  });
+
+  var header=document.createElement('div');
+  header.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:6px">💳 결제 수단 선택</div>'+
+    '<div style="font-size:24px;font-weight:900;color:#22c55e;margin-bottom:16px">₩'+total.toLocaleString()+'</div>';
+  box.appendChild(header);
+  box.appendChild(grid);
+
+  var counterBtn=document.createElement('button');
+  counterBtn.style.cssText='width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer;margin-bottom:8px';
+  counterBtn.textContent='🏪 카운터에서 결제';
+  counterBtn.onclick=function(){mo.remove();_saveOrderOnly();};
+  box.appendChild(counterBtn);
+
+  var cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='width:100%;padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer';
+  cancelBtn.textContent='취소';
+  cancelBtn.onclick=function(){mo.remove();};
+  box.appendChild(cancelBtn);
+
   mo.appendChild(box);
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   document.body.appendChild(mo);
