@@ -22,10 +22,12 @@ jobs:
       - name: Upload filo.html to KV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 02709cbec18d848913b4246015b9148f
         run: |
-          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          npx wrangler kv key put --namespace-id=$NS_ID "filo.html" --path=filo.html --remote && echo "✅ filo.html OK"
-          npx wrangler kv key put --namespace-id=$NS_ID "filo_backup.html" --path=filo.html --remote && echo "✅ filo_backup.html OK"
+          npm install -g wrangler@4 --silent
+          wrangler kv key put --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b "filo.html" --path=filo.html --remote
+          wrangler kv key put --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b "filo_backup.html" --path=filo.html --remote
+          echo "✅ filo KV 완료"
       - name: Upload settle.html to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
