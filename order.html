@@ -7,91 +7,120 @@
 <title>FILO — 테이블 주문</title>
 <style>
 :root{
-  --bg:#0d0d1a;--surface:#1a1a2e;--surface2:#20203a;--surface3:#262642;
-  --bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.12);
-  --tx:#f2f2ff;--t2:#a0a0c0;--t3:#606080;
-  --br:#7c3aed;--br2:#0891b2;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  --bg:#07071a;--surface:#14142a;--surface2:#1a1a32;--surface3:#20203a;
+  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.12);
+  --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;
+  --br:#7c3aed;--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
   --r:12px;--r-lg:18px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased}
-.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:rgba(13,13,26,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;z-index:100;gap:12px}
-.topbar-logo{font-size:17px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.content{padding:70px 16px 100px}
-.card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
-.btn-brand{background:linear-gradient(135deg,#7c3aed,#9f5ef8);color:#fff;border:none;border-radius:var(--r);padding:14px;width:100%;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.3)}
-.btn-ghost{background:var(--surface2);color:var(--t2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px;width:100%;font-size:13px;font-weight:600;cursor:pointer}
-.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.menu-card{background:var(--surface2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px;text-align:center;cursor:pointer;transition:.2s;position:relative}
-.menu-card:active{transform:scale(.97)}
-.menu-card.selected{border-color:#7c3aed;background:rgba(124,58,237,.1)}
-.menu-card .qty-badge{position:absolute;top:-6px;right:-6px;background:#7c3aed;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
-.cart-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:rgba(13,13,26,.95);backdrop-filter:blur(16px);border-top:1px solid var(--bd)}
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.2)}
-.badge-red{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
-.cat-btn{padding:7px 14px;border:1px solid var(--bd2);border-radius:20px;background:var(--surface2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.2s}
-.cat-btn.active{background:var(--br);color:#fff;border-color:var(--br)}
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.slide-up{animation:slideUp .3s ease both}
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--tx);padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:200;transition:.3s;border:1px solid var(--bd2);white-space:nowrap}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100dvh;-webkit-font-smoothing:antialiased;padding-bottom:140px}
+/* 탑바 */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(7,7,26,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(124,58,237,.12);display:flex;align-items:center;padding:0 16px;z-index:100;gap:10px}
+.logo{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.table-name{font-size:13px;font-weight:700;color:var(--t2)}
+/* 카테고리 */
+.cat-wrap{position:sticky;top:56px;z-index:90;background:rgba(7,7,26,.95);backdrop-filter:blur(16px);padding:10px 16px;border-bottom:1px solid var(--bd);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cat-wrap::-webkit-scrollbar{display:none}
+.cat-btn{padding:7px 16px;border:1px solid var(--bd2);border-radius:20px;background:var(--surface2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.2s;flex-shrink:0}
+.cat-btn.active{background:var(--br);color:#fff;border-color:var(--br);box-shadow:0 2px 12px rgba(124,58,237,.35)}
+/* 메뉴 그리드 */
+.content{padding:16px}
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.menu-card{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);overflow:hidden;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;user-select:none}
+.menu-card:active{transform:scale(.96)}
+.menu-card.selected{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.06);box-shadow:0 0 0 1px rgba(124,58,237,.2)}
+.menu-card.soldout{opacity:.45;pointer-events:none}
+.menu-emoji{font-size:36px;display:block;text-align:center;padding:16px 0 8px}
+.menu-info{padding:0 12px 14px}
+.menu-name{font-size:13px;font-weight:800;margin-bottom:4px;line-height:1.3}
+.menu-price{font-size:14px;font-weight:900;color:#22c55e}
+.menu-soldout{font-size:10px;color:var(--red);margin-top:2px}
+.qty-badge{position:absolute;top:-6px;right:-6px;background:var(--br);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;box-shadow:0 2px 8px rgba(124,58,237,.5);animation:pop .2s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+/* 수량 조절 */
+.qty-ctrl{display:flex;align-items:center;justify-content:center;gap:10px;padding:8px 12px;background:rgba(124,58,237,.1);border-top:1px solid rgba(124,58,237,.15)}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:none;background:var(--br);color:#fff;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.qty-btn:active{transform:scale(.9)}
+.qty-num{font-size:15px;font-weight:900;color:#a78bfa;min-width:20px;text-align:center}
+/* 카트 바 */
+.cart-bar{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 20px;background:rgba(7,7,26,.97);backdrop-filter:blur(20px);border-top:1px solid rgba(124,58,237,.15);box-shadow:0 -4px 32px rgba(0,0,0,.4)}
+.cart-summary{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cart-count{font-size:13px;font-weight:700;color:var(--t2)}
+.cart-total{font-size:20px;font-weight:900;color:#22c55e;letter-spacing:-.5px}
+.btn-order{width:100%;padding:15px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,.4);transition:.2s;letter-spacing:.2px}
+.btn-order:active{transform:scale(.98)}
+.btn-order:disabled{opacity:.5;cursor:not-allowed}
+/* 주문 완료 */
+.success-wrap{text-align:center;padding:60px 20px}
+.success-icon{font-size:64px;margin-bottom:16px;animation:bounce .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes bounce{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+/* 토스트 */
+#toast{position:fixed;bottom:150px;left:50%;transform:translateX(-50%) translateY(60px);background:rgba(20,20,42,.95);backdrop-filter:blur(16px);color:var(--tx);padding:10px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:300;transition:.3s cubic-bezier(.34,1.56,.64,1);border:1px solid var(--bd2);white-space:nowrap}
 #toast.show{transform:translateX(-50%) translateY(0)}
+/* 모달 */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.mo-box{background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:24px 24px 20px 20px;width:100%;max-width:440px;padding:24px;box-shadow:0 -8px 48px rgba(0,0,0,.5);animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+input[type=tel]{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:15px;outline:none;transition:.2s;letter-spacing:.5px}
+input[type=tel]:focus{border-color:var(--br);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .3s ease both}
 </style>
 </head>
 <body>
+
 <div class="topbar">
-  <div class="topbar-logo">FILO</div>
-  <div id="table-label" style="font-size:13px;font-weight:700;color:var(--t2)">로딩 중...</div>
+  <div class="logo">FILO</div>
+  <div class="table-name" id="table-label">로딩 중...</div>
   <div id="status-badge" style="margin-left:auto"></div>
 </div>
 
+<div id="cat-wrap" class="cat-wrap" style="display:none"></div>
+
 <div class="content" id="main-content">
-  <div style="text-align:center;padding:60px 20px;color:var(--t3)">
-    <div style="font-size:32px;margin-bottom:12px">⏳</div>
+  <div style="text-align:center;padding:80px 20px;color:var(--t3)">
+    <div style="font-size:36px;margin-bottom:12px">⏳</div>
     <div>메뉴 불러오는 중...</div>
   </div>
 </div>
 
 <div class="cart-bar" id="cart-bar" style="display:none">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <div style="font-size:13px;font-weight:700">🛒 <span id="cart-count">0</span>개 선택</div>
-    <div style="font-size:16px;font-weight:900;color:#22c55e">₩<span id="cart-total">0</span></div>
+  <div class="cart-summary">
+    <div class="cart-count">🛒 <span id="cart-count">0</span>개 선택</div>
+    <div class="cart-total">₩<span id="cart-total">0</span></div>
   </div>
-  <button class="btn-brand" onclick="_orderSubmit()">주문하기</button>
+  <button class="btn-order" onclick="_orderSubmit()" id="order-btn">주문하기</button>
 </div>
 
 <div id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-var _db=null,_cartItems={},_allMenus=[],_did='',_tid='',_tName='';
+var _db=null,_cart={},_menus=[],_did='',_tid='',_tName='',_activeCat='전체';
 
 function _init(){
   var cfg={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'862900137263',appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'};
   firebase.initializeApp(cfg);
   _db=firebase.firestore();
 
-  var params=new URLSearchParams(location.search);
-  _did=params.get('did')||'';
-  _tid=params.get('tid')||'';
-  _tName=_tid?'테이블 '+_tid:'포장';
+  var p=new URLSearchParams(location.search);
+  _did=p.get('did')||'';
+  _tid=p.get('tid')||'';
+  _tName=_tid?'테이블 '+_tid:'카운터';
 
   document.getElementById('table-label').textContent=_tName;
 
   if(!_did){
-    document.getElementById('main-content').innerHTML='<div style="text-align:center;padding:60px;color:var(--t3)"><div style="font-size:32px">❌</div><div style="margin-top:12px">잘못된 QR 코드입니다</div></div>';
+    document.getElementById('main-content').innerHTML='<div style="text-align:center;padding:80px;color:var(--t3)"><div style="font-size:40px">❌</div><div style="margin-top:12px">잘못된 QR 코드입니다</div></div>';
     return;
   }
 
-  /* 테이블 상태 occupied로 변경 */
+  /* 테이블 occupied 처리 */
   if(_tid){
     _db.collection('filo_tables').where('dealerId','==',_did).where('tableId','==',parseInt(_tid)).get().then(function(snap){
-      if(!snap.empty){
-        snap.docs[0].ref.update({status:'occupied',since:new Date().toISOString()});
-      }
+      if(!snap.empty) snap.docs[0].ref.update({status:'occupied',since:new Date().toISOString()});
     });
   }
 
@@ -99,85 +128,110 @@ function _init(){
 }
 
 function _loadMenus(){
+  /* filo_menus 먼저, 없으면 inventory fallback */
   _db.collection('filo_menus').where('dealerId','==',_did).get().then(function(snap){
-    _allMenus=[];
-    snap.forEach(function(doc){_allMenus.push(Object.assign({_id:doc.id},doc.data()));});
-
-    if(!_allMenus.length){
-      /* filo_menus 없으면 menu_costs에서 */
-      return _db.collection('menu_costs').where('dealerId','==',_did).get().then(function(snap2){
-        snap2.forEach(function(doc){
-          var d=doc.data();
-          _allMenus.push({_id:doc.id,name:d.name,price:d.price||0,category:'전체',emoji:'🍽'});
-        });
-        _renderMenus();
-      });
-    }
-    _renderMenus();
+    _menus=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.name&&d.price&&d.forSale!==false) _menus.push(Object.assign({_id:doc.id},d));
+    });
+    if(_menus.length){_renderAll();return;}
+    return _db.collection('inventory').where('dealerId','==',_did).get();
+  }).then(function(snap){
+    if(!snap)return;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.name&&d.price&&d.forSale!==false) _menus.push(Object.assign({_id:doc.id},d));
+    });
+    _renderAll();
+  }).catch(function(e){
+    document.getElementById('main-content').innerHTML='<div style="text-align:center;padding:60px;color:var(--t3)">메뉴를 불러올 수 없습니다</div>';
   });
 }
 
-function _renderMenus(){
-  var content=document.getElementById('main-content');
-  if(!_allMenus.length){
-    content.innerHTML='<div style="text-align:center;padding:60px;color:var(--t3)"><div style="font-size:40px">🍽</div><div style="margin-top:12px">등록된 메뉴가 없습니다</div></div>';
+function _renderAll(){
+  if(!_menus.length){
+    document.getElementById('main-content').innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--t3)"><div style="font-size:40px">🍽</div><div style="margin-top:12px">등록된 메뉴가 없습니다</div></div>';
     return;
   }
 
   /* 카테고리 */
-  var cats=['전체',...new Set(_allMenus.map(function(m){return m.category||'기타';}))];
-  var activeCat='전체';
+  var cats=['전체',...new Set(_menus.map(function(m){return m.category||'기타';}))];
+  var catWrap=document.getElementById('cat-wrap');
+  catWrap.style.display='flex';
+  catWrap.innerHTML=cats.map(function(c){
+    return '<button class="cat-btn'+(c===_activeCat?' active':'')+'" onclick="_setCat(\''+c+'\')" data-cat="'+c+'">'+c+'</button>';
+  }).join('');
 
-  function render(cat){
-    activeCat=cat;
-    var filtered=cat==='전체'?_allMenus:_allMenus.filter(function(m){return (m.category||'기타')===cat;});
-    var menuHtml=filtered.map(function(m){
-      var qty=_cartItems[m._id]?_cartItems[m._id].qty:0;
-      return '<div class="menu-card'+(qty>0?' selected':'')+'" onclick="_toggleMenu(\''+m._id+'\',\''+esc(m.name)+'\','+m.price+')">'+
+  _renderMenus();
+}
+
+function _setCat(cat){
+  _activeCat=cat;
+  document.querySelectorAll('.cat-btn').forEach(function(b){
+    b.className='cat-btn'+(b.dataset.cat===cat?' active':'');
+  });
+  _renderMenus();
+}
+
+function _renderMenus(){
+  var filtered=_activeCat==='전체'?_menus:_menus.filter(function(m){return (m.category||'기타')===_activeCat;});
+  var html=filtered.map(function(m){
+    var qty=_cart[m._id]?_cart[m._id].qty:0;
+    var soldout=m.stock!=null&&m.stock<=0;
+    return '<div class="menu-card'+(qty>0?' selected':'')+(soldout?' soldout':'')+'" onclick="_addMenu(\''+m._id+'\',\''+esc(m.name)+'\','+m.price+')" data-id="'+m._id+'">'+
       (qty>0?'<div class="qty-badge">'+qty+'</div>':'')+
-      '<div style="font-size:28px;margin-bottom:8px">'+(m.emoji||'🍽')+'</div>'+
-      '<div style="font-size:13px;font-weight:800;margin-bottom:4px">'+esc(m.name)+'</div>'+
-      '<div style="font-size:13px;font-weight:900;color:#22c55e">₩'+Number(m.price||0).toLocaleString()+'</div>'+
-      (m.stock!=null&&m.stock<=0?'<div style="font-size:10px;color:#ef4444;margin-top:4px">품절</div>':'')+
-      '</div>';
-    }).join('');
-
-    var catHtml=cats.map(function(c){
-      return '<button class="cat-btn'+(c===activeCat?' active':'')+'" onclick="_renderCat(\''+c+'\')">'+c+'</button>';
-    }).join('');
-
-    content.innerHTML=
-    '<div style="overflow-x:auto;display:flex;gap:8px;margin-bottom:16px;padding-bottom:4px">'+catHtml+'</div>'+
-    '<div class="menu-grid slide-up">'+menuHtml+'</div>';
-  }
-
-  window._renderCat=function(cat){render(cat);};
-  render('전체');
+      '<span class="menu-emoji">'+(m.emoji||'🍽')+'</span>'+
+      '<div class="menu-info">'+
+      '<div class="menu-name">'+esc(m.name)+'</div>'+
+      '<div class="menu-price">₩'+Number(m.price||0).toLocaleString()+'</div>'+
+      (soldout?'<div class="menu-soldout">품절</div>':'')+
+      '</div>'+
+      (qty>0?
+      '<div class="qty-ctrl" onclick="event.stopPropagation()">'+
+      '<button class="qty-btn" onclick="_decMenu(\''+m._id+'\')">−</button>'+
+      '<span class="qty-num">'+qty+'</span>'+
+      '<button class="qty-btn" onclick="_addMenu(\''+m._id+'\',\''+esc(m.name)+'\','+m.price+')">+</button>'+
+      '</div>':'')
+      +'</div>';
+  }).join('');
+  document.getElementById('main-content').innerHTML='<div class="menu-grid fade-up">'+html+'</div>';
 }
 
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
 
-function _toggleMenu(id,name,price){
-  if(!_cartItems[id]){_cartItems[id]={name:name,price:price,qty:1};}
-  else{_cartItems[id].qty++;} 
+function _addMenu(id,name,price){
+  if(!_cart[id]) _cart[id]={name:name,price:price,qty:0};
+  _cart[id].qty++;
+  _updateCart();
+  _renderMenus();
+}
+
+function _decMenu(id){
+  if(!_cart[id])return;
+  _cart[id].qty--;
+  if(_cart[id].qty<=0) delete _cart[id];
   _updateCart();
   _renderMenus();
 }
 
 function _updateCart(){
   var total=0,count=0;
-  Object.values(_cartItems).forEach(function(it){total+=it.price*it.qty;count+=it.qty;});
+  Object.values(_cart).forEach(function(it){total+=it.price*it.qty;count+=it.qty;});
   document.getElementById('cart-count').textContent=count;
   document.getElementById('cart-total').textContent=total.toLocaleString();
-  document.getElementById('cart-bar').style.display=count>0?'block':'none';
+  document.getElementById('cart-bar').style.display=count>0?'flex':'none';
+  document.getElementById('cart-bar').style.flexDirection='column';
 }
 
 function _orderSubmit(){
-  var items=Object.values(_cartItems).filter(function(it){return it.qty>0;});
-  if(!items.length){return;}
+  var items=Object.values(_cart).filter(function(it){return it.qty>0;});
+  if(!items.length)return;
   var total=items.reduce(function(s,it){return s+it.price*it.qty;},0);
-  var now=new Date();
+  var btn=document.getElementById('order-btn');
+  btn.disabled=true;btn.textContent='주문 중...';
 
+  var now=new Date();
   _db.collection('filo_sales').add({
     dealerId:_did,
     tableId:_tid?parseInt(_tid):null,
@@ -186,62 +240,72 @@ function _orderSubmit(){
     total:total,
     status:'pending',
     type:'table',
+    source:'qr',
     createdAt:now.toISOString(),
     date:now.toISOString().slice(0,10)
   }).then(function(){
-    _cartItems={};
+    _cart={};
     _updateCart();
-    _renderMenus();
-    _showToast('✅ 주문이 접수됐습니다!');
-    document.getElementById('status-badge').innerHTML='<span class="badge badge-green">주문 완료</span>';
-    _askReceipt(items, total);
-  }).catch(function(e){_showToast('❌ '+e.message);});
+    _showSuccess(items,total);
+  }).catch(function(e){
+    _showToast('❌ 오류: '+e.message);
+    btn.disabled=false;btn.textContent='주문하기';
+  });
 }
 
-function _askReceipt(items, total){
-  var mo=document.createElement('div');
-  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:200;display:flex;align-items:flex-end;justify-content:center;padding:20px';
-  var box=document.createElement('div');
-  box.style.cssText='background:#18182e;border:1px solid rgba(255,255,255,.1);border-radius:24px 24px 20px 20px;width:100%;max-width:420px;padding:24px;box-shadow:0 -8px 40px rgba(0,0,0,.4)';
-  box.innerHTML='<div style="font-size:15px;font-weight:900;text-align:center;margin-bottom:6px">📱 영수증 받기</div>'+
-  '<div style="font-size:12px;color:#a0a0c0;text-align:center;margin-bottom:16px">카카오톡으로 영수증을 받으시겠어요?</div>'+
-  '<div style="margin-bottom:12px"><label style="font-size:10px;color:#606080;font-weight:700;display:block;margin-bottom:6px">휴대폰 번호</label>'+
-  '<input id="receipt-phone-order" type="tel" placeholder="010-0000-0000" style="width:100%;padding:12px 14px;background:#1e1e36;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f2f2ff;font-size:15px;outline:none;letter-spacing:1px"></div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<button id="skip-receipt" style="flex:1;padding:12px;background:#1e1e36;border:none;border-radius:12px;color:#a0a0c0;font-size:13px;cursor:pointer">건너뛰기</button>'+
-  '<button id="send-receipt" style="flex:2;padding:12px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:12px;color:#000;font-size:13px;font-weight:800;cursor:pointer">📨 발송</button>'+
-  '</div>';
-  var phoneInp=box.querySelector('#receipt-phone-order');
-  phoneInp.oninput=function(){var v=this.value.replace(/[^0-9]/g,'');if(v.length>=8)v=v.substring(0,3)+'-'+v.substring(3,7)+'-'+v.substring(7,11);this.value=v;};
-  box.querySelector('#skip-receipt').onclick=function(){mo.remove();};
-  box.querySelector('#send-receipt').onclick=function(){
-    var phone=phoneInp.value.replace(/-/g,'');
-    if(phone.length<10){_showToast('연락처를 입력해 주세요');return;}
-    _sendReceiptAlimtalk(phone, items, total);
-    mo.remove();
-  };
+function _showSuccess(items,total){
+  document.getElementById('cat-wrap').style.display='none';
+  document.getElementById('main-content').innerHTML=
+    '<div class="success-wrap fade-up">'+
+    '<div class="success-icon">✅</div>'+
+    '<div style="font-size:20px;font-weight:900;margin-bottom:8px">주문 완료!</div>'+
+    '<div style="font-size:14px;color:var(--t2);margin-bottom:20px">'+_tName+' · 잠시 후 준비됩니다</div>'+
+    '<div style="background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px;text-align:left;margin-bottom:20px">'+
+    items.map(function(it){return '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--bd)"><span>'+it.name+' x'+it.qty+'</span><span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span></div>';}).join('')+
+    '<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:15px;font-weight:900"><span>합계</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div>'+
+    '</div>'+
+    '<button onclick="_askReceipt()" style="width:100%;padding:13px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:var(--r);color:#000;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">📱 카카오로 영수증 받기</button>'+
+    '<button onclick="location.reload()" style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer">추가 주문하기</button>'+
+    '</div>';
+  window._lastItems=items;window._lastTotal=total;
+}
+
+function _askReceipt(){
+  var mo=document.createElement('div');mo.className='mo';
+  var box=document.createElement('div');box.className='mo-box';
+  box.innerHTML=
+    '<div style="font-size:16px;font-weight:900;text-align:center;margin-bottom:6px">📱 카카오 영수증</div>'+
+    '<div style="font-size:12px;color:var(--t2);text-align:center;margin-bottom:16px">카카오톡으로 영수증을 받으세요</div>'+
+    '<label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">휴대폰 번호</label>'+
+    '<input type="tel" id="rp-phone" placeholder="010-0000-0000" style="margin-bottom:14px">'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="this.closest(\'.mo\').remove()" style="flex:1;padding:12px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer">건너뛰기</button>'+
+    '<button onclick="_sendReceipt()" style="flex:2;padding:12px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:var(--r);color:#000;font-size:13px;font-weight:800;cursor:pointer">📨 발송</button>'+
+    '</div>';
+  var inp=box.querySelector('#rp-phone');
+  inp.oninput=function(){var v=this.value.replace(/[^0-9]/g,'');if(v.length>=8)v=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);this.value=v;};
   mo.appendChild(box);
   mo.onclick=function(e){if(e.target===mo)mo.remove();};
   document.body.appendChild(mo);
-  setTimeout(function(){phoneInp.focus();},200);
+  setTimeout(function(){inp.focus();},100);
 }
 
-function _sendReceiptAlimtalk(phone, items, total){
+function _sendReceipt(){
+  var phone=document.getElementById('rp-phone').value.replace(/-/g,'');
+  if(phone.length<10){_showToast('연락처를 입력해 주세요');return;}
+  var items=window._lastItems||[];
+  var total=window._lastTotal||0;
   var now=new Date();
   var kst=new Date(now.getTime()+9*3600000);
   var dateStr=(kst.getUTCMonth()+1)+'/'+kst.getUTCDate()+' '+kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
   _db.collection('alimtalk_queue').add({
     type:'filo_receipt',phone:phone,dealerId:_did,
-    templateData:{
-      date:dateStr,
-      table:_tName,
-      items:items.map(function(it){return it.name+' x'+it.qty+' ₩'+(it.price*it.qty).toLocaleString();}).join(', '),
-      total:'₩'+total.toLocaleString(),
-      method:'테이블 주문'
-    },
+    templateData:{date:dateStr,table:_tName,items:items.map(function(it){return it.name+' x'+it.qty;}).join(', '),total:'₩'+total.toLocaleString(),method:'테이블 주문'},
     createdAt:now.toISOString(),status:'pending'
-  }).then(function(){_showToast('✅ 알림톡 발송됩니다!');})
-  .catch(function(e){_showToast('❌ '+e.message);});
+  }).then(function(){
+    _showToast('✅ 알림톡 발송됩니다!');
+    document.querySelector('.mo').remove();
+  }).catch(function(e){_showToast('❌ '+e.message);});
 }
 
 function _showToast(msg){
