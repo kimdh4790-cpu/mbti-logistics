@@ -235,28 +235,94 @@ function _orderSubmit(){
   var items=Object.values(_cart).filter(function(it){return it.qty>0;});
   if(!items.length)return;
   var total=items.reduce(function(s,it){return s+it.price*it.qty;},0);
-  var btn=document.getElementById('order-btn');
-  btn.disabled=true;btn.textContent='주문 중...';
+  _showPayModal(items,total);
+}
 
+function _showPayModal(items,total){
+  var mo=document.createElement('div');mo.className='mo';
+  var box=document.createElement('div');box.className='mo-box';
+  var methods=[{k:'카드',ic:'💳'},{k:'카카오페이',ic:'🟡'},{k:'네이버페이',ic:'🟢'},{k:'현금',ic:'💵'}];
+  var itemsJson=JSON.stringify(items).replace(/'/g,"\\'");
+  box.innerHTML=
+    '<div style="font-size:16px;font-weight:900;margin-bottom:6px">💳 결제 수단 선택</div>'+
+    '<div style="font-size:22px;font-weight:900;color:#22c55e;margin-bottom:16px">₩'+total.toLocaleString()+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
+    methods.map(function(m){
+      return '<button onclick="window._payMethod=\''+m.k+'\';window._payItems='+JSON.stringify(items)+';window._payTotal='+total+';document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_payWithToss();" '+
+        'style="padding:16px 8px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;text-align:center">'+
+        '<div style="font-size:24px;margin-bottom:4px">'+m.ic+'</div>'+
+        '<div style="font-size:12px;font-weight:700">'+m.k+'</div></button>';
+    }).join('')+
+    '</div>'+
+    '<button onclick="window._payItems='+JSON.stringify(items)+';window._payTotal='+total+';document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_saveOrderOnly();" '+
+      'style="width:100%;padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--t2);font-size:13px;cursor:pointer;margin-bottom:8px">🏪 카운터에서 결제</button>'+
+    '<button onclick="this.closest(\'.mo\').remove()" style="width:100%;padding:10px;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer">취소</button>';
+  mo.appendChild(box);
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+}
+
+function _payWithToss(){
+  var method=window._payMethod||'카드';
+  var items=window._payItems||[];
+  var total=window._payTotal||0;
+  var orderId='FILO-'+Date.now();
+  var orderName=items[0]?items[0].name+(items.length>1?' 외 '+(items.length-1)+'건':''):'주문';
+  var btn=document.getElementById('order-btn');
+  btn.disabled=true;btn.textContent='결제 중...';
+
+  if(!window.TossPayments){
+    var s=document.createElement('script');
+    s.src='https://js.tosspayments.com/v1/payment';
+    s.onload=function(){_tossCheckout(method,orderId,orderName,total,items);};
+    s.onerror=function(){
+      _showToast('결제 모듈 로드 실패. 카운터에서 결제해 주세요.');
+      btn.disabled=false;btn.textContent='주문하기';
+    };
+    document.head.appendChild(s);
+  } else {
+    _tossCheckout(method,orderId,orderName,total,items);
+  }
+}
+
+function _tossCheckout(method,orderId,orderName,total,items){
+  var tossPayments=window.TossPayments('test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eo2');
   var now=new Date();
   _db.collection('filo_sales').add({
-    dealerId:_did,
-    tableId:_tid?parseInt(_tid):null,
-    tableName:_tName,
+    dealerId:_did,tableId:_tid?parseInt(_tid):null,tableName:_tName,
     items:items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
-    total:total,
-    status:'pending',
-    type:'table',
-    source:'qr',
-    createdAt:now.toISOString(),
-    date:now.toISOString().slice(0,10)
-  }).then(function(){
-    _cart={};
-    _updateCart();
-    _showSuccess(items,total);
+    total:total,status:'pending',type:'table',source:'qr',
+    orderId:orderId,payMethod:method,
+    createdAt:now.toISOString(),date:now.toISOString().slice(0,10)
+  }).then(function(ref){
+    return tossPayments.requestPayment(method,{
+      amount:total,orderId:orderId,orderName:orderName,customerName:_tName,
+      successUrl:location.protocol+'//'+location.host+'/order?did='+_did+'&tid='+_tid+'&paid='+ref.id,
+      failUrl:location.href
+    });
   }).catch(function(e){
-    console.error('주문 오류:',e);
-    _showToast('❌ 오류: '+e.message);
+    if(e.code==='USER_CANCEL'){_showToast('결제를 취소했습니다.');}
+    else{_showToast('❌ '+e.message);}
+    var btn=document.getElementById('order-btn');
+    if(btn){btn.disabled=false;btn.textContent='주문하기';}
+  });
+}
+
+function _saveOrderOnly(){
+  var items=window._payItems||[];
+  var total=window._payTotal||0;
+  var btn=document.getElementById('order-btn');
+  btn.disabled=true;btn.textContent='주문 중...';
+  var now=new Date();
+  _db.collection('filo_sales').add({
+    dealerId:_did,tableId:_tid?parseInt(_tid):null,tableName:_tName,
+    items:items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
+    total:total,status:'pending',type:'table',source:'qr',payMethod:'카운터결제',
+    createdAt:now.toISOString(),date:now.toISOString().slice(0,10)
+  }).then(function(){
+    _cart={};_updateCart();_showSuccess(items,total);
+  }).catch(function(e){
+    _showToast('❌ '+e.message);
     btn.disabled=false;btn.textContent='주문하기';
   });
 }
