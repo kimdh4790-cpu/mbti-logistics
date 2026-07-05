@@ -1248,6 +1248,15 @@ function _toggleSidebar(){
 }
 
 function _filoGoPage(p){
+ /* 사이드바 자동 닫기 */
+ var sb=document.getElementById('sidebar');
+ var btn=document.getElementById('sidebar-toggle');
+ var ov=document.getElementById('sidebar-overlay');
+ if(sb&&sb.classList.contains('open')){
+  sb.classList.remove('open');
+  if(btn)btn.textContent='☰';
+  if(ov)ov.style.display='none';
+ }
  document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');});
  var nav=document.getElementById('nav-'+p);
  if(nav)nav.classList.add('on');
