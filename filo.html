@@ -114,9 +114,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%)}
   #sidebar.open{transform:translateX(0)}
-  #content-wrap{margin-left:0}
-  #content{padding:14px}
+  #content-wrap{margin-left:0!important;width:100%!important}
+  #content{margin-left:0!important;width:100%!important;padding:12px!important}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
+  .pos-wrap{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;overflow:visible!important}
+  .cart-panel{max-height:50dvh!important;overflow-y:auto!important}
+  .menu-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr))!important}
+  .cat-scroll{display:flex!important;overflow-x:auto!important;gap:6px!important;padding-bottom:6px!important;flex-wrap:nowrap!important}
+  .modal-inner{max-height:90dvh!important;overflow-y:auto!important}
+  .section-header{flex-wrap:wrap!important;gap:8px!important}
+  table{font-size:11px!important}
+  .pay-card{flex-direction:column!important}
 }
 
 /* ── 카드 컴포넌트 ── */
