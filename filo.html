@@ -3121,13 +3121,20 @@ function _filoImportMenuExcel(input){
    });
    if(!batch.length){alert('유효한 메뉴가 없습니다.');return;}
    var db=firebase.firestore();
-   var bw=db.batch();
-   batch.forEach(function(m){
-    var ref=db.collection('inventory').doc();
-    bw.set(ref,m);
-   });
-   bw.commit().then(function(){
-    alert(batch.length+'개 메뉴 등록 완료!');
+   /* 기존 filo_menus 삭제 후 재등록 */
+   db.collection('filo_menus').where('dealerId','==',did).get().then(function(old){
+    var bwD=db.batch();
+    old.forEach(function(oc){bwD.delete(oc.ref);});
+    return bwD.commit();
+   }).then(function(){
+    var bw2=db.batch();
+    batch.forEach(function(m){
+     var ref=db.collection('filo_menus').doc();
+     bw2.set(ref,m);
+    });
+    return bw2.commit();
+   }).then(function(){
+    alert(batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다.');
     _filoPageKiosk(document.getElementById('content'));
    }).catch(function(e){alert('저장 오류: '+e.message);});
   }catch(e){alert('파일 읽기 오류: '+e.message);}
