@@ -1369,10 +1369,9 @@ function _filoPageHome(el){
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🪑',l:'테이블',p:'table_mgmt'},
- {ic:'📊',l:'매출분석',p:'sales_report'},{ic:'📦',l:'재고',p:'inventory'},{ic:'📥',l:'입고',p:'stock_in'},
- {ic:'📤',l:'출고',p:'stock_out'},{ic:'⏰',l:'유통기한',p:'expiry'},{ic:'🔐',l:'QR출퇴근',p:'attendance'},
- {ic:'💼',l:'급여',p:'payroll'},{ic:'🎁',l:'회원QR',p:'member_qr'},{ic:'⚙️',l:'설정',p:'settings'}].map(function(m){
+ [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🛵',l:'배달',p:'delivery'},
+ {ic:'📊',l:'재고',p:'inventory'},{ic:'🍽',l:'레시피',p:'recipe'},{ic:'📈',l:'매출',p:'sales_report'},
+ {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🗓',l:'예약',p:'schedule'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
  '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
