@@ -167,7 +167,7 @@ service cloud.firestore {
         );
       }
     }
-    match /inventory/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /inventory/{docId}               { allow read: if canRead() || resource.data.dealerId != null; allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /inventory_in/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /inventory_out/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /mbetco_sales/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
