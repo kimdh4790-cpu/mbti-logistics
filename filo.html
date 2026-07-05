@@ -1615,7 +1615,7 @@ var SUPER_ADMIN_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
 window.addEventListener('DOMContentLoaded',function(){_initFirebase();});
 function _filoPageSales(el){
- var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
  var today=new Date().toISOString().slice(0,10);
  var ym=today.slice(0,7);
@@ -1679,7 +1679,7 @@ function _filoMgTab(idx){
   var b=document.getElementById('mgt-'+i);
   if(b){b.style.background=i===idx?'var(--br)':'var(--b3)';b.style.color=i===idx?'#fff':'var(--t2)';}
  });
- var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  var ymEl=document.getElementById('mg-ym');
  var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
  if(idx===0)_filoRenderMarginAnalysis(did,ym);
@@ -1692,7 +1692,7 @@ function _filoMgTab(idx){
 var _marginUnsub=null,_marginCostMap={},_marginDid='';
 
 function _filoMarginLoad(){
- var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did)return;
  _marginDid=did;
  var ymEl=document.getElementById('mg-ym');
@@ -2117,7 +2117,7 @@ function _filoRenderInsights(did,ym){
 }
 
 function _filoPageExpiry(el){
- var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
  var today=new Date().toISOString().slice(0,10);
@@ -2186,7 +2186,7 @@ window._filoExpSave=function(did){
 };
 
 function _filoPageInventory(el){
- var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
  el.innerHTML='<div style="max-width:900px;margin:0 auto"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">'+
  ['오늘 매출','거래건수','재고 부족','마진율'].map(function(t,i){
