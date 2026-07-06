@@ -150,7 +150,7 @@ select.inp option{background:var(--s2)}
   <div id="pane-staff" style="display:none">
    <div class="input-group" style="text-align:left"><label>이름 *</label><input id="st-name" class="inp" placeholder="홍길동"></div>
    <div class="input-group" style="text-align:left"><label>연락처 *</label><input id="st-phone" class="inp" type="tel" placeholder="010-0000-0000"></div>
-   <div class="input-group" style="text-align:left"><label>매장 코드 *</label><input id="st-code" class="inp" placeholder="매장에서 받은 코드 입력"></div>
+   <div class="input-group" style="text-align:left"><label>매장명 *</label><input id="st-code" class="inp" placeholder="예) 홍길동치킨 강남점"></div>
    <div class="input-group" style="text-align:left"><label>비밀번호 * (6자 이상)</label><input id="st-pw" class="inp" type="password" placeholder="비밀번호 설정"></div>
    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="_dineStaffJoin()">직원 가입</button>
    <div id="st-err" style="font-size:11px;color:var(--rd);margin-top:8px;min-height:16px"></div>
@@ -160,7 +160,7 @@ select.inp option{background:var(--s2)}
    <div class="input-group" style="text-align:left"><label>이름 *</label><input id="mb-reg-name" class="inp" placeholder="홍길동"></div>
    <div class="input-group" style="text-align:left"><label>연락처 *</label><input id="mb-reg-phone" class="inp" type="tel" placeholder="010-0000-0000"></div>
    <div class="input-group" style="text-align:left"><label>생년월일</label><input id="mb-reg-birth" class="inp" type="date"></div>
-   <div class="input-group" style="text-align:left"><label>매장 코드 *</label><input id="mb-reg-code" class="inp" placeholder="매장에서 받은 코드 입력"></div>
+   <div class="input-group" style="text-align:left"><label>매장명 *</label><input id="mb-reg-code" class="inp" placeholder="예) 홍길동치킨 강남점"></div>
    <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="_dineMemberJoin()">회원 등록</button>
    <div id="mb-reg-err" style="font-size:11px;color:var(--rd);margin-top:8px;min-height:16px"></div>
   </div>
@@ -281,10 +281,21 @@ function _dineStaffJoin(){
  /* 매장 코드로 companies 조회 */
  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code}}},limit:1}})
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'companyName'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
  }).then(function(r){return r.json();}).then(function(rows){
-  var co=rows&&rows[0]&&rows[0].document;
-  if(!co){err.textContent='매장 코드를 확인해주세요';return;}
+  var docs=(rows||[]).filter(function(r){return r.document;});
+  if(!docs.length){
+   /* companyName 없으면 name 필드로 재시도 */
+   return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
+   }).then(function(r){return r.json();});
+  }
+  return rows;
+ }).then(function(rows){
+  var docs=(rows||[]).filter(function(r){return r.document;});
+  var co=docs[0]&&docs[0].document;
+  if(!co){err.textContent='매장을 찾을 수 없습니다. 매장명을 정확히 입력해주세요';return;}
   var did=co.name.split('/').pop();
   var coName=(co.fields.companyName||co.fields.name||{}).stringValue||'';
   /* Firebase Auth 계정 생성 */
@@ -323,10 +334,11 @@ function _dineMemberJoin(){
  err.textContent='처리 중...';
  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code}}},limit:1}})
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'companyName'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
  }).then(function(r){return r.json();}).then(function(rows){
-  var co=rows&&rows[0]&&rows[0].document;
-  if(!co){err.textContent='매장 코드를 확인해주세요';return;}
+  var docs=(rows||[]).filter(function(r){return r.document;});
+  var co=docs[0]&&docs[0].document;
+  if(!co){err.textContent='매장을 찾을 수 없습니다. 매장명을 정확히 입력해주세요';return;}
   var did=co.name.split('/').pop();
   /* filo_customers에 저장 */
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_customers',{
