@@ -176,6 +176,7 @@ select.inp option{background:var(--s2)}
   <div class="tb-right">
    <div class="attend-live"><span class="live-dot"></span><span id="tb-attend-cnt">0명 출근중</span></div>
    <div class="tb-user" id="tb-user-name"></div>
+   <button onclick="_dineGoFilo()" style="padding:5px 10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">📦 FILO</button>
    <button class="tb-logout btn" onclick="_dineLogout()">로그아웃</button>
   </div>
  </div>
@@ -489,6 +490,14 @@ function _dineLogin(){
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
 document.getElementById('li-pw').addEventListener('keydown',function(e){if(e.key==='Enter')_dineLogin();});
+
+function _dineGoFilo(){
+ var slug=(_CU&&_CU.dineSlug)||(_CU&&_CU.dealerId)||'';
+ var storeName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'';
+ // slug 있으면 filo.ai.kr/slug, 없으면 filo.ai.kr/app
+ var url=slug?'https://filo.ai.kr/'+encodeURIComponent(slug):'https://filo.ai.kr/app';
+ window.open(url,'_blank');
+}
 
 function _dineLogout(){
  if(!confirm('로그아웃하시겠습니까?'))return;
