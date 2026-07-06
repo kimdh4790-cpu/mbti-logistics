@@ -131,7 +131,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
   #sidebar.open{transform:translateX(0);box-shadow:4px 0 32px rgba(0,0,0,.5)}
   #content-wrap{margin-left:0!important;width:100%!important}
   #content{margin-left:0!important;width:100%!important;padding:12px!important}
-  #app{display:block!important}
+  #app.logged-in{display:block!important}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
   .pos-wrap{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;overflow:visible!important}
   .cart-panel{max-height:50dvh!important;overflow-y:auto!important}
@@ -1136,7 +1136,7 @@ function _initFirebase(){
  } else {
  _CU=null;
  document.getElementById('login-screen').style.display='flex';
- document.getElementById('app').style.display='none';
+ var _appEl2=document.getElementById('app');_appEl2.style.display='none';_appEl2.classList.remove('logged-in');
  }
  });
  }catch(e){console.error('Firebase init:',e);}
@@ -1168,8 +1168,8 @@ function _loadCompany(uid){
 
 function _showApp(){
  document.getElementById('login-screen').style.display='none';
- document.getElementById('app').style.display='flex';
- /* 사이드바 상태 복원 */
+ document.getElementById('login-screen').style.display='none';
+ var _appEl=document.getElementById('app');_appEl.style.display='flex';_appEl.classList.add('logged-in');
  if(window.innerWidth<=768){
   var sb=document.getElementById('sidebar');
   if(sb)sb.classList.remove('open');
