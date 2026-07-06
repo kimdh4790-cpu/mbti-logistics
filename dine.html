@@ -110,6 +110,17 @@ select.inp option{background:var(--s2)}
  :root{--sidebar-w:0px}
  #sidebar{display:none}
  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+ #app-wrap{height:auto!important;min-height:100vh}
+ #main-wrap{overflow:visible!important;height:auto!important}
+ #content{overflow-y:visible!important;height:auto!important;min-height:calc(100vh - 56px);padding:16px}
+ html,body{overflow:auto!important;height:auto!important}
+ .ana-kpi{padding:14px!important}
+ .ana-kpi .num{font-size:18px!important}
+ [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+ [style*="grid-template-columns:3fr 2fr"]{grid-template-columns:1fr!important}
+ [style*="grid-template-columns:2fr 1fr"]{grid-template-columns:1fr!important}
+ [style*="grid-template-columns:3fr 1fr 1fr"]{grid-template-columns:1fr!important}
+ [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
 }
 
 /* ── 로그인 화면 ── */
