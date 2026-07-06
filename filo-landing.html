@@ -181,8 +181,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
       <div class="demo-chip">⚡ 피크 <strong>18시</strong></div>
     </div>
   </div>
-  <div class="scroll-hint" onclick="goSlide(1)">
-    <div class="scroll-arrow"></div>
+  
     <span>SCROLL</span>
   </div>
 </section>
@@ -217,7 +216,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
       </div>
     </div>
   </div>
-  <div class="scroll-hint" onclick="goSlide(2)"><div class="scroll-arrow"></div><span>NEXT</span></div>
+  <span>NEXT</span></div>
 </section>
 
 <!-- S3: 재고 + 직원관리 -->
@@ -263,7 +262,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
       </div>
     </div>
   </div>
-  <div class="scroll-hint" onclick="goSlide(3)"><div class="scroll-arrow"></div><span>NEXT</span></div>
+  <span>NEXT</span></div>
 </section>
 
 <!-- S4: 회원 + 매출분석 -->
@@ -303,7 +302,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
       </div>
     </div>
   </div>
-  <div class="scroll-hint" onclick="goSlide(4)"><div class="scroll-arrow"></div><span>NEXT</span></div>
+  <span>NEXT</span></div>
 </section>
 
 <!-- S5: 비교 + CTA -->
@@ -325,7 +324,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
         <div class="compare-row" style="color:#a78bfa;font-weight:900;font-size:14px">9만원~</div>
       </div>
       <div class="compare-col">
-        <div class="compare-head" style="color:var(--t2)">토스POS</div>
+        <div class="compare-head" style="color:var(--t2)">타사 A</div>
         <div class="compare-row"><span class="ck">✓</span></div>
         <div class="compare-row"><span class="pk">△ 일부</span></div>
         <div class="compare-row"><span class="xk">✕</span></div>
@@ -335,7 +334,7 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
         <div class="compare-row other">수수료</div>
       </div>
       <div class="compare-col">
-        <div class="compare-head" style="color:var(--t3)">기존 포스기</div>
+        <div class="compare-head" style="color:var(--t3)">타사 B</div>
         <div class="compare-row"><span class="ck">✓</span></div>
         <div class="compare-row"><span class="pk">△ 유료</span></div>
         <div class="compare-row"><span class="xk">✕</span></div>
@@ -358,6 +357,30 @@ nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);
   </div>
 </section>
 
+<!-- 좌우(상하) 화살표 네비 -->
+<div id="nav-prev" onclick="goSlide(Math.max(curSlide-1,0))"
+ style="position:fixed;left:50%;bottom:40px;transform:translateX(calc(-50% - 36px));
+  width:44px;height:44px;border-radius:50%;background:rgba(124,58,237,.15);
+  border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;z-index:101;transition:.2s;backdrop-filter:blur(8px)"
+ onmouseover="this.style.background='rgba(124,58,237,.3)'"
+ onmouseout="this.style.background='rgba(124,58,237,.15)'">
+ <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+  <path d="M10 11L5 7L10 3" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+ </svg>
+</div>
+<div id="nav-next" onclick="goSlide(Math.min(curSlide+1,slides.length-1))"
+ style="position:fixed;left:50%;bottom:40px;transform:translateX(calc(-50% + 36px));
+  width:44px;height:44px;border-radius:50%;background:rgba(124,58,237,.15);
+  border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;z-index:101;transition:.2s;backdrop-filter:blur(8px)"
+ onmouseover="this.style.background='rgba(124,58,237,.3)'"
+ onmouseout="this.style.background='rgba(124,58,237,.15)'">
+ <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+  <path d="M4 3L9 7L4 11" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+ </svg>
+</div>
+
 <script>
 var slides=document.querySelectorAll('.slide');
 var dots=document.querySelectorAll('.nav-dot');
@@ -379,6 +402,11 @@ var observer=new IntersectionObserver(function(entries){
     if(dots[i])dots[i].classList.add('active');
     curSlide=i;
     onSlideEnter(i);
+    /* 화살표 표시/숨김 */
+    var pp=document.getElementById('nav-prev');
+    var pn=document.getElementById('nav-next');
+    if(pp)pp.style.opacity=i===0?'0.3':'1';
+    if(pn)pn.style.opacity=i===slides.length-1?'0.3':'1';
    }
   }
  });
