@@ -147,20 +147,110 @@ label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;le
 
     <!-- 예약 폼 (숨김) -->
     <div id="reserve-form" style="display:none" class="card">
-      <div style="font-size:14px;font-weight:800;margin-bottom:14px">🗓 예약 신청</div>
-      <div class="fg"><label>날짜 *</label>
-        <input id="rv-date" type="date">
+      <div style="font-size:15px;font-weight:900;margin-bottom:16px">🗓 예약 신청</div>
+
+      <!-- 날짜 & 시간 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg">
+          <label>📅 날짜 *</label>
+          <input id="rv-date" type="date">
+        </div>
+        <div class="fg">
+          <label>⏰ 시간 *</label>
+          <select id="rv-time">
+            <option value="">선택</option>
+            <option>09:00</option><option>09:30</option>
+            <option>10:00</option><option>10:30</option>
+            <option>11:00</option><option>11:30</option>
+            <option>12:00</option><option>12:30</option>
+            <option>13:00</option><option>13:30</option>
+            <option>14:00</option><option>14:30</option>
+            <option>15:00</option><option>15:30</option>
+            <option>16:00</option><option>16:30</option>
+            <option>17:00</option><option>17:30</option>
+            <option>18:00</option><option>18:30</option>
+            <option>19:00</option><option>19:30</option>
+            <option>20:00</option>
+          </select>
+        </div>
       </div>
-      <div class="fg"><label>시간 *</label>
-        <input id="rv-time" type="time" value="10:00">
+
+      <!-- 서비스 종류 -->
+      <div class="fg">
+        <label>✂️ 서비스 / 메뉴 *</label>
+        <select id="rv-service">
+          <option value="">선택해 주세요</option>
+          <optgroup label="💇 미용">
+            <option>커트</option><option>염색</option><option>파마</option>
+            <option>클리닉 트리트먼트</option><option>드라이</option>
+          </optgroup>
+          <optgroup label="💆 피부/케어">
+            <option>기본 관리</option><option>특수 관리</option>
+            <option>제모</option><option>마사지</option>
+          </optgroup>
+          <optgroup label="💅 네일">
+            <option>손 네일</option><option>발 네일</option>
+            <option>젤 네일</option><option>아트 네일</option>
+          </optgroup>
+          <optgroup label="🍽 식당/카페">
+            <option>단체 예약 (5인 이상)</option><option>프라이빗 룸</option>
+            <option>생일/기념일 패키지</option>
+          </optgroup>
+          <optgroup label="💪 헬스/PT">
+            <option>PT 1회</option><option>그룹 수업</option>
+            <option>인바디 측정</option>
+          </optgroup>
+          <optgroup label="기타">
+            <option>상담</option><option>기타 (직접 입력)</option>
+          </optgroup>
+        </select>
       </div>
-      <div class="fg"><label>서비스 / 내용</label>
-        <input id="rv-service" type="text" placeholder="예: 커트, 네일, 마사지...">
+
+      <!-- 직접입력 (기타 선택시) -->
+      <div class="fg" id="rv-service-etc-wrap" style="display:none">
+        <label>✏️ 서비스 직접 입력</label>
+        <input id="rv-service-etc" type="text" placeholder="원하시는 서비스를 입력해 주세요">
       </div>
-      <div class="fg"><label>요청사항</label>
-        <input id="rv-memo" type="text" placeholder="특이사항을 입력해 주세요">
+
+      <!-- 인원 & 담당자 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg">
+          <label>👥 인원수</label>
+          <select id="rv-people">
+            <option value="1">1명</option>
+            <option value="2">2명</option>
+            <option value="3">3명</option>
+            <option value="4">4명</option>
+            <option value="5">5명 이상</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>👤 담당자 (선택)</label>
+          <input id="rv-staff" type="text" placeholder="없으면 배정됩니다">
+        </div>
       </div>
-      <button class="btn-primary" onclick="_submitReserve()">예약 신청</button>
+
+      <!-- 연락처 -->
+      <div class="fg">
+        <label>📱 연락처 (선택)</label>
+        <input id="rv-phone" type="tel" placeholder="010-0000-0000" 
+          oninput="var v=this.value.replace(/[^0-9]/g,'');if(v.length>=8)v=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);this.value=v;">
+      </div>
+
+      <!-- 요청사항 -->
+      <div class="fg">
+        <label>💬 요청사항</label>
+        <textarea id="rv-memo" rows="3" placeholder="알레르기, 민감한 부위, 특별 요청사항 등을 적어주세요"
+          style="width:100%;padding:10px 12px;background:var(--b2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px;resize:vertical;min-height:70px;font-family:inherit"></textarea>
+      </div>
+
+      <!-- 알림 수신 동의 -->
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;margin-bottom:8px">
+        <input type="checkbox" id="rv-alarm" checked style="width:16px;height:16px;accent-color:#7c3aed;cursor:pointer">
+        <label for="rv-alarm" style="font-size:12px;color:var(--t2);cursor:pointer">📱 카카오톡으로 예약 확인 알림 받기</label>
+      </div>
+
+      <button class="btn-primary" onclick="_submitReserve()" style="margin-bottom:8px">✅ 예약 신청하기</button>
       <button class="btn-secondary" onclick="document.getElementById('reserve-form').style.display='none'">취소</button>
     </div>
 
@@ -334,6 +424,15 @@ function _loadReservations(){
 }
 
 function _showReserveForm(){
+  /* 기타 선택시 직접입력 표시 */
+  var svc=document.getElementById('rv-service');
+  if(svc){
+    svc.onchange=function(){
+      var etcWrap=document.getElementById('rv-service-etc-wrap');
+      if(etcWrap)etcWrap.style.display=this.value==='기타 (직접 입력)'?'block':'none';
+    };
+  }
+
   var form=document.getElementById('reserve-form');
   form.style.display=form.style.display==='none'?'block':'none';
 }
