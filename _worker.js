@@ -1477,15 +1477,53 @@ async function acceptExchange(){
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
-      // ★ /매장명 경로 → dine.html 서빙 + 매장명 주입
+      // ★ /매장명 or /slug 경로 → dine.html 서빙 + 매장명 주입
       const dinePath = path.replace(/^\//, '');
-      if (dinePath) {
+      if (dinePath && dinePath !== 'app' && dinePath !== 'app.html') {
         const dineHtml = await env.DONWAY_ASSETS.get('dine.html', 'text');
         if (dineHtml) {
-          const storeName = decodeURIComponent(dinePath);
+          const storeKey = decodeURIComponent(dinePath); // 한글 or 영문 slug
+          // Firestore에서 slug 또는 companyName으로 매장 조회
+          let storeName = storeKey;
+          try {
+            const fsRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ structuredQuery: {
+                from: [{ collectionId: 'companies' }],
+                where: { compositeFilter: { op: 'AND', filters: [
+                  { fieldFilter: { field: { fieldPath: 'platform' }, op: 'EQUAL', value: { stringValue: 'dine' } } },
+                  { fieldFilter: { field: { fieldPath: 'dineSlug' }, op: 'EQUAL', value: { stringValue: storeKey } } }
+                ]}},
+                limit: 1
+              }})
+            });
+            const fsData = await fsRes.json();
+            const doc = fsData && fsData[0] && fsData[0].document;
+            if (doc) {
+              storeName = (doc.fields.companyName || doc.fields.name || {}).stringValue || storeKey;
+            } else {
+              // slug 없으면 companyName으로 재시도
+              const fsRes2 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ structuredQuery: {
+                  from: [{ collectionId: 'companies' }],
+                  where: { compositeFilter: { op: 'AND', filters: [
+                    { fieldFilter: { field: { fieldPath: 'platform' }, op: 'EQUAL', value: { stringValue: 'dine' } } },
+                    { fieldFilter: { field: { fieldPath: 'companyName' }, op: 'EQUAL', value: { stringValue: storeKey } } }
+                  ]}},
+                  limit: 1
+                }})
+              });
+              const fsData2 = await fsRes2.json();
+              const doc2 = fsData2 && fsData2[0] && fsData2[0].document;
+              if (doc2) storeName = (doc2.fields.companyName || doc2.fields.name || {}).stringValue || storeKey;
+            }
+          } catch(e) {}
           const injected = dineHtml.replace(
             '</head>',
-            '<script>window.__DINE_STORE__=' + JSON.stringify(storeName) + ';</script></head>'
+            '<script>window.__DINE_STORE__=' + JSON.stringify(storeName) + ';window.__DINE_SLUG__=' + JSON.stringify(storeKey) + ';</script></head>'
           );
           return new Response(injected, {
             headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
