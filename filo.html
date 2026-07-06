@@ -2820,6 +2820,15 @@ function _filoPageStockIn(el){
  '<div class="fg"><label>유통기한 (선택)</label><input id="si-expiry" type="date" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
  '<div class="fg"><label>거래처 (선택)</label><input id="si-supplier" type="text" placeholder="거래처명" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
  '<div class="fg"><label>메모 (선택)</label><input id="si-memo" type="text" placeholder="메모" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
+ '<div class="fg"><label>영수증 첨부 <span style="font-size:10px;color:var(--t3)">(선택 · 사진/PDF)</span></label>'+
+ '<div style="display:flex;align-items:center;gap:8px">'+
+ '<label style="flex:1;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--t3);cursor:pointer;text-align:center">'+
+ '<span id="si-receipt-label">📎 파일 선택</span>'+
+ '<input id="si-receipt-input" type="file" accept="image/*,.pdf" style="display:none" onchange="_filoReceiptSelected(this)">'+
+ '</label>'+
+ '<div id="si-receipt-preview" style="display:none;width:48px;height:48px;border-radius:8px;overflow:hidden;border:1px solid var(--bd)">'+
+ '<img id="si-receipt-img" style="width:100%;height:100%;object-fit:cover">'+
+ '</div></div></div>'+
  '<button onclick="_filoDoStockIn()" class="btn btn-brand" style="width:100%">📥 입고 등록</button>'+
  '</div>'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">최근 입고 이력</div>'+
@@ -2828,6 +2837,21 @@ function _filoPageStockIn(el){
  '</div></div>';
  _filoLoadInventoryItems(did, 'si-item');
  _filoLoadStockHistory(did, 'si-history', 'in');
+}
+
+/* ── 영수증 선택 미리보기 ── */
+function _filoReceiptSelected(input){
+ var file=input.files&&input.files[0];
+ if(!file)return;
+ var label=document.getElementById('si-receipt-label');
+ if(label)label.textContent='📎 '+file.name.slice(0,20)+(file.name.length>20?'...':'');
+ var preview=document.getElementById('si-receipt-preview');
+ var img=document.getElementById('si-receipt-img');
+ if(file.type.startsWith('image/')&&preview&&img){
+  var reader=new FileReader();
+  reader.onload=function(e){img.src=e.target.result;preview.style.display='block';};
+  reader.readAsDataURL(file);
+ }
 }
 
 function _filoDoStockIn(){
@@ -2843,27 +2867,50 @@ function _filoDoStockIn(){
  var now=new Date();
  var inUnitEl=document.getElementById('si-inunit');
  var inUnit=inUnitEl?inUnitEl.value:'개';
- /* g당/ml당 단가 자동 환산 저장 */
  var unitPrice=price;
  if(inUnit==='kg')unitPrice=price/1000;
  else if(inUnit==='L')unitPrice=price/1000;
- _db.collection('inventory_in').add({
- dealerId:did, itemId:itemId, qty:qty, price:unitPrice, totalPrice:price, inUnit:inUnit,
- expiry:expiry, supplier:supplier, memo:memo,
- createdAt:now.toISOString(), date:now.toISOString().slice(0,10),
- createdBy:_CU.name||_CU.userId||''
- }).then(function(){
- return _db.collection('inventory').doc(itemId).update({
- stock:firebase.firestore.FieldValue.increment(qty),
- updatedAt:now.toISOString()
- });
- }).then(function(){
- _filoToast('✅ 입고 완료 (+'+qty+'개)');
- document.getElementById('si-qty').value='';
- document.getElementById('si-price').value='';
- document.getElementById('si-memo').value='';
- _filoLoadStockHistory(did,'si-history','in');
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ var receiptInput=document.getElementById('si-receipt-input');
+ var file=receiptInput&&receiptInput.files&&receiptInput.files[0];
+
+ function _saveStockIn(receiptUrl){
+  _db.collection('inventory_in').add({
+   dealerId:did,itemId:itemId,qty:qty,price:unitPrice,totalPrice:price,inUnit:inUnit,
+   expiry:expiry,supplier:supplier,memo:memo,
+   receiptUrl:receiptUrl||'',hasReceipt:!!receiptUrl,
+   createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
+   createdBy:_CU.name||_CU.userId||''
+  }).then(function(){
+   return _db.collection('inventory').doc(itemId).update({
+    stock:firebase.firestore.FieldValue.increment(qty),
+    updatedAt:now.toISOString()
+   });
+  }).then(function(){
+   _filoToast('✅ 입고 완료 (+'+qty+'개)'+(receiptUrl?' 📎':''));
+   document.getElementById('si-qty').value='';
+   document.getElementById('si-price').value='';
+   document.getElementById('si-memo').value='';
+   if(receiptInput)receiptInput.value='';
+   var lbl=document.getElementById('si-receipt-label');if(lbl)lbl.textContent='📎 파일 선택';
+   var pv=document.getElementById('si-receipt-preview');if(pv)pv.style.display='none';
+   _filoLoadStockHistory(did,'si-history','in');
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+ }
+
+ if(file){
+  _filoToast('📎 업로드 중...');
+  var reader=new FileReader();
+  reader.onload=function(e){
+   var base64=e.target.result.split(',')[1];
+   var path='receipts/'+did+'/'+now.toISOString().slice(0,10)+'-'+Date.now()+'.'+file.name.split('.').pop();
+   fetch('/storage-upload',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({storagePath:path,base64data:base64,contentType:file.type,idToken:(_auth&&_auth.currentUser)?_auth.currentUser.getIdToken():''})
+   }).then(function(r){return r.json();}).then(function(d){_saveStockIn(d.url||'');}).catch(function(){_saveStockIn('');});
+  };
+  reader.readAsDataURL(file);
+ } else {
+  _saveStockIn('');
+ }
 }
 
 function _filoPageStockOut(el){
