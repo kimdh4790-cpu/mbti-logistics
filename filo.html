@@ -1016,7 +1016,7 @@ function _filoGenDynamicQR(did){
 }
 
 function _filoRenderStaffQRs(did){
- _db.collection('members').where('dealerId','==',did).get().then(function(snap){
+ _db.collection('filo_customers').where('dealerId','==',did).get().then(function(snap){
   var list=document.getElementById('staff-qr-list');
   if(!list)return;
   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">직원 목록이 없습니다</div>';return;}
@@ -1075,7 +1075,7 @@ function _filoPageMemberQR(el){
  '</div></div>';
 
  /* 회원 통계 */
- _db.collection('members').where('dealerId','==',did).get().then(function(snap){
+ _db.collection('filo_customers').where('dealerId','==',did).get().then(function(snap){
   var total=snap.size;
   var stats=document.getElementById('member-qr-stats');
   if(!stats)return;
