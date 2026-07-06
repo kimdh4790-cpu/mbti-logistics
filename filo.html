@@ -558,7 +558,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 <!-- ── 앱 화면 ── -->
 <div id="app">
  <div class="topbar">
-  <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">☰</button>
+  <button id="sidebar-toggle" onclick="_toggleSidebar()" style="background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s;width:36px;justify-content:center" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">☰</button>
   <div class="topbar-logo">FILO</div>
   <div style="width:1px;height:18px;background:var(--bd2);margin:0 2px"></div>
   <div id="topbar-title" style="font-size:13px;font-weight:700;color:var(--tx)">대시보드</div>
@@ -1318,7 +1318,24 @@ function _toggleNavGroup(gi,el){
 
 }
 
+function _toggleSidebar(){
+ var sb=document.getElementById('sidebar');
+ var btn=document.getElementById('sidebar-toggle');
+ var ov=document.getElementById('sidebar-overlay');
+ var isOpen=sb.classList.toggle('open');
+ if(btn)btn.textContent=isOpen?'✕':'☰';
+ if(ov)ov.style.display=isOpen?'block':'none';
+}
+
 function _filoGoPage(p){
+ var sb=document.getElementById('sidebar');
+ if(sb&&sb.classList.contains('open')&&window.innerWidth<=768){
+  sb.classList.remove('open');
+  var btn=document.getElementById('sidebar-toggle');
+  if(btn)btn.textContent='☰';
+  var ov=document.getElementById('sidebar-overlay');
+  if(ov)ov.style.display='none';
+ }
  document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');});
  var nav=document.getElementById('nav-'+p);
  if(nav)nav.classList.add('on');
