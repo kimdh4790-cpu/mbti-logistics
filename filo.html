@@ -4952,20 +4952,47 @@ function _filoMarginLoadRange(from,to){
  var heroSub=document.getElementById('hero-sub');
  if(heroSub)heroSub.textContent=from+' ~ '+to+' 조회 중...';
  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get().then(function(snap){
-  var total=0,cnt=0,items={};
+  var total=0,cnt=0,items={},methods={};
   snap.forEach(function(doc){
    var d=doc.data();
    if(d.status==='cancelled')return;
    total+=d.total||0;cnt++;
+   var method=d.payMethod||d.method||'기타';
+   methods[method]=(methods[method]||0)+(d.total||0);
    (d.items||[]).forEach(function(it){items[it.name]=(items[it.name]||0)+(it.qty||1);});
   });
   if(heroSub)heroSub.textContent=from+(from!==to?' ~ '+to:'')+'·'+cnt+'건·₩'+total.toLocaleString();
   ['today-sales','month-sales'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent='₩'+total.toLocaleString();});
   ['today-cnt','month-cnt'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=cnt+'건';});
+
+  /* 결제수단별 집계 표시 */
+  var payEl=document.getElementById('pay-method-breakdown');
+  if(payEl){
+   var methodIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','삼성페이':'📱','기타':'💰'};
+   var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
+   payEl.innerHTML=sorted.length?sorted.map(function(m){
+    var pct=total>0?Math.round(m[1]/total*100):0;
+    var ic=methodIcons[m[0]]||'💰';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+     '<span style="font-size:16px">'+ic+'</span>'+
+     '<div style="flex:1">'+
+     '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+     '<span style="font-size:13px;font-weight:700">'+m[0]+'</span>'+
+     '<span style="font-size:13px;font-weight:900;color:#22c55e">₩'+m[1].toLocaleString()+'</span>'+
+     '</div>'+
+     '<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">'+
+     '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--br),#22c55e);border-radius:2px;transition:width .5s"></div>'+
+     '</div>'+
+     '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% · 비중</div>'+
+     '</div></div>';
+   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">데이터 없음</div>';
+  }
+
+  /* 인기메뉴 */
   var topEl=document.getElementById('top-menus');
   if(topEl){
-   var sorted=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-   topEl.innerHTML=sorted.length?sorted.map(function(e,i){
+   var sorted2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+   topEl.innerHTML=sorted2.length?sorted2.map(function(e,i){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
      '<span style="font-size:13px"><span style="color:var(--br);font-weight:800;margin-right:6px">'+(i+1)+'위</span>'+e[0]+'</span>'+
      '<span style="font-size:13px;font-weight:700">'+e[1]+'개</span></div>';
