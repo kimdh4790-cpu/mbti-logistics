@@ -5028,6 +5028,7 @@ function _filoMarginLoadRange(from,to){
    methods[method]=(methods[method]||0)+(d.total||0);
    (d.items||[]).forEach(function(it){items[it.name]=(items[it.name]||0)+(it.qty||1);});
   });
+  var paySorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
   if(heroSub)heroSub.textContent=from+(from!==to?' ~ '+to:'')+'·'+cnt+'건·₩'+total.toLocaleString();
   ['today-sales','month-sales'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent='₩'+total.toLocaleString();});
   ['today-cnt','month-cnt'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=cnt+'건';});
