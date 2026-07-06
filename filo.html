@@ -1092,6 +1092,27 @@ function _filoPageMemberQR(el){
 }
 
 var _fbApp=null,_db=null,_auth=null,_CU=null,_cachedCompanyDoc=null;
+
+/* ── FILO 매장명 자동 주입 (filo.ai.kr/매장명 접속 시) ── */
+(function(){
+ if(window.__FILO_STORE__){
+  var s=window.__FILO_STORE__;
+  var slug=window.__FILO_SLUG__||s;
+  // 로고 아래 매장명 표시
+  var sub=document.querySelector('#login-screen .login-card > div > div:nth-child(3)');
+  if(sub)sub.textContent=s;
+  setTimeout(function(){
+   // 회사 등록 폼 - 회사명 자동 입력
+   var fc=document.getElementById('fr-company');
+   if(fc){fc.value=s;fc.readOnly=true;}
+   // 직원 가입 폼 - 회사 코드 자동 입력
+   var fj=document.getElementById('fj-code');
+   if(fj){fj.value=slug;fj.readOnly=true;}
+   // 안내 문구 변경
+   var tip=document.querySelector('#form-join .fg label');
+  },200);
+ }
+})();
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
 function _initFirebase(){
  if(_fbApp)return;
