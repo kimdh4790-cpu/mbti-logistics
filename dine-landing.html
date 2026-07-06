@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DINE — 외식업 정산·직원·급여 플랫폼</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+ --bg:#07071a;--s1:#0c0c22;--s2:#14142a;
+ --br:#0891b2;--gr:#22c55e;--yl:#f59e0b;
+ --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Gothic Neo',sans-serif}
+
+/* ── 슬라이드 ── */
+#slides{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;opacity:0;transition:opacity .6s ease,transform .6s ease;transform:translateX(60px);pointer-events:none}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+
+/* ── 배경 그라디언트 ── */
+.slide-1{background:radial-gradient(ellipse at 30% 40%,rgba(8,145,178,.18) 0%,transparent 60%),radial-gradient(ellipse at 80% 70%,rgba(124,58,237,.12) 0%,transparent 50%),var(--bg)}
+.slide-2{background:radial-gradient(ellipse at 70% 30%,rgba(34,197,94,.12) 0%,transparent 55%),radial-gradient(ellipse at 20% 70%,rgba(8,145,178,.1) 0%,transparent 50%),var(--bg)}
+.slide-3{background:radial-gradient(ellipse at 50% 20%,rgba(245,158,11,.12) 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,rgba(8,145,178,.1) 0%,transparent 50%),var(--bg)}
+.slide-4{background:radial-gradient(ellipse at 20% 50%,rgba(124,58,237,.15) 0%,transparent 55%),radial-gradient(ellipse at 80% 30%,rgba(34,197,94,.1) 0%,transparent 50%),var(--bg)}
+.slide-5{background:radial-gradient(ellipse at 60% 40%,rgba(8,145,178,.2) 0%,transparent 60%),var(--bg)}
+
+/* ── 네비게이션 ── */
+#nav{position:fixed;top:0;left:0;right:0;height:60px;display:flex;align-items:center;padding:0 32px;z-index:100;background:rgba(7,7,26,.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+.nav-logo{font-size:22px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.nav-btn{padding:7px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:.2s}
+.nav-login{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--t2)}
+.nav-login:hover{border-color:var(--br);color:var(--tx)}
+.nav-start{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
+.nav-start:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(8,145,178,.4)}
+
+/* ── 화살표 ── */
+.arrow{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--t2);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;font-size:18px;transition:.2s;backdrop-filter:blur(8px)}
+.arrow:hover{background:rgba(8,145,178,.2);border-color:var(--br);color:var(--tx)}
+#arrow-prev{left:16px}
+#arrow-next{right:16px}
+
+/* ── 도트 ── */
+#dots{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:100}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:.3s}
+.dot.active{background:var(--br);width:24px;border-radius:4px}
+
+/* ── 슬라이드 콘텐츠 ── */
+.slide-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:18px}
+.slide-title{font-size:clamp(28px,5vw,52px);font-weight:900;letter-spacing:-1.5px;line-height:1.1;text-align:center;margin-bottom:14px}
+.slide-sub{font-size:clamp(13px,2vw,17px);color:var(--t2);text-align:center;max-width:560px;line-height:1.7;margin-bottom:32px}
+.gradient-blue{background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gradient-green{background:linear-gradient(135deg,#4ade80,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gradient-yellow{background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gradient-purple{background:linear-gradient(135deg,#c084fc,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ── 피처 카드 ── */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;max-width:700px;width:100%;margin-bottom:28px}
+.feature-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;text-align:center;transition:.3s}
+.feature-card:hover{background:rgba(8,145,178,.08);border-color:rgba(8,145,178,.2);transform:translateY(-3px)}
+.feature-icon{font-size:28px;margin-bottom:8px}
+.feature-title{font-size:13px;font-weight:800;margin-bottom:4px}
+.feature-desc{font-size:11px;color:var(--t3);line-height:1.5}
+
+/* ── 법조항 카드 ── */
+.law-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;max-width:680px;width:100%;margin-bottom:28px}
+.law-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;text-align:center}
+.law-val{font-size:18px;font-weight:900;margin-bottom:2px}
+.law-label{font-size:10px;color:var(--t3)}
+
+/* ── 가격 카드 ── */
+.price-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;max-width:680px;width:100%;margin-bottom:28px}
+.price-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;text-align:center;transition:.3s}
+.price-card.highlight{background:rgba(8,145,178,.08);border-color:rgba(8,145,178,.3)}
+.price-card:hover{transform:translateY(-3px)}
+.price-name{font-size:13px;font-weight:700;color:var(--t3);margin-bottom:8px}
+.price-val{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:4px}
+.price-unit{font-size:11px;color:var(--t3);margin-bottom:12px}
+.price-list{font-size:11px;color:var(--t2);line-height:2;text-align:left}
+
+/* ── CTA 버튼 ── */
+.cta-btn{padding:14px 36px;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;border:none;font-family:inherit;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.cta-primary{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;box-shadow:0 4px 24px rgba(8,145,178,.3)}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(8,145,178,.45)}
+.cta-ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--t2);margin-left:10px}
+.cta-ghost:hover{border-color:var(--br);color:var(--tx)}
+
+/* ── 플로우 ── */
+.flow-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:700px;margin-bottom:28px}
+.flow-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 16px;text-align:center;font-size:12px;font-weight:700}
+.flow-arrow{font-size:16px;color:var(--t3)}
+
+@media(max-width:600px){
+ .feature-grid{grid-template-columns:repeat(2,1fr)}
+ .price-wrap{grid-template-columns:1fr}
+ .law-grid{grid-template-columns:repeat(2,1fr)}
+ .flow-wrap{gap:4px}
+ .flow-item{padding:8px 10px;font-size:10px}
+ #arrow-prev{left:8px}
+ #arrow-next{right:8px}
+}
+</style>
+</head>
+<body>
+
+<!-- 네비 -->
+<div id="nav">
+ <div class="nav-logo">DINE</div>
+ <div class="nav-right">
+  <button class="nav-btn nav-login" onclick="location.href='/app'">로그인</button>
+  <button class="nav-btn nav-start" onclick="location.href='/app'">무료 시작 →</button>
+ </div>
+</div>
+
+<!-- 슬라이드 -->
+<div id="slides">
+
+ <!-- 슬라이드 1: 메인 -->
+ <div class="slide slide-1 active">
+  <div class="slide-badge" style="background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.2);color:#38bdf8">🍽 외식업 전용 올인원 플랫폼</div>
+  <div class="slide-title">외식업 운영의 모든 것<br><span class="gradient-blue">DINE</span>에서 끝냅니다</div>
+  <div class="slide-sub">POS 매출 · 직원 급여 · 배달 정산 · 예약 관리까지<br>외식업 사장님을 위한 스마트 운영 솔루션</div>
+  <div class="feature-grid">
+   <div class="feature-card"><div class="feature-icon">🛒</div><div class="feature-title">POS 실시간</div><div class="feature-desc">FILO POS와 자동 연동 매출 즉시 확인</div></div>
+   <div class="feature-card"><div class="feature-icon">👥</div><div class="feature-title">직원 급여</div><div class="feature-desc">2026 근로기준법 자동 계산 급여명세서 발송</div></div>
+   <div class="feature-card"><div class="feature-icon">🛵</div><div class="feature-title">배달 정산</div><div class="feature-desc">배민·쿠팡이츠·요기요 엑셀 자동 파싱</div></div>
+   <div class="feature-card"><div class="feature-icon">📑</div><div class="feature-title">세무 공유</div><div class="feature-desc">월 정산 리포트 세무사 자동 발송</div></div>
+  </div>
+  <div>
+   <button class="cta-btn cta-primary" onclick="location.href='/app'">30일 무료 시작 →</button>
+   <button class="cta-btn cta-ghost" onclick="_goSlide(1)">더 알아보기</button>
+  </div>
+ </div>
+
+ <!-- 슬라이드 2: 매장 운영 -->
+ <div class="slide slide-2">
+  <div class="slide-badge" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e">🪑 매장 운영</div>
+  <div class="slide-title">매장 운영을<br><span class="gradient-green">한눈에</span> 파악</div>
+  <div class="slide-sub">테이블 현황부터 주문 대기, POS 매출, 배달앱 정산까지<br>실시간으로 매장 전체를 모니터링합니다</div>
+  <div class="feature-grid">
+   <div class="feature-card"><div class="feature-icon">🪑</div><div class="feature-title">테이블 현황</div><div class="feature-desc">빈자리·사용중·예약 실시간 상태 관리</div></div>
+   <div class="feature-card"><div class="feature-icon">🔔</div><div class="feature-title">주문 대기</div><div class="feature-desc">FILO POS 주문 실시간 완료·취소 처리</div></div>
+   <div class="feature-card"><div class="feature-icon">📈</div><div class="feature-title">매출 분석</div><div class="feature-desc">시간대·요일·메뉴·결제수단 차트 분석</div></div>
+   <div class="feature-card"><div class="feature-icon">🛵</div><div class="feature-title">배달 통합</div><div class="feature-desc">홀+배달 매출 한 화면에서 통합 정산</div></div>
+  </div>
+  <div class="flow-wrap">
+   <div class="flow-item">🛒 POS 결제</div><div class="flow-arrow">→</div>
+   <div class="flow-item">📊 자동 집계</div><div class="flow-arrow">→</div>
+   <div class="flow-item">📈 매출 분석</div><div class="flow-arrow">→</div>
+   <div class="flow-item">📑 월 정산</div>
+  </div>
+  <button class="cta-btn cta-primary" onclick="location.href='/app'">지금 시작하기 →</button>
+ </div>
+
+ <!-- 슬라이드 3: 직원 급여 -->
+ <div class="slide slide-3">
+  <div class="slide-badge" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b">💰 직원 급여</div>
+  <div class="slide-title">2026 근로기준법<br><span class="gradient-yellow">자동 계산</span></div>
+  <div class="slide-sub">시급·주급·월급 모두 지원, 주휴수당·야간수당·4대보험까지<br>복잡한 급여 계산을 자동으로 처리합니다</div>
+  <div class="law-grid">
+   <div class="law-card"><div class="law-val" style="color:#38bdf8">10,320원</div><div class="law-label">2026 최저시급</div></div>
+   <div class="law-card"><div class="law-val" style="color:#22c55e">×1.5배</div><div class="law-label">야간·연장수당</div></div>
+   <div class="law-card"><div class="law-val" style="color:#f59e0b">9.5%</div><div class="law-label">국민연금(2026)</div></div>
+   <div class="law-card"><div class="law-val" style="color:#a78bfa">자동</div><div class="law-label">주휴수당 계산</div></div>
+   <div class="law-card"><div class="law-val" style="color:#22c55e">4가지</div><div class="law-label">일·주·격주·월급</div></div>
+   <div class="law-card"><div class="law-val" style="color:#f59e0b">5인미만</div><div class="law-label">가산수당 자동제외</div></div>
+  </div>
+  <div class="flow-wrap">
+   <div class="flow-item">⏱ QR 출퇴근</div><div class="flow-arrow">→</div>
+   <div class="flow-item">💰 급여 자동계산</div><div class="flow-arrow">→</div>
+   <div class="flow-item">📋 명세서 발행</div><div class="flow-arrow">→</div>
+   <div class="flow-item">💬 알림톡 발송</div>
+  </div>
+  <button class="cta-btn cta-primary" onclick="location.href='/app'">급여 자동화 시작 →</button>
+ </div>
+
+ <!-- 슬라이드 4: FILO 연동 -->
+ <div class="slide slide-4">
+  <div class="slide-badge" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa">🔗 FILO 실시간 연동</div>
+  <div class="slide-title">FILO와 완벽하게<br><span class="gradient-purple">실시간 연동</span></div>
+  <div class="slide-sub">FILO POS · QR출퇴근 · 테이블오더 · 예약과 실시간 연동<br>데이터 입력 없이 자동으로 모든 것이 처리됩니다</div>
+  <div class="feature-grid">
+   <div class="feature-card"><div class="feature-icon">📱</div><div class="feature-title">QR 출퇴근</div><div class="feature-desc">FILO QR 스캔 → 근무시간 자동 집계</div></div>
+   <div class="feature-card"><div class="feature-icon">🛒</div><div class="feature-title">POS 매출</div><div class="feature-desc">FILO 결제 → 매출 즉시 반영</div></div>
+   <div class="feature-card"><div class="feature-icon">🪑</div><div class="feature-title">테이블 상태</div><div class="feature-desc">filo_tables 실시간 동기화</div></div>
+   <div class="feature-card"><div class="feature-icon">📆</div><div class="feature-title">예약 연동</div><div class="feature-desc">filo_bookings 예약 자동 반영</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px;flex-wrap:wrap;justify-content:center">
+   <div style="text-align:center;padding:16px 24px;background:rgba(8,145,178,.08);border:1px solid rgba(8,145,178,.2);border-radius:14px">
+    <div style="font-size:22px;font-weight:900;color:#38bdf8">FILO</div>
+    <div style="font-size:11px;color:var(--t3)">전업종 POS·근태</div>
+   </div>
+   <div style="font-size:24px;color:var(--t3)">⟷</div>
+   <div style="text-align:center;padding:16px 24px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:14px">
+    <div style="font-size:22px;font-weight:900;color:#a78bfa">DINE</div>
+    <div style="font-size:11px;color:var(--t3)">외식업 특화</div>
+   </div>
+  </div>
+  <button class="cta-btn cta-primary" onclick="location.href='/app'">연동 시작하기 →</button>
+ </div>
+
+ <!-- 슬라이드 5: 요금제 -->
+ <div class="slide slide-5">
+  <div class="slide-badge" style="background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.2);color:#38bdf8">💎 요금제</div>
+  <div class="slide-title">합리적인 가격으로<br><span class="gradient-blue">시작하세요</span></div>
+  <div class="slide-sub">30일 무료 체험 · 약정 없음 · VAT 별도</div>
+  <div class="price-wrap">
+   <div class="price-card">
+    <div class="price-name">개인</div>
+    <div class="price-val" style="color:#38bdf8">99,000<span style="font-size:14px;font-weight:600">원</span></div>
+    <div class="price-unit">매장/월 (VAT별도)</div>
+    <div class="price-list">✅ 직원 무제한<br>✅ 급여 자동계산<br>✅ FILO 실시간 연동<br>✅ 배달앱 정산<br>✅ 세무사 리포트</div>
+   </div>
+   <div class="price-card highlight">
+    <div class="price-name" style="color:#38bdf8">단체 (5개↑)</div>
+    <div class="price-val" style="color:#22c55e">69,000<span style="font-size:14px;font-weight:600">원</span></div>
+    <div class="price-unit">매장/월 (VAT별도)</div>
+    <div class="price-list">✅ 개인 플랜 전체<br>✅ 30% 할인<br>✅ 프랜차이즈 통합<br>✅ 본사 대시보드<br>✅ 전담 지원</div>
+   </div>
+  </div>
+  <div>
+   <button class="cta-btn cta-primary" onclick="location.href='/app'">🚀 30일 무료 시작</button>
+   <div style="font-size:11px;color:var(--t3);margin-top:12px;text-align:center">신용카드 불필요 · 언제든 해지 가능</div>
+  </div>
+ </div>
+
+</div>
+
+<!-- 화살표 -->
+<div class="arrow" id="arrow-prev" onclick="_goSlide(-1)">‹</div>
+<div class="arrow" id="arrow-next" onclick="_goSlide(1)">›</div>
+
+<!-- 도트 -->
+<div id="dots">
+ <div class="dot active" onclick="_setSlide(0)"></div>
+ <div class="dot" onclick="_setSlide(1)"></div>
+ <div class="dot" onclick="_setSlide(2)"></div>
+ <div class="dot" onclick="_setSlide(3)"></div>
+ <div class="dot" onclick="_setSlide(4)"></div>
+</div>
+
+<script>
+var cur=0,total=5,animating=false;
+
+function _setSlide(n){
+ if(animating)return;
+ animating=true;
+ var slides=document.querySelectorAll('.slide');
+ var dots=document.querySelectorAll('.dot');
+ slides[cur].classList.remove('active');
+ slides[cur].classList.add(n>cur?'prev':'');
+ cur=n;
+ slides.forEach(function(s,i){s.classList.remove('active','prev');});
+ slides[cur].classList.add('active');
+ dots.forEach(function(d){d.classList.remove('active');});
+ dots[cur].classList.add('active');
+ setTimeout(function(){animating=false;},650);
+}
+
+function _goSlide(dir){
+ var n=(cur+dir+total)%total;
+ _setSlide(n);
+}
+
+/* 키보드 */
+document.addEventListener('keydown',function(e){
+ if(e.key==='ArrowRight'||e.key==='ArrowDown')_goSlide(1);
+ if(e.key==='ArrowLeft'||e.key==='ArrowUp')_goSlide(-1);
+});
+
+/* 스와이프 */
+var sx=0;
+document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){
+ var dx=e.changedTouches[0].clientX-sx;
+ if(Math.abs(dx)>50)_goSlide(dx<0?1:-1);
+});
+
+/* 자동 슬라이드 5초 */
+var timer=setInterval(function(){_goSlide(1);},5000);
+document.getElementById('slides').addEventListener('mouseenter',function(){clearInterval(timer);});
+document.getElementById('slides').addEventListener('mouseleave',function(){timer=setInterval(function(){_goSlide(1);},5000);});
+</script>
+</body>
+</html>
