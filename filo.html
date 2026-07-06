@@ -5066,7 +5066,7 @@ function _filoMarginLoadRange(from,to){
    }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">판매 데이터 없음</div>';
   }
  /* 차트 렌더링 */
-  var liveEl=document.getElementById('sales-live');
+  var liveEl=document.getElementById('sales-chart-extra');if(!liveEl){liveEl=document.createElement('div');liveEl.id='sales-chart-extra';var mainEl2=document.getElementById('content');if(mainEl2)mainEl2.appendChild(liveEl);}liveEl.innerHTML='';
   if(liveEl){
    /* 시간대별 집계 */
    var hourStats2={};
