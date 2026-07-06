@@ -847,7 +847,7 @@ function _dineStaff(el){
      '</div>'+
      '</div>'+
      '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+
-     '<button class="btn btn-sm btn-ghost" onclick="_dineEditStaff(''+doc.id+'')">수정</button>'+
+     '<button class="btn btn-sm btn-ghost" onclick="_dineEditStaff(this.dataset.id)" data-id=\''+doc.id+'\'>수정</button>'+
      '<button style="font-size:10px;padding:3px 8px;border:1px solid rgba(99,102,241,.3);border-radius:6px;background:rgba(99,102,241,.08);color:#818cf8;cursor:pointer" onclick="_dineStaffDetail(''+doc.id+'')">상세보기</button>'+
      '</div>'+
      '</div>'+
