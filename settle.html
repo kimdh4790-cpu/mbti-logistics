@@ -32194,7 +32194,27 @@ function _saveSECurrent(){
   var dcnt=cached?cached.dcnt||0:0;
   var rcnt=cached?cached.rcnt||0:0;
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
-  var rds=cached?cached.routeDetails||[]:[];
+  var rds=cached?JSON.parse(JSON.stringify(cached.routeDetails||[])):[];
+  // ★ input에서 수정된 건수/단가 반영
+  var rdinps=document.querySelectorAll('.se-rd-inp');
+  if(rdinps.length>0){
+    var byIdx={};
+    rdinps.forEach(function(inp){
+      var idx=+inp.dataset.rdidx;var field=inp.dataset.field;var val=+inp.value||0;
+      if(!byIdx[idx])byIdx[idx]={};
+      byIdx[idx][field]=val;
+    });
+    Object.keys(byIdx).forEach(function(i){
+      var d=byIdx[i];
+      if(rds[+i]){
+        if(d.cnt!==undefined)rds[+i].cnt=d.cnt;
+        if(d.ret!==undefined)rds[+i].ret=d.ret;
+        if(d.price!==undefined)rds[+i].unitPrice=d.price;
+      }
+    });
+    dcnt=rds.reduce(function(s,r){return s+(r.cnt||0);},0);
+    rcnt=rds.reduce(function(s,r){return s+(r.ret||0);},0);
+  }
   var newDamt=0,newRamt=0;
   rds.forEach(function(rd){
     var price=RPRICE[rd.route]>0?RPRICE[rd.route]:(rd.unitPrice||0);
