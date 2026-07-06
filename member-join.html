@@ -102,7 +102,7 @@ input:focus,select:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,2
     </div>
     <div class="fg">
       <label>생년월일 <span style="color:var(--t3)">(선택)</span></label>
-      <input id="f-birth" type="date" max="">
+      <input id="f-birth" type="text" placeholder="19901225" maxlength="8" inputmode="numeric" style="letter-spacing:1px" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       <div class="birthday-hint">🎂 생일월에 특별 쿠폰을 드려요</div>
     </div>
     <div class="fg">
@@ -237,7 +237,16 @@ function _submitJoin(){
   else document.getElementById('err-name').style.display='none';
   if(!phone||phone.replace(/-/g,'').length<10){document.getElementById('err-phone').style.display='block';ok=false;}
   else document.getElementById('err-phone').style.display='none';
-  if(!privacy){document.getElementById('err-agree').style.display='block';ok=false;}
+  if(!privacy){
+   document.getElementById('err-agree').style.display='block';
+   var lbl=document.getElementById('label-privacy');
+   if(lbl)lbl.style.color='#ef4444';
+   ok=false;
+  } else {
+   document.getElementById('err-agree').style.display='none';
+   var lbl2=document.getElementById('label-privacy');
+   if(lbl2)lbl2.style.color='';
+  }
   else document.getElementById('err-agree').style.display='none';
   if(!ok)return;
 
