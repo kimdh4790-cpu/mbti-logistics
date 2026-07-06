@@ -1804,6 +1804,23 @@ function _filoPageSales(el){
  '</div>';
 
  _filoMarginLoad();
+ /* 날짜 필터 버튼 DOM으로 생성 */
+ setTimeout(function(){
+  var wrap=document.getElementById('sf-btns');
+  if(!wrap)return;
+  var filters=[{k:'today',l:'오늘'},{k:'week',l:'이번주'},{k:'month',l:'이번달'},{k:'custom',l:'📅 직접선택'}];
+  filters.forEach(function(f){
+   var btn=document.createElement('button');
+   btn.id='sf-'+f.k;
+   btn.textContent=f.l;
+   btn.style.cssText='padding:7px 14px;border-radius:20px;border:1px solid var(--bd2);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;transition:.2s';
+   if(f.k==='today'){btn.style.background='rgba(124,58,237,.3)';btn.style.color='#a78bfa';btn.style.border='none';}
+   (function(key){btn.onclick=function(){_filoSalesFilter(key);};})(f.k);
+   wrap.appendChild(btn);
+  });
+  var rangeBtn=document.getElementById('sf-range-btn');
+  if(rangeBtn)rangeBtn.onclick=function(){_filoMarginLoadRange();};
+ },100);
 }
 
 /* ── 탭 전환 ── */
