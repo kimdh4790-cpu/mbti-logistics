@@ -1,47 +1,14 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    function isAuth() {
-      return request.auth != null;
-    }
-    function isSuperAdmin() {
-      return isAuth() && (
-        request.auth.token.email == 'kimdh4790@gmail.com' ||
-        request.auth.token.email == 'soungkyekim@naver.com'
-      );
-    }
-    function isMyDealer(dealerId) {
-      return isAuth() && (
-        request.auth.uid == dealerId || isSuperAdmin()
-      );
-    }
-    match /tax_docs/{dealerId}/{allPaths=**} {
-      allow read, write: if isMyDealer(dealerId);
-    }
-    match /biz_docs/{userId}/{allPaths=**} {
-      allow read, write: if isAuth() && (
-        request.auth.uid == userId || isSuperAdmin()
-      );
-    }
-    match /settlements/{dealerId}/{allPaths=**} {
-      allow read, write: if isMyDealer(dealerId);
-    }
-    match /tax_invoices/{dealerId}/{allPaths=**} {
-      allow read, write: if isMyDealer(dealerId);
-    }
-    // ★ 명세서 이미지 (dealerId 격리) — 카카오 알림톡 서빙용 공개 읽기
-    match /stmt_kakao/{dealerId}/{allPaths=**} {
+    /* FILO 메뉴 이미지 - 로그인한 사용자 업로드, 누구나 읽기 */
+    match /filo_menus/{dealerId}/{fileName} {
       allow read: if true;
-      allow write: if isMyDealer(dealerId);
+      allow write: if request.auth != null && request.auth.uid == dealerId;
     }
-    // ★ 공지 파일 — 읽기 로그인, 쓰기 슈퍼어드민만
-    match /notices/{allPaths=**} {
-      allow read: if isAuth();
-      allow write: if isSuperAdmin();
-    }
-    // ★ 나머지 슈퍼어드민만 (고객간 격리)
+    /* 기타 파일 - 로그인 필요 */
     match /{allPaths=**} {
-      allow read, write: if isSuperAdmin();
+      allow read, write: if request.auth != null;
     }
   }
 }
