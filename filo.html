@@ -4925,6 +4925,54 @@ function _filoMenuAddModal(did, menu, cat){
  document.body.appendChild(mo);
  setTimeout(function(){document.getElementById('menu-name-inp').focus();},100);
 }
+
+function _filoSalesFilter(type){
+ ['today','week','month','custom'].forEach(function(t){
+  var btn=document.getElementById('sf-'+t);
+  if(!btn)return;
+  if(t===type){btn.style.background='rgba(124,58,237,.4)';btn.style.color='#a78bfa';btn.style.border='1px solid rgba(124,58,237,.4)';}
+  else{btn.style.background='transparent';btn.style.color='rgba(255,255,255,.6)';btn.style.border='1px solid rgba(255,255,255,.12)';}
+ });
+ var cw=document.getElementById('sf-custom-wrap');
+ if(cw)cw.style.display=type==='custom'?'flex':'none';
+ if(type==='custom')return;
+ var today=new Date();
+ var from,to=today.toISOString().slice(0,10);
+ if(type==='today'){from=to;}
+ else if(type==='week'){var day=today.getDay()||7;var mon=new Date(today);mon.setDate(today.getDate()-(day-1));from=mon.toISOString().slice(0,10);}
+ else if(type==='month'){from=today.toISOString().slice(0,7)+'-01';}
+ _filoMarginLoadRange(from,to);
+}
+
+function _filoMarginLoadRange(from,to){
+ if(!from){var f=document.getElementById('sf-from');var t2=document.getElementById('sf-to');if(f)from=f.value;if(t2)to=t2.value;}
+ if(!from||!to){_filoToast('날짜를 선택하세요');return;}
+ var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ if(!did)return;
+ var heroSub=document.getElementById('hero-sub');
+ if(heroSub)heroSub.textContent=from+' ~ '+to+' 조회 중...';
+ _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get().then(function(snap){
+  var total=0,cnt=0,items={};
+  snap.forEach(function(doc){
+   var d=doc.data();
+   if(d.status==='cancelled')return;
+   total+=d.total||0;cnt++;
+   (d.items||[]).forEach(function(it){items[it.name]=(items[it.name]||0)+(it.qty||1);});
+  });
+  if(heroSub)heroSub.textContent=from+(from!==to?' ~ '+to:'')+'·'+cnt+'건·₩'+total.toLocaleString();
+  ['today-sales','month-sales'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent='₩'+total.toLocaleString();});
+  ['today-cnt','month-cnt'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=cnt+'건';});
+  var topEl=document.getElementById('top-menus');
+  if(topEl){
+   var sorted=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+   topEl.innerHTML=sorted.length?sorted.map(function(e,i){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+     '<span style="font-size:13px"><span style="color:var(--br);font-weight:800;margin-right:6px">'+(i+1)+'위</span>'+e[0]+'</span>'+
+     '<span style="font-size:13px;font-weight:700">'+e[1]+'개</span></div>';
+   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">판매 데이터 없음</div>';
+  }
+ }).catch(function(e){if(heroSub)heroSub.textContent='오류: '+e.message;});
+}
 </script>
 </body>
 </html>
