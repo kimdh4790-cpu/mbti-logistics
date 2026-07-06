@@ -245,18 +245,35 @@ function _dineLogin(){
   }
   err.textContent='';
   _dineToken = d.idToken;
-  /* Firestore는 SDK로 사용 (Firestore는 referer 체크 없음) */
-  _db.collection('companies').where('uid','==',d.localId).limit(1).get()
-   .then(function(s){
-    var co=s.empty?null:s.docs[0].data();
-    _CU={uid:d.localId,email:d.email,dealerId:d.localId,name:(co&&co.name)||d.email.split('@')[0],company:co};
-    document.getElementById('login-wrap').style.display='none';
-    var aw=document.getElementById('app-wrap');aw.style.display='flex';
-    document.getElementById('tb-user-name').textContent=_CU.name;
-    _dinePage('dashboard',document.querySelector('.nav-item'));
-    _dineUpdateSidebar();
-    _dineWatchAttend();
-   });
+  var _lid = d.localId; var _lemail = d.email;
+  /* Firestore REST API로 companies 조회 */
+  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.idToken},
+   body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_lid}}},limit:1}})
+  }).then(function(r){return r.json();}).then(function(rows){
+   var co=null;
+   if(rows&&rows[0]&&rows[0].document){
+    var f=rows[0].document.fields||{};
+    co={name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||''};
+   }
+   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:(co&&co.name)||_lemail.split('@')[0],company:co};
+   document.getElementById('login-wrap').style.display='none';
+   var aw=document.getElementById('app-wrap');aw.style.display='flex';
+   document.getElementById('tb-user-name').textContent=_CU.name;
+   _dinePage('dashboard',document.querySelector('.nav-item'));
+   _dineUpdateSidebar();
+   _dineWatchAttend();
+  }).catch(function(){
+   /* Firestore 실패해도 로그인은 진행 */
+   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],company:null};
+   document.getElementById('login-wrap').style.display='none';
+   var aw=document.getElementById('app-wrap');aw.style.display='flex';
+   document.getElementById('tb-user-name').textContent=_CU.name;
+   _dinePage('dashboard',document.querySelector('.nav-item'));
+   _dineUpdateSidebar();
+   _dineWatchAttend();
+  });
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
 document.getElementById('li-pw').addEventListener('keydown',function(e){if(e.key==='Enter')_dineLogin();});
