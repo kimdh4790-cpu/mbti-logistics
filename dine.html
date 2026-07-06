@@ -1872,9 +1872,10 @@ function _dineTaxGenerate(did){
  Promise.all([
   _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
   _db.collection('members').where('dealerId','==',did).get(),
-  _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
+  _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
+  _db.collection('inventory_in').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
  ]).then(function(results){
-  var salesSnap=results[0],memSnap=results[1],attSnap=results[2];
+  var salesSnap=results[0],memSnap=results[1],attSnap=results[2],stockSnap=results[3];
   var totalSales=0,cnt=0,methods={};
   salesSnap.forEach(function(doc){var d=doc.data();if(d.status==='cancelled')return;totalSales+=d.total||0;cnt++;var pm=d.payMethod||'기타';methods[pm]=(methods[pm]||0)+(d.total||0);});
 
@@ -1884,15 +1885,34 @@ function _dineTaxGenerate(did){
   var totalLabor=0;
   memSnap.forEach(function(doc){var m=doc.data();var r=_calcPayFull(m,attMap[doc.id]||{ins:[],outs:[]},memSnap.size,ym);totalLabor+=r.grossSalary;});
 
+  /* 재료 구입비 집계 */
+  var totalStock=0,stockBySupplier={},stockReceipts=[];
+  stockSnap.forEach(function(doc){
+   var d=doc.data();
+   var amt=d.totalPrice||0;
+   totalStock+=amt;
+   var sup=d.supplier||'기타';
+   stockBySupplier[sup]=(stockBySupplier[sup]||0)+amt;
+   if(d.receiptUrl)stockReceipts.push({date:d.date,supplier:sup,amt:amt,url:d.receiptUrl,item:d.itemId||''});
+  });
+
+  var totalCost=totalLabor+totalStock;
+  var profit=totalSales-totalCost;
+
   res.innerHTML='<div style="font-size:14px;font-weight:900;margin-bottom:14px;color:var(--t2)">📄 '+ym+' 세무사 리포트</div>'+
    '<div style="font-size:12px;line-height:2">'+
    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>📅 정산 기간</span><span>'+from+' ~ '+to+'</span></div>'+
-   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>💰 총 매출</span><span style="font-weight:700;color:var(--gr)">₩'+totalSales.toLocaleString()+'</span></div>'+
-   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>🛒 주문 건수</span><span>'+cnt+'건</span></div>'+
-   Object.entries(methods).map(function(m){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);padding-left:16px"><span style="color:var(--t3)">└ '+m[0]+'</span><span>₩'+m[1].toLocaleString()+'</span></div>';}).join('')+
-   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>👥 인건비 합계</span><span style="font-weight:700;color:var(--rd)">₩'+totalLabor.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--bd)"><span style="font-weight:800">💰 총 매출</span><span style="font-weight:700;color:var(--gr)">₩'+totalSales.toLocaleString()+'</span></div>'+
+   '<div style="padding:4px 0 2px;font-size:11px;color:var(--t3)">결제수단별</div>'+
+   Object.entries(methods).map(function(m){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ '+m[0]+'</span><span>₩'+m[1].toLocaleString()+'</span></div>';}).join('')+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);margin-top:6px"><span>👥 인건비</span><span style="font-weight:700;color:var(--rd)">₩'+totalLabor.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--bd)"><span>🧂 재료 구입비</span><span style="font-weight:700;color:var(--rd)">₩'+totalStock.toLocaleString()+'</span></div>'+
+   (Object.entries(stockBySupplier).map(function(s){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ '+s[0]+'</span><span>₩'+s[1].toLocaleString()+'</span></div>';}).join(''))+
+   (stockReceipts.length?'<div style="padding:6px 0;font-size:11px;color:var(--t3)">📎 영수증 '+stockReceipts.length+'건 첨부'+
+    stockReceipts.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0 3px 12px"><span style="color:var(--t3)">'+r.date+' '+r.supplier+'</span><a href="'+r.url+'" target="_blank" style="color:var(--br);font-size:10px">보기↗</a></div>';}).join('')+
+    '</div>':'')+
    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>📊 인건비율</span><span>'+(totalSales>0?Math.round(totalLabor/totalSales*100):0)+'%</span></div>'+
-   '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:900"><span>💵 매출-인건비</span><span style="color:var(--gr)">₩'+(totalSales-totalLabor).toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:900;border-top:2px solid var(--bd)"><span>💵 매출-비용 합계</span><span style="color:'+(profit>=0?'var(--gr)':'var(--rd)')+'">₩'+profit.toLocaleString()+'</span></div>'+
    '</div>'+
    '<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="_dineToast(\'💬 세무사 알림톡 발송 기능 준비중\')">📤 세무사 발송</button>';
  });
