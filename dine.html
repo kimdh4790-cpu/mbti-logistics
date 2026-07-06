@@ -1876,68 +1876,59 @@ function _dineAnalytics(el){
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
 
- /* 스타일 주입 */
  if(!document.getElementById('ana-styles')){
   var st=document.createElement('style');st.id='ana-styles';
   st.textContent=
-   '.ana-kpi-card{position:relative;overflow:hidden;border-radius:16px;padding:20px;background:var(--s2);border:1px solid var(--bd2);transition:transform .2s,box-shadow .2s}'+
-   '.ana-kpi-card:hover{transform:translateY(-2px)}'+
-   '.ana-kpi-card .kpi-glow{position:absolute;width:80px;height:80px;border-radius:50%;opacity:.12;bottom:-20px;right:-20px;filter:blur(20px)}'+
-   '.ana-kpi-card .kpi-icon{position:absolute;top:12px;right:14px;font-size:28px;opacity:.15}'+
-   '.ana-kpi-card .kpi-lbl{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);margin-bottom:6px}'+
-   '.ana-kpi-card .kpi-num{font-size:26px;font-weight:900;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums}'+
-   '.ana-kpi-card .kpi-sub{font-size:11px;opacity:.7}'+
+   '.ana-kpi{position:relative;overflow:hidden;border-radius:16px;padding:20px;background:var(--s2);border:1px solid var(--bd2)}'+
+   '.ana-kpi .glow{position:absolute;width:90px;height:90px;border-radius:50%;opacity:.1;bottom:-20px;right:-20px;filter:blur(25px)}'+
+   '.ana-kpi .ico{position:absolute;top:14px;right:14px;font-size:30px;opacity:.12}'+
+   '.ana-kpi .lbl{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t3);margin-bottom:6px}'+
+   '.ana-kpi .num{font-size:24px;font-weight:900;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums}'+
+   '.ana-kpi .sub{font-size:11px;opacity:.65}'+
+   '.ana-kpi .delta{font-size:10px;font-weight:700;margin-top:5px;padding:2px 7px;border-radius:20px;display:inline-block}'+
+   '.ana-cc{background:var(--s2);border:1px solid var(--bd2);border-radius:16px;padding:20px}'+
+   '.ana-ct{font-size:12px;font-weight:800;color:var(--t2);margin-bottom:3px}'+
+   '.ana-cs{font-size:10px;color:var(--t3);margin-bottom:14px}'+
    '.ana-tab2{padding:7px 16px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--t3);transition:.15s}'+
    '.ana-tab2.on{background:var(--bg3);color:var(--tx)}'+
-   '.ana-chart-card{background:var(--s2);border:1px solid var(--bd2);border-radius:16px;padding:20px}'+
-   '.ana-chart-title{font-size:12px;font-weight:800;color:var(--t2);margin-bottom:4px}'+
-   '.ana-chart-sub{font-size:10px;color:var(--t3);margin-bottom:14px}'+
-   '.ana-menu-rank{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}'+
-   '.ana-menu-rank:last-child{border-bottom:none}'+
-   '@keyframes countUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}'+
-   '.kpi-num{animation:countUp .4s ease forwards}';
+   '.dp-bar{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}'+
+   '.dp-bar:last-child{border:none}';
   document.head.appendChild(st);
  }
 
  wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:10px">'+
-  '<div>'+
-  '<div class="page-title" style="font-size:22px">📈 매출 분석</div>'+
-  '<div class="page-sub" style="margin-top:2px">실시간 경영 데이터</div>'+
-  '</div>'+
+  '<div><div class="page-title">📈 매출 분석</div><div class="page-sub">실시간 경영 인사이트</div></div>'+
   '<div style="display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px" id="ana-tabs">'+
   '<button class="ana-tab2 on" data-t="today" onclick="_dineAnaTab2(this)">오늘</button>'+
   '<button class="ana-tab2" data-t="week" onclick="_dineAnaTab2(this)">이번주</button>'+
   '<button class="ana-tab2" data-t="month" onclick="_dineAnaTab2(this)">이번달</button>'+
   '</div></div>'+
   /* KPI 4개 */
-  '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="ana-kpi2"></div>'+
-  /* 차트 행 1 */
+  '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="ana-kpi"></div>'+
+  /* 일별 추이 + daypart */
+  '<div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">'+
+  '<div class="ana-cc"><div class="ana-ct">📅 일별 매출 추이</div><div class="ana-cs" id="ana-trend-sub">기간 트렌드</div>'+
+  '<div style="position:relative;height:160px"><canvas id="ch-trend" aria-label="일별 매출 추이"></canvas></div></div>'+
+  '<div class="ana-cc"><div class="ana-ct">⏱ 영업 타임별</div><div class="ana-cs">브런치/점심/저녁/야간</div>'+
+  '<div id="ana-daypart" style="margin-top:4px"></div></div>'+
+  '</div>'+
+  /* 시간대 + 요일 */
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
-  '<div class="ana-chart-card">'+
-  '<div class="ana-chart-title">시간대별 매출</div>'+
-  '<div class="ana-chart-sub" id="ana-peak-txt">피크타임 분석</div>'+
-  '<div style="position:relative;height:180px"><canvas id="ch-hour" aria-label="시간대별 매출 차트"></canvas></div>'+
+  '<div class="ana-cc"><div class="ana-ct">⏰ 시간대별 매출</div><div class="ana-cs" id="ana-peak-txt">피크타임 분석</div>'+
+  '<div style="position:relative;height:170px"><canvas id="ch-hour" aria-label="시간대별 매출"></canvas></div></div>'+
+  '<div class="ana-cc"><div class="ana-ct">📅 요일별 매출</div><div class="ana-cs" id="ana-day-sub">요일 패턴</div>'+
+  '<div style="position:relative;height:170px"><canvas id="ch-day" aria-label="요일별 매출"></canvas></div></div>'+
   '</div>'+
-  '<div class="ana-chart-card">'+
-  '<div class="ana-chart-title">요일별 매출</div>'+
-  '<div class="ana-chart-sub">요일 패턴 분석</div>'+
-  '<div style="position:relative;height:180px"><canvas id="ch-day" aria-label="요일별 매출 차트"></canvas></div>'+
-  '</div>'+
-  '</div>'+
-  /* 차트 행 2 */
-  '<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px">'+
-  '<div class="ana-chart-card">'+
-  '<div class="ana-chart-title">인기 메뉴 TOP 5</div>'+
-  '<div class="ana-chart-sub">주문 수량 기준</div>'+
-  '<div id="ana-menu2"></div>'+
-  '</div>'+
-  '<div class="ana-chart-card">'+
-  '<div class="ana-chart-title">결제수단 비중</div>'+
-  '<div class="ana-chart-sub" id="ana-pay-sub">-</div>'+
-  '<div style="position:relative;height:150px;margin-bottom:10px"><canvas id="ch-pay" aria-label="결제수단 도넛 차트"></canvas></div>'+
-  '<div id="ana-pay-leg" style="display:flex;flex-direction:column;gap:5px"></div>'+
-  '</div>'+
+  /* 메뉴 + 결제 + 인건비 */
+  '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px">'+
+  '<div class="ana-cc"><div class="ana-ct">🏆 인기 메뉴 TOP 5</div><div class="ana-cs">주문 수량 기준</div>'+
+  '<div id="ana-menu"></div></div>'+
+  '<div class="ana-cc"><div class="ana-ct">💳 결제수단</div><div class="ana-cs" id="ana-pay-sub">비중 분석</div>'+
+  '<div style="position:relative;height:130px"><canvas id="ch-pay" aria-label="결제수단 도넛"></canvas></div>'+
+  '<div id="ana-pay-leg" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div></div>'+
+  '<div class="ana-cc"><div class="ana-ct">👥 인건비 분석</div><div class="ana-cs">매출 대비 비율</div>'+
+  '<div id="ana-labor"></div></div>'+
   '</div>';
 
  el.appendChild(wrap);
@@ -1959,78 +1950,221 @@ function _dineAnaFilter2(type){
 }
 
 function _dineLoadAnalytics(did,from,to){
- var kpi=document.getElementById('ana-kpi2');
- if(kpi)kpi.innerHTML='<div class="ana-kpi-card"><div class="kpi-lbl">로딩중</div><div class="kpi-num" style="color:var(--t3)">...</div></div>'.repeat(4);
+ var kpi=document.getElementById('ana-kpi');
+ if(kpi)kpi.innerHTML='<div class="ana-kpi" style="grid-column:1/-1"><div class="lbl">로딩중...</div></div>';
 
- _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
- .then(function(snap){
-  var total=0,cnt=0,hours={},days={},menus={},methods={};
+ var ym=from.slice(0,7);
+ var from2,to2; /* 비교기간 */
+ var d1=new Date(from),d2=new Date(to);
+ var diffDays=Math.round((d2-d1)/86400000)+1;
+ var prevTo=new Date(d1);prevTo.setDate(prevTo.getDate()-1);
+ var prevFrom=new Date(prevTo);prevFrom.setDate(prevFrom.getDate()-diffDays+1);
+ from2=prevFrom.toISOString().slice(0,10);
+ to2=prevTo.toISOString().slice(0,10);
+
+ Promise.all([
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from2).where('date','<=',to2).get(),
+  _db.collection('members').where('dealerId','==',did).get(),
+  _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
+ ]).then(function(results){
+  var snap=results[0],prevSnap=results[1],memSnap=results[2],attSnap=results[3];
+
+  var total=0,cnt=0,hours={},days={},menus={},methods={},daily={};
   var DN=['일','월','화','수','목','금','토'];
   snap.forEach(function(doc){
    var d=doc.data();if(d.status==='cancelled')return;
    var amt=d.total||0;total+=amt;cnt++;
    var dt=new Date(d.createdAt||d.date+'T12:00:00');
-   hours[dt.getHours()]=(hours[dt.getHours()]||0)+amt;
+   var h=dt.getHours();
+   hours[h]=(hours[h]||0)+amt;
    days[DN[dt.getDay()]]=(days[DN[dt.getDay()]]||0)+amt;
-   var pmRaw=d.payMethod||'기타';
-   var pmKr={'cash':'현금','Cash':'현금','card':'카드','Card':'카드','kakao':'카카오페이','naver':'네이버페이','toss':'토스'};
-   var pm=pmKr[pmRaw]||pmRaw;
+   var pmKr={'cash':'현금','Cash':'현금','card':'카드','Card':'카드','kakao':'카카오페이','naver':'네이버페이','toss':'토스페이'};
+   var pm=pmKr[d.payMethod||'']||d.payMethod||'기타';
    methods[pm]=(methods[pm]||0)+amt;
+   var dt2=d.date||dt.toISOString().slice(0,10);
+   daily[dt2]=(daily[dt2]||0)+amt;
    (d.items||[]).forEach(function(it){menus[it.name]=(menus[it.name]||0)+(it.qty||1);});
   });
+
+  var prevTotal=0,prevCnt=0;
+  prevSnap.forEach(function(doc){
+   var d=doc.data();if(d.status==='cancelled')return;
+   prevTotal+=d.total||0;prevCnt++;
+  });
+
   var avg=cnt?Math.round(total/cnt):0;
-  var peakH=Object.entries(hours).sort(function(a,b){return b[1]-a[1];})[0];
-  var days2=Math.max(1,(new Date(to)-new Date(from))/(86400000)+1);
+  var days2=Math.max(1,Object.keys(daily).length||diffDays);
   var dayAvg=Math.round(total/days2);
+  var peakH=Object.entries(hours).sort(function(a,b){return b[1]-a[1];})[0];
   var maxDay=Object.entries(days).sort(function(a,b){return b[1]-a[1];})[0];
 
-  /* KPI */
-  if(kpi){
-   var kpis=[
-    {lbl:'총 매출',val:total,pre:'₩',suf:'',sub:cnt+'건 주문',color:'#38bdf8',glow:'#38bdf8',icon:'💰'},
-    {lbl:'일평균 매출',val:dayAvg,pre:'₩',suf:'',sub:Math.round(days2)+'일 기준',color:'#22c55e',glow:'#22c55e',icon:'📊'},
-    {lbl:'피크타임',val:peakH?+peakH[0]:0,pre:'',suf:'시대',sub:peakH?'₩'+Math.round(peakH[1]).toLocaleString():'없음',color:'#f59e0b',glow:'#f59e0b',icon:'⏰'},
-    {lbl:'객단가',val:avg,pre:'₩',suf:'',sub:'주문당 평균',color:'#a78bfa',glow:'#a78bfa',icon:'🎯'},
-   ];
-   kpi.innerHTML=kpis.map(function(k,i){
-    return '<div class="ana-kpi-card">'+
-     '<div class="kpi-glow" style="background:'+k.glow+'"></div>'+
-     '<div class="kpi-icon">'+k.icon+'</div>'+
-     '<div class="kpi-lbl">'+k.lbl+'</div>'+
-     '<div class="kpi-num" id="kn'+i+'" style="color:'+k.color+'">'+k.pre+'0'+k.suf+'</div>'+
-     '<div class="kpi-sub" style="color:'+k.color+'">'+k.sub+'</div>'+
-     '</div>';
-   }).join('');
-   /* 카운팅 애니메이션 */
-   function cu(id,target,pre,suf){
-    var el2=document.getElementById(id);if(!el2||!target)return;
-    var s=0,st=null,dur=1000;
-    function step(ts){
-     if(!st)st=ts;
-     var p=Math.min((ts-st)/dur,1);
-     var ease=1-Math.pow(1-p,4);
-     el2.textContent=pre+Math.round(ease*target).toLocaleString()+suf;
-     if(p<1)requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+  /* 인건비 계산 */
+  var attMap={};
+  attSnap.forEach(function(doc){
+   var d=doc.data();
+   if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[]};
+   if(d.type==='in')attMap[d.memberId].ins.push(d);
+   else attMap[d.memberId].outs.push(d);
+  });
+  var totalLabor=0;
+  memSnap.forEach(function(doc){
+   var r=_calcPayFull(doc.data(),attMap[doc.id]||{ins:[],outs:[]},memSnap.size,ym);
+   totalLabor+=r.grossSalary;
+  });
+  var laborRate=total>0?Math.round(totalLabor/total*100):0;
+
+  /* 증감률 */
+  function delta(cur,prev){
+   if(!prev)return null;
+   var d=Math.round((cur-prev)/prev*100);
+   return {v:d,up:d>=0};
+  }
+  var dTotal=delta(total,prevTotal);
+  var dCnt=delta(cnt,prevCnt);
+
+  /* KPI 렌더 */
+  function cu(id,target,pre,suf){
+   var el=document.getElementById(id);if(!el||!target)return;
+   var st=null;
+   function step(ts){
+    if(!st)st=ts;
+    var p=Math.min((ts-st)/900,1);
+    var e=1-Math.pow(1-p,4);
+    el.textContent=pre+Math.round(e*target).toLocaleString()+suf;
+    if(p<1)requestAnimationFrame(step);
    }
+   requestAnimationFrame(step);
+  }
+
+  var kpis=[
+   {lbl:'총 매출',id:'kn0',val:total,pre:'₩',suf:'',sub:cnt+'건',color:'#38bdf8',d:dTotal,icon:'💰'},
+   {lbl:'일평균 매출',id:'kn1',val:dayAvg,pre:'₩',suf:'',sub:days2+'일 기준',color:'#22c55e',d:null,icon:'📊'},
+   {lbl:'피크타임',id:'kn2',val:null,pre:'',suf:'',sub:peakH?'₩'+Math.round(peakH[1]).toLocaleString():'없음',color:'#f59e0b',d:null,icon:'⏰'},
+   {lbl:'객단가',id:'kn3',val:avg,pre:'₩',suf:'',sub:'주문당 평균',color:'#a78bfa',d:dCnt,icon:'🎯'},
+  ];
+  if(kpi)kpi.innerHTML=kpis.map(function(k){
+   var deltaHtml='';
+   if(k.d!==null&&k.d){
+    var bg=k.d.up?'rgba(34,197,94,.15)':'rgba(239,68,68,.15)';
+    var fc=k.d.up?'#22c55e':'#ef4444';
+    deltaHtml='<div class="delta" style="background:'+bg+';color:'+fc+'">'+(k.d.up?'▲':'▼')+Math.abs(k.d.v)+'% 전기간</div>';
+   }
+   return '<div class="ana-kpi">'+
+    '<div class="glow" style="background:'+k.color+'"></div>'+
+    '<div class="ico">'+k.icon+'</div>'+
+    '<div class="lbl">'+k.lbl+'</div>'+
+    '<div class="num" id="'+k.id+'" style="color:'+k.color+'">'+(k.val===null?(peakH?peakH[0]+'시대':'-'):'₩0')+'</div>'+
+    '<div class="sub" style="color:'+k.color+'">'+k.sub+'</div>'+
+    deltaHtml+'</div>';
+  }).join('');
+
+  setTimeout(function(){
+   cu('kn0',total,'₩','');
+   cu('kn1',dayAvg,'₩','');
+   cu('kn3',avg,'₩','');
+   if(peakH){var pk=document.getElementById('kn2');if(pk)pk.textContent=peakH[0]+'시대';}
+   var pt=document.getElementById('ana-peak-txt');
+   if(pt&&peakH)pt.textContent='🔥 '+peakH[0]+'시대 피크';
+   var ds=document.getElementById('ana-day-sub');
+   if(ds&&maxDay)ds.textContent='최다: '+maxDay[0]+'요일';
+  },50);
+
+  /* Daypart */
+  var daypart=[
+   {lbl:'브런치',range:[6,11],icon:'☀️',color:'#f59e0b'},
+   {lbl:'점심',range:[11,15],icon:'🍱',color:'#22c55e'},
+   {lbl:'저녁',range:[17,21],icon:'🌆',color:'#38bdf8'},
+   {lbl:'야간',range:[21,24],icon:'🌙',color:'#a78bfa'},
+  ];
+  var dpEl=document.getElementById('ana-daypart');
+  if(dpEl){
+   var dpData=daypart.map(function(dp){
+    var s=0;
+    for(var h=dp.range[0];h<dp.range[1];h++)s+=(hours[h]||0);
+    return Object.assign({},dp,{amt:s});
+   });
+   var dpMax=Math.max.apply(null,dpData.map(function(d){return d.amt;}))||1;
+   dpEl.innerHTML=dpData.map(function(dp){
+    var pct=Math.round(dp.amt/dpMax*100);
+    var share=total>0?Math.round(dp.amt/total*100):0;
+    return '<div class="dp-bar">'+
+     '<span style="font-size:16px;flex-shrink:0">'+dp.icon+'</span>'+
+     '<div style="flex:1;min-width:0">'+
+     '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">'+
+     '<span style="font-weight:700">'+dp.lbl+'</span>'+
+     '<span style="color:'+dp.color+';font-weight:800">'+share+'%</span>'+
+     '</div>'+
+     '<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">'+
+     '<div style="height:100%;width:0%;background:'+dp.color+';border-radius:3px;transition:width 1s ease" data-w="'+pct+'"></div>'+
+     '</div>'+
+     '<div style="font-size:10px;color:var(--t3);margin-top:2px">₩'+dp.amt.toLocaleString()+'</div>'+
+     '</div></div>';
+   }).join('');
    setTimeout(function(){
-    cu('kn0',total,'₩','');
-    cu('kn1',dayAvg,'₩','');
-    if(peakH)document.getElementById('kn2').textContent=peakH[0]+'시대';
-    cu('kn3',avg,'₩','');
-    /* 피크 텍스트 */
-    var pt=document.getElementById('ana-peak-txt');
-    if(pt&&peakH)pt.textContent='🔥 '+peakH[0]+'시대 피크 · ₩'+Math.round(peakH[1]).toLocaleString();
-    /* 최고요일 텍스트 */
-    var ps=document.getElementById('ana-pay-sub');
-    if(ps&&maxDay)ps.textContent='최다: '+maxDay[0]+'요일 ₩'+Math.round(maxDay[1]).toLocaleString();
-   },50);
+    dpEl.querySelectorAll('[data-w]').forEach(function(b){b.style.width=b.dataset.w+'%';});
+   },200);
+  }
+
+  /* 인건비 분석 */
+  var lEl=document.getElementById('ana-labor');
+  if(lEl){
+   var lRate=laborRate;
+   var lColor=lRate<25?'#22c55e':lRate<35?'#f59e0b':'#ef4444';
+   var lMsg=lRate<25?'✅ 양호':lRate<35?'⚠️ 주의':'❌ 과다';
+   lEl.innerHTML=
+    '<div style="text-align:center;padding:10px 0">'+
+    '<div style="font-size:36px;font-weight:900;color:'+lColor+'">'+lRate+'%</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:6px">매출 대비 인건비율</div>'+
+    '<div style="font-size:12px;font-weight:700;color:'+lColor+'">'+lMsg+'</div>'+
+    '<div style="font-size:10px;color:var(--t3);margin-top:4px">적정 25~30%</div>'+
+    '</div>'+
+    '<div style="margin-top:8px">'+
+    '<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">'+
+    '<div style="height:100%;width:0%;background:'+lColor+';border-radius:4px;transition:width 1.2s ease" id="labor-bar"></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--t3);margin-top:3px">'+
+    '<span>₩'+totalLabor.toLocaleString()+' 인건비</span>'+
+    '<span>₩'+total.toLocaleString()+' 매출</span>'+
+    '</div></div>';
+   setTimeout(function(){var b=document.getElementById('labor-bar');if(b)b.style.width=Math.min(lRate,100)+'%';},200);
   }
 
   /* 차트 */
   _dineEnsureChart(function(){
    var CS=['#2a78d6','#1baf7a','#eda100','#4a3aa7','#e34948','#e87ba4','#eb6834','#008300'];
+
+   /* 일별 추이 선차트 */
+   var tc=document.getElementById('ch-trend');
+   if(tc&&window.Chart){
+    if(tc._ch)tc._ch.destroy();
+    var allDates=[];
+    var d=new Date(from);
+    while(d<=new Date(to)){allDates.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}
+    var tData=allDates.map(function(dt){return daily[dt]||0;});
+    var tLabels=allDates.map(function(dt){return dt.slice(5);});
+    var tMax=Math.max.apply(null,tData)||1;
+    var ctx=tc.getContext('2d');
+    var grad=ctx.createLinearGradient(0,0,0,160);
+    grad.addColorStop(0,'rgba(56,189,248,.3)');
+    grad.addColorStop(1,'rgba(56,189,248,.0)');
+    tc._ch=new Chart(tc,{type:'line',data:{labels:tLabels,datasets:[{
+     data:tData,
+     borderColor:'#38bdf8',borderWidth:2.5,
+     backgroundColor:grad,fill:true,
+     tension:.4,pointRadius:tData.length<=7?4:2,
+     pointBackgroundColor:'#38bdf8',pointBorderColor:'#111420',pointBorderWidth:2,
+     hoverPointRadius:6
+    }]},options:{responsive:true,maintainAspectRatio:false,
+     animation:{duration:900},
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
+     scales:{
+      x:{grid:{display:false},border:{display:false},ticks:{color:'#6b7280',font:{size:9},maxTicksLimit:10}},
+      y:{grid:{color:'rgba(255,255,255,.04)',lineWidth:.5},border:{display:false},ticks:{color:'#6b7280',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}
+     }}});
+    var ts=document.getElementById('ana-trend-sub');
+    if(ts)ts.textContent=allDates.length+'일 · 최고 ₩'+tMax.toLocaleString();
+   }
 
    /* 시간대 */
    var hc=document.getElementById('ch-hour');
@@ -2042,13 +2176,11 @@ function _dineLoadAnalytics(did,from,to){
     hc._ch=new Chart(hc,{type:'bar',data:{labels:hl,datasets:[{
      data:hd,
      backgroundColor:hd.map(function(v){return v===hmax?'#38bdf8':'rgba(56,189,248,.2)';}),
-     borderRadius:5,borderSkipped:false,
-     hoverBackgroundColor:'rgba(56,189,248,.7)'
+     borderRadius:5,borderSkipped:false
     }]},options:{responsive:true,maintainAspectRatio:false,
      animation:{duration:900,easing:'easeOutQuart'},
      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
-     scales:{
-      x:{grid:{display:false},border:{display:false},ticks:{color:'#6b7280',font:{size:9},maxRotation:0}},
+     scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#6b7280',font:{size:9},maxRotation:0}},
       y:{grid:{color:'rgba(255,255,255,.04)',lineWidth:.5},border:{display:false},ticks:{color:'#6b7280',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}
      }}});
    }
@@ -2063,13 +2195,11 @@ function _dineLoadAnalytics(did,from,to){
     dc._ch=new Chart(dc,{type:'bar',data:{labels:dord,datasets:[{
      data:dd,
      backgroundColor:dd.map(function(v){return v===dmax?'#a78bfa':'rgba(167,139,250,.2)';}),
-     borderRadius:5,borderSkipped:false,
-     hoverBackgroundColor:'rgba(167,139,250,.7)'
+     borderRadius:5,borderSkipped:false
     }]},options:{responsive:true,maintainAspectRatio:false,
      animation:{duration:900,easing:'easeOutBounce'},
      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
-     scales:{
-      x:{grid:{display:false},border:{display:false},ticks:{color:'#6b7280',font:{size:11}}},
+     scales:{x:{grid:{display:false},border:{display:false},ticks:{color:'#6b7280',font:{size:11}}},
       y:{grid:{color:'rgba(255,255,255,.04)',lineWidth:.5},border:{display:false},ticks:{color:'#6b7280',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}
      }}});
    }
@@ -2082,68 +2212,58 @@ function _dineLoadAnalytics(did,from,to){
     var pColors=meth.map(function(_,i){return CS[i%CS.length];});
     pc._ch=new Chart(pc,{type:'doughnut',data:{
      labels:meth.map(function(e){return e[0];}),
-     datasets:[{data:meth.map(function(e){return e[1];}),
-      backgroundColor:pColors,borderWidth:3,borderColor:'#111420',hoverOffset:6
-     }]
+     datasets:[{data:meth.map(function(e){return e[1];}),backgroundColor:pColors,borderWidth:3,borderColor:'#111420',hoverOffset:6}]
     },options:{responsive:true,maintainAspectRatio:false,
-     animation:{animateRotate:true,duration:1000},
-     cutout:'68%',
-     plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.label+': ₩'+c.raw.toLocaleString()+' ('+Math.round(c.raw/(total||1)*100)+'%)';}}}}
+     animation:{animateRotate:true,duration:1000},cutout:'68%',
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.label+' '+Math.round(c.raw/(total||1)*100)+'%';}}}}
     }});
-    /* 커스텀 범례 */
     var leg=document.getElementById('ana-pay-leg');
     if(leg)leg.innerHTML=meth.map(function(e,i){
      var pct=total?Math.round(e[1]/total*100):0;
-     return '<div style="display:flex;align-items:center;gap:8px;font-size:11px">'+
-      '<div style="width:10px;height:10px;border-radius:3px;background:'+pColors[i]+';flex-shrink:0"></div>'+
-      '<span style="flex:1;color:var(--t2)">'+e[0]+'</span>'+
+     return '<div style="display:flex;align-items:center;gap:6px;font-size:10px">'+
+      '<div style="width:8px;height:8px;border-radius:2px;background:'+pColors[i]+';flex-shrink:0"></div>'+
+      '<span style="flex:1">'+e[0]+'</span>'+
       '<span style="font-weight:800;color:'+pColors[i]+'">'+pct+'%</span>'+
-      '<span style="color:var(--t3)">₩'+e[1].toLocaleString()+'</span>'+
       '</div>';
     }).join('');
+    var ps=document.getElementById('ana-pay-sub');
+    if(ps&&meth[0])ps.textContent='최다: '+meth[0][0]+' '+Math.round(meth[0][1]/total*100)+'%';
    }
   });
 
-  /* 인기 메뉴 */
-  var mEl=document.getElementById('ana-menu2');
+  /* 인기메뉴 */
+  var mEl=document.getElementById('ana-menu');
   if(mEl){
    var top5=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
    var mmax=top5[0]?top5[0][1]:1;
-   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
    var mColors=['#f59e0b','#94a3b8','#cd7f32','#38bdf8','#a78bfa'];
-   if(!top5.length){mEl.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">주문 데이터 없음</div>';return;}
+   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
+   if(!top5.length){mEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';return;}
    mEl.innerHTML=top5.map(function(m,i){
-    return '<div class="ana-menu-rank">'+
-     '<span style="font-size:18px;flex-shrink:0">'+ranks[i]+'</span>'+
-     '<div style="flex:1;min-width:0">'+
-     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
-     '<span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m[0]+'</span>'+
-     '<span style="font-size:12px;font-weight:800;color:'+mColors[i]+';margin-left:8px;flex-shrink:0" id="mc'+i+'">0개</span>'+
+    var share=cnt?Math.round((m[1]||0)/cnt*100):0;
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'+
+     '<span style="font-size:16px;flex-shrink:0">'+ranks[i]+'</span>'+
+     '<span style="flex:1;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m[0]+'</span>'+
+     '<span style="font-size:11px;font-weight:800;color:'+mColors[i]+'" id="mc'+i+'">0개</span>'+
+     '<span style="font-size:9px;color:var(--t3);margin-left:2px">'+share+'%</span>'+
      '</div>'+
-     '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">'+
+     '<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">'+
      '<div style="height:100%;width:0%;background:'+mColors[i]+';border-radius:3px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1) '+(i*.1)+'s" id="mb'+i+'"></div>'+
-     '</div></div></div>';
+     '</div></div>';
    }).join('');
    setTimeout(function(){
     top5.forEach(function(m,i){
-     var bar=document.getElementById('mb'+i);
-     if(bar)bar.style.width=Math.round(m[1]/mmax*100)+'%';
-     var cnt3=document.getElementById('mc'+i);
-     if(!cnt3)return;
-     var target3=m[1],s3=0,st3=null;
-     function step3(ts){
-      if(!st3)st3=ts;
-      var p=Math.min((ts-st3)/700,1);
-      cnt3.textContent=Math.round(p*target3)+'개';
-      if(p<1)requestAnimationFrame(step3);
-     }
-     requestAnimationFrame(step3);
+     var bar=document.getElementById('mb'+i);if(bar)bar.style.width=Math.round(m[1]/mmax*100)+'%';
+     var cnt2=document.getElementById('mc'+i);if(!cnt2)return;
+     var t2=m[1],st2=null;
+     (function step2(ts){if(!st2)st2=ts;var p=Math.min((ts-st2)/700,1);cnt2.textContent=Math.round(p*t2)+'개';if(p<1)requestAnimationFrame(step2);})(0);
     });
    },150);
   }
  });
 }
-/* 사이드바 매장명 업데이트 */
+
 function _dineUpdateSidebar(){
  var n=document.getElementById('sb-store-name');
  var s=document.getElementById('sb-store-sub');
