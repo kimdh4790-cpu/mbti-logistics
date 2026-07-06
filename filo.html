@@ -5061,6 +5061,79 @@ function _filoMarginLoadRange(from,to){
      '<span style="font-size:13px;font-weight:700">'+e[1]+'개</span></div>';
    }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">판매 데이터 없음</div>';
   }
+ /* 차트 렌더링 */
+  var liveEl=document.getElementById('sales-live');
+  if(liveEl){
+   /* 시간대별 집계 */
+   var hourStats2={};
+   snap.forEach(function(doc){
+    var d2=doc.data();
+    if(d2.status==='cancelled')return;
+    var h=d2.createdAt?(new Date(d2.createdAt).getHours()):(new Date().getHours());
+    hourStats2[h]=(hourStats2[h]||0)+(d2.total||0);
+   });
+   var hourEntries2=Object.keys(hourStats2).sort(function(a,b){return a-b;}).map(function(h){return [h,hourStats2[h]];});
+
+   var chartHtml='';
+   if(hourEntries2.length){
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div>'+
+     '<div style="position:relative;height:160px"><canvas id="hour-chart-canvas"></canvas></div></div>';
+   }
+   if(paySorted&&paySorted.length){
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div>'+
+     '<div style="position:relative;height:160px"><canvas id="pay-donut-canvas"></canvas></div></div>';
+   }
+   if(Object.keys(items).length){
+    var menuEntries2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div>'+
+     menuEntries2.map(function(kv,i){
+      var rank=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
+      var pct=total>0?Math.round(kv[1]/total*100):0;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+       '<span style="font-size:15px">'+rank+'</span>'+
+       '<div style="flex:1"><div style="display:flex;justify-content:space-between">'+
+       '<span style="font-size:12px;font-weight:700">'+kv[0]+'</span>'+
+       '<span style="font-size:12px;font-weight:900;color:#22c55e">'+kv[1]+'개</span>'+
+       '</div>'+
+       '<div style="height:3px;background:var(--surface3);border-radius:2px;margin-top:4px">'+
+       '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
+       '</div></div></div>';
+     }).join('')+'</div>';
+   }
+
+   if(chartHtml) liveEl.innerHTML=(liveEl.innerHTML||'')+chartHtml;
+
+   setTimeout(function(){
+    /* 시간대 바차트 */
+    var hc=document.getElementById('hour-chart-canvas');
+    if(hc&&window.Chart&&hourEntries2.length){
+     if(hc._chart)hc._chart.destroy();
+     hc._chart=new Chart(hc,{type:'bar',
+      data:{labels:hourEntries2.map(function(h){return h[0]+'시';}),
+       datasets:[{label:'매출',data:hourEntries2.map(function(h){return h[1];}),
+        backgroundColor:'rgba(124,58,237,.6)',borderColor:'rgba(124,58,237,1)',
+        borderWidth:1,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+       plugins:{legend:{display:false}},
+       scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#9898c0',font:{size:10}}},
+        y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#9898c0',font:{size:10},
+         callback:function(v){return '₩'+(v>=1000?(v/1000).toFixed(0)+'k':v);}}}}}});
+    }
+    /* 결제수단 도넛 */
+    var pc=document.getElementById('pay-donut-canvas');
+    if(pc&&window.Chart&&paySorted&&paySorted.length){
+     if(pc._chart)pc._chart.destroy();
+     pc._chart=new Chart(pc,{type:'doughnut',
+      data:{labels:paySorted.map(function(p){return p[0];}),
+       datasets:[{data:paySorted.map(function(p){return p[1];}),
+        backgroundColor:['#7c3aed','#22c55e','#f59e0b','#38bdf8','#ef4444'],
+        borderWidth:0,hoverOffset:4}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+       plugins:{legend:{position:'bottom',labels:{color:'#9898c0',font:{size:10},boxWidth:10,padding:6}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.label+': ₩'+ctx.raw.toLocaleString();}}}}}});
+    }
+   },150);
+  }
  }).catch(function(e){if(heroSub)heroSub.textContent='오류: '+e.message;});
 }
 </script>
