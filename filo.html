@@ -1134,6 +1134,13 @@ function _loadCompany(uid){
 function _showApp(){
  document.getElementById('login-screen').style.display='none';
  document.getElementById('app').style.display='flex';
+ /* 모바일이면 사이드바 기본 닫힘 */
+ if(window.innerWidth<=768){
+  var sb=document.getElementById('sidebar');
+  var btn=document.getElementById('sidebar-toggle');
+  if(sb)sb.classList.remove('open');
+  if(btn)btn.textContent='☰';
+ }
  var company=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
  var role=_CU.role==='member'?'직원':'관리자';
  document.getElementById('nav-company').textContent=company;
