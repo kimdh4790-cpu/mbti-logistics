@@ -155,22 +155,41 @@ select.inp option{background:var(--s2)}
  <div id="main-wrap">
   <!-- 사이드바 -->
   <div id="sidebar">
+   <!-- 매장명 -->
+   <div style="padding:16px;border-bottom:1px solid var(--bd)">
+    <div style="font-size:13px;font-weight:800;color:var(--tx)" id="sb-store-name">내 매장</div>
+    <div style="font-size:10px;color:var(--t3);margin-top:2px" id="sb-store-sub">외식업 관리 플랫폼</div>
+   </div>
    <div class="nav-group">
-    <div class="nav-group-title">대시보드</div>
-    <div class="nav-item active" onclick="_dinePage('dashboard',this)"><span class="ic">📊</span>매출 현황</div>
+    <div class="nav-group-title">홈</div>
+    <div class="nav-item active" onclick="_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
+    <div class="nav-item" onclick="_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
+   </div>
+   <div class="nav-group">
+    <div class="nav-group-title">매장 운영</div>
+    <div class="nav-item" onclick="_dinePage('table',this)"><span class="ic">🪑</span>테이블 현황</div>
+    <div class="nav-item" onclick="_dinePage('orders',this)"><span class="ic">🔔</span>주문 대기</div>
+    <div class="nav-item" onclick="_dinePage('sales',this)"><span class="ic">🛒</span>POS 매출</div>
+    <div class="nav-item" onclick="_dinePage('delivery',this)"><span class="ic">🛵</span>배달앱 정산</div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title">직원 관리</div>
     <div class="nav-item" onclick="_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
     <div class="nav-item" onclick="_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
+    <div class="nav-item" onclick="_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
     <div class="nav-item" onclick="_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
     <div class="nav-item" onclick="_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title">매출 정산</div>
-    <div class="nav-item" onclick="_dinePage('sales',this)"><span class="ic">🛒</span>POS 매출</div>
-    <div class="nav-item" onclick="_dinePage('delivery',this)"><span class="ic">🛵</span>배달앱 정산</div>
+    <div class="nav-group-title">정산</div>
     <div class="nav-item" onclick="_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
+    <div class="nav-item" onclick="_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
+    <div class="nav-item" onclick="_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
+   </div>
+   <div class="nav-group">
+    <div class="nav-group-title">고객</div>
+    <div class="nav-item" onclick="_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
+    <div class="nav-item" onclick="_dinePage('reservation',this)"><span class="ic">📆</span>예약 관리</div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title">설정</div>
@@ -231,6 +250,7 @@ _auth.onAuthStateChanged(function(u){
     var aw=document.getElementById('app-wrap');aw.style.display='flex';
     document.getElementById('tb-user-name').textContent=_CU.name;
     _dinePage('dashboard',document.querySelector('.nav-item'));
+    _dineUpdateSidebar();
     _dineWatchAttend();
    });
  } else {
@@ -252,6 +272,14 @@ function _dinePage(p,el){
  else if(p==='sales')    _dineSales(c);
  else if(p==='delivery') _dineDelivery(c);
  else if(p==='settle')   _dineSettle(c);
+ else if(p==='analytics') _dineAnalytics(c);
+ else if(p==='table')    _dineTable(c);
+ else if(p==='orders')   _dineOrders(c);
+ else if(p==='schedule') _dineSchedule(c);
+ else if(p==='cost')     _dineCost(c);
+ else if(p==='tax')      _dineTax(c);
+ else if(p==='member')   _dineMember(c);
+ else if(p==='reservation') _dineReservation(c);
  else if(p==='store')    _dineStore(c);
  else if(p==='alimtalk') _dineAlimtalk(c);
 }
@@ -1146,6 +1174,598 @@ function _countUp(id,target,prefix,suffix){
 }
 
 // util end
+
+/* ══════════════════════════════════
+   📈 매출 분석 (고도화)
+   ══════════════════════════════════ */
+function _dineAnalytics(el){
+ var did=_CU.dealerId;
+ var today=new Date().toISOString().slice(0,10);
+ var ym=today.slice(0,7);
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
+  '<div><div class="page-title">📈 매출 분석</div><div class="page-sub">시간대·요일·메뉴 분석</div></div>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap" id="ana-filter">'+
+  '<button class="btn btn-sm btn-primary" onclick="_dineAnaFilter(\'today\',this)">오늘</button>'+
+  '<button class="btn btn-sm btn-ghost" onclick="_dineAnaFilter(\'week\',this)">이번주</button>'+
+  '<button class="btn btn-sm btn-ghost" onclick="_dineAnaFilter(\'month\',this)">이번달</button>'+
+  '</div></div>'+
+  '<div class="kpi-grid" id="ana-kpi"></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+  '<div class="card"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div><div style="position:relative;height:160px"><canvas id="ana-hour-chart"></canvas></div></div>'+
+  '<div class="card"><div class="sec-title" style="margin-bottom:10px">📅 요일별 매출</div><div style="position:relative;height:160px"><canvas id="ana-day-chart"></canvas></div></div>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+  '<div class="card"><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div><div id="ana-menu-list"></div></div>'+
+  '<div class="card"><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div><div id="ana-pay-list"></div></div>'+
+  '</div>';
+ el.appendChild(wrap);
+ _dineAnaFilter('today',document.querySelector('#ana-filter button'));
+}
+
+function _dineAnaFilter(type,btn){
+ document.querySelectorAll('#ana-filter button').forEach(function(b){b.className='btn btn-sm btn-ghost';});
+ if(btn)btn.className='btn btn-sm btn-primary';
+ var now=new Date();
+ var from,to=now.toISOString().slice(0,10);
+ if(type==='today'){from=to;}
+ else if(type==='week'){var d=new Date(now);d.setDate(d.getDate()-6);from=d.toISOString().slice(0,10);}
+ else{from=to.slice(0,7)+'-01';}
+ _dineLoadAnalytics(_CU.dealerId,from,to);
+}
+
+function _dineLoadAnalytics(did,from,to){
+ _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
+ .then(function(snap){
+  var total=0,cnt=0,hours={},days={},menus={},methods={};
+  var dayNames=['일','월','화','수','목','금','토'];
+  snap.forEach(function(doc){
+   var d=doc.data();if(d.status==='cancelled')return;
+   var amt=d.total||0;total+=amt;cnt++;
+   var dt=new Date(d.createdAt||d.date+'T12:00:00');
+   var h=dt.getHours();hours[h]=(hours[h]||0)+amt;
+   var dy=dayNames[dt.getDay()];days[dy]=(days[dy]||0)+amt;
+   var pm=d.payMethod||'기타';methods[pm]=(methods[pm]||0)+amt;
+   (d.items||[]).forEach(function(it){menus[it.name]=(menus[it.name]||0)+(it.qty||1);});
+  });
+  var avg=cnt?Math.round(total/cnt):0;
+  var peakH=Object.entries(hours).sort(function(a,b){return b[1]-a[1];})[0];
+
+  /* KPI */
+  var kpi=document.getElementById('ana-kpi');
+  if(kpi)kpi.innerHTML=
+   '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">💰 총 매출</div><div class="kpi-val" id="ana-rev" style="color:#38bdf8">₩0</div><div class="kpi-sub">'+cnt+'건</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🛒 주문</div><div class="kpi-val" id="ana-cnt" style="color:#22c55e">0건</div><div class="kpi-sub">평균 ₩'+avg.toLocaleString()+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">⏰ 피크타임</div><div class="kpi-val" style="color:#f59e0b">'+(peakH?peakH[0]+'시':'-')+'</div><div class="kpi-sub">'+(peakH?'₩'+peakH[1].toLocaleString():'')+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #a78bfa"><div class="kpi-label">💰 객단가</div><div class="kpi-val" id="ana-avg" style="color:#a78bfa">₩0</div><div class="kpi-sub">주문당 평균</div></div>';
+  _countUp('ana-rev',total,'₩','');
+  _countUp('ana-cnt',cnt,'','건');
+  _countUp('ana-avg',avg,'₩','');
+
+  /* 차트 */
+  _dineEnsureChart(function(){
+   /* 시간대 */
+   var hCanvas=document.getElementById('ana-hour-chart');
+   if(hCanvas&&window.Chart){
+    if(hCanvas._c)hCanvas._c.destroy();
+    var hLabels=Array.from({length:16},function(_,i){return (8+i)+'시';});
+    var hData=Array.from({length:16},function(_,i){return hours[8+i]||0;});
+    var maxH=Math.max.apply(null,hData)||1;
+    hCanvas._c=new Chart(hCanvas,{type:'bar',data:{labels:hLabels,datasets:[{data:hData,
+     backgroundColor:hData.map(function(v){return v===maxH?'rgba(8,145,178,.8)':'rgba(8,145,178,.2)';}),
+     borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,
+     animation:{duration:800},plugins:{legend:{display:false}},
+     scales:{x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}}}});
+   }
+   /* 요일 */
+   var dCanvas=document.getElementById('ana-day-chart');
+   if(dCanvas&&window.Chart){
+    if(dCanvas._c)dCanvas._c.destroy();
+    var dOrder=['월','화','수','목','금','토','일'];
+    dCanvas._c=new Chart(dCanvas,{type:'bar',data:{labels:dOrder,datasets:[{data:dOrder.map(function(d){return days[d]||0;}),
+     backgroundColor:'rgba(124,58,237,.3)',borderColor:'rgba(124,58,237,.6)',borderWidth:1,borderRadius:4}]},
+     options:{responsive:true,maintainAspectRatio:false,animation:{duration:800},
+     plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:10}}},
+     y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}}}});
+   }
+  });
+
+  /* 인기메뉴 */
+  var mEl=document.getElementById('ana-menu-list');
+  if(mEl){
+   var top=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
+   var maxM=top[0]?top[0][1]:1;
+   mEl.innerHTML=top.length?top.map(function(m,i){
+    var pct=Math.round(m[1]/maxM*100);
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)">'+
+     '<span>'+ranks[i]+'</span>'+
+     '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+     '<span style="font-weight:700">'+m[0]+'</span><span style="color:var(--gr)">'+m[1]+'개</span></div>'+
+     '<div style="height:3px;background:var(--s3);border-radius:2px;overflow:hidden">'+
+     '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--br),#22c55e);border-radius:2px;transition:width .8s ease '+(i*.1)+'s"></div></div></div></div>';
+   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';
+  }
+
+  /* 결제수단 */
+  var pEl=document.getElementById('ana-pay-list');
+  if(pEl){
+   var payColors={'카드':'#60a5fa','현금':'#22c55e','카카오페이':'#f59e0b','네이버페이':'#10b981','카운터결제':'#a78bfa','기타':'#9898c0'};
+   var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
+   pEl.innerHTML=sorted.map(function(m){
+    var pct=total>0?Math.round(m[1]/total*100):0;
+    var col=payColors[m[0]]||'#9898c0';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+     '<span style="font-weight:700">'+m[0]+'</span><span style="color:'+col+'">'+pct+'%</span></div>'+
+     '<div style="height:3px;background:var(--s3);border-radius:2px;overflow:hidden">'+
+     '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px;transition:width .8s ease"></div></div></div>'+
+     '<span style="font-size:11px;font-weight:800;color:var(--t2)">₩'+m[1].toLocaleString()+'</span></div>';
+   }).join('')||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';
+  }
+ });
+}
+
+/* ══════════════════════════════════
+   🪑 테이블 현황 (FILO 실시간)
+   ══════════════════════════════════ */
+function _dineTable(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">🪑 테이블 현황</div>'+
+  '<div class="page-sub attend-live"><span class="live-dot"></span>FILO 실시간 연동</div></div>'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px" id="table-kpi"></div>'+
+  '<div class="card"><div class="sec-title" style="margin-bottom:12px">테이블 맵</div>'+
+  '<div id="table-map" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px"></div></div>';
+ el.appendChild(wrap);
+
+ /* 실시간 */
+ if(window._tableUnsub)window._tableUnsub();
+ window._tableUnsub=_db.collection('filo_tables').where('dealerId','==',did)
+  .orderBy('tableId').onSnapshot(function(snap){
+   var tables=[];snap.forEach(function(doc){tables.push(Object.assign({_id:doc.id},doc.data()));});
+   var e=tables.filter(function(t){return t.status==='empty';}).length;
+   var o=tables.filter(function(t){return t.status==='occupied';}).length;
+   var rs=tables.filter(function(t){return t.status==='reserved';}).length;
+   var kpi=document.getElementById('table-kpi');
+   if(kpi)kpi.innerHTML=
+    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🟢 빈자리</div><div class="kpi-val" style="color:#22c55e">'+e+'개</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">🔴 사용중</div><div class="kpi-val" style="color:#ef4444">'+o+'개</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">🟡 예약</div><div class="kpi-val" style="color:#f59e0b">'+rs+'개</div></div>';
+   var map=document.getElementById('table-map');
+   if(!map)return;
+   if(!tables.length){map.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);grid-column:1/-1;font-size:12px">FILO에서 테이블을 먼저 등록하세요</div>';return;}
+   var sc={empty:{c:'#22c55e',bg:'rgba(34,197,94,.08)',bd:'rgba(34,197,94,.25)',l:'빈자리'},
+    occupied:{c:'#ef4444',bg:'rgba(239,68,68,.08)',bd:'rgba(239,68,68,.25)',l:'사용중'},
+    reserved:{c:'#f59e0b',bg:'rgba(245,158,11,.08)',bd:'rgba(245,158,11,.25)',l:'예약'},
+    cleaning:{c:'#60a5fa',bg:'rgba(96,165,250,.08)',bd:'rgba(96,165,250,.25)',l:'청소중'}};
+   map.innerHTML=tables.map(function(t){
+    var s=sc[t.status||'empty'];
+    var since=t.since&&t.status==='occupied'?Math.floor((Date.now()-new Date(t.since))/60000)+'분':'';
+    return '<div style="padding:12px 8px;text-align:center;border-radius:12px;border:2px solid '+s.bd+';background:'+s.bg+';cursor:pointer" onclick="_dineTableClick(\''+t._id+'\',\''+did+'\')">'+
+     '<div style="font-size:18px">🪑</div>'+
+     '<div style="font-size:13px;font-weight:900;margin-top:2px">'+t.tableId+'번</div>'+
+     (t.seats?'<div style="font-size:10px;color:var(--t3)">'+t.seats+'인석</div>':'')+
+     '<div style="font-size:10px;font-weight:700;color:'+s.c+';margin-top:2px">'+s.l+'</div>'+
+     (since?'<div style="font-size:9px;color:var(--t3)">'+since+'</div>':'')+
+     '</div>';
+   }).join('');
+  });
+}
+
+function _dineTableClick(id,did){
+ var statuses=['empty','occupied','reserved','cleaning'];
+ var labels=['빈자리','사용중','예약','청소중'];
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
+ box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">테이블 상태 변경</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  statuses.map(function(s,i){
+   var colors={empty:'#22c55e',occupied:'#ef4444',reserved:'#f59e0b',cleaning:'#60a5fa'};
+   return '<button onclick="_dineSetTableStatus(\''+id+'\',\''+s+'\',\''+did+'\')" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:var(--s3);color:'+colors[s]+';font-size:13px;font-weight:700;cursor:pointer">'+labels[i]+'</button>';
+  }).join('')+
+  '</div><button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="this.closest(\'.mo\').remove()">취소</button>';
+ mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+function _dineSetTableStatus(id,status,did){
+ _db.collection('filo_tables').doc(id).update({status:status,since:status==='occupied'?new Date().toISOString():null})
+  .then(function(){_dineToast('✅ 상태 변경됐습니다');document.querySelector('.mo')?.remove();})
+  .catch(function(e){_dineToast('❌ '+e.message);});
+}
+
+/* ══════════════════════════════════
+   🔔 주문 대기 (FILO 실시간)
+   ══════════════════════════════════ */
+function _dineOrders(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+  '<div><div class="page-title">🔔 주문 대기</div><div class="page-sub attend-live"><span class="live-dot"></span>FILO POS 실시간 연동</div></div>'+
+  '</div><div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">⏳ 로딩중</div></div>';
+ el.appendChild(wrap);
+
+ if(window._ordersUnsub)window._ordersUnsub();
+ var today=new Date().toISOString().slice(0,10);
+ window._ordersUnsub=_db.collection('filo_sales').where('dealerId','==',did)
+  .where('date','==',today).onSnapshot(function(snap){
+   var orders=[];snap.forEach(function(doc){orders.push(Object.assign({_id:doc.id},doc.data()));});
+   orders.sort(function(a,b){return (b.createdAt||'')>(a.createdAt||'')?1:-1;});
+   var list=document.getElementById('orders-list');if(!list)return;
+   if(!orders.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📭 오늘 주문 없음</div>';return;}
+   var sc={pending:{c:'#f59e0b',l:'대기중'},done:{c:'#22c55e',l:'완료'},cancel:{c:'#ef4444',l:'취소'}};
+   list.innerHTML=orders.map(function(o){
+    var s=sc[o.status||'pending'];
+    var t=new Date(o.createdAt||o.date+'T12:00:00');
+    return '<div class="card" style="margin-bottom:8px;padding:12px">'+
+     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+     '<div style="display:flex;align-items:center;gap:8px">'+
+     '<span style="font-size:13px;font-weight:800">'+(o.tableName||o.payMethod||'주문')+'</span>'+
+     '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.06);color:'+s.c+'">'+s.l+'</span>'+
+     '</div>'+
+     '<div style="display:flex;align-items:center;gap:8px">'+
+     '<span style="font-size:12px;color:var(--t3)">'+t.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>'+
+     '<span style="font-size:14px;font-weight:900;color:var(--gr)">₩'+(o.total||0).toLocaleString()+'</span>'+
+     '</div></div>'+
+     '<div style="font-size:11px;color:var(--t3);margin-bottom:8px">'+
+     (o.items||[]).map(function(it){return it.name+' ×'+it.qty;}).join(' · ')+
+     '</div>'+
+     (o.status==='pending'?'<div style="display:flex;gap:6px">'+
+     '<button onclick="_dineOrderDone(\''+o._id+'\')" style="flex:1;padding:7px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">✅ 완료</button>'+
+     '<button onclick="_dineOrderCancel(\''+o._id+'\')" style="padding:7px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer">취소</button>'+
+     '</div>':'')+
+     '</div>';
+   }).join('');
+  });
+}
+
+function _dineOrderDone(id){
+ _db.collection('filo_sales').doc(id).update({status:'done',doneAt:new Date().toISOString()})
+  .then(function(){_dineToast('✅ 주문 완료 처리');}).catch(function(e){_dineToast('❌ '+e.message);});
+}
+function _dineOrderCancel(id){
+ if(!confirm('취소하시겠습니까?'))return;
+ _db.collection('filo_sales').doc(id).update({status:'cancel'})
+  .then(function(){_dineToast('🗑 취소됐습니다');}).catch(function(e){_dineToast('❌ '+e.message);});
+}
+
+/* ══════════════════════════════════
+   📅 근무 스케줄
+   ══════════════════════════════════ */
+function _dineSchedule(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ var now=new Date();
+ var days=['일','월','화','수','목','금','토'];
+ /* 이번주 월~일 */
+ var weekStart=new Date(now);
+ weekStart.setDate(now.getDate()-now.getDay()+1);
+
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📅 근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
+  '<div class="card"><div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px" id="schedule-grid">'+
+  '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
+  Array.from({length:7},function(_,i){
+   var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+   var isToday=d.toISOString().slice(0,10)===now.toISOString().slice(0,10);
+   return '<div style="padding:6px;text-align:center;font-weight:700;'+(isToday?'color:var(--br)':'color:var(--t3)')+'">'+
+    days[d.getDay()]+'<br><span style="font-size:9px">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></div>';
+  }).join('')+
+  '</div></div>';
+ el.appendChild(wrap);
+
+ Promise.all([
+  _db.collection('members').where('dealerId','==',did).get(),
+  _db.collection('attendance').where('dealerId','==',did)
+   .where('date','>=',weekStart.toISOString().slice(0,10)).get()
+ ]).then(function(results){
+  var memSnap=results[0],attSnap=results[1];
+  var attMap={};
+  attSnap.forEach(function(doc){
+   var d=doc.data();
+   var key=d.memberId+'_'+d.date;
+   if(!attMap[key])attMap[key]={in:null,out:null};
+   if(d.type==='in')attMap[key].in=d.time;
+   else attMap[key].out=d.time;
+  });
+  var grid=document.getElementById('schedule-grid');if(!grid)return;
+  memSnap.forEach(function(doc){
+   var m=doc.data();
+   var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
+   var row='<div style="padding:6px;font-weight:700;font-size:11px;color:'+partColor+'">'+m.name+'</div>';
+   for(var i=0;i<7;i++){
+    var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+    var dateStr=d.toISOString().slice(0,10);
+    var key=doc.id+'_'+dateStr;
+    var att=attMap[key];
+    if(att&&att.in){
+     var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+     var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
+     row+='<div style="padding:4px;background:rgba(34,197,94,.1);border-radius:6px;text-align:center;font-size:9px;color:#22c55e">'+inT+'<br>'+outT+'</div>';
+    } else {
+     row+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3)">-</div>';
+    }
+   }
+   grid.insertAdjacentHTML('beforeend',row);
+  });
+ });
+}
+
+/* ══════════════════════════════════
+   🧾 원가 관리
+   ══════════════════════════════════ */
+function _dineCost(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+  '<div><div class="page-title">🧾 원가 관리</div><div class="page-sub">메뉴별 원가율 · 마진 분석</div></div>'+
+  '<button class="btn btn-primary" onclick="_dineCostAdd(\''+did+'\')">+ 원가 등록</button></div>'+
+  '<div id="cost-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+ el.appendChild(wrap);
+
+ _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
+  var list=document.getElementById('cost-list');if(!list)return;
+  if(snap.empty){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);font-size:12px">원가를 등록하면 마진율이 자동 계산됩니다</div>';return;}
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">';
+  snap.forEach(function(doc){
+   var d=doc.data();
+   var rate=d.price>0?Math.round((1-d.cost/d.price)*100):0;
+   var rateColor=rate>=70?'#22c55e':rate>=50?'#f59e0b':'#ef4444';
+   html+='<div class="card" style="padding:14px">'+
+    '<div style="font-size:14px;font-weight:800;margin-bottom:8px">'+(d.emoji||'🍽')+' '+d.name+'</div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+    '<span style="color:var(--t3)">판매가</span><span>₩'+d.price.toLocaleString()+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">'+
+    '<span style="color:var(--t3)">원가</span><span style="color:var(--rd)">₩'+d.cost.toLocaleString()+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:11px;color:var(--t3)">마진율</span>'+
+    '<span style="font-size:16px;font-weight:900;color:'+rateColor+'">'+rate+'%</span></div>'+
+    '<div style="height:4px;background:var(--s3);border-radius:2px;margin-top:6px;overflow:hidden">'+
+    '<div style="height:100%;width:'+rate+'%;background:'+rateColor+';border-radius:2px"></div></div>'+
+    '</div>';
+  });
+  html+='</div>';
+  list.innerHTML=html;
+ });
+}
+
+function _dineCostAdd(did){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">🧾 원가 등록</div>'+
+  '<div class="input-group"><label>메뉴명</label><input id="c-name" class="inp" placeholder="아메리카노"></div>'+
+  '<div class="input-group"><label>이모지</label><input id="c-emoji" class="inp" value="☕" style="width:80px"></div>'+
+  '<div class="input-group"><label>판매가 (원)</label><input id="c-price" class="inp" type="number" placeholder="4000"></div>'+
+  '<div class="input-group"><label>원가 (원)</label><input id="c-cost" class="inp" type="number" placeholder="800"></div>'+
+  '<div style="display:flex;gap:8px;margin-top:12px">'+
+  '<button class="btn btn-primary" style="flex:1" onclick="_dineCostSave(\''+did+'\')">저장</button>'+
+  '<button class="btn btn-ghost" onclick="this.closest(\'.mo\').remove()">취소</button></div>';
+ mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+function _dineCostSave(did){
+ var data={dealerId:did,name:document.getElementById('c-name').value.trim(),
+  emoji:document.getElementById('c-emoji').value||'🍽',
+  price:parseInt(document.getElementById('c-price').value)||0,
+  cost:parseInt(document.getElementById('c-cost').value)||0,
+  createdAt:new Date().toISOString()};
+ if(!data.name){alert('메뉴명 입력');return;}
+ _db.collection('menu_costs').add(data).then(function(){
+  _dineToast('✅ 등록됐습니다');document.querySelector('.mo')?.remove();_dineCost(document.getElementById('content'));
+ });
+}
+
+/* ══════════════════════════════════
+   📂 세무사 공유
+   ══════════════════════════════════ */
+function _dineTax(el){
+ var did=_CU.dealerId;
+ var ym=new Date().toISOString().slice(0,7);
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
+  '<div class="card">'+
+  '<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">'+
+  '<input type="month" id="tax-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineTaxGenerate(\''+did+'\')">리포트 생성</button>'+
+  '</div>'+
+  '<div id="tax-result"><div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">월을 선택 후 리포트 생성 버튼을 누르세요</div></div>'+
+  '</div>';
+ el.appendChild(wrap);
+}
+
+function _dineTaxGenerate(did){
+ var ym=document.getElementById('tax-ym')?.value||new Date().toISOString().slice(0,7);
+ var from=ym+'-01',to=ym+'-31';
+ var res=document.getElementById('tax-result');
+ if(!res)return;
+ res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 생성중...</div>';
+
+ Promise.all([
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
+  _db.collection('members').where('dealerId','==',did).get(),
+  _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
+ ]).then(function(results){
+  var salesSnap=results[0],memSnap=results[1],attSnap=results[2];
+  var totalSales=0,cnt=0,methods={};
+  salesSnap.forEach(function(doc){var d=doc.data();if(d.status==='cancelled')return;totalSales+=d.total||0;cnt++;var pm=d.payMethod||'기타';methods[pm]=(methods[pm]||0)+(d.total||0);});
+
+  var attMap={};
+  attSnap.forEach(function(doc){var d=doc.data();if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[]};if(d.type==='in')attMap[d.memberId].ins.push(d);else attMap[d.memberId].outs.push(d);});
+
+  var totalLabor=0;
+  memSnap.forEach(function(doc){var m=doc.data();var r=_calcPayFull(m,attMap[doc.id]||{ins:[],outs:[]},memSnap.size,ym);totalLabor+=r.grossSalary;});
+
+  res.innerHTML='<div style="font-size:14px;font-weight:900;margin-bottom:14px;color:var(--t2)">📄 '+ym+' 세무사 리포트</div>'+
+   '<div style="font-size:12px;line-height:2">'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>📅 정산 기간</span><span>'+from+' ~ '+to+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>💰 총 매출</span><span style="font-weight:700;color:var(--gr)">₩'+totalSales.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>🛒 주문 건수</span><span>'+cnt+'건</span></div>'+
+   Object.entries(methods).map(function(m){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);padding-left:16px"><span style="color:var(--t3)">└ '+m[0]+'</span><span>₩'+m[1].toLocaleString()+'</span></div>';}).join('')+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>👥 인건비 합계</span><span style="font-weight:700;color:var(--rd)">₩'+totalLabor.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)"><span>📊 인건비율</span><span>'+(totalSales>0?Math.round(totalLabor/totalSales*100):0)+'%</span></div>'+
+   '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:900"><span>💵 매출-인건비</span><span style="color:var(--gr)">₩'+(totalSales-totalLabor).toLocaleString()+'</span></div>'+
+   '</div>'+
+   '<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="_dineToast(\'💬 세무사 알림톡 발송 기능 준비중\')">📤 세무사 발송</button>';
+ });
+}
+
+/* ══════════════════════════════════
+   🎁 회원 관리
+   ══════════════════════════════════ */
+function _dineMember(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+  '<div><div class="page-title">🎁 회원 관리</div><div class="page-sub">포인트·스탬프·등급</div></div>'+
+  '</div>'+
+  '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px" id="member-kpi"></div>'+
+  '<div class="card" id="member-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+ el.appendChild(wrap);
+
+ _db.collection('filo_customers').where('dealerId','==',did).orderBy('createdAt','desc').limit(50).get()
+  .then(function(snap){
+   var kpi=document.getElementById('member-kpi');
+   if(kpi)kpi.innerHTML=
+    '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">👥 총 회원</div><div class="kpi-val" style="color:#38bdf8">'+snap.size+'명</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">⭐ 포인트 보유</div><div class="kpi-val" style="color:#22c55e">'+snap.docs.filter(function(d){return (d.data().point||0)>0;}).length+'명</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">📅 이번달 신규</div><div class="kpi-val" style="color:#f59e0b">'+snap.docs.filter(function(d){return (d.data().createdAt||'').startsWith(new Date().toISOString().slice(0,7));}).length+'명</div></div>';
+
+   var list=document.getElementById('member-list');if(!list)return;
+   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">FILO QR 회원가입으로 자동 등록됩니다</div>';return;}
+   list.innerHTML='<div class="sec-title" style="margin-bottom:10px">회원 목록</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr style="border-bottom:1px solid var(--bd)">'+
+    ['이름','연락처','포인트','스탬프','가입일'].map(function(h){return '<th style="padding:8px;text-align:left;color:var(--t3)">'+h+'</th>';}).join('')+
+    '</tr></thead><tbody>'+
+    snap.docs.map(function(doc){
+     var d=doc.data();
+     return '<tr style="border-bottom:1px solid var(--bd)">'+
+      '<td style="padding:8px;font-weight:700">'+(d.name||'-')+'</td>'+
+      '<td style="padding:8px;color:var(--t2)">'+(d.phone||'-')+'</td>'+
+      '<td style="padding:8px;color:var(--yl);font-weight:700">'+(d.point||0)+'P</td>'+
+      '<td style="padding:8px">'+(d.stamp||0)+'개</td>'+
+      '<td style="padding:8px;color:var(--t3)">'+(d.createdAt||'').slice(0,10)+'</td>'+
+      '</tr>';
+    }).join('')+'</tbody></table></div>';
+  });
+}
+
+/* ══════════════════════════════════
+   📆 예약 관리
+   ══════════════════════════════════ */
+function _dineReservation(el){
+ var did=_CU.dealerId;
+ var today=new Date().toISOString().slice(0,10);
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
+  '<div><div class="page-title">📆 예약 관리</div><div class="page-sub">테이블 예약 현황</div></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input type="date" id="res-date" value="'+today+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px" onchange="_dineLoadReservation(\''+did+'\')">'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineAddReservation(\''+did+'\')">+ 예약 추가</button>'+
+  '</div></div>'+
+  '<div id="reservation-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+ el.appendChild(wrap);
+ _dineLoadReservation(did);
+}
+
+function _dineLoadReservation(did){
+ var date=document.getElementById('res-date')?.value||new Date().toISOString().slice(0,10);
+ _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',date)
+  .orderBy('time').get().then(function(snap){
+   var list=document.getElementById('reservation-list');if(!list)return;
+   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 예약 없음</div>';return;}
+   var sc={pending:{c:'#f59e0b',l:'대기'},confirmed:{c:'#22c55e',l:'확정'},cancelled:{c:'#ef4444',l:'취소'}};
+   list.innerHTML=snap.docs.map(function(doc){
+    var b=doc.data();var s=sc[b.status||'pending'];
+    return '<div class="card" style="margin-bottom:8px;padding:12px;display:flex;align-items:center;gap:12px">'+
+     '<div style="text-align:center;min-width:50px"><div style="font-size:16px;font-weight:900;color:var(--br)">'+(b.time||'')+'</div></div>'+
+     '<div style="flex:1">'+
+     '<div style="display:flex;justify-content:space-between;align-items:center">'+
+     '<span style="font-size:14px;font-weight:800">'+(b.customerName||'고객')+'</span>'+
+     '<span style="font-size:10px;font-weight:700;color:'+s.c+'">'+s.l+'</span>'+
+     '</div>'+
+     '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+
+     (b.seats?b.seats+'인 · ':'')+
+     (b.memo||'')+
+     '</div></div>'+
+     (b.status!=='confirmed'?'<button onclick="_dineConfirmRes(\''+doc.id+'\',\''+did+'\')" style="padding:5px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">확정</button>':'')+
+     (b.status!=='cancelled'?'<button onclick="_dineCancelRes(\''+doc.id+'\',\''+did+'\')" style="padding:5px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px">취소</button>':'')+
+     '</div>';
+   }).join('');
+  });
+}
+
+function _dineConfirmRes(id,did){
+ _db.collection('filo_bookings').doc(id).update({status:'confirmed'})
+  .then(function(){_dineToast('✅ 확정됐습니다');_dineLoadReservation(did);});
+}
+function _dineCancelRes(id,did){
+ if(!confirm('취소하시겠습니까?'))return;
+ _db.collection('filo_bookings').doc(id).update({status:'cancelled'})
+  .then(function(){_dineToast('🗑 취소됐습니다');_dineLoadReservation(did);});
+}
+
+function _dineAddReservation(did){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
+ var today=new Date().toISOString().slice(0,10);
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📆 예약 추가</div>'+
+  '<div class="input-group"><label>고객명</label><input id="r-name" class="inp" placeholder="홍길동"></div>'+
+  '<div class="input-group"><label>연락처</label><input id="r-phone" class="inp" type="tel" placeholder="010-0000-0000"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<div class="input-group" style="flex:1"><label>날짜</label><input id="r-date" class="inp" type="date" value="'+today+'"></div>'+
+  '<div class="input-group" style="flex:1"><label>시간</label><input id="r-time" class="inp" type="time" value="12:00"></div>'+
+  '</div>'+
+  '<div class="input-group"><label>인원</label><input id="r-seats" class="inp" type="number" value="2" min="1"></div>'+
+  '<div class="input-group"><label>메모</label><input id="r-memo" class="inp" placeholder="요청사항"></div>'+
+  '<div style="display:flex;gap:8px;margin-top:12px">'+
+  '<button class="btn btn-primary" style="flex:1" onclick="_dineSaveReservation(\''+did+'\')">저장</button>'+
+  '<button class="btn btn-ghost" onclick="this.closest(\'.mo\').remove()">취소</button></div>';
+ mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+function _dineSaveReservation(did){
+ var data={dealerId:did,
+  customerName:document.getElementById('r-name').value.trim(),
+  phone:document.getElementById('r-phone').value,
+  date:document.getElementById('r-date').value,
+  time:document.getElementById('r-time').value,
+  seats:parseInt(document.getElementById('r-seats').value)||2,
+  memo:document.getElementById('r-memo').value,
+  status:'pending',createdAt:new Date().toISOString()};
+ if(!data.customerName){alert('고객명 입력');return;}
+ _db.collection('filo_bookings').add(data).then(function(){
+  _dineToast('✅ 예약 등록됐습니다');document.querySelector('.mo')?.remove();
+  _dineLoadReservation(did);
+ });
+}
+
+/* Chart.js 로드 헬퍼 */
+function _dineEnsureChart(cb){
+ if(window.Chart)return cb();
+ var s=document.createElement('script');
+ s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+ s.onload=cb;document.head.appendChild(s);
+}
+
+/* 사이드바 매장명 업데이트 */
+function _dineUpdateSidebar(){
+ var n=document.getElementById('sb-store-name');
+ var s=document.getElementById('sb-store-sub');
+ if(n)n.textContent=_CU.company?.storeName||_CU.company?.name||_CU.name||'내 매장';
+ if(s)s.textContent=(_CU.company?.address||'외식업 관리 플랫폼');
+}
 </script>
 </body>
 </html>
