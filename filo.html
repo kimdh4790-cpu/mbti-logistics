@@ -92,8 +92,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 #sidebar{position:fixed;top:var(--topbar-h);left:0;bottom:0;width:var(--sidebar-w);
   background:linear-gradient(180deg,var(--bg2) 0%,rgba(7,7,26,.95) 100%);
   border-right:1px solid rgba(124,58,237,.1);
-  overflow-y:auto;z-index:150;transition:transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;z-index:150;
+  transition:width .25s cubic-bezier(.4,0,.2,1),transform .3s cubic-bezier(.4,0,.2,1);
   box-shadow:4px 0 24px rgba(0,0,0,.3)}
+#sidebar.collapsed{width:52px;overflow-x:hidden}
+#sidebar.collapsed .ni span:last-child{display:none}
+#sidebar.collapsed .ni{justify-content:center;padding:9px 0}
+#sidebar.collapsed .ns-label{display:none}
+#sidebar.collapsed .ns-arrow{display:none}
+#sidebar.collapsed #sidebar-profile{display:none}
+#sidebar.collapsed #sidebar-clock{display:none}
+#sidebar.collapsed .sidebar-bottom{display:none}
+#content{transition:margin-left .25s cubic-bezier(.4,0,.2,1)}
 #sidebar::-webkit-scrollbar{display:none}
 .sidebar-profile{padding:16px 14px 10px;border-bottom:1px solid var(--bd);margin-bottom:6px}
 .sidebar-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;margin-bottom:8px}
@@ -113,7 +123,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .ni-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 
 /* ── 메인 콘텐츠 ── */
-#content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0;width:calc(100% - var(--sidebar-w))}
+#content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0;width:calc(100% - var(--sidebar-w));transition:margin-left .25s cubic-bezier(.4,0,.2,1),width .25s cubic-bezier(.4,0,.2,1)}
 #content{padding:16px;min-height:calc(100dvh - var(--topbar-h));box-sizing:border-box;padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;margin-left:var(--sidebar-w);width:calc(100% - var(--sidebar-w))}
 
 @media(max-width:768px){
@@ -1134,12 +1144,17 @@ function _loadCompany(uid){
 function _showApp(){
  document.getElementById('login-screen').style.display='none';
  document.getElementById('app').style.display='flex';
- /* 모바일이면 사이드바 기본 닫힘 */
+ /* 사이드바 상태 복원 */
  if(window.innerWidth<=768){
   var sb=document.getElementById('sidebar');
-  var btn=document.getElementById('sidebar-toggle');
   if(sb)sb.classList.remove('open');
-  if(btn)btn.textContent='☰';
+ } else {
+  if(localStorage.getItem('filo_sidebar_collapsed')==='1'){
+   var sb2=document.getElementById('sidebar');
+   var wrap2=document.getElementById('content-wrap');
+   if(sb2)sb2.classList.add('collapsed');
+   if(wrap2){wrap2.style.marginLeft='52px';wrap2.style.width='calc(100% - 52px)';}
+  }
  }
  var company=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
  var role=_CU.role==='member'?'직원':'관리자';
@@ -1329,9 +1344,28 @@ function _toggleSidebar(){
  var sb=document.getElementById('sidebar');
  var btn=document.getElementById('sidebar-toggle');
  var ov=document.getElementById('sidebar-overlay');
- var isOpen=sb.classList.toggle('open');
- if(btn)btn.textContent=isOpen?'✕':'☰';
- if(ov)ov.style.display=isOpen?'block':'none';
+ var isMobile=window.innerWidth<=768;
+ if(isMobile){
+  /* 모바일: 열기/닫기 */
+  var isOpen=sb.classList.toggle('open');
+  if(btn)btn.textContent=isOpen?'✕':'☰';
+  if(ov)ov.style.display=isOpen?'block':'none';
+ } else {
+  /* 데스크탑: 축소/확장 */
+  var isCollapsed=sb.classList.toggle('collapsed');
+  var wrap=document.getElementById('content-wrap');
+  var content2=document.getElementById('content');
+  if(isCollapsed){
+   if(wrap){wrap.style.marginLeft='52px';wrap.style.width='calc(100% - 52px)';}
+   if(content2){content2.style.marginLeft='0';}
+   if(btn)btn.textContent='☰';
+  } else {
+   if(wrap){wrap.style.marginLeft='';wrap.style.width='';}
+   if(content2){content2.style.marginLeft='';}
+   if(btn)btn.textContent='☰';
+  }
+  localStorage.setItem('filo_sidebar_collapsed', isCollapsed?'1':'0');
+ }
 }
 
 function _filoGoPage(p){
