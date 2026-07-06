@@ -1901,9 +1901,12 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
  /* POS 실시간 매출 + 원가 + 메뉴통계 + 시간대 */
  var menuStats={};  /* 메뉴별 {qty,rev} */
  var hourStats={};  /* 시간대별 매출 */
+ var payStats={};  /* 결제수단별 매출 */
  posSnap.forEach(function(doc){
   var d=doc.data();
   var posTotal=d.total||0;
+  var pm=d.payMethod||d.method||'기타';
+  payStats[pm]=(payStats[pm]||0)+posTotal;
   var posCost=0;
   (d.items||[]).forEach(function(it){
    var c=_marginCostMap[it.name]||{};
@@ -1969,6 +1972,29 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
 
   /* 인기 메뉴 TOP5 */
   var menuEntries=Object.entries(menuStats).sort(function(a,b){return b[1].qty-a[1].qty;}).slice(0,5);
+  /* 결제수단별 카드 */
+  var payIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','삼성페이':'📱','기타':'💰'};
+  var paySorted=Object.entries(payStats).sort(function(a,b){return b[1]-a[1];});
+  var payHtml=paySorted.length?
+  '<div style="margin-top:14px"><div class="sec-title">💳 결제수단별 매출</div>'+
+  paySorted.map(function(m){
+   var pct=totalRev>0?Math.round(m[1]/totalRev*100):0;
+   var ic=payIcons[m[0]]||'💰';
+   return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+    '<span style="font-size:16px">'+ic+'</span>'+
+    '<div style="flex:1">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'+
+    '<span style="font-size:13px;font-weight:700">'+m[0]+'</span>'+
+    '<span style="font-size:13px;font-weight:900;color:#22c55e">₩'+m[1].toLocaleString()+'</span>'+
+    '</div>'+
+    '<div style="height:4px;background:var(--surface3);border-radius:2px">'+
+    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
+    '</div>'+
+    '<span style="font-size:10px;color:var(--t3)">'+pct+'% 비중</span>'+
+    '</div></div>';
+  }).join('')+'</div>'
+  :'<div style="padding:16px;text-align:center;color:var(--t3);font-size:12px">결제 데이터 없음</div>';
+
   var topMenu=menuEntries.length?
   '<div style="margin-top:14px"><div class="sec-title">🏆 인기 메뉴 TOP5</div>'+
   menuEntries.map(function(kv,idx){
