@@ -136,7 +136,11 @@ select.inp option{background:var(--s2)}
   </div>
   <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="_dineLogin()">로그인</button>
   <div id="li-err" style="font-size:11px;color:var(--rd);margin-top:8px;min-height:16px"></div>
-  <div style="margin-top:16px;font-size:11px;color:var(--t3)">30일 무료 체험 · 외식업 특화</div>
+  <div style="border-top:1px solid var(--bd);margin-top:16px;padding-top:14px;text-align:center">
+   <span style="font-size:12px;color:var(--t3)">계정이 없으신가요?</span>
+   <button onclick="_dineShowRegister()" style="background:none;border:none;color:var(--br);font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">회원가입</button>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--t3)">30일 무료 체험 · 외식업 특화</div>
  </div>
 </div>
 
@@ -225,6 +229,62 @@ var INS = {pension:0.0475,health:0.03595,longcare:0.1314,employ:0.009};
 
 /* ── 로그인 (REST API 직접 호출 - .ne.kr referer blocked 완전 우회) ── */
 var DINE_APIKEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+
+/* ── 회원가입 화면 ── */
+function _dineShowRegister(){
+ var box=document.querySelector('.login-box');
+ box.innerHTML='<div class="login-logo">DINE</div>'+
+  '<div class="login-sub" style="margin-bottom:20px">회원가입</div>'+
+  '<div class="input-group" style="text-align:left"><label>매장명 *</label><input id="rg-store" class="inp" placeholder="홍길동 치킨"></div>'+
+  '<div class="input-group" style="text-align:left"><label>이메일 *</label><input id="rg-email" class="inp" type="email" placeholder="example@email.com"></div>'+
+  '<div class="input-group" style="text-align:left"><label>비밀번호 * (6자 이상)</label><input id="rg-pw" class="inp" type="password" placeholder="비밀번호"></div>'+
+  '<div class="input-group" style="text-align:left"><label>연락처</label><input id="rg-phone" class="inp" type="tel" placeholder="010-0000-0000"></div>'+
+  '<button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="_dineRegister()">가입하기</button>'+
+  '<div id="rg-err" style="font-size:11px;color:var(--rd);margin-top:8px;min-height:16px"></div>'+
+  '<div style="border-top:1px solid var(--bd);margin-top:14px;padding-top:12px;text-align:center">'+
+  '<span style="font-size:12px;color:var(--t3)">이미 계정이 있으신가요?</span>'+
+  '<button onclick="location.reload()" style="background:none;border:none;color:var(--br);font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">로그인</button>'+
+  '</div>';
+}
+
+function _dineRegister(){
+ var store=document.getElementById('rg-store').value.trim();
+ var email=document.getElementById('rg-email').value.trim();
+ var pw=document.getElementById('rg-pw').value;
+ var phone=document.getElementById('rg-phone').value.trim();
+ var err=document.getElementById('rg-err');
+ if(!store){err.textContent='매장명을 입력하세요';return;}
+ if(!email){err.textContent='이메일을 입력하세요';return;}
+ if(pw.length<6){err.textContent='비밀번호는 6자 이상이어야 합니다';return;}
+ err.textContent='가입 중...';
+ fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+DINE_APIKEY,{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({email:email,password:pw,returnSecureToken:true})
+ }).then(function(r){return r.json();}).then(function(d){
+  if(d.error){err.textContent='가입 실패: '+(d.error.message==='EMAIL_EXISTS'?'이미 사용중인 이메일입니다':d.error.message);return;}
+  /* companies 컬렉션에 매장 정보 저장 */
+  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/'+d.localId,{
+   method:'PATCH',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.idToken},
+   body:JSON.stringify({fields:{
+    uid:{stringValue:d.localId},
+    dealerId:{stringValue:d.localId},
+    companyName:{stringValue:store},
+    name:{stringValue:store},
+    email:{stringValue:email},
+    phone:{stringValue:phone},
+    platform:{stringValue:'dine'},
+    createdAt:{stringValue:new Date().toISOString()},
+    status:{stringValue:'active'}
+   }})
+  }).then(function(){
+   err.style.color='var(--gr)';
+   err.textContent='✅ 가입 완료! 로그인해주세요';
+   setTimeout(function(){location.reload();},1500);
+  });
+ }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
+}
 var _dineToken  = null;
 
 function _dineLogin(){
