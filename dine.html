@@ -1672,8 +1672,9 @@ function _dineMember(el){
  var did=_CU.dealerId;
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
   '<div><div class="page-title">🎁 회원 관리</div><div class="page-sub">포인트·스탬프·등급</div></div>'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineAddMember(\''+did+'\')" style="font-size:12px">+ 회원 등록</button>'+
   '</div>'+
   '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px" id="member-kpi"></div>'+
   '<div class="card" id="member-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
@@ -1692,7 +1693,7 @@ function _dineMember(el){
    list.innerHTML='<div class="sec-title" style="margin-bottom:10px">회원 목록</div>'+
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
     '<thead><tr style="border-bottom:1px solid var(--bd)">'+
-    ['이름','연락처','포인트','스탬프','가입일'].map(function(h){return '<th style="padding:8px;text-align:left;color:var(--t3)">'+h+'</th>';}).join('')+
+    ['이름','연락처','포인트','스탬프','가입일',''].map(function(h){return '<th style="padding:8px;text-align:left;color:var(--t3)">'+h+'</th>';}).join('')+
     '</tr></thead><tbody>'+
     snap.docs.map(function(doc){
      var d=doc.data();
@@ -1702,9 +1703,50 @@ function _dineMember(el){
       '<td style="padding:8px;color:var(--yl);font-weight:700">'+(d.point||0)+'P</td>'+
       '<td style="padding:8px">'+(d.stamp||0)+'개</td>'+
       '<td style="padding:8px;color:var(--t3)">'+(d.createdAt||'').slice(0,10)+'</td>'+
+      '<td style="padding:8px"><button onclick="_dineAddMember(\''+did+'\'  ,\''+doc.id+'\','+JSON.stringify(d)+')" style="padding:3px 8px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);font-size:10px;cursor:pointer">수정</button></td>'+
       '</tr>';
     }).join('')+'</tbody></table></div>';
   });
+}
+
+/* 회원 등록/수정 모달 */
+function _dineAddMember(did,memberId,existing){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
+ var title=memberId?'✏️ 회원 수정':'👤 회원 등록';
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">'+title+'</div>'+
+  '<div class="input-group"><label>이름 *</label><input id="mb-name" class="inp" placeholder="홍길동" value="'+(existing&&existing.name||'')+'"></div>'+
+  '<div class="input-group"><label>연락처 *</label><input id="mb-phone" class="inp" type="tel" placeholder="010-0000-0000" value="'+(existing&&existing.phone||'')+'"></div>'+
+  '<div class="input-group"><label>생년월일</label><input id="mb-birth" class="inp" type="date" value="'+(existing&&existing.birth||'')+'"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<div class="input-group" style="flex:1"><label>포인트</label><input id="mb-point" class="inp" type="number" min="0" value="'+(existing&&existing.point||0)+'"></div>'+
+  '<div class="input-group" style="flex:1"><label>스탬프</label><input id="mb-stamp" class="inp" type="number" min="0" value="'+(existing&&existing.stamp||0)+'"></div>'+
+  '</div>'+
+  '<div class="input-group"><label>등급</label><select id="mb-grade" class="inp">'+
+  ['일반','실버','골드','VIP'].map(function(g){return '<option value="'+g+'"'+((existing&&existing.grade===g)?' selected':'')+'>'+g+'</option>';}).join('')+
+  '</select></div>'+
+  '<div class="input-group"><label>메모</label><input id="mb-memo" class="inp" placeholder="특이사항" value="'+(existing&&existing.memo||'')+'"></div>'+
+  '<div style="display:flex;gap:8px;margin-top:16px">'+
+  '<button class="btn btn-primary" style="flex:1" id="mb-save-btn">저장</button>'+
+  '<button class="btn btn-ghost" onclick="this.closest(\'.mo\').remove()">취소</button>'+
+  '</div>';
+ box.querySelector('#mb-save-btn').onclick=function(){
+  var name=document.getElementById('mb-name').value.trim();
+  var phone=document.getElementById('mb-phone').value.trim();
+  if(!name||!phone){alert('이름과 연락처를 입력하세요');return;}
+  var data={dealerId:did,name:name,phone:phone,
+   birth:document.getElementById('mb-birth').value,
+   point:parseInt(document.getElementById('mb-point').value)||0,
+   stamp:parseInt(document.getElementById('mb-stamp').value)||0,
+   grade:document.getElementById('mb-grade').value,
+   memo:document.getElementById('mb-memo').value.trim(),
+   updatedAt:new Date().toISOString()};
+  var pr=memberId?_db.collection('filo_customers').doc(memberId).set(data,{merge:true}):_db.collection('filo_customers').add(Object.assign(data,{createdAt:new Date().toISOString()}));
+  pr.then(function(){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('member',null);}).catch(function(e){alert(e.message);});
+ };
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
 }
 
 /* ══════════════════════════════════
