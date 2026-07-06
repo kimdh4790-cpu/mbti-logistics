@@ -254,6 +254,25 @@ var INS = {pension:0.0475,health:0.03595,longcare:0.1314,employ:0.009};
 var DINE_APIKEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 /* ── 탭 전환 ── */
+/* ── 매장명 자동 주입 ── */
+(function(){
+ if(window.__DINE_STORE__){
+  var s=window.__DINE_STORE__;
+  // 로고 아래 매장명 표시
+  var sub=document.querySelector('.login-sub');
+  if(sub)sub.textContent=s+' · 외식업 플랫폼';
+  // 직원/회원 폼 매장명 자동입력
+  setTimeout(function(){
+   var sc=document.getElementById('st-code');
+   var mc=document.getElementById('mb-reg-code');
+   if(sc)sc.value=s;
+   if(mc)mc.value=s;
+   if(sc)sc.readOnly=true;
+   if(mc)mc.readOnly=true;
+  },100);
+ }
+})();
+
 function _dineTab(t){
  ['login','staff','member'].forEach(function(id){
   var pane=document.getElementById('pane-'+id);
