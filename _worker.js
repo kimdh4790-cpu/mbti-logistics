@@ -1477,6 +1477,21 @@ async function acceptExchange(){
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
+      // ★ /매장명 경로 → dine.html 서빙 + 매장명 주입
+      const dinePath = path.replace(/^\//, '');
+      if (dinePath) {
+        const dineHtml = await env.DONWAY_ASSETS.get('dine.html', 'text');
+        if (dineHtml) {
+          const storeName = decodeURIComponent(dinePath);
+          const injected = dineHtml.replace(
+            '</head>',
+            '<script>window.__DINE_STORE__=' + JSON.stringify(storeName) + ';</script></head>'
+          );
+          return new Response(injected, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+          });
+        }
+      }
       return serveKVFile(env, 'dine.html', 'text/html');
     }
 
