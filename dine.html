@@ -2132,6 +2132,7 @@ function _dineLoadAnalytics(did,from,to){
   }
  });
 }
+function _dineEnsureChart(cb){
 
  if(window.Chart)return cb();
  var s=document.createElement('script');
