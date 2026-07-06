@@ -1384,6 +1384,11 @@ function _dineStore(el){
   var box=document.createElement('div');box.className='card';
   box.innerHTML='<div class="sec-title" style="margin-bottom:12px">매장 기본 정보</div>'+
    '<div class="input-group"><label>매장명</label><input id="st-storeName" class="inp" type="text" value="'+(co.storeName||co.name||'')+'"></div>'+
+   '<div class="input-group">'+
+   '<label>URL 슬러그 <span style="font-size:10px;color:var(--t3)">(영문/한글 모두 가능 · 예: mbti 또는 엠비티아이)</span></label>'+
+   '<input id="st-dineSlug" class="inp" type="text" value="'+(co.dineSlug||'')+'" placeholder="예) mbti 또는 엠비티아이">'+
+   '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div>'+
+   '</div>'+
    '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp" type="text" value="'+(co.bizNo||'')+'"></div>'+
    '<div class="input-group"><label>주소</label><input id="st-address" class="inp" type="text" value="'+(co.address||'')+'"></div>'+
    '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel" value="'+(co.phone||'')+'"></div>'+
@@ -1399,6 +1404,7 @@ function _dineStore(el){
 function _dineSaveStore(did){
  var data={
   storeName:document.getElementById('st-storeName')?.value||'',
+  dineSlug:document.getElementById('st-dineSlug')?.value.trim()||'',
   bizNo:document.getElementById('st-bizNo')?.value||'',
   address:document.getElementById('st-address')?.value||'',
   phone:document.getElementById('st-phone')?.value||'',
