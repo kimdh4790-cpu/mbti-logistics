@@ -1770,6 +1770,14 @@ function _filoPageSales(el){
  '<select id="mg-ym" onchange="_filoMarginLoad()" style="padding:8px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:12px;font-weight:700">'+
  (function(){var opts='';var now=new Date();for(var i=0;i<6;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var v=d.toISOString().slice(0,7);opts+='<option value="'+v+'"'+(i===0?' selected':'')+'>'+v+'</option>';}return opts;})()+'</select>'+
  '<button onclick="_filoGoPage(\'cost_mgmt\')" style="padding:8px 14px;background:rgba(124,58,237,.3);border:1px solid rgba(124,58,237,.5);border-radius:10px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer">⚙️ 원가 설정</button>'+
+ '</div>'+
+ '<div id="sf-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>'+
+ '<div id="sf-custom-wrap" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">'+
+ '<input type="date" id="sf-from" style="padding:6px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:12px">'+
+ '<span style="color:rgba(255,255,255,.4);font-size:12px">~</span>'+
+ '<input type="date" id="sf-to" style="padding:6px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:12px">'+
+ '<button id="sf-range-btn" style="padding:6px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">조회</button>'+
+ '</div>'+
  '</div></div>'+
  /* 오늘 미니 바 차트 */
  '<div style="margin-top:20px">'+
