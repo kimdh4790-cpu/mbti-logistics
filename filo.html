@@ -579,6 +579,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
     🔔<span id="topbar-order-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:16px"></span>
    </button>
    <div id="topbar-right" style="display:flex;gap:6px"></div>
+   <button onclick="_filoGoDine()" style="padding:5px 10px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:8px;color:#38bdf8;font-size:11px;font-weight:700;cursor:pointer">🍽 DINE</button>
    <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--t3)' ">로그아웃</button>
   </div>
  </div>
@@ -1755,6 +1756,14 @@ function _filoFindPw(){
  _auth.sendPasswordResetEmail(id).then(function(){
  _filoToast('✅ 비밀번호 재설정 이메일을 발송했습니다');
  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+function _filoGoDine(){
+ var slug=(_CU&&_CU.dineSlug)||'';
+ var storeName=(_CU&&(_CU.companyName||_CU.name))||'';
+ var key=slug||storeName;
+ var url=key?'https://dine.ne.kr/'+encodeURIComponent(key):'https://dine.ne.kr/app';
+ window.open(url,'_blank');
 }
 
 function _filoLogout(){
