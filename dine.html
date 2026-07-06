@@ -223,25 +223,56 @@ var _CU   = {};
 var MIN_WAGE = 10320;
 var INS = {pension:0.0475,health:0.03595,longcare:0.1314,employ:0.009};
 
-/* ── 로그인 ── */
+/* ── 로그인 (REST API 직접 호출 - .ne.kr referer blocked 완전 우회) ── */
+var DINE_APIKEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+var _dineToken  = null;
+
 function _dineLogin(){
  var email = document.getElementById('li-email').value.trim();
  var pw    = document.getElementById('li-pw').value;
  var err   = document.getElementById('li-err');
  if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';return;}
- err.textContent='';
- _auth.signInWithEmailAndPassword(email,pw)
-  .catch(function(e){err.textContent='로그인 실패: '+e.message;});
+ err.textContent='로그인 중...';
+ fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+DINE_APIKEY,{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({email:email,password:pw,returnSecureToken:true})
+ }).then(function(r){return r.json();}).then(function(d){
+  if(d.error){
+   var msg=d.error.message||'';
+   err.textContent=msg==='INVALID_PASSWORD'||msg==='EMAIL_NOT_FOUND'?'이메일 또는 비밀번호가 올바르지 않습니다':'로그인 실패: '+msg;
+   return;
+  }
+  err.textContent='';
+  _dineToken = d.idToken;
+  /* Firestore는 SDK로 사용 (Firestore는 referer 체크 없음) */
+  _db.collection('companies').where('uid','==',d.localId).limit(1).get()
+   .then(function(s){
+    var co=s.empty?null:s.docs[0].data();
+    _CU={uid:d.localId,email:d.email,dealerId:d.localId,name:(co&&co.name)||d.email.split('@')[0],company:co};
+    document.getElementById('login-wrap').style.display='none';
+    var aw=document.getElementById('app-wrap');aw.style.display='flex';
+    document.getElementById('tb-user-name').textContent=_CU.name;
+    _dinePage('dashboard',document.querySelector('.nav-item'));
+    _dineUpdateSidebar();
+    _dineWatchAttend();
+   });
+ }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
 document.getElementById('li-pw').addEventListener('keydown',function(e){if(e.key==='Enter')_dineLogin();});
 
 function _dineLogout(){
  if(!confirm('로그아웃하시겠습니까?'))return;
- _auth.signOut();
+ _dineToken=null; _CU={};
+ document.getElementById('login-wrap').style.display='flex';
+ document.getElementById('app-wrap').style.display='none';
 }
 
+/* onAuthStateChanged는 REST 로그인 시 트리거 안 됨 - 로그아웃 감지용으로만 유지 */
 _auth.onAuthStateChanged(function(u){
  if(u){
+  /* SDK 로그인 세션 복원 시 (페이지 새로고침 등) - .ne.kr에서는 보통 미실행 */
+  if(_CU && _CU.uid) return; /* REST 로그인 후 중복 방지 */
   _db.collection('companies').where('uid','==',u.uid).limit(1).get()
    .then(function(s){
     var co = s.empty ? null : s.docs[0].data();
