@@ -1475,8 +1475,6 @@ async function acceptExchange(){
 
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
-      if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
-      if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
       return serveKVFile(env, 'dine.html', 'text/html');
     }
 
