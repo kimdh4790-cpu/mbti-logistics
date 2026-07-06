@@ -131,6 +131,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
   #sidebar.open{transform:translateX(0);box-shadow:4px 0 32px rgba(0,0,0,.5)}
   #content-wrap{margin-left:0!important;width:100%!important}
   #content{margin-left:0!important;width:100%!important;padding:12px!important}
+  #app{display:block!important}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
   .pos-wrap{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;overflow:visible!important}
   .cart-panel{max-height:50dvh!important;overflow-y:auto!important}
@@ -1152,8 +1153,10 @@ function _showApp(){
   if(localStorage.getItem('filo_sidebar_collapsed')==='1'){
    var sb2=document.getElementById('sidebar');
    var wrap2=document.getElementById('content-wrap');
+   var cont2=document.getElementById('content');
    if(sb2)sb2.classList.add('collapsed');
    if(wrap2){wrap2.style.marginLeft='52px';wrap2.style.width='calc(100% - 52px)';}
+   if(cont2)cont2.style.marginLeft='52px';
   }
  }
  var company=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
@@ -1357,11 +1360,11 @@ function _toggleSidebar(){
   var content2=document.getElementById('content');
   if(isCollapsed){
    if(wrap){wrap.style.marginLeft='52px';wrap.style.width='calc(100% - 52px)';}
-   if(content2){content2.style.marginLeft='0';}
+   if(content2){content2.style.marginLeft='52px';}
    if(btn)btn.textContent='☰';
   } else {
-   if(wrap){wrap.style.marginLeft='';wrap.style.width='';}
-   if(content2){content2.style.marginLeft='';}
+   if(wrap){wrap.style.marginLeft='var(--sidebar-w)';wrap.style.width='calc(100% - var(--sidebar-w))';}
+   if(content2){content2.style.marginLeft='var(--sidebar-w)';}
    if(btn)btn.textContent='☰';
   }
   localStorage.setItem('filo_sidebar_collapsed', isCollapsed?'1':'0');
