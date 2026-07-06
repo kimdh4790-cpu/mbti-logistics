@@ -4339,6 +4339,64 @@ function _filoRenderTableMgmt(did,tables){
  html+='</div></div>';
 
  wrap.innerHTML=html;
+ /* 오늘 예약 현황 실시간 */
+ var today=new Date().toISOString().slice(0,10);
+ _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today)
+  .orderBy('time').get().then(function(snap){
+   if(snap.empty)return;
+   var rWrap=document.createElement('div');
+   rWrap.className='card';rWrap.style.marginTop='14px';
+   rWrap.innerHTML='<div class="sec-title" style="margin-bottom:12px">📅 오늘 예약 ('+snap.size+'건)</div>';
+   snap.forEach(function(doc){
+    var b=doc.data();
+    var stMap={pending:'⏳ 대기',confirmed:'✅ 확정',cancelled:'❌ 취소'};
+    var stColor={pending:'#f59e0b',confirmed:'#22c55e',cancelled:'#ef4444'};
+    var st=stMap[b.status||'pending'];
+    var sc=stColor[b.status||'pending'];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--r);margin-bottom:8px;border:1px solid var(--bd2)';
+    row.innerHTML='<div style="font-size:22px">🗓</div>'+
+     '<div style="flex:1">'+
+     '<div style="display:flex;justify-content:space-between;align-items:center">'+
+     '<span style="font-size:13px;font-weight:700">'+(b.customerName||'고객')+'</span>'+
+     '<span style="font-size:11px;font-weight:700;color:'+sc+'">'+st+'</span>'+
+     '</div>'+
+     '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
+     (b.time||'')+
+     (b.service?' · '+b.service:'')+
+     (b.seats?' · '+b.seats+'인':'')+
+     (b.memo?' · '+b.memo:'')+
+     '</div></div>';
+    var btnWrap=document.createElement('div');btnWrap.style.cssText='display:flex;gap:4px;flex-shrink:0';
+    (function(bid,bdata){
+     if(bdata.status!=='confirmed'){
+      var cf=document.createElement('button');
+      cf.style.cssText='padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;cursor:pointer';
+      cf.textContent='확정';
+      cf.onclick=function(){
+       _db.collection('filo_bookings').doc(bid).update({status:'confirmed'})
+        .then(function(){_filoToast('✅ 확정됐습니다');_filoLoadTableMgmt(did);});
+      };
+      btnWrap.appendChild(cf);
+     }
+     if(bdata.status!=='cancelled'){
+      var cx=document.createElement('button');
+      cx.style.cssText='padding:4px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#ef4444;font-size:10px;cursor:pointer';
+      cx.textContent='취소';
+      cx.onclick=function(){
+       if(!confirm('취소하시겠습니까?'))return;
+       _db.collection('filo_bookings').doc(bid).update({status:'cancelled'})
+        .then(function(){_filoToast('🗑 취소됐습니다');_filoLoadTableMgmt(did);});
+      };
+      btnWrap.appendChild(cx);
+     }
+    })(doc.id,b);
+    row.appendChild(btnWrap);
+    rWrap.appendChild(row);
+   });
+   var liveEl=document.getElementById('table-live');
+   if(liveEl)liveEl.appendChild(rWrap);
+  }).catch(function(){});
 }
 
 function _filoTableStatusChange(did,docId,currentStatus){
