@@ -195,10 +195,9 @@ select.inp option{background:var(--s2)}
    </div>
    <div class="nav-group">
     <div class="nav-group-title">매장 운영</div>
-    <div class="nav-item" onclick="_dinePage('table',this)"><span class="ic">🪑</span>테이블 현황</div>
-    <div class="nav-item" onclick="_dinePage('orders',this)"><span class="ic">🔔</span>주문 대기</div>
-    <div class="nav-item" onclick="_dinePage('sales',this)"><span class="ic">🛒</span>POS 매출</div>
-    <div class="nav-item" onclick="_dinePage('delivery',this)"><span class="ic">🛵</span>배달앱 정산</div>
+    <div class="nav-item" onclick="_dineGoFiloPage('kiosk')"><span class="ic">🪑</span>테이블·POS <span style="font-size:9px;color:var(--br);margin-left:4px">FILO↗</span></div>
+    <div class="nav-item" onclick="_dineGoFiloPage('orders')"><span class="ic">🔔</span>주문 대기 <span style="font-size:9px;color:var(--br);margin-left:4px">FILO↗</span></div>
+    <div class="nav-item" onclick="_dineGoFiloPage('delivery')"><span class="ic">🛵</span>배달 주문 <span style="font-size:9px;color:var(--br);margin-left:4px">FILO↗</span></div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title">직원 관리</div>
@@ -217,7 +216,7 @@ select.inp option{background:var(--s2)}
    <div class="nav-group">
     <div class="nav-group-title">고객</div>
     <div class="nav-item" onclick="_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
-    <div class="nav-item" onclick="_dinePage('reservation',this)"><span class="ic">📆</span>예약 관리</div>
+    <div class="nav-item" onclick="_dineGoFiloPage('schedule')"><span class="ic">📆</span>예약 관리 <span style="font-size:9px;color:var(--br);margin-left:4px">FILO↗</span></div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title">설정</div>
@@ -490,6 +489,12 @@ function _dineLogin(){
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
 document.getElementById('li-pw').addEventListener('keydown',function(e){if(e.key==='Enter')_dineLogin();});
+
+function _dineGoFiloPage(page){
+ var slug=(_CU&&_CU.dineSlug)||'';
+ var base=slug?'https://filo.ai.kr/'+encodeURIComponent(slug):'https://filo.ai.kr/app';
+ window.open(base+'#'+page,'_blank');
+}
 
 function _dineGoFilo(){
  var slug=(_CU&&_CU.dineSlug)||(_CU&&_CU.dealerId)||'';
