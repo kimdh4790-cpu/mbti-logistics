@@ -1866,35 +1866,59 @@ function _countUp(id,target,prefix,suffix){
 function _dineAnalytics(el){
  var did=_CU.dealerId;
  var today=new Date().toISOString().slice(0,10);
- var ym=today.slice(0,7);
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
-
- wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">📈 매출 분석</div><div class="page-sub">시간대·요일·메뉴 분석</div></div>'+
-  '<div style="display:flex;gap:6px;flex-wrap:wrap" id="ana-filter">'+
-  '<button class="btn btn-sm btn-primary" onclick="_dineAnaFilter(\'today\',this)">오늘</button>'+
-  '<button class="btn btn-sm btn-ghost" onclick="_dineAnaFilter(\'week\',this)">이번주</button>'+
-  '<button class="btn btn-sm btn-ghost" onclick="_dineAnaFilter(\'month\',this)">이번달</button>'+
+ wrap.innerHTML=
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">'+
+  '<div><div class="page-title">📈 매출 분석</div><div class="page-sub">실시간 경영 인사이트</div></div>'+
+  '<div style="display:flex;gap:6px;background:var(--bg3);border-radius:10px;padding:4px;border:1px solid var(--bd)" id="ana-filter">'+
+  '<button class="ana-tab active" data-t="today" onclick="_dineAnaTab(this)">오늘</button>'+
+  '<button class="ana-tab" data-t="week" onclick="_dineAnaTab(this)">이번주</button>'+
+  '<button class="ana-tab" data-t="month" onclick="_dineAnaTab(this)">이번달</button>'+
   '</div></div>'+
-  '<div class="kpi-grid" id="ana-kpi"></div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
-  '<div class="card"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div><div style="position:relative;height:160px"><canvas id="ana-hour-chart"></canvas></div></div>'+
-  '<div class="card"><div class="sec-title" style="margin-bottom:10px">📅 요일별 매출</div><div style="position:relative;height:160px"><canvas id="ana-day-chart"></canvas></div></div>'+
+  /* KPI 4개 */
+  '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="ana-kpi"></div>'+
+  /* 차트 2개 */
+  '<div style="display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:12px">'+
+  '<div class="card" style="padding:16px">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+  '<span style="font-size:12px;font-weight:800;color:var(--t2)">⏰ 시간대별 매출</span>'+
+  '<span id="ana-peak-label" style="font-size:10px;color:var(--br);font-weight:700"></span>'+
   '</div>'+
+  '<div style="position:relative;height:200px"><canvas id="ana-hour-chart"></canvas></div>'+
+  '</div>'+
+  '<div class="card" style="padding:16px">'+
+  '<div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:14px">📅 요일별 매출</div>'+
+  '<div style="position:relative;height:200px"><canvas id="ana-day-chart"></canvas></div>'+
+  '</div>'+
+  '</div>'+
+  /* 하단 2개 */
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-  '<div class="card"><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div><div id="ana-menu-list"></div></div>'+
-  '<div class="card"><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div><div id="ana-pay-list"></div></div>'+
+  '<div class="card" style="padding:16px"><div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:14px">🏆 인기 메뉴 TOP5</div><div id="ana-menu-list"></div></div>'+
+  '<div class="card" style="padding:16px"><div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:14px">💳 결제수단</div><div id="ana-pay-chart" style="position:relative;height:180px"></div><div id="ana-pay-list" style="margin-top:10px"></div></div>'+
   '</div>';
+
+ /* ana-tab 스타일 */
+ if(!document.getElementById('ana-tab-style')){
+  var st=document.createElement('style');st.id='ana-tab-style';
+  st.textContent='.ana-tab{padding:6px 14px;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--t3);transition:.15s}.ana-tab.active{background:var(--br);color:#fff}';
+  document.head.appendChild(st);
+ }
+
  el.appendChild(wrap);
- _dineAnaFilter('today',document.querySelector('#ana-filter button'));
+ _dineAnaFilter('today');
 }
 
-function _dineAnaFilter(type,btn){
- document.querySelectorAll('#ana-filter button').forEach(function(b){b.className='btn btn-sm btn-ghost';});
- if(btn)btn.className='btn btn-sm btn-primary';
+function _dineAnaTab(btn){
+ document.querySelectorAll('.ana-tab').forEach(function(b){b.classList.remove('active');});
+ btn.classList.add('active');
+ _dineAnaFilter(btn.dataset.t);
+}
+
+function _dineAnaFilter(type){
  var now=new Date();
- var from,to=now.toISOString().slice(0,10);
+ var to=now.toISOString().slice(0,10);
+ var from;
  if(type==='today'){from=to;}
  else if(type==='week'){var d=new Date(now);d.setDate(d.getDate()-6);from=d.toISOString().slice(0,10);}
  else{from=to.slice(0,7)+'-01';}
@@ -1902,9 +1926,13 @@ function _dineAnaFilter(type,btn){
 }
 
 function _dineLoadAnalytics(did,from,to){
+ /* 로딩 표시 */
+ var kpi=document.getElementById('ana-kpi');
+ if(kpi)kpi.innerHTML=Array(4).fill('<div class="kpi-card" style="border-top:2px solid var(--bd)"><div style="height:14px;background:var(--bg3);border-radius:4px;margin:4px 0;animation:shimmer 1.2s infinite"></div><div style="height:24px;background:var(--bg3);border-radius:4px;margin:4px 0;animation:shimmer 1.2s infinite"></div></div>').join('');
+
  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
  .then(function(snap){
-  var total=0,cnt=0,hours={},days={},menus={},methods={};
+  var total=0,cnt=0,hours={},days={},menus={},methods={},dailyRev={};
   var dayNames=['일','월','화','수','목','금','토'];
   snap.forEach(function(doc){
    var d=doc.data();if(d.status==='cancelled')return;
@@ -1913,85 +1941,196 @@ function _dineLoadAnalytics(did,from,to){
    var h=dt.getHours();hours[h]=(hours[h]||0)+amt;
    var dy=dayNames[dt.getDay()];days[dy]=(days[dy]||0)+amt;
    var pm=d.payMethod||'기타';methods[pm]=(methods[pm]||0)+amt;
+   var dt2=d.date||d.createdAt&&d.createdAt.slice(0,10);
+   if(dt2)dailyRev[dt2]=(dailyRev[dt2]||0)+amt;
    (d.items||[]).forEach(function(it){menus[it.name]=(menus[it.name]||0)+(it.qty||1);});
   });
   var avg=cnt?Math.round(total/cnt):0;
   var peakH=Object.entries(hours).sort(function(a,b){return b[1]-a[1];})[0];
+  var days2=Object.keys(dailyRev).length||1;
+  var dailyAvg=Math.round(total/days2);
 
-  /* KPI */
-  var kpi=document.getElementById('ana-kpi');
+  /* KPI 카드 - 애니메이션 카운팅 */
   if(kpi)kpi.innerHTML=
-   '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">💰 총 매출</div><div class="kpi-val" id="ana-rev" style="color:#38bdf8">₩0</div><div class="kpi-sub">'+cnt+'건</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🛒 주문</div><div class="kpi-val" id="ana-cnt" style="color:#22c55e">0건</div><div class="kpi-sub">평균 ₩'+avg.toLocaleString()+'</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">⏰ 피크타임</div><div class="kpi-val" style="color:#f59e0b">'+(peakH?peakH[0]+'시':'-')+'</div><div class="kpi-sub">'+(peakH?'₩'+peakH[1].toLocaleString():'')+'</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #a78bfa"><div class="kpi-label">💰 객단가</div><div class="kpi-val" id="ana-avg" style="color:#a78bfa">₩0</div><div class="kpi-sub">주문당 평균</div></div>';
-  _countUp('ana-rev',total,'₩','');
-  _countUp('ana-cnt',cnt,'','건');
-  _countUp('ana-avg',avg,'₩','');
+   '<div class="kpi-card" style="border-top:3px solid #38bdf8;position:relative;overflow:hidden">'+
+   '<div style="position:absolute;top:-10px;right:-10px;font-size:50px;opacity:.06">💰</div>'+
+   '<div class="kpi-label">총 매출</div>'+
+   '<div class="kpi-val" id="ana-rev" style="color:#38bdf8;font-size:20px">₩0</div>'+
+   '<div class="kpi-sub" style="color:#38bdf8;opacity:.7">'+cnt+'건 주문</div>'+
+   '</div>'+
+   '<div class="kpi-card" style="border-top:3px solid #22c55e;position:relative;overflow:hidden">'+
+   '<div style="position:absolute;top:-10px;right:-10px;font-size:50px;opacity:.06">🛒</div>'+
+   '<div class="kpi-label">일평균 매출</div>'+
+   '<div class="kpi-val" id="ana-davg" style="color:#22c55e;font-size:20px">₩0</div>'+
+   '<div class="kpi-sub" style="color:#22c55e;opacity:.7">'+days2+'일 기준</div>'+
+   '</div>'+
+   '<div class="kpi-card" style="border-top:3px solid #f59e0b;position:relative;overflow:hidden">'+
+   '<div style="position:absolute;top:-10px;right:-10px;font-size:50px;opacity:.06">⏰</div>'+
+   '<div class="kpi-label">피크타임</div>'+
+   '<div class="kpi-val" style="color:#f59e0b;font-size:20px">'+(peakH?peakH[0]+'시대':'-')+'</div>'+
+   '<div class="kpi-sub" style="color:#f59e0b;opacity:.7">'+(peakH?'₩'+Math.round(peakH[1]).toLocaleString():'데이터없음')+'</div>'+
+   '</div>'+
+   '<div class="kpi-card" style="border-top:3px solid #a78bfa;position:relative;overflow:hidden">'+
+   '<div style="position:absolute;top:-10px;right:-10px;font-size:50px;opacity:.06">🎯</div>'+
+   '<div class="kpi-label">객단가</div>'+
+   '<div class="kpi-val" id="ana-avg" style="color:#a78bfa;font-size:20px">₩0</div>'+
+   '<div class="kpi-sub" style="color:#a78bfa;opacity:.7">주문당 평균</div>'+
+   '</div>';
+
+  /* 카운팅 애니메이션 */
+  function countUp(id,target,prefix,suffix,duration){
+   var el=document.getElementById(id);if(!el)return;
+   var start=0,startTime=null;
+   function step(ts){
+    if(!startTime)startTime=ts;
+    var prog=Math.min((ts-startTime)/(duration||1200),1);
+    var ease=1-Math.pow(1-prog,3);
+    var val=Math.round(ease*target);
+    el.textContent=(prefix||'')+val.toLocaleString()+(suffix||'');
+    if(prog<1)requestAnimationFrame(step);
+   }
+   requestAnimationFrame(step);
+  }
+  setTimeout(function(){
+   countUp('ana-rev',total,'₩','',1000);
+   countUp('ana-davg',dailyAvg,'₩','',800);
+   countUp('ana-avg',avg,'₩','',900);
+  },100);
+
+  /* 피크타임 라벨 */
+  var pl=document.getElementById('ana-peak-label');
+  if(pl&&peakH)pl.textContent='🔥 '+peakH[0]+'시 피크';
 
   /* 차트 */
   _dineEnsureChart(function(){
-   /* 시간대 */
+   /* 시간대 bar chart - 그라데이션 */
    var hCanvas=document.getElementById('ana-hour-chart');
    if(hCanvas&&window.Chart){
     if(hCanvas._c)hCanvas._c.destroy();
-    var hLabels=Array.from({length:16},function(_,i){return (8+i)+'시';});
-    var hData=Array.from({length:16},function(_,i){return hours[8+i]||0;});
+    var hLabels=Array.from({length:18},function(_,i){return (6+i)+'시';});
+    var hData=Array.from({length:18},function(_,i){return hours[6+i]||0;});
     var maxH=Math.max.apply(null,hData)||1;
-    hCanvas._c=new Chart(hCanvas,{type:'bar',data:{labels:hLabels,datasets:[{data:hData,
-     backgroundColor:hData.map(function(v){return v===maxH?'rgba(8,145,178,.8)':'rgba(8,145,178,.2)';}),
-     borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,
-     animation:{duration:800},plugins:{legend:{display:false}},
-     scales:{x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}}}});
+    var ctx=hCanvas.getContext('2d');
+    var grad=ctx.createLinearGradient(0,0,0,200);
+    grad.addColorStop(0,'rgba(8,145,178,.9)');
+    grad.addColorStop(1,'rgba(8,145,178,.1)');
+    hCanvas._c=new Chart(hCanvas,{type:'bar',data:{labels:hLabels,datasets:[{
+     data:hData,
+     backgroundColor:hData.map(function(v){return v===maxH?'rgba(56,189,248,1)':grad;}),
+     borderRadius:6,borderSkipped:false
+    }]},options:{responsive:true,maintainAspectRatio:false,
+     animation:{duration:1000,easing:'easeOutQuart'},
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
+     scales:{
+      x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:9}}},
+      y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#6b7280',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}
+     }}});
    }
-   /* 요일 */
+   /* 요일 radar or bar */
    var dCanvas=document.getElementById('ana-day-chart');
    if(dCanvas&&window.Chart){
     if(dCanvas._c)dCanvas._c.destroy();
     var dOrder=['월','화','수','목','금','토','일'];
-    dCanvas._c=new Chart(dCanvas,{type:'bar',data:{labels:dOrder,datasets:[{data:dOrder.map(function(d){return days[d]||0;}),
-     backgroundColor:'rgba(124,58,237,.3)',borderColor:'rgba(124,58,237,.6)',borderWidth:1,borderRadius:4}]},
-     options:{responsive:true,maintainAspectRatio:false,animation:{duration:800},
-     plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:10}}},
-     y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}}}});
+    var dData=dOrder.map(function(d){return days[d]||0;});
+    var maxD=Math.max.apply(null,dData)||1;
+    var ctx2=dCanvas.getContext('2d');
+    var grad2=ctx2.createLinearGradient(0,0,0,200);
+    grad2.addColorStop(0,'rgba(124,58,237,.8)');
+    grad2.addColorStop(1,'rgba(124,58,237,.1)');
+    dCanvas._c=new Chart(dCanvas,{type:'bar',data:{labels:dOrder,datasets:[{
+     data:dData,
+     backgroundColor:dData.map(function(v){return v===maxD?'rgba(167,139,250,1)':grad2;}),
+     borderRadius:6,borderSkipped:false
+    }]},options:{responsive:true,maintainAspectRatio:false,
+     animation:{duration:1000,easing:'easeOutBounce'},
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
+     scales:{
+      x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:11}}},
+      y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#6b7280',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v;}}}
+     }}});
+   }
+   /* 결제수단 doughnut */
+   var pCanvas=document.getElementById('ana-pay-chart');
+   if(pCanvas&&window.Chart&&Object.keys(methods).length){
+    /* canvas 동적 생성 */
+    var cvs=document.createElement('canvas');
+    pCanvas.innerHTML='';pCanvas.appendChild(cvs);
+    var payColors2=['#60a5fa','#22c55e','#f59e0b','#a78bfa','#f87171','#34d399'];
+    var pEntries=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
+    if(cvs._c)cvs._c.destroy();
+    cvs._c=new Chart(cvs,{type:'doughnut',data:{
+     labels:pEntries.map(function(e){return e[0];}),
+     datasets:[{data:pEntries.map(function(e){return e[1];}),
+      backgroundColor:payColors2.slice(0,pEntries.length),
+      borderWidth:2,borderColor:'var(--bg)',hoverOffset:8
+     }]
+    },options:{responsive:true,maintainAspectRatio:false,
+     animation:{animateRotate:true,duration:1200},
+     plugins:{legend:{position:'right',labels:{color:'#9ca3af',font:{size:10},boxWidth:10,padding:8}},
+      tooltip:{callbacks:{label:function(c){return c.label+': ₩'+c.raw.toLocaleString()+' ('+Math.round(c.raw/total*100)+'%)';}}}
+     }
+    }});
    }
   });
 
-  /* 인기메뉴 */
+  /* 인기메뉴 TOP5 */
   var mEl=document.getElementById('ana-menu-list');
   if(mEl){
-   var top=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
-   var maxM=top[0]?top[0][1]:1;
-   mEl.innerHTML=top.length?top.map(function(m,i){
+   var top5=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+   var rankEmoji=['🥇','🥈','🥉','4️⃣','5️⃣'];
+   var maxM=top5[0]?top5[0][1]:1;
+   mEl.innerHTML=top5.length?top5.map(function(m,i){
     var pct=Math.round(m[1]/maxM*100);
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)">'+
-     '<span>'+ranks[i]+'</span>'+
-     '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
-     '<span style="font-weight:700">'+m[0]+'</span><span style="color:var(--gr)">'+m[1]+'개</span></div>'+
-     '<div style="height:3px;background:var(--s3);border-radius:2px;overflow:hidden">'+
-     '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--br),#22c55e);border-radius:2px;transition:width .8s ease '+(i*.1)+'s"></div></div></div></div>';
-   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';
+    var colors=['#f59e0b','#9ca3af','#cd7f32','#38bdf8','#a78bfa'];
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'+
+     '<span style="font-size:16px">'+rankEmoji[i]+'</span>'+
+     '<span style="flex:1;font-size:12px;font-weight:700">'+m[0]+'</span>'+
+     '<span style="font-size:11px;font-weight:800;color:'+colors[i]+'" id="menu-cnt-'+i+'">0개</span>'+
+     '</div>'+
+     '<div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">'+
+     '<div class="menu-bar" style="height:100%;width:0%;background:linear-gradient(90deg,'+colors[i]+','+colors[i]+'88);border-radius:3px;transition:width 1s ease '+(i*.15)+'s"></div>'+
+     '</div></div>';
+   }).join(''):'<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">주문 데이터 없음</div>';
+   /* 진행바 + 카운팅 애니메이션 */
+   setTimeout(function(){
+    mEl.querySelectorAll('.menu-bar').forEach(function(bar,i){
+     bar.style.width=Math.round(top5[i][1]/maxM*100)+'%';
+    });
+    top5.forEach(function(m,i){
+     var el=document.getElementById('menu-cnt-'+i);
+     if(!el)return;
+     var cnt2=m[1],start2=0,st2=null;
+     function step2(ts){
+      if(!st2)st2=ts;
+      var p=Math.min((ts-st2)/800,1);
+      el.textContent=Math.round(p*cnt2)+'개';
+      if(p<1)requestAnimationFrame(step2);
+     }
+     requestAnimationFrame(step2);
+    });
+   },200);
   }
 
-  /* 결제수단 */
-  var pEl=document.getElementById('ana-pay-list');
-  if(pEl){
-   var payColors={'카드':'#60a5fa','현금':'#22c55e','카카오페이':'#f59e0b','네이버페이':'#10b981','카운터결제':'#a78bfa','기타':'#9898c0'};
+  /* 결제수단 리스트 */
+  var pListEl=document.getElementById('ana-pay-list');
+  if(pListEl){
+   var payColors3={'카드':'#60a5fa','현금':'#22c55e','카카오페이':'#f59e0b','네이버페이':'#10b981','카운터결제':'#a78bfa','기타':'#9ca3af'};
    var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
-   pEl.innerHTML=sorted.map(function(m){
+   pListEl.innerHTML=sorted.map(function(m){
     var pct=total>0?Math.round(m[1]/total*100):0;
-    var col=payColors[m[0]]||'#9898c0';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
-     '<div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
-     '<span style="font-weight:700">'+m[0]+'</span><span style="color:'+col+'">'+pct+'%</span></div>'+
-     '<div style="height:3px;background:var(--s3);border-radius:2px;overflow:hidden">'+
-     '<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px;transition:width .8s ease"></div></div></div>'+
-     '<span style="font-size:11px;font-weight:800;color:var(--t2)">₩'+m[1].toLocaleString()+'</span></div>';
-   }).join('')||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';
+    var col=payColors3[m[0]]||'#9ca3af';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0">'+
+     '<div style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'+
+     '<span style="flex:1;font-size:11px">'+m[0]+'</span>'+
+     '<span style="font-size:11px;font-weight:700;color:'+col+'">'+pct+'%</span>'+
+     '<span style="font-size:10px;color:var(--t3)">₩'+m[1].toLocaleString()+'</span>'+
+     '</div>';
+   }).join('')||'<div style="text-align:center;padding:10px;color:var(--t3);font-size:11px">데이터 없음</div>';
   }
  });
 }
+
 
 
 function _dineTable(el){
