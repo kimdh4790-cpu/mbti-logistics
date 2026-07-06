@@ -9,7 +9,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
   'X-XSS-Protection': '1; mode=block',
-  'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.tosspayments.com https://cdn.iamport.kr https://static.cloudflareinsights.com https://t1.kakaocdn.net https://developers.kakao.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https://donway.ai.kr https://app.donway.ai.kr https://filo.ai.kr https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://api.anthropic.com https://api.toss.im https://api.tosspayments.com https://*.tosspayments.com https://log.tosspayments.com/v1/log https://event.tosspayments.com https://www.gstatic.com https://api.ipify.org https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'none';",
+  'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.tosspayments.com https://cdn.iamport.kr https://static.cloudflareinsights.com https://t1.kakaocdn.net https://developers.kakao.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https://donway.ai.kr https://app.donway.ai.kr https://filo.ai.kr https://dine.ne.kr https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://api.anthropic.com https://api.toss.im https://api.tosspayments.com https://*.tosspayments.com https://log.tosspayments.com/v1/log https://event.tosspayments.com https://www.gstatic.com https://api.ipify.org https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'none';",
 };
 
 // Rate Limiting (메모리 기반, Worker 재시작 시 초기화)
@@ -1474,6 +1474,12 @@ async function acceptExchange(){
     }
 
     // ★ filo.ai.kr 라우팅
+    if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
+      if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
+      if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
+      return serveKVFile(env, 'dine.html', 'text/html');
+    }
+
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
