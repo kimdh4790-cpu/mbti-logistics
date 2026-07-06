@@ -601,6 +601,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <script>
 
@@ -1218,6 +1219,7 @@ function _buildFiloNav(){
  if(hasAll||hasSub('kiosk')){
   menus.push({s:'🛒 판매',items:[
    {ic:'🖥️',l:'POS 결제',p:'kiosk'},
+   {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
    {ic:'🔔',l:'주문 대기',p:'orders'},
    {ic:'🛵',l:'배달 주문',p:'delivery'},
    {ic:'📊',l:'매출·분석',p:'sales_report'},
@@ -1396,6 +1398,7 @@ function _filoGoPage(p){
 
  if(p==='home') _filoPageHome(el);
  else if(p==='kiosk') _filoPageKiosk(el);
+ else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
  else if(p==='orders') _filoPageOrders(el);
  else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='sales_report') _filoPageSales(el);
@@ -4594,6 +4597,308 @@ function _filoDeliveryAdd(did){
  mo.appendChild(box);
  mo.onclick=function(e){if(e.target===mo)mo.remove();};
  document.body.appendChild(mo);
+}
+
+/* ══════════════════════════════════════
+   🍽 메뉴 관리 페이지
+   카테고리 + 메뉴 CRUD + 이미지 업로드
+   ══════════════════════════════════════ */
+function _filoPageMenuMgmt(el){
+ var did=_CU.dealerId||_CU.uid;
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ wrap.style.cssText='max-width:900px;margin:0 auto';
+
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px';
+ hdr.innerHTML='<div><div class="page-title">🍽 메뉴 관리</div><div class="page-sub">카테고리·메뉴 추가/수정/삭제 및 이미지 등록</div></div>';
+ var addBtn=document.createElement('button');
+ addBtn.className='btn btn-primary btn-sm';
+ addBtn.textContent='+ 메뉴 추가';
+ addBtn.onclick=function(){_filoMenuAddModal(did,null,null);};
+ hdr.appendChild(addBtn);
+ wrap.appendChild(hdr);
+
+ /* 카테고리 관리 */
+ var catCard=document.createElement('div');
+ catCard.className='card';
+ catCard.style.marginBottom='14px';
+ catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">📂 카테고리</div>'+
+  '<div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input id="new-cat-inp" type="text" placeholder="새 카테고리명" style="flex:1;padding:9px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">'+
+  '<button onclick="_filoAddCategory(\''+did+'\')" style="padding:9px 16px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">추가</button>'+
+  '</div>';
+ wrap.appendChild(catCard);
+
+ /* 메뉴 목록 */
+ var menuCard=document.createElement('div');
+ menuCard.className='card';
+ menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">🍽 메뉴 목록</div>'+
+  '<div id="menu-mgmt-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div></div>';
+ wrap.appendChild(menuCard);
+
+ el.appendChild(wrap);
+ _filoLoadMenuMgmt(did);
+}
+
+function _filoLoadMenuMgmt(did){
+ _db.collection('filo_menus').where('dealerId','==',did).orderBy('category').get().then(function(snap){
+  /* 카테고리 목록 */
+  var cats=[];
+  snap.forEach(function(doc){
+   var c=doc.data().category||'기타';
+   if(cats.indexOf(c)<0)cats.push(c);
+  });
+
+  var catList=document.getElementById('cat-list');
+  if(catList){
+   catList.innerHTML=cats.map(function(c){
+    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:700;color:#a78bfa">'+
+     c+
+     '<button onclick="_filoDeleteCategory(\''+did+'\',\''+c+'\')" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px;opacity:.6">×</button>'+
+     '</div>';
+   }).join('');
+  }
+
+  /* 메뉴 목록 */
+  var list=document.getElementById('menu-mgmt-list');
+  if(!list)return;
+  if(snap.empty){
+   list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:32px;margin-bottom:8px">🍽</div>등록된 메뉴가 없습니다<br><div style="font-size:12px;margin-top:8px">+ 메뉴 추가 버튼으로 시작하세요</div></div>';
+   return;
+  }
+
+  /* 카테고리별 그룹핑 */
+  var grouped={};
+  snap.forEach(function(doc){
+   var d=doc.data();
+   var c=d.category||'기타';
+   if(!grouped[c])grouped[c]=[];
+   grouped[c].push(Object.assign({_id:doc.id},d));
+  });
+
+  list.innerHTML='';
+  Object.keys(grouped).sort().forEach(function(cat){
+   var catDiv=document.createElement('div');
+   catDiv.style.marginBottom='16px';
+   catDiv.innerHTML='<div style="font-size:11px;font-weight:800;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;padding:6px 0;border-bottom:1px solid var(--bd);margin-bottom:8px">'+cat+'</div>';
+
+   var grid=document.createElement('div');
+   grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px';
+
+   grouped[cat].forEach(function(m){
+    var card=document.createElement('div');
+    card.style.cssText='background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px;position:relative;transition:.2s';
+    card.onmouseover=function(){this.style.borderColor='rgba(124,58,237,.3)';};
+    card.onmouseout=function(){this.style.borderColor='var(--bd2)';};
+
+    /* 이미지 or 이모지 */
+    var imgDiv=document.createElement('div');
+    imgDiv.style.cssText='width:100%;height:80px;border-radius:8px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:32px';
+    if(m.imageUrl){
+     var img=document.createElement('img');
+     img.src=m.imageUrl;
+     img.style.cssText='width:100%;height:100%;object-fit:cover';
+     img.onerror=function(){this.style.display='none';imgDiv.textContent=m.emoji||'🍽';};
+     imgDiv.appendChild(img);
+    } else {
+     imgDiv.textContent=m.emoji||'🍽';
+    }
+    card.appendChild(imgDiv);
+
+    /* 메뉴 정보 */
+    var info=document.createElement('div');
+    info.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
+     '<div style="font-size:13px;font-weight:900;color:#22c55e">₩'+Number(m.price||0).toLocaleString()+'</div>'+
+     (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:2px">재고: '+m.stock+'</div>':'');
+    card.appendChild(info);
+
+    /* 수정/삭제 버튼 */
+    var btns=document.createElement('div');
+    btns.style.cssText='display:flex;gap:6px;margin-top:8px';
+    var editBtn=document.createElement('button');
+    editBtn.style.cssText='flex:1;padding:6px;background:var(--br);border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer';
+    editBtn.textContent='수정';
+    (function(menu){editBtn.onclick=function(){_filoMenuAddModal(did,menu,null);};})(m);
+    var delBtn=document.createElement('button');
+    delBtn.style.cssText='flex:1;padding:6px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#ef4444;font-size:11px;cursor:pointer';
+    delBtn.textContent='삭제';
+    (function(id){delBtn.onclick=function(){
+     if(!confirm('삭제하시겠습니까?'))return;
+     _db.collection('filo_menus').doc(id).delete().then(function(){
+      _filoToast('🗑 삭제됐습니다');
+      _filoPageMenuMgmt(document.getElementById('content'));
+     });
+    };})(m._id);
+    btns.appendChild(editBtn);btns.appendChild(delBtn);
+    card.appendChild(btns);
+    grid.appendChild(card);
+   });
+   catDiv.appendChild(grid);
+   list.appendChild(catDiv);
+  });
+ }).catch(function(e){
+  var list=document.getElementById('menu-mgmt-list');
+  if(list)list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">메뉴를 불러올 수 없습니다: '+e.message+'</div>';
+ });
+}
+
+function _filoAddCategory(did){
+ var inp=document.getElementById('new-cat-inp');
+ var cat=(inp.value||'').trim();
+ if(!cat){_filoToast('카테고리명을 입력하세요');return;}
+ inp.value='';
+ _filoToast('✅ 카테고리 추가됐습니다');
+ _filoLoadMenuMgmt(did);
+}
+
+function _filoDeleteCategory(did,cat){
+ if(!confirm('['+cat+'] 카테고리의 메뉴를 모두 삭제하시겠습니까?'))return;
+ _db.collection('filo_menus').where('dealerId','==',did).where('category','==',cat).get().then(function(snap){
+  var batch=_db.batch();
+  snap.forEach(function(doc){batch.delete(doc.ref);});
+  return batch.commit();
+ }).then(function(){
+  _filoToast('🗑 ['+cat+'] 카테고리 삭제됐습니다');
+  _filoPageMenuMgmt(document.getElementById('content'));
+ });
+}
+
+function _filoMenuAddModal(did, menu, cat){
+ var isEdit=!!menu;
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:22px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:var(--r-xl)';
+
+ /* 이미지 미리보기 */
+ var imgPreview=document.createElement('div');
+ imgPreview.style.cssText='width:100%;height:140px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:14px;cursor:pointer;border:2px dashed var(--bd2);overflow:hidden;position:relative';
+ imgPreview.textContent=menu?menu.emoji||'🍽':'🍽';
+ if(menu&&menu.imageUrl){
+  var pimg=document.createElement('img');
+  pimg.src=menu.imageUrl;
+  pimg.style.cssText='width:100%;height:100%;object-fit:cover';
+  imgPreview.innerHTML='';
+  imgPreview.appendChild(pimg);
+ }
+
+ /* 이미지 업로드 */
+ var fileInp=document.createElement('input');
+ fileInp.type='file';fileInp.accept='image/*';fileInp.style.display='none';
+ var uploadProgress=document.createElement('div');
+ uploadProgress.style.cssText='font-size:11px;color:var(--t3);text-align:center;margin-top:4px';
+ var _imageUrl=menu?menu.imageUrl||'':'';
+
+ fileInp.onchange=function(){
+  var file=this.files[0];
+  if(!file)return;
+  if(file.size>3*1024*1024){_filoToast('이미지는 3MB 이하만 가능합니다');return;}
+  uploadProgress.textContent='⏳ 업로드 중...';
+  var ref=_storage.ref('filo_menus/'+did+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9.]/g,'_'));
+  var task=ref.put(file);
+  task.on('state_changed',
+   function(snap){var pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);uploadProgress.textContent=pct+'% 업로드 중...';},
+   function(e){uploadProgress.textContent='❌ '+e.message;},
+   function(){
+    ref.getDownloadURL().then(function(url){
+     _imageUrl=url;
+     imgPreview.innerHTML='';
+     var ni=document.createElement('img');
+     ni.src=url;ni.style.cssText='width:100%;height:100%;object-fit:cover';
+     imgPreview.appendChild(ni);
+     uploadProgress.textContent='✅ 이미지 업로드 완료';
+    });
+   }
+  );
+ };
+ imgPreview.onclick=function(){fileInp.click();};
+
+ box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">'+(isEdit?'✏️ 메뉴 수정':'➕ 메뉴 추가')+'</div>';
+ box.appendChild(imgPreview);
+ box.appendChild(uploadProgress);
+ box.appendChild(fileInp);
+
+ /* 이미지 제거 버튼 */
+ var rmBtn=document.createElement('button');
+ rmBtn.style.cssText='width:100%;padding:6px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-bottom:10px';
+ rmBtn.textContent='🗑 이미지 제거 (이모지 사용)';
+ rmBtn.onclick=function(){_imageUrl='';imgPreview.innerHTML='';imgPreview.textContent=document.getElementById('menu-emoji-inp').value||'🍽';uploadProgress.textContent='';};
+ box.appendChild(rmBtn);
+
+ /* 필드들 */
+ var fields=[
+  {id:'menu-name-inp',l:'메뉴명 *',type:'text',ph:'아메리카노',val:menu?menu.name:''},
+  {id:'menu-price-inp',l:'가격 *',type:'number',ph:'4500',val:menu?menu.price:''},
+  {id:'menu-cat-inp',l:'카테고리',type:'text',ph:'커피',val:menu?menu.category||'':''},
+  {id:'menu-emoji-inp',l:'이모지',type:'text',ph:'☕',val:menu?menu.emoji||'🍽':'🍽'},
+  {id:'menu-stock-inp',l:'재고 수량 (선택)',type:'number',ph:'100',val:menu&&menu.stock!=null?menu.stock:''},
+ ];
+ fields.forEach(function(f){
+  var g=document.createElement('div');g.style.marginBottom='10px';
+  var l=document.createElement('label');
+  l.style.cssText='font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px';
+  l.textContent=f.l;
+  var inp=document.createElement('input');
+  inp.id=f.id;inp.type=f.type;inp.placeholder=f.ph;
+  if(f.val!==undefined&&f.val!=='')inp.value=f.val;
+  inp.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none';
+  /* 이모지 변경시 미리보기 업데이트 */
+  if(f.id==='menu-emoji-inp'){
+   inp.oninput=function(){if(!_imageUrl)imgPreview.textContent=this.value||'🍽';};
+  }
+  g.appendChild(l);g.appendChild(inp);box.appendChild(g);
+ });
+
+ /* 판매여부 */
+ var saleRow=document.createElement('div');
+ saleRow.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:14px';
+ var saleChk=document.createElement('input');
+ saleChk.type='checkbox';saleChk.id='menu-forsale-inp';saleChk.checked=menu?menu.forSale!==false:true;
+ saleChk.style.cssText='width:16px;height:16px;accent-color:var(--br);cursor:pointer';
+ var saleLbl=document.createElement('label');
+ saleLbl.htmlFor='menu-forsale-inp';
+ saleLbl.style.cssText='font-size:13px;cursor:pointer';
+ saleLbl.textContent='판매 중 (체크 해제시 품절 표시)';
+ saleRow.appendChild(saleChk);saleRow.appendChild(saleLbl);
+ box.appendChild(saleRow);
+
+ /* 버튼 */
+ var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;margin-top:4px';
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer';
+ cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
+ var saveBtn=document.createElement('button');
+ saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-weight:800;cursor:pointer';
+ saveBtn.textContent=isEdit?'✅ 수정 완료':'✅ 메뉴 등록';
+ saveBtn.onclick=function(){
+  var name=(document.getElementById('menu-name-inp').value||'').trim();
+  var price=parseInt(document.getElementById('menu-price-inp').value)||0;
+  var category=(document.getElementById('menu-cat-inp').value||'기타').trim();
+  var emoji=(document.getElementById('menu-emoji-inp').value||'🍽').trim();
+  var stock=document.getElementById('menu-stock-inp').value!==''?parseInt(document.getElementById('menu-stock-inp').value):null;
+  var forSale=document.getElementById('menu-forsale-inp').checked;
+  if(!name){_filoToast('메뉴명을 입력하세요');return;}
+  if(!price){_filoToast('가격을 입력하세요');return;}
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||null,stock:stock,minStock:null,updatedAt:new Date().toISOString()};
+  var promise=isEdit?
+   _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
+   _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
+  promise.then(function(){
+   _filoToast(isEdit?'✅ 수정됐습니다!':'✅ 메뉴가 등록됐습니다!');
+   mo.remove();
+   _filoPageMenuMgmt(document.getElementById('content'));
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+ };
+ btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
+ box.appendChild(btnRow);
+
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+ setTimeout(function(){document.getElementById('menu-name-inp').focus();},100);
 }
 </script>
 </body>
