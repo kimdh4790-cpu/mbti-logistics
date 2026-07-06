@@ -1231,15 +1231,91 @@ function _buildFiloNav(){
  ]});
 
  var html='';
- menus.forEach(function(g){
- html+='<div class="ns-label">'+g.s+'</div>';
- g.items.forEach(function(m){
- html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
- +'<span style="font-size:15px">'+m.ic+'</span>'
- +'<span>'+m.l+'</span></div>';
+
+ var _closedG=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');
+
+ menus.forEach(function(g,gi){
+
+  var isClosed=_closedG.indexOf(gi)>=0;
+
+  var labelCls='ns-label ns-toggle'+(isClosed?' collapsed':'');
+
+  var arrowTxt=isClosed?'▸':'▾';
+
+  var groupStyle=isClosed?' style="max-height:0;overflow:hidden"':'';
+
+  html+='<div class="'+labelCls+'" onclick="_toggleNavGroup('+gi+',this)" data-gi="'+gi+'">'+
+
+   '<span>'+g.s+'</span><span class="ns-arrow">'+arrowTxt+'</span></div>';
+
+  html+='<div class="ns-group" id="nav-g-'+gi+'"'+groupStyle+'>';
+
+  g.items.forEach(function(m){
+
+   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
+
+   +'<span style="font-size:15px">'+m.ic+'</span>'
+
+   +'<span>'+m.l+'</span></div>';
+
+  });
+
+  html+='</div>';
+
  });
- });
+
  document.getElementById('nav-menu').innerHTML=html;
+
+}
+
+
+
+function _toggleNavGroup(gi,el){
+
+ var group=document.getElementById('nav-g-'+gi);
+
+ if(!group)return;
+
+ var closing=!el.classList.contains('collapsed');
+
+ el.classList.toggle('collapsed',closing);
+
+ var arrow=el.querySelector('.ns-arrow');
+
+ if(arrow)arrow.textContent=closing?'▸':'▾';
+
+ if(closing){
+
+  group.style.maxHeight=group.scrollHeight+'px';
+
+  group.offsetHeight;
+
+  group.style.transition='max-height .25s ease';
+
+  group.style.maxHeight='0';
+
+  group.style.overflow='hidden';
+
+ } else {
+
+  group.style.overflow='';
+
+  group.style.transition='max-height .25s ease';
+
+  group.style.maxHeight=group.scrollHeight+'px';
+
+  setTimeout(function(){group.style.maxHeight='none';},300);
+
+ }
+
+ var saved=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');
+
+ if(closing&&saved.indexOf(gi)<0)saved.push(gi);
+
+ else saved=saved.filter(function(x){return x!==gi;});
+
+ localStorage.setItem('filo_nav_closed',JSON.stringify(saved));
+
 }
 
 function _filoGoPage(p){
