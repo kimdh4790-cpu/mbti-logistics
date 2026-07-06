@@ -1755,6 +1755,8 @@ function _filoPageSales(el){
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
  var today=new Date().toISOString().slice(0,10);
  var ym=today.slice(0,7);
+ /* 월선택 현재달로 설정 */
+ setTimeout(function(){var ymEl=document.getElementById('mg-ym');if(ymEl)ymEl.value=ym;},50);
 
  el.innerHTML=
  '<div style="max-width:920px;margin:0 auto">'+
@@ -2425,6 +2427,8 @@ function _filoPageInventory(el){
 
  var today=new Date().toISOString().slice(0,10);
  var ym=today.slice(0,7);
+ /* 월선택 현재달로 설정 */
+ setTimeout(function(){var ymEl=document.getElementById('mg-ym');if(ymEl)ymEl.value=ym;},50);
  Promise.all([
  firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
  firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
