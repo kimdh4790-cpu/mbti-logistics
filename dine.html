@@ -249,6 +249,14 @@ var _CU   = {};
 
 
 var MIN_WAGE = 10320;
+function _dineEnsureChart(cb){
+
+ if(window.Chart)return cb();
+ var s=document.createElement('script');
+ s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+ s.onload=cb;document.head.appendChild(s);
+}
+
 var INS = {pension:0.0475,health:0.03595,longcare:0.1314,employ:0.009};
 
 
@@ -2132,14 +2140,6 @@ function _dineLoadAnalytics(did,from,to){
   }
  });
 }
-function _dineEnsureChart(cb){
-
- if(window.Chart)return cb();
- var s=document.createElement('script');
- s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
- s.onload=cb;document.head.appendChild(s);
-}
-
 /* 사이드바 매장명 업데이트 */
 function _dineUpdateSidebar(){
  var n=document.getElementById('sb-store-name');
