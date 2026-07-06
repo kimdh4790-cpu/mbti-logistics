@@ -1972,7 +1972,10 @@ function _dineLoadAnalytics(did,from,to){
    var dt=new Date(d.createdAt||d.date+'T12:00:00');
    hours[dt.getHours()]=(hours[dt.getHours()]||0)+amt;
    days[DN[dt.getDay()]]=(days[DN[dt.getDay()]]||0)+amt;
-   (d.payMethod?methods[d.payMethod]=(methods[d.payMethod]||0)+amt:0);
+   var pmRaw=d.payMethod||'기타';
+   var pmKr={'cash':'현금','Cash':'현금','card':'카드','Card':'카드','kakao':'카카오페이','naver':'네이버페이','toss':'토스'};
+   var pm=pmKr[pmRaw]||pmRaw;
+   methods[pm]=(methods[pm]||0)+amt;
    (d.items||[]).forEach(function(it){menus[it.name]=(menus[it.name]||0)+(it.qty||1);});
   });
   var avg=cnt?Math.round(total/cnt):0;
