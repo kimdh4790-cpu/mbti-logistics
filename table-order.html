@@ -299,7 +299,7 @@ function renderMenus(){
 
   area.innerHTML='<div class="menu-grid">'+filtered.map(function(m){
     var qty=_cart[m.id]?_cart[m.id].qty:0;
-    var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover">':'<div class="menu-img">'+(m.emoji||'🍽')+'</div>';
+    var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'"><div class="menu-img" style="display:none">'+(m.emoji||'🍽')+'</div>':'<div class="menu-img">'+(m.emoji||'🍽')+'</div>';
     return '<div class="menu-card'+(m.soldOut?' sold-out':'')+'\" id="mc-'+m.id+'">'+
       img+
       '<div class="menu-info">'+
