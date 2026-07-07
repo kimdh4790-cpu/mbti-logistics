@@ -1,8 +1,8 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    # 수동 실행만 허용 (자동배포 비활성화)
 
 jobs:
 
