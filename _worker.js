@@ -1543,7 +1543,7 @@ async function acceptExchange(){
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
-      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
       /* ★ 메뉴 공개 API (로그인 불필요) */
