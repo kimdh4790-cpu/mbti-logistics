@@ -185,10 +185,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .dw-stat-val{font-size:17px;font-weight:900;letter-spacing:-.5px}
 .dw-stat-lbl{font-size:9px;color:#484F58;margin-top:3px}
 /* fitem 클릭 커서 */
-.fitem{cursor:pointer;transition:.2s}
-.fitem:hover{border-color:rgba(0,102,255,.4);background:rgba(0,102,255,.06);transform:translateY(-2px)}
-.fitem::after{content:'자세히 →';display:block;font-size:9px;color:#484F58;margin-top:4px;opacity:0;transition:.2s}
-.fitem:hover::after{opacity:1}
+.fitem{transition:.2s}
+.fitem[onclick]{cursor:pointer}
+.fitem[onclick]:hover{border-color:rgba(0,102,255,.4);background:rgba(0,102,255,.06);transform:translateY(-2px)}
 </style>
 </head>
 <body>
@@ -757,10 +756,9 @@ setActive(0);
 .dw-stat-val{font-size:17px;font-weight:900;letter-spacing:-.5px}
 .dw-stat-lbl{font-size:9px;color:#484F58;margin-top:3px}
 /* fitem 클릭 커서 */
-.fitem{cursor:pointer;transition:.2s}
-.fitem:hover{border-color:rgba(0,102,255,.4);background:rgba(0,102,255,.06);transform:translateY(-2px)}
-.fitem::after{content:'자세히 →';display:block;font-size:9px;color:#484F58;margin-top:4px;opacity:0;transition:.2s}
-.fitem:hover::after{opacity:1}
+.fitem{transition:.2s}
+.fitem[onclick]{cursor:pointer}
+.fitem[onclick]:hover{border-color:rgba(0,102,255,.4);background:rgba(0,102,255,.06);transform:translateY(-2px)}
 </style>
     <!-- 헤더 -->
     <div style="padding:20px 20px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.07)">
