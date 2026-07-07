@@ -2141,7 +2141,6 @@ function parseCoupangExcel(inp){
         }
       }).catch(function(){})
     :Promise.resolve();
-  // ★ 아이디지원 규칙 최신 로드 (엑셀 업로드 직전 보장)
   var idSupportPromise=(window._db&&did)
     ?window._db.collection('idSupport').where('dealerId','==',did).get()
         .then(function(snap){
@@ -7548,13 +7547,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 Object.keys(_rtAgg).forEach(function(rt){
                   var a=_rtAgg[rt];
                   var up=RPRICE[rt]||0;
-                  var existing=ts.routeDetails.findIndex(function(r){return r.route===rt;});
-                  if(existing>=0){
-                    ts.routeDetails[existing].cnt=(ts.routeDetails[existing].cnt||0)+a.cnt;
-                    ts.routeDetails[existing].ret=(ts.routeDetails[existing].ret||0)+a.ret;
-                  } else {
-                    ts.routeDetails.push({route:rt,cnt:a.cnt,ret:a.ret,unitPrice:up});
-                  }
+                  var ei=ts.routeDetails.findIndex(function(r){return r.route===rt;});
+                  if(ei>=0){ts.routeDetails[ei].cnt+=a.cnt;ts.routeDetails[ei].ret+=a.ret;}
+                  else ts.routeDetails.push({route:rt,cnt:a.cnt,ret:a.ret,unitPrice:up});
                 });
                 ts.dcnt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
                 ts.rcnt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
@@ -7595,7 +7590,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
                   });
                 });
-                } // end routeDetails 건수차감
+                } // end 건수차감
                 // 프레시백 차감 (routeDetails 유무 무관, 1회만)
                 if(fdm.dateFresh){
                   var _freshDed=Object.keys(fdm.dateFresh).reduce(function(s,dt){
