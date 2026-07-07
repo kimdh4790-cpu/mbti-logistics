@@ -3,576 +3,305 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="FILO — POS·재고·QR출퇴근·테이블오더 올인원. 포스기 없이 태블릿 하나로 매장 전체를 운영하세요.">
-<title>FILO — 매장 운영의 새로운 기준</title>
+<title>FILO — 전업종 매장 운영 플랫폼</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap');
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07071a;--s1:#0c0c22;--s2:#14142a;--s3:#1a1a32;
-  --br:#7c3aed;--br2:#0891b2;--gr:#22c55e;--yl:#f59e0b;
-  --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;
-  --bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.12);
+ --bg:#07071a;--s1:#0c0c22;--s2:#14142a;
+ --br:#0891b2;--gr:#22c55e;--yl:#f59e0b;--pu:#7c3aed;--rd:#ef4444;
+ --tx:#f0f0ff;--t2:#9898c0;--t3:#565678;
 }
-html{scroll-behavior:smooth;scroll-snap-type:y mandatory;overflow-y:scroll}
-body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Gothic Neo',sans-serif}
+
+/* ── 슬라이드 ── */
+#slides{width:100%;height:100vh;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px 60px;opacity:0;transition:opacity .6s ease,transform .6s ease;transform:translateX(60px);pointer-events:none}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+.s1{background:radial-gradient(ellipse at 25% 40%,rgba(8,145,178,.2) 0%,transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(124,58,237,.15) 0%,transparent 50%),var(--bg)}
+.s2{background:radial-gradient(ellipse at 70% 30%,rgba(34,197,94,.15) 0%,transparent 55%),radial-gradient(ellipse at 20% 80%,rgba(8,145,178,.1) 0%,transparent 50%),var(--bg)}
+.s3{background:radial-gradient(ellipse at 50% 20%,rgba(245,158,11,.15) 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,rgba(8,145,178,.1) 0%,transparent 50%),var(--bg)}
+.s4{background:radial-gradient(ellipse at 20% 50%,rgba(124,58,237,.18) 0%,transparent 55%),radial-gradient(ellipse at 80% 30%,rgba(34,197,94,.1) 0%,transparent 50%),var(--bg)}
+.s5{background:radial-gradient(ellipse at 60% 40%,rgba(239,68,68,.12) 0%,transparent 55%),radial-gradient(ellipse at 20% 70%,rgba(8,145,178,.1) 0%,transparent 50%),var(--bg)}
+.s6{background:radial-gradient(ellipse at 40% 30%,rgba(8,145,178,.2) 0%,transparent 60%),var(--bg)}
 
 /* ── 네비 ── */
-nav{position:fixed;top:0;left:0;right:0;height:58px;background:rgba(7,7,26,.85);backdrop-filter:blur(24px);border-bottom:1px solid rgba(124,58,237,.08);display:flex;align-items:center;padding:0 24px;z-index:100;gap:12px}
-.nav-logo{font-size:20px;font-weight:900;background:linear-gradient(135deg,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px;flex-shrink:0}
-.nav-dots{display:flex;gap:6px;margin-left:auto}
-.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--t3);cursor:pointer;transition:.3s}
-.nav-dot.active{background:#a78bfa;transform:scale(1.4)}
-.nav-cta{display:flex;gap:8px;margin-left:16px}
-.btn-ghost{padding:7px 16px;border-radius:8px;border:1px solid var(--bd2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;background:transparent;text-decoration:none;transition:.2s}
+#nav{position:fixed;top:0;left:0;right:0;height:60px;display:flex;align-items:center;padding:0 28px;z-index:100;background:rgba(7,7,26,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+.nav-logo{font-size:22px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.nav-btn{padding:7px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:.2s}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--t2)}
 .btn-ghost:hover{border-color:var(--br);color:var(--tx)}
-.btn-solid{padding:7px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#9f5ef8);color:#fff;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;transition:.2s;box-shadow:0 3px 16px rgba(124,58,237,.35)}
-.btn-solid:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.5)}
+.btn-cta{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
+.btn-cta:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(8,145,178,.4)}
 
-/* ── 슬라이드 공통 ── */
-.slide{height:100dvh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:58px 24px 0}
+/* ── 화살표 ── */
+.arrow{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--t2);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;font-size:20px;transition:.2s;backdrop-filter:blur(8px)}
+.arrow:hover{background:rgba(8,145,178,.2);border-color:var(--br);color:var(--tx)}
+#ap{left:14px}#an{right:14px}
 
-/* ── S1: 히어로 ── */
-#s1{background:radial-gradient(ellipse at 20% 30%,rgba(124,58,237,.2) 0%,transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(8,145,178,.15) 0%,transparent 55%),var(--bg)}
-.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(124,58,237,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,.03) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse at 50% 50%,black 20%,transparent 75%)}
-.hero-content{text-align:center;position:relative;z-index:1;max-width:800px}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;margin-bottom:20px}
-.badge-pulse{width:6px;height:6px;border-radius:50%;background:#a78bfa;animation:bpulse 2s infinite}
-@keyframes bpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-.hero-title{font-size:clamp(38px,7vw,78px);font-weight:900;letter-spacing:-2px;line-height:1.05;margin-bottom:18px}
-.gt{background:linear-gradient(135deg,#fff 0%,#a78bfa 45%,#38bdf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-sub{font-size:clamp(15px,2vw,18px);color:var(--t2);max-width:500px;margin:0 auto 32px;line-height:1.7}
-.hero-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:48px}
-.btn-hero{padding:14px 28px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.2s}
-.btn-hero-p{background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;color:#fff;box-shadow:0 4px 24px rgba(124,58,237,.4)}
-.btn-hero-p:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(124,58,237,.6)}
-.btn-hero-g{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:var(--tx)}
-.btn-hero-g:hover{background:rgba(255,255,255,.1)}
-/* 실시간 데모 */
-.demo-strip{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.demo-chip{padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:12px;font-size:12px;font-weight:600;color:var(--t2);display:flex;align-items:center;gap:6px}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--gr);animation:bpulse 1.5s infinite}
+/* ── 도트 ── */
+#dots{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:100}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:.3s}
+.dot.active{background:var(--br);width:24px;border-radius:4px}
 
-/* ── S2: POS + 테이블오더 ── */
-#s2{background:var(--bg)}
-.feat-layout{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;max-width:1100px;width:100%}
-.feat-text .tag{display:inline-flex;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.2);color:#a78bfa;margin-bottom:14px;text-transform:uppercase;letter-spacing:.8px}
-.feat-text h2{font-size:clamp(26px,3.5vw,44px);font-weight:900;letter-spacing:-1px;line-height:1.2;margin-bottom:14px}
-.feat-text p{font-size:14px;color:var(--t2);line-height:1.8;margin-bottom:20px}
-.feat-list{display:flex;flex-direction:column;gap:10px}
-.feat-item{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
-.feat-item::before{content:'✓';color:var(--gr);font-weight:900;flex-shrink:0}
+/* ── 콘텐츠 공통 ── */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:16px}
+.slide-title{font-size:clamp(26px,4.5vw,50px);font-weight:900;letter-spacing:-1.5px;line-height:1.1;text-align:center;margin-bottom:12px}
+.slide-sub{font-size:clamp(13px,1.8vw,16px);color:var(--t2);text-align:center;max-width:580px;line-height:1.7;margin-bottom:28px}
+.g-blue{background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-green{background:linear-gradient(135deg,#4ade80,#22c55e);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-yellow{background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-purple{background:linear-gradient(135deg,#c084fc,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-red{background:linear-gradient(135deg,#f87171,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
-/* ── 모의 UI 카드 ── */
-.mock-card{background:var(--s2);border:1px solid var(--bd2);border-radius:20px;padding:20px;position:relative;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.mock-topbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
-.mock-logo{font-size:13px;font-weight:900;color:#a78bfa}
-.mock-title{font-size:11px;font-weight:700;color:var(--t2)}
-.mock-menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.mock-menu-item{background:var(--s3);border-radius:10px;padding:10px 6px;text-align:center;border:1px solid var(--bd);transition:.2s;cursor:pointer}
-.mock-menu-item:hover{border-color:rgba(124,58,237,.4);background:rgba(124,58,237,.08)}
-.mock-menu-item.selected{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.1)}
-.mock-emoji{font-size:22px;display:block;margin-bottom:3px}
-.mock-name{font-size:9px;font-weight:700;color:var(--tx);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mock-price{font-size:9px;font-weight:900;color:var(--gr)}
-.mock-cart{margin-top:12px;background:var(--s3);border-radius:10px;padding:10px;border:1px solid var(--bd)}
-.mock-total{display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-top:6px}
-.mock-pay-btn{margin-top:8px;width:100%;padding:8px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:800;cursor:pointer}
+/* ── 피처 그리드 ── */
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:720px;width:100%;margin-bottom:24px}
+.feat-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 12px;text-align:center;transition:.3s;cursor:default}
+.feat-card:hover{transform:translateY(-3px);border-color:rgba(8,145,178,.3);background:rgba(8,145,178,.06)}
+.feat-ic{font-size:26px;margin-bottom:8px}
+.feat-tt{font-size:12px;font-weight:800;margin-bottom:3px}
+.feat-ds{font-size:10px;color:var(--t3);line-height:1.5}
 
-/* ── 테이블 맵 mock ── */
-.mock-table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.mock-table{border-radius:10px;padding:10px 6px;text-align:center;border:2px solid;transition:.3s;cursor:pointer}
-.mt-empty{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3);color:#22c55e}
-.mt-occupied{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#ef4444}
-.mt-reserved{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:#f59e0b}
-.mock-table-num{font-size:13px;font-weight:900}
-.mock-table-seats{font-size:9px;color:var(--t3);margin-top:1px}
-.mock-table-status{font-size:9px;font-weight:700;margin-top:2px}
+/* ── 플로우 ── */
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:700px;margin-bottom:24px}
+.flow-item{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:9px 14px;font-size:11px;font-weight:800}
+.flow-arr{font-size:14px;color:var(--t3)}
 
-/* ── S3: 재고+출퇴근 ── */
-#s3{background:radial-gradient(ellipse at 80% 20%,rgba(8,145,178,.12) 0%,transparent 50%),var(--bg)}
+/* ── 스탯 ── */
+.stat-row{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
+.stat-box{text-align:center;padding:16px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;min-width:120px}
+.stat-val{font-size:24px;font-weight:900;letter-spacing:-1px}
+.stat-lbl{font-size:10px;color:var(--t3);margin-top:3px}
 
-/* ── 차트 mock ── */
-.mock-chart-bars{display:flex;align-items:flex-end;gap:6px;height:80px;margin-top:8px}
-.mock-bar{flex:1;background:linear-gradient(180deg,rgba(124,58,237,.8),rgba(124,58,237,.3));border-radius:4px 4px 0 0;min-height:4px;transition:height .8s cubic-bezier(.34,1.56,.64,1)}
-.mock-bar.peak{background:linear-gradient(180deg,#a78bfa,rgba(124,58,237,.5))}
+/* ── 업종 탭 ── */
+.ind-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.ind-tab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:var(--t3);background:transparent;transition:.2s;font-family:inherit}
+.ind-tab.on{background:rgba(8,145,178,.15);border-color:rgba(8,145,178,.4);color:#38bdf8}
+.ind-list{font-size:13px;color:var(--t2);text-align:center;line-height:2;max-width:500px}
 
-/* ── S4: QR 회원 ── */
-#s4{background:radial-gradient(ellipse at 20% 80%,rgba(34,197,94,.1) 0%,transparent 50%),var(--bg)}
+/* ── 가격 ── */
+.price-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;max-width:660px;width:100%;margin-bottom:24px}
+.price-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;text-align:center;transition:.3s}
+.price-card.hi{background:rgba(8,145,178,.08);border-color:rgba(8,145,178,.3)}
+.price-card:hover{transform:translateY(-3px)}
+.price-nm{font-size:12px;font-weight:700;color:var(--t3);margin-bottom:8px}
+.price-vl{font-size:28px;font-weight:900;letter-spacing:-1px}
+.price-ut{font-size:11px;color:var(--t3);margin-bottom:12px}
+.price-li{font-size:11px;color:var(--t2);line-height:2.1;text-align:left}
 
-/* ── S5: 비교+CTA ── */
-#s5{background:var(--bg)}
-.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--bd);border-radius:16px;overflow:hidden;max-width:700px}
-.compare-col{background:var(--s2);padding:0}
-.compare-head{padding:16px;text-align:center;font-size:13px;font-weight:800;border-bottom:1px solid var(--bd)}
-.compare-head.filo{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(8,145,178,.08));color:#a78bfa}
-.compare-row{padding:10px 14px;font-size:11px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:center;gap:4px;min-height:38px;text-align:center}
-.compare-row.filo-col{color:var(--tx);font-weight:600}
-.compare-row.other{color:var(--t3)}
-.ck{color:var(--gr);font-size:13px}
-.xk{color:#ef4444;font-size:13px}
-.pk{color:var(--yl);font-size:11px}
+/* ── CTA ── */
+.cta-wrap{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.cta-btn{padding:13px 32px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;border:none;font-family:inherit;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.cta-p{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;box-shadow:0 4px 20px rgba(8,145,178,.3)}
+.cta-p:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(8,145,178,.45)}
+.cta-g{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--t2)}
+.cta-g:hover{border-color:var(--br);color:var(--tx)}
 
-/* ── 애니메이션 ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes slideRight{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
-@keyframes countUp{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-
-.anim-fadeup{opacity:0;animation:fadeUp .7s ease both}
-.anim-fadein{opacity:0;animation:fadeIn .8s ease both}
-.anim-float{animation:float 3s ease-in-out infinite}
-.delay1{animation-delay:.1s}
-.delay2{animation-delay:.2s}
-.delay3{animation-delay:.35s}
-.delay4{animation-delay:.5s}
-.delay5{animation-delay:.65s}
-
-/* ── 반응형 ── */
-@media(max-width:768px){
- .feat-layout{grid-template-columns:1fr;gap:20px}
- .feat-mock{display:none}
- .compare-grid{grid-template-columns:1fr 1fr 1fr;font-size:10px}
- .nav-dots{display:none}
- html{scroll-snap-type:none}
+@media(max-width:600px){
+ .feat-grid{grid-template-columns:repeat(2,1fr)}
+ .price-wrap{grid-template-columns:1fr}
+ #ap{left:6px}#an{right:6px}
 }
-
-/* ── 스크롤 인디케이터 ── */
-.scroll-hint{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.5px;animation:float 2s ease-in-out infinite;cursor:pointer}
-.scroll-arrow{width:20px;height:20px;border-right:2px solid var(--t3);border-bottom:2px solid var(--t3);transform:rotate(45deg)}
 </style>
 </head>
 <body>
 
-<!-- 네비 -->
-<nav>
-  <div class="nav-logo">FILO</div>
-  <div class="nav-dots">
-    <div class="nav-dot active" onclick="scrollTo(0)" id="d0"></div>
-    <div class="nav-dot" onclick="scrollTo(1)" id="d1"></div>
-    <div class="nav-dot" onclick="scrollTo(2)" id="d2"></div>
-    <div class="nav-dot" onclick="scrollTo(3)" id="d3"></div>
-    <div class="nav-dot" onclick="scrollTo(4)" id="d4"></div>
-  </div>
-  <div class="nav-cta">
-    <a href="https://filo.ai.kr/app" class="btn-ghost">로그인</a>
-    <a href="https://filo.ai.kr/app" class="btn-solid">무료 시작 →</a>
-  </div>
-</nav>
-
-<!-- S1: 히어로 -->
-<section class="slide" id="s1">
-  <div class="hero-grid"></div>
-  <div class="hero-content">
-    <div class="hero-badge anim-fadeup"><span class="badge-pulse"></span>포스기 없이 태블릿 하나로</div>
-    <h1 class="hero-title anim-fadeup delay1">매장 운영,<br><span class="gt">이제 단순하게</span></h1>
-    <p class="hero-sub anim-fadeup delay2">POS · 재고 · QR출퇴근 · 테이블오더까지<br>흩어진 매장 관리를 FILO 하나로 통합하세요</p>
-    <div class="hero-btns anim-fadeup delay3">
-      <a href="https://filo.ai.kr/app" class="btn-hero btn-hero-p">🚀 30일 무료 체험</a>
-      <a href="#" onclick="goSlide(1)" class="btn-hero btn-hero-g">기능 보기 ↓</a>
-    </div>
-    <div class="demo-strip anim-fadeup delay4">
-      <div class="demo-chip"><span class="live-dot"></span>실시간 매출 <strong id="live-rev">₩0</strong></div>
-      <div class="demo-chip">💳 오늘 <strong id="live-cnt">0건</strong></div>
-      <div class="demo-chip">🪑 빈 테이블 <strong id="live-tbl">0개</strong></div>
-      <div class="demo-chip">⚡ 피크 <strong>18시</strong></div>
-    </div>
-  </div>
-  
-    <span>SCROLL</span>
-  </div>
-</section>
-
-<!-- S2: POS + 테이블 오더 -->
-<section class="slide" id="s2">
-  <div class="feat-layout">
-    <div class="feat-text">
-      <div class="tag">🖥️ POS · 테이블 오더</div>
-      <h2>포스기가 없어도<br>됩니다</h2>
-      <p>기존 태블릿이나 노트북 하나면 충분합니다. 직원이 테이블에서 직접 주문을 받으면 주방화면과 카운터에 실시간 자동 등록됩니다.</p>
-      <div class="feat-list">
-        <div class="feat-item">카드·현금·카카오·네이버·삼성페이 6종 결제</div>
-        <div class="feat-item">테이블 번호 선택 → 메뉴 → 주방 자동 전송</div>
-        <div class="feat-item">손님 QR 주문도 카운터에 자동 등록</div>
-        <div class="feat-item">카카오 알림톡 영수증 자동 발송</div>
-      </div>
-    </div>
-    <div class="feat-mock anim-float" id="mock-pos">
-      <div class="mock-card" style="max-width:340px">
-        <div class="mock-topbar">
-          <div class="mock-logo">FILO</div>
-          <div class="mock-title" id="mock-pos-title">POS 키오스크</div>
-          <div style="margin-left:auto;font-size:9px;color:var(--t3)" id="mock-time">--:--</div>
-        </div>
-        <div class="mock-menu-grid" id="mock-menu-grid"></div>
-        <div class="mock-cart">
-          <div id="mock-cart-items" style="font-size:10px;color:var(--t2);min-height:16px">장바구니 비어있음</div>
-          <div class="mock-total"><span>합계</span><span style="color:var(--gr)" id="mock-total">₩0</span></div>
-          <button class="mock-pay-btn" onclick="mockPay()">💳 결제하기</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <span>NEXT</span></div>
-</section>
-
-<!-- S3: 재고 + 직원관리 -->
-<section class="slide" id="s3">
-  <div class="feat-layout">
-    <div class="feat-mock anim-float" id="mock-table">
-      <div class="mock-card" style="max-width:340px">
-        <div class="mock-topbar">
-          <div class="mock-logo">FILO</div>
-          <div class="mock-title">테이블 현황</div>
-          <div style="margin-left:auto;font-size:9px;color:var(--gr);font-weight:700" id="mock-live-badge">● LIVE</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
-          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:900;color:#22c55e" id="m-empty">4</div>
-            <div style="font-size:9px;color:var(--t3)">빈자리</div>
-          </div>
-          <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:900;color:#ef4444" id="m-occ">6</div>
-            <div style="font-size:9px;color:var(--t3)">사용중</div>
-          </div>
-          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:900;color:#f59e0b" id="m-res">2</div>
-            <div style="font-size:9px;color:var(--t3)">예약</div>
-          </div>
-        </div>
-        <div class="mock-table-grid" id="mock-table-grid"></div>
-        <div style="margin-top:12px;background:var(--s3);border-radius:10px;padding:10px;border:1px solid var(--bd)">
-          <div style="font-size:10px;font-weight:700;margin-bottom:8px">📦 재고 알림</div>
-          <div id="mock-stock-alert" style="font-size:10px;color:var(--yl)">⚠️ 원두 (5개) 부족</div>
-        </div>
-      </div>
-    </div>
-    <div class="feat-text">
-      <div class="tag">📦 재고 · 직원 관리</div>
-      <h2>팔면 알아서<br>빠지는 재고</h2>
-      <p>결제하면 재고가 자동으로 차감됩니다. 부족하면 알림이 오고 자동 발주도 됩니다. QR 출퇴근으로 시급이 실시간 계산됩니다.</p>
-      <div class="feat-list">
-        <div class="feat-item">판매 시 재고 자동 차감 · 발주 알림</div>
-        <div class="feat-item">레시피 기반 원가율 자동 계산</div>
-        <div class="feat-item">QR 스캔 출퇴근 → 시급 실시간 계산</div>
-        <div class="feat-item">4대보험·3.3% 공제 자동 처리</div>
-      </div>
-    </div>
-  </div>
-  <span>NEXT</span></div>
-</section>
-
-<!-- S4: 회원 + 매출분석 -->
-<section class="slide" id="s4">
-  <div class="feat-layout">
-    <div class="feat-text">
-      <div class="tag">📊 회원 · 매출분석</div>
-      <h2>데이터로<br>운영하세요</h2>
-      <p>시간대별 피크타임, 인기 메뉴 TOP5, 결제수단 비중을 한눈에. 고객이 QR로 회원가입하면 포인트가 자동 적립됩니다.</p>
-      <div class="feat-list">
-        <div class="feat-item">시간대별 매출 바차트 실시간</div>
-        <div class="feat-item">결제수단별 비중 (카드/현금/카카오)</div>
-        <div class="feat-item">QR 회원가입 → 포인트 자동 적립</div>
-        <div class="feat-item">세무사 월별 리포트 자동 발송</div>
-      </div>
-    </div>
-    <div class="feat-mock anim-float">
-      <div class="mock-card" style="max-width:340px">
-        <div class="mock-topbar">
-          <div class="mock-logo">FILO</div>
-          <div class="mock-title">매출 분석</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px">
-          <div style="background:var(--s3);border-radius:10px;padding:10px;border:1px solid var(--bd)">
-            <div style="font-size:9px;color:var(--t3);margin-bottom:3px">오늘 매출</div>
-            <div style="font-size:16px;font-weight:900;color:#a78bfa" id="m-rev">₩0</div>
-          </div>
-          <div style="background:var(--s3);border-radius:10px;padding:10px;border:1px solid var(--bd)">
-            <div style="font-size:9px;color:var(--t3);margin-bottom:3px">주문 건수</div>
-            <div style="font-size:16px;font-weight:900;color:#22c55e" id="m-cnt2">0건</div>
-          </div>
-        </div>
-        <div style="font-size:10px;font-weight:700;margin-bottom:6px">⏰ 시간대별</div>
-        <div class="mock-chart-bars" id="mock-bars"></div>
-        <div style="margin-top:14px;font-size:10px;font-weight:700;margin-bottom:6px">💳 결제수단</div>
-        <div id="mock-pay-bars"></div>
-      </div>
-    </div>
-  </div>
-  <span>NEXT</span></div>
-</section>
-
-<!-- S5: 비교 + CTA -->
-<section class="slide" id="s5">
-  <div style="text-align:center;width:100%;max-width:800px">
-    <div style="font-size:11px;font-weight:700;color:#a78bfa;letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">📊 경쟁사 비교</div>
-    <h2 style="font-size:clamp(26px,4vw,44px);font-weight:900;letter-spacing:-1px;margin-bottom:6px">왜 FILO인가요?</h2>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:28px">기능과 가격, 둘 다 비교해보세요</p>
-    <div style="overflow-x:auto">
-    <div class="compare-grid">
-      <div class="compare-col">
-        <div class="compare-head filo">✨ FILO</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> POS 결제</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> 재고 자동관리</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> QR 출퇴근</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> 테이블 오더</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> 회원 포인트</div>
-        <div class="compare-row filo-col"><span class="ck">✓</span> 매출 분석</div>
-        <div class="compare-row" style="color:#a78bfa;font-weight:900;font-size:14px">9만원~</div>
-      </div>
-      <div class="compare-col">
-        <div class="compare-head" style="color:var(--t2)">타사 A</div>
-        <div class="compare-row"><span class="ck">✓</span></div>
-        <div class="compare-row"><span class="pk">△ 일부</span></div>
-        <div class="compare-row"><span class="xk">✕</span></div>
-        <div class="compare-row"><span class="pk">△ 유료</span></div>
-        <div class="compare-row"><span class="ck">✓</span></div>
-        <div class="compare-row"><span class="pk">△ 일부</span></div>
-        <div class="compare-row other">수수료</div>
-      </div>
-      <div class="compare-col">
-        <div class="compare-head" style="color:var(--t3)">타사 B</div>
-        <div class="compare-row"><span class="ck">✓</span></div>
-        <div class="compare-row"><span class="pk">△ 유료</span></div>
-        <div class="compare-row"><span class="xk">✕</span></div>
-        <div class="compare-row"><span class="xk">✕</span></div>
-        <div class="compare-row"><span class="pk">△ 유료</span></div>
-        <div class="compare-row"><span class="xk">✕</span></div>
-        <div class="compare-row other" style="color:#ef4444">10~30만</div>
-      </div>
-    </div>
-    </div>
-    <div style="margin-top:32px;background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(8,145,178,.06));border:1px solid rgba(124,58,237,.2);border-radius:20px;padding:28px">
-      <div style="font-size:clamp(20px,3vw,32px);font-weight:900;letter-spacing:-1px;margin-bottom:8px">30일 무료로 시작하세요</div>
-      <div style="font-size:13px;color:var(--t2);margin-bottom:20px">신용카드 불필요 · 약정 없음 · 언제든 해지</div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <a href="https://filo.ai.kr/app" class="btn-hero btn-hero-p">🚀 무료 체험 시작</a>
-        <a href="tel:051-711-3103" class="btn-hero btn-hero-g">📞 051-711-3103</a>
-      </div>
-    </div>
-    <div style="margin-top:16px;font-size:11px;color:var(--t3)">(유)엠비티아이 · 부산시 수영로 668, 607호</div>
-  </div>
-</section>
-
-<!-- 좌우(상하) 화살표 네비 -->
-<div id="nav-prev" onclick="goSlide(Math.max(curSlide-1,0))"
- style="position:fixed;left:50%;bottom:40px;transform:translateX(calc(-50% - 36px));
-  width:44px;height:44px;border-radius:50%;background:rgba(124,58,237,.15);
-  border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;z-index:101;transition:.2s;backdrop-filter:blur(8px)"
- onmouseover="this.style.background='rgba(124,58,237,.3)'"
- onmouseout="this.style.background='rgba(124,58,237,.15)'">
- <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-  <path d="M10 11L5 7L10 3" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
- </svg>
+<div id="nav">
+ <div class="nav-logo">FILO</div>
+ <div class="nav-right">
+  <button class="nav-btn btn-ghost" onclick="location.href='https://filo.ai.kr/app'">로그인</button>
+  <button class="nav-btn btn-cta" onclick="location.href='https://filo.ai.kr/app'">무료 시작 →</button>
+ </div>
 </div>
-<div id="nav-next" onclick="goSlide(Math.min(curSlide+1,slides.length-1))"
- style="position:fixed;left:50%;bottom:40px;transform:translateX(calc(-50% + 36px));
-  width:44px;height:44px;border-radius:50%;background:rgba(124,58,237,.15);
-  border:1px solid rgba(124,58,237,.3);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;z-index:101;transition:.2s;backdrop-filter:blur(8px)"
- onmouseover="this.style.background='rgba(124,58,237,.3)'"
- onmouseout="this.style.background='rgba(124,58,237,.15)'">
- <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-  <path d="M4 3L9 7L4 11" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
- </svg>
+
+<div id="slides">
+
+<!-- 슬라이드 1: 메인 -->
+<div class="slide s1 active">
+ <div class="badge" style="background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.2);color:#38bdf8">⚡ 전업종 매장 운영 올인원</div>
+ <div class="slide-title">매장 운영의 모든 것<br><span class="g-blue">FILO</span>에서 끝냅니다</div>
+ <div class="slide-sub">POS 결제 · QR 출퇴근 · 재고 관리 · 테이블 QR 주문 · 급여 자동계산까지<br>업종 구분 없이 하나의 플랫폼으로 운영하세요</div>
+ <div class="feat-grid">
+  <div class="feat-card"><div class="feat-ic">🖥️</div><div class="feat-tt">POS 키오스크</div><div class="feat-ds">터치 결제 · 메뉴관리<br>엑셀 업로드</div></div>
+  <div class="feat-card"><div class="feat-ic">⏱</div><div class="feat-tt">QR 출퇴근</div><div class="feat-ds">실시간 근태 · 급여<br>자동 계산</div></div>
+  <div class="feat-card"><div class="feat-ic">📦</div><div class="feat-tt">재고 관리</div><div class="feat-ds">입출고 · 자동발주<br>원가 계산</div></div>
+  <div class="feat-card"><div class="feat-ic">📱</div><div class="feat-tt">테이블 QR</div><div class="feat-ds">QR 스캔 주문<br>결제 연동</div></div>
+ </div>
+ <div class="cta-wrap">
+  <button class="cta-btn cta-p" onclick="location.href='https://filo.ai.kr/app'">30일 무료 시작 →</button>
+  <button class="cta-btn cta-g" onclick="_goSlide(1)">더 알아보기</button>
+ </div>
+</div>
+
+<!-- 슬라이드 2: POS + 테이블 QR -->
+<div class="slide s2">
+ <div class="badge" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e">🛒 판매 · 주문</div>
+ <div class="slide-title">POS부터 테이블 QR까지<br><span class="g-green">완전 자동화</span></div>
+ <div class="slide-sub">카운터 POS 결제부터 고객 스마트폰 QR 주문까지<br>주문이 자동으로 주방과 관리자에게 전달됩니다</div>
+ <div class="feat-grid">
+  <div class="feat-card"><div class="feat-ic">🖥️</div><div class="feat-tt">POS 결제</div><div class="feat-ds">카드·현금·카카오페이<br>영수증 출력</div></div>
+  <div class="feat-card"><div class="feat-ic">🍽</div><div class="feat-tt">메뉴 관리</div><div class="feat-ds">카테고리·이미지<br>엑셀 일괄 등록</div></div>
+  <div class="feat-card"><div class="feat-ic">🔔</div><div class="feat-tt">주문 대기</div><div class="feat-ds">실시간 주문 접수<br>완료·취소 처리</div></div>
+  <div class="feat-card"><div class="feat-ic">🪑</div><div class="feat-tt">테이블 현황</div><div class="feat-ds">빈자리·사용중·예약<br>실시간 상태 관리</div></div>
+  <div class="feat-card"><div class="feat-ic">📱</div><div class="feat-tt">테이블 QR</div><div class="feat-ds">QR 스캔 → 고객 주문<br>저장·인쇄</div></div>
+  <div class="feat-card"><div class="feat-ic">🛵</div><div class="feat-tt">배달 주문</div><div class="feat-ds">배달앱 연동<br>통합 관리</div></div>
+ </div>
+ <div class="flow">
+  <div class="flow-item">🪑 QR 스캔</div><div class="flow-arr">→</div>
+  <div class="flow-item">🛒 메뉴 선택</div><div class="flow-arr">→</div>
+  <div class="flow-item">💳 결제</div><div class="flow-arr">→</div>
+  <div class="flow-item">🔔 주방 자동 전달</div>
+ </div>
+ <button class="cta-btn cta-p" onclick="location.href='https://filo.ai.kr/app'">지금 시작하기 →</button>
+</div>
+
+<!-- 슬라이드 3: 직원 관리 + 급여 -->
+<div class="slide s3">
+ <div class="badge" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:#f59e0b">👥 직원 · 급여</div>
+ <div class="slide-title">QR 출퇴근에서<br><span class="g-yellow">급여명세서까지 자동</span></div>
+ <div class="slide-sub">직원이 QR 찍으면 근무시간이 자동 기록되고<br>2026 근로기준법에 맞춰 급여가 자동 계산됩니다</div>
+ <div class="feat-grid">
+  <div class="feat-card"><div class="feat-ic">🔐</div><div class="feat-tt">QR 출퇴근</div><div class="feat-ds">직원 QR 스캔<br>실시간 근태 기록</div></div>
+  <div class="feat-card"><div class="feat-ic">👤</div><div class="feat-tt">직원 QR</div><div class="feat-ds">개인 QR 카드<br>저장·인쇄</div></div>
+  <div class="feat-card"><div class="feat-ic">💼</div><div class="feat-tt">급여 계산</div><div class="feat-ds">시급·주급·월급<br>4대보험 자동</div></div>
+  <div class="feat-card"><div class="feat-ic">📋</div><div class="feat-tt">급여명세서</div><div class="feat-ds">카카오 알림톡<br>자동 발송</div></div>
+  <div class="feat-card"><div class="feat-ic">🗓</div><div class="feat-tt">근무 스케줄</div><div class="feat-ds">주간 캘린더<br>교대 관리</div></div>
+  <div class="feat-card"><div class="feat-ic">📊</div><div class="feat-tt">출퇴근 현황</div><div class="feat-ds">일별·월별<br>근무시간 집계</div></div>
+ </div>
+ <div class="stat-row">
+  <div class="stat-box"><div class="stat-val" style="color:#38bdf8">10,320원</div><div class="stat-lbl">2026 최저시급</div></div>
+  <div class="stat-box"><div class="stat-val" style="color:#22c55e">자동</div><div class="stat-lbl">주휴수당 계산</div></div>
+  <div class="stat-box"><div class="stat-val" style="color:#f59e0b">×1.5</div><div class="stat-lbl">야간·연장수당</div></div>
+  <div class="stat-box"><div class="stat-val" style="color:#a78bfa">4가지</div><div class="stat-lbl">일·주·격주·월급</div></div>
+ </div>
+ <button class="cta-btn cta-p" onclick="location.href='https://filo.ai.kr/app'">급여 자동화 시작 →</button>
+</div>
+
+<!-- 슬라이드 4: 재고 관리 -->
+<div class="slide s4">
+ <div class="badge" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa">📦 재고 · 원가</div>
+ <div class="slide-title">재고 부족 걱정 없이<br><span class="g-purple">자동 발주·원가 계산</span></div>
+ <div class="slide-sub">입고부터 출고, 자동 발주, 유통기한 알림까지<br>레시피 원가 계산으로 마진율을 한눈에 파악합니다</div>
+ <div class="feat-grid">
+  <div class="feat-card"><div class="feat-ic">📥</div><div class="feat-tt">입고 관리</div><div class="feat-ds">거래처별 입고<br>엑셀 업로드</div></div>
+  <div class="feat-card"><div class="feat-ic">📤</div><div class="feat-tt">출고 관리</div><div class="feat-ds">출고 등록<br>재고 자동 차감</div></div>
+  <div class="feat-card"><div class="feat-ic">🔔</div><div class="feat-tt">자동 발주</div><div class="feat-ds">최소재고 도달 시<br>자동 발주 알림</div></div>
+  <div class="feat-card"><div class="feat-ic">⏰</div><div class="feat-tt">유통기한</div><div class="feat-ds">D-7 경고<br>만료 알림</div></div>
+  <div class="feat-card"><div class="feat-ic">🍽</div><div class="feat-tt">레시피·원가</div><div class="feat-ds">메뉴별 원가 자동<br>마진율 계산</div></div>
+  <div class="feat-card"><div class="feat-ic">📊</div><div class="feat-tt">재고 현황</div><div class="feat-ds">4단계 필터<br>실시간 파악</div></div>
+ </div>
+ <div class="flow">
+  <div class="flow-item">📥 입고 등록</div><div class="flow-arr">→</div>
+  <div class="flow-item">📊 재고 현황</div><div class="flow-arr">→</div>
+  <div class="flow-item">🔔 자동 발주</div><div class="flow-arr">→</div>
+  <div class="flow-item">🍽 원가 계산</div>
+ </div>
+ <button class="cta-btn cta-p" onclick="location.href='https://filo.ai.kr/app'">재고 자동화 시작 →</button>
+</div>
+
+<!-- 슬라이드 5: 고객 관리 -->
+<div class="slide s5">
+ <div class="badge" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171">🎁 고객 · 회원</div>
+ <div class="slide-title">단골 고객을<br><span class="g-red">포인트·회원권으로 관리</span></div>
+ <div class="slide-sub">회원 QR 스캔으로 포인트 적립·사용, 스탬프, 회원권까지<br>예약 관리와 세무사 연동으로 완전한 매장 운영을 실현합니다</div>
+ <div class="feat-grid">
+  <div class="feat-card"><div class="feat-ic">🎁</div><div class="feat-tt">회원 QR</div><div class="feat-ds">QR 스캔 회원가입<br>포인트 자동 적립</div></div>
+  <div class="feat-card"><div class="feat-ic">⭐</div><div class="feat-tt">포인트 관리</div><div class="feat-ds">적립·사용·내역<br>자동 계산</div></div>
+  <div class="feat-card"><div class="feat-ic">🎫</div><div class="feat-tt">회원권</div><div class="feat-ds">정기권·횟수권<br>자동 차감</div></div>
+  <div class="feat-card"><div class="feat-ic">📆</div><div class="feat-tt">예약·달력</div><div class="feat-ds">테이블 예약<br>일정 관리</div></div>
+  <div class="feat-card"><div class="feat-ic">🧾</div><div class="feat-tt">세무사 연동</div><div class="feat-ds">월 정산 리포트<br>자동 생성</div></div>
+  <div class="feat-card"><div class="feat-ic">📈</div><div class="feat-tt">매출 분석</div><div class="feat-ds">시간대·메뉴<br>결제수단 분석</div></div>
+ </div>
+ <div class="ind-tabs" id="ind-tabs">
+  <button class="ind-tab on" onclick="_selInd(this,'all')">전체</button>
+  <button class="ind-tab" onclick="_selInd(this,'food')">🍽 외식</button>
+  <button class="ind-tab" onclick="_selInd(this,'beauty')">💅 미용</button>
+  <button class="ind-tab" onclick="_selInd(this,'cafe')">☕ 카페</button>
+  <button class="ind-tab" onclick="_selInd(this,'retail')">🛍 소매</button>
+  <button class="ind-tab" onclick="_selInd(this,'service')">🔧 서비스</button>
+ </div>
+ <div class="ind-list" id="ind-list">POS · QR출퇴근 · 재고 · 테이블QR · 포인트 · 예약 · 급여 · 세무사</div>
+ <button class="cta-btn cta-p" style="margin-top:16px" onclick="location.href='https://filo.ai.kr/app'">우리 매장 시작하기 →</button>
+</div>
+
+<!-- 슬라이드 6: 요금제 -->
+<div class="slide s6">
+ <div class="badge" style="background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.2);color:#38bdf8">💎 요금제</div>
+ <div class="slide-title">합리적인 가격으로<br><span class="g-blue">시작하세요</span></div>
+ <div class="slide-sub">30일 무료 체험 · 약정 없음 · VAT 별도</div>
+ <div class="price-wrap">
+  <div class="price-card">
+   <div class="price-nm">개인</div>
+   <div class="price-vl" style="color:#38bdf8">99,000<span style="font-size:14px;font-weight:600">원</span></div>
+   <div class="price-ut">매장/월 (VAT별도)</div>
+   <div class="price-li">✅ POS 키오스크<br>✅ QR 출퇴근·급여<br>✅ 재고 관리<br>✅ 테이블 QR 주문<br>✅ 포인트·회원권<br>✅ 예약·세무사 연동</div>
+  </div>
+  <div class="price-card hi">
+   <div class="price-nm" style="color:#38bdf8">단체 (5개↑)</div>
+   <div class="price-vl" style="color:#22c55e">69,000<span style="font-size:14px;font-weight:600">원</span></div>
+   <div class="price-ut">매장/월 (VAT별도)</div>
+   <div class="price-li">✅ 개인 플랜 전체<br>✅ 30% 할인<br>✅ 프랜차이즈 통합<br>✅ 본사 대시보드<br>✅ 전담 지원</div>
+  </div>
+ </div>
+ <div class="cta-wrap">
+  <button class="cta-btn cta-p" onclick="location.href='https://filo.ai.kr/app'">🚀 30일 무료 시작</button>
+ </div>
+ <div style="font-size:11px;color:var(--t3);margin-top:12px">신용카드 불필요 · 언제든 해지 가능</div>
+</div>
+
+</div><!-- /slides -->
+
+<div class="arrow" id="ap" onclick="_goSlide(-1)">‹</div>
+<div class="arrow" id="an" onclick="_goSlide(1)">›</div>
+<div id="dots">
+ <div class="dot active" onclick="_setSlide(0)"></div>
+ <div class="dot" onclick="_setSlide(1)"></div>
+ <div class="dot" onclick="_setSlide(2)"></div>
+ <div class="dot" onclick="_setSlide(3)"></div>
+ <div class="dot" onclick="_setSlide(4)"></div>
+ <div class="dot" onclick="_setSlide(5)"></div>
 </div>
 
 <script>
-var slides=document.querySelectorAll('.slide');
-var dots=document.querySelectorAll('.nav-dot');
-var curSlide=0;
-
-/* 슬라이드 이동 */
-function goSlide(i){
- slides[i].scrollIntoView({behavior:'smooth'});
+var cur=0,total=6,anim=false;
+function _setSlide(n){
+ if(anim)return;anim=true;
+ var sl=document.querySelectorAll('.slide'),dt=document.querySelectorAll('.dot');
+ sl[cur].classList.remove('active');sl[cur].classList.add(n>cur?'prev':'');
+ cur=n;
+ sl.forEach(function(s){s.classList.remove('active','prev');});
+ sl[cur].classList.add('active');
+ dt.forEach(function(d){d.classList.remove('active');});dt[cur].classList.add('active');
+ setTimeout(function(){anim=false;},650);
 }
-window.scrollTo=goSlide;
-
-/* 스크롤 감지 → 닷 업데이트 */
-var observer=new IntersectionObserver(function(entries){
- entries.forEach(function(e){
-  if(e.isIntersecting){
-   var i=Array.from(slides).indexOf(e.target);
-   if(i>=0){
-    dots.forEach(function(d){d.classList.remove('active');});
-    if(dots[i])dots[i].classList.add('active');
-    curSlide=i;
-    onSlideEnter(i);
-    /* 화살표 표시/숨김 */
-    var pp=document.getElementById('nav-prev');
-    var pn=document.getElementById('nav-next');
-    if(pp)pp.style.opacity=i===0?'0.3':'1';
-    if(pn)pn.style.opacity=i===slides.length-1?'0.3':'1';
-   }
-  }
- });
-},{threshold:.5});
-slides.forEach(function(s){observer.observe(s);});
-
-/* 슬라이드 진입 애니메이션 */
-function onSlideEnter(i){
- if(i===0) startHeroCounters();
- if(i===1) startMockPOS();
- if(i===2) startMockTable();
- if(i===3) startMockChart();
-}
-
-/* ── 히어로 카운터 ── */
-var heroStarted=false;
-function startHeroCounters(){
- if(heroStarted)return;heroStarted=true;
- animCount(document.getElementById('live-rev'),487000,'₩','toLocaleString',1200);
- animCount(document.getElementById('live-cnt'),24,'','건',800);
- animCount(document.getElementById('live-tbl'),4,'','개',600);
- /* 3초마다 숫자 변동 */
- setInterval(function(){
-  var el=document.getElementById('live-rev');
-  if(!el)return;
-  var cur=parseInt(el.textContent.replace(/[^0-9]/g,''))||487000;
-  cur+=Math.floor(Math.random()*15000-3000);
-  el.textContent='₩'+Math.max(400000,cur).toLocaleString();
- },3000);
-}
-function animCount(el,target,prefix,suffix,dur){
- if(!el)return;
- var start=0,step=dur/60;
- var t=setInterval(function(){
-  start+=target/60;
-  if(start>=target){start=target;clearInterval(t);}
-  el.textContent=prefix+(typeof suffix==='function'?suffix(Math.round(start)):Math.round(start).toLocaleString()+suffix);
- },step);
-}
-
-/* ── POS Mock ── */
-var mockMenus=[
- {e:'☕',n:'아메리카노',p:1800},{e:'☕',n:'카페라떼',p:4000},{e:'🥛',n:'바닐라라떼',p:4300},
- {e:'🍓',n:'딸기라떼',p:4800},{e:'🥤',n:'흑당밀크티',p:4500},{e:'🎂',n:'치즈케이크',p:4500}
-];
-var mockCart={};
-function startMockPOS(){
- var grid=document.getElementById('mock-menu-grid');
- if(!grid||grid.innerHTML!=='')return;
- grid.innerHTML=mockMenus.map(function(m,i){
-  return '<div class="mock-menu-item" onclick="mockAdd('+i+')" id="mm'+i+'">'+
-   '<span class="mock-emoji">'+m.e+'</span>'+
-   '<div class="mock-name">'+m.n+'</div>'+
-   '<div class="mock-price">₩'+m.p.toLocaleString()+'</div></div>';
- }).join('');
- updateMockTime();setInterval(updateMockTime,1000);
-}
-function updateMockTime(){
- var el=document.getElementById('mock-time');
- if(el){var n=new Date();el.textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
-}
-function mockAdd(i){
- var m=mockMenus[i];
- mockCart[i]=(mockCart[i]||0)+1;
- var el=document.getElementById('mm'+i);
- if(el)el.classList.add('selected');
- var items=Object.entries(mockCart).map(function(kv){return mockMenus[kv[0]].n+' x'+kv[1];});
- var total=Object.entries(mockCart).reduce(function(s,kv){return s+mockMenus[kv[0]].p*kv[1];},0);
- var ci=document.getElementById('mock-cart-items');
- var ti=document.getElementById('mock-total');
- if(ci)ci.textContent=items.join(' | ');
- if(ti)ti.textContent='₩'+total.toLocaleString();
-}
-function mockPay(){
- mockCart={};
- document.querySelectorAll('.mock-menu-item').forEach(function(el){el.classList.remove('selected');});
- var ci=document.getElementById('mock-cart-items');var ti=document.getElementById('mock-total');
- if(ci)ci.textContent='결제 완료! ✅';
- if(ti)ti.textContent='₩0';
- setTimeout(function(){if(ci)ci.textContent='장바구니 비어있음';},1800);
-}
-
-/* ── 테이블 Mock ── */
-var tableStates=['empty','occupied','occupied','reserved','empty','occupied','occupied','empty','reserved','occupied','empty','occupied'];
-function startMockTable(){
- var grid=document.getElementById('mock-table-grid');
- if(!grid||grid.innerHTML!=='')return;
- renderMockTables();
- setInterval(function(){
-  var r=Math.floor(Math.random()*tableStates.length);
-  var states=['empty','occupied','reserved'];
-  tableStates[r]=states[Math.floor(Math.random()*states.length)];
-  renderMockTables();
-  updateTableKpi();
- },2500);
-}
-function renderMockTables(){
- var grid=document.getElementById('mock-table-grid');if(!grid)return;
- var labels={empty:'빈자리',occupied:'사용중',reserved:'예약'};
- grid.innerHTML=tableStates.slice(0,8).map(function(s,i){
-  return '<div class="mock-table mt-'+s+'" onclick="toggleMockTable('+i+')">'+
-   '<div class="mock-table-num">'+(i+1)+'번</div>'+
-   '<div class="mock-table-seats">4인석</div>'+
-   '<div class="mock-table-status">'+labels[s]+'</div></div>';
- }).join('');
-}
-function toggleMockTable(i){
- var arr=['empty','occupied','reserved'];
- var cur=arr.indexOf(tableStates[i]);
- tableStates[i]=arr[(cur+1)%3];
- renderMockTables();updateTableKpi();
-}
-function updateTableKpi(){
- var e=tableStates.filter(function(s){return s==='empty';}).length;
- var o=tableStates.filter(function(s){return s==='occupied';}).length;
- var r=tableStates.filter(function(s){return s==='reserved';}).length;
- var me=document.getElementById('m-empty');var mo=document.getElementById('m-occ');var mr=document.getElementById('m-res');
- if(me)me.textContent=e;if(mo)mo.textContent=o;if(mr)mr.textContent=r;
- var live=document.getElementById('live-tbl');if(live)live.textContent=e+'개';
-}
-
-/* ── 차트 Mock ── */
-var chartStarted=false;
-function startMockChart(){
- if(chartStarted)return;chartStarted=true;
- var data=[2,5,8,12,18,22,28,35,42,38,30,22,18,25,32,40,48,52,45,38,28,20,14,8];
- var hours=[9,10,11,12,13,14,15,16,17,18,19,20];
- var bars=document.getElementById('mock-bars');
- if(bars){
-  bars.innerHTML=hours.map(function(h,i){
-   var v=data[h-9]||0;var pct=Math.round(v/55*100);
-   return '<div class="mock-bar'+(h===18?' peak':'').toString()+'" id="mb'+i+'" style="height:0%" title="'+h+'시"></div>';
-  }).join('');
-  setTimeout(function(){
-   hours.forEach(function(h,i){
-    var v=data[h-9]||0;var pct=Math.round(v/55*100);
-    var b=document.getElementById('mb'+i);
-    if(b)b.style.height=pct+'%';
-   });
-  },100);
- }
- /* 결제수단 */
- var pays=[{l:'카드 💳',v:68,c:'#60a5fa'},{l:'현금 💵',v:20,c:'#22c55e'},{l:'카카오페이 🟡',v:12,c:'#f59e0b'}];
- var pb=document.getElementById('mock-pay-bars');
- if(pb){
-  pb.innerHTML=pays.map(function(p){
-   return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-    '<span style="font-size:10px;width:80px;flex-shrink:0">'+p.l+'</span>'+
-    '<div style="flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden">'+
-    '<div class="pay-anim-bar" data-pct="'+p.v+'" style="height:100%;width:0%;background:'+p.c+';border-radius:2px;transition:width .8s ease"></div></div>'+
-    '<span style="font-size:10px;font-weight:700;color:'+p.c+'">'+p.v+'%</span></div>';
-  }).join('');
-  setTimeout(function(){
-   document.querySelectorAll('.pay-anim-bar').forEach(function(b){b.style.width=b.dataset.pct+'%';});
-  },150);
- }
- /* 카운터 */
- animCount(document.getElementById('m-rev'),487000,'₩','',1000);
- animCount(document.getElementById('m-cnt2'),24,'','건',800);
-}
-
-/* 키보드 슬라이드 */
+function _goSlide(d){_setSlide((cur+d+total)%total);}
 document.addEventListener('keydown',function(e){
- if(e.key==='ArrowDown'||e.key==='PageDown'){goSlide(Math.min(curSlide+1,slides.length-1));}
- if(e.key==='ArrowUp'||e.key==='PageUp'){goSlide(Math.max(curSlide-1,0));}
+ if(e.key==='ArrowRight'||e.key==='ArrowDown')_goSlide(1);
+ if(e.key==='ArrowLeft'||e.key==='ArrowUp')_goSlide(-1);
 });
+var sx=0;
+document.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)_goSlide(dx<0?1:-1);});
+var timer=setInterval(function(){_goSlide(1);},5000);
+document.getElementById('slides').addEventListener('mouseenter',function(){clearInterval(timer);});
+document.getElementById('slides').addEventListener('mouseleave',function(){timer=setInterval(function(){_goSlide(1);},5000);});
+
+/* 업종 탭 */
+var indMap={
+ all:'POS · QR출퇴근 · 재고 · 테이블QR · 포인트 · 예약 · 급여 · 세무사',
+ food:'POS · 테이블QR주문 · 메뉴관리 · 배달주문 · 직원급여 · 예약관리',
+ beauty:'POS · 회원QR · 포인트·회원권 · 직원QR출퇴근 · 급여 · 예약',
+ cafe:'POS · 테이블QR · 메뉴관리 · 재고자동발주 · 직원출퇴근 · 세무사',
+ retail:'POS · 재고관리 · 자동발주 · 원가계산 · 직원급여 · 포인트',
+ service:'QR출퇴근 · 직원급여명세서 · 예약·달력 · 회원관리 · 세무사연동'
+};
+function _selInd(el,key){
+ document.querySelectorAll('.ind-tab').forEach(function(t){t.classList.remove('on');});
+ el.classList.add('on');
+ document.getElementById('ind-list').textContent=indMap[key]||'';
+}
 </script>
 </body>
 </html>
