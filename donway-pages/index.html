@@ -7555,15 +7555,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     // ★ 프레시백 차감
                     if(fdm.dateFresh){
                       Object.keys(fdm.dateFresh).forEach(function(dt){
-                        if(rule.rStart&&dt<rule.rStart)return;
-                        if(rule.rEnd&&dt>rule.rEnd)return;
+                        if(rule.rStart&&dt.slice(0,rule.rStart.length)<rule.rStart)return;
+                        if(rule.rEnd&&dt.slice(0,rule.rEnd.length)>rule.rEnd)return;
                         fs.fresh=Math.max(0,(fs.fresh||0)-(fdm.dateFresh[dt]||0));
                       });
                     }
                     // ★ 인센 차감
                     Object.keys(fdm.dateRoutes).forEach(function(dt){
-                      if(rule.rStart&&dt<rule.rStart)return;
-                      if(rule.rEnd&&dt>rule.rEnd)return;
+                      if(rule.rStart&&dt.slice(0,rule.rStart.length)<rule.rStart)return;
+                      if(rule.rEnd&&dt.slice(0,rule.rEnd.length)>rule.rEnd)return;
                       Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                         if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                         var rd2=fdm.dateRoutes[dt][rt];
