@@ -1560,20 +1560,39 @@ async function acceptExchange(){
           }})
         });
         const rows = await r.json();
-        const menus = (rows||[]).filter(d=>d.document).map(d=>{
+        const parseRows = (rows) => (rows||[]).filter(d=>d.document).map(d=>{
           const f = d.document.fields||{};
-          const g = (k)=>f[k]?.stringValue||f[k]?.integerValue||f[k]?.booleanValue||null;
+          const g = (k)=>{const v=f[k]; if(!v)return null; return v.stringValue??v.integerValue??v.booleanValue??null;};
           return {
             id: d.document.name.split('/').pop(),
             name: g('name')||g('menuName')||'',
-            price: parseInt(g('price')||0),
+            price: parseInt(g('price')||g('sellPrice')||0),
             category: g('category')||'기타',
             emoji: g('emoji')||'🍽',
             imgUrl: g('imageUrl')||g('imgUrl')||'',
-            soldOut: f.soldOut?.booleanValue||false,
-            forSale: f.forSale?.booleanValue!==false
+            soldOut: f.soldOut?.booleanValue||false
           };
         }).filter(m=>m.name&&m.price>0);
+
+        let menus = parseRows(rows);
+
+        /* filo_menus 없으면 inventory fallback */
+        if(!menus.length){
+          const r2 = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`, {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'inventory'}],
+              where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                {fieldFilter:{field:{fieldPath:'forSale'},op:'NOT_EQUAL',value:{booleanValue:false}}}
+              ]}},
+              limit:200
+            }})
+          });
+          const rows2 = await r2.json();
+          menus = parseRows(rows2);
+        }
+
         return new Response(JSON.stringify(menus), {
           headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*',...SECURITY_HEADERS}
         });
