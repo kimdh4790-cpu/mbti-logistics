@@ -6982,6 +6982,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var tr=total[tj];if(!tr||!tr[tID])continue;
             var tid=String(tr[tID]).replace(/@[a-z0-9@._-]+$/i,'').trim();
             if(!tid||tid==='ID')continue;
+            if(tid.includes('수수료')||tid.includes('영업점')){window._agencyFee=(window._agencyFee||0)+Math.abs(Number(tr[tTotal])||0);continue;}
             // ★ 정산총괄 = VAT제외 기준 → ×1.1 해서 VAT포함으로 저장
             // ★ raw값 저장 (VAT제외) — display/calcNet에서 ×1.1 처리
             totalMap[tid]={
@@ -28332,7 +28333,9 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+      // ★ 아이디지원 신규생성 문서 총매출 제외
+      var _isIdDoc=(+s.dcnt===0&&+s.damt===0&&String(s.etcPlusReason||'').includes('아이디지원'));
+      var ct=_isIdDoc?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
       // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
       totTaxBase+=(r.income||r.totalAmt||0);
@@ -28402,7 +28405,9 @@ function pageSettle(){
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     // 마진 = 쿠팡수입 - 기사세금계산서 - 고용·산재(기사+회사) - 부가세10%
     var totInsAll=totEmpComp+totWorkComp+totEmpDrv+totWorkDrv; // 고용·산재 전체
-    var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
+    var _agencyFeeVat=Math.round((window._agencyFee||0)*1.1);
+  totCoupang=totCoupang-_agencyFeeVat;
+  var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
     var totVat=Math.round(totMarginBeforeVat*0.1); // 부가세 10%
     var totMargin=totMarginBeforeVat-totVat;
     // 경비 차감 실순수익
