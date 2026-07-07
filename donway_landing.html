@@ -292,52 +292,52 @@ var industryData = {
     {ico:'💸',ttl:'자동 이체 <span style="color:#fbbf24;font-size:10px">출시예정</span>',desc:'정산 완료 → 기사 계좌 자동 송금'}
   ],
   delivery: [
-    {ico:'🛵',ttl:'배달대행 정산',desc:'쿠팡이츠·배민·바로고 등 플랫폼별 정산 자동화'},
-    {ico:'💬',ttl:'라이더 명세서',desc:'라이더별 실지급 명세서 카카오 자동 발송'},
-    {ico:'📊',ttl:'차액 정산',desc:'플랫폼 수수료 자동 차감, 실수령액 계산'},
-    {ico:'🧾',ttl:'세금계산서',desc:'정산 확정 즉시 자동 발행'},
-    {ico:'📈',ttl:'일별 건수 분석',desc:'라이더별·지역별 배달 건수 통계'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 정산 자료 자동 전달'}
+    {ico:'🛵',ttl:'배달대행 정산',desc:'쿠팡이츠·배민·바로고 등 플랫폼별 정산 자동화',key:'delivery_settle'},
+    {ico:'💬',ttl:'라이더 명세서',desc:'라이더별 실지급 명세서 카카오 자동 발송',key:'delivery_kakao'},
+    {ico:'📊',ttl:'차액 정산',desc:'플랫폼 수수료 자동 차감, 실수령액 계산',key:'delivery_diff'},
+    {ico:'🧾',ttl:'세금계산서',desc:'정산 확정 즉시 자동 발행',key:'courier_tax'},
+    {ico:'📈',ttl:'일별 건수 분석',desc:'라이더별·지역별 배달 건수 통계',key:'delivery_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 정산 자료 자동 전달',key:'courier_accountant'}
   ],
   cleaning: [
-    {ico:'🧹',ttl:'청소 직원 급여',desc:'시급·일급·건당 혼용 자동 계산'},
-    {ico:'💬',ttl:'직원 명세서',desc:'급여 명세서 카카오 자동 발송'},
-    {ico:'📋',ttl:'근무표 관리',desc:'주간 근무표 업로드 → 급여 자동 계산'},
-    {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산'},
-    {ico:'📈',ttl:'지점별 실적',desc:'지점별 매출·마진 실시간 비교'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+    {ico:'🧹',ttl:'청소 직원 급여',desc:'시급·일급·건당 혼용 자동 계산',key:'cleaning_pay'},
+    {ico:'💬',ttl:'직원 명세서',desc:'급여 명세서 카카오 자동 발송',key:'courier_kakao'},
+    {ico:'📋',ttl:'근무표 관리',desc:'주간 근무표 업로드 → 급여 자동 계산',key:'roster'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산',key:'insurance4'},
+    {ico:'📈',ttl:'지점별 실적',desc:'지점별 매출·마진 실시간 비교',key:'branch_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달',key:'courier_accountant'}
   ],
   construction: [
-    {ico:'🏗️',ttl:'일용직 급여',desc:'날별 인원·금액 다른 일용직 자동 계산'},
-    {ico:'💬',ttl:'작업자 명세서',desc:'일별 작업 내역 명세서 카카오 발송'},
-    {ico:'📋',ttl:'현장별 관리',desc:'현장별 인원·비용 통합 관리'},
-    {ico:'🧾',ttl:'일용직 세금',desc:'일용근로소득세 자동 계산'},
-    {ico:'📈',ttl:'현장 수익 분석',desc:'현장별 마진율 실시간 확인'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'일용직 지급명세서 자동 생성'}
+    {ico:'🏗️',ttl:'일용직 급여',desc:'날별 인원·금액 다른 일용직 자동 계산',key:'const_pay'},
+    {ico:'💬',ttl:'작업자 명세서',desc:'일별 작업 내역 명세서 카카오 발송',key:'courier_kakao'},
+    {ico:'📋',ttl:'현장별 관리',desc:'현장별 인원·비용 통합 관리',key:'const_site'},
+    {ico:'🧾',ttl:'일용직 세금',desc:'일용근로소득세 자동 계산',key:'const_tax'},
+    {ico:'📈',ttl:'현장 수익 분석',desc:'현장별 마진율 실시간 확인',key:'branch_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'일용직 지급명세서 자동 생성',key:'courier_accountant'}
   ],
   insurance: [
-    {ico:'🛡️',ttl:'설계사 수수료',desc:'상품별 수수료 자동 계산, 환수 처리'},
-    {ico:'💬',ttl:'설계사 명세서',desc:'월 수수료 명세서 카카오 자동 발송'},
-    {ico:'📊',ttl:'실적 관리',desc:'설계사별 신계약·유지·환수 통합 관리'},
-    {ico:'🧾',ttl:'세금계산서',desc:'수수료 세금계산서 자동 발행'},
-    {ico:'📈',ttl:'팀별 실적',desc:'팀장별 팀 실적 통합 분석'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 지급 자료 자동 전달'}
+    {ico:'🛡️',ttl:'설계사 수수료',desc:'상품별 수수료 자동 계산, 환수 처리',key:'ins_comm'},
+    {ico:'💬',ttl:'설계사 명세서',desc:'월 수수료 명세서 카카오 자동 발송',key:'courier_kakao'},
+    {ico:'📊',ttl:'실적 관리',desc:'설계사별 신계약·유지·환수 통합 관리',key:'ins_perf'},
+    {ico:'🧾',ttl:'세금계산서',desc:'수수료 세금계산서 자동 발행',key:'courier_tax'},
+    {ico:'📈',ttl:'팀별 실적',desc:'팀장별 팀 실적 통합 분석',key:'branch_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 지급 자료 자동 전달',key:'courier_accountant'}
   ],
   beauty: [
-    {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산'},
-    {ico:'💬',ttl:'직원 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
-    {ico:'📋',ttl:'근태 관리',desc:'QR 출퇴근 연동 자동 급여 계산'},
-    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
-    {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+    {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산',key:'beauty_comm'},
+    {ico:'💬',ttl:'직원 명세서',desc:'월 급여 명세서 카카오 자동 발송',key:'courier_kakao'},
+    {ico:'📋',ttl:'근태 관리',desc:'QR 출퇴근 연동 자동 급여 계산',key:'qr_attend'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료',key:'insurance4'},
+    {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교',key:'branch_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달',key:'courier_accountant'}
   ],
   care: [
-    {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산'},
-    {ico:'💬',ttl:'요양보호사 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
-    {ico:'📋',ttl:'방문 기록',desc:'어르신별 방문 일정·시간 자동 집계'},
-    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산'},
-    {ico:'📈',ttl:'센터별 실적',desc:'센터별 방문건수·매출 통계'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'}
+    {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산',key:'care_pay'},
+    {ico:'💬',ttl:'요양보호사 명세서',desc:'월 급여 명세서 카카오 자동 발송',key:'courier_kakao'},
+    {ico:'📋',ttl:'방문 기록',desc:'어르신별 방문 일정·시간 자동 집계',key:'care_visit'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산',key:'insurance4'},
+    {ico:'📈',ttl:'센터별 실적',desc:'센터별 방문건수·매출 통계',key:'branch_stats'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달',key:'courier_accountant'}
   ]
 };
 
@@ -895,6 +895,64 @@ var DW_MODALS = {
   roster:{ic:'🗓️',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
     title:'근무표·연차 관리',tagline:'주간 근무표 자동 생성, 연차 신청·승인 자동화',
     body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📅</div><div><div class="dw-feat-row-ttl">주간 근무표 자동 생성</div><div class="dw-feat-row-desc">직원별 근무 패턴 등록 → 주간 달력 자동 생성. 교대 근무 설정으로 반복 입력 불필요</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🔄</div><div><div class="dw-feat-row-ttl">근무 교체 요청</div><div class="dw-feat-row-desc">직원끼리 카카오톡 링크로 교체 요청. 승인 시 근무표·급여 자동 반영</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🌴</div><div><div class="dw-feat-row-ttl">연차 자동 계산</div><div class="dw-feat-row-desc">입사일 기준 연차 자동 부여. 신청·승인·잔여일수 실시간 관리</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🔗</div><div><div class="dw-feat-row-ttl">근무표 공개 링크</div><div class="dw-feat-row-desc">로그인 없이 링크만으로 근무표 확인. 단톡방 공유 가능</div></div></div>'},
+
+  /* ── 배달대행 ── */
+  delivery_settle:{ic:'🛵',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'배달대행 정산',tagline:'쿠팡이츠·배민·바로고 등 플랫폼별 정산 자동화',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📑</div><div><div class="dw-feat-row-ttl">플랫폼별 엑셀 자동 파싱</div><div class="dw-feat-row-desc">배민, 쿠팡이츠, 바로고 정산 엑셀 업로드 → 플랫폼별 수수료 자동 차감, 라이더별 실수령액 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">💰</div><div><div class="dw-feat-row-ttl">라이더별 자동 분리</div><div class="dw-feat-row-desc">건수·금액·수수료 라이더별 자동 분리. 정산 확정 즉시 명세서 발송</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">채널별 수익성 비교</div><div class="dw-feat-row-desc">플랫폼별 수수료율·실수익 비교. 어느 플랫폼이 더 유리한지 즉시 파악</div></div></div>'},
+  delivery_kakao:{ic:'💬',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'라이더 명세서 발송',tagline:'라이더별 실지급 명세서 카카오 자동 발송',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📲</div><div><div class="dw-feat-row-ttl">정산 확정 → 즉시 발송</div><div class="dw-feat-row-desc">정산 완료 버튼 하나로 전 라이더에게 개인별 명세서 카카오 알림톡 자동 발송</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📋</div><div><div class="dw-feat-row-ttl">건수·금액·수수료 내역</div><div class="dw-feat-row-desc">플랫폼별 건수, 총 금액, 수수료 공제 내역, 실수령액 전체 표시</div></div></div>'},
+  delivery_diff:{ic:'📊',color:'rgba(0,102,255,.15)',border:'rgba(0,102,255,.3)',
+    title:'차액 정산',tagline:'플랫폼 수수료 자동 차감, 실수령액 계산',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">➖</div><div><div class="dw-feat-row-ttl">수수료 자동 차감</div><div class="dw-feat-row-desc">플랫폼별 수수료율 자동 적용. 총 배달료 - 수수료 = 실수령액 자동 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📈</div><div><div class="dw-feat-row-ttl">일별 건수 분석</div><div class="dw-feat-row-desc">라이더별·지역별·시간대별 배달 건수 통계. 피크타임 인력 배치 최적화</div></div></div>'},
+  delivery_stats:{ic:'📈',color:'rgba(0,102,255,.15)',border:'rgba(0,102,255,.3)',
+    title:'일별 건수 분석',tagline:'라이더별·지역별 배달 건수 통계',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">라이더별 통계</div><div class="dw-feat-row-desc">라이더별 일·주·월 배달 건수, 평균 배달료, 수익 추이 자동 집계</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🗺️</div><div><div class="dw-feat-row-ttl">지역별 분석</div><div class="dw-feat-row-desc">지역별 배달 밀도, 피크타임 분석. 배차 효율 최적화에 활용</div></div></div>'},
+
+  /* ── 청소·건설·공통 ── */
+  cleaning_pay:{ic:'🧹',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'청소 직원 급여',tagline:'시급·일급·건당 혼용 자동 계산',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">💰</div><div><div class="dw-feat-row-ttl">시급·일급·건당 혼용</div><div class="dw-feat-row-desc">정직원(시급), 파트타임(일급), 건당 도급 직원 혼용 사업장도 한 번에 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📋</div><div><div class="dw-feat-row-ttl">근무표 → 급여 자동</div><div class="dw-feat-row-desc">주간 근무표 업로드 즉시 급여 자동 계산. 수동 입력 없이 정확한 급여 산출</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🏢</div><div><div class="dw-feat-row-ttl">지점별 인건비 관리</div><div class="dw-feat-row-desc">지점별 인건비 비율 실시간 비교. 인건비 초과 지점 즉시 파악</div></div></div>'},
+  const_pay:{ic:'🏗️',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',
+    title:'일용직 급여',tagline:'날별 인원·금액 다른 일용직 자동 계산',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📅</div><div><div class="dw-feat-row-ttl">날별 일용직 자동 계산</div><div class="dw-feat-row-desc">매일 다른 인원·일당을 날짜별로 입력하면 월 합계 자동 계산. 여러 현장 동시 관리</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🧾</div><div><div class="dw-feat-row-ttl">일용근로소득세 자동</div><div class="dw-feat-row-desc">일당 187,000원 초과분에 대한 일용근로소득세 자동 계산 및 명세서 반영</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📋</div><div><div class="dw-feat-row-ttl">현장별 분리 관리</div><div class="dw-feat-row-desc">현장A·B·C 각각 인원·비용 분리 집계. 현장별 수익성 즉시 파악</div></div></div>'},
+  const_site:{ic:'📋',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',
+    title:'현장별 관리',tagline:'현장별 인원·비용 통합 관리',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">🏗️</div><div><div class="dw-feat-row-ttl">현장 단위 분리</div><div class="dw-feat-row-desc">현장별 투입 인원, 인건비, 자재비 분리 입력. 현장별 손익 즉시 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">현장 수익 분석</div><div class="dw-feat-row-desc">발주 금액 대비 실제 비용 비교. 수익성 낮은 현장 즉시 파악 및 원인 분석</div></div></div>'},
+  const_tax:{ic:'🧾',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',
+    title:'일용직 세금',tagline:'일용근로소득세 자동 계산 + 지급명세서 생성',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">🧾</div><div><div class="dw-feat-row-ttl">일용근로소득세 자동</div><div class="dw-feat-row-desc">일당 187,000원 초과 시 6% 원천징수 자동 계산. 비과세 구간 자동 처리</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📄</div><div><div class="dw-feat-row-ttl">일용직 지급명세서</div><div class="dw-feat-row-desc">분기별 일용직 지급명세서 자동 생성. 세무사 제출용 자료 원클릭 완성</div></div></div>'},
+
+  /* ── 보험 ── */
+  ins_comm:{ic:'🛡️',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
+    title:'설계사 수수료',tagline:'상품별 수수료 자동 계산, 환수 처리',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">💰</div><div><div class="dw-feat-row-ttl">상품별 수수료 자동</div><div class="dw-feat-row-desc">종신·건강·자동차 등 상품별 수수료율 등록 → 신계약 입력 즉시 수수료 자동 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">↩️</div><div><div class="dw-feat-row-ttl">환수 자동 처리</div><div class="dw-feat-row-desc">계약 해지 시 환수금액 자동 계산 및 설계사 급여에서 자동 차감</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">설계사별 실적 관리</div><div class="dw-feat-row-desc">신계약·유지·환수 통합 관리. 설계사별 순수익 및 팀 실적 자동 집계</div></div></div>'},
+  ins_perf:{ic:'📈',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
+    title:'실적 관리',tagline:'설계사별 신계약·유지·환수 통합 관리',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">설계사별 실적</div><div class="dw-feat-row-desc">신계약 건수·금액, 유지율, 환수율 설계사별 자동 집계. 성과 평가 근거 데이터</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">👥</div><div><div class="dw-feat-row-ttl">팀별 통합 분석</div><div class="dw-feat-row-desc">팀장별 팀 실적 통합. 팀 간 성과 비교 및 인센티브 계산 자동화</div></div></div>'},
+
+  /* ── 뷰티 ── */
+  beauty_comm:{ic:'💄',color:'rgba(239,68,68,.15)',border:'rgba(239,68,68,.3)',
+    title:'매출 커미션',tagline:'매출 기반 커미션 자동 계산',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">💰</div><div><div class="dw-feat-row-ttl">매출 기반 커미션</div><div class="dw-feat-row-desc">직원별 담당 매출 자동 집계 → 커미션율 적용 → 기본급+커미션 합산 자동 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📈</div><div><div class="dw-feat-row-ttl">직원별·매장별 비교</div><div class="dw-feat-row-desc">직원별 매출 순위, 매장별 실적 비교. 성과 우수 직원 즉시 파악</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📋</div><div><div class="dw-feat-row-ttl">QR 출퇴근 연동</div><div class="dw-feat-row-desc">출퇴근 자동 기록 → 근무시간 기반 기본급 + 매출 기반 커미션 합산</div></div></div>'},
+
+  /* ── 요양 ── */
+  care_pay:{ic:'🏥',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'요양보호사 급여',tagline:'방문시간·거리 기반 급여 자동 계산',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">⏱</div><div><div class="dw-feat-row-ttl">방문시간 기반 급여</div><div class="dw-feat-row-desc">어르신별 방문 시간 기록 → 시간 단위 급여 자동 계산. 이동거리 수당 별도 적용</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📋</div><div><div class="dw-feat-row-ttl">방문 기록 자동 집계</div><div class="dw-feat-row-desc">어르신별 월 방문 일정·시간 자동 집계. 급여 계산 근거 자료 자동 생성</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🧾</div><div><div class="dw-feat-row-ttl">4대보험 자동</div><div class="dw-feat-row-desc">요양보호사 4대보험 자동 계산. 시간제·전일제 구분 처리</div></div></div>'},
+  care_visit:{ic:'📋',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'방문 기록',tagline:'어르신별 방문 일정·시간 자동 집계',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">👴</div><div><div class="dw-feat-row-ttl">어르신별 방문 관리</div><div class="dw-feat-row-desc">어르신별 담당 보호사, 방문 스케줄, 누적 방문시간 자동 집계</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">센터별 통계</div><div class="dw-feat-row-desc">센터별 방문건수·총 서비스시간·매출 자동 집계. 급여 정산 근거 자료</div></div></div>'},
+
+  /* ── 공통 ── */
+  insurance4:{ic:'🧾',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',
+    title:'4대보험 자동 계산',tagline:'국민연금·건강·고용·산재 자동 계산 및 신고 자료',
+    body:'<div class="dw-stat-row"><div class="dw-stat"><div class="dw-stat-val" style="color:#60A5FA">4.5%</div><div class="dw-stat-lbl">국민연금(근로자)</div></div><div class="dw-stat"><div class="dw-stat-val" style="color:#22C55E">3.545%</div><div class="dw-stat-lbl">건강보험</div></div><div class="dw-stat"><div class="dw-stat-val" style="color:#F59E0B">0.9%</div><div class="dw-stat-lbl">고용보험</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">⚙️</div><div><div class="dw-feat-row-ttl">요율 자동 업데이트</div><div class="dw-feat-row-desc">매년 변경되는 4대보험 요율 자동 적용. 연도 바뀌어도 수동 수정 불필요</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📄</div><div><div class="dw-feat-row-ttl">신고 자료 자동 생성</div><div class="dw-feat-row-desc">4대보험 신고용 자료 자동 생성. 세무사 또는 공단 직접 제출용</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🏢</div><div><div class="dw-feat-row-ttl">5인 미만 자동 처리</div><div class="dw-feat-row-desc">5인 미만 사업장 연장·야간·휴일 가산 자동 제외</div></div></div>'},
+  branch_stats:{ic:'📈',color:'rgba(0,102,255,.15)',border:'rgba(0,102,255,.3)',
+    title:'지점·현장별 실적',tagline:'지점별 매출·마진·인건비 실시간 비교',
+    body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">📊</div><div><div class="dw-feat-row-ttl">지점별 수익성 비교</div><div class="dw-feat-row-desc">지점별 매출·인건비·마진율 실시간 비교. 수익성 낮은 지점 즉시 파악하여 조치</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📅</div><div><div class="dw-feat-row-ttl">월별 추이 분석</div><div class="dw-feat-row-desc">지점별 월별 실적 추이 차트. 계절성, 이상치 즉시 확인</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🏆</div><div><div class="dw-feat-row-ttl">직원별 실적 순위</div><div class="dw-feat-row-desc">직원별 매출·건수 순위 자동 집계. 성과급·인센티브 계산 근거 자료</div></div></div>'}
+
   donway_filo:{ic:'🔗',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
     title:'DONWAY × FILO 연동',tagline:'출퇴근 → 급여 → 정산 → 명세서 원스톱',
     body:'<div class="dw-feat-row"><div class="dw-feat-row-ic">⚡</div><div><div class="dw-feat-row-ttl">출퇴근 → 급여 자동</div><div class="dw-feat-row-desc">FILO QR 스캔 → 근무시간 집계 → DONWAY 급여 계산 자동 반영. 별도 입력 0</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📦</div><div><div class="dw-feat-row-ttl">재고 → 원가 연동</div><div class="dw-feat-row-desc">FILO 재고 판매 → DONWAY 원가 분석 자동 반영. 마진율 실시간 계산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">🖥️</div><div><div class="dw-feat-row-ttl">POS 매출 → 정산</div><div class="dw-feat-row-desc">FILO POS 결제 즉시 DONWAY 월 정산에 반영. 홀+배달 통합 정산</div></div></div><div class="dw-feat-row"><div class="dw-feat-row-ic">📱</div><div><div class="dw-feat-row-ttl">탭 하나로 전환</div><div class="dw-feat-row-desc">DONWAY 탑바에서 FILO 바로가기. 같은 계정으로 자유롭게 전환</div></div></div>'}
