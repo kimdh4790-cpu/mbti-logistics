@@ -7401,7 +7401,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
-          // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 둘 다 합산
+          // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 합산 (중복 제거)
           var _mergedIdRules=[];
           if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
             _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
@@ -7412,52 +7412,62 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!dup) _mergedIdRules.push(r);
             });
           }
-          if(_mergedIdRules.length){
-            window._idSupportRules=_mergedIdRules;
-          }
+          if(_mergedIdRules.length) window._idSupportRules=_mergedIdRules;
+
           if(window._idSupportRules&&window._idSupportRules.length){
-            function _normD(s){
-              if(!s)return '';
-              var p=String(s).trim().split('-');
-              if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
-              return s;
-            }
-            // 날짜 → yyyy-MM (월 기준 매칭)
-            function _dateYM(s){
-              if(!s)return '';
-              var p=String(s).trim().split('-');
-              if(p.length>=2) return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1]);
-              return '';
-            }
+            // 날짜 정규화: yyyy-MM-dd 형식으로 통일
+            var _ndFmt=function(d){
+              if(!d)return '';
+              d=String(d).trim();
+              var p=d.split('-');
+              if(p.length>=3){
+                var m=p[1].replace(/^0+/,'')||'0', dd=p[2].replace(/^0+/,'')||'0';
+                return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);
+              }
+              return d;
+            };
+
+            // 날짜 매칭 함수: dates배열 있으면 정확 매칭, 없으면 startDate~endDate 범위
+            var _dtMatch=function(dt, rule){
+              var _dates=(rule.dates||[]).map(_ndFmt).filter(Boolean);
+              if(_dates.length) return _dates.indexOf(_ndFmt(dt))>=0;
+              var s=_ndFmt(rule.startDate), e=_ndFmt(rule.endDate);
+              if(s&&dt<s)return false;
+              if(e&&dt>e)return false;
+              return true;
+            };
+
             var _fd={};
             window._idSupportRules.forEach(function(rule){
               var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
               var tid=(rule.toId||'').replace(/@df$/i,'').trim();
               var fd=drvMap[fid]; if(!fd)return;
-              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
-              if(!ts)return;
-              // ★ 날짜 범위: startDate/endDate 우선, 없으면 dates[] 배열 첫/끝값으로 범위 구성
-              var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
-              var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
-              var rStart=_ndFmt(rule.startDate)||(_sortedDates.length?_sortedDates[0]:'');
-              var rEnd=_ndFmt(rule.endDate)||(_sortedDates.length?_sortedDates[_sortedDates.length-1]:'');
               var tR=rule.routes||[];
               var tot=0, pts=[];
+              var _rtAgg={};
+              var _totalFresh=0, _totalDmg=0;
 
-              var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
-              if(hasDateRoutes){
-                // ★ 라우트별 합산 (날짜 범위 내)
-                var _rtAgg={};  // {rt: {cnt,ret}}
-                var _totalFresh=0, _totalDmg=0;
+              // ★ toId 명세서 없으면 신규 생성
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
+              if(!ts){
+                ts={userId:tid,driver:tid,month:month,dealerId:_CU.dealerId,
+                    dcnt:0,rcnt:0,damt:0,fresh:0,inc:0,etcPlus:0,etcMinus:0,
+                    etcPlusReason:'',etcMinusReason:'',routeDetails:[],
+                    _isNewIdSupport:true};
+                settlements.push(ts);
+              }
+
+              if(fd.dateRoutes&&Object.keys(fd.dateRoutes).length){
+                // ★ dateRoutes 기준: 정확한 날짜 매칭
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  if(rStart&&dt<rStart)return;
-                  if(rEnd&&dt>rEnd)return;
+                  if(!_dtMatch(dt,rule))return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
                     var up=RPRICE[rt]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
+                    // toId 인센: _getIncSetting(tid, rt) 기준
                     var _toInc=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
                     if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,inc:0};
                     _rtAgg[rt].cnt+=(rd.cnt||0);
@@ -7465,38 +7475,35 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc;
                   });
                 });
-                // ★ 프레시백
+                // ★ 프레시백: 정확한 날짜 매칭
                 if(fd.dateFresh){
                   Object.keys(fd.dateFresh).forEach(function(dt){
-                    if(rStart&&dt<rStart)return;
-                    if(rEnd&&dt>rEnd)return;
+                    if(!_dtMatch(dt,rule))return;
                     _totalFresh+=(fd.dateFresh[dt]||0);
                   });
                 }
-                // ★ 분실파손
+                // ★ 분실파손: 정확한 날짜 매칭
                 var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
                 if(_fdmg&&_fdmg.dateDmg){
                   Object.keys(_fdmg.dateDmg).forEach(function(dt){
-                    if(rStart&&dt<rStart)return;
-                    if(rEnd&&dt>rEnd)return;
+                    if(!_dtMatch(dt,rule))return;
                     _totalDmg+=(_fdmg.dateDmg[dt]||0);
                   });
                 }
-                tot+=_totalFresh-_totalDmg;
-                // ★ 사유 포맷: 라우트*건수 반품*건수 / 프레시백 금액 / 분실 금액
+                var _totalInc=Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
+                tot+=_totalFresh+_totalInc-_totalDmg;
+                // 사유 포맷
                 Object.keys(_rtAgg).sort().forEach(function(rt){
                   var a=_rtAgg[rt];
                   var s=rt+'*'+a.cnt+'건';
                   if(a.ret>0)s+=' 반품*'+a.ret+'건';
                   pts.push(s);
                 });
-                var _totalInc=Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
-                if(_totalInc>0){tot+=_totalInc;pts.push('인센 ₩'+_totalInc.toLocaleString());}
+                if(_totalInc>0)pts.push('인센 ₩'+_totalInc.toLocaleString());
                 if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
                 if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
               } else {
-                // fallback: routeDetails 기준 (라우트별 합산)
-                var _rtAgg2={};
+                // fallback: routeDetails 기준
                 var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
                 if(fs2&&fs2.routeDetails){
                   fs2.routeDetails.forEach(function(rd){
@@ -7504,105 +7511,73 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var up=RPRICE[rd.route]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    if(!_rtAgg2[rd.route])_rtAgg2[rd.route]={cnt:0,ret:0};
-                    _rtAgg2[rd.route].cnt+=(rd.cnt||0);
-                    _rtAgg2[rd.route].ret+=(rd.ret||0);
+                    if(!_rtAgg[rd.route])_rtAgg[rd.route]={cnt:0,ret:0};
+                    _rtAgg[rd.route].cnt+=(rd.cnt||0);
+                    _rtAgg[rd.route].ret+=(rd.ret||0);
+                  });
+                  Object.keys(_rtAgg).sort().forEach(function(rt){
+                    var a=_rtAgg[rt];
+                    var s=rt+'*'+a.cnt+'건';
+                    if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                    pts.push(s);
                   });
                 }
-                Object.keys(_rtAgg2).sort().forEach(function(rt){
-                  var a=_rtAgg2[rt];
-                  var s=rt+'*'+a.cnt+'건';
-                  if(a.ret>0)s+=' 반품*'+a.ret+'건';
-                  pts.push(s);
-                });
               }
 
               if(!tot)return;
+              // ★ toId: etcPlus 추가
               ts.etcPlus=(ts.etcPlus||0)+tot;
               var pv=ts.etcPlusReason||'';
               ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tR:tR,rStart:rStart,rEnd:rEnd,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,pts:pts,tR:tR,rule:rule});
             });
 
+            // ★ fromId: routeDetails 건수만 차감 (etcMinus 건드리지 않음)
             Object.keys(_fd).forEach(function(fid){
               var rules=_fd[fid];
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
-              if(!fs)return;
-              var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
-              var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              var pvm=fs.etcMinusReason||'';
+              if(!fs||!fs.routeDetails||!fs.routeDetails.length)return;
+              var fdm=drvMap[fid];
+              if(!fdm||!fdm.dateRoutes)return;
 
-              if(fs.routeDetails&&fs.routeDetails.length){
-                rules.forEach(function(rule){
-                  if(rule.hasDateRoutes){
-                    var fdm=drvMap[fid];
-                    if(fdm&&fdm.dateRoutes){
-                      Object.keys(fdm.dateRoutes).forEach(function(dt){
-                        // ★ 동일 범위 필터 (toId 쪽과 동일 기준)
-                        if(rule.rStart&&dt<rule.rStart)return;
-                        if(rule.rEnd&&dt>rule.rEnd)return;
-                        Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                          if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
-                          var rd=fdm.dateRoutes[dt][rt];
-                          var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                          if(ri<0)return;
-                          fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
-                          fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
-                        });
-                      });
-                    }
-                    // ★ 프레시백 차감 (날짜+라우트 매칭)
-                    if(fdm.dateFresh){
-                      var _freshDeduct=Object.keys(fdm.dateFresh).reduce(function(s,dt){
-                        // 해당 날짜에 해당 라우트가 있어야 차감
-                        if(!fdm.dateRoutes||!fdm.dateRoutes[dt])return s;
-                        var hasRoute=tR.length===0||Object.keys(fdm.dateRoutes[dt]).some(function(rt){return tR.indexOf(rt)>=0;});
-                        if(!hasRoute)return s;
-                        // 날짜 범위 확인
-                        if(rStart&&dt<rStart)return s;
-                        if(rEnd&&dt>rEnd+'~')return s;
-                        return s+(fdm.dateFresh[dt]||0);
-                      },0);
-                      fs.fresh=Math.max(0,(fs.fresh||0)-_freshDeduct);
-                    }
-                    // ★ 인센 차감 (날짜 정확 매칭)
-                    var _validDates2=_sortedDates.length?_sortedDates:Object.keys(fdm.dateRoutes);
-                    _validDates2.forEach(function(dt){
-                      if(!fdm.dateRoutes[dt])return;
-                      Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                        if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
-                        var rd2=fdm.dateRoutes[dt][rt];
-                        fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)*(rd2.addInc||0)+(rd2.ret||0)*(rd2.addInc||0)));
-                      });
-                    });
-                  } else {
-                    rule.pts.forEach(function(pt){
-                      var m=pt.match(/^(\S+)\s+(\d+)\uAC74/);
-                      if(!m)return;
-                      var rt=m[1],cnt=parseInt(m[2]);
-                      var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                      if(ri<0)return;
-                      fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
-                    });
-                  }
-                  // ★ 프레시백 차감 (날짜+라우트 매칭)
-                  var fdm2=drvMap[fid];
-                  if(fdm2&&fdm2.dateFresh&&fdm2.dateRoutes){
-                    var _fd2=Object.keys(fdm2.dateFresh).reduce(function(s,dt){
-                      if(!fdm2.dateRoutes[dt])return s;
-                      var hasRoute2=rule.tR.length===0||Object.keys(fdm2.dateRoutes[dt]).some(function(rt){return rule.tR.indexOf(rt)>=0;});
-                      if(!hasRoute2)return s;
-                      if(rule.rStart&&dt<rule.rStart)return s;
-                      if(rule.rEnd&&dt>rule.rEnd+'~')return s;
-                      return s+(fdm2.dateFresh[dt]||0);
-                    },0);
-                    fs.fresh=Math.max(0,(fs.fresh||0)-_fd2);
-                  }
+              rules.forEach(function(ruleInfo){
+                var rule=ruleInfo.rule;
+                var tR=ruleInfo.tR;
+                // 건수 차감: 정확한 날짜 매칭
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  if(!_dtMatch(dt,rule))return;
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd=fdm.dateRoutes[dt][rt];
+                    var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                    if(ri<0)return;
+                    fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                    fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                  });
                 });
-                fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
-                fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
-              }
+                // 프레시백 차감 (1회만)
+                if(fdm.dateFresh){
+                  var _freshDed=Object.keys(fdm.dateFresh).reduce(function(s,dt){
+                    if(!_dtMatch(dt,rule))return s;
+                    return s+(fdm.dateFresh[dt]||0);
+                  },0);
+                  fs.fresh=Math.max(0,(fs.fresh||0)-_freshDed);
+                }
+                // 인센 차감: _getIncSetting(fid, rt) 기준
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  if(!_dtMatch(dt,rule))return;
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd2=fdm.dateRoutes[dt][rt];
+                    var _fInc=typeof _getIncSetting==='function'?(_getIncSetting(fid,rt).on?(_getIncSetting(fid,rt).rate||0):0):0;
+                    fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)+(rd2.ret||0))*_fInc);
+                  });
+                });
+              });
+              // dcnt/rcnt 재계산
+              fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+              fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
             });
           }
           // 정산 보장금액 자동 채움 (동기)
