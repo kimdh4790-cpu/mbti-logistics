@@ -69,15 +69,11 @@ async function fetchAsset(path, request, env) {
   const filePath = path.startsWith('/') ? path : '/' + path;
   const fileName = filePath.replace(/^\//, '');
 
-  // MIME 타입 결정
-  const _mimeMap = {'.json':'application/json','.js':'application/javascript','.css':'text/css','.png':'image/png','.ico':'image/x-icon','.svg':'image/svg+xml','.webp':'image/webp'};
-  const _ext = fileName.includes('.') ? '.'+fileName.split('.').pop() : '';
-  const _mime = _mimeMap[_ext] || 'text/html; charset=utf-8';
   // KV 우선 서빙
   if (e && e.DONWAY_ASSETS) {
     const kvVal_fa = await e.DONWAY_ASSETS.get(fileName, 'text');
     if (kvVal_fa) {
-      return new Response(kvVal_fa, { status: 200, headers: { 'Content-Type': _mime, 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
+      return new Response(kvVal_fa, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Served-From': 'KV' } });
     }
   }
   // KV 없으면 GitHub Raw
@@ -1548,6 +1544,7 @@ async function acceptExchange(){
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
