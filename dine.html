@@ -1833,6 +1833,13 @@ function _dineSaveStore(did){
  }).catch(function(e){_dineToast('❌ '+e.message);});
 }
 
+
+function _dinePayslip(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ var ym=new Date().toISOString().slice(0,7);
+ wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
   '<div><div class="page-title">📋 급여명세서</div><div class="page-sub">직원별 월별 명세서</div></div>'+
   '<div style="display:flex;gap:6px;align-items:center">'+
