@@ -111,18 +111,39 @@ select.inp option{background:var(--s2)}
  #sidebar{display:none;position:fixed;top:0;left:0;height:100vh;z-index:100;transform:translateX(-100%);transition:.25s}
  #sidebar.open{display:flex!important;transform:translateX(0)}
  #dine-sidebar-btn{display:flex!important;align-items:center;justify-content:center}
- .kpi-grid{grid-template-columns:repeat(2,1fr)}
+ /* 탑바 모바일 */
+ #topbar{padding:0 10px;gap:6px}
+ .tb-sub{display:none}
+ .tb-right{gap:6px}
+ .tb-user{display:none}
+ #tb-attend-cnt{font-size:10px}
+ .tb-logout{padding:4px 8px;font-size:10px}
+ /* 레이아웃 */
  #app-wrap{height:auto!important;min-height:100vh}
  #main-wrap{overflow:visible!important;height:auto!important}
- #content{overflow-y:auto!important;height:auto!important;min-height:calc(100vh - 56px);padding:16px}
+ #content{overflow-y:auto!important;height:auto!important;min-height:calc(100vh - 56px);padding:12px}
  html,body{overflow:auto!important;height:auto!important}
- .ana-kpi{padding:14px!important}
- .ana-kpi .num{font-size:18px!important}
+ /* KPI 그리드 */
+ .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
+ .kpi-card{padding:10px!important}
+ .kpi-val{font-size:16px!important}
+ .kpi-label{font-size:9px!important}
+ /* 분석 */
+ .ana-kpi{padding:12px!important}
+ .ana-kpi .num{font-size:16px!important}
+ /* 인라인 그리드 강제 1열 */
  [style*="grid-template-columns:repeat(4"]{grid-template-columns:repeat(2,1fr)!important}
+ [style*="grid-template-columns:repeat(3"]{grid-template-columns:repeat(2,1fr)!important}
  [style*="grid-template-columns:3fr 2fr"]{grid-template-columns:1fr!important}
  [style*="grid-template-columns:2fr 1fr"]{grid-template-columns:1fr!important}
- [style*="grid-template-columns:3fr 1fr 1fr"]{grid-template-columns:1fr!important}
+ [style*="grid-template-columns:3fr 1fr"]{grid-template-columns:1fr!important}
  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+ [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+ /* 카드 */
+ .card{padding:12px!important}
+ .staff-grid{grid-template-columns:1fr!important}
+ /* 페이지 타이틀 */
+ .page-title{font-size:16px!important}
 }
 
 /* ── 로그인 화면 ── */
