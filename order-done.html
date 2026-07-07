@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>주문 완료</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#07071a;color:#f0f0ff;font-family:'Apple SD Gothic Neo','Pretendard',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{text-align:center;max-width:360px;width:100%}
+.icon{font-size:64px;margin-bottom:16px}
+.title{font-size:24px;font-weight:900;margin-bottom:8px}
+.sub{font-size:14px;color:#9898c0;line-height:1.7;margin-bottom:24px}
+.order-num{background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.3);border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px;color:#9898c0}
+.order-num b{display:block;font-size:20px;font-weight:900;color:#38bdf8;margin-top:4px}
+.btn{padding:12px 28px;background:linear-gradient(135deg,#0891b2,#0e7490);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="box">
+ <div class="icon">🎉</div>
+ <div class="title">주문 완료!</div>
+ <div class="sub">결제가 완료됐습니다.<br>잠시만 기다려주세요.</div>
+ <div class="order-num">주문번호<b id="order-num">확인중...</b></div>
+ <button class="btn" onclick="goBack()">추가 주문하기</button>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyC4oiIjh3eLvxVz9VEjxu7L7KHDKs_A3jA",projectId:"mbti-logistics"});
+var db=firebase.firestore();
+var p=new URLSearchParams(location.search);
+var oid=p.get('oid')||'';
+var did=p.get('did')||'';
+var tid=p.get('tid')||'';
+var paymentKey=p.get('paymentKey')||'';
+var amount=p.get('amount')||'';
+
+document.getElementById('order-num').textContent=oid.slice(-8)||'-';
+
+/* 결제 승인 */
+if(paymentKey&&oid&&amount){
+ fetch('/toss/confirm',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({paymentKey:paymentKey,orderId:oid,amount:parseInt(amount)})
+ }).then(function(r){return r.json();}).then(function(d){
+  if(d.error){document.querySelector('.title').textContent='결제 오류';document.querySelector('.sub').textContent=d.error;return;}
+  /* 주문 상태 업데이트 */
+  db.collection('toss_orders').doc(oid).update({status:'paid',paymentKey:paymentKey,paidAt:new Date().toISOString()});
+  /* FILO 앱에 주문 알림용 filo_table_orders 저장 */
+  db.collection('filo_table_orders').add({dealerId:did,tableId:tid,orderId:oid,status:'ordered',notified:false,createdAt:new Date().toISOString()});
+ }).catch(function(){});
+}
+
+function goBack(){location.href='/order?did='+did+'&tid='+tid;}
+</script>
+</body>
+</html>
