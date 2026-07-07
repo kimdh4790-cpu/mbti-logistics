@@ -1,34 +1,12 @@
-name: Pages 자동배포
-
+name: Pages 자동배포 (비활성화)
+# ⚠️ Worker+KV 구조로 전환됨 — Pages 배포 불필요
+# 수동 실행만 허용 (자동 트리거 없음)
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy-donway-pages:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: donway-pages 파일 동기화
-        run: |
-          cp donway_landing.html donway-pages/index.html
-          cp settle.html donway-pages/settle.html
-          cp -f join.html donway-pages/join.html 2>/dev/null || true
-          cp -f manifest.json donway-pages/manifest.json 2>/dev/null || true
-          cp -f favicon.ico donway-pages/favicon.ico 2>/dev/null || true
-          cp -f icon-192.png donway-pages/icon-192.png 2>/dev/null || true
-          cp -f icon-512.png donway-pages/icon-512.png 2>/dev/null || true
-          cp -f sw.js donway-pages/sw.js 2>/dev/null || true
-          cp -f donway-sound.js donway-pages/donway-sound.js 2>/dev/null || true
-          cp -f jsQR.min.js donway-pages/jsQR.min.js 2>/dev/null || true
-          cp -f qrcode.min.js donway-pages/qrcode.min.js 2>/dev/null || true
-          cp -f xlsx.full.min.js donway-pages/xlsx.full.min.js 2>/dev/null || true
-
-      - name: Install Wrangler
-        run: npm install -g wrangler@4
-
-      - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        run: wrangler pages deploy donway-pages --project-name=donway-pages
+      - name: 안내
+        run: echo "현재 donway.ai.kr / filo.ai.kr 은 Cloudflare Worker로 서빙 중. Pages 배포 불필요."
