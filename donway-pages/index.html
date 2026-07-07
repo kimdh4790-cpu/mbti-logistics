@@ -1262,7 +1262,7 @@ function _saveWorkSettings() {
     .set(ws).then(function() {
       window._workSettings = ws;
       toast('✅ 근무 설정 저장됨');
-      toast('✅ 저장됨'); // pageWorkSettings 제거됨
+      pageWorkSettings(); // 미리보기 갱신
     }).catch(function(e) { toast('❌ '+e.message); });
 }
 
@@ -2141,23 +2141,7 @@ function parseCoupangExcel(inp){
         }
       }).catch(function(){})
     :Promise.resolve();
-  var idSupportPromise=(window._db&&did)
-    ?window._db.collection('idSupport').where('dealerId','==',did).get()
-        .then(function(snap){
-          var r=[];
-          snap.forEach(function(d){
-            var data=Object.assign({_id:d.id},d.data());
-            if(!data.startDate&&data.dates&&data.dates.length){
-              var sorted=data.dates.slice().sort();
-              data.startDate=sorted[0];
-              data.endDate=sorted[sorted.length-1];
-            }
-            r.push(data);
-          });
-          window._idSupportRules=r;
-        }).catch(function(){})
-    :Promise.resolve();
-  Promise.all([driversPromise, settingsPromise, idSupportPromise]).then(function(results){
+  Promise.all([driversPromise, settingsPromise]).then(function(results){
     _parseCoupangExcelInner(file, results[0], month);
   });
 }
@@ -6944,10 +6928,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
-            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0,addInc:0};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0};
             drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
             drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
-            drvMap[cleanId].dateRoutes[rowDate][route].addInc+=addInc;
           }
 
           // 시즌 기간별 분리 집계
@@ -6999,7 +6982,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             var tr=total[tj];if(!tr||!tr[tID])continue;
             var tid=String(tr[tID]).replace(/@[a-z0-9@._-]+$/i,'').trim();
             if(!tid||tid==='ID')continue;
-            if(tid.includes('수수료')||tid.includes('영업점')){window._agencyFee=(window._agencyFee||0)+Math.abs(Number(tr[tTotal])||0);continue;}
             // ★ 정산총괄 = VAT제외 기준 → ×1.1 해서 VAT포함으로 저장
             // ★ raw값 저장 (VAT제외) — display/calcNet에서 ×1.1 처리
             totalMap[tid]={
@@ -7371,7 +7353,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 return Object.assign({},newRd,{unitPrice:oldRd.unitPrice});
               return newRd;
             });
-            prev.etcMinusReason='';
             settlements[existing]=Object.assign({},prev,entry);
             updated++;
           } else {
@@ -7418,6 +7399,20 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 둘 다 합산
+          var _mergedIdRules=[];
+          if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
+            _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
+          }
+          if(window._idSupportRules&&window._idSupportRules.length){
+            window._idSupportRules.forEach(function(r){
+              var dup=_mergedIdRules.some(function(x){return x.fromId===r.fromId&&x.toId===r.toId;});
+              if(!dup) _mergedIdRules.push(r);
+            });
+          }
+          if(_mergedIdRules.length){
+            window._idSupportRules=_mergedIdRules;
+          }
           if(window._idSupportRules&&window._idSupportRules.length){
             function _normD(s){
               if(!s)return '';
@@ -7434,34 +7429,68 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
             var _fd={};
             window._idSupportRules.forEach(function(rule){
-              var fid=rule.fromId, tid=rule.toId;
+              var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
+              var tid=(rule.toId||'').replace(/@df$/i,'').trim();
               var fd=drvMap[fid]; if(!fd)return;
-              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid;});
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
               if(!ts)return;
-              // 날짜 → yyyy-MM 변환 (월 기준)
-              var tDYM=(rule.dates||[]).map(function(d){return _dateYM(d);}).filter(Boolean);
-              var tDFull=(rule.dates||[]).map(function(d){var p=String(d).trim().split('-');if(p.length<3)return '';return p[0]+'-'+(p[1].length<2?'0'+p[1]:p[1])+'-'+(p[2].length<2?'0'+p[2]:p[2]);}).filter(Boolean);
+              // ★ 날짜 범위: startDate/endDate 우선, 없으면 dates[] 배열 첫/끝값으로 범위 구성
+              var _ndFmt=function(d){if(!d)return '';d=String(d).trim();var p=d.split('-');if(p.length>=3){var m=p[1].replace(/^0+/,'')||'0',dd=p[2].replace(/^0+/,'')||'0';return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);}return d;};
+              var _sortedDates=(rule.dates||[]).map(_ndFmt).filter(Boolean).sort();
+              var rStart=_ndFmt(rule.startDate)||(_sortedDates.length?_sortedDates[0]:'');
+              var rEnd=_ndFmt(rule.endDate)||(_sortedDates.length?_sortedDates[_sortedDates.length-1]:'');
               var tR=rule.routes||[];
               var tot=0, pts=[];
 
               var hasDateRoutes=fd.dateRoutes&&Object.keys(fd.dateRoutes).length>0;
               if(hasDateRoutes){
+                // ★ 라우트별 합산 (날짜 범위 내)
+                var _rtAgg={};  // {rt: {cnt,ret}}
+                var _totalFresh=0, _totalDmg=0;
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  var dtYM=_dateYM(dt);
-                  // 날짜 조건: 비어있으면 전체, 있으면 같은 월만
-                  if(tDFull.length&&tDFull.indexOf(dt)<0)return;
-                  else if(!tDFull.length&&tDYM.length&&tDYM.indexOf(dtYM)<0)return;
+                  if(rStart&&dt<rStart)return;
+                  if(rEnd&&dt>rEnd)return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
                     var up=RPRICE[rt]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    pts.push(rt+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0};
+                    _rtAgg[rt].cnt+=(rd.cnt||0);
+                    _rtAgg[rt].ret+=(rd.ret||0);
                   });
                 });
+                // ★ 프레시백
+                if(fd.dateFresh){
+                  Object.keys(fd.dateFresh).forEach(function(dt){
+                    if(rStart&&dt<rStart)return;
+                    if(rEnd&&dt>rEnd)return;
+                    _totalFresh+=(fd.dateFresh[dt]||0);
+                  });
+                }
+                // ★ 분실파손
+                var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
+                if(_fdmg&&_fdmg.dateDmg){
+                  Object.keys(_fdmg.dateDmg).forEach(function(dt){
+                    if(rStart&&dt<rStart)return;
+                    if(rEnd&&dt>rEnd)return;
+                    _totalDmg+=(_fdmg.dateDmg[dt]||0);
+                  });
+                }
+                tot+=_totalFresh-_totalDmg;
+                // ★ 사유 포맷: 라우트*건수 반품*건수 / 프레시백 금액 / 분실 금액
+                Object.keys(_rtAgg).sort().forEach(function(rt){
+                  var a=_rtAgg[rt];
+                  var s=rt+'*'+a.cnt+'건';
+                  if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                  pts.push(s);
+                });
+                if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
+                if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
               } else {
-                // fallback: routeDetails 기준
+                // fallback: routeDetails 기준 (라우트별 합산)
+                var _rtAgg2={};
                 var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
                 if(fs2&&fs2.routeDetails){
                   fs2.routeDetails.forEach(function(rd){
@@ -7469,33 +7498,30 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var up=RPRICE[rd.route]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    pts.push(rd.route+' '+(rd.cnt||0)+'건'+(rd.ret>0?' 반품'+(rd.ret)+'건':''));
+                    if(!_rtAgg2[rd.route])_rtAgg2[rd.route]={cnt:0,ret:0};
+                    _rtAgg2[rd.route].cnt+=(rd.cnt||0);
+                    _rtAgg2[rd.route].ret+=(rd.ret||0);
                   });
                 }
+                Object.keys(_rtAgg2).sort().forEach(function(rt){
+                  var a=_rtAgg2[rt];
+                  var s=rt+'*'+a.cnt+'건';
+                  if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                  pts.push(s);
+                });
               }
 
               if(!tot)return;
-              // 프레시백 비례 안분: fromId 총 프레시백 × (아이디지원 건수 / fromId 전체 배송건수)
-              var freshAlloc=0;
-              var fdFresh=fd.freshAmt||0;
-              var fdTotalCnt=fd.dcnt||0;
-              if(fdFresh>0&&fdTotalCnt>0){
-                var idSupportCnt=0;
-                pts.forEach(function(p){var m=p.match(/(\d+)건/);if(m)idSupportCnt+=parseInt(m[1]);});
-                freshAlloc=Math.round(fdFresh*(idSupportCnt/fdTotalCnt));
-              }
-              var totWithFresh=tot+freshAlloc;
-              ts.etcPlus=(ts.etcPlus||0)+totWithFresh;
+              ts.etcPlus=(ts.etcPlus||0)+tot;
               var pv=ts.etcPlusReason||'';
-              var freshNote=freshAlloc>0?' 프레시백안분₩'+freshAlloc.toLocaleString():'';
-              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·')+freshNote;
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,freshAlloc:freshAlloc,pts:pts,tDYM:tDYM,tDFull:tDFull,tR:tR,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,pts:pts,tR:tR,rStart:rStart,rEnd:rEnd,hasDateRoutes:hasDateRoutes});
             });
 
             Object.keys(_fd).forEach(function(fid){
               var rules=_fd[fid];
-              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
               if(!fs)return;
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
@@ -7509,9 +7535,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var fdm=drvMap[fid];
                     if(fdm&&fdm.dateRoutes){
                       Object.keys(fdm.dateRoutes).forEach(function(dt){
-                        var dtYM=_dateYM(dt);
-                        if(rule.tDFull&&rule.tDFull.length&&rule.tDFull.indexOf(dt)<0)return;
-                        else if((!rule.tDFull||!rule.tDFull.length)&&rule.tDYM.length&&rule.tDYM.indexOf(dtYM)<0)return;
+                        // ★ 동일 범위 필터 (toId 쪽과 동일 기준)
+                        if(rule.rStart&&dt<rule.rStart)return;
+                        if(rule.rEnd&&dt>rule.rEnd)return;
                         Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                           if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                           var rd=fdm.dateRoutes[dt][rt];
@@ -21108,7 +21134,7 @@ function _submitHourlyLeave() {
   }).then(function(){
     toast('✅ 시간 휴가 신청 완료 ('+hours+'시간)');
     document.getElementById('mo-leave-h').remove();
-    goPage('home');
+    pageLeave();
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -28175,8 +28201,8 @@ function goPage(page){
   vehicle:pageVehicle,
   expense:pageExpense,
   evaluation:pageEvaluation,
-  work_settings:function(){toast('준비 중');},
-  monthly_stats:function(){toast('준비 중');},
+  work_settings:pageWorkSettings,
+  monthly_stats:pageMonthlyStats,
   delivery_settle:pageDeliverySettle,
   delivery_input:pageDeliveryPlatform,
   delivery_stats:pageDeliveryStats2,
@@ -28306,9 +28332,7 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      // ★ 아이디지원 신규생성 문서 총매출 제외
-      var _isIdDoc=(+s.dcnt===0&&+s.damt===0&&String(s.etcPlusReason||'').includes('아이디지원'));
-      var ct=_isIdDoc?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
+      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
       // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
       totTaxBase+=(r.income||r.totalAmt||0);
@@ -28378,9 +28402,7 @@ function pageSettle(){
     hero.style.cssText='background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 50%,#312e81 100%);border-radius:16px;padding:28px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden';
     // 마진 = 쿠팡수입 - 기사세금계산서 - 고용·산재(기사+회사) - 부가세10%
     var totInsAll=totEmpComp+totWorkComp+totEmpDrv+totWorkDrv; // 고용·산재 전체
-    var _agencyFeeVat=Math.round((window._agencyFee||0)*1.1);
-  totCoupang=totCoupang-_agencyFeeVat;
-  var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
+    var totMarginBeforeVat=totCoupang-totTaxBase-totInsAll;
     var totVat=Math.round(totMarginBeforeVat*0.1); // 부가세 10%
     var totMargin=totMarginBeforeVat-totVat;
     // 경비 차감 실순수익
@@ -31028,16 +31050,13 @@ function recalcAllSettlements(){
       if(_drvInfo&&_drvInfo.settleGuarantee){
         var _g=_drvInfo.settleGuarantee;
         var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+(x.etcPlusTL||0);  // ★ inc 제외
-        // 아이디지원 보존, 보장성만 제거
+        // 보장성 제외한 기존 etcPlus (보장성 외 기타+ 있으면 유지)
         var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
         var _prevReason=_recalcEtcPlusReason;
         if(_prevReason.indexOf('정산보장')>=0){
-          // 아이디지원 있으면 보존, 보장성만 제거
-          var _parts2=_prevReason.split(' / ');
-          var _keepParts=_parts2.filter(function(p){return p.indexOf('정산보장')<0;});
-          _prevReason=_keepParts.join(' / ');
-          // etcPlus에서 보장성 금액 제거 불가(혼합)이므로 아이디지원 있으면 전체유지, 없으면 0
-          if(_prevReason.indexOf('아이디지원')<0) _prevEtcPlusNoGuarantee=0;
+          // 기존 보장성 차액 제거하고 순수 기타+만 남김
+          _prevEtcPlusNoGuarantee=0;
+          _prevReason='';
         }
         var _baseWithEtc=_baseAmt+_prevEtcPlusNoGuarantee;
         if(_g>_baseWithEtc){
@@ -31060,7 +31079,6 @@ function recalcAllSettlements(){
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
         etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
-        etcMinusReason:'',
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
@@ -41082,7 +41100,7 @@ window._invCompareExcel = function(file, did){
       var html=
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
           '<div style="font-size:15px;font-weight:800">🔍 입고 대조검수 결과</div>'+
-          '<button onclick="goPage("home")" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:7px;font-size:12px;cursor:pointer">← 홈으로</button>'+
+          '<button onclick="pageInventory()" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:7px;font-size:12px;cursor:pointer">← 재고관리로</button>'+
         '</div>'+
         // 요약 카드
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
@@ -41190,7 +41208,7 @@ function _invConfirmByActual(did, results){
   });
   batch.commit().then(function(){
     toast('✅ '+toSave.length+'건 입고 확정 완료!');
-    goPage('home');
+    pageInventory();
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -42082,7 +42100,7 @@ function _invBatchSave(did, items, inItems, outItems){
       saveChunks('inventory_out', outItems, function(){
         _saveChangeLog(inItems.length, outItems.length, items.length);
         toast('✅ 품목 '+items.length+'종 / 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 등록 완료!');
-        goPage('home');
+        pageInventory();
       });
     });
   });
@@ -42138,7 +42156,7 @@ function _invSaveIn(did){
   }).then(function(){
     toast('✅ 입고 저장됨');
     document.querySelector('[style*="position:fixed"]').remove();
-    goPage('home');
+    pageInventory();
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -42191,7 +42209,7 @@ function _invSaveOut(did){
   }).then(function(){
     toast('✅ 출고 저장됨');
     document.querySelector('[style*="position:fixed"]').remove();
-    goPage('home');
+    pageInventory();
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
