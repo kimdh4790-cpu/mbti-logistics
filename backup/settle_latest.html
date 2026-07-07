@@ -6704,11 +6704,22 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               }
 
               if(!tot)return;
-              ts.etcPlus=(ts.etcPlus||0)+tot;
+              // 프레시백 비례 안분: fromId 총 프레시백 × (아이디지원 건수 / fromId 전체 배송건수)
+              var freshAlloc=0;
+              var fdFresh=fd.freshAmt||0;
+              var fdTotalCnt=fd.dcnt||0;
+              if(fdFresh>0&&fdTotalCnt>0){
+                var idSupportCnt=0;
+                pts.forEach(function(p){var m=p.match(/(\d+)건/);if(m)idSupportCnt+=parseInt(m[1]);});
+                freshAlloc=Math.round(fdFresh*(idSupportCnt/fdTotalCnt));
+              }
+              var totWithFresh=tot+freshAlloc;
+              ts.etcPlus=(ts.etcPlus||0)+totWithFresh;
               var pv=ts.etcPlusReason||'';
-              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+              var freshNote=freshAlloc>0?' 프레시백안분₩'+freshAlloc.toLocaleString():'';
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·')+freshNote;
               if(!_fd[fid]) _fd[fid]=[];
-              _fd[fid].push({tot:tot,pts:pts,tDYM:tDYM,tDFull:tDFull,tR:tR,hasDateRoutes:hasDateRoutes});
+              _fd[fid].push({tot:tot,freshAlloc:freshAlloc,pts:pts,tDYM:tDYM,tDFull:tDFull,tR:tR,hasDateRoutes:hasDateRoutes});
             });
 
             Object.keys(_fd).forEach(function(fid){
@@ -6716,10 +6727,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid;});
               if(!fs)return;
               var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
+              var totalFreshDeduct=rules.reduce(function(s,r){return s+(r.freshAlloc||0);},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
+              fs.etcMinus=(fs.etcMinus||0)+totalDeduct+totalFreshDeduct;
               var pvm=fs.etcMinusReason||'';
-              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
+              var freshDeductNote=totalFreshDeduct>0?' 프레시백차감₩'+totalFreshDeduct.toLocaleString():'';
+              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·')+freshDeductNote;
 
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
