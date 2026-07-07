@@ -28,7 +28,7 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple S
 
 /* ── 슬라이드 ── */
 #slides{width:100%;height:100dvh;min-height:540px;position:relative;overflow:hidden}
-.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 56px;opacity:0;transition:opacity .55s ease,transform .55s ease;transform:translateX(60px);pointer-events:none;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 56px;opacity:0;transition:opacity .55s ease,transform .55s ease;transform:translateX(60px);pointer-events:none;overflow-y:auto;overflow-x:hidden}
 .slide.active{opacity:1;transform:translateX(0);pointer-events:all}
 .slide.prev{opacity:0;transform:translateX(-60px)}
 .s1{background:radial-gradient(ellipse 70% 60% at 20% 45%,rgba(8,145,178,.18) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 85% 65%,rgba(124,58,237,.12) 0%,transparent 55%),var(--bg)}
@@ -446,9 +446,7 @@ document.addEventListener('touchend',function(e){
   if(document.getElementById('modal-overlay').classList.contains('open'))return;
   var dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)_goSlide(dx<0?1:-1);
 });
-var timer=setInterval(function(){_goSlide(1);},6000);
-document.getElementById('slides').addEventListener('mouseenter',function(){clearInterval(timer);});
-document.getElementById('slides').addEventListener('mouseleave',function(){timer=setInterval(function(){_goSlide(1);},6000);});
+/* 자동 슬라이드 없음 */
 
 /* ── 업종 탭 ── */
 var indMap={
@@ -568,7 +566,6 @@ var MODALS={
 function _openModal(key){
   var d=MODALS[key];
   if(!d)return;
-  clearInterval(timer);
   var hdr=document.getElementById('modal-header');
   var bdy=document.getElementById('modal-body');
   hdr.innerHTML='<div class="modal-ic-big" style="background:'+d.color+';border:1px solid '+d.border+'">'+d.ic+'</div>'+
@@ -584,7 +581,6 @@ function _openModal(key){
 function _closeModal(e){
   if(e&&e.target!==document.getElementById('modal-overlay'))return;
   document.getElementById('modal-overlay').classList.remove('open');
-  timer=setInterval(function(){_goSlide(1);},6000);
 }
 </script>
 </body>
