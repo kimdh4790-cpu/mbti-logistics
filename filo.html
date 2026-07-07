@@ -604,6 +604,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <script>
 
@@ -4225,9 +4226,11 @@ function _filoShowTableQRModal(did){
 
 function _filoEnsureQR(cb){
  if(window.QRCode)return cb();
+ /* 혹시 로드 안됐으면 동적 로드 */
  var s=document.createElement('script');
  s.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
- s.onload=cb;document.head.appendChild(s);
+ s.onload=function(){setTimeout(cb,100);};
+ document.head.appendChild(s);
 }
 
 function _filoQRDownload(num,name){
