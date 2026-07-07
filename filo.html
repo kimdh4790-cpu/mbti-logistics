@@ -4117,7 +4117,7 @@ function _filoShowTableQRModal(did){
  _db.collection('filo_tables').where('dealerId','==',did).get()
   .then(function(snap){
    var tables=[];
-   if(snap.empty){for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i});}
+   if(snap.empty){for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i,tableNum:i,tableName:'테이블 '+i});}
    else{snap.forEach(function(doc){var d=doc.data();tables.push({num:d.tableNum||1,name:d.tableName||('테이블 '+(d.tableNum||1))});});}
    tables.sort(function(a,b){return a.num-b.num;});
 
@@ -4159,6 +4159,8 @@ function _filoShowTableQRModal(did){
    document.body.appendChild(mo);
 
    var baseUrl='https://filo.ai.kr/order?d='+did+'&t=';
+
+   /* 카드 먼저 생성 */
    tables.forEach(function(t){
     var card=document.createElement('div');
     card.style.cssText='background:var(--b3);border:1px solid var(--bd);border-radius:12px;padding:14px;text-align:center';
@@ -4170,7 +4172,8 @@ function _filoShowTableQRModal(did){
 
     var canvas=document.createElement('canvas');
     canvas.id='qr-c-'+t.num;
-    canvas.style.cssText='width:120px;height:120px;display:block;margin:0 auto';
+    canvas.width=120;canvas.height=120;
+    canvas.style.cssText='display:block;margin:0 auto;border-radius:8px';
     card.appendChild(canvas);
 
     var btnWrap=document.createElement('div');
@@ -4189,15 +4192,16 @@ function _filoShowTableQRModal(did){
     btnWrap.appendChild(dlBtn);btnWrap.appendChild(prBtn);
     card.appendChild(btnWrap);
     list.appendChild(card);
+   });
 
-    var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
-    (function(tNum,tUrl){
-     _filoEnsureQR(function(){
-      var cv=document.getElementById('qr-c-'+tNum);
-      if(!cv)return;
-      QRCode.toCanvas(cv,tUrl,{width:120,margin:1,color:{dark:'#000000',light:'#ffffff'}},function(err){if(err)console.error(err);});
-     });
-    })(t.num,url);
+   /* QR 라이브러리 로드 후 일괄 생성 */
+   _filoEnsureQR(function(){
+    tables.forEach(function(t){
+     var cv=document.getElementById('qr-c-'+t.num);
+     if(!cv)return;
+     var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
+     QRCode.toCanvas(cv,url,{width:120,margin:2,color:{dark:'#000000',light:'#ffffff'}},function(err){if(err)console.error('QR err:',err);});
+    });
    });
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
