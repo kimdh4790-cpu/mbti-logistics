@@ -269,7 +269,7 @@ var cur=0,total=6,anim=false;
 function _setSlide(n){
  if(anim)return;anim=true;
  var sl=document.querySelectorAll('.slide'),dt=document.querySelectorAll('.dot');
- sl[cur].classList.remove('active');sl[cur].classList.add(n>cur?'prev':'');
+ sl[cur].classList.remove('active');if(n>cur)sl[cur].classList.add('prev');
  cur=n;
  sl.forEach(function(s){s.classList.remove('active','prev');});
  sl[cur].classList.add('active');
