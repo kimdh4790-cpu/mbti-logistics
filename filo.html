@@ -4185,11 +4185,10 @@ function _filoShowTableQRModal(did){
     title.textContent=t.name;
     card.appendChild(title);
 
-    var canvas=document.createElement('canvas');
-    canvas.id='qr-c-'+t.num;
-    canvas.width=120;canvas.height=120;
-    canvas.style.cssText='display:block;margin:0 auto;border-radius:8px';
-    card.appendChild(canvas);
+    var qrWrap=document.createElement('div');
+    qrWrap.id='qr-c-'+t.num;
+    qrWrap.style.cssText='width:120px;height:120px;margin:0 auto;border-radius:8px;overflow:hidden;background:#fff';
+    card.appendChild(qrWrap);
 
     var btnWrap=document.createElement('div');
     btnWrap.style.cssText='margin-top:10px;display:flex;gap:4px;justify-content:center';
