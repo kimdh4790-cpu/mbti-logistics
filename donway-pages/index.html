@@ -7573,26 +7573,28 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           Object.keys(_fd).forEach(function(fid){
             var rules=_fd[fid];
             var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
-            if(!fs||!fs.routeDetails||!fs.routeDetails.length)return;
+            if(!fs)return;
             var fdm=drvMap[fid];
-            if(!fdm||!fdm.dateRoutes)return;
+            if(!fdm)return;
 
             rules.forEach(function(ruleInfo){
               var rule=ruleInfo.rule;
               var tR=ruleInfo.tR;
-              // 건수 차감: 정확한 날짜 매칭
-              Object.keys(fdm.dateRoutes).forEach(function(dt){
-                if(!_dtMatch(dt,rule))return;
-                Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                  if(tR.length&&tR.indexOf(rt)<0)return;
-                  var rd=fdm.dateRoutes[dt][rt];
-                  var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                  if(ri<0)return;
-                  fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
-                  fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+              // 건수 차감: routeDetails 있을 때만
+              if(fs.routeDetails&&fs.routeDetails.length&&fdm.dateRoutes){
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  if(!_dtMatch(dt,rule))return;
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd=fdm.dateRoutes[dt][rt];
+                    var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
+                    if(ri<0)return;
+                    fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
+                    fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                  });
                 });
-              });
-              // 프레시백 차감 (1회만)
+              }
+              // 프레시백 차감 (routeDetails 유무 무관, 1회만)
               if(fdm.dateFresh){
                 var _freshDed=Object.keys(fdm.dateFresh).reduce(function(s,dt){
                   if(!_dtMatch(dt,rule))return s;
