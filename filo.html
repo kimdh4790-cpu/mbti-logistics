@@ -4105,14 +4105,144 @@ function _filoPageTableQR(el){
   '<div id="filo-table-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">'+
   '<div style="text-align:center;padding:30px;color:var(--t3);grid-column:1/-1">⏳ 로딩중...</div></div>'+
   '<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">📋 예약 대기</div>'+
-  '<div id="filo-booking-list"><div style="text-align:center;padding:16px;color:var(--t3);font-size:12px">로딩중...</div></div></div>';
+  '<div id="filo-booking-list"><div style="text-align:center;padding:16px;color:var(--t3);font-size:12px">로딩중...</div></div></div>'+
+  /* QR 섹션 */
+  '<div class="card" style="margin-top:12px;display:none" id="qr-section">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+  '<div style="font-size:13px;font-weight:800">📱 테이블 QR 코드</div>'+
+  '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">🖨️ 전체 인쇄</button>'+
+  '</div>'+
+  '<div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>'+
+  '</div>';
+
  el.appendChild(wrap);
  _filoTableLoad(did);
  var qrBtn=document.getElementById('table-qr-btn');
- if(qrBtn)qrBtn.onclick=function(){_filoShowTableQRModal(did);};
- var qrBtn2=document.getElementById('table-qr-btn2');
- if(qrBtn2)qrBtn2.onclick=function(){_filoShowTableQRModal(did);};
+ if(qrBtn)qrBtn.onclick=function(){_filoGenQRs(did);};
 }
+
+function _filoGenQRs(did){
+ did=did||_CU.dealerId||_CU.uid;
+ var sec=document.getElementById('qr-section');
+ var grid=document.getElementById('qr-grid');
+ if(!sec||!grid)return;
+ sec.style.display='block';
+ grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ QR 생성중...</div>';
+
+ /* Firestore에서 테이블 목록 가져오기 */
+ _db.collection('filo_tables').where('dealerId','==',did).get().then(function(snap){
+  var seen={};
+  if(snap.empty){
+   for(var i=1;i<=10;i++)seen[i]={num:i,name:'테이블 '+i};
+  } else {
+   snap.forEach(function(doc){
+    var d=doc.data();
+    var num=d.tableNum||d.tableId||1;
+    var name=d.tableName||('테이블 '+num);
+    if(!seen[num]||name!=='테이블 '+num)seen[num]={num:num,name:name};
+   });
+  }
+  var tables=Object.values(seen).sort(function(a,b){return a.num-b.num;});
+
+  grid.innerHTML='';
+  var baseUrl='https://filo.ai.kr/order?d='+did+'&t=';
+
+  tables.forEach(function(t){
+   var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
+   var div=document.createElement('div');
+   div.className='card';
+   div.style.cssText='text-align:center;padding:14px';
+   div.innerHTML=
+    '<div style="font-size:13px;font-weight:800;margin-bottom:10px">'+t.name+'</div>'+
+    '<div id="qr-'+t.num+'" style="background:#fff;padding:6px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
+    '<div style="display:flex;gap:4px;justify-content:center">'+
+    '<button data-dl="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer">💾 저장</button>'+
+    '<button data-pr="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
+    '<button onclick="window.open(\''+url+'\',\'_blank\')" style="padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">👁 미리보기</button>'+
+    '</div>';
+   grid.appendChild(div);
+  });
+
+  /* QR 라이브러리 로드 후 생성 */
+  function genQRs(){
+   tables.forEach(function(t){
+    var el=document.getElementById('qr-'+t.num);
+    if(!el||el.children.length>0)return;
+    var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
+    try{
+     new QRCode(el,{text:url,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }catch(e){console.error('QR err:',e);}
+   });
+  }
+
+  if(window.QRCode){
+   genQRs();
+  } else {
+   var s=document.createElement('script');
+   s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+   s.onload=function(){setTimeout(genQRs,100);};
+   document.head.appendChild(s);
+  }
+
+  /* 버튼 이벤트 위임 */
+  grid.addEventListener('click',function(e){
+   var dlBtn=e.target.closest('[data-dl]');
+   var prBtn=e.target.closest('[data-pr]');
+   if(dlBtn)_filoQRSave(dlBtn.dataset.dl,dlBtn.dataset.name);
+   if(prBtn)_filoQRPrint(prBtn.dataset.pr,prBtn.dataset.name);
+  });
+ }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+function _filoQRSave(num,name){
+ var el=document.getElementById('qr-'+num);
+ if(!el)return;
+ var img=el.querySelector('img');
+ var canvas=el.querySelector('canvas');
+ var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
+ if(!src){_filoToast('❌ QR 없음');return;}
+ var a=document.createElement('a');
+ a.download=name+'_QR.png';a.href=src;a.click();
+ _filoToast('💾 '+name+' QR 저장됐습니다');
+}
+
+function _filoQRPrint(num,name){
+ var el=document.getElementById('qr-'+num);
+ if(!el)return;
+ var img=el.querySelector('img');
+ var canvas=el.querySelector('canvas');
+ var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
+ if(!src)return;
+ var w=window.open('','_blank','width=400,height=500');
+ w.document.write('<html><head><title>'+name+'</title>'+
+  '<style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}h2{margin-bottom:16px}img{width:220px;height:220px}p{margin-top:10px;font-size:13px;color:#666}</style></head>'+
+  '<body onload="window.print()"><h2>'+name+'</h2><img src="'+src+'"><p>QR 스캔 → 주문</p></body></html>');
+ w.document.close();
+}
+
+function _filoQRPrintAll(){
+ var items=document.querySelectorAll('[id^="qr-"]');
+ if(!items.length){_filoToast('❌ QR 없음');return;}
+ var imgs='';
+ items.forEach(function(el){
+  var num=el.id.replace('qr-','');
+  var img=el.querySelector('img');
+  var canvas=el.querySelector('canvas');
+  var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
+  if(!src)return;
+  imgs+='<div style="display:inline-block;margin:12px;text-align:center;page-break-inside:avoid">'+
+   '<div style="font-weight:700;margin-bottom:6px">테이블 '+num+'</div>'+
+   '<img src="'+src+'" style="width:150px;height:150px;display:block">'+
+   '<div style="font-size:11px;color:#666;margin-top:4px">QR 스캔 → 주문</div></div>';
+ });
+ if(!imgs){_filoToast('❌ QR 없음');return;}
+ var w=window.open('','_blank');
+ w.document.write('<html><head><title>테이블 QR</title><style>body{font-family:sans-serif;padding:20px}@media print{.no-print{display:none}}</style></head>'+
+  '<body><h2 style="margin-bottom:16px">📱 테이블 QR 코드</h2>'+imgs+
+  '<br><button class="no-print" onclick="window.print()" style="padding:10px 24px;margin-top:16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ 인쇄</button></body></html>');
+ w.document.close();
+}
+
 
 function _filoShowTableQRModal(did){
  _db.collection('filo_tables').where('dealerId','==',did).get()
