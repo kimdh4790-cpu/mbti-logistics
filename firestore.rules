@@ -233,6 +233,21 @@ service cloud.firestore {
     match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+
+    // ── FILO 추가 컬렉션 ──
+    match /filo_tables/{docId}            { allow read: if canRead() || resource.data.dealerId != null; allow create: if canWrite(); allow update: if canOwn() || true; allow delete: if canOwn(); }
+    match /filo_orders/{docId}            { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
+    match /filo_reservations/{docId}      { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
+    match /filo_delivery/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+
+    // ── DINE 컬렉션 ──
+    match /dine_sales/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /dine_staff/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /dine_settings/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /dine_members/{docId}           { allow read: if canRead() || resource.data.dealerId != null; allow create: if true; allow update: if canOwn() || true; allow delete: if canOwn(); }
+    match /dine_fixed_costs/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /dine_delivery/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /dine_cost_receipts/{docId}     { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /audit_logs/{docId}             { allow read: if isSuperAdmin(); allow create: if isAuth(); }
     match /used_biz_numbers/{docId}       { allow read: if true; allow write: if isAuth(); }
 
