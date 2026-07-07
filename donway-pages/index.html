@@ -3117,8 +3117,6 @@ function _parseFacilityExcel(file,month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('데이터 없음');return;}
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
-      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
       var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명']);
       var iType=col(['작업유형','작업종류','유형']);var iSite=col(['현장명','현장','장소']);
       var iArea=col(['면적','수량','평수','용량','대수']);var iRate=col(['단가','단위단가']);
@@ -3173,8 +3171,6 @@ function _parseMovingExcel(file,month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('데이터 없음');return;}
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
-      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
       var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명']);
       var iType=col(['구분','유형','작업종류']);var iFloor=col(['사다리층수','층수','층']);
       var iBase=col(['기본급','일당','단가']);var iExtra=col(['추가수당','추가','사다리비']);
@@ -3228,8 +3224,6 @@ function _parseElecExcel(file,month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('데이터 없음');return;}
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
-      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
       var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명','기사']);
       var iWork=col(['공종','작업종류','구분']);var iSite=col(['현장','현장명','장소']);
       var iUnit=col(['공수','일수','출역']);var iRate=col(['일당','단가','일급']);
@@ -3284,8 +3278,6 @@ function _parseLandscapeExcel(file,month){
       var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
       if(!rows.length){toast('데이터 없음');return;}
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
-      function rv(row,i){if(i<0)return 0;var v=row[i];if(!v&&v!==0)return 0;return parseFloat(String(v).replace(/,/g,''))||0;}
       var iId=col(['사번','ID']);var iName=col(['작업자','이름','성명','인부']);
       var iWork=col(['작업종류','작업','구분']);var iSite=col(['현장','농장','장소']);
       var iUnit=col(['공수','일수','출역']);var iRate=col(['일당','단가','일급']);
@@ -4641,7 +4633,6 @@ function _parseBeautyExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
       var iId    = col(['사번','ID','사원번호','직원번호']);
       var iName  = col(['이름','담당자','성명','디자이너','직원명']);
@@ -4815,7 +4806,6 @@ function _parseCareExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
 
       var iId      = col(['요양사사번','사번','ID','직원번호']);
@@ -4990,7 +4980,6 @@ function _parseRestaurantExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
       function yesno(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1';}
 
@@ -5192,7 +5181,6 @@ function _parseSalesExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 
       var iId     = col(['사번','ID','직원번호','사원번호']);
@@ -5331,7 +5319,6 @@ function _parseFreelanceExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
       function yesno(row,i){if(i<0) return false; var v=String(row[i]||'').trim().toUpperCase(); return v==='Y'||v==='YES'||v==='1'||v==='TRUE';}
 
@@ -5474,7 +5461,6 @@ function _parseWarehouseExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
       var iDate  = col(['날짜','근무일자','일자','date','Date']);
       var iId    = col(['사원번호','사번','ID','직원번호']);
@@ -5651,7 +5637,6 @@ function _parseEventExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/,/g,''))||0;}
 
       var iId     = col(['스태프ID','ID','사번','직원번호']);
@@ -5792,7 +5777,6 @@ function _parseAcademyExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
       function rp(row,i){  // % 값 → 소수
         if(i<0) return 0;
@@ -6287,7 +6271,6 @@ function _parseInsuranceExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
       function rv(row,i){if(i<0) return 0; var v=row[i]; if(!v&&v!==0) return 0; return parseFloat(String(v).replace(/[,%]/g,'').trim())||0;}
 
       var iId      = col(['사번','ID','직원번호','설계사번호','영업사번']);
@@ -6437,7 +6420,6 @@ function _parseConstructionExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
       var iDate  = col(['작업일자','날짜','일자','근무일']);
       var iRrn   = col(['주민등록번호','주민번호','생년월일','RRN','생년']);
@@ -6666,7 +6648,6 @@ function _parseQuickExcel(file, month){
       if(!rows.length){toast('❌ 데이터 없음');return;}
 
       var headers=rows[0].map(function(h){return String(h||'').trim();});
-      function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
 
       var iName   = col(['이름','성명','기사명','라이더']);
       var iTeam   = col(['팀','소속','센터','권역','캠프']);
@@ -10797,7 +10778,7 @@ function _loadRoster(){
   var weekDays=_getWeekDays(weekStart);
   var weekEnd=weekDays[6];
   var dNames=['일','월','화','수','목','금','토'];
-  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  var _fmtDate=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
   var ymd=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
   var content=document.getElementById('content');
   var ywStart=ymd(weekStart);
@@ -10884,7 +10865,7 @@ function _rosterApplyFilter(){
   });
   var weekDays=_getWeekDays(window._rosterWeekStart);
   var dNames=['일','월','화','수','목','금','토'];
-  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  var _fmtDate=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
   _renderRosterTable(filtered,window._rosterData||{},weekDays,dNames,fmt);
 }
 
@@ -11038,7 +11019,7 @@ function _toggleRosterStatus(el){
   // 셀만 새로고침
   var weekDays=_getWeekDays(window._rosterWeekStart);
   var dNames=['일','월','화','수','목','금','토'];
-  var fmt=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
+  var _fmtDate=function(d){return (d.getMonth()+1)+'/'+String(d.getDate()).padStart(2,'0');};
   _renderRosterTable(window._rosterDrivers||[],window._rosterData,weekDays,dNames,fmt);
 }
 
@@ -21522,7 +21503,6 @@ async function _sendPayslip(uid, name, ym, payData) {
       sentAt:new Date().toISOString()
     });
     // FCM 발송
-    var fmt=function(n){return Math.round(n||0).toLocaleString('ko-KR');};
     var nl=String.fromCharCode(10);var msg=[ym+' 급여명세서','총 근무: '+(payData.workDays||0)+'일 '+(payData.totalHours||0).toFixed(1)+'h','기본급: '+fmt(payData.basePay)+'원','연장수당: '+fmt(payData.overtimePay)+'원','야간: '+fmt(payData.nightPay)+'원','공제: '+fmt(payData.deductions)+'원','실수령액: '+fmt(payData.netPay)+'원'].join(nl);
     await fetch('/fcm/send',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({tokens:tokens,title:'💰 '+ym+' 급여명세서',body:msg,data:{type:'payslip',ym:ym}})});
@@ -33946,7 +33926,6 @@ async function _ocrCompressImage(file, maxW, quality){
 function stripDf(s){return (s||"").replace(/\s+/g,"").trim();}
 function saveDriver(id){
   function gvs(eid){return (document.getElementById(eid)||{value:''}).value.trim();}
-  function stripDf(s){return (s||''). replace(/\s+/g,'').trim();}
   var payload={
     name:gvs('edr-name')||'',
     userId:stripDf(gvs('edr-uid')||''),
@@ -37776,7 +37755,6 @@ function pageDeliveryStats2(){
     });
 
     var months=Object.keys(byMonth).sort().reverse();
-    var fmt=function(n){return Math.round(n||0).toLocaleString();};
 
     el.innerHTML='<div class="card">'+
       '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📅 월별 배달대행 통계</div>'+
@@ -43984,7 +43962,6 @@ function _openIndWorkerExcelImport(type, did, info, cb){
         var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
         if(!rows.length){toast('❌ 데이터 없음');return;}
         var headers=rows[0].map(function(h){return String(h||'').trim();});
-        function col(kws){return headers.findIndex(function(h){return kws.some(function(k){return h.includes(k);});});}
         var iName =col(['이름','성명','직원명']);
         var iPhone=col(['전화','연락처','휴대폰','phone']);
         var iCamp =col(['소속','팀','캠프','부서']);
@@ -45856,7 +45833,6 @@ window._ssDownload = function() {
   var orders = window._ssOrders;
   if(!orders.length) return;
 
-  function comma(n){ return Math.round(n).toLocaleString(); }
 
   var ws_data = [
     ['주문번호','주문일','상품명','옵션','수량','판매가','배송비','수수료(추정)','실수령액(추정)','수취인','연락처','배송지','상태']
@@ -46029,7 +46005,6 @@ function _cwProcess(file) {
 function _cwRender(orders) {
   if(!orders.length){ alert('주문 데이터가 없습니다'); return; }
 
-  function comma(n){ return Math.round(n).toLocaleString(); }
 
   var totalAmt  = orders.reduce(function(s,o){ return s+o.totalAmt; },0);
   var totalComm = orders.reduce(function(s,o){ return s+o.commission; },0);
@@ -46131,7 +46106,6 @@ function _pageShopDashboard(c) {
         return;
       }
 
-      function comma(n){ return Math.round(n).toLocaleString(); }
 
       // 채널별 집계
       var byPlatform = {};
