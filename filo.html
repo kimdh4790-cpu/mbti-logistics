@@ -4209,17 +4209,18 @@ function _filoShowTableQRModal(did){
     list.appendChild(card);
    });
 
-   /* QR 라이브러리 로드 후 일괄 생성 */
+   /* QR 라이브러리 로드 후 일괄 생성 - DOM 렌더링 후 실행 */
    _filoEnsureQR(function(){
-    tables.forEach(function(t){
-     var cv=document.getElementById('qr-c-'+t.num);
-     if(!cv)return;
-     var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
-     cv.innerHTML='';
-     try{
-      new QRCode(cv,{text:url,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-     }catch(e){console.error('QR:',e);}
-    });
+    setTimeout(function(){
+     tables.forEach(function(t){
+      var cv=document.getElementById('qr-c-'+t.num);
+      if(!cv)return;
+      var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
+      try{
+       new QRCode(cv,{text:url,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      }catch(e){console.error('QR:',e);}
+     });
+    },300);
    });
   }).catch(function(e){_filoToast('❌ '+e.message);});
 }
