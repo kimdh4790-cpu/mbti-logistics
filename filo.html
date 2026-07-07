@@ -4117,8 +4117,22 @@ function _filoShowTableQRModal(did){
  _db.collection('filo_tables').where('dealerId','==',did).get()
   .then(function(snap){
    var tables=[];
-   if(snap.empty){for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i,tableNum:i,tableName:'테이블 '+i});}
-   else{snap.forEach(function(doc){var d=doc.data();tables.push({num:d.tableNum||1,name:d.tableName||('테이블 '+(d.tableNum||1))});});}
+   if(snap.empty){
+    for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i});
+   } else {
+    /* tableNum 또는 tableId 둘 다 지원, 중복 제거 */
+    var seen={};
+    snap.forEach(function(doc){
+     var d=doc.data();
+     var num=d.tableNum||d.tableId||1;
+     var name=d.tableName||('테이블 '+num);
+     /* 같은 번호 중 tableName 있는 것 우선 */
+     if(!seen[num]||(!seen[num].hasName&&name!=='테이블 '+num)){
+      seen[num]={num:num,name:name,hasName:name!=='테이블 '+num};
+     }
+    });
+    tables=Object.values(seen);
+   }
    tables.sort(function(a,b){return a.num-b.num;});
 
    var mo=document.createElement('div');
