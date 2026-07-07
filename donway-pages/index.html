@@ -2141,7 +2141,24 @@ function parseCoupangExcel(inp){
         }
       }).catch(function(){})
     :Promise.resolve();
-  Promise.all([driversPromise, settingsPromise]).then(function(results){
+  // ★ 아이디지원 규칙 최신 로드 (엑셀 업로드 직전 보장)
+  var idSupportPromise=(window._db&&did)
+    ?window._db.collection('idSupport').where('dealerId','==',did).get()
+        .then(function(snap){
+          var r=[];
+          snap.forEach(function(d){
+            var data=Object.assign({_id:d.id},d.data());
+            if(!data.startDate&&data.dates&&data.dates.length){
+              var sorted=data.dates.slice().sort();
+              data.startDate=sorted[0];
+              data.endDate=sorted[sorted.length-1];
+            }
+            r.push(data);
+          });
+          window._idSupportRules=r;
+        }).catch(function(){})
+    :Promise.resolve();
+  Promise.all([driversPromise, settingsPromise, idSupportPromise]).then(function(results){
     _parseCoupangExcelInner(file, results[0], month);
   });
 }
