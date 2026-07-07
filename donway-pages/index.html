@@ -1262,7 +1262,7 @@ function _saveWorkSettings() {
     .set(ws).then(function() {
       window._workSettings = ws;
       toast('✅ 근무 설정 저장됨');
-      pageWorkSettings(); // 미리보기 갱신
+      toast('✅ 저장됨'); // pageWorkSettings 제거됨
     }).catch(function(e) { toast('❌ '+e.message); });
 }
 
@@ -21134,7 +21134,7 @@ function _submitHourlyLeave() {
   }).then(function(){
     toast('✅ 시간 휴가 신청 완료 ('+hours+'시간)');
     document.getElementById('mo-leave-h').remove();
-    pageLeave();
+    goPage('home');
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -28201,8 +28201,8 @@ function goPage(page){
   vehicle:pageVehicle,
   expense:pageExpense,
   evaluation:pageEvaluation,
-  work_settings:pageWorkSettings,
-  monthly_stats:pageMonthlyStats,
+  work_settings:function(){toast('준비 중');},
+  monthly_stats:function(){toast('준비 중');},
   delivery_settle:pageDeliverySettle,
   delivery_input:pageDeliveryPlatform,
   delivery_stats:pageDeliveryStats2,
@@ -41100,7 +41100,7 @@ window._invCompareExcel = function(file, did){
       var html=
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
           '<div style="font-size:15px;font-weight:800">🔍 입고 대조검수 결과</div>'+
-          '<button onclick="pageInventory()" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:7px;font-size:12px;cursor:pointer">← 재고관리로</button>'+
+          '<button onclick="goPage("home")" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:7px;font-size:12px;cursor:pointer">← 홈으로</button>'+
         '</div>'+
         // 요약 카드
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
@@ -41208,7 +41208,7 @@ function _invConfirmByActual(did, results){
   });
   batch.commit().then(function(){
     toast('✅ '+toSave.length+'건 입고 확정 완료!');
-    pageInventory();
+    goPage('home');
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -42100,7 +42100,7 @@ function _invBatchSave(did, items, inItems, outItems){
       saveChunks('inventory_out', outItems, function(){
         _saveChangeLog(inItems.length, outItems.length, items.length);
         toast('✅ 품목 '+items.length+'종 / 입고 '+inItems.length+'건 / 출고 '+outItems.length+'건 등록 완료!');
-        pageInventory();
+        goPage('home');
       });
     });
   });
@@ -42156,7 +42156,7 @@ function _invSaveIn(did){
   }).then(function(){
     toast('✅ 입고 저장됨');
     document.querySelector('[style*="position:fixed"]').remove();
-    pageInventory();
+    goPage('home');
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -42209,7 +42209,7 @@ function _invSaveOut(did){
   }).then(function(){
     toast('✅ 출고 저장됨');
     document.querySelector('[style*="position:fixed"]').remove();
-    pageInventory();
+    goPage('home');
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
