@@ -2465,15 +2465,67 @@ function _dineTax(el){
  var ym=new Date().toISOString().slice(0,7);
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
-  '<div class="card">'+
-  '<div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">'+
+ wrap.innerHTML=
+  '<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
+  /* 월 선택 + 생성 버튼 */
+  '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">'+
   '<input type="month" id="tax-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
-  '<button class="btn btn-primary btn-sm" onclick="_dineTaxGenerate(\''+did+'\')">리포트 생성</button>'+
+  '<button class="btn btn-primary btn-sm" data-did="'+did+'" onclick="_dineTaxGenerate(this.dataset.did)">리포트 생성</button>'+
   '</div>'+
-  '<div id="tax-result"><div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">월을 선택 후 리포트 생성 버튼을 누르세요</div></div>'+
-  '</div>';
+  /* 고정비용 입력 카드 */
+  '<div class="card" style="margin-bottom:14px">'+
+  '<div class="sec-title" style="margin-bottom:12px">📋 월별 고정비용 입력 <span style="font-size:10px;font-weight:400;color:var(--t3)">(리포트에 자동 반영)</span></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+  '<div class="input-group" style="margin:0"><label>임대료 (원)</label><input id="tax-rent" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div class="input-group" style="margin:0"><label>전기료 (원)</label><input id="tax-elec" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div class="input-group" style="margin:0"><label>가스비 (원)</label><input id="tax-gas" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">'+
+  '<div class="input-group" style="margin:0"><label>수도료 (원)</label><input id="tax-water" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div class="input-group" style="margin:0"><label>카드수수료 (원)</label><input id="tax-card-fee" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div class="input-group" style="margin:0"><label>기타비용 (원)</label><input id="tax-other" class="inp" type="number" placeholder="소모품,유니폼 등" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '</div>'+
+  '<div class="input-group" style="margin-top:8px;margin-bottom:0"><label>기타 메모</label><input id="tax-memo" class="inp" placeholder="예) 인테리어 수리비 50만원" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:6px">💾 입력 즉시 자동저장됩니다</div>'+
+  '</div>'+
+  /* 리포트 결과 */
+  '<div id="tax-result"><div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">월을 선택 후 리포트 생성 버튼을 누르세요</div></div>';
  el.appendChild(wrap);
+
+ /* 저장된 고정비용 불러오기 */
+ _dineTaxLoadFixed(did);
+}
+
+function _dineTaxLoadFixed(did){
+ _db.collection('filo_settings').doc(did+'_tax_fixed').get().then(function(doc){
+  if(!doc.exists)return;
+  var d=doc.data();
+  var fields=['rent','elec','gas','water','card-fee','other','memo'];
+  fields.forEach(function(f){
+   var el=document.getElementById('tax-'+f);
+   if(el&&d[f])el.value=d[f];
+  });
+ }).catch(function(){});
+}
+
+var _taxSaveTimer=null;
+function _dineTaxSaveFixed(did){
+ clearTimeout(_taxSaveTimer);
+ _taxSaveTimer=setTimeout(function(){
+  var data={
+   rent:parseInt(document.getElementById('tax-rent')?.value)||0,
+   elec:parseInt(document.getElementById('tax-elec')?.value)||0,
+   gas:parseInt(document.getElementById('tax-gas')?.value)||0,
+   water:parseInt(document.getElementById('tax-water')?.value)||0,
+   'card-fee':parseInt(document.getElementById('tax-card-fee')?.value)||0,
+   other:parseInt(document.getElementById('tax-other')?.value)||0,
+   memo:document.getElementById('tax-memo')?.value||'',
+   updatedAt:new Date().toISOString()
+  };
+  _db.collection('filo_settings').doc(did+'_tax_fixed').set(data,{merge:true})
+   .then(function(){_dineToast('💾 저장됐습니다');})
+   .catch(function(){});
+ },800);
 }
 
 function _dineTaxGenerate(did){
@@ -2482,14 +2534,23 @@ function _dineTaxGenerate(did){
  var res=document.getElementById('tax-result');
  if(!res)return;
  res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 생성중...</div>';
+ var res=document.getElementById('tax-result');
+ if(!res)return;
+ res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 생성중...</div>';
 
  Promise.all([
   _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
   _db.collection('members').where('dealerId','==',did).get(),
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
-  _db.collection('inventory_in').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
+  _db.collection('inventory_in').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
+  _db.collection('filo_settings').doc(did+'_tax_fixed').get()
  ]).then(function(results){
-  var salesSnap=results[0],memSnap=results[1],attSnap=results[2],stockSnap=results[3];
+  var salesSnap=results[0],memSnap=results[1],attSnap=results[2],stockSnap=results[3],fixedDoc=results[4];
+  var fixed=fixedDoc.exists?fixedDoc.data():{};
+  var fixedRent=fixed.rent||0,fixedElec=fixed.elec||0,fixedGas=fixed.gas||0;
+  var fixedWater=fixed.water||0,fixedCardFee=fixed['card-fee']||0,fixedOther=fixed.other||0;
+  var fixedMemo=fixed.memo||'';
+  var totalFixed=fixedRent+fixedElec+fixedGas+fixedWater+fixedCardFee+fixedOther;
   var totalSales=0,cnt=0,methods={};
   salesSnap.forEach(function(doc){var d=doc.data();if(d.status==='cancelled')return;totalSales+=d.total||0;cnt++;var pm=d.payMethod||'기타';methods[pm]=(methods[pm]||0)+(d.total||0);});
 
@@ -2510,7 +2571,7 @@ function _dineTaxGenerate(did){
    if(d.receiptUrl)stockReceipts.push({date:d.date,supplier:sup,amt:amt,url:d.receiptUrl,item:d.itemId||''});
   });
 
-  var totalCost=totalLabor+totalStock;
+  var totalCost=totalLabor+totalStock+totalFixed;
   var profit=totalSales-totalCost;
 
   res.innerHTML='<div style="font-size:14px;font-weight:900;margin-bottom:14px;color:var(--t2)">📄 '+ym+' 세무사 리포트</div>'+
@@ -2521,6 +2582,17 @@ function _dineTaxGenerate(did){
    Object.entries(methods).map(function(m){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ '+m[0]+'</span><span>₩'+m[1].toLocaleString()+'</span></div>';}).join('')+
    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);margin-top:6px"><span>👥 인건비</span><span style="font-weight:700;color:var(--rd)">₩'+totalLabor.toLocaleString()+'</span></div>'+
    '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:2px solid var(--bd)"><span>🧂 재료 구입비</span><span style="font-weight:700;color:var(--rd)">₩'+totalStock.toLocaleString()+'</span></div>'+
+   /* 고정비용 */
+   (totalFixed>0?
+   '<div style="padding:4px 0 2px;font-size:11px;color:var(--t3)">고정비용</div>'+
+   (fixedRent?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 임대료</span><span style="color:var(--rd)">₩'+fixedRent.toLocaleString()+'</span></div>':'')+
+   (fixedElec?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 전기료</span><span style="color:var(--rd)">₩'+fixedElec.toLocaleString()+'</span></div>':'')+
+   (fixedGas?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 가스비</span><span style="color:var(--rd)">₩'+fixedGas.toLocaleString()+'</span></div>':'')+
+   (fixedWater?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 수도료</span><span style="color:var(--rd)">₩'+fixedWater.toLocaleString()+'</span></div>':'')+
+   (fixedCardFee?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 카드수수료</span><span style="color:var(--rd)">₩'+fixedCardFee.toLocaleString()+'</span></div>':'')+
+   (fixedOther?'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ 기타비용</span><span style="color:var(--rd)">₩'+fixedOther.toLocaleString()+'</span></div>':'')+
+   '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:2px solid var(--bd);font-weight:700"><span>💡 고정비용 합계</span><span style="color:var(--rd)">₩'+totalFixed.toLocaleString()+'</span></div>'
+   :'')+
    (Object.entries(stockBySupplier).map(function(s){return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);padding-left:12px"><span style="color:var(--t3)">└ '+s[0]+'</span><span>₩'+s[1].toLocaleString()+'</span></div>';}).join(''))+
    (stockReceipts.length?'<div style="padding:6px 0;font-size:11px;color:var(--t3)">📎 영수증 '+stockReceipts.length+'건 첨부'+
     stockReceipts.map(function(r){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0 3px 12px"><span style="color:var(--t3)">'+r.date+' '+r.supplier+'</span><a href="'+r.url+'" target="_blank" style="color:var(--br);font-size:10px">보기↗</a></div>';}).join('')+
