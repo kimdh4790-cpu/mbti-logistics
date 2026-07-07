@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#07071a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DINE">
+<link rel="manifest" href="/dine-manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230c0c22'/><text y='.9em' font-size='80' x='10'>🍽</text></svg>">
 <title>DINE — 외식업 정산 플랫폼</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap');
@@ -212,6 +219,7 @@ select.inp option{background:var(--s2)}
    <div class="attend-live"><span class="live-dot"></span><span id="tb-attend-cnt">0명 출근중</span></div>
    <div class="tb-user" id="tb-user-name"></div>
    <button onclick="_dineGoFilo()" style="padding:5px 10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">📦 FILO</button>
+   <button id="dine-install-btn" onclick="_dineInstallApp()" style="display:none;padding:5px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:4px">📲 앱설치</button>
    <button class="tb-logout btn" onclick="_dineLogout()">로그아웃</button>
   </div>
  </div>
@@ -2799,6 +2807,29 @@ function _dineSaveReservation(did){
   _dineToast('✅ 예약 등록됐습니다');document.querySelector('.mo')?.remove();
   _dineLoadReservation(did);
  });
+}
+</script>
+<script>
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('/dine-sw.js').catch(function(){});
+}
+/* PWA 설치 배너 */
+var _pwaPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){
+ e.preventDefault();
+ _pwaPrompt=e;
+ /* 탑바에 설치 버튼 표시 */
+ var btn=document.getElementById('dine-install-btn');
+ if(btn)btn.style.display='flex';
+});
+window.addEventListener('appinstalled',function(){
+ var btn=document.getElementById('dine-install-btn');
+ if(btn)btn.style.display='none';
+ _dineToast('✅ 홈화면에 추가됐습니다!');
+});
+function _dineInstallApp(){
+ if(_pwaPrompt){_pwaPrompt.prompt();_pwaPrompt.userChoice.then(function(){_pwaPrompt=null;});}
+ else{_dineToast('브라우저 메뉴 → "홈 화면에 추가"를 눌러주세요');}
 }
 </script>
 </body>
