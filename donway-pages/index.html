@@ -7417,6 +7417,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           _guardUpdateMonthlySeat(settlements,month);
         }
         // Firebase 저장
+        console.log('[디버그] _db:', !!_db, '_CU:', !!_CU, '_CU.dealerId:', _CU&&_CU.dealerId, '_idSupportRules:', window._idSupportRules&&window._idSupportRules.length);
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
           settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
@@ -7425,7 +7426,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
             _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
           }
-          console.log('[아이디지원] rules:', window._idSupportRules&&window._idSupportRules.length, 'RPRICE 812B:', RPRICE['812B']);
           if(window._idSupportRules&&window._idSupportRules.length){
             window._idSupportRules.forEach(function(r){
               var dup=_mergedIdRules.some(function(x){return x.fromId===r.fromId&&x.toId===r.toId;});
