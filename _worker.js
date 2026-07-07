@@ -1573,7 +1573,7 @@ async function acceptExchange(){
             soldOut: f.soldOut?.booleanValue||false,
             forSale: f.forSale?.booleanValue!==false
           };
-        }).filter(m=>m.name&&m.price>0&&m.forSale);
+        }).filter(m=>m.name&&m.price>0);
         return new Response(JSON.stringify(menus), {
           headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*',...SECURITY_HEADERS}
         });
