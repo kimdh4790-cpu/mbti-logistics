@@ -7372,7 +7372,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           var _entryPromoMargin=window._promoMarginRate||0;
           var _entryPromoPayAmt=_entryPromoRaw>0?Math.round(_entryPromoRaw*(1-Math.max(0,_entryPromoMargin-10)/100)):0;
 
-          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)+(dm.nocontAmt||0)-(dmgAmt||0)));
+          var coupangRawTotal=tm.totalAmt||(Math.round((dm.delAmt||0)+(dm.retAmt||0)+(freshAmt||0)+(addIncAmt||0)-(dmgAmt||0)));  // ★ nocontAmt 제외: 대리점→기사 추가금, 쿠팡수입 아님
           var entry={
             driver:drvName, userId:cleanId, dealerId:_CU.dealerId,
             camp:dm.camp||drvObj.camp||'',
@@ -29832,7 +29832,7 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)))||0;  // ★ nocont 제외: 쿠팡수입 아님
       totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
       // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
       totTaxBase+=(r.income||r.totalAmt||0);
@@ -38001,7 +38001,7 @@ function pageStats(){
           var mo=s.month||'';var cc=_getSettleCamp(s)||'기타';
           var n=s.driverName||s.driver||s.userId||'';
           var r=calcNet(s);
-          var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+          var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)))||0;  // ★ nocont 제외: 쿠팡수입 아님
           var totalVat=ct?Math.round(ct*1.1):Math.round((r.income||0)*1.1); // 쿠팡수입(VAT포함)
           var taxBase=r.income||r.totalAmt||0; // 기사 세금계산서(정산현황과 동일)
           var mw=r.monthlyWage||0;
@@ -38343,7 +38343,7 @@ function _statRenderCombined(){
     settleSnap.forEach(function(d){
       var s=d.data(); var mo=s.month||''; if(!mo)return;
       var r=calcNet(s);
-      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0;
+      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)))||0;  // ★ nocont 제외: 쿠팡수입 아님
       var totalVat=ct?Math.round(ct*1.1):(r.income||0);
       var mw=r.monthlyWage||0;
       var insComp=(mw>=800000?Math.floor(mw*0.008/10)*10:0)+Math.floor(mw*0.0088/10)*10;
