@@ -551,6 +551,28 @@ export default {
     const hostname = url.hostname;
 
 
+    // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
+    if (path === '/firebase-app-compat.js') {
+      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-app-compat.js');
+      const js = await r.text();
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
+    }
+    if (path === '/firebase-auth-compat.js') {
+      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth-compat.js');
+      const js = await r.text();
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
+    }
+    if (path === '/firebase-firestore-compat.js') {
+      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore-compat.js');
+      const js = await r.text();
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
+    }
+    if (path === '/firebase-messaging-compat.js') {
+      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging-compat.js');
+      const js = await r.text();
+      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
+    }
+
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
       // /admin → settle.html 서빙 (DONWAY 통합 어드민)
