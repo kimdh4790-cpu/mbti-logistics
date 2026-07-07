@@ -4114,7 +4114,7 @@ function _filoPageTableQR(el){
 }
 
 function _filoShowTableQRModal(did){
- _db.collection('filo_tables').where('dealerId','==',did).orderBy('tableNum').get()
+ _db.collection('filo_tables').where('dealerId','==',did).get()
   .then(function(snap){
    var tables=[];
    if(snap.empty){for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i});}
