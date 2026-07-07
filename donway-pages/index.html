@@ -1230,63 +1230,6 @@ async function _calcMonthlyStats(did, ym) {
 }
 
 // ── 근무 설정 페이지
-function pageWorkSettings() {
-  document.getElementById('page-title').textContent = '⚙️ 근무 설정';
-  var el = document.getElementById('content');
-  var did = _CU.dealerId;
-  window._workSettings = null; // 캐시 초기화
-
-  _loadWorkSettings(did, function(ws) {
-    el.innerHTML = '<div style="max-width:600px;margin:0 auto">'
-      + '<div class="card" style="margin-bottom:14px">'
-      + '<div class="card-title">⚙️ 기본 근무 설정</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'
-      // 출근 기준시간
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">출근 기준시간</label>'
-      + '<input type="time" id="ws-start" value="'+ws.startTime+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
-      // 퇴근 기준시간
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">퇴근 기준시간</label>'
-      + '<input type="time" id="ws-end" value="'+ws.endTime+'" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
-      // 지각 유예
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">지각 유예 (분)</label>'
-      + '<input type="number" id="ws-late" value="'+(ws.lateGraceMin||10)+'" min="0" max="60" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
-      // 조퇴 유예
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">조퇴 유예 (분)</label>'
-      + '<input type="number" id="ws-early" value="'+(ws.earlyLeaveMin||10)+'" min="0" max="60" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
-      // 휴게시간
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">휴게시간 (분)</label>'
-      + '<input type="number" id="ws-break" value="'+(ws.breakMin||60)+'" min="0" max="120" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px"></div>'
-      // 근무유형
-      + '<div><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:5px">근무 유형</label>'
-      + '<select id="ws-type" style="width:100%;padding:9px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">'
-      + '<option value="fixed"'+(ws.workType==='fixed'?' selected':'')+'>정시제 (고정시간)</option>'
-      + '<option value="flex"'+(ws.workType==='flex'?' selected':'')+'>유연근무제</option>'
-      + '<option value="shift"'+(ws.workType==='shift'?' selected':'')+'>교대근무</option>'
-      + '</select></div>'
-      + '</div>'
-      // 근무요일
-      + '<div style="margin-bottom:16px"><label style="font-size:11px;font-weight:700;color:var(--text3);display:block;margin-bottom:8px">근무 요일</label>'
-      + '<div style="display:flex;gap:6px">'
-      + ['일','월','화','수','목','금','토'].map(function(d,i){
-          var on=(ws.workDays||[1,2,3,4,5]).indexOf(i)>=0;
-          return '<button type="button" data-day="'+i+'" onclick="_wsToggleDay(this)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid '+(on?'var(--blue)':'var(--border)')+';background:'+(on?'var(--blue)':'var(--bg3)')+';color:'+(on?'#fff':'var(--text3)')+';font-size:12px;font-weight:700;cursor:pointer">'+d+'</button>';
-        }).join('')
-      + '</div></div>'
-      // 저장 버튼
-      + '<button onclick="_saveWorkSettings()" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 설정 저장</button>'
-      + '</div>'
-      // 미리보기
-      + '<div class="card"><div class="card-title">📋 현재 설정 미리보기</div>'
-      + '<div style="font-size:13px;line-height:2">'
-      + '출근: <strong>'+ws.startTime+'</strong> ('+ws.lateGraceMin+'분 유예까지 정상)<br>'
-      + '퇴근: <strong>'+ws.endTime+'</strong> ('+ws.earlyLeaveMin+'분 유예까지 정상)<br>'
-      + '휴게: <strong>'+ws.breakMin+'분</strong> 자동 차감<br>'
-      + '유형: <strong>'+{fixed:'정시제',flex:'유연근무',shift:'교대근무'}[ws.workType||'fixed']+'</strong><br>'
-      + '주 최대: <strong>52시간</strong> (법정)'
-      + '</div></div>'
-      + '</div>';
-  });
-}
 
 function _wsToggleDay(btn) {
   var on = btn.style.background.indexOf('var(--blue)') >= 0 || btn.style.background === 'var(--blue)';
@@ -1324,24 +1267,6 @@ function _saveWorkSettings() {
 }
 
 // ── 월간 집계 페이지
-function pageMonthlyStats() {
-  document.getElementById('page-title').textContent = '📊 월간 근무 집계';
-  var el = document.getElementById('content');
-  var did = _CU.dealerId;
-  var now = new Date();
-  var ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-
-  el.innerHTML = '<div style="max-width:900px;margin:0 auto">'
-    + '<div class="card">'
-    + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">'
-    + '<div class="card-title" style="margin:0">📊 월간 근무 집계</div>'
-    + '<input type="month" id="ms-ym" value="'+ym+'" style="padding:7px;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">'
-    + '<button onclick="_loadMonthlyStats()" class="btn btn-blue" style="font-size:12px">조회</button>'
-    + '</div>'
-    + '<div id="ms-content"><div class="empty">조회 버튼을 누르세요</div></div>'
-    + '</div></div>';
-  _loadMonthlyStats();
-}
 
 async function _loadMonthlyStats() {
   var did = _CU.dealerId;
@@ -19291,25 +19216,6 @@ window._fixedExpenseDelete=function(did,idx){
 };
 
 
-function pageOvertime(){
-  document.getElementById('page-title').textContent='⏰ 연장근로 승인';
-  _requirePlan('overtime',function(){
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
-  var isDriver=_CU.role==='driver'||_CU.role==='member';
-  el.innerHTML='<div style="max-width:800px;margin:0 auto">'
-    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
-    +(isDriver?'':'<button id="ot-tab-pending" class="btn btn-blue" onclick="_otTab(\'pending\')" style="font-size:12px">⏳ 승인대기</button>')
-    +(isDriver?'':'<button id="ot-tab-all" class="btn" onclick="_otTab(\'all\')" style="font-size:12px">📋 전체</button>')
-    +'<button id="ot-tab-mine" class="btn'+(isDriver?' btn-blue':'')+'" onclick="_otTab(\'mine\')" style="font-size:12px">👤 내 신청</button>'
-    +'<button onclick="_otApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">+ 연장근로 신청</button>'
-    +'</div>'
-    +'<div id="ot-content"></div>'
-    +'</div>';
-  _otTab(isDriver?'mine':'pending');
-  });
-}
 function _otTab(tab){
   ['pending','all','mine'].forEach(function(t){
     var b=document.getElementById('ot-tab-'+t);if(b)b.className=t===tab?'btn btn-blue':'btn';
@@ -23581,33 +23487,6 @@ function _empHomeLoad(did, uid, today, ym){
   }).catch(function(){});
 }
 
-function pageLeave(){
-  document.getElementById('page-title').textContent='🌴 휴가 관리';
-  _requirePlan('leave',function(){
-  var tr=document.getElementById('topbar-right'); tr.innerHTML='';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
-  var isDriver=_CU.role==='driver'||_CU.role==='member';
-
-  el.innerHTML='<div style="max-width:900px;margin:0 auto">'
-    // 탭
-    +'<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'
-    +(isDriver?'':'<button id="ltab-pending" class="btn btn-blue" onclick="_leaveTab(this.dataset.t)" data-t="pending" style="font-size:12px">⏳ 승인대기</button>')
-    +(isDriver?'':'<button id="ltab-all" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="all" style="font-size:12px">📋 전체 현황</button>')
-    +(isDriver?'':'<button id="ltab-balance" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="balance" style="font-size:12px">📊 잔여 연차</button>')
-    +(isDriver?'':'<button id="ltab-comp" class="btn" onclick="_leaveCompView()" style="font-size:11px">💰 보상휴가</button>')
-+(isDriver?'':'<button id="ltab-yearend" class="btn" onclick="_leaveTab(this.dataset.t)" data-t="yearend" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🗓 연도말 처리</button>')
-    +'<button id="ltab-mine" class="btn'+(isDriver?' btn-blue':'')+'" onclick="_leaveTab(this.dataset.t)" data-t="mine" style="font-size:12px">👤 내 휴가</button>'
-    +'<button id="ltab-comp" class="btn" onclick="_leaveTab(\'comp\')" data-t="comp" style="font-size:12px">💰 보상휴가</button>'+(isDriver?'':'<button onclick="_leaveAutoApproveSettings()" class="btn" style="font-size:11px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚡ 자동승인</button>')+(isSuperAdmin()||!isDriver?'<button onclick="_autoGenerateAnnualLeave(_CU.dealerId)" class="btn" style="font-size:11px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">🔄 연차발생</button>':'')+'<button onclick="_leaveApproveAll(_CU.dealerId)" class="btn" style="font-size:11px;background:#0066ff;color:#fff;border:none">✅ 일괄승인</button>'+'<button onclick="_leaveAutoApproveSettings()" class="btn" style="font-size:11px;background:#7c3aed;color:#fff;border:none">⚡ 자동승인</button>'+'<button onclick="_leaveCompView()" class="btn" style="font-size:11px;background:#059669;color:#fff;border:none">💰 보상휴가</button>'+'<button onclick="_leaveApplyModal()" class="btn btn-teal" style="font-size:12px;margin-left:auto">✏️ 휴가 신청</button>'
-+'<button onclick="_leaveApplyHourly()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff">⏰ 시간 휴가</button>'
-    +'</div>'
-    +'<div id="leave-tab-content"></div>'
-    +'</div>';
-
-  _leaveTab(isDriver?'mine':'pending');
-  });
-}
 function _leaveTab(tab){
   ['pending','all','balance','yearend','mine','comp'].forEach(function(t){
     var btn=document.getElementById('ltab-'+t);
@@ -24698,42 +24577,6 @@ function _calDeleteMemo(btn){
 }
 
 // ══ 출퇴근 (QR 전용) ══
-function pageAttendance(){
-  document.getElementById('page-title').textContent='🔐 출퇴근 현황';
-  _requirePlan('qr',function(){
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId;
-  var today=new Date().toISOString().slice(0,10);
-
-  el.innerHTML='<div style="max-width:860px;margin:0 auto">'
-    // ── 탭 ──
-    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
-    +'<button id="att-tab-qr" class="btn btn-blue" onclick="_attTab(\'qr\')" style="font-size:12px">📺 QR 코드 표시</button>'
-    +'<button id="att-tab-today" class="btn" onclick="_attTab(\'today\')" style="font-size:12px">📋 오늘 현황</button>'
-+'<button id="att-tab-payroll" class="btn" onclick="_attTab(\'payroll\')" style="font-size:12px">💼 급여 현황</button>'
-    +'<button id="att-tab-hist" class="btn" onclick="_attTab(\'hist\')" style="font-size:12px">📅 기간별 조회</button>'
-    +'<button id="att-tab-visitor" class="btn" onclick="_attTab(\'visitor\')" style="font-size:12px">🙋 방문자 관리</button>'
-    +'<button id="att-tab-url" class="btn" onclick="_attTab(\'url\')" style="font-size:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border:none">🔗 URL 발급</button>'
-    +'<button id="att-tab-guide" class="btn" onclick="_attTab(\'guide\')" style="font-size:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none">📄 안내문 출력</button>'
-    +'<button onclick="_attCheckMissingFCM()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff">📲 누락알림</button>'
-+'<button onclick="pageWorkSettings()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#059669,#10b981);color:#fff">⚙️ 근무설정</button>'
-+'<button onclick="pageMonthlyStats()" class="btn" style="font-size:12px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff">📊 월간집계</button>'
-+'<button id="att-tab-sim" class="btn" onclick="_attTab(\'sim\')" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 시뮬레이션</button>'
-    +'</div>'
-    +'<div id="att-qr-area"></div>'
-    +'<div id="att-today-area" style="display:none"></div>'
-    +'<div id="att-hist-area" style="display:none"></div>'
-    +'<div id="att-visitor-area" style="display:none"></div>'
-    +'<div id="att-url-area" style="display:none"></div>'
-    +'<div id="att-guide-area" style="display:none"></div>'
-    +'<div id="att-payroll-area" style="display:none"></div>'
-+'<div id="att-sim-area" style="display:none"></div>'
-    +'</div>';
-
-  _attTab('qr');
-  });
-}
 function _attTab(tab){
   ['qr','today','payroll','hist','visitor','url','guide','sim'].forEach(function(t){
     var btn=document.getElementById('att-tab-'+t);
@@ -25760,64 +25603,6 @@ function _attLoadHist(){
 }
 
 // ══ 직원용: QR 출퇴근 스캔 ══
-function pageMyQR(){
-  document.getElementById('page-title').textContent='📷 QR 출퇴근';
-  var el=document.getElementById('content');
-  if(!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-
-  var today=new Date().toISOString().slice(0,10);
-  var _scanState='idle'; // idle / scanning / done
-
-  el.innerHTML='<div style="max-width:420px;margin:0 auto;padding:16px">'
-    // 오늘 출퇴근 상태
-    +'<div class="card" style="margin-bottom:16px;text-align:center">'
-    +'<div style="font-size:13px;color:var(--text3);margin-bottom:4px">'+today+'</div>'
-    +'<div id="qr-status-text" style="font-size:16px;font-weight:800;margin-bottom:12px">확인 중...</div>'
-    +'<div id="qr-time-display" style="font-size:12px;color:var(--text3)"></div>'
-    +'</div>'
-    // 스캔 영역
-    +'<div class="card" style="text-align:center">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:16px">회사 화면의 QR을 스캔하세요</div>'
-    +'<div id="qr-reader-wrap" style="position:relative;width:100%;max-width:300px;margin:0 auto;border-radius:16px;overflow:hidden;background:#000">'
-    +'<video id="qr-video" style="width:100%;display:block" playsinline autoplay></video>'
-    +'<canvas id="qr-canvas" style="display:none"></canvas>'
-    +'<div style="position:absolute;inset:0;border:3px solid var(--brand);border-radius:16px;pointer-events:none">'
-    +'<div style="position:absolute;top:20%;left:10%;right:10%;bottom:20%;border:2px solid rgba(255,255,255,.6);border-radius:8px"></div>'
-    +'<div id="qr-scan-line" style="position:absolute;left:10%;right:10%;height:2px;background:linear-gradient(90deg,transparent,var(--brand),transparent);animation:scanLine 2s linear infinite;top:30%"></div>'
-    +'</div>'
-    +'</div>'
-    +'<button id="qr-scan-btn" onclick="_startQRScan()" class="btn btn-blue" style="width:100%;margin-top:14px;padding:13px;font-size:14px;font-weight:700">📷 카메라 시작</button>'
-    +'<div id="qr-scan-msg" style="margin-top:10px;font-size:12px;color:var(--text3);min-height:20px"></div>'
-    +'</div>'
-    +'</div>'
-    +'<style>@keyframes scanLine{0%{top:25%}50%{top:65%}100%{top:25%}}</style>';
-
-  // 오늘 출퇴근 현황 로드
-  if(_db&&_CU){
-    _db.collection('attendance')
-      .where('dealerId','==',_CU.companyId||_CU.dealerId||'')
-      .where('userId','==',_CU.driverId||_CU.userId||_CU.uid||'')
-      .where('date','==',today).limit(1).get()
-    .then(function(snap){
-      var st=document.getElementById('qr-status-text');
-      var td=document.getElementById('qr-time-display');
-      if(!st)return;
-      if(snap.empty){
-        st.innerHTML='<span style="color:var(--amber)">⏳ 미출근</span>';
-        td.textContent='';
-      } else {
-        var d=snap.docs[0].data();
-        if(d.checkOut){
-          st.innerHTML='<span style="color:var(--green)">✅ 퇴근 완료</span>';
-          td.textContent='출근 '+esc(d.checkIn||'')+'  ·  퇴근 '+esc(d.checkOut||'');
-        } else {
-          st.innerHTML='<span style="color:var(--blue)">🟢 출근 중</span>';
-          td.textContent='출근 '+esc(d.checkIn||'')+'  ·  퇴근 미처리';
-        }
-      }
-    }).catch(function(){});
-  }
-}
 
 // QR 스캔 시작
 function _startQRScan(){
@@ -26429,32 +26214,6 @@ var MENUS_SETTLE = [
 // QR 전용
 
 
-var MENUS_QR = [
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
-  ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'연차·휴가',        p:'leave',            plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
-  ]},
-  {s:'👤 직원 관리', items:[
-    {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
-    {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
-    
-  ]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
-  ]},
-  {s:'🚚 원스톱 물류', items:[
-    {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
-    {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
-    {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
-  ]}
-];
 
 // ALL-IN-ONE
 
@@ -26474,14 +26233,6 @@ var MENUS_FULL = [
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
-  ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-        {ic:'🌴',l:'연차·휴가',        p:'leave',            plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
-  ]},
-  {s:'💼 급여 관리', items:[
-    {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
     {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
@@ -27250,17 +27001,6 @@ function _invOrderEmail(sup, encodedMsg){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 👷 과장(manager) 메뉴
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var MENUS_MANAGER=[
-  {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}
-  ]},
-  {s:'📦 재고 관리', items:[
-    {ic:'📦',l:'재고현황',p:'inv_manager_stock',plan_key:'free'},
-    {ic:'📥',l:'입고 등록',p:'inv_manager_in',plan_key:'free'},
-    {ic:'📤',l:'출고 등록',p:'inv_manager_out',plan_key:'free'},
-    {ic:'🔄',l:'반품/공병',p:'inv_manager_return',plan_key:'free'},
-  ]}
-];
 
 // 과장 - 재고현황 (본인 매장만)
 
@@ -27343,18 +27083,6 @@ function _mgrLoadTodayIn(did, store){
 
 // 과장 - 반품/공병
 
-var MENUS_MANAGER = [
-  {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
-  {s:'📊 정산', items:[
-    {ic:'📊',l:'정산 현황',p:'settle',plan_key:'settle'},
-    {ic:'📋',l:'정산 관리',p:'settlements',plan_key:'settle'},
-    {ic:'👤',l:'기사 관리',p:'drivers',plan_key:'settle'},
-    {ic:'💸',l:'송금 관리',p:'payout',plan_key:'settle'},
-  ]},
-  {s:'📢 공지', items:[
-    {ic:'📢',l:'공지사항',p:'notices',plan_key:'free'},
-  ]},
-];
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
   {s:'출퇴근',items:[
@@ -27382,27 +27110,6 @@ function _copyCompanyCode(el){
 
 
 // 재고관리 → filo.ai.kr로 이전 (스텁)
-function pageInventory(){
-  if(!isSuperAdmin()&&!_isPlanAllowedNow('inventory')){_renderPaywall('inventory');return;}
-  document.getElementById('page-title').textContent='📦 재고·매출·마진';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-  var did=_CU.dealerId||_CU.uid;
-  el.innerHTML='<div style="max-width:860px;margin:0 auto">'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'
-    +'<button id="inv-tab-dash" class="btn btn-blue" onclick="_invTab(this,\'dash\')" style="font-size:12px">📊 대시보드</button>'
-    +'<button id="inv-tab-stock" class="btn" onclick="_invTab(this,\'stock\')" style="font-size:12px">📦 재고 현황</button>'
-    +'<button id="inv-tab-order" class="btn" onclick="_invTab(this,\'order\')" style="font-size:12px">🛒 자동발주 설정</button>'
-    +'<button id="inv-tab-history" class="btn" onclick="_invTab(this,\'history\')" style="font-size:12px">📋 발주 이력</button>'
-    +'<button id="inv-tab-salary" class="btn" onclick="_invTab(this,\'salary\')" style="font-size:12px">💼 급여 연동</button>'
-    +'</div>'
-    +'<div id="inv-dash-area"></div>'
-    +'<div id="inv-stock-area" style="display:none"></div>'
-    +'<div id="inv-order-area" style="display:none"></div>'
-    +'<div id="inv-salary-area" style="display:none"></div>'
-    +'</div>';
-  _invTab(document.getElementById('inv-tab-dash'),'dash');
-}
 
 
 function _invRenderDash(){
@@ -27620,15 +27327,6 @@ function _invRenderSalary(){
     area.innerHTML=html;
   }).catch(function(e){area.innerHTML='<div style="color:#ef4444;padding:20px">'+e.message+'</div>';});
 }
-function pageInvSummary(){pageInventory();}
-function pageInvMonthly(){pageInventory();}
-function pageInvOrder(){pageInventory();}
-function pageInvEditLog(){pageInventory();}
-function pageInvChangeLog(){pageInventory();}
-function pageInvManagerStock(){pageInventory();}
-function pageInvManagerIn(){pageInventory();}
-function pageInvManagerOut(){pageInventory();}
-function pageInvManagerReturn(){pageInventory();}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💄 뷰티 키오스크/태블릿 시술 입력
@@ -34322,73 +34020,6 @@ async function saveDispatchResult(){
 }
 
 
-function pageHourlySettle(){
-  _requirePlan('payroll',function(){
-  // 서비스 타입에 따라 타이틀 변경
-  var _svcType=_CU&&_CU.serviceType||'';
-  var _pageTitle=(_svcType==='hourly')?'💼 급여 관리':'⏰ 시급·일급·수수료 정산';
-  document.getElementById('page-title').textContent=_pageTitle;
-  var tr=document.getElementById('topbar-right');
-  tr.innerHTML='';
-  var el=document.getElementById('content');
-  if(!_db||!_CU){el.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
-
-  var did=_CU.dealerId;
-  var now=new Date();
-  var curYM=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  var _selMonth=curYM;
-  var _workers=[]; // 직원 목록 (근무타입 있는 자)
-  var _attMap={};  // {userId: [{date,checkIn,checkOut}]}
-  var _results={}; // {userId: calcResult}
-
-  el.innerHTML='<div style="max-width:800px;margin:0 auto">'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
-    +'<select id="hs-month-sel" style="padding:8px 12px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);border-radius:8px;font-size:13px;font-weight:700"></select>'
-    +'<button onclick="_hsLoad()" class="btn btn-blue">🔄 QR 데이터 불러오기</button>'
-    +'<button onclick="_hsSaveAll()" class="btn btn-teal">💾 전체 저장</button>'
-    +'<button onclick="_sendAllPayslips(_selMonth)" class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:12px">📨 명세서 전송</button>'
-+'<button onclick="_hsSendAll()" class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none">📱 전체 급여 문자 발송</button>'
-    +'<button onclick="_hsAnomalyCheck()" class="btn" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">🤖 AI 이상감지</button>'
-    +'<button onclick="_hsTaxShare()" class="btn" style="background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;margin-left:auto">📤 세무사 공유</button>'
-    +'</div>'
-    +'<div style="font-size:11px;color:var(--text3)">QR 출퇴근 기록을 불러와 자동으로 급여를 계산합니다</div>'
-    +'</div>'
-    // 탭: 계산기 / QR 자동정산
-    +'<div style="display:flex;gap:6px;margin-bottom:12px">'
-    +'<button id="hs-tab-auto" onclick="_hsTabSwitch(this.dataset.t)" data-t="auto" class="btn btn-blue" style="font-size:12px">📱 QR 자동 정산</button>'
-    +'<button id="hs-tab-calc" onclick="_hsTabSwitch(this.dataset.t)" data-t="calc" class="btn" style="font-size:12px">🧮 수동 계산기</button>'
-    +'<button id="hs-tab-sim" onclick="_hsTabSwitch(this.dataset.t)" data-t="sim" class="btn" style="font-size:12px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;border:none">🧪 급여 시뮬레이션</button>'
-    +'</div>'
-    +'<div id="hs-auto-area">'
-    +'<div id="hs-result-list"><div class="empty"><div class="empty-icon">📱</div>월 선택 후 QR 데이터 불러오기를 클릭하세요</div></div>'
-    +'</div>'
-    +'<div id="hs-sim-area" style="display:none"></div>'
-    +'<div id="hs-calc-area" style="display:none">'
-    +'<div class="card"><div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-    +Object.entries(WORK_TYPES).map(function(kv){
-      var k=kv[0],v=kv[1];
-      return '<button onclick="_hwTab(this,this.dataset.tab)" data-tab="'+k+'" class="btn btn-sm" '
-        +(k==='hourly'?'style="background:var(--brand);color:#fff;border-color:var(--brand)"':'')
-        +'>'+v.icon+' '+v.label+'</button>';
-    }).join('')
-    +'</div><div id="hw-calc-area">'+_hwRenderCalc('hourly')+'</div></div>'
-    +'</div>'
-    +'</div>';
-
-  // 월 선택 드롭다운 채우기
-  var sel=document.getElementById('hs-month-sel');
-  for(var i=0;i<12;i++){
-    var d2=new Date(now.getFullYear(),now.getMonth()-i,1);
-    var ym=d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0');
-    var opt=document.createElement('option');
-    opt.value=ym;opt.textContent=ym;
-    if(ym===curYM)opt.selected=true;
-    sel.appendChild(opt);
-  }
-  window._hsState={workers:_workers,attMap:_attMap,results:_results,did:did};
-  }); // _requirePlan
-}
 function _hsTabSwitch(tab){
   document.getElementById('hs-auto-area').style.display=tab==='auto'?'':'none';
   document.getElementById('hs-calc-area').style.display=tab==='calc'?'':'none';
