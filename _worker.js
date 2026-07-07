@@ -1534,6 +1534,7 @@ async function acceptExchange(){
     }
 
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
