@@ -2392,7 +2392,7 @@ function _getTerm(key){
   var ind=dealer.industryType||dealer.plan_key||'universal';
   // 메뉴에서 현재 업종 파악
   var curPage=window._curPage||'';
-  else if(curPage.indexOf('delivery')>=0) ind='delivery';
+  if(curPage.indexOf('delivery')>=0) ind='delivery';
   else if(curPage.indexOf('facility')>=0) ind='facility';
   else if(curPage.indexOf('moving')>=0) ind='moving';
   else if(curPage.indexOf('elec')>=0)  ind='elec';
@@ -2885,7 +2885,7 @@ function pageSubscription(){
   var el=document.getElementById('content');
   // 업종별 용어 적용
   var indKey='universal';
-  else if(p.indexOf('delivery')>=0) indKey='delivery';
+  if(p.indexOf('delivery')>=0) indKey='delivery';
   else if(p.indexOf('facility')>=0) indKey='facility';
   else if(p.indexOf('moving')>=0) indKey='moving';
   else if(p.indexOf('elec')>=0)  indKey='elec';
@@ -5235,7 +5235,6 @@ function showApp(){
     }
     // 업종별 파서 라우팅
     var parserMap={
-      :        function(f,m){_parseGolfExcel(f,m);},
       'facility':    function(f,m){_parseFacilityExcel(f,m);},
       'moving':      function(f,m){_parseMovingExcel(f,m);},
       'elec':        function(f,m){_parseElecExcel(f,m);},
@@ -34817,7 +34816,7 @@ function _openIndWorkerTextImport(type, did, info, cb){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📋 업종별 근무표 (공통)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-var _IND_ROSTER_CFG = {: {"label": "출역일지", "icon": "🏗️", "cols": ["현장명", "직종", "출역일수", "일당", "특기사항"], "tip": "현장별·직종별 출역 현황을 관리합니다."}, : {"label": "실적표", "icon": "🛡️", "cols": ["소속팀", "신계약건", "유지건", "시책", "이월금"], "tip": "월별 계약·유지 실적을 관리합니다."}, : {"label": "콜 실적표", "icon": "🚗", "cols": ["센터", "콜건수", "장거리", "심야", "미션"], "tip": "일별·라이더별 콜 실적을 관리합니다."}, : {"label": "시술 매출표", "icon": "💄", "cols": ["직급", "시술매출", "수수료율", "팁", "재료비"], "tip": "디자이너별 시술 매출 현황을 관리합니다."}, : {"label": "방문 일지", "icon": "🏥", "cols": ["서비스구분", "방문일수", "서비스시간", "목욕횟수", "특이사항"], "tip": "요양보호사별 방문·서비스 현황을 관리합니다."}, : {"label": "강의 스케줄", "icon": "🎓", "cols": ["담당과목", "수업시간", "수강생수", "교재비", "비고"], "tip": "강사별 강의 스케줄·수강생 현황을 관리합니다."}, : {"label": "작업 실적표", "icon": "📦", "cols": ["작업구분", "출근일수", "피킹건", "패킹건", "오배송"], "tip": "직원별 작업 실적·페널티 현황을 관리합니다."}, : {"label": "투입 현황", "icon": "🎪", "cols": ["행사명", "직무", "근무일수", "식대", "교통비"], "tip": "행사별·직무별 인력 투입 현황을 관리합니다."}, : {"label": "영업 실적표", "icon": "💼", "cols": ["팀", "영업건수", "계약금액", "달성률", "인센"], "tip": "영업사원별 실적·달성률을 관리합니다."}, : {"label": "프로젝트 현황", "icon": "🖥️", "cols": ["프로젝트명", "계약금액", "진행단계", "마감일", "지연여부"], "tip": "프리랜서별 프로젝트 진행 현황을 관리합니다."}, : {"label": "근무 스케줄", "icon": "🍽️", "cols": ["포지션", "근무일수", "근무시간", "주휴여부", "비고"], "tip": "직원별 근무 스케줄·주휴수당 현황을 관리합니다."}};
+var _IND_ROSTER_CFG = {};
 
 
 function _loadIndRosterData(type,did,workers,ym,cfg,tableDiv,info){
