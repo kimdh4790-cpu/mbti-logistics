@@ -7417,10 +7417,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           _guardUpdateMonthlySeat(settlements,month);
         }
         // Firebase 저장
-        console.log('[디버그] _db:', !!_db, '_CU:', !!_CU, '_CU.dealerId:', _CU&&_CU.dealerId, '_idSupportRules:', window._idSupportRules&&window._idSupportRules.length);
         if(_db){
           // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
-          settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          var _did=(_CU&&_CU.dealerId)||'';
+          if(_did) settlements.forEach(function(x){x.dealerId=_did;});
           // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 합산 (중복 제거)
           var _mergedIdRules=[];
           if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
