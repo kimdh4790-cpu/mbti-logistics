@@ -7372,6 +7372,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 return Object.assign({},newRd,{unitPrice:oldRd.unitPrice});
               return newRd;
             });
+            // ★ 아이디지원 차감 사유는 재계산으로 덮어씀 (이전 잔재 제거)
+            prev.etcMinusReason='';
             settlements[existing]=Object.assign({},prev,entry);
             updated++;
           } else {
