@@ -4117,25 +4117,20 @@ function _filoPageTableQR(el){
 
 function _filoTableLoad(did){
  did=did||_CU.dealerId||_CU.uid;
- var FURL='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
  var today=new Date().toISOString().slice(0,10);
  Promise.all([
-  fetch(FURL+':runQuery',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-   body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_tables'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},orderBy:[{field:{fieldPath:'tableNum'},direction:'ASCENDING'}]}})
-  }).then(function(r){return r.json();}),
-  fetch(FURL+':runQuery',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-   body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_bookings'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:today}}},{fieldFilter:{field:{fieldPath:'status'},op:'IN',value:{arrayValue:{values:[{stringValue:'pending'},{stringValue:'confirmed'}]}}}}]}},orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:20}})
-  }).then(function(r){return r.json();})
+  _db.collection('filo_tables').where('dealerId','==',did).orderBy('tableNum','asc').get(),
+  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).where('status','in',['pending','confirmed']).orderBy('createdAt','desc').limit(20).get()
  ]).then(function(results){
-  var tableRows=(results[0]||[]).filter(function(r){return r.document;});
-  var bookingRows=(results[1]||[]).filter(function(r){return r.document;});
+  var tableSnap=results[0];
+  var bookingSnap=results[1];
 
-  function gf(f,k){var x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):null;}
-
-  var tables=tableRows.length?tableRows.map(function(r){
-   var f=r.document.fields||{};
-   return {docId:r.document.name.split('/').pop(),num:gf(f,'tableNum')||1,name:gf(f,'tableName')||'테이블',status:gf(f,'status')||'empty',reservedName:gf(f,'reservedName')||'',occupiedSince:gf(f,'occupiedSince')||''};
-  }):Array.from({length:10},function(_,i){return {docId:'auto_'+(i+1),num:i+1,name:'테이블 '+(i+1),status:'empty',reservedName:'',occupiedSince:''};});
+  var tables=tableSnap.empty?
+   Array.from({length:10},function(_,i){return {docId:'auto_'+(i+1),num:i+1,name:'테이블 '+(i+1),status:'empty',reservedName:'',occupiedSince:''};})
+   :tableSnap.docs.map(function(d){
+    var f=d.data();
+    return {docId:d.id,num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty',reservedName:f.reservedName||'',occupiedSince:f.occupiedSince||''};
+   });
 
   /* 테이블 그리드 */
   var grid=document.getElementById('filo-table-grid');
@@ -4170,16 +4165,17 @@ function _filoTableLoad(did){
   /* 예약 대기 목록 */
   var blist=document.getElementById('filo-booking-list');
   if(!blist)return;
+  var bookingRows=bookingSnap.docs;
   if(!bookingRows.length){blist.innerHTML='<div style="text-align:center;padding:12px;color:var(--t3);font-size:12px">오늘 예약 없음</div>';return;}
-  blist.innerHTML=bookingRows.map(function(r){
-   var f=r.document.fields||{};
-   var bid=r.document.name.split('/').pop();
-   var name=gf(f,'customerName')||'-';
-   var table=gf(f,'tableName')||'테이블';
-   var seats=gf(f,'seats')||0;
-   var time=gf(f,'time')||'';
-   var status=gf(f,'status')||'pending';
-   var memo=gf(f,'memo')||'';
+  blist.innerHTML=bookingRows.map(function(d){
+   var f=d.data();
+   var bid=d.id;
+   var name=f.customerName||'-';
+   var table=f.tableName||'테이블';
+   var seats=f.seats||0;
+   var time=f.time||'';
+   var status=f.status||'pending';
+   var memo=f.memo||'';
    var sc={pending:{c:'#f59e0b',l:'대기'},confirmed:{c:'#22c55e',l:'확정'},cancelled:{c:'#ef4444',l:'취소'}}[status]||{c:'var(--t3)',l:status};
    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px">'+
     '<div style="flex:1">'+
@@ -4196,37 +4192,25 @@ function _filoTableLoad(did){
 }
 
 window._filoTableSeat=function(docId,did,num){
- var FURL='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
  var now=new Date().toISOString();
- fetch(FURL+'/filo_tables/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=occupiedSince&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt',{
-  method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-  body:JSON.stringify({fields:{status:{stringValue:'occupied'},occupiedSince:{stringValue:now},reservedName:{stringValue:''},updatedAt:{stringValue:now}}})
- }).then(function(){_filoToast('🍽 테이블 '+num+' 착석 처리');_filoTableLoad(did);}).catch(function(){
-  /* docId가 auto_N이면 신규 생성 */
-  if(docId.startsWith('auto_')){
-   fetch(FURL+'/filo_tables/'+did+'_t'+num,{
-    method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-    body:JSON.stringify({fields:{dealerId:{stringValue:did},tableNum:{integerValue:parseInt(num)},tableName:{stringValue:'테이블 '+num},status:{stringValue:'occupied'},occupiedSince:{stringValue:now},reservedName:{stringValue:''},updatedAt:{stringValue:now}}})
-   }).then(function(){_filoToast('🍽 테이블 '+num+' 착석 처리');_filoTableLoad(did);});
-  }
- });
+ var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
+ _db.collection('filo_tables').doc(id).set({
+  dealerId:did,tableNum:parseInt(num),tableName:'테이블 '+num,
+  status:'occupied',occupiedSince:now,reservedName:'',updatedAt:now
+ },{merge:true}).then(function(){_filoToast('🍽 테이블 '+num+' 착석');_filoTableLoad(did);});
 };
 
 window._filoTableClear=function(docId,did,num){
- var FURL='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
  var now=new Date().toISOString();
- fetch(FURL+'/filo_tables/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=occupiedSince&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt',{
-  method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-  body:JSON.stringify({fields:{status:{stringValue:'empty'},occupiedSince:{stringValue:''},reservedName:{stringValue:''},updatedAt:{stringValue:now}}})
- }).then(function(){_filoToast('🪑 테이블 '+num+' 비움');_filoTableLoad(did);}).catch(function(){_filoTableLoad(did);});
+ var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
+ _db.collection('filo_tables').doc(id).set({
+  status:'empty',occupiedSince:'',reservedName:'',updatedAt:now
+ },{merge:true}).then(function(){_filoToast('🪑 테이블 '+num+' 비움');_filoTableLoad(did);});
 };
 
 window._filoBookingConfirm=function(bid,did){
- var FURL='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
- fetch(FURL+'/filo_bookings/'+bid+'?updateMask.fieldPaths=status',{
-  method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-  body:JSON.stringify({fields:{status:{stringValue:'confirmed'}}})
- }).then(function(){_filoToast('✅ 예약 확정');_filoTableLoad(did);});
+ _db.collection('filo_bookings').doc(bid).update({status:'confirmed'})
+ .then(function(){_filoToast('✅ 예약 확정');_filoTableLoad(did);});
 };
 
 window._filoTableRefresh=function(){_filoTableLoad(_CU.dealerId||_CU.uid);};
@@ -4234,16 +4218,14 @@ window._filoTableRefresh=function(){_filoTableLoad(_CU.dealerId||_CU.uid);};
 window._filoTableInit=function(){
  var did=_CU.dealerId||_CU.uid;
  var count=parseInt(document.getElementById('table-count-inp').value)||10;
- var FURL='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
  var now=new Date().toISOString();
- var promises=Array.from({length:count},function(_,i){
+ var batch=_db.batch();
+ Array.from({length:count},function(_,i){
   var n=i+1;
-  return fetch(FURL+'/filo_tables/'+did+'_t'+n,{
-   method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_filoToken||'')},
-   body:JSON.stringify({fields:{dealerId:{stringValue:did},tableNum:{integerValue:n},tableName:{stringValue:'테이블 '+n},status:{stringValue:'empty'},occupiedSince:{stringValue:''},reservedName:{stringValue:''},updatedAt:{stringValue:now}}})
-  });
+  var ref=_db.collection('filo_tables').doc(did+'_t'+n);
+  batch.set(ref,{dealerId:did,tableNum:n,tableName:'테이블 '+n,status:'empty',occupiedSince:'',reservedName:'',updatedAt:now},{merge:true});
  });
- Promise.all(promises).then(function(){_filoToast('✅ 테이블 '+count+'개 설정 완료');_filoTableLoad(did);});
+ batch.commit().then(function(){_filoToast('✅ 테이블 '+count+'개 설정 완료');_filoTableLoad(did);});
 };
 
 function _filoGenQRs(){
