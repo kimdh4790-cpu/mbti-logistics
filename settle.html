@@ -5072,10 +5072,6 @@ function showApp(){
     }
     // 업종별 파서 라우팅
     var parserMap={
-      'facility':    function(f,m){_parseFacilityExcel(f,m);},
-      'moving':      function(f,m){_parseMovingExcel(f,m);},
-      'elec':        function(f,m){_parseElecExcel(f,m);},
-      'landscape':   function(f,m){_parseLandscapeExcel(f,m);},
       'universal':   function(f,m){_parseUniversalExcel(f,m,'universal','📋 범용 정산');},
       'coworking':   function(f,m){_parseUniversalExcel(f,m,'coworking','🏢 공유오피스');},
       'creator':     function(f,m){_parseUniversalExcel(f,m,'creator','🎬 크리에이터');},
@@ -19820,30 +19816,6 @@ var MENUS_SETTLE = [
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}]},
-  {s:'🔧 시설관리·청소', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_facility_settle',    plan_key:'ind_facility'},
-    {ic:'📋',l:'정산 관리',       p:'ind_facility_list',      plan_key:'ind_facility'},
-    {ic:'👤',l:'직원 관리',       p:'ind_facility_workers',   plan_key:'ind_facility'},
-    {ic:'💸',l:'송금',            p:'payout',                 plan_key:'ind_facility'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',              plan_key:'ind_facility'}]},
-  {s:'🚛 이삿짐·운반', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_moving_settle',    plan_key:'ind_moving'},
-    {ic:'📋',l:'정산 관리',       p:'ind_moving_list',      plan_key:'ind_moving'},
-    {ic:'👤',l:'직원 관리',       p:'ind_moving_workers',   plan_key:'ind_moving'},
-    {ic:'💸',l:'송금',            p:'payout',               plan_key:'ind_moving'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',            plan_key:'ind_moving'}]},
-  {s:'⚡ 전기·설비', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_elec_settle',    plan_key:'ind_elec'},
-    {ic:'📋',l:'정산 관리',       p:'ind_elec_list',      plan_key:'ind_elec'},
-    {ic:'👤',l:'직원 관리',       p:'ind_elec_workers',   plan_key:'ind_elec'},
-    {ic:'💸',l:'송금',            p:'payout',             plan_key:'ind_elec'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',          plan_key:'ind_elec'}]},
-  {s:'🌿 조경·농업', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_landscape_settle',    plan_key:'ind_landscape'},
-    {ic:'📋',l:'정산 관리',       p:'ind_landscape_list',      plan_key:'ind_landscape'},
-    {ic:'👤',l:'직원 관리',       p:'ind_landscape_workers',   plan_key:'ind_landscape'},
-    {ic:'💸',l:'송금',            p:'payout',                  plan_key:'ind_landscape'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',               plan_key:'ind_landscape'}]},
   {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle',  plan_key:'universal'},
     {ic:'📥',l:'엑셀 업로드 정산', p:'universal_input',   plan_key:'universal'},
@@ -31129,11 +31101,6 @@ function _buildNavRender(nav,cur,companyDoc){
     if(plan_key==='premium')     return hasPremium;
     if(plan_key==='any_paid')    return hasAnyPaid;
     // 업종별 정산 — companies.services 배열에 해당 plan_key 있으면 허용
-    if(false) return false; // cleaning removed
-    if(plan_key==='ind_facility')  return _hasIndPlan(d,'ind_facility');
-    if(plan_key==='ind_moving')    return _hasIndPlan(d,'ind_moving');
-    if(plan_key==='ind_elec')      return _hasIndPlan(d,'ind_elec');
-    if(plan_key==='ind_landscape') return _hasIndPlan(d,'ind_landscape');
     if(plan_key.startsWith('ind_')) return _hasIndPlan(d,plan_key);
     return false;
   }
