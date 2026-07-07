@@ -4536,24 +4536,6 @@ window._filoTableInit=function(){
  batch.commit().then(function(){_filoToast('✅ 테이블 '+count+'개 설정 완료');_filoTableLoad(did);});
 };
 
-function _filoGenQRs(){
- var did=_CU.dealerId||_CU.uid;
- var count=parseInt(document.getElementById('table-count').value)||10;
- var grid=document.getElementById('qr-grid');
- if(!grid)return;
- grid.innerHTML='';
- for(var i=1;i<=count;i++){
-  var url='https://filo.ai.kr/table?did='+did+'&tid='+i;
-  var div=document.createElement('div');
-  div.className='card';
-  div.style.cssText='text-align:center;padding:16px;cursor:pointer';
-  div.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:10px">테이블 '+i+'</div>'+
-   '<div id="qr-'+i+'" style="background:#fff;padding:8px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
-   '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;word-break:break-all">'+url+'</div>'+
-   '<button data-url="'+url+'" onclick="window.open(this.dataset.url,\'_blank\')" style="padding:4px 10px;background:var(--br);border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">미리보기</button>';
-  grid.appendChild(div);
- }
-}
 
 function _filoShowModal(html){
  var mo=document.createElement('div');
