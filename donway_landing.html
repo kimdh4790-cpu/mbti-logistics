@@ -359,8 +359,8 @@ function showIndustry(type) {
   });
   var data = industryData[type] || industryData.courier;
   var html = data.map(function(d) {
-    var onclick = d.key ? ' onclick="_dwOpenModal(\''+d.key+'\')"' : '';
-    return '<div class="fitem"'+onclick+'><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
+    var dataKey = d.key ? ' data-mkey="'+d.key+'"' : '';
+    return '<div class="fitem"'+dataKey+'><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
   }).join('');
   document.getElementById('industry-content').innerHTML = html;
 }
@@ -725,6 +725,12 @@ function switchTab(n){
 }
 
 setActive(0);
+
+// 업종 탭 카드 이벤트 위임
+document.getElementById('industry-content').addEventListener('click', function(e){
+  var item = e.target.closest('.fitem[data-mkey]');
+  if(item){ _dwOpenModal(item.getAttribute('data-mkey')); }
+});
 </script>
 
 <!-- ── 홈화면 설치 모달 ── -->
