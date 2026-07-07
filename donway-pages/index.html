@@ -28180,11 +28180,36 @@ function goPage(page){
   document.getElementById('topbar-right').innerHTML='';
   document.getElementById('sidebar').classList.remove('open');
   var _bd=document.getElementById('sb-backdrop');if(_bd)_bd.style.display='none';
-  var pages={settle:pageSettle,settle_inc:function(){ goPage(_getMainSettlePage()); },
-work_settings:pageWorkSettings,
-monthly_stats:pageMonthlyStats,
-message:pageMessage,
-customer:pageCustomer
+  var pages={
+  settle:pageSettle, settle_inc:function(){ goPage(_getMainSettlePage()); },
+  settlements:pageSettlements,
+  drivers:pageDrivers,
+  payout:function(){toast('준비 중');},
+  prices:pagePrices,
+  season:pageSeason,
+  roster:pageRoster,
+  schedule:pageSchedule,
+  contract:pageContract,
+  tax_share:pageTaxShare,
+  stats:pageStats,
+  notices:pageNotices,
+  notify_history:pageNotifyHistory,
+  message:pageMessage,
+  customer:pageCustomer,
+  dispatch:pageDispatch,
+  dispatch_history:pageDispatchHistory,
+  vehicle:pageVehicle,
+  expense:pageExpense,
+  evaluation:pageEvaluation,
+  work_settings:pageWorkSettings,
+  monthly_stats:pageMonthlyStats,
+  delivery_settle:pageDeliverySettle,
+  delivery_input:pageDeliveryPlatform,
+  delivery_stats:pageDeliveryStats2,
+  delivery_report:pageDeliveryReport,
+  home:pageHome,
+  camps:pageCamps,
+  sa_events:pageSaEvents,
   };
   // ★ 플랜 체크
   var cd=window._cachedCompanyDoc||{};
