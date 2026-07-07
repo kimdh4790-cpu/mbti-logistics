@@ -29685,9 +29685,13 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      var ct=s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)))||0;  // ★ nocont 제외: 쿠팡수입 아님
-      totCoupang+=ct?Math.round(ct*1.1):(r.income||0);
-      // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
+      // ★ 쿠팡수입 = 엑셀 원본(damt+ramt+fresh+inc-dmg) × 1.1
+      // nocont(미계약), etcPlus(기타+)는 대리점 자체 지급금 → 쿠팡수입 제외
+      // calcNet에서 이미 계산된 damt/ramt/fresh/finc/inc 사용
+      var _coupangBase = (r.damt||0)+(r.ramt||0)+(r.fresh||0)+(r.finc||0)+(r.inc||0)-(+s.dmg||+s.damage||0);
+      var ct = _coupangBase > 0 ? _coupangBase : (s.coupangTotal||0);
+      totCoupang+=ct?Math.round(ct*1.1):0;
+      // 기사 세금계산서 = income (damt+ramt+fresh+finc+nocont+etcPlus, VAT포함)
       totTaxBase+=(r.income||r.totalAmt||0);
       // 추가 지출 (팀장수수료 + 기타+ — 쿠팡수입 초과분)
       totExtraOut+=(+s.etcPlusTL||0)+(+s.etcPlus||0);
