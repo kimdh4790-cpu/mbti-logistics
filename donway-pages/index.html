@@ -31120,6 +31120,7 @@ function recalcAllSettlements(){
       var update={
         routeDetails:newRds, damt:newDamt, ramt:newRamt, finc:fincVal,
         etcPlus:_recalcEtcPlus, etcPlusReason:_recalcEtcPlusReason,
+        etcMinusReason:'',
         totalAmt:taxBase, vatIncome:taxBase, supplyAmt:supplyAmt, monthlyWage:monthlyWage,
         emp:empIns, work:workIns, deduct:deductTotal, net:net,
         updatedAt:new Date().toISOString()
