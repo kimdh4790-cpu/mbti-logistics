@@ -4214,7 +4214,10 @@ function _filoShowTableQRModal(did){
      var cv=document.getElementById('qr-c-'+t.num);
      if(!cv)return;
      var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
-     QRCode.toCanvas(cv,url,{width:120,margin:2,color:{dark:'#000000',light:'#ffffff'}},function(err){if(err)console.error('QR err:',err);});
+     cv.innerHTML='';
+     try{
+      new QRCode(cv,{text:url,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+     }catch(e){console.error('QR:',e);}
     });
    });
   }).catch(function(e){_filoToast('❌ '+e.message);});
@@ -4223,24 +4226,31 @@ function _filoShowTableQRModal(did){
 function _filoEnsureQR(cb){
  if(window.QRCode)return cb();
  var s=document.createElement('script');
- s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+ s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
  s.onload=cb;document.head.appendChild(s);
 }
 
 function _filoQRDownload(num,name){
- var canvas=document.getElementById('qr-c-'+num);
- if(!canvas){_filoToast('❌ QR 없음');return;}
+ var wrap=document.getElementById('qr-c-'+num);
+ if(!wrap){_filoToast('❌ QR 없음');return;}
+ var canvas=wrap.querySelector('canvas');
+ var img=wrap.querySelector('img');
  var a=document.createElement('a');
  a.download=name+'_QR.png';
- a.href=canvas.toDataURL('image/png');
+ if(canvas)a.href=canvas.toDataURL('image/png');
+ else if(img)a.href=img.src;
+ else{_filoToast('❌ QR 없음');return;}
  a.click();
  _filoToast('💾 '+name+' QR 저장됐습니다');
 }
 
 function _filoQRPrint1(num,name){
- var canvas=document.getElementById('qr-c-'+num);
- if(!canvas)return;
- var img=canvas.toDataURL('image/png');
+ var wrap=document.getElementById('qr-c-'+num);
+ if(!wrap)return;
+ var canvas=wrap.querySelector('canvas');
+ var imgEl=wrap.querySelector('img');
+ var img=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
+ if(!img)return;
  var w=window.open('','_blank','width=400,height=500');
  w.document.write('<html><head><title>'+name+'</title>'+
   '<style>*{margin:0;padding:0}body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}h2{font-size:22px;font-weight:900;margin-bottom:16px}img{width:220px;height:220px}p{font-size:13px;color:#666;margin-top:10px}</style></head>'+
@@ -4249,14 +4259,18 @@ function _filoQRPrint1(num,name){
 }
 
 function _filoQRPrintAll(){
- var canvases=document.querySelectorAll('[id^="qr-c-"]');
- if(!canvases.length){_filoToast('❌ QR 코드 없음');return;}
+ var wraps=document.querySelectorAll('[id^="qr-c-"]');
+ if(!wraps.length){_filoToast('❌ QR 코드 없음');return;}
  var imgs='';
- canvases.forEach(function(c){
-  var num=c.id.replace('qr-c-','');
+ wraps.forEach(function(wrap){
+  var num=wrap.id.replace('qr-c-','');
+  var canvas=wrap.querySelector('canvas');
+  var imgEl=wrap.querySelector('img');
+  var src=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
+  if(!src)return;
   imgs+='<div style="display:inline-block;margin:12px;text-align:center;page-break-inside:avoid">'+
    '<div style="font-size:16px;font-weight:700;margin-bottom:8px">테이블 '+num+'</div>'+
-   '<img src="'+c.toDataURL('image/png')+'" style="width:160px;height:160px;display:block">'+
+   '<img src="'+src+'" style="width:160px;height:160px;display:block">'+
    '<div style="font-size:11px;color:#666;margin-top:6px">QR 스캔 → 주문</div></div>';
  });
  var w=window.open('','_blank');
