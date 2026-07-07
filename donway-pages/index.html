@@ -7552,19 +7552,24 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                         });
                       });
                     }
-                    // ★ 프레시백 차감
+                    // ★ 프레시백 차감 (날짜+라우트 매칭)
                     if(fdm.dateFresh){
                       var _freshDeduct=Object.keys(fdm.dateFresh).reduce(function(s,dt){
-                        if(rule.rStart&&dt.substring(0,7)<rule.rStart.substring(0,7))return s;
-                        if(rule.rEnd&&dt.substring(0,7)>rule.rEnd.substring(0,7))return s;
+                        // 해당 날짜에 해당 라우트가 있어야 차감
+                        if(!fdm.dateRoutes||!fdm.dateRoutes[dt])return s;
+                        var hasRoute=tR.length===0||Object.keys(fdm.dateRoutes[dt]).some(function(rt){return tR.indexOf(rt)>=0;});
+                        if(!hasRoute)return s;
+                        // 날짜 범위 확인
+                        if(rStart&&dt<rStart)return s;
+                        if(rEnd&&dt>rEnd+'~')return s;
                         return s+(fdm.dateFresh[dt]||0);
                       },0);
                       fs.fresh=Math.max(0,(fs.fresh||0)-_freshDeduct);
                     }
-                    // ★ 인센 차감
-                    Object.keys(fdm.dateRoutes).forEach(function(dt){
-                      if(rule.rStart&&dt.substring(0,7)<rule.rStart.substring(0,7))return;
-                      if(rule.rEnd&&dt.substring(0,7)>rule.rEnd.substring(0,7))return;
+                    // ★ 인센 차감 (날짜 정확 매칭)
+                    var _validDates2=_sortedDates.length?_sortedDates:Object.keys(fdm.dateRoutes);
+                    _validDates2.forEach(function(dt){
+                      if(!fdm.dateRoutes[dt])return;
                       Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
                         if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
                         var rd2=fdm.dateRoutes[dt][rt];
@@ -7581,12 +7586,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                       fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
                     });
                   }
-                  // ★ 프레시백 차감 (공통)
+                  // ★ 프레시백 차감 (날짜+라우트 매칭)
                   var fdm2=drvMap[fid];
-                  if(fdm2&&fdm2.dateFresh){
+                  if(fdm2&&fdm2.dateFresh&&fdm2.dateRoutes){
                     var _fd2=Object.keys(fdm2.dateFresh).reduce(function(s,dt){
-                      if(rule.rStart&&dt.substring(0,7)<rule.rStart.substring(0,7))return s;
-                      if(rule.rEnd&&dt.substring(0,7)>rule.rEnd.substring(0,7))return s;
+                      if(!fdm2.dateRoutes[dt])return s;
+                      var hasRoute2=rule.tR.length===0||Object.keys(fdm2.dateRoutes[dt]).some(function(rt){return rule.tR.indexOf(rt)>=0;});
+                      if(!hasRoute2)return s;
+                      if(rule.rStart&&dt<rule.rStart)return s;
+                      if(rule.rEnd&&dt>rule.rEnd+'~')return s;
                       return s+(fdm2.dateFresh[dt]||0);
                     },0);
                     fs.fresh=Math.max(0,(fs.fresh||0)-_fd2);
