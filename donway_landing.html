@@ -15,6 +15,9 @@
 </script>
 <title>DONWAY — 업종 무관 정산 자동화</title>
 <link rel="manifest" href="/donway-manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/donway-icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/donway-icon-512.png">
+<link rel="apple-touch-icon" href="/donway-apple-icon.png">
 <style>
 :root{
   --bg:#07080F;--bg2:#0D1117;--bg3:#161B22;--border:rgba(255,255,255,.07);
@@ -155,6 +158,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .slide.vis .comp-row:nth-child(9) td{animation:fadeIn .3s .61s ease forwards}
 .slide.vis .comp-row-last td{animation:fadeIn .3s .7s ease forwards}
 .fitem{opacity:0}
+@media(prefers-reduced-motion:reduce){.fitem,.inner,.card,.frow,.pcard{opacity:1!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -162,6 +166,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <nav class="nav">
   <div class="nav-logo">DONWAY</div>
   <div class="nav-space"></div>
+  <button onclick="_openInstall()" style="padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);display:inline-flex;align-items:center;gap:5px;margin-right:4px">📲 앱 설치</button>
   <button class="nav-btn" onclick="location.href='https://donway.ai.kr/settle'" style="background:#f8fafc;color:#1e3a8a;border:1.5px solid #bfdbfe;margin-right:6px">로그인</button>
   <button class="nav-btn" onclick="location.href='https://donway.ai.kr/join'">무료 체험 →</button>
 </nav>
@@ -449,13 +454,13 @@ function showIndustry(type) {
     <table class="ptable">
       <thead><tr><th>월 정산 인원</th><th>월 정액</th><th>인당</th></tr></thead>
       <tbody>
-        <tr><td>~ 50명</td><td class="hi">325,000원</td><td class="per">6,500원</td></tr>
-        <tr><td>~ 100명</td><td class="hi">620,000원</td><td class="per">6,200원</td></tr>
-        <tr><td>~ 200명</td><td class="hi">1,140,000원</td><td class="per">5,700원</td></tr>
-        <tr><td>~ 300명</td><td class="hi">1,590,000원</td><td class="per">5,300원</td></tr>
-        <tr><td>~ 500명</td><td class="hi">2,400,000원</td><td class="per">4,800원</td></tr>
-        <tr><td>~ 700명</td><td class="hi">3,150,000원</td><td class="per">4,500원</td></tr>
-        <tr><td>700명+</td><td class="hi" style="font-size:11px">인당 4,500원</td><td class="per">별도 문의</td></tr>
+        <tr><td>~ 50명</td><td class="hi">310,000원</td><td class="per">6,200원</td></tr>
+        <tr><td>~ 100명</td><td class="hi">590,000원</td><td class="per">5,900원</td></tr>
+        <tr><td>~ 200명</td><td class="hi">1,100,000원</td><td class="per">5,500원</td></tr>
+        <tr><td>~ 300명</td><td class="hi">1,530,000원</td><td class="per">5,100원</td></tr>
+        <tr><td>~ 500명</td><td class="hi">2,300,000원</td><td class="per">4,600원</td></tr>
+        <tr><td>~ 700명</td><td class="hi">2,940,000원</td><td class="per">4,200원</td></tr>
+        <tr><td>700명+</td><td class="hi" style="font-size:11px">인당 3,929원</td><td class="per">고정</td></tr>
       </tbody>
     </table>
   </div>
@@ -463,13 +468,13 @@ function showIndustry(type) {
     <table class="ptable">
       <thead><tr><th>월 정산 인원</th><th>월 정액</th><th>인당</th><th>할인</th></tr></thead>
       <tbody>
-        <tr><td>~ 50명</td><td class="hi">265,000원</td><td class="per">5,300원</td><td class="grn">↓19%</td></tr>
-        <tr><td>~ 100명</td><td class="hi">500,000원</td><td class="per">5,000원</td><td class="grn">↓19%</td></tr>
-        <tr><td>~ 200명</td><td class="hi">920,000원</td><td class="per">4,600원</td><td class="grn">↓19%</td></tr>
-        <tr><td>~ 300명</td><td class="hi">1,260,000원</td><td class="per">4,200원</td><td class="grn">↓21%</td></tr>
-        <tr><td>~ 500명</td><td class="hi">1,900,000원</td><td class="per">3,800원</td><td class="grn">↓21%</td></tr>
-        <tr><td>~ 700명</td><td class="hi">2,450,000원</td><td class="per">3,500원</td><td class="grn">↓22%</td></tr>
-        <tr><td>700명+</td><td class="hi" style="font-size:11px">인당 3,300원</td><td class="per">3,300원</td><td class="grn">↓27%</td></tr>
+        <tr><td>~ 50명</td><td class="hi">248,000원</td><td class="per">4,960원</td><td class="grn">↓20%</td></tr>
+        <tr><td>~ 100명</td><td class="hi">472,000원</td><td class="per">4,720원</td><td class="grn">↓20%</td></tr>
+        <tr><td>~ 200명</td><td class="hi">880,000원</td><td class="per">4,400원</td><td class="grn">↓20%</td></tr>
+        <tr><td>~ 300명</td><td class="hi">1,224,000원</td><td class="per">4,080원</td><td class="grn">↓20%</td></tr>
+        <tr><td>~ 500명</td><td class="hi">1,840,000원</td><td class="per">3,680원</td><td class="grn">↓20%</td></tr>
+        <tr><td>~ 700명</td><td class="hi">2,352,000원</td><td class="per">3,360원</td><td class="grn">↓20%</td></tr>
+        <tr><td>700명+</td><td class="hi" style="font-size:11px">인당 3,143원</td><td class="per">3,143원</td><td class="grn">↓20%</td></tr>
       </tbody>
     </table>
   </div>
@@ -726,7 +731,7 @@ setActive(0);
           <div><div style="font-size:13px;font-weight:800;margin-bottom:3px">홈 화면에 추가</div><div style="font-size:11px;color:#9898c0;line-height:1.6">스크롤 내려서 <b style="color:#f0f0ff">"홈 화면에 추가"</b> 선택 → <b style="color:#3b82f6">추가</b> 탭</div></div>
         </div>
       </div>
-      <a href="donway.ai.kr/settle" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:13px;background:linear-gradient(135deg,#3b82f6,#3b82f6bb);color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;letter-spacing:-.3px">🍎 Safari로 열기 →</a>
+      <a href="https://donway.ai.kr/settle" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:13px;background:linear-gradient(135deg,#3b82f6,#3b82f6bb);color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;letter-spacing:-.3px">🍎 Safari로 열기 →</a>
     </div>
     <!-- Android 가이드 -->
     <div id="ipanel-aos" style="padding:20px;display:none">
@@ -750,7 +755,7 @@ setActive(0);
           <button id="pwa-install-btn" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">설치</button>
         </div>
       </div>
-      <a href="donway.ai.kr/settle" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:13px;background:linear-gradient(135deg,#3b82f6,#3b82f6bb);color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;letter-spacing:-.3px">🤖 Chrome으로 열기 →</a>
+      <a href="https://donway.ai.kr/settle" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:13px;background:linear-gradient(135deg,#3b82f6,#3b82f6bb);color:#fff;border-radius:12px;font-size:14px;font-weight:800;text-decoration:none;letter-spacing:-.3px">🤖 Chrome으로 열기 →</a>
     </div>
   </div>
 </div>
