@@ -4119,8 +4119,8 @@ function _filoTableLoad(did){
  did=did||_CU.dealerId||_CU.uid;
  var today=new Date().toISOString().slice(0,10);
  Promise.all([
-  _db.collection('filo_tables').where('dealerId','==',did).orderBy('tableNum','asc').get(),
-  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).where('status','in',['pending','confirmed']).orderBy('createdAt','desc').limit(20).get()
+  _db.collection('filo_tables').where('dealerId','==',did).get(),
+  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).get()
  ]).then(function(results){
   var tableSnap=results[0];
   var bookingSnap=results[1];
@@ -4130,7 +4130,7 @@ function _filoTableLoad(did){
    :tableSnap.docs.map(function(d){
     var f=d.data();
     return {docId:d.id,num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty',reservedName:f.reservedName||'',occupiedSince:f.occupiedSince||''};
-   });
+   }).sort(function(a,b){return a.num-b.num;});
 
   /* 테이블 그리드 */
   var grid=document.getElementById('filo-table-grid');
@@ -4165,7 +4165,7 @@ function _filoTableLoad(did){
   /* 예약 대기 목록 */
   var blist=document.getElementById('filo-booking-list');
   if(!blist)return;
-  var bookingRows=bookingSnap.docs;
+  var bookingRows=bookingSnap.docs.filter(function(d){var s=d.data().status;return s==='pending'||s==='confirmed';}).sort(function(a,b){return (b.data().createdAt||'')>(a.data().createdAt||'')?1:-1;}).slice(0,20);
   if(!bookingRows.length){blist.innerHTML='<div style="text-align:center;padding:12px;color:var(--t3);font-size:12px">오늘 예약 없음</div>';return;}
   blist.innerHTML=bookingRows.map(function(d){
    var f=d.data();
