@@ -812,6 +812,7 @@ async function _loadSlugCompany(){
     if(!snap.empty){
       _slugCompany = snap.docs[0].data();
       _slugCompany._id = snap.docs[0].id;
+      _applySlugBranding(); // ★ 로그인 전에도 회사명 표시
       // ★ v9.26 핵심 수정: 슬러그 모드에서는 URL 슬러그 회사의 dealerId로 덮어씀
       // 슈퍼어드민이 /test123 접속 시 test123 데이터 보임, /mbti 접속 시 mbti 데이터 보임
       // 일반 대리점 로그인 시: 자기 슬러그 URL로만 접근 가능 (다른 대리점 URL = 빈 화면)
