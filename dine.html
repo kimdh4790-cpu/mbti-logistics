@@ -661,6 +661,57 @@ function _firestoreQuery(collection, filters, token){
 
 /* 실시간 출퇴근 카운트 (REST 폴링) */
 var _attendInterval=null;
+function _dineDashboard(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
+ hdr.innerHTML='<div><div class="page-title">📊 오늘 현황</div><div class="page-sub" id="dash-date"></div></div>';
+ var now=new Date();
+ wrap.appendChild(hdr);
+
+ var kpi=document.createElement('div');
+ kpi.className='kpi-grid';
+ [{id:'kpi-sales',label:'오늘 매출',icon:'💰',color:'#38bdf8'},
+  {id:'kpi-orders',label:'주문 건수',icon:'🛒',color:'#a78bfa'},
+  {id:'kpi-staff',label:'출근 인원',icon:'👥',color:'#22c55e'},
+  {id:'kpi-labor',label:'인건비율',icon:'📈',color:'#f59e0b'}
+ ].forEach(function(k){
+  var card=document.createElement('div');
+  card.className='kpi-card';
+  card.style.borderTop='2px solid '+k.color;
+  card.innerHTML='<div class="kpi-label">'+k.icon+' '+k.label+'</div>'+
+   '<div class="kpi-val" id="'+k.id+'" style="color:'+k.color+'">-</div>'+
+   '<div class="kpi-sub" id="'+k.id+'-sub">로딩중</div>';
+  kpi.appendChild(card);
+ });
+ wrap.appendChild(kpi);
+
+ var grid=document.createElement('div');
+ grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px';
+ var attCard=document.createElement('div');
+ attCard.className='card';
+ attCard.innerHTML='<div class="sec-title" style="margin-bottom:10px"><span class="attend-live"><span class="live-dot"></span>실시간 출퇴근</span></div>'+
+  '<div id="dash-attend-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ grid.appendChild(attCard);
+ var lawCard=document.createElement('div');
+ lawCard.className='card';
+ lawCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">⚖️ 근로법 알림</div>'+
+  '<div id="dash-law-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ grid.appendChild(lawCard);
+ wrap.appendChild(grid);
+ el.appendChild(wrap);
+
+ var days=['일','월','화','수','목','금','토'];
+ document.getElementById('dash-date').textContent=
+  now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 ('+days[now.getDay()]+')';
+
+ var today=now.toISOString().slice(0,10);
+ _dineLoadDashboard(did,today);
+}
+
 function _dineWatchAttend(){
  if(_attendInterval)clearInterval(_attendInterval);
  function loadAttend(){
@@ -2477,8 +2528,8 @@ function _dineTax(el){
 function _dineTaxLoadFixed(did){
  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_settings/'+did+'_tax_fixed',{
   headers:{'Authorization':'Bearer '+(_dineToken||'')}
- }).then(function(r){return r.json();}).then(function(doc){
-  if(!doc.fields)return;
+ }).then(function(r){return r.ok?r.json():null;}).then(function(doc){
+  if(!doc||!doc.fields)return;
   var f=doc.fields;
   var map={rent:'tax-rent',elec:'tax-elec',gas:'tax-gas',water:'tax-water',cardFee:'tax-card-fee',other:'tax-other',memo:'tax-memo'};
   Object.keys(map).forEach(function(k){
