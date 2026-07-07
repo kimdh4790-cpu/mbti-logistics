@@ -7581,6 +7581,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                       fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
                     });
                   }
+                  // ★ 프레시백 차감 (공통)
+                  var fdm2=drvMap[fid];
+                  if(fdm2&&fdm2.dateFresh){
+                    var _fd2=Object.keys(fdm2.dateFresh).reduce(function(s,dt){
+                      if(rule.rStart&&dt.substring(0,7)<rule.rStart.substring(0,7))return s;
+                      if(rule.rEnd&&dt.substring(0,7)>rule.rEnd.substring(0,7))return s;
+                      return s+(fdm2.dateFresh[dt]||0);
+                    },0);
+                    fs.fresh=Math.max(0,(fs.fresh||0)-_fd2);
+                  }
                 });
                 fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
                 fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
