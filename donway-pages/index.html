@@ -7540,10 +7540,31 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
 
             if(!tot)return;
-            // ★ toId: etcPlus 추가
-            ts.etcPlus=(ts.etcPlus||0)+tot;
-            var pv=ts.etcPlusReason||'';
-            ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+            // ★ toId: 신규생성이면 routeDetails+damt로, 기존이면 etcPlus로
+            if(ts._isNewIdSupport){
+              // 건수/금액을 routeDetails에 흡수
+              Object.keys(_rtAgg).forEach(function(rt){
+                var a=_rtAgg[rt];
+                var up=RPRICE[rt]||0;
+                var existing=ts.routeDetails.findIndex(function(r){return r.route===rt;});
+                if(existing>=0){
+                  ts.routeDetails[existing].cnt=(ts.routeDetails[existing].cnt||0)+a.cnt;
+                  ts.routeDetails[existing].ret=(ts.routeDetails[existing].ret||0)+a.ret;
+                } else {
+                  ts.routeDetails.push({route:rt,cnt:a.cnt,ret:a.ret,unitPrice:up});
+                }
+              });
+              ts.dcnt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+              ts.rcnt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
+              ts.damt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
+              ts.ramt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
+              ts.fresh=(ts.fresh||0)+_totalFresh;
+              ts.inc=(ts.inc||0)+Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
+            } else {
+              ts.etcPlus=(ts.etcPlus||0)+tot;
+              var pv=ts.etcPlusReason||'';
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+            }
             if(!_fd[fid]) _fd[fid]=[];
             _fd[fid].push({tot:tot,pts:pts,tR:tR,rule:rule});
           });
