@@ -7560,7 +7560,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               } else {
                 ts.etcPlus=(ts.etcPlus||0)+tot;
                 var pv=ts.etcPlusReason||'';
-                ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+                var _rDates=(rule.dates&&rule.dates.length)?rule.dates.join(','):(rule.startDate||'');
+              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+')'+(_rDates?' ['+_rDates+']':'')+' '+pts.join('·');
               }
               if(!_fd[fid]) _fd[fid]=[];
               _fd[fid].push({tot:tot,pts:pts,tR:tR,rule:rule});
