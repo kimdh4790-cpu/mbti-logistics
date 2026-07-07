@@ -138,15 +138,12 @@ function init(){
   }
  }).catch(function(){});
 
- /* 메뉴 로드 */
- _db.collection('filo_menus').where('dealerId','==',DID).get().then(function(snap){
-  if(snap.empty){document.getElementById('menu-area').innerHTML='<div class="loading">등록된 메뉴가 없습니다.<br><span style="font-size:12px;color:var(--t3)">FILO 앱 → 메뉴관리에서 추가해주세요</span></div>';return;}
-  _menus=snap.docs.map(function(d){
-   var f=d.data();
-   return {id:d.id,name:f.name||f.menuName||'메뉴',price:parseInt(f.price||f.sellPrice||0),category:f.category||'기타',soldOut:f.soldOut||false,emoji:f.emoji||'🍽',imgUrl:f.imageUrl||f.imgUrl||''};
-  }).filter(function(m){return m.price>0&&m.name;});
+ /* 메뉴 로드 - Worker API 경유 (인증 불필요) */
+ fetch('/api/menus?did='+DID).then(function(r){return r.json();}).then(function(menus){
+  if(!menus||!menus.length){document.getElementById('menu-area').innerHTML='<div class="loading">등록된 메뉴가 없습니다.<br><span style="font-size:12px;color:var(--t3)">FILO 앱 → 메뉴관리에서 추가해주세요</span></div>';return;}
+  _menus=menus;
   renderMenus();
- }).catch(function(e){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 메뉴를 불러올 수 없습니다.</div>';console.error(e);});
+ }).catch(function(e){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 메뉴를 불러올 수 없습니다.<br><span style="font-size:11px;color:var(--t3)">'+e.message+'</span></div>';console.error(e);});
 }
 
 function renderMenus(){
