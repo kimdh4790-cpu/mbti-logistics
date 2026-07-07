@@ -2497,13 +2497,16 @@ function _dineTax(el){
 }
 
 function _dineTaxLoadFixed(did){
- _db.collection('filo_settings').doc(did+'_tax_fixed').get().then(function(doc){
-  if(!doc.exists)return;
-  var d=doc.data();
-  var fields=['rent','elec','gas','water','card-fee','other','memo'];
-  fields.forEach(function(f){
-   var el=document.getElementById('tax-'+f);
-   if(el&&d[f])el.value=d[f];
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_settings/'+did+'_tax_fixed',{
+  headers:{'Authorization':'Bearer '+(_dineToken||'')}
+ }).then(function(r){return r.json();}).then(function(doc){
+  if(!doc.fields)return;
+  var f=doc.fields;
+  var map={rent:'tax-rent',elec:'tax-elec',gas:'tax-gas',water:'tax-water',cardFee:'tax-card-fee',other:'tax-other',memo:'tax-memo'};
+  Object.keys(map).forEach(function(k){
+   var el=document.getElementById(map[k]);
+   if(!el||!f[k])return;
+   el.value=f[k].integerValue||f[k].stringValue||'';
   });
  }).catch(function(){});
 }
@@ -2512,19 +2515,22 @@ var _taxSaveTimer=null;
 function _dineTaxSaveFixed(did){
  clearTimeout(_taxSaveTimer);
  _taxSaveTimer=setTimeout(function(){
-  var data={
-   rent:parseInt(document.getElementById('tax-rent')?.value)||0,
-   elec:parseInt(document.getElementById('tax-elec')?.value)||0,
-   gas:parseInt(document.getElementById('tax-gas')?.value)||0,
-   water:parseInt(document.getElementById('tax-water')?.value)||0,
-   'card-fee':parseInt(document.getElementById('tax-card-fee')?.value)||0,
-   other:parseInt(document.getElementById('tax-other')?.value)||0,
-   memo:document.getElementById('tax-memo')?.value||'',
-   updatedAt:new Date().toISOString()
+  var fields={
+   rent:{integerValue:parseInt(document.getElementById('tax-rent')?.value)||0},
+   elec:{integerValue:parseInt(document.getElementById('tax-elec')?.value)||0},
+   gas:{integerValue:parseInt(document.getElementById('tax-gas')?.value)||0},
+   water:{integerValue:parseInt(document.getElementById('tax-water')?.value)||0},
+   cardFee:{integerValue:parseInt(document.getElementById('tax-card-fee')?.value)||0},
+   other:{integerValue:parseInt(document.getElementById('tax-other')?.value)||0},
+   memo:{stringValue:document.getElementById('tax-memo')?.value||''},
+   updatedAt:{stringValue:new Date().toISOString()}
   };
-  _db.collection('filo_settings').doc(did+'_tax_fixed').set(data,{merge:true})
-   .then(function(){_dineToast('💾 저장됐습니다');})
-   .catch(function(){});
+  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_settings/'+did+'_tax_fixed',{
+   method:'PATCH',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+   body:JSON.stringify({fields:fields})
+  }).then(function(r){if(r.ok)_dineToast('💾 저장됐습니다');})
+  .catch(function(){});
  },800);
 }
 
@@ -2543,10 +2549,10 @@ function _dineTaxGenerate(did){
   _db.collection('members').where('dealerId','==',did).get(),
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
   _db.collection('inventory_in').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
-  _db.collection('filo_settings').doc(did+'_tax_fixed').get()
+  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_settings/'+did+'_tax_fixed',{headers:{'Authorization':'Bearer '+(_dineToken||'')}}).then(function(r){return r.json();})
  ]).then(function(results){
   var salesSnap=results[0],memSnap=results[1],attSnap=results[2],stockSnap=results[3],fixedDoc=results[4];
-  var fixed=fixedDoc.exists?fixedDoc.data():{};
+  var fixed={};if(fixedDoc&&fixedDoc.fields){var ff=fixedDoc.fields;Object.keys(ff).forEach(function(k){fixed[k]=ff[k].integerValue||ff[k].stringValue||0;});}
   var fixedRent=fixed.rent||0,fixedElec=fixed.elec||0,fixedGas=fixed.gas||0;
   var fixedWater=fixed.water||0,fixedCardFee=fixed['card-fee']||0,fixedOther=fixed.other||0;
   var fixedMemo=fixed.memo||'';
