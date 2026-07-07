@@ -159,6 +159,7 @@ select.inp option{background:var(--s2)}
 .login-logo{font-size:32px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--t3);margin-bottom:24px}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1724,7 +1725,123 @@ function _dineDelivery(el){
 }
 
 function _dineParseDelivery(input,platform){
- _dineToast('⏳ '+platform+' 엑셀 파싱 기능은 개발 중입니다. DONWAY 배달 파싱 엔진 연동 예정입니다.');
+ var file=input.files[0];if(!file)return;
+ _dineToast('⏳ 파싱중...');
+ var reader=new FileReader();
+ reader.onload=function(e){
+  try{
+   var data=new Uint8Array(e.target.result);
+   var wb=XLSX.read(data,{type:'array'});
+   var ws=wb.Sheets[wb.SheetNames[0]];
+   var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+   if(!rows.length){_dineToast('❌ 데이터 없음');return;}
+   var result={platform:platform,orders:[],total:0,fee:0,cancel:0,net:0};
+   function norm(s){return String(s||'').replace(/[\s\(\)]/g,'').toLowerCase();}
+   function toNum(v){return parseInt(String(v||'0').replace(/[^0-9\-]/g,''))||0;}
+   rows.forEach(function(row){
+    var keys=Object.keys(row);
+    var kmap={};keys.forEach(function(k){kmap[norm(k)]=k;});
+    if(platform==='baemin'){
+     var dateKey=kmap['주문일시']||kmap['주문일자']||kmap['날짜'];
+     var typeKey=kmap['매출구분']||kmap['구분']||kmap['주문구분'];
+     var amtKey=kmap['합계']||kmap['매출금액']||kmap['결제금액']||kmap['주문금액'];
+     var feeKey=kmap['수수료']||kmap['배달수수료']||kmap['중개수수료'];
+     if(!amtKey)return;
+     var amt=toNum(row[amtKey]);
+     var fee=feeKey?toNum(row[feeKey]):0;
+     var type=typeKey?String(row[typeKey]||''):'';
+     if(type.includes('취소')||amt<0||amt===0)return;
+     result.total+=amt;result.fee+=Math.abs(fee);
+     result.orders.push({date:dateKey?String(row[dateKey]||'').slice(0,10):'',amt:amt,fee:Math.abs(fee),type:type});
+    } else if(platform==='coupang'){
+     var dateKey=kmap['주문일자']||kmap['주문일시']||kmap['날짜'];
+     var amtKey=kmap['주문금액']||kmap['결제금액']||kmap['총주문금액']||kmap['총결제금액'];
+     var feeKey=kmap['수수료']||kmap['중개수수료']||kmap['서비스수수료'];
+     var cancelKey=kmap['취소금액']||kmap['취소'];
+     var netKey=kmap['정산금액']||kmap['정산예정금액'];
+     var amt=toNum(row[amtKey])||toNum(row[netKey]);
+     var fee=feeKey?Math.abs(toNum(row[feeKey])):0;
+     var cancel=cancelKey?toNum(row[cancelKey]):0;
+     if(cancel>0||amt<=0)return;
+     result.total+=amt;result.fee+=fee;result.cancel+=cancel;
+     result.orders.push({date:dateKey?String(row[dateKey]||'').slice(0,10):'',amt:amt,fee:fee});
+    } else if(platform==='yogiyo'){
+     var dateKey=kmap['주문일']||kmap['주문일시']||kmap['날짜'];
+     var amtKey=kmap['주문금액']||kmap['결제금액']||kmap['총결제금액']||kmap['총주문금액'];
+     var feeKey=kmap['수수료']||kmap['서비스수수료']||kmap['중개수수료'];
+     var discountKey=kmap['할인']||kmap['쿠폰할인']||kmap['할인금액'];
+     var netKey=kmap['정산금액']||kmap['정산예정금액'];
+     var amt=toNum(row[amtKey])||toNum(row[netKey]);
+     var fee=feeKey?Math.abs(toNum(row[feeKey])):0;
+     var discount=discountKey?toNum(row[discountKey]):0;
+     if(amt<=0)return;
+     result.total+=amt;result.fee+=fee;
+     result.orders.push({date:dateKey?String(row[dateKey]||'').slice(0,10):'',amt:amt,fee:fee,discount:discount});
+    }
+   });
+   result.net=result.total-result.fee-result.cancel;
+   _dineShowDeliveryResult(result);
+   _dineToast('✅ '+result.orders.length+'건 파싱 완료');
+  }catch(e){_dineToast('❌ 파싱 오류: '+e.message);console.error(e);}
+ };
+ reader.readAsArrayBuffer(file);
+}
+
+function _dineShowDeliveryResult(r){
+ var el=document.getElementById('delivery-result');
+ if(!el)return;
+ var name={'baemin':'🟢 배달의민족','coupang':'🔴 쿠팡이츠','yogiyo':'🟡 요기요'}[r.platform]||r.platform;
+ var color={'baemin':'#22c55e','coupang':'#ef4444','yogiyo':'#f59e0b'}[r.platform]||'#38bdf8';
+ var byDate={};
+ r.orders.forEach(function(o){var d=o.date||'미상';byDate[d]=(byDate[d]||0)+o.amt;});
+ var dateRows=Object.entries(byDate).sort(function(a,b){return a[0]<b[0]?-1:1;});
+ var box=document.createElement('div');
+ box.style.cssText='border:2px solid '+color+';border-radius:12px;padding:16px;margin-bottom:12px';
+ box.innerHTML=
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+  '<div style="font-size:14px;font-weight:800;color:'+color+'">'+name+'</div>'+
+  '<div style="font-size:11px;color:var(--t3)">'+r.orders.length+'건</div></div>'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'+
+  '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">'+
+  '<div style="font-size:10px;color:var(--t3);margin-bottom:3px">총 주문금액</div>'+
+  '<div style="font-size:15px;font-weight:800;color:'+color+'">₩'+r.total.toLocaleString()+'</div></div>'+
+  '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">'+
+  '<div style="font-size:10px;color:var(--t3);margin-bottom:3px">수수료</div>'+
+  '<div style="font-size:15px;font-weight:800;color:#ef4444">-₩'+r.fee.toLocaleString()+'</div></div>'+
+  '<div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">'+
+  '<div style="font-size:10px;color:var(--t3);margin-bottom:3px">순정산액</div>'+
+  '<div style="font-size:15px;font-weight:800;color:#22c55e">₩'+r.net.toLocaleString()+'</div></div></div>'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:6px">날짜별 내역</div>'+
+  '<div style="max-height:160px;overflow-y:auto">'+
+  dateRows.map(function(e){
+   return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bd);font-size:12px">'+
+    '<span>'+e[0]+'</span><span style="font-weight:700">₩'+e[1].toLocaleString()+'</span></div>';
+  }).join('')+'</div>'+
+  '<button style="margin-top:10px;width:100%;padding:8px;background:'+color+'22;border:1px solid '+color+'44;border-radius:8px;color:'+color+';font-size:12px;font-weight:700;cursor:pointer" '+
+  'data-r="'+btoa(unescape(encodeURIComponent(JSON.stringify(r))))+'" onclick="_dineSaveDeliveryData(JSON.parse(decodeURIComponent(escape(atob(this.dataset.r)))))">💾 매출분석에 저장</button>';
+ el.innerHTML='';
+ el.appendChild(box);
+}
+
+function _dineSaveDeliveryData(r){
+ var did=_CU.dealerId;
+ var promises=r.orders.slice(0,200).map(function(o){
+  return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_sales',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+   body:JSON.stringify({fields:{
+    dealerId:{stringValue:did},platform:{stringValue:r.platform},
+    date:{stringValue:o.date||new Date().toISOString().slice(0,10)},
+    total:{integerValue:o.amt},fee:{integerValue:o.fee||0},
+    status:{stringValue:'completed'},payMethod:{stringValue:r.platform},
+    source:{stringValue:'excel_import'},
+    createdAt:{stringValue:(o.date?o.date+'T12:00:00.000Z':new Date().toISOString())}
+   }})
+  });
+ });
+ Promise.all(promises).then(function(){
+  _dineToast('✅ '+r.orders.length+'건 저장! 매출분석에 반영됩니다.');
+ }).catch(function(e){_dineToast('❌ 저장 실패: '+e.message);});
 }
 
 
