@@ -1,17 +1,36 @@
 {
-  "name": "FILO - 재고·QR·키오스크",
+  "name": "FILO - 전업종 매장 운영 플랫폼",
   "short_name": "FILO",
-  "description": "재고관리 · QR출퇴근 · 키오스크POS | filo.ai.kr",
+  "description": "POS · QR출퇴근 · 재고 · 급여 자동화 | filo.ai.kr",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0f1e",
-  "theme_color": "#7b2fff",
+  "background_color": "#100e0c",
+  "theme_color": "#b4944e",
   "lang": "ko",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "/filo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/filo-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/filo-apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
