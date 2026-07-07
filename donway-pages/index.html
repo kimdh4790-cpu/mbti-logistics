@@ -6928,9 +6928,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
-            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0,addInc:0};
             drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
             drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
+            drvMap[cleanId].dateRoutes[rowDate][route].addInc+=addInc;
           }
 
           // 시즌 기간별 분리 집계
@@ -7455,7 +7456,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
                     var up=RPRICE[rt]||0; if(!up)return;
-                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                    var addInc=rd.addInc||0; var amt=(rd.cnt||0)*(up+addInc)+(rd.ret||0)*(up+addInc); if(!amt)return;
                     tot+=amt;
                     if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0};
                     _rtAgg[rt].cnt+=(rd.cnt||0);
@@ -7541,6 +7542,25 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                           if(ri<0)return;
                           fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
                           fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
+                        });
+                      });
+                      // ★ 프레시백 차감
+                      if(fdm.dateFresh){
+                        Object.keys(fdm.dateFresh).forEach(function(dt){
+                          if(rule.rStart&&dt<rule.rStart)return;
+                          if(rule.rEnd&&dt>rule.rEnd)return;
+                          fs.fresh=Math.max(0,(fs.fresh||0)-(fdm.dateFresh[dt]||0));
+                        });
+                      }
+                      // ★ 인센 차감
+                      Object.keys(fdm.dateRoutes).forEach(function(dt){
+                        if(rule.rStart&&dt<rule.rStart)return;
+                        if(rule.rEnd&&dt>rule.rEnd)return;
+                        Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                          if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
+                          var rd=fdm.dateRoutes[dt][rt];
+                          var _addIncAmt=(rd.cnt||0)*(rd.addInc||0)+(rd.ret||0)*(rd.addInc||0);
+                          fs.inc=Math.max(0,(fs.inc||0)-_addIncAmt);
                         });
                       });
                     }
