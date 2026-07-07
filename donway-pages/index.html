@@ -7458,11 +7458,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     var up=RPRICE[rt]||0; if(!up)return;
                     var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    var _toInc2=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
+                    var _toInc=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
                     if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,inc:0};
                     _rtAgg[rt].cnt+=(rd.cnt||0);
                     _rtAgg[rt].ret+=(rd.ret||0);
-                    _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc2;
+                    _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc;
                   });
                 });
                 // ★ 프레시백
@@ -7529,14 +7529,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var rules=_fd[fid];
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
               if(!fs)return;
+              var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              // ★ etcMinus 제거 - 건수차감으로 이미 금액 반영됨 (이중차감 방지)
+              var pvm=fs.etcMinusReason||'';
+
               if(fs.routeDetails&&fs.routeDetails.length){
                 rules.forEach(function(rule){
                   if(rule.hasDateRoutes){
                     var fdm=drvMap[fid];
                     if(fdm&&fdm.dateRoutes){
                       Object.keys(fdm.dateRoutes).forEach(function(dt){
+                        // ★ 동일 범위 필터 (toId 쪽과 동일 기준)
                         if(rule.rStart&&dt<rule.rStart)return;
                         if(rule.rEnd&&dt>rule.rEnd)return;
                         Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
@@ -7548,26 +7551,25 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                           fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
                         });
                       });
-                      // ★ 프레시백 차감
-                      if(fdm.dateFresh){
-                        Object.keys(fdm.dateFresh).forEach(function(dt){
-                          if(rule.rStart&&dt<rule.rStart)return;
-                          if(rule.rEnd&&dt>rule.rEnd)return;
-                          fs.fresh=Math.max(0,(fs.fresh||0)-(fdm.dateFresh[dt]||0));
-                        });
-                      }
-                      // ★ 인센 차감
-                      Object.keys(fdm.dateRoutes).forEach(function(dt){
+                    }
+                    // ★ 프레시백 차감
+                    if(fdm.dateFresh){
+                      Object.keys(fdm.dateFresh).forEach(function(dt){
                         if(rule.rStart&&dt<rule.rStart)return;
                         if(rule.rEnd&&dt>rule.rEnd)return;
-                        Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                          if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
-                          var rd=fdm.dateRoutes[dt][rt];
-                          var _addIncAmt=(rd.cnt||0)*(rd.addInc||0)+(rd.ret||0)*(rd.addInc||0);
-                          fs.inc=Math.max(0,(fs.inc||0)-_addIncAmt);
-                        });
+                        fs.fresh=Math.max(0,(fs.fresh||0)-(fdm.dateFresh[dt]||0));
                       });
                     }
+                    // ★ 인센 차감
+                    Object.keys(fdm.dateRoutes).forEach(function(dt){
+                      if(rule.rStart&&dt<rule.rStart)return;
+                      if(rule.rEnd&&dt>rule.rEnd)return;
+                      Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                        if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
+                        var rd2=fdm.dateRoutes[dt][rt];
+                        fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)*(rd2.addInc||0)+(rd2.ret||0)*(rd2.addInc||0)));
+                      });
+                    });
                   } else {
                     rule.pts.forEach(function(pt){
                       var m=pt.match(/^(\S+)\s+(\d+)\uAC74/);
