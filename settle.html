@@ -2449,17 +2449,6 @@ var IND_DB = {
       {name:'주야간보호 8시간',unit:'일', rate2026:68360, careWorkerRate:0.75},
       {name:'단기보호 1일',    unit:'일', rate2026:68530, careWorkerRate:0.75}],
     // 처우개선비 (2026년 기준)
-    welfareImprovements: [
-      {name:'처우개선비A',      amount:65000,  label:'방문요양 월정액'},
-      {name:'처우개선비B',      amount:45000,  label:'방문목욕 월정액'},
-      {name:'장기근속장려금',   amount:70000,  label:'5년이상 근속'},
-      {name:'명절수당',         amount:100000, label:'설·추석'}],
-    deductions: {
-      empInsRate: 0.009,   // 고용보험
-      healthInsRate: 0.035, // 건강보험 (월급제)
-      nationPensionRate: 0.045, // 국민연금
-    }
-  },
 
 };
 
@@ -5492,7 +5481,7 @@ function doQuickJoin(){
         role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
         bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
         ssn:ssn,joinDate:joinDate,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:};
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'qr'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
           userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
@@ -19830,7 +19819,7 @@ var MENUS_SETTLE = [
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'stats',            plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}]}]}]}]}]}]}]}]}]}]}]}]},
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}]},
   {s:'🔧 시설관리·청소', items:[
     {ic:'📊',l:'정산 현황',       p:'ind_facility_settle',    plan_key:'ind_facility'},
     {ic:'📋',l:'정산 관리',       p:'ind_facility_list',      plan_key:'ind_facility'},
@@ -19863,12 +19852,6 @@ var MENUS_SETTLE = [
     {ic:'💸',l:'송금',             p:'payout',            plan_key:'universal'},
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',         plan_key:'universal'},
     {ic:'🔗',l:'재고관리 연동',    p:'goto_mbtico',       plan_key:'universal'}]},
-  {s:'🧹 청소업 관리', items:[
-    {ic:'📝',l:'의뢰서 작성',       p:'clean_order',      plan_key:},
-    {ic:'💰',l:'단가 설정',          p:'clean_pricing',    plan_key:},
-    {ic:'👷',l:'인력 관리',          p:'clean_workers',    plan_key:},
-    {ic:'🔧',l:'현장 출고 컨펌',    p:'clean_dispatch',   plan_key:},
-    {ic:'📊',l:'정산 현황',          p:'clean_settle',     plan_key:}]},
   
   
   
@@ -20433,8 +20416,8 @@ function pageCleanWorkers(){
       var excelBtn=document.getElementById('cw-excel-btn');
       if(excelBtn) excelBtn.onclick=function(){
         if(!_COMPANY_CFG) _COMPANY_CFG={};
-        _COMPANY_CFG.industryType=;
-        _SA_TEST_INDUSTRY=;
+        _COMPANY_CFG.industryType='cleaning';
+        _SA_TEST_INDUSTRY='cleaning';
         document.getElementById('excel-input').click();
       };
       document.querySelectorAll('.cw-edit-btn').forEach(function(btn){
@@ -21001,7 +20984,8 @@ function _cleanOrderToSettle(order, orderId){
     month:month,
     name:order.managerName||'미배정',
     camp:'청소',
-    industryType:gross:order.managerGross,
+    industryType:'cleaning',
+    gross:order.managerGross,
     tax33:order.empType==='3.3'?order.tax:0,
     taxIns:order.empType==='daily'?order.tax:0,
     net:order.managerNet,
@@ -21042,8 +21026,8 @@ function pageCleanSettle(){
       var ub=document.getElementById('cs-upload-btn');
       if(ub) ub.onclick=function(){
         if(!_COMPANY_CFG) _COMPANY_CFG={};
-        _COMPANY_CFG.industryType=;
-        _SA_TEST_INDUSTRY=;
+        _COMPANY_CFG.industryType='cleaning';
+        _SA_TEST_INDUSTRY='cleaning';
         document.getElementById('excel-input').click();
       };
       var nb=document.getElementById('cs-new-btn');
@@ -21114,8 +21098,8 @@ function pageCleanSettle(){
     var uploadBtn2=document.getElementById('cs-upload-btn');
     if(uploadBtn2) uploadBtn2.onclick=function(){
       if(!_COMPANY_CFG) _COMPANY_CFG={};
-      _COMPANY_CFG.industryType=;
-      _SA_TEST_INDUSTRY=;
+      _COMPANY_CFG.industryType='cleaning';
+      _SA_TEST_INDUSTRY='cleaning';
       document.getElementById('excel-input').click();
     };
   }).catch(function(e){c.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
@@ -21647,6 +21631,7 @@ function _bkSave(){
     serviceIncome:totalIncome,cardFee:cardFee,tax33:tax33,net:net,
     source:'kiosk',createdAt:now
   };
+  _db.collection('beauty_sales').add(saleData).then(function(ref){
     // 세무사 연동 — tax_docs 자동 등록
     _db.collection('tax_docs').add({
       dealerId:did,docType:'매출',category:'뷰티·미용',
@@ -21697,6 +21682,7 @@ function _bkRenderToday(c){
   var did=window._bkDid;
   var today=window._bkToday;
   c.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>로딩 중...</div>';
+  _db.collection('beauty_sales').where('dealerId','==',did).where('date','==',today).get()
   .then(function(snap){
     if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">💄</div>오늘 기록 없음</div>';return;}
     var byD={};var totalS=0,totalN=0;
@@ -21731,6 +21717,7 @@ function _bkRenderStaff(c){
   var did=window._bkDid;
   var ym=window._bkYm;
   c.innerHTML='<div class="empty"><div class="empty-icon">\u23f3</div>\ub85c\ub529 \uc911...</div>';
+  _db.collection('beauty_sales').where('dealerId','==',did).where('ym','==',ym).get()
   .then(function(snap){
     if(snap.empty){c.innerHTML='<div class="empty"><div class="empty-icon">\ud83d\udc84</div>\uc774\ubc88\ub2ec \uae30\ub85d \uc5c6\uc74c</div>';return;}
     var byD={};
@@ -21766,6 +21753,7 @@ function _bkRenderStaff(c){
 function _bkExportToSettle(designerName){
   var did=window._bkDid;var ym=window._bkYm;
   if(!confirm(designerName+'님의 '+ym+' 정산을 생성하시겠습니까?'))return;
+  _db.collection('beauty_sales').where('dealerId','==',did).where('ym','==',ym).where('designerName','==',designerName).get()
   .then(function(snap){
     if(snap.empty){toast('❌ 데이터 없음');return;}
     var totalS=0,totalM=0,totalI=0,totalN=0,allSvc=[];
@@ -21778,7 +21766,8 @@ function _bkExportToSettle(designerName){
     var cardFee=Math.round(totalS*0.11);
     var tax33=Math.round(totalI*0.033);
     _db.collection('settlements').add({
-      dealerId:did,month:ym,name:designerName,industryType:gross:totalI,tax33:tax33,net:totalN,
+      dealerId:did,month:ym,name:designerName,industryType:'beauty',
+        gross:totalI,tax33:tax33,net:totalN,
       totalSales:totalS,totalMat:totalM,serviceCount:allSvc.length,
       extras:[
         {label:'시술 '+allSvc.length+'건 매출',value:totalS},
