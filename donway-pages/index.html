@@ -7372,7 +7372,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 return Object.assign({},newRd,{unitPrice:oldRd.unitPrice});
               return newRd;
             });
-            // ★ 아이디지원 차감 사유는 재계산으로 덮어씀 (이전 잔재 제거)
             prev.etcMinusReason='';
             settlements[existing]=Object.assign({},prev,entry);
             updated++;
@@ -7404,6 +7403,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               .catch(function(){});
           }
         })();
+        lss('settlements',settlements);
         window._lastParsedSettlements = settlements;
         if(window._guardCheckDriverCount){
           var _pgIds=[]; var _pgSet={};settlements.forEach(function(s){var id=s.userId||s.driver||'';if(id&&!_pgSet[id]){_pgSet[id]=1;_pgIds.push(id);}});
@@ -7415,173 +7415,175 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           _guardCheckRouteSpike(Object.keys(_pgRoutes).length);
           _guardUpdateMonthlySeat(settlements,month);
         }
-        // ★ 아이디지원+보장금액 계산 (if(_db) 밖에서 실행)
-        // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 합산 (중복 제거)
-        var _mergedIdRules=[];
-        if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
-          _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
-        }
-        if(window._idSupportRules&&window._idSupportRules.length){
-          window._idSupportRules.forEach(function(r){
-            var dup=_mergedIdRules.some(function(x){return x.fromId===r.fromId&&x.toId===r.toId;});
-            if(!dup) _mergedIdRules.push(r);
-          });
-        }
-        if(_mergedIdRules.length) window._idSupportRules=_mergedIdRules;
+        // Firebase 저장
+        if(_db){
+          // ★ dealerId 강제 갱신 (다른 계정 데이터 혼입 방지) - fbPromises 전에 실행
+          settlements.forEach(function(x){x.dealerId=_CU.dealerId;});
+          // ★ idSupportRules: settings(_uCurrentRules) + idSupport 컬렉션 합산 (중복 제거)
+          var _mergedIdRules=[];
+          if(window._uCurrentRules&&window._uCurrentRules.idSupportRules&&window._uCurrentRules.idSupportRules.length){
+            _mergedIdRules=_mergedIdRules.concat(window._uCurrentRules.idSupportRules);
+          }
+          if(window._idSupportRules&&window._idSupportRules.length){
+            window._idSupportRules.forEach(function(r){
+              var dup=_mergedIdRules.some(function(x){return x.fromId===r.fromId&&x.toId===r.toId;});
+              if(!dup) _mergedIdRules.push(r);
+            });
+          }
+          if(_mergedIdRules.length) window._idSupportRules=_mergedIdRules;
 
-        if(window._idSupportRules&&window._idSupportRules.length){
-          // 날짜 정규화: yyyy-MM-dd 형식으로 통일
-          var _ndFmt=function(d){
-            if(!d)return '';
-            d=String(d).trim();
-            var p=d.split('-');
-            if(p.length>=3){
-              var m=p[1].replace(/^0+/,'')||'0', dd=p[2].replace(/^0+/,'')||'0';
-              return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);
-            }
-            return d;
-          };
-
-          // 날짜 매칭 함수: dates배열 있으면 정확 매칭, 없으면 startDate~endDate 범위
-          var _dtMatch=function(dt, rule){
-            var _dates=(rule.dates||[]).map(_ndFmt).filter(Boolean);
-            if(_dates.length) return _dates.indexOf(_ndFmt(dt))>=0;
-            var s=_ndFmt(rule.startDate), e=_ndFmt(rule.endDate);
-            if(s&&dt<s)return false;
-            if(e&&dt>e)return false;
-            return true;
-          };
-
-          var _fd={};
-          window._idSupportRules.forEach(function(rule){
-            var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
-            var tid=(rule.toId||'').replace(/@df$/i,'').trim();
-            var fd=drvMap[fid]; if(!fd)return;
-            var tR=rule.routes||[];
-            var tot=0, pts=[];
-            var _rtAgg={};
-            var _totalFresh=0, _totalDmg=0;
-
-            // ★ toId 명세서 없으면 신규 생성
-            var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
-            if(!ts){
-              ts={userId:tid,driver:tid,month:month,dealerId:(_CU&&_CU.dealerId)||'',
-                  dcnt:0,rcnt:0,damt:0,fresh:0,inc:0,etcPlus:0,etcMinus:0,
-                  etcPlusReason:'',etcMinusReason:'',routeDetails:[],
-                  _isNewIdSupport:true};
-              settlements.push(ts);
-            }
-
-            if(fd.dateRoutes&&Object.keys(fd.dateRoutes).length){
-              // ★ dateRoutes 기준: 정확한 날짜 매칭
-              Object.keys(fd.dateRoutes).forEach(function(dt){
-                if(!_dtMatch(dt,rule))return;
-                Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
-                  if(tR.length&&tR.indexOf(rt)<0)return;
-                  var rd=fd.dateRoutes[dt][rt];
-                  var up=RPRICE[rt]||0; if(!up)return;
-                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
-                  tot+=amt;
-                  // toId 인센: _getIncSetting(tid, rt) 기준
-                  var _toInc=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
-                  if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,inc:0};
-                  _rtAgg[rt].cnt+=(rd.cnt||0);
-                  _rtAgg[rt].ret+=(rd.ret||0);
-                  _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc;
-                });
-              });
-              // ★ 프레시백: 정확한 날짜 매칭
-              if(fd.dateFresh){
-                Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(!_dtMatch(dt,rule))return;
-                  _totalFresh+=(fd.dateFresh[dt]||0);
-                });
+          if(window._idSupportRules&&window._idSupportRules.length){
+            // 날짜 정규화: yyyy-MM-dd 형식으로 통일
+            var _ndFmt=function(d){
+              if(!d)return '';
+              d=String(d).trim();
+              var p=d.split('-');
+              if(p.length>=3){
+                var m=p[1].replace(/^0+/,'')||'0', dd=p[2].replace(/^0+/,'')||'0';
+                return p[0]+'-'+(m.length<2?'0'+m:m)+'-'+(dd.length<2?'0'+dd:dd);
               }
-              // ★ 분실파손: 정확한 날짜 매칭
-              var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
-              if(_fdmg&&_fdmg.dateDmg){
-                Object.keys(_fdmg.dateDmg).forEach(function(dt){
-                  if(!_dtMatch(dt,rule))return;
-                  _totalDmg+=(_fdmg.dateDmg[dt]||0);
-                });
+              return d;
+            };
+
+            // 날짜 매칭 함수: dates배열 있으면 정확 매칭, 없으면 startDate~endDate 범위
+            var _dtMatch=function(dt, rule){
+              var _dates=(rule.dates||[]).map(_ndFmt).filter(Boolean);
+              if(_dates.length) return _dates.indexOf(_ndFmt(dt))>=0;
+              var s=_ndFmt(rule.startDate), e=_ndFmt(rule.endDate);
+              if(s&&dt<s)return false;
+              if(e&&dt>e)return false;
+              return true;
+            };
+
+            var _fd={};
+            window._idSupportRules.forEach(function(rule){
+              var fid=(rule.fromId||'').replace(/@df$/i,'').trim();
+              var tid=(rule.toId||'').replace(/@df$/i,'').trim();
+              var fd=drvMap[fid]; if(!fd)return;
+              var tR=rule.routes||[];
+              var tot=0, pts=[];
+              var _rtAgg={};
+              var _totalFresh=0, _totalDmg=0;
+
+              // ★ toId 명세서 없으면 신규 생성
+              var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
+              if(!ts){
+                ts={userId:tid,driver:tid,month:month,dealerId:_CU.dealerId,
+                    dcnt:0,rcnt:0,damt:0,fresh:0,inc:0,etcPlus:0,etcMinus:0,
+                    etcPlusReason:'',etcMinusReason:'',routeDetails:[],
+                    _isNewIdSupport:true};
+                settlements.push(ts);
               }
-              var _totalInc=Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
-              tot+=_totalFresh+_totalInc-_totalDmg;
-              // 사유 포맷
-              Object.keys(_rtAgg).sort().forEach(function(rt){
-                var a=_rtAgg[rt];
-                var s=rt+'*'+a.cnt+'건';
-                if(a.ret>0)s+=' 반품*'+a.ret+'건';
-                pts.push(s);
-              });
-              if(_totalInc>0)pts.push('인센 ₩'+_totalInc.toLocaleString());
-              if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
-              if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
-            } else {
-              // fallback: routeDetails 기준
-              var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
-              if(fs2&&fs2.routeDetails){
-                fs2.routeDetails.forEach(function(rd){
-                  if(tR.length&&tR.indexOf(rd.route)<0)return;
-                  var up=RPRICE[rd.route]||0; if(!up)return;
-                  var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
-                  tot+=amt;
-                  if(!_rtAgg[rd.route])_rtAgg[rd.route]={cnt:0,ret:0};
-                  _rtAgg[rd.route].cnt+=(rd.cnt||0);
-                  _rtAgg[rd.route].ret+=(rd.ret||0);
+
+              if(fd.dateRoutes&&Object.keys(fd.dateRoutes).length){
+                // ★ dateRoutes 기준: 정확한 날짜 매칭
+                Object.keys(fd.dateRoutes).forEach(function(dt){
+                  if(!_dtMatch(dt,rule))return;
+                  Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd=fd.dateRoutes[dt][rt];
+                    var up=RPRICE[rt]||0; if(!up)return;
+                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                    tot+=amt;
+                    // toId 인센: _getIncSetting(tid, rt) 기준
+                    var _toInc=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
+                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,inc:0};
+                    _rtAgg[rt].cnt+=(rd.cnt||0);
+                    _rtAgg[rt].ret+=(rd.ret||0);
+                    _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc;
+                  });
                 });
+                // ★ 프레시백: 정확한 날짜 매칭
+                if(fd.dateFresh){
+                  Object.keys(fd.dateFresh).forEach(function(dt){
+                    if(!_dtMatch(dt,rule))return;
+                    _totalFresh+=(fd.dateFresh[dt]||0);
+                  });
+                }
+                // ★ 분실파손: 정확한 날짜 매칭
+                var _fdmg=window._lastDmgMap&&window._lastDmgMap[fid];
+                if(_fdmg&&_fdmg.dateDmg){
+                  Object.keys(_fdmg.dateDmg).forEach(function(dt){
+                    if(!_dtMatch(dt,rule))return;
+                    _totalDmg+=(_fdmg.dateDmg[dt]||0);
+                  });
+                }
+                var _totalInc=Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
+                tot+=_totalFresh+_totalInc-_totalDmg;
+                // 사유 포맷
                 Object.keys(_rtAgg).sort().forEach(function(rt){
                   var a=_rtAgg[rt];
                   var s=rt+'*'+a.cnt+'건';
                   if(a.ret>0)s+=' 반품*'+a.ret+'건';
                   pts.push(s);
                 });
-              }
-            }
-
-            if(!tot)return;
-            // ★ toId: 신규생성이면 routeDetails+damt로, 기존이면 etcPlus로
-            if(ts._isNewIdSupport){
-              // 건수/금액을 routeDetails에 흡수
-              Object.keys(_rtAgg).forEach(function(rt){
-                var a=_rtAgg[rt];
-                var up=RPRICE[rt]||0;
-                var existing=ts.routeDetails.findIndex(function(r){return r.route===rt;});
-                if(existing>=0){
-                  ts.routeDetails[existing].cnt=(ts.routeDetails[existing].cnt||0)+a.cnt;
-                  ts.routeDetails[existing].ret=(ts.routeDetails[existing].ret||0)+a.ret;
-                } else {
-                  ts.routeDetails.push({route:rt,cnt:a.cnt,ret:a.ret,unitPrice:up});
+                if(_totalInc>0)pts.push('인센 ₩'+_totalInc.toLocaleString());
+                if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
+                if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
+              } else {
+                // fallback: routeDetails 기준
+                var fs2=settlements.find(function(s){return (s.userId||s.driver)===fid;});
+                if(fs2&&fs2.routeDetails){
+                  fs2.routeDetails.forEach(function(rd){
+                    if(tR.length&&tR.indexOf(rd.route)<0)return;
+                    var up=RPRICE[rd.route]||0; if(!up)return;
+                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
+                    tot+=amt;
+                    if(!_rtAgg[rd.route])_rtAgg[rd.route]={cnt:0,ret:0};
+                    _rtAgg[rd.route].cnt+=(rd.cnt||0);
+                    _rtAgg[rd.route].ret+=(rd.ret||0);
+                  });
+                  Object.keys(_rtAgg).sort().forEach(function(rt){
+                    var a=_rtAgg[rt];
+                    var s=rt+'*'+a.cnt+'건';
+                    if(a.ret>0)s+=' 반품*'+a.ret+'건';
+                    pts.push(s);
+                  });
                 }
-              });
-              ts.dcnt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
-              ts.rcnt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
-              ts.damt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
-              ts.ramt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
-              ts.fresh=(ts.fresh||0)+_totalFresh;
-              ts.inc=(ts.inc||0)+Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
-            } else {
-              ts.etcPlus=(ts.etcPlus||0)+tot;
-              var pv=ts.etcPlusReason||'';
-              ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
-            }
-            if(!_fd[fid]) _fd[fid]=[];
-            _fd[fid].push({tot:tot,pts:pts,tR:tR,rule:rule});
-          });
+              }
 
-          // ★ fromId: routeDetails 건수만 차감 (etcMinus 건드리지 않음)
-          Object.keys(_fd).forEach(function(fid){
-            var rules=_fd[fid];
-            var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
-            if(!fs)return;
-            var fdm=drvMap[fid];
-            if(!fdm)return;
+              if(!tot)return;
+              // ★ toId: 신규생성이면 routeDetails+damt, 기존이면 etcPlus
+              if(ts._isNewIdSupport){
+                Object.keys(_rtAgg).forEach(function(rt){
+                  var a=_rtAgg[rt];
+                  var up=RPRICE[rt]||0;
+                  var existing=ts.routeDetails.findIndex(function(r){return r.route===rt;});
+                  if(existing>=0){
+                    ts.routeDetails[existing].cnt=(ts.routeDetails[existing].cnt||0)+a.cnt;
+                    ts.routeDetails[existing].ret=(ts.routeDetails[existing].ret||0)+a.ret;
+                  } else {
+                    ts.routeDetails.push({route:rt,cnt:a.cnt,ret:a.ret,unitPrice:up});
+                  }
+                });
+                ts.dcnt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+                ts.rcnt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
+                ts.damt=ts.routeDetails.reduce(function(s,r){return s+(r.cnt||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
+                ts.ramt=ts.routeDetails.reduce(function(s,r){return s+(r.ret||0)*(RPRICE[r.route]||r.unitPrice||0);},0);
+                ts.fresh=(ts.fresh||0)+_totalFresh;
+                ts.inc=(ts.inc||0)+Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
+              } else {
+                ts.etcPlus=(ts.etcPlus||0)+tot;
+                var pv=ts.etcPlusReason||'';
+                ts.etcPlusReason=(pv?pv+' / ':'')+'아이디지원('+fid+') '+pts.join('·');
+              }
+              if(!_fd[fid]) _fd[fid]=[];
+              _fd[fid].push({tot:tot,pts:pts,tR:tR,rule:rule});
+            });
 
-            rules.forEach(function(ruleInfo){
-              var rule=ruleInfo.rule;
-              var tR=ruleInfo.tR;
-              // 건수 차감: routeDetails 있을 때만
-              if(fs.routeDetails&&fs.routeDetails.length&&fdm.dateRoutes){
+            // ★ fromId: routeDetails 건수만 차감 (etcMinus 건드리지 않음)
+            Object.keys(_fd).forEach(function(fid){
+              var rules=_fd[fid];
+              var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
+              if(!fs)return;
+              var fdm=drvMap[fid];
+              if(!fdm)return;
+
+              rules.forEach(function(ruleInfo){
+                var rule=ruleInfo.rule;
+                var tR=ruleInfo.tR;
+                // 건수 차감: routeDetails 있을 때만
+                if(fs.routeDetails&&fs.routeDetails.length&&fdm.dateRoutes){
                 Object.keys(fdm.dateRoutes).forEach(function(dt){
                   if(!_dtMatch(dt,rule))return;
                   Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
@@ -7593,57 +7595,51 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
                   });
                 });
-              }
-              // 프레시백 차감 (routeDetails 유무 무관, 1회만)
-              if(fdm.dateFresh){
-                var _freshDed=Object.keys(fdm.dateFresh).reduce(function(s,dt){
-                  if(!_dtMatch(dt,rule))return s;
-                  return s+(fdm.dateFresh[dt]||0);
-                },0);
-                fs.fresh=Math.max(0,(fs.fresh||0)-_freshDed);
-              }
-              // 인센 차감: _getIncSetting(fid, rt) 기준
-              Object.keys(fdm.dateRoutes).forEach(function(dt){
-                if(!_dtMatch(dt,rule))return;
-                Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                  if(tR.length&&tR.indexOf(rt)<0)return;
-                  var rd2=fdm.dateRoutes[dt][rt];
-                  var _fInc=typeof _getIncSetting==='function'?(_getIncSetting(fid,rt).on?(_getIncSetting(fid,rt).rate||0):0):0;
-                  fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)+(rd2.ret||0))*_fInc);
+                } // end routeDetails 건수차감
+                // 프레시백 차감 (routeDetails 유무 무관, 1회만)
+                if(fdm.dateFresh){
+                  var _freshDed=Object.keys(fdm.dateFresh).reduce(function(s,dt){
+                    if(!_dtMatch(dt,rule))return s;
+                    return s+(fdm.dateFresh[dt]||0);
+                  },0);
+                  fs.fresh=Math.max(0,(fs.fresh||0)-_freshDed);
+                }
+                // 인센 차감: _getIncSetting(fid, rt) 기준
+                Object.keys(fdm.dateRoutes).forEach(function(dt){
+                  if(!_dtMatch(dt,rule))return;
+                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                    if(tR.length&&tR.indexOf(rt)<0)return;
+                    var rd2=fdm.dateRoutes[dt][rt];
+                    var _fInc=typeof _getIncSetting==='function'?(_getIncSetting(fid,rt).on?(_getIncSetting(fid,rt).rate||0):0):0;
+                    fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)+(rd2.ret||0))*_fInc);
+                  });
                 });
               });
+              // dcnt/rcnt 재계산
+              fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
+              fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
             });
-            // dcnt/rcnt 재계산
-            fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
-            fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
-          });
-        }
-        // 정산 보장금액 자동 채움 (동기)
-        (function(){
-          var drvList=fbDrivers||window._drvCache||[];
-          drvList.forEach(function(drv){
-            var guarantee=drv.settleGuarantee||0;
-            if(!guarantee)return;
-            var uid=drv.userId||drv.id||'';
-            if(!uid)return;
-            var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
-            if(!settle)return;
-            var cn=calcNet(settle);
-            var currentAmt=cn.totalAmt||cn.vatIncome||0;
-            var diff=guarantee-currentAmt;
-            if(diff>0){
-              settle.etcPlus=(settle.etcPlus||0)+diff;
-              var prev=settle.etcPlusReason||'';
-              settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
-            }
-          });
-        })();
-        lss('settlements',settlements);
-        // Firebase 저장
-        if(_db){
-          // ★ dealerId 강제 갱신
-          var _did=(_CU&&_CU.dealerId)||'';
-          if(_did) settlements.forEach(function(x){x.dealerId=_did;});
+          }
+          // 정산 보장금액 자동 채움 (동기)
+          (function(){
+            var drvList=fbDrivers||window._drvCache||[];
+            drvList.forEach(function(drv){
+              var guarantee=drv.settleGuarantee||0;
+              if(!guarantee)return;
+              var uid=drv.userId||drv.id||'';
+              if(!uid)return;
+              var settle=settlements.find(function(s){return (s.userId||s.driver)===uid;});
+              if(!settle)return;
+              var cn=calcNet(settle);
+              var currentAmt=cn.totalAmt||cn.vatIncome||0;
+              var diff=guarantee-currentAmt;
+              if(diff>0){
+                settle.etcPlus=(settle.etcPlus||0)+diff;
+                var prev=settle.etcPlusReason||'';
+                settle.etcPlusReason=(prev?prev+' / ':'')+'정산보장('+Math.round(guarantee/10000)+'만원 보장)';
+              }
+            });
+          })();
           var fbPromises=[];
           // ★ drivers에서 사업자 정보 미리 맵핑 (isBiz, bizNum 반영)
           var _drvBizMap={};
