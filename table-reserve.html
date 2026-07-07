@@ -148,9 +148,9 @@ function loadTables(){
    if(t&&t.status==='empty')openForm(t);
    PRE_TABLE=null;
   }
-  /* 30초 폴링 */
+  /* 10초 폴링 (REST API) */
   clearInterval(_pollTimer);
-  _pollTimer=setInterval(loadTables,30000);
+  _pollTimer=setInterval(loadTables,10000);
  }).catch(function(e){showError('데이터 로드 실패');});
 }
 
