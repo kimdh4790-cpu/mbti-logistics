@@ -331,6 +331,16 @@ var DINE_APIKEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 
 (function(){
+ // ── slug 인식 (URL 기반 딥링크·설정 자동로드에 활용) ──
+ if(window.__DINE_SLUG__){
+  window._DINE_SLUG=window.__DINE_SLUG__;
+ } else {
+  var _pp=location.pathname.replace(/^\//, '').split('/');
+  var _rsv=['app','login','join','settle','admin','api',''];
+  if(_pp[0] && _rsv.indexOf(_pp[0])===-1)
+   window._DINE_SLUG=decodeURIComponent(_pp[0]);
+ }
+ if(window._DINE_SLUG) console.log('[DINE] slug 인식:', window._DINE_SLUG);
  if(window.__DINE_STORE__){
   var s=window.__DINE_STORE__;
   // 로고 아래 매장명 표시
