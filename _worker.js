@@ -1545,6 +1545,39 @@ async function acceptExchange(){
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
+
+      /* ★ 메뉴 공개 API (로그인 불필요) */
+      if (path === '/api/menus') {
+        const did = new URL(request.url).searchParams.get('did');
+        if (!did) return new Response(JSON.stringify({error:'did required'}), {status:400, headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
+        const token = await getAccessToken(env);
+        const r = await fetch(`${FS_BASE}:runQuery`, {
+          method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+          body: JSON.stringify({structuredQuery:{
+            from:[{collectionId:'filo_menus'}],
+            where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+            limit:200
+          }})
+        });
+        const rows = await r.json();
+        const menus = (rows||[]).filter(d=>d.document).map(d=>{
+          const f = d.document.fields||{};
+          const g = (k)=>f[k]?.stringValue||f[k]?.integerValue||f[k]?.booleanValue||null;
+          return {
+            id: d.document.name.split('/').pop(),
+            name: g('name')||g('menuName')||'',
+            price: parseInt(g('price')||0),
+            category: g('category')||'기타',
+            emoji: g('emoji')||'🍽',
+            imgUrl: g('imageUrl')||g('imgUrl')||'',
+            soldOut: f.soldOut?.booleanValue||false,
+            forSale: f.forSale?.booleanValue!==false
+          };
+        }).filter(m=>m.name&&m.price>0&&m.forSale);
+        return new Response(JSON.stringify(menus), {
+          headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*',...SECURITY_HEADERS}
+        });
+      }
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
