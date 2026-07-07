@@ -11,11 +11,22 @@
 html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Apple SD Gothic Neo','Pretendard',sans-serif;overflow-x:hidden}
 
 /* 헤더 */
-.hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hdr-left{min-width:0}
 .hdr-logo{font-size:16px;font-weight:900;color:#38bdf8}
 .hdr-table{font-size:13px;font-weight:700;color:var(--t2)}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* 언어 선택 */
+.lang-wrap{display:flex;gap:4px}
+.lang-btn{padding:4px 8px;border-radius:10px;border:1px solid var(--bd2);background:transparent;color:var(--t3);font-size:11px;font-weight:700;cursor:pointer;transition:.15s}
+.lang-btn.on{background:rgba(8,145,178,.2);border-color:rgba(8,145,178,.4);color:#38bdf8}
+
 .cart-btn{position:relative;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:20px;padding:7px 14px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer}
 .cart-badge{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* 번역 중 배너 */
+.trans-banner{display:none;text-align:center;padding:6px;background:rgba(8,145,178,.1);border-bottom:1px solid var(--bd);font-size:11px;color:#38bdf8}
 
 /* 카테고리 탭 */
 .cat-wrap{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bd)}
@@ -31,6 +42,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'App
 .menu-img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:36px}
 .menu-info{padding:10px}
 .menu-name{font-size:13px;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-desc{font-size:10px;color:var(--t3);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .menu-price{font-size:14px;font-weight:900;color:#38bdf8}
 .menu-sold{font-size:11px;color:#ef4444;font-weight:700}
 .menu-qty{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -71,27 +83,36 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'App
 <body>
 
 <div class="hdr">
- <div>
+ <div class="hdr-left">
   <div class="hdr-logo" id="store-logo">FILO</div>
   <div class="hdr-table" id="table-label">테이블 로딩중...</div>
  </div>
- <button class="cart-btn" onclick="openCart()" id="cart-btn" style="display:none">
-  🛒 장바구니<span class="cart-badge" id="cart-badge">0</span>
- </button>
+ <div class="hdr-right">
+  <div class="lang-wrap">
+   <button class="lang-btn on" onclick="setLang('ko')">🇰🇷</button>
+   <button class="lang-btn" onclick="setLang('en')">🇺🇸</button>
+   <button class="lang-btn" onclick="setLang('zh')">🇨🇳</button>
+   <button class="lang-btn" onclick="setLang('ja')">🇯🇵</button>
+  </div>
+  <button class="cart-btn" onclick="openCart()" id="cart-btn" style="display:none">
+   🛒 <span id="cart-label">장바구니</span><span class="cart-badge" id="cart-badge">0</span>
+  </button>
+ </div>
 </div>
 
+<div class="trans-banner" id="trans-banner">⏳ <span id="trans-msg">번역 중...</span></div>
 <div class="cat-wrap" id="cat-wrap"></div>
 <div id="menu-area"><div class="loading">⏳ 메뉴 불러오는 중...</div></div>
 
-<button class="float-btn" id="float-btn" onclick="openCart()">🛒 주문하기 · <span id="float-total">₩0</span></button>
+<button class="float-btn" id="float-btn" onclick="openCart()">🛒 <span id="float-label">주문하기</span> · <span id="float-total">₩0</span></button>
 
 <!-- 장바구니 시트 -->
 <div class="cart-sheet" id="cart-sheet">
  <div class="cart-handle"></div>
- <div class="cart-title">🛒 주문 내역</div>
+ <div class="cart-title">🛒 <span id="cart-title-txt">주문 내역</span></div>
  <div class="cart-items" id="cart-items"></div>
- <div class="cart-total"><span>합계</span><span id="cart-total-amt" style="color:#38bdf8">₩0</span></div>
- <button class="order-btn" id="order-btn" onclick="doOrder()">결제하기</button>
+ <div class="cart-total"><span id="total-label">합계</span><span id="cart-total-amt" style="color:#38bdf8">₩0</span></div>
+ <button class="order-btn" id="order-btn" onclick="doOrder()"><span id="order-label">결제하기</span></button>
 </div>
 
 <!-- 완료 -->
@@ -99,11 +120,11 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'App
  <div class="done-icon">🎉</div>
  <div id="done-num" class="done-num"></div>
  <div class="done-sub" id="done-sub"></div>
- <button onclick="location.reload()" style="margin-top:24px;padding:12px 28px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:12px;color:#38bdf8;font-size:14px;font-weight:700;cursor:pointer">추가 주문</button>
+ <button onclick="location.reload()" style="margin-top:24px;padding:12px 28px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:12px;color:#38bdf8;font-size:14px;font-weight:700;cursor:pointer" id="reorder-btn">추가 주문</button>
 </div>
 
 <!-- 로딩 오버레이 -->
-<div class="overlay" id="overlay"><div class="spin"></div>결제 처리 중...</div>
+<div class="overlay" id="overlay"><div class="spin"></div><span id="pay-label">결제 처리 중...</span></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -117,149 +138,266 @@ var params=new URLSearchParams(location.search);
 var DID=params.get('did')||'';
 var TID=params.get('tid')||'';
 var _menus=[];
-var _cart={};  /* {menuId: {name,price,qty}} */
+var _cart={};
 var _curCat='전체';
-var _tossKey='test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'; /* TODO: live 키로 교체 */
+var _tossKey='test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+var _lang=localStorage.getItem('filo_lang')||'ko';
+var _transCache={}; /* {lang: {ko텍스트: 번역텍스트}} */
+var _transMenus=[]; /* 현재 언어로 번역된 메뉴 */
 
-/* 매장 + 메뉴 로드 */
-function init(){
- if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 잘못된 QR코드입니다.</div>';return;}
- document.getElementById('table-label').textContent='테이블 '+TID+' · 주문';
+/* ── UI 텍스트 다국어 ── */
+var UI_TEXT={
+  ko:{loading:'메뉴 불러오는 중...',noMenu:'등록된 메뉴가 없습니다.',cart:'장바구니',cartTitle:'주문 내역',total:'합계',order:'결제하기',reorder:'추가 주문',paying:'결제 처리 중...',floatOrder:'주문하기',soldOut:'품절',emptyCart:'장바구니가 비어있습니다',tableLoading:'테이블 로딩중...',all:'전체',transBanner:'번역 중...'},
+  en:{loading:'Loading menu...',noMenu:'No menu available.',cart:'Cart',cartTitle:'Order Summary',total:'Total',order:'Pay Now',reorder:'Order More',paying:'Processing payment...',floatOrder:'Order',soldOut:'Sold Out',emptyCart:'Your cart is empty',tableLoading:'Loading table...',all:'All',transBanner:'Translating...'},
+  zh:{loading:'菜单加载中...',noMenu:'暂无菜单。',cart:'购物车',cartTitle:'订单明细',total:'合计',order:'立即支付',reorder:'继续点餐',paying:'支付处理中...',floatOrder:'点餐',soldOut:'售罄',emptyCart:'购物车为空',tableLoading:'桌台加载中...',all:'全部',transBanner:'翻译中...'},
+  ja:{loading:'メニュー読み込み中...',noMenu:'メニューがありません。',cart:'カート',cartTitle:'ご注文内容',total:'合計',order:'お会計',reorder:'追加注文',paying:'決済処理中...',floatOrder:'注文する',soldOut:'売り切れ',emptyCart:'カートが空です',tableLoading:'テーブル読み込み中...',all:'すべて',transBanner:'翻訳中...'}
+};
 
- /* 매장 정보 */
- _db.collection('companies').doc(DID).get().then(function(d){
-  if(d.exists){
-   var f=d.data();
-   var name=f.storeName||f.companyName||f.name||'매장';
-   document.getElementById('store-logo').textContent=name;
-   document.title=name+' · 테이블 '+TID;
-   /* Toss 클라이언트 키 */
-   if(f.tossClientKey)_tossKey=f.tossClientKey;
+function t(key){return (UI_TEXT[_lang]||UI_TEXT.ko)[key]||key;}
+
+function applyUIText(){
+  var el=function(id){return document.getElementById(id);};
+  if(el('cart-label'))el('cart-label').textContent=t('cart');
+  if(el('cart-title-txt'))el('cart-title-txt').textContent=t('cartTitle');
+  if(el('total-label'))el('total-label').textContent=t('total');
+  if(el('order-label'))el('order-label').textContent=t('order');
+  if(el('reorder-btn'))el('reorder-btn').textContent=t('reorder');
+  if(el('pay-label'))el('pay-label').textContent=t('paying');
+  if(el('float-label'))el('float-label').textContent=t('floatOrder');
+  if(el('trans-banner'))el('trans-msg').textContent=t('transBanner');
+  /* 테이블 라벨 */
+  if(TID&&el('table-label'))el('table-label').textContent='Table '+TID+((_lang==='ko')?' · 주문':'');
+  /* 언어 버튼 활성화 */
+  document.querySelectorAll('.lang-btn').forEach(function(b){b.classList.remove('on');});
+  var activeBtn=document.querySelector('.lang-btn[onclick*="\''+_lang+'\'"]');
+  if(activeBtn)activeBtn.classList.add('on');
+}
+
+/* ── 언어 전환 ── */
+window.setLang=function(lang){
+  _lang=lang;
+  localStorage.setItem('filo_lang',lang);
+  applyUIText();
+  if(lang==='ko'){
+    _transMenus=_menus.slice();
+    renderMenus();
+  } else {
+    translateMenus(lang);
   }
- }).catch(function(){});
+};
 
- /* 메뉴 로드 - Worker API 경유 (인증 불필요) */
- fetch('/api/menus?did='+DID).then(function(r){return r.json();}).then(function(menus){
-  if(!menus||!menus.length){document.getElementById('menu-area').innerHTML='<div class="loading">등록된 메뉴가 없습니다.<br><span style="font-size:12px;color:var(--t3)">FILO 앱 → 메뉴관리에서 추가해주세요</span></div>';return;}
-  _menus=menus;
+/* ── Claude API로 메뉴 번역 ── */
+function translateMenus(lang){
+  /* 캐시 확인 */
+  if(_transCache[lang]){
+    _applyTranslation(lang);
+    return;
+  }
+  var banner=document.getElementById('trans-banner');
+  if(banner)banner.style.display='block';
+
+  /* 번역할 텍스트 수집 (메뉴명 + 카테고리) */
+  var texts=[];
+  var seen={};
+  _menus.forEach(function(m){
+    if(m.name&&!seen[m.name]){texts.push(m.name);seen[m.name]=true;}
+    if(m.category&&!seen[m.category]){texts.push(m.category);seen[m.category]=true;}
+    if(m.description&&!seen[m.description]){texts.push(m.description);seen[m.description]=true;}
+  });
+
+  var langName={en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1000,
+      messages:[{role:'user',content:
+        'You are a restaurant menu translator. Translate the following Korean food/menu texts to '+langName[lang]+'.\n'+
+        'Return ONLY a JSON object mapping Korean text to translated text. No explanation, no markdown.\n'+
+        'Example: {"김치찌개":"Kimchi Stew","한식":"Korean Food"}\n\n'+
+        'Texts to translate:\n'+JSON.stringify(texts)
+      }]
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var raw=data.content&&data.content[0]&&data.content[0].text||'{}';
+    var clean=raw.replace(/```json|```/g,'').trim();
+    try{
+      _transCache[lang]=JSON.parse(clean);
+    }catch(e){_transCache[lang]={};}
+    _applyTranslation(lang);
+    if(banner)banner.style.display='none';
+  })
+  .catch(function(){
+    if(banner)banner.style.display='none';
+    _transMenus=_menus.slice();
+    renderMenus();
+  });
+}
+
+function _applyTranslation(lang){
+  var cache=_transCache[lang]||{};
+  _transMenus=_menus.map(function(m){
+    return Object.assign({},m,{
+      name:cache[m.name]||m.name,
+      category:cache[m.category]||m.category,
+      description:cache[m.description]||m.description
+    });
+  });
   renderMenus();
- }).catch(function(e){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 메뉴를 불러올 수 없습니다.<br><span style="font-size:11px;color:var(--t3)">'+e.message+'</span></div>';console.error(e);});
+  var banner=document.getElementById('trans-banner');
+  if(banner)banner.style.display='none';
+}
+
+/* ── 매장 + 메뉴 로드 ── */
+function init(){
+  if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 잘못된 QR코드입니다.</div>';return;}
+  applyUIText();
+  document.getElementById('table-label').textContent='테이블 '+TID+' · 주문';
+
+  _db.collection('companies').doc(DID).get().then(function(d){
+    if(d.exists){
+      var f=d.data();
+      var name=f.storeName||f.companyName||f.name||'매장';
+      document.getElementById('store-logo').textContent=name;
+      document.title=name+' · Table '+TID;
+      if(f.tossClientKey)_tossKey=f.tossClientKey;
+    }
+  }).catch(function(){});
+
+  fetch('/api/menus?did='+DID).then(function(r){return r.json();}).then(function(menus){
+    if(!menus||!menus.length){
+      document.getElementById('menu-area').innerHTML='<div class="loading">'+t('noMenu')+'<br><span style="font-size:12px;color:var(--t3)">FILO 앱 → 메뉴관리에서 추가해주세요</span></div>';
+      return;
+    }
+    _menus=menus;
+    if(_lang==='ko'){
+      _transMenus=_menus.slice();
+      renderMenus();
+    } else {
+      translateMenus(_lang);
+    }
+  }).catch(function(e){
+    document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 메뉴를 불러올 수 없습니다.<br><span style="font-size:11px;color:var(--t3)">'+e.message+'</span></div>';
+  });
 }
 
 function renderMenus(){
- var cats=['전체'].concat([...new Set(_menus.map(function(m){return m.category;}).filter(Boolean))]);
- var catWrap=document.getElementById('cat-wrap');
- catWrap.innerHTML=cats.map(function(c){
-  return '<button class="cat-btn'+(c===_curCat?' on':'')+'" onclick="filterCat(\''+c+'\')">'+c+'</button>';
- }).join('');
+  var menus=_transMenus.length?_transMenus:_menus;
+  var cats=[t('all')].concat([...new Set(menus.map(function(m){return m.category;}).filter(Boolean))]);
+  var catWrap=document.getElementById('cat-wrap');
+  catWrap.innerHTML=cats.map(function(c){
+    return '<button class="cat-btn'+(c===_curCat?' on':'')+(c===t('all')&&_curCat==='전체'?' on':'')+'" onclick="filterCat(\''+c+'\')">'+c+'</button>';
+  }).join('');
 
- var filtered=_curCat==='전체'?_menus:_menus.filter(function(m){return m.category===_curCat;});
- var area=document.getElementById('menu-area');
- if(!filtered.length){area.innerHTML='<div class="loading" style="padding:40px">등록된 메뉴가 없습니다</div>';return;}
+  var filtered=(_curCat==='전체'||_curCat===t('all'))?menus:menus.filter(function(m){return m.category===_curCat;});
+  var area=document.getElementById('menu-area');
+  if(!filtered.length){area.innerHTML='<div class="loading" style="padding:40px">'+t('noMenu')+'</div>';return;}
 
- area.innerHTML='<div class="menu-grid">'+filtered.map(function(m){
-  var qty=_cart[m.id]?_cart[m.id].qty:0;
-  var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover">':'<div class="menu-img">'+( m.emoji||'🍽')+'</div>';
-  return '<div class="menu-card'+(m.soldOut?' sold-out':'')+'" id="mc-'+m.id+'">'+
-   img+
-   '<div class="menu-info">'+
-   '<div class="menu-name">'+m.name+'</div>'+
-   (m.soldOut?'<div class="menu-sold">품절</div>':'<div class="menu-price">₩'+m.price.toLocaleString()+'</div>')+
-   (!m.soldOut?'<div class="menu-qty">'+
-    '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',-1);event.stopPropagation()">−</button>'+
-    '<span class="qty-num" id="qty-'+m.id+'">'+qty+'</span>'+
-    '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',1);event.stopPropagation()" style="background:rgba(8,145,178,.2);border-color:rgba(8,145,178,.4);color:#38bdf8">+</button>'+
-   '</div>':'')+
-   '</div></div>';
- }).join('')+'</div>';
+  area.innerHTML='<div class="menu-grid">'+filtered.map(function(m){
+    var qty=_cart[m.id]?_cart[m.id].qty:0;
+    var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover">':'<div class="menu-img">'+(m.emoji||'🍽')+'</div>';
+    return '<div class="menu-card'+(m.soldOut?' sold-out':'')+'\" id="mc-'+m.id+'">'+
+      img+
+      '<div class="menu-info">'+
+      '<div class="menu-name">'+m.name+'</div>'+
+      (m.description?'<div class="menu-desc">'+m.description+'</div>':'')+
+      (m.soldOut?'<div class="menu-sold">'+t('soldOut')+'</div>':'<div class="menu-price">₩'+m.price.toLocaleString()+'</div>')+
+      (!m.soldOut?'<div class="menu-qty">'+
+        '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',-1);event.stopPropagation()">−</button>'+
+        '<span class="qty-num" id="qty-'+m.id+'">'+qty+'</span>'+
+        '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',1);event.stopPropagation()" style="background:rgba(8,145,178,.2);border-color:rgba(8,145,178,.4);color:#38bdf8">+</button>'+
+      '</div>':'')+
+      '</div></div>';
+  }).join('')+'</div>';
 }
 
 window.filterCat=function(c){
- _curCat=c;
- renderMenus();
+  _curCat=c;
+  renderMenus();
 };
 
 window.changeQty=function(id,name,price,delta){
- if(!_cart[id])_cart[id]={name:name,price:price,qty:0};
- _cart[id].qty=Math.max(0,_cart[id].qty+delta);
- if(_cart[id].qty===0)delete _cart[id];
- var el=document.getElementById('qty-'+id);
- if(el)el.textContent=(_cart[id]?_cart[id].qty:0);
- updateCartUI();
+  if(!_cart[id])_cart[id]={name:name,price:price,qty:0};
+  _cart[id].qty=Math.max(0,_cart[id].qty+delta);
+  if(_cart[id].qty===0)delete _cart[id];
+  var el=document.getElementById('qty-'+id);
+  if(el)el.textContent=(_cart[id]?_cart[id].qty:0);
+  updateCartUI();
 };
 
 function updateCartUI(){
- var total=0,count=0;
- Object.values(_cart).forEach(function(i){total+=i.price*i.qty;count+=i.qty;});
- var badge=document.getElementById('cart-badge');
- var cartBtn=document.getElementById('cart-btn');
- var floatBtn=document.getElementById('float-btn');
- if(badge)badge.textContent=count;
- if(count>0){
-  cartBtn.style.display='';
-  floatBtn.style.display='';
-  document.getElementById('float-total').textContent='₩'+total.toLocaleString();
- } else {
-  cartBtn.style.display='none';
-  floatBtn.style.display='none';
-  closeCart();
- }
+  var total=0,count=0;
+  Object.values(_cart).forEach(function(i){total+=i.price*i.qty;count+=i.qty;});
+  var badge=document.getElementById('cart-badge');
+  var cartBtn=document.getElementById('cart-btn');
+  var floatBtn=document.getElementById('float-btn');
+  if(badge)badge.textContent=count;
+  if(count>0){
+    cartBtn.style.display='';
+    floatBtn.style.display='';
+    document.getElementById('float-total').textContent='₩'+total.toLocaleString();
+  } else {
+    cartBtn.style.display='none';
+    floatBtn.style.display='none';
+    closeCart();
+  }
 }
 
 window.openCart=function(){
- var sheet=document.getElementById('cart-sheet');
- var items=document.getElementById('cart-items');
- var totalEl=document.getElementById('cart-total-amt');
- var total=0;
- var html='';
- Object.entries(_cart).forEach(function(e){
-  var id=e[0],item=e[1];
-  var sub=item.price*item.qty;total+=sub;
-  html+='<div class="cart-item">'+
-   '<div class="cart-item-name">'+item.name+' <span style="color:var(--t3)">×'+item.qty+'</span></div>'+
-   '<div style="display:flex;align-items:center;gap:8px">'+
-   '<div class="cart-item-price">₩'+sub.toLocaleString()+'</div>'+
-   '<button onclick="changeQty(\''+id+'\',\''+item.name+'\','+item.price+',-1);openCart()" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
-   '</div></div>';
- });
- items.innerHTML=html||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">장바구니가 비어있습니다</div>';
- totalEl.textContent='₩'+total.toLocaleString();
- sheet.classList.add('open');
- /* 배경 클릭 닫기 */
- sheet.onclick=null;
- setTimeout(function(){document.addEventListener('click',function h(e){if(!sheet.contains(e.target)){closeCart();document.removeEventListener('click',h);}},true);},100);
+  var sheet=document.getElementById('cart-sheet');
+  var items=document.getElementById('cart-items');
+  var totalEl=document.getElementById('cart-total-amt');
+  var total=0;
+  var html='';
+  Object.entries(_cart).forEach(function(e){
+    var id=e[0],item=e[1];
+    var sub=item.price*item.qty;total+=sub;
+    html+='<div class="cart-item">'+
+      '<div class="cart-item-name">'+item.name+' <span style="color:var(--t3)">×'+item.qty+'</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+      '<div class="cart-item-price">₩'+sub.toLocaleString()+'</div>'+
+      '<button onclick="changeQty(\''+id+'\',\''+item.name+'\','+item.price+',-1);openCart()" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
+      '</div></div>';
+  });
+  items.innerHTML=html||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">'+t('emptyCart')+'</div>';
+  totalEl.textContent='₩'+total.toLocaleString();
+  sheet.classList.add('open');
+  sheet.onclick=null;
+  setTimeout(function(){document.addEventListener('click',function h(e){if(!sheet.contains(e.target)){closeCart();document.removeEventListener('click',h);}},true);},100);
 };
 
 function closeCart(){document.getElementById('cart-sheet').classList.remove('open');}
 
 window.doOrder=function(){
- var items=Object.entries(_cart);
- if(!items.length)return;
- var total=items.reduce(function(s,e){return s+e[1].price*e[1].qty;},0);
- var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
- var orderName=items[0][1].name+(items.length>1?' 외 '+(items.length-1)+'건':'');
+  var items=Object.entries(_cart);
+  if(!items.length)return;
+  var total=items.reduce(function(s,e){return s+e[1].price*e[1].qty;},0);
+  var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
+  var orderName=items[0][1].name+(items.length>1?' 외 '+(items.length-1)+'건':'');
 
- /* Firestore에 주문 저장 */
- var orderData={
-  dealerId:DID,tableId:TID,orderId:orderId,
-  items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
-  total:total,status:'pending_payment',
-  source:'table_qr',createdAt:new Date().toISOString()
- };
- _db.collection('toss_orders').doc(orderId).set(orderData).then(function(){
-  /* Toss 결제 요청 */
-  var toss=TossPayments(_tossKey);
-  toss.requestPayment('카드',{
-   amount:total,
-   orderId:orderId,
-   orderName:orderName,
-   customerName:'테이블 '+TID,
-   successUrl:location.origin+'/order-done?oid='+orderId+'&did='+DID+'&tid='+TID,
-   failUrl:location.origin+'/order-fail?oid='+orderId+'&did='+DID+'&tid='+TID,
-  }).catch(function(e){
-   if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);
+  var orderData={
+    dealerId:DID,tableId:TID,orderId:orderId,
+    items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
+    total:total,status:'pending_payment',
+    source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
+  };
+  _db.collection('toss_orders').doc(orderId).set(orderData).then(function(){
+    var toss=TossPayments(_tossKey);
+    toss.requestPayment('카드',{
+      amount:total,
+      orderId:orderId,
+      orderName:orderName,
+      customerName:'Table '+TID,
+      successUrl:location.origin+'/order-done?oid='+orderId+'&did='+DID+'&tid='+TID,
+      failUrl:location.origin+'/order-fail?oid='+orderId+'&did='+DID+'&tid='+TID,
+    }).catch(function(e){
+      if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);
+    });
   });
- });
 };
 
 init();
