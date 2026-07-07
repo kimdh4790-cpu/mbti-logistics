@@ -2494,35 +2494,83 @@ function _dineTax(el){
  var ym=new Date().toISOString().slice(0,7);
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
+
+ var ITEMS=[
+  {key:'rent',   label:'임대료',     icon:'🏠', placeholder:'월세/전세 관련 비용'},
+  {key:'elec',   label:'전기료',     icon:'⚡', placeholder:'전기 요금'},
+  {key:'gas',    label:'가스비',     icon:'🔥', placeholder:'가스 요금'},
+  {key:'water',  label:'수도료',     icon:'💧', placeholder:'수도 요금'},
+  {key:'cardFee',label:'카드수수료', icon:'💳', placeholder:'POS 카드 수수료'},
+  {key:'other',  label:'기타비용',   icon:'📦', placeholder:'소모품, 유니폼, 수리비 등'},
+ ];
+
+ var itemRows=ITEMS.map(function(item){
+  return '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:8px" id="tax-row-'+item.key+'">'+
+   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+   '<span style="font-size:16px">'+item.icon+'</span>'+
+   '<span style="font-size:13px;font-weight:700;flex:1">'+item.label+'</span>'+
+   '<span id="tax-receipt-badge-'+item.key+'" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:2px 8px">📎 영수증</span>'+
+   '</div>'+
+   '<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">'+
+   '<input id="tax-'+item.key+'" class="inp" type="number" placeholder="'+item.placeholder+'" style="margin:0" oninput="_dineTaxSaveFixed(\''+did+'\')">'+
+   '<label style="cursor:pointer;padding:6px 10px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:8px;font-size:11px;font-weight:700;color:#818cf8;white-space:nowrap">'+
+   '📎 첨부<input type="file" accept="image/*,application/pdf" style="display:none" onchange="_dineTaxUploadReceipt(this,\''+did+'\',\''+item.key+'\')">'+
+   '</label>'+
+   '<button id="tax-receipt-view-'+item.key+'" style="display:none;padding:6px 10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:11px;color:#22c55e;cursor:pointer" onclick="_dineTaxViewReceipt(\''+item.key+'\')">보기</button>'+
+   '</div>'+
+   '</div>';
+ }).join('');
+
  wrap.innerHTML=
   '<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
-  /* 월 선택 + 생성 버튼 */
   '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">'+
   '<input type="month" id="tax-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
   '<button class="btn btn-primary btn-sm" data-did="'+did+'" onclick="_dineTaxGenerate(this.dataset.did)">리포트 생성</button>'+
   '</div>'+
-  /* 고정비용 입력 카드 */
   '<div class="card" style="margin-bottom:14px">'+
-  '<div class="sec-title" style="margin-bottom:12px">📋 월별 고정비용 입력 <span style="font-size:10px;font-weight:400;color:var(--t3)">(리포트에 자동 반영)</span></div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
-  '<div class="input-group" style="margin:0"><label>임대료 (원)</label><input id="tax-rent" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
-  '<div class="input-group" style="margin:0"><label>전기료 (원)</label><input id="tax-elec" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
-  '<div class="input-group" style="margin:0"><label>가스비 (원)</label><input id="tax-gas" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+  '<div class="sec-title" style="margin:0">📋 월별 고정비용 <span style="font-size:10px;font-weight:400;color:var(--t3)">(금액 + 영수증 첨부)</span></div>'+
+  '<div style="font-size:10px;color:var(--t3)">💾 자동저장</div>'+
   '</div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">'+
-  '<div class="input-group" style="margin:0"><label>수도료 (원)</label><input id="tax-water" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
-  '<div class="input-group" style="margin:0"><label>카드수수료 (원)</label><input id="tax-card-fee" class="inp" type="number" placeholder="0" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
-  '<div class="input-group" style="margin:0"><label>기타비용 (원)</label><input id="tax-other" class="inp" type="number" placeholder="소모품,유니폼 등" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
+  itemRows+
+  '<div class="input-group" style="margin-top:8px;margin-bottom:0"><label>메모</label><input id="tax-memo" class="inp" placeholder="예) 인테리어 수리비 50만원" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
   '</div>'+
-  '<div class="input-group" style="margin-top:8px;margin-bottom:0"><label>기타 메모</label><input id="tax-memo" class="inp" placeholder="예) 인테리어 수리비 50만원" oninput="_dineTaxSaveFixed(\''+did+'\')"></div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:6px">💾 입력 즉시 자동저장됩니다</div>'+
-  '</div>'+
-  /* 리포트 결과 */
   '<div id="tax-result"><div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">월을 선택 후 리포트 생성 버튼을 누르세요</div></div>';
- el.appendChild(wrap);
 
- /* 저장된 고정비용 불러오기 */
+ el.appendChild(wrap);
  _dineTaxLoadFixed(did);
+}
+
+var _taxReceiptUrls={};
+
+function _dineTaxUploadReceipt(input,did,key){
+ var file=input.files[0];if(!file)return;
+ _dineToast('📤 업로드중...');
+ var ts=Date.now();
+ var path='receipts/'+did+'/tax/'+key+'_'+ts+'_'+file.name;
+ var token=_dineToken||'';
+ /* Firebase Storage REST API */
+ var storageUrl='https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/'+encodeURIComponent(path)+'?uploadType=media';
+ fetch(storageUrl,{method:'POST',headers:{'Content-Type':file.type,'Authorization':'Bearer '+token},body:file})
+ .then(function(r){return r.json();})
+ .then(function(d){
+  if(!d.downloadTokens){_dineToast('❌ 업로드 실패');return;}
+  var url='https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/'+encodeURIComponent(path)+'?alt=media&token='+d.downloadTokens;
+  _taxReceiptUrls[key]=url;
+  /* 배지 표시 */
+  var badge=document.getElementById('tax-receipt-badge-'+key);
+  var viewBtn=document.getElementById('tax-receipt-view-'+key);
+  if(badge)badge.style.display='inline';
+  if(viewBtn)viewBtn.style.display='inline';
+  /* URL 저장 */
+  _dineTaxSaveFixed(did);
+  _dineToast('✅ 영수증 첨부됐습니다');
+ }).catch(function(e){_dineToast('❌ '+e.message);});
+}
+
+function _dineTaxViewReceipt(key){
+ var url=_taxReceiptUrls[key];
+ if(url)window.open(url,'_blank');
 }
 
 function _dineTaxLoadFixed(did){
@@ -2536,6 +2584,17 @@ function _dineTaxLoadFixed(did){
    var el=document.getElementById(map[k]);
    if(!el||!f[k])return;
    el.value=f[k].integerValue||f[k].stringValue||'';
+  });
+  /* 영수증 URL 복원 */
+  Object.keys(f).forEach(function(k){
+   if(k.indexOf('receipt_')===0){
+    var itemKey=k.replace('receipt_','');
+    _taxReceiptUrls[itemKey]=f[k].stringValue;
+    var badge=document.getElementById('tax-receipt-badge-'+itemKey);
+    var viewBtn=document.getElementById('tax-receipt-view-'+itemKey);
+    if(badge)badge.style.display='inline';
+    if(viewBtn)viewBtn.style.display='inline';
+   }
   });
  }).catch(function(){});
 }
@@ -2554,6 +2613,10 @@ function _dineTaxSaveFixed(did){
    memo:{stringValue:document.getElementById('tax-memo')?.value||''},
    updatedAt:{stringValue:new Date().toISOString()}
   };
+  /* 영수증 URL 추가 */
+  Object.keys(_taxReceiptUrls).forEach(function(k){
+   fields['receipt_'+k]={stringValue:_taxReceiptUrls[k]};
+  });
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_settings/'+did+'_tax_fixed',{
    method:'PATCH',
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
