@@ -2505,19 +2505,23 @@ function _dineTax(el){
  ];
 
  var itemRows=ITEMS.map(function(item){
-  return '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:8px" id="tax-row-'+item.key+'">'+
-   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-   '<span style="font-size:16px">'+item.icon+'</span>'+
-   '<span style="font-size:13px;font-weight:700;flex:1">'+item.label+'</span>'+
-   '<span id="tax-receipt-badge-'+item.key+'" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:2px 8px">📎 영수증</span>'+
+ var itemRows=ITEMS.map(function(item){
+  return '<div style="border:1px solid var(--bd);border-radius:10px;margin-bottom:6px;overflow:hidden" id="tax-row-'+item.key+'">'+
+   '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--bg3)" onclick="_dineTaxToggle(''+item.key+'')">'+
+   '<span style="font-size:14px">'+item.icon+'</span>'+
+   '<span style="font-size:12px;font-weight:700;flex:1">'+item.label+'</span>'+
+   '<span id="tax-amt-preview-'+item.key+'" style="font-size:11px;color:var(--br);font-weight:700"></span>'+
+   '<span id="tax-receipt-badge-'+item.key+'" style="display:none;font-size:10px;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:1px 7px;margin-left:4px">📎</span>'+
+   '<span style="font-size:10px;color:var(--t3);margin-left:6px" id="tax-arrow-'+item.key+'">▼</span>'+
    '</div>'+
+   '<div id="tax-body-'+item.key+'" style="display:none;padding:10px 12px;background:var(--s2)">'+
    '<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center">'+
-   '<input id="tax-'+item.key+'" class="inp" type="number" placeholder="'+item.placeholder+'" style="margin:0" oninput="_dineTaxSaveFixed(\''+did+'\')">'+
+   '<input id="tax-'+item.key+'" class="inp" type="number" placeholder="'+item.placeholder+'" style="margin:0" oninput="_dineTaxSaveFixed(''+did+'');_dineTaxPreview(''+item.key+'')">'+
    '<label style="cursor:pointer;padding:6px 10px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:8px;font-size:11px;font-weight:700;color:#818cf8;white-space:nowrap">'+
-   '📎 첨부<input type="file" accept="image/*,application/pdf" style="display:none" onchange="_dineTaxUploadReceipt(this,\''+did+'\',\''+item.key+'\')">'+
+   '📎 첨부<input type="file" accept="image/*,application/pdf" style="display:none" onchange="_dineTaxUploadReceipt(this,''+did+'',''+item.key+'')">'+
    '</label>'+
-   '<button id="tax-receipt-view-'+item.key+'" style="display:none;padding:6px 10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:11px;color:#22c55e;cursor:pointer" onclick="_dineTaxViewReceipt(\''+item.key+'\')">보기</button>'+
-   '</div>'+
+   '<button id="tax-receipt-view-'+item.key+'" style="display:none;padding:6px 10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:11px;color:#22c55e;cursor:pointer" onclick="_dineTaxViewReceipt(''+item.key+'')">보기</button>'+
+   '</div></div>'+
    '</div>';
  }).join('');
 
@@ -2542,6 +2546,23 @@ function _dineTax(el){
 }
 
 var _taxReceiptUrls={};
+
+function _dineTaxToggle(key){
+ var body=document.getElementById('tax-body-'+key);
+ var arrow=document.getElementById('tax-arrow-'+key);
+ if(!body)return;
+ var open=body.style.display==='block';
+ body.style.display=open?'none':'block';
+ if(arrow)arrow.textContent=open?'▼':'▲';
+}
+
+function _dineTaxPreview(key){
+ var inp=document.getElementById('tax-'+key);
+ var preview=document.getElementById('tax-amt-preview-'+key);
+ if(!preview||!inp)return;
+ var v=parseInt(inp.value)||0;
+ preview.textContent=v?'₩'+v.toLocaleString():'';
+}
 
 function _dineTaxUploadReceipt(input,did,key){
  var file=input.files[0];if(!file)return;
