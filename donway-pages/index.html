@@ -7524,45 +7524,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var rules=_fd[fid];
               var fs=settlements.find(function(s){return (s.userId||s.driver)===fid&&s.month===month;});
               if(!fs)return;
-              var totalDeduct=rules.reduce(function(s,r){return s+r.tot;},0);
               var allPts=[];rules.forEach(function(r){allPts=allPts.concat(r.pts);});
-              fs.etcMinus=(fs.etcMinus||0)+totalDeduct;
-              var pvm=fs.etcMinusReason||'';
-              fs.etcMinusReason=(pvm?pvm+' / ':'')+'지원차감 '+allPts.join('·');
+              // ★ etcMinus 제거 - 건수차감으로 이미 금액 반영됨 (이중차감 방지)
 
-              if(fs.routeDetails&&fs.routeDetails.length){
-                rules.forEach(function(rule){
-                  if(rule.hasDateRoutes){
-                    var fdm=drvMap[fid];
-                    if(fdm&&fdm.dateRoutes){
-                      Object.keys(fdm.dateRoutes).forEach(function(dt){
-                        // ★ 동일 범위 필터 (toId 쪽과 동일 기준)
-                        if(rule.rStart&&dt<rule.rStart)return;
-                        if(rule.rEnd&&dt>rule.rEnd)return;
-                        Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                          if(rule.tR.length&&rule.tR.indexOf(rt)<0)return;
-                          var rd=fdm.dateRoutes[dt][rt];
-                          var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                          if(ri<0)return;
-                          fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-(rd.cnt||0));
-                          fs.routeDetails[ri].ret=Math.max(0,(fs.routeDetails[ri].ret||0)-(rd.ret||0));
-                        });
-                      });
-                    }
-                  } else {
-                    rule.pts.forEach(function(pt){
-                      var m=pt.match(/^(\S+)\s+(\d+)\uAC74/);
-                      if(!m)return;
-                      var rt=m[1],cnt=parseInt(m[2]);
-                      var ri=fs.routeDetails.findIndex(function(r){return r.route===rt;});
-                      if(ri<0)return;
-                      fs.routeDetails[ri].cnt=Math.max(0,(fs.routeDetails[ri].cnt||0)-cnt);
-                    });
-                  }
-                });
-                fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
-                fs.rcnt=fs.routeDetails.reduce(function(s,r){return s+(r.ret||0);},0);
-              }
+              // ★ 건수차감 제거 - etcMinus만으로 처리
             });
           }
           // 정산 보장금액 자동 채움 (동기)
