@@ -1545,6 +1545,9 @@ async function acceptExchange(){
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
+      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
+      if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
+      if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
