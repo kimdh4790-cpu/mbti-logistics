@@ -1582,15 +1582,12 @@ async function acceptExchange(){
             method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
             body: JSON.stringify({structuredQuery:{
               from:[{collectionId:'inventory'}],
-              where:{compositeFilter:{op:'AND',filters:[
-                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
-                {fieldFilter:{field:{fieldPath:'forSale'},op:'NOT_EQUAL',value:{booleanValue:false}}}
-              ]}},
-              limit:200
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              limit:300
             }})
           });
           const rows2 = await r2.json();
-          menus = parseRows(rows2);
+          menus = parseRows(rows2).filter(m=>m.price>0);
         }
 
         return new Response(JSON.stringify(menus), {
