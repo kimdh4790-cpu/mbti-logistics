@@ -31108,13 +31108,16 @@ function recalcAllSettlements(){
       if(_drvInfo&&_drvInfo.settleGuarantee){
         var _g=_drvInfo.settleGuarantee;
         var _baseAmt=newDamt+newRamt+(x.fresh||0)+(x.finc||fincVal||0)+(x.nocont||0)+(x.etcPlusTL||0);  // ★ inc 제외
-        // 보장성 제외한 기존 etcPlus (보장성 외 기타+ 있으면 유지)
+        // 아이디지원 보존, 보장성만 제거
         var _prevEtcPlusNoGuarantee=_recalcEtcPlus;
         var _prevReason=_recalcEtcPlusReason;
         if(_prevReason.indexOf('정산보장')>=0){
-          // 기존 보장성 차액 제거하고 순수 기타+만 남김
-          _prevEtcPlusNoGuarantee=0;
-          _prevReason='';
+          // 아이디지원 있으면 보존, 보장성만 제거
+          var _parts2=_prevReason.split(' / ');
+          var _keepParts=_parts2.filter(function(p){return p.indexOf('정산보장')<0;});
+          _prevReason=_keepParts.join(' / ');
+          // etcPlus에서 보장성 금액 제거 불가(혼합)이므로 아이디지원 있으면 전체유지, 없으면 0
+          if(_prevReason.indexOf('아이디지원')<0) _prevEtcPlusNoGuarantee=0;
         }
         var _baseWithEtc=_baseAmt+_prevEtcPlusNoGuarantee;
         if(_g>_baseWithEtc){
