@@ -645,7 +645,7 @@ function _dineWatchAttend(){
    var working=Object.keys(ins).filter(function(id){return !outs[id];});
    var el=document.getElementById('tb-attend-cnt');
    if(el)el.textContent=working.length+'명 출근중';
-  });
+  },function(err){console.warn('attend watch:',err.code);});
 }
 
 
@@ -713,9 +713,9 @@ function _dineLoadDashboard(did,today){
  Promise.all([
   _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today).get(),
   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).get(),
-  _db.collection('members').where('dealerId','==',did).get()
+  _db.collection('members').where('dealerId','==',did).get().catch(function(){return {forEach:function(){},size:0,docs:[]};})
  ]).then(function(results){
-  var salesSnap=results[0],attSnap=results[1],memSnap=results[2];
+  var salesSnap=results[0],attSnap=results[1],memSnap=results[2]||{forEach:function(){},size:0,docs:[]};
 
   /* 매출 */
   var totalSales=0,orderCnt=0;
@@ -2566,9 +2566,6 @@ function _dineTaxSaveFixed(did){
 function _dineTaxGenerate(did){
  var ym=document.getElementById('tax-ym')?.value||new Date().toISOString().slice(0,7);
  var from=ym+'-01',to=ym+'-31';
- var res=document.getElementById('tax-result');
- if(!res)return;
- res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 생성중...</div>';
  var res=document.getElementById('tax-result');
  if(!res)return;
  res.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 생성중...</div>';
