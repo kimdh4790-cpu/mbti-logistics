@@ -4111,26 +4111,27 @@ function _filoPageTableQR(el){
  el.appendChild(wrap);
  _filoTableLoad(did);
  /* 30초 폴링 */
- clearInterval(window._tableTimer);
- window._tableTimer=setInterval(function(){_filoTableLoad(did);},30000);
+
 }
 
 function _filoTableLoad(did){
  did=did||_CU.dealerId||_CU.uid;
  var today=new Date().toISOString().slice(0,10);
- Promise.all([
-  _db.collection('filo_tables').where('dealerId','==',did).get(),
-  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).get()
- ]).then(function(results){
-  var tableSnap=results[0];
-  var bookingSnap=results[1];
+ /* 기존 리스너 해제 */
+ if(window._tableUnsub)window._tableUnsub();
+ if(window._bookingUnsub)window._bookingUnsub();
+ var tableSnap=null,bookingSnap=null;
+ function tryRender(){
+  if(!tableSnap||!bookingSnap)return;
+  var results=[tableSnap,bookingSnap];
 
   var tables=tableSnap.empty?
    Array.from({length:10},function(_,i){return {docId:'auto_'+(i+1),num:i+1,name:'테이블 '+(i+1),status:'empty',reservedName:'',occupiedSince:''};})
    :tableSnap.docs.map(function(d){
     var f=d.data();
     return {docId:d.id,num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty',reservedName:f.reservedName||'',occupiedSince:f.occupiedSince||''};
-   }).sort(function(a,b){return a.num-b.num;});
+   }).sort(function(a,b){return a.num-b.num;})
+   .filter(function(t,i,arr){return arr.findIndex(function(x){return x.num===t.num;})=== i;});
 
   /* 테이블 그리드 */
   var grid=document.getElementById('filo-table-grid');
@@ -4188,7 +4189,13 @@ function _filoTableLoad(did){
     '<button data-bid="'+bid+'" data-did="'+did+'" onclick="_filoBookingConfirm(this.dataset.bid,this.dataset.did)" style="padding:3px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;cursor:pointer">확정</button>':'')+
     '</div>';
   }).join('');
- }).catch(function(e){console.warn('table load:',e);});
+ }
+ window._tableUnsub=_db.collection('filo_tables').where('dealerId','==',did).onSnapshot(function(snap){
+  tableSnap=snap;tryRender();
+ },function(e){console.warn('table:',e);});
+ window._bookingUnsub=_db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).onSnapshot(function(snap){
+  bookingSnap=snap;tryRender();
+ },function(e){console.warn('booking:',e);});
 }
 
 window._filoTableSeat=function(docId,did,num){
