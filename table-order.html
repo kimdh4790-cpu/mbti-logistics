@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07071a">
+<title>테이블 주문</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#07071a;--s1:#0c0c22;--s2:#14142a;--s3:#1a1a32;--br:#0891b2;--tx:#f0f0ff;--t2:#9898c0;--t3:#565678;--bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.13)}
+html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'Apple SD Gothic Neo','Pretendard',sans-serif;overflow-x:hidden}
+
+/* 헤더 */
+.hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.hdr-logo{font-size:16px;font-weight:900;color:#38bdf8}
+.hdr-table{font-size:13px;font-weight:700;color:var(--t2)}
+.cart-btn{position:relative;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:20px;padding:7px 14px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer}
+.cart-badge{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;border-radius:10px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* 카테고리 탭 */
+.cat-wrap{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--bd)}
+.cat-wrap::-webkit-scrollbar{display:none}
+.cat-btn{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1px solid var(--bd2);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.cat-btn.on{background:rgba(8,145,178,.15);border-color:rgba(8,145,178,.4);color:#38bdf8}
+
+/* 메뉴 그리드 */
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px 16px;padding-bottom:120px}
+.menu-card{background:var(--s2);border:1px solid var(--bd2);border-radius:14px;overflow:hidden;cursor:pointer;transition:.15s}
+.menu-card:active{transform:scale(.97)}
+.menu-card.sold-out{opacity:.45;cursor:not-allowed}
+.menu-img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:36px}
+.menu-info{padding:10px}
+.menu-name{font-size:13px;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-price{font-size:14px;font-weight:900;color:#38bdf8}
+.menu-sold{font-size:11px;color:#ef4444;font-weight:700}
+.menu-qty{display:flex;align-items:center;gap:8px;margin-top:8px}
+.qty-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--bd2);background:var(--s3);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.qty-num{font-size:13px;font-weight:800;min-width:20px;text-align:center}
+
+/* 장바구니 바텀시트 */
+.cart-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--bd2);border-radius:20px 20px 0 0;padding:0;max-height:75vh;overflow-y:auto;transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);z-index:200}
+.cart-sheet.open{transform:translateY(0)}
+.cart-handle{width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:12px auto 4px}
+.cart-title{padding:8px 16px 12px;font-size:16px;font-weight:900;border-bottom:1px solid var(--bd)}
+.cart-items{padding:8px 16px}
+.cart-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.cart-item-name{flex:1;font-size:13px;font-weight:700}
+.cart-item-price{font-size:13px;font-weight:800;color:#38bdf8;white-space:nowrap}
+.cart-total{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:800;border-top:2px solid var(--bd2)}
+.order-btn{margin:0 16px 16px;width:calc(100% - 32px);padding:15px;background:linear-gradient(135deg,#0891b2,#0e7490);border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:-.3px}
+.order-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* 플로팅 주문 버튼 */
+.float-btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0891b2,#0e7490);border:none;border-radius:30px;padding:14px 28px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;box-shadow:0 4px 20px rgba(8,145,178,.4);white-space:nowrap;display:none;z-index:150}
+
+/* 완료 */
+.done{display:none;text-align:center;padding:60px 20px}
+.done.show{display:block}
+.done-icon{font-size:60px;margin-bottom:16px}
+.done-num{font-size:32px;font-weight:900;color:#38bdf8;margin-bottom:8px}
+.done-sub{font-size:14px;color:var(--t2);line-height:1.7}
+
+/* 로딩 */
+.loading{text-align:center;padding:60px 16px;color:var(--t3)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-size:14px;color:#fff}
+.overlay.show{display:flex}
+.spin{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#38bdf8;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+ <div>
+  <div class="hdr-logo" id="store-logo">FILO</div>
+  <div class="hdr-table" id="table-label">테이블 로딩중...</div>
+ </div>
+ <button class="cart-btn" onclick="openCart()" id="cart-btn" style="display:none">
+  🛒 장바구니<span class="cart-badge" id="cart-badge">0</span>
+ </button>
+</div>
+
+<div class="cat-wrap" id="cat-wrap"></div>
+<div id="menu-area"><div class="loading">⏳ 메뉴 불러오는 중...</div></div>
+
+<button class="float-btn" id="float-btn" onclick="openCart()">🛒 주문하기 · <span id="float-total">₩0</span></button>
+
+<!-- 장바구니 시트 -->
+<div class="cart-sheet" id="cart-sheet">
+ <div class="cart-handle"></div>
+ <div class="cart-title">🛒 주문 내역</div>
+ <div class="cart-items" id="cart-items"></div>
+ <div class="cart-total"><span>합계</span><span id="cart-total-amt" style="color:#38bdf8">₩0</span></div>
+ <button class="order-btn" id="order-btn" onclick="doOrder()">결제하기</button>
+</div>
+
+<!-- 완료 -->
+<div class="done" id="done-view">
+ <div class="done-icon">🎉</div>
+ <div id="done-num" class="done-num"></div>
+ <div class="done-sub" id="done-sub"></div>
+ <button onclick="location.reload()" style="margin-top:24px;padding:12px 28px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:12px;color:#38bdf8;font-size:14px;font-weight:700;cursor:pointer">추가 주문</button>
+</div>
+
+<!-- 로딩 오버레이 -->
+<div class="overlay" id="overlay"><div class="spin"></div>결제 처리 중...</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://js.tosspayments.com/v1/payment"></script>
+<script>
+var FB_CFG={apiKey:"AIzaSyC4oiIjh3eLvxVz9VEjxu7L7KHDKs_A3jA",authDomain:"mbti-logistics.firebaseapp.com",projectId:"mbti-logistics"};
+firebase.initializeApp(FB_CFG);
+var _db=firebase.firestore();
+
+var params=new URLSearchParams(location.search);
+var DID=params.get('did')||'';
+var TID=params.get('tid')||'';
+var _menus=[];
+var _cart={};  /* {menuId: {name,price,qty}} */
+var _curCat='전체';
+var _tossKey='test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'; /* TODO: live 키로 교체 */
+
+/* 매장 + 메뉴 로드 */
+function init(){
+ if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 잘못된 QR코드입니다.</div>';return;}
+ document.getElementById('table-label').textContent='테이블 '+TID+' · 주문';
+
+ /* 매장 정보 */
+ _db.collection('companies').doc(DID).get().then(function(d){
+  if(d.exists){
+   var f=d.data();
+   var name=f.storeName||f.companyName||f.name||'매장';
+   document.getElementById('store-logo').textContent=name;
+   document.title=name+' · 테이블 '+TID;
+   /* Toss 클라이언트 키 */
+   if(f.tossClientKey)_tossKey=f.tossClientKey;
+  }
+ }).catch(function(){});
+
+ /* 메뉴 로드 */
+ _db.collection('pos_menus').where('dealerId','==',DID).get().then(function(snap){
+  if(snap.empty){
+   /* menu_costs 폴백 */
+   return _db.collection('menu_costs').where('dealerId','==',DID).get().then(function(s2){
+    _menus=s2.docs.map(function(d){
+     var f=d.data();
+     return {id:d.id,name:f.menuName||f.name||'메뉴',price:parseInt(f.price||f.sellPrice||0),category:f.category||'메뉴',soldOut:f.soldOut||false,emoji:f.emoji||'🍽'};
+    });
+    renderMenus();
+   });
+  }
+  _menus=snap.docs.map(function(d){
+   var f=d.data();
+   return {id:d.id,name:f.menuName||f.name||'메뉴',price:parseInt(f.price||f.sellPrice||0),category:f.category||'메뉴',soldOut:f.soldOut||false,emoji:f.emoji||'🍽',imgUrl:f.imgUrl||''};
+  });
+  renderMenus();
+ }).catch(function(e){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 메뉴를 불러올 수 없습니다.</div>';});
+}
+
+function renderMenus(){
+ var cats=['전체'].concat([...new Set(_menus.map(function(m){return m.category;}).filter(Boolean))]);
+ var catWrap=document.getElementById('cat-wrap');
+ catWrap.innerHTML=cats.map(function(c){
+  return '<button class="cat-btn'+(c===_curCat?' on':'')+'" onclick="filterCat(\''+c+'\')">'+c+'</button>';
+ }).join('');
+
+ var filtered=_curCat==='전체'?_menus:_menus.filter(function(m){return m.category===_curCat;});
+ var area=document.getElementById('menu-area');
+ if(!filtered.length){area.innerHTML='<div class="loading" style="padding:40px">등록된 메뉴가 없습니다</div>';return;}
+
+ area.innerHTML='<div class="menu-grid">'+filtered.map(function(m){
+  var qty=_cart[m.id]?_cart[m.id].qty:0;
+  var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover">':'<div class="menu-img">'+( m.emoji||'🍽')+'</div>';
+  return '<div class="menu-card'+(m.soldOut?' sold-out':'')+'" id="mc-'+m.id+'">'+
+   img+
+   '<div class="menu-info">'+
+   '<div class="menu-name">'+m.name+'</div>'+
+   (m.soldOut?'<div class="menu-sold">품절</div>':'<div class="menu-price">₩'+m.price.toLocaleString()+'</div>')+
+   (!m.soldOut?'<div class="menu-qty">'+
+    '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',-1);event.stopPropagation()">−</button>'+
+    '<span class="qty-num" id="qty-'+m.id+'">'+qty+'</span>'+
+    '<button class="qty-btn" onclick="changeQty(\''+m.id+'\',\''+m.name+'\','+m.price+',1);event.stopPropagation()" style="background:rgba(8,145,178,.2);border-color:rgba(8,145,178,.4);color:#38bdf8">+</button>'+
+   '</div>':'')+
+   '</div></div>';
+ }).join('')+'</div>';
+}
+
+window.filterCat=function(c){
+ _curCat=c;
+ renderMenus();
+};
+
+window.changeQty=function(id,name,price,delta){
+ if(!_cart[id])_cart[id]={name:name,price:price,qty:0};
+ _cart[id].qty=Math.max(0,_cart[id].qty+delta);
+ if(_cart[id].qty===0)delete _cart[id];
+ var el=document.getElementById('qty-'+id);
+ if(el)el.textContent=(_cart[id]?_cart[id].qty:0);
+ updateCartUI();
+};
+
+function updateCartUI(){
+ var total=0,count=0;
+ Object.values(_cart).forEach(function(i){total+=i.price*i.qty;count+=i.qty;});
+ var badge=document.getElementById('cart-badge');
+ var cartBtn=document.getElementById('cart-btn');
+ var floatBtn=document.getElementById('float-btn');
+ if(badge)badge.textContent=count;
+ if(count>0){
+  cartBtn.style.display='';
+  floatBtn.style.display='';
+  document.getElementById('float-total').textContent='₩'+total.toLocaleString();
+ } else {
+  cartBtn.style.display='none';
+  floatBtn.style.display='none';
+  closeCart();
+ }
+}
+
+window.openCart=function(){
+ var sheet=document.getElementById('cart-sheet');
+ var items=document.getElementById('cart-items');
+ var totalEl=document.getElementById('cart-total-amt');
+ var total=0;
+ var html='';
+ Object.entries(_cart).forEach(function(e){
+  var id=e[0],item=e[1];
+  var sub=item.price*item.qty;total+=sub;
+  html+='<div class="cart-item">'+
+   '<div class="cart-item-name">'+item.name+' <span style="color:var(--t3)">×'+item.qty+'</span></div>'+
+   '<div style="display:flex;align-items:center;gap:8px">'+
+   '<div class="cart-item-price">₩'+sub.toLocaleString()+'</div>'+
+   '<button onclick="changeQty(\''+id+'\',\''+item.name+'\','+item.price+',-1);openCart()" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
+   '</div></div>';
+ });
+ items.innerHTML=html||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">장바구니가 비어있습니다</div>';
+ totalEl.textContent='₩'+total.toLocaleString();
+ sheet.classList.add('open');
+ /* 배경 클릭 닫기 */
+ sheet.onclick=null;
+ setTimeout(function(){document.addEventListener('click',function h(e){if(!sheet.contains(e.target)){closeCart();document.removeEventListener('click',h);}},true);},100);
+};
+
+function closeCart(){document.getElementById('cart-sheet').classList.remove('open');}
+
+window.doOrder=function(){
+ var items=Object.entries(_cart);
+ if(!items.length)return;
+ var total=items.reduce(function(s,e){return s+e[1].price*e[1].qty;},0);
+ var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
+ var orderName=items[0][1].name+(items.length>1?' 외 '+(items.length-1)+'건':'');
+
+ /* Firestore에 주문 저장 */
+ var orderData={
+  dealerId:DID,tableId:TID,orderId:orderId,
+  items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
+  total:total,status:'pending_payment',
+  source:'table_qr',createdAt:new Date().toISOString()
+ };
+ _db.collection('toss_orders').doc(orderId).set(orderData).then(function(){
+  /* Toss 결제 요청 */
+  var toss=TossPayments(_tossKey);
+  toss.requestPayment('카드',{
+   amount:total,
+   orderId:orderId,
+   orderName:orderName,
+   customerName:'테이블 '+TID,
+   successUrl:location.origin+'/order-done?oid='+orderId+'&did='+DID+'&tid='+TID,
+   failUrl:location.origin+'/order-fail?oid='+orderId+'&did='+DID+'&tid='+TID,
+  }).catch(function(e){
+   if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);
+  });
+ });
+};
+
+init();
+</script>
+</body>
+</html>
