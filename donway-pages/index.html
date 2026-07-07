@@ -7404,7 +7404,6 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               .catch(function(){});
           }
         })();
-        lss('settlements',settlements);
         window._lastParsedSettlements = settlements;
         if(window._guardCheckDriverCount){
           var _pgIds=[]; var _pgSet={};settlements.forEach(function(s){var id=s.userId||s.driver||'';if(id&&!_pgSet[id]){_pgSet[id]=1;_pgIds.push(id);}});
@@ -7616,6 +7615,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             }
           });
         })();
+        lss('settlements',settlements);
         // Firebase 저장
         if(_db){
           // ★ dealerId 강제 갱신
