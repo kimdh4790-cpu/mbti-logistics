@@ -7600,15 +7600,17 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.fresh=Math.max(0,(fs.fresh||0)-_freshDed);
                 }
                 // 인센 차감: _getIncSetting(fid, rt) 기준
-                Object.keys(fdm.dateRoutes).forEach(function(dt){
-                  if(!_dtMatch(dt,rule))return;
-                  Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
-                    if(tR.length&&tR.indexOf(rt)<0)return;
-                    var rd2=fdm.dateRoutes[dt][rt];
-                    var _fInc=typeof _getIncSetting==='function'?(_getIncSetting(fid,rt).on?(_getIncSetting(fid,rt).rate||0):0):0;
-                    fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)+(rd2.ret||0))*_fInc);
+                if(fdm.dateRoutes){
+                  Object.keys(fdm.dateRoutes).forEach(function(dt){
+                    if(!_dtMatch(dt,rule))return;
+                    Object.keys(fdm.dateRoutes[dt]).forEach(function(rt){
+                      if(tR.length&&tR.indexOf(rt)<0)return;
+                      var rd2=fdm.dateRoutes[dt][rt];
+                      var _fInc=typeof _getIncSetting==='function'?(_getIncSetting(fid,rt).on?(_getIncSetting(fid,rt).rate||0):0):0;
+                      fs.inc=Math.max(0,(fs.inc||0)-((rd2.cnt||0)+(rd2.ret||0))*_fInc);
+                    });
                   });
-                });
+                }
               });
               // dcnt/rcnt 재계산
               fs.dcnt=fs.routeDetails.reduce(function(s,r){return s+(r.cnt||0);},0);
