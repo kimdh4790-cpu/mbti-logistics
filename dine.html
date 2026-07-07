@@ -1757,32 +1757,55 @@ function _dineStore(el){
  var did=_CU.dealerId;
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">🏪 매장 설정</div><div class="page-sub">매장 정보 및 근로 기준 설정</div></div>';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">🏪 매장 설정</div><div class="page-sub">매장 정보 및 근로 기준 설정</div></div>'+
+  '<div class="card" id="store-form"><div style="text-align:center;padding:20px;color:var(--t3)">⏳ 로딩중...</div></div>';
+ el.appendChild(wrap);
 
- _db.collection('companies').where('uid','==',did).limit(1).get().then(function(snap){
-  var co=snap.empty?{}:snap.docs[0].data();
-  var box=document.createElement('div');box.className='card';
+ /* REST API로 companies 조회 */
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+  method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:did}}},limit:1}})
+ }).then(function(r){return r.json();}).then(function(rows){
+  var co={};
+  if(rows&&rows[0]&&rows[0].document){
+   var f=rows[0].document.fields||{};
+   Object.keys(f).forEach(function(k){co[k]=(f[k].stringValue||f[k].integerValue||f[k].doubleValue||'');});
+  }
+  var box=document.getElementById('store-form');if(!box)return;
   box.innerHTML='<div class="sec-title" style="margin-bottom:12px">매장 기본 정보</div>'+
-   '<div class="input-group"><label>매장명</label><input id="st-storeName" class="inp" type="text" value="'+(co.storeName||co.name||'')+'"></div>'+
-   '<div class="input-group">'+
-   '<label>URL 슬러그 <span style="font-size:10px;color:var(--t3)">(영문/한글 모두 가능 · 예: mbti 또는 엠비티아이)</span></label>'+
-   '<input id="st-dineSlug" class="inp" type="text" value="'+(co.dineSlug||'')+'" placeholder="예) mbti 또는 엠비티아이">'+
-   '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div>'+
-   '</div>'+
-   '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp" type="text" value="'+(co.bizNo||'')+'"></div>'+
-   '<div class="input-group"><label>주소</label><input id="st-address" class="inp" type="text" value="'+(co.address||'')+'"></div>'+
+   '<div class="input-group"><label>매장명</label><input id="st-storeName" class="inp" value="'+(co.storeName||co.name||'')+'"></div>'+
+   '<div class="input-group"><label>URL 슬러그 <span style="font-size:10px;color:var(--t3)">(예: mbti)</span></label>'+
+   '<input id="st-dineSlug" class="inp" value="'+(co.dineSlug||'')+'" placeholder="예) mbti">'+
+   '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div></div>'+
+   '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp" value="'+(co.bizNo||'')+'"></div>'+
+   '<div class="input-group"><label>주소</label><input id="st-address" class="inp" value="'+(co.address||'')+'"></div>'+
    '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel" value="'+(co.phone||'')+'"></div>'+
-   '<div class="input-group"><label>직원수(5인기준)</label><input id="st-empCount" class="inp" type="number" value="'+(co.empCount||5)+'"></div>'+
-   '<div class="input-group"><label>기본 시급</label><input id="st-defaultWage" class="inp" type="number" value="'+(co.defaultWage||10320)+'"></div>'+
-   '<div class="input-group"><label>급여일</label><input id="st-payDate" class="inp" type="number" value="'+(co.payDate||25)+'"></div>'+
-   '<button class="btn btn-primary" onclick="_dineSaveStore(\''+did+'\')">저장</button>';
-  wrap.appendChild(box);
-  el.appendChild(wrap);
+   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+   '<div class="input-group" style="margin:0"><label>직원수(5인기준)</label><input id="st-empCount" class="inp" type="number" value="'+(co.empCount||5)+'"></div>'+
+   '<div class="input-group" style="margin:0"><label>기본 시급</label><input id="st-defaultWage" class="inp" type="number" value="'+(co.defaultWage||10320)+'"></div>'+
+   '<div class="input-group" style="margin:0"><label>급여일</label><input id="st-payDate" class="inp" type="number" value="'+(co.payDate||25)+'"></div>'+
+   '</div>'+
+   '<button class="btn btn-primary" style="margin-top:12px" onclick="_dineSaveStore(''+did+'')">저장</button>';
+ }).catch(function(){
+  var box=document.getElementById('store-form');
+  if(box)box.innerHTML='<div style="color:var(--t3);font-size:12px">⚠️ 정보를 불러올 수 없습니다. 직접 입력해주세요.</div>'+
+   '<div class="input-group" style="margin-top:12px"><label>매장명</label><input id="st-storeName" class="inp"></div>'+
+   '<div class="input-group"><label>URL 슬러그</label><input id="st-dineSlug" class="inp" placeholder="예) mbti"></div>'+
+   '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp"></div>'+
+   '<div class="input-group"><label>주소</label><input id="st-address" class="inp"></div>'+
+   '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel"></div>'+
+   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+   '<div class="input-group" style="margin:0"><label>직원수</label><input id="st-empCount" class="inp" type="number" value="5"></div>'+
+   '<div class="input-group" style="margin:0"><label>기본 시급</label><input id="st-defaultWage" class="inp" type="number" value="10320"></div>'+
+   '<div class="input-group" style="margin:0"><label>급여일</label><input id="st-payDate" class="inp" type="number" value="25"></div>'+
+   '</div>'+
+   '<button class="btn btn-primary" style="margin-top:12px" onclick="_dineSaveStore(''+did+'')">저장</button>';
  });
 }
 
 function _dineSaveStore(did){
  var data={
+  uid:did,dealerId:did,
   storeName:document.getElementById('st-storeName')?.value||'',
   dineSlug:document.getElementById('st-dineSlug')?.value.trim()||'',
   bizNo:document.getElementById('st-bizNo')?.value||'',
@@ -1793,19 +1816,23 @@ function _dineSaveStore(did){
   payDate:parseInt(document.getElementById('st-payDate')?.value)||25,
   updatedAt:new Date().toISOString()
  };
- _db.collection('companies').where('uid','==',did).limit(1).get().then(function(snap){
-  var pr=snap.empty?_db.collection('companies').add(Object.assign(data,{uid:did})):snap.docs[0].ref.update(data);
-  pr.then(function(){_dineToast('✅ 저장됐습니다');}).catch(function(e){_dineToast('❌ '+e.message);});
+ /* REST API PATCH */
+ var fields={};
+ Object.keys(data).forEach(function(k){
+  var v=data[k];
+  if(typeof v==='number')fields[k]={integerValue:v};
+  else fields[k]={stringValue:v};
  });
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/'+did+'?updateMask.fieldPaths='+Object.keys(data).join('&updateMask.fieldPaths='),{
+  method:'PATCH',
+  headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+  body:JSON.stringify({fields:fields})
+ }).then(function(r){
+  if(r.ok){_dineToast('✅ 저장됐습니다');}
+  else{return r.json().then(function(e){_dineToast('❌ '+(e.error&&e.error.message||'저장 실패'));});}
+ }).catch(function(e){_dineToast('❌ '+e.message);});
 }
 
-/* 나머지 페이지들 */
-function _dinePayslip(el){
- var did=_CU.dealerId;
- el.innerHTML='';
- var wrap=document.createElement('div');wrap.className='slide-up';
- var ym=new Date().toISOString().slice(0,7);
- wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
   '<div><div class="page-title">📋 급여명세서</div><div class="page-sub">직원별 월별 명세서</div></div>'+
   '<div style="display:flex;gap:6px;align-items:center">'+
