@@ -7465,7 +7465,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             // ★ toId 명세서 없으면 신규 생성
             var ts=settlements.find(function(s){return (s.userId||s.driver)===tid&&s.month===month;});
             if(!ts){
-              ts={userId:tid,driver:tid,month:month,dealerId:_CU.dealerId,
+              ts={userId:tid,driver:tid,month:month,dealerId:(_CU&&_CU.dealerId)||'',
                   dcnt:0,rcnt:0,damt:0,fresh:0,inc:0,etcPlus:0,etcMinus:0,
                   etcPlusReason:'',etcMinusReason:'',routeDetails:[],
                   _isNewIdSupport:true};
