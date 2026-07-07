@@ -4107,6 +4107,8 @@ function _filoPageTableQR(el){
   '<div id="filo-booking-list"><div style="text-align:center;padding:16px;color:var(--t3);font-size:12px">로딩중...</div></div></div>';
  el.appendChild(wrap);
  _filoTableLoad(did);
+ var qrBtn=document.getElementById('table-qr-btn');
+ if(qrBtn)qrBtn.onclick=function(){_filoShowTableQRModal(did);};
 }
 
 function _filoShowTableQRModal(did){
