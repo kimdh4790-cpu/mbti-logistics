@@ -7456,11 +7456,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                     if(tR.length&&tR.indexOf(rt)<0)return;
                     var rd=fd.dateRoutes[dt][rt];
                     var up=RPRICE[rt]||0; if(!up)return;
-                    var addInc=rd.addInc||0; var amt=(rd.cnt||0)*(up+addInc)+(rd.ret||0)*(up+addInc); if(!amt)return;
+                    var amt=(rd.cnt||0)*up+(rd.ret||0)*up; if(!amt)return;
                     tot+=amt;
-                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0};
+                    var _toInc2=typeof _getIncSetting==='function'?(_getIncSetting(tid,rt).on?(_getIncSetting(tid,rt).rate||0):0):0;
+                    if(!_rtAgg[rt])_rtAgg[rt]={cnt:0,ret:0,inc:0};
                     _rtAgg[rt].cnt+=(rd.cnt||0);
                     _rtAgg[rt].ret+=(rd.ret||0);
+                    _rtAgg[rt].inc+=((rd.cnt||0)+(rd.ret||0))*_toInc2;
                   });
                 });
                 // ★ 프레시백
@@ -7488,6 +7490,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   if(a.ret>0)s+=' 반품*'+a.ret+'건';
                   pts.push(s);
                 });
+                var _totalInc=Object.values(_rtAgg).reduce(function(s,a){return s+(a.inc||0);},0);
+                if(_totalInc>0){tot+=_totalInc;pts.push('인센 ₩'+_totalInc.toLocaleString());}
                 if(_totalFresh>0)pts.push('프레시백 ₩'+_totalFresh.toLocaleString());
                 if(_totalDmg>0)pts.push('분실 -₩'+_totalDmg.toLocaleString());
               } else {
