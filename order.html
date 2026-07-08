@@ -175,23 +175,13 @@ window.onload=function(){
 };
 
 function _loadMenus(){
- // /api/menus 공개 API로 메뉴 로드 (Firestore Rules 우회)
  fetch('/api/menus?did='+encodeURIComponent(_did))
  .then(function(r){return r.json();})
  .then(function(data){
-  var menus=data.menus||[];
-  // companies 정보도 별도 로드
-  fetch('/api/menus?did='+encodeURIComponent(_did)+'&info=1')
-  .catch(function(){return {json:function(){return {};}}; });
-  _renderMenus(menus);
-  // 매장명 로드
-  _db.collection('companies').doc(_did).get().then(function(doc){
-   if(doc.exists){
-    var d=doc.data();
-    var el=document.getElementById('store-name');
-    if(el) el.textContent=d.companyName||d.name||'매장';
-   }
-  }).catch(function(){});
+  _menus=data.menus||[];
+  document.getElementById('loading').style.display='none';
+  document.getElementById('menu-wrap').style.display='block';
+  _renderMenus();
  })
  .catch(function(e){
   document.getElementById('loading').innerHTML=
