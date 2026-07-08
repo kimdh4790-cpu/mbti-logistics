@@ -35468,7 +35468,10 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
-    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<div style="display:flex;background:var(--bg3);border-radius:20px;padding:3px;gap:2px">'+
+     '<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="'+(!window._subGrp?'background:#0891b2;color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.4)':'background:transparent;color:var(--text2)')+';padding:7px 18px;border:none;border-radius:17px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s">개인</button>'+
+     '<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="'+(window._subGrp?'background:#7c3aed;color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.4)':'background:transparent;color:var(--text2)')+';padding:7px 18px;border:none;border-radius:17px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s">단체 (20개사+)</button>'+
+     '</div>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
     +[50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].map(function(n,i){
       var active=i===0;
