@@ -3700,16 +3700,7 @@ function _filoImportMenuExcel(input){
     var category=r['카테고리']||r['category']||'기타';
     var emoji=r['이모지']||r['emoji']||'🍽';
     if(!name||!price)return;
-    // 이모지 깨짐 방지 - 카테고리 기반 기본 이모지 매핑
- var emojiMap={'버거':'🍔','치킨':'🍗','피자':'🍕','분식':'🌶️','음료':'☕',
-  '사이드':'🍟','디저트':'🍰','세트':'🎉','카페':'☕','커피':'☕',
-  '한식':'🍱','중식':'🥢','일식':'🍣','양식':'🍝','분식':'🌶️',
-  '주류':'🍺','디저트':'🍰','기타':'🍽'};
- // emoji 필드가 비었거나 단일 문자(깨진 경우) 이면 카테고리 기본값 사용
- var safeEmoji = (emoji && emoji.length > 0 && emoji.codePointAt(0) > 127) 
-  ? emoji 
-  : (emojiMap[category] || '🍽');
- batch.push({name:name,price:price,category:category,emoji:safeEmoji,forSale:true,dealerId:did,stock:null,minStock:null});
+    batch.push({name:name,price:price,category:category,emoji:emoji,forSale:true,dealerId:did,stock:null,minStock:null});
    });
    if(!batch.length){alert('유효한 메뉴가 없습니다.');return;}
    var db=firebase.firestore();
