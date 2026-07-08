@@ -218,6 +218,19 @@ window._setSeat=function(n){
 window._submitReserve=function(){
  var name=document.getElementById('r-name').value.trim();
  var phone=document.getElementById('r-phone').value.trim();
+ // 회원 확인 (members 컬렉션에 전화번호 있는지)
+ if(!name||!phone){alert('이름과 연락처를 입력해주세요');return;}
+ firebase.firestore().collection('members')
+  .where('dealerId','==',DID).where('phone','==',phone).limit(1).get()
+  .then(function(snap){
+   if(snap.empty){
+    alert('회원 전용 서비스입니다.\n'+phone+'로 가입된 회원 정보가 없습니다.\n먼저 회원 가입 후 이용해주세요.');
+    return;
+   }
+   _doReserve(name,phone);
+  });
+};
+function _doReserve(name,phone){
  if(!name||!phone){alert('이름과 연락처를 입력해주세요');return;}
  var btn=document.querySelector('.btn-submit');
  btn.disabled=true;btn.textContent='예약 중...';
@@ -247,6 +260,7 @@ window._submitReserve=function(){
   updateTableStatus(_selectedTable.id,'reserved',name);
   var _bid=d.name?d.name.split('/').pop():''; showDone(name,_selectedTable.name,_seats,rDate,rTime,_bid);
  }).catch(function(e){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류가 발생했습니다');});
+}
 };
 
 function updateTableStatus(tableId,status,reservedName){
