@@ -1499,6 +1499,17 @@ async function acceptExchange(){
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
+      // ★ /슬러그/status → 회원용 테이블/대기 현황 페이지
+      if (path.match(/^\/[^/]+\/status$/)) {
+        const slugForStatus = path.replace(/^\//, '').replace(/\/status$/, '');
+        const statusHtml = await env.DONWAY_ASSETS.get('dine-status.html', 'text');
+        if (statusHtml) {
+          const injected = statusHtml.replace('</head>',
+            '<script>window.__DINE_SLUG__=' + JSON.stringify(decodeURIComponent(slugForStatus)) + ';</script></head>'
+          );
+          return new Response(injected, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+        }
+      }
       // ★ /매장명 or /slug 경로 → dine.html 서빙 + 매장명 주입
       const dinePath = path.replace(/^\//, '');
       if (dinePath && dinePath !== 'app' && dinePath !== 'app.html') {
