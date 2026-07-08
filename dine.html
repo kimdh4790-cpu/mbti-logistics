@@ -2055,7 +2055,7 @@ function _dineStore(el){
    '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div></div>'+
    '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp" value="'+(co.bizNo||'')+'"></div>'+
    '<div class="input-group"><label>주소</label><input id="st-address" class="inp" value="'+(co.address||'')+'"></div>'+
-   '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel" value="'+(co.phone||'')+'"></div>'+
+   '<div class="input-group"><label>전화번호</label><input id="reg-phone" class="inp" type="tel" value="'+(co.phone||'')+'"></div>'+
    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
    '<div class="input-group" style="margin:0"><label>직원수(5인기준)</label><input id="st-empCount" class="inp" type="number" value="'+(co.empCount||5)+'"></div>'+
    '<div class="input-group" style="margin:0"><label>기본 시급</label><input id="st-defaultWage" class="inp" type="number" value="'+(co.defaultWage||10320)+'"></div>'+
@@ -2065,15 +2065,15 @@ function _dineStore(el){
  }).catch(function(){
   var box=document.getElementById('store-form');
   if(box)box.innerHTML='<div style="color:var(--t3);font-size:12px">⚠️ 정보를 불러올 수 없습니다. 직접 입력해주세요.</div>'+
-   '<div class="input-group" style="margin-top:12px"><label>매장명</label><input id="st-storeName" class="inp"></div>'+
-   '<div class="input-group"><label>URL 슬러그</label><input id="st-dineSlug" class="inp" placeholder="예) mbti"></div>'+
-   '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp"></div>'+
-   '<div class="input-group"><label>주소</label><input id="st-address" class="inp"></div>'+
-   '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel"></div>'+
+   '<div class="input-group" style="margin-top:12px"><label>매장명</label><input id="store-storeName" class="inp"></div>'+
+   '<div class="input-group"><label>URL 슬러그</label><input id="store-dineSlug" class="inp" placeholder="예) mbti"></div>'+
+   '<div class="input-group"><label>사업자번호</label><input id="store-bizNo" class="inp"></div>'+
+   '<div class="input-group"><label>주소</label><input id="store-address" class="inp"></div>'+
+   '<div class="input-group"><label>전화번호</label><input id="reg-phone" class="inp" type="tel"></div>'+
    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
-   '<div class="input-group" style="margin:0"><label>직원수</label><input id="st-empCount" class="inp" type="number" value="5"></div>'+
-   '<div class="input-group" style="margin:0"><label>기본 시급</label><input id="st-defaultWage" class="inp" type="number" value="10320"></div>'+
-   '<div class="input-group" style="margin:0"><label>급여일</label><input id="st-payDate" class="inp" type="number" value="25"></div>'+
+   '<div class="input-group" style="margin:0"><label>직원수</label><input id="store-empCount" class="inp" type="number" value="5"></div>'+
+   '<div class="input-group" style="margin:0"><label>기본 시급</label><input id="store-defaultWage" class="inp" type="number" value="10320"></div>'+
+   '<div class="input-group" style="margin:0"><label>급여일</label><input id="store-payDate" class="inp" type="number" value="25"></div>'+
    '</div>'+
    '<button class="btn btn-primary" style="margin-top:12px" data-did="'+did+'" onclick="_dineSaveStore(this.dataset.did)">저장</button>';
  });
