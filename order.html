@@ -27,7 +27,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Pretenda
 #menu-wrap{padding:130px 16px 160px;overflow-y:auto;min-height:100vh}
 .cat-section{margin-bottom:24px}
 .cat-title{font-size:14px;font-weight:900;color:var(--t2);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--bd)}
-.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .menu-card{background:var(--s1);border:1px solid var(--bd);border-radius:14px;overflow:hidden;cursor:pointer;transition:.2s;position:relative}
 .menu-card:active{transform:scale(.97)}
 .menu-img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:40px}
@@ -175,13 +175,23 @@ window.onload=function(){
 };
 
 function _loadMenus(){
+ // /api/menus 공개 API로 메뉴 로드 (Firestore Rules 우회)
  fetch('/api/menus?did='+encodeURIComponent(_did))
  .then(function(r){return r.json();})
  .then(function(data){
-  _menus=data.menus||[];
-  document.getElementById('loading').style.display='none';
-  document.getElementById('menu-wrap').style.display='block';
-  _renderMenus();
+  var menus=data.menus||[];
+  // companies 정보도 별도 로드
+  fetch('/api/menus?did='+encodeURIComponent(_did)+'&info=1')
+  .catch(function(){return {json:function(){return {};}}; });
+  _renderMenus(menus);
+  // 매장명 로드
+  _db.collection('companies').doc(_did).get().then(function(doc){
+   if(doc.exists){
+    var d=doc.data();
+    var el=document.getElementById('store-name');
+    if(el) el.textContent=d.companyName||d.name||'매장';
+   }
+  }).catch(function(){});
  })
  .catch(function(e){
   document.getElementById('loading').innerHTML=
