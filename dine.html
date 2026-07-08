@@ -951,7 +951,7 @@ function _dineStaff(el){
 
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
- hdr.innerHTML='<div><div class="page-title">👤 '+(_CU.role==="staff"?"내 정보":"직원 현황")+'</div><div class="page-sub">'+(_CU.role==="staff"?"나의 근무 정보":"파트별 직원 관리")+'</div></div>';
+ hdr.innerHTML='<div><div class="page-title">👥 직원 현황</div><div class="page-sub">파트별 직원 관리</div></div>';
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary';addBtn.textContent='+ 직원 등록';
  addBtn.onclick=function(){_dineAddStaff(did);};
@@ -966,12 +966,7 @@ function _dineStaff(el){
  el.appendChild(wrap);
 
  if(window._staffUnsub) window._staffUnsub();
- // 직원이면 본인만, 매장주면 전체
- var staffQuery = (_CU.role==='staff')
-  ? _db.collection('members').where('dealerId','==',did).where('uid','==',_CU.uid)
-  : _db.collection('members').where('dealerId','==',did).orderBy('name');
- if(window._staffUnsub) window._staffUnsub();
- window._staffUnsub=staffQuery.onSnapshot(function(snap){
+ window._staffUnsub=_db.collection('members').where('dealerId','==',did).orderBy('name').onSnapshot(function(snap){
    if(snap.empty){
     grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">직원이 없습니다. + 직원 등록을 눌러주세요</div>';
     return;
@@ -1037,8 +1032,8 @@ function _dineStaff(el){
      '</div>'+
      '</div>'+
      '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'+
-     '<button class="btn btn-sm btn-ghost" data-id="'+doc.id+'" onclick="_dineEditStaff(this.dataset.id)">수정</button>'+
-     '<button style="font-size:10px;padding:3px 8px;border:1px solid rgba(99,102,241,.3);border-radius:6px;background:rgba(99,102,241,.08);color:#818cf8;cursor:pointer" data-id="'+doc.id+'" onclick="_dineStaffDetail(this.dataset.id)">상세보기</button>'+
+     +(_CU.role!=='staff'?'<button class="btn btn-sm btn-ghost" data-id="'+doc.id+'" onclick="_dineEditStaff(this.dataset.id)">수정</button>':'')+
+     '<button style="font-size:10px;padding:3px 8px;border:1px solid rgba(99,102,241,.3);border-radius:6px;background:rgba(99,102,241,.08);color:#818cf8;cursor:pointer" data-id="'+doc.id+'" onclick="_dineStaffDetail(this.dataset.id)">'+(_CU.role==='staff'?'내 정보':'상세보기')+'</button>'+
      '</div>'+
      '</div>'+
      '<div class="staff-row"><span style="color:var(--t3)">급여</span><span class="staff-pay">'+pay+'</span></div>'+
