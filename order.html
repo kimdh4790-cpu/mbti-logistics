@@ -261,4 +261,28 @@ function _submitOrder(){
 }
 </script>
 </body>
-</html>
+</html>function _openMdl(m){
+  _curMenu=m;
+  document.getElementById('mdi').textContent=m.emoji||'🍽';
+  document.getElementById('mdn').textContent=m.name;
+  document.getElementById('mdp').textContent='\u20a9'+(m.price||0).toLocaleString();
+  document.getElementById('mda').textContent='\ub2f4\uae30';
+  document.getElementById('mdl').classList.add('open');
+  if(_lang==='ko'){document.getElementById('mdt').textContent='';return;}
+  var ck=m.name+'_'+_lang;
+  if(_tlCache[ck]){document.getElementById('mdt').textContent=_tlCache[ck];return;}
+  document.getElementById('mdt').innerHTML='<span class="tl-spin"></span>\ub2f4\ubc29\ud37c...';
+  fetch('/api/translate',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:m.name,lang:_lang})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    var t=d.translated||m.name;
+    _tlCache[ck]=t;
+    if(document.getElementById('mdl').classList.contains('open')&&_curMenu&&_curMenu.name===m.name){
+      document.getElementById('mdt').textContent=t;
+    }
+  }).catch(function(){document.getElementById('mdt').textContent='';});
+}
+
