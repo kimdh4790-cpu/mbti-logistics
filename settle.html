@@ -4083,25 +4083,9 @@ function pageSubscription(){
   document.getElementById('page-title').textContent='구독 / 요금제';
   var el=document.getElementById('content');
   // 업종별 용어 적용
-  var indKey='universal';
-  if(p.indexOf('beauty')>=0)     indKey='beauty';
-  else if(p.indexOf('delivery')>=0) indKey='delivery';
-  else if(p.indexOf('construct')>=0) indKey='construction';
-  else if(p.indexOf('insur')>=0) indKey='insurance';
-  else if(p.indexOf('care')>=0&&p.indexOf('career')<0) indKey='care';
-  else if(p.indexOf('academy')>=0) indKey='academy';
-  else if(p.indexOf('warehouse')>=0) indKey='warehouse';
-  else if(p.indexOf('event')>=0) indKey='event';
-  else if(p.indexOf('golf')>=0)  indKey='golf';
-  else if(p.indexOf('facility')>=0) indKey='facility';
-  else if(p.indexOf('moving')>=0) indKey='moving';
-  else if(p.indexOf('elec')>=0)  indKey='elec';
-  else if(p.indexOf('landscape')>=0) indKey='landscape';
-  else if(p.indexOf('clean')>=0) indKey='cleaning';
+  var indKey='ai_settle';
+  if(p.indexOf('delivery')>=0) indKey='delivery';
   else if(p.indexOf('ai_settle')>=0||p==='settle') indKey='ai_settle';
-  else if(p.indexOf('sales')>=0) indKey='sales';
-  else if(p.indexOf('freelance')>=0) indKey='freelance';
-  else if(p.indexOf('restaurant')>=0) indKey='restaurant';
   window._curIndKey=indKey;
   // 페이지 타이틀 업종 용어 반영
   setTimeout(function(){_applyIndTermsToUI(indKey);},100);
