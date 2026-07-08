@@ -5567,7 +5567,7 @@ function _filoPageMenuMgmt(el){
 }
 
 function _filoLoadMenuMgmt(did){
- _db.collection('filo_menus').where('dealerId','==',did).orderBy('category').get().then(function(snap){
+ _db.collection('filo_menus').where('dealerId','==',did).get().then(function(snap){
   /* 카테고리 목록 */
   var cats=[];
   snap.forEach(function(doc){
