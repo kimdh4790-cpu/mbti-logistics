@@ -1567,6 +1567,21 @@ async function acceptExchange(){
     }
 
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      if (path === '/api/translate') {
+        if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        const body = await request.json();
+        const name = body.name || '';
+        const lang = body.lang || 'en';
+        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+        });
+        const data = await res.json();
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
         if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:{'Content-Type':'application/json'}});
@@ -1596,6 +1611,21 @@ async function acceptExchange(){
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
       /* ★ 메뉴 공개 API (로그인 불필요) */
+      if (path === '/api/translate') {
+        if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        const body = await request.json();
+        const name = body.name || '';
+        const lang = body.lang || 'en';
+        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+        });
+        const data = await res.json();
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
         if (!did) return new Response(JSON.stringify({error:'did required'}), {status:400, headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
