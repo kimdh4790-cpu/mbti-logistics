@@ -202,6 +202,11 @@ function _loadMenus(){
 }
 
 function _renderMenus(){
+ // menu-wrap 표시
+ var mw=document.getElementById('menu-wrap');
+ if(mw) mw.style.display='block';
+ var ld=document.getElementById('loading');
+ if(ld) ld.style.display='none';
  /* 카테고리 추출 */
  var cats=['전체'];
  _menus.forEach(function(m){if(m.category&&cats.indexOf(m.category)<0)cats.push(m.category);});
