@@ -245,7 +245,7 @@ window._submitReserve=function(){
   if(d.error){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류: '+d.error.message);return;}
   /* filo_tables 상태 업데이트 */
   updateTableStatus(_selectedTable.id,'reserved',name);
-  showDone(name,_selectedTable.name,_seats);
+  var _bid=d.name?d.name.split('/').pop():''; showDone(name,_selectedTable.name,_seats,rDate,rTime,_bid);
  }).catch(function(e){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류가 발생했습니다');});
 };
 
@@ -261,18 +261,38 @@ function updateTableStatus(tableId,status,reservedName){
  }).catch(function(){});
 }
 
-function showDone(name,tableName,seats){
+function showDone(name,tableName,seats,rDate,rTime,bookingId){
  var view=document.getElementById('main-view');
- view.innerHTML='<div class="done-box">'+
-  '<div class="done-icon">🎉</div>'+
-  '<div class="done-title">예약 완료!</div>'+
-  '<div class="done-sub">'+
+ view.innerHTML=
+  '<div class="done-box">'+
+  '<div class="done-icon" id="done-icon">⏳</div>'+
+  '<div class="done-title" id="done-title">확인 중...</div>'+
+  '<div id="done-sub" class="done-sub">'+
   '<b style="color:#38bdf8">'+tableName+'</b><br>'+
-  name+'님 <b>'+seats+'인</b> 예약이 접수됐습니다.<br><br>'+
-  '<span style="color:var(--t3);font-size:12px">직원이 곧 안내해드립니다.</span>'+
-  '</div>'+
-  '<button onclick="loadTables()" style="margin-top:20px;padding:10px 24px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:10px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer">← 테이블 현황 보기</button>'+
-  '</div>';
+  name+'님 <b>'+seats+'인</b><br>'+(rDate||'')+' '+(rTime||'')+'<br><br>'+
+  '<span style="color:var(--t3);font-size:12px">매장에서 예약을 확인하고 있습니다.<br>잠시만 기다려주세요.</span>'+
+  '</div></div>';
+
+ if(!bookingId) return;
+ var _db2=firebase.firestore();
+ var unsub=_db2.collection('filo_bookings').doc(bookingId).onSnapshot(function(doc){
+  var d=doc.data(); if(!d) return;
+  var icon=document.getElementById('done-icon');
+  var title=document.getElementById('done-title');
+  var sub=document.getElementById('done-sub');
+  if(d.status==='confirmed'){
+   if(icon)icon.textContent='🎉';
+   if(title)title.textContent='예약 확정!';
+   if(sub)sub.innerHTML='<b style="color:#38bdf8">'+tableName+'</b><br>'+name+'님 <b>'+seats+'인</b><br>'+(rDate||'')+' '+(rTime||'')+'<br><br><span style="color:#22c55e;font-size:13px;font-weight:700">✅ 예약이 확정됐습니다!</span>';
+   unsub();
+  } else if(d.status==='rejected'){
+   if(icon)icon.textContent='😔';
+   if(title)title.textContent='예약 불가';
+   if(sub)sub.innerHTML='<span style="color:#ef4444">해당 시간 예약이 어렵습니다.<br>다른 시간을 선택해주세요.</span>'+
+    '<br><button onclick="loadTables()" style="margin-top:16px;padding:10px 24px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:10px;color:#38bdf8;font-size:13px;cursor:pointer">← 다시 예약</button>';
+   unsub();
+  }
+ });
 }
 
 function showError(msg){
