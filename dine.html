@@ -293,7 +293,6 @@ select.inp option{background:var(--s2)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script>
 
 firebase.initializeApp({
@@ -2657,6 +2656,22 @@ function _dineTax(el){
   {key:'other',  label:'기타비용',   icon:'📦', placeholder:'소모품, 유니폼, 수리비 등'},
  ];
 
+ var itemRows=ITEMS.map(function(it){
+  return '<div style="border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;overflow:hidden">'+
+   '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--s2)" onclick="_dineTaxToggle(\''+it.key+'\'))">'+
+   '<span>'+it.icon+'</span><span style="flex:1;font-size:13px;font-weight:700">'+it.label+'</span>'+
+   '<span id="tax-amt-preview-'+it.key+'" style="font-size:12px;color:var(--br);margin-right:8px"></span>'+
+   '<span id="tax-arrow-'+it.key+'" style="font-size:11px;color:var(--t3)">▼</span></div>'+
+   '<div id="tax-body-'+it.key+'" style="display:none;padding:12px 14px;background:var(--s1)">'+
+   '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+   '<input id="tax-'+it.key+'" type="number" class="inp" placeholder="'+it.placeholder+'" style="flex:1" oninput="_dineTaxPreview(\''+it.key+'\');_dineTaxSaveFixed(\''+did+'\'))">'+
+   '</div>'+
+   '<div style="display:flex;gap:8px;align-items:center">'+
+   '<label class="btn btn-sm" style="background:var(--s3);border:1px solid var(--bd);cursor:pointer;font-size:11px">📎 영수증 첨부<input type="file" accept="image/*,application/pdf" style="display:none" onchange="_dineTaxUploadReceipt(this,\''+did+'\',\''+it.key+'\'))"></label>'+
+   '<span id="tax-receipt-badge-'+it.key+'" style="font-size:10px;color:var(--br)"></span>'+
+   '<a id="tax-receipt-view-'+it.key+'" href="#" target="_blank" style="display:none;font-size:10px;color:var(--br)">보기</a>'+
+   '</div></div></div>';
+ }).join('');
 
  wrap.innerHTML=
   '<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
