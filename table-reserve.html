@@ -223,6 +223,8 @@ window._submitReserve=function(){
  btn.disabled=true;btn.textContent='예약 중...';
 
  var now=new Date().toISOString();
+ var rDate=(document.getElementById('r-date')||{value:now.slice(0,10)}).value||now.slice(0,10);
+ var rTime=(document.getElementById('r-time')||{value:now.slice(11,16)}).value||now.slice(11,16);
  /* filo_bookings에 저장 */
  fetch(FIREBASE_URL+'/filo_bookings',{
   method:'POST',headers:{'Content-Type':'application/json'},
@@ -236,16 +238,16 @@ window._submitReserve=function(){
    seats:{integerValue:_seats},
    memo:{stringValue:document.getElementById('r-memo').value.trim()},
    status:{stringValue:'pending'},
-   date:{stringValue:now.slice(0,10)},
-   time:{stringValue:now.slice(11,16)},
-   source:{stringValue:'qr_walk_in'},
+   date:{stringValue:rDate},
+   time:{stringValue:rTime},
+   source:{stringValue:'qr_table_reserve'},
    createdAt:{stringValue:now}
   }})
  }).then(function(r){return r.json();}).then(function(d){
   if(d.error){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류: '+d.error.message);return;}
   /* filo_tables 상태 업데이트 */
   updateTableStatus(_selectedTable.id,'reserved',name);
-  showDone(name,_selectedTable.name,_seats);
+  showDone(name,_selectedTable.name,_seats,rDate,rTime);
  }).catch(function(e){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류가 발생했습니다');});
 };
 
@@ -261,14 +263,14 @@ function updateTableStatus(tableId,status,reservedName){
  }).catch(function(){});
 }
 
-function showDone(name,tableName,seats){
+function showDone(name,tableName,seats,rDate,rTime){
  var view=document.getElementById('main-view');
  view.innerHTML='<div class="done-box">'+
   '<div class="done-icon">🎉</div>'+
   '<div class="done-title">예약 완료!</div>'+
   '<div class="done-sub">'+
   '<b style="color:#38bdf8">'+tableName+'</b><br>'+
-  name+'님 <b>'+seats+'인</b> 예약이 접수됐습니다.<br><br>'+
+  name+'님 <b>'+seats+'인</b><br>'+(rDate||'')+' '+(rTime||'')+' 예약이 확정됐습니다.<br><br>'+
   '<span style="color:var(--t3);font-size:12px">직원이 곧 안내해드립니다.</span>'+
   '</div>'+
   '<button onclick="loadTables()" style="margin-top:20px;padding:10px 24px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:10px;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer">← 테이블 현황 보기</button>'+
