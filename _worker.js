@@ -1567,6 +1567,21 @@ async function acceptExchange(){
     }
 
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      if (path === '/api/menus') {
+        const did = new URL(request.url).searchParams.get('did');
+        if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const r2 = await fetch(`${FS_BASE}:runQuery`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}}}})
+        });
+        const d2=await r2.json();
+        const menus=(d2||[]).filter(function(r){return r.document;}).map(function(r){
+          var f=r.document.fields||{};
+          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||''};
+        });
+        return new Response(JSON.stringify({menus:menus}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
