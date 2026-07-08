@@ -197,8 +197,6 @@ function openForm(t){
  var view=document.getElementById('main-view');
  view.innerHTML='<div class="form-box">'+
   '<div class="form-title">📋 예약하기 — '+t.name+'</div>'+
-  '<div class="inp-group"><label>예약 날짜 *</label><input id="r-date" class="inp" type="date" min="'+new Date().toISOString().slice(0,10)+'" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
-  '<div class="inp-group"><label>예약 시간 *</label><select id="r-time" class="inp">'+function(){var o='';for(var h=10;h<=22;h++){for(var m=0;m<60;m+=30){var hh=h.toString().padStart(2,'0');var mm=m.toString().padStart(2,'0');o+='<option value="'+hh+':'+mm+'">'+hh+':'+mm+'</option>';}}return o;}()+'</select></div>'+
   '<div class="inp-group"><label>이름 *</label><input id="r-name" class="inp" placeholder="홍길동" autocomplete="name"></div>'+
   '<div class="inp-group"><label>연락처 *</label><input id="r-phone" class="inp" type="tel" placeholder="010-0000-0000" autocomplete="tel"></div>'+
   '<div class="inp-group"><label>인원</label>'+
