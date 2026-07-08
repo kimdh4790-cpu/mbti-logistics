@@ -613,15 +613,37 @@ function _dineLogin(){
     var f=rows[0].document.fields||{};
     co={name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||''};
    }
-   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:(co&&co.name)||_lemail.split('@')[0],company:co};
-   document.getElementById('login-wrap').style.display='none';
-   var aw=document.getElementById('app-wrap');aw.style.display='flex';
-   document.getElementById('tb-user-name').textContent=_CU.name;
-   _dinePage('dashboard',document.querySelector('.nav-item'));
-   _dineUpdateSidebar();
-   _dineWatchAttend();
+   if(co){
+    // 매장주 로그인
+    _CU={uid:_lid,email:_lemail,dealerId:_lid,name:(co&&co.name)||_lemail.split('@')[0],company:co,role:'owner'};
+    _dineAfterLogin();
+   } else {
+    // 직원 로그인 시도 - members 컬렉션 조회
+    fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_lid,{
+     headers:{'Authorization':'Bearer '+d.idToken}
+    }).then(function(r){return r.json();}).then(function(mem){
+     if(mem&&mem.fields&&mem.fields.role&&mem.fields.role.stringValue==='staff'){
+      var mf=mem.fields;
+      _CU={
+       uid:_lid,email:_lemail,
+       dealerId:(mf.dealerId&&mf.dealerId.stringValue)||_lid,
+       name:(mf.name&&mf.name.stringValue)||_lemail.split('@')[0],
+       role:'staff',
+       staffId:_lid,
+       part:(mf.part&&mf.part.stringValue)||'',
+       phone:(mf.phone&&mf.phone.stringValue)||''
+      };
+      _dineAfterLogin();
+     } else {
+      _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
+      _dineAfterLogin();
+     }
+    }).catch(function(){
+     _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
+     _dineAfterLogin();
+    });
+   }
   }).catch(function(){
-   /* Firestore 실패해도 로그인은 진행 */
    _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],company:null};
    document.getElementById('login-wrap').style.display='none';
    var aw=document.getElementById('app-wrap');aw.style.display='flex';
@@ -1461,24 +1483,7 @@ function _dinePayroll(el){
  hdr.innerHTML='<div><div class="page-title">💰 급여 계산</div><div class="page-sub">2026 근로기준법 자동 적용</div></div>'+
   '<div style="display:flex;gap:8px;align-items:center">'+
   '<input type="month" id="pay-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
-  '<select id="pay-part" class="inp" style="width:auto;padding:5px 8px;font-size:11px">'+
-  '<option value="">전체파트</option>'+
-  '<option value="kitchen">주방</option>'+
-  '<option value="hall">홀</option>'+
-  '<option value="management">관리</option>'+
-  '</select>'+
-  '<select id="pay-emptype" class="inp" style="width:auto;padding:5px 8px;font-size:11px">'+
-  '<option value="">전체</option>'+
-  '<option value="hourly">알바</option>'+
-  '<option value="monthly">정직원</option>'+
-  '</select>'+
-  '<select id="pay-cycle-filter" class="inp" style="width:auto;padding:5px 8px;font-size:11px">'+
-  '<option value="month">월급기준</option>'+
-  '<option value="week">주급기준</option>'+
-  '<option value="day">일급기준</option>'+
-  '</select>'+
-  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(''+did+'')">계산</button>'+
-  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(''+did+'')">🔄 실시간</button>'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(\''+did+'\')">계산</button>'+
   '</div>';
  wrap.appendChild(hdr);
 
@@ -2571,6 +2576,161 @@ function _dineLoadAnalytics(did,from,to){
    },150);
   }
  });
+}
+
+function _dineAfterLogin(){
+ document.getElementById('login-wrap').style.display='none';
+ var aw=document.getElementById('app-wrap');aw.style.display='flex';
+ document.getElementById('tb-user-name').textContent=_CU.name;
+ // 직원이면 사이드바 제한
+ if(_CU.role==='staff'){
+  _dineUpdateSidebarStaff();
+  _dinePage('schedule',document.querySelector('.nav-item'));
+ } else {
+  _dinePage('dashboard',document.querySelector('.nav-item'));
+  _dineUpdateSidebar();
+ }
+ _dineRequestNotifPermission(_CU.dealerId);
+ _dineWatchAttend();
+}
+
+function _dineUpdateSidebarStaff(){
+ // 직원용 사이드바: 스케줄/출퇴근만
+ var groups = document.querySelectorAll('.nav-group');
+ groups.forEach(function(g){
+  var title = g.querySelector('.nav-group-title');
+  if(!title) return;
+  var t = title.textContent.trim();
+  if(t==='직원 관리'){
+   // 직원 관리 내 스케줄/출퇴근만 보이고 나머지 숨김
+   g.querySelectorAll('.nav-item').forEach(function(item){
+    var txt = item.textContent.trim();
+    if(txt.includes('근무 스케줄')||txt.includes('출퇴근 현황')){
+     item.style.display='flex';
+    } else {
+     item.style.display='none';
+    }
+   });
+  } else if(t==='정산'||t==='고객'||t==='설정'){
+   g.style.display='none';
+  } else if(t==='홈'||t===''){
+   // 홈(오늘 현황)은 숨김
+   g.querySelectorAll('.nav-item').forEach(function(item){
+    item.style.display='none';
+   });
+  }
+ });
+ // 급여/명세서는 본인것만 추가
+ var staffMenuGroup = document.querySelector('.nav-group-items');
+ // 내 급여 메뉴 추가
+ var myPayNav = document.createElement('div');
+ myPayNav.className='nav-item';
+ myPayNav.innerHTML='<span class="ic">💰</span>내 급여';
+ myPayNav.onclick=function(){_dineMyPayroll(document.getElementById('content'));};
+ // 내 명세서 메뉴
+ var mySlipNav = document.createElement('div');
+ mySlipNav.className='nav-item';
+ mySlipNav.innerHTML='<span class="ic">📋</span>내 명세서';
+ mySlipNav.onclick=function(){_dineMyPayslip(document.getElementById('content'));};
+ // 첫번째 nav-group-items에 추가
+ if(staffMenuGroup){
+  staffMenuGroup.appendChild(myPayNav);
+  staffMenuGroup.appendChild(mySlipNav);
+ }
+}
+
+// 직원 본인 급여 조회
+function _dineMyPayroll(el){
+ if(!_CU.staffId){el.innerHTML='<div class="empty">직원 정보 없음</div>';return;}
+ el.innerHTML='<div class="slide-up">';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">💰 내 급여</div><div class="page-sub">'+_CU.name+'님의 급여 현황</div></div>'+
+  '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+  '<input type="month" id="my-pay-ym" class="inp" style="width:auto" value="'+new Date().toISOString().slice(0,7)+'">'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineLoadMyPayroll()">조회</button>'+
+  '</div>'+
+  '<div id="my-payroll-result"><div style="text-align:center;padding:30px;color:var(--t3)">월을 선택 후 조회하세요</div></div>';
+ el.innerHTML='';el.appendChild(wrap);
+}
+
+function _dineLoadMyPayroll(){
+ var ym=document.getElementById('my-pay-ym')?.value;
+ if(!ym) return;
+ var did=_CU.dealerId;var sid=_CU.staffId||_CU.uid;
+ // 직원 정보 + 출퇴근 기록 조회
+ _db.collection('staff').doc(sid).get().then(function(snap){
+  var st=snap.data()||{name:_CU.name,hourlyWage:10320,payType:'hourly'};
+  _db.collection('attendance').where('dealerId','==',did)
+   .where('staffId','==',sid)
+   .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get()
+  .then(function(attSnap){
+   var dateIns={};var dateOuts={};
+   attSnap.forEach(function(doc){
+    var d=doc.data();
+    if(d.type==='in') dateIns[d.date]=d;
+    else if(d.type==='out') dateOuts[d.date]=d;
+   });
+   var totalMin=0;var nightMin=0;var workDays=0;
+   Object.keys(dateIns).forEach(function(date){
+    workDays++;
+    var inT=new Date(dateIns[date].time);
+    var outT=dateOuts[date]?new Date(dateOuts[date].time):new Date();
+    var diffMin=(outT-inT)/60000;
+    var brMin=diffMin>=480?60:diffMin>=240?30:0;
+    totalMin+=Math.max(0,diffMin-brMin);
+    var ns=new Date(inT);ns.setHours(22,0,0,0);
+    if(outT>ns) nightMin+=(outT-Math.max(inT,ns))/60000;
+   });
+   var workH=totalMin/60;var nightH=nightMin/60;
+   var hourlyWage=st.hourlyWage||10320;
+   var basePay=st.payType==='monthly'?st.monthlySalary||2500000:Math.round(workH*hourlyWage);
+   var nightPay=Math.round(nightH*hourlyWage*0.5);
+   var weeklyH=st.weeklyHours||0;
+   var weeklyPay=(weeklyH>=15&&workH/4.3>=weeklyH*0.9)?(hourlyWage*weeklyH/5):0;
+   var totalPay=basePay+nightPay+Math.round(weeklyPay);
+   var ins4=Math.round(totalPay*(0.0475+0.03595+0.009));
+   var netPay=totalPay-ins4;
+   var res=document.getElementById('my-payroll-result');if(!res)return;
+   res.innerHTML='<div class="card" style="padding:18px">'+
+    '<div style="font-size:14px;font-weight:800;margin-bottom:14px">'+ym+' 급여 내역</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+    '<div class="kpi-card"><div class="kpi-label">근무일수</div><div class="kpi-val">'+workDays+'일</div></div>'+
+    '<div class="kpi-card"><div class="kpi-label">총 근무시간</div><div class="kpi-val">'+Math.floor(workH)+'h '+Math.round((workH%1)*60)+'m</div></div>'+
+    '<div class="kpi-card"><div class="kpi-label">야간수당</div><div class="kpi-val" style="color:#f59e0b">₩'+nightPay.toLocaleString()+'</div></div>'+
+    '<div class="kpi-card"><div class="kpi-label">주휴수당</div><div class="kpi-val" style="color:#a78bfa">₩'+Math.round(weeklyPay).toLocaleString()+'</div></div>'+
+    '</div>'+
+    '<div style="border-top:1px solid var(--bd);padding-top:12px">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px">'+
+    '<span style="color:var(--t3)">세전 합계</span><span>₩'+totalPay.toLocaleString()+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:12px">'+
+    '<span style="color:var(--t3)">4대보험 공제</span><span style="color:#ef4444">-₩'+ins4.toLocaleString()+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:20px;font-weight:900">'+
+    '<span>실수령액</span><span style="color:#22c55e">₩'+netPay.toLocaleString()+'</span></div>'+
+    '</div></div>';
+  });
+ });
+}
+
+// 직원 본인 명세서 조회
+function _dineMyPayslip(el){
+ var did=_CU.dealerId;var sid=_CU.staffId||_CU.uid;
+ var wrap=document.createElement('div');wrap.className='slide-up';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📋 내 명세서</div><div class="page-sub">'+_CU.name+'님의 급여명세서</div></div>'+
+  '<div id="my-payslip-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+ el.innerHTML='';el.appendChild(wrap);
+ _db.collection('payslips').where('dealerId','==',did).where('staffId','==',sid)
+  .orderBy('ym','desc').limit(12).get()
+  .then(function(snap){
+   var list=document.getElementById('my-payslip-list');if(!list)return;
+   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">발송된 명세서가 없습니다</div>';return;}
+   list.innerHTML=snap.docs.map(function(doc){
+    var d=doc.data();
+    return '<div class="card" style="padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'+
+     '<div><div style="font-weight:800">'+d.ym+' 급여명세서</div>'+
+     '<div style="font-size:11px;color:var(--t3)">'+new Date(d.createdAt).toLocaleDateString('ko')+'</div></div>'+
+     '<div style="font-size:18px;font-weight:900;color:#22c55e">₩'+(d.netPay||0).toLocaleString()+'</div></div>';
+   }).join('');
+  });
 }
 
 function _dineUpdateSidebar(){
