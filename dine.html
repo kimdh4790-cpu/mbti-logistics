@@ -2657,21 +2657,25 @@ function _dineTax(el){
  ];
 
  var itemRows=ITEMS.map(function(it){
+  var k=it.key;
   return '<div style="border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;overflow:hidden">'+
-   '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--s2)" onclick="_dineTaxToggle(\''+it.key+'\'))">'+
+   '<div class="tax-hd" data-k="'+k+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--s2)">'+
    '<span>'+it.icon+'</span><span style="flex:1;font-size:13px;font-weight:700">'+it.label+'</span>'+
-   '<span id="tax-amt-preview-'+it.key+'" style="font-size:12px;color:var(--br);margin-right:8px"></span>'+
-   '<span id="tax-arrow-'+it.key+'" style="font-size:11px;color:var(--t3)">▼</span></div>'+
-   '<div id="tax-body-'+it.key+'" style="display:none;padding:12px 14px;background:var(--s1)">'+
-   '<div style="display:flex;gap:8px;margin-bottom:8px">'+
-   '<input id="tax-'+it.key+'" type="number" class="inp" placeholder="'+it.placeholder+'" style="flex:1" oninput="_dineTaxPreview(\''+it.key+'\');_dineTaxSaveFixed(\''+did+'\'))">'+
-   '</div>'+
+   '<span id="tax-amt-preview-'+k+'" style="font-size:12px;color:var(--br);margin-right:8px"></span>'+
+   '<span id="tax-arrow-'+k+'" style="font-size:11px;color:var(--t3)">▼</span></div>'+
+   '<div id="tax-body-'+k+'" style="display:none;padding:12px 14px;background:var(--s1)">'+
+   '<input id="tax-'+k+'" type="number" class="inp tax-inp" data-k="'+k+'" data-did="'+did+'" placeholder="'+it.placeholder+'" style="width:100%;margin-bottom:8px">'+
    '<div style="display:flex;gap:8px;align-items:center">'+
-   '<label class="btn btn-sm" style="background:var(--s3);border:1px solid var(--bd);cursor:pointer;font-size:11px">📎 영수증 첨부<input type="file" accept="image/*,application/pdf" style="display:none" onchange="_dineTaxUploadReceipt(this,\''+did+'\',\''+it.key+'\'))"></label>'+
-   '<span id="tax-receipt-badge-'+it.key+'" style="font-size:10px;color:var(--br)"></span>'+
-   '<a id="tax-receipt-view-'+it.key+'" href="#" target="_blank" style="display:none;font-size:10px;color:var(--br)">보기</a>'+
+   '<label class="btn btn-sm" style="background:var(--s3);border:1px solid var(--bd);cursor:pointer;font-size:11px">'+
+   '📎 영수증<input type="file" accept="image/*" class="tax-file" data-k="'+k+'" data-did="'+did+'" style="display:none"></label>'+
+   '<span id="tax-receipt-badge-'+k+'" style="font-size:10px;color:var(--br)"></span>'+
    '</div></div></div>';
- }).join('');
+}).join('');
+setTimeout(function(){
+ document.querySelectorAll('.tax-hd').forEach(function(h){h.onclick=function(){_dineTaxToggle(this.dataset.k);};});
+ document.querySelectorAll('.tax-inp').forEach(function(i){i.oninput=function(){_dineTaxPreview(this.dataset.k);_dineTaxSaveFixed(this.dataset.did);};});
+ document.querySelectorAll('.tax-file').forEach(function(f){f.onchange=function(){_dineTaxUploadReceipt(this,this.dataset.did,this.dataset.k);};});
+},100);
 
  wrap.innerHTML=
   '<div style="margin-bottom:16px"><div class="page-title">📂 세무사 공유</div><div class="page-sub">월별 정산 리포트 자동 생성</div></div>'+
