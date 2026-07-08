@@ -1253,12 +1253,10 @@ function _dineAttendTab(tab){
 
 function _dineLoadAttend(did){
  var date=document.getElementById('att-date')?.value||new Date().toISOString().slice(0,10);
- // 이전 리스너 해제
- if(window._attendUnsub) window._attendUnsub();
- // 직원 먼저 로드 후 출퇴근 실시간 구독
- _db.collection('staff').where('dealerId','==',did).get().then(function(memSnap){
-  window._attendUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','==',date).onSnapshot(function(attSnap){
-   var results=[attSnap,memSnap];
+ Promise.all([
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',date).get(),
+  _db.collection('members').where('dealerId','==',did).get()
+ ]).then(function(results){
   var attSnap=results[0],memSnap=results[1];
   var memMap={};memSnap.forEach(function(doc){memMap[doc.id]=doc.data();});
   var allMem=[];memSnap.forEach(function(doc){allMem.push({id:doc.id,data:doc.data()});});
@@ -1463,15 +1461,7 @@ function _dinePayroll(el){
  hdr.innerHTML='<div><div class="page-title">💰 급여 계산</div><div class="page-sub">2026 근로기준법 자동 적용</div></div>'+
   '<div style="display:flex;gap:8px;align-items:center">'+
   '<input type="month" id="pay-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
-  '<div style="display:flex;gap:6px">'+
-  '<select id="pay-type" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
-  '<option value="month">월급</option>'+
-  '<option value="week">주급</option>'+
-  '<option value="day">일급</option>'+
-  '</select>'+
-  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(''+did+'')">계산</button>'+
-  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(''+did+'')">🔄 실시간</button>'+
-  '</div>'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(\''+did+'\')">계산</button>'+
   '</div>';
  wrap.appendChild(hdr);
 
@@ -2068,116 +2058,6 @@ function _dineSaveStore(did){
  }).catch(function(e){_dineToast('❌ '+e.message);});
 }
 
-
-// 실시간 급여 계산 (onSnapshot)
-function _dineAutoPayroll(did){
- var ym=document.getElementById('pay-ym').value;
- var payType=document.getElementById('pay-type')?.value||'month';
- var dateFrom,dateTo;
- if(payType==='week'){
-  var d=new Date();d.setDate(d.getDate()-d.getDay()+1);dateFrom=d.toISOString().slice(0,10);
-  var d2=new Date();d2.setDate(d2.getDate()-d2.getDay()+7);dateTo=d2.toISOString().slice(0,10);
- } else if(payType==='day'){
-  dateFrom=dateTo=new Date().toISOString().slice(0,10);
- } else {
-  dateFrom=ym+'-01';dateTo=ym+'-31';
- }
- _dineToast('🔄 실시간 급여 계산 시작');
- if(window._payrollUnsub) window._payrollUnsub();
- _db.collection('staff').where('dealerId','==',did).get().then(function(staffSnap){
-  var staffMap={};staffSnap.forEach(function(doc){staffMap[doc.id]=doc.data();});
-  window._payrollUnsub=_db.collection('attendance')
-   .where('dealerId','==',did).where('date','>=',dateFrom).where('date','<=',dateTo)
-   .onSnapshot(function(attSnap){
-    // 직원별 출퇴근 집계
-    var workMap={};
-    attSnap.forEach(function(doc){
-     var d=doc.data();
-     if(!workMap[d.staffId]) workMap[d.staffId]={ins:[],outs:[],breaks:[],dates:new Set()};
-     workMap[d.staffId].dates.add(d.date);
-     if(d.type==='in') workMap[d.staffId].ins.push(d);
-     else if(d.type==='out') workMap[d.staffId].outs.push(d);
-     else if(d.type==='break_start') workMap[d.staffId].breaks.push({start:d.time,end:null});
-     else if(d.type==='break_end'){
-      var br=workMap[d.staffId].breaks.find(function(b){return !b.end;});
-      if(br) br.end=d.time;
-     }
-    });
-    // 렌더링
-    var list=document.getElementById('payroll-list');if(!list)return;
-    var typeLabel={'month':'월급','week':'주급','day':'일급'}[payType]||'급여';
-    var rows='';var grandTotal=0;
-    Object.keys(staffMap).forEach(function(sid){
-     var st=staffMap[sid];
-     var wk=workMap[sid]||{ins:[],outs:[],breaks:[],dates:new Set()};
-     var hourlyWage=st.hourlyWage||MIN_WAGE;
-     var totalMin=0;var nightMin=0;var breakMin=0;
-     // 날짜별 매칭
-     var dateIns={};var dateOuts={};
-     wk.ins.forEach(function(r){if(!dateIns[r.date])dateIns[r.date]=r;});
-     wk.outs.forEach(function(r){if(!dateOuts[r.date])dateOuts[r.date]=r;});
-     Object.keys(dateIns).forEach(function(date){
-      var inT=new Date(dateIns[date].time);
-      var outT=dateOuts[date]?new Date(dateOuts[date].time):new Date();
-      var diffMin=(outT-inT)/60000;
-      // 휴식시간 자동 차감
-      var autoBr=diffMin>=480?60:diffMin>=240?30:0;
-      // 실제 휴식 기록
-      var realBr=wk.breaks.filter(function(b){
-       return b.start&&new Date(b.start).toISOString().slice(0,10)===date;
-      }).reduce(function(acc,b){
-       if(!b.end)return acc;
-       return acc+(new Date(b.end)-new Date(b.start))/60000;
-      },0);
-      var brMin=realBr||autoBr;
-      breakMin+=brMin;
-      totalMin+=Math.max(0,diffMin-brMin);
-      // 야간 (22시 이후)
-      var ns=new Date(inT);ns.setHours(22,0,0,0);
-      if(outT>ns) nightMin+=(outT-Math.max(inT,ns))/60000;
-     });
-     var workH=totalMin/60;var nightH=nightMin/60;
-     // 주휴수당 (주 15시간 이상 개근)
-     var weeklyH=payType==='week'?workH:workH/4.3;
-     var weeklyPay=weeklyH>=15?(hourlyWage*weeklyH/5):0;
-     // 기본급
-     var basePay=Math.round(workH*hourlyWage);
-     var nightPay=Math.round(nightH*hourlyWage*0.5);
-     var totalPay=basePay+nightPay+Math.round(weeklyPay);
-     // 4대보험
-     var ins4=Math.round(totalPay*(0.0475+0.03595+0.009));
-     var netPay=totalPay-ins4;
-     grandTotal+=netPay;
-     var statusColor=wk.ins.length>0?'#22c55e':'#ef4444';
-     rows+='<div class="card" style="padding:14px;margin-bottom:8px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-      '<div style="font-weight:800;font-size:14px">'+st.name+'</div>'+
-      '<div style="font-size:11px;color:var(--t3)">시급 ₩'+hourlyWage.toLocaleString()+'</div>'+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;margin-bottom:10px">'+
-      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
-       '<div style="color:var(--t3)">근무시간</div>'+
-       '<div style="font-weight:700;color:#38bdf8">'+Math.floor(workH)+'h '+Math.round((workH%1)*60)+'m</div></div>'+
-      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
-       '<div style="color:var(--t3)">야간수당</div>'+
-       '<div style="font-weight:700;color:#f59e0b">₩'+nightPay.toLocaleString()+'</div></div>'+
-      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
-       '<div style="color:var(--t3)">주휴수당</div>'+
-       '<div style="font-weight:700;color:#a78bfa">₩'+Math.round(weeklyPay).toLocaleString()+'</div></div>'+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--bd);padding-top:8px">'+
-      '<div style="font-size:11px;color:var(--t3)">4대보험 -₩'+ins4.toLocaleString()+'</div>'+
-      '<div style="font-size:16px;font-weight:900;color:#22c55e">실수령 ₩'+netPay.toLocaleString()+'</div>'+
-      '</div></div>';
-    });
-    list.innerHTML=
-     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-     '<div style="font-size:12px;color:var(--t3)">'+typeLabel+' 실시간 계산 <span class="live-dot"></span></div>'+
-     '<div style="font-size:16px;font-weight:900;color:#f59e0b">총 ₩'+grandTotal.toLocaleString()+'</div>'+
-     '</div>'+rows;
-   });
- });
-}
 
 function _dinePayslip(el){
  var did=_CU.dealerId;
