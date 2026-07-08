@@ -56,16 +56,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;
 .sp{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 #ld .lt{font-size:12px;color:#94a3b8;margin-top:12px}
-
-#mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:flex-end}
-#mdl.open{display:flex}
-#mb{background:#fff;border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:80vh;overflow-y:auto}
-#mb .mdi{font-size:48px;text-align:center;margin-bottom:8px}
-#mb .mdn{font-size:18px;font-weight:900;text-align:center;margin-bottom:4px}
-#mb .mdt{font-size:13px;color:#94a3b8;text-align:center;margin-bottom:16px;min-height:20px}
-#mb .mdp{font-size:22px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:16px}
-#mb .mda{width:100%;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer}
-.tl-spin{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
 </style>
 </head>
 <body>
@@ -98,112 +88,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;
   <div class="ds" id="ds">잠시 후 준비됩니다</div>
   <button id="db">메뉴로 돌아가기</button>
 </div>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-var _tlCache={};
-var _curMenu=null;
-
-function _openMdl(m){
-  _curMenu=m;
-  document.getElementById('mdi').textContent=m.emoji||'🍽';
-  document.getElementById('mdn').textContent=m.name;
-  document.getElementById('mdp').textContent='₩'+(m.price||0).toLocaleString();
-  document.getElementById('mda').textContent=_t('ob')==='주문하기'?'담기':'Add';
-  document.getElementById('mdl').classList.add('open');
-  // 번역
-  if(_lang==='ko'){
-    document.getElementById('mdt').textContent='';
-    return;
-  }
-  var cacheKey=m.name+'_'+_lang;
-  if(_tlCache[cacheKey]){
-    document.getElementById('mdt').textContent=_tlCache[cacheKey];
-    return;
-  }
-  document.getElementById('mdt').innerHTML='<span class="tl-spin"></span>번역 중...';
-  var langNames={en:'English',zh:'Chinese',ja:'Japanese'};
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:100,
-      messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[_lang]+'. Return ONLY the translated name, nothing else: '+m.name}]
-    })
-  }).then(function(r){return r.json();})
-  .then(function(d){
-    var translated=(d.content&&d.content[0]&&d.content[0].text)||m.name;
-    _tlCache[cacheKey]=translated;
-    if(document.getElementById('mdl').classList.contains('open')&&_curMenu&&_curMenu.name===m.name){
-      document.getElementById('mdt').textContent=translated;
-    }
-  }).catch(function(){
-    document.getElementById('mdt').textContent='';
-  });
-}
-
-function _closeMdl(){
-  document.getElementById('mdl').classList.remove('open');
-  _curMenu=null;
-}
-
-function _addFromMdl(){
-  if(_curMenu) _add(_curMenu);
-  _closeMdl();
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
-var _tlCache={};
-var _curMenu=null;
-
-function _openMdl(m){
-  _curMenu=m;
-  document.getElementById('mdi').textContent=m.emoji||'🍽';
-  document.getElementById('mdn').textContent=m.name;
-  document.getElementById('mdp').textContent='₩'+(m.price||0).toLocaleString();
-  document.getElementById('mda').textContent=_t('ob')==='주문하기'?'담기':'Add';
-  document.getElementById('mdl').classList.add('open');
-  // 번역
-  if(_lang==='ko'){
-    document.getElementById('mdt').textContent='';
-    return;
-  }
-  var cacheKey=m.name+'_'+_lang;
-  if(_tlCache[cacheKey]){
-    document.getElementById('mdt').textContent=_tlCache[cacheKey];
-    return;
-  }
-  document.getElementById('mdt').innerHTML='<span class="tl-spin"></span>번역 중...';
-  var langNames={en:'English',zh:'Chinese',ja:'Japanese'};
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:100,
-      messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[_lang]+'. Return ONLY the translated name, nothing else: '+m.name}]
-    })
-  }).then(function(r){return r.json();})
-  .then(function(d){
-    var translated=(d.content&&d.content[0]&&d.content[0].text)||m.name;
-    _tlCache[cacheKey]=translated;
-    if(document.getElementById('mdl').classList.contains('open')&&_curMenu&&_curMenu.name===m.name){
-      document.getElementById('mdt').textContent=translated;
-    }
-  }).catch(function(){
-    document.getElementById('mdt').textContent='';
-  });
-}
-
-function _closeMdl(){
-  document.getElementById('mdl').classList.remove('open');
-  _curMenu=null;
-}
-
-function _addFromMdl(){
-  if(_curMenu) _add(_curMenu);
-  _closeMdl();
-}
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 var _did='',_tn='',_menus=[],_cart={},_lang='ko';
 var _i18n={
@@ -297,7 +183,7 @@ function _render(){
       '<div class="mc" id="mc-'+m.name.replace(/\W/g,'')+'"></div>';
     if(!so){
       (function(menu){
-        item.onclick=function(){_openMdl(menu);};
+        item.onclick=function(){_add(menu);};
       })(m);
     } else {
       item.style.opacity='.6';
@@ -373,68 +259,6 @@ function _submitOrder(){
     document.getElementById('dn').style.display='flex';
   }).catch(function(e){alert('주문 실패: '+e.message);});
 }
-
-var _tlCache={};
-var _curMenu=null;
-
-function _openMdl(m){
-  _curMenu=m;
-  document.getElementById('mdi').textContent=m.emoji||'🍽';
-  document.getElementById('mdn').textContent=m.name;
-  document.getElementById('mdp').textContent='₩'+(m.price||0).toLocaleString();
-  document.getElementById('mda').textContent=_t('ob')==='주문하기'?'담기':'Add';
-  document.getElementById('mdl').classList.add('open');
-  // 번역
-  if(_lang==='ko'){
-    document.getElementById('mdt').textContent='';
-    return;
-  }
-  var cacheKey=m.name+'_'+_lang;
-  if(_tlCache[cacheKey]){
-    document.getElementById('mdt').textContent=_tlCache[cacheKey];
-    return;
-  }
-  document.getElementById('mdt').innerHTML='<span class="tl-spin"></span>번역 중...';
-  var langNames={en:'English',zh:'Chinese',ja:'Japanese'};
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:100,
-      messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[_lang]+'. Return ONLY the translated name, nothing else: '+m.name}]
-    })
-  }).then(function(r){return r.json();})
-  .then(function(d){
-    var translated=(d.content&&d.content[0]&&d.content[0].text)||m.name;
-    _tlCache[cacheKey]=translated;
-    if(document.getElementById('mdl').classList.contains('open')&&_curMenu&&_curMenu.name===m.name){
-      document.getElementById('mdt').textContent=translated;
-    }
-  }).catch(function(){
-    document.getElementById('mdt').textContent='';
-  });
-}
-
-function _closeMdl(){
-  document.getElementById('mdl').classList.remove('open');
-  _curMenu=null;
-}
-
-function _addFromMdl(){
-  if(_curMenu) _add(_curMenu);
-  _closeMdl();
-}
 </script>
-
-<div id="mdl" onclick="if(event.target===this)_closeMdl()">
-  <div id="mb">
-    <div class="mdi" id="mdi">🍽</div>
-    <div class="mdn" id="mdn"></div>
-    <div class="mdt" id="mdt"></div>
-    <div class="mdp" id="mdp"></div>
-    <button class="mda" id="mda" onclick="_addFromMdl()">담기</button>
-  </div>
-</div>
 </body>
 </html>
