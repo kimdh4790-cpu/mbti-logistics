@@ -221,6 +221,7 @@ service cloud.firestore {
     match /menu_recipes/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /menu_costs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_menus/{docId}             { allow read: if true; allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_orders/{docId}            { allow create: if true; allow read, update, delete: if canRead(); }
     match /filo_menu_costs/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_customers/{docId}         { allow read: if canRead() || resource.data.dealerId != null; allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /filo_services/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
