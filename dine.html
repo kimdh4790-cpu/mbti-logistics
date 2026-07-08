@@ -311,6 +311,89 @@ _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
 
 
 var MIN_WAGE = 10320;
+var _fcmMessaging = null;
+var DINE_FCM_VAPID = 'BEl62iUYgUivxIkv69yViEuiBIa40Lf1WvVB_QPL-nBelGT5LbwzMvCwMmS_-ZxCjPIe4i7E6y2bQf5zZ7X0';
+
+// FCM 초기화 및 토큰 저장
+function _dineInitFCM(did){
+  try{
+    if(!firebase.messaging) return;
+    _fcmMessaging = firebase.messaging();
+    // SW 등록
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(function(reg){
+        _fcmMessaging.getToken({vapidKey:DINE_FCM_VAPID, serviceWorkerRegistration:reg})
+        .then(function(token){
+          if(!token) return;
+          // companies에 FCM 토큰 저장
+          _db.collection('companies').doc(did).update({
+            fcmToken: token,
+            fcmTokens: firebase.firestore.FieldValue.arrayUnion({
+              token: token,
+              updatedAt: new Date().toISOString(),
+              ua: navigator.userAgent.slice(0,80)
+            })
+          }).catch(function(){});
+        }).catch(function(){});
+      }).catch(function(){});
+    }
+    // 포그라운드 메시지 수신
+    _fcmMessaging.onMessage(function(payload){
+      var title = payload.notification&&payload.notification.title||'DINE';
+      var body  = payload.notification&&payload.notification.body||'';
+      _dineToast('🔔 '+title+': '+body);
+    });
+  } catch(e){}
+}
+
+// 알림 허용 요청 (로그인 후 호출)
+function _dineRequestNotifPermission(did){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'granted'){
+    _dineInitFCM(did);
+  } else if(Notification.permission !== 'denied'){
+    Notification.requestPermission().then(function(p){
+      if(p === 'granted') _dineInitFCM(did);
+    });
+  }
+}
+
+// FCM 푸시 발송 (서버 경유)
+async function _dineSendPush(tokens, title, body, url){
+  if(!tokens||!tokens.length) return false;
+  try{
+    var r = await fetch('https://donway.ai.kr/fcm/notify-drivers',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({tokens:tokens, title:title, body:body, url:url||window.location.origin})
+    });
+    var d = await r.json();
+    return d.success||false;
+  } catch(e){ return false; }
+}
+
+// 알림 발송 (FCM 먼저, 실패시 알림톡 fallback)
+async function _dineSendNotif(did, memberIds, title, body, alimtalkFn){
+  // FCM 토큰 수집
+  var tokens = [];
+  var noTokenIds = [];
+  for(var i=0;i<memberIds.length;i++){
+    var snap = await _db.collection('members').doc(memberIds[i]).get();
+    var d = snap.data()||{};
+    var toks = (d.fcmTokens||[]).map(function(t){return t.token;}).filter(Boolean);
+    if(d.fcmToken) toks.push(d.fcmToken);
+    toks = [...new Set(toks)];
+    if(toks.length){ tokens = tokens.concat(toks); }
+    else { noTokenIds.push(memberIds[i]); }
+  }
+  // 1순위: FCM 푸시
+  if(tokens.length) await _dineSendPush(tokens, title, body);
+  // 2순위: 알림톡 (FCM 없는 대상)
+  if(noTokenIds.length && typeof alimtalkFn === 'function'){
+    alimtalkFn(noTokenIds);
+  }
+}
 
 function _dineToggleSidebar(){
  var sb=document.getElementById('sidebar');
