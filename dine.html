@@ -1510,9 +1510,10 @@ function _dinePayroll(el){
   '<select id="pay-cycle-filter" class="inp" style="width:auto;padding:5px 8px;font-size:11px">'+
   '<option value="month">월급기준</option><option value="week">주급기준</option><option value="day">일급기준</option>'+
   '</select>'+
-  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(''+did+'')">계산</button>'+
-  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(''+did+'')">🔄 실시간</button>'+
+  '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(\''+did+'\')">계산</button>'+
+  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(\''+did+'\')">🔄 실시간</button>'+
   '</div>';
+
  wrap.appendChild(hdr);
 
  /* 법정 안내 */
