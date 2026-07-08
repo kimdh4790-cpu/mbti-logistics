@@ -926,8 +926,8 @@ function _dineStaff(el){
  wrap.appendChild(grid);
  el.appendChild(wrap);
 
- _db.collection('members').where('dealerId','==',did).orderBy('name').get()
-  .then(function(snap){
+ if(window._staffUnsub) window._staffUnsub();
+ window._staffUnsub=_db.collection('members').where('dealerId','==',did).orderBy('name').onSnapshot(function(snap){
    if(snap.empty){
     grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">직원이 없습니다. + 직원 등록을 눌러주세요</div>';
     return;
@@ -2569,271 +2569,56 @@ function _dineSchedule(el){
  var wrap=document.createElement('div');wrap.className='slide-up';
  var now=new Date();
  var days=['일','월','화','수','목','금','토'];
- var weekOffset=0;
+ /* 이번주 월~일 */
+ var weekStart=new Date(now);
+ weekStart.setDate(now.getDate()-now.getDay()+1);
 
- function renderSchedule(){
-  var weekStart=new Date(now);
-  weekStart.setDate(now.getDate()-now.getDay()+1+(weekOffset*7));
-  weekStart.setHours(0,0,0,0);
-  var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
-  var weekLabel=[(weekStart.getMonth()+1)+'/'+weekStart.getDate(),(weekEnd.getMonth()+1)+'/'+weekEnd.getDate()].join(' ~ ');
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📅 근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
+  '<div class="card"><div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px" id="schedule-grid">'+
+  '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
+  Array.from({length:7},function(_,i){
+   var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+   var isToday=d.toISOString().slice(0,10)===now.toISOString().slice(0,10);
+   return '<div style="padding:6px;text-align:center;font-weight:700;'+(isToday?'color:var(--br)':'color:var(--t3)')+'">'+
+    days[d.getDay()]+'<br><span style="font-size:9px">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></div>';
+  }).join('')+
+  '</div></div>';
+ el.appendChild(wrap);
 
-  wrap.innerHTML=
-   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
-   '<div><div class="page-title">📅 근무 스케줄</div><div class="page-sub">'+weekLabel+'</div></div>'+
-   '<div style="display:flex;gap:8px">'+
-   '<button class="btn btn-sm" onclick="_dineScheduleWeek(-1)" style="font-size:12px">◀ 이전</button>'+
-   '<button class="btn btn-sm" onclick="_dineScheduleWeek(0)" style="font-size:12px;background:var(--br);color:#fff">이번주</button>'+
-   '<button class="btn btn-sm" onclick="_dineScheduleWeek(1)" style="font-size:12px">다음 ▶</button>'+
-   '<button class="btn btn-primary btn-sm" onclick="_dineScheduleAdd(''+did+'')" style="font-size:12px">+ 스케줄 등록</button>'+
-   '</div></div>'+
-   '<div class="card" style="overflow-x:auto">'+
-   '<div style="display:grid;grid-template-columns:90px repeat(7,1fr);gap:4px;font-size:11px;min-width:500px" id="schedule-grid">'+
-   '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
-   Array.from({length:7},function(_,i){
+ Promise.all([
+  _db.collection('members').where('dealerId','==',did).get(),
+  _db.collection('attendance').where('dealerId','==',did)
+   .where('date','>=',weekStart.toISOString().slice(0,10)).get()
+ ]).then(function(results){
+  var memSnap=results[0],attSnap=results[1];
+  var attMap={};
+  attSnap.forEach(function(doc){
+   var d=doc.data();
+   var key=d.memberId+'_'+d.date;
+   if(!attMap[key])attMap[key]={in:null,out:null};
+   if(d.type==='in')attMap[key].in=d.time;
+   else attMap[key].out=d.time;
+  });
+  var grid=document.getElementById('schedule-grid');if(!grid)return;
+  memSnap.forEach(function(doc){
+   var m=doc.data();
+   var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
+   var row='<div style="padding:6px;font-weight:700;font-size:11px;color:'+partColor+'">'+m.name+'</div>';
+   for(var i=0;i<7;i++){
     var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-    var isToday=d.toISOString().slice(0,10)===now.toISOString().slice(0,10);
-    return '<div style="padding:6px;text-align:center;font-weight:700;'+(isToday?'color:var(--br);background:rgba(8,145,178,.08);border-radius:6px':'color:var(--t3)')+'">'+
-     days[d.getDay()]+'<br><span style="font-size:9px">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></div>';
-   }).join('')+
-   '</div></div>';
-  el.appendChild(wrap);
-
-  Promise.all([
-   _db.collection('staff').where('dealerId','==',did).get(),
-   _db.collection('dine_schedules').where('dealerId','==',did)
-    .where('date','>=',weekStart.toISOString().slice(0,10))
-    .where('date','<=',weekEnd.toISOString().slice(0,10)).get(),
-   _db.collection('attendance').where('dealerId','==',did)
-    .where('date','>=',weekStart.toISOString().slice(0,10)).get()
-  ]).then(function(results){
-   var staffSnap=results[0],schedSnap=results[1],attSnap=results[2];
-   // 스케줄 맵
-   var schedMap={};
-   schedSnap.forEach(function(doc){
-    var d=doc.data();
-    var key=d.staffId+'_'+d.date;
-    schedMap[key]={id:doc.id,start:d.startTime,end:d.endTime,note:d.note||''};
-   });
-   // 출퇴근 맵
-   var attMap={};
-   attSnap.forEach(function(doc){
-    var d=doc.data();
-    var key=d.staffId+'_'+d.date;
-    if(!attMap[key])attMap[key]={in:null,out:null};
-    if(d.type==='in')attMap[key].in=d.time;
-    else attMap[key].out=d.time;
-   });
-   var grid=document.getElementById('schedule-grid');if(!grid)return;
-   if(staffSnap.empty){
-    grid.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">등록된 직원이 없습니다</div>');
-    return;
-   }
-   staffSnap.forEach(function(doc){
-    var m=doc.data();
-    var row='<div style="padding:6px;font-weight:700;font-size:11px;color:var(--br)">'+m.name+'</div>';
-    for(var i=0;i<7;i++){
-     var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-     var dateStr=d.toISOString().slice(0,10);
-     var sk=doc.id+'_'+dateStr;
-     var ak=doc.id+'_'+dateStr;
-     var sch=schedMap[sk];
-     var att=attMap[ak];
-     if(sch){
-      var attInfo='';
-      if(att&&att.in){
-       var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
-       var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
-       attInfo='<div style="font-size:8px;color:#22c55e;margin-top:2px">'+inT+'~'+outT+'</div>';
-      }
-      row+='<div style="padding:4px;background:rgba(8,145,178,.12);border:1px solid rgba(8,145,178,.2);border-radius:6px;text-align:center;font-size:9px;cursor:pointer" onclick="_dineScheduleEdit(''+doc.id+'',''+dateStr+'',''+did+'')">'+
-       '<div style="color:var(--br);font-weight:700">'+sch.start+'-'+sch.end+'</div>'+
-       (sch.note?'<div style="color:var(--t3);font-size:8px">'+sch.note+'</div>':'')+
-       attInfo+'</div>';
-     } else {
-      row+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3);cursor:pointer;border:1px dashed var(--bd);border-radius:6px" onclick="_dineScheduleAddDay(''+doc.id+'',''+m.name+'',''+dateStr+'',''+did+'')">+</div>';
-     }
-    }
-    grid.insertAdjacentHTML('beforeend',row);
-   });
-  });
- }
-
- window._dineScheduleWeek=function(offset){
-  if(offset===0) weekOffset=0;
-  else weekOffset+=offset;
-  wrap.innerHTML='';
-  renderSchedule();
- };
- renderSchedule();
-}
-
-// 스케줄 등록 모달 (전체 주간)
-function _dineScheduleAdd(did){
- _db.collection('staff').where('dealerId','==',did).get().then(function(snap){
-  if(snap.empty){alert('등록된 직원이 없습니다');return;}
-  var opts=snap.docs.map(function(d){return '<option value="'+d.id+'">'+d.data().name+'</option>';}).join('');
-  var mo=document.createElement('div');mo.className='mo';
-  var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
-  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 근무 스케줄 등록</div>'+
-   '<div class="input-group"><label>직원 *</label><select id="sch-staff" class="inp">'+opts+'</select></div>'+
-   '<div class="input-group"><label>날짜 *</label><input id="sch-date" class="inp" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
-   '<div style="display:flex;gap:8px">'+
-   '<div class="input-group" style="flex:1"><label>출근 시간</label><input id="sch-start" class="inp" type="time" value="09:00"></div>'+
-   '<div class="input-group" style="flex:1"><label>퇴근 시간</label><input id="sch-end" class="inp" type="time" value="18:00"></div>'+
-   '</div>'+
-   '<div class="input-group"><label>메모</label><input id="sch-note" class="inp" placeholder="오픈근무, 마감 등"></div>'+
-   '<div style="display:flex;gap:8px;margin-top:4px">'+
-   '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">'+
-   '<input type="checkbox" id="sch-push" checked> 직원에게 푸시 알림 발송</label></div>'+
-   '<div style="display:flex;gap:8px;margin-top:16px">'+
-   '<button class="btn btn-primary" style="flex:1" onclick="_dineScheduleSave(''+did+'')">저장</button>'+
-   '<button class="btn btn-ghost" onclick="this.closest('.mo').remove()">취소</button></div>';
-  mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
-  document.body.appendChild(mo);
- });
-}
-
-// 날짜 셀 클릭 시 바로 등록
-function _dineScheduleAddDay(staffId,staffName,date,did){
- var mo=document.createElement('div');mo.className='mo';
- var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
- box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 '+staffName+' 근무 등록 ('+date+')</div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<div class="input-group" style="flex:1"><label>출근</label><input id="sch-start2" class="inp" type="time" value="09:00"></div>'+
-  '<div class="input-group" style="flex:1"><label>퇴근</label><input id="sch-end2" class="inp" type="time" value="18:00"></div>'+
-  '</div>'+
-  '<div class="input-group"><label>메모</label><input id="sch-note2" class="inp" placeholder="오픈, 마감, 오후 등"></div>'+
-  '<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:12px">'+
-  '<input type="checkbox" id="sch-push2" checked> 직원에게 푸시 알림</div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<button class="btn btn-primary" style="flex:1" onclick="_dineScheduleSaveDirect(''+staffId+'',''+staffName+'',''+date+'',''+did+'')">저장</button>'+
-  '<button class="btn btn-ghost" onclick="this.closest('.mo').remove()">취소</button></div>';
- mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
- document.body.appendChild(mo);
-}
-
-function _dineScheduleSave(did){
- var staffId=document.getElementById('sch-staff').value;
- var date=document.getElementById('sch-date').value;
- var startTime=document.getElementById('sch-start').value;
- var endTime=document.getElementById('sch-end').value;
- var note=document.getElementById('sch-note').value.trim();
- var pushOn=document.getElementById('sch-push').checked;
- if(!date){alert('날짜를 선택해주세요');return;}
- var staffName=document.getElementById('sch-staff').options[document.getElementById('sch-staff').selectedIndex].text;
- _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,pushOn);
-}
-
-function _dineScheduleSaveDirect(staffId,staffName,date,did){
- var startTime=document.getElementById('sch-start2').value;
- var endTime=document.getElementById('sch-end2').value;
- var note=document.getElementById('sch-note2').value.trim();
- var pushOn=document.getElementById('sch-push2').checked;
- _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,pushOn);
-}
-
-function _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,pushOn){
- _db.collection('dine_schedules').add({
-  dealerId:did,staffId:staffId,staffName:staffName,
-  date:date,startTime:startTime,endTime:endTime,
-  note:note,createdAt:new Date().toISOString()
- }).then(function(){
-  _dineToast('✅ 스케줄 등록됐습니다');
-  document.querySelector('.mo')?.remove();
-  // 직원 FCM 푸시
-  if(pushOn){
-   _db.collection('staff').doc(staffId).get().then(function(snap){
-    var d=snap.data()||{};
-    var tokens=((d.fcmTokens||[]).map(function(t){return t.token||t;})).filter(Boolean);
-    if(d.fcmToken&&d.fcmToken.length>20) tokens.push(d.fcmToken);
-    tokens=[...new Set(tokens)].filter(function(t){return t&&t.length>20;});
-    if(tokens.length){
-     fetch('https://donway.ai.kr/fcm/notify-drivers',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-       tokens:tokens,
-       title:'📅 근무 스케줄 등록',
-       body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')
-      })
-     }).catch(function(){});
-     _dineToast('📱 '+staffName+'님에게 푸시 발송');
+    var dateStr=d.toISOString().slice(0,10);
+    var key=doc.id+'_'+dateStr;
+    var att=attMap[key];
+    if(att&&att.in){
+     var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+     var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
+     row+='<div style="padding:4px;background:rgba(34,197,94,.1);border-radius:6px;text-align:center;font-size:9px;color:#22c55e">'+inT+'<br>'+outT+'</div>';
     } else {
-     // FCM 없으면 알림톡
-     if(d.phone){
-      fetch('/api/send-alimtalk',{
-       method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({to:d.phone,name:staffName,
-        templateCode:'schedule_notify',
-        variables:{name:staffName,date:date,start:startTime,end:endTime,note:note||''}
-       })
-      }).catch(function(){});
-      _dineToast('💬 '+staffName+'님 알림톡 발송');
-     }
+     row+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3)">-</div>';
     }
-   });
-  }
-  // 스케줄 화면 새로고침
-  _dineSchedule(document.getElementById('content'));
- });
-}
-
-// 스케줄 수정/삭제
-function _dineScheduleEdit(staffId,date,did){
- _db.collection('dine_schedules')
-  .where('dealerId','==',did).where('staffId','==',staffId).where('date','==',date).limit(1).get()
-  .then(function(snap){
-   if(snap.empty)return;
-   var doc=snap.docs[0];var d=doc.data();
-   var mo=document.createElement('div');mo.className='mo';
-   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
-   box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 스케줄 수정 ('+d.staffName+' '+date+')</div>'+
-    '<div style="display:flex;gap:8px">'+
-    '<div class="input-group" style="flex:1"><label>출근</label><input id="sch-edit-start" class="inp" type="time" value="'+d.startTime+'"></div>'+
-    '<div class="input-group" style="flex:1"><label>퇴근</label><input id="sch-edit-end" class="inp" type="time" value="'+d.endTime+'"></div>'+
-    '</div>'+
-    '<div class="input-group"><label>메모</label><input id="sch-edit-note" class="inp" value="'+(d.note||'')+'"></div>'+
-    '<div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:12px">'+
-    '<input type="checkbox" id="sch-edit-push" checked> 수정 내용 직원에게 푸시</div>'+
-    '<div style="display:flex;gap:8px;margin-top:16px">'+
-    '<button class="btn btn-primary" style="flex:1" onclick="_dineScheduleUpdate(''+doc.id+'',''+staffId+'',''+d.staffName+'',''+date+'',''+did+'')">저장</button>'+
-    '<button class="btn" style="background:#ef4444;color:#fff;flex:1" onclick="_dineScheduleDelete(''+doc.id+'',''+did+'')">삭제</button>'+
-    '<button class="btn btn-ghost" onclick="this.closest('.mo').remove()">취소</button></div>';
-   mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
-   document.body.appendChild(mo);
+   }
+   grid.insertAdjacentHTML('beforeend',row);
   });
-}
-
-function _dineScheduleUpdate(docId,staffId,staffName,date,did){
- var startTime=document.getElementById('sch-edit-start').value;
- var endTime=document.getElementById('sch-edit-end').value;
- var note=document.getElementById('sch-edit-note').value.trim();
- var pushOn=document.getElementById('sch-edit-push').checked;
- _db.collection('dine_schedules').doc(docId).update({startTime:startTime,endTime:endTime,note:note,updatedAt:new Date().toISOString()})
- .then(function(){
-  _dineToast('✅ 수정됐습니다');document.querySelector('.mo')?.remove();
-  if(pushOn){
-   _db.collection('staff').doc(staffId).get().then(function(snap){
-    var d=snap.data()||{};
-    var tokens=((d.fcmTokens||[]).map(function(t){return t.token||t;})).filter(Boolean);
-    if(d.fcmToken) tokens.push(d.fcmToken);
-    tokens=[...new Set(tokens)].filter(function(t){return t&&t.length>20;});
-    if(tokens.length){
-     fetch('https://donway.ai.kr/fcm/notify-drivers',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tokens:tokens,title:'📅 근무 스케줄 변경',body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')})
-     }).catch(function(){});
-    }
-   });
-  }
-  _dineSchedule(document.getElementById('content'));
- });
-}
-
-function _dineScheduleDelete(docId,did){
- if(!confirm('스케줄을 삭제하시겠습니까?'))return;
- _db.collection('dine_schedules').doc(docId).delete().then(function(){
-  _dineToast('🗑 삭제됐습니다');document.querySelector('.mo')?.remove();
-  _dineSchedule(document.getElementById('content'));
  });
 }
 
