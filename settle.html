@@ -354,7 +354,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="coupang" checked onclick="event.stopPropagation()"> 🚚 쿠팡</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="delivery" onclick="event.stopPropagation()"> 🛵 배달대행</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="cleaning" onclick="event.stopPropagation()"> 🧹 청소</label>
+              <label style="display:none"><input type="radio" name="settle-industry" value="cleaning"></label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="insurance" onclick="event.stopPropagation()"> 🛡️ 보험</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="construction" onclick="event.stopPropagation()"> 🏗️ 건설</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="quick" onclick="event.stopPropagation()"> 🚗 퀵·대리</label>
@@ -10368,7 +10368,7 @@ function _showFindPw(){
     +'<div class="fg"><label>이메일</label><input id="find-pw-email" type="email" placeholder="가입한 이메일 주소"></div>'
     +'<div id="find-pw-msg" style="font-size:12px;margin-bottom:8px;display:none"></div>'
     +'<button onclick="_sendFindPw()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700;margin-bottom:8px">재설정 메일 발송</button>'
-    +'<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" class="btn" style="width:100%;padding:10px">닫기</button>'
+    +'<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" class="btn" style="display:none;width:100%;padding:10px">닫기</button>'
     +'</div>';
   document.body.appendChild(mo);
   setTimeout(function(){var el=document.getElementById('find-pw-email');if(el)el.focus();},100);
@@ -10587,43 +10587,43 @@ function pageContract(){
 function _renderContractPaywall(){
   var content=document.getElementById('content');
   var cn=esc((_CU&&_CU.companyName)||'대리점명');
-  content.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'
+  content.innerHTML='<div style="display:none;max-width:700px;margin:0 auto;padding:16px">'
     // 샘플 계약서 미리보기
-    +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
-    +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
-    +'<div style="font-size:28px;margin-bottom:8px"></div>'
-    +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
-    +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;position:relative;overflow:hidden">'
+    +'<div style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
+    +'<div style="display:none;font-size:28px;margin-bottom:8px"></div>'
+    +'<div style="display:none;color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
+    +'<div style="display:none;color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
     +'</div>'
-    +'<div style="pointer-events:none">'
-    +'<div style="text-align:center;font-size:14px;font-weight:800;margin-bottom:10px">화물자동차운송 위수탁 표준계약서</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;margin-bottom:10px">'
-    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
-    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 수탁자(기사)</div>'
+    +'<div style="display:none;pointer-events:none">'
+    +'<div style="display:none;text-align:center;font-size:14px;font-weight:800;margin-bottom:10px">화물자동차운송 위수탁 표준계약서</div>'
+    +'<div style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;margin-bottom:10px">'
+    +'<div style="display:none;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;color:var(--text3);margin-bottom:4px;font-size:10px">■ 수탁자(기사)</div>'
     +'<div><b>홍길동</b></div><div>사업자: 000-00-00000</div>'
     +'<div>주소: 부산시 ○○구 ○○로 000</div></div>'
-    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
-    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 위탁자(대리점)</div>'
+    +'<div style="display:none;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;color:var(--text3);margin-bottom:4px;font-size:10px">■ 위탁자(대리점)</div>'
     +'<div><b>'+cn+'</b></div><div>사업자: 000-00-00000</div>'
     +'<div>주소: 부산시 수영구 수영로 668</div></div>'
     +'</div>'
-    +'<div style="font-size:10px;color:var(--text3);line-height:1.9;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;font-size:10px;color:var(--text3);line-height:1.9;background:var(--bg3);padding:10px;border-radius:6px">'
     +'제1조(목적) 본 계약은 위탁자와 수탁자 간의 화물운송 위수탁 관계를 규정함을 목적으로 한다.<br>'
     +'제2조(계약기간) 본 계약의 유효기간은 계약일로부터 1년으로 한다.<br>'
     +'제3조(운임) 배송 1건당 단가는 별도 라우트 단가표에 따른다.<br>'
-    +'<span style="color:var(--brand)">... 서명란 및 전체 내용은 결제 후 열람 가능 ...</span>'
+    +'<span style="display:none;color:var(--brand)">... 서명란 및 전체 내용은 결제 후 열람 가능 ...</span>'
     +'</div></div></div>'
-    +'<div style="max-width:480px;margin:0 auto;text-align:center">'
-    +'<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
-    +'<div class="card" style="margin-bottom:16px;text-align:left">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
-    +'<div style="font-size:12px;color:var(--text2);line-height:2">✅ 영업점-택배기사 위수탁 계약서 양식<br>✅ 기사별 계약서 PDF 업로드·보관<br>✅ 계약서 목록 관리</div>'
+    +'<div style="display:none;max-width:480px;margin:0 auto;text-align:center">'
+    +'<div style="display:none;font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;text-align:left">'
+    +'<div style="display:none;font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
+    +'<div style="display:none;font-size:12px;color:var(--text2);line-height:2">✅ 영업점-택배기사 위수탁 계약서 양식<br>✅ 기사별 계약서 PDF 업로드·보관<br>✅ 계약서 목록 관리</div>'
     +'</div>'
-    +'<div class="card" style="margin-bottom:16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3)">'
-    +'<div style="font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
-    +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3)">'
+    +'<div style="display:none;font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
+    +'<div style="display:none;font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
     +'</div>'
-    +'<button onclick="_tossPay(\'contract\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
+    +'<button onclick="_tossPay(\'contract\',9900)" style="display:none;width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
     +'<button onclick="_contractPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
     +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>DONWAY</strong></div>'
     +'</div>';

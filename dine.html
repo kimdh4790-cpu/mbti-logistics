@@ -293,6 +293,7 @@ select.inp option{background:var(--s2)}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script>
 
 firebase.initializeApp({
@@ -311,6 +312,49 @@ _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
 
 
 var MIN_WAGE = 10320;
+var DINE_FCM_VAPID = 'BEl62iUYgUivxIkv69yViEuiBIa40Lf1WvVB_QPL-nBelGT5LbwzMvCwMmS_-ZxCjPIe4i7E6y2bQf5zZ7X0';
+function _dineInitFCM(did){
+  try{
+    if(!firebase.messaging) return;
+    var msg=firebase.messaging();
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg){
+        msg.getToken({vapidKey:DINE_FCM_VAPID,serviceWorkerRegistration:reg}).then(function(token){
+          if(!token) return;
+          _db.collection('companies').doc(did).update({fcmToken:token,fcmTokenUpdatedAt:new Date().toISOString()}).catch(function(){});
+        }).catch(function(){});
+      }).catch(function(){});
+    }
+    msg.onMessage(function(payload){
+      var b=payload.notification&&payload.notification.body||'';
+      _dineToast('🔔 '+b);
+    });
+  }catch(e){}
+}
+function _dineRequestNotifPermission(did){
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='granted'){ _dineInitFCM(did); }
+  else if(Notification.permission!=='denied'){
+    Notification.requestPermission().then(function(p){ if(p==='granted') _dineInitFCM(did); });
+  }
+}
+async function _dineSendNotif(did,memberIds,title,body,alimtalkFn){
+  var tokens=[];var noTokenIds=[];
+  for(var i=0;i<memberIds.length;i++){
+    var snap=await _db.collection('members').doc(memberIds[i]).get();
+    var d=snap.data()||{};
+    var toks=((d.fcmTokens||[]).map(function(t){return t.token||t;})).filter(Boolean);
+    if(d.fcmToken) toks.push(d.fcmToken);
+    toks=[...new Set(toks)].filter(function(t){return t&&t.length>20;});
+    if(toks.length){ tokens=tokens.concat(toks); }
+    else { noTokenIds.push(memberIds[i]); }
+  }
+  if(tokens.length){
+    fetch('https://donway.ai.kr/fcm/notify-drivers',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:tokens,title:title,body:body})}).catch(function(){});
+  }
+  if(noTokenIds.length&&typeof alimtalkFn==='function') alimtalkFn(noTokenIds);
+}
 
 function _dineToggleSidebar(){
  var sb=document.getElementById('sidebar');
