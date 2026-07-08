@@ -109,6 +109,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Pretenda
 .menu-price{font-size:11px!important;font-weight:900!important;color:#0891b2!important}
 .menu-sold{position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:6px}
 .cat-section,.cat-title,.menu-img,.menu-info{display:none!important}
+
+.lang-btn{padding:3px 7px;border:1px solid #cbd5e1;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;background:#fff;color:#64748b}
+.lang-btn.active{background:#0891b2;color:#fff;border-color:#0891b2}
 </style>
 </head>
 <body>
@@ -126,6 +129,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Pretenda
   <div class="hdr-table" id="hdr-table">테이블</div>
   <div class="hdr-sub" id="hdr-store">매장</div>
  </div>
+ <div style="display:flex;align-items:center;gap:6px">
+  <div id="lang-btns" style="display:flex;gap:3px">
+   <button class="lang-btn active" onclick="_setLang('ko')">KO</button>
+   <button class="lang-btn" onclick="_setLang('en')">EN</button>
+   <button class="lang-btn" onclick="_setLang('zh')">中</button>
+   <button class="lang-btn" onclick="_setLang('ja')">日</button>
+  </div>
  <button class="hdr-cart" id="cart-btn" onclick="_openCart()">
   🛒<span class="cart-badge" id="cart-badge">0</span>
  </button>
@@ -434,6 +444,67 @@ function _resetOrder(){
  _renderCartItems();
 }
 
+
+/* ── 다국어 번역 ── */
+var _lang = 'ko';
+var _i18n = {
+ ko: {
+  allCat:'전체', soldOut:'품절', addCart:'담기',
+  cartTitle:'주문 내역', total:'합계', orderBtn:'주문하기',
+  emptyCart:'장바구니가 비어있습니다', orderDone:'주문이 접수됐습니다!',
+  orderWait:'잠시 후 준비됩니다', close:'닫기',
+  qty:'개', won:'₩'
+ },
+ en: {
+  allCat:'All', soldOut:'Sold Out', addCart:'Add',
+  cartTitle:'Order List', total:'Total', orderBtn:'Order Now',
+  emptyCart:'Cart is empty', orderDone:'Order Received!',
+  orderWait:'Please wait a moment', close:'Close',
+  qty:'', won:'₩'
+ },
+ zh: {
+  allCat:'全部', soldOut:'售罄', addCart:'加入',
+  cartTitle:'订单', total:'合计', orderBtn:'下单',
+  emptyCart:'购物车为空', orderDone:'订单已接收！',
+  orderWait:'请稍等', close:'关闭',
+  qty:'个', won:'₩'
+ },
+ ja: {
+  allCat:'全て', soldOut:'売切', addCart:'追加',
+  cartTitle:'注文リスト', total:'合計', orderBtn:'注文する',
+  emptyCart:'カートが空です', orderDone:'注文を受け付けました！',
+  orderWait:'しばらくお待ちください', close:'閉じる',
+  qty:'個', won:'₩'
+ }
+};
+
+function _t(key){ return (_i18n[_lang]&&_i18n[_lang][key]) || _i18n['ko'][key] || key; }
+
+function _setLang(lang){
+ _lang=lang;
+ // 버튼 활성화
+ document.querySelectorAll('.lang-btn').forEach(function(b){
+  b.classList.toggle('active', b.textContent.toLowerCase()===lang||
+   (lang==='zh'&&b.textContent==='中')||(lang==='ja'&&b.textContent==='日'));
+ });
+ // UI 재번역
+ var cartTitle=document.getElementById('cart-title');
+ if(cartTitle) cartTitle.textContent=_t('cartTitle');
+ var orderBtn=document.getElementById('order-btn');
+ if(orderBtn) orderBtn.textContent=_t('orderBtn');
+ var totalEl=document.getElementById('total-label');
+ if(totalEl) totalEl.textContent=_t('total');
+ // 카테고리 전체 버튼
+ document.querySelectorAll('.cat-btn').forEach(function(b){
+  if(b.dataset.cat==='전체') b.lastChild.textContent=_t('allCat');
+ });
+ // 품절 뱃지
+ document.querySelectorAll('.menu-sold').forEach(function(b){
+  b.textContent=_t('soldOut');
+ });
+ // 장바구니 업데이트
+ _renderCart();
+}
 </script>
 </body>
 </html>
