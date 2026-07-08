@@ -3635,50 +3635,55 @@ var _cartItems=[];
 function _filoPageKiosk(el){
  var did=_CU.dealerId||_CU.uid;
  _cartItems=[];
- el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">'+
- '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px">📊 메뉴 엑셀 업로드</button>'+
- '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
- '</div>'+
- '<div class="pos-wrap">'+
- '<div style="display:flex;flex-direction:column">'+
- '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
- '<div class="menu-grid" id="kiosk-menu">'+
- '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">⏳ 메뉴 로딩 중...</div>'+
- '</div></div>'+
- '<div class="cart-panel">'+
- '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">🛒 주문 내역</div>'+
- '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
- '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
- '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
- '<span style="font-size:13px;font-weight:700">합계</span>'+
- '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
- '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
- '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">🗑 초기화</button>'+
- '</div></div></div>';
 
- // filo_menus 컬렉션에서 로드
+ // HTML 먼저 렌더링
+ el.innerHTML=
+  '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">'+
+  '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px">📊 메뉴 엑셀 업로드</button>'+
+  '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
+  '</div>'+
+  '<div class="pos-wrap">'+
+   '<div style="display:flex;flex-direction:column;min-width:0">'+
+    '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
+    '<div class="menu-grid" id="kiosk-menu">'+
+     '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">⏳ 메뉴 로딩 중...</div>'+
+    '</div>'+
+   '</div>'+
+   '<div class="cart-panel">'+
+    '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">🛒 주문 내역</div>'+
+    '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
+    '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
+     '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
+      '<span style="font-size:13px;font-weight:700">합계</span>'+
+      '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span>'+
+     '</div>'+
+     '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
+     '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">🗑 초기화</button>'+
+    '</div>'+
+   '</div>'+
+  '</div>';
+
+ // HTML 렌더 후 쿼리
  _db.collection('filo_menus').where('dealerId','==',did).get()
  .then(function(snap){
+  var menuEl=document.getElementById('kiosk-menu');
+  var catEl=document.getElementById('kiosk-cats');
+  if(!menuEl) return;
   if(snap.empty){
-   // 메뉴 없으면 안내
-   var menuEl=document.getElementById('kiosk-menu');
-   if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--t3)">'+
+   menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--t3)">'+
     '<div style="font-size:40px;margin-bottom:12px">🍽</div>'+
     '<div style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 메뉴가 없습니다</div>'+
-    '<div style="font-size:12px">메뉴 관리에서 메뉴를 추가하거나<br>엑셀 업로드로 일괄 등록하세요</div></div>';
-   var catEl=document.getElementById('kiosk-cats');
+    '<div style="font-size:12px">메뉴 관리에서 추가하거나 엑셀 업로드 하세요</div></div>';
    if(catEl) catEl.innerHTML='<button class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>';
    return;
   }
   var menus=[];
-  snap.forEach(function(doc){
-   menus.push(Object.assign({_id:doc.id},doc.data()));
-  });
-  menus.sort(function(a,b){return (a.category||'').localeCompare(b.category||'');});
+  snap.forEach(function(doc){menus.push(Object.assign({_id:doc.id},doc.data()));});
+  menus.sort(function(a,b){return (a.category||'기타').localeCompare(b.category||'기타');});
   _filoRenderKiosk(menus);
  }).catch(function(e){
   var menuEl=document.getElementById('kiosk-menu');
-  if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">⚠️ 메뉴 로드 실패: '+e.message+'</div>';
+  if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:#ef4444">⚠️ '+e.message+'</div>';
  });
 }
 
