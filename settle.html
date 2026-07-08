@@ -17133,7 +17133,7 @@ window._openUnivSubModal=function(){
   html+='</div>';
   html+='<div style="display:flex;gap:8px">';
   html+='<button onclick="this.closest(\'div\').parentElement.remove()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">닫기</button>';
-  html+='<button onclick="_univSubscribe(this,'+JSON.stringify(UNIV_PLANS)+')" style="flex:2;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🚀 7일 무료체험</button>';
+  html+='<button onclick="_univSubscribe(this,'+JSON.stringify(UNIV_PLANS)+')" style="flex:2;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🚀 1개월 무료체험</button>';
   html+='</div>';
   html+='<div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">카드 등록 불필요 · 즉시 사용</div>';
   html+='</div>';
@@ -17153,7 +17153,7 @@ window._univSubscribe=function(btn,plans){
     trialStart:new Date().toISOString(),trialEnd:new Date(Date.now()+30*86400000).toISOString(),
     status:'trial',updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   },{merge:true}).then(function(){
-    toast('✅ 7일 무료체험 시작 — '+plan.label);
+    toast('✅ 1개월 무료체험 시작 — '+plan.label);
     document.querySelectorAll('div[style*="position:fixed"]').forEach(function(el){if(el.style.zIndex==='9999')el.remove();});
   }).catch(function(e){toast('❌ '+e.message);});
 };
@@ -29257,7 +29257,7 @@ function _onSuperAdminEvent(d){
   if(type === 'join'){
     icon = '🎉';
     title = '신규 가입!';
-    body = (d.companyName||'?') + ' · ' + (d.bizNumber||'') + ' · 7일 무료체험';
+    body = (d.companyName||'?') + ' · ' + (d.bizNumber||'') + ' · 1개월 무료체험';
     color = 'linear-gradient(135deg,#059669,#10b981)';
   } else if(type === 'pay'){
     icon = '💳';
@@ -35461,7 +35461,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
       var active=i===0;
       var lbl=n===9999?'2000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
-    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 카드 등록 불필요</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 1개월 무료 체험 · 카드 등록 불필요</div>'
     +'</div>'
     
     +'</div>'

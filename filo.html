@@ -455,7 +455,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <!-- ── 회사 등록 폼 ── -->
  <div id="form-register" style="display:none">
  <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);margin-bottom:14px">
- 🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
+ 🎁 <strong>1개월 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
  </div>
  <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
  <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
@@ -539,7 +539,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <input id="fr-phone" type="tel" placeholder="01012345678">
  </div>
  <div id="fr-err" class="err"></div>
- <button class="btn btn-brand" onclick="_filoRegister()">7일 무료체험 시작</button>
+ <button class="btn btn-brand" onclick="_filoRegister()">1개월 무료체험 시작</button>
  </div>
 
  <!-- ── 직원 가입 폼 ── -->
@@ -1699,7 +1699,7 @@ function _filoRegister(){
  createdAt:firebase.firestore.FieldValue.serverTimestamp()
  });
  }).then(function(){
- _filoToast('✅ 등록 완료! 7일 무료 체험을 시작합니다');
+ _filoToast('✅ 등록 완료! 1개월 무료 체험을 시작합니다');
  }).catch(function(e){
  errEl.textContent=e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message;
  errEl.style.display='block';
