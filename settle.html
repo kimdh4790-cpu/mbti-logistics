@@ -35318,28 +35318,50 @@ function addRpCamp(cid){
 // 구간: 50/100/200/300/500/700명 (AI정산 확정 요금제 2026-07-02 개정, VAT별도)
 // 개인: 700명 이상 인당 4,500원 고정 / 단체: 개인 대비 ~19~27% 할인, 700명 이상 인당 3,300원 고정
 var DW_TIERS_IND=[
-  {cap:50,  amt:325000, label:'~50명'},
-  {cap:100, amt:620000, label:'~100명'},
-  {cap:200, amt:1140000,label:'~200명'},
-  {cap:300, amt:1590000,label:'~300명'},
-  {cap:500, amt:2400000,label:'~500명'},
-  {cap:700, amt:3150000,label:'~700명'},
-  {cap:1000,amt:4500000,label:'~1000명'},
-  {cap:1500,amt:6750000,label:'~1500명'},
-  {cap:2000,amt:9000000,label:'~2000명'},
-  {cap:9999,amt:0,       label:'2000명+'},
+  {cap:50, amt:200000, label:'~50명'},
+  {cap:100, amt:400000, label:'~100명'},
+  {cap:150, amt:600000, label:'~150명'},
+  {cap:200, amt:800000, label:'~200명'},
+  {cap:250, amt:1000000, label:'~250명'},
+  {cap:300, amt:1200000, label:'~300명'},
+  {cap:350, amt:1400000, label:'~350명'},
+  {cap:400, amt:1600000, label:'~400명'},
+  {cap:450, amt:1800000, label:'~450명'},
+  {cap:500, amt:2000000, label:'~500명'},
+  {cap:550, amt:2200000, label:'~550명'},
+  {cap:600, amt:2400000, label:'~600명'},
+  {cap:650, amt:2600000, label:'~650명'},
+  {cap:700, amt:2800000, label:'~700명'},
+  {cap:750, amt:3000000, label:'~750명'},
+  {cap:800, amt:3200000, label:'~800명'},
+  {cap:850, amt:3400000, label:'~850명'},
+  {cap:900, amt:3600000, label:'~900명'},
+  {cap:950, amt:3800000, label:'~950명'},
+  {cap:1000, amt:4000000, label:'~1000명'},
+  {cap:9999,amt:0, label:'1000명+'},
 ];
 var DW_TIERS_GRP=[
-  {cap:50,  amt:265000, label:'~50명'},
-  {cap:100, amt:500000, label:'~100명'},
-  {cap:200, amt:920000, label:'~200명'},
-  {cap:300, amt:1260000,label:'~300명'},
-  {cap:500, amt:1900000,label:'~500명'},
-  {cap:700, amt:2450000,label:'~700명'},
-  {cap:1000,amt:3300000,label:'~1000명'},
-  {cap:1500,amt:4950000,label:'~1500명'},
-  {cap:2000,amt:6600000,label:'~2000명'},
-  {cap:9999,amt:0,       label:'2000명+'},
+  {cap:50, amt:165000, label:'~50명'},
+  {cap:100, amt:330000, label:'~100명'},
+  {cap:150, amt:495000, label:'~150명'},
+  {cap:200, amt:660000, label:'~200명'},
+  {cap:250, amt:825000, label:'~250명'},
+  {cap:300, amt:990000, label:'~300명'},
+  {cap:350, amt:1155000, label:'~350명'},
+  {cap:400, amt:1320000, label:'~400명'},
+  {cap:450, amt:1485000, label:'~450명'},
+  {cap:500, amt:1650000, label:'~500명'},
+  {cap:550, amt:1815000, label:'~550명'},
+  {cap:600, amt:1980000, label:'~600명'},
+  {cap:650, amt:2145000, label:'~650명'},
+  {cap:700, amt:2310000, label:'~700명'},
+  {cap:750, amt:2475000, label:'~750명'},
+  {cap:800, amt:2640000, label:'~800명'},
+  {cap:850, amt:2805000, label:'~850명'},
+  {cap:900, amt:2970000, label:'~900명'},
+  {cap:950, amt:3135000, label:'~950명'},
+  {cap:1000, amt:3300000, label:'~1000명'},
+  {cap:9999,amt:0, label:'1000명+'},
 ];
 function _tierCap(hc){
   var tiers=DW_TIERS_IND;
@@ -35369,7 +35391,7 @@ function _subPayClick(btn){
   var hc=parseInt(btn.dataset.selcap||50);
   if(!key) return;
   var amt=_tierAmt(key,hc);
-  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리',kiosk:'키오스크·POS'};
+  var planNames={settle:'AI 정산',delivery:'배달대행 정산'};
   var pname=planNames[key]||key;
 
   // 결제 수단 선택 모달
@@ -35399,7 +35421,7 @@ function _subTransfer(planKey, amt, hc){
 }
 
 function _showTransferGuide(planKey, amt, hc){
-  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리',kiosk:'키오스크·POS'};
+  var planNames={settle:'AI 정산',delivery:'배달대행 정산'};
   var pname=planNames[planKey]||planKey;
   var discAmt=amt;
   var old=document.getElementById('transfer-guide-modal');if(old)old.remove();
@@ -35435,21 +35457,12 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
   // ★ QR+급여: 인당 3,500원, 배달대행: AI정산 동일 구간
   // 재고/키오스크: filo.ai.kr 연동 (90,000원/월)
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4725,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4000,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:3500,g:1,color:'#7c3aed',badge:'추천',ptype:'per',
-     tl:'출퇴근부터 급여까지 원스톱 — 인당 3,500원/월',
-     ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4000,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서','기사 앱 명세서·푸시 발송']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:4725,g:1,color:'#7c3aed',badge:'NEW',
-     tl:'쿠팡 외 타업종 / 복합업종 정산',
-     ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
-    {key:'filo_combo',ic:'📦🖥️',nm:'재고+키오스크 콤보',up:110000,g:1,color:'#059669',badge:'FILO',ptype:'fixed',
-     tl:'재고·무인주문·매출·발주 올인원 — DONWAY 연동 할인',
-     ft:['POS·키오스크 판매 시 실시간 재고 자동 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','QR·태블릿 무인주문 (테이블·포장·출장)','실시간 매출 대시보드','DONWAY 정산·급여 연동','단독 이용 시 165,000원/월']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
@@ -35457,7 +35470,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
     +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[50,100,200,300,500,700,1000,1500,2000,9999].map(function(n,i){
+    +[50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].map(function(n,i){
       var active=i===0;
       var lbl=n===9999?'2000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
@@ -35493,7 +35506,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
 function _selectTier(cap){
   // 2000명+ 별도문의
   if(cap===9999){
-    [50,150,300,500,700,1000,1500,2000,9999].forEach(function(n){
+    [50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].forEach(function(n){
       var btn=document.getElementById('sub-tier-'+n);
       if(!btn) return;
       if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
@@ -35502,11 +35515,11 @@ function _selectTier(cap){
     document.querySelectorAll('.sub-amt-settle,.sub-amt-delivery').forEach(function(el){
       el.innerHTML='<span style="font-size:12px">별도 문의</span>';
     });
-    toast('💬 2000명 이상은 카카오톡으로 문의해주세요');
+    toast('💬 1000명 이상은 카카오톡으로 문의해주세요');
     return;
   }
   // 버튼 스타일 갱신
-  [50,150,300,500,700,1000,1500,2000,9999].forEach(function(n){
+  [50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].forEach(function(n){
     var btn=document.getElementById('sub-tier-'+n);
     if(!btn) return;
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
@@ -35517,11 +35530,9 @@ function _selectTier(cap){
   var _indTier=DW_TIERS_IND.find(function(t){return t.cap===cap;})||{amt:0};
   var _grpTier=DW_TIERS_GRP.find(function(t){return t.cap===cap;})||{amt:0};
   var _tierObj=_subType2==='grp'?_grpTier:_indTier;
-  ['settle','delivery','universal','qr_payroll','filo_combo'].forEach(function(k){
+  ['settle','delivery'].forEach(function(k){
     var amt=_tierAmt(k,cap);
     var amtLabel=amt===0?'별도 문의':amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
-    if(k==='qr_payroll') amtLabel=(cap*3500).toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span><span style="font-size:10px;color:var(--text3)"> ('+cap+'명×3,500원)</span>';
-    if(k==='inventory'||k==='kiosk') amtLabel='90,000<span style="font-size:11px;font-weight:400">원/월</span><span style="font-size:10px;color:var(--text3)"> (고정)</span>';
     document.querySelectorAll('.sub-amt-'+k).forEach(function(el){
       el.innerHTML=amtLabel;
     });
