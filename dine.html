@@ -400,21 +400,21 @@ function _dineStaffJoin(){
  /* 매장 코드로 companies 조회 */
  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'companyName'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
  }).then(function(r){return r.json();}).then(function(rows){
   var docs=(rows||[]).filter(function(r){return r.document;});
   if(!docs.length){
    /* companyName 없으면 name 필드로 재시도 */
    return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'dineSlug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
    }).then(function(r){return r.json();});
   }
   return rows;
  }).then(function(rows){
   var docs=(rows||[]).filter(function(r){return r.document;});
   var co=docs[0]&&docs[0].document;
-  if(!co){err.textContent='매장을 찾을 수 없습니다. 매장명을 정확히 입력해주세요';return;}
+  if(!co){err.textContent='dine.ne.kr/뒤 주소를 정확히 입력해주세요 (소문자)';return;}
   var did=co.name.split('/').pop();
   var coName=(co.fields.companyName||co.fields.name||{}).stringValue||'';
   /* Firebase Auth 계정 생성 */
@@ -453,11 +453,11 @@ function _dineMemberJoin(){
  err.textContent='처리 중...';
  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'companyName'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
  }).then(function(r){return r.json();}).then(function(rows){
   var docs=(rows||[]).filter(function(r){return r.document;});
   var co=docs[0]&&docs[0].document;
-  if(!co){err.textContent='매장을 찾을 수 없습니다. 매장명을 정확히 입력해주세요';return;}
+  if(!co){err.textContent='dine.ne.kr/뒤 주소를 정확히 입력해주세요 (소문자)';return;}
   var did=co.name.split('/').pop();
   /* filo_customers에 저장 */
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_customers',{
@@ -1957,7 +1957,7 @@ function _dineStore(el){
    '<div class="input-group"><label>매장명</label><input id="st-storeName" class="inp" value="'+(co.storeName||co.name||'')+'"></div>'+
    '<div class="input-group"><label>URL 슬러그 <span style="font-size:10px;color:var(--t3)">(예: mbti)</span></label>'+
    '<input id="st-dineSlug" class="inp" value="'+(co.dineSlug||'')+'" placeholder="예) mbti">'+
-   '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div></div>'+
+   '<div style="margin-top:4px;font-size:10px;color:var(--br)">접속 URL · 직원/회원 초대코드: dine.ne.kr/'+(co.dineSlug||'슬러그')+'</div></div>'+
    '<div class="input-group"><label>사업자번호</label><input id="st-bizNo" class="inp" value="'+(co.bizNo||'')+'"></div>'+
    '<div class="input-group"><label>주소</label><input id="st-address" class="inp" value="'+(co.address||'')+'"></div>'+
    '<div class="input-group"><label>전화번호</label><input id="st-phone" class="inp" type="tel" value="'+(co.phone||'')+'"></div>'+
