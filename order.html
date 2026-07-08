@@ -175,29 +175,29 @@ window.onload=function(){
 };
 
 function _loadMenus(){
- Promise.all([
-  _db.collection('filo_menus').where('dealerId','==',_did).get(),
-  _db.collection('companies').where('uid','==',_did).limit(1).get()
- ]).then(function(results){
-  var menuSnap=results[0],coSnap=results[1];
-  var co=coSnap.empty?null:coSnap.docs[0].data();
-  document.getElementById('hdr-store').textContent=(co&&(co.storeName||co.name))||'매장';
-
-  _menus=[];
-  menuSnap.forEach(function(doc){
-   var d=doc.data();d._id=doc.id;
-   if(d.forSale!==false)_menus.push(d);
-  });
-  _menus.sort(function(a,b){return (a.category||'').localeCompare(b.category||'');});
-
-  _renderMenus();
-
-  document.getElementById('loading').style.display='none';
-  document.getElementById('header').style.display='flex';
-  document.getElementById('cat-tabs').style.display='flex';
-  document.getElementById('menu-wrap').style.display='block';
- }).catch(function(e){
-  document.getElementById('loading').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:40px;margin-bottom:12px">😅</div><div style="font-size:14px;color:#666">메뉴를 불러올 수 없습니다<br>'+e.message+'</div></div>';
+ // /api/menus 공개 API로 메뉴 로드 (Firestore Rules 우회)
+ fetch('/api/menus?did='+encodeURIComponent(_did))
+ .then(function(r){return r.json();})
+ .then(function(data){
+  var menus=data.menus||[];
+  // companies 정보도 별도 로드
+  fetch('/api/menus?did='+encodeURIComponent(_did)+'&info=1')
+  .catch(function(){return {json:function(){return {};}}; });
+  _renderMenus(menus);
+  // 매장명 로드
+  _db.collection('companies').doc(_did).get().then(function(doc){
+   if(doc.exists){
+    var d=doc.data();
+    var el=document.getElementById('store-name');
+    if(el) el.textContent=d.companyName||d.name||'매장';
+   }
+  }).catch(function(){});
+ })
+ .catch(function(e){
+  document.getElementById('loading').innerHTML=
+   '<div style="text-align:center;padding:40px">'+
+   '<div style="font-size:40px;margin-bottom:12px">😅</div>'+
+   '<div style="font-size:14px;color:#ef4444">메뉴를 불러올 수 없습니다<br><small>'+e.message+'</small></div></div>';
  });
 }
 
