@@ -241,17 +241,24 @@ function _renderMenus(){
   sec.innerHTML='<div class="cat-title">'+cat+'</div>';
   var grid=document.createElement('div');
   grid.className='menu-grid';
+
   grouped[cat].forEach(function(m){
-   var item=document.createElement('div');
-   item.className='menu-item';
-   var imgHtml=m.imageUrl
-    ?('<img src="'+m.imageUrl+'" loading="lazy" onerror="this.style.display='none';this.nextSibling.style.display='block'"><span class="menu-emoji" style="display:none">'+(m.emoji||'🍽')+'</span>')
-    :('<span class="menu-emoji">'+(m.emoji||'🍽')+'</span>');
-   item.innerHTML=imgHtml+
+   var card=document.createElement('div');
+   card.className='menu-item';
+   card.id='mc-'+m._id;
+   var soldOut=m.stock!==null&&m.stock!==undefined&&m.stock<=0;
+   var cnt=_cart[m._id]?_cart[m._id].qty:0;
+   card.innerHTML=
+    (m.imageUrl?'<img src="'+m.imageUrl+'" style="width:100%;height:70px;object-fit:cover;border-radius:8px;margin-bottom:6px" loading="lazy">':'<span style="font-size:28px;margin-bottom:6px;display:block">'+(m.emoji||'🍽')+'</span>')+
     '<div class="menu-name">'+m.name+'</div>'+
-    '<div class="menu-price">₩'+Number(m.price).toLocaleString()+'</div>';
-   item.onclick=function(){_addToCart(m);};
-   grid.appendChild(item);
+    '<div class="menu-price">₩'+(m.price||0).toLocaleString()+'</div>'+
+    (soldOut?'<div class="menu-sold">품절</div>':'')+
+    '<div class="menu-cnt'+(cnt>0?' show':'')+'" id="cnt-'+m._id+'">'+cnt+'</div>';
+
+   if(!soldOut){
+    card.onclick=function(){_addToCart(m);};
+   }
+   grid.appendChild(card);
   });
   sec.appendChild(grid);
   wrap.appendChild(sec);
