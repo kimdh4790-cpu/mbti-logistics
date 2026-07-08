@@ -179,19 +179,11 @@ function _loadMenus(){
  fetch('/api/menus?did='+encodeURIComponent(_did))
  .then(function(r){return r.json();})
  .then(function(data){
-  _menus=data.menus||[];
-  // loading 숨기기
-  var loadEl=document.getElementById('loading');
-  if(loadEl) loadEl.style.display='none';
-  // companies 정보 로드
-  _db.collection('companies').doc(_did).get().then(function(doc){
-   if(doc.exists){
-    var d=doc.data();
-    var el=document.getElementById('store-name');
-    if(el) el.textContent=d.companyName||d.name||'매장';
-   }
-  }).catch(function(){});
-  _renderMenus();
+  var menus=data.menus||[];
+  // companies 정보도 별도 로드
+  fetch('/api/menus?did='+encodeURIComponent(_did)+'&info=1')
+  .catch(function(){return {json:function(){return {};}}; });
+  _renderMenus(menus);
   // 매장명 로드
   _db.collection('companies').doc(_did).get().then(function(doc){
    if(doc.exists){
