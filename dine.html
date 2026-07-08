@@ -306,6 +306,8 @@ firebase.initializeApp({
 var _db   = firebase.firestore();
 var _auth = firebase.auth();
 var _CU   = {};
+// 로그인 상태 영구 유지 (새로고침·브라우저 재시작 후에도 유지)
+_auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
 
 
 var MIN_WAGE = 10320;
