@@ -97,7 +97,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 </div>
 
 <!-- 바디 -->
-<div id="body" style="display:none">
+<div id="main-wrap" style="display:none">
  <div id="cat-bar"></div>
  <div id="menu-area">
   <div id="menu-grid"></div>
@@ -194,7 +194,7 @@ window.onload=function(){
   _menus=data.menus||[];
   document.getElementById('loading').style.display='none';
   document.getElementById('hdr').style.display='flex';
-  document.getElementById('body').style.display='flex';
+  document.getElementById('main-wrap').style.display='flex';
   _renderMenus();
  })
  .catch(function(e){
