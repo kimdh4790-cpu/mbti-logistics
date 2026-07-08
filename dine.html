@@ -2059,6 +2059,136 @@ function _dineSaveStore(did){
 }
 
 
+function _dineAutoPayroll(did){
+ var ym=document.getElementById('pay-ym').value;
+ var cycleFilter=document.getElementById('pay-cycle-filter')?.value||'month';
+ var filterPart=document.getElementById('pay-part')?.value||'';
+ var filterEmp=document.getElementById('pay-emptype')?.value||'';
+ var dateFrom,dateTo;
+ if(cycleFilter==='week'){
+  var dw=new Date();dw.setDate(dw.getDate()-dw.getDay()+1);dateFrom=dw.toISOString().slice(0,10);
+  var dw2=new Date();dw2.setDate(dw2.getDate()-dw2.getDay()+7);dateTo=dw2.toISOString().slice(0,10);
+ } else if(cycleFilter==='day'){
+  dateFrom=dateTo=new Date().toISOString().slice(0,10);
+ } else {
+  dateFrom=ym+'-01';dateTo=ym+'-31';
+ }
+ if(window._payrollUnsub) window._payrollUnsub();
+ _dineToast('🔄 실시간 급여 계산 중...');
+ _db.collection('staff').where('dealerId','==',did).get().then(function(staffSnap){
+  var staffMap={};
+  staffSnap.forEach(function(doc){
+   var d=doc.data();
+   if(filterPart&&d.part!==filterPart) return;
+   if(filterEmp&&(d.payType||'hourly')!==filterEmp) return;
+   staffMap[doc.id]=d;
+  });
+  window._payrollUnsub=_db.collection('attendance')
+   .where('dealerId','==',did).where('date','>=',dateFrom).where('date','<=',dateTo)
+   .onSnapshot(function(attSnap){
+    // 직원별 출퇴근 집계
+    var workMap={};
+    attSnap.forEach(function(doc){
+     var d=doc.data();
+     if(!staffMap[d.staffId]) return;
+     if(!workMap[d.staffId]) workMap[d.staffId]={dateIns:{},dateOuts:{},breaks:[]};
+     if(d.type==='in') workMap[d.staffId].dateIns[d.date]=d;
+     else if(d.type==='out') workMap[d.staffId].dateOuts[d.date]=d;
+     else if(d.type==='break_start') workMap[d.staffId].breaks.push({date:d.date,start:d.time,end:null});
+     else if(d.type==='break_end'){
+      var br=workMap[d.staffId].breaks.find(function(b){return b.date===d.date&&!b.end;});
+      if(br) br.end=d.time;
+     }
+    });
+    var list=document.getElementById('payroll-list');if(!list)return;
+    var rows='';var grandTotal=0;var grandNet=0;
+    Object.keys(staffMap).forEach(function(sid){
+     var st=staffMap[sid];
+     var wk=workMap[sid]||{dateIns:{},dateOuts:{},breaks:[]};
+     var empType=st.payType||'hourly';
+     var payCycle=st.payCycle||'monthly';
+     var hourlyWage=st.hourlyWage||MIN_WAGE;
+     var monthlySalary=st.monthlySalary||2500000;
+     var weeklyContractH=st.weeklyHours||40;
+     var totalMin=0;var nightMin=0;
+     Object.keys(wk.dateIns).forEach(function(date){
+      var inT=new Date(wk.dateIns[date].time);
+      var outT=wk.dateOuts[date]?new Date(wk.dateOuts[date].time):new Date();
+      var diffMin=(outT-inT)/60000;
+      // 실제 휴식 or 자동차감
+      var realBr=wk.breaks.filter(function(b){return b.date===date&&b.end;})
+       .reduce(function(a,b){return a+(new Date(b.end)-new Date(b.start))/60000;},0);
+      var autoBr=diffMin>=480?60:diffMin>=240?30:0;
+      var brMin=realBr||autoBr;
+      totalMin+=Math.max(0,diffMin-brMin);
+      // 야간
+      var ns=new Date(inT);ns.setHours(22,0,0,0);
+      if(outT>ns) nightMin+=(outT-Math.max(inT,ns))/60000;
+     });
+     var workH=totalMin/60;var nightH=nightMin/60;
+     var basePay=0;var nightPay=0;var weeklyPay=0;var empLabel='';
+     if(empType==='monthly'){
+      // 정직원: 월급 기준
+      var calcHourly=monthlySalary/(weeklyContractH*4.3);
+      if(cycleFilter==='week') basePay=Math.round(monthlySalary/4.3);
+      else if(cycleFilter==='day') basePay=Math.round(monthlySalary/22);
+      else basePay=monthlySalary;
+      nightPay=Math.round(nightH*calcHourly*0.5);
+      empLabel='정직원';
+     } else {
+      // 알바: 시급 기준
+      basePay=Math.round(workH*hourlyWage);
+      nightPay=Math.round(nightH*hourlyWage*0.5);
+      var weeklyWorkH=cycleFilter==='week'?workH:workH/4.3;
+      weeklyPay=(weeklyWorkH>=weeklyContractH*0.9&&weeklyContractH>=15)?(hourlyWage*weeklyContractH/5):0;
+      empLabel={'daily':'일급알바','weekly':'주급알바','biweekly':'격주알바','monthly':'월급알바'}[payCycle]||'알바';
+     }
+     var totalPay=basePay+nightPay+Math.round(weeklyPay);
+     var ins4=Math.round(totalPay*(0.0475+0.03595+0.009));
+     var netPay=totalPay-ins4;
+     grandTotal+=totalPay;grandNet+=netPay;
+     var partLabel={'kitchen':'주방','hall':'홀','management':'관리'}[st.part]||st.part||'';
+     var empColor=empType==='monthly'?'#38bdf8':'#a78bfa';
+     rows+='<div class="card" style="padding:14px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+      '<div style="font-weight:800;font-size:14px">'+st.name+'</div>'+
+      '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(0,0,0,.2);color:'+empColor+'">'+empLabel+'</span>'+
+      (partLabel?'<span style="font-size:10px;color:var(--t3)">'+partLabel+'</span>':'')+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--t3)">'+(empType==='monthly'?'₩'+monthlySalary.toLocaleString()+'/월':'₩'+hourlyWage.toLocaleString()+'/시')+'</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px;margin-bottom:10px">'+
+      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
+       '<div style="color:var(--t3);font-size:9px">근무시간</div>'+
+       '<div style="font-weight:700;color:#38bdf8">'+Math.floor(workH)+'h '+Math.round((workH%1)*60)+'m</div></div>'+
+      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
+       '<div style="color:var(--t3);font-size:9px">야간수당</div>'+
+       '<div style="font-weight:700;color:#f59e0b">₩'+nightPay.toLocaleString()+'</div></div>'+
+      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
+       '<div style="color:var(--t3);font-size:9px">주휴수당</div>'+
+       '<div style="font-weight:700;color:#a78bfa">₩'+Math.round(weeklyPay).toLocaleString()+'</div></div>'+
+      '<div style="background:var(--s2);border-radius:6px;padding:6px;text-align:center">'+
+       '<div style="color:var(--t3);font-size:9px">4대보험</div>'+
+       '<div style="font-weight:700;color:#ef4444">-₩'+ins4.toLocaleString()+'</div></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--bd);padding-top:8px">'+
+      '<div style="font-size:11px;color:var(--t3)">세전 ₩'+totalPay.toLocaleString()+'</div>'+
+      '<div style="font-size:16px;font-weight:900;color:#22c55e">실수령 ₩'+netPay.toLocaleString()+'</div>'+
+      '</div></div>';
+    });
+    list.innerHTML=
+     '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--s2);border-radius:10px;margin-bottom:12px">'+
+     '<div style="font-size:12px;color:var(--t3)">실시간 계산 <span class="live-dot"></span></div>'+
+     '<div>'+
+     '<span style="font-size:12px;color:var(--t3);margin-right:12px">세전 ₩'+grandTotal.toLocaleString()+'</span>'+
+     '<span style="font-size:16px;font-weight:900;color:#f59e0b">총 실수령 ₩'+grandNet.toLocaleString()+'</span>'+
+     '</div></div>'+
+     (rows||'<div style="text-align:center;padding:30px;color:var(--t3)">출퇴근 기록이 없습니다</div>');
+   });
+ });
+}
+
 function _dinePayslip(el){
  var did=_CU.dealerId;
  el.innerHTML='';
