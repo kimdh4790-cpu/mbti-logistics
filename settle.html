@@ -327,16 +327,27 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
               <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
               <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                <option value="50">~50명 — 32.5만원/월</option>
-                <option value="100">~100명 — 62만원/월</option>
-                <option value="200">~200명 — 114만원/월</option>
-                <option value="300">~300명 — 159만원/월</option>
-                <option value="500">~500명 — 240만원/월</option>
-                <option value="700">~700명 — 315만원/월</option>
-                <option value="1000">~1000명 — 450만원/월</option>
-                <option value="1500">~1500명 — 675만원/월</option>
-                <option value="2000">~2000명 — 786만원/월</option>
-                <option value="9999">2000명+ — 별도 문의</option>
+                <option value="50">~50명 — 20만원/월 (VAT별도)</option>
+                <option value="100">~100명 — 40만원/월 (VAT별도)</option>
+                <option value="150">~150명 — 60만원/월 (VAT별도)</option>
+                <option value="200">~200명 — 80만원/월 (VAT별도)</option>
+                <option value="250">~250명 — 100만원/월 (VAT별도)</option>
+                <option value="300">~300명 — 120만원/월 (VAT별도)</option>
+                <option value="350">~350명 — 140만원/월 (VAT별도)</option>
+                <option value="400">~400명 — 160만원/월 (VAT별도)</option>
+                <option value="450">~450명 — 180만원/월 (VAT별도)</option>
+                <option value="500">~500명 — 200만원/월 (VAT별도)</option>
+                <option value="550">~550명 — 220만원/월 (VAT별도)</option>
+                <option value="600">~600명 — 240만원/월 (VAT별도)</option>
+                <option value="650">~650명 — 260만원/월 (VAT별도)</option>
+                <option value="700">~700명 — 280만원/월 (VAT별도)</option>
+                <option value="750">~750명 — 300만원/월 (VAT별도)</option>
+                <option value="800">~800명 — 320만원/월 (VAT별도)</option>
+                <option value="850">~850명 — 340만원/월 (VAT별도)</option>
+                <option value="900">~900명 — 360만원/월 (VAT별도)</option>
+                <option value="950">~950명 — 380만원/월 (VAT별도)</option>
+                <option value="1000">~1000명 — 400만원/월 (VAT별도)</option>
+                <option value="9999">1000명+ — 별도 문의</option>
               </select>
             </div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:6px">업종 선택:</div>
@@ -3881,15 +3892,15 @@ function _guardFn(fn, featureName){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var PLAN_DEF = {
   free: {
-    name:'FREE', label:'무료', color:'#666',
+    name:'FREE', label:'무료체험', color:'#666',
     pricePerPerson:0, maxPerson:5,
     features:{
-      settleLimit:3,        // 월 정산 횟수
-      industries:['ai_settle','delivery'], // 사용 가능 업종
+      settleLimit:3,
+      industries:['ai_settle','delivery'],
       allIndustries:false,
       qrBooking:false,
       qrPos:false,
-      alimtalk:0,           // 월 알림톡 건수
+      alimtalk:0,
       taxShare:false,
       beautyKiosk:false,
       customerDb:false,
@@ -3900,39 +3911,38 @@ var PLAN_DEF = {
     }
   },
   starter: {
-    name:'STARTER', label:'스타터', color:'#00d4ff',
-    pricePerPerson:9000, maxPerson:20,
+    name:'STARTER', label:'개인 (4,000원/인)', color:'#00c8f8',
+    pricePerPerson:4000, maxPerson:1000,
     features:{
       settleLimit:999,
-      industries:['ai_settle','delivery','construction','insurance','beauty',
-                  'care','academy','warehouse','event','sales'],
+      industries:['ai_settle','delivery'],
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
-      alimtalk:100,
-      taxShare:false,
+      alimtalk:999,
+      taxShare:true,
       beautyKiosk:false,
       customerDb:false,
-      multiCamp:false,
+      multiCamp:true,
       inventory:false,
       excelDownload:true,
       customParser:false,
     }
   },
   pro: {
-    name:'PRO', label:'프로', color:'#7b2fff',
-    pricePerPerson:8000, maxPerson:50,
+    name:'PRO', label:'단체 (3,300원/인)', color:'#f59e0b',
+    pricePerPerson:3300, maxPerson:1000,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
-      qrPos:true,
+      qrPos:false,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
-      customerDb:true,
-      multiCamp:false,
+      beautyKiosk:false,
+      customerDb:false,
+      multiCamp:true,
       inventory:false,
       excelDownload:true,
       customParser:false,
@@ -3940,16 +3950,16 @@ var PLAN_DEF = {
   },
   business: {
     name:'BUSINESS', label:'비즈니스', color:'#ff9500',
-    pricePerPerson:7000, maxPerson:200,
+    pricePerPerson:3300, maxPerson:9999,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
+      beautyKiosk:false,
       customerDb:true,
       multiCamp:true,
       inventory:true,
@@ -3962,13 +3972,13 @@ var PLAN_DEF = {
     pricePerPerson:0, maxPerson:9999,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
+      beautyKiosk:false,
       customerDb:true,
       multiCamp:true,
       inventory:true,
@@ -4122,7 +4132,7 @@ function pageSubscription(){
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
         '<div>'+
           '<div style="font-size:14px;font-weight:900;color:'+p.color+'">'+p.label+(isCur?' <span style="font-size:9px;background:'+p.color+';color:#000;padding:2px 7px;border-radius:20px">현재</span>':'')+'</div>'+
-          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월 (VAT별도)':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
         '</div>'+btn+
       '</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:10px">'+
@@ -4142,7 +4152,7 @@ function pageSubscription(){
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<div>'+
           '<div style="font-size:22px;font-weight:900;color:'+curPlan.color+'">'+curPlan.label+'</div>'+
-          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b>':'무료')+'</div>'+
+          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b> (VAT별도)':'무료')+'</div>'+
         '</div>'+
         '<div style="text-align:right"><div style="font-size:10px;color:var(--text3)">기한</div><div style="font-size:13px;font-weight:700">'+(dealer.planExpiry||'-')+'</div></div>'+
       '</div>'+
@@ -4151,7 +4161,7 @@ function pageSubscription(){
     planCard('free')+planCard('starter')+planCard('pro')+planCard('business')+
     '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;margin-bottom:24px">'+
       '<div style="font-size:14px;font-weight:900;color:#ff5555;margin-bottom:4px">🏢 ENTERPRISE</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">200명 이상 · 커스텀 파서 · 세금계산서</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">1,000명 이상 · 대량 계약 · 맞춤 견적 · 세금계산서</div>'+
       '<a href="tel:051-711-3103" style="display:inline-block;padding:10px 24px;background:rgba(255,85,85,.15);border:1px solid rgba(255,85,85,.3);border-radius:10px;color:#ff5555;font-size:12px;font-weight:800;text-decoration:none">📞 도입 문의 051-711-3103</a>'+
     '</div>'+
     '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🧾 구독 내역</div>'+
