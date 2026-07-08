@@ -3878,54 +3878,6 @@ function _showLockPopup(featureName){
   _showTrialExpiredPopup();
 }
 
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 알림톡 건수 제한 (인원×3건 기본, 초과시 건당 15원)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-window._alimtalkUsedThisMonth = null;
-
-function _getAlimtalkLimit() {
-  var dealer = window._dealerData || {};
-  var personCount = dealer.personCount || dealer.workerCount || 1;
-  return personCount * 3;
-}
-
-async function _checkAlimtalkQuota(sendCount) {
-  if(isSuperAdmin()) return {ok:true};
-  var did = _CU && _CU.dealerId;
-  if(!did) return {ok:true};
-  var now = new Date();
-  var ym = now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
-  try {
-    var snap = await _db.collection('message_history')
-      .where('dealerId','==',did)
-      .where('channel','==','alimtalk')
-      .where('month','==',ym)
-      .get();
-    var used = snap.size;
-    var limit = _getAlimtalkLimit();
-    var after = used + (sendCount||1);
-    window._alimtalkUsedThisMonth = used;
-    if(after <= limit) return {ok:true, used:used, limit:limit};
-    // 초과분 계산
-    var over = after - limit;
-    var extraCost = over * 15;
-    return {ok:false, used:used, limit:limit, over:over, extraCost:extraCost};
-  } catch(e) {
-    return {ok:true}; // 오류시 허용
-  }
-}
-
-async function _confirmAlimtalkOverage(sendCount) {
-  var q = await _checkAlimtalkQuota(sendCount||1);
-  if(q.ok) return true;
-  var msg = '⚠️ 알림톡 기본 제공량 초과\n\n' +
-    '이번 달 발송: '+q.used+'건 / 기본 '+q.limit+'건\n' +
-    '초과 '+q.over+'건 × 15원 = '+q.extraCost.toLocaleString()+'원 추가 과금\n\n' +
-    '계속 발송하시겠습니까?';
-  return confirm(msg);
-}
-
 // 잠금 래퍼 — 핵심 함수들에 적용
 function _guardFn(fn, featureName){
   return function(){
@@ -3967,7 +3919,7 @@ var PLAN_DEF = {
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
-      alimtalk:-1,  // -1 = 인원×3건 동적계산, 초과시 건당 15원
+      alimtalk:-1,      // -1 = 인원×3건 기본, 초과 건당 15원
       taxShare:true,
       beautyKiosk:false,
       customerDb:false,
@@ -3986,7 +3938,7 @@ var PLAN_DEF = {
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
-      alimtalk:-1,  // -1 = 인원×3건 동적계산, 초과시 건당 15원
+      alimtalk:999,
       taxShare:true,
       beautyKiosk:false,
       customerDb:false,
@@ -4167,7 +4119,7 @@ function pageSubscription(){
       ['업종',f.allIndustries?'전체':''+( (f.industries||[]).length)+'개'],
       ['QR예약',f.qrBooking?'✅':'🔒'],
       ['QR POS',f.qrPos?'✅':'🔒'],
-      ['알림톡',f.alimtalk===-1?'인원×3건 기본':f.alimtalk>=999?'무제한':''+( f.alimtalk||0)+'건'],
+      ['알림톡',f.alimtalk===-1?'인원×3건':''+( f.alimtalk||0)+'건'],
       ['세무',f.taxShare?'✅':'🔒'],
       ['키오스크',f.beautyKiosk?'✅':'🔒'],
       ['재고',f.inventory?'✅':'🔒'],
@@ -8648,11 +8600,40 @@ function _doExcelDownload(){
   if(_isLocked('download')){_showLockPopup('엑셀 다운로드');return;}
   return _downloadRosterExcel.apply(this,arguments);
 }
+// ── 알림톡 월 사용량 체크 (인원×3건 기본, 초과 건당 15원) ──
+async function _checkAlimtalkQuota(){
+  if(isSuperAdmin()) return {ok:true};
+  var did=_CU&&_CU.dealerId;
+  if(!did) return {ok:false, msg:'로그인 필요'};
+  var dealer=window._dealerData||{};
+  var personCount=dealer.personCount||dealer.workerCount||1;
+  var baseQuota=personCount*3; // 기본 인원×3건
+  // 이번 달 발송 건수 조회
+  var now=new Date();
+  var monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  try{
+    var snap=await _db.collection('message_history')
+      .where('dealerId','==',did)
+      .where('channel','==','alimtalk')
+      .where('sentAt','>=',monthStart)
+      .get();
+    var used=snap.size||0;
+    if(used<baseQuota){
+      return {ok:true, used:used, quota:baseQuota, extra:false};
+    } else {
+      // 초과분 → 건당 15원 과금 안내 후 진행
+      var over=used-baseQuota+1;
+      return {ok:true, used:used, quota:baseQuota, extra:true, overCharge:over*15,
+              msg:'기본 '+baseQuota+'건 초과 ('+used+'건 사용). 이번 건 15원 추가 과금됩니다.'};
+    }
+  } catch(e){
+    return {ok:true}; // 조회 실패 시 허용
+  }
+}
+
 function _sendAlimtalk(){
   if(_isLocked('alimtalk')){_showLockPopup('알림톡 발송');return;}
-  _confirmAlimtalkOverage(1).then(function(ok){
-    if(ok) _sendAlimtalk_orig.apply(this,arguments);
-  });
+  return _sendAlimtalk_orig.apply(this,arguments);
 }
 function calcDonWaySettlement(){
   if(_isLocked('settle')){_showLockPopup('정산 계산');return null;}
@@ -30540,6 +30521,23 @@ function sendOne(id){
 }
 
 async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
+  // 알림톡 할당량 체크
+  var quota=await _checkAlimtalkQuota();
+  if(quota.extra){
+    toast('⚠️ '+quota.msg,'#f59e0b');
+    // Firestore에 초과 과금 기록
+    if(_db&&_CU&&_CU.dealerId){
+      _db.collection('alimtalk_overcharge').add({
+        dealerId:_CU.dealerId,
+        charge:15,
+        used:quota.used,
+        quota:quota.quota,
+        name:name,
+        month:month,
+        createdAt:new Date().toISOString()
+      }).catch(function(){});
+    }
+  }
   if(!phone||phone.replace(/[^0-9]/g,'').length<10){toast('❌ 전화번호 없음');return;}
   toast('📸 명세서 이미지 생성 중...');
   var did=_CU.dealerId||'';
