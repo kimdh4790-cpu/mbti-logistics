@@ -4494,7 +4494,10 @@ function _filoTableLoad(did){
     '<div style="font-size:10px;color:var(--t3)">'+time+'</div>'+
     '<span style="font-size:10px;font-weight:700;color:'+sc.c+';background:'+sc.c+'22;border-radius:20px;padding:2px 7px">'+sc.l+'</span>'+
     (status==='pending'?
-    '<button data-bid="'+bid+'" data-did="'+did+'" onclick="_filoBookingConfirm(this.dataset.bid,this.dataset.did)" style="padding:3px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;cursor:pointer">확정</button>':'')+
+    '<div style="display:flex;gap:4px">'+
+    '<button data-bid="'+bid+'" data-did="'+did+'" onclick="_filoBookingConfirm(this.dataset.bid,this.dataset.did)" style="padding:3px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;cursor:pointer">✅ 확정</button>'+
+    '<button data-bid="'+bid+'" data-did="'+did+'" onclick="_filoBookingReject(this.dataset.bid,this.dataset.did)" style="padding:3px 8px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:10px;cursor:pointer">❌ 거절</button>'+
+    '</div>':'')+
     '</div>';
   }).join('');
  }
@@ -4524,9 +4527,79 @@ window._filoTableClear=function(docId,did,num){
 };
 
 window._filoBookingConfirm=function(bid,did){
- _db.collection('filo_bookings').doc(bid).update({status:'confirmed'})
- .then(function(){_filoToast('✅ 예약 확정');_filoTableLoad(did);});
+ _db.collection('filo_bookings').doc(bid).get().then(function(snap){
+  var d=snap.data()||{};
+  return _db.collection('filo_bookings').doc(bid).update({status:'confirmed',confirmedAt:new Date().toISOString()})
+  .then(function(){
+   _filoToast('✅ 예약 확정');
+   _filoTableLoad(did);
+   // 고객 FCM 푸시 (회원) 또는 알림톡 (비회원)
+   _filoNotifyReservation(did, d, 'confirmed');
+  });
+ });
 };
+
+window._filoBookingReject=function(bid,did){
+ if(!confirm('예약을 거절하시겠습니까?')) return;
+ _db.collection('filo_bookings').doc(bid).get().then(function(snap){
+  var d=snap.data()||{};
+  return _db.collection('filo_bookings').doc(bid).update({status:'rejected',rejectedAt:new Date().toISOString()})
+  .then(function(){
+   _filoToast('❌ 예약 거절');
+   _filoTableLoad(did);
+   // 고객 FCM 푸시 (회원) 또는 알림톡 (비회원)
+   _filoNotifyReservation(did, d, 'rejected');
+  });
+ });
+};
+
+// 예약 확정/거절 알림 (FCM 우선, 없으면 알림톡)
+async function _filoNotifyReservation(did, booking, status){
+ var name = booking.customerName||'고객';
+ var phone = booking.phone||'';
+ var tableName = booking.tableName||'테이블';
+ var date = booking.date||'';
+ var time = booking.time||'';
+ var title = status==='confirmed'?'예약 확정':'예약 불가';
+ var body = status==='confirmed'
+  ? tableName+' '+date+' '+time+' 예약이 확정됐습니다!'
+  : '죄송합니다. 해당 시간 예약이 어렵습니다. 다른 시간을 선택해주세요.';
+
+ // 회원 FCM 토큰 조회
+ if(phone){
+  var memberSnap = await _db.collection('members')
+   .where('dealerId','==',did)
+   .where('phone','==',phone)
+   .limit(1).get();
+  if(!memberSnap.empty){
+   var member = memberSnap.docs[0].data();
+   var tokens = (member.fcmTokens||[]).map(function(t){return t.token||t;}).filter(Boolean);
+   if(member.fcmToken) tokens.push(member.fcmToken);
+   tokens = [...new Set(tokens)].filter(function(t){return t&&t.length>20;});
+   if(tokens.length){
+    // FCM 푸시 발송
+    fetch('https://donway.ai.kr/fcm/notify-drivers',{
+     method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({tokens:tokens,title:title,body:body})
+    }).catch(function(){});
+    _filoToast('📱 '+name+'님에게 푸시 발송');
+    return;
+   }
+  }
+ }
+ // 비회원 or FCM 없으면 알림톡
+ if(phone){
+  fetch('/api/send-alimtalk',{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+    to:phone, name:name,
+    templateCode: status==='confirmed'?'reserve_confirm':'reserve_reject',
+    variables:{name:name,tableName:tableName,date:date,time:time}
+   })
+  }).catch(function(){});
+  _filoToast('💬 '+name+'님에게 알림톡 발송');
+ }
+}
 
 window._filoTableRefresh=function(){_filoTableLoad(_CU.dealerId||_CU.uid);};
 
