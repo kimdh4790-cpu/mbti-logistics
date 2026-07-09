@@ -1599,14 +1599,22 @@ async function acceptExchange(){
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-        });
-        const data = await res.json();
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+          });
+          const resText = await res.text();
+          let translated = name;
+          try {
+            const data = JSON.parse(resText);
+            translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+          } catch(e) {}
+          return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({translated:name}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
@@ -1687,14 +1695,22 @@ async function acceptExchange(){
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-        });
-        const data = await res.json();
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+          });
+          const resText = await res.text();
+          let translated = name;
+          try {
+            const data = JSON.parse(resText);
+            translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+          } catch(e) {}
+          return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({translated:name}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
