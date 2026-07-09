@@ -124,7 +124,7 @@ select.inp option{background:var(--s2)}
 /* ── 반응형 ── */
 @media(max-width:768px){
  :root{--sidebar-w:0px}
- #sidebar{display:none;position:fixed;top:0;left:0;height:100vh;z-index:100;transform:translateX(-100%);transition:.25s}
+ #sidebar{display:none;position:fixed;top:0;left:0;height:100vh;z-index:200;transform:translateX(-100%);transition:.25s}
  #sidebar.open{display:flex!important;transform:translateX(0)}
  #dine-sidebar-btn{display:flex!important;align-items:center;justify-content:center}
  /* 탑바 모바일 */
@@ -366,7 +366,7 @@ function _dineToggleSidebar(){
   if(!ov){
    ov=document.createElement('div');
    ov.id='dine-sb-overlay';
-   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99';
+   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:98';
    ov.onclick=function(){sb.classList.remove('open');ov.remove();};
    document.body.appendChild(ov);
   }
