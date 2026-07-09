@@ -290,39 +290,39 @@ document.addEventListener('touchstart',function(e){
    </div>
    <div class="nav-group">
     <div class="nav-group-title">홈</div>
-    <div class="nav-item active" onclick="_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
+    <div class="nav-item active" onclick="_dinePage('dashboard',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
    </div>
 
    <div class="nav-group">
     <div class="nav-group-title" onclick="_dineToggleGroup(this)">직원 관리<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
-     <div class="nav-item" onclick="_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
-     <div class="nav-item" onclick="_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
-     <div class="nav-item" onclick="_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
-     <div class="nav-item" onclick="_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
+     <div class="nav-item" onclick="_dinePage('staff',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
+     <div class="nav-item" onclick="_dinePage('attend',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
+     <div class="nav-item" onclick="_dinePage('schedule',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
+     <div class="nav-item" onclick="_dinePage('payroll',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
+     <div class="nav-item" onclick="_dinePage('payslip',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
     </div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title" onclick="_dineToggleGroup(this)">정산<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
-     <div class="nav-item" onclick="_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
-     <div class="nav-item" onclick="_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
-     <div class="nav-item" onclick="_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
+     <div class="nav-item" onclick="_dinePage('analytics',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
+     <div class="nav-item" onclick="_dinePage('settle',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
+     <div class="nav-item" onclick="_dinePage('cost',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
+     <div class="nav-item" onclick="_dinePage('tax',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
     </div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title" onclick="_dineToggleGroup(this)">고객<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
+     <div class="nav-item" onclick="_dinePage('member',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
     </div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title" onclick="_dineToggleGroup(this)">설정<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('store',this)"><span class="ic">🏪</span>매장 설정</div>
-     <div class="nav-item" onclick="_dinePage('alimtalk',this)"><span class="ic">💬</span>알림톡 설정</div>
+     <div class="nav-item" onclick="_dinePage('store',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('store',this)"><span class="ic">🏪</span>매장 설정</div>
+     <div class="nav-item" onclick="_dinePage('alimtalk',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('alimtalk',this)"><span class="ic">💬</span>알림톡 설정</div>
     </div>
    </div>
    <!-- FILO 바로가기 -->
