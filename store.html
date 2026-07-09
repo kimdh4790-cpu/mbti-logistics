@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>주문하기</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;min-height:100vh}
+
+/* 헤더 */
+#hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 16px;position:sticky;top:0;z-index:100}
+.store-logo{width:40px;height:40px;border-radius:10px;object-fit:cover;margin-right:10px}
+.store-logo-emoji{width:40px;height:40px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:10px;flex-shrink:0}
+.store-name{font-size:16px;font-weight:900;color:#1e293b}
+.store-desc{font-size:11px;color:#94a3b8;margin-top:1px}
+.lang-wrap{display:flex;gap:3px;margin-left:auto}
+.lb{padding:3px 7px;border:1px solid #cbd5e1;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;background:#fff;color:#64748b}
+.lb.on{background:#0891b2;color:#fff;border-color:#0891b2}
+
+/* 탭 (메뉴/배달정보) */
+#tabs{background:#fff;border-bottom:1px solid #e2e8f0;display:flex}
+.tab{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:#0891b2;border-bottom-color:#0891b2}
+
+/* 메뉴 영역 */
+#menu-wrap{display:flex;height:calc(100vh - 110px);overflow:hidden}
+#cat-bar{width:72px;flex-shrink:0;background:#f1f5f9;border-right:1px solid #e2e8f0;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:2px}
+.cb{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:10px;cursor:pointer;font-size:9px;font-weight:700;color:#64748b;border:none;background:transparent;text-align:center;line-height:1.4;min-height:50px;width:100%}
+.cb.on{background:#0891b2;color:#fff}
+.ci{font-size:20px;margin-bottom:2px;display:block}
+#menu-area{flex:1;overflow-y:auto;padding:8px 8px 120px}
+#menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mi{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;transition:.15s;position:relative}
+.mi:active{transform:scale(.96);background:#e0f2fe}
+.mi img{width:100%;height:60px;object-fit:cover;border-radius:8px;margin-bottom:4px;display:block}
+.me{font-size:24px;margin-bottom:4px;display:block;line-height:1}
+.mn{font-size:10px;font-weight:700;color:#1e293b;margin-bottom:2px;line-height:1.3;word-break:keep-all}
+.mp{font-size:11px;font-weight:900;color:#0891b2}
+.mc{position:absolute;top:-6px;right:-6px;background:#0891b2;color:#fff;font-size:10px;font-weight:900;width:20px;height:20px;border-radius:50%;display:none;align-items:center;justify-content:center}
+.mc.on{display:flex}
+
+/* 배달 정보 폼 */
+#delivery-wrap{display:none;padding:16px;overflow-y:auto;max-height:calc(100vh - 110px)}
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;background:#fff;color:#1e293b;outline:none}
+.form-input:focus{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.1)}
+textarea.form-input{height:80px;resize:none}
+.addr-btn{width:100%;padding:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;color:#0891b2;cursor:pointer;text-align:left}
+
+/* 장바구니 버튼 */
+#cart-btn{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0891b2;color:#fff;border:none;border-radius:50px;padding:14px 24px;font-size:15px;font-weight:900;cursor:pointer;display:none;box-shadow:0 4px 20px rgba(8,145,178,.4);z-index:200;white-space:nowrap;min-width:200px;text-align:center}
+
+/* 장바구니 시트 */
+#cs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.15);transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);z-index:300;max-height:90vh;display:flex;flex-direction:column}
+#cs.open{transform:translateY(0)}
+#ch{padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+#ch .t{font-size:16px;font-weight:900}
+#ccl{background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8}
+#cl{overflow-y:auto;padding:8px 16px;flex:1}
+.ri{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.rn{flex:1;font-size:13px;font-weight:700}
+.rc{display:flex;align-items:center;gap:6px}
+.rc button{width:26px;height:26px;border-radius:50%;border:1px solid #e2e8f0;background:#f8fafc;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rq{font-size:13px;font-weight:700;min-width:20px;text-align:center}
+.rp{font-size:13px;font-weight:900;color:#0891b2;min-width:60px;text-align:right}
+#cf{padding:14px 16px;border-top:1px solid #f1f5f9;flex-shrink:0}
+
+/* 배달 정보 입력 (시트 내) */
+#delivery-form-sheet{padding:0 16px 8px;border-top:1px solid #f1f5f9}
+.sf-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.sf-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+.sf-input{padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none}
+.sf-input:focus{border-color:#0891b2}
+
+#cart-total-row{display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;font-weight:700;align-items:center}
+#cart-total-price{font-size:20px;font-weight:900;color:#0891b2}
+#order-btn{width:100%;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer}
+#order-btn:disabled{background:#cbd5e1;cursor:not-allowed}
+
+/* 완료 */
+#dn{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:400;padding:20px}
+.dn-ico{font-size:64px;margin-bottom:16px}
+.dn-msg{font-size:22px;font-weight:900;margin-bottom:8px;text-align:center}
+.dn-sub{font-size:13px;color:#94a3b8;margin-bottom:8px;text-align:center}
+.dn-order{font-size:12px;color:#64748b;margin-bottom:24px;text-align:center;line-height:1.6}
+#dn-back{padding:12px 32px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+
+/* 로딩 */
+#ld{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500}
+.sp{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 오버레이 */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:250;display:none}
+</style>
+</head>
+<body>
+
+<div id="ld">
+  <div style="font-size:28px;font-weight:900;color:#0891b2;margin-bottom:16px">🛵 FILO</div>
+  <div class="sp"></div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:12px">매장 정보를 불러오는 중...</div>
+</div>
+
+<div id="hdr" style="display:none">
+  <div style="display:flex;align-items:center">
+    <div class="store-logo-emoji" id="store-logo">🏪</div>
+    <div>
+      <div class="store-name" id="store-name">매장명</div>
+      <div class="store-desc" id="store-desc">주문하기</div>
+    </div>
+    <div class="lang-wrap">
+      <button class="lb on" id="lb-ko">KO</button>
+      <button class="lb" id="lb-en">EN</button>
+      <button class="lb" id="lb-zh">中</button>
+      <button class="lb" id="lb-ja">日</button>
+    </div>
+  </div>
+</div>
+
+<div id="tabs" style="display:none">
+  <div class="tab on" id="tab-menu" onclick="_switchTab('menu')">🍽 메뉴</div>
+  <div class="tab" id="tab-delivery" onclick="_switchTab('delivery')">📍 배달정보</div>
+</div>
+
+<!-- 메뉴 -->
+<div id="menu-wrap" style="display:none">
+  <div id="cat-bar"></div>
+  <div id="menu-area"><div id="menu-grid"></div></div>
+</div>
+
+<!-- 배달 정보 -->
+<div id="delivery-wrap">
+  <div class="form-group">
+    <label class="form-label" id="lbl-addr">배달 주소 *</label>
+    <button class="addr-btn" id="addr-btn" onclick="_searchAddr()">📍 주소 검색</button>
+    <input class="form-input" id="addr-detail" placeholder="상세주소 (동/호수 등)" style="margin-top:6px;display:none">
+  </div>
+  <div class="form-group">
+    <label class="form-label" id="lbl-name">이름 *</label>
+    <input class="form-input" id="cust-name" placeholder="홍길동">
+  </div>
+  <div class="form-group">
+    <label class="form-label" id="lbl-phone">연락처 *</label>
+    <input class="form-input" id="cust-phone" type="tel" placeholder="010-0000-0000">
+  </div>
+  <div class="form-group">
+    <label class="form-label" id="lbl-memo">요청사항</label>
+    <textarea class="form-input" id="cust-memo" placeholder="문 앞에 놓아주세요 / 수저 빼주세요 등"></textarea>
+  </div>
+  <div style="padding:14px;background:#f0f9ff;border-radius:12px;font-size:12px;color:#0369a1;line-height:1.6">
+    📋 주문 후 매장에서 확인하여 배달 접수합니다.<br>
+    배달비는 거리에 따라 별도 부과됩니다.
+  </div>
+</div>
+
+<!-- 장바구니 버튼 -->
+<button id="cart-btn" onclick="_openCart()">
+  🛒 <span id="cart-cnt">0</span>개 · <span id="cart-total-btn">₩0</span> &nbsp;주문하기
+</button>
+
+<!-- 오버레이 -->
+<div id="overlay" onclick="_closeCart()"></div>
+
+<!-- 장바구니 시트 -->
+<div id="cs">
+  <div id="ch">
+    <div class="t">🛒 장바구니</div>
+    <button id="ccl" onclick="_closeCart()">✕</button>
+  </div>
+  <div id="cl"></div>
+  <div id="delivery-form-sheet">
+    <div class="sf-row" style="margin-top:10px">
+      <span class="sf-label" id="sf-lbl-addr">배달 주소 *</span>
+      <button class="addr-btn" id="sf-addr-btn" onclick="_searchAddr()" style="font-size:12px;padding:10px">📍 주소 검색</button>
+      <input class="sf-input" id="sf-addr-detail" placeholder="상세주소" style="display:none;margin-top:4px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <div class="sf-row" style="flex:1">
+        <span class="sf-label" id="sf-lbl-name">이름 *</span>
+        <input class="sf-input" id="sf-name" placeholder="홍길동">
+      </div>
+      <div class="sf-row" style="flex:1">
+        <span class="sf-label" id="sf-lbl-phone">연락처 *</span>
+        <input class="sf-input" id="sf-phone" type="tel" placeholder="010-0000-0000">
+      </div>
+    </div>
+    <div class="sf-row">
+      <span class="sf-label" id="sf-lbl-memo">요청사항</span>
+      <input class="sf-input" id="sf-memo" placeholder="문 앞에 놓아주세요">
+    </div>
+  </div>
+  <div id="cf">
+    <div id="cart-total-row">
+      <span id="tl">합계</span>
+      <span id="cart-total-price">₩0</span>
+    </div>
+    <button id="order-btn" onclick="_submitOrder()">주문하기</button>
+  </div>
+</div>
+
+<!-- 완료 -->
+<div id="dn">
+  <div class="dn-ico">✅</div>
+  <div class="dn-msg" id="dn-msg">주문이 접수됐습니다!</div>
+  <div class="dn-sub" id="dn-sub">매장에서 확인 후 배달을 시작합니다</div>
+  <div class="dn-order" id="dn-order"></div>
+  <button id="dn-back" onclick="location.reload()">다시 주문하기</button>
+</div>
+
+<!-- 카카오 주소 API -->
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+var _did='', _slug='', _menus=[], _cart={}, _lang='ko', _addr='', _addrFull='';
+
+var _i18n={
+ ko:{menu:'🍽 메뉴',delivery:'📍 배달정보',order:'주문하기',total:'합계',addr:'배달 주소 *',name:'이름 *',phone:'연락처 *',memo:'요청사항',done:'주문이 접수됐습니다!',sub:'매장에서 확인 후 배달을 시작합니다',back:'다시 주문하기',addrBtn:'📍 주소 검색',cartBtn:'주문하기'},
+ en:{menu:'🍽 Menu',delivery:'📍 Delivery Info',order:'Order Now',total:'Total',addr:'Address *',name:'Name *',phone:'Phone *',memo:'Requests',done:'Order Received!',sub:'Store will confirm and start delivery',back:'Order Again',addrBtn:'📍 Search Address',cartBtn:'Order'},
+ zh:{menu:'🍽 菜单',delivery:'📍 配送信息',order:'下单',total:'合计',addr:'配送地址 *',name:'姓名 *',phone:'电话 *',memo:'备注',done:'订单已接收！',sub:'商家确认后开始配送',back:'再次订购',addrBtn:'📍 搜索地址',cartBtn:'下单'},
+ ja:{menu:'🍽 メニュー',delivery:'📍 配達情報',order:'注文する',total:'合計',addr:'配達住所 *',name:'お名前 *',phone:'電話番号 *',memo:'ご要望',done:'注文を受け付けました！',sub:'店舗確認後に配達を開始します',back:'もう一度注文',addrBtn:'📍 住所検索',cartBtn:'注文'}
+};
+function _t(k){return(_i18n[_lang]&&_i18n[_lang][k])||_i18n.ko[k]||k;}
+
+firebase.initializeApp({
+ apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+ authDomain:'mbti-logistics.firebaseapp.com',
+ projectId:'mbti-logistics'
+});
+var _db=firebase.firestore();
+
+// 슬러그로 매장ID 조회
+function _p(k){return new URLSearchParams(location.search).get(k)||'';}
+
+window.onload=function(){
+ _slug=location.pathname.replace('/store/','').replace('/store','').replace('/','').trim();
+ if(!_slug) _slug=_p('id')||_p('slug');
+
+ if(!_slug){
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:40px">❌</div><div style="margin-top:12px;color:#ef4444">잘못된 주소입니다</div></div>';
+  return;
+ }
+
+ // companies 컬렉션에서 slug로 매장 조회
+ _db.collection('companies').where('slug','==',_slug).limit(1).get()
+ .then(function(snap){
+  if(snap.empty){
+   // slug가 없으면 dealerId로 시도
+   return _db.collection('companies').doc(_slug).get().then(function(doc){
+    if(!doc.exists) throw new Error('매장을 찾을 수 없습니다');
+    return {docs:[doc]};
+   });
+  }
+  return snap;
+ })
+ .then(function(snap){
+  var doc=snap.docs[0];
+  var d=doc.data();
+  _did=doc.id;
+
+  // 매장 정보 표시
+  document.getElementById('store-name').textContent=d.companyName||d.name||'매장';
+  document.getElementById('store-desc').textContent=d.address||'배달 주문';
+  document.title=(d.companyName||'매장')+' - 주문하기';
+
+  document.getElementById('ld').style.display='none';
+  document.getElementById('hdr').style.display='block';
+  document.getElementById('tabs').style.display='flex';
+  document.getElementById('menu-wrap').style.display='flex';
+
+  // 언어 버튼
+  ['ko','en','zh','ja'].forEach(function(l){
+   document.getElementById('lb-'+l).onclick=function(){_setLang(l);};
+  });
+  document.getElementById('ccl').onclick=_closeCart;
+  document.getElementById('order-btn').onclick=_submitOrder;
+
+  _loadMenus();
+ })
+ .catch(function(e){
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:40px">😅</div><div style="margin-top:12px;color:#ef4444;font-size:14px">'+e.message+'</div></div>';
+ });
+};
+
+function _loadMenus(){
+ fetch('/api/menus?did='+encodeURIComponent(_did))
+ .then(function(r){return r.json();})
+ .then(function(d){
+  _menus=d.menus||[];
+  _renderMenus();
+ })
+ .catch(function(){
+  document.getElementById('menu-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:#94a3b8">메뉴를 불러올 수 없습니다</div>';
+ });
+}
+
+var _catIco={'전체':'🍽','버거':'🍔','치킨':'🍗','피자':'🍕','분식':'🌶️','음료':'☕','사이드':'🍟','디저트':'🍰','세트':'🎉','카페':'☕','한식':'🍱','기타':'🍽'};
+
+function _renderMenus(){
+ var cats=['전체'];
+ _menus.forEach(function(m){if(m.category&&cats.indexOf(m.category)<0)cats.push(m.category);});
+
+ var bar=document.getElementById('cat-bar');
+ bar.innerHTML='';
+ cats.forEach(function(cat,i){
+  var btn=document.createElement('button');
+  btn.className='cb'+(i===0?' on':'');
+  btn.dataset.cat=cat;
+  btn.innerHTML='<span class="ci">'+(_catIco[cat]||'🍽')+'</span><span>'+cat+'</span>';
+  btn.onclick=function(){
+   document.querySelectorAll('.cb').forEach(function(b){b.classList.remove('on');});
+   btn.classList.add('on');
+   document.querySelectorAll('.mi').forEach(function(item){
+    item.style.display=(cat==='전체'||item.dataset.cat===cat)?'':'none';
+   });
+   document.getElementById('menu-area').scrollTop=0;
+  };
+  bar.appendChild(btn);
+ });
+
+ var grid=document.getElementById('menu-grid');
+ grid.innerHTML='';
+ _menus.forEach(function(m){
+  var item=document.createElement('div');
+  item.className='mi';
+  item.dataset.cat=m.category||'기타';
+  item.innerHTML=
+   (m.imageUrl?'<img src="'+m.imageUrl+'" loading="lazy">':'<span class="me">'+(m.emoji||'🍽')+'</span>')+
+   '<div class="mn">'+m.name+'</div>'+
+   '<div class="mp">₩'+(m.price||0).toLocaleString()+'</div>'+
+   '<div class="mc" id="sc-'+m.name.replace(/\W/g,'')+'"></div>';
+  (function(menu){
+   item.onclick=function(){_add(menu);};
+  })(m);
+  grid.appendChild(item);
+ });
+}
+
+function _add(m){
+ if(!_cart[m.name]) _cart[m.name]={name:m.name,price:m.price,qty:0,emoji:m.emoji||'🍽'};
+ _cart[m.name].qty++;
+ var el=document.getElementById('sc-'+m.name.replace(/\W/g,''));
+ if(el){el.textContent=_cart[m.name].qty;el.className='mc on';}
+ _updBtn();
+}
+
+function _updBtn(){
+ var total=0,cnt=0;
+ Object.values(_cart).forEach(function(i){total+=i.price*i.qty;cnt+=i.qty;});
+ var btn=document.getElementById('cart-btn');
+ if(cnt>0){
+  btn.style.display='block';
+  document.getElementById('cart-cnt').textContent=cnt;
+  document.getElementById('cart-total-btn').textContent='₩'+total.toLocaleString();
+ } else {
+  btn.style.display='none';
+ }
+}
+
+function _openCart(){
+ var list=document.getElementById('cl');
+ list.innerHTML='';
+ var total=0;
+ Object.values(_cart).forEach(function(item){
+  if(!item.qty) return;
+  total+=item.price*item.qty;
+  var row=document.createElement('div');
+  row.className='ri';
+  var nd=document.createElement('div');nd.className='rn';
+  nd.innerHTML='<span style="margin-right:6px">'+item.emoji+'</span>'+item.name;
+  var ctrl=document.createElement('div');ctrl.className='rc';
+  var bm=document.createElement('button');bm.textContent='−';
+  var qs=document.createElement('span');qs.className='rq';qs.textContent=item.qty;
+  var bp=document.createElement('button');bp.textContent='+';
+  (function(n){
+   bm.onclick=function(){_chg(n,-1);};
+   bp.onclick=function(){_chg(n,1);};
+  })(item.name);
+  ctrl.appendChild(bm);ctrl.appendChild(qs);ctrl.appendChild(bp);
+  var pd=document.createElement('div');pd.className='rp';
+  pd.textContent='₩'+(item.price*item.qty).toLocaleString();
+  row.appendChild(nd);row.appendChild(ctrl);row.appendChild(pd);
+  list.appendChild(row);
+ });
+ document.getElementById('cart-total-price').textContent='₩'+total.toLocaleString();
+ document.getElementById('cs').classList.add('open');
+ document.getElementById('overlay').style.display='block';
+}
+
+function _closeCart(){
+ document.getElementById('cs').classList.remove('open');
+ document.getElementById('overlay').style.display='none';
+}
+
+function _chg(name,d){
+ if(!_cart[name]) return;
+ _cart[name].qty+=d;
+ if(_cart[name].qty<=0) delete _cart[name];
+ var el=document.getElementById('sc-'+name.replace(/\W/g,''));
+ if(el){
+  var q=(_cart[name]&&_cart[name].qty)||0;
+  el.textContent=q;el.className='mc'+(q>0?' on':'');
+ }
+ _openCart();_updBtn();
+ if(!Object.keys(_cart).length) _closeCart();
+}
+
+function _searchAddr(){
+ new daum.Postcode({
+  oncomplete:function(data){
+   _addr=data.roadAddress||data.jibunAddress;
+   _addrFull=_addr;
+   document.getElementById('addr-btn').textContent='📍 '+_addr;
+   document.getElementById('addr-btn').style.color='#1e293b';
+   document.getElementById('addr-detail').style.display='block';
+   document.getElementById('sf-addr-btn').textContent='📍 '+_addr;
+   document.getElementById('sf-addr-btn').style.color='#1e293b';
+   document.getElementById('sf-addr-detail').style.display='block';
+  }
+ }).open();
+}
+
+function _submitOrder(){
+ var name=document.getElementById('sf-name').value.trim()||document.getElementById('cust-name').value.trim();
+ var phone=document.getElementById('sf-phone').value.trim()||document.getElementById('cust-phone').value.trim();
+ var memo=document.getElementById('sf-memo').value.trim()||document.getElementById('cust-memo').value.trim();
+ var detail=document.getElementById('sf-addr-detail').value.trim()||document.getElementById('addr-detail').value.trim();
+ var fullAddr=_addr+(detail?' '+detail:'');
+
+ if(!_addr){alert('배달 주소를 입력해주세요');return;}
+ if(!name){alert('이름을 입력해주세요');return;}
+ if(!phone){alert('연락처를 입력해주세요');return;}
+
+ var items=Object.values(_cart).filter(function(i){return i.qty>0;});
+ if(!items.length){alert('메뉴를 선택해주세요');return;}
+
+ var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+ var btn=document.getElementById('order-btn');
+ btn.disabled=true;btn.textContent='주문 중...';
+
+ _db.collection('filo_orders').add({
+  dealerId:_did,
+  type:'delivery',
+  status:'pending',
+  items:items,
+  total:total,
+  customer:name,
+  phone:phone,
+  address:fullAddr,
+  memo:memo,
+  createdAt:new Date().toISOString()
+ }).then(function(ref){
+  _closeCart();
+  _cart={};
+  _updBtn();
+  document.querySelectorAll('.mc').forEach(function(c){c.textContent='';c.className='mc';});
+  var orderInfo=items.map(function(i){return i.emoji+' '+i.name+' ×'+i.qty;}).join('\n');
+  document.getElementById('dn-order').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n'+orderInfo+'\n\n배달주소: '+fullAddr;
+  document.getElementById('dn').style.display='flex';
+ }).catch(function(e){
+  alert('주문 실패: '+e.message);
+  btn.disabled=false;btn.textContent=_t('order');
+ });
+}
+
+function _switchTab(tab){
+ document.getElementById('tab-menu').classList.toggle('on',tab==='menu');
+ document.getElementById('tab-delivery').classList.toggle('on',tab==='delivery');
+ document.getElementById('menu-wrap').style.display=tab==='menu'?'flex':'none';
+ document.getElementById('delivery-wrap').style.display=tab==='delivery'?'block':'none';
+}
+
+function _setLang(l){
+ _lang=l;
+ ['ko','en','zh','ja'].forEach(function(x){
+  document.getElementById('lb-'+x).classList.toggle('on',x===l);
+ });
+ document.getElementById('tab-menu').textContent=_t('menu');
+ document.getElementById('tab-delivery').textContent=_t('delivery');
+ document.getElementById('order-btn').textContent=_t('order');
+ document.getElementById('tl').textContent=_t('total');
+ document.getElementById('dn-msg').textContent=_t('done');
+ document.getElementById('dn-sub').textContent=_t('sub');
+ document.getElementById('dn-back').textContent=_t('back');
+}
+</script>
+</body>
+</html>
