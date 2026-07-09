@@ -1595,26 +1595,18 @@ async function acceptExchange(){
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
-        let body; try { body = await request.json(); } catch(e) { body = {}; }
+        const body = await request.json();
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-          });
-          const resText = await res.text();
-          let translated = name;
-          try {
-            const data = JSON.parse(resText);
-            translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-          } catch(e) {}
-          return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({translated:name}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+        });
+        const data = await res.json();
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
@@ -1691,26 +1683,18 @@ async function acceptExchange(){
       /* ★ 메뉴 공개 API (로그인 불필요) */
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
-        let body; try { body = await request.json(); } catch(e) { body = {}; }
+        const body = await request.json();
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-          });
-          const resText = await res.text();
-          let translated = name;
-          try {
-            const data = JSON.parse(resText);
-            translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-          } catch(e) {}
-          return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({translated:name}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+        });
+        const data = await res.json();
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
@@ -1766,13 +1750,9 @@ async function acceptExchange(){
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
-      // API 경로는 slug로 처리하지 않음
-      if (path.startsWith('/api/')) {
-        return new Response(JSON.stringify({error:'not found'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-      }
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
-      if (filoPath && !path.startsWith('/api/') && !path.startsWith('/order') && !path.startsWith('/store') && !path.startsWith('/kitchen') && !path.startsWith('/staff') && !path.startsWith('/member')) {
+      if (filoPath) {
         const filoHtml = await env.DONWAY_ASSETS.get('filo.html', 'text');
         if (filoHtml) {
           const storeKey = decodeURIComponent(filoPath);
