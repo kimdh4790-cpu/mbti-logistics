@@ -1595,7 +1595,7 @@ async function acceptExchange(){
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
-        const body = await request.json();
+        let body; try { body = await request.json(); } catch(e) { body = {}; }
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
@@ -1683,7 +1683,7 @@ async function acceptExchange(){
       /* ★ 메뉴 공개 API (로그인 불필요) */
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
-        const body = await request.json();
+        let body; try { body = await request.json(); } catch(e) { body = {}; }
         const name = body.name || '';
         const lang = body.lang || 'en';
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
