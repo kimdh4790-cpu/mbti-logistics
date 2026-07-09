@@ -1,3 +1,29 @@
+// ================================================================
+// ⚠️ _worker.js — Claude 인수인계 필독
+// ================================================================
+// 작성일: 2026-07-10 | 담당: 엠비티아이 형우님
+//
+// [라우팅]
+// donway.ai.kr → settle.html (KV키: settle.html ← 절대변경금지)
+// filo.ai.kr   → filo.html + API
+// dine.ne.kr   → dine.html
+//
+// [filo.ai.kr API]
+// /api/translate → AI 메뉴 번역 (Anthropic API)
+// /api/store     → 매장 정보 조회 (비로그인)
+// /api/menus     → 메뉴 목록 (비로그인)
+// /order         → order.html (테이블QR)
+// /store/*       → store.html (배달주문)
+//
+// [KV 키 — 절대 변경 금지]
+// settle.html → 'settle.html' (donway-pages/index.html 아님!)
+//
+// [배포]
+// curl -o _worker.js "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/_worker.js?bust=%RANDOM%"
+// npx wrangler deploy
+//
+// [Secrets] ANTHROPIC_API_KEY
+// ================================================================
 // DONWAY Worker v20260613185004
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
