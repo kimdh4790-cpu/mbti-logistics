@@ -94,6 +94,16 @@ textarea.form-input{height:80px;resize:none}
 
 /* 오버레이 */
 #overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:250;display:none}
+
+#tl-mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:none;align-items:flex-end}
+#tl-mdl.open{display:flex}
+#tl-mb{background:#fff;border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:75vh}
+#tl-mb .tl-ico{font-size:44px;text-align:center;margin-bottom:8px}
+#tl-mb .tl-name{font-size:17px;font-weight:900;text-align:center;margin-bottom:4px;color:#1e293b}
+#tl-mb .tl-tr{font-size:13px;color:#0891b2;text-align:center;margin-bottom:14px;min-height:20px;font-weight:700}
+#tl-mb .tl-price{font-size:22px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:16px}
+#tl-mb .tl-add{width:100%;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer}
+.tl-spin{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
 </style>
 </head>
 <body>
@@ -211,8 +221,84 @@ textarea.form-input{height:80px;resize:none}
 </div>
 
 <!-- 카카오 주소 API -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+var _tlCache={};
+var _curMdlMenu=null;
+
+function _openMdl(m){
+ _curMdlMenu=m;
+ document.getElementById('tl-ico').textContent=m.emoji||'🍽';
+ document.getElementById('tl-name').textContent=m.name;
+ document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
+ document.getElementById('tl-add').textContent='\ub2f4\uae30';
+ document.getElementById('tl-mdl').classList.add('open');
+ if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
+ var ck=m.name+'_'+_lang;
+ if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
+ document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
+ fetch('/api/translate',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({name:m.name,lang:_lang})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  var t=d.translated||m.name;
+  _tlCache[ck]=t;
+  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
+   document.getElementById('tl-tr').textContent=t;
+  }
+ }).catch(function(){document.getElementById('tl-tr').textContent='';});
+}
+
+function _closeTlMdl(){
+ document.getElementById('tl-mdl').classList.remove('open');
+ _curMdlMenu=null;
+}
+
+function _addFromTlMdl(){
+ if(_curMdlMenu) _add(_curMdlMenu);
+ _closeTlMdl();
+}
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+var _tlCache={};
+var _curMdlMenu=null;
+
+function _openMdl(m){
+ _curMdlMenu=m;
+ document.getElementById('tl-ico').textContent=m.emoji||'🍽';
+ document.getElementById('tl-name').textContent=m.name;
+ document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
+ document.getElementById('tl-add').textContent='\ub2f4\uae30';
+ document.getElementById('tl-mdl').classList.add('open');
+ if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
+ var ck=m.name+'_'+_lang;
+ if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
+ document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
+ fetch('/api/translate',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({name:m.name,lang:_lang})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  var t=d.translated||m.name;
+  _tlCache[ck]=t;
+  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
+   document.getElementById('tl-tr').textContent=t;
+  }
+ }).catch(function(){document.getElementById('tl-tr').textContent='';});
+}
+
+function _closeTlMdl(){
+ document.getElementById('tl-mdl').classList.remove('open');
+ _curMdlMenu=null;
+}
+
+function _addFromTlMdl(){
+ if(_curMdlMenu) _add(_curMdlMenu);
+ _closeTlMdl();
+}
+</script>
 <script>
 var _did='', _slug='', _menus=[], _cart={}, _lang='ko', _addr='', _addrFull='';
 
@@ -323,7 +409,7 @@ function _renderMenus(){
    '<div class="mp">₩'+(m.price||0).toLocaleString()+'</div>'+
    '<div class="mc" id="sc-'+m.name.replace(/\W/g,'')+'"></div>';
   (function(menu){
-   item.onclick=function(){_add(menu);};
+   item.onclick=function(){_openMdl(menu);};
   })(m);
   grid.appendChild(item);
  });
@@ -494,6 +580,54 @@ function _setLang(l){
  document.getElementById('dn-sub').textContent=_t('sub');
  document.getElementById('dn-back').textContent=_t('back');
 }
+
+var _tlCache={};
+var _curMdlMenu=null;
+
+function _openMdl(m){
+ _curMdlMenu=m;
+ document.getElementById('tl-ico').textContent=m.emoji||'🍽';
+ document.getElementById('tl-name').textContent=m.name;
+ document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
+ document.getElementById('tl-add').textContent='\ub2f4\uae30';
+ document.getElementById('tl-mdl').classList.add('open');
+ if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
+ var ck=m.name+'_'+_lang;
+ if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
+ document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
+ fetch('/api/translate',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({name:m.name,lang:_lang})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  var t=d.translated||m.name;
+  _tlCache[ck]=t;
+  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
+   document.getElementById('tl-tr').textContent=t;
+  }
+ }).catch(function(){document.getElementById('tl-tr').textContent='';});
+}
+
+function _closeTlMdl(){
+ document.getElementById('tl-mdl').classList.remove('open');
+ _curMdlMenu=null;
+}
+
+function _addFromTlMdl(){
+ if(_curMdlMenu) _add(_curMdlMenu);
+ _closeTlMdl();
+}
 </script>
+
+<div id="tl-mdl" onclick="if(event.target===this)_closeTlMdl()">
+  <div id="tl-mb">
+    <div class="tl-ico" id="tl-ico">🍽</div>
+    <div class="tl-name" id="tl-name"></div>
+    <div class="tl-tr" id="tl-tr"></div>
+    <div class="tl-price" id="tl-price"></div>
+    <button class="tl-add" id="tl-add" onclick="_addFromTlMdl()">담기</button>
+  </div>
+</div>
 </body>
 </html>
