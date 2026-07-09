@@ -1262,25 +1262,20 @@ function _buildFiloNav(){
    {ic:'🔔',l:'자동 발주',p:'auto_order'},
   ]});
  }
- if(hasAll||hasSub('qr')||hasSub('payroll')){
+ if(hasAll||hasSub('qr')){
   menus.push({s:'👥 인사',items:[
-   {ic:'👤',l:'직원 관리',p:'members'},
    {ic:'🔐',l:'QR 출퇴근',p:'attendance'},
-   {ic:'💼',l:'급여 현황',p:'payroll_dine',ext:true},
    {ic:'👤',l:'직원 QR',p:'qr_staff'},
   ]});
- } else {
-  menus.push({s:'👥 인사',items:[{ic:'👤',l:'직원 관리',p:'members'}]});
  }
  if(hasAll||hasSub('kiosk')){
   menus.push({s:'🎁 고객',items:[
-   {ic:'🎁',l:'회원 QR',p:'member_qr'},
    {ic:'📋',l:'테이블 QR',p:'table_qr'},
-   {ic:'⭐',l:'포인트 관리',p:'points'},
-   {ic:'🎫',l:'회원권',p:'membership'},
   ]});
  }
  menus.push({s:'⚙️ 설정',items:[
+  {ic:'🗓',l:'예약·달력',p:'schedule'},
+  {ic:'🧾',l:'세무사 연동',p:'tax_share'},
   {ic:'⚙️',l:'설정',p:'settings'},
   {ic:'💳',l:'구독 관리',p:'subscription'},
  ]});
