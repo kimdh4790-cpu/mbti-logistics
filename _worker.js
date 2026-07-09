@@ -1750,9 +1750,13 @@ async function acceptExchange(){
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
+      // API 경로는 slug로 처리하지 않음
+      if (path.startsWith('/api/')) {
+        return new Response(JSON.stringify({error:'not found'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
-      if (filoPath && !filoPath.startsWith('api/')) {
+      if (filoPath && !path.startsWith('/api/') && !path.startsWith('/order') && !path.startsWith('/store') && !path.startsWith('/kitchen') && !path.startsWith('/staff') && !path.startsWith('/member')) {
         const filoHtml = await env.DONWAY_ASSETS.get('filo.html', 'text');
         if (filoHtml) {
           const storeKey = decodeURIComponent(filoPath);
