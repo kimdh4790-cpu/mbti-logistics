@@ -4003,62 +4003,254 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 var _ordersUnsub = null;
 function _filoPageOrders(el){
  var did=_CU.dealerId||_CU.uid;
- el.innerHTML='<div class="slide-up">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
-  '<div style="font-size:17px;font-weight:900">🔔 주문 대기</div>'+
-  '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+(_CU.dealerId||_CU.uid),\'_blank\')" style="padding:6px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">🍳 주방화면 열기</button>'+
-  '<div class="live-dot"></div></div>'+
-  '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">⏳ 로딩 중...</div></div>'+
-  '</div>';
- if(_ordersUnsub) _ordersUnsub();
- var today=new Date().toISOString().slice(0,10);
- _ordersUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did)
-  .where('date','==',today)
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
 
+ /* 헤더 */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px';
+ hdr.innerHTML=
+  '<div style="display:flex;align-items:center;gap:10px">'+
+  '<div style="font-size:17px;font-weight:900">🔔 주문 대기</div>'+
+  '<div class="live-dot"></div>'+
+  '</div>'+
+  '<div style="display:flex;gap:6px">'+
+  '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+did,\'_blank\')" style="padding:6px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">🍳 주방화면</button>'+
+  '<button onclick="_filoOrdersFilter(\'all\')" id="of-all" class="btn btn-primary btn-sm" style="border-radius:100px;font-size:11px">전체</button>'+
+  '<button onclick="_filoOrdersFilter(\'pending\')" id="of-pending" class="btn btn-sm" style="border-radius:100px;font-size:11px">대기</button>'+
+  '<button onclick="_filoOrdersFilter(\'done\')" id="of-done" class="btn btn-sm" style="border-radius:100px;font-size:11px">완료</button>'+
+  '</div>';
+ wrap.appendChild(hdr);
+
+ /* KPI */
+ var kpi=document.createElement('div');
+ kpi.id='order-kpi';
+ kpi.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px';
+ kpi.innerHTML=
+  '<div class="kpi-card"><div class="kpi-label">오늘 주문</div><div class="kpi-val" id="ok-total" style="color:#a78bfa">-</div></div>'+
+  '<div class="kpi-card"><div class="kpi-label">대기 중</div><div class="kpi-val" id="ok-pending" style="color:#f59e0b">-</div></div>'+
+  '<div class="kpi-card"><div class="kpi-label">완료</div><div class="kpi-val" id="ok-done" style="color:#22c55e">-</div></div>'+
+  '<div class="kpi-card"><div class="kpi-label">매출</div><div class="kpi-val" id="ok-rev" style="color:#38bdf8;font-size:14px">-</div></div>';
+ wrap.appendChild(kpi);
+
+ /* 탭 (테이블QR / 배달 / 전체) */
+ var tabs=document.createElement('div');
+ tabs.style.cssText='display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--bd);padding-bottom:8px';
+ tabs.innerHTML=
+  '<button id="ot-all" onclick="_filoOrdersTabSwitch(\'all\')" style="padding:6px 14px;border:none;background:#0891b2;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">전체</button>'+
+  '<button id="ot-table" onclick="_filoOrdersTabSwitch(\'table\')" style="padding:6px 14px;border:none;background:var(--b3);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🪑 테이블</button>'+
+  '<button id="ot-delivery" onclick="_filoOrdersTabSwitch(\'delivery\')" style="padding:6px 14px;border:none;background:var(--b3);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🛵 배달</button>'+
+  '<button id="ot-counter" onclick="_filoOrdersTabSwitch(\'counter\')" style="padding:6px 14px;border:none;background:var(--b3);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🏪 카운터</button>';
+ wrap.appendChild(tabs);
+
+ /* 리스트 */
+ var listEl=document.createElement('div');
+ listEl.id='orders-list';
+ listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">⏳ 로딩 중...</div>';
+ wrap.appendChild(listEl);
+ el.appendChild(wrap);
+
+ window._orderTab='all';
+ window._orderFilter='all';
+ window._allOrders=[];
+
+ if(_ordersUnsub) _ordersUnsub();
+
+ var today=new Date().toISOString().slice(0,10);
+
+ // filo_sales (배달/카운터) + filo_orders (테이블QR) 통합
+ var salesOrders=[], tableOrders=[];
+ var updated=false;
+
+ function mergeAndRender(){
+  var all=salesOrders.concat(tableOrders);
+  all.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+  window._allOrders=all;
+
+  // KPI
+  var total=all.length;
+  var pending=all.filter(function(o){return o.status==='pending'||o.status==='cooking';}).length;
+  var done=all.filter(function(o){return o.status==='done';}).length;
+  var rev=all.filter(function(o){return o.status!=='cancel';}).reduce(function(s,o){return s+(o.total||0);},0);
+  document.getElementById('ok-total').textContent=total;
+  document.getElementById('ok-pending').textContent=pending;
+  document.getElementById('ok-done').textContent=done;
+  document.getElementById('ok-rev').textContent='₩'+rev.toLocaleString();
+
+  _filoRenderOrderList(did);
+ }
+
+ // filo_sales 리스너
+ var salesUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(snap){
-   var orders=[];
-   snap.forEach(function(doc){orders.push(Object.assign({_id:doc.id},doc.data()));});
-   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
-   var listEl=document.getElementById('orders-list');
-   if(!listEl)return;
-   if(!orders.length){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📭 대기 중인 주문 없음</div>';return;}
-    listEl.innerHTML=orders.map(function(o){
-     var statusColor=o.status==='done'?'#22c55e':o.status==='cancel'?'#ef4444':'#f59e0b';
-     var statusLabel=o.status==='done'?'완료':o.status==='cancel'?'취소':'대기중';
-     var timeStr=o.createdAt?(function(){
-      var d=new Date(o.createdAt);
-      var kst=new Date(d.getTime()+9*3600000);
-      var mm=(kst.getUTCMonth()+1).toString().padStart(2,'0');
-      var dd=kst.getUTCDate().toString().padStart(2,'0');
-      var hh=kst.getUTCHours().toString().padStart(2,'0');
-      var mi=kst.getUTCMinutes().toString().padStart(2,'0');
-      return mm+'/'+dd+' '+hh+':'+mi;
-     })():'';
-     var tName=o.tableName||(o.tableId?'🪑 테이블 '+o.tableId:'🏪 카운터');
-     return '<div class="card" style="margin-bottom:10px;border-left:3px solid '+statusColor+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
-      '<div style="display:flex;align-items:center;gap:8px">'+
-      '<div style="font-size:13px;font-weight:900">'+tName+'</div>'+
-      (timeStr?'<div style="font-size:10px;color:var(--t3)">'+timeStr+'</div>':'')+
-      '</div>'+
-      '<span class="badge" style="background:'+statusColor+'20;color:'+statusColor+'">'+statusLabel+'</span></div>'+
-      '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">'+
-      (o.items||[]).map(function(it){return it.name+' x'+it.qty;}).join(' / ')+'</div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center">'+
-      '<div style="font-size:15px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</div>'+
-      (o.status!=='done'?
-       '<div style="display:flex;gap:6px">'+
-       '<button data-oid="'+o._id+'" data-st="done" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
-       '<button data-oid="'+o._id+'" data-st="cancel" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
-       '</div>':'')+
-      '</div></div>';
-    }).join('');
-   // 새 주문 알림음
-   if(snap.docChanges().some(function(c){return c.type==='added'&&c.doc.data().status!=='done';})){
-    try{var a=new AudioContext();var o2=a.createOscillator();o2.connect(a.destination);o2.frequency.value=880;o2.start();o2.stop(a.currentTime+0.15);}catch(e){}
+   salesOrders=[];
+   snap.forEach(function(doc){
+    var d=doc.data();
+    salesOrders.push(Object.assign({_id:doc.id,_src:'sales'},d));
+   });
+   // 새 주문 소리
+   if(snap.docChanges().some(function(c){return c.type==='added'&&c.doc.data().status!=='done'&&c.doc.data().status!=='cancel';})){
+    _filoOrderBeep();
+    _filoNewOrderPopup(snap.docChanges().find(function(c){return c.type==='added'&&c.doc.data().status!=='done';}));
    }
+   mergeAndRender();
   });
+
+ // filo_orders 리스너 (테이블QR)
+ var ordersUnsub=_db.collection('filo_orders')
+  .where('dealerId','==',did).where('createdAt','>=',today)
+  .onSnapshot(function(snap){
+   tableOrders=[];
+   snap.forEach(function(doc){
+    var d=doc.data();
+    tableOrders.push(Object.assign({_id:doc.id,_src:'table',type:'table'},d));
+   });
+   if(snap.docChanges().some(function(c){return c.type==='added'&&c.doc.data().status==='pending';})){
+    _filoOrderBeep();
+    _filoNewOrderPopup(snap.docChanges().find(function(c){return c.type==='added'&&c.doc.data().status==='pending';}));
+   }
+   mergeAndRender();
+  });
+
+ _ordersUnsub=function(){salesUnsub();ordersUnsub();};
+}
+
+window._orderTab='all';
+window._orderFilter='all';
+window._allOrders=[];
+
+function _filoOrdersTabSwitch(tab){
+ window._orderTab=tab;
+ ['all','table','delivery','counter'].forEach(function(t){
+  var btn=document.getElementById('ot-'+t);
+  if(btn) btn.style.background=t===tab?'#0891b2':'var(--b3)';
+  if(btn) btn.style.color=t===tab?'#fff':'var(--t2)';
+ });
+ _filoRenderOrderList(_CU.dealerId||_CU.uid);
+}
+
+function _filoOrdersFilter(f){
+ window._orderFilter=f;
+ ['all','pending','done'].forEach(function(x){
+  var btn=document.getElementById('of-'+x);
+  if(!btn) return;
+  btn.className=x===f?'btn btn-primary btn-sm':'btn btn-sm';
+  btn.style.borderRadius='100px';btn.style.fontSize='11px';
+ });
+ _filoRenderOrderList(_CU.dealerId||_CU.uid);
+}
+
+function _filoRenderOrderList(did){
+ var listEl=document.getElementById('orders-list');
+ if(!listEl) return;
+ var orders=window._allOrders||[];
+
+ // 탭 필터
+ if(window._orderTab==='table') orders=orders.filter(function(o){return o._src==='table'||o.type==='table';});
+ else if(window._orderTab==='delivery') orders=orders.filter(function(o){return o.type==='delivery';});
+ else if(window._orderTab==='counter') orders=orders.filter(function(o){return o._src==='sales'&&o.type!=='delivery';});
+
+ // 상태 필터
+ if(window._orderFilter==='pending') orders=orders.filter(function(o){return o.status==='pending'||o.status==='cooking';});
+ else if(window._orderFilter==='done') orders=orders.filter(function(o){return o.status==='done';});
+
+ if(!orders.length){
+  listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📭 주문 없음</div>';
+  return;
+ }
+
+ listEl.innerHTML='';
+ orders.forEach(function(o){
+  var card=document.createElement('div');
+  card.className='card';
+  card.style.cssText='margin-bottom:10px;padding:14px';
+
+  var statusInfo={
+   pending:{color:'#f59e0b',label:'대기중',bg:'rgba(245,158,11,.1)'},
+   cooking:{color:'#0891b2',label:'조리중',bg:'rgba(8,145,178,.1)'},
+   ready:{color:'#a78bfa',label:'픽업대기',bg:'rgba(167,139,250,.1)'},
+   done:{color:'#22c55e',label:'완료',bg:'rgba(34,197,94,.1)'},
+   cancel:{color:'#ef4444',label:'취소',bg:'rgba(239,68,68,.1)'}
+  }[o.status||'pending']||{color:'#f59e0b',label:'대기중',bg:'rgba(245,158,11,.1)'};
+
+  var typeIcon=o._src==='table'?'🪑':o.type==='delivery'?'🛵':'🏪';
+  var typeName=o._src==='table'?(o.tableName||'테이블'):o.type==='delivery'?'배달':'카운터';
+
+  var timeStr='';
+  if(o.createdAt){
+   var d=new Date(o.createdAt);
+   var kst=new Date(d.getTime()+9*3600000);
+   timeStr=kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+  }
+
+  card.innerHTML=
+   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+   '<div style="display:flex;align-items:center;gap:8px">'+
+   '<span style="font-size:18px">'+typeIcon+'</span>'+
+   '<div>'+
+   '<div style="font-size:13px;font-weight:900">'+typeName+'</div>'+
+   '<div style="font-size:10px;color:var(--t3)">'+timeStr+(o.deliveryApp?' · '+o.deliveryApp:'')+'</div>'+
+   '</div></div>'+
+   '<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+statusInfo.bg+';color:'+statusInfo.color+'">'+statusInfo.label+'</span>'+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.6">'+
+   (o.items||[]).map(function(it){return it.name+' <b>×'+it.qty+'</b>';}).join(' &nbsp;·&nbsp; ')+
+   '</div>'+
+   '<div style="display:flex;justify-content:space-between;align-items:center">'+
+   '<div style="font-size:16px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</div>'+
+   '<div id="btn-area-'+o._id+'" style="display:flex;gap:6px"></div>'+
+   '</div>';
+
+  listEl.appendChild(card);
+
+  // 버튼 동적 생성
+  var btnArea=card.querySelector('#btn-area-'+o._id);
+  var col=o._src==='table'?'filo_orders':'filo_sales';
+  var st=o.status||'pending';
+
+  if(st==='pending'||st==='cooking'){
+   var b1=document.createElement('button');
+   b1.style.cssText='padding:6px 10px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer';
+   b1.textContent=st==='pending'?'🍳 조리시작':'✅ 완료';
+   (function(id,cur,c){
+    b1.onclick=function(){_db.collection(c).doc(id).update({status:cur==='pending'?'cooking':'done',updatedAt:new Date().toISOString()}).then(function(){_filoToast('상태 변경됨');});};
+   })(o._id,st,col);
+   btnArea.appendChild(b1);
+
+   var b2=document.createElement('button');
+   b2.style.cssText='padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer';
+   b2.textContent='취소';
+   (function(id,c){
+    b2.onclick=function(){if(!confirm('취소하시겠습니까?'))return;_db.collection(c).doc(id).update({status:'cancel',updatedAt:new Date().toISOString()}).then(function(){_filoToast('🗑 취소됨');});};
+   })(o._id,col);
+   btnArea.appendChild(b2);
+  }
+ });
+}
+
+function _filoOrderBeep(){
+ try{
+  var a=new(window.AudioContext||window.webkitAudioContext)();
+  [880,1100,880].forEach(function(f,i){
+   var o=a.createOscillator();var g=a.createGain();
+   o.connect(g);g.connect(a.destination);
+   o.frequency.value=f;g.gain.value=0.3;
+   o.start(a.currentTime+i*0.12);o.stop(a.currentTime+i*0.12+0.1);
+  });
+ }catch(e){}
+}
+
+function _filoNewOrderPopup(change){
+ if(!change) return;
+ var d=change.doc.data();
+ var popup=document.createElement('div');
+ popup.style.cssText='position:fixed;top:16px;right:16px;background:#0891b2;color:#fff;border-radius:14px;padding:14px 18px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);animation:slideIn .3s ease;max-width:280px';
+ popup.innerHTML='<div style="font-size:13px;font-weight:900;margin-bottom:4px">🔔 새 주문 접수!</div>'+
+  '<div style="font-size:11px;opacity:.85">'+(d.tableName||d.type||'주문')+'&nbsp;·&nbsp;₩'+(d.total||0).toLocaleString()+'</div>';
+ document.body.appendChild(popup);
+ setTimeout(function(){popup.remove();},4000);
 }
 
 function _filoOrderStatus(orderId, status){
@@ -5297,42 +5489,71 @@ function _filoPageDelivery(el){
  el.innerHTML='';
  var wrap=document.createElement('div');
  wrap.className='slide-up';
- wrap.style.cssText='max-width:900px;margin:0 auto';
+ wrap.style.maxWidth='960px';wrap.style.margin='0 auto';
 
  /* 헤더 */
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
- hdr.innerHTML='<div><div class="page-title">🛵 배달 주문 관리</div>'+
-  '<div class="page-sub">배달앱 주문을 한곳에서 접수·관리합니다</div></div>';
+ hdr.innerHTML='<div><div class="page-title">🛵 배달 주문 관리</div><div class="page-sub">배달앱 주문을 한곳에서 접수·관리합니다</div></div>';
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary btn-sm';
- addBtn.textContent='+ 주문 접수';
+ addBtn.innerHTML='+ 주문 접수';
  addBtn.onclick=function(){_filoDeliveryAdd(did);};
  hdr.appendChild(addBtn);
  wrap.appendChild(hdr);
 
- /* 오늘 배달 현황 KPI */
+ /* KPI */
  var kpiWrap=document.createElement('div');
  kpiWrap.id='delivery-kpi';
  kpiWrap.className='kpi-grid';
  kpiWrap.style.cssText='grid-template-columns:repeat(4,1fr);margin-bottom:14px';
- kpiWrap.innerHTML='<div class="kpi-card kpi-revenue"><div class="kpi-label">오늘 배달 건수</div><div class="kpi-val" id="dkpi-cnt" style="color:#a78bfa">-</div></div>'+
+ kpiWrap.innerHTML=
+  '<div class="kpi-card kpi-revenue"><div class="kpi-label">오늘 배달 건수</div><div class="kpi-val" id="dkpi-cnt" style="color:#a78bfa">-</div></div>'+
   '<div class="kpi-card kpi-profit"><div class="kpi-label">배달 매출</div><div class="kpi-val" id="dkpi-rev" style="color:#22c55e">-</div></div>'+
   '<div class="kpi-card kpi-cost"><div class="kpi-label">배달비 합계</div><div class="kpi-val" id="dkpi-fee" style="color:#ef4444">-</div></div>'+
-  '<div class="kpi-card kpi-margin"><div class="kpi-label">앱별 비중</div><div class="kpi-val" id="dkpi-top" style="color:#f59e0b;font-size:14px">-</div></div>';
+  '<div class="kpi-card kpi-margin"><div class="kpi-label">앱별 비중</div><div class="kpi-val" id="dkpi-top" style="color:#f59e0b;font-size:13px">-</div></div>';
  wrap.appendChild(kpiWrap);
+
+ /* 상태 필터 탭 */
+ var filterWrap=document.createElement('div');
+ filterWrap.style.cssText='display:flex;gap:4px;margin-bottom:12px';
+ var filters=[['all','전체'],['cooking','조리중'],['ready','픽업대기'],['delivered','배달완료'],['cancelled','취소']];
+ filters.forEach(function(f){
+  var btn=document.createElement('button');
+  btn.id='dvf-'+f[0];
+  btn.style.cssText='padding:6px 12px;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;'+(f[0]==='all'?'background:#0891b2;color:#fff':'background:var(--b3);color:var(--t2)');
+  btn.textContent=f[1];
+  (function(fv){btn.onclick=function(){_filoDeliveryFilter(fv);};})(f[0]);
+  filterWrap.appendChild(btn);
+ });
+ wrap.appendChild(filterWrap);
 
  /* 주문 목록 */
  var listWrap=document.createElement('div');
  listWrap.id='delivery-list';
  listWrap.innerHTML='<div class="card" style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
  wrap.appendChild(listWrap);
-
  el.appendChild(wrap);
+
+ window._dvFilter='all';
  _filoLoadDelivery(did);
 }
 
-var _deliveryUnsub=null;
+function _filoDeliveryFilter(f){
+ window._dvFilter=f;
+ ['all','cooking','ready','delivered','cancelled'].forEach(function(x){
+  var btn=document.getElementById('dvf-'+x);
+  if(!btn) return;
+  btn.style.background=x===f?'#0891b2':'var(--b3)';
+  btn.style.color=x===f?'#fff':'var(--t2)';
+ });
+ // 현재 렌더된 카드 필터
+ document.querySelectorAll('.dv-card').forEach(function(card){
+  var st=card.dataset.status;
+  card.style.display=(f==='all'||st===f)?'':'none';
+ });
+}
+
 function _filoLoadDelivery(did){
  if(_deliveryUnsub){_deliveryUnsub();_deliveryUnsub=null;}
  var today=new Date().toISOString().slice(0,10);
@@ -5349,49 +5570,106 @@ function _filoLoadDelivery(did){
 }
 
 function _filoRenderDelivery(did,orders){
+ var listWrap=document.getElementById('delivery-list');
+ if(!listWrap) return;
+
  /* KPI */
- var cnt=orders.length;
- var rev=orders.reduce(function(s,o){return s+(o.total||0);},0);
+ var cnt=orders.filter(function(o){return o.deliveryStatus!=='cancelled';}).length;
+ var rev=orders.filter(function(o){return o.deliveryStatus!=='cancelled';}).reduce(function(s,o){return s+(o.total||0);},0);
  var fee=orders.reduce(function(s,o){return s+(o.deliveryFee||0);},0);
- var appMap={};
- orders.forEach(function(o){var a=o.deliveryApp||'기타';appMap[a]=(appMap[a]||0)+1;});
- var topApp=Object.entries(appMap).sort(function(a,b){return b[1]-a[1];})[0];
+ var appCnt={};
+ orders.forEach(function(o){if(o.deliveryApp) appCnt[o.deliveryApp]=(appCnt[o.deliveryApp]||0)+1;});
+ var topApp=Object.keys(appCnt).sort(function(a,b){return appCnt[b]-appCnt[a];})[0]||'-';
 
- var e=function(id){return document.getElementById(id);};
- if(e('dkpi-cnt'))e('dkpi-cnt').textContent=cnt+'건';
- if(e('dkpi-rev'))e('dkpi-rev').textContent='₩'+rev.toLocaleString();
- if(e('dkpi-fee'))e('dkpi-fee').textContent='₩'+fee.toLocaleString();
- if(e('dkpi-top'))e('dkpi-top').textContent=topApp?topApp[0]+' '+topApp[1]+'건':'-';
+ var dkpiCnt=document.getElementById('dkpi-cnt');
+ var dkpiRev=document.getElementById('dkpi-rev');
+ var dkpiFee=document.getElementById('dkpi-fee');
+ var dkpiTop=document.getElementById('dkpi-top');
+ if(dkpiCnt) dkpiCnt.textContent=cnt+'건';
+ if(dkpiRev) dkpiRev.textContent='₩'+rev.toLocaleString();
+ if(dkpiFee) dkpiFee.textContent='₩'+fee.toLocaleString();
+ if(dkpiTop) dkpiTop.textContent=topApp+(appCnt[topApp]?' ('+appCnt[topApp]+'건)':'');
 
- var wrap=document.getElementById('delivery-list');
- if(!wrap)return;
- wrap.innerHTML='';
+ if(!orders.length){
+  listWrap.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">📭 오늘 배달 주문 없음</div>';
+  return;
+ }
 
- /* 앱별 필터 */
- var apps=['전체','배민','쿠팡이츠','요기요','기타'];
- var filterWrap=document.createElement('div');
- filterWrap.style.cssText='display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap';
- apps.forEach(function(app){
-  var btn=document.createElement('button');
-  btn.style.cssText='padding:6px 14px;border-radius:20px;border:1px solid var(--bd2);background:var(--surface2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;transition:.15s';
-  btn.textContent=app==='전체'?app+'('+cnt+')':app;
-  btn.onclick=function(){
-   document.querySelectorAll('.delivery-filter-btn').forEach(function(b){
-    b.style.background='var(--surface2)';b.style.color='var(--t2)';b.style.borderColor='var(--bd2)';
-   });
-   this.style.background='var(--br)';this.style.color='#fff';this.style.borderColor='var(--br)';
-   var filtered=app==='전체'?orders:orders.filter(function(o){return (o.deliveryApp||'기타')===app;});
-   _filoRenderDeliveryCards(did,filtered,wrap.querySelector('#delivery-cards'));
-  };
-  btn.className='delivery-filter-btn';
-  filterWrap.appendChild(btn);
+ var statusInfo={
+  cooking:{color:'#0891b2',label:'🍳 조리중',bg:'rgba(8,145,178,.1)'},
+  ready:{color:'#a78bfa',label:'📦 픽업대기',bg:'rgba(167,139,250,.1)'},
+  delivered:{color:'#22c55e',label:'✅ 배달완료',bg:'rgba(34,197,94,.1)'},
+  cancelled:{color:'#ef4444',label:'❌ 취소',bg:'rgba(239,68,68,.1)'},
+  pending:{color:'#f59e0b',label:'⏳ 접수됨',bg:'rgba(245,158,11,.1)'}
+ };
+ var appIcon={'배민':'🟢','쿠팡이츠':'🔴','요기요':'🟣','기타':'🛵'};
+ var nextStatus={pending:'cooking',cooking:'ready',ready:'delivered'};
+ var nextLabel={pending:'조리 시작',cooking:'픽업 대기',ready:'배달 완료'};
+
+ listWrap.innerHTML='';
+ orders.forEach(function(o){
+  var si=statusInfo[o.deliveryStatus||'pending']||statusInfo.pending;
+  var dvFilter=window._dvFilter||'all';
+  var show=dvFilter==='all'||(o.deliveryStatus||'pending')===dvFilter;
+
+  var card=document.createElement('div');
+  card.className='card dv-card';
+  card.dataset.status=o.deliveryStatus||'pending';
+  card.style.cssText='margin-bottom:10px;padding:14px;border-left:3px solid '+si.color+(show?'':'display:none');
+  if(!show) card.style.display='none';
+
+  var timeStr='';
+  if(o.createdAt){
+   var d=new Date(o.createdAt);
+   var kst=new Date(d.getTime()+9*3600000);
+   timeStr=kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+  }
+
+  card.innerHTML=
+   '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+   '<div>'+
+   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+   '<span style="font-size:16px">'+(appIcon[o.deliveryApp]||'🛵')+'</span>'+
+   '<span style="font-size:13px;font-weight:900">'+(o.deliveryApp||'배달')+'</span>'+
+   (timeStr?'<span style="font-size:10px;color:var(--t3)">'+timeStr+'</span>':'')+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--t2)">'+(o.customer||'')+(o.phone?' · '+o.phone:'')+'</div>'+
+   (o.address?'<div style="font-size:11px;color:var(--t3);margin-top:2px">📍 '+o.address+'</div>':'')+
+   '</div>'+
+   '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+si.bg+';color:'+si.color+'">'+si.label+'</span>'+
+   '</div>'+
+   '<div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.6">'+
+   (o.items||[]).map(function(it){return (it.name||it)+(it.qty?' <b>×'+it.qty+'</b>':'');}).join(' &nbsp;·&nbsp; ')+
+   (o.memo?'<div style="margin-top:4px;color:#f59e0b;font-size:11px">💬 '+o.memo+'</div>':'')+
+   '</div>'+
+   '<div style="display:flex;justify-content:space-between;align-items:center">'+
+   '<div>'+
+   '<span style="font-size:16px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</span>'+
+   (o.deliveryFee?'<span style="font-size:11px;color:var(--t3);margin-left:8px">배달비 ₩'+o.deliveryFee.toLocaleString()+'</span>':'')+
+   '</div>'+
+   '<div id="dvbtn-'+o._id+'" style="display:flex;gap:6px"></div>'+
+   '</div>';
+
+  listWrap.appendChild(card);
+
+  // 버튼 생성
+  var btnArea=card.querySelector('#dvbtn-'+o._id);
+  var curSt=o.deliveryStatus||'pending';
+  if(nextStatus[curSt]){
+   var nb=document.createElement('button');
+   nb.style.cssText='padding:6px 12px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer';
+   nb.textContent='→ '+nextLabel[curSt];
+   (function(id,ns){nb.onclick=function(){_filoDeliveryStatus(id,ns);};})(o._id,nextStatus[curSt]);
+   btnArea.appendChild(nb);
+  }
+  if(curSt!=='delivered'&&curSt!=='cancelled'){
+   var cb=document.createElement('button');
+   cb.style.cssText='padding:6px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer';
+   cb.textContent='취소';
+   (function(id){cb.onclick=function(){_filoDeliveryCancel(id);};})(o._id);
+   btnArea.appendChild(cb);
+  }
  });
- wrap.appendChild(filterWrap);
-
- var cardsWrap=document.createElement('div');
- cardsWrap.id='delivery-cards';
- wrap.appendChild(cardsWrap);
- _filoRenderDeliveryCards(did,orders,cardsWrap);
 }
 
 function _filoRenderDeliveryCards(did,orders,wrap){
