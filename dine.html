@@ -167,8 +167,55 @@ select.inp option{background:var(--s2)}
 .login-box{background:var(--s2);border:1px solid var(--bd2);border-radius:24px;padding:32px;width:100%;max-width:360px;text-align:center}
 .login-logo{font-size:32px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--t3);margin-bottom:24px}
+
+/* 모바일 하단 탭바 */
+#mobile-tabs{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--bd);z-index:1000;padding-bottom:env(safe-area-inset-bottom)}
+#mobile-tabs .mt-bar{display:flex;align-items:stretch}
+#mobile-tabs .mt-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;font-size:9px;color:var(--t2);gap:3px;min-height:56px;border:none;background:transparent;-webkit-tap-highlight-color:transparent}
+#mobile-tabs .mt-item .mt-ico{font-size:20px;line-height:1}
+#mobile-tabs .mt-item.on{color:#0891b2}
+#mobile-tabs .mt-more{position:relative}
+#mobile-tabs .mt-more-menu{display:none;position:fixed;bottom:60px;left:0;right:0;background:var(--s1);border-top:1px solid var(--bd);padding:8px 0;z-index:1001}
+#mobile-tabs .mt-more-menu.open{display:block}
+#mobile-tabs .mt-more-menu .mm-item{display:flex;align-items:center;gap:12px;padding:14px 20px;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#mobile-tabs .mt-more-menu .mm-item:active{background:var(--b3)}
+@media(max-width:768px){
+ #mobile-tabs{display:block}
+ #content{padding-bottom:70px}
+}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
+</script>
 </head>
 <body>
 
@@ -243,39 +290,39 @@ select.inp option{background:var(--s2)}
    </div>
    <div class="nav-group">
     <div class="nav-group-title">홈</div>
-    <div class="nav-item active" onclick="_dinePage('dashboard',this)" ontouchend="event.preventDefault();_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
+    <div class="nav-item active" onclick="_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
    </div>
 
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)" ontouchend="event.preventDefault();_dineToggleGroup(this)">직원 관리<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)">직원 관리<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('staff',this)" ontouchend="event.preventDefault();_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
-     <div class="nav-item" onclick="_dinePage('attend',this)" ontouchend="event.preventDefault();_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
-     <div class="nav-item" onclick="_dinePage('schedule',this)" ontouchend="event.preventDefault();_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
-     <div class="nav-item" onclick="_dinePage('payroll',this)" ontouchend="event.preventDefault();_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
-     <div class="nav-item" onclick="_dinePage('payslip',this)" ontouchend="event.preventDefault();_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
+     <div class="nav-item" onclick="_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
+     <div class="nav-item" onclick="_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
+     <div class="nav-item" onclick="_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
+     <div class="nav-item" onclick="_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
+     <div class="nav-item" onclick="_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)" ontouchend="event.preventDefault();_dineToggleGroup(this)">정산<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)">정산<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('analytics',this)" ontouchend="event.preventDefault();_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
-     <div class="nav-item" onclick="_dinePage('settle',this)" ontouchend="event.preventDefault();_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
-     <div class="nav-item" onclick="_dinePage('cost',this)" ontouchend="event.preventDefault();_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
-     <div class="nav-item" onclick="_dinePage('tax',this)" ontouchend="event.preventDefault();_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
+     <div class="nav-item" onclick="_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
+     <div class="nav-item" onclick="_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
+     <div class="nav-item" onclick="_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
+     <div class="nav-item" onclick="_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)" ontouchend="event.preventDefault();_dineToggleGroup(this)">고객<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)">고객<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('member',this)" ontouchend="event.preventDefault();_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
+     <div class="nav-item" onclick="_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)" ontouchend="event.preventDefault();_dineToggleGroup(this)">설정<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)">설정<span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('store',this)" ontouchend="event.preventDefault();_dinePage('store',this)"><span class="ic">🏪</span>매장 설정</div>
-     <div class="nav-item" onclick="_dinePage('alimtalk',this)" ontouchend="event.preventDefault();_dinePage('alimtalk',this)"><span class="ic">💬</span>알림톡 설정</div>
+     <div class="nav-item" onclick="_dinePage('store',this)"><span class="ic">🏪</span>매장 설정</div>
+     <div class="nav-item" onclick="_dinePage('alimtalk',this)"><span class="ic">💬</span>알림톡 설정</div>
     </div>
    </div>
    <!-- FILO 바로가기 -->
@@ -290,10 +337,134 @@ select.inp option{background:var(--s2)}
 </div>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js">
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
+</script>
 <script>
 
 firebase.initializeApp({
@@ -3550,6 +3721,37 @@ function _dineSaveReservation(did){
   _dineLoadReservation(did);
  });
 }
+
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
 </script>
 <script>
 if('serviceWorker' in navigator){
@@ -3573,6 +3775,65 @@ function _dineInstallApp(){
  if(_pwaPrompt){_pwaPrompt.prompt();_pwaPrompt.userChoice.then(function(){_pwaPrompt=null;});}
  else{_dineToast('브라우저 메뉴 → "홈 화면에 추가"를 눌러주세요');}
 }
+
+function _mtGo(page, btn){
+ // 더보기 메뉴 닫기
+ _mtMoreClose();
+ // 탭 활성화
+ document.querySelectorAll('.mt-item').forEach(function(b){b.classList.remove('on');});
+ if(btn) btn.classList.add('on');
+ // 페이지 이동
+ _dinePage(page, null);
+}
+
+function _mtMoreToggle(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.toggle('open');
+}
+
+function _mtMoreClose(){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu) menu.classList.remove('open');
+}
+
+// 더보기 메뉴 외부 터치 시 닫기
+document.addEventListener('touchstart',function(e){
+ var menu=document.getElementById('mt-more-menu');
+ if(menu&&menu.classList.contains('open')){
+  var moreBtn=document.querySelector('.mt-more');
+  if(!menu.contains(e.target)&&moreBtn&&!moreBtn.contains(e.target)){
+   menu.classList.remove('open');
+  }
+ }
+});
 </script>
+
+<div id="mobile-tabs">
+  <div class="mt-bar">
+    <button class="mt-item on" ontouchend="event.preventDefault();_mtGo('dashboard',this)" onclick="_mtGo('dashboard',this)">
+      <span class="mt-ico">📊</span><span>현황</span>
+    </button>
+    <button class="mt-item" ontouchend="event.preventDefault();_mtGo('staff',this)" onclick="_mtGo('staff',this)">
+      <span class="mt-ico">👥</span><span>직원</span>
+    </button>
+    <button class="mt-item" ontouchend="event.preventDefault();_mtGo('attend',this)" onclick="_mtGo('attend',this)">
+      <span class="mt-ico">⏱</span><span>출퇴근</span>
+    </button>
+    <button class="mt-item" ontouchend="event.preventDefault();_mtGo('payroll',this)" onclick="_mtGo('payroll',this)">
+      <span class="mt-ico">💰</span><span>급여</span>
+    </button>
+    <button class="mt-item mt-more" ontouchend="event.preventDefault();_mtMoreToggle()" onclick="_mtMoreToggle()">
+      <span class="mt-ico">⋯</span><span>더보기</span>
+    </button>
+  </div>
+  <div class="mt-more-menu" id="mt-more-menu">
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('schedule',null);_mtMoreClose()" onclick="_mtGo('schedule',null);_mtMoreClose()">📅 &nbsp;근무 스케줄</div>
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('payslip',null);_mtMoreClose()" onclick="_mtGo('payslip',null);_mtMoreClose()">📄 &nbsp;급여명세서</div>
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('member',null);_mtMoreClose()" onclick="_mtGo('member',null);_mtMoreClose()">👤 &nbsp;회원 관리</div>
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('reservation',null);_mtMoreClose()" onclick="_mtGo('reservation',null);_mtMoreClose()">📆 &nbsp;예약 관리</div>
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('settle',null);_mtMoreClose()" onclick="_mtGo('settle',null);_mtMoreClose()">💳 &nbsp;정산 관리</div>
+    <div class="mm-item" ontouchend="event.preventDefault();_mtGo('sales',null);_mtMoreClose()" onclick="_mtGo('sales',null);_mtMoreClose()">📈 &nbsp;매출 분석</div>
+  </div>
+</div>
 </body>
 </html>
