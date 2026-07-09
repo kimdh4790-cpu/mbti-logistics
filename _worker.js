@@ -1604,7 +1604,7 @@ async function acceptExchange(){
           headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
           body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
         });
-        const data = await res.json();
+        let data={};try{const _t=await res.text();if(_t)data=JSON.parse(_t);}catch(e){}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
@@ -1692,7 +1692,7 @@ async function acceptExchange(){
           headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
           body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
         });
-        const data = await res.json();
+        let data={};try{const _t=await res.text();if(_t)data=JSON.parse(_t);}catch(e){}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
