@@ -5421,43 +5421,153 @@ function _filoRenderDeliveryCards(did,orders,wrap){
    '<div style="font-size:11px;margin-top:6px">+ 주문 접수 버튼으로 배달 주문을 등록하세요</div></div>';
   return;
  }
- var appIcon={'배민':'🟢','쿠팡이츠':'🔴','요기요':'🟣','기타':'🛵'};
- var statusColor={pending:'#f59e0b',cooking:'#60a5fa',ready:'#a78bfa',delivered:'#22c55e',cancelled:'#ef4444'};
- var statusLabel={pending:'접수',cooking:'조리중',ready:'픽업대기',delivered:'배달완료',cancelled:'취소'};
+ var appIcon={'배민':'🟢','쿠팡이츠':'🔴','요기요':'🟣','테이블QR':'🛵','기타':'🛵'};
+ var statusColor={pending:'#f59e0b',accepted:'#0891b2',cooking:'#60a5fa',ready:'#a78bfa',delivered:'#22c55e',rejected:'#ef4444',cancelled:'#ef4444'};
+ var statusLabel={pending:'승인대기',accepted:'접수됨',cooking:'조리중',ready:'픽업대기',delivered:'배달완료',rejected:'거절됨',cancelled:'취소됨'};
 
- wrap.innerHTML=orders.map(function(o){
-  var sc=statusColor[o.deliveryStatus||'pending'];
-  var sl=statusLabel[o.deliveryStatus||'pending'];
+ wrap.innerHTML='';
+ orders.forEach(function(o){
+  var st=o.deliveryStatus||o.status||'pending';
+  var sc=statusColor[st]||'#f59e0b';
+  var sl=statusLabel[st]||'대기';
   var kst=o.createdAt?new Date(new Date(o.createdAt).getTime()+9*3600000):new Date();
   var timeStr=kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
-  return '<div class="card card-hover" style="margin-bottom:10px;border-left:3px solid '+sc+'">'+
+  var src=o._src||'sales';
+  var appName=o.deliveryApp||(src==='qr'?'테이블QR':'배달');
+
+  var card=document.createElement('div');
+  card.className='card';
+  card.style.cssText='margin-bottom:10px;border-left:3px solid '+sc;
+
+  // 상단 - 앱/시간/상태
+  card.innerHTML=
    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
    '<div>'+
    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'+
-   '<span style="font-size:16px">'+(appIcon[o.deliveryApp||'기타']||'🛵')+'</span>'+
-   '<span style="font-size:14px;font-weight:900">'+(o.deliveryApp||'배달')+'</span>'+
+   '<span style="font-size:16px">'+(appIcon[appName]||'🛵')+'</span>'+
+   '<span style="font-size:14px;font-weight:900">'+appName+'</span>'+
    '<span style="font-size:11px;color:var(--t3)">'+timeStr+'</span>'+
    '</div>'+
-   '<div style="font-size:12px;color:var(--t2)">'+(o.customerName||'고객')+(o.phone?' · '+o.phone:'')+'</div>'+
+   '<div style="font-size:12px;color:var(--t2)">'+(o.customer||o.customerName||'고객')+(o.phone?' · '+o.phone:'')+'</div>'+
+   (o.address?'<div style="font-size:11px;color:var(--t3);margin-top:2px">📍 '+o.address+'</div>':'')+
    '</div>'+
    '<div style="text-align:right">'+
    '<span class="chip" style="background:'+sc+'18;color:'+sc+';border-color:'+sc+'40">'+sl+'</span>'+
    '<div style="font-size:16px;font-weight:900;color:#22c55e;margin-top:4px">₩'+(o.total||0).toLocaleString()+'</div>'+
    (o.deliveryFee?'<div style="font-size:10px;color:var(--t3)">배달비 ₩'+o.deliveryFee.toLocaleString()+'</div>':'')+
-   '</div></div>'+
-   '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+
-   (o.items||[]).map(function(it){return it.name+' x'+it.qty;}).join(' / ')+'</div>'+
-   (o.address?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">📍 '+o.address+'</div>':'')+
-   '<div style="display:flex;gap:6px">'+
-   ['cooking','ready','delivered'].map(function(s){
-    var active=(o.deliveryStatus||'pending')===s;
-    return '<button data-id="'+o._id+'" data-s="'+s+'" onclick="_filoDeliveryStatus(this.dataset.id,this.dataset.s)" '+
-     'style="flex:1;padding:7px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid '+(active?statusColor[s]:'var(--bd2)')+';background:'+(active?statusColor[s]+'18':'var(--surface2)')+';color:'+(active?statusColor[s]:'var(--t2)')+'">'+
-     {cooking:'🍳 조리중',ready:'✅ 픽업대기',delivered:'🛵 완료'}[s]+'</button>';
-   }).join('')+
-   '<button data-id="'+o._id+'" onclick="_filoDeliveryCancel(this.dataset.id)" style="padding:7px 10px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.08);color:#ef4444">취소</button>'+
-   '</div></div>';
- }).join('');
+   '</div>'+
+   '</div>'+
+   // 메뉴 목록
+   '<div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.6">'+
+   (o.items||[]).map(function(it){return (it.emoji||'🍽')+' '+(it.name||it)+(it.qty?' <b>×'+it.qty+'</b>':'');}).join(' &nbsp;·&nbsp; ')+
+   (o.memo?'<div style="margin-top:4px;color:#f59e0b;font-size:11px">💬 '+o.memo+'</div>':'')+
+   '</div>'+
+   // 버튼 영역
+   '<div id="dvbtn-'+o._id+'" style="display:flex;gap:6px;flex-wrap:wrap"></div>';
+
+  wrap.appendChild(card);
+
+  // 버튼 동적 생성
+  var btnArea=document.getElementById('dvbtn-'+o._id);
+  var col=src==='qr'?'filo_orders':'filo_sales';
+
+  // 승인대기 (store.html에서 온 주문)
+  if(st==='pending'){
+   var acceptBtn=document.createElement('button');
+   acceptBtn.style.cssText='padding:7px 14px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   acceptBtn.innerHTML='✅ 승인';
+   (function(id,c,phone,name,items,total){
+    acceptBtn.onclick=function(){
+     _db.collection(c).doc(id).update({
+      deliveryStatus:'accepted',status:'accepted',
+      updatedAt:new Date().toISOString()
+     }).then(function(){
+      _filoToast('✅ 주문 승인됨');
+      // 알림톡 발송 (전화번호 있을 때)
+      if(phone) _filoSendOrderAlimtalk(phone,name,items,total,'accepted');
+     });
+    };
+   })(o._id,col,o.phone,o.customer||o.customerName,o.items,o.total);
+   btnArea.appendChild(acceptBtn);
+
+   var rejectBtn=document.createElement('button');
+   rejectBtn.style.cssText='padding:7px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer';
+   rejectBtn.innerHTML='❌ 거절';
+   (function(id,c,phone,name){
+    rejectBtn.onclick=function(){
+     if(!confirm('주문을 거절하시겠습니까?'))return;
+     _db.collection(c).doc(id).update({
+      deliveryStatus:'rejected',status:'rejected',
+      updatedAt:new Date().toISOString()
+     }).then(function(){
+      _filoToast('🗑 주문 거절됨');
+      if(phone) _filoSendOrderAlimtalk(phone,name,[],'','rejected');
+     });
+    };
+   })(o._id,col,o.phone,o.customer||o.customerName);
+   btnArea.appendChild(rejectBtn);
+  }
+
+  // 접수됨 → 조리중
+  if(st==='accepted'){
+   var cookBtn=document.createElement('button');
+   cookBtn.style.cssText='padding:7px 14px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   cookBtn.innerHTML='🍳 조리 시작';
+   (function(id,c){cookBtn.onclick=function(){_db.collection(c).doc(id).update({deliveryStatus:'cooking',status:'cooking',updatedAt:new Date().toISOString()}).then(function(){_filoToast('🍳 조리 시작');});};})(o._id,col);
+   btnArea.appendChild(cookBtn);
+  }
+
+  // 조리중 → 픽업대기
+  if(st==='cooking'){
+   var readyBtn=document.createElement('button');
+   readyBtn.style.cssText='padding:7px 14px;background:#a78bfa;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   readyBtn.innerHTML='📦 픽업 대기';
+   (function(id,c){readyBtn.onclick=function(){_db.collection(c).doc(id).update({deliveryStatus:'ready',status:'ready',updatedAt:new Date().toISOString()}).then(function(){_filoToast('📦 픽업 대기');});};})(o._id,col);
+   btnArea.appendChild(readyBtn);
+  }
+
+  // 픽업대기 → 배달완료
+  if(st==='ready'){
+   var doneBtn=document.createElement('button');
+   doneBtn.style.cssText='padding:7px 14px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   doneBtn.innerHTML='✅ 배달 완료';
+   (function(id,c,phone,name){
+    doneBtn.onclick=function(){
+     _db.collection(c).doc(id).update({deliveryStatus:'delivered',status:'done',updatedAt:new Date().toISOString()}).then(function(){
+      _filoToast('✅ 배달 완료');
+      if(phone) _filoSendOrderAlimtalk(phone,name,[],'','delivered');
+     });
+    };
+   })(o._id,col,o.phone,o.customer||o.customerName);
+   btnArea.appendChild(doneBtn);
+  }
+
+  // 취소 버튼 (완료/거절/취소 제외)
+  if(st!=='delivered'&&st!=='rejected'&&st!=='cancelled'){
+   var cancelBtn=document.createElement('button');
+   cancelBtn.style.cssText='padding:7px 12px;background:transparent;border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer';
+   cancelBtn.innerHTML='취소';
+   (function(id,c){
+    cancelBtn.onclick=function(){
+     if(!confirm('주문을 취소하시겠습니까?'))return;
+     _db.collection(c).doc(id).update({deliveryStatus:'cancelled',status:'cancel',updatedAt:new Date().toISOString()}).then(function(){_filoToast('🗑 취소됨');});
+    };
+   })(o._id,col);
+   btnArea.appendChild(cancelBtn);
+  }
+ });
+}
+
+function _filoSendOrderAlimtalk(phone,name,items,total,status){
+ // 알림톡 발송 (향후 구현)
+ // status: accepted / rejected / delivered
+ var msgs={
+  accepted:'주문이 접수됐습니다! 곧 배달을 시작합니다.',
+  rejected:'죄송합니다. 매장 사정으로 주문이 거절됐습니다.',
+  delivered:'배달이 완료됐습니다. 맛있게 드세요!'
+ };
+ console.log('[알림톡]', phone, msgs[status]);
+ // TODO: 알림톡 API 연동
 }
 
 function _filoDeliveryStatus(id,status){
