@@ -5334,7 +5334,7 @@ function _filoPageDelivery(el){
 
 var _deliveryUnsub=null;
 function _filoLoadDelivery(did){
- if(_deliveryUnsub){_deliveryUnsub();_deliveryUnsub=null;}
+ if(window._deliveryUnsub){window._deliveryUnsub();window._deliveryUnsub=null;}
  var today=new Date().toISOString().slice(0,10);
  // filo_orders(테이블QR 배달) + filo_sales(수동접수) 통합
  var salesOrders=[], qrOrders=[];
@@ -5363,7 +5363,7 @@ function _filoLoadDelivery(did){
    });
    renderAll();
   },function(e){console.error('delivery orders err:',e);renderAll();});
- _deliveryUnsub=function(){u1();u2();};
+ window._deliveryUnsub=function(){u1();u2();};
 }
 
 function _filoRenderDelivery(did,orders){
