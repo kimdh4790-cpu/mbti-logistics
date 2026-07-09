@@ -1598,6 +1598,28 @@ async function acceptExchange(){
         return new Response(JSON.stringify({menus:menus}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      if (path === '/api/store') {
+        const slug = new URL(request.url).searchParams.get('slug');
+        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token = await getAccessToken(env);
+        // slug로 조회
+        const r1 = await fetch(FS_BASE+'/companies/'+slug,{headers:{'Authorization':'Bearer '+token}});
+        const d1 = await r1.json();
+        if(d1.fields){
+          const f=d1.fields;
+          const store={id:slug,name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
+          return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+        // slug 필드로 검색
+        const r2 = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}},limit:1}})});
+        const d2 = await r2.json();
+        const doc=(d2||[]).find(function(r){return r.document;});
+        if(!doc) return new Response(JSON.stringify({error:'매장을 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const f=doc.document.fields||{};
+        const store={id:doc.document.name.split('/').pop(),name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
+        return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');

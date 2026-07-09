@@ -244,27 +244,18 @@ window.onload=function(){
   return;
  }
 
- // companies 컬렉션에서 slug로 매장 조회
- _db.collection('companies').where('slug','==',_slug).limit(1).get()
- .then(function(snap){
-  if(snap.empty){
-   // slug가 없으면 dealerId로 시도
-   return _db.collection('companies').doc(_slug).get().then(function(doc){
-    if(!doc.exists) throw new Error('매장을 찾을 수 없습니다');
-    return {docs:[doc]};
-   });
-  }
-  return snap;
- })
- .then(function(snap){
-  var doc=snap.docs[0];
-  var d=doc.data();
-  _did=doc.id;
+ // /api/store로 매장 정보 조회 (비로그인 가능)
+ fetch('/api/store?slug='+encodeURIComponent(_slug))
+ .then(function(r){return r.json();})
+ .then(function(data){
+  if(data.error) throw new Error(data.error);
+  var d=data.store;
+  _did=d.id;
 
   // 매장 정보 표시
-  document.getElementById('store-name').textContent=d.companyName||d.name||'매장';
+  document.getElementById('store-name').textContent=d.name||'매장';
   document.getElementById('store-desc').textContent=d.address||'배달 주문';
-  document.title=(d.companyName||'매장')+' - 주문하기';
+  document.title=(d.name||'매장')+' - 주문하기';
 
   document.getElementById('ld').style.display='none';
   document.getElementById('hdr').style.display='block';
