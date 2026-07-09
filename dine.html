@@ -168,28 +168,7 @@ select.inp option{background:var(--s2)}
 .login-logo{font-size:32px;font-weight:900;background:linear-gradient(135deg,#38bdf8,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--t3);margin-bottom:24px}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-function _dineSidebarToggle(){
- var sb=document.getElementById('sidebar');
- var overlay=document.getElementById('dine-overlay');
- if(!sb) return;
- if(sb.classList.contains('open')){
-  sb.classList.remove('open');
-  if(overlay) overlay.style.display='none';
- } else {
-  sb.classList.add('open');
-  if(!overlay){
-   overlay=document.createElement('div');
-   overlay.id='dine-overlay';
-   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;';
-   overlay.onclick=function(){sb.classList.remove('open');overlay.style.display='none';};
-   document.body.appendChild(overlay);
-  } else {
-   overlay.style.display='block';
-  }
- }
-}
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -243,7 +222,7 @@ function _dineSidebarToggle(){
 <div id="app-wrap" style="display:none;flex-direction:column;height:100vh">
  <!-- 탑바 -->
  <div id="topbar">
-  <button onclick="_dineSidebarToggle()" id="dine-sidebar-btn" onclick="_dineToggleSidebar()" style="display:none;background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;margin-right:4px">☰</button>
+  <button id="dine-sidebar-btn" onclick="_dineToggleSidebar()" style="display:none;background:none;border:none;color:var(--tx);font-size:20px;cursor:pointer;padding:6px;border-radius:8px;margin-right:4px">☰</button>
   <div class="tb-logo">DINE</div>
   <div class="tb-sub">외식업 정산 플랫폼</div>
   <div class="tb-right">
