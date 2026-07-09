@@ -1620,6 +1620,27 @@ async function acceptExchange(){
         const store={id:doc.document.name.split('/').pop(),name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
         return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      if (path === '/api/store') {
+        if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        const slug = new URL(request.url).searchParams.get('slug')||'';
+        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token2 = await getAccessToken(env);
+        // dealerId로 직접 조회
+        const r1 = await fetch(FS_BASE+'/companies/'+slug,{headers:{'Authorization':'Bearer '+token2}});
+        const d1 = await r1.json();
+        if(d1.fields){
+          const f=d1.fields;
+          return new Response(JSON.stringify({store:{id:slug,name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''}}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+        // slug 필드로 검색
+        const r2 = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token2},body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}},limit:1}})});
+        const d2 = await r2.json();
+        const docItem=(d2||[]).find(r=>r.document);
+        if(!docItem) return new Response(JSON.stringify({error:'매장을 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const f2=docItem.document.fields||{};
+        const did2=docItem.document.name.split('/').pop();
+        return new Response(JSON.stringify({store:{id:did2,name:(f2.companyName&&f2.companyName.stringValue)||(f2.name&&f2.name.stringValue)||'',address:(f2.address&&f2.address.stringValue)||''}}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
