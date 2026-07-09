@@ -211,7 +211,6 @@ textarea.form-input{height:80px;resize:none}
 </div>
 
 <!-- 카카오 주소 API -->
-<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
@@ -400,18 +399,36 @@ function _chg(name,d){
 }
 
 function _searchAddr(){
- new daum.Postcode({
-  oncomplete:function(data){
-   _addr=data.roadAddress||data.jibunAddress;
-   _addrFull=_addr;
-   document.getElementById('addr-btn').textContent='📍 '+_addr;
-   document.getElementById('addr-btn').style.color='#1e293b';
-   document.getElementById('addr-detail').style.display='block';
-   document.getElementById('sf-addr-btn').textContent='📍 '+_addr;
-   document.getElementById('sf-addr-btn').style.color='#1e293b';
-   document.getElementById('sf-addr-detail').style.display='block';
-  }
- }).open();
+ // 카카오 주소 API 대신 직접 입력
+ var input=document.createElement('div');
+ input.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+ input.innerHTML=
+  '<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:400px">'+
+  '<div style="font-size:15px;font-weight:900;margin-bottom:14px">📍 배달 주소 입력</div>'+
+  '<input id="addr-input-main" placeholder="도로명 주소 (예: 수영로 668)" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:8px;box-sizing:border-box">'+
+  '<input id="addr-input-detail" placeholder="상세주소 (예: 607호)" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:14px;box-sizing:border-box">'+
+  '<div style="display:flex;gap:8px">'+
+  '<button id="addr-confirm" style="flex:1;padding:12px;background:#0891b2;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">확인</button>'+
+  '<button id="addr-cancel" style="flex:1;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
+  '</div></div>';
+ document.body.appendChild(input);
+ document.getElementById('addr-input-main').focus();
+ document.getElementById('addr-confirm').onclick=function(){
+  var main=document.getElementById('addr-input-main').value.trim();
+  var detail=document.getElementById('addr-input-detail').value.trim();
+  if(!main){alert('주소를 입력해주세요');return;}
+  _addr=main+(detail?' '+detail:'');
+  _addrFull=_addr;
+  document.getElementById('addr-btn').textContent='📍 '+_addr;
+  document.getElementById('addr-btn').style.color='#1e293b';
+  document.getElementById('addr-detail').style.display='none';
+  document.getElementById('sf-addr-btn').textContent='📍 '+_addr;
+  document.getElementById('sf-addr-btn').style.color='#1e293b';
+  document.getElementById('sf-addr-detail').style.display='none';
+  input.remove();
+ };
+ document.getElementById('addr-cancel').onclick=function(){input.remove();};
+ input.onclick=function(e){if(e.target===input)input.remove();};
 }
 
 function _submitOrder(){
