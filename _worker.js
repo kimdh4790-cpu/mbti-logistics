@@ -1631,21 +1631,44 @@ async function acceptExchange(){
           var f=r.document.fields||{};
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
         });
-        // 이미지 없는 메뉴에 Unsplash 자동 이미지 검색
-        const UNSPLASH_KEY = 'G_GlhSlJibE4gGWFiH0eCDrDphrpRMLPzpvbJb6TAKY';
+        // 이미지 없는 메뉴에 Wikipedia 자동 이미지 검색
+        const menuKeywords = {
+          '버거':'Hamburger','치킨':'Fried_chicken','피자':'Pizza','떡볶이':'Tteokbokki',
+          '순대':'Sundae_(food)','파스타':'Pasta','샐러드':'Salad','커피':'Coffee',
+          '케이크':'Cake','마카롱':'Macaron','치즈케이크':'Cheesecake','애플파이':'Apple_pie',
+          '어니언링':'Onion_ring','파':'Scallion','김치':'Kimchi','비빔밥':'Bibimbap',
+          '삼겹살':'Samgyeopsal','갈비':'Galbi','냉면':'Naengmyeon','라면':'Ramen',
+          '초밥':'Sushi','돈까스':'Tonkatsu','우동':'Udon','짜장면':'Jajangmyeon'
+        };
         const menusWithImg = await Promise.all(menus.map(async function(m){
           if(m.imageUrl) return m;
           try {
-            const q = encodeURIComponent(m.name+' food korean');
-            const imgRes = await fetch('https://api.unsplash.com/search/photos?query='+q+'&per_page=1&orientation=portrait&client_id='+UNSPLASH_KEY);
-            const imgData = await imgRes.json();
-            if(imgData.results&&imgData.results[0]){
-              m.imageUrl = imgData.results[0].urls.regular;
+            // 메뉴명에서 키워드 매칭
+            let wikiPage = null;
+            for(const [key, page] of Object.entries(menuKeywords)){
+              if(m.name.includes(key)){wikiPage=page;break;}
+            }
+            if(!wikiPage){
+              // 기본: 메뉴명 영어 번역해서 검색
+              const cat = m.category||'';
+              if(cat.includes('버거'))wikiPage='Hamburger';
+              else if(cat.includes('치킨'))wikiPage='Fried_chicken';
+              else if(cat.includes('피자'))wikiPage='Pizza';
+              else if(cat.includes('분식'))wikiPage='Tteokbokki';
+              else if(cat.includes('디저트'))wikiPage='Dessert';
+              else if(cat.includes('음료'))wikiPage='Soft_drink';
+              else wikiPage='Korean_cuisine';
+            }
+            const wikiRes = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+wikiPage);
+            const wikiData = await wikiRes.json();
+            if(wikiData.thumbnail&&wikiData.thumbnail.source){
+              // 고화질로 변환
+              m.imageUrl = wikiData.thumbnail.source.replace(/\/\d+px-/, '/600px-');
             }
           } catch(e){}
           return m;
         }));
-        return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=3600'}});
+        return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=1800'}});
       }
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
