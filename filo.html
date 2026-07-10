@@ -5019,12 +5019,40 @@ function _filoTableOrderModal(did,table,order){
 
  var btnRow=inner.querySelector('#modal-btn-row');
 
- if(hasOrder&&!order.paid){
+ if(hasOrder&&order.pendingTotal>0){
+  // 결제 완료 처리
   var payBtn=document.createElement('button');
-  payBtn.style.cssText='flex:2;padding:12px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer';
-  payBtn.textContent='결제 완료 처리';
+  payBtn.style.cssText='flex:2;padding:12px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer';
+  payBtn.textContent='💳 후불 결제 (₩'+(order.pendingTotal||order.total).toLocaleString()+')';
   (function(d,n,dc){payBtn.onclick=function(){_filoMarkPaid(d,n,dc,payBtn,mo);};})(did,table.num,table.docId);
   btnRow.appendChild(payBtn);
+
+  // 분할 결제
+  var splitBtn2=document.createElement('button');
+  splitBtn2.style.cssText='flex:1;padding:12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:12px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer';
+  splitBtn2.textContent='✂️ 분할';
+  (function(tot){splitBtn2.onclick=function(){mo.remove();
+   // 임시 cart로 분할결제
+   var prevCart=_cartItems;
+   _cartItems=(order.items||[]).map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};});
+   window._selectedTableId=table.num;
+   window._selectedTableName=table.name;
+   _filoSplitPay(tot);
+  };})(order.pendingTotal||order.total);
+  btnRow.appendChild(splitBtn2);
+
+  // 각자 계산
+  var selfBtn2=document.createElement('button');
+  selfBtn2.style.cssText='flex:1;padding:12px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer';
+  selfBtn2.textContent='👥 각자';
+  (function(){selfBtn2.onclick=function(){mo.remove();
+   var prevCart=_cartItems;
+   _cartItems=(order.items||[]).map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};});
+   window._selectedTableId=table.num;
+   window._selectedTableName=table.name;
+   _filoSelfPay();
+  };})();
+  btnRow.appendChild(selfBtn2);
  }
 
  if(s!=='empty'){
