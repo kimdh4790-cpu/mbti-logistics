@@ -4583,7 +4583,10 @@ function _filoTableLoad(did){
    snap.forEach(function(doc){
     var d=doc.data();
     if(d.createdAt&&d.createdAt.slice(0,10)===today){
-     var tNum=String(d.tableNum||d.tableName||'');
+     // tableNum 우선, 없으면 tableName에서 숫자 추출
+     var tNum=String(d.tableNum||'');
+     if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;
+     if(!tNum)return;
      if(!orderMap[tNum])orderMap[tNum]={total:0,items:[],ids:[],paid:false};
      orderMap[tNum].total+=(d.total||0);
      orderMap[tNum].ids.push(doc.id);
