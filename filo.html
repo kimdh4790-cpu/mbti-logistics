@@ -4032,16 +4032,12 @@ function _filoPageOrders(el){
   '</div>';
  if(_ordersUnsub) _ordersUnsub();
  var today=new Date().toISOString().slice(0,10);
- _ordersUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did)
-  .where('date','==',today)
-
-  .onSnapshot(function(snap){
-   var orders=[];
-   snap.forEach(function(doc){orders.push(Object.assign({_id:doc.id},doc.data()));});
-   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
-   var listEl=document.getElementById('orders-list');
-   if(!listEl)return;
+ var _oSales=[], _oQR=[];
+ function _renderOrders(){
+  var orders=_oSales.concat(_oQR);
+  orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+  var listEl=document.getElementById('orders-list');
+  if(!listEl)return;
    if(!orders.length){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">📭 대기 중인 주문 없음</div>';return;}
     listEl.innerHTML=orders.map(function(o){
      var statusColor=o.status==='done'?'#22c55e':o.status==='cancel'?'#ef4444':'#f59e0b';
@@ -4078,7 +4074,26 @@ function _filoPageOrders(el){
    if(snap.docChanges().some(function(c){return c.type==='added'&&c.doc.data().status!=='done';})){
     try{var a=new AudioContext();var o2=a.createOscillator();o2.connect(a.destination);o2.frequency.value=880;o2.start();o2.stop(a.currentTime+0.15);}catch(e){}
    }
+  }
+ var _u1=_db.collection('filo_sales')
+  .where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   _oSales=[];
+   snap.forEach(function(doc){_oSales.push(Object.assign({_id:doc.id,_src:'sales'},doc.data()));});
+   _renderOrders();
   });
+ var _u2=_db.collection('filo_orders')
+  .where('dealerId','==',did).where('type','==','table')
+  .onSnapshot(function(snap){
+   _oQR=[];
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(d.createdAt&&d.createdAt.slice(0,10)===today)
+     _oQR.push(Object.assign({_id:doc.id,_src:'qr'},d));
+   });
+   _renderOrders();
+  });
+ _ordersUnsub=function(){_u1();_u2();};
 }
 
 function _filoOrderStatus(orderId, status){
