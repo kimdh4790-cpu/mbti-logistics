@@ -3718,8 +3718,9 @@ function _filoImportMenuExcel(input){
     var price=parseInt(r['가격']||r['price']||0);
     var category=r['카테고리']||r['category']||'기타';
     var emoji=r['이모지']||r['emoji']||'🍽';
+    var description=r['설명(참고용)']||r['설명']||r['description']||'';
     if(!name||!price)return;
-    batch.push({name:name,price:price,category:category,emoji:emoji,forSale:true,dealerId:did,stock:null,minStock:null});
+    batch.push({name:name,price:price,category:category,emoji:emoji,description:description,forSale:true,dealerId:did,stock:null,minStock:null});
    });
    if(!batch.length){alert('유효한 메뉴가 없습니다.');return;}
    var db=firebase.firestore();
