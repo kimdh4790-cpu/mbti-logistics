@@ -217,13 +217,7 @@ function _filoLoadDelivery(did){
   .where('dealerId','==',did)
   .onSnapshot(function(snap){
    qrOrders=[];
-   snap.forEach(function(doc){
-    var d=doc.data();
-    // createdAt이 오늘인 것만
-    if(d.createdAt&&d.createdAt.slice(0,10)===today){
-     qrOrders.push(Object.assign({_id:doc.id,_src:'qr',deliveryApp:'테이블QR',type:'delivery'},d));
-    }
-   });
+   // 테이블QR 주문은 배달 탭에 표시하지 않음 (테이블 현황 탭에서 관리)
    renderAll();
   },function(e){console.error('delivery orders err:',e);renderAll();});
  window._deliveryUnsub=function(){u1();u2();};
