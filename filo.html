@@ -5031,7 +5031,8 @@ function _filoTableOrderModal(did,table,order){
   order.orders.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
   itemsHtml=order.orders.map(function(ord,i){
    var pc=ord.paid?'#818cf8':'#fbbf24';
-   var pm=ord.paid?'✅ 선결제':'⏳ 후불';
+   var methodIcon=ord.payMethod==='cash'?'💵':ord.payMethod==='card'?'💳':ord.payMethod==='split'?'✂️':'';
+   var pm=ord.paid?(methodIcon+'선결제'):'⏳ 후불';
    var itemRows=(ord.items||[]).map(function(it){
     return '<div style="display:flex;justify-content:space-between;padding:6px 8px;font-size:13px">'+
      '<span>'+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
@@ -5174,26 +5175,34 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
   var cancelBtn=box.querySelector('#tself-cancel');
   function doSelfPay(method,label){
    if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
-   var selected=allItems.filter(function(_,i){return checks[i];});
    mo.remove();
-   // Firestore에 결제 완료 주문으로 저장
-   var now=new Date();
-   _db.collection('filo_orders').add({
-    dealerId:did,
-    tableNum:parseInt(tableNum)||tableNum,
-    tableName:tableName,
-    type:'table',
-    source:'self_pay',
-    payMethod:method,
-    payType:'prepay',
-    status:'paid',
-    items:selected.map(function(it){return {name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};}),
-    total:selTotal,
-    createdAt:now.toISOString(),
-    date:now.toISOString().slice(0,10)
-   }).then(function(){
+   // 선택된 아이템이 속한 주문 ID 찾기 (order.orders 배열 기반)
+   var orderIds=[];
+   if(order.orders&&order.orders.length){
+    // 선택된 아이템의 이름으로 주문 찾기
+    var selectedNames=allItems.filter(function(_,i){return checks[i];}).map(function(it){return it.name;});
+    order.orders.forEach(function(ord){
+     if(!ord.paid&&ord.id){
+      var hasSelected=(ord.items||[]).some(function(it){return selectedNames.indexOf(it.name)>=0;});
+      if(hasSelected)orderIds.push(ord.id);
+     }
+    });
+   }
+   if(orderIds.length>0){
+    // 기존 주문 status/payMethod 업데이트
+    var batch=_db.batch();
+    orderIds.forEach(function(id){
+     batch.update(_db.collection('filo_orders').doc(id),{
+      status:'paid',payType:'prepay',payMethod:method,paidAt:new Date().toISOString()
+     });
+    });
+    batch.commit().then(function(){
+     _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+    }).catch(function(e){_filoToast('❌ '+e.message);});
+   } else {
+    // 주문 ID 없으면 토스트만
     _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
-   }).catch(function(e){_filoToast('❌ '+e.message);});
+   }
   }
   if(cardBtn)cardBtn.onclick=function(){doSelfPay('card','💳 카드');};
   if(cashBtn)cashBtn.onclick=function(){doSelfPay('cash','💵 현금');};
