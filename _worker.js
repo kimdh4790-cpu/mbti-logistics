@@ -1623,6 +1623,7 @@ async function acceptExchange(){
         });
         return new Response(JSON.stringify({menus:menus}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/api/store') {
         const slug = new URL(request.url).searchParams.get('slug');
@@ -1667,6 +1668,7 @@ async function acceptExchange(){
         const did2=docItem.document.name.split('/').pop();
         return new Response(JSON.stringify({store:{id:did2,name:(f2.companyName&&f2.companyName.stringValue)||(f2.name&&f2.name.stringValue)||'',address:(f2.address&&f2.address.stringValue)||''}}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      if (path === '/store.js') return serveKVFile(env, 'store.js', 'application/javascript');
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
