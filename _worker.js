@@ -1673,10 +1673,6 @@ async function acceptExchange(){
         const did2=docItem.document.name.split('/').pop();
         return new Response(JSON.stringify({store:{id:did2,name:(f2.companyName&&f2.companyName.stringValue)||(f2.name&&f2.name.stringValue)||'',address:(f2.address&&f2.address.stringValue)||''}}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
-      // filo JS 모듈 서빙
-      if (path.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
-        return serveKVFile(env, path.slice(1).split('?')[0], 'application/javascript');
-      }
       if (path === '/store.js') return serveKVFile(env, 'store.js', 'application/javascript');
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
@@ -1766,6 +1762,11 @@ async function acceptExchange(){
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
+      // filo JS 모듈 서빙 (slug 라우팅보다 먼저!)
+      if (path.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js(\?.*)?$/)) {
+        const jsKey = path.slice(1).split('?')[0];
+        return serveKVFile(env, jsKey, 'application/javascript');
+      }
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
       if (filoPath) {
