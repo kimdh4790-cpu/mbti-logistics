@@ -1763,9 +1763,12 @@ async function acceptExchange(){
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
       // filo JS 모듈 서빙 (slug 라우팅보다 먼저!)
-      if (path.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js(\?.*)?$/)) {
-        const jsKey = path.slice(1).split('?')[0];
-        return serveKVFile(env, jsKey, 'application/javascript');
+      const cleanPath = path.split('?')[0];
+      if (cleanPath.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
+        return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
+      }
+      if (cleanPath === '/store.js' || cleanPath === '/order.js') {
+        return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
       }
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
