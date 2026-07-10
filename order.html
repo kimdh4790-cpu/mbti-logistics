@@ -165,6 +165,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 #call-btn .cb-ico{font-size:20px;line-height:1}
 #call-btn .cb-txt{font-size:8px;font-weight:800;color:var(--brand);margin-top:1px}
 #call-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 20px;border-radius:50px;font-size:13px;font-weight:700;z-index:9999;display:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+/* 결제 선택 모달 */
+#pay-mdl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:flex-end;backdrop-filter:blur(4px)}
+#pay-mdl.open{display:flex}
+#pay-mb{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 36px}
+.pay-drag{width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px}
+.pay-title{font-size:18px;font-weight:900;color:#0f172a;text-align:center;margin-bottom:6px}
+.pay-sub{font-size:12px;color:#94a3b8;text-align:center;margin-bottom:20px}
+.pay-total{font-size:24px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:20px}
+.pay-opts{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.pay-opt{display:flex;align-items:center;gap:14px;padding:16px;border:2px solid #e2e8f0;border-radius:16px;cursor:pointer;transition:.15s}
+.pay-opt:active{background:#f0f9ff;border-color:#0891b2}
+.pay-opt.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.pay-opt-ico{font-size:28px;flex-shrink:0}
+.pay-opt-info{flex:1}
+.pay-opt-name{font-size:15px;font-weight:800;color:#0f172a}
+.pay-opt-desc{font-size:11px;color:#94a3b8;margin-top:2px}
+.pay-opt-badge{font-size:10px;font-weight:700;background:#f0f9ff;color:#0891b2;padding:2px 8px;border-radius:10px}
+.pay-cancel{width:100%;padding:14px;background:#f1f5f9;border:none;border-radius:14px;font-size:14px;font-weight:700;color:#64748b;cursor:pointer}
 </style>
 </head>
 <body>
@@ -564,6 +582,21 @@ function _submitOrder(){
   if(!phone){alert('연락처를 입력해주세요');return;}
  }
 
+ // 결제 모달 오픈
+ var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+ document.getElementById('pay-total-amt').textContent='₩'+total.toLocaleString();
+ document.getElementById('pay-mdl').classList.add('open');
+}
+
+function _closePayMdl(){
+ document.getElementById('pay-mdl').classList.remove('open');
+}
+
+function _doOrder(payType){
+ _closePayMdl();
+ var items=Object.values(_cart).filter(function(i){return i.qty>0;});
+ if(!items.length){return;}
+
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');
  btn.disabled=true;btn.textContent='주문 중...';
@@ -573,6 +606,7 @@ function _submitOrder(){
   tableName:_tName,
   type:_isDelivery?'delivery':'table',
   status:'pending',
+  payType:payType||'postpay',
   items:items,
   total:total,
   createdAt:new Date().toISOString()
@@ -641,5 +675,32 @@ function _callStaff(){
   <span class="cb-txt">호출</span>
 </div>
 <div id="call-toast">✅ 직원을 호출했습니다!</div>
+<!-- 결제 방식 선택 모달 -->
+<div id="pay-mdl" onclick="if(event.target===this)_closePayMdl()">
+  <div id="pay-mb">
+    <div class="pay-drag"></div>
+    <div class="pay-title">💳 결제 방식 선택</div>
+    <div class="pay-sub">편하신 방법으로 결제해주세요</div>
+    <div class="pay-total" id="pay-total-amt">₩0</div>
+    <div class="pay-opts">
+      <div class="pay-opt" onclick="_doOrder('postpay')">
+        <div class="pay-opt-ico">🧾</div>
+        <div class="pay-opt-info">
+          <div class="pay-opt-name">후불 결제</div>
+          <div class="pay-opt-desc">식사 후 카운터에서 결제</div>
+        </div>
+        <div class="pay-opt-badge">기본</div>
+      </div>
+      <div class="pay-opt disabled" id="prepay-opt" onclick="_doOrder('prepay')">
+        <div class="pay-opt-ico">📱</div>
+        <div class="pay-opt-info">
+          <div class="pay-opt-name">선결제 <span style="font-size:10px;color:#f59e0b">준비중</span></div>
+          <div class="pay-opt-desc">카드·카카오페이·네이버페이</div>
+        </div>
+      </div>
+    </div>
+    <button class="pay-cancel" onclick="_closePayMdl()">취소</button>
+  </div>
+</div>
 </body>
 </html>
