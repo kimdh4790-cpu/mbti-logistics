@@ -3963,11 +3963,22 @@ function _filoPay(){
  var payTypeDiv=document.createElement('div');
  payTypeDiv.style.cssText='display:flex;gap:6px;margin-bottom:12px';
  window._posPayType=window._posPayType||'postpay';
- [{k:'postpay',l:'🧾 후불'},{k:'prepay',l:'💳 선불'}].forEach(function(pt){
+ [{k:'postpay',l:'🧾 후불 (나중에 결제)'},{k:'prepay',l:'💳 선불 (지금 결제)'}].forEach(function(pt){
   var ptBtn=document.createElement('button');
   ptBtn.style.cssText='flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid '+(window._posPayType===pt.k?'#0891b2':'var(--bd2)')+';background:'+(window._posPayType===pt.k?'rgba(8,145,178,.15)':'var(--surface2)')+';color:'+(window._posPayType===pt.k?'#0891b2':'var(--t2)');
   ptBtn.textContent=pt.l;
-  (function(k){ptBtn.onclick=function(){window._posPayType=k;document.querySelectorAll('.mo').forEach(function(e){e.remove();});_filoPay();};})(pt.k);
+  (function(k){ptBtn.onclick=function(){
+   window._posPayType=k;
+   if(k==='postpay'){
+    // 후불: 바로 주문 등록 (결제수단 = 후불)
+    document.querySelectorAll('.mo').forEach(function(e){e.remove();});
+    _filoConfirmPay('postpay','🧾 후불');
+   } else {
+    // 선불: 결제 수단 선택 화면으로
+    document.querySelectorAll('.mo').forEach(function(e){e.remove();});
+    _filoPay();
+   }
+  };})(pt.k);
   payTypeDiv.appendChild(ptBtn);
  });
  box.appendChild(payTypeDiv);
