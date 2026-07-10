@@ -369,7 +369,7 @@ function _openMdl(m){
   var t=d.translated||m.name;
   _tlCache[ck]=t;
   if(_curMdlMenu&&_curMdlMenu.name===m.name) document.getElementById('tl-tr').textContent=t;
- }).catch(function(){document.getElementById('tl-tr').textContent='';});
+ }).catch(function(e){document.getElementById('tl-tr').textContent='ERR:'+e.message;});
  // 설명 번역
  if(m.description){
   var dk=m.name+'_desc_'+_lang;
