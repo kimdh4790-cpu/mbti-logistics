@@ -260,16 +260,17 @@ var _i18n={
 };
 function _t(k){return(_i18n[_lang]&&_i18n[_lang][k])||_i18n.ko[k]||k;}
 
-firebase.initializeApp({
- apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
- authDomain:'mbti-logistics.firebaseapp.com',
- projectId:'mbti-logistics'
-});
-var _db=firebase.firestore();
+var _db=null;
 
 function _p(k){return new URLSearchParams(location.search).get(k)||'';}
 
 window.onload=function(){
+ firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics'
+ });
+ _db=firebase.firestore();
  _slug=location.pathname.replace('/store/','').replace('/store','').replace('/','').trim();
  if(!_slug) _slug=_p('id')||_p('slug');
  if(!_slug){
