@@ -5997,6 +5997,14 @@ function _filoMenuAddModal(did, menu, cat){
   g.appendChild(l);g.appendChild(inp);box.appendChild(g);
  });
 
+ /* 메뉴 설명 */
+ var descG=document.createElement('div');descG.style.cssText='margin-bottom:14px';
+ var descL=document.createElement('label');descL.textContent='메뉴 설명 (선택)';descL.style.cssText='font-size:11px;font-weight:700;color:var(--t2);margin-bottom:6px;display:block';
+ var descInp=document.createElement('textarea');descInp.id='menu-desc-inp';descInp.placeholder='예: 국내산 돼지 순대, 매콤달콤한 소스와 함께';
+ descInp.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none;height:70px;resize:none';
+ if(menu&&menu.description)descInp.value=menu.description;
+ descG.appendChild(descL);descG.appendChild(descInp);box.appendChild(descG);
+
  /* 판매여부 */
  var saleRow=document.createElement('div');
  saleRow.style.cssText='display:flex;align-items:center;gap:10px;margin-bottom:14px';
@@ -6027,7 +6035,8 @@ function _filoMenuAddModal(did, menu, cat){
   var forSale=document.getElementById('menu-forsale-inp').checked;
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
-  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||null,stock:stock,minStock:null,updatedAt:new Date().toISOString()};
+  var description=(document.getElementById('menu-desc-inp')?document.getElementById('menu-desc-inp').value||'':'').trim();
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||null,stock:stock,minStock:null,description:description,updatedAt:new Date().toISOString()};
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
