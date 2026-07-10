@@ -603,6 +603,7 @@ function _doOrder(payType){
 
  var data={
   dealerId:_did,
+  tableNum:parseInt(_tNum)||_tNum,
   tableName:_tName,
   type:_isDelivery?'delivery':'table',
   status:'pending',
