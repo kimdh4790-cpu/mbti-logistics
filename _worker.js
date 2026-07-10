@@ -1631,43 +1631,40 @@ async function acceptExchange(){
           var f=r.document.fields||{};
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
         });
-        // 이미지 없는 메뉴에 Wikipedia 자동 이미지 검색
-        const menuKeywords = {
-          '버거':'Hamburger','치킨':'Fried_chicken','피자':'Pizza','떡볶이':'Tteokbokki',
-          '순대':'Sundae_(food)','파스타':'Pasta','샐러드':'Salad','커피':'Coffee',
-          '케이크':'Cake','마카롱':'Macaron','치즈케이크':'Cheesecake','애플파이':'Apple_pie',
-          '어니언링':'Onion_ring','파':'Scallion','김치':'Kimchi','비빔밥':'Bibimbap',
-          '삼겹살':'Samgyeopsal','갈비':'Galbi','냉면':'Naengmyeon','라면':'Ramen',
-          '초밥':'Sushi','돈까스':'Tonkatsu','우동':'Udon','짜장면':'Jajangmyeon'
+        // 카테고리/키워드별 고정 이미지 (외부 API 없이)
+        const IMG_MAP = {
+          '버거':'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '치킨':'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '피자':'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '떡볶이':'https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '분식':'https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '순대':'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '파스타':'https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '케이크':'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '마카롱':'https://images.unsplash.com/photo-1558326567-98166e232c52?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '디저트':'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '애플파이':'https://images.unsplash.com/photo-1568571780765-9276ac8b75a2?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '치즈케이크':'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '어니언링':'https://images.unsplash.com/photo-1639024471283-03518883512d?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '음료':'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '커피':'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '세트':'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          '샐러드':'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80&fm=jpg&crop=entropy&fit=crop',
+          'default':'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80&fm=jpg&crop=entropy&fit=crop'
         };
-        const menusWithImg = await Promise.all(menus.map(async function(m){
+        const menusWithImg = menus.map(function(m){
           if(m.imageUrl) return m;
-          try {
-            // 메뉴명에서 키워드 매칭
-            let wikiPage = null;
-            for(const [key, page] of Object.entries(menuKeywords)){
-              if(m.name.includes(key)){wikiPage=page;break;}
-            }
-            if(!wikiPage){
-              // 기본: 메뉴명 영어 번역해서 검색
-              const cat = m.category||'';
-              if(cat.includes('버거'))wikiPage='Hamburger';
-              else if(cat.includes('치킨'))wikiPage='Fried_chicken';
-              else if(cat.includes('피자'))wikiPage='Pizza';
-              else if(cat.includes('분식'))wikiPage='Tteokbokki';
-              else if(cat.includes('디저트'))wikiPage='Dessert';
-              else if(cat.includes('음료'))wikiPage='Soft_drink';
-              else wikiPage='Korean_cuisine';
-            }
-            const wikiRes = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+wikiPage);
-            const wikiData = await wikiRes.json();
-            if(wikiData.thumbnail&&wikiData.thumbnail.source){
-              // 고화질로 변환
-              m.imageUrl = wikiData.thumbnail.source.replace(/\/\d+px-/, '/600px-');
-            }
-          } catch(e){}
+          const name = m.name||'';
+          const cat = m.category||'';
+          let imgUrl = '';
+          // 메뉴명 키워드 매칭
+          for(const [key, url] of Object.entries(IMG_MAP)){
+            if(name.includes(key)||cat.includes(key)){imgUrl=url;break;}
+          }
+          if(!imgUrl) imgUrl = IMG_MAP['default'];
+          m.imageUrl = imgUrl;
           return m;
-        }));
+        });
         return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=1800'}});
       }
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
