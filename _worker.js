@@ -5195,8 +5195,6 @@ service cloud.firestore {
     }
 
     // ── firebase core compat JS 프록시 (settle.html 상대경로 로딩) ──
-    // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    }
     if (path === '/firebase-auth-compat.js') {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth-compat.js');
       const js = await r.text();
