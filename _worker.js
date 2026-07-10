@@ -579,7 +579,7 @@ export default {
 
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    if (['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js','/dine.js'].indexOf(path) !== -1) {
+    if (['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js','/dine.js','/donway_landing.js','/filo-landing.js'].indexOf(path) !== -1) {
       return serveKVFile(env, path.slice(1), 'application/javascript');
     }
     if (path === '/firebase-app-compat.js') {
