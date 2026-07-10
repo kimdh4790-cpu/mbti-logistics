@@ -3959,6 +3959,19 @@ function _filoPay(){
   '</div>';
  box.appendChild(discDiv);
 
+ /* 선불/후불 선택 탭 */
+ var payTypeDiv=document.createElement('div');
+ payTypeDiv.style.cssText='display:flex;gap:6px;margin-bottom:12px';
+ window._posPayType=window._posPayType||'postpay';
+ [{k:'postpay',l:'🧾 후불'},{k:'prepay',l:'💳 선불'}].forEach(function(pt){
+  var ptBtn=document.createElement('button');
+  ptBtn.style.cssText='flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid '+(window._posPayType===pt.k?'#0891b2':'var(--bd2)')+';background:'+(window._posPayType===pt.k?'rgba(8,145,178,.15)':'var(--surface2)')+';color:'+(window._posPayType===pt.k?'#0891b2':'var(--t2)');
+  ptBtn.textContent=pt.l;
+  (function(k){ptBtn.onclick=function(){window._posPayType=k;document.querySelectorAll('.mo').forEach(function(e){e.remove();});_filoPay();};})(pt.k);
+  payTypeDiv.appendChild(ptBtn);
+ });
+ box.appendChild(payTypeDiv);
+
  /* 결제 수단 버튼 */
  var methods=[
   {k:'card',l:'카드',ic:'💳'},{k:'cash',l:'현금',ic:'💵'},
@@ -4003,12 +4016,25 @@ function _filoConfirmPay(method, methodLabel){
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  var tableId=window._selectedTableId||null;
  var tableName=window._selectedTableName||(tableId?'테이블 '+tableId:'카운터');
- _db.collection('filo_sales').add({
+ var payType=window._posPayType||'postpay';
+ window._posPayType='postpay';
+ var saveData={
   dealerId:did,items:items,total:total,
   tableId:tableId,tableName:tableName,
+  tableNum:tableId?parseInt(tableId):null,
   createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
-  type:'pos',payMethod:method,createdBy:_CU.name||_CU.userId||''
- }).then(function(ref){
+  type:'pos',payMethod:method,payType:payType,
+  status:payType==='prepay'?'paid':'pending',
+  createdBy:_CU.name||_CU.userId||''
+ };
+ // filo_sales에 저장
+ _db.collection('filo_sales').add(saveData).then(function(ref){
+  // 테이블 선택 시 filo_orders에도 저장 (테이블 현황 연동)
+  if(tableId){
+   _db.collection('filo_orders').add(Object.assign({},saveData,{
+    type:'table',source:'pos'
+   })).catch(function(){});
+  }
   window._selectedTableId=null;window._selectedTableName=null;
   var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='🛒 주문 내역';
   _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
