@@ -4447,8 +4447,15 @@ function _filoTableLoad(did){
    // 배너 업데이트
    if(snap.size>0){
     var callList=Object.keys(callMap).map(function(k){
-     var btnHtml='<button onclick="_filoConfirmCall(\'' +callMap[k].ids.join(',')+ '\',\'' +k+ '\')" style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px">확인</button>';
-     return '<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px">🔔 테이블 '+k+' '+btnHtml+'</span>';
+     var btn=document.createElement('button');
+     btn.textContent='확인';
+     btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
+     (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
+     var span=document.createElement('span');
+     span.style.cssText='display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px';
+     span.textContent='🔔 테이블 '+k+' ';
+     span.appendChild(btn);
+     return span.outerHTML;
     }).join('');
     banner.innerHTML='<div style="font-size:12px;font-weight:800;color:#ef4444;margin-bottom:6px">🔔 직원 호출 ('+snap.size+'건)</div>'+callList;
     banner.style.display='block';
