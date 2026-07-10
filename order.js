@@ -222,7 +222,7 @@ function _openMdl(m){
 }
 
 function _closeMdl(){
- document.getElementById('mdl').style.display='none';
+ document.getElementById('mdl').classList.remove('open');
  _curMdlMenu=null;
 }
 
