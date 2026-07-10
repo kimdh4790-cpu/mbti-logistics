@@ -1607,6 +1607,7 @@ async function acceptExchange(){
             body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
           });
           const resText = await res.text();
+          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
@@ -1699,6 +1700,7 @@ async function acceptExchange(){
             body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
           });
           const resText = await res.text();
+          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
