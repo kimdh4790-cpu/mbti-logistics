@@ -1619,7 +1619,7 @@ async function acceptExchange(){
         const d2=await r2.json();
         const menus=(d2||[]).filter(function(r){return r.document;}).map(function(r){
           var f=r.document.fields||{};
-          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||''};
+          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
         });
         return new Response(JSON.stringify({menus:menus}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
