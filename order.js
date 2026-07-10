@@ -127,17 +127,28 @@ function _renderMenus(cat){
   var inCart=_cart[m.name]&&_cart[m.name].qty>0;
   var card=document.createElement('div');
   card.className='mi';
+  var trId='tr-'+m.name.replace(/\W/g,'_');
+  var badgeId='badge-'+m.name.replace(/\W/g,'_');
   if(m.imageUrl){
-   card.innerHTML='<img class="mi-img" src="'+m.imageUrl+'" loading="lazy" alt="'+m.name+'">';
+   // 풀스크린 이미지 카드
+   card.innerHTML='<div class="mi-img-wrap">'+
+    '<img class="mi-img" src="'+m.imageUrl+'" loading="lazy" alt="'+m.name+'">'+
+    '<div class="mi-overlay">'+
+    '<div class="mi-name-img">'+m.name+'</div>'+
+    '<div class="mi-tr-img" id="'+trId+'"></div>'+
+    '<div class="mi-price-img">₩'+(m.price||0).toLocaleString()+'</div>'+
+    '</div></div>'+
+    '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   } else {
-   card.innerHTML='<div class="mi-emoji">'+( m.emoji||'🍽')+'</div>';
+   // 이모지 카드
+   card.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||'🍽')+'</div></div>'+
+    '<div class="mi-body">'+
+    '<div class="mi-name">'+m.name+'</div>'+
+    '<div class="mi-tr" id="'+trId+'"></div>'+
+    '<div class="mi-price">₩'+(m.price||0).toLocaleString()+'</div>'+
+    '</div>'+
+    '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   }
-  card.innerHTML+='<div class="mi-body">'+
-   '<div class="mi-name">'+m.name+'</div>'+
-   '<div class="mi-tr" id="tr-'+m.name.replace(/\W/g,'_')+'"></div>'+
-   '<div class="mi-price">₩'+(m.price||0).toLocaleString()+'</div>'+
-   '</div>'+
-   '<div class="mi-badge'+(inCart?' on':'')+'" id="badge-'+m.name.replace(/\W/g,'_')+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   if(sold){
    card.innerHTML+='<div class="mi-sold">'+_t('sold')+'</div>';
   } else {
@@ -149,28 +160,31 @@ function _renderMenus(cat){
 
 function _openMdl(m){
  _curMdlMenu=m;
+ _tlQtyVal=1;
  var mdlBox=document.getElementById('mdl-box');
- // 이미지 또는 이모지
- var imgEl=mdlBox.querySelector('.mdl-img');
- if(imgEl)imgEl.remove();
- var emojiEl=document.getElementById('mdl-emoji');
+ // 이미지/이모지 헤더 교체
+ var oldHdr=mdlBox.querySelector('.mdl-img-full,.mdl-emoji');
+ if(oldHdr)oldHdr.remove();
+ var mdlContent=mdlBox.querySelector('.mdl-content');
  if(m.imageUrl){
   var img=document.createElement('img');
-  img.className='mdl-img';
+  img.className='mdl-img-full';
   img.src=m.imageUrl;
   img.alt=m.name;
-  mdlBox.insertBefore(img,emojiEl);
-  emojiEl.style.display='none';
+  mdlBox.insertBefore(img,mdlContent);
  } else {
-  emojiEl.style.display='block';
+  var emojiEl=document.createElement('div');
+  emojiEl.className='mdl-emoji';
   emojiEl.textContent=m.emoji||'🍽';
+  mdlBox.insertBefore(emojiEl,mdlContent);
  }
  document.getElementById('mdl-name').textContent=m.name;
  document.getElementById('mdl-price').textContent='₩'+(m.price||0).toLocaleString();
- document.getElementById('mdl-add').textContent=_t('add');
+ document.getElementById('tl-qty').textContent='1';
+ document.getElementById('mdl-add').textContent='담기 — ₩'+(m.price||0).toLocaleString();
  document.getElementById('mdl-tr').textContent='';
  document.getElementById('mdl-desc').textContent=m.description||'';
- document.getElementById('mdl').style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(3px)';
+ document.getElementById('mdl').classList.add('open');
 
  // 번역 (한국어 아닐 때)
  if(_lang!=='ko'){
@@ -210,6 +224,12 @@ function _openMdl(m){
 function _closeMdl(){
  document.getElementById('mdl').style.display='none';
  _curMdlMenu=null;
+}
+
+function _tlQty(d){
+ _tlQtyVal=Math.max(1,(_tlQtyVal||1)+d);
+ document.getElementById('tl-qty').textContent=_tlQtyVal;
+ if(_curMdlMenu) document.getElementById('mdl-add').textContent='담기 — ₩'+((_curMdlMenu.price||0)*_tlQtyVal).toLocaleString();
 }
 
 function _addFromMdl(){
