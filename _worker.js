@@ -1631,7 +1631,21 @@ async function acceptExchange(){
           var f=r.document.fields||{};
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
         });
-        return new Response(JSON.stringify({menus:menus}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // 이미지 없는 메뉴에 Unsplash 자동 이미지 검색
+        const UNSPLASH_KEY = 'G_GlhSlJibE4gGWFiH0eCDrDphrpRMLPzpvbJb6TAKY';
+        const menusWithImg = await Promise.all(menus.map(async function(m){
+          if(m.imageUrl) return m;
+          try {
+            const q = encodeURIComponent(m.name+' food korean');
+            const imgRes = await fetch('https://api.unsplash.com/search/photos?query='+q+'&per_page=1&orientation=portrait&client_id='+UNSPLASH_KEY);
+            const imgData = await imgRes.json();
+            if(imgData.results&&imgData.results[0]){
+              m.imageUrl = imgData.results[0].urls.regular;
+            }
+          } catch(e){}
+          return m;
+        }));
+        return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=3600'}});
       }
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
