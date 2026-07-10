@@ -234,6 +234,7 @@ textarea.form-input{height:80px;resize:none}
     <div class="tl-ico-wrap"><span id="tl-ico">🍽</span></div>
     <div id="tl-name"></div>
     <div id="tl-tr"></div>
+    <div id="tl-desc" style="font-size:12px;color:#64748b;text-align:center;margin-bottom:8px;line-height:1.6;min-height:0;padding:0 8px"></div>
     <div id="tl-price"></div>
     <div class="qty-row">
       <button class="qty-btn" onclick="_tlQty(-1)">−</button>
@@ -355,6 +356,9 @@ function _openMdl(m){
  document.getElementById('tl-add').textContent='담기 — ₩'+(m.price||0).toLocaleString();
  document.getElementById('tl-mdl').style.display='flex';
  document.getElementById('tl-tr').textContent='';
+ // 설명 표시
+ var descEl=document.getElementById('tl-desc');
+ descEl.textContent=m.description||'';
  if(_lang==='ko') return;
  var ck=m.name+'_'+_lang;
  if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
@@ -366,6 +370,20 @@ function _openMdl(m){
   _tlCache[ck]=t;
   if(_curMdlMenu&&_curMdlMenu.name===m.name) document.getElementById('tl-tr').textContent=t;
  }).catch(function(){document.getElementById('tl-tr').textContent='';});
+ // 설명 번역
+ if(m.description){
+  var dk=m.name+'_desc_'+_lang;
+  if(_tlCache[dk]){descEl.textContent=_tlCache[dk];}
+  else{
+   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.description,lang:_lang})})
+   .then(function(r){return r.json();})
+   .then(function(d){
+    var t=d.translated||m.description;
+    _tlCache[dk]=t;
+    if(_curMdlMenu&&_curMdlMenu.name===m.name) descEl.textContent=t;
+   }).catch(function(){});
+  }
+ }
 }
 
 function _tlQty(d){
