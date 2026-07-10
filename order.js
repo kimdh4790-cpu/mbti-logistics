@@ -25,7 +25,7 @@
 
 'use strict';
 var _did='', _tNum='', _tName='', _menus=[], _cart={}, _lang='ko';
-var _curMdlMenu=null, _tlCache={}, _isDelivery=false, _addrFull='';
+var _curMdlMenu=null, _tlQtyVal=1, _tlCache={}, _isDelivery=false, _addrFull='';
 
 var _i18n={
  ko:{all:'전체',cart:'🛒 장바구니',order:'주문하기',total:'합계',done:'주문 완료!',
