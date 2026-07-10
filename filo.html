@@ -3689,7 +3689,9 @@ function _filoPageKiosk(el){
     oSnap.forEach(function(doc){
      var d=doc.data();
      if(d.createdAt&&d.createdAt.slice(0,10)===today){
+      // tableNum 우선, 없으면 tableName에서 숫자 추출
       var k=String(d.tableNum||'');
+      if(!k&&d.tableName)k=String(d.tableName).replace(/[^0-9]/g,'')||d.tableName;
       if(!oMap[k])oMap[k]={total:0,paid:false};
       oMap[k].total+=(d.total||0);
       if(d.status==='paid')oMap[k].paid=true;
