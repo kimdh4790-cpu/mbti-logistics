@@ -5101,13 +5101,10 @@ function _filoTableOrderModal(did,table,order){
   var selfBtn2=document.createElement('button');
   selfBtn2.style.cssText='flex:1;padding:12px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer';
   selfBtn2.textContent='👥 각자';
-  (function(){selfBtn2.onclick=function(){mo.remove();
-   var prevCart=_cartItems;
-   _cartItems=(order.items||[]).map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};});
-   window._selectedTableId=table.num;
-   window._selectedTableName=table.name;
-   _filoSelfPay();
-  };})();
+  (function(ord,tNum,tName){selfBtn2.onclick=function(){mo.remove();
+   // 테이블 주문 아이템으로 각자계산 모달
+   _filoTableSelfPay(did,ord,tNum,tName);
+  };})(order,table.num,table.name);
   btnRow.appendChild(selfBtn2);
  }
 
@@ -5134,6 +5131,61 @@ function _filoTableOrderModal(did,table,order){
  mo.appendChild(inner);
  mo.onclick=function(e){if(e.target===mo)mo.remove();};
  document.body.appendChild(mo);
+}
+
+// 테이블 각자 계산 (filo_orders 직접 처리)
+function _filoTableSelfPay(did,order,tableNum,tableName){
+ var allItems=(order.items||[]).map(function(it,i){return Object.assign({},it,{_idx:i});});
+ var checks=allItems.map(function(){return false;});
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
+
+ function render(){
+  var selected=allItems.filter(function(_,i){return checks[i];});
+  var selTotal=selected.reduce(function(s,c){return s+(c.price||0)*(c.qty||1);},0);
+  box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
+   '<div style="font-size:11px;color:var(--t2);margin-bottom:10px">계산할 메뉴 선택</div>'+
+   allItems.map(function(it,i){
+    return '<div data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;background:'+(checks[i]?'rgba(8,145,178,.15)':'var(--surface2)')+';border:1.5px solid '+(checks[i]?'#0891b2':'var(--bd2)')+'">'+
+     '<div style="width:20px;height:20px;border-radius:50%;border:2px solid '+(checks[i]?'#0891b2':'var(--bd2)')+';background:'+(checks[i]?'#0891b2':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">'+(checks[i]?'✓':'')+'</div>'+
+     '<span style="flex:1;font-size:13px">'+(it.emoji||'🍽')+' '+(it.name||'')+' ×'+(it.qty||1)+'</span>'+
+     '<span style="font-size:13px;font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+   }).join('')+
+   '<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin:10px 0;display:flex;justify-content:space-between">'+
+   '<span style="font-size:13px;font-weight:700">선택 합계</span>'+
+   '<span style="font-size:14px;font-weight:900;color:#0891b2">₩'+selTotal.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;gap:8px">'+
+   '<button id="tself-card" style="flex:1;padding:12px;background:rgba(8,145,178,.15);border:1.5px solid #0891b2;border-radius:12px;color:#0891b2;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💳 카드</button>'+
+   '<button id="tself-cash" style="flex:1;padding:12px;background:rgba(34,197,94,.15);border:1.5px solid #22c55e;border-radius:12px;color:#22c55e;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💵 현금</button>'+
+   '<button id="tself-cancel" style="padding:12px 14px;background:var(--surface2);border:none;border-radius:12px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
+   '</div>';
+
+  // 클릭 이벤트
+  box.querySelectorAll('[data-idx]').forEach(function(el){
+   el.onclick=function(){
+    var idx=parseInt(el.dataset.idx);
+    checks[idx]=!checks[idx];
+    render();
+   };
+  });
+  var cardBtn=document.getElementById('tself-card');
+  var cashBtn=document.getElementById('tself-cash');
+  var cancelBtn=document.getElementById('tself-cancel');
+  if(cardBtn)cardBtn.onclick=function(){
+   if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
+   mo.remove();_filoToast('💳 카드 ₩'+selTotal.toLocaleString()+' 결제 완료');
+  };
+  if(cashBtn)cashBtn.onclick=function(){
+   if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
+   mo.remove();_filoToast('💵 현금 ₩'+selTotal.toLocaleString()+' 결제 완료');
+  };
+  if(cancelBtn)cancelBtn.onclick=function(){mo.remove();};
+ }
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+ render();
 }
 
 // 결제 완료 처리
