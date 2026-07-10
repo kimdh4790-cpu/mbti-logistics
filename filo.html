@@ -4048,8 +4048,16 @@ function _filoConfirmPay(method, methodLabel){
   }
   window._selectedTableId=null;window._selectedTableName=null;
   var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='🛒 주문 내역';
-  _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
-  _cartClear();
+  if(payType==='postpay'){
+   // 후불: 주문 접수 토스트만
+   var tMsg=tableName&&tableName!=='카운터'?tableName+' ':'';
+   _filoToast('✅ '+tMsg+'주문 접수됐습니다!');
+   _cartClear();
+  } else {
+   // 선불: 영수증 출력
+   _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
+   _cartClear();
+  }
  }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
