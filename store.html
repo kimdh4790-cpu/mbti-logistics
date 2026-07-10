@@ -535,14 +535,14 @@ function _switchTab(tab){
 
 function _setLang(l){
  _lang=l;
- ['ko','en','zh','ja'].forEach(function(x){document.getElementById('lb-'+x).classList.toggle('on',x===l);});
- document.getElementById('tab-menu').textContent=_t('menu');
- document.getElementById('tab-delivery').textContent=_t('delivery');
- document.getElementById('order-btn').textContent=_t('order');
- document.getElementById('tl-total').textContent=_t('total');
- document.getElementById('dn-msg').textContent=_t('done');
- document.getElementById('dn-sub').textContent=_t('sub');
- document.getElementById('dn-back').textContent=_t('back');
+ ['ko','en','zh','ja'].forEach(function(x){var b=document.getElementById('lb-'+x);if(b)b.classList.toggle('on',x===l);});
+ var tm=document.getElementById('tab-menu');if(tm)tm.textContent=_t('menu');
+ var td=document.getElementById('tab-delivery');if(td)td.textContent=_t('delivery');
+ var ob=document.getElementById('order-btn');if(ob)ob.textContent=_t('order');
+ var tt=document.getElementById('tl-total');if(tt)tt.textContent=_t('total');
+ var dm=document.getElementById('dn-msg');if(dm)dm.textContent=_t('done');
+ var ds=document.getElementById('dn-sub');if(ds)ds.textContent=_t('sub');
+ var db=document.getElementById('dn-back');if(db)db.textContent=_t('back');
  _tlCache={};
 }
 </script>
