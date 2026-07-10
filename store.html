@@ -1,117 +1,130 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>주문하기</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Noto Sans KR',sans-serif;background:#f8fafc;min-height:100vh}
 
 /* 헤더 */
-#hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 16px;position:sticky;top:0;z-index:100}
-.store-logo{width:40px;height:40px;border-radius:10px;object-fit:cover;margin-right:10px}
-.store-logo-emoji{width:40px;height:40px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:10px;flex-shrink:0}
-.store-name{font-size:16px;font-weight:900;color:#1e293b}
-.store-desc{font-size:11px;color:#94a3b8;margin-top:1px}
-.lang-wrap{display:flex;gap:3px;margin-left:auto}
-.lb{padding:3px 7px;border:1px solid #cbd5e1;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;background:#fff;color:#64748b}
+#hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 16px;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.store-logo-emoji{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:flex;align-items:center;justify-content:center;font-size:22px;margin-right:12px;flex-shrink:0}
+.store-name{font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-.3px}
+.store-desc{font-size:11px;color:#94a3b8;margin-top:2px}
+.lang-wrap{display:flex;gap:4px;margin-left:auto}
+.lb{padding:4px 8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;background:#fff;color:#64748b;transition:.15s}
 .lb.on{background:#0891b2;color:#fff;border-color:#0891b2}
 
-/* 탭 (메뉴/배달정보) */
-#tabs{background:#fff;border-bottom:1px solid #e2e8f0;display:flex}
-.tab{flex:1;padding:12px;text-align:center;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent}
+/* 탭 */
+#tabs{background:#fff;border-bottom:2px solid #f1f5f9;display:flex}
+.tab{flex:1;padding:13px;text-align:center;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
 .tab.on{color:#0891b2;border-bottom-color:#0891b2}
 
 /* 메뉴 영역 */
-#menu-wrap{display:flex;height:calc(100vh - 110px);overflow:hidden}
-#cat-bar{width:72px;flex-shrink:0;background:#f1f5f9;border-right:1px solid #e2e8f0;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:2px}
-.cb{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:10px;cursor:pointer;font-size:9px;font-weight:700;color:#64748b;border:none;background:transparent;text-align:center;line-height:1.4;min-height:50px;width:100%}
+#menu-wrap{display:flex;height:calc(100vh - 116px);overflow:hidden}
+#cat-bar{width:72px;flex-shrink:0;background:#f8fafc;border-right:1px solid #f1f5f9;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:2px}
+.cb{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:10px;cursor:pointer;font-size:9px;font-weight:700;color:#64748b;border:none;background:transparent;text-align:center;line-height:1.4;min-height:52px;width:100%;transition:.15s}
 .cb.on{background:#0891b2;color:#fff}
-.ci{font-size:20px;margin-bottom:2px;display:block}
-#menu-area{flex:1;overflow-y:auto;padding:8px 8px 120px}
-#menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.mi{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;transition:.15s;position:relative}
-.mi:active{transform:scale(.96);background:#e0f2fe}
-.mi img{width:100%;height:60px;object-fit:cover;border-radius:8px;margin-bottom:4px;display:block}
-.me{font-size:24px;margin-bottom:4px;display:block;line-height:1}
-.mn{font-size:10px;font-weight:700;color:#1e293b;margin-bottom:2px;line-height:1.3;word-break:keep-all}
-.mp{font-size:11px;font-weight:900;color:#0891b2}
-.mc{position:absolute;top:-6px;right:-6px;background:#0891b2;color:#fff;font-size:10px;font-weight:900;width:20px;height:20px;border-radius:50%;display:none;align-items:center;justify-content:center}
+.ci{font-size:22px;margin-bottom:2px;display:block}
+#menu-area{flex:1;overflow-y:auto;padding:10px 10px 140px}
+#menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+
+/* 메뉴 카드 */
+.mi{background:#fff;border:1px solid #f1f5f9;border-radius:14px;padding:10px 8px;text-align:center;cursor:pointer;transition:.18s;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.mi:active{transform:scale(.94);background:#e0f2fe;border-color:#bae6fd}
+.mi img{width:100%;height:70px;object-fit:cover;border-radius:10px;margin-bottom:6px;display:block}
+.me{font-size:28px;margin-bottom:4px;display:block;line-height:1}
+.mn{font-size:10px;font-weight:800;color:#0f172a;margin-bottom:3px;line-height:1.3;word-break:keep-all}
+.mp{font-size:12px;font-weight:900;color:#0891b2}
+.mc{position:absolute;top:-7px;right:-7px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4)}
 .mc.on{display:flex}
 
-/* 배달 정보 폼 */
-#delivery-wrap{display:none;padding:16px;overflow-y:auto;max-height:calc(100vh - 110px)}
+/* 배달 정보 */
+#delivery-wrap{display:none;padding:16px;overflow-y:auto;max-height:calc(100vh - 116px)}
 .form-group{margin-bottom:14px}
 .form-label{font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.5px}
-.form-input{width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;background:#fff;color:#1e293b;outline:none}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;background:#fff;color:#0f172a;outline:none;transition:.15s}
 .form-input:focus{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.1)}
 textarea.form-input{height:80px;resize:none}
-.addr-btn{width:100%;padding:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;color:#0891b2;cursor:pointer;text-align:left}
+.addr-btn{width:100%;padding:12px 14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;font-size:13px;font-weight:700;color:#0891b2;cursor:pointer;text-align:left;transition:.15s}
+.addr-btn:active{background:#e0f2fe}
 
 /* 장바구니 버튼 */
-#cart-btn{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0891b2;color:#fff;border:none;border-radius:50px;padding:14px 24px;font-size:15px;font-weight:900;cursor:pointer;display:none;box-shadow:0 4px 20px rgba(8,145,178,.4);z-index:200;white-space:nowrap;min-width:200px;text-align:center}
+#cart-btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:50px;padding:15px 28px;font-size:15px;font-weight:900;cursor:pointer;display:none;box-shadow:0 6px 24px rgba(8,145,178,.45);z-index:200;white-space:nowrap;min-width:220px;text-align:center;letter-spacing:-.2px}
 
 /* 장바구니 시트 */
-#cs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.15);transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);z-index:300;max-height:90vh;display:flex;flex-direction:column}
+#cs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.12);transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);z-index:300;max-height:90vh;display:flex;flex-direction:column}
 #cs.open{transform:translateY(0)}
-#ch{padding:14px 16px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-#ch .t{font-size:16px;font-weight:900}
-#ccl{background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8}
-#cl{overflow-y:auto;padding:8px 16px;flex:1}
-.ri{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
-.rn{flex:1;font-size:13px;font-weight:700}
-.rc{display:flex;align-items:center;gap:6px}
-.rc button{width:26px;height:26px;border-radius:50%;border:1px solid #e2e8f0;background:#f8fafc;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.rq{font-size:13px;font-weight:700;min-width:20px;text-align:center}
-.rp{font-size:13px;font-weight:900;color:#0891b2;min-width:60px;text-align:right}
-#cf{padding:14px 16px;border-top:1px solid #f1f5f9;flex-shrink:0}
+#ch{padding:16px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+#ch .t{font-size:17px;font-weight:900;color:#0f172a}
+#ccl{background:#f1f5f9;border:none;font-size:16px;cursor:pointer;color:#64748b;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+#cl{overflow-y:auto;padding:8px 18px;flex:1}
+.ri{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f8fafc}
+.rn{flex:1;font-size:13px;font-weight:700;color:#0f172a}
+.rc{display:flex;align-items:center;gap:8px}
+.rc button{width:28px;height:28px;border-radius:50%;border:1.5px solid #e2e8f0;background:#f8fafc;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0891b2}
+.rq{font-size:14px;font-weight:900;min-width:22px;text-align:center;color:#0f172a}
+.rp{font-size:13px;font-weight:900;color:#0891b2;min-width:65px;text-align:right}
 
-/* 배달 정보 입력 (시트 내) */
-#delivery-form-sheet{padding:0 16px 8px;border-top:1px solid #f1f5f9}
+/* 배달 정보 (시트 내) */
+#delivery-form-sheet{padding:0 18px 10px;border-top:1px solid #f1f5f9}
 .sf-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.sf-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
-.sf-input{padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none}
+.sf-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.sf-input{padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;transition:.15s}
 .sf-input:focus{border-color:#0891b2}
 
-#cart-total-row{display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;font-weight:700;align-items:center}
-#cart-total-price{font-size:20px;font-weight:900;color:#0891b2}
-#order-btn{width:100%;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer}
-#order-btn:disabled{background:#cbd5e1;cursor:not-allowed}
+#cart-total-row{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:700;align-items:center;color:#64748b}
+#cart-total-price{font-size:22px;font-weight:900;color:#0891b2}
+#cf{padding:14px 18px 24px;border-top:1px solid #f1f5f9;flex-shrink:0}
+#order-btn{width:100%;padding:15px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(8,145,178,.3)}
+#order-btn:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed}
 
 /* 완료 */
-#dn{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:400;padding:20px}
-.dn-ico{font-size:64px;margin-bottom:16px}
-.dn-msg{font-size:22px;font-weight:900;margin-bottom:8px;text-align:center}
-.dn-sub{font-size:13px;color:#94a3b8;margin-bottom:8px;text-align:center}
-.dn-order{font-size:12px;color:#64748b;margin-bottom:24px;text-align:center;line-height:1.6}
-#dn-back{padding:12px 32px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+#dn{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:400;padding:24px}
+.dn-ico{font-size:72px;margin-bottom:20px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.dn-msg{font-size:24px;font-weight:900;margin-bottom:8px;text-align:center;color:#0f172a}
+.dn-sub{font-size:13px;color:#94a3b8;margin-bottom:10px;text-align:center}
+.dn-order{font-size:12px;color:#64748b;margin-bottom:28px;text-align:center;line-height:1.7;background:#f8fafc;padding:14px;border-radius:12px;width:100%;max-width:320px}
+#dn-back{padding:14px 36px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer}
 
 /* 로딩 */
 #ld{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500}
-.sp{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .8s linear infinite}
+.sp{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 
 /* 오버레이 */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:250;display:none}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:none;backdrop-filter:blur(2px)}
 
-#tl-mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:700;display:none;align-items:flex-end}
+/* 메뉴 상세 모달 */
+#tl-mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;align-items:flex-end;backdrop-filter:blur(2px)}
 #tl-mdl.open{display:flex}
-#tl-mb{background:#fff;border-radius:20px 20px 0 0;width:100%;padding:20px;max-height:75vh}
-#tl-mb .tl-ico{font-size:44px;text-align:center;margin-bottom:8px}
-#tl-mb .tl-name{font-size:17px;font-weight:900;text-align:center;margin-bottom:4px;color:#1e293b}
-#tl-mb .tl-tr{font-size:13px;color:#0891b2;text-align:center;margin-bottom:14px;min-height:20px;font-weight:700}
-#tl-mb .tl-price{font-size:22px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:16px}
-#tl-mb .tl-add{width:100%;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer}
-.tl-spin{display:inline-block;width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
+#tl-mb{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 36px;max-height:80vh}
+.tl-drag{width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px}
+.tl-ico-wrap{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+#tl-ico{font-size:44px;display:block;text-align:center}
+#tl-name{font-size:20px;font-weight:900;text-align:center;margin-bottom:6px;color:#0f172a;letter-spacing:-.3px}
+#tl-tr{font-size:14px;color:#0891b2;text-align:center;margin-bottom:4px;min-height:22px;font-weight:700}
+#tl-price{font-size:26px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:20px}
+
+/* 수량 선택 */
+.qty-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
+.qty-btn{width:40px;height:40px;border-radius:50%;border:2px solid #e2e8f0;background:#f8fafc;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0891b2;transition:.15s}
+.qty-btn:active{background:#e0f2fe;border-color:#0891b2}
+#tl-qty{font-size:22px;font-weight:900;min-width:40px;text-align:center;color:#0f172a}
+#tl-add{width:100%;padding:16px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:16px;font-size:17px;font-weight:900;cursor:pointer;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(8,145,178,.3)}
+.tl-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#0891b2;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
 </style>
 </head>
 <body>
 
 <div id="ld">
-  <div style="font-size:28px;font-weight:900;color:#0891b2;margin-bottom:16px">🛵 FILO</div>
+  <div style="font-size:30px;font-weight:900;color:#0891b2;margin-bottom:20px;letter-spacing:-.5px">🛵 FILO</div>
   <div class="sp"></div>
-  <div style="font-size:12px;color:#94a3b8;margin-top:12px">매장 정보를 불러오는 중...</div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:14px">매장 정보를 불러오는 중...</div>
 </div>
 
 <div id="hdr" style="display:none">
@@ -135,13 +148,11 @@ textarea.form-input{height:80px;resize:none}
   <div class="tab" id="tab-delivery" onclick="_switchTab('delivery')">📍 배달정보</div>
 </div>
 
-<!-- 메뉴 -->
 <div id="menu-wrap" style="display:none">
   <div id="cat-bar"></div>
   <div id="menu-area"><div id="menu-grid"></div></div>
 </div>
 
-<!-- 배달 정보 -->
 <div id="delivery-wrap">
   <div class="form-group">
     <label class="form-label" id="lbl-addr">배달 주소 *</label>
@@ -160,21 +171,18 @@ textarea.form-input{height:80px;resize:none}
     <label class="form-label" id="lbl-memo">요청사항</label>
     <textarea class="form-input" id="cust-memo" placeholder="문 앞에 놓아주세요 / 수저 빼주세요 등"></textarea>
   </div>
-  <div style="padding:14px;background:#f0f9ff;border-radius:12px;font-size:12px;color:#0369a1;line-height:1.6">
+  <div style="padding:14px;background:#f0f9ff;border-radius:14px;font-size:12px;color:#0369a1;line-height:1.7;border:1px solid #bae6fd">
     📋 주문 후 매장에서 확인하여 배달 접수합니다.<br>
     배달비는 거리에 따라 별도 부과됩니다.
   </div>
 </div>
 
-<!-- 장바구니 버튼 -->
 <button id="cart-btn" onclick="_openCart()">
   🛒 <span id="cart-cnt">0</span>개 · <span id="cart-total-btn">₩0</span> &nbsp;주문하기
 </button>
 
-<!-- 오버레이 -->
 <div id="overlay" onclick="_closeCart()"></div>
 
-<!-- 장바구니 시트 -->
 <div id="cs">
   <div id="ch">
     <div class="t">🛒 장바구니</div>
@@ -182,7 +190,7 @@ textarea.form-input{height:80px;resize:none}
   </div>
   <div id="cl"></div>
   <div id="delivery-form-sheet">
-    <div class="sf-row" style="margin-top:10px">
+    <div class="sf-row" style="margin-top:12px">
       <span class="sf-label" id="sf-lbl-addr">배달 주소 *</span>
       <button class="addr-btn" id="sf-addr-btn" onclick="_searchAddr()" style="font-size:12px;padding:10px">📍 주소 검색</button>
       <input class="sf-input" id="sf-addr-detail" placeholder="상세주소" style="display:none;margin-top:4px">
@@ -204,14 +212,13 @@ textarea.form-input{height:80px;resize:none}
   </div>
   <div id="cf">
     <div id="cart-total-row">
-      <span id="tl">합계</span>
+      <span id="tl-total">합계</span>
       <span id="cart-total-price">₩0</span>
     </div>
     <button id="order-btn" onclick="_submitOrder()">주문하기</button>
   </div>
 </div>
 
-<!-- 완료 -->
 <div id="dn">
   <div class="dn-ico">✅</div>
   <div class="dn-msg" id="dn-msg">주문이 접수됐습니다!</div>
@@ -220,95 +227,36 @@ textarea.form-input{height:80px;resize:none}
   <button id="dn-back" onclick="location.reload()">다시 주문하기</button>
 </div>
 
-<!-- 카카오 주소 API -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-var _tlCache={};
-var _curMdlMenu=null;
+<!-- 메뉴 상세 모달 -->
+<div id="tl-mdl" onclick="if(event.target===this)_closeTlMdl()">
+  <div id="tl-mb">
+    <div class="tl-drag"></div>
+    <div class="tl-ico-wrap"><span id="tl-ico">🍽</span></div>
+    <div id="tl-name"></div>
+    <div id="tl-tr"></div>
+    <div id="tl-price"></div>
+    <div class="qty-row">
+      <button class="qty-btn" onclick="_tlQty(-1)">−</button>
+      <span id="tl-qty">1</span>
+      <button class="qty-btn" onclick="_tlQty(1)">+</button>
+    </div>
+    <button id="tl-add" onclick="_addFromTlMdl()">담기</button>
+  </div>
+</div>
 
-function _openMdl(m){
- _curMdlMenu=m;
- document.getElementById('tl-ico').textContent=m.emoji||'🍽';
- document.getElementById('tl-name').textContent=m.name;
- document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
- document.getElementById('tl-add').textContent='\ub2f4\uae30';
- var m=document.getElementById('tl-mdl');
- m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end';
- if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
- var ck=m.name+'_'+_lang;
- if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
- document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
- fetch('/api/translate',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({name:m.name,lang:_lang})
- }).then(function(r){return r.json();})
- .then(function(d){
-  var t=d.translated||m.name;
-  _tlCache[ck]=t;
-  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
-   document.getElementById('tl-tr').textContent=t;
-  }
- }).catch(function(){document.getElementById('tl-tr').textContent='';});
-}
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-function _closeTlMdl(){
- document.getElementById('tl-mdl').style.display='none';
- _curMdlMenu=null;
-}
-
-function _addFromTlMdl(){
- if(_curMdlMenu) _add(_curMdlMenu);
- _closeTlMdl();
-}
-</script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
-var _tlCache={};
-var _curMdlMenu=null;
-
-function _openMdl(m){
- _curMdlMenu=m;
- document.getElementById('tl-ico').textContent=m.emoji||'🍽';
- document.getElementById('tl-name').textContent=m.name;
- document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
- document.getElementById('tl-add').textContent='\ub2f4\uae30';
- var m=document.getElementById('tl-mdl');
- m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end';
- if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
- var ck=m.name+'_'+_lang;
- if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
- document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
- fetch('/api/translate',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({name:m.name,lang:_lang})
- }).then(function(r){return r.json();})
- .then(function(d){
-  var t=d.translated||m.name;
-  _tlCache[ck]=t;
-  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
-   document.getElementById('tl-tr').textContent=t;
-  }
- }).catch(function(){document.getElementById('tl-tr').textContent='';});
-}
-
-function _closeTlMdl(){
- document.getElementById('tl-mdl').style.display='none';
- _curMdlMenu=null;
-}
-
-function _addFromTlMdl(){
- if(_curMdlMenu) _add(_curMdlMenu);
- _closeTlMdl();
-}
-</script>
 <script>
 var _did='', _slug='', _menus=[], _cart={}, _lang='ko', _addr='', _addrFull='';
+var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 
 var _i18n={
- ko:{menu:'🍽 메뉴',delivery:'📍 배달정보',order:'주문하기',total:'합계',addr:'배달 주소 *',name:'이름 *',phone:'연락처 *',memo:'요청사항',done:'주문이 접수됐습니다!',sub:'매장에서 확인 후 배달을 시작합니다',back:'다시 주문하기',addrBtn:'📍 주소 검색',cartBtn:'주문하기'},
- en:{menu:'🍽 Menu',delivery:'📍 Delivery Info',order:'Order Now',total:'Total',addr:'Address *',name:'Name *',phone:'Phone *',memo:'Requests',done:'Order Received!',sub:'Store will confirm and start delivery',back:'Order Again',addrBtn:'📍 Search Address',cartBtn:'Order'},
- zh:{menu:'🍽 菜单',delivery:'📍 配送信息',order:'下单',total:'合计',addr:'配送地址 *',name:'姓名 *',phone:'电话 *',memo:'备注',done:'订单已接收！',sub:'商家确认后开始配送',back:'再次订购',addrBtn:'📍 搜索地址',cartBtn:'下单'},
- ja:{menu:'🍽 メニュー',delivery:'📍 配達情報',order:'注文する',total:'合計',addr:'配達住所 *',name:'お名前 *',phone:'電話番号 *',memo:'ご要望',done:'注文を受け付けました！',sub:'店舗確認後に配達を開始します',back:'もう一度注文',addrBtn:'📍 住所検索',cartBtn:'注文'}
+ ko:{menu:'🍽 메뉴',delivery:'📍 배달정보',order:'주문하기',total:'합계',done:'주문이 접수됐습니다!',sub:'매장에서 확인 후 배달을 시작합니다',back:'다시 주문하기'},
+ en:{menu:'🍽 Menu',delivery:'📍 Delivery Info',order:'Order Now',total:'Total',done:'Order Received!',sub:'Store will confirm and start delivery',back:'Order Again'},
+ zh:{menu:'🍽 菜单',delivery:'📍 配送信息',order:'下单',total:'合计',done:'订单已接收！',sub:'商家确认后开始配送',back:'再次订购'},
+ ja:{menu:'🍽 メニュー',delivery:'📍 配達情報',order:'注文する',total:'合計',done:'注文を受け付けました！',sub:'店舗確認後に配達を開始します',back:'もう一度注文'}
 };
 function _t(k){return(_i18n[_lang]&&_i18n[_lang][k])||_i18n.ko[k]||k;}
 
@@ -319,60 +267,43 @@ firebase.initializeApp({
 });
 var _db=firebase.firestore();
 
-// 슬러그로 매장ID 조회
 function _p(k){return new URLSearchParams(location.search).get(k)||'';}
 
 window.onload=function(){
  _slug=location.pathname.replace('/store/','').replace('/store','').replace('/','').trim();
  if(!_slug) _slug=_p('id')||_p('slug');
-
  if(!_slug){
-  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:40px">❌</div><div style="margin-top:12px;color:#ef4444">잘못된 주소입니다</div></div>';
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:48px">❌</div><div style="margin-top:12px;color:#ef4444;font-size:14px">잘못된 주소입니다</div></div>';
   return;
  }
-
- // /api/store로 매장 정보 조회 (비로그인 가능)
  fetch('/api/store?slug='+encodeURIComponent(_slug))
  .then(function(r){return r.json();})
  .then(function(data){
   if(data.error) throw new Error(data.error);
   var d=data.store;
   _did=d.id;
-
-  // 매장 정보 표시
   document.getElementById('store-name').textContent=d.name||'매장';
   document.getElementById('store-desc').textContent=d.address||'배달 주문';
   document.title=(d.name||'매장')+' - 주문하기';
-
   document.getElementById('ld').style.display='none';
   document.getElementById('hdr').style.display='block';
   document.getElementById('tabs').style.display='flex';
   document.getElementById('menu-wrap').style.display='flex';
-
-  // 언어 버튼
   ['ko','en','zh','ja'].forEach(function(l){
    document.getElementById('lb-'+l).onclick=function(){_setLang(l);};
   });
-  document.getElementById('ccl').onclick=_closeCart;
-  document.getElementById('order-btn').onclick=_submitOrder;
-
   _loadMenus();
  })
  .catch(function(e){
-  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:40px">😅</div><div style="margin-top:12px;color:#ef4444;font-size:14px">'+e.message+'</div></div>';
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px"><div style="font-size:48px">😅</div><div style="margin-top:12px;color:#ef4444;font-size:14px">'+e.message+'</div></div>';
  });
 };
 
 function _loadMenus(){
  fetch('/api/menus?did='+encodeURIComponent(_did))
  .then(function(r){return r.json();})
- .then(function(d){
-  _menus=d.menus||[];
-  _renderMenus();
- })
- .catch(function(){
-  document.getElementById('menu-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:#94a3b8">메뉴를 불러올 수 없습니다</div>';
- });
+ .then(function(d){_menus=d.menus||[];_renderMenus();})
+ .catch(function(){document.getElementById('menu-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:#94a3b8">메뉴를 불러올 수 없습니다</div>';});
 }
 
 var _catIco={'전체':'🍽','버거':'🍔','치킨':'🍗','피자':'🍕','분식':'🌶️','음료':'☕','사이드':'🍟','디저트':'🍰','세트':'🎉','카페':'☕','한식':'🍱','기타':'🍽'};
@@ -380,7 +311,6 @@ var _catIco={'전체':'🍽','버거':'🍔','치킨':'🍗','피자':'🍕','�
 function _renderMenus(){
  var cats=['전체'];
  _menus.forEach(function(m){if(m.category&&cats.indexOf(m.category)<0)cats.push(m.category);});
-
  var bar=document.getElementById('cat-bar');
  bar.innerHTML='';
  cats.forEach(function(cat,i){
@@ -398,7 +328,6 @@ function _renderMenus(){
   };
   bar.appendChild(btn);
  });
-
  var grid=document.getElementById('menu-grid');
  grid.innerHTML='';
  _menus.forEach(function(m){
@@ -406,15 +335,54 @@ function _renderMenus(){
   item.className='mi';
   item.dataset.cat=m.category||'기타';
   item.innerHTML=
-   (m.imageUrl?'<img src="'+m.imageUrl+'" loading="lazy">':'<span class="me">'+(m.emoji||'🍽')+'</span>')+
+   (m.imageUrl?'<img src="'+m.imageUrl+'" loading="lazy" onerror="this.style.display=\'none\'">':'<span class="me">'+(m.emoji||'🍽')+'</span>')+
    '<div class="mn">'+m.name+'</div>'+
    '<div class="mp">₩'+(m.price||0).toLocaleString()+'</div>'+
    '<div class="mc" id="sc-'+m.name.replace(/\W/g,'')+'"></div>';
-  (function(menu){
-   item.onclick=function(){_openMdl(menu);};
-  })(m);
+  (function(menu){item.onclick=function(){_openMdl(menu);};})(m);
   grid.appendChild(item);
  });
+}
+
+function _openMdl(m){
+ _curMdlMenu=m;
+ _tlQtyVal=1;
+ document.getElementById('tl-ico').textContent=m.emoji||'🍽';
+ document.getElementById('tl-name').textContent=m.name;
+ document.getElementById('tl-price').textContent='₩'+(m.price||0).toLocaleString();
+ document.getElementById('tl-qty').textContent='1';
+ document.getElementById('tl-add').textContent='담기 — ₩'+(m.price||0).toLocaleString();
+ document.getElementById('tl-mdl').style.display='flex';
+ document.getElementById('tl-tr').textContent='';
+ if(_lang==='ko') return;
+ var ck=m.name+'_'+_lang;
+ if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
+ document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>';
+ fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,lang:_lang})})
+ .then(function(r){return r.json();})
+ .then(function(d){
+  var t=d.translated||m.name;
+  _tlCache[ck]=t;
+  if(_curMdlMenu&&_curMdlMenu.name===m.name) document.getElementById('tl-tr').textContent=t;
+ }).catch(function(){document.getElementById('tl-tr').textContent='';});
+}
+
+function _tlQty(d){
+ _tlQtyVal=Math.max(1,_tlQtyVal+d);
+ document.getElementById('tl-qty').textContent=_tlQtyVal;
+ if(_curMdlMenu) document.getElementById('tl-add').textContent='담기 — ₩'+((_curMdlMenu.price||0)*_tlQtyVal).toLocaleString();
+}
+
+function _closeTlMdl(){
+ document.getElementById('tl-mdl').style.display='none';
+ _curMdlMenu=null;
+}
+
+function _addFromTlMdl(){
+ if(_curMdlMenu){
+  for(var i=0;i<_tlQtyVal;i++) _add(_curMdlMenu);
+ }
+ _closeTlMdl();
 }
 
 function _add(m){
@@ -453,10 +421,7 @@ function _openCart(){
   var bm=document.createElement('button');bm.textContent='−';
   var qs=document.createElement('span');qs.className='rq';qs.textContent=item.qty;
   var bp=document.createElement('button');bp.textContent='+';
-  (function(n){
-   bm.onclick=function(){_chg(n,-1);};
-   bp.onclick=function(){_chg(n,1);};
-  })(item.name);
+  (function(n){bm.onclick=function(){_chg(n,-1);};bp.onclick=function(){_chg(n,1);};})(item.name);
   ctrl.appendChild(bm);ctrl.appendChild(qs);ctrl.appendChild(bp);
   var pd=document.createElement('div');pd.className='rp';
   pd.textContent='₩'+(item.price*item.qty).toLocaleString();
@@ -478,26 +443,23 @@ function _chg(name,d){
  _cart[name].qty+=d;
  if(_cart[name].qty<=0) delete _cart[name];
  var el=document.getElementById('sc-'+name.replace(/\W/g,''));
- if(el){
-  var q=(_cart[name]&&_cart[name].qty)||0;
-  el.textContent=q;el.className='mc'+(q>0?' on':'');
- }
+ if(el){var q=(_cart[name]&&_cart[name].qty)||0;el.textContent=q;el.className='mc'+(q>0?' on':'');}
  _openCart();_updBtn();
  if(!Object.keys(_cart).length) _closeCart();
 }
 
 function _searchAddr(){
- // 카카오 주소 API 대신 직접 입력
  var input=document.createElement('div');
- input.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+ input.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
  input.innerHTML=
-  '<div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:400px">'+
-  '<div style="font-size:15px;font-weight:900;margin-bottom:14px">📍 배달 주소 입력</div>'+
-  '<input id="addr-input-main" placeholder="도로명 주소 (예: 수영로 668)" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:8px;box-sizing:border-box">'+
-  '<input id="addr-input-detail" placeholder="상세주소 (예: 607호)" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;margin-bottom:14px;box-sizing:border-box">'+
+  '<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2)">'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:6px;color:#0f172a">📍 배달 주소 입력</div>'+
+  '<div style="font-size:12px;color:#94a3b8;margin-bottom:16px">도로명 주소로 입력해주세요</div>'+
+  '<input id="addr-input-main" placeholder="예: 수영로 668" style="width:100%;padding:13px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none" onfocus="this.style.borderColor=\'#0891b2\'" onblur="this.style.borderColor=\'#e2e8f0\'">'+
+  '<input id="addr-input-detail" placeholder="상세주소 예: 607호" style="width:100%;padding:13px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:18px;box-sizing:border-box;outline:none" onfocus="this.style.borderColor=\'#0891b2\'" onblur="this.style.borderColor=\'#e2e8f0\'">'+
   '<div style="display:flex;gap:8px">'+
-  '<button id="addr-confirm" style="flex:1;padding:12px;background:#0891b2;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">확인</button>'+
-  '<button id="addr-cancel" style="flex:1;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
+  '<button id="addr-confirm" style="flex:1;padding:14px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>'+
+  '<button id="addr-cancel" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
   '</div></div>';
  document.body.appendChild(input);
  document.getElementById('addr-input-main').focus();
@@ -506,13 +468,10 @@ function _searchAddr(){
   var detail=document.getElementById('addr-input-detail').value.trim();
   if(!main){alert('주소를 입력해주세요');return;}
   _addr=main+(detail?' '+detail:'');
-  _addrFull=_addr;
   document.getElementById('addr-btn').textContent='📍 '+_addr;
-  document.getElementById('addr-btn').style.color='#1e293b';
-  document.getElementById('addr-detail').style.display='none';
+  document.getElementById('addr-btn').style.color='#0f172a';
   document.getElementById('sf-addr-btn').textContent='📍 '+_addr;
-  document.getElementById('sf-addr-btn').style.color='#1e293b';
-  document.getElementById('sf-addr-detail').style.display='none';
+  document.getElementById('sf-addr-btn').style.color='#0f172a';
   input.remove();
  };
  document.getElementById('addr-cancel').onclick=function(){input.remove();};
@@ -523,38 +482,24 @@ function _submitOrder(){
  var name=document.getElementById('sf-name').value.trim()||document.getElementById('cust-name').value.trim();
  var phone=document.getElementById('sf-phone').value.trim()||document.getElementById('cust-phone').value.trim();
  var memo=document.getElementById('sf-memo').value.trim()||document.getElementById('cust-memo').value.trim();
- var detail=document.getElementById('sf-addr-detail').value.trim()||document.getElementById('addr-detail').value.trim();
- var fullAddr=_addr+(detail?' '+detail:'');
-
+ var fullAddr=_addr;
  if(!_addr){alert('배달 주소를 입력해주세요');return;}
  if(!name){alert('이름을 입력해주세요');return;}
  if(!phone){alert('연락처를 입력해주세요');return;}
-
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
  if(!items.length){alert('메뉴를 선택해주세요');return;}
-
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');
  btn.disabled=true;btn.textContent='주문 중...';
-
  _db.collection('filo_orders').add({
-  dealerId:_did,
-  type:'delivery',
-  status:'pending',
-  items:items,
-  total:total,
-  customer:name,
-  phone:phone,
-  address:fullAddr,
-  memo:memo,
-  createdAt:new Date().toISOString()
+  dealerId:_did,type:'delivery',status:'pending',
+  items:items,total:total,customer:name,phone:phone,
+  address:fullAddr,memo:memo,createdAt:new Date().toISOString()
  }).then(function(ref){
-  _closeCart();
-  _cart={};
-  _updBtn();
+  _closeCart();_cart={};_updBtn();
   document.querySelectorAll('.mc').forEach(function(c){c.textContent='';c.className='mc';});
-  var orderInfo=items.map(function(i){return i.emoji+' '+i.name+' ×'+i.qty;}).join('\n');
-  document.getElementById('dn-order').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n'+orderInfo+'\n\n배달주소: '+fullAddr;
+  var orderInfo=items.map(function(i){return i.emoji+' '+i.name+' ×'+i.qty+'  ₩'+(i.price*i.qty).toLocaleString();}).join('\n');
+  document.getElementById('dn-order').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n\n'+orderInfo+'\n\n📍 '+fullAddr;
   document.getElementById('dn').style.display='flex';
  }).catch(function(e){
   alert('주문 실패: '+e.message);
@@ -571,66 +516,17 @@ function _switchTab(tab){
 
 function _setLang(l){
  _lang=l;
- ['ko','en','zh','ja'].forEach(function(x){
-  document.getElementById('lb-'+x).classList.toggle('on',x===l);
- });
+ ['ko','en','zh','ja'].forEach(function(x){document.getElementById('lb-'+x).classList.toggle('on',x===l);});
  document.getElementById('tab-menu').textContent=_t('menu');
  document.getElementById('tab-delivery').textContent=_t('delivery');
  document.getElementById('order-btn').textContent=_t('order');
- document.getElementById('tl').textContent=_t('total');
+ document.getElementById('tl-total').textContent=_t('total');
  document.getElementById('dn-msg').textContent=_t('done');
  document.getElementById('dn-sub').textContent=_t('sub');
  document.getElementById('dn-back').textContent=_t('back');
-}
-
-var _tlCache={};
-var _curMdlMenu=null;
-
-function _openMdl(m){
- _curMdlMenu=m;
- document.getElementById('tl-ico').textContent=m.emoji||'🍽';
- document.getElementById('tl-name').textContent=m.name;
- document.getElementById('tl-price').textContent='\u20a9'+(m.price||0).toLocaleString();
- document.getElementById('tl-add').textContent='\ub2f4\uae30';
- var m=document.getElementById('tl-mdl');
- m.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end';
- if(_lang==='ko'){document.getElementById('tl-tr').textContent='';return;}
- var ck=m.name+'_'+_lang;
- if(_tlCache[ck]){document.getElementById('tl-tr').textContent=_tlCache[ck];return;}
- document.getElementById('tl-tr').innerHTML='<span class="tl-spin"></span>번역 중...';
- fetch('/api/translate',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({name:m.name,lang:_lang})
- }).then(function(r){return r.json();})
- .then(function(d){
-  var t=d.translated||m.name;
-  _tlCache[ck]=t;
-  if(document.getElementById('tl-mdl').classList.contains('open')&&_curMdlMenu&&_curMdlMenu.name===m.name){
-   document.getElementById('tl-tr').textContent=t;
-  }
- }).catch(function(){document.getElementById('tl-tr').textContent='';});
-}
-
-function _closeTlMdl(){
- document.getElementById('tl-mdl').style.display='none';
- _curMdlMenu=null;
-}
-
-function _addFromTlMdl(){
- if(_curMdlMenu) _add(_curMdlMenu);
- _closeTlMdl();
+ _tlCache={};
 }
 </script>
-
-<div id="tl-mdl" onclick="if(event.target===this)_closeTlMdl()">
-  <div id="tl-mb">
-    <div class="tl-ico" id="tl-ico">🍽</div>
-    <div class="tl-name" id="tl-name"></div>
-    <div class="tl-tr" id="tl-tr"></div>
-    <div class="tl-price" id="tl-price"></div>
-    <button class="tl-add" id="tl-add" onclick="_addFromTlMdl()">담기</button>
-  </div>
-</div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"fcc737ed587146dd8feafc9db77f93b2","r":1}' crossorigin="anonymous"></script>
 </body>
 </html>
