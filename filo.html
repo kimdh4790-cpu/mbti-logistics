@@ -4503,10 +4503,28 @@ function _filoTableLoad(did){
     });
    }
   });
- var tableSnap=null,bookingSnap=null;
+ var tableSnap=null,bookingSnap=null,orderMap={};
+ // 실시간 주문 감지 (테이블별 주문금액)
+ var today=new Date().toISOString().slice(0,10);
+ _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+  .onSnapshot(function(snap){
+   orderMap={};
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(d.createdAt&&d.createdAt.slice(0,10)===today){
+     var tNum=String(d.tableNum||d.tableName||'');
+     if(!orderMap[tNum])orderMap[tNum]={total:0,items:[],ids:[],paid:false};
+     orderMap[tNum].total+=(d.total||0);
+     orderMap[tNum].ids.push(doc.id);
+     if(d.payType==='prepay'||d.status==='paid')orderMap[tNum].paid=true;
+     (d.items||[]).forEach(function(it){orderMap[tNum].items.push(it);});
+    }
+   });
+   tryRender();
+  });
+
  function tryRender(){
   if(!tableSnap||!bookingSnap)return;
-  var results=[tableSnap,bookingSnap];
 
   var tables=tableSnap.empty?
    Array.from({length:10},function(_,i){return {docId:'auto_'+(i+1),num:i+1,name:'테이블 '+(i+1),status:'empty',reservedName:'',occupiedSince:''};})
@@ -4519,32 +4537,45 @@ function _filoTableLoad(did){
   /* 테이블 그리드 */
   var grid=document.getElementById('filo-table-grid');
   if(!grid)return;
-  grid.innerHTML=tables.map(function(t){
+  grid.innerHTML='';
+  tables.forEach(function(t){
    var s=t.status;
-   var color=s==='empty'?'#22c55e':s==='occupied'?'#ef4444':'#f59e0b';
-   var bg=s==='empty'?'rgba(34,197,94,.08)':s==='occupied'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)';
-   var border=s==='empty'?'rgba(34,197,94,.3)':s==='occupied'?'rgba(239,68,68,.25)':'rgba(245,158,11,.3)';
-   var icon=s==='empty'?'🪑':s==='occupied'?'🍽':'📋';
-   var statusTxt=s==='empty'?'빈 테이블':s==='occupied'?'사용 중':'예약됨';
+   var ord=orderMap[String(t.num)]||orderMap[t.name]||null;
+   var hasOrder=ord&&ord.total>0;
+   // 결제 상태
+   var isPaid=ord&&ord.paid;
+   var color=s==='empty'?'#22c55e':isPaid?'#6366f1':s==='occupied'?'#ef4444':'#f59e0b';
+   var bg=s==='empty'?'rgba(34,197,94,.06)':isPaid?'rgba(99,102,241,.08)':s==='occupied'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)';
+   var border=s==='empty'?'rgba(34,197,94,.25)':isPaid?'rgba(99,102,241,.3)':s==='occupied'?'rgba(239,68,68,.25)':'rgba(245,158,11,.3)';
+   var icon=s==='empty'?'🪑':isPaid?'💳':s==='occupied'?'🍽':'📋';
+   var statusTxt=s==='empty'?'빈 테이블':isPaid?'결제완료':s==='occupied'?'사용 중':'예약됨';
    var sub=s==='occupied'&&t.occupiedSince?Math.floor((Date.now()-new Date(t.occupiedSince))/60000)+'분째':(t.reservedName?t.reservedName+'님':'');
-   /* 액션 버튼 */
-   var actions='';
-   if(s==='empty'){
-    actions='<button data-id="'+t.docId+'" data-did="'+did+'" data-num="'+t.num+'" onclick="_filoTableSeat(this.dataset.id,this.dataset.did,this.dataset.num)" style="margin-top:6px;width:100%;padding:5px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer">착석 처리</button>';
-   } else {
-    actions='<button data-id="'+t.docId+'" data-did="'+did+'" data-num="'+t.num+'" onclick="_filoTableClear(this.dataset.id,this.dataset.did,this.dataset.num)" style="margin-top:6px;width:100%;padding:5px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">테이블 비움</button>';
-   }
-   /* 예약페이지 URL */
-   var reserveUrl='https://filo.ai.kr/table?did='+did+'&tid='+t.num;
-   return '<div data-tnum="'+t.num+'" style="background:'+bg+';border:1.5px solid '+border+';border-radius:12px;padding:12px;text-align:center;position:relative">'+
-    '<div style="font-size:20px;margin-bottom:4px">'+icon+'</div>'+
+
+   var card=document.createElement('div');
+   card.dataset.tnum=t.num;
+   card.style.cssText='background:'+bg+';border:1.5px solid '+border+';border-radius:14px;padding:12px;text-align:center;position:relative;cursor:pointer;transition:.15s';
+   card.onmouseenter=function(){this.style.transform='scale(1.02)';};
+   card.onmouseleave=function(){this.style.transform='';};
+
+   var html='<div style="font-size:22px;margin-bottom:4px">'+icon+'</div>'+
     '<div style="font-size:12px;font-weight:800;color:var(--tx)">'+t.name+'</div>'+
     '<div style="font-size:10px;font-weight:700;color:'+color+';margin-top:2px">'+statusTxt+'</div>'+
     (sub?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+sub+'</div>':'')+
-    actions+
-    '<div style="margin-top:4px"><a href="'+reserveUrl+'" target="_blank" style="font-size:9px;color:var(--t3);text-decoration:none">예약링크 ↗</a></div>'+
-    '</div>';
-  }).join('');
+    (hasOrder?'<div style="margin-top:6px;font-size:13px;font-weight:900;color:'+color+'">₩'+ord.total.toLocaleString()+'</div>':'')+
+    (hasOrder&&!isPaid?'<div style="font-size:9px;color:#f59e0b;font-weight:700;margin-top:1px">결제 대기중</div>':'');
+
+   if(s==='empty'){
+    html+='<button data-id="'+t.docId+'" data-did="'+did+'" data-num="'+t.num+'" onclick="event.stopPropagation();_filoTableSeat(this.dataset.id,this.dataset.did,this.dataset.num)" style="margin-top:6px;width:100%;padding:5px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer">착석 처리</button>';
+   } else {
+    html+='<button data-id="'+t.docId+'" data-did="'+did+'" data-num="'+t.num+'" onclick="event.stopPropagation();_filoTableClear(this.dataset.id,this.dataset.did,this.dataset.num)" style="margin-top:4px;width:100%;padding:5px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">비움</button>';
+   }
+   card.innerHTML=html;
+   // 테이블 클릭 → 주문 상세 모달
+   (function(table,order){
+    card.onclick=function(){_filoTableOrderModal(did,table,order);};
+   })(t,ord);
+   grid.appendChild(card);
+  });
 
   /* 예약 대기 목록 */
   var blist=document.getElementById('filo-booking-list');
@@ -4658,6 +4689,95 @@ async function _filoNotifyReservation(did,booking,status){
 }
 
 window._filoTableRefresh=function(){_filoTableLoad(_CU.dealerId||_CU.uid);};
+
+// 테이블 주문 상세 모달
+function _filoTableOrderModal(did,table,order){
+ var mo=document.createElement('div');
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;backdrop-filter:blur(4px)';
+ var s=table.status;
+ var hasOrder=order&&order.total>0;
+ var itemsHtml=hasOrder?(order.items||[]).map(function(it){
+  return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
+   '<span>'+it.emoji+' '+it.name+' ×'+it.qty+'</span>'+
+   '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span></div>';
+ }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
+
+ var inner=document.createElement('div');
+ inner.style.cssText='background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px 20px 36px';
+ inner.innerHTML=
+  '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px"></div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+  '<div style="font-size:18px;font-weight:900">개 '+table.name+'</div>'+
+  (s==='occupied'?'<span style="font-size:11px;font-weight:700;color:#ef4444;background:rgba(239,68,68,.1);padding:4px 10px;border-radius:20px">사용 중</span>':
+   s==='empty'?'<span style="font-size:11px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);padding:4px 10px;border-radius:20px">빈 테이블</span>':'')+
+  '</div>'+
+  '<div style="margin-bottom:16px">'+itemsHtml+'</div>'+
+  (hasOrder?'<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-bottom:16px;border-top:2px solid var(--bd)">'+
+   '<span style="font-size:14px;font-weight:700">합계</span>'+
+   '<span style="font-size:20px;font-weight:900;color:#0891b2">₩'+order.total.toLocaleString()+'</span>'+
+   '</div>':'')+
+  '<div id="modal-btn-row" style="display:flex;gap:8px;flex-wrap:wrap"></div>';
+
+ var btnRow=inner.querySelector('#modal-btn-row');
+
+ if(hasOrder&&!order.paid){
+  var payBtn=document.createElement('button');
+  payBtn.style.cssText='flex:2;padding:12px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer';
+  payBtn.textContent='결제 완료 처리';
+  (function(d,n,dc){payBtn.onclick=function(){_filoMarkPaid(d,n,dc,payBtn,mo);};})(did,table.num,table.docId);
+  btnRow.appendChild(payBtn);
+ }
+
+ if(s!=='empty'){
+  var clearBtn=document.createElement('button');
+  clearBtn.style.cssText='flex:1;padding:12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#22c55e;font-size:13px;font-weight:700;cursor:pointer';
+  clearBtn.textContent='테이블 비움';
+  (function(dc,d,n){clearBtn.onclick=function(){_filoTableClear(dc,d,n);mo.remove();};})(table.docId,did,table.num);
+  btnRow.appendChild(clearBtn);
+ } else {
+  var seatBtn=document.createElement('button');
+  seatBtn.style.cssText='flex:1;padding:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer';
+  seatBtn.textContent='제륙 처리';
+  (function(dc,d,n){seatBtn.onclick=function(){_filoTableSeat(dc,d,n);mo.remove();};})(table.docId,did,table.num);
+  btnRow.appendChild(seatBtn);
+ }
+
+ var closeBtn=document.createElement('button');
+ closeBtn.style.cssText='padding:12px 16px;background:var(--b3);border:1px solid var(--bd);border-radius:12px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer';
+ closeBtn.textContent='닫기';
+ closeBtn.onclick=function(){mo.remove();};
+ btnRow.appendChild(closeBtn);
+
+ mo.appendChild(inner);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+// 결제 완료 처리
+function _filoMarkPaid(did,tableNum,docId,btn,mo){
+ if(!confirm('결제 완료 처리하시겠습니까?'))return;
+ btn.disabled=true;btn.textContent='처리 중...';
+ var today=new Date().toISOString().slice(0,10);
+ _db.collection('filo_orders')
+  .where('dealerId','==',did).where('type','==','table')
+  .get().then(function(snap){
+   var batch=_db.batch();
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(d.createdAt&&d.createdAt.slice(0,10)===today){
+     var tNum=String(d.tableNum||d.tableName||'');
+     if(tNum===String(tableNum))batch.update(doc.ref,{status:'paid',payType:'postpay',paidAt:new Date().toISOString()});
+    }
+   });
+   return batch.commit();
+  }).then(function(){
+   _filoToast('💳 결제 완료 처리됐습니다!');
+   if(mo)mo.remove();
+   // 테이블 자동 비움
+   if(docId&&!docId.startsWith('auto_'))
+    _db.collection('filo_tables').doc(docId).set({status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()},{merge:true});
+  }).catch(function(e){_filoToast('❌ '+e.message);btn.disabled=false;btn.textContent='💳 결제 완료 처리';});
+}
 window._filoConfirmCall=function(idsStr,tableNum){
  var ids=idsStr.split(',');
  var batch=_db.batch();
