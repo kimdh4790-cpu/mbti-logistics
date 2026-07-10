@@ -3654,9 +3654,10 @@ var _cartItems=[];
 function _filoPageKiosk(el){
  var did=_CU.dealerId||_CU.uid;
  _cartItems=[];
- el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">'+
+ el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
  '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px">📊 메뉴 엑셀 업로드</button>'+
  '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
+ '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
  '<div class="pos-wrap">'+
  '<div style="display:flex;flex-direction:column">'+
@@ -3674,6 +3675,73 @@ function _filoPageKiosk(el){
  '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">🗑 초기화</button>'+
  '</div></div></div>';
+
+ // 테이블 현황 바 실시간 로드 (5개씩)
+ var _kioskTableUnsub=null;
+ function _loadKioskTableBar(){
+  var bar=document.getElementById('kiosk-table-bar');
+  if(!bar)return;
+  var today=new Date().toISOString().slice(0,10);
+  // 주문 맵 로드
+  _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+   .onSnapshot(function(oSnap){
+    var oMap={};
+    oSnap.forEach(function(doc){
+     var d=doc.data();
+     if(d.createdAt&&d.createdAt.slice(0,10)===today){
+      var k=String(d.tableNum||'');
+      if(!oMap[k])oMap[k]={total:0,paid:false};
+      oMap[k].total+=(d.total||0);
+      if(d.status==='paid')oMap[k].paid=true;
+     }
+    });
+    // 테이블 목록 로드
+    _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
+     var tables=tSnap.empty?
+      Array.from({length:10},function(_,i){return {num:i+1,name:'테이블 '+(i+1),status:'empty'};})
+      :tSnap.docs.map(function(d){var f=d.data();return {num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty'};})
+       .sort(function(a,b){return a.num-b.num;})
+       .filter(function(t,i,arr){return arr.findIndex(function(x){return x.num===t.num;})=== i;});
+
+     // 5개씩 페이지
+     if(!window._kioskTablePage)window._kioskTablePage=0;
+     var page=window._kioskTablePage;
+     var chunk=tables.slice(page*5,(page+1)*5);
+     bar.innerHTML='';
+
+     // 이전/다음 버튼
+     if(tables.length>5){
+      var prevBtn=document.createElement('button');
+      prevBtn.textContent='◀';
+      prevBtn.style.cssText='padding:4px 8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer';
+      prevBtn.onclick=function(){window._kioskTablePage=Math.max(0,page-1);_loadKioskTableBar();};
+      bar.appendChild(prevBtn);
+     }
+
+     chunk.forEach(function(t){
+      var ord=oMap[String(t.num)];
+      var hasOrder=ord&&ord.total>0;
+      var isPaid=ord&&ord.paid;
+      var color=t.status==='empty'?'var(--t3)':isPaid?'#6366f1':hasOrder?'#f59e0b':'#22c55e';
+      var bg=t.status==='empty'?'var(--b3)':isPaid?'rgba(99,102,241,.15)':hasOrder?'rgba(245,158,11,.15)':'rgba(239,68,68,.1)';
+      var btn=document.createElement('button');
+      btn.style.cssText='padding:5px 10px;background:'+bg+';border:1.5px solid '+color+';border-radius:10px;color:'+color+';font-size:11px;font-weight:700;cursor:pointer;line-height:1.4;text-align:center';
+      btn.innerHTML='<div>'+t.name+'</div>'+(hasOrder?'<div style="font-size:10px">₩'+ord.total.toLocaleString()+(isPaid?' ✅':'⏳')+'</div>':'<div style="font-size:10px;opacity:.6">비어있음</div>');
+      (function(table,order){btn.onclick=function(){_filoTableOrderModal(did,table,order);};})(t,ord||null);
+      bar.appendChild(btn);
+     });
+
+     if(tables.length>5){
+      var nextBtn=document.createElement('button');
+      nextBtn.textContent='▶';
+      nextBtn.style.cssText='padding:4px 8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer';
+      nextBtn.onclick=function(){window._kioskTablePage=Math.min(Math.ceil(tables.length/5)-1,page+1);_loadKioskTableBar();};
+      bar.appendChild(nextBtn);
+     }
+    });
+   });
+ }
+ _loadKioskTableBar();
 
  // filo_menus 컬렉션에서 로드
  _db.collection('filo_menus').where('dealerId','==',did).get()
