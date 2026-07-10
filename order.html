@@ -227,6 +227,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
     <div class="mdl-emoji" id="mdl-emoji"></div>
     <div class="mdl-name" id="mdl-name"></div>
     <div class="mdl-tr" id="mdl-tr"></div>
+    <div id="mdl-desc" style="font-size:12px;color:#64748b;text-align:center;margin:0 0 10px;line-height:1.6;padding:0 8px;min-height:0"></div>
     <div class="mdl-price" id="mdl-price"></div>
     <button class="mdl-add" id="mdl-add" onclick="_addFromMdl()">담기</button>
   </div>
@@ -402,6 +403,7 @@ function _openMdl(m){
  document.getElementById('mdl-price').textContent='₩'+(m.price||0).toLocaleString();
  document.getElementById('mdl-add').textContent=_t('add');
  document.getElementById('mdl-tr').textContent='';
+ document.getElementById('mdl-desc').textContent=m.description||'';
  document.getElementById('mdl').style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(3px)';
 
  // 번역 (한국어 아닐 때)
@@ -423,6 +425,18 @@ function _openMdl(m){
      document.getElementById('mdl-tr').textContent=t;
     }
    }).catch(function(){document.getElementById('mdl-tr').textContent='';});
+  }
+ }
+ // 설명 번역
+ if(m.description){
+  var dk=m.name+'_desc_'+_lang;
+  var descEl=document.getElementById('mdl-desc');
+  if(_tlCache[dk]){descEl.textContent=_tlCache[dk];}
+  else{
+   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.description,lang:_lang})})
+   .then(function(r){return r.json();})
+   .then(function(d){var t=d.translated||m.description;_tlCache[dk]=t;descEl.textContent=t;})
+   .catch(function(){});
   }
  }
 }
