@@ -4448,7 +4448,7 @@ function _filoTableLoad(did){
    if(snap.size>0){
     var callList=Object.keys(callMap).map(function(k){
      var btn=document.createElement('button');
-     btn.textContent='확인';
+     btn.textContent='OK';
      btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
      (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
      var span=document.createElement('span');
