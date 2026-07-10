@@ -3693,8 +3693,19 @@ function _filoPageKiosk(el){
       var k=String(d.tableNum||'');
       var k2=d.tableName||'';
       if(!k&&k2)k=k2.replace(/[^0-9]/g,'')||k2;
-      if(k){if(!oMap[k])oMap[k]={total:0,paid:false};oMap[k].total+=(d.total||0);if(d.status==='paid')oMap[k].paid=true;}
-      if(k2&&k2!==k){if(!oMap[k2])oMap[k2]={total:0,paid:false};oMap[k2].total+=(d.total||0);if(d.status==='paid')oMap[k2].paid=true;}
+      var isPd=(d.status==='paid'||d.payType==='prepay');
+      if(k){
+       if(!oMap[k])oMap[k]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false};
+       oMap[k].total+=(d.total||0);
+       if(isPd){oMap[k].paidTotal+=(d.total||0);}else{oMap[k].pendingTotal+=(d.total||0);oMap[k].hasPending=true;}
+       if(isPd&&!oMap[k].hasPending)oMap[k].paid=true;
+      }
+      if(k2&&k2!==k){
+       if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false};
+       oMap[k2].total+=(d.total||0);
+       if(isPd){oMap[k2].paidTotal+=(d.total||0);}else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
+       if(isPd&&!oMap[k2].hasPending)oMap[k2].paid=true;
+      }
      }
     });
     // 테이블 목록 로드
@@ -3729,7 +3740,14 @@ function _filoPageKiosk(el){
       var borderC=t.status==='empty'?'rgba(148,163,184,.3)':isPaid?'#6366f1':hasOrder?'#f59e0b':'#22c55e';
       var btn=document.createElement('button');
       btn.style.cssText='padding:6px 12px;background:'+bg+';border:1.5px solid '+borderC+';border-radius:10px;color:'+color+';font-size:11px;font-weight:800;cursor:pointer;line-height:1.5;text-align:center;min-width:72px';
-      btn.innerHTML='<div style="color:var(--tx)">'+t.name+'</div>'+(hasOrder?'<div style="font-size:11px;color:'+color+'">₩'+ord.total.toLocaleString()+(isPaid?' ✅':'⏳')+'</div>':'<div style="font-size:10px;color:var(--t3)">비어있음</div>');
+      var dispHtml='<div style="color:var(--tx)">'+t.name+'</div>';
+      if(hasOrder){
+       if(ord.paidTotal>0)dispHtml+='<div style="font-size:10px;color:#818cf8">✅₩'+ord.paidTotal.toLocaleString()+'</div>';
+       if(ord.pendingTotal>0)dispHtml+='<div style="font-size:10px;color:#fbbf24">⏳₩'+ord.pendingTotal.toLocaleString()+'</div>';
+      } else {
+       dispHtml+='<div style="font-size:10px;color:var(--t3)">비어있음</div>';
+      }
+      btn.innerHTML=dispHtml;
       (function(table,order){btn.onclick=function(){
        // POS 테이블 선택
        window._selectedTableId=table.num;
@@ -4652,7 +4670,10 @@ function _filoTableLoad(did){
      if(!orderMap[tNum])orderMap[tNum]={total:0,items:[],ids:[],paid:false};
      orderMap[tNum].total+=(d.total||0);
      orderMap[tNum].ids.push(doc.id);
-     if(d.payType==='prepay'||d.status==='paid')orderMap[tNum].paid=true;
+     var isOrdPaid=(d.payType==='prepay'||d.status==='paid');
+     if(isOrdPaid){orderMap[tNum].paidTotal=(orderMap[tNum].paidTotal||0)+(d.total||0);}
+     else{orderMap[tNum].pendingTotal=(orderMap[tNum].pendingTotal||0)+(d.total||0);orderMap[tNum].hasPending=true;}
+     if(isOrdPaid&&!orderMap[tNum].hasPending)orderMap[tNum].paid=true;
      (d.items||[]).forEach(function(it){orderMap[tNum].items.push(it);});
     }
    });
@@ -4697,8 +4718,8 @@ function _filoTableLoad(did){
     '<div style="font-size:12px;font-weight:800;color:var(--tx)">'+t.name+'</div>'+
     '<div style="font-size:10px;font-weight:700;color:'+color+';margin-top:2px">'+statusTxt+'</div>'+
     (sub?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+sub+'</div>':'')+
-    (hasOrder?'<div style="margin-top:6px;font-size:13px;font-weight:900;color:'+color+'">₩'+ord.total.toLocaleString()+'</div>':'')+
-    (hasOrder&&!isPaid?'<div style="font-size:9px;color:#f59e0b;font-weight:700;margin-top:1px">결제 대기중</div>':'');
+    (ord&&ord.paidTotal>0?'<div style="margin-top:4px;font-size:12px;font-weight:900;color:#818cf8">✅ ₩'+ord.paidTotal.toLocaleString()+'</div>':'')+
+    (ord&&ord.pendingTotal>0?'<div style="margin-top:2px;font-size:12px;font-weight:900;color:#fbbf24">⏳ ₩'+ord.pendingTotal.toLocaleString()+'</div>':'');
 
    if(s==='empty'){
     html+='<button data-id="'+t.docId+'" data-did="'+did+'" data-num="'+t.num+'" onclick="event.stopPropagation();_filoTableSeat(this.dataset.id,this.dataset.did,this.dataset.num)" style="margin-top:6px;width:100%;padding:5px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:10px;font-weight:700;cursor:pointer">착석 처리</button>';
