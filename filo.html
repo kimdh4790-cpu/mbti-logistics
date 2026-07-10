@@ -1564,7 +1564,7 @@ function _filoPageHome(el){
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🛵',l:'배달',p:'delivery'},
+ [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기<span id="staff-call-badge" style="display:inline-block;background:#ef4444;color:#fff;border-radius:50%;font-size:9px;padding:1px 5px;margin-left:3px;vertical-align:middle"></span>',p:'orders'},{ic:'🛵',l:'배달',p:'delivery'},
  {ic:'📊',l:'재고',p:'inventory'},{ic:'🍽',l:'레시피',p:'recipe'},{ic:'📈',l:'매출',p:'sales_report'},
  {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🗓',l:'예약',p:'schedule'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
@@ -5356,6 +5356,23 @@ var _deliveryUnsub=null;
 function _filoLoadDelivery(did){
  if(window._deliveryUnsub){window._deliveryUnsub();window._deliveryUnsub=null;}
  var today=new Date().toISOString().slice(0,10);
+ // 직원 호출 실시간 감지
+ var callUnsub=_db.collection('staff_calls').where('dealerId','==',did).where('status','==','pending')
+  .onSnapshot(function(snap){
+   var callCount=snap.size;
+   var callBadge=document.getElementById('staff-call-badge');
+   if(callBadge) callBadge.textContent=callCount>0?callCount:'';
+   if(callCount>0){
+    // 새 호출 알림
+    snap.docChanges().forEach(function(change){
+     if(change.type==='added'){
+      var d=change.doc.data();
+      _filoToast('🔔 직원 호출! '+(d.tableName||d.tableInfo||'배달고객'));
+     }
+    });
+   }
+  });
+
  // filo_orders(테이블QR 배달) + filo_sales(수동접수) 통합
  var salesOrders=[], qrOrders=[];
  function renderAll(){
