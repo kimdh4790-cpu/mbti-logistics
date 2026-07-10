@@ -579,11 +579,6 @@ export default {
 
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    const _filoJsFiles = ['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js'];
-    if (_filoJsFiles.indexOf(path) !== -1) {
-      return serveKVFile(env, path.slice(1), 'application/javascript');
-    }
-
     if (path === '/firebase-app-compat.js') {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-app-compat.js');
       const js = await r.text();
@@ -5201,15 +5196,6 @@ service cloud.firestore {
 
     // ── firebase core compat JS 프록시 (settle.html 상대경로 로딩) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    const _filoJsFiles = ['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js'];
-    if (_filoJsFiles.indexOf(path) !== -1) {
-      return serveKVFile(env, path.slice(1), 'application/javascript');
-    }
-
-    if (path === '/firebase-app-compat.js') {
-      const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-app-compat.js');
-      const js = await r.text();
-      return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
     }
     if (path === '/firebase-auth-compat.js') {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-auth-compat.js');
