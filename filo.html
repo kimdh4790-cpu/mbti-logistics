@@ -5172,14 +5172,31 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
   var cardBtn=box.querySelector('#tself-card');
   var cashBtn=box.querySelector('#tself-cash');
   var cancelBtn=box.querySelector('#tself-cancel');
-  if(cardBtn)cardBtn.onclick=function(){
+  function doSelfPay(method,label){
    if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
-   mo.remove();_filoToast('💳 카드 ₩'+selTotal.toLocaleString()+' 결제 완료');
-  };
-  if(cashBtn)cashBtn.onclick=function(){
-   if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
-   mo.remove();_filoToast('💵 현금 ₩'+selTotal.toLocaleString()+' 결제 완료');
-  };
+   var selected=allItems.filter(function(_,i){return checks[i];});
+   mo.remove();
+   // Firestore에 결제 완료 주문으로 저장
+   var now=new Date();
+   _db.collection('filo_orders').add({
+    dealerId:did,
+    tableNum:parseInt(tableNum)||tableNum,
+    tableName:tableName,
+    type:'table',
+    source:'self_pay',
+    payMethod:method,
+    payType:'prepay',
+    status:'paid',
+    items:selected.map(function(it){return {name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};}),
+    total:selTotal,
+    createdAt:now.toISOString(),
+    date:now.toISOString().slice(0,10)
+   }).then(function(){
+    _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+   }).catch(function(e){_filoToast('❌ '+e.message);});
+  }
+  if(cardBtn)cardBtn.onclick=function(){doSelfPay('card','💳 카드');};
+  if(cashBtn)cashBtn.onclick=function(){doSelfPay('cash','💵 현금');};
   if(cancelBtn)cancelBtn.onclick=function(){mo.remove();};
  }
  mo.appendChild(box);
