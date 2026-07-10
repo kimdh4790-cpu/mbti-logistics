@@ -579,10 +579,8 @@ export default {
 
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    if (path.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
-      return serveKVFile(env, path.slice(1), 'application/javascript');
-    }
-    if (path === '/store.js' || path === '/order.js') {
+    const _filoJsFiles = ['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js'];
+    if (_filoJsFiles.indexOf(path) !== -1) {
       return serveKVFile(env, path.slice(1), 'application/javascript');
     }
 
@@ -5203,10 +5201,8 @@ service cloud.firestore {
 
     // ── firebase core compat JS 프록시 (settle.html 상대경로 로딩) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    if (path.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
-      return serveKVFile(env, path.slice(1), 'application/javascript');
-    }
-    if (path === '/store.js' || path === '/order.js') {
+    const _filoJsFiles = ['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/store.js','/order.js'];
+    if (_filoJsFiles.indexOf(path) !== -1) {
       return serveKVFile(env, path.slice(1), 'application/javascript');
     }
 
