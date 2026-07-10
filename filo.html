@@ -3730,7 +3730,22 @@ function _filoPageKiosk(el){
       var btn=document.createElement('button');
       btn.style.cssText='padding:6px 12px;background:'+bg+';border:1.5px solid '+borderC+';border-radius:10px;color:'+color+';font-size:11px;font-weight:800;cursor:pointer;line-height:1.5;text-align:center;min-width:72px';
       btn.innerHTML='<div style="color:var(--tx)">'+t.name+'</div>'+(hasOrder?'<div style="font-size:11px;color:'+color+'">₩'+ord.total.toLocaleString()+(isPaid?' ✅':'⏳')+'</div>':'<div style="font-size:10px;color:var(--t3)">비어있음</div>');
-      (function(table,order){btn.onclick=function(){_filoTableOrderModal(did,table,order);};})(t,ord||null);
+      (function(table,order){btn.onclick=function(){
+       // POS 테이블 선택
+       window._selectedTableId=table.num;
+       window._selectedTableName=table.name;
+       // 기존 선택 표시 초기화
+       document.querySelectorAll('#kiosk-table-bar button[data-selected]').forEach(function(b){
+        b.removeAttribute('data-selected');
+        b.style.outline='';
+       });
+       btn.setAttribute('data-selected','1');
+       btn.style.outline='2px solid #0891b2';
+       // 주문 내역 헤더 업데이트
+       var cartTitle=document.querySelector('.cart-panel div:first-child');
+       if(cartTitle)cartTitle.textContent='🛒 '+table.name+' 주문';
+       _filoToast('🪑 '+table.name+' 선택됨');
+      };})(t,ord||null);
       bar.appendChild(btn);
      });
 
@@ -3987,13 +4002,15 @@ function _filoConfirmPay(method, methodLabel){
  var now=new Date();
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  var tableId=window._selectedTableId||null;
- var tableName=tableId?'테이블 '+tableId:'카운터';
+ var tableName=window._selectedTableName||(tableId?'테이블 '+tableId:'카운터');
  _db.collection('filo_sales').add({
   dealerId:did,items:items,total:total,
   tableId:tableId,tableName:tableName,
   createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
   type:'pos',payMethod:method,createdBy:_CU.name||_CU.userId||''
  }).then(function(ref){
+  window._selectedTableId=null;window._selectedTableName=null;
+  var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='🛒 주문 내역';
   _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
   _cartClear();
  }).catch(function(e){_filoToast('❌ '+e.message);});
