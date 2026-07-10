@@ -1598,13 +1598,18 @@ async function acceptExchange(){
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
+        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        let data={};
         try {
-          const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+lang+'&dt=t&q='+encodeURIComponent(name));
-          const gData = await gRes.json();
-          const translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
-          return new Response(JSON.stringify({translated:translated}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+          });
+          const resText = await res.text();
+          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
+          try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
-        const data = {};
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
@@ -1688,13 +1693,18 @@ async function acceptExchange(){
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
+        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        let data={};
         try {
-          const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+lang+'&dt=t&q='+encodeURIComponent(name));
-          const gData = await gRes.json();
-          const translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
-          return new Response(JSON.stringify({translated:translated}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+          });
+          const resText = await res.text();
+          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
+          try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
-        const data = {};
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
