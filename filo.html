@@ -3691,10 +3691,10 @@ function _filoPageKiosk(el){
      if(d.createdAt&&d.createdAt.slice(0,10)===today){
       // tableNum 우선, 없으면 tableName에서 숫자 추출
       var k=String(d.tableNum||'');
-      if(!k&&d.tableName)k=String(d.tableName).replace(/[^0-9]/g,'')||d.tableName;
-      if(!oMap[k])oMap[k]={total:0,paid:false};
-      oMap[k].total+=(d.total||0);
-      if(d.status==='paid')oMap[k].paid=true;
+      var k2=d.tableName||'';
+      if(!k&&k2)k=k2.replace(/[^0-9]/g,'')||k2;
+      if(k){if(!oMap[k])oMap[k]={total:0,paid:false};oMap[k].total+=(d.total||0);if(d.status==='paid')oMap[k].paid=true;}
+      if(k2&&k2!==k){if(!oMap[k2])oMap[k2]={total:0,paid:false};oMap[k2].total+=(d.total||0);if(d.status==='paid')oMap[k2].paid=true;}
      }
     });
     // 테이블 목록 로드
@@ -3721,7 +3721,7 @@ function _filoPageKiosk(el){
      }
 
      chunk.forEach(function(t){
-      var ord=oMap[String(t.num)];
+      var ord=oMap[String(t.num)]||oMap[t.name]||oMap[String(t.num).replace(/[^0-9]/g,'')];
       var hasOrder=ord&&ord.total>0;
       var isPaid=ord&&ord.paid;
       var color=t.status==='empty'?'#94a3b8':isPaid?'#818cf8':hasOrder?'#fbbf24':'#4ade80';
