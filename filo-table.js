@@ -666,6 +666,42 @@ function _filoTableOrderModal(did,table,order){
   btnRow.appendChild(seatBtn);
  }
 
+ // 준비완료 버튼 (주문 있을 때)
+ if(hasOrder&&order.pendingTotal>0){
+  var readyBtn=document.createElement('button');
+  readyBtn.style.cssText='flex:1;padding:12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#22c55e;font-size:12px;font-weight:700;cursor:pointer';
+  readyBtn.textContent='🔔 준비완료';
+  (function(d,tNum,tName){readyBtn.onclick=function(){
+   // filo_orders status → ready (고객 폰에 픽업 알림)
+   var db=firebase.firestore();
+   db.collection('filo_orders')
+    .where('dealerId','==',d)
+    .where('tableNum','==',String(tNum))
+    .where('status','==','pending')
+    .get().then(function(snap){
+     var batch=db.batch();
+     snap.forEach(function(doc){batch.update(doc.ref,{status:'ready',readyAt:new Date().toISOString()});});
+     return batch.commit();
+    }).then(function(){
+     _filoToast('🔔 테이블 '+tNum+' 픽업 알림 전송!');
+     mo.remove();
+    }).catch(function(e){_filoToast('❌ '+e.message);});
+  };})(did,table.num,table.name);
+  btnRow.appendChild(readyBtn);
+ }
+
+ // 테이블 이동 버튼
+ if(hasOrder){
+  var moveBtn=document.createElement('button');
+  moveBtn.style.cssText='flex:1;padding:12px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer';
+  moveBtn.textContent='↔️ 이동';
+  (function(d,fromNum,fromName,ord){moveBtn.onclick=function(){
+   mo.remove();
+   _filoTableMoveModal(d,fromNum,fromName,ord);
+  };})(did,table.num,table.name,order);
+  btnRow.appendChild(moveBtn);
+ }
+
  var closeBtn=document.createElement('button');
  closeBtn.style.cssText='padding:12px 16px;background:var(--b3);border:1px solid var(--bd);border-radius:12px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer';
  closeBtn.textContent='닫기';
@@ -782,3 +818,77 @@ function _filoPageTableOrder(el){
  el.appendChild(wrap);
  _toLoadTables(did);_toLoadMenus(did);
 }
+
+// ── 테이블 이동 모달 ──────────────────────────────────────────────────────────
+function _filoTableMoveModal(did,fromNum,fromName,order){
+ var mo=document.createElement('div');
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+ 
+ // 현재 테이블 목록 가져오기
+ firebase.firestore().collection('filo_tables').where('dealerId','==',did).get().then(function(snap){
+  var tables=[];
+  snap.forEach(function(doc){
+   var d=doc.data();
+   var num=d.tableNum||doc.id;
+   if(String(num)!==String(fromNum))tables.push({num:num,name:d.tableName||'테이블 '+num,status:d.status||'empty'});
+  });
+  tables.sort(function(a,b){return parseInt(a.num)-parseInt(b.num);});
+  
+  
+  var inner=document.createElement('div');
+  inner.style.cssText='background:var(--surface);border-radius:20px;padding:24px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto';
+  var hdr=document.createElement('div');
+  hdr.innerHTML='<div style="font-size:17px;font-weight:900;margin-bottom:6px">↔️ 테이블 이동</div>'+
+   '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">'+fromName+' → 이동할 테이블 선택</div>';
+  var cancelBtn=document.createElement('button');
+  cancelBtn.style.cssText='width:100%;padding:13px;background:var(--b3);border:1px solid var(--bd);border-radius:12px;color:var(--t2);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px';
+  cancelBtn.textContent='취소';
+  cancelBtn.onclick=function(){mo.remove();};
+  inner.appendChild(hdr);
+  inner.appendChild(btnWrap);
+  inner.appendChild(cancelBtn);
+  mo.appendChild(inner);
+  
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+ });
+}
+
+window._filoDoTableMove=function(did,fromNum,toNum,moEl){
+ var db=firebase.firestore();
+ // filo_orders에서 fromNum → toNum으로 변경
+ db.collection('filo_orders')
+  .where('dealerId','==',did)
+  .where('tableNum','==',String(fromNum))
+  .where('status','in',['pending','ready'])
+  .get().then(function(snap){
+   var batch=db.batch();
+   snap.forEach(function(doc){
+    batch.update(doc.ref,{
+     tableNum:String(toNum),
+     tableName:'테이블 '+toNum,
+     movedFrom:String(fromNum),
+     movedAt:new Date().toISOString()
+    });
+   });
+   return batch.commit();
+  }).then(function(){
+   // filo_tables 상태도 업데이트
+   return db.collection('filo_tables')
+    .where('dealerId','==',did)
+    .where('tableNum','==',parseInt(fromNum))
+    .get();
+  }).then(function(snap){
+   var batch=db.batch();
+   snap.forEach(function(doc){batch.update(doc.ref,{status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()});});
+   return batch.commit();
+  }).then(function(){
+   _filoToast('✅ 테이블 '+fromNum+' → '+toNum+' 이동 완료!');
+   if(moEl)moEl.closest('[style*=fixed]').remove();
+   // 테이블 현황 새로고침
+   setTimeout(function(){
+    var cont=document.getElementById('content');
+    if(cont)_filoPageTableOrder(cont,did);
+   },500);
+  }).catch(function(e){_filoToast('❌ '+e.message);});
+};
