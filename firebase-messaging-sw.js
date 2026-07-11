@@ -23,6 +23,7 @@ const NOTIF_CONFIG = {
   notice:         { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=notices',      title:'📢 공지 알림' },
   membership_expire:{ icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=customer',   title:'⏰ 회원권 만료' },
   pos:            { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=kiosk',        title:'🖥️ POS 알림' },
+  pickup:         { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'🔔 픽업 알림' },
   alert:          { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle',                   title:'🔔 DONWAY 알림' },
 };
 
