@@ -214,13 +214,16 @@ function _add(m){
 function _updBtn(){
  var total=0,cnt=0;
  Object.values(_cart).forEach(function(i){total+=i.price*i.qty;cnt+=i.qty;});
- var btn=document.getElementById('cart-btn');
+ var fab=document.getElementById('cart-fab');
+ if(!fab)return;
  if(cnt>0){
-  btn.style.display='block';
-  document.getElementById('fab-cnt').textContent=cnt;
-  document.getElementById('cart-fab').textContent='₩'+total.toLocaleString();
+  fab.classList.add('show');
+  var fc=document.getElementById('fab-cnt');
+  var fp=document.getElementById('fab-price');
+  if(fc)fc.textContent=cnt;
+  if(fp)fp.textContent='₩'+total.toLocaleString();
  } else {
-  btn.style.display='none';
+  fab.classList.remove('show');
  }
 }
 
