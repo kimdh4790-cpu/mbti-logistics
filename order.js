@@ -327,8 +327,8 @@ function _requestFCM(){
 
 function _initFCM(){
  var gate=document.getElementById('fcm-gate');
- navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(){
-  return navigator.serviceWorker.ready;
+ navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'}).then(function(reg){
+  return reg.update().then(function(){return reg;});
  }).then(function(reg){
   try{
    if(!firebase.messaging){throw new Error('no messaging');}
@@ -353,10 +353,12 @@ function _initFCM(){
    });
   }catch(e){
    console.log('[FCM] messaging 초기화 실패:',e.message);
+   alert('[FCM] messaging 에러: '+e.message);
    if(gate)gate.style.display='none';
   }
  }).catch(function(e){
   console.log('[FCM] SW 등록 실패:',e.message);
+  alert('[FCM] SW 에러: '+e.message);
   if(gate)gate.style.display='none';
  });
 }
