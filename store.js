@@ -86,7 +86,7 @@ function _renderMenus(){
   var btn=document.createElement('button');
   btn.className='cat-btn'+(i===0?' on':'');
   btn.dataset.cat=cat;
-  btn.innerHTML='<span class="ci">'+(_catIco[cat]||'🍽')+'</span><span>'+cat+'</span>';
+  btn.textContent=(_catIco[cat]||'')+(cat==='전체'?'':' ')+cat;
   btn.onclick=function(){
    document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('on');});
    btn.classList.add('on');
