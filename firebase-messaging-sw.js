@@ -43,13 +43,17 @@ messaging.onBackgroundMessage(function(payload) {
     tag:     'donway-' + type,
     renotify: true,
     silent:  false,
-    vibrate: [300, 100, 300, 100, 300],
-    requireInteraction: (type === 'leave' || type === 'payslip'),
+    vibrate: type === 'pickup'
+      ? [500,100,500,100,500,100,500,100,1000]  // 픽업: 강하고 긴 진동 패턴
+      : [300, 100, 300, 100, 300],
+    requireInteraction: (type === 'pickup' || type === 'leave' || type === 'payslip'),
     data:    { url: url, type: type },
-    actions: [
-      { action: 'open',  title: '확인하기' },
-      { action: 'close', title: '닫기' }
-    ]
+    actions: type === 'pickup'
+      ? [{ action: 'open', title: '✅ 픽업하러 가기' }]
+      : [
+          { action: 'open',  title: '확인하기' },
+          { action: 'close', title: '닫기' }
+        ]
   });
 });
 
