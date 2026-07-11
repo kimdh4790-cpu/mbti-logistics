@@ -24,7 +24,7 @@
 //
 // [Secrets] ANTHROPIC_API_KEY
 // ================================================================
-// DONWAY Worker v20260613185004
+// DONWAY Worker v20260711 — 번역 재시도3회+Google폴백, 메뉴이미지 고정URL
 // MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
