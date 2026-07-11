@@ -1733,7 +1733,7 @@ async function acceptExchange(){
           }
 
           if (!menus || !dealerId) return new Response(JSON.stringify({error:'menus/dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const fsToken = await getAccessToken(env);
+          const fsToken3 = await getAccessToken(env);
           let success = 0, errors = [];
           for (const m of menus) {
             const doc = { fields: {
@@ -1748,7 +1748,7 @@ async function acceptExchange(){
               createdAt: {stringValue: new Date().toISOString()},
             }};
             const r = await fetch(`${FS_BASE}/filo_menus`, {
-              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken3},
               body: JSON.stringify(doc)
             });
             if (r.ok) success++;
