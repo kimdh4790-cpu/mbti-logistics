@@ -193,14 +193,17 @@ function _showPickupAlert(){
 
 function _speakPickup(count){
  if(count>=3)return;
+ // 진동 (패턴: 길-짧-길)
+ try{if(navigator.vibrate)navigator.vibrate([500,200,500,200,1000]);}catch(e){}
+ // TTS 음성
  try{
   window.speechSynthesis.cancel();
-  var msg=new SpeechSynthesisUtterance('고객님 주문하신 음식이 준비되었습니다');
+  var msg=new SpeechSynthesisUtterance('픽업 픽업');
   msg.lang='ko-KR';
-  msg.rate=0.9;
+  msg.rate=0.85;
   msg.pitch=1.1;
   msg.volume=1;
-  msg.onend=function(){setTimeout(function(){_speakPickup(count+1);},2000);};
+  msg.onend=function(){setTimeout(function(){_speakPickup(count+1);},1500);};
   window.speechSynthesis.speak(msg);
  } catch(e){
   // TTS 실패 시 벨소리 폴백
