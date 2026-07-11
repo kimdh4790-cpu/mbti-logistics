@@ -53,7 +53,53 @@ window.onload=function(){
  document.getElementById('app').style.display='flex';
  _loadMenus();
  _listenOrders(); // 픽업 알림
+ _checkExistingOrder(); // 기존 주문 테이블 이동 감지
 };
+
+// ── 기존 주문 감지 (QR 재스캔 시 테이블 이동) ────────────────────────────────
+function _checkExistingOrder(){
+ if(!_did||!_tNum)return;
+ // localStorage에 이전 주문 ID 있는지 확인
+ var lastId=localStorage.getItem('filo_order_'+_did);
+ if(!lastId)return;
+ // 해당 주문이 아직 pending/ready 상태인지 확인
+ _db.collection('filo_orders').doc(lastId).get().then(function(doc){
+  if(!doc.exists)return;
+  var d=doc.data();
+  if(d.status!=='pending'&&d.status!=='ready')return;
+  if(String(d.tableNum)===String(_tNum))return; // 같은 테이블이면 무시
+  // 다른 테이블 QR 스캔 → 이동 확인 팝업
+  var pop=document.createElement('div');
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+  pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:100%">'+
+   '<div style="font-size:40px;margin-bottom:12px">🪑</div>'+
+   '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 이동</div>'+
+   '<div style="font-size:14px;color:#475569;margin-bottom:20px">'+
+   '기존 주문을 <b style="color:#0891b2">테이블 '+_tNum+'</b>번으로<br>이동할까요?</div>'+
+   '<div style="display:flex;gap:10px">'+
+   '<button id="_mv_ok" style="flex:1;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동</button>'+
+   '<button id="_mv_no" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">새 주문</button>'+
+   '</div></div>';
+  document.body.appendChild(pop);
+  document.getElementById('_mv_ok').onclick=function(){
+   _db.collection('filo_orders').doc(lastId).update({
+    tableNum:_tNum,tableName:'테이블 '+_tNum,
+    movedFrom:d.tableNum,movedAt:new Date().toISOString()
+   }).then(function(){
+    _lastOrderId=lastId;
+    _listenPickup(lastId);
+    pop.remove();
+    // 완료 화면 표시
+    var dn=document.getElementById('done');
+    var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+_tNum+'번으로 이동됐습니다';
+    var ditems=document.getElementById('done-items');
+    if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
+    if(dn)dn.style.display='flex';
+   }).catch(function(e){alert('이동 실패: '+e.message);pop.remove();});
+  };
+  document.getElementById('_mv_no').onclick=function(){pop.remove();};
+ }).catch(function(){});
+}
 
 // ── 메뉴 로드 ─────────────────────────────────────────────────────────────────
 function _loadMenus(){
@@ -131,6 +177,8 @@ function _doOrder(payType){
   // 픽업 감지 시작
   _lastOrderId=ref.id;
   _listenPickup(ref.id);
+  // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
+  try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
  }).catch(function(e){
   alert('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
