@@ -330,8 +330,8 @@ function _switchTab(tab){
  document.getElementById('tab-delivery').classList.toggle('on',tab==='delivery');
  document.getElementById('cat-wrap').style.display=tab==='menu'?'':'none';
  document.getElementById('scroll-area').style.display=tab==='menu'?'':'none';
- document.getElementById('delivery-section').style.display=tab==='delivery'?'block':'none';
- if(tab==='delivery') document.getElementById('delivery-section').style.padding='20px';
+ var dt=document.getElementById('delivery-tab');
+ if(dt)dt.style.display=tab==='delivery'?'flex':'none';
 }
 
 function _setLang(l){
