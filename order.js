@@ -212,7 +212,11 @@ function _openMdl(m){
   var dk=m.name+'_desc_'+_lang;
   var descEl=document.getElementById('mdl-desc');
   if(_tlCache[dk]){descEl.textContent=_tlCache[dk];}
-  else{
+  else if(m.descTranslations&&m.descTranslations[_lang]){
+   var dt=m.descTranslations[_lang];
+   _tlCache[dk]=dt;
+   descEl.textContent=dt;
+  } else {
    fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.description,lang:_lang})})
    .then(function(r){return r.json();})
    .then(function(d){var t=d.translated||m.description;_tlCache[dk]=t;descEl.textContent=t;})
