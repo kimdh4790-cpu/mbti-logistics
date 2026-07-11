@@ -576,6 +576,11 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // 보안: 민감 경로 차단
+    if (path.match(/^\/\.env|^\/\.git|^\/\.aws|^\/config\.json|^\/wp-|^\/phpmy/i)) {
+      return new Response('Not Found', {status:404});
+    }
+
 
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
