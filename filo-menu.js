@@ -192,7 +192,7 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
  trAllBtn.style.cssText='padding:8px 14px;background:rgba(16,185,129,.15);border:1px solid #10b981;border-radius:8px;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px';
  trAllBtn.textContent='🌐 전체 번역';
  trAllBtn.onclick=function(){_filoTranslateAllMenus(did);};
- topRow.appendChild(trAllBtn);
+ hdr.appendChild(trAllBtn);
  var addBtn=document.createElement('button');
   addBtn.style.cssText='width:100%;padding:8px;background:var(--surface2);border:1px dashed var(--bd2);border-radius:var(--r);color:var(--t2);font-size:12px;cursor:pointer;margin-bottom:14px';
   addBtn.textContent='+ 재료 추가';
@@ -412,7 +412,7 @@ function _filoPageMenuMgmt(el){
  trAllBtn.style.cssText='padding:8px 14px;background:rgba(16,185,129,.15);border:1px solid #10b981;border-radius:8px;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px';
  trAllBtn.textContent='🌐 전체 번역';
  trAllBtn.onclick=function(){_filoTranslateAllMenus(did);};
- topRow.appendChild(trAllBtn);
+ hdr.appendChild(trAllBtn);
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary btn-sm';
  addBtn.textContent='+ 메뉴 추가';
