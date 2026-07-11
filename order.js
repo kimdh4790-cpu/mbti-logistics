@@ -128,6 +128,8 @@ function _doOrder(payType){
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
+  // 픽업 감지 시작
+  _listenPickup(ref.id);
  }).catch(function(e){
   alert('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
@@ -135,6 +137,8 @@ function _doOrder(payType){
 }
 
 // ── 픽업 알림 (Firestore onSnapshot) ─────────────────────────────────────────
+var _pickupOrderId = null; // 주문 완료 후 해당 주문 감지용
+
 function _listenOrders(){
  if(!_did||!_tNum)return;
  _db.collection('filo_orders')
@@ -143,8 +147,31 @@ function _listenOrders(){
   .where('status','==','ready')
   .onSnapshot(function(snap){
    if(snap.empty)return;
-   _showPickupAlert();
+   // 이미 완료 화면이 떠있을 때만 알림
+   var done=document.getElementById('done');
+   if(done&&done.style.display==='flex'){
+    _showPickupAlert();
+   }
   });
+}
+
+function _listenPickup(orderId){
+ // 특정 주문 ID 감지 (주문 완료 후 호출)
+ _pickupOrderId=orderId;
+ var status=document.getElementById('pickup-status');
+ if(status)status.textContent='⏳ 주방에서 준비 중...';
+ _db.collection('filo_orders').doc(orderId).onSnapshot(function(doc){
+  if(!doc.exists)return;
+  var data=doc.data();
+  if(data.status==='ready'){
+   var status=document.getElementById('pickup-status');
+   if(status){status.textContent='✅ 준비 완료! 카운터에서 수령해주세요';status.style.color='#22c55e';status.style.fontWeight='800';}
+   _showPickupAlert();
+  } else if(data.status==='served'){
+   var status=document.getElementById('pickup-status');
+   if(status){status.textContent='🍽 서빙 완료!';status.style.color='#0891b2';}
+  }
+ });
 }
 
 function _showPickupAlert(){
