@@ -1,274 +1,279 @@
-<!DOCTYPE html>
 <!--
-  store.html - FILO 배달 주문 페이지 (HTML 뼈대)
+  store.html - FILO 배달 주문 페이지 v3
   URL: filo.ai.kr/store/:slug
+  JS: store.js | 자동배포: GitHub Actions
   
-  ⚠️ 수정 시 주의:
-  - JS 로직은 store.js에 있음
-  - GitHub push → 자동배포 (GitHub Actions)
-  - KV keys: store.html, store.js
-  
-  연관 파일:
-  - store.js: 모든 JS 로직
-  - _worker.js: /store/:slug 라우팅, /api/menus, /api/translate
-  - filo.html: 관리자 (메뉴 등록)
-  
-  Firestore:
-  - filo_menus: 메뉴 읽기
-  - filo_orders: 주문 쓰기
-  - filo_stores: 매장 정보
+  v3 변경사항:
+  - 풀스크린 이미지 카드 (order.html과 동일 스타일)
+  - 브랜드 컬러 커스텀 지원
+  - 배달/픽업 탭 분리
+  - 메뉴 상세 모달 (이미지 + 번역 + 설명)
 -->
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>주문하기</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>배달 주문</title>
 <style>
+:root{
+  --brand:#0891b2;--brand-dark:#0e7490;--brand-light:#e0f2fe;
+  --bg:#f8fafc;--surface:#fff;--border:#e2e8f0;
+  --text1:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --red:#ef4444;--green:#22c55e;
+  --radius:16px;--radius-sm:12px;
+  --shadow:0 2px 12px rgba(0,0,0,.08);--shadow-lg:0 8px 32px rgba(0,0,0,.16);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Noto Sans KR',sans-serif;background:#f8fafc;min-height:100vh}
-
-/* 헤더 */
-#hdr{background:#fff;border-bottom:1px solid #e2e8f0;padding:14px 16px;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06)}
-.store-logo-emoji{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:flex;align-items:center;justify-content:center;font-size:22px;margin-right:12px;flex-shrink:0}
-.store-name{font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-.3px}
-.store-desc{font-size:11px;color:#94a3b8;margin-top:2px}
-.lang-wrap{display:flex;gap:4px;margin-left:auto}
-.lb{padding:4px 8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;background:#fff;color:#64748b;transition:.15s}
-.lb.on{background:#0891b2;color:#fff;border-color:#0891b2}
-
-/* 탭 */
-#tabs{background:#fff;border-bottom:2px solid #f1f5f9;display:flex}
-.tab{flex:1;padding:13px;text-align:center;font-size:13px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
-.tab.on{color:#0891b2;border-bottom-color:#0891b2}
-
-/* 메뉴 영역 */
-#menu-wrap{display:flex;height:calc(100vh - 116px);overflow:hidden}
-#cat-bar{width:72px;flex-shrink:0;background:#f8fafc;border-right:1px solid #f1f5f9;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:2px}
-.cb{display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:10px;cursor:pointer;font-size:9px;font-weight:700;color:#64748b;border:none;background:transparent;text-align:center;line-height:1.4;min-height:52px;width:100%;transition:.15s}
-.cb.on{background:#0891b2;color:#fff}
-.ci{font-size:22px;margin-bottom:2px;display:block}
-#menu-area{flex:1;overflow-y:auto;padding:10px 10px 140px}
-#menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-
-/* 메뉴 카드 */
-.mi{background:#fff;border:1px solid #f1f5f9;border-radius:14px;padding:10px 8px;text-align:center;cursor:pointer;transition:.18s;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.mi:active{transform:scale(.94);background:#e0f2fe;border-color:#bae6fd}
-.mi img{width:100%;height:70px;object-fit:cover;border-radius:10px;margin-bottom:6px;display:block}
-.me{font-size:28px;margin-bottom:4px;display:block;line-height:1}
-.mn{font-size:10px;font-weight:800;color:#0f172a;margin-bottom:3px;line-height:1.3;word-break:keep-all}
-.mp{font-size:12px;font-weight:900;color:#0891b2}
-.mc{position:absolute;top:-7px;right:-7px;background:#ef4444;color:#fff;font-size:10px;font-weight:900;width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(239,68,68,.4)}
-.mc.on{display:flex}
-
-/* 배달 정보 */
-#delivery-wrap{display:none;padding:16px;overflow-y:auto;max-height:calc(100vh - 116px)}
-.form-group{margin-bottom:14px}
-.form-label{font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.5px}
-.form-input{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;background:#fff;color:#0f172a;outline:none;transition:.15s}
-.form-input:focus{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.1)}
-textarea.form-input{height:80px;resize:none}
-.addr-btn{width:100%;padding:12px 14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;font-size:13px;font-weight:700;color:#0891b2;cursor:pointer;text-align:left;transition:.15s}
-.addr-btn:active{background:#e0f2fe}
-
-/* 장바구니 버튼 */
-#cart-btn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:50px;padding:15px 28px;font-size:15px;font-weight:900;cursor:pointer;display:none;box-shadow:0 6px 24px rgba(8,145,178,.45);z-index:200;white-space:nowrap;min-width:220px;text-align:center;letter-spacing:-.2px}
-
-/* 장바구니 시트 */
-#cs{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.12);transform:translateY(100%);transition:.3s cubic-bezier(.4,0,.2,1);z-index:300;max-height:90vh;display:flex;flex-direction:column}
-#cs.open{transform:translateY(0)}
-#ch{padding:16px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
-#ch .t{font-size:17px;font-weight:900;color:#0f172a}
-#ccl{background:#f1f5f9;border:none;font-size:16px;cursor:pointer;color:#64748b;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-#cl{overflow-y:auto;padding:8px 18px;flex:1}
-.ri{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f8fafc}
-.rn{flex:1;font-size:13px;font-weight:700;color:#0f172a}
-.rc{display:flex;align-items:center;gap:8px}
-.rc button{width:28px;height:28px;border-radius:50%;border:1.5px solid #e2e8f0;background:#f8fafc;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0891b2}
-.rq{font-size:14px;font-weight:900;min-width:22px;text-align:center;color:#0f172a}
-.rp{font-size:13px;font-weight:900;color:#0891b2;min-width:65px;text-align:right}
-
-/* 배달 정보 (시트 내) */
-#delivery-form-sheet{padding:0 18px 10px;border-top:1px solid #f1f5f9}
-.sf-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.sf-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
-.sf-input{padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;transition:.15s}
-.sf-input:focus{border-color:#0891b2}
-
-#cart-total-row{display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:700;align-items:center;color:#64748b}
-#cart-total-price{font-size:22px;font-weight:900;color:#0891b2}
-#cf{padding:14px 18px 24px;border-top:1px solid #f1f5f9;flex-shrink:0}
-#order-btn{width:100%;padding:15px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:900;cursor:pointer;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(8,145,178,.3)}
-#order-btn:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed}
-
-/* 완료 */
-#dn{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:400;padding:24px}
-.dn-ico{font-size:72px;margin-bottom:20px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
-@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
-.dn-msg{font-size:24px;font-weight:900;margin-bottom:8px;text-align:center;color:#0f172a}
-.dn-sub{font-size:13px;color:#94a3b8;margin-bottom:10px;text-align:center}
-.dn-order{font-size:12px;color:#64748b;margin-bottom:28px;text-align:center;line-height:1.7;background:#f8fafc;padding:14px;border-radius:12px;width:100%;max-width:320px}
-#dn-back{padding:14px 36px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;color:var(--text1)}
 
 /* 로딩 */
-#ld{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500}
-.sp{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#0891b2;border-radius:50%;animation:sp .8s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
+#ld{position:fixed;inset:0;background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+#ld .logo{font-size:32px;font-weight:900;color:#fff;letter-spacing:-1px}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 헤더 */
+#hdr{background:var(--surface);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 16px;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 8px rgba(0,0,0,.06);position:sticky;top:0;z-index:100}
+.store-info{display:flex;flex-direction:column;gap:2px}
+.store-nm{font-size:17px;font-weight:900;letter-spacing:-.3px}
+.store-sub{font-size:11px;color:var(--text3);font-weight:600}
+.lang-row{display:flex;gap:4px}
+.lb{height:28px;padding:0 10px;border:1.5px solid var(--border);border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text2);transition:.15s}
+.lb.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* 탭 (배달/픽업) */
+#tab-wrap{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 16px;gap:0;flex-shrink:0}
+.tab-btn{flex:1;height:44px;border:none;background:none;font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.tab-btn.on{color:var(--brand);border-color:var(--brand)}
+
+/* 카테고리 탭 */
+#cat-wrap{background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0}
+#cat-wrap::-webkit-scrollbar{display:none}
+#cat-bar{display:flex;padding:0 12px;gap:6px;height:48px;align-items:center;white-space:nowrap}
+.cat-btn{height:34px;padding:0 16px;border-radius:20px;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:.2s}
+.cat-btn.on{background:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(8,145,178,.3)}
+
+/* 앱 레이아웃 */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 140px}
+#menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+
+/* 메뉴 카드 - 풀스크린 이미지 */
+.mi{background:var(--surface);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:.2s;box-shadow:var(--shadow)}
+.mi:active{transform:scale(.97)}
+.mi-img-wrap{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden}
+.mi-img{width:100%;height:100%;object-fit:cover;display:block;transition:.3s}
+.mi:active .mi-img{transform:scale(1.03)}
+.mi-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.75));padding:40px 12px 12px}
+.mi-name-img{font-size:14px;font-weight:800;color:#fff;line-height:1.3;word-break:keep-all}
+.mi-tr-img{font-size:11px;color:rgba(255,255,255,.8);font-weight:600;margin-top:2px;min-height:14px}
+.mi-price-img{font-size:15px;font-weight:900;color:#fff;margin-top:4px}
+.mi-emoji-wrap{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
+.mi-emoji{font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.1))}
+.mi-body{padding:10px 12px 14px}
+.mi-name{font-size:13px;font-weight:700;color:var(--text1);line-height:1.4;margin-bottom:3px}
+.mi-tr{font-size:11px;color:var(--brand);font-weight:600;margin-bottom:3px;min-height:15px}
+.mi-price{font-size:15px;font-weight:900;color:var(--brand)}
+.mi-sold{position:absolute;inset:0;background:rgba(255,255,255,.75);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text3);border-radius:var(--radius)}
+.mi-badge{position:absolute;top:8px;right:8px;background:var(--brand);color:#fff;font-size:11px;font-weight:900;min-width:22px;height:22px;border-radius:11px;display:none;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 2px 8px rgba(8,145,178,.5)}
+.mi-badge.on{display:flex}
+
+/* 장바구니 FAB */
+#cart-fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;border:none;border-radius:50px;padding:0 28px;height:56px;font-size:15px;font-weight:800;cursor:pointer;display:none;box-shadow:0 8px 28px rgba(8,145,178,.5);z-index:200;white-space:nowrap;align-items:center;gap:10px;transition:.3s}
+#cart-fab.show{display:flex;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.fab-price{opacity:.9;font-weight:700;font-size:14px}
 
 /* 오버레이 */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:250;display:none;backdrop-filter:blur(2px)}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;backdrop-filter:blur(3px)}
+
+/* 장바구니 시트 */
+#cart-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 40px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);z-index:400;max-height:90vh;display:flex;flex-direction:column}
+#cart-sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 0}
+.sheet-hdr{padding:14px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:17px;font-weight:900}
+.sheet-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text3);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+#cart-list{overflow-y:auto;padding:8px 20px;flex:1}
+.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.ci-emoji{font-size:28px;flex-shrink:0;width:40px;text-align:center}
+.ci-img{width:44px;height:44px;object-fit:cover;border-radius:8px;flex-shrink:0}
+.ci-name{flex:1;font-size:13px;font-weight:700;color:var(--text1);line-height:1.4}
+.ci-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ci-ctrl button{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:.1s}
+.ci-ctrl button:active{background:var(--brand);border-color:var(--brand);color:#fff}
+.ci-qty{font-size:15px;font-weight:900;min-width:22px;text-align:center}
+.ci-price{font-size:13px;font-weight:800;color:var(--brand);min-width:68px;text-align:right;flex-shrink:0}
+
+/* 배달 정보 */
+#delivery-section{padding:12px 20px 8px;border-top:1px solid var(--border)}
+.ds-title{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.ds-inputs{display:flex;flex-direction:column;gap:8px}
+.ds-row{display:flex;gap:8px}
+.ds-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text1);outline:none;background:var(--surface);transition:.15s}
+.ds-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(8,145,178,.1)}
+.addr-btn{width:100%;padding:12px 14px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--brand);background:var(--brand-light);cursor:pointer;text-align:left;transition:.15s}
+
+/* 합계 + 주문 버튼 */
+#cart-footer{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+.total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.total-label{font-size:14px;color:var(--text2);font-weight:600}
+.total-price{font-size:24px;font-weight:900;color:var(--brand)}
+#order-btn{width:100%;height:54px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:800;cursor:pointer;transition:.15s;box-shadow:0 4px 16px rgba(8,145,178,.4)}
+#order-btn:active{background:var(--brand-dark);transform:scale(.99)}
+#order-btn:disabled{background:var(--border);cursor:not-allowed;color:var(--text3);box-shadow:none}
 
 /* 메뉴 상세 모달 */
-#tl-mdl{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:none;align-items:flex-end;backdrop-filter:blur(2px)}
-#tl-mdl.open{display:flex}
-#tl-mb{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 36px;max-height:80vh}
-.tl-drag{width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px}
-.tl-ico-wrap{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
-#tl-ico{font-size:44px;display:block;text-align:center}
-#tl-name{font-size:20px;font-weight:900;text-align:center;margin-bottom:6px;color:#0f172a;letter-spacing:-.3px}
-#tl-tr{font-size:14px;color:#0891b2;text-align:center;margin-bottom:4px;min-height:22px;font-weight:700}
-#tl-price{font-size:26px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:20px}
+#tl-mdl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity .2s}
+#tl-mdl.open{pointer-events:all;opacity:1}
+#tl-box{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:32px}
+.mdl-img-full{width:100%;max-height:280px;object-fit:cover;display:block}
+.mdl-emoji{font-size:80px;text-align:center;padding:28px 0 16px;display:block;line-height:1;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
+.mdl-content{padding:20px 20px 0}
+.mdl-name{font-size:22px;font-weight:900;text-align:center;margin-bottom:4px;letter-spacing:-.3px}
+.mdl-tr{font-size:14px;color:var(--brand);text-align:center;margin-bottom:8px;min-height:20px;font-weight:600}
+.mdl-desc{font-size:13px;color:var(--text2);text-align:center;line-height:1.7;margin-bottom:14px;padding:0 8px}
+.mdl-price{font-size:28px;font-weight:900;color:var(--brand);text-align:center;margin-bottom:20px}
+.mdl-qty-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
+.mdl-qty-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;transition:.1s}
+.mdl-qty-btn:active{background:var(--brand);border-color:var(--brand);color:#fff}
+.mdl-qty{font-size:22px;font-weight:900;min-width:36px;text-align:center}
+.tl-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(8,145,178,.3);border-top-color:var(--brand);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+.mdl-btns{display:flex;gap:8px;padding:0 20px;margin-bottom:8px}
+.mdl-close-btn{width:48px;height:54px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);font-size:20px;cursor:pointer;flex-shrink:0}
+.mdl-add{flex:1;height:54px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:800;cursor:pointer;transition:.15s;box-shadow:0 4px 16px rgba(8,145,178,.4)}
+.mdl-add:active{background:var(--brand-dark)}
 
-/* 수량 선택 */
-.qty-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
-.qty-btn{width:40px;height:40px;border-radius:50%;border:2px solid #e2e8f0;background:#f8fafc;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0891b2;transition:.15s}
-.qty-btn:active{background:#e0f2fe;border-color:#0891b2}
-#tl-qty{font-size:22px;font-weight:900;min-width:40px;text-align:center;color:#0f172a}
-#tl-add{width:100%;padding:16px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:16px;font-size:17px;font-weight:900;cursor:pointer;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(8,145,178,.3)}
-.tl-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#0891b2;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:4px}
+/* 완료 화면 */
+#dn{position:fixed;inset:0;background:linear-gradient(135deg,#f0f9ff,#fff);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:600;padding:32px;text-align:center}
+.dn-circle{width:88px;height:88px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 24px;animation:pop .5s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(34,197,94,.4)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.dn-title{font-size:26px;font-weight:900;margin-bottom:8px;letter-spacing:-.5px}
+.dn-sub{font-size:15px;color:var(--text2);margin-bottom:28px}
+#dn-back{padding:16px 36px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.4)}
+
+/* 주소 팝업 */
+#addr-popup{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#addr-popup.open{display:flex}
+.ap-box{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;box-shadow:var(--shadow-lg)}
+.ap-title{font-size:17px;font-weight:900;margin-bottom:16px}
+.ap-input{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;margin-bottom:10px;transition:.15s}
+.ap-input:focus{border-color:var(--brand)}
+.ap-row{display:flex;gap:10px;margin-top:6px}
+.ap-ok{flex:1;padding:13px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer}
+.ap-cancel{padding:13px 18px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;color:var(--text2)}
+.empty{text-align:center;padding:60px 20px;color:var(--text3);grid-column:1/-1}
+.empty-ico{font-size:48px;margin-bottom:16px;opacity:.5}
 </style>
 </head>
 <body>
 
 <div id="ld">
-  <div style="font-size:30px;font-weight:900;color:#0891b2;margin-bottom:20px;letter-spacing:-.5px">🛵 FILO</div>
-  <div class="sp"></div>
-  <div style="font-size:12px;color:#94a3b8;margin-top:14px">매장 정보를 불러오는 중...</div>
+  <div class="logo">🛵 FILO</div>
+  <div class="spinner"></div>
 </div>
 
-<div id="hdr" style="display:none">
-  <div style="display:flex;align-items:center">
-    <div class="store-logo-emoji" id="store-logo">🏪</div>
-    <div>
-      <div class="store-name" id="store-name">매장명</div>
-      <div class="store-desc" id="store-desc">주문하기</div>
+<div id="app" style="display:none">
+  <div id="hdr">
+    <div class="store-info">
+      <div class="store-nm" id="store-name">매장</div>
+      <div class="store-sub" id="store-sub">배달 · 픽업</div>
     </div>
-    <div class="lang-wrap">
+    <div class="lang-row">
       <button class="lb on" id="lb-ko" onclick="_setLang('ko')">KO</button>
       <button class="lb" id="lb-en" onclick="_setLang('en')">EN</button>
       <button class="lb" id="lb-zh" onclick="_setLang('zh')">中</button>
       <button class="lb" id="lb-ja" onclick="_setLang('ja')">日</button>
     </div>
   </div>
+  <div id="tab-wrap">
+    <button class="tab-btn on" id="tab-menu" onclick="_switchTab('menu')">🍽 메뉴</button>
+    <button class="tab-btn" id="tab-delivery" onclick="_switchTab('delivery')">🛵 배달정보</button>
+  </div>
+  <div id="cat-wrap" style="display:none"><div id="cat-bar"></div></div>
+  <div id="scroll-area"><div id="menu-grid"></div></div>
 </div>
 
-<div id="tabs" style="display:none">
-  <div class="tab on" id="tab-menu" onclick="_switchTab('menu')">🍽 메뉴</div>
-  <div class="tab" id="tab-delivery" onclick="_switchTab('delivery')">📍 배달정보</div>
-</div>
-
-<div id="menu-wrap" style="display:none">
-  <div id="cat-bar"></div>
-  <div id="menu-area"><div id="menu-grid"></div></div>
-</div>
-
-<div id="delivery-wrap">
-  <div class="form-group">
-    <label class="form-label" id="lbl-addr">배달 주소 *</label>
-    <button class="addr-btn" id="addr-btn" onclick="_searchAddr()">📍 주소 검색</button>
-    <input class="form-input" id="addr-detail" placeholder="상세주소 (동/호수 등)" style="margin-top:6px;display:none">
-  </div>
-  <div class="form-group">
-    <label class="form-label" id="lbl-name">이름 *</label>
-    <input class="form-input" id="cust-name" placeholder="홍길동">
-  </div>
-  <div class="form-group">
-    <label class="form-label" id="lbl-phone">연락처 *</label>
-    <input class="form-input" id="cust-phone" type="tel" placeholder="010-0000-0000">
-  </div>
-  <div class="form-group">
-    <label class="form-label" id="lbl-memo">요청사항</label>
-    <textarea class="form-input" id="cust-memo" placeholder="문 앞에 놓아주세요 / 수저 빼주세요 등"></textarea>
-  </div>
-  <div style="padding:14px;background:#f0f9ff;border-radius:14px;font-size:12px;color:#0369a1;line-height:1.7;border:1px solid #bae6fd">
-    📋 주문 후 매장에서 확인하여 배달 접수합니다.<br>
-    배달비는 거리에 따라 별도 부과됩니다.
-  </div>
-</div>
-
-<button id="cart-btn" onclick="_openCart()">
-  🛒 <span id="cart-cnt">0</span>개 · <span id="cart-total-btn">₩0</span> &nbsp;주문하기
+<button id="cart-fab" onclick="_openCart()">
+  🛒 <span id="fab-cnt">0</span>개
+  <span class="fab-price" id="fab-price">₩0</span>
+  &nbsp;·&nbsp; <span id="fab-label">주문하기</span>
 </button>
 
 <div id="overlay" onclick="_closeCart()"></div>
 
-<div id="cs">
-  <div id="ch">
-    <div class="t">🛒 장바구니</div>
-    <button id="ccl" onclick="_closeCart()">✕</button>
+<div id="cart-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-hdr">
+    <div class="sheet-title" id="cart-title">🛒 장바구니</div>
+    <button class="sheet-close" onclick="_closeCart()">✕</button>
   </div>
-  <div id="cl"></div>
-  <div id="delivery-form-sheet">
-    <div class="sf-row" style="margin-top:12px">
-      <span class="sf-label" id="sf-lbl-addr">배달 주소 *</span>
-      <button class="addr-btn" id="sf-addr-btn" onclick="_searchAddr()" style="font-size:12px;padding:10px">📍 주소 검색</button>
-      <input class="sf-input" id="sf-addr-detail" placeholder="상세주소" style="display:none;margin-top:4px">
-    </div>
-    <div style="display:flex;gap:8px">
-      <div class="sf-row" style="flex:1">
-        <span class="sf-label" id="sf-lbl-name">이름 *</span>
-        <input class="sf-input" id="sf-name" placeholder="홍길동">
+  <div id="cart-list"></div>
+  <div id="delivery-section" style="display:none">
+    <div class="ds-title" id="ds-title">배달 정보</div>
+    <div class="ds-inputs">
+      <button class="addr-btn" id="addr-btn" onclick="_openAddrPopup()">📍 주소를 입력해주세요</button>
+      <div class="ds-row">
+        <input class="ds-input" id="cust-name" placeholder="이름">
+        <input class="ds-input" id="cust-phone" type="tel" placeholder="010-0000-0000">
       </div>
-      <div class="sf-row" style="flex:1">
-        <span class="sf-label" id="sf-lbl-phone">연락처 *</span>
-        <input class="sf-input" id="sf-phone" type="tel" placeholder="010-0000-0000">
-      </div>
-    </div>
-    <div class="sf-row">
-      <span class="sf-label" id="sf-lbl-memo">요청사항</span>
-      <input class="sf-input" id="sf-memo" placeholder="문 앞에 놓아주세요">
+      <input class="ds-input" id="cust-memo" placeholder="요청사항">
     </div>
   </div>
-  <div id="cf">
-    <div id="cart-total-row">
-      <span id="tl-total">합계</span>
-      <span id="cart-total-price">₩0</span>
+  <div id="cart-footer">
+    <div class="total-row">
+      <span class="total-label" id="tl-total">합계</span>
+      <span class="total-price" id="total-price">₩0</span>
     </div>
     <button id="order-btn" onclick="_submitOrder()">주문하기</button>
   </div>
 </div>
 
-<div id="dn">
-  <div class="dn-ico">✅</div>
-  <div class="dn-msg" id="dn-msg">주문이 접수됐습니다!</div>
-  <div class="dn-sub" id="dn-sub">매장에서 확인 후 배달을 시작합니다</div>
-  <div class="dn-order" id="dn-order"></div>
-  <button id="dn-back" onclick="location.reload()">다시 주문하기</button>
-</div>
-
 <!-- 메뉴 상세 모달 -->
 <div id="tl-mdl" onclick="if(event.target===this)_closeTlMdl()">
-  <div id="tl-mb">
-    <div class="tl-drag"></div>
-    <div class="tl-ico-wrap"><span id="tl-ico">🍽</span></div>
-    <div id="tl-name"></div>
-    <div id="tl-tr"></div>
-    <div id="tl-desc" style="font-size:12px;color:#64748b;text-align:center;margin-bottom:8px;line-height:1.6;min-height:0;padding:0 8px"></div>
-    <div id="tl-price"></div>
-    <div class="qty-row">
-      <button class="qty-btn" onclick="_tlQty(-1)">−</button>
-      <span id="tl-qty">1</span>
-      <button class="qty-btn" onclick="_tlQty(1)">+</button>
+  <div id="tl-box">
+    <div class="mdl-content">
+      <div class="mdl-name" id="tl-name"></div>
+      <div class="mdl-tr" id="tl-tr"></div>
+      <div class="mdl-desc" id="tl-desc"></div>
+      <div class="mdl-price" id="tl-price"></div>
+      <div class="mdl-qty-row">
+        <button class="mdl-qty-btn" onclick="_tlQty(-1)">−</button>
+        <span class="mdl-qty" id="tl-qty">1</span>
+        <button class="mdl-qty-btn" onclick="_tlQty(1)">+</button>
+      </div>
     </div>
-    <button id="tl-add" onclick="_addFromTlMdl()">담기</button>
+    <div class="mdl-btns">
+      <button class="mdl-close-btn" onclick="_closeTlMdl()">✕</button>
+      <button class="mdl-add" id="tl-add" onclick="_addFromTlMdl()">담기 — ₩0</button>
+    </div>
   </div>
 </div>
 
-<!-- Firebase -->
+<div id="dn" style="display:none">
+  <div class="dn-circle">✓</div>
+  <div class="dn-title" id="dn-msg">주문 완료!</div>
+  <div class="dn-sub" id="dn-sub">곧 준비해드릴게요 😊</div>
+  <button id="dn-back" onclick="location.reload()">메뉴로 돌아가기</button>
+</div>
+
+<div id="addr-popup">
+  <div class="ap-box">
+    <div class="ap-title">📍 배달 주소 입력</div>
+    <input class="ap-input" id="ap-addr" placeholder="도로명 주소">
+    <input class="ap-input" id="ap-detail" placeholder="상세주소">
+    <div class="ap-row">
+      <button class="ap-ok" onclick="_confirmAddr()">확인</button>
+      <button class="ap-cancel" onclick="_closeAddrPopup()">취소</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<script src="/store.js?v=1"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"fcc737ed587146dd8feafc9db77f93b2","r":1}' crossorigin="anonymous"></script>
+<script src="/store.js?v=3"></script>
 </body>
 </html>
