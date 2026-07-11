@@ -1772,7 +1772,9 @@ async function acceptExchange(){
               }
             }
             return new Response(JSON.stringify({ok:true, translated}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          }{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+
+          if (!menus || !dealerId) return new Response(JSON.stringify({error:'menus/dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const fsToken3 = await getAccessToken(env);
           let success = 0, errors = [];
           for (const m of menus) {
