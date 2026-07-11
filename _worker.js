@@ -584,8 +584,9 @@ export default {
 
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
-    if (['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-order-common.js','/store.js','/order.js','/dine.js','/donway_landing.js','/filo-landing.js'].indexOf(path) !== -1) {
-      return serveKVFile(env, path.slice(1), 'application/javascript');
+    const pathNoQ = path.split('?')[0]; // 쿼리스트링 제거
+    if (['/filo-common.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-order-common.js','/store.js','/order.js','/dine.js','/donway_landing.js','/filo-landing.js'].indexOf(pathNoQ) !== -1) {
+      return serveKVFile(env, pathNoQ.slice(1), 'application/javascript');
     }
     if (path === '/firebase-app-compat.js') {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-app-compat.js');
