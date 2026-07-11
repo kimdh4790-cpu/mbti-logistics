@@ -267,34 +267,37 @@ function _chg(name,d){
 }
 
 function _searchAddr(){
- var input=document.createElement('div');
- input.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
- input.innerHTML=
-  '<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2)">'+
-  '<div style="font-size:16px;font-weight:900;margin-bottom:6px;color:#0f172a">📍 배달 주소 입력</div>'+
-  '<div style="font-size:12px;color:#94a3b8;margin-bottom:16px">도로명 주소로 입력해주세요</div>'+
-  '<input id="addr-input-main" placeholder="예: 수영로 668" style="width:100%;padding:13px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none" onfocus="this.style.borderColor=\'#0891b2\'" onblur="this.style.borderColor=\'#e2e8f0\'">'+
-  '<input id="addr-input-detail" placeholder="상세주소 예: 607호" style="width:100%;padding:13px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:18px;box-sizing:border-box;outline:none" onfocus="this.style.borderColor=\'#0891b2\'" onblur="this.style.borderColor=\'#e2e8f0\'">'+
+ // 간단한 주소 입력 팝업
+ var pop=document.createElement('div');
+ pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+ var mainInput='';var detailInput='';
+ pop.innerHTML=
+  '<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px">'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:16px">📍 배달 주소 입력</div>'+
+  '<input id="_ai1" placeholder="도로명 주소 (예: 수영로 668)" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none">'+
+  '<input id="_ai2" placeholder="상세주소 (예: 607호)" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none">'+
   '<div style="display:flex;gap:8px">'+
-  '<button id="addr-confirm" style="flex:1;padding:14px;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>'+
-  '<button id="addr-cancel" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
+  '<button id="_aok" style="flex:1;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>'+
+  '<button id="_acl" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
   '</div></div>';
- document.body.appendChild(input);
- document.getElementById('ap-addr').focus();
- document.getElementById('addr-popup').onclick=function(){
-  var main=document.getElementById('ap-addr').value.trim();
-  var detail=document.getElementById('ap-detail').value.trim();
+ document.body.appendChild(pop);
+ document.getElementById('_ai1').focus();
+ document.getElementById('_aok').onclick=function(){
+  var main=document.getElementById('_ai1').value.trim();
+  var detail=document.getElementById('_ai2').value.trim();
   if(!main){alert('주소를 입력해주세요');return;}
-  _addr=main+(detail?' '+detail:'');
-  document.getElementById('addr-btn').textContent='📍 '+_addr;
-  document.getElementById('addr-btn').style.color='#0f172a';
-  document.getElementById('addr-btn').textContent='📍 '+_addr;
-  document.getElementById('addr-btn').style.color='#0f172a';
-  input.remove();
+  _addrFull=main+(detail?' '+detail:'');
+  _addr=_addrFull;
+  var btns=document.querySelectorAll('[id^="addr-btn"]');
+  btns.forEach(function(b){b.textContent='📍 '+_addrFull;b.style.color='#0f172a';});
+  pop.remove();
  };
- document.getElementById('addr-popup').onclick=function(){input.remove();};
- input.onclick=function(e){if(e.target===input)input.remove();};
+ document.getElementById('_acl').onclick=function(){pop.remove();};
+ pop.onclick=function(e){if(e.target===pop)pop.remove();};
 }
+function _confirmAddr(){_searchAddr();}
+function _openAddrPopup(){_searchAddr();}
+function _closeAddrPopup(){var p=document.querySelector('[id^="_a"]');if(p&&p.parentNode===document.body)p.parentNode.removeChild(p);}
 
 function _submitOrder(){
  var name=document.getElementById('cust-name').value.trim()||document.getElementById('cust-name').value.trim();
