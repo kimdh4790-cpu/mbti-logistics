@@ -53,12 +53,12 @@ window.onload=function(){
   var d=data.store;
   _did=d.id;
   document.getElementById('store-name').textContent=d.name||'매장';
-  document.getElementById('store-desc').textContent=d.address||'배달 주문';
+  document.getElementById('store-sub').textContent=d.address||'배달 · 픽업';
   document.title=(d.name||'매장')+' - 주문하기';
   document.getElementById('ld').style.display='none';
   document.getElementById('hdr').style.display='block';
   document.getElementById('tabs').style.display='flex';
-  document.getElementById('menu-wrap').style.display='flex';
+  document.getElementById('app').style.display='flex';document.getElementById('cat-wrap').style.display='';
   ['ko','en','zh','ja'].forEach(function(l){
    document.getElementById('lb-'+l).onclick=function(){_setLang(l);};
   });
@@ -94,7 +94,7 @@ function _renderMenus(){
    document.querySelectorAll('.mi').forEach(function(item){
     item.style.display=(cat==='전체'||item.dataset.cat===cat)?'':'none';
    });
-   document.getElementById('menu-area').scrollTop=0;
+   document.getElementById('scroll-area').scrollTop=0;
   };
   bar.appendChild(btn);
  });
@@ -218,15 +218,15 @@ function _updBtn(){
  var btn=document.getElementById('cart-btn');
  if(cnt>0){
   btn.style.display='block';
-  document.getElementById('cart-cnt').textContent=cnt;
-  document.getElementById('cart-total-btn').textContent='₩'+total.toLocaleString();
+  document.getElementById('fab-cnt').textContent=cnt;
+  document.getElementById('cart-fab').textContent='₩'+total.toLocaleString();
  } else {
   btn.style.display='none';
  }
 }
 
 function _openCart(){
- var list=document.getElementById('cl');
+ var list=document.getElementById('cart-list');
  list.innerHTML='';
  var total=0;
  Object.values(_cart).forEach(function(item){
@@ -247,14 +247,14 @@ function _openCart(){
   row.appendChild(nd);row.appendChild(ctrl);row.appendChild(pd);
   list.appendChild(row);
  });
- document.getElementById('cart-total-price').textContent='₩'+total.toLocaleString();
- document.getElementById('cs').classList.add('open');
- document.getElementById('overlay').style.display='block';
+ document.getElementById('fab-price').textContent='₩'+total.toLocaleString();
+ document.getElementById('cart-list').classList.add('open');
+ document.getElementById('overlay').style.display='block';document.getElementById('cart-sheet').classList.add('open');
 }
 
 function _closeCart(){
- document.getElementById('cs').classList.remove('open');
- document.getElementById('overlay').style.display='none';
+ document.getElementById('cart-list').classList.remove('open');
+ document.getElementById('overlay').style.display='none';document.getElementById('cart-sheet').classList.remove('open');
 }
 
 function _chg(name,d){
@@ -281,26 +281,26 @@ function _searchAddr(){
   '<button id="addr-cancel" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">취소</button>'+
   '</div></div>';
  document.body.appendChild(input);
- document.getElementById('addr-input-main').focus();
- document.getElementById('addr-confirm').onclick=function(){
-  var main=document.getElementById('addr-input-main').value.trim();
-  var detail=document.getElementById('addr-input-detail').value.trim();
+ document.getElementById('ap-addr').focus();
+ document.getElementById('addr-popup').onclick=function(){
+  var main=document.getElementById('ap-addr').value.trim();
+  var detail=document.getElementById('ap-detail').value.trim();
   if(!main){alert('주소를 입력해주세요');return;}
   _addr=main+(detail?' '+detail:'');
   document.getElementById('addr-btn').textContent='📍 '+_addr;
   document.getElementById('addr-btn').style.color='#0f172a';
-  document.getElementById('sf-addr-btn').textContent='📍 '+_addr;
-  document.getElementById('sf-addr-btn').style.color='#0f172a';
+  document.getElementById('addr-btn').textContent='📍 '+_addr;
+  document.getElementById('addr-btn').style.color='#0f172a';
   input.remove();
  };
- document.getElementById('addr-cancel').onclick=function(){input.remove();};
+ document.getElementById('addr-popup').onclick=function(){input.remove();};
  input.onclick=function(e){if(e.target===input)input.remove();};
 }
 
 function _submitOrder(){
- var name=document.getElementById('sf-name').value.trim()||document.getElementById('cust-name').value.trim();
- var phone=document.getElementById('sf-phone').value.trim()||document.getElementById('cust-phone').value.trim();
- var memo=document.getElementById('sf-memo').value.trim()||document.getElementById('cust-memo').value.trim();
+ var name=document.getElementById('cust-name').value.trim()||document.getElementById('cust-name').value.trim();
+ var phone=document.getElementById('cust-phone').value.trim()||document.getElementById('cust-phone').value.trim();
+ var memo=document.getElementById('cust-memo').value.trim()||document.getElementById('cust-memo').value.trim();
  var fullAddr=_addr;
  if(!_addr){alert('배달 주소를 입력해주세요');return;}
  if(!name){alert('이름을 입력해주세요');return;}
@@ -318,7 +318,7 @@ function _submitOrder(){
   _closeCart();_cart={};_updBtn();
   document.querySelectorAll('.mc').forEach(function(c){c.textContent='';c.className='mc';});
   var orderInfo=items.map(function(i){return i.emoji+' '+i.name+' ×'+i.qty+'  ₩'+(i.price*i.qty).toLocaleString();}).join('\n');
-  document.getElementById('dn-order').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n\n'+orderInfo+'\n\n📍 '+fullAddr;
+  document.getElementById('dn-sub').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n\n'+orderInfo+'\n\n📍 '+fullAddr;
   document.getElementById('dn').style.display='flex';
  }).catch(function(e){
   alert('주문 실패: '+e.message);
@@ -330,7 +330,7 @@ function _switchTab(tab){
  document.getElementById('tab-menu').classList.toggle('on',tab==='menu');
  document.getElementById('tab-delivery').classList.toggle('on',tab==='delivery');
  document.getElementById('menu-wrap').style.display=tab==='menu'?'flex':'none';
- document.getElementById('delivery-wrap').style.display=tab==='delivery'?'block':'none';
+ document.getElementById('delivery-section').style.display=tab==='delivery'?'block':'none';
 }
 
 function _setLang(l){
