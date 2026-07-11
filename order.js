@@ -191,7 +191,13 @@ function _openMdl(m){
   var ck=m.name+'_'+_lang;
   if(_tlCache[ck]){
    document.getElementById('mdl-tr').textContent=_tlCache[ck];
+  } else if(m.nameTranslations&&m.nameTranslations[_lang]){
+   // Firestore 저장 번역 사용 (안정적)
+   var t=m.nameTranslations[_lang];
+   _tlCache[ck]=t;
+   document.getElementById('mdl-tr').textContent=t;
   } else {
+   // API 실시간 번역 (폴백)
    document.getElementById('mdl-tr').innerHTML='<span class="tl-spin"></span>';
    fetch('/api/translate',{
     method:'POST',
