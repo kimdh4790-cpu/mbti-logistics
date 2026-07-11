@@ -1751,14 +1751,33 @@ async function acceptExchange(){
                 if (!name) continue;
                 const docId = item.document.name.split('/').pop();
                 const nameTranslations = {};
+                const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
                 for (const lang of langs) {
                   try {
-                    const tr = await fetch(`https://filo.ai.kr/api/translate`, {
-                      method:'POST', headers:{'Content-Type':'application/json'},
-                      body: JSON.stringify({name, lang})
-                    });
-                    const td = await tr.json();
-                    nameTranslations[lang] = td.translated || name;
+                    const k2 = (env.ANTHROPIC_API_KEY||'').trim();
+                    let translated2 = '';
+                    if (k2) {
+                      const res2 = await fetch('https://api.anthropic.com/v1/messages',{
+                        method:'POST',
+                        headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
+                        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+                      });
+                      if (res2.ok) {
+                        const d2 = await res2.json();
+                        translated2 = (d2.content&&d2.content[0]&&d2.content[0].text)||'';
+                      }
+                    }
+                    // Google 폴백
+                    if (!translated2 || translated2 === name) {
+                      const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
+                      const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+langMap[lang]+'&dt=t&q='+encodeURIComponent(name));
+                      const gData = await gRes.json();
+                      translated2 = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
+                    }
+                    nameTranslations[lang] = translated2 || name;
+                    // KV 캐시 갱신
+                    const cacheKey2 = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+                    try{await env.DONWAY_ASSETS.put(cacheKey2, nameTranslations[lang], {expirationTtl:86400});}catch(e){}
                   } catch(e) { nameTranslations[lang] = name; }
                 }
                 const fields = {};
