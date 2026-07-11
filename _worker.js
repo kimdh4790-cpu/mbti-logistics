@@ -1732,7 +1732,47 @@ async function acceptExchange(){
             return new Response(JSON.stringify({ok:true, updated}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           }
 
-          if (!menus || !dealerId) return new Response(JSON.stringify({error:'menus/dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          // 번역 없는 메뉴 일괄 번역
+          if (action === 'fix-translations' && dealerId) {
+            const qr2 = await fetch(`${FS_BASE}:runQuery`, {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
+              body: JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})
+            });
+            const docs2 = await qr2.json();
+            let translated = 0;
+            const langs = ['en','zh','ja'];
+            for (const item of (docs2||[])) {
+              if (!item.document) continue;
+              const f = item.document.fields || {};
+              const hasTranslation = f.nameTranslations && f.nameTranslations.mapValue;
+              if (!hasTranslation) {
+                const name = (f.name && f.name.stringValue) || '';
+                if (!name) continue;
+                const docId = item.document.name.split('/').pop();
+                const nameTranslations = {};
+                for (const lang of langs) {
+                  try {
+                    const tr = await fetch(`https://filo.ai.kr/api/translate`, {
+                      method:'POST', headers:{'Content-Type':'application/json'},
+                      body: JSON.stringify({name, lang})
+                    });
+                    const td = await tr.json();
+                    nameTranslations[lang] = td.translated || name;
+                  } catch(e) { nameTranslations[lang] = name; }
+                }
+                const fields = {};
+                for (const [lang, val] of Object.entries(nameTranslations)) {
+                  fields[lang] = {stringValue: val};
+                }
+                await fetch(`${FS_BASE}/filo_menus/${docId}?updateMask.fieldPaths=nameTranslations`, {
+                  method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
+                  body: JSON.stringify({fields:{nameTranslations:{mapValue:{fields}}}})
+                });
+                translated++;
+              }
+            }
+            return new Response(JSON.stringify({ok:true, translated}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const fsToken3 = await getAccessToken(env);
           let success = 0, errors = [];
           for (const m of menus) {
