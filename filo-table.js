@@ -509,7 +509,7 @@ window._filoTableClear=function(docId,did,num){
   _db.collection('filo_orders')
    .where('dealerId','==',did)
    .where('type','==','table')
-   .where('tableNum','==',String(num))
+   .where('tableNum','==',isNaN(num)?String(num):parseInt(num))
    .get().then(function(snap){
     var batch=_db.batch();
     snap.forEach(function(doc){
