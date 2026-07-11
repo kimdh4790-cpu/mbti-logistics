@@ -1615,20 +1615,15 @@ async function acceptExchange(){
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
         } catch(e){}
-        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        let data={};
+        const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
+        const tl = langMap[lang]||'en';
+        let translated = '';
         try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-          });
-          const resText = await res.text();
-          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
-          try{data=JSON.parse(resText);}catch(e){}
+          const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name));
+          const gData = await gRes.json();
+          translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
         } catch(e) {}
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||'';
-        // 번역 성공 시만 KV 캐시 저장 (원문 반환 시 저장 안 함)
+        // 번역 성공 시만 KV 캐시 저장
         if(translated && translated.trim() !== name) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
@@ -1745,20 +1740,15 @@ async function acceptExchange(){
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
         } catch(e){}
-        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        let data={};
+        const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
+        const tl = langMap[lang]||'en';
+        let translated = '';
         try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':env.ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01'},
-            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean menu item name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-          });
-          const resText = await res.text();
-          console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
-          try{data=JSON.parse(resText);}catch(e){}
+          const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name));
+          const gData = await gRes.json();
+          translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
         } catch(e) {}
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||'';
-        // 번역 성공 시만 KV 캐시 저장 (원문 반환 시 저장 안 함)
+        // 번역 성공 시만 KV 캐시 저장
         if(translated && translated.trim() !== name) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
