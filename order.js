@@ -295,6 +295,15 @@ function _changeTable(){
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
 function _showFCMGate(){
+ // 아이폰 크롬 감지
+ var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+ var isChrome=/CriOS/.test(navigator.userAgent);
+ if(isIOS&&isChrome){
+  // 아이폰 크롬 → FCM 불가, 안내만 표시
+  var notice=document.getElementById('ios-chrome-notice');
+  if(notice)notice.style.display='block';
+  return;
+ }
  var gate=document.getElementById('fcm-gate');
  if(!gate)return;
  // 이미 토큰 있으면 스킵
