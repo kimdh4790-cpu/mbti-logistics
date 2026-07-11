@@ -85,11 +85,11 @@ function _renderMenus(){
  bar.innerHTML='';
  cats.forEach(function(cat,i){
   var btn=document.createElement('button');
-  btn.className='cb'+(i===0?' on':'');
+  btn.className='cat-btn'+(i===0?' on':'');
   btn.dataset.cat=cat;
   btn.innerHTML='<span class="ci">'+(_catIco[cat]||'🍽')+'</span><span>'+cat+'</span>';
   btn.onclick=function(){
-   document.querySelectorAll('.cb').forEach(function(b){b.classList.remove('on');});
+   document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('on');});
    btn.classList.add('on');
    document.querySelectorAll('.mi').forEach(function(item){
     item.style.display=(cat==='전체'||item.dataset.cat===cat)?'':'none';
@@ -104,11 +104,27 @@ function _renderMenus(){
   var item=document.createElement('div');
   item.className='mi';
   item.dataset.cat=m.category||'기타';
-  item.innerHTML=
-   (m.imageUrl?'<img src="'+m.imageUrl+'" loading="lazy" onerror="this.style.display=\'none\'">':'<span class="me">'+(m.emoji||'🍽')+'</span>')+
-   '<div class="mn">'+m.name+'</div>'+
-   '<div class="mp">₩'+(m.price||0).toLocaleString()+'</div>'+
-   '<div class="mc" id="sc-'+m.name.replace(/\W/g,'')+'"></div>';
+  var trId='tr-'+m.name.replace(/\W/g,'_');
+  var badgeId='sc-'+m.name.replace(/\W/g,'');
+  var inCart=_cart[m.name]&&_cart[m.name].qty>0;
+  if(m.imageUrl){
+   item.innerHTML='<div class="mi-img-wrap">'+
+    '<img class="mi-img" src="'+m.imageUrl+'" loading="lazy" alt="'+m.name+'">'+
+    '<div class="mi-overlay">'+
+    '<div class="mi-name-img">'+m.name+'</div>'+
+    '<div class="mi-tr-img" id="'+trId+'"></div>'+
+    '<div class="mi-price-img">₩'+(m.price||0).toLocaleString()+'</div>'+
+    '</div></div>'+
+    '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
+  } else {
+   item.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||'🍽')+'</div></div>'+
+    '<div class="mi-body">'+
+    '<div class="mi-name">'+m.name+'</div>'+
+    '<div class="mi-tr" id="'+trId+'"></div>'+
+    '<div class="mi-price">₩'+(m.price||0).toLocaleString()+'</div>'+
+    '</div>'+
+    '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
+  }
   (function(menu){item.onclick=function(){_openMdl(menu);};})(m);
   grid.appendChild(item);
  });
@@ -117,12 +133,28 @@ function _renderMenus(){
 function _openMdl(m){
  _curMdlMenu=m;
  _tlQtyVal=1;
- document.getElementById('tl-ico').textContent=m.emoji||'🍽';
+ // 이미지/이모지 헤더 교체
+ var tlBox=document.getElementById('tl-box');
+ var oldHdr=tlBox.querySelector('.mdl-img-full,.mdl-emoji');
+ if(oldHdr)oldHdr.remove();
+ var mdlContent=tlBox.querySelector('.mdl-content');
+ if(m.imageUrl){
+  var img=document.createElement('img');
+  img.className='mdl-img-full';
+  img.src=m.imageUrl;
+  img.alt=m.name;
+  tlBox.insertBefore(img,mdlContent);
+ } else {
+  var emojiEl=document.createElement('div');
+  emojiEl.className='mdl-emoji';
+  emojiEl.textContent=m.emoji||'🍽';
+  tlBox.insertBefore(emojiEl,mdlContent);
+ }
  document.getElementById('tl-name').textContent=m.name;
  document.getElementById('tl-price').textContent='₩'+(m.price||0).toLocaleString();
  document.getElementById('tl-qty').textContent='1';
  document.getElementById('tl-add').textContent='담기 — ₩'+(m.price||0).toLocaleString();
- document.getElementById('tl-mdl').style.display='flex';
+ document.getElementById('tl-mdl').classList.add('open');
  document.getElementById('tl-tr').textContent='';
  // 설명 표시
  var descEl=document.getElementById('tl-desc');
@@ -161,7 +193,7 @@ function _tlQty(d){
 }
 
 function _closeTlMdl(){
- document.getElementById('tl-mdl').style.display='none';
+ document.getElementById('tl-mdl').classList.remove('open');
  _curMdlMenu=null;
 }
 
