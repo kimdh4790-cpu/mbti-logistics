@@ -9,7 +9,8 @@
  * 
  * 주요 기능:
  * - 메뉴 로드 및 렌더링 (/api/menus)
- * - 다국어 번역 (/api/translate - Google 무료)
+ * - 다국어 번역: Firestore nameTranslations 우선 → Anthropic 재시도3회 → Google 폴백
+ * - 토스페이먼츠: TOSS_CLIENT_KEY 변수에 키 입력하면 바로 작동
  * - 장바구니 + 주문 접수 (filo_orders)
  * - 배달 주소 입력
  * - 메뉴 상세 모달 (수량 선택)
