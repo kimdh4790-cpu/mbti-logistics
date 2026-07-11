@@ -93,7 +93,7 @@ let _env_ref = null;
 async function fetchAsset(path, request, env) {
   const e = env || _env_ref;
   const filePath = path.startsWith('/') ? path : '/' + path;
-  const fileName = filePath.replace(/^\//, '');
+  const fileName = filePath.replace(/^\//, '').split('?')[0]; // 쿼리스트링 제거
 
   // KV 우선 서빙
   if (e && e.DONWAY_ASSETS) {
