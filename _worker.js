@@ -1618,29 +1618,32 @@ async function acceptExchange(){
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
         let translated = '';
-        // 1차: Anthropic Claude (고품질)
-        try {
-          const k = (env.ANTHROPIC_API_KEY||'').trim();
-          if(k) {
-            const res = await fetch('https://api.anthropic.com/v1/messages',{
-              method:'POST',
-              headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-              body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-            });
-            if(res.ok){
-              const d = await res.json();
-              translated = (d.content&&d.content[0]&&d.content[0].text)||'';
-              console.log('[tr] anthropic ok:'+translated);
-            } else {
-              console.log('[tr] anthropic fail:'+res.status);
+        // Anthropic 재시도 3회 + Google 폴백
+        const k = (env.ANTHROPIC_API_KEY||'').trim();
+        const tl2 = langMap[lang]||'en';
+        for(let attempt=0; attempt<3 && !translated; attempt++) {
+          try {
+            if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
+            if(k) {
+              const res = await fetch('https://api.anthropic.com/v1/messages',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+              });
+              if(res.ok){
+                const d = await res.json();
+                translated = (d.content&&d.content[0]&&d.content[0].text)||'';
+                console.log('[tr] anthropic ok(attempt '+attempt+'):'+translated);
+              } else {
+                console.log('[tr] anthropic '+res.status+' attempt '+attempt);
+              }
             }
-          }
-        } catch(e){console.log('[tr] anthropic err:'+e.message);}
-        // 2차 폴백: Google 무료 번역
+          } catch(e){console.log('[tr] anthropic err:'+e.message);}
+        }
+        // Google 폴백
         if(!translated || translated===name) {
           try {
-            const tl = langMap[lang]||'en';
-            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name));
+            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
             const gData = await gRes.json();
             translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
             console.log('[tr] google fallback:'+translated);
@@ -1792,29 +1795,32 @@ async function acceptExchange(){
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
         let translated = '';
-        // 1차: Anthropic Claude (고품질)
-        try {
-          const k = (env.ANTHROPIC_API_KEY||'').trim();
-          if(k) {
-            const res = await fetch('https://api.anthropic.com/v1/messages',{
-              method:'POST',
-              headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-              body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
-            });
-            if(res.ok){
-              const d = await res.json();
-              translated = (d.content&&d.content[0]&&d.content[0].text)||'';
-              console.log('[tr] anthropic ok:'+translated);
-            } else {
-              console.log('[tr] anthropic fail:'+res.status);
+        // Anthropic 재시도 3회 + Google 폴백
+        const k = (env.ANTHROPIC_API_KEY||'').trim();
+        const tl2 = langMap[lang]||'en';
+        for(let attempt=0; attempt<3 && !translated; attempt++) {
+          try {
+            if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
+            if(k) {
+              const res = await fetch('https://api.anthropic.com/v1/messages',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+              });
+              if(res.ok){
+                const d = await res.json();
+                translated = (d.content&&d.content[0]&&d.content[0].text)||'';
+                console.log('[tr] anthropic ok(attempt '+attempt+'):'+translated);
+              } else {
+                console.log('[tr] anthropic '+res.status+' attempt '+attempt);
+              }
             }
-          }
-        } catch(e){console.log('[tr] anthropic err:'+e.message);}
-        // 2차 폴백: Google 무료 번역
+          } catch(e){console.log('[tr] anthropic err:'+e.message);}
+        }
+        // Google 폴백
         if(!translated || translated===name) {
           try {
-            const tl = langMap[lang]||'en';
-            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name));
+            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
             const gData = await gRes.json();
             translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
             console.log('[tr] google fallback:'+translated);
