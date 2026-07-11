@@ -32,7 +32,10 @@ window.onload=function(){
  firebase.initializeApp({
   apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
   authDomain:'mbti-logistics.firebaseapp.com',
-  projectId:'mbti-logistics'
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.firebasestorage.app',
+  messagingSenderId:'40761160761',
+  appId:'1:40761160761:web:20545b610f03f534e949e8'
  });
  _db=firebase.firestore();
  _did=_p('d')||'';
