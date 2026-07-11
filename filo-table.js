@@ -377,7 +377,7 @@ function _filoTableLoad(did){
    orderMap={};
    snap.forEach(function(doc){
     var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today){
+    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
      // tableNum 우선, 없으면 tableName에서 숫자 추출
      var tNum=String(d.tableNum||'');
      if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;
@@ -507,20 +507,24 @@ window._filoTableClear=function(docId,did,num){
  },{merge:true}).then(function(){
   // 해당 테이블의 오늘 주문 cleared 처리
   var today=new Date().toISOString().slice(0,10);
-  _db.collection('filo_orders')
-   .where('dealerId','==',did)
-   .where('type','==','table')
-   .where('tableNum','==',isNaN(num)?String(num):parseInt(num))
-   .get().then(function(snap){
-    var batch=_db.batch();
+  // tableNum이 숫자로 저장된 경우와 문자열로 저장된 경우 모두 처리
+  var queries=[
+   _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table').where('tableNum','==',parseInt(num)).get(),
+   _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table').where('tableNum','==',String(num)).get()
+  ];
+  Promise.all(queries).then(function(results){
+   var batch=_db.batch();var seen={};
+   results.forEach(function(snap){
     snap.forEach(function(doc){
+     if(seen[doc.id])return;seen[doc.id]=true;
      var d=doc.data();
      if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
       batch.update(doc.ref,{status:'cleared',clearedAt:now});
      }
     });
-    return batch.commit();
-   }).then(function(){
+   });
+   return batch.commit();
+  }).then(function(){
     _filoToast('🪑 테이블 '+num+' 비움');
     _filoTableLoad(did);
    });
