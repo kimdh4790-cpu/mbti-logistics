@@ -129,28 +129,6 @@ function _filoQRPrint(num,name){
  w.document.close();
 }
 
-function _filoQRPrintAll(){
- var items=document.querySelectorAll('[id^="qr-"]');
- if(!items.length){_filoToast('❌ QR 없음');return;}
- var imgs='';
- items.forEach(function(el){
-  var num=el.id.replace('qr-','');
-  var img=el.querySelector('img');
-  var canvas=el.querySelector('canvas');
-  var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
-  if(!src)return;
-  imgs+='<div style="display:inline-block;margin:12px;text-align:center;page-break-inside:avoid">'+
-   '<div style="font-weight:700;margin-bottom:6px">테이블 '+num+'</div>'+
-   '<img src="'+src+'" style="width:150px;height:150px;display:block">'+
-   '<div style="font-size:11px;color:#666;margin-top:4px">QR 스캔 → 주문</div></div>';
- });
- if(!imgs){_filoToast('❌ QR 없음');return;}
- var w=window.open('','_blank');
- w.document.write('<html><head><title>테이블 QR</title><style>body{font-family:sans-serif;padding:20px}@media print{.no-print{display:none}}</style></head>'+
-  '<body><h2 style="margin-bottom:16px">📱 테이블 QR 코드</h2>'+imgs+
-  '<br><button class="no-print" onclick="window.print()" style="padding:10px 24px;margin-top:16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ 인쇄</button></body></html>');
- w.document.close();
-}
 
 
 function _filoShowTableQRModal(did){
