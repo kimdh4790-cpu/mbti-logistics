@@ -341,24 +341,18 @@ function _initFCM(){
      _fcmToken=token;
      try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
      console.log('[FCM] 토큰 발급 성공');
-     alert('[FCM] 성공! '+token.slice(0,20)+'...');
-    } else {
-     alert('[FCM] 토큰 null');
     }
     if(gate)gate.style.display='none';
    }).catch(function(e){
     console.log('[FCM] 토큰 발급 실패:',e.message);
-    alert('[FCM] 에러: '+e.message);
     if(gate)gate.style.display='none';
    });
   }catch(e){
    console.log('[FCM] messaging 초기화 실패:',e.message);
-   alert('[FCM] messaging 에러: '+e.message);
    if(gate)gate.style.display='none';
   }
  }).catch(function(e){
   console.log('[FCM] SW 등록 실패:',e.message);
-  alert('[FCM] SW 에러: '+e.message);
   if(gate)gate.style.display='none';
  });
 }
