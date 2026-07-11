@@ -1734,6 +1734,7 @@ async function acceptExchange(){
 
           // 번역 없는 메뉴 일괄 번역
           if (action === 'fix-translations' && dealerId) {
+            const force = body.force === true;
             const qr2 = await fetch(`${FS_BASE}:runQuery`, {
               method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
               body: JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})
@@ -1745,7 +1746,7 @@ async function acceptExchange(){
               if (!item.document) continue;
               const f = item.document.fields || {};
               const hasTranslation = f.nameTranslations && f.nameTranslations.mapValue;
-              if (!hasTranslation) {
+              if (!hasTranslation || force) {
                 const name = (f.name && f.name.stringValue) || '';
                 if (!name) continue;
                 const docId = item.document.name.split('/').pop();
