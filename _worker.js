@@ -1736,7 +1736,7 @@ async function acceptExchange(){
               body:JSON.stringify({message:{token:token,
                 notification:{title:title||'🔔 픽업 알림',body:msgBody||'음식이 준비됐습니다!'},
                 data:Object.assign({type:'pickup'},extraData||{}),
-                android:{priority:'high',notification:{sound:'default',channel_id:'filo_pickup',defaultSound:true,vibrateTimings:['0.3s','0.1s','0.3s']}},
+                android:{priority:'high',notification:{sound:'default',channel_id:'filo_pickup',defaultSound:true,vibrateTimings:['0.5s','0.1s','0.5s','0.1s','0.5s','0.1s','0.5s','0.1s','1s']}},
                 apns:{payload:{aps:{sound:'default',badge:1,'content-available':1}}},
                 webpush:{notification:{icon:'/filo-icon-192.png',badge:'/filo-icon-192.png',vibrate:[300,100,300],requireInteraction:true},fcm_options:{link:'/'}}
               }})
