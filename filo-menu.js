@@ -2,6 +2,77 @@
 // 의존성: filo-common.js
 // 관련 컬렉션: filo_menus, menu_recipes, menu_costs
 
+// ── 메뉴 이름으로 AI 이미지 자동 생성 (Pollinations.ai) ──────────────────────
+function _filoAutoImageUrl(name,category,emoji){
+ var nameMap={
+  '보리굴비':'korean dried yellow croaker fish banchan food photography',
+  '낙지':'korean spicy octopus stir fry food photography',
+  '전복':'korean abalone steamed food photography',
+  '해물':'korean seafood dish food photography',
+  '불고기':'korean beef bulgogi food photography',
+  '장어':'korean grilled eel food photography',
+  '비빔밥':'korean bibimbap mixed rice bowl food photography colorful',
+  '물회':'korean cold raw fish soup hoe food photography',
+  '홍합':'korean mussel seafood food photography',
+  '꼬막':'korean cockle clam bibimbap food photography',
+  '멍게':'korean sea squirt bibimbap food photography',
+  '공기밥':'korean steamed white rice bowl food photography',
+  '해초':'korean seaweed mussel rice bowl food photography',
+  '굴비':'korean dried croaker fish meal food photography',
+  '삼겹살':'korean pork belly bbq food photography',
+  '갈비':'korean ribs grilled food photography',
+  '냉면':'korean cold noodles food photography',
+  '라면':'korean ramen noodle food photography',
+  '떡볶이':'korean spicy rice cake tteokbokki food photography',
+  '순대':'korean blood sausage soondae food photography',
+  '김치찌개':'korean kimchi stew food photography',
+  '된장찌개':'korean soybean paste stew food photography',
+  '삼계탕':'korean ginseng chicken soup food photography',
+  '족발':'korean pork feet food photography',
+  '보쌈':'korean boiled pork wrap food photography',
+  '파스타':'pasta italian food photography',
+  '스테이크':'steak beef food photography',
+  '샐러드':'fresh salad food photography',
+  '커피':'coffee cup food photography',
+  '케이크':'cake dessert food photography',
+  '치킨':'korean fried chicken food photography',
+  '피자':'pizza food photography',
+  '버거':'burger hamburger food photography',
+  '초밥':'japanese sushi food photography',
+  '우동':'japanese udon noodle food photography',
+  '라멘':'japanese ramen noodle food photography',
+  '짜장':'korean jajangmyeon black noodle food photography',
+  '짬뽕':'korean spicy seafood noodle food photography',
+  '탕수육':'korean sweet sour pork food photography',
+ };
+ var catMap={
+  '밥상':'korean table set meal banchan multiple dishes food photography',
+  '프리미엄':'korean premium deluxe meal set food photography elegant',
+  '단품':'korean single dish food photography',
+  '사이드':'korean side dish rice food photography',
+  '버거':'burger food photography',
+  '치킨':'fried chicken food photography',
+  '피자':'pizza food photography',
+  '분식':'korean street food food photography',
+  '음료':'beverage drink food photography',
+  '디저트':'dessert food photography',
+  '카페':'cafe coffee food photography',
+  '한식':'korean traditional food photography',
+  '중식':'chinese food photography',
+  '일식':'japanese food photography',
+  '양식':'western food photography',
+ };
+ var prompt='';
+ var keys=Object.keys(nameMap);
+ for(var i=0;i<keys.length;i++){
+  if(name.indexOf(keys[i])>=0){prompt=nameMap[keys[i]];break;}
+ }
+ if(!prompt&&category&&catMap[category])prompt=catMap[category];
+ if(!prompt)prompt='korean food dish food photography delicious';
+ var seed=name.split('').reduce(function(a,c){return a+c.charCodeAt(0)},0)%9999;
+ return 'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?width=400&height=400&nologo=true&seed='+seed;
+}
+
 function _filoPageRecipe(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:860px;margin:0 auto">'+
@@ -698,7 +769,7 @@ function _filoMenuAddModal(did, menu, cat){
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
   var description=(document.getElementById('menu-desc-inp')?document.getElementById('menu-desc-inp').value||'':'').trim();
-  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||null,stock:stock,minStock:null,description:description,updatedAt:new Date().toISOString()};
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:null,description:description,updatedAt:new Date().toISOString()};
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
