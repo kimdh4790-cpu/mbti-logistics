@@ -1,7 +1,9 @@
-// filo-table.js - 테이블 QR, 예약, 착석, 직원호출
+// filo-table.js - 테이블QR, 예약, 착석, 직원호출, POS 테이블관리
 // 의존성: filo-common.js
-// 관련 컬렉션: filo_tables, filo_orders, staff_calls, filo_bookings
-
+// 관련 컬렉션: filo_tables, filo_orders, filo_bookings, filo_reservations
+// ⚠️ 2026-07-12 filo-common.js에서 분리됨
+//   포함: _filoPageSchedule, _filoRenderCalendar, _filoPageTableMgmt,
+//          _filoTableSetup, _toLoadTables, _toSelectTable
 function _filoPageTableQR(el){
  if(!el)el=document.getElementById('content');
  if(!el)return;
