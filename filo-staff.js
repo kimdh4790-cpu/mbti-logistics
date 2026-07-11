@@ -1,7 +1,9 @@
-// filo-staff.js - 직원QR, 출퇴근, 급여, 근무표
+// filo-staff.js - 직원QR, 출퇴근, 급여, 회원권
 // 의존성: filo-common.js
-// 관련 컬렉션: members, attendance, payslips, roster_week
-
+// 관련 컬렉션: members, attendance, payslips, roster_week, filo_memberships
+// ⚠️ 2026-07-12 filo-common.js에서 분리됨
+//   포함: _filoPageMembers, _filoLoadMembers, _filoPay, _filoConfirmPay,
+//          _calcWeeklyAllowance, _calcDeduction, _filoQRSave, _filoEnsureQR
 function _filoPageStaffQR(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
