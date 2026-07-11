@@ -1,7 +1,9 @@
-// filo-report.js - 매출분석, 차트, 리포트
+// filo-report.js - 매출분석, 마진분석, AI인사이트, 차트
 // 의존성: filo-common.js, Chart.js
 // 관련 컬렉션: filo_sales
-
+// ⚠️ 2026-07-12 filo-common.js에서 분리됨
+//   포함: _filoMgTab, _filoMarginLoad, _filoCalcAndRender,
+//          _filoRenderMarginAnalysis, _filoGenerateAIInsight
 function _filoPageSales(el){
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
