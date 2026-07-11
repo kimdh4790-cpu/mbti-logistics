@@ -1644,10 +1644,18 @@ async function acceptExchange(){
         // Google 폴백
         if(!translated || translated===name) {
           try {
+            const gKey = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+          if(gKey){
+            const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
+            const gData = await gRes.json();
+            translated = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||'';
+            console.log('[tr] google official:'+translated);
+          } else {
             const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
             const gData = await gRes.json();
             translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
             console.log('[tr] google fallback:'+translated);
+          }
           } catch(e){}
         }
         // 번역 성공 시만 KV 캐시 저장
@@ -1770,9 +1778,16 @@ async function acceptExchange(){
                     // Google 폴백
                     if (!translated2 || translated2 === name) {
                       const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
-                      const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+langMap[lang]+'&dt=t&q='+encodeURIComponent(name));
-                      const gData = await gRes.json();
-                      translated2 = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
+                      const gKey2 = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+                      if(gKey2){
+                        const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey2,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:langMap[lang],format:'text'})});
+                        const gData = await gRes.json();
+                        translated2 = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||name;
+                      } else {
+                        const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+langMap[lang]+'&dt=t&q='+encodeURIComponent(name));
+                        const gData = await gRes.json();
+                        translated2 = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
+                      }
                     }
                     nameTranslations[lang] = translated2 || name;
                     // KV 캐시 갱신
@@ -2011,10 +2026,18 @@ async function acceptExchange(){
         // Google 폴백
         if(!translated || translated===name) {
           try {
+            const gKey = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+          if(gKey){
+            const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
+            const gData = await gRes.json();
+            translated = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||'';
+            console.log('[tr] google official:'+translated);
+          } else {
             const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
             const gData = await gRes.json();
             translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
             console.log('[tr] google fallback:'+translated);
+          }
           } catch(e){}
         }
         // 번역 성공 시만 KV 캐시 저장
