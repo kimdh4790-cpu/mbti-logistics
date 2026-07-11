@@ -328,8 +328,10 @@ function _submitOrder(){
 function _switchTab(tab){
  document.getElementById('tab-menu').classList.toggle('on',tab==='menu');
  document.getElementById('tab-delivery').classList.toggle('on',tab==='delivery');
- document.getElementById('menu-wrap').style.display=tab==='menu'?'flex':'none';
+ document.getElementById('cat-wrap').style.display=tab==='menu'?'':'none';
+ document.getElementById('scroll-area').style.display=tab==='menu'?'':'none';
  document.getElementById('delivery-section').style.display=tab==='delivery'?'block':'none';
+ if(tab==='delivery') document.getElementById('delivery-section').style.padding='20px';
 }
 
 function _setLang(l){
