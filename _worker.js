@@ -1659,7 +1659,79 @@ async function acceptExchange(){
       if (path === '/api/menus-bulk' && method === 'POST') {
         try {
           const body = await request.json();
-          const { menus, dealerId } = body;
+          const { menus, dealerId, action } = body;
+          const fsToken = await getAccessToken(env);
+
+          // 이미지 없는 메뉴 자동 업데이트
+          if (action === 'fix-images' && dealerId) {
+            const nameMap = {
+              '보리굴비':'korean dried yellow croaker fish banchan food photography',
+              '낙지':'korean spicy octopus stir fry food photography',
+              '전복':'korean abalone steamed seafood food photography',
+              '해물':'korean seafood dish multiple banchan food photography',
+              '불고기':'korean beef bulgogi food photography',
+              '장어':'korean grilled eel food photography',
+              '비빔밥':'korean bibimbap mixed rice bowl colorful food photography',
+              '물회':'korean cold raw fish soup food photography',
+              '홍합':'korean mussel seaweed rice bowl food photography',
+              '꼬막':'korean cockle clam bibimbap food photography',
+              '멍게':'korean sea squirt bibimbap food photography',
+              '공기밥':'korean steamed white rice bowl simple food photography',
+              '해초':'korean seaweed mussel rice bowl healthy food photography',
+              '삼겹살':'korean pork belly bbq food photography',
+              '갈비':'korean ribs grilled food photography',
+              '치킨':'korean fried chicken food photography',
+              '피자':'pizza food photography',
+              '버거':'burger hamburger food photography',
+              '떡볶이':'korean spicy rice cake tteokbokki food photography',
+              '김치':'korean kimchi stew food photography',
+              '냉면':'korean cold noodles food photography',
+              '삼계탕':'korean ginseng chicken soup food photography',
+              '족발':'korean pork feet food photography',
+              '보쌈':'korean boiled pork wrap food photography',
+            };
+            const catMap = {
+              '밥상':'korean table set meal banchan multiple dishes food photography',
+              '프리미엄':'korean premium deluxe meal set food photography elegant',
+              '단품':'korean single dish food photography',
+              '사이드':'korean side dish food photography',
+            };
+            function autoImg(name, category) {
+              let prompt = '';
+              for (const [k, v] of Object.entries(nameMap)) {
+                if (name.includes(k)) { prompt = v; break; }
+              }
+              if (!prompt && category && catMap[category]) prompt = catMap[category];
+              if (!prompt) prompt = 'korean food dish food photography delicious';
+              const seed = name.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 9999;
+              return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=400&height=400&nologo=true&seed=${seed}`;
+            }
+            // 해당 딜러 메뉴 전체 조회
+            const qr = await fetch(`${FS_BASE}:runQuery`, {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+              body: JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})
+            });
+            const docs = await qr.json();
+            let updated = 0;
+            for (const item of (docs||[])) {
+              if (!item.document) continue;
+              const f = item.document.fields || {};
+              const hasImg = f.imageUrl && f.imageUrl.stringValue;
+              if (!hasImg) {
+                const name = (f.name && f.name.stringValue) || '';
+                const cat = (f.category && f.category.stringValue) || '';
+                const imgUrl = autoImg(name, cat);
+                const docId = item.document.name.split('/').pop();
+                await fetch(`${FS_BASE}/filo_menus/${docId}?updateMask.fieldPaths=imageUrl`, {
+                  method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+                  body: JSON.stringify({fields:{imageUrl:{stringValue:imgUrl}}})
+                });
+                updated++;
+              }
+            }
+            return new Response(JSON.stringify({ok:true, updated}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+
           if (!menus || !dealerId) return new Response(JSON.stringify({error:'menus/dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const fsToken = await getAccessToken(env);
           let success = 0, errors = [];
