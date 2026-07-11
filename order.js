@@ -23,6 +23,9 @@ var _did='', _tNum='', _tName='';
 var _menus=[], _cart={}, _lang='ko';
 var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 var _db=null, _orderListener=null;
+var _fcmToken=null, _messaging=null;
+// FILO FCM VAPID 키
+var _VAPID_KEY='BLBz1TbMDgIXBl6IrKHOdVPn5a4WOJivJDq9gbJfKZ0YQXH2Lv7kPqN8rW3mE4tA1sC6uZ2yB9oF5nD7xKe';
 
 // ── 초기화 ────────────────────────────────────────────────────────────────────
 window.onload=function(){
@@ -54,6 +57,8 @@ window.onload=function(){
  _loadMenus();
  _listenOrders(); // 픽업 알림
  _checkExistingOrder(); // 기존 주문 테이블 이동 감지
+ // FCM 알림 허용 팝업 표시
+ _showFCMGate();
 };
 
 // ── 기존 주문 감지 (QR 재스캔 시 테이블 이동) ────────────────────────────────
@@ -159,13 +164,15 @@ function _doOrder(payType){
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');if(btn){btn.disabled=true;btn.textContent='주문 중...';}
- _db.collection('filo_orders').add({
+ var orderData={
   dealerId:_did,type:'table',status:'pending',
   payType:payType,tableNum:_tNum,tableName:_tName,
   items:items,total:total,
   createdAt:new Date().toISOString(),
   date:new Date().toISOString().slice(0,10)
- }).then(function(ref){
+ };
+ if(_fcmToken)orderData.fcmToken=_fcmToken;
+ _db.collection('filo_orders').add(orderData).then(function(ref){
   _closeCart();_cart={};_updFab();
   // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
@@ -281,6 +288,64 @@ function _changeTable(){
   var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
   alert('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
  }).catch(function(e){alert('변경 실패: '+e.message);});
+}
+
+// ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
+function _showFCMGate(){
+ var gate=document.getElementById('fcm-gate');
+ if(!gate)return;
+ // 이미 토큰 있으면 스킵
+ try{
+  var saved=localStorage.getItem('filo_fcm_'+_did);
+  if(saved){_fcmToken=saved;return;}
+ }catch(e){}
+ // 브라우저 지원 여부
+ if(!('Notification' in window)||!('serviceWorker' in navigator)){return;}
+ // 이미 허용된 경우 바로 토큰 발급
+ if(Notification.permission==='granted'){
+  _initFCM();return;
+ }
+ gate.style.display='flex';
+}
+
+function _requestFCM(){
+ var btn=document.getElementById('fcm-allow-btn');
+ var deniedMsg=document.getElementById('fcm-denied-msg');
+ if(btn)btn.textContent='⏳ 처리 중...';
+ Notification.requestPermission().then(function(perm){
+  if(perm==='granted'){
+   _initFCM();
+  } else {
+   if(btn)btn.textContent='🔔 알림 허용하기';
+   if(deniedMsg)deniedMsg.style.display='block';
+  }
+ });
+}
+
+function _initFCM(){
+ var gate=document.getElementById('fcm-gate');
+ navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg){
+  try{
+   if(!firebase.messaging){throw new Error('no messaging');}
+   _messaging=firebase.messaging();
+   _messaging.getToken({
+    vapidKey:_VAPID_KEY,
+    serviceWorkerRegistration:reg
+   }).then(function(token){
+    if(token){
+     _fcmToken=token;
+     try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
+    }
+    if(gate)gate.style.display='none';
+   }).catch(function(){
+    if(gate)gate.style.display='none';
+   });
+  }catch(e){
+   if(gate)gate.style.display='none';
+  }
+ }).catch(function(){
+  if(gate)gate.style.display='none';
+ });
 }
 
 // ── 직원 호출 ─────────────────────────────────────────────────────────────────
