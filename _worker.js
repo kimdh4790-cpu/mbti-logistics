@@ -1992,30 +1992,14 @@ async function acceptExchange(){
     }
 
 
-    // ── firebase-messaging-sw.js 최우선 서빙 ──
+    // ── firebase-messaging-sw.js KV에서 서빙 ──
     if (path === '/firebase-messaging-sw.js') {
-      const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
-        + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
-        + "const messaging=firebase.messaging();"
-        + "messaging.onBackgroundMessage(function(payload){"
-        + "  const data=payload.data||{};const type=data.type||'alert';"
-        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');"
-        + "  const body=(payload.notification&&payload.notification.body)||'';"
-        + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
-        + "});"
-        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;var url=e.notification.data&&e.notification.data.url?e.notification.data.url:'/';e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if(c.url.includes('donway')&&'focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow(url);}));});"
-        + "self.addEventListener('install',function(){self.skipWaiting();});"
-        + "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});";
-      return new Response(swContent, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/javascript; charset=utf-8',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Service-Worker-Allowed': '/',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      const swContent = await env.DONWAY_ASSETS.get('firebase-messaging-sw.js', 'text');
+      if (swContent) {
+        return new Response(swContent, {
+          headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
@@ -5330,31 +5314,6 @@ service cloud.firestore {
       const r = await fetch('https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js');
       const js = await r.text();
       return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
-    }
-
-    // ── firebase-messaging-sw.js 인라인 서빙 (404 방지) ──
-    if (path === '/firebase-messaging-sw.js') {
-      const swContent = "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');"
-        + "importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');"
-        + "firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});"
-        + "const messaging=firebase.messaging();"
-        + "messaging.onBackgroundMessage(function(payload){"
-        + "  const data=payload.data||{};const type=data.type||'alert';"
-        + "  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');"
-        + "  const body=(payload.notification&&payload.notification.body)||'';"
-        + "  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-'+type,renotify:true,vibrate:[200,100,200]});"
-        + "});"
-        + "self.addEventListener('notificationclick',function(e){e.notification.close();if(e.action==='close')return;e.waitUntil(clients.openWindow('/settle'));});"
-        + "self.addEventListener('install',function(){self.skipWaiting();});"
-        + "self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});";
-      return new Response(swContent, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/javascript; charset=utf-8',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Service-Worker-Allowed': '/'
-        }
-      });
     }
 
     // ── manifest.json 인라인 서빙 ──
