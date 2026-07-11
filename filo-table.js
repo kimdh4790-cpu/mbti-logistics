@@ -499,7 +499,8 @@ window._filoTableSeat=function(docId,did,num){
 
 window._filoTableClear=function(docId,did,num){
  var now=new Date().toISOString();
- var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
+ // auto_ 또는 dealerId_t{num} 패턴 모두 처리
+ var id=(docId.startsWith('auto_')||docId===did+'_t'+num)?(did+'_t'+num):docId;
  // 테이블 상태 비움
  _db.collection('filo_tables').doc(id).set({
   status:'empty',occupiedSince:'',reservedName:'',updatedAt:now
