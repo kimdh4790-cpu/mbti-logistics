@@ -200,7 +200,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;color:
     <div style="background:var(--surface);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)">
       <div style="font-size:15px;font-weight:900;margin-bottom:16px">📍 배달 정보 입력</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="addr-btn" id="addr-btn2" onclick="_openAddrPopup()" style="text-align:left;padding:14px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:var(--brand-light);color:var(--brand);font-size:13px;font-weight:600;cursor:pointer">📍 주소를 입력해주세요</button>
+        <button class="addr-btn" id="addr-btn2" onclick="_searchAddr()" style="text-align:left;padding:14px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:var(--brand-light);color:var(--brand);font-size:13px;font-weight:600;cursor:pointer">📍 주소를 입력해주세요</button>
         <div style="display:flex;gap:8px">
           <input class="ds-input" id="cust-name2" placeholder="이름" style="flex:1">
           <input class="ds-input" id="cust-phone2" type="tel" placeholder="010-0000-0000" style="flex:1">
@@ -229,7 +229,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;color:
   <div id="delivery-section" style="display:none">
     <div class="ds-title" id="ds-title">배달 정보</div>
     <div class="ds-inputs">
-      <button class="addr-btn" id="addr-btn" onclick="_openAddrPopup()">📍 주소를 입력해주세요</button>
+      <button class="addr-btn" id="addr-btn" onclick="_searchAddr()">📍 주소를 입력해주세요</button>
       <div class="ds-row">
         <input class="ds-input" id="cust-name" placeholder="이름">
         <input class="ds-input" id="cust-phone" type="tel" placeholder="010-0000-0000">
