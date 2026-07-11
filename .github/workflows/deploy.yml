@@ -12,17 +12,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy Worker (wrangler)
+      - name: Deploy Worker (Global API Key)
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           npm install -g wrangler@4 --silent
-          # Global API Key로 배포 (routes 권한 포함)
-          CLOUDFLARE_API_KEY=$CF_KEY CLOUDFLARE_EMAIL=$CF_EMAIL npx wrangler deploy 2>&1 ||           npx wrangler deploy 2>&1
+          CLOUDFLARE_API_KEY=$CF_KEY CLOUDFLARE_EMAIL=$CF_EMAIL npx wrangler deploy 2>&1
 
-      - name: Upload HTML assets to KV
+      - name: Upload HTML/JS assets to KV
         env:
           CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
