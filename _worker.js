@@ -1603,6 +1603,13 @@ async function acceptExchange(){
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
+        if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // KV 캐시 확인 (24시간)
+        const cacheKey = 'tr:'+lang+':'+name.slice(0,50);
+        try {
+          const cached = await env.DONWAY_ASSETS.get(cacheKey);
+          if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
+        } catch(e){}
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         let data={};
         try {
@@ -1616,6 +1623,8 @@ async function acceptExchange(){
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        // KV에 24시간 캐시 저장
+        try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
@@ -1732,6 +1741,13 @@ async function acceptExchange(){
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
+        if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // KV 캐시 확인 (24시간)
+        const cacheKey = 'tr:'+lang+':'+name.slice(0,50);
+        try {
+          const cached = await env.DONWAY_ASSETS.get(cacheKey);
+          if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
+        } catch(e){}
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         let data={};
         try {
@@ -1745,6 +1761,8 @@ async function acceptExchange(){
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
         const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
+        // KV에 24시간 캐시 저장
+        try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
