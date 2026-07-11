@@ -835,6 +835,19 @@ function _filoTableMoveModal(did,fromNum,fromName,order){
   tables.sort(function(a,b){return parseInt(a.num)-parseInt(b.num);});
   
   
+  // 테이블 버튼 생성
+  var btnWrap=document.createElement('div');
+  btnWrap.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px';
+  tables.forEach(function(t){
+   var clr=t.status==='occupied'?'#ef4444':'#22c55e';
+   var bg=t.status==='occupied'?'rgba(239,68,68,.1)':'rgba(34,197,94,.1)';
+   var btn=document.createElement('button');
+   btn.style.cssText='padding:14px 18px;background:'+bg+';border:1.5px solid '+clr+';border-radius:12px;color:'+clr+';font-size:14px;font-weight:800;cursor:pointer';
+   btn.textContent=t.name+(t.status==='occupied'?' 🔴':' 🟢');
+   (function(toN){btn.onclick=function(){window._filoDoTableMove(did,fromNum,toN,mo);};})(t.num);
+   btnWrap.appendChild(btn);
+  });
+
   var inner=document.createElement('div');
   inner.style.cssText='background:var(--surface);border-radius:20px;padding:24px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto';
   var hdr=document.createElement('div');
