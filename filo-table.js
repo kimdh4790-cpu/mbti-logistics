@@ -849,7 +849,9 @@ function _filoTableMoveModal(did,fromNum,fromName,order){
   inner.appendChild(cancelBtn);
   mo.appendChild(inner);
   
-  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  setTimeout(function(){
+   mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  },100);
   document.body.appendChild(mo);
  });
 }
