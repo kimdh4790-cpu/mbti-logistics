@@ -295,7 +295,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
         <button class="mdl-qty-btn" onclick="_tlQty(1)">+</button>
       </div>
     </div>
-    <button class="mdl-add" id="mdl-add" onclick="_addFromMdl()">담기 — ₩0</button>
+    <div style="display:flex;gap:8px;padding:0 20px;margin-bottom:8px">
+      <button onclick="_closeMdl()" style="width:48px;height:54px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);font-size:20px;cursor:pointer;flex-shrink:0">✕</button>
+      <button class="mdl-add" id="mdl-add" onclick="_addFromMdl()" style="flex:1;width:auto;margin:0">담기 — ₩0</button>
+    </div>
   </div>
 </div>
 
