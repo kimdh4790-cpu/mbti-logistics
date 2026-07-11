@@ -500,9 +500,30 @@ window._filoTableSeat=function(docId,did,num){
 window._filoTableClear=function(docId,did,num){
  var now=new Date().toISOString();
  var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
+ // 테이블 상태 비움
  _db.collection('filo_tables').doc(id).set({
   status:'empty',occupiedSince:'',reservedName:'',updatedAt:now
- },{merge:true}).then(function(){_filoToast('🪑 테이블 '+num+' 비움');_filoTableLoad(did);});
+ },{merge:true}).then(function(){
+  // 해당 테이블의 오늘 주문 cleared 처리
+  var today=new Date().toISOString().slice(0,10);
+  _db.collection('filo_orders')
+   .where('dealerId','==',did)
+   .where('type','==','table')
+   .where('tableNum','==',String(num))
+   .get().then(function(snap){
+    var batch=_db.batch();
+    snap.forEach(function(doc){
+     var d=doc.data();
+     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
+      batch.update(doc.ref,{status:'cleared',clearedAt:now});
+     }
+    });
+    return batch.commit();
+   }).then(function(){
+    _filoToast('🪑 테이블 '+num+' 비움');
+    _filoTableLoad(did);
+   });
+ });
 };
 
 window._filoBookingConfirm=function(bid,did){
