@@ -347,9 +347,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
   <div class="done-items" id="done-items"></div>
   <!-- 픽업 대기 안내 -->
   <div id="pickup-wait" style="margin:16px 0;padding:14px 20px;background:rgba(8,145,178,.1);border:1.5px solid rgba(8,145,178,.3);border-radius:16px;text-align:center;max-width:320px;width:100%">
-    <div style="font-size:13px;font-weight:700;color:#0891b2;margin-bottom:4px">📱 화면을 유지해주세요</div>
-    <div style="font-size:12px;color:#475569;line-height:1.6">음식이 준비되면<br>이 화면에서 알려드려요!</div>
-    <div id="pickup-status" style="margin-top:8px;font-size:12px;color:#94a3b8">⏳ 준비 중...</div>
+    <div style="font-size:13px;font-weight:700;color:#0891b2;margin-bottom:4px">🔔 픽업 알림 안내</div>
+    <div style="font-size:12px;color:#475569;line-height:1.8">
+      음식이 준비되면 <b>폰 알림</b>으로 알려드려요!<br>
+      화면이 꺼져도 알림이 도착합니다 😊
+    </div>
+    <div id="pickup-status" style="margin-top:8px;font-size:12px;color:#94a3b8">⏳ 주방에서 준비 중...</div>
+    <div id="ios-chrome-notice" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(245,158,11,.1);border-radius:10px;font-size:11px;color:#92400e;line-height:1.6">
+      🍎 아이폰 사용자 안내<br>
+      알림 수신은 <b>사파리 브라우저</b>에서만 지원됩니다.<br>
+      화면을 유지하시면 음식 준비 시 알려드려요!
+    </div>
   </div>
   <button id="done-back" onclick="location.reload()" style="margin-top:8px">메뉴 더 담기</button>
   <button onclick="_changeTable()" style="margin-top:8px;padding:12px 24px;background:transparent;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-weight:700;color:var(--text2);cursor:pointer">🪑 테이블 번호 변경</button>
