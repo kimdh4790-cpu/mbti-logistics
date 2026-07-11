@@ -18,6 +18,10 @@
  * 비로그인 접근 가능 (고객용)
  */
 
+// ── 토스페이먼츠 설정 ──
+// 키 발급 후 여기에 입력하세요
+var TOSS_CLIENT_KEY = ''; // 예: 'live_ck_...' 또는 'test_ck_...'
+
 var _did='', _slug='', _menus=[], _cart={}, _lang='ko', _addr='', _addrFull='';
 var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 
@@ -303,31 +307,65 @@ function _openAddrPopup(){_searchAddr();}
 function _closeAddrPopup(){var p=document.querySelector('[id^="_a"]');if(p&&p.parentNode===document.body)p.parentNode.removeChild(p);}
 
 function _submitOrder(){
- var name=document.getElementById('cust-name').value.trim()||document.getElementById('cust-name').value.trim();
- var phone=document.getElementById('cust-phone').value.trim()||document.getElementById('cust-phone').value.trim();
- var memo=document.getElementById('cust-memo').value.trim()||document.getElementById('cust-memo').value.trim();
- var fullAddr=_addr;
+ var name=(document.getElementById('cust-name')||{}).value||'';
+ name=name.trim();
+ var phone=(document.getElementById('cust-phone')||{}).value||'';
+ phone=phone.trim();
+ var memo=(document.getElementById('cust-memo')||{}).value||'';
+ memo=memo.trim();
  if(!_addr){alert('배달 주소를 입력해주세요');return;}
  if(!name){alert('이름을 입력해주세요');return;}
  if(!phone){alert('연락처를 입력해주세요');return;}
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
  if(!items.length){alert('메뉴를 선택해주세요');return;}
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+
+ // 토스페이먼츠 결제 연동 (키 있을 때)
+ if(TOSS_CLIENT_KEY){
+  var tossObj=window.TossPayments(TOSS_CLIENT_KEY);
+  var orderId='filo-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  var orderName=items[0].name+(items.length>1?' 외 '+(items.length-1)+'건':'');
+  tossObj.requestPayment('카드',{
+   amount:total,
+   orderId:orderId,
+   orderName:orderName,
+   customerName:name,
+   customerMobilePhone:phone,
+   successUrl:location.origin+'/payment/success?did='+_did+'&addr='+encodeURIComponent(_addr)+'&memo='+encodeURIComponent(memo)+'&name='+encodeURIComponent(name)+'&phone='+encodeURIComponent(phone),
+   failUrl:location.origin+'/payment/fail'
+  }).catch(function(e){
+   if(e.code!=='USER_CANCEL') alert('결제 오류: '+e.message);
+  });
+  return;
+ }
+
+ // 토스 키 없을 때 - 바로 접수 (테스트용)
  var btn=document.getElementById('order-btn');
  btn.disabled=true;btn.textContent='주문 중...';
+ _saveOrder(name,phone,memo,_addr,items,total,'pending','none');
+}
+
+function _saveOrder(name,phone,memo,addr,items,total,status,payMethod){
  _db.collection('filo_orders').add({
-  dealerId:_did,type:'delivery',status:'pending',
-  items:items,total:total,customer:name,phone:phone,
-  address:fullAddr,memo:memo,createdAt:new Date().toISOString()
+  dealerId:_did,type:'delivery',status:status,
+  payMethod:payMethod,payType:'prepay',
+  items:items,total:total,
+  customer:name,phone:phone,
+  address:addr,memo:memo,
+  createdAt:new Date().toISOString(),
+  date:new Date().toISOString().slice(0,10)
  }).then(function(ref){
   _closeCart();_cart={};_updBtn();
-  document.querySelectorAll('.mc').forEach(function(c){c.textContent='';c.className='mc';});
-  var orderInfo=items.map(function(i){return i.emoji+' '+i.name+' ×'+i.qty+'  ₩'+(i.price*i.qty).toLocaleString();}).join('\n');
-  document.getElementById('dn-sub').textContent='주문번호: #'+ref.id.slice(-6).toUpperCase()+'\n\n'+orderInfo+'\n\n📍 '+fullAddr;
-  document.getElementById('dn').style.display='flex';
+  document.querySelectorAll('[class*="badge"]').forEach(function(c){c.textContent='';c.classList.remove('on');});
+  var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join(', ');
+  var dn=document.getElementById('dn');
+  var dnSub=document.getElementById('dn-sub');
+  if(dnSub)dnSub.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase()+' · '+orderInfo;
+  if(dn)dn.style.display='flex';
  }).catch(function(e){
   alert('주문 실패: '+e.message);
-  btn.disabled=false;btn.textContent=_t('order');
+  var btn=document.getElementById('order-btn');
+  if(btn){btn.disabled=false;btn.textContent=_t('order');}
  });
 }
 
