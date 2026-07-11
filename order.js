@@ -187,11 +187,28 @@ function _showPickupAlert(){
   '<button onclick="document.getElementById(\'pickup-alert\').remove()" style="width:100%;padding:16px;background:#0891b2;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer">확인</button>'+
   '</div>';
  document.body.appendChild(alert);
- // 벨소리
- try{var ctx=new AudioContext();var o=ctx.createOscillator();var g=ctx.createGain();
-  o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=0.3;
-  o.start();g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
-  setTimeout(function(){o.stop();},500);}catch(e){}
+ // TTS 음성 안내 3회
+ _speakPickup(0);
+}
+
+function _speakPickup(count){
+ if(count>=3)return;
+ try{
+  window.speechSynthesis.cancel();
+  var msg=new SpeechSynthesisUtterance('고객님 주문하신 음식이 준비되었습니다');
+  msg.lang='ko-KR';
+  msg.rate=0.9;
+  msg.pitch=1.1;
+  msg.volume=1;
+  msg.onend=function(){setTimeout(function(){_speakPickup(count+1);},2000);};
+  window.speechSynthesis.speak(msg);
+ } catch(e){
+  // TTS 실패 시 벨소리 폴백
+  try{var ctx=new AudioContext();var o=ctx.createOscillator();var g=ctx.createGain();
+   o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=0.3;
+   o.start();g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.8);
+   setTimeout(function(){o.stop();},800);}catch(e2){}
+ }
 }
 
 // ── 직원 호출 ─────────────────────────────────────────────────────────────────
