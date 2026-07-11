@@ -1604,8 +1604,8 @@ async function acceptExchange(){
         const name = body.name || '';
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        // KV 캐시 확인 (24시간)
-        const cacheKey = 'tr:'+lang+':'+name.slice(0,50);
+        // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
+        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
@@ -1744,8 +1744,8 @@ async function acceptExchange(){
         const name = body.name || '';
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        // KV 캐시 확인 (24시간)
-        const cacheKey = 'tr:'+lang+':'+name.slice(0,50);
+        // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
+        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
