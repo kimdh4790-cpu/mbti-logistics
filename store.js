@@ -56,9 +56,8 @@ window.onload=function(){
   document.getElementById('store-sub').textContent=d.address||'배달 · 픽업';
   document.title=(d.name||'매장')+' - 주문하기';
   document.getElementById('ld').style.display='none';
-  document.getElementById('hdr').style.display='block';
-  document.getElementById('tabs').style.display='flex';
-  document.getElementById('app').style.display='flex';document.getElementById('cat-wrap').style.display='';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('cat-wrap').style.display='';
   ['ko','en','zh','ja'].forEach(function(l){
    document.getElementById('lb-'+l).onclick=function(){_setLang(l);};
   });
