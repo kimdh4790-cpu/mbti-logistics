@@ -1660,7 +1660,7 @@ async function acceptExchange(){
         try {
           const body = await request.json();
           const { menus, dealerId, action } = body;
-          const fsToken = await getAccessToken(env);
+          const fsToken2 = await getAccessToken(env);
 
           // 이미지 없는 메뉴 자동 업데이트
           if (action === 'fix-images' && dealerId) {
@@ -1708,7 +1708,7 @@ async function acceptExchange(){
             }
             // 해당 딜러 메뉴 전체 조회
             const qr = await fetch(`${FS_BASE}:runQuery`, {
-              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
               body: JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})
             });
             const docs = await qr.json();
@@ -1723,7 +1723,7 @@ async function acceptExchange(){
                 const imgUrl = autoImg(name, cat);
                 const docId = item.document.name.split('/').pop();
                 await fetch(`${FS_BASE}/filo_menus/${docId}?updateMask.fieldPaths=imageUrl`, {
-                  method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+                  method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
                   body: JSON.stringify({fields:{imageUrl:{stringValue:imgUrl}}})
                 });
                 updated++;
