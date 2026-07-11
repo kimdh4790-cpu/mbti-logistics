@@ -25,7 +25,7 @@ var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
 // FILO FCM VAPID 키
-var _VAPID_KEY='BLBz1TbMDgIXBl6IrKHOdVPn5a4WOJivJDq9gbJfKZ0YQXH2Lv7kPqN8rW3mE4tA1sC6uZ2yB9oF5nD7xKe';
+var _VAPID_KEY='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
 
 // ── 초기화 ────────────────────────────────────────────────────────────────────
 window.onload=function(){
