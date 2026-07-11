@@ -1663,7 +1663,21 @@ async function acceptExchange(){
         const d2=await r2.json();
         const menus=(d2||[]).filter(function(r){return r.document;}).map(function(r){
           var f=r.document.fields||{};
-          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
+          var nameTranslations={};
+          if(f.nameTranslations&&f.nameTranslations.mapValue&&f.nameTranslations.mapValue.fields){
+            var nt=f.nameTranslations.mapValue.fields;
+            if(nt.en)nameTranslations.en=nt.en.stringValue||'';
+            if(nt.zh)nameTranslations.zh=nt.zh.stringValue||'';
+            if(nt.ja)nameTranslations.ja=nt.ja.stringValue||'';
+          }
+          var descTranslations={};
+          if(f.descTranslations&&f.descTranslations.mapValue&&f.descTranslations.mapValue.fields){
+            var dt=f.descTranslations.mapValue.fields;
+            if(dt.en)descTranslations.en=dt.en.stringValue||'';
+            if(dt.zh)descTranslations.zh=dt.zh.stringValue||'';
+            if(dt.ja)descTranslations.ja=dt.ja.stringValue||'';
+          }
+          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
         });
         // 카테고리/메뉴명 키워드별 고정 이미지
         const IMG_MAP = [
