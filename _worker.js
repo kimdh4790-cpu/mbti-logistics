@@ -1662,7 +1662,7 @@ async function acceptExchange(){
         if(translated && translated.trim() !== name) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
-        return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        return new Response(JSON.stringify({translated:(translated||name).trim(),_debug:{ak:!!k,gk:!!(env.GOOGLE_TRANSLATE_KEY||'').trim(),raw:translated}}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus-bulk' && method === 'POST') {
         try {
