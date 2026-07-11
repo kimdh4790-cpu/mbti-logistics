@@ -1622,10 +1622,12 @@ async function acceptExchange(){
           console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-        // KV에 24시간 캐시 저장
-        try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||'';
+        // 번역 성공 시만 KV 캐시 저장 (원문 반환 시 저장 안 함)
+        if(translated && translated.trim() !== name) {
+          try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
+        }
+        return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
@@ -1760,10 +1762,12 @@ async function acceptExchange(){
           console.log('[tr] status:'+res.status+' body:'+resText.slice(0,200));
           try{data=JSON.parse(resText);}catch(e){}
         } catch(e) {}
-        const translated = (data.content&&data.content[0]&&data.content[0].text)||name;
-        // KV에 24시간 캐시 저장
-        try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const translated = (data.content&&data.content[0]&&data.content[0].text)||'';
+        // 번역 성공 시만 KV 캐시 저장 (원문 반환 시 저장 안 함)
+        if(translated && translated.trim() !== name) {
+          try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
+        }
+        return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
