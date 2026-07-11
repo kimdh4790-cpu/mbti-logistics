@@ -187,7 +187,13 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
   });
 
   /* 재료 추가 버튼 */
-  var addBtn=document.createElement('button');
+  // 전체 번역 버튼
+ var trAllBtn=document.createElement('button');
+ trAllBtn.style.cssText='padding:8px 14px;background:rgba(16,185,129,.15);border:1px solid #10b981;border-radius:8px;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px';
+ trAllBtn.textContent='🌐 전체 번역';
+ trAllBtn.onclick=function(){_filoTranslateAllMenus(did);};
+ topRow.appendChild(trAllBtn);
+ var addBtn=document.createElement('button');
   addBtn.style.cssText='width:100%;padding:8px;background:var(--surface2);border:1px dashed var(--bd2);border-radius:var(--r);color:var(--t2);font-size:12px;cursor:pointer;margin-bottom:14px';
   addBtn.textContent='+ 재료 추가';
   addBtn.onclick=function(){_filoRmAddRowDOM(ingsWrap,invItems,'','','g');};
@@ -401,6 +407,12 @@ function _filoPageMenuMgmt(el){
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px';
  hdr.innerHTML='<div><div class="page-title">🍽 메뉴 관리</div><div class="page-sub">카테고리·메뉴 추가/수정/삭제 및 이미지 등록</div></div>';
+ // 전체 번역 버튼
+ var trAllBtn=document.createElement('button');
+ trAllBtn.style.cssText='padding:8px 14px;background:rgba(16,185,129,.15);border:1px solid #10b981;border-radius:8px;color:#10b981;font-size:12px;font-weight:700;cursor:pointer;margin-right:8px';
+ trAllBtn.textContent='🌐 전체 번역';
+ trAllBtn.onclick=function(){_filoTranslateAllMenus(did);};
+ topRow.appendChild(trAllBtn);
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary btn-sm';
  addBtn.textContent='+ 메뉴 추가';
@@ -747,6 +759,44 @@ function _filoMenuAddModal(did, menu, cat){
  mo.onclick=function(e){if(e.target===mo)mo.remove();};
  document.body.appendChild(mo);
  setTimeout(function(){document.getElementById('menu-name-inp').focus();},100);
+}
+
+// 전체 메뉴 일괄 번역 저장
+function _filoTranslateAllMenus(did){
+ _filoToast('🌐 전체 메뉴 번역 시작...');
+ _db.collection('filo_menus').where('dealerId','==',did).get().then(function(snap){
+  var menus=[];
+  snap.forEach(function(doc){
+   var d=doc.data();
+   if(d.name) menus.push({id:doc.id,name:d.name,description:d.description||''});
+  });
+  var done=0;
+  var langs=['en','zh','ja'];
+  menus.forEach(function(m){
+   var nameTranslations={};
+   var descTranslations={};
+   var pending=langs.length*(m.description?2:1);
+   function finish(){
+    pending--;
+    if(pending<=0){
+     var updateData={nameTranslations:nameTranslations};
+     if(m.description) updateData.descTranslations=descTranslations;
+     _db.collection('filo_menus').doc(m.id).update(updateData).then(function(){
+      done++;
+      _filoToast('✅ '+done+'/'+menus.length+' 번역 완료');
+     });
+    }
+   }
+   langs.forEach(function(lang){
+    fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,lang:lang})})
+    .then(function(r){return r.json();}).then(function(d){nameTranslations[lang]=d.translated||m.name;finish();}).catch(function(){nameTranslations[lang]=m.name;finish();});
+    if(m.description){
+     fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.description,lang:lang})})
+     .then(function(r){return r.json();}).then(function(d){descTranslations[lang]=d.translated||m.description;finish();}).catch(function(){descTranslations[lang]=m.description;finish();});
+    }
+   });
+  });
+ });
 }
 
 function _toLoadMenus(did){
