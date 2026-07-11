@@ -889,3 +889,148 @@ function _toShowMenuGrid(menus){
   grid.appendChild(card);
  });
 }
+
+function _filoRmAddRowDOM(wrap,invItems,selId,amount,unit){
+ if(!wrap)wrap=document.getElementById('rm-ings');
+ if(!wrap)return;
+ var units=['g','ml','개','스푼','봉','컵','장'];
+
+ var row=document.createElement('div');
+ row.className='rm-row';
+ row.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:7px;align-items:center';
+
+ /* 재료 선택 */
+ var sel=document.createElement('select');
+ sel.className='rm-item';
+ sel.style.cssText='padding:8px 8px;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:12px;outline:none';
+ var defOpt=document.createElement('option');
+ defOpt.value='';defOpt.textContent='재료 선택';
+ sel.appendChild(defOpt);
+ invItems.forEach(function(it){
+  var opt=document.createElement('option');
+  opt.value=it.id;opt.textContent=it.name;
+  if(it.id===selId)opt.selected=true;
+  sel.appendChild(opt);
+ });
+
+ /* 사용량 */
+ var amtInp=document.createElement('input');
+ amtInp.className='rm-amount';amtInp.type='number';amtInp.placeholder='사용량';
+ amtInp.style.cssText=sel.style.cssText;
+ if(amount)amtInp.value=amount;
+
+ /* 단위 */
+ var unitSel=document.createElement('select');
+ unitSel.className='rm-unit';
+ unitSel.style.cssText=sel.style.cssText;
+ units.forEach(function(u){
+  var opt=document.createElement('option');
+  opt.value=u;opt.textContent=u;
+  if(u===unit)opt.selected=true;
+  unitSel.appendChild(opt);
+ });
+
+ /* 삭제 버튼 */
+ var delBtn=document.createElement('button');
+ delBtn.style.cssText='padding:8px 10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r);color:var(--red);font-size:12px;cursor:pointer';
+ delBtn.textContent='✕';
+ delBtn.onclick=function(){row.remove();};
+
+ row.appendChild(sel);row.appendChild(amtInp);row.appendChild(unitSel);row.appendChild(delBtn);
+ wrap.appendChild(row);
+}
+function _filoRmAddRow(invOpts){
+ var wrap=document.getElementById('rm-ings');
+ _filoRmAddRowDOM(wrap,_rmInvItems,'','','g');
+}
+function _filoPageExpiry(el){
+ var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
+ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
+ var today=new Date().toISOString().slice(0,10);
+ firebase.firestore().collection('inventory').where('dealerId','==',did).get().then(function(snap){
+ var expired=[],warn=[],ok=[];
+ snap.forEach(function(doc){
+ var d=Object.assign({id:doc.id},doc.data());
+ if(!d.expiryDate){ok.push(d);return;}
+ if(d.expiryDate<today) expired.push(d);
+ else if(d.expiryDate<=new Date(Date.now()+7*86400000).toISOString().slice(0,10)) warn.push(d);
+ else ok.push(d);
+ });
+ var html='<div style="max-width:860px;margin:0 auto">';
+ html+='<div class="card" style="margin-bottom:10px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📝 유통기한 등록</div>'+
+ '<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end">'+
+ '<div class="fg"><label>품목</label><select id="exp-item" class="inp" style="font-size:12px"><option value="">-- 선택 --</option>';
+ snap.forEach(function(doc){html+='<option value="'+doc.id+'">'+(doc.data().name||'')+'</option>';});
+ html+='</select></div>'+
+ '<div class="fg"><label>유통기한</label><input type="date" id="exp-date" class="inp"></div>'+
+ '<button onclick="_filoExpSave(\''+did+'\')" style="padding:10px 12px;background:var(--br);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">저장</button>'+
+ '</div></div>';
+ if(expired.length){
+ html+='<div class="card" style="border:2px solid #ef4444;margin-bottom:10px">'+
+ '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:8px">🚨 만료 ('+expired.length+'개) — 즉시 폐기</div>';
+ expired.forEach(function(d){
+ html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(239,68,68,.2)">'+
+ '<span style="font-size:12px;font-weight:700">'+d.name+'</span>'+
+ '<span style="font-size:11px;color:#ef4444;font-weight:700">'+d.expiryDate+' 만료</span></div>';
+ });
+ html+='</div>';
+ }
+ if(warn.length){
+ html+='<div class="card" style="border:1px solid #f59e0b;margin-bottom:10px">'+
+ '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">⚠️ 7일 이내 만료 ('+warn.length+'개)</div>';
+ warn.forEach(function(d){
+ var dL=Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000);
+ html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(245,158,11,.2)">'+
+ '<span style="font-size:12px;font-weight:700">'+d.name+'</span>'+
+ '<span style="font-size:11px;color:#f59e0b;font-weight:700">D-'+dL+'</span></div>';
+ });
+ html+='</div>';
+ }
+ html+='<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px">📦 전체 목록</div>';
+ snap.forEach(function(doc){
+ var d=doc.data();
+ var dL=d.expiryDate?Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000):null;
+ var color=dL===null?'var(--t3)':dL<0?'#ef4444':dL<=7?'#f59e0b':'#22c55e';
+ html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)">'+
+ '<span style="font-size:12px">'+d.name+'</span>'+
+ '<span style="font-size:11px;font-weight:700;color:'+color+'">'+
+ (d.expiryDate?d.expiryDate+' (D-'+dL+')':'미등록')+'</span></div>';
+ });
+ html+='</div></div>';
+ el.innerHTML=html;
+ }).catch(function(e){el.innerHTML='<div class="card" style="color:#ef4444">'+e.message+'</div>';});
+}
+function _filoLoadStockHistory(did, elId, type){
+ var col=type==='in'?'inventory_in':'inventory_out';
+ _db.collection(col).where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
+ .then(function(snap){
+ var el=document.getElementById(elId);if(!el)return;
+ if(snap.empty){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">이력 없음</div>';return;}
+ el.innerHTML=snap.docs.map(function(doc){
+ var d=doc.data();
+ var itemName=d.itemName||d.itemId||'';
+ var icon=type==='in'?'📥':'📤';
+ var color=type==='in'?'#22c55e':'#ef4444';
+ var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
+ return '<div class="stock-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px">'+
+ '<div style="font-size:18px">'+icon+'</div>'+
+ '<div style="flex:1">'+
+ '<div style="font-size:13px;font-weight:700">'+esc(d.itemId||'')+(typeLabel?' · '+typeLabel:'')+'</div>'+
+ '<div style="font-size:11px;color:var(--t3)">'+(d.supplier||d.memo||'')+(d.expiry?' · 유통기한:'+d.expiry:'')+'</div>'+
+ '</div>'+
+ '<div style="text-align:right">'+
+ '<div style="font-size:15px;font-weight:900;color:'+color+'">'+(type==='in'?'+':'-')+d.qty+'개</div>'+
+ '<div style="font-size:10px;color:var(--t3)">'+(d.date||'')+'</div>'+
+ '</div></div>';
+ }).join('');
+ }).catch(function(){});
+ _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
+ var map={};
+ snap.forEach(function(doc){map[doc.id]=doc.data().name||doc.id;});
+ var el=document.getElementById(elId);if(!el)return;
+ el.querySelectorAll('.stock-item').forEach(function(row,i){
+ });
+ }).catch(function(){});
+}
