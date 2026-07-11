@@ -1661,8 +1661,12 @@ async function acceptExchange(){
             });
             const aiData = await aiRes.json();
             const searchTerm = (aiData.content&&aiData.content[0]&&aiData.content[0].text||'food').trim().replace(/[^a-zA-Z0-9 ]/g,'').slice(0,30);
-            // Unsplash Source API (키 불필요)
-            m.imageUrl = 'https://source.unsplash.com/500x600/?'+encodeURIComponent(searchTerm+',food');
+            // Unsplash Source → 실제 이미지 URL 가져오기
+            const unsplashUrl = 'https://source.unsplash.com/500x600/?'+encodeURIComponent(searchTerm+',food');
+            const imgRes = await fetch(unsplashUrl, {redirect:'follow'});
+            if(imgRes.ok) {
+              m.imageUrl = imgRes.url; // 리다이렉트된 실제 이미지 URL
+            }
           } catch(e){}
           return m;
         }));
