@@ -9,7 +9,7 @@
  * 
  * 주요 기능:
  * - 테이블 QR 메뉴 주문 (비로그인 고객용)
- * - 다국어 번역 (/api/translate - Google 무료)
+ * - 다국어 번역: Firestore nameTranslations 우선 → Anthropic 재시도3회 → Google 폴백
  * - 장바구니 + 주문 접수 (filo_orders type:'table')
  * - 선결제/후불 선택
  * - 직원 호출 (staff_calls 컬렉션)
