@@ -1665,31 +1665,41 @@ async function acceptExchange(){
           var f=r.document.fields||{};
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||''};
         });
-        // Claude AI로 메뉴명 → 영어 검색어 변환 → Unsplash 이미지
-        const menusWithImg = await Promise.all(menus.map(async function(m){
+        // 카테고리/메뉴명 키워드별 고정 이미지
+        const IMG_MAP = [
+          ['마카롱','https://images.unsplash.com/photo-1569864358642-9d1684040f43?w=500&q=80'],
+          ['애플파이','https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?w=500&q=80'],
+          ['치즈케이크','https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'],
+          ['떡볶이','https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80'],
+          ['순대','https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=500&q=80'],
+          ['어니언링','https://images.unsplash.com/photo-1639024471283-03518883512d?w=500&q=80'],
+          ['슈림프','https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80'],
+          ['새우','https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=500&q=80'],
+          ['뿌링','https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&q=80'],
+          ['양념','https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=500&q=80'],
+          ['콤비네이션','https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80'],
+          ['콤보','https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=500&q=80'],
+          ['파이','https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?w=500&q=80'],
+          ['버거','https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80'],
+          ['치킨','https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&q=80'],
+          ['피자','https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80'],
+          ['분식','https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80'],
+          ['케이크','https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'],
+          ['디저트','https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&q=80'],
+          ['커피','https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=500&q=80'],
+          ['음료','https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&q=80'],
+          ['샐러드','https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80'],
+          ['파스타','https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=500&q=80'],
+          ['세트','https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500&q=80'],
+        ];
+        const DEFAULT_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80';
+        const menusWithImg = menus.map(function(m){
           if(m.imageUrl) return m;
-          try {
-            // Claude로 메뉴명을 영어 음식 검색어로 변환
-            const k = (env.ANTHROPIC_API_KEY||'').trim();
-            if(!k) return m;
-            const aiRes = await fetch('https://api.anthropic.com/v1/messages',{
-              method:'POST',
-              headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-              body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:20,messages:[{role:'user',content:'Convert this Korean food menu name to a 1-3 word English food search term for image search. Reply ONLY with the search term, no punctuation: '+m.name}]})
-            });
-            const aiData = await aiRes.json();
-            const searchTerm = (aiData.content&&aiData.content[0]&&aiData.content[0].text||'food').trim().replace(/[^a-zA-Z0-9 ]/g,'').slice(0,30);
-            // Unsplash Source → 실제 이미지 URL 가져오기 (body 반드시 소비)
-            const unsplashUrl = 'https://source.unsplash.com/500x600/?'+encodeURIComponent(searchTerm+',food');
-            const imgRes = await fetch(unsplashUrl, {redirect:'follow'});
-            const finalUrl = imgRes.url;
-            await imgRes.body.cancel(); // body 소비 (deadlock 방지)
-            if(imgRes.ok && finalUrl && !finalUrl.includes('source.unsplash.com')) {
-              m.imageUrl = finalUrl;
-            }
-          } catch(e){}
+          const n = m.name||''; const c = m.category||'';
+          const found = IMG_MAP.find(function(e){return n.includes(e[0])||c.includes(e[0]);});
+          m.imageUrl = found ? found[1] : DEFAULT_IMG;
           return m;
-        }));
+        });
 
         return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
       }
