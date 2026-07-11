@@ -1656,10 +1656,38 @@ async function acceptExchange(){
         }
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      if (path === '/api/menus-bulk' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { menus, dealerId } = body;
+          if (!menus || !dealerId) return new Response(JSON.stringify({error:'menus/dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const fsToken = await getAccessToken(env);
+          let success = 0, errors = [];
+          for (const m of menus) {
+            const doc = { fields: {
+              dealerId: {stringValue: dealerId},
+              name: {stringValue: m.name||''},
+              price: {integerValue: String(m.price||0)},
+              category: {stringValue: m.category||''},
+              description: {stringValue: m.description||''},
+              emoji: {stringValue: m.emoji||'🍽'},
+              imageUrl: {stringValue: m.imageUrl||''},
+              available: {booleanValue: true},
+              createdAt: {stringValue: new Date().toISOString()},
+            }};
+            const r = await fetch(`${FS_BASE}/filo_menus`, {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken},
+              body: JSON.stringify(doc)
+            });
+            if (r.ok) success++;
+            else errors.push({name: m.name, status: r.status});
+          }
+          return new Response(JSON.stringify({ok:true, success, total:menus.length, errors}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
       if (path === '/api/menus') {
-        const did = new URL(request.url).searchParams.get('did');
-        if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:{'Content-Type':'application/json'}});
-        const token = await getAccessToken(env);
         const r2 = await fetch(`${FS_BASE}:runQuery`,{
           method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
           body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}}}})
