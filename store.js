@@ -235,22 +235,22 @@ function _openCart(){
   if(!item.qty) return;
   total+=item.price*item.qty;
   var row=document.createElement('div');
-  row.className='ri';
-  var nd=document.createElement('div');nd.className='rn';
+  row.className='ci';
+  var nd=document.createElement('div');nd.className='ci-name';
   nd.innerHTML='<span style="margin-right:6px">'+item.emoji+'</span>'+item.name;
-  var ctrl=document.createElement('div');ctrl.className='rc';
+  var ctrl=document.createElement('div');ctrl.className='ci-ctrl';
   var bm=document.createElement('button');bm.textContent='−';
-  var qs=document.createElement('span');qs.className='rq';qs.textContent=item.qty;
+  var qs=document.createElement('span');qs.className='ci-qty';qs.textContent=item.qty;
   var bp=document.createElement('button');bp.textContent='+';
   (function(n){bm.onclick=function(){_chg(n,-1);};bp.onclick=function(){_chg(n,1);};})(item.name);
   ctrl.appendChild(bm);ctrl.appendChild(qs);ctrl.appendChild(bp);
-  var pd=document.createElement('div');pd.className='rp';
+  var pd=document.createElement('div');pd.className='ci-price';
   pd.textContent='₩'+(item.price*item.qty).toLocaleString();
   row.appendChild(nd);row.appendChild(ctrl);row.appendChild(pd);
   list.appendChild(row);
  });
- document.getElementById('fab-price').textContent='₩'+total.toLocaleString();
- document.getElementById('cart-list').classList.add('open');
+ var tp=document.getElementById('total-price');if(tp)tp.textContent='₩'+total.toLocaleString();
+ var fp=document.getElementById('fab-price');if(fp)fp.textContent='₩'+total.toLocaleString();
  document.getElementById('overlay').style.display='block';document.getElementById('cart-sheet').classList.add('open');
 }
 
