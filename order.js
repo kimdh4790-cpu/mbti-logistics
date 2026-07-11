@@ -207,8 +207,8 @@ function _openMdl(m){
    }).catch(function(){document.getElementById('mdl-tr').textContent='';});
   }
  }
- // 설명 번역
- if(m.description){
+ // 설명 번역 (한국어 아닐 때만)
+ if(m.description && _lang!=='ko'){
   var dk=m.name+'_desc_'+_lang;
   var descEl=document.getElementById('mdl-desc');
   if(_tlCache[dk]){descEl.textContent=_tlCache[dk];}
