@@ -129,6 +129,7 @@ function _doOrder(payType){
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
   // 픽업 감지 시작
+  _lastOrderId=ref.id;
   _listenPickup(ref.id);
  }).catch(function(e){
   alert('주문 실패: '+e.message);
@@ -212,6 +213,26 @@ function _speakPickup(count){
    o.start();g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.8);
    setTimeout(function(){o.stop();},800);}catch(e2){}
  }
+}
+
+// ── 테이블 번호 변경 (고객이 직접) ─────────────────────────────────────────
+var _lastOrderId = null;
+
+function _changeTable(){
+ var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
+ if(!newNum||!newNum.trim())return;
+ newNum=newNum.trim();
+ if(!_lastOrderId){alert('주문 정보를 찾을 수 없습니다');return;}
+ _db.collection('filo_orders').doc(_lastOrderId).update({
+  tableNum:newNum,
+  tableName:'테이블 '+newNum,
+  movedFrom:_tNum,
+  movedAt:new Date().toISOString()
+ }).then(function(){
+  _tNum=newNum;
+  var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
+  alert('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
+ }).catch(function(e){alert('변경 실패: '+e.message);});
 }
 
 // ── 직원 호출 ─────────────────────────────────────────────────────────────────
