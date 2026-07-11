@@ -702,10 +702,42 @@ function _filoMenuAddModal(did, menu, cat){
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
-  promise.then(function(){
-   _filoToast(isEdit?'✅ 수정됐습니다!':'✅ 메뉴가 등록됐습니다!');
+  promise.then(function(ref){
+   _filoToast(isEdit?'✅ 수정됐습니다! 번역 중...':'✅ 등록됐습니다! 번역 중...');
    mo.remove();
-   _filoPageMenuMgmt(document.getElementById('content'));
+   // 메뉴 저장 후 자동 번역 → Firestore에 저장
+   var docId=isEdit?menu._id:(ref&&ref.id);
+   if(docId && name){
+    var langs=['en','zh','ja'];
+    var translations={};
+    var descTranslations={};
+    var pending=langs.length*(description?2:1);
+    function done(){
+     pending--;
+     if(pending<=0){
+      var updateData={nameTranslations:translations};
+      if(description) updateData.descTranslations=descTranslations;
+      _db.collection('filo_menus').doc(docId).update(updateData)
+       .then(function(){_filoToast('✅ 번역 저장 완료!');})
+       .catch(function(){});
+      _filoPageMenuMgmt(document.getElementById('content'));
+     }
+    }
+    langs.forEach(function(lang){
+     fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,lang:lang})})
+     .then(function(r){return r.json();})
+     .then(function(d){translations[lang]=d.translated||name;done();})
+     .catch(function(){translations[lang]=name;done();});
+     if(description){
+      fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:description,lang:lang})})
+      .then(function(r){return r.json();})
+      .then(function(d){descTranslations[lang]=d.translated||description;done();})
+      .catch(function(){descTranslations[lang]=description;done();});
+     }
+    });
+   } else {
+    _filoPageMenuMgmt(document.getElementById('content'));
+   }
   }).catch(function(e){_filoToast('❌ '+e.message);});
  };
  btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
