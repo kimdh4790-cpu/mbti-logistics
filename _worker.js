@@ -1629,7 +1629,7 @@ async function acceptExchange(){
               const res = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
               });
               if(res.ok){
                 const d = await res.json();
@@ -1760,7 +1760,7 @@ async function acceptExchange(){
                       const res2 = await fetch('https://api.anthropic.com/v1/messages',{
                         method:'POST',
                         headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
-                        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+                        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
                       });
                       if (res2.ok) {
                         const d2 = await res2.json();
@@ -1996,7 +1996,7 @@ async function acceptExchange(){
               const res = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean food menu name to '+langNames[lang]+'. Return ONLY the translated name, nothing else: '+name}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
               });
               if(res.ok){
                 const d = await res.json();
