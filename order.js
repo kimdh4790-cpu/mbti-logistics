@@ -327,7 +327,9 @@ function _requestFCM(){
 
 function _initFCM(){
  var gate=document.getElementById('fcm-gate');
- navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg){
+ navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(){
+  return navigator.serviceWorker.ready;
+ }).then(function(reg){
   try{
    if(!firebase.messaging){throw new Error('no messaging');}
    _messaging=firebase.messaging();
@@ -338,15 +340,19 @@ function _initFCM(){
     if(token){
      _fcmToken=token;
      try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
+     console.log('[FCM] 토큰 발급 성공');
     }
     if(gate)gate.style.display='none';
-   }).catch(function(){
+   }).catch(function(e){
+    console.log('[FCM] 토큰 발급 실패:',e.message);
     if(gate)gate.style.display='none';
    });
   }catch(e){
+   console.log('[FCM] messaging 초기화 실패:',e.message);
    if(gate)gate.style.display='none';
   }
- }).catch(function(){
+ }).catch(function(e){
+  console.log('[FCM] SW 등록 실패:',e.message);
   if(gate)gate.style.display='none';
  });
 }
