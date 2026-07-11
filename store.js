@@ -175,17 +175,3 @@ function _saveOrder(name,phone,memo,addr,items,total,status,payMethod){
 }
 
 // ── 언어 변경 (배달 UI 텍스트 포함) ──────────────────────────────────────────
-function _setLang(l){
- _lang=l;_tlCache={};
- ['ko','en','zh','ja'].forEach(function(x){
-  var b=document.getElementById('lb-'+x);if(b)b.classList.toggle('on',x===l);
- });
- var tabMenu=document.getElementById('tab-menu');if(tabMenu)tabMenu.textContent=_ts('menu');
- var tabDel=document.getElementById('tab-delivery');if(tabDel)tabDel.textContent=_ts('delivery');
- var ob=document.getElementById('order-btn');if(ob)ob.textContent=_ts('order');
- var tt=document.getElementById('tl-total');if(tt)tt.textContent=_ts('total');
- var dn=document.getElementById('dn-msg');if(dn)dn.textContent=_ts('done');
- var ds=document.getElementById('dn-sub');if(ds)ds.textContent=_ts('sub');
- var db=document.getElementById('dn-back');if(db)db.textContent=_ts('back');
- if(_menus&&_menus.length)_applyTranslationsToGrid(_menus);
-}
