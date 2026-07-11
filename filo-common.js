@@ -1,9 +1,11 @@
 // filo-common.js - 공통 초기화, Firebase, 네비게이션, 유틸
 // 의존성: Firebase SDK
 // 전역변수: _CU, _db, _storage, _cachedCompanyDoc
-
-
-
+// ⚠️ 리팩토링 완료 (2026-07-12): 2749줄→1038줄
+//   직원/급여 → filo-staff.js
+//   테이블/예약 → filo-table.js
+//   마진분석 → filo-report.js
+//   레시피/유통기한 → filo-menu.js
 /* ══════════════════════════════════════════
    🍽 레시피 관리 페이지
    재료 + 사용량 + 단위 등록
