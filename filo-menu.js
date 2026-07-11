@@ -1,8 +1,10 @@
-// filo-menu.js - 메뉴 관리, 레시피, 원가
+// filo-menu.js - 메뉴관리, 레시피, 원가, 유통기한
 // 의존성: filo-common.js
 // 관련 컬렉션: filo_menus, menu_recipes, menu_costs
-
-// ── 메뉴 이름으로 AI 이미지 자동 생성 (Pollinations.ai) ──────────────────────
+// ⚠️ 2026-07-12 filo-common.js에서 분리됨
+//   포함: _filoRmAddRowDOM, _filoRmAddRow, _filoPageExpiry,
+//          _filoLoadStockHistory, _filoAutoImageUrl (AI이미지 자동생성)
+// 메뉴 저장 시 자동: 번역(EN/中/日) + AI이미지 생성(Pollinations.ai)
 function _filoAutoImageUrl(name,category,emoji){
  var nameMap={
   '보리굴비':'korean dried yellow croaker fish banchan food photography',
