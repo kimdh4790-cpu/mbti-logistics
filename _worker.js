@@ -1688,6 +1688,9 @@ async function acceptExchange(){
         }
       }
       if (path === '/api/menus') {
+        const did = new URL(request.url).searchParams.get('did');
+        if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token = await getAccessToken(env);
         const r2 = await fetch(`${FS_BASE}:runQuery`,{
           method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
           body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}}}})
