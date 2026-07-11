@@ -1658,8 +1658,21 @@ async function acceptExchange(){
           }
           } catch(e){}
         }
-        // 번역 성공 시만 KV 캐시 저장
-        if(translated && translated.trim() !== name) {
+        // 한글 포함이면 번역 실패로 처리 → Google 재시도
+        const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated);
+        if(!translated || hasKorean || translated.trim() === name) {
+          try {
+            const gKey3 = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+            if(gKey3) {
+              const gRes3 = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey3,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
+              const gData3 = await gRes3.json();
+              const gt3 = (gData3&&gData3.data&&gData3.data.translations&&gData3.data.translations[0]&&gData3.data.translations[0].translatedText)||'';
+              if(gt3 && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(gt3)) translated = gt3;
+            }
+          } catch(e){}
+        }
+        // 번역 성공 시만 KV 캐시 저장 (한글 포함이면 저장 안함)
+        if(translated && translated.trim() !== name && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated)) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
