@@ -398,19 +398,22 @@ function _doOrder(payType){
 
 function _setLang(l){
  _lang=l;
+ _tlCache={}; // 언어 변경 시 번역 캐시 초기화
  ['ko','en','zh','ja'].forEach(function(x){
-  document.getElementById('lb-'+x).classList.toggle('on',x===l);
+  var b=document.getElementById('lb-'+x);
+  if(b)b.classList.toggle('on',x===l);
  });
- document.getElementById('cart-title').textContent=_t('cart');
- document.getElementById('total-label').textContent=_t('total');
- document.getElementById('order-btn').textContent=_t('order');
- document.getElementById('done-title').textContent=_t('done');
- document.getElementById('done-sub').textContent=_t('sub');
- document.getElementById('done-back').textContent=_t('back');
- document.getElementById('fab-label').textContent=_t('fab');
- if(document.getElementById('ds-title'))document.getElementById('ds-title').textContent=_t('ds');
- document.getElementById('addr-btn').textContent=_addrFull?'📍 '+_addrFull:_t('addr');
- // 메뉴 품절 텍스트 갱신
+ var els={
+  'cart-title':_t('cart'),'total-label':_t('total'),'order-btn':_t('order'),
+  'done-title':_t('done'),'done-sub':_t('sub'),'done-back':_t('back'),
+  'fab-label':_t('fab'),'ds-title':_t('ds')
+ };
+ Object.keys(els).forEach(function(id){
+  var el=document.getElementById(id);
+  if(el)el.textContent=els[id];
+ });
+ var addrBtn=document.getElementById('addr-btn');
+ if(addrBtn)addrBtn.textContent=_addrFull?'📍 '+_addrFull:_t('addr');
  document.querySelectorAll('.mi-sold').forEach(function(s){s.textContent=_t('sold');});
 }
 function _callStaff(){
