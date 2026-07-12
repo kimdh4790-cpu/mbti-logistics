@@ -369,7 +369,7 @@ function _filoTableLoad(did){
      var isOrdPaid=(d.payType==='prepay'||d.status==='paid'||d.status==='cleared');
      orderMap[tNum].total+=(d.total||0);
      orderMap[tNum].ids.push(doc.id);
-     orderMap[tNum].orders.push({id:doc.id,items:d.items||[],total:d.total||0,paid:isOrdPaid,payType:d.payType||'postpay',createdAt:d.createdAt||''});
+     orderMap[tNum].orders.push({id:doc.id,items:d.items||[],total:d.total||0,paid:isOrdPaid,payType:d.payType||'postpay',createdAt:d.createdAt||'',movedFrom:d.movedFrom||null});
      if(isOrdPaid){orderMap[tNum].paidTotal+=(d.total||0);}
      else{orderMap[tNum].pendingTotal+=(d.total||0);orderMap[tNum].hasPending=true;}
      if(isOrdPaid&&!orderMap[tNum].hasPending)orderMap[tNum].paid=true;
@@ -419,6 +419,8 @@ function _filoTableLoad(did){
     '<div style="font-size:12px;font-weight:800;color:var(--tx)">'+t.name+'</div>'+
     '<div style="font-size:10px;font-weight:700;color:'+color+';margin-top:2px">'+statusTxt+'</div>'+
     (sub?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+sub+'</div>':'')+
+    (ord&&ord.orders&&ord.orders.some(function(o){return o.movedFrom;})?
+     '<div style="font-size:9px;color:#f59e0b;margin-top:2px">↔️ '+(ord.orders.find(function(o){return o.movedFrom;})||{}).movedFrom+'번에서 이동</div>':'')+
     (ord&&ord.paidTotal>0?'<div style="margin-top:4px;font-size:12px;font-weight:900;color:#818cf8">✅ ₩'+ord.paidTotal.toLocaleString()+'</div>':'')+
     (ord&&ord.pendingTotal>0?'<div style="margin-top:2px;font-size:12px;font-weight:900;color:#fbbf24">⏳ ₩'+ord.pendingTotal.toLocaleString()+'</div>':'');
 
