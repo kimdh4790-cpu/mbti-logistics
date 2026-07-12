@@ -741,38 +741,40 @@ function _filoTableOrderModal(did,table,order){
   readyBtn.style.cssText='flex:1;padding:12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#22c55e;font-size:12px;font-weight:700;cursor:pointer';
   readyBtn.textContent='🔔 준비완료';
   (function(d,tNum,tName){readyBtn.onclick=function(){
-   // filo_orders status → ready (고객 폰에 픽업 알림)
    var db=firebase.firestore();
-   db.collection('filo_orders')
-    .where('dealerId','==',d)
-    .where('tableNum','==',String(tNum))
-    .where('status','==','pending')
-    .get().then(function(snap){
-     var batch=db.batch();
-     var tokens=[];
+   // 숫자/문자 모두 조회
+   Promise.all([
+    db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','==','pending').get(),
+    db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','==','pending').get()
+   ]).then(function(results){
+    var batch=db.batch();var tokens=[];var seen={};
+    results.forEach(function(snap){
      snap.forEach(function(doc){
+      if(seen[doc.id])return;seen[doc.id]=true;
       batch.update(doc.ref,{status:'ready',readyAt:new Date().toISOString()});
       var tk=doc.data().fcmToken;
-      if(tk)tokens.push(tk);
+      if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
      });
-     return batch.commit().then(function(){return tokens;});
-    }).then(function(tokens){
-     // FCM 푸시 발송 (토큰 있는 경우)
-     if(tokens.length>0){
-      fetch('/fcm/notify-drivers',{
-       method:'POST',
-       headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({
-        tokens:tokens,
-        title:'🔔 픽업 알림',
-        body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요 😊',
-        data:{type:'pickup',tableNum:String(tNum),url:'/order?d='+d+'&t='+tNum}
-       })
-      }).catch(function(){});
-     }
+    });
+    return batch.commit().then(function(){return tokens;});
+   }).then(function(tokens){
+    if(tokens.length>0){
+     fetch('/fcm/notify-drivers',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+       tokens:tokens,
+       title:'🔔 픽업 알림',
+       body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요 😊',
+       data:{type:'pickup',tableNum:String(tNum),url:'/order?d='+d+'&t='+tNum}
+      })
+     }).catch(function(){});
      _filoToast('🔔 테이블 '+tNum+' 픽업 알림 전송!');
-     mo.remove();
-    }).catch(function(e){_filoToast('❌ '+e.message);});
+    } else {
+     _filoToast('⚠️ FCM 토큰 없음 — 알림 미전송 (Firestore 상태는 ready로 변경)');
+    }
+    mo.remove();
+   }).catch(function(e){_filoToast('❌ '+e.message);});
   };})(did,table.num,table.name);
   btnRow.appendChild(readyBtn);
  }
