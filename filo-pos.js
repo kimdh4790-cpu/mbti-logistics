@@ -131,7 +131,7 @@ function _filoPageKiosk(el){
        _filoToast('🪑 '+table.name+' 선택됨');
        // 주문 있으면 주문 내역 모달 표시
        if(order&&order.orders&&order.orders.length){
-        _filoTableOrderModal(did,order,table);
+        _filoTableOrderModal(did,table,order);
        }
       };})(t,ord||null);
       bar.appendChild(btn);
@@ -518,44 +518,6 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 
 // ── 주문 대기 페이지 (실시간) ──
 var _ordersUnsub = null;
-function _filoTableOrderModal(did,order,table){
- var mo=document.createElement('div');mo.className='mo';
- mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
- var box=document.createElement('div');
- box.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
-
- var totalItems=order.orders.reduce(function(acc,ord){return acc.concat(ord.items||[]);},[] );
- // 같은 메뉴 합산
- var itemMap={};
- totalItems.forEach(function(it){
-  var key=it.name||'';
-  if(!itemMap[key])itemMap[key]={name:it.name,price:it.price,qty:0,emoji:it.emoji||'🍽'};
-  itemMap[key].qty+=(it.qty||1);
- });
- var mergedItems=Object.values(itemMap);
-
- box.innerHTML=
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<div style="font-size:15px;font-weight:900">🪑 '+table.name+' 주문 내역</div>'+
-  '<button onclick="this.closest(\'.mo\').remove()" style="background:none;border:none;color:var(--t2);font-size:20px;cursor:pointer">✕</button>'+
-  '</div>'+
-  mergedItems.map(function(it){
-   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-    '<span style="font-size:13px">'+(it.emoji||'🍽')+' '+it.name+' <span style="color:#0891b2;font-weight:700">×'+it.qty+'</span></span>'+
-    '<span style="font-size:13px;font-weight:800">₩'+((it.price||0)*it.qty).toLocaleString()+'</span></div>';
-  }).join('')+
-  '<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:16px;font-weight:900">'+
-  '<span>합계</span><span style="color:#22c55e">₩'+order.total.toLocaleString()+'</span></div>'+
-  '<div style="display:flex;gap:8px;margin-top:8px">'+
-  '<button onclick="document.querySelectorAll(\'.mo\').forEach(function(e){e.remove();});_filoTableSelfPay(\''+did+'\',{orders:'+JSON.stringify(order.orders)+'},'+table.num+',\''+table.name+'\')" style="flex:1;padding:11px;background:rgba(8,145,178,.15);border:1.5px solid #0891b2;border-radius:10px;color:#0891b2;font-size:13px;font-weight:700;cursor:pointer">💳 결제</button>'+
-  '<button onclick="this.closest(\'.mo\').remove()" style="padding:11px 16px;background:var(--surface2);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer">닫기</button>'+
-  '</div>';
-
- mo.appendChild(box);
- mo.onclick=function(e){if(e.target===mo)mo.remove();};
- document.body.appendChild(mo);
-}
-
 function _filoTableSelfPay(did,order,tableNum,tableName){
  var allItems=(order.items||[]).map(function(it,i){return Object.assign({},it,{_idx:i});});
  var checks=allItems.map(function(){return false;});
