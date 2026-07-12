@@ -357,7 +357,7 @@ function _filoTableLoad(did){
    orderMap={};
    snap.forEach(function(doc){
     var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
+    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
      // tableNum 우선, 없으면 tableName에서 숫자 추출
      var tNum=String(d.tableNum||'');
      if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;
@@ -498,7 +498,7 @@ window._filoTableClear=function(docId,did,num){
     snap.forEach(function(doc){
      if(seen[doc.id])return;seen[doc.id]=true;
      var d=doc.data();
-     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
+     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
       batch.update(doc.ref,{status:'cleared',clearedAt:now});
      }
     });
