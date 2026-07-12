@@ -599,56 +599,53 @@ function _filoTableOrderModal(did,table,order){
    var paidNames=[];
    payments.forEach(function(p){(p.items||[]).forEach(function(it){paidNames.push(it.name);});});
 
-   var itemsHtml='';
+   // 전체 아이템 펼치기
+   var allItemsList=[];
    if(hasOrder&&order.orders&&order.orders.length){
-    order.orders.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
-    itemsHtml=order.orders.map(function(ord){
-     var pc=ord.paid?'#818cf8':'#fbbf24';
-     var pm=ord.paid?'✅ 선결제':'⏳ 후불 대기';
-     var itemRows=(ord.items||[]).map(function(it){
-      var isPaid=paidNames.indexOf(it.name)>=0;
-      return '<div style="display:flex;justify-content:space-between;padding:6px 8px;font-size:13px;'+
-       (isPaid?'color:#818cf8;background:rgba(129,140,248,.08);':'')+'">'+
-       '<span>'+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+
-       (isPaid?'<span style="font-size:10px;color:#818cf8;margin-left:6px">✅ 결제됨</span>':'')+'</span>'+
-       '<span style="font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
-     }).join('');
-     return '<div style="border:1.5px solid '+pc+';border-radius:10px;margin-bottom:8px;overflow:hidden">'+
-      '<div style="background:'+pc+'22;padding:6px 10px;display:flex;justify-content:space-between;align-items:center">'+
-      '<span style="font-size:11px;font-weight:800;color:'+pc+'">'+pm+'</span>'+
-      '<span style="font-size:12px;font-weight:900;color:'+pc+'">₩'+ord.total.toLocaleString()+'</span>'+
-      '</div>'+itemRows+'</div>';
-    }).join('');
+    order.orders.forEach(function(ord){
+     (ord.items||[]).forEach(function(it){allItemsList.push(it);});
+    });
    } else if(hasOrder){
-    itemsHtml=(order.items||[]).map(function(it){
-     return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
-      '<span>'+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
-      '<span style="font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+    allItemsList=(order.items||[]);
+   }
+
+   var itemsHtml='';
+   if(allItemsList.length){
+    itemsHtml=allItemsList.map(function(it){
+     var isPaid=paidNames.indexOf(it.name)>=0;
+     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
+      '<span style="'+(isPaid?'color:#818cf8':'')+'">'+
+      (isPaid?'✅ ':'⏳ ')+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
+      '<span style="font-weight:700;'+(isPaid?'color:#818cf8':'')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
     }).join('');
    } else {
     itemsHtml='<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
    }
 
-   // 결제 내역 표시
-   var paymentsHtml='';
-   if(payments.length){
-    paymentsHtml='<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd)">'+
-     '<div style="font-size:11px;color:var(--t3);margin-bottom:6px">💳 결제 내역</div>'+
-     payments.map(function(p){
-      var icon=p.method==='cash'?'💵':p.method==='card'?'💳':'✅';
-      return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:var(--t2)">'+
-       '<span>'+icon+' '+(p.method==='cash'?'현금':'카드')+' · '+(p.items||[]).map(function(i){return i.name;}).join(', ')+'</span>'+
-       '<span style="font-weight:700;color:#818cf8">₩'+(p.amount||0).toLocaleString()+'</span></div>';
-     }).join('')+
-     '</div>';
-   }
-
    var pendingTotal=Math.max(0,(order.total||0)-paidTotal);
+   var isAllPaid=pendingTotal<=0&&paidTotal>0;
+
    var summaryHtml='';
    if(hasOrder){
-    if(paidTotal>0)summaryHtml+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span style="color:#818cf8">✅ 결제 완료</span><span style="font-weight:700;color:#818cf8">₩'+paidTotal.toLocaleString()+'</span></div>';
-    if(pendingTotal>0)summaryHtml+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span style="color:#fbbf24">⏳ 후불 대기</span><span style="font-weight:700;color:#fbbf24">₩'+pendingTotal.toLocaleString()+'</span></div>';
-    summaryHtml+='<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding:8px 0;border-top:1px solid var(--bd);margin-top:4px"><span>합계</span><span style="color:#0891b2">₩'+(order.total||0).toLocaleString()+'</span></div>';
+    summaryHtml=
+     '<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding:10px 0">'+
+     '<span>합계</span>'+
+     '<span style="color:'+(isAllPaid?'#818cf8':pendingTotal>0?'#fbbf24':'#0891b2')+'">'+
+     '₩'+(order.total||0).toLocaleString()+
+     (isAllPaid?' ✅':pendingTotal>0?' (미결제 ₩'+pendingTotal.toLocaleString()+')'||'':'')+
+     '</span></div>';
+   }
+
+   var paymentsHtml='';
+   if(payments.length){
+    paymentsHtml='<div style="padding:8px 0;border-top:1px dashed var(--bd);margin-top:4px">'+
+     payments.map(function(p){
+      var icon=p.method==='cash'?'💵':'💳';
+      return '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);padding:2px 0">'+
+       '<span>'+icon+' '+(p.items||[]).map(function(i){return i.name;}).join(', ')+'</span>'+
+       '<span>₩'+(p.amount||0).toLocaleString()+'</span></div>';
+     }).join('')+
+     '</div>';
    }
 
    var inner=mo.querySelector('div');
@@ -660,10 +657,9 @@ function _filoTableOrderModal(did,table,order){
     (s==='occupied'?'<span style="font-size:11px;font-weight:700;color:#ef4444;background:rgba(239,68,68,.1);padding:4px 10px;border-radius:20px">사용 중</span>':
      s==='empty'?'<span style="font-size:11px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);padding:4px 10px;border-radius:20px">빈 테이블</span>':'')+
     '</div>'+
-    '<div style="margin-bottom:8px">'+itemsHtml+'</div>'+
-    paymentsHtml+
-    (hasOrder?'<div style="padding:10px 0;margin-bottom:8px;border-top:2px solid var(--bd)">'+summaryHtml+'</div>':'')+
-    '<div id="modal-btn-row" style="display:flex;gap:8px;flex-wrap:wrap"></div>';
+    '<div style="margin-bottom:4px">'+itemsHtml+'</div>'+
+    (hasOrder?'<div style="border-top:2px solid var(--bd);margin-top:4px">'+summaryHtml+paymentsHtml+'</div>':'')+
+    '<div id="modal-btn-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>';
 
    var btnRow=inner.querySelector('#modal-btn-row');
 
