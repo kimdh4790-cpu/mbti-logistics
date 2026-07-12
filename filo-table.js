@@ -482,7 +482,8 @@ window._filoTableSeat=function(docId,did,num){
 window._filoTableClear=function(docId,did,num){
  var now=new Date().toISOString();
  var today=now.slice(0,10);
- var id=(docId.startsWith('auto_')||docId===did+'_t'+num)?(did+'_t'+num):docId;
+ // docId 없으면 기본값 생성
+ var id=docId&&!docId.startsWith('auto_')&&docId!==did+'_t'+num?docId:(did+'_t'+num);
  _db.collection('filo_tables').doc(id).set({
   status:'empty',occupiedSince:'',reservedName:'',updatedAt:now
  },{merge:true}).then(function(){
