@@ -576,10 +576,45 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
     });
     batch.commit().then(function(){
      _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+     // filo_sales에 매출 저장 (DINE 연동)
+     var now=new Date();
+     var selectedItems=allItems.filter(function(_,i){return checks[i];});
+     _db.collection('filo_sales').add({
+      dealerId:did,
+      type:'table',
+      source:'qr',
+      items:selectedItems.map(function(it){return {id:it.id||'',name:it.name||'',price:it.price||0,qty:it.qty||1};}),
+      total:selTotal,
+      tableNum:tableNum,
+      tableName:tableName,
+      payMethod:method,
+      payType:'prepay',
+      status:'done',
+      date:now.toISOString().slice(0,10),
+      createdAt:now.toISOString(),
+      paidAt:now.toISOString()
+     }).catch(function(e){console.warn('[filo_sales] 저장 실패:',e.message);});
     }).catch(function(e){_filoToast('❌ '+e.message);});
    } else {
-    // 주문 ID 없으면 토스트만
+    // 주문 ID 없으면 토스트만 + filo_sales 저장
     _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+    var now2=new Date();
+    var selectedItems2=allItems.filter(function(_,i){return checks[i];});
+    _db.collection('filo_sales').add({
+     dealerId:did,
+     type:'table',
+     source:'qr',
+     items:selectedItems2.map(function(it){return {id:it.id||'',name:it.name||'',price:it.price||0,qty:it.qty||1};}),
+     total:selTotal,
+     tableNum:tableNum,
+     tableName:tableName,
+     payMethod:method,
+     payType:'prepay',
+     status:'done',
+     date:now2.toISOString().slice(0,10),
+     createdAt:now2.toISOString(),
+     paidAt:now2.toISOString()
+    }).catch(function(e){console.warn('[filo_sales] 저장 실패:',e.message);});
    }
   }
   if(cardBtn)cardBtn.onclick=function(){doSelfPay('card','💳 카드');};
