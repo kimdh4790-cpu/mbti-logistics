@@ -53,24 +53,29 @@ function _filoPageKiosk(el){
     var oMap={};
     oSnap.forEach(function(doc){
      var d=doc.data();
-     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cleared'){
+     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
       var k=String(d.tableNum||'');
       var k2=d.tableName||'';
       if(!k&&k2)k=k2.replace(/[^0-9]/g,'')||k2;
-      var isPd=(d.status==='paid'||d.payType==='prepay');
+      var isCleared=(d.status==='cleared');
+      var isPd=(d.status==='paid'||d.payType==='prepay'||isCleared);
       if(k){
-       if(!oMap[k])oMap[k]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[]};
+       if(!oMap[k])oMap[k]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
        oMap[k].total+=(d.total||0);
        oMap[k].orders.push(Object.assign({_id:doc.id},d));
-       if(isPd){oMap[k].paidTotal+=(d.total||0);}else{oMap[k].pendingTotal+=(d.total||0);oMap[k].hasPending=true;}
-       if(isPd&&!oMap[k].hasPending)oMap[k].paid=true;
+       if(isCleared){oMap[k].paidTotal+=(d.total||0);oMap[k].hasCleared=true;}
+       else if(isPd){oMap[k].paidTotal+=(d.total||0);}
+       else{oMap[k].pendingTotal+=(d.total||0);oMap[k].hasPending=true;}
+       if(!oMap[k].hasPending&&oMap[k].paidTotal>0)oMap[k].paid=true;
       }
       if(k2&&k2!==k){
-       if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[]};
+       if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
        oMap[k2].total+=(d.total||0);
        oMap[k2].orders.push(Object.assign({_id:doc.id},d));
-       if(isPd){oMap[k2].paidTotal+=(d.total||0);}else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
-       if(isPd&&!oMap[k2].hasPending)oMap[k2].paid=true;
+       if(isCleared){oMap[k2].paidTotal+=(d.total||0);oMap[k2].hasCleared=true;}
+       else if(isPd){oMap[k2].paidTotal+=(d.total||0);}
+       else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
+       if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
       }
      }
     });
