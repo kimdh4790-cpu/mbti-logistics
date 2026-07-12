@@ -599,24 +599,33 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
     var batch=_db.batch();
     var hasBatch=false;
     order.orders.forEach(function(ord){
-     if(!ord.id)return;
+     var ordId=ord.id||ord._id;  // filo-table.js는 id, filo-pos.js는 _id
+     if(!ordId)return;
      var remainItems=(ord.items||[]).filter(function(it){
       var idx=selectedNames.indexOf(it.name);
       if(idx>=0){selectedNames.splice(idx,1);return false;}// 선택된 것 제거
       return true;// 나머지 유지
      });
      if(remainItems.length===0){
-      // 이 주문의 모든 아이템이 결제됨 → cleared 처리
-      batch.update(_db.collection('filo_orders').doc(ord.id),{
-       status:'cleared',payMethod:method,paidAt:now.toISOString(),items:[]
+      // 모든 아이템 결제됨 → cleared 처리
+      batch.update(_db.collection('filo_orders').doc(ordId),{
+       status:'cleared',payMethod:method,payType:'prepay',paidAt:now.toISOString(),items:[]
       });
       hasBatch=true;
      } else if(remainItems.length<(ord.items||[]).length){
       // 일부만 결제됨 → items 업데이트 + 남은 금액 재계산
       var remainTotal=remainItems.reduce(function(s,it){return s+(it.price||0)*(it.qty||1);},0);
-      batch.update(_db.collection('filo_orders').doc(ord.id),{
+      // 결제된 아이템 기록
+      var paidItems=(ord.items||[]).filter(function(it){
+       return remainItems.indexOf(it)<0;
+      });
+      batch.update(_db.collection('filo_orders').doc(ordId),{
        items:remainItems,
-       total:remainTotal
+       total:remainTotal,
+       partialPaid:true,
+       partialPaidItems:(ord.partialPaidItems||[]).concat(paidItems.map(function(it){
+        return Object.assign({},it,{payMethod:method,paidAt:now.toISOString()});
+       }))
       });
       hasBatch=true;
      }
