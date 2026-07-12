@@ -519,7 +519,21 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 // ── 주문 대기 페이지 (실시간) ──
 var _ordersUnsub = null;
 function _filoTableSelfPay(did,order,tableNum,tableName){
- var allItems=(order.items||[]).map(function(it,i){return Object.assign({},it,{_idx:i});});
+ // orders 배열에서 items 펼치기 (filo-table.js에서 넘어올 때)
+ var flatItems=[];
+ if(order.orders&&order.orders.length){
+  order.orders.forEach(function(ord){
+   (ord.items||[]).forEach(function(it){
+    // 같은 메뉴 합산
+    var existing=flatItems.find(function(f){return f.name===it.name&&f.price===it.price;});
+    if(existing){existing.qty+=(it.qty||1);}
+    else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
+   });
+  });
+ } else {
+  flatItems=(order.items||[]).slice();
+ }
+ var allItems=flatItems.map(function(it,i){return Object.assign({},it,{_idx:i});});
  var checks=allItems.map(function(){return false;});
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');
