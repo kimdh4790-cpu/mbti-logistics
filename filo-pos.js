@@ -518,30 +518,95 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 
 // ── 주문 대기 페이지 (실시간) ──
 var _ordersUnsub = null;
+// ── 테이블 결제 통합 함수 ──────────────────────────────────────────────────────
+function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds){
+ if(!items||!items.length||total<=0)return;
+ var now=new Date();
+ var today=now.toISOString().slice(0,10);
+ var methodLabel=method==='card'?'💳 카드':method==='cash'?'💵 현금':method==='kakao'?'🟡 카카오페이':'✅ '+method;
+
+ // 1. filo_payments 저장 (결제 기록)
+ _db.collection('filo_payments').add({
+  dealerId:did,
+  tableNum:tableNum,
+  tableName:tableName,
+  items:items.map(function(it){return {name:it.name||'',price:it.price||0,qty:it.qty||1,emoji:it.emoji||'🍽'};}),
+  amount:total,
+  method:method,
+  methodLabel:methodLabel,
+  payType:'table',
+  orderIds:orderIds||[],
+  date:today,
+  paidAt:now.toISOString()
+ }).then(function(){
+  // 2. filo_sales 저장 (DINE 매출 연동)
+  _db.collection('filo_sales').add({
+   dealerId:did, type:'table', source:'pos',
+   items:items, total:total,
+   tableNum:tableNum, tableName:tableName,
+   payMethod:method, payType:'table', status:'done',
+   date:today, createdAt:now.toISOString(), paidAt:now.toISOString()
+  }).catch(function(e){console.warn('[filo_sales]',e.message);});
+
+  // 3. 전체 결제 완료 확인 → filo_orders cleared
+  if(orderIds&&orderIds.length){
+   _db.collection('filo_payments')
+    .where('dealerId','==',did).where('tableNum','==',tableNum).where('date','==',today)
+    .get().then(function(snap){
+     var paidTotal=0;
+     snap.forEach(function(doc){paidTotal+=doc.data().amount||0;});
+     // 해당 테이블 filo_orders 합계
+     _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+      .get().then(function(oSnap){
+       var orderTotal=0;
+       var pendingIds=[];
+       oSnap.forEach(function(doc){
+        var d=doc.data();
+        if((String(d.tableNum)===String(tableNum)||d.tableName===tableName)&&d.status!=='cleared'){
+         orderTotal+=(d.total||0);
+         pendingIds.push(doc.id);
+        }
+       });
+       if(orderTotal>0&&paidTotal>=orderTotal&&pendingIds.length){
+        var batch=_db.batch();
+        pendingIds.forEach(function(id){
+         batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
+        });
+        batch.commit().catch(function(){});
+       }
+      }).catch(function(){});
+    }).catch(function(){});
+  }
+  _filoToast(methodLabel+' ₩'+total.toLocaleString()+' 결제 완료! ✅');
+ }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
+}
+
+// ── 테이블 각자 계산 ─────────────────────────────────────────────────────────
 function _filoTableSelfPay(did,order,tableNum,tableName){
  var today=new Date().toISOString().slice(0,10);
 
- // filo_payments에서 이미 결제된 항목 조회 후 목록 구성
+ // filo_payments에서 이미 결제된 항목 조회
  _db.collection('filo_payments')
   .where('dealerId','==',did)
   .where('tableNum','==',tableNum)
   .where('date','==',today)
   .get().then(function(paySnap){
-   // 이미 결제된 아이템 이름 목록
    var paidNames=[];
    paySnap.forEach(function(doc){
     (doc.data().items||[]).forEach(function(it){paidNames.push(it.name);});
    });
 
-   // orders 배열에서 items 펼치기 (_ordId 태깅) - 이미 결제된 것 제외
+   // orders에서 미결제 항목 펼치기
    var allItems=[];
+   var allOrderIds=[];
    if(order.orders&&order.orders.length){
     order.orders.forEach(function(ord){
+     var oid=ord.id||ord._id;
+     if(oid&&allOrderIds.indexOf(oid)<0)allOrderIds.push(oid);
      (ord.items||[]).forEach(function(it){
-      // 이미 결제된 항목 제외
       var pidx=paidNames.indexOf(it.name);
       if(pidx>=0){paidNames.splice(pidx,1);return;}
-      allItems.push(Object.assign({},it,{_ordId:ord.id||ord._id,qty:it.qty||1}));
+      allItems.push(Object.assign({},it,{_ordId:oid,qty:it.qty||1}));
      });
     });
    } else {
@@ -552,11 +617,9 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
     });
    }
 
-   if(allItems.length===0){
-    _filoToast('모든 항목이 이미 결제됐어요! ✅');
-    return;
-   }
+   if(!allItems.length){_filoToast('모든 항목이 이미 결제됐어요! ✅');return;}
 
+   // 각자계산 모달 UI
    var mo=document.createElement('div');mo.className='mo';
    mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
    var box=document.createElement('div');
@@ -568,106 +631,61 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
    var checkedMap={};
    allItems.forEach(function(_,i){checkedMap[i]=false;});
 
- function getSelTotal(){
-  return allItems.reduce(function(s,it,i){
-   return s+(checkedMap[i]?(it.price||0)*(it.qty||1):0);
-  },0);
- }
+   function getSelTotal(){
+    return allItems.reduce(function(s,it,i){return s+(checkedMap[i]?(it.price||0)*(it.qty||1):0);},0);
+   }
 
- function render(){
-  var selTotal=getSelTotal();
-  var rows=allItems.map(function(it,i){
-   var on=checkedMap[i];
-   return '<div data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;'+
-    'background:'+(on?'rgba(8,145,178,.15)':'var(--surface2)')+';border:1.5px solid '+(on?'#0891b2':'var(--bd2)')+'">'+
-    '<div style="width:20px;height:20px;border-radius:50%;border:2px solid '+(on?'#0891b2':'var(--bd2)')+';'+
-    'background:'+(on?'#0891b2':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">'+(on?'✓':'')+'</div>'+
-    '<span style="flex:1;font-size:13px">'+(it.emoji||'🍽')+' '+(it.name||'')+' x'+(it.qty||1)+'</span>'+
-    '<span style="font-size:13px;font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
-  }).join('');
+   function render(){
+    var selTotal=getSelTotal();
+    box.innerHTML=
+     '<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
+     '<div style="font-size:11px;color:var(--t2);margin-bottom:10px">계산할 메뉴 선택</div>'+
+     allItems.map(function(it,i){
+      var on=checkedMap[i];
+      return '<div data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;background:'+(on?'rgba(8,145,178,.15)':'var(--surface2)')+';border:1.5px solid '+(on?'#0891b2':'var(--bd2)')+'">'+
+       '<div style="width:20px;height:20px;border-radius:50%;border:2px solid '+(on?'#0891b2':'var(--bd2)')+';background:'+(on?'#0891b2':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">'+(on?'✓':'')+'</div>'+
+       '<span style="flex:1;font-size:13px">'+(it.emoji||'🍽')+' '+(it.name||'')+' ×'+(it.qty||1)+'</span>'+
+       '<span style="font-size:13px;font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+     }).join('')+
+     '<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin:10px 0;display:flex;justify-content:space-between">'+
+     '<span style="font-size:13px;font-weight:700">선택 합계</span>'+
+     '<span style="font-size:14px;font-weight:900;color:#0891b2">₩'+selTotal.toLocaleString()+'</span></div>'+
+     '<div style="display:flex;gap:8px">'+
+     '<button id="tself-card" style="flex:1;padding:12px;background:rgba(8,145,178,.15);border:1.5px solid #0891b2;border-radius:12px;color:#0891b2;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💳 카드</button>'+
+     '<button id="tself-cash" style="flex:1;padding:12px;background:rgba(34,197,94,.15);border:1.5px solid #22c55e;border-radius:12px;color:#22c55e;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💵 현금</button>'+
+     '<button id="tself-cancel" style="padding:12px 14px;background:var(--surface2);border:none;border-radius:12px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
+     '</div>';
 
-  box.innerHTML=
-   '<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
-   '<div style="font-size:11px;color:var(--t2);margin-bottom:10px">계산할 메뉴 선택</div>'+
-   rows+
-   '<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin:10px 0;display:flex;justify-content:space-between">'+
-   '<span style="font-size:13px;font-weight:700">선택 합계</span>'+
-   '<span style="font-size:14px;font-weight:900;color:#0891b2">₩'+selTotal.toLocaleString()+'</span></div>'+
-   '<div style="display:flex;gap:8px">'+
-   '<button id="tself-card" style="flex:1;padding:12px;background:rgba(8,145,178,.15);border:1.5px solid #0891b2;border-radius:12px;color:#0891b2;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💳 카드</button>'+
-   '<button id="tself-cash" style="flex:1;padding:12px;background:rgba(34,197,94,.15);border:1.5px solid #22c55e;border-radius:12px;color:#22c55e;font-size:13px;font-weight:700;cursor:pointer'+(selTotal<=0?';opacity:.4;pointer-events:none':'')+'">💵 현금</button>'+
-   '<button id="tself-cancel" style="padding:12px 14px;background:var(--surface2);border:none;border-radius:12px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
-   '</div>';
-
-  box.querySelectorAll('[data-idx]').forEach(function(el){
-   el.onclick=function(){checkedMap[parseInt(el.dataset.idx)]=!checkedMap[parseInt(el.dataset.idx)];render();};
-  });
-  var cb=box.querySelector('#tself-card');
-  var hb=box.querySelector('#tself-cash');
-  var xb=box.querySelector('#tself-cancel');
-  if(cb)cb.onclick=function(){pay('card','💳 카드');};
-  if(hb)hb.onclick=function(){pay('cash','💵 현금');};
-  if(xb)xb.onclick=function(){mo.remove();};
- }
-
- function pay(method,label){
-  var selTotal=getSelTotal();
-  if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
-  var selectedItems=allItems.filter(function(_,i){return checkedMap[i];});
-  mo.remove();
-  var now=new Date();
-  var today=now.toISOString().slice(0,10);
-
-  // filo_payments - 결제 기록 (원본 filo_orders 수정 안 함!)
-  var ordIds=[];
-  selectedItems.forEach(function(it){
-   if(it._ordId&&ordIds.indexOf(it._ordId)<0)ordIds.push(it._ordId);
-  });
-  _db.collection('filo_payments').add({
-   dealerId:did,
-   tableNum:tableNum,
-   tableName:tableName,
-   items:selectedItems.map(function(it){return {name:it.name||'',price:it.price||0,qty:it.qty||1,emoji:it.emoji||'🍽'};}),
-   amount:selTotal,
-   method:method,
-   payType:'split',
-   orderIds:ordIds,
-   date:today,
-   paidAt:now.toISOString()
-  }).catch(function(e){console.warn('[filo_payments]',e.message);});
-
-  // filo_sales - DINE 매출 연동
-  _db.collection('filo_sales').add({
-   dealerId:did,type:'table',source:'qr',
-   items:selectedItems.map(function(it){return {name:it.name||'',price:it.price||0,qty:it.qty||1};}),
-   total:selTotal,tableNum:tableNum,tableName:tableName,
-   payMethod:method,payType:'split',status:'done',
-   date:today,createdAt:now.toISOString(),paidAt:now.toISOString()
-  }).catch(function(e){console.warn('[filo_sales]',e.message);});
-
-  // 전체 결제 완료 확인 → filo_orders cleared
-  _db.collection('filo_payments')
-   .where('dealerId','==',did).where('tableNum','==',tableNum).where('date','==',today)
-   .get().then(function(snap){
-    var paidTotal=selTotal;
-    snap.forEach(function(doc){paidTotal+=doc.data().amount||0;});
-    var orderTotal=(order.orders||[]).reduce(function(s,o){return s+(o.total||0);},0)||order.total||0;
-    if(orderTotal>0&&paidTotal>=orderTotal){
-     var batch=_db.batch();
-     (order.orders||[]).forEach(function(ord){
-      var oid=ord.id||ord._id;
-      if(oid)batch.update(_db.collection('filo_orders').doc(oid),{status:'cleared',paidAt:now.toISOString()});
-     });
-     batch.commit().catch(function(){});
-    }
-   }).catch(function(){});
-
-   _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
-  }
-
-  render();
- }).catch(function(){_filoToast('❌ 결제 내역 조회 실패');});
+    box.querySelectorAll('[data-idx]').forEach(function(el){
+     el.onclick=function(){
+      var idx=parseInt(el.dataset.idx);
+      checkedMap[idx]=!checkedMap[idx];
+      render();
+     };
+    });
+    var cb=box.querySelector('#tself-card');
+    var hb=box.querySelector('#tself-cash');
+    var xb=box.querySelector('#tself-cancel');
+    if(cb)cb.onclick=function(){
+     var sel=allItems.filter(function(_,i){return checkedMap[i];});
+     var total=getSelTotal();
+     if(!sel.length||total<=0){_filoToast('메뉴를 선택하세요');return;}
+     mo.remove();
+     _filoTablePay(did,sel,total,tableNum,tableName,'card',allOrderIds);
+    };
+    if(hb)hb.onclick=function(){
+     var sel=allItems.filter(function(_,i){return checkedMap[i];});
+     var total=getSelTotal();
+     if(!sel.length||total<=0){_filoToast('메뉴를 선택하세요');return;}
+     mo.remove();
+     _filoTablePay(did,sel,total,tableNum,tableName,'cash',allOrderIds);
+    };
+    if(xb)xb.onclick=function(){mo.remove();};
+   }
+   render();
+  }).catch(function(e){_filoToast('❌ '+e.message);});
 }
+
 
 
 // 결제 완료 처리
