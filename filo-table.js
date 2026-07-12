@@ -669,11 +669,24 @@ function _filoTableOrderModal(did,table,order){
     var splitBtn2=document.createElement('button');
     splitBtn2.style.cssText='flex:1;padding:12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:12px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer';
     splitBtn2.textContent='✂️ 분할';
-    (function(tot){splitBtn2.onclick=function(){mo.remove();
-     _cartItems=(order.items||[]).map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty,emoji:it.emoji||'🍽'};});
+    (function(tot,ord){splitBtn2.onclick=function(){mo.remove();
+     // orders 배열에서 items 펼치기
+     var flatItems=[];
+     if(ord.orders&&ord.orders.length){
+      ord.orders.forEach(function(o){
+       (o.items||[]).forEach(function(it){
+        var ex=flatItems.find(function(f){return f.name===it.name;});
+        if(ex){ex.qty+=(it.qty||1);}
+        else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
+       });
+      });
+     } else {
+      flatItems=(ord.items||[]).slice();
+     }
+     _cartItems=flatItems.map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty||1,emoji:it.emoji||'🍽'};});
      window._selectedTableId=table.num;window._selectedTableName=table.name;
      _filoSplitPay(tot);
-    };})(pendingTotal);
+    };})(pendingTotal,order);
     btnRow.appendChild(splitBtn2);
 
     var selfBtn2=document.createElement('button');
