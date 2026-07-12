@@ -575,66 +575,79 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
    mo.remove();
    var now=new Date();
    var selectedItems=allItems.filter(function(_,i){return checks[i];});
+   var selectedNames=selectedItems.map(function(it){return it.name;});
 
    // filo_sales에 선택된 항목만 저장 (DINE 연동)
    _db.collection('filo_sales').add({
-    dealerId:did,
-    type:'table',
-    source:'qr',
+    dealerId:did, type:'table', source:'qr',
     items:selectedItems.map(function(it){return {id:it.id||'',name:it.name||'',price:it.price||0,qty:it.qty||1};}),
-    total:selTotal,
-    tableNum:tableNum,
-    tableName:tableName,
-    payMethod:method,
-    payType:'prepay',
-    status:'done',
-    date:now.toISOString().slice(0,10),
-    createdAt:now.toISOString(),
-    paidAt:now.toISOString()
-   }).catch(function(e){console.warn('[filo_sales] 저장 실패:',e.message);});
+    total:selTotal, tableNum:tableNum, tableName:tableName,
+    payMethod:method, payType:'prepay', status:'done',
+    date:now.toISOString().slice(0,10), createdAt:now.toISOString(), paidAt:now.toISOString()
+   }).catch(function(e){console.warn('[filo_sales]',e.message);});
 
-   // filo_orders에서 선택한 아이템만 제거 (나머지 유지)
+   // filo_orders에 paidItems 추가 방식
    if(order.orders&&order.orders.length){
-    var selectedNames=selectedItems.map(function(it){return it.name;});
     var batch=_db.batch();
     var hasBatch=false;
+    var remainingNames=selectedNames.slice(); // 처리할 이름 목록
+
     order.orders.forEach(function(ord){
-     var ordId=ord.id||ord._id;  // filo-table.js는 id, filo-pos.js는 _id
+     var ordId=ord.id||ord._id;
      if(!ordId)return;
-     var remainItems=(ord.items||[]).filter(function(it){
-      var idx=selectedNames.indexOf(it.name);
-      if(idx>=0){selectedNames.splice(idx,1);return false;}// 선택된 것 제거
-      return true;// 나머지 유지
+     var ordItems=ord.items||[];
+     var newPaidItems=[];
+     var consumedNames=[];
+
+     // 이 주문에서 결제할 아이템 찾기
+     ordItems.forEach(function(it){
+      var idx=remainingNames.indexOf(it.name);
+      if(idx>=0){
+       newPaidItems.push(Object.assign({},it,{payMethod:method,paidAt:now.toISOString()}));
+       consumedNames.push(it.name);
+       remainingNames.splice(idx,1);
+      }
      });
-     if(remainItems.length===0){
-      // 모든 아이템 결제됨 → cleared 처리
+
+     if(newPaidItems.length===0)return; // 이 주문에서 선택된 아이템 없음
+
+     var existingPaid=ord.partialPaidItems||[];
+     var allPaidItems=existingPaid.concat(newPaidItems);
+     var unpaidItems=ordItems.filter(function(it){
+      return consumedNames.indexOf(it.name)<0;
+     });
+
+     if(unpaidItems.length===0){
+      // 이 주문 모두 결제 → cleared
       batch.update(_db.collection('filo_orders').doc(ordId),{
-       status:'cleared',payMethod:method,payType:'prepay',paidAt:now.toISOString(),items:[]
+       status:'cleared',
+       payMethod:method,
+       paidAt:now.toISOString(),
+       paidItems:allPaidItems,
+       items:[]
       });
-      hasBatch=true;
-     } else if(remainItems.length<(ord.items||[]).length){
-      // 일부만 결제됨 → items 업데이트 + 남은 금액 재계산
-      var remainTotal=remainItems.reduce(function(s,it){return s+(it.price||0)*(it.qty||1);},0);
-      // 결제된 아이템 기록
-      var paidItems=(ord.items||[]).filter(function(it){
-       return remainItems.indexOf(it)<0;
-      });
+     } else {
+      // 일부만 결제 → paidItems 추가, items 업데이트
+      var unpaidTotal=unpaidItems.reduce(function(s,it){return s+(it.price||0)*(it.qty||1);},0);
       batch.update(_db.collection('filo_orders').doc(ordId),{
-       items:remainItems,
-       total:remainTotal,
-       partialPaid:true,
-       partialPaidItems:(ord.partialPaidItems||[]).concat(paidItems.map(function(it){
-        return Object.assign({},it,{payMethod:method,paidAt:now.toISOString()});
-       }))
+       paidItems:allPaidItems,
+       items:unpaidItems,
+       total:unpaidTotal
       });
-      hasBatch=true;
      }
+     hasBatch=true;
     });
+
     if(hasBatch){
-     batch.commit().catch(function(e){console.warn('[batch] 실패:',e.message);});
+     batch.commit().then(function(){
+      _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+     }).catch(function(e){_filoToast('❌ '+e.message);});
+    } else {
+     _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
     }
+   } else {
+    _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
    }
-   _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
   }
   if(cardBtn)cardBtn.onclick=function(){doSelfPay('card','💳 카드');};
   if(cashBtn)cashBtn.onclick=function(){doSelfPay('cash','💵 현금');};
