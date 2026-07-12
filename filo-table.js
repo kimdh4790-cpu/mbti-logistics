@@ -363,7 +363,7 @@ function _filoTableLoad(did){
      if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;
      if(!tNum)return;
      if(!orderMap[tNum])orderMap[tNum]={total:0,items:[],ids:[],paid:false,orders:[],paidTotal:0,pendingTotal:0,hasPending:false};
-     var isOrdPaid=(d.payType==='prepay'||d.status==='paid');
+     var isOrdPaid=(d.payType==='prepay'||d.status==='paid'||d.status==='cleared');
      orderMap[tNum].total+=(d.total||0);
      orderMap[tNum].ids.push(doc.id);
      orderMap[tNum].orders.push({id:doc.id,items:d.items||[],total:d.total||0,paid:isOrdPaid,payType:d.payType||'postpay',createdAt:d.createdAt||''});
@@ -580,8 +580,9 @@ function _filoTableOrderModal(did,table,order){
   order.orders.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
   itemsHtml=order.orders.map(function(ord,i){
    var pc=ord.paid?'#818cf8':'#fbbf24';
-   var methodIcon=ord.payMethod==='cash'?'💵':ord.payMethod==='card'?'💳':ord.payMethod==='split'?'✂️':'';
-   var pm=ord.paid?(methodIcon+'선결제'):'⏳ 후불';
+   var methodIcon=ord.payMethod==='cash'?'💵 현금':ord.payMethod==='card'?'💳 카드':ord.payMethod==='kakao'?'🟡 카카오페이':ord.payMethod==='naver'?'🟢 네이버페이':ord.payMethod==='split'?'✂️ 분할':'';
+   var payTypeLabel=ord.payType==='prepay'?'선결제':ord.payType==='postpay'?'후불':'';
+   var pm=ord.paid?(methodIcon+(payTypeLabel?' · '+payTypeLabel:'')):'⏳ 후불 대기';
    var itemRows=(ord.items||[]).map(function(it){
     return '<div style="display:flex;justify-content:space-between;padding:6px 8px;font-size:13px">'+
      '<span>'+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
