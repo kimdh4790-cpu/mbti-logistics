@@ -107,12 +107,11 @@ function _filoPageOrders(el){
        '</div>':'')+
       '</div></div>';
     }).join('');
-   // 새 주문 알림음
-    // 새 QR 주문 알림음
-    if(window._filoLastOrderCount!==undefined&&_oQR.length>window._filoLastOrderCount){
+   // 새 QR 주문 알림음
+   if(window._filoLastOrderCount!==undefined&&_oQR.length>window._filoLastOrderCount){
+    try{var a=new AudioContext();var o2=a.createOscillator();o2.connect(a.destination);o2.frequency.value=880;o2.start();o2.stop(a.currentTime+0.15);}catch(e){}
    }
-    }
-    window._filoLastOrderCount=_oQR.length;
+   window._filoLastOrderCount=_oQR.length;
   }
  var _u1=_db.collection('filo_sales')
   .where('dealerId','==',did).where('date','==',today)
