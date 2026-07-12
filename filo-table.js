@@ -707,7 +707,7 @@ function _filoTableOrderModal(did,table,order){
  } else {
   var seatBtn=document.createElement('button');
   seatBtn.style.cssText='flex:1;padding:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer';
-  seatBtn.textContent='제륙 처리';
+  seatBtn.textContent='🪑 착석 처리';
   (function(dc,d,n){seatBtn.onclick=function(){_filoTableSeat(dc,d,n);mo.remove();};})(table.docId,did,table.num);
   btnRow.appendChild(seatBtn);
  }
