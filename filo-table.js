@@ -1,9 +1,12 @@
-// filo-table.js - 테이블QR, 예약, 착석, 직원호출, POS 테이블관리
+// filo-table.js - 테이블QR, 예약, 착석, 비움, 모달, 이동
 // 의존성: filo-common.js
-// 관련 컬렉션: filo_tables, filo_orders, filo_bookings, filo_reservations
-// ⚠️ 2026-07-12 filo-common.js에서 분리됨
-//   포함: _filoPageSchedule, _filoRenderCalendar, _filoPageTableMgmt,
-//          _filoTableSetup, _toLoadTables, _toSelectTable
+// 관련 컬렉션: filo_tables, filo_orders, filo_payments, filo_bookings
+// ⚠️ 2026-07-12 리팩토링:
+//   filo-common.js 중복 함수 통합 (단일화)
+//   _filoTableClear: 비움 시 filo_orders 삭제 + filo_payments 삭제
+//   _filoTableOrderModal: filo_payments 기반 결제내역 표시
+//   _filoMarkPaid: _filoTablePay 호출로 통일
+//   status 보정: filo_tables.empty + 오늘 주문 있으면 occupied 표시
 function _filoPageTableQR(el){
  if(!el)el=document.getElementById('content');
  if(!el)return;
