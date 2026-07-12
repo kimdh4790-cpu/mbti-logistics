@@ -153,20 +153,28 @@ function _submitOrder(){
 }
 
 function _saveOrder(name,phone,memo,addr,items,total,status,payMethod){
- _db.collection('filo_orders').add({
+ var now=new Date();
+ var orderData={
   dealerId:_did,type:'delivery',status:status,
   payMethod:payMethod,payType:'prepay',
   items:items,total:total,
   customer:name,phone:phone,
   address:addr,memo:memo,
-  createdAt:new Date().toISOString(),
-  date:new Date().toISOString().slice(0,10)
- }).then(function(ref){
+  createdAt:now.toISOString(),
+  date:now.toISOString().slice(0,10)
+ };
+ _db.collection('filo_orders').add(orderData).then(function(ref){
   _closeCart();_cart={};_updFab();
   var dn=document.getElementById('dn');
   var dnSub=document.getElementById('dn-sub');
   if(dnSub)dnSub.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
   if(dn)dn.style.display='flex';
+  // filo_sales에도 저장 (DINE 매출 연동)
+  _db.collection('filo_sales').add(Object.assign({},orderData,{
+   source:'store',
+   orderId:ref.id,
+   status:status==='paid'?'done':'pending'
+  })).catch(function(e){console.warn('[filo_sales] 저장 실패:',e.message);});
  }).catch(function(e){
   alert('주문 실패: '+e.message);
   var btn=document.getElementById('order-btn');
