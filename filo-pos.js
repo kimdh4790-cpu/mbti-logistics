@@ -1,7 +1,12 @@
-// filo-pos.js - POS 결제, 영수증, 장바구니, 분할결제, 각자계산
-// 의존성: filo-common.js
-// 관련 컬렉션: filo_sales, filo_menus
-
+// filo-pos.js - POS UI, 테이블바, 통합 결제
+// 의존성: filo-common.js, filo-table.js
+// 관련 컬렉션: filo_sales, filo_payments, filo_orders, filo_menus
+// ⚠️ 2026-07-12 리팩토링:
+//   _filoSelfPay (구버전 각자계산) 제거
+//   _splitCalc/_splitConfirm (중복) 제거
+//   _filoTablePay: 모든 테이블 결제 통합 함수 (신규)
+//   _filoTableSelfPay: 각자계산 (filo_payments 기반)
+//   결제 흐름: _filoTablePay → filo_payments + filo_sales 저장
 function _filoReceiptSelected(input){
  var file=input.files&&input.files[0];
  if(!file)return;
