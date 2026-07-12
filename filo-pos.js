@@ -121,6 +121,10 @@ function _filoPageKiosk(el){
       btn.style.cssText='padding:6px 12px;background:'+bg+';border:1.5px solid '+borderC+';border-radius:10px;color:'+color+';font-size:11px;font-weight:800;cursor:pointer;line-height:1.5;text-align:center;min-width:72px';
       var dispHtml='<div style="color:var(--tx)">'+t.name+'</div>';
       if(hasOrder){
+       if(ord.orders&&ord.orders.some(function(o){return o.movedFrom;})){
+        var from=ord.orders.find(function(o){return o.movedFrom;});
+        dispHtml+='<div style="font-size:9px;color:#f59e0b">↔️ '+from.movedFrom+'번에서 이동</div>';
+       }
        if(dispPaid>0)dispHtml+='<div style="font-size:10px;color:#818cf8">✅₩'+dispPaid.toLocaleString()+'</div>';
        if(dispPending>0)dispHtml+='<div style="font-size:10px;color:#fbbf24">⏳₩'+dispPending.toLocaleString()+'</div>';
        if(isPaid)dispHtml+='<div style="font-size:10px;color:#818cf8">✅ 전액결제</div>';
