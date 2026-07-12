@@ -1,9 +1,12 @@
-// filo-common.js - 공통 초기화, Firebase, 네비게이션, 유틸
+// filo-common.js - 공통 초기화, Firebase, 네비게이션, 유틸, POS 카트 결제
 // 의존성: Firebase SDK
-// 전역변수: _CU, _db, _storage, _cachedCompanyDoc
-
-
-
+// 전역변수: _CU, _db, _storage, _cachedCompanyDoc, _cartItems
+// 관련 컬렉션: filo_sales, filo_menus, members, attendance
+// ⚠️ 2026-07-12 리팩토링:
+//   테이블 관련 8개 함수 → filo-table.js로 이동/제거 (중복 제거)
+//   _filoPageTableMgmt/_filoLoadTableMgmt/_filoRenderTableMgmt
+//   _filoTableStatusChange/_filoTableSetup/_filoCreateTables
+//   _toLoadTables/_toSelectTable
 /* ══════════════════════════════════════════
    🍽 레시피 관리 페이지
    재료 + 사용량 + 단위 등록
