@@ -519,34 +519,50 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 // ── 주문 대기 페이지 (실시간) ──
 var _ordersUnsub = null;
 function _filoTableSelfPay(did,order,tableNum,tableName){
- // orders 배열에서 items 펼치기
- var flatItems=[];
+ // orders 배열에서 items 펼치기 (_ordId 태깅)
+ var allItems=[];
  if(order.orders&&order.orders.length){
   order.orders.forEach(function(ord){
    (ord.items||[]).forEach(function(it){
-    flatItems.push(Object.assign({},it,{_ordId:ord.id||ord._id,qty:it.qty||1}));
+    allItems.push(Object.assign({},it,{_ordId:ord.id||ord._id,qty:it.qty||1}));
    });
   });
  } else {
-  flatItems=(order.items||[]).map(function(it){return Object.assign({},it,{qty:it.qty||1});});
+  (order.items||[]).forEach(function(it){
+   allItems.push(Object.assign({},it,{qty:it.qty||1}));
+  });
  }
- var allItems=flatItems.map(function(it,i){return Object.assign({},it,{_idx:i});});
- var checks=allItems.map(function(){return false;});
+
  var mo=document.createElement('div');mo.className='mo';
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
  var box=document.createElement('div');
- box.style.cssText='padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
+ box.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+
+ // checked 상태 Map
+ var checkedMap={};
+ allItems.forEach(function(_,i){checkedMap[i]=false;});
+
+ function getSelTotal(){
+  return allItems.reduce(function(s,it,i){return s+(checkedMap[i]?(it.price||0)*(it.qty||1):0);},0);
+ }
 
  function render(){
-  var selected=allItems.filter(function(_,i){return checks[i];});
-  var selTotal=selected.reduce(function(s,c){return s+(c.price||0)*(c.qty||1);},0);
-  box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
+  var selTotal=getSelTotal();
+  var rows=allItems.map(function(it,i){
+   var on=checkedMap[i];
+   return '<div data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;background:'+(on?'rgba(8,145,178,.15)':'var(--surface2)')+';border:1.5px solid '+(on?'#0891b2':'var(--bd2)')+'">'+
+    '<div style="width:20px;height:20px;border-radius:50%;border:2px solid '+(on?'#0891b2':'var(--bd2)')+';background:'+(on?'#0891b2':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">'+(on?'✓':'')+'</div>'+
+    '<span style="flex:1;font-size:13px">'+(it.emoji||'🍽')+' '+(it.name||'')+' ×'+(it.qty||1)+'</span>'+
+    '<span style="font-size:13px;font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+  }).join('');
+
+  box.innerHTML=
+   '<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
    '<div style="font-size:11px;color:var(--t2);margin-bottom:10px">계산할 메뉴 선택</div>'+
-   allItems.map(function(it,i){
-    return '<div data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;cursor:pointer;background:'+(checks[i]?'rgba(8,145,178,.15)':'var(--surface2)')+';border:1.5px solid '+(checks[i]?'#0891b2':'var(--bd2)')+'">'+
-     '<div style="width:20px;height:20px;border-radius:50%;border:2px solid '+(checks[i]?'#0891b2':'var(--bd2)')+';background:'+(checks[i]?'#0891b2':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">'+(checks[i]?'✓':'')+'</div>'+
-     '<span style="flex:1;font-size:13px">'+(it.emoji||'🍽')+' '+(it.name||'')+' ×'+(it.qty||1)+'</span>'+
-     '<span style="font-size:13px;font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
-   }).join('')+
+   rows+
    '<div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin:10px 0;display:flex;justify-content:space-between">'+
    '<span style="font-size:13px;font-weight:700">선택 합계</span>'+
    '<span style="font-size:14px;font-weight:900;color:#0891b2">₩'+selTotal.toLocaleString()+'</span></div>'+
@@ -556,97 +572,85 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
    '<button id="tself-cancel" style="padding:12px 14px;background:var(--surface2);border:none;border-radius:12px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>'+
    '</div>';
 
-  // 클릭 이벤트
   box.querySelectorAll('[data-idx]').forEach(function(el){
    el.onclick=function(){
     var idx=parseInt(el.dataset.idx);
-    checks[idx]=!checks[idx];
+    checkedMap[idx]=!checkedMap[idx];
     render();
    };
   });
+
   var cardBtn=box.querySelector('#tself-card');
   var cashBtn=box.querySelector('#tself-cash');
   var cancelBtn=box.querySelector('#tself-cancel');
-  function doSelfPay(method,label){
-   if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
-   mo.remove();
-   var now=new Date();
-   var selectedItems=allItems.filter(function(_,i){return checks[i];});
-   var selectedNames=selectedItems.map(function(it){return it.name;});
-
-   // filo_sales에 선택된 항목만 저장 (DINE 연동)
-   _db.collection('filo_sales').add({
-    dealerId:did, type:'table', source:'qr',
-    items:selectedItems.map(function(it){return {id:it.id||'',name:it.name||'',price:it.price||0,qty:it.qty||1};}),
-    total:selTotal, tableNum:tableNum, tableName:tableName,
-    payMethod:method, payType:'prepay', status:'done',
-    date:now.toISOString().slice(0,10), createdAt:now.toISOString(), paidAt:now.toISOString()
-   }).catch(function(e){console.warn('[filo_sales]',e.message);});
-
-   // filo_orders에 paidItems 추가 방식
-   if(order.orders&&order.orders.length){
-    var batch=_db.batch();
-    var hasBatch=false;
-
-    // 선택된 아이템을 _ordId 기준으로 그룹핑
-    var ordMap={};
-    selectedItems.forEach(function(it){
-     var oid=it._ordId;
-     if(!oid)return;
-     if(!ordMap[oid])ordMap[oid]=[];
-     ordMap[oid].push(it);
-    });
-
-    order.orders.forEach(function(ord){
-     var ordId=ord.id||ord._id;
-     if(!ordId)return;
-     var paidForThisOrd=ordMap[ordId]||[];
-     if(paidForThisOrd.length===0)return; // 이 주문엔 선택된 아이템 없음
-
-     var paidNames=paidForThisOrd.map(function(it){return it.name;});
-     var unpaidItems=(ord.items||[]).filter(function(it){
-      var idx=paidNames.indexOf(it.name);
-      if(idx>=0){paidNames.splice(idx,1);return false;}
-      return true;
-     });
-     var newPaidItems=paidForThisOrd.map(function(it){
-      return Object.assign({},it,{payMethod:method,paidAt:now.toISOString()});
-     });
-     var existingPaid=ord.paidItems||[];
-     var allPaidItems=existingPaid.concat(newPaidItems);
-
-     if(unpaidItems.length===0){
-      batch.update(_db.collection('filo_orders').doc(ordId),{
-       status:'cleared', payMethod:method, paidAt:now.toISOString(),
-       paidItems:allPaidItems, items:[]
-      });
-     } else {
-      var unpaidTotal=unpaidItems.reduce(function(s,it){return s+(it.price||0)*(it.qty||1);},0);
-      batch.update(_db.collection('filo_orders').doc(ordId),{
-       paidItems:allPaidItems, items:unpaidItems, total:unpaidTotal
-      });
-     }
-     hasBatch=true;
-    });
-
-    if(hasBatch){
-     batch.commit().then(function(){
-      _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
-     }).catch(function(e){_filoToast('❌ '+e.message);});
-    } else {
-     _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
-    }
-   } else {
-    _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
-   }
-  }
-  if(cardBtn)cardBtn.onclick=function(){doSelfPay('card','💳 카드');};
-  if(cashBtn)cashBtn.onclick=function(){doSelfPay('cash','💵 현금');};
+  if(cardBtn)cardBtn.onclick=function(){pay('card','💳 카드');};
+  if(cashBtn)cashBtn.onclick=function(){pay('cash','💵 현금');};
   if(cancelBtn)cancelBtn.onclick=function(){mo.remove();};
  }
- mo.appendChild(box);
- mo.onclick=function(e){if(e.target===mo)mo.remove();};
- document.body.appendChild(mo);
+
+ function pay(method,label){
+  var selTotal=getSelTotal(); // 매번 새로 계산
+  if(selTotal<=0){_filoToast('메뉴를 선택하세요');return;}
+  var selectedItems=allItems.filter(function(_,i){return checkedMap[i];});
+  mo.remove();
+  var now=new Date();
+
+  // filo_sales 저장 (DINE 연동)
+  _db.collection('filo_sales').add({
+   dealerId:did, type:'table', source:'qr',
+   items:selectedItems.map(function(it){return {name:it.name||'',price:it.price||0,qty:it.qty||1};}),
+   total:selTotal, tableNum:tableNum, tableName:tableName,
+   payMethod:method, payType:'prepay', status:'done',
+   date:now.toISOString().slice(0,10),
+   createdAt:now.toISOString(), paidAt:now.toISOString()
+  }).catch(function(e){console.warn('[filo_sales]',e.message);});
+
+  // filo_orders 업데이트 - _ordId 기반 그룹핑
+  var ordMap={};
+  selectedItems.forEach(function(it){
+   var oid=it._ordId;
+   if(!oid)return;
+   if(!ordMap[oid])ordMap[oid]=[];
+   ordMap[oid].push(it.name);
+  });
+
+  var ords=order.orders||[];
+  if(ords.length&&Object.keys(ordMap).length){
+   var batch=_db.batch();
+   var hasBatch=false;
+   ords.forEach(function(ord){
+    var ordId=ord.id||ord._id;
+    if(!ordId||!ordMap[ordId])return;
+    var paidNames=ordMap[ordId].slice();
+    var remainItems=(ord.items||[]).filter(function(it){
+     var idx=paidNames.indexOf(it.name);
+     if(idx>=0){paidNames.splice(idx,1);return false;}
+     return true;
+    });
+    var newPaid=ordMap[ordId].map(function(name){
+     var it=allItems.find(function(a){return a.name===name&&a._ordId===ordId;});
+     return Object.assign({},it||{name:name},{payMethod:method,paidAt:now.toISOString()});
+    });
+    var allPaid=(ord.paidItems||[]).concat(newPaid);
+    if(remainItems.length===0){
+     batch.update(_db.collection('filo_orders').doc(ordId),{
+      status:'cleared',payMethod:method,paidAt:now.toISOString(),
+      paidItems:allPaid,items:[]
+     });
+    } else {
+     batch.update(_db.collection('filo_orders').doc(ordId),{
+      paidItems:allPaid,
+      items:remainItems,
+      total:remainItems.reduce(function(s,it){return s+(it.price||0)*(it.qty||1);},0)
+     });
+    }
+    hasBatch=true;
+   });
+   if(hasBatch)batch.commit().catch(function(e){console.warn('[batch]',e.message);});
+  }
+  _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+ }
+
  render();
 }
 
