@@ -497,7 +497,7 @@ window._filoTableClear=function(docId,did,num){
      if(seen[doc.id])return;seen[doc.id]=true;
      var d=doc.data();
      if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
-      batch.update(doc.ref,{status:'cleared',clearedAt:now});
+      batch.delete(doc.ref); // cleared 대신 삭제
      }
     });
    });
