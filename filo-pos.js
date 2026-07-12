@@ -606,9 +606,9 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
       return true;// 나머지 유지
      });
      if(remainItems.length===0){
-      // 이 주문의 모든 아이템이 결제됨 → paid 처리
+      // 이 주문의 모든 아이템이 결제됨 → cleared 처리
       batch.update(_db.collection('filo_orders').doc(ord.id),{
-       status:'paid',payMethod:method,paidAt:now.toISOString()
+       status:'cleared',payMethod:method,paidAt:now.toISOString(),items:[]
       });
       hasBatch=true;
      } else if(remainItems.length<(ord.items||[]).length){
