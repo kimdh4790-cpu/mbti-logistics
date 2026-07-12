@@ -102,8 +102,8 @@ function _filoPageOrders(el){
       '<div style="font-size:15px;font-weight:900;color:#22c55e">₩'+(o.total||0).toLocaleString()+'</div>'+
       (o.status!=='done'?
        '<div style="display:flex;gap:6px">'+
-       '<button data-oid="'+o._id+'" data-st="done" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
-       '<button data-oid="'+o._id+'" data-st="cancel" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st)" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
+       '<button data-oid="'+o._id+'" data-st="done" data-src="'+(o._src||'sales')+'" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st,this.dataset.src)" style="padding:6px 12px;background:#22c55e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ 완료</button>'+
+       '<button data-oid="'+o._id+'" data-st="cancel" data-src="'+(o._src||'sales')+'" onclick="_filoOrderStatus(this.dataset.oid,this.dataset.st,this.dataset.src)" style="padding:6px 12px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">❌ 취소</button>'+
        '</div>':'')+
       '</div></div>';
     }).join('');
@@ -133,8 +133,16 @@ function _filoPageOrders(el){
  _ordersUnsub=function(){_u1();_u2();};
 }
 
-function _filoOrderStatus(orderId, status){
- _db.collection('filo_sales').doc(orderId).update({status:status});
+function _filoOrderStatus(orderId, status, src){
+ var col = (src==='qr') ? 'filo_orders' : 'filo_sales';
+ _db.collection(col).doc(orderId).update({status:status}).then(function(){
+  // QR 주문 완료 시 filo_sales에도 상태 동기화
+  if(src==='qr' && status==='done'){
+   _db.collection('filo_sales').where('orderId','==',orderId).get().then(function(snap){
+    snap.forEach(function(doc){doc.ref.update({status:'done'});});
+   }).catch(function(){});
+  }
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
 // ── 테이블 QR 생성 ──
