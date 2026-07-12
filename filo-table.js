@@ -789,25 +789,74 @@ function _filoMarkPaid(did,tableNum,docId,btn,mo){
  if(!confirm('결제 완료 처리하시겠습니까?'))return;
  btn.disabled=true;btn.textContent='처리 중...';
  var today=new Date().toISOString().slice(0,10);
+
+ // 해당 테이블 미결제 주문 전체 조회
  _db.collection('filo_orders')
   .where('dealerId','==',did).where('type','==','table')
   .get().then(function(snap){
-   var batch=_db.batch();
+   var items=[];var orderIds=[];var total=0;var tableName='';
    snap.forEach(function(doc){
     var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today){
-     var tNum=String(d.tableNum||d.tableName||'');
-     if(tNum===String(tableNum))batch.update(doc.ref,{status:'paid',payType:'postpay',paidAt:new Date().toISOString()});
+    if(d.status!=='cleared'&&d.status!=='paid'&&d.status!=='cancel'){
+     var tNum=String(d.tableNum||'');
+     var tName=d.tableName||'';
+     if(tNum===String(tableNum)||tName===('테이블 '+tableNum)){
+      (d.items||[]).forEach(function(it){items.push(it);});
+      total+=(d.total||0);
+      tableName=tName||'테이블 '+tableNum;
+      orderIds.push(doc.id);
+     }
     }
    });
-   return batch.commit();
-  }).then(function(){
-   _filoToast('💳 결제 완료 처리됐습니다!');
-   if(mo)mo.remove();
-   // 테이블 자동 비움
-   if(docId&&!docId.startsWith('auto_'))
-    _db.collection('filo_tables').doc(docId).set({status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()},{merge:true});
-  }).catch(function(e){_filoToast('❌ '+e.message);btn.disabled=false;btn.textContent='💳 결제 완료 처리';});
+
+   // filo_payments에서 이미 결제된 금액 차감
+   _db.collection('filo_payments')
+    .where('dealerId','==',did).where('tableNum','==',tableNum).where('date','==',today)
+    .get().then(function(paySnap){
+     var paidTotal=0;
+     paySnap.forEach(function(doc){paidTotal+=doc.data().amount||0;});
+     var pendingTotal=Math.max(0,total-paidTotal);
+
+     if(pendingTotal<=0){
+      _filoToast('이미 모두 결제됐어요! ✅');
+      if(mo)mo.remove();
+      return;
+     }
+
+     // 결제 수단 선택 모달
+     var pm=document.createElement('div');pm.className='mo';
+     pm.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+     var pb=document.createElement('div');
+     pb.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:380px';
+     pb.innerHTML=
+      '<div style="font-size:15px;font-weight:900;margin-bottom:6px">💳 후불 결제</div>'+
+      '<div style="background:var(--surface2);border-radius:var(--r);padding:12px;margin-bottom:14px;display:flex;justify-content:space-between">'+
+      '<span style="font-size:13px">결제 금액</span>'+
+      '<span style="font-size:16px;font-weight:900;color:#22c55e">₩'+pendingTotal.toLocaleString()+'</span></div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+      '<button id="mp-card" style="flex:1;padding:14px;background:rgba(8,145,178,.15);border:1.5px solid #0891b2;border-radius:12px;color:#0891b2;font-size:14px;font-weight:700;cursor:pointer">💳 카드</button>'+
+      '<button id="mp-cash" style="flex:1;padding:14px;background:rgba(34,197,94,.15);border:1.5px solid #22c55e;border-radius:12px;color:#22c55e;font-size:14px;font-weight:700;cursor:pointer">💵 현금</button>'+
+      '</div>'+
+      '<button id="mp-cancel" style="width:100%;padding:11px;background:var(--surface2);border:none;border-radius:12px;color:var(--t2);font-size:13px;cursor:pointer">취소</button>';
+
+     pm.appendChild(pb);
+     pm.onclick=function(e){if(e.target===pm)pm.remove();};
+     document.body.appendChild(pm);
+
+     function doPay(method){
+      pm.remove();
+      if(mo)mo.remove();
+      _filoTablePay(did,items,pendingTotal,tableNum,tableName,method,orderIds);
+      // 테이블 비움
+      if(docId&&!docId.startsWith('auto_'))
+       _db.collection('filo_tables').doc(docId).set({status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()},{merge:true});
+     }
+
+     pb.querySelector('#mp-card').onclick=function(){doPay('card');};
+     pb.querySelector('#mp-cash').onclick=function(){doPay('cash');};
+     pb.querySelector('#mp-cancel').onclick=function(){pm.remove();btn.disabled=false;btn.textContent='💳 후불 결제';};
+    }).catch(function(e){_filoToast('❌ '+e.message);btn.disabled=false;});
+  }).catch(function(e){_filoToast('❌ '+e.message);btn.disabled=false;});
 }
 window._filoConfirmCall=function(idsStr,tableNum){
  var ids=idsStr.split(',');
