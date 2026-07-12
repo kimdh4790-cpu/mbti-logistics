@@ -395,8 +395,10 @@ function _filoTableLoad(did){
    var s=t.status;
    var ord=orderMap[String(t.num)]||orderMap[t.name]||null;
    var hasOrder=ord&&ord.total>0;
+   // 주문/결제 있으면 occupied로 보정 (비움 전까지)
+   if(s==='empty'&&hasOrder)s='occupied';
    // 결제 상태
-   var isPaid=ord&&ord.paid;
+   var isPaid=ord&&(ord.paid||ord.hasCleared)&&!ord.hasPending;
    var color=s==='empty'?'#22c55e':isPaid?'#6366f1':s==='occupied'?'#ef4444':'#f59e0b';
    var bg=s==='empty'?'rgba(34,197,94,.06)':isPaid?'rgba(99,102,241,.08)':s==='occupied'?'rgba(239,68,68,.08)':'rgba(245,158,11,.08)';
    var border=s==='empty'?'rgba(34,197,94,.25)':isPaid?'rgba(99,102,241,.3)':s==='occupied'?'rgba(239,68,68,.25)':'rgba(245,158,11,.3)';
@@ -479,15 +481,11 @@ window._filoTableSeat=function(docId,did,num){
 
 window._filoTableClear=function(docId,did,num){
  var now=new Date().toISOString();
- // auto_ 또는 dealerId_t{num} 패턴 모두 처리
+ var today=now.slice(0,10);
  var id=(docId.startsWith('auto_')||docId===did+'_t'+num)?(did+'_t'+num):docId;
- // 테이블 상태 비움
  _db.collection('filo_tables').doc(id).set({
   status:'empty',occupiedSince:'',reservedName:'',updatedAt:now
  },{merge:true}).then(function(){
-  // 해당 테이블의 오늘 주문 cleared 처리
-  var today=new Date().toISOString().slice(0,10);
-  // tableNum이 숫자로 저장된 경우와 문자열로 저장된 경우 모두 처리
   var queries=[
    _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table').where('tableNum','==',parseInt(num)).get(),
    _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table').where('tableNum','==',String(num)).get()
@@ -505,9 +503,18 @@ window._filoTableClear=function(docId,did,num){
    });
    return batch.commit();
   }).then(function(){
-    _filoToast('🪑 테이블 '+num+' 비움');
-    _filoTableLoad(did);
-   });
+   // filo_payments 삭제 (결제 내역 초기화)
+   return _db.collection('filo_payments')
+    .where('dealerId','==',did).where('tableNum','==',parseInt(num)).where('date','==',today)
+    .get().then(function(snap){
+     var b=_db.batch();
+     snap.forEach(function(doc){b.delete(doc.ref);});
+     return b.commit();
+    });
+  }).then(function(){
+   _filoToast('🪑 테이블 '+num+' 비움');
+   _filoTableLoad(did);
+  });
  });
 };
 
@@ -575,6 +582,8 @@ function _filoTableOrderModal(did,table,order){
  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;backdrop-filter:blur(4px)';
  var s=table.status;
  var hasOrder=order&&order.total>0;
+ // 주문/결제 있으면 occupied로 보정
+ if(s==='empty'&&hasOrder)s='occupied';
  var today=new Date().toISOString().slice(0,10);
 
  // 로딩 화면 먼저 표시
