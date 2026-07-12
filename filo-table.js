@@ -505,10 +505,14 @@ window._filoTableClear=function(docId,did,num){
   }).then(function(){
    // filo_payments 삭제 (결제 내역 초기화)
    return _db.collection('filo_payments')
-    .where('dealerId','==',did).where('tableNum','==',parseInt(num)).where('date','==',today)
+    .where('dealerId','==',did)
+    .where('date','==',today)
     .get().then(function(snap){
      var b=_db.batch();
-     snap.forEach(function(doc){b.delete(doc.ref);});
+     snap.forEach(function(doc){
+      if(doc.data().tableNum===parseInt(num)||doc.data().tableNum===String(num))
+       b.delete(doc.ref);
+     });
      return b.commit();
     });
   }).then(function(){
