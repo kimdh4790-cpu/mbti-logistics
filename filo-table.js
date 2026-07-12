@@ -577,6 +577,14 @@ function _filoTableOrderModal(did,table,order){
  var hasOrder=order&&order.total>0;
  var today=new Date().toISOString().slice(0,10);
 
+ // 로딩 화면 먼저 표시
+ var inner=document.createElement('div');
+ inner.style.cssText='background:var(--surface);border-radius:24px 24px 0 0;width:100%;padding:40px 20px;text-align:center;color:var(--t3)';
+ inner.innerHTML='<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px"></div>⏳ 로딩 중...';
+ mo.appendChild(inner);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+
  // filo_payments에서 이 테이블 오늘 결제 내역 조회
  _db.collection('filo_payments')
   .where('dealerId','==',did)
@@ -643,7 +651,7 @@ function _filoTableOrderModal(did,table,order){
     summaryHtml+='<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding:8px 0;border-top:1px solid var(--bd);margin-top:4px"><span>합계</span><span style="color:#0891b2">₩'+(order.total||0).toLocaleString()+'</span></div>';
    }
 
-   var inner=document.createElement('div');
+   var inner=mo.querySelector('div');
    inner.style.cssText='background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px 20px 36px';
    inner.innerHTML=
     '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px"></div>'+
@@ -771,10 +779,6 @@ function _filoTableOrderModal(did,table,order){
    closeBtn.textContent='닫기';
    closeBtn.onclick=function(){mo.remove();};
    btnRow.appendChild(closeBtn);
-
-   mo.appendChild(inner);
-   mo.onclick=function(e){if(e.target===mo)mo.remove();};
-   document.body.appendChild(mo);
   }).catch(function(){
    mo.remove();
   });
