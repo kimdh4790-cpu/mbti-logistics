@@ -519,30 +519,54 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 // ── 주문 대기 페이지 (실시간) ──
 var _ordersUnsub = null;
 function _filoTableSelfPay(did,order,tableNum,tableName){
- // orders 배열에서 items 펼치기 (_ordId 태깅)
- var allItems=[];
- if(order.orders&&order.orders.length){
-  order.orders.forEach(function(ord){
-   (ord.items||[]).forEach(function(it){
-    allItems.push(Object.assign({},it,{_ordId:ord.id||ord._id,qty:it.qty||1}));
+ var today=new Date().toISOString().slice(0,10);
+
+ // filo_payments에서 이미 결제된 항목 조회 후 목록 구성
+ _db.collection('filo_payments')
+  .where('dealerId','==',did)
+  .where('tableNum','==',tableNum)
+  .where('date','==',today)
+  .get().then(function(paySnap){
+   // 이미 결제된 아이템 이름 목록
+   var paidNames=[];
+   paySnap.forEach(function(doc){
+    (doc.data().items||[]).forEach(function(it){paidNames.push(it.name);});
    });
-  });
- } else {
-  (order.items||[]).forEach(function(it){
-   allItems.push(Object.assign({},it,{qty:it.qty||1}));
-  });
- }
 
- var mo=document.createElement('div');mo.className='mo';
- mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
- var box=document.createElement('div');
- box.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
- mo.appendChild(box);
- mo.onclick=function(e){if(e.target===mo)mo.remove();};
- document.body.appendChild(mo);
+   // orders 배열에서 items 펼치기 (_ordId 태깅) - 이미 결제된 것 제외
+   var allItems=[];
+   if(order.orders&&order.orders.length){
+    order.orders.forEach(function(ord){
+     (ord.items||[]).forEach(function(it){
+      // 이미 결제된 항목 제외
+      var pidx=paidNames.indexOf(it.name);
+      if(pidx>=0){paidNames.splice(pidx,1);return;}
+      allItems.push(Object.assign({},it,{_ordId:ord.id||ord._id,qty:it.qty||1}));
+     });
+    });
+   } else {
+    (order.items||[]).forEach(function(it){
+     var pidx=paidNames.indexOf(it.name);
+     if(pidx>=0){paidNames.splice(pidx,1);return;}
+     allItems.push(Object.assign({},it,{qty:it.qty||1}));
+    });
+   }
 
- var checkedMap={};
- allItems.forEach(function(_,i){checkedMap[i]=false;});
+   if(allItems.length===0){
+    _filoToast('모든 항목이 이미 결제됐어요! ✅');
+    return;
+   }
+
+   var mo=document.createElement('div');mo.className='mo';
+   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+   var box=document.createElement('div');
+   box.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto';
+   mo.appendChild(box);
+   mo.onclick=function(e){if(e.target===mo)mo.remove();};
+   document.body.appendChild(mo);
+
+   var checkedMap={};
+   allItems.forEach(function(_,i){checkedMap[i]=false;});
 
  function getSelTotal(){
   return allItems.reduce(function(s,it,i){
@@ -638,10 +662,11 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
     }
    }).catch(function(){});
 
-  _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
- }
+   _filoToast(label+' ₩'+selTotal.toLocaleString()+' 결제 완료! ✅');
+  }
 
- render();
+  render();
+ }).catch(function(){_filoToast('❌ 결제 내역 조회 실패');});
 }
 
 
