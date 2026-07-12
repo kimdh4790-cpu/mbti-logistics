@@ -1004,41 +1004,63 @@ function _filoTableMoveModal(did,fromNum,fromName,order){
 
 window._filoDoTableMove=function(did,fromNum,toNum,moEl){
  var db=firebase.firestore();
- // filo_orders에서 fromNum → toNum으로 변경
- db.collection('filo_orders')
-  .where('dealerId','==',did)
-  .where('tableNum','==',String(fromNum))
-  .where('status','in',['pending','ready'])
-  .get().then(function(snap){
-   var batch=db.batch();
+ var now=new Date().toISOString();
+ var toName='테이블 '+toNum;
+
+ // filo_orders: fromNum → toNum (숫자/문자 모두)
+ Promise.all([
+  db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(fromNum)).get(),
+  db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',parseInt(fromNum)).get()
+ ]).then(function(results){
+  var batch=db.batch();var seen={};
+  results.forEach(function(snap){
    snap.forEach(function(doc){
+    if(seen[doc.id])return;seen[doc.id]=true;
+    if(doc.data().status==='cancel'||doc.data().status==='cleared')return;
     batch.update(doc.ref,{
-     tableNum:String(toNum),
-     tableName:'테이블 '+toNum,
-     movedFrom:String(fromNum),
-     movedAt:new Date().toISOString()
+     tableNum:parseInt(toNum),
+     tableName:toName,
+     movedFrom:parseInt(fromNum),
+     movedAt:now
+    });
+   });
+  });
+  return batch.commit();
+ }).then(function(){
+  // filo_payments도 이동
+  var today=now.slice(0,10);
+  return Promise.all([
+   db.collection('filo_payments').where('dealerId','==',did).where('tableNum','==',parseInt(fromNum)).where('date','==',today).get(),
+   db.collection('filo_payments').where('dealerId','==',did).where('tableNum','==',String(fromNum)).where('date','==',today).get()
+  ]).then(function(results){
+   var batch=db.batch();var seen={};
+   results.forEach(function(snap){
+    snap.forEach(function(doc){
+     if(seen[doc.id])return;seen[doc.id]=true;
+     batch.update(doc.ref,{tableNum:parseInt(toNum),tableName:toName});
     });
    });
    return batch.commit();
-  }).then(function(){
-   // filo_tables 상태도 업데이트
-   return db.collection('filo_tables')
-    .where('dealerId','==',did)
-    .where('tableNum','==',parseInt(fromNum))
-    .get();
-  }).then(function(snap){
-   var batch=db.batch();
-   snap.forEach(function(doc){batch.update(doc.ref,{status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()});});
-   return batch.commit();
-  }).then(function(){
-   _filoToast('✅ 테이블 '+fromNum+' → '+toNum+' 이동 완료!');
-   if(moEl)moEl.closest('[style*=fixed]').remove();
-   // 테이블 현황 새로고침
-   setTimeout(function(){
-    var cont=document.getElementById('content');
-    if(cont)_filoPageTableOrder(cont,did);
-   },500);
-  }).catch(function(e){_filoToast('❌ '+e.message);});
+  });
+ }).then(function(){
+  // filo_tables: fromNum → empty
+  return db.collection('filo_tables').where('dealerId','==',did).where('tableNum','==',parseInt(fromNum)).get()
+   .then(function(snap){
+    var batch=db.batch();
+    snap.forEach(function(doc){batch.update(doc.ref,{status:'empty',occupiedSince:'',updatedAt:now});});
+    return batch.commit();
+   });
+ }).then(function(){
+  _filoToast('↔️ 테이블 '+fromNum+' → '+toNum+' 이동 완료!');
+  if(moEl)moEl.remove();
+  // POS 테이블바 알림
+  if(window._loadKioskTableBar)_loadKioskTableBar();
+  // 테이블 현황 새로고침
+  setTimeout(function(){
+   var cont=document.getElementById('content');
+   if(cont&&typeof _filoPageTableOrder==='function')_filoPageTableOrder(cont,did);
+  },500);
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 };
 
 function _filoPageSchedule(el){
