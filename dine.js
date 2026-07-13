@@ -589,16 +589,37 @@ function _dineWatchAttend(){
 }
 
 function _dineLoadDashboard(did,today){
- Promise.all([
-  _firestoreQuery('filo_sales',[{field:'dealerId',value:did},{field:'date',value:today}]),
-  _firestoreQuery('attendance',[{field:'dealerId',value:did},{field:'date',value:today}]),
-  _firestoreQuery('members',[{field:'dealerId',value:did}])
- ]).then(function(results){
-  var sales=results[0],atts=results[1],mems=results[2];
+ if(window._dineSalesUnsub)window._dineSalesUnsub();
+ var costMap={};
+ _db.collection('menu_costs').where('dealerId','==',did).get()
+  .then(function(cs){cs.forEach(function(doc){var d=doc.data();if(d.name)costMap[d.name]=+d.cost||0;});})
+  .catch(function(){});
+ // filo_sales 실시간 onSnapshot
+ window._dineSalesUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(salesSnap){
+  Promise.all([
+   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).get(),
+   _db.collection('members').where('dealerId','==',did).get()
+  ]).then(function(results){
+  var attSnap=results[0],memSnap=results[1];
+  var atts=[],mems=[];
+  attSnap.forEach(function(doc){atts.push(Object.assign({_id:doc.id},doc.data()));});
+  memSnap.forEach(function(doc){mems.push(Object.assign({_id:doc.id},doc.data()));});
+  var sales=[];
+  salesSnap.forEach(function(doc){sales.push(Object.assign({_id:doc.id},doc.data()));});
 
-  /* 매출 */
-  var totalSales=0,orderCnt=0;
-  sales.forEach(function(d){if(d.status!=='cancelled'){totalSales+=parseInt(d.total)||0;orderCnt++;}});
+  /* 매출 + 원가 */
+  var totalSales=0,orderCnt=0,totalCost=0;
+  sales.forEach(function(d){
+   if(d.status!=='cancelled'){
+    totalSales+=parseInt(d.total)||0;
+    orderCnt++;
+    (d.items||[]).forEach(function(it){totalCost+=(costMap[it.name]||0)*(it.qty||1);});
+   }
+  });
+  var todayProfit=totalSales-totalCost;
+  var marginRate=totalSales>0?Math.round(todayProfit/totalSales*100):0;
 
   /* 출퇴근 */
   var ins={},outs={};
