@@ -1,18 +1,15 @@
-/*
- * filo-common.js — FILO 공통 유틸/QR/재고입출
- *
- * ⚠️ 리팩토링 완료 (2026-07-13) — 모듈 분리:
- * - filo-auth.js       로그인, 회원가입, Firebase 초기화
- * - filo-margin.js     마진분석, AI인사이트, 대시보드
- * - filo-members.js    회원관리, 출퇴근, 재고이력
- * - filo-payroll2.js   급여, 명세서
- * - filo-payment.js    결제, 분할결제, QR
- * - filo-schedule.js   스케줄, 예약, 캘린더
- * - filo-settings.js   설정, 구독, 세금공유, 공지, 카테고리
- *
- * filo.html에서 위 파일들 모두 로드 필요
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      filo-common.js
+ * @description 공통 유틸리티·동적QR·FCM 알림·사이드바
  */
-// filo-common.js - 공통 초기화, Firebase, 네비게이션, 유틸, POS 카트 결제
 // 의존성: Firebase SDK
 // 전역변수: _CU, _db, _storage, _cachedCompanyDoc, _cartItems
 // 관련 컬렉션: filo_sales, filo_menus, members, attendance
