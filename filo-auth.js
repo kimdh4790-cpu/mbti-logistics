@@ -712,11 +712,11 @@ function _filoWatchDineSales(){
  var did=d.dealerId||d.uid||'';
  if(!did||!_db)return;
  var today=new Date().toISOString().slice(0,10);
- window._filoDineSalesUnsub=_db.collection('filo_orders')
+ window._filoDineSalesUnsub=_db.collection('filo_sales')
   .where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(snap){
    var total=0,cnt=0;
-   snap.forEach(function(doc){var d=doc.data();total+=d.totalAmount||0;cnt++;});
+   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
    var el=document.getElementById('filo-dine-sales');
    if(el)el.textContent='DINE ₩'+total.toLocaleString()+'('+cnt+'건)';
   },function(){});
