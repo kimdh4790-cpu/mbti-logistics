@@ -408,6 +408,58 @@ function _dineAfterLogin(){
  }
  _dineRequestNotifPermission(_CU.dealerId);
  _dineWatchAttend();
+ _dineWatchFiloSales();  // FILO POS 실시간 연동
+ _dineWatchReservations(); // 예약 실시간 연동
+}
+
+// FILO POS 매출 실시간 감시 (FILO→DINE 연동)
+function _dineWatchFiloSales(){
+ if(window._dineFiloSalesUnsub)window._dineFiloSalesUnsub();
+ var did=_CU&&_CU.dealerId;
+ if(!did||!_db)return;
+ var today=new Date().toISOString().slice(0,10);
+ var totalEl=document.getElementById('filo-live-total');
+ window._dineFiloSalesUnsub=_db.collection('filo_sales')
+  .where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var total=0,cnt=0;
+   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
+   // 사이드바/헤더에 실시간 매출 표시
+   var liveEl=document.getElementById('dine-live-sales');
+   if(liveEl){liveEl.textContent='POS ₩'+total.toLocaleString();liveEl.style.color='#22c55e';}
+   // 대시보드 KPI 실시간 갱신
+   var kSales=document.getElementById('kpi-sales');
+   if(kSales&&kSales.dataset.source==='live')kSales.textContent='₩'+total.toLocaleString();
+  },function(e){console.warn('filo-sales:',e);});
+}
+
+// 예약 실시간 감시
+function _dineWatchReservations(){
+ if(window._dineResUnsub)window._dineResUnsub();
+ var did=_CU&&_CU.dealerId;
+ if(!did||!_db)return;
+ var today=new Date().toISOString().slice(0,10);
+ window._dineResUnsub=_db.collection('filo_bookings')
+  .where('dealerId','==',did).where('date','==',today).where('status','==','pending')
+  .onSnapshot(function(snap){
+   var badge=document.getElementById('dine-res-badge');
+   if(badge){
+    badge.textContent=snap.size>0?snap.size:'';
+    badge.style.display=snap.size>0?'flex':'none';
+   }
+   // 새 예약 푸시 알림
+   if(snap.docChanges){
+    snap.docChanges().forEach(function(change){
+     if(change.type==='added'){
+      var d=change.doc.data();
+      _dineToast('📅 새 예약: '+d.customerName+'님 '+d.seats+'인 ('+d.time+')');
+      if('Notification' in window&&Notification.permission==='granted'){
+       new Notification('새 예약 알림',{body:d.customerName+'님 '+d.seats+'인 '+d.time,icon:'/dine-icon-192.png'});
+      }
+     }
+    });
+   }
+  },function(e){console.warn('reservations:',e);});
 }
 
 function _dineUpdateSidebarStaff(){
