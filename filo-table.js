@@ -418,14 +418,21 @@ function _filoTableLoad(did){
 
    var card=document.createElement('div');
    card.dataset.tnum=t.num;
-   card.style.cssText='background:'+bg+';border:1.5px solid '+border+';border-radius:14px;padding:12px;text-align:center;position:relative;cursor:pointer;transition:.15s';
+   var elapsedMin=s==='occupied'&&t.occupiedSince?Math.floor((Date.now()-new Date(t.occupiedSince))/60000):0;
+   var urgentBg=elapsedMin>=60?'rgba(239,68,68,.15)':elapsedMin>=30?'rgba(245,158,11,.1)':bg;
+   var urgentBorder=elapsedMin>=60?'rgba(239,68,68,.5)':elapsedMin>=30?'rgba(245,158,11,.4)':border;
+   card.style.cssText='background:'+(s==='occupied'?urgentBg:bg)+';border:1.5px solid '+(s==='occupied'?urgentBorder:border)+';border-radius:14px;padding:12px;text-align:center;position:relative;cursor:pointer;transition:.15s';
    card.onmouseenter=function(){this.style.transform='scale(1.02)';};
    card.onmouseleave=function(){this.style.transform='';};
 
+   var elapsedTxt=elapsedMin>=60?'⚠️ '+elapsedMin+'분':elapsedMin>=30?'⏱ '+elapsedMin+'분':'';
+   var pendAmt=ord&&ord.pendingTotal>0?ord.pendingTotal:0;
    var html='<div style="font-size:22px;margin-bottom:4px">'+icon+'</div>'+
     '<div style="font-size:12px;font-weight:800;color:var(--tx)">'+t.name+'</div>'+
     '<div style="font-size:10px;font-weight:700;color:'+color+';margin-top:2px">'+statusTxt+'</div>'+
-    (sub?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+sub+'</div>':'')+
+    (elapsedTxt?'<div style="font-size:9px;font-weight:700;color:'+(elapsedMin>=60?'#ef4444':'#f59e0b')+';margin-top:1px">'+elapsedTxt+'</div>':'')+
+    (pendAmt>0?'<div style="font-size:11px;font-weight:900;color:#fbbf24;margin-top:2px">₩'+pendAmt.toLocaleString()+'</div>':'')+
+    (!elapsedTxt&&sub?'<div style="font-size:9px;color:var(--t3);margin-top:1px">'+sub+'</div>':'')+
     (ord&&ord.orders&&ord.orders.some(function(o){return o.movedFrom;})?
      '<div style="font-size:9px;color:#f59e0b;margin-top:2px">↔️ '+(ord.orders.find(function(o){return o.movedFrom;})||{}).movedFrom+'번에서 이동</div>':'')+
     (ord&&ord.paidTotal>0?'<div style="margin-top:4px;font-size:12px;font-weight:900;color:#818cf8">✅ ₩'+ord.paidTotal.toLocaleString()+'</div>':'')+
