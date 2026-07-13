@@ -1,14 +1,33 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-payroll2.js
- * @description 급여관리·명세서·카카오알림톡
+ * ══════════════════════════════════════════════════════
+ * 역할: 급여 자동계산 · 명세서 발송 (2026 근로기준법)
+ *
+ * 저장 컬렉션:
+ *   filo_attendances — QR 출퇴근 기록 (급여 계산 소스)
+ *   filo_staffs      — 직원 시급·4대보험 정보
+ *   filo_payrolls    — 월 급여 확정 내역
+ *
+ * 급여 계산 항목:
+ *   기본급: 시급 × 근무시간
+ *   주휴수당: 주 15시간 이상 시 자동 산정
+ *   야간수당: 22:00~06:00 × 1.5배
+ *   연장수당: 8시간 초과 × 1.5배 (5인 미만 제외)
+ *   4대보험: 국민연금4.5%, 건강보험3.545%, 고용보험0.9%, 산재보험(사측)
+ *   휴식공제: QR 휴식 시작~종료 자동 차감
+ *
+ * 알림톡 발송:
+ *   카카오 알림톡으로 직원 개인 명세서 발송
+ *   현재: 솔라피 API (13원/건)
+ *   교체 예정: 알리고 API (6.5원/건) — 절반 비용
+ *   엔드포인트: /api/kakao-alimtalk (_worker.js)
+ *
+ * 주요 함수:
+ *   _filoCalcPayroll(did, month)  — 급여 자동계산
+ *   _filoSendPayslip(staffId)     — 개인 명세서 카카오 발송
+ *   _filoSendAllPayslips(did)     — 전 직원 일괄 발송
+ *   _filoConfirmPayroll(did)      — 급여 확정 처리
+ * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
