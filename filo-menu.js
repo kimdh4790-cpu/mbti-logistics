@@ -727,6 +727,7 @@ function _filoMenuAddModal(did, menu, cat){
   {id:'menu-cat-inp',l:'카테고리',type:'text',ph:'커피',val:menu?menu.category||'':''},
   {id:'menu-emoji-inp',l:'이모지',type:'text',ph:'☕',val:menu?menu.emoji||'🍽':'🍽'},
   {id:'menu-stock-inp',l:'재고 수량 (선택)',type:'number',ph:'100',val:menu&&menu.stock!=null?menu.stock:''},
+  {id:'menu-stock-min-inp',l:'재고 알림 기준 (선택)',type:'number',ph:'10',val:menu&&menu.stockMin!=null?menu.stockMin:''},
  ];
  fields.forEach(function(f){
   var g=document.createElement('div');g.style.marginBottom='10px';
