@@ -341,7 +341,7 @@ function _openAddrPopup(){
   var main=(document.getElementById('_ai1')||{}).value||'';
   var detail=(document.getElementById('_ai2')||{}).value||'';
   main=main.trim();detail=detail.trim();
-  if(!main){alert('주소를 입력해주세요');return;}
+  if(!main){_filoToast('📍 주소를 입력해주세요');return;}
   if(typeof _addrFull!=='undefined')_addrFull=main+(detail?' '+detail:'');
   if(typeof _addr!=='undefined')_addr=main+(detail?' '+detail:'');
   var btns=document.querySelectorAll('[id^="addr-btn"]');
