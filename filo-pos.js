@@ -1,16 +1,45 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-pos.js
- * @description POS UI·주문·결제·주방출력·픽업알림
+ * @description POS UI · 주문 · 결제 · 주방출력 · 픽업알림
+ *
+ * ══════════════════════════════════════════════════════
+ * 📋 이 파일의 역할 & 연결 구조
+ * ══════════════════════════════════════════════════════
+ * 역할: POS 화면 전체 (장바구니·메뉴·테이블결제·픽업)
+ *
+ * 저장 컬렉션:
+ *   filo_sales    — POS 결제 내역
+ *   filo_payments — 테이블 분할결제 (각자계산)
+ *   filo_orders   — 테이블 주문 (테이블 선택 시)
+ *   filo_menus    — 메뉴 목록 조회
+ *
+ * FCM 발송:
+ *   _filoSendPickupPush() — filo-table.js 791~810줄
+ *   → 픽업알림: /fcm/notify-drivers (type:'pickup')
+ *   ※ 결제 완료 FCM: filo-payment.js _filoSendReceiptPush()
+ *
+ * 주요 함수:
+ *   _filoTablePay(did,sel,total,tNum,tName,method,ids) — 테이블 결제 통합 (468줄)
+ *   _filoTableSelfPay(did,tNum,tName,orderIds)         — 각자계산 (535줄)
+ *   _filoConfirmPay(method, methodLabel)               — filo-payment.js
+ *   _filoShowReceipt(id,items,total,method,label,now)  — 영수증 모달 (390줄)
+ *   _cartAddFromEl(el)                                 — 장바구니 담기 (639줄)
+ *
+ * 연결 파일:
+ *   filo-payment.js  — 결제 확정, FCM 영수증
+ *   filo-table.js    — 테이블 현황, 픽업 알림
+ *   filo-menu.js     — 메뉴 관리
+ *   filo-members.js  — 회원 관리
+ *   filo-common.js   — _filoToast, _filoModal 등 공통
+ *
+ * 결제 흐름:
+ *   POS 결제: 장바구니 → _filoConfirmPay() → filo_sales 저장
+ *   테이블 결제: 테이블선택 → _filoTablePay() → filo_payments + filo_sales
+ *   각자계산: _filoTableSelfPay() → 항목별 개별 결제
+ *   픽업알림: 준비완료 버튼 → _filoSendPickupPush() → 손님 FCM
+ *   영수증: 결제완료 → _filoSendReceiptPush() → 손님 FCM (신규)
+ * ══════════════════════════════════════════════════════
  */
-// 의존성: filo-common.js, filo-table.js
 // 관련 컬렉션: filo_sales, filo_payments, filo_orders, filo_menus
 // ⚠️ 2026-07-12 리팩토링:
 //   _filoSelfPay (구버전 각자계산) 제거
