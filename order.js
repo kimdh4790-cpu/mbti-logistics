@@ -1,24 +1,15 @@
-/*
- * order.js - FILO 테이블 QR 주문 페이지 v3
- * URL: filo.ai.kr/order?d=dealerId&t=tableNum&name=tableName
- *
- * ⚠️ 수정 시 주의사항:
- * - GitHub push → 자동배포 (GitHub Actions → KV)
- * - 공통 로직: filo-order-common.js 참조
- * - 관련: order.html, _worker.js
- * - GitHub Token: ghp_***참조:secrets*** (기한없음)
- *
- * 테이블QR 전용 기능:
- * - 선결제/후불 선택 (_openPayMdl, _doOrder)
- * - 직원 호출 (_callStaff)
- * - 픽업 알림 (Firestore onSnapshot - status:'ready')
- * - 테이블 번호 표시
- *
- * 번역: filo_menus.nameTranslations 우선 → Anthropic 재시도3회 → Google 폴백
- * Firebase: filo_orders, staff_calls write (비로그인)
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      order.js
+ * @description QR테이블오더·주문·결제·AI추천
  */
-
-// ── 전역 변수 ─────────────────────────────────────────────────────────────────
 var _did='', _tNum='', _tName='';
 var _menus=[], _cart={}, _lang='ko';
 var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
