@@ -2498,12 +2498,7 @@ async function acceptExchange(){
 
     // ── 스캔 세션 저장 ──
     // ── 간선차 GPS 저장 ──
-    if (path === '/get-label-key') {
-      const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      return new Response(JSON.stringify({ k }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
-      });
-    }
+    // /get-label-key 삭제됨 (보안 취약점 — API 키 노출)
 
     // ── /api/join-member — 직원 가입 시 members 자동 저장 (서버 백업)
   if (path === '/api/join-member' && request.method === 'POST') {
