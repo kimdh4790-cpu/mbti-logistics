@@ -1,4 +1,15 @@
-// filo-menu.js - 메뉴관리, 레시피, 원가, 유통기한
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      filo-menu.js
+ * @description 메뉴관리·원가계산·마진율·재고알림·AI이미지생성
+ */
 // 의존성: filo-common.js
 // 관련 컬렉션: filo_menus, menu_recipes, menu_costs
 // ⚠️ 2026-07-12 filo-common.js에서 분리됨
