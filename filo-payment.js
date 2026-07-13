@@ -3,12 +3,42 @@
  * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
  * @author      김형우 (kimdh4790@gmail.com)
  * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-payment.js
  * @description 결제처리·분할결제·QR결제
+ *
+ * ══════════════════════════════════════════════════════
+ * 📋 이 파일의 역할 & 연결 구조
+ * ══════════════════════════════════════════════════════
+ * 역할: POS 결제 처리 (선불/후불/현금/카드/분할/카카오페이)
+ *
+ * 저장 컬렉션:
+ *   filo_sales    — 모든 결제 내역 (POS + 테이블)
+ *   filo_orders   — 테이블 주문 (테이블 선택 시만 추가 저장)
+ *   filo_payments — 테이블 분할결제 내역
+ *
+ * FCM 푸시 발송:
+ *   결제 완료 시 → _filoSendReceiptPush() 호출
+ *   → /fcm/notify-drivers 엔드포인트 (donway.ai.kr/_worker.js)
+ *   → 고객 폰에 영수증 알림 (type: 'receipt')
+ *   ※ FCM 토큰: filo_orders.fcmToken (QR 스캔 시 저장됨)
+ *
+ * 연결 파일:
+ *   filo-pos.js       — POS UI, 장바구니, _filoTablePay() 호출
+ *   filo-table.js     — 테이블 현황, 픽업알림(_filoSendPickupPush)
+ *   filo-common.js    — 공통 함수 (_filoToast, _filoShowReceipt 등)
+ *   firebase-messaging-sw.js — 백그라운드 푸시 수신 (type: receipt 추가 필요)
+ *
+ * 주요 함수:
+ *   _filoConfirmPay(method, methodLabel) — POS 결제 확정 (filo_sales 저장)
+ *   _filoTablePay(did,items,total,...)   — 테이블 결제 (filo-pos.js에 있음)
+ *   _filoSendReceiptPush(token, data)    — 결제 완료 FCM 영수증 발송 ★신규
+ *   _filoQRSave(num, name)               — QR 이미지 저장
+ *   _filoEnsureQR(cb)                    — QR 라이브러리 동적 로드
+ *
+ * TODO:
+ *   - 알림톡 연동: 카카오 비즈메시지 영수증 발송 (현재 FCM으로 대체)
+ *   - 솔라피 → 알리고 교체 예정 (6.5원/건, 현재 13원/건)
+ * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
@@ -50,10 +80,24 @@ function _filoConfirmPay(method, methodLabel){
    // 후불: 주문 접수 토스트만
    var tMsg=tableName&&tableName!=='카운터'?tableName+' ':'';
    _filoToast('✅ '+tMsg+'주문 접수됐습니다!');
+   // FCM 주문 접수 알림 (fcmToken 있을 때)
+   if(saveData.fcmToken) {
+     _filoSendReceiptPush(saveData.fcmToken, {
+       items: items, total: total,
+       methodLabel: '주문 접수', tableName: tableName
+     });
+   }
    _cartClear();
   } else {
-   // 선불: 영수증 출력
+   // 선불: 영수증 출력 + FCM 영수증 발송
    _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
+   // FCM 영수증 발송 (테이블 주문이고 fcmToken 있을 때)
+   if(tableId && saveData.fcmToken) {
+     _filoSendReceiptPush(saveData.fcmToken, {
+       items: items, total: total,
+       methodLabel: methodLabel, tableName: tableName
+     });
+   }
    _cartClear();
   }
  }).catch(function(e){_filoToast('❌ '+e.message);});
