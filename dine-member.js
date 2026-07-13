@@ -76,7 +76,7 @@ function _dineAddMember(did,memberId,existing){
  box.querySelector('#mb-save-btn').onclick=function(){
   var name=document.getElementById('mb-name').value.trim();
   var phone=document.getElementById('mb-phone').value.trim();
-  if(!name||!phone){alert('이름과 연락처를 입력하세요');return;}
+  if(!name||!phone){_filoToast('이름과 연락처를 입력하세요');return;}
   var data={dealerId:did,name:name,phone:phone,
    birth:document.getElementById('mb-birth').value,
    point:parseInt(document.getElementById('mb-point').value)||0,
@@ -176,7 +176,7 @@ function _dineSaveReservation(did){
   seats:parseInt(document.getElementById('r-seats').value)||2,
   memo:document.getElementById('r-memo').value,
   status:'pending',createdAt:new Date().toISOString()};
- if(!data.customerName){alert('고객명 입력');return;}
+ if(!data.customerName){_filoToast('고객명 입력');return;}
  _db.collection('filo_bookings').add(data).then(function(){
   _dineToast('✅ 예약 등록됐습니다');document.querySelector('.mo')?.remove();
   _dineLoadReservation(did);
