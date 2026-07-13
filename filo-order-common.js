@@ -1,27 +1,15 @@
-/*
- * filo-order-common.js - FILO 주문 공통 모듈
- * order.js(테이블QR) + store.js(배달) 공통 로직
- *
- * ⚠️ 수정 시 주의사항:
- * - GitHub push → 자동배포 (GitHub Actions → KV)
- * - KV key: filo-order-common.js
- * - 이 파일 수정 시 order.js, store.js 모두 영향받음
- * - GitHub Token: ghp_***참조:secrets*** (기한없음)
- *
- * 공통 기능:
- * - 다국어 i18n + _t() + _setLang()
- * - 메뉴 카드 렌더링 (_renderMenus, _renderCatBar)
- * - 메뉴 상세 모달 (_openMdl, _closeMdl, _tlQty)
- * - 번역 (Firestore 우선 → Anthropic 재시도3회 → Google 폴백)
- * - 장바구니 FAB (_updFab)
- * - 장바구니 시트 (_openCart, _closeCart)
- * - URL 파라미터 (_p)
- *
- * 전역 변수 (각 파일에서 선언):
- * - _did, _menus, _cart, _lang, _tlCache, _curMdlMenu, _tlQtyVal, _db
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      filo-order-common.js
+ * @description QR주문 공통·AI메뉴추천·다국어지원
  */
-
-// ── i18n ──────────────────────────────────────────────────────────────────
 var _i18n_common = {
  ko:{cart:'🛒 장바구니',order:'주문하기',total:'합계',sold:'품절',add:'담기',
      call:'직원을 호출했습니다!',done:'주문 완료!',sub:'잠시 후 준비됩니다',back:'메뉴로 돌아가기',
