@@ -117,11 +117,11 @@ function _submitOrder(){
  var phone=(document.getElementById('cust-phone')||{}).value||'';
  var memo=(document.getElementById('cust-memo')||{}).value||'';
  name=name.trim();phone=phone.trim();memo=memo.trim();
- if(!_addrFull&&!_addr){alert('배달 주소를 입력해주세요');return;}
- if(!name){alert('이름을 입력해주세요');return;}
- if(!phone){alert('연락처를 입력해주세요');return;}
+ if(!_addrFull&&!_addr){_filoToast('배달 주소를 입력해주세요');return;}
+ if(!name){_filoToast('이름을 입력해주세요');return;}
+ if(!phone){_filoToast('연락처를 입력해주세요');return;}
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
- if(!items.length){alert('메뉴를 선택해주세요');return;}
+ if(!items.length){_filoToast('메뉴를 선택해주세요');return;}
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var fullAddr=_addrFull||_addr;
 
@@ -135,7 +135,7 @@ function _submitOrder(){
    customerName:name,customerMobilePhone:phone,
    successUrl:location.origin+'/payment/success?did='+_did+'&addr='+encodeURIComponent(fullAddr)+'&memo='+encodeURIComponent(memo)+'&name='+encodeURIComponent(name)+'&phone='+encodeURIComponent(phone),
    failUrl:location.origin+'/payment/fail'
-  }).catch(function(e){if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);});
+  }).catch(function(e){if(e.code!=='USER_CANCEL')_filoToast('결제 오류: '+e.message);});
   return;
  }
 
@@ -168,7 +168,7 @@ function _saveOrder(name,phone,memo,addr,items,total,status,payMethod){
    status:status==='paid'?'done':'pending'
   })).catch(function(e){console.warn('[filo_sales] 저장 실패:',e.message);});
  }).catch(function(e){
-  alert('주문 실패: '+e.message);
+  _filoToast('주문 실패: '+e.message);
   var btn=document.getElementById('order-btn');
   if(btn){btn.disabled=false;btn.textContent=_ts('order');}
  });
