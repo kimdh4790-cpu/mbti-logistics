@@ -63,13 +63,14 @@ function _dineCalcPayroll(did){
   var empCnt=memSnap.size;
   var co=coSnap.empty?{}:coSnap.docs[0].data();
 
-  /* 직원별 출퇴근 집계 */
+  /* 직원별 출퇴근 + 휴식 집계 */
   var attMap={};
   attSnap.forEach(function(doc){
    var d=doc.data();
-   if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[]};
+   if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[],breaks:[]};
    if(d.type==='in')attMap[d.memberId].ins.push(d);
-   else attMap[d.memberId].outs.push(d);
+   else if(d.type==='out')attMap[d.memberId].outs.push(d);
+   else if(d.type==='break_start'||d.type==='break_end')attMap[d.memberId].breaks.push(d);
   });
 
   var cards=[];
@@ -170,16 +171,26 @@ function _payRow(label,val,type){
 
 
 function _calcPayFull(m,att,empCnt,ym){
- var ins=att.ins||[],outs=att.outs||[];
+ var ins=att.ins||[],outs=att.outs||[],breaks=att.breaks||[];
  ins.sort(function(a,b){return a.time>b.time?1:-1;});
  outs.sort(function(a,b){return a.time>b.time?1:-1;});
+
+ /* 실제 휴식시간 계산 (QR break_start/break_end) */
+ var breakStarts=breaks.filter(function(b){return b.type==='break_start';}).sort(function(a,b){return a.time>b.time?1:-1;});
+ var breakEnds=breaks.filter(function(b){return b.type==='break_end';}).sort(function(a,b){return a.time>b.time?1:-1;});
+ var actualBreakMin=0;
+ for(var bi=0;bi<Math.min(breakStarts.length,breakEnds.length);bi++){
+  var bDiff=(new Date(breakEnds[bi].time)-new Date(breakStarts[bi].time))/60000;
+  if(bDiff>0&&bDiff<240)actualBreakMin+=bDiff;
+ }
 
  var totalMin=0,nightMin=0,overMin=0;
  for(var i=0;i<Math.min(ins.length,outs.length);i++){
   var inT=new Date(ins[i].time),outT=new Date(outs[i].time);
   var diff=(outT-inT)/60000;
   if(diff<=0||diff>720)continue;
-  var br=diff>=480?60:diff>=240?30:0;
+  /* 실제 QR 휴식 있으면 적용, 없으면 자동 추정 */
+  var br=actualBreakMin>0?actualBreakMin:(diff>=480?60:diff>=240?30:0);
   var net=diff-br;totalMin+=net;
   /* 야간 */
   var ns=new Date(inT);ns.setHours(22,0,0,0);
