@@ -159,7 +159,6 @@ function _buildFiloNav(){
  }
  if(hasAll||hasSub('qr')){
   menus.push({s:'👥 인사',items:[
-   {ic:'🔐',l:'QR 출퇴근',p:'attendance'},
    {ic:'👤',l:'직원 QR',p:'qr_staff'},
   ]});
  }
@@ -328,7 +327,6 @@ function _filoGoPage(p){
  else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='expiry') _filoPageExpiry(el);
  else if(p==='members') _filoPageMembers(el);
- else if(p==='attendance') _filoPageAttendance(el);
  else if(p==='attend_dash') _filoPageAttendDash(el);
  else if(p==='payroll') _filoPagePayroll(el);
  else if(p==='payroll_dine'){ var slug=(_CU&&_CU.dineSlug)||''; var k=slug||(_CU&&(_CU.companyName||_CU.name))||''; var url=k?'https://dine.ne.kr/'+encodeURIComponent(k)+'#payroll':'https://dine.ne.kr/app'; window.open(url,'_blank'); }
@@ -437,7 +435,7 @@ function _filoPageHome(el){
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
  [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🛵',l:'배달',p:'delivery'},
  {ic:'📊',l:'재고',p:'inventory'},{ic:'🍽',l:'레시피',p:'recipe'},{ic:'📈',l:'매출',p:'sales_report'},
- {ic:'🔐',l:'QR출퇴근',p:'attendance'},{ic:'💼',l:'급여',p:'payroll'},{ic:'🗓',l:'예약',p:'schedule'}].map(function(m){
+ {ic:'💼',l:'급여',p:'payroll'},{ic:'🗓',l:'예약',p:'schedule'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
  '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
