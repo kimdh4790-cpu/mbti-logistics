@@ -1989,6 +1989,23 @@ async function acceptExchange(){
         }));
         return new Response(JSON.stringify({ok:true,sent:sent2,errors:errors2}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+
+      // ★ 임시 KV 진단 엔드포인트
+      if (path === '/api/kv-peek') {
+        const key = url.searchParams.get('k') || 'order.js';
+        const secret = url.searchParams.get('s') || '';
+        if (secret !== 'mbtico2024') return new Response('forbidden',{status:403});
+        try {
+          const val = await env.DONWAY_ASSETS.get(key, 'text');
+          const preview = val ? val.slice(0, 300) : 'NULL - KV에 없음';
+          return new Response(JSON.stringify({key, len: val ? val.length : 0, preview}), {
+            headers: {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}
+          });
+        } catch(e) {
+          return new Response(JSON.stringify({error: e.message}), {headers: {'Content-Type':'application/json'}});
+        }
+      }
+
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
       if (path === '/api/store') {
