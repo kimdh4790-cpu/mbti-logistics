@@ -57,12 +57,23 @@ function _filoPageTableQR(el){
   '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">🖨️ 전체 인쇄</button>'+
   '</div>'+
   '<div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>'+
+  '</div>'+
+  /* 리뷰 QR 섹션 */
+  '<div class="card" style="margin-top:12px" id="review-qr-section">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+  '<div style="font-size:13px;font-weight:800">⭐ 리뷰 QR</div>'+
+  '<button onclick="_filoReviewQRPrint()" style="padding:5px 12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">테이블에 부착하면 고객이 식사 후 바로 리뷰 작성 가능합니다</div>'+
+  '<div id="review-qr-wrap" style="display:flex;gap:12px;flex-wrap:wrap"></div>'+
+  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">💡 리뷰 링크는 설정 → 리뷰 링크 설정에서 등록하세요</div>'+
   '</div>';
 
  el.appendChild(wrap);
  _filoTableLoad(did);
  var qrBtn=document.getElementById('table-qr-btn');
  if(qrBtn)qrBtn.onclick=function(){_filoGenQRs(did);};
+ _filoLoadReviewQR();
 }
 
 function _filoGenQRs(did){
@@ -1601,4 +1612,74 @@ function _toDecItem(id){
  if(!_toCart[id])return;
  _toCart[id].qty--;if(_toCart[id].qty<=0)delete _toCart[id];
  _toUpdateCart();_toShowMenuGrid(window._toAllMenus||[]);
+}
+
+// ── 리뷰 QR 생성 및 인쇄 ──────────────────────────────────────────────────
+function _filoLoadReviewQR(){
+ var d=_cachedCompanyDoc||{};
+ var wrap=document.getElementById('review-qr-wrap');
+ if(!wrap)return;
+ var naver=d.reviewUrlNaver||'';
+ var kakao=d.reviewUrlKakao||'';
+ if(!naver&&!kakao){
+  wrap.innerHTML='<div style="font-size:12px;color:var(--t3);padding:20px 0">리뷰 링크가 없습니다. 설정에서 등록해주세요.</div>';
+  return;
+ }
+ var html='';
+ if(naver){
+  html+='<div style="text-align:center;padding:12px;background:var(--b2);border:1px solid var(--bd);border-radius:12px">'+
+   '<div style="font-size:11px;font-weight:800;color:#03C75A;margin-bottom:8px">📗 네이버 리뷰</div>'+
+   '<div style="background:#fff;border-radius:8px;padding:6px;display:inline-block" id="review-qr-naver"></div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-top:6px">스캔 후 리뷰 작성</div>'+
+   '</div>';
+ }
+ if(kakao){
+  html+='<div style="text-align:center;padding:12px;background:var(--b2);border:1px solid var(--bd);border-radius:12px">'+
+   '<div style="font-size:11px;font-weight:800;color:#FEE500;margin-bottom:8px">💛 카카오맵 리뷰</div>'+
+   '<div style="background:#fff;border-radius:8px;padding:6px;display:inline-block" id="review-qr-kakao"></div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-top:6px">스캔 후 리뷰 작성</div>'+
+   '</div>';
+ }
+ wrap.innerHTML=html;
+ // QR 생성
+ _filoEnsureQR(function(){
+  if(naver&&document.getElementById('review-qr-naver')){
+   new QRCode(document.getElementById('review-qr-naver'),{text:naver,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  }
+  if(kakao&&document.getElementById('review-qr-kakao')){
+   new QRCode(document.getElementById('review-qr-kakao'),{text:kakao,width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  }
+ });
+}
+
+function _filoReviewQRPrint(){
+ var d=_cachedCompanyDoc||{};
+ var naver=d.reviewUrlNaver||'';
+ var kakao=d.reviewUrlKakao||'';
+ var companyName=d.companyName||d.name||'매장';
+ if(!naver&&!kakao){_filoToast('⚠️ 설정에서 리뷰 링크를 먼저 등록하세요');return;}
+
+ var win=window.open('','_blank');
+ var items='';
+ if(naver) items+='<div class="qr-item"><div class="platform naver">📗 네이버 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(naver)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
+ if(kakao) items+='<div class="qr-item"><div class="platform kakao">💛 카카오맵 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(kakao)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
+
+ win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>리뷰 QR - '+companyName+'</title>'+
+  '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:#fff;padding:20px}'+
+  'h1{text-align:center;font-size:18px;font-weight:900;margin-bottom:6px}'+
+  '.subtitle{text-align:center;font-size:12px;color:#888;margin-bottom:20px}'+
+  '.qr-wrap{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}'+
+  '.qr-item{text-align:center;padding:20px;border:2px solid #eee;border-radius:16px;width:260px}'+
+  '.platform{font-size:14px;font-weight:800;margin-bottom:12px}'+
+  '.platform.naver{color:#03C75A}.platform.kakao{color:#B8860B}'+
+  '.label{font-size:12px;color:#666;margin-top:10px;font-weight:600}'+
+  '.msg{text-align:center;margin-top:20px;font-size:13px;color:#444;font-weight:600;padding:12px;background:#f9f9f9;border-radius:8px}'+
+  '@media print{body{padding:10px}}</style></head><body>'+
+  '<h1>⭐ 리뷰를 남겨주세요!</h1>'+
+  '<div class="subtitle">'+companyName+' · 소중한 리뷰가 큰 힘이 됩니다 😊</div>'+
+  '<div class="qr-wrap">'+items+'</div>'+
+  '<div class="msg">QR코드를 스캔하시면 리뷰 페이지로 바로 이동합니다</div>'+
+  '</body></html>');
+ win.document.close();
+ setTimeout(function(){win.print();},800);
 }
