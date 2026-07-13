@@ -94,7 +94,7 @@ function _checkExistingOrder(){
     var ditems=document.getElementById('done-items');
     if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
     if(dn)dn.style.display='flex';
-   }).catch(function(e){alert('이동 실패: '+e.message);pop.remove();});
+   }).catch(function(e){_filoToast('❌ 이동 실패: '+e.message);pop.remove();});
   };
   document.getElementById('_mv_no').onclick=function(){pop.remove();};
  }).catch(function(){});
@@ -140,7 +140,7 @@ function _chgQty(name,d){_cartChg(name,d);}
 // ── 주문 접수 ─────────────────────────────────────────────────────────────────
 function _submitOrder(){
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
- if(!items.length){alert('메뉴를 선택해주세요');return;}
+ if(!items.length){_filoToast('🛒 메뉴를 선택해주세요');return;}
  _openPayMdl();
 }
 
@@ -182,7 +182,7 @@ function _doOrder(payType){
   // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
  }).catch(function(e){
-  alert('주문 실패: '+e.message);
+  _filoToast('❌ 주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
  });
 }
