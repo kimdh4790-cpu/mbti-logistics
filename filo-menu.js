@@ -1048,3 +1048,19 @@ function _filoLoadStockHistory(did, elId, type){
  });
  }).catch(function(){});
 }
+
+// 재고 하한선 푸시 알림
+function _filoStockLowAlert(menuName, stock, stockMin){
+ var title='⚠️ 재고 부족: '+menuName;
+ var body='현재 재고 '+stock+'개 (기준: '+stockMin+'개 이하)';
+ // 브라우저 푸시 알림
+ if('Notification' in window && Notification.permission==='granted'){
+  new Notification(title,{body:body,icon:'/filo-icon-192.png',tag:'stock-'+menuName,vibrate:[200,100,200]});
+ } else if('Notification' in window && Notification.permission!=='denied'){
+  Notification.requestPermission().then(function(p){
+   if(p==='granted') new Notification(title,{body:body,icon:'/filo-icon-192.png',tag:'stock-'+menuName});
+  });
+ }
+ // 화면 토스트도 표시
+ _filoToast('⚠️ '+menuName+' 재고 부족 ('+stock+'개)');
+}
