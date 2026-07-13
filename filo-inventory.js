@@ -1,14 +1,21 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-inventory.js
- * @description 재고현황·입출고·자동발주
+ * ══════════════════════════════════════════════════════
+ * 역할: 재고 관리 · 발주 알림 · 입고 예정
+ *
+ * 저장 컬렉션:
+ *   filo_inventory  — 재고 목록 (재료명·현재고·최소재고)
+ *   filo_purchases  — 발주 기록
+ *
+ * FCM 발송:
+ *   재고 부족 시 → 사장님 FCM (type: 'alert')
+ *   최소재고 이하 → 즉시 경보
+ *
+ * 주요 함수:
+ *   _filoPageInventory(el)     — 재고 현황 페이지
+ *   _filoCheckStockAlert(did)  — 재고 부족 자동 체크
+ *   _filoOrderStock(itemId)    — 발주 처리
+ * ══════════════════════════════════════════════════════
  */
 // 의존성: filo-common.js
 // 관련 컬렉션: inventory, inventory_in, inventory_out
