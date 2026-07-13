@@ -28,7 +28,30 @@ function _filoPageSettings(el){
  '<div style="display:flex;justify-content:space-between;padding:8px 0">'+
  '<span style="font-size:12px;color:var(--t3)">역할</span>'+
  '<span style="font-size:13px;font-weight:700">'+(_CU.role||'관리자')+'</span></div>'+
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">⭐ 리뷰 링크 설정</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">고객이 결제 후 리뷰를 남길 수 있는 링크를 등록하세요</div>'+
+ '<div style="margin-bottom:8px">'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">네이버 플레이스 리뷰 URL</div>'+
+ '<input id="review-naver" class="inp" placeholder="https://naver.me/..." value="'+(d.reviewUrlNaver||'')+'" style="width:100%;font-size:12px">'+
+ '</div>'+
+ '<div style="margin-bottom:12px">'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">카카오맵 리뷰 URL</div>'+
+ '<input id="review-kakao" class="inp" placeholder="https://place.map.kakao.com/..." value="'+(d.reviewUrlKakao||'')+'" style="width:100%;font-size:12px">'+
+ '</div>'+
+ '<button class="btn btn-brand btn-sm" onclick="_filoSaveReviewUrls()">저장</button>'+
+ '</div>'+
  '</div></div>';
+}
+function _filoSaveReviewUrls(){
+ var did=_CU.dealerId||_CU.uid;
+ var naver=document.getElementById('review-naver')?.value.trim()||'';
+ var kakao=document.getElementById('review-kakao')?.value.trim()||'';
+ _db.collection('companies').doc(did).update({reviewUrlNaver:naver,reviewUrlKakao:kakao,updatedAt:new Date().toISOString()})
+ .then(function(){
+  if(_cachedCompanyDoc){_cachedCompanyDoc.reviewUrlNaver=naver;_cachedCompanyDoc.reviewUrlKakao=kakao;}
+  _filoToast('✅ 리뷰 링크 저장됨');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 function _filoPageSubscription(el){
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
