@@ -1,0 +1,29 @@
+name: Check KV order.js
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check KV order.js content
+        env:
+          CF_EMAIL: kimdh4790@gmail.com
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          ACCOUNT="02709cbec18d848913b4246015b9148f"
+          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
+          echo "=== KV order.js 앞 300자 ==="
+          curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/order.js" \
+            -H "X-Auth-Email: $CF_EMAIL" \
+            -H "X-Auth-Key: $CF_KEY" | head -c 300
+          echo ""
+          echo "=== KV order.js _did 포함 여부 ==="
+          curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/order.js" \
+            -H "X-Auth-Email: $CF_EMAIL" \
+            -H "X-Auth-Key: $CF_KEY" | grep -o "_did=''" | head -3
+          echo "=== _fcmToken 포함 여부 ==="
+          curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/order.js" \
+            -H "X-Auth-Email: $CF_EMAIL" \
+            -H "X-Auth-Key: $CF_KEY" | grep -o "_fcmToken" | head -3
