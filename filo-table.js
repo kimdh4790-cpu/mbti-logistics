@@ -1,23 +1,51 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-table.js
- * @description 테이블 현황·색상시각화·예약관리·실시간연동
+ *
+ * ══════════════════════════════════════════════════════
+ * 📋 이 파일의 역할 & 연결 구조
+ * ══════════════════════════════════════════════════════
+ * 역할: 테이블 현황·픽업알림·웨이팅·예약·테이블이동
+ *
+ * 저장 컬렉션:
+ *   filo_tables     — 테이블 현황 (착석/비어있음/대기)
+ *   filo_orders     — 테이블별 주문 내역
+ *   filo_payments   — 결제 기록
+ *   filo_bookings   — 예약 정보 (날짜·시간·인원)
+ *   filo_members    — 회원 정보 (FCM 토큰 포함)
+ *
+ * FCM 발송:
+ *   픽업 알림 (791~810줄):
+ *     filo_orders.fcmToken → /fcm/notify-drivers
+ *     type: 'pickup', 진동패턴: [500,100,500,100,500,100,500,100,1000]
+ *   예약 알림 (584~612줄):
+ *     1순위: member.fcmToken → FCM 푸시
+ *     2순위: FCM 없으면 알림톡 (솔라피 → 알리고 교체 예정)
+ *
+ * 주요 함수:
+ *   _filoRenderTablePage()           — 테이블 현황 화면 렌더링
+ *   _filoSendPickupPush(tNum)        — 픽업 알림 FCM 발송 (791줄)
+ *   _filoTableMove(from, to)         — 테이블 이동 (주문 자동 이전)
+ *   _filoReservationAdd(did, date)   — 예약 추가 팝업
+ *   _filoReservationEdit(id, did)    — 예약 수정 (기존 데이터 자동 채우기)
+ *   _filoRenderCalendar(did)         — 예약 캘린더 렌더링
+ *   _filoPageTableMgmt(el)           — 테이블 설정 (수 변경, QR 생성)
+ *   _filoWaitingPage(el)             — 웨이팅 관리 페이지
+ *
+ * 연결 파일:
+ *   filo-pos.js      — _filoTablePay(), _filoTableSelfPay()
+ *   filo-payment.js  — _filoSendReceiptPush() (결제완료 FCM)
+ *   filo-members.js  — 회원 FCM 토큰 조회
+ *   order.js         — 고객 QR 주문 (fcmToken 저장)
+ *   firebase-messaging-sw.js — 백그라운드 수신
+ *     type: pickup → 강한 진동 + requireInteraction
+ *     type: receipt → 결제 영수증 (신규 추가 필요)
+ *
+ * FCM 토큰 저장 경로:
+ *   고객: order.js → localStorage('filo_fcm_'+did) → filo_orders.fcmToken
+ *   회원: filo-members.js → filo_members.fcmToken / fcmTokens[]
+ *   직원: filo-staff.js → filo_dealers.fcmToken (DONWAY 앱)
+ * ══════════════════════════════════════════════════════
  */
-(function(){
- var st=document.createElement('style');
- st.textContent='@keyframes tablePulse{0%,100%{opacity:1}50%{opacity:.6}}';
- document.head.appendChild(st);
-})();
-
-// filo-table.js - 테이블QR, 예약, 착석, 비움, 모달, 이동
-// 의존성: filo-common.js
 // 관련 컬렉션: filo_tables, filo_orders, filo_payments, filo_bookings
 // ⚠️ 2026-07-12 리팩토링:
 //   filo-common.js 중복 함수 통합 (단일화)
