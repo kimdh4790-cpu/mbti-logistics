@@ -487,9 +487,23 @@ function _filoPageHome(el){
    var low=0;snap.forEach(function(doc){var d=doc.data();if((d.stock||0)<=(d.minStock||5))low++;});
    if(e2)e2.textContent=low+'개';
   });
-  /* 출근 인원 (오늘) */
-  _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('status','==','in')
-   .get().then(function(snap){if(e3)e3.textContent=snap.size+'명';});
+  /* 출근 인원 실시간 (DINE 출퇴근 연동) */
+  if(window._filoAttendUnsub)window._filoAttendUnsub();
+  window._filoAttendUnsub=_db.collection('attendance')
+   .where('dealerId','==',did).where('date','==',today)
+   .onSnapshot(function(attSnap){
+    var ins={},outs={};
+    attSnap.forEach(function(doc){
+     var d=doc.data();
+     if(d.type==='in')ins[d.memberId]=d;
+     else if(d.type==='out')outs[d.memberId]=d;
+    });
+    var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
+    if(e3)e3.textContent=working+'명';
+    // DINE 연동 카드에도 표시
+    var dineAtt=document.getElementById('filo-dine-att');
+    if(dineAtt)dineAtt.textContent='출근 '+working+'명';
+   },function(){});
    var todayProfit=todayRev-todayCost;
    var ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
    if(e0)_countUp(e0,todayRev,400,'₩','');
