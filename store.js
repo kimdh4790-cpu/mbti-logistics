@@ -1,24 +1,15 @@
-/*
- * store.js - FILO 배달 주문 페이지 v3
- * URL: filo.ai.kr/store/:slug
- *
- * ⚠️ 수정 시 주의사항:
- * - GitHub push → 자동배포 (GitHub Actions → KV)
- * - 공통 로직: filo-order-common.js 참조
- * - 관련: store.html, _worker.js
- * - GitHub Token: ghp_***참조:secrets*** (기한없음)
- *
- * 배달 전용 기능:
- * - 배달/픽업 탭 (_switchTab)
- * - 주소 입력 (_openAddrPopup - common)
- * - 토스페이먼츠 결제 (TOSS_CLIENT_KEY 입력 시 활성화)
- * - 주문 저장 (_saveOrder)
- *
- * 번역: filo_menus.nameTranslations 우선 → Anthropic 재시도3회 → Google 폴백
- * Firebase: filo_orders write (비로그인)
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      store.js
+ * @description 매장정보·메뉴표시·키오스크
  */
-
-// ── 토스페이먼츠 설정 ──────────────────────────────────────────────────────────
 // 키 발급 후 여기에 입력 (live_ck_... 또는 test_ck_...)
 var TOSS_CLIENT_KEY = '';
 
