@@ -361,3 +361,60 @@ function _toDecItem(id){
  _toCart[id].qty--;if(_toCart[id].qty<=0)delete _toCart[id];
  _toUpdateCart();_toShowMenuGrid(window._toAllMenus||[]);
 }
+
+// ── AI 리뷰 답글 생성기 ─────────────────────────────────────────────────────
+function _filoPageReviewReply(el){
+ var did=_CU&&(_CU.dealerId||_CU.uid)||'';
+ el.innerHTML='<div style="max-width:600px;margin:0 auto">'+
+  '<div style="font-size:20px;font-weight:900;margin-bottom:4px">💬 AI 리뷰 답글</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">고객 리뷰를 붙여넣으면 AI가 답글을 자동 생성합니다</div>'+
+  '<div style="background:var(--surface2);border:1px solid var(--bd2);border-radius:14px;padding:16px;margin-bottom:12px">'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">📋 고객 리뷰</div>'+
+  '<textarea id="review-input" placeholder="리뷰 내용을 붙여넣으세요..." style="width:100%;min-height:100px;background:var(--surface3);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>'+
+  '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
+  '<button onclick="_filoGenReviewReply(1)" style="flex:1;padding:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:10px;color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer">⭐ 긍정 답글</button>'+
+  '<button onclick="_filoGenReviewReply(0)" style="flex:1;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#f87171;font-weight:700;font-size:12px;cursor:pointer">😔 부정/개선 답글</button>'+
+  '<button onclick="_filoGenReviewReply(2)" style="flex:1;padding:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer">🎯 일반 답글</button>'+
+  '</div></div>'+
+  '<div id="review-result" style="display:none;background:var(--surface2);border:1px solid var(--bd2);border-radius:14px;padding:16px">'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">✍️ AI 생성 답글</div>'+
+  '<textarea id="review-output" style="width:100%;min-height:120px;background:var(--surface3);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>'+
+  '<button onclick="navigator.clipboard.writeText(document.getElementById(\'review-output\').value).then(function(){_filoToast(\'📋 복사됐습니다!\')})" style="width:100%;margin-top:8px;padding:10px;background:var(--br);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer">📋 복사하기</button>'+
+  '</div>'+
+  '</div>';
+}
+
+async function _filoGenReviewReply(type){
+ var review=(document.getElementById('review-input')||{}).value||'';
+ if(!review.trim()){_filoToast('리뷰 내용을 입력하세요');return;}
+ var typeLabel=type===1?'긍정적이고 감사한':type===0?'사과하고 개선 의지를 보이는':'친절하고 전문적인';
+ var compName=(_CU&&_CU.companyName)||'저희 매장';
+ var resultEl=document.getElementById('review-result');
+ var outputEl=document.getElementById('review-output');
+ if(resultEl)resultEl.style.display='block';
+ if(outputEl)outputEl.value='AI가 답글을 작성 중입니다...';
+
+ try{
+  var res=await fetch('https://api.anthropic.com/v1/messages',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','x-api-key':window._anthropicKey||'','anthropic-version':'2023-06-01'},
+   body:JSON.stringify({
+    model:'claude-haiku-4-5-20251001',
+    max_tokens:300,
+    messages:[{role:'user',content:'다음 고객 리뷰에 대한 '+typeLabel+' 답글을 작성해줘. 매장명: '+compName+'. 답글만 출력해. 2~4문장으로 간결하게.\n\n리뷰: '+review}]
+   })
+  });
+  var d=await res.json();
+  var reply=(d.content&&d.content[0]&&d.content[0].text)||'답글 생성에 실패했습니다.';
+  if(outputEl)outputEl.value=reply;
+ } catch(e){
+  // API 키 없으면 Worker 프록시 사용
+  try{
+   var res2=await fetch('/api/review-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review,type:type,compName:compName})});
+   var d2=await res2.json();
+   if(outputEl)outputEl.value=d2.reply||'답글 생성에 실패했습니다.';
+  } catch(e2){
+   if(outputEl)outputEl.value='답글 생성에 실패했습니다. 잠시 후 다시 시도하세요.';
+  }
+ }
+}
