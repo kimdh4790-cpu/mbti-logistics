@@ -90,10 +90,7 @@ function _filoStartDynamicQR(did){
  var countdown=30;
  _dynamicQRTimer=setInterval(function(){
   countdown--;
-  var ct=document.getElementById('qr-checkin-timer');
-  var ot=document.getElementById('qr-checkout-timer');
-  if(ct)ct.textContent=countdown+'초 후 자동 갱신';
-  if(ot)ot.textContent=countdown+'초 후 자동 갱신';
+  ['qr-checkin-timer','qr-checkout-timer','qr-break-timer'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=countdown+'초 후 자동 갱신';});
   if(countdown<=0){
    countdown=30;
    _filoGenDynamicQR(did);
@@ -102,15 +99,20 @@ function _filoStartDynamicQR(did){
 }
 
 function _filoGenDynamicQR(did){
- var ts=Math.floor(Date.now()/30000); /* 30초 단위 타임스탬프 */
- var token=did+'_'+ts;
+ var ts=Math.floor(Date.now()/30000);
  var inUrl='https://filo.ai.kr/qr?did='+did+'&action=in&t='+ts;
  var outUrl='https://filo.ai.kr/qr?did='+did+'&action=out&t='+ts;
- var size='160x160';
+ var bsUrl='https://filo.ai.kr/qr?did='+did+'&action=break_start&t='+ts;
+ var beUrl='https://filo.ai.kr/qr?did='+did+'&action=break_end&t='+ts;
+ function qrImg(url,size){return '<img src="https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(url)+'" style="width:'+size+'px;height:'+size+'px;border-radius:6px">';}
  var inEl=document.getElementById('qr-checkin');
  var outEl=document.getElementById('qr-checkout');
- if(inEl)inEl.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size='+size+'&data='+encodeURIComponent(inUrl)+'" style="width:160px;height:160px;border-radius:6px">';
- if(outEl)outEl.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size='+size+'&data='+encodeURIComponent(outUrl)+'" style="width:160px;height:160px;border-radius:6px">';
+ var bsEl=document.getElementById('qr-break-start');
+ var beEl=document.getElementById('qr-break-end');
+ if(inEl)inEl.innerHTML=qrImg(inUrl,160);
+ if(outEl)outEl.innerHTML=qrImg(outUrl,160);
+ if(bsEl)bsEl.innerHTML=qrImg(bsUrl,130);
+ if(beEl)beEl.innerHTML=qrImg(beUrl,130);
 }
 
 function _filoPageMemberQR(el){
