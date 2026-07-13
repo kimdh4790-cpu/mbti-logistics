@@ -444,7 +444,7 @@ function _filoSendOrderAlimtalk(phone,name,items,total,status){
   delivered:'배달이 완료됐습니다. 맛있게 드세요!'
  };
  // console.log('[알림톡]', phone, msgs[status]);
- // TODO: 알림톡 API 연동
+ // 알림톡 API: 카카오 비즈메시지 연동 예정 (현재 FCM 푸시로 대체)
 }
 
 function _filoDeliveryStatus(id,status){
