@@ -99,8 +99,9 @@ function _dineReservation(el){
 
 function _dineLoadReservation(did){
  var date=document.getElementById('res-date')?.value||new Date().toISOString().slice(0,10);
- _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',date)
-  .orderBy('time').get().then(function(snap){
+ if(window._dineResListUnsub)window._dineResListUnsub();
+ window._dineResListUnsub=_db.collection('filo_bookings').where('dealerId','==',did).where('date','==',date)
+  .orderBy('time').onSnapshot(function(snap){
    var list=document.getElementById('reservation-list');if(!list)return;
    if(snap.empty){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 예약 없음</div>';return;}
    var sc={pending:{c:'#f59e0b',l:'대기'},confirmed:{c:'#22c55e',l:'확정'},cancelled:{c:'#ef4444',l:'취소'}};
@@ -126,13 +127,13 @@ function _dineLoadReservation(did){
 
 function _dineConfirmRes(id,did){
  _db.collection('filo_bookings').doc(id).update({status:'confirmed'})
-  .then(function(){_dineToast('✅ 확정됐습니다');_dineLoadReservation(did);});
+  .then(function(){_dineToast('✅ 확정됐습니다');/* onSnapshot 자동 갱신 */});
 }
 
 function _dineCancelRes(id,did){
  if(!confirm('취소하시겠습니까?'))return;
  _db.collection('filo_bookings').doc(id).update({status:'cancelled'})
-  .then(function(){_dineToast('🗑 취소됐습니다');_dineLoadReservation(did);});
+  .then(function(){_dineToast('🗑 취소됐습니다');/* onSnapshot 자동 갱신 */});
 }
 
 function _dineAddReservation(did){
