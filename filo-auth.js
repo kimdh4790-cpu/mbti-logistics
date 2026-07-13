@@ -468,10 +468,14 @@ function _filoPageHome(el){
   /* 출근 인원 (오늘) */
   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('status','==','in')
    .get().then(function(snap){if(e3)e3.textContent=snap.size+'명';});
+   var todayProfit=todayRev-todayCost;
+   var ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
    if(e0)_countUp(e0,todayRev,400,'₩','');
+   if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
+   if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
    if(e1)_countUp(e1,monthRev,600,'₩','');
    if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
-   if(e3){e3.textContent=todayMargin+'%';e3.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
+   if(e3)e3.textContent=document.getElementById('hs-3')?document.getElementById('hs-3').textContent:'';
   }).catch(function(){});
  });
  }
