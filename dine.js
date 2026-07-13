@@ -677,7 +677,8 @@ function _dineLoadDashboard(did,today){
 
   /* 근로법 알림 */
   _dineCheckLaborLaw(did,mems,atts);
- }).catch(function(e){console.warn('dashboard:',e);});
+  }).catch(function(e){console.warn('dashboard:',e);});
+ },function(e){console.warn('sales:',e);});
 }
 
 function _dineCheckLaborLaw(did,mems,atts){
@@ -1061,4 +1062,4 @@ function _countUp(id,target,prefix,suffix){
 }
 
 // util end
-
+}
