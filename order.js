@@ -1,14 +1,52 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      order.js
- * @description QR테이블오더·주문·결제·AI추천
+ *
+ * ══════════════════════════════════════════════════════
+ * 📋 이 파일의 역할 & 연결 구조
+ * ══════════════════════════════════════════════════════
+ * 역할: 고객 QR 주문 (테이블오더)
+ *   URL: filo.ai.kr/order?d={dealerId}&t={tableNum}
+ *
+ * 저장 컬렉션:
+ *   filo_orders  — 고객 주문 저장
+ *     필드: dealerId, tableNum, items, total, fcmToken,
+ *           status(pending/done), createdAt, payType
+ *   filo_menus   — 메뉴 목록 조회
+ *   filo_members — 회원 포인트·쿠폰 조회
+ *
+ * FCM 흐름:
+ *   1. QR 스캔 → _showFCMGate() 호출
+ *   2. 알림 허용 → getToken() → localStorage('filo_fcm_'+did) 저장
+ *   3. 주문 시 → filo_orders.fcmToken 필드에 저장
+ *   4. 매장에서 준비완료 → filo-table.js _filoSendPickupPush()
+ *      → 이 fcmToken으로 FCM 발송
+ *   5. 결제 완료 → filo-payment.js _filoSendReceiptPush()
+ *      → 동일 fcmToken으로 영수증 알림 (신규)
+ *
+ *   ⚠️ 주의: _did는 window.onload(32줄)에서 URL params로 세팅
+ *            _showFCMGate() 호출 전 반드시 _did 세팅 완료되어야 함
+ *
+ * 전역변수:
+ *   _did        — dealerId (URL params에서)
+ *   _tableNum   — 테이블 번호
+ *   _fcmToken   — FCM 토큰 (localStorage 또는 신규 발급)
+ *   _cartItems  — 장바구니
+ *   _lang       — 현재 언어 (ko/en/zh/ja)
+ *
+ * 주요 함수:
+ *   _showFCMGate()     — FCM 알림 허용 팝업 (localStorage 우선 확인)
+ *   _doOrder(payType)  — 주문 Firestore 저장 (fcmToken 포함)
+ *   _renderMenu()      — 메뉴 화면 렌더링
+ *   _applyAIBanner()   — AI 시간대별 추천 배너
+ *
+ * 연결 파일:
+ *   filo-order-common.js — AI추천·다국어·공통 UI
+ *   filo-table.js        — 준비완료 → 픽업알림
+ *   filo-payment.js      — 결제완료 → 영수증알림
+ *   firebase-messaging-sw.js — 백그라운드 수신
+ *     type: pickup  → 픽업 알림
+ *     type: receipt → 결제 영수증 (신규)
+ * ══════════════════════════════════════════════════════
  */
 var _did='', _tNum='', _tName='';
 var _menus=[], _cart={}, _lang='ko';
