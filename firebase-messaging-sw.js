@@ -24,6 +24,7 @@ const NOTIF_CONFIG = {
   membership_expire:{ icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=customer',   title:'⏰ 회원권 만료' },
   pos:            { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=kiosk',        title:'🖥️ POS 알림' },
   pickup:         { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'🔔 픽업 알림' },
+  receipt:        { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'🧾 결제 완료' },
   alert:          { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle',                   title:'🔔 DONWAY 알림' },
 };
 
