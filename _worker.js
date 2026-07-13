@@ -2049,6 +2049,30 @@ async function acceptExchange(){
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
       /* ★ 메뉴 공개 API (로그인 불필요) */
+      // ── /api/review-reply — AI 리뷰 답글 생성
+      if (path === '/api/review-reply' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { review, type, compName } = body;
+          const typeLabel = type===1?'긍정적이고 감사한':type===0?'사과하고 개선 의지를 보이는':'친절하고 전문적인';
+          const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 300,
+              messages: [{role:'user',content:'다음 고객 리뷰에 대한 '+typeLabel+' 답글을 작성해줘. 매장명: '+(compName||'저희 매장')+'. 답글만 출력해. 2~4문장으로 간결하게.\n\n리뷰: '+review}]
+            })
+          });
+          const d = await resp.json();
+          const reply = (d.content&&d.content[0]&&d.content[0].text)||'';
+          return new Response(JSON.stringify({reply}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         let body;try{body=await request.json();}catch(e){body={};}
