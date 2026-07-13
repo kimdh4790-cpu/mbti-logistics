@@ -785,7 +785,7 @@ function _filoMenuAddModal(did, menu, cat){
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
   var description=(document.getElementById('menu-desc-inp')?document.getElementById('menu-desc-inp').value||'':'').trim();
-  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:null,description:description,updatedAt:new Date().toISOString()};
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:stockMin>0?stockMin:null,description:description,updatedAt:new Date().toISOString()};
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
