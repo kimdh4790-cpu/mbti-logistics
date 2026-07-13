@@ -1,14 +1,27 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-auth.js
- * @description 로그인·회원가입·Firebase 인증·앱 초기화·네비게이션
+ * ══════════════════════════════════════════════════════
+ * 역할: 로그인·회원가입·권한 관리
+ *
+ * 저장 컬렉션:
+ *   filo_dealers — 사업자 정보 (dealerId, name, role, fcmToken)
+ *
+ * FCM:
+ *   로그인 완료 → FCM 토큰 체크/재발급
+ *   filo_dealers.fcmToken 갱신
+ *   ※ 고객 FCM은 order.js에서 별도 처리
+ *
+ * 권한 구조:
+ *   owner  — 모든 기능 (사장)
+ *   staff  — 주문·테이블·출퇴근
+ *   viewer — 조회만
+ *
+ * 주요 함수:
+ *   _filoLogin(email, pw)    — 로그인
+ *   _filoLogout()            — 로그아웃
+ *   _filoCheckAuth()         — 권한 체크 (페이지 진입 시)
+ *   _filoUpdateFCMToken(did) — FCM 토큰 갱신
+ * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
