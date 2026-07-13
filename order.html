@@ -1,15 +1,13 @@
-<!--
-⚠️ order.html — Claude 인수인계
-- 테이블 QR 주문 페이지 (비로그인 고객용)
-- URL: filo.ai.kr/order?d=매장ID&t=테이블번호&name=테이블명
-- filo_orders 컬렉션에 저장
-- /api/menus Worker API로 메뉴 로드
-- /api/translate Worker API로 AI 번역
-- id="body" 사용 금지 (HTML body태그 충돌)
-- JS 로직은 order.js에 분리됨
-- v3: 풀스크린 이미지 카드 UI (티오더 능가 버전)
--->
 <!DOCTYPE html>
+<!--
+  FILO · DINE — 외식업 통합 운영 플랫폼
+  Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+  Author: 김형우 (kimdh4790@gmail.com)
+  All Rights Reserved. 무단 복제·배포·수정 금지.
+  사업자등록번호: 373-86-02536 | filo.ai.kr | dine.ne.kr
+  @module: order.html
+  QR 테이블오더 — 고객용 주문·결제·AI추천 페이지
+-->
 <!--
   order.html - FILO 테이블 QR 주문 페이지 v3
   JS: order.js | 자동배포: GitHub Actions
