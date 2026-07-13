@@ -171,7 +171,7 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple S
 <div class="slide s1 active">
   <div class="badge" style="background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.25);color:#38bdf8">🍽 외식업 전용 올인원 플랫폼</div>
   <div class="slide-title">외식업 운영의 모든 것<br><span class="g-blue">DINE 하나로 끝냅니다</span></div>
-  <div class="slide-sub">매출 분석 · 직원 급여 · 배달 정산 · 원가 관리까지<br>아래 기능을 <strong style="color:var(--tx)">터치</strong>하면 상세 내용을 확인하세요</div>
+  <div class="slide-sub">매출분석 · 직원급여 · 배달정산 · 원가관리 · 휴식QR · 근로기준법 · 재고알림까지<br>아래 기능을 <strong style="color:var(--tx)">터치</strong>하면 상세 내용을 확인하세요</div>
   <div class="feat-grid" style="max-width:560px">
     <div class="feat-card" onclick="_openModal('sales')"><div class="feat-ic">📊</div><div class="feat-tt">매출 분석</div><div class="feat-ds">시간대·메뉴·결제<br>차트 자동 생성</div></div>
     <div class="feat-card" onclick="_openModal('pay')"><div class="feat-ic">💰</div><div class="feat-tt">직원 급여</div><div class="feat-ds">2026 근로기준법<br>자동 계산</div></div>
@@ -179,6 +179,9 @@ html,body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple S
     <div class="feat-card" onclick="_openModal('cost')"><div class="feat-ic">🧾</div><div class="feat-tt">원가 관리</div><div class="feat-ds">메뉴 원가율<br>마진 자동 계산</div></div>
     <div class="feat-card" onclick="_openModal('tax')"><div class="feat-ic">📂</div><div class="feat-tt">세무사 공유</div><div class="feat-ds">월 정산 리포트<br>자동 발송</div></div>
     <div class="feat-card" onclick="_openModal('filo')"><div class="feat-ic">🔗</div><div class="feat-tt">FILO 연동</div><div class="feat-ds">POS·QR출퇴근<br>실시간 연동</div></div>
+  <div class="feat-card" onclick="_openModal('break_qr')"><div class="feat-ic">☕</div><div class="feat-tt">휴식 QR</div><div class="feat-ds">급여 자동차감<br>30초 보안갱신</div></div>
+  <div class="feat-card" onclick="_openModal('labor_law')"><div class="feat-ic">⚖️</div><div class="feat-tt">근로기준법</div><div class="feat-ds">주52시간·연차<br>자동 알림</div></div>
+  <div class="feat-card" onclick="_openModal('stock_alert')"><div class="feat-ic">⚠️</div><div class="feat-tt">재고 알림</div><div class="feat-ds">FILO 재고부족<br>DINE 즉시알림</div></div>
   </div>
   <div class="trust-row">
     <div class="trust-chip">🍽 외식업 특화</div>
@@ -407,7 +410,25 @@ var MODALS={
   filo_inv:{ic:'📦',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',title:'재고 연동',tagline:'POS 판매 시 재고 자동 차감',
     body:'<div class="feat-list"><div class="feat-row"><div class="feat-row-ic">➖</div><div><div class="feat-row-title">판매 시 자동 차감</div><div class="feat-row-desc">FILO POS에서 메뉴 판매 즉시 레시피 기반으로 재료 재고 자동 차감</div></div></div><div class="feat-row"><div class="feat-row-ic">🔔</div><div><div class="feat-row-title">부족 재고 알림</div><div class="feat-row-desc">재고가 최소 기준 이하로 떨어지면 즉시 알림. DINE 대시보드에 경고 표시</div></div></div></div>'},
   filo_reserve:{ic:'📆',color:'rgba(8,145,178,.15)',border:'rgba(8,145,178,.3)',title:'예약 연동',tagline:'FILO 예약 → DINE 테이블 자동 확정',
-    body:'<div class="feat-list"><div class="feat-row"><div class="feat-row-ic">📅</div><div><div class="feat-row-title">예약 자동 반영</div><div class="feat-row-desc">FILO에서 예약 확정 즉시 DINE 테이블 현황에 예약 상태 자동 표시</div></div></div><div class="feat-row"><div class="feat-row-ic">🔔</div><div><div class="feat-row-title">예약 알림</div><div class="feat-row-desc">예약 30분 전 알림. 테이블 준비 누락 방지</div></div></div></div>'}
+    body:'<div class="feat-list"><div class="feat-row"><div class="feat-row-ic">📅</div><div><div class="feat-row-title">예약 자동 반영</div><div class="feat-row-desc">FILO에서 예약 확정 즉시 DINE 테이블 현황에 예약 상태 자동 표시</div></div></div><div class="feat-row"><div class="feat-row-ic">🔔</div><div><div class="feat-row-title">예약 알림</div><div class="feat-row-desc">예약 30분 전 알림. 테이블 준비 누락 방지</div></div></div></div>'},break_qr:{ic:'☕',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',title:'휴식 QR',tagline:'휴식시작·종료 QR → 급여 자동 차감',
+    body:'<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">☕</div><div class="feat-row-body"><div class="feat-row-title">휴식 시작 QR</div><div class="feat-row-desc">QR 스캔 시 휴식 시작 시각 자동 기록</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🏃</div><div class="feat-row-body"><div class="feat-row-title">휴식 종료 QR</div><div class="feat-row-desc">복귀 시 QR 스캔 → 실제 휴식시간 자동 계산</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">💰</div><div class="feat-row-body"><div class="feat-row-title">급여 자동 차감</div><div class="feat-row-desc">휴식시간 자동 공제. QR 없으면 법정 기준 자동 적용</div></div></div>'+
+      '</div>'}
+  ,labor_law:{ic:'⚖️',color:'rgba(239,68,68,.15)',border:'rgba(239,68,68,.3)',title:'근로기준법 자동 알림',tagline:'주52시간·연차·휴게시간 자동 체크',
+    body:'<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">⏰</div><div class="feat-row-body"><div class="feat-row-title">주52시간 초과 경고</div><div class="feat-row-desc">주간 52시간 초과 직원 자동 감지 → 대시보드 알림</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">📅</div><div class="feat-row-body"><div class="feat-row-title">연차 자동 계산</div><div class="feat-row-desc">입사일 기준 연차 자동 계산. 미사용 연차 현황 표시</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">☕</div><div class="feat-row-body"><div class="feat-row-title">휴게시간 자동 적용</div><div class="feat-row-desc">4시간 이상 30분, 8시간 이상 60분 자동 차감</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">👥</div><div class="feat-row-body"><div class="feat-row-title">5인 미만 자동 처리</div><div class="feat-row-desc">5인 미만 사업장 가산수당 자동 제외</div></div></div>'+
+      '</div>'}
+  ,stock_alert:{ic:'⚠️',color:'rgba(239,68,68,.15)',border:'rgba(239,68,68,.3)',title:'재고 부족 실시간 알림',tagline:'FILO 재고 부족 발생 시 DINE 즉시 알림',
+    body:'<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">📦</div><div class="feat-row-body"><div class="feat-row-title">재고 부족 즉시 감지</div><div class="feat-row-desc">FILO 메뉴 재고가 하한선 이하로 떨어지면 DINE 대시보드에 즉시 표시</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🔔</div><div class="feat-row-body"><div class="feat-row-title">브라우저 푸시알림</div><div class="feat-row-desc">재고 부족 항목 발생 시 브라우저 푸시알림 자동 발송</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🔗</div><div class="feat-row-body"><div class="feat-row-title">FILO 실시간 연동</div><div class="feat-row-desc">Firestore onSnapshot 기반 실시간 감시. 새로고침 불필요</div></div></div>'+
+      '</div>'}
 };
 
 function _openModal(key){
