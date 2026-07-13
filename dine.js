@@ -1,14 +1,39 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      dine.js
- * @description DINE 메인·로그인·대시보드·실시간연동
+ * ══════════════════════════════════════════════════════
+ * 역할: DINE 외식업 특화 플랫폼 메인 (dine.ne.kr)
+ *
+ * 저장 컬렉션 (FILO와 공유 Firestore):
+ *   filo_orders   — 주문 (실시간 매출 집계)
+ *   filo_sales    — 매출 내역
+ *   filo_members  — 회원 CRM
+ *   filo_bookings — 예약
+ *   filo_tables   — 테이블 현황
+ *
+ * DINE 전용 컬렉션:
+ *   dine_reviews   — 리뷰·별점
+ *   dine_waiting   — 웨이팅 대기열
+ *   dine_delivery  — 배달 주문
+ *
+ * 연동:
+ *   DONWAY (donway.ai.kr) — 직원 급여·정산 자동화
+ *   FILO (filo.ai.kr)     — QR 주문·재고·출퇴근
+ *   Firebase Firestore     — 실시간 데이터 공유
+ *
+ * FCM 발송:
+ *   주문 접수 → 사장님 FCM (type: 'pos')
+ *   배달 완료 → 고객 FCM (type: 'receipt')
+ *
+ * 업종별 도메인:
+ *   dine.ne.kr        — 기본
+ *   *.dine.ne.kr      — 업종별 서브도메인
+ *
+ * 주요 함수:
+ *   _dineInit()           — DINE 초기화 (slug 인식)
+ *   _dineRenderDashboard() — 매출 대시보드
+ *   _dineRenderWaiting()   — 웨이팅 관리
+ *   _dineRenderReviews()   — 리뷰 관리
+ * ══════════════════════════════════════════════════════
  */
 firebase.initializeApp({
  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
