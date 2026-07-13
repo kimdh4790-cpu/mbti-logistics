@@ -1703,46 +1703,79 @@ async function acceptExchange(){
           // 이미지 없는 메뉴 자동 업데이트
           if (action === 'fix-images' && dealerId) {
             const nameMap = {
-              '보리굴비':'korean dried yellow croaker fish banchan food photography',
-              '낙지':'korean spicy octopus stir fry food photography',
-              '전복':'korean abalone steamed seafood food photography',
-              '해물':'korean seafood dish multiple banchan food photography',
-              '불고기':'korean beef bulgogi food photography',
-              '장어':'korean grilled eel food photography',
-              '비빔밥':'korean bibimbap mixed rice bowl colorful food photography',
-              '물회':'korean cold raw fish soup food photography',
-              '홍합':'korean mussel seaweed rice bowl food photography',
-              '꼬막':'korean cockle clam bibimbap food photography',
-              '멍게':'korean sea squirt bibimbap food photography',
-              '공기밥':'korean steamed white rice bowl simple food photography',
-              '해초':'korean seaweed mussel rice bowl healthy food photography',
-              '삼겹살':'korean pork belly bbq food photography',
-              '갈비':'korean ribs grilled food photography',
-              '치킨':'korean fried chicken food photography',
-              '피자':'pizza food photography',
-              '버거':'burger hamburger food photography',
-              '떡볶이':'korean spicy rice cake tteokbokki food photography',
-              '김치':'korean kimchi stew food photography',
-              '냉면':'korean cold noodles food photography',
-              '삼계탕':'korean ginseng chicken soup food photography',
-              '족발':'korean pork feet food photography',
-              '보쌈':'korean boiled pork wrap food photography',
+              // 해산물
+              '보리굴비':'premium korean dried yellow croaker fish banchan, restaurant quality plating, white ceramic plate, soft natural lighting, shallow depth of field, professional food photography, 4k',
+              '낙지':'korean spicy octopus bokkeum in cast iron pan, gochujang sauce, green onion garnish, restaurant plating, professional food photography, 4k',
+              '전복':'korean steamed abalone with soy butter sauce, shell presentation, premium restaurant quality, dramatic lighting, food photography, 4k',
+              '해물':'korean mixed seafood hot pot, clams shrimp squid, rich broth, traditional stone bowl, professional food photography, 4k',
+              '장어':'korean grilled freshwater eel on charcoal, caramelized sauce, sesame seeds, premium restaurant plating, food photography, 4k',
+              '홍합':'korean spicy mussel soup, fresh mussels, vegetable broth, traditional bowl, steam rising, food photography, 4k',
+              '꼬막':'korean seasoned cockle clam bibimbap, colorful vegetables, gochujang, ceramic bowl, food photography, 4k',
+              '멍게':'korean sea squirt fresh sashimi, vibrant orange color, ice presentation, premium seafood plating, food photography, 4k',
+              '생선':'korean grilled fish with salt, crispy golden skin, restaurant plating, food photography, 4k',
+              '회':'korean fresh sashimi assortment, colorful slices, wasabi pickled ginger, premium presentation, food photography, 4k',
+              // 육류
+              '불고기':'korean marinated beef bulgogi sizzling on plate, caramelized edges, sesame garnish, premium restaurant quality, food photography, 4k',
+              '삼겹살':'korean pork belly bbq slices on grill, sizzling, lettuce wrap setup, restaurant quality, food photography, 4k',
+              '갈비':'korean LA galbi short ribs, charcoal grilled, caramelized marinade, premium plating, food photography, 4k',
+              '소고기':'korean premium wagyu beef dish, marble texture, elegant restaurant plating, food photography, 4k',
+              '돼지':'korean pork dish, seasoned, restaurant quality plating, food photography, 4k',
+              '닭':'korean chicken dish, golden crispy, restaurant quality, food photography, 4k',
+              '족발':'korean braised pork feet, sliced, dark soy glaze, traditional plating, food photography, 4k',
+              '보쌈':'korean boiled pork belly, tender sliced, kimchi and radish accompaniment, traditional wooden board, food photography, 4k',
+              // 면/밥류
+              '비빔밥':'korean bibimbap colorful vegetables beef egg in stone dolsot bowl, restaurant quality, dramatic lighting, food photography, 4k',
+              '냉면':'korean mul naengmyeon cold buckwheat noodles, clear broth, sliced beef egg cucumber, premium restaurant, food photography, 4k',
+              '삼계탕':'korean ginseng chicken soup samgyetang, whole small chicken, ginseng dates rice stuffing, premium white ceramic pot, food photography, 4k',
+              '김치찌개':'korean kimchi stew jjigae, bubbling in stone pot, pork tofu, restaurant quality, food photography, 4k',
+              '된장찌개':'korean doenjang jjigae soybean paste stew, tofu vegetables, traditional clay pot, steam, food photography, 4k',
+              '순두부':'korean soft tofu stew sundubu jjigae, silky tofu, seafood, spicy red broth, stone pot, food photography, 4k',
+              '떡볶이':'korean tteokbokki spicy rice cakes, gochujang sauce, fish cake, scallion, street food style premium, food photography, 4k',
+              '공기밥':'korean steamed white rice, fluffy perfect grains, premium white bowl, soft lighting, food photography, 4k',
+              // 치킨/패스트푸드
+              '치킨':'korean fried chicken golden crispy, double fried, yangnyeom sauce option, premium restaurant presentation, food photography, 4k',
+              '피자':'premium artisan pizza, fresh mozzarella, basil, thin crust, restaurant quality, dramatic lighting, food photography, 4k',
+              '버거':'premium gourmet burger, brioche bun, beef patty, fresh vegetables, restaurant quality plating, food photography, 4k',
+              // 기타
+              '김치':'korean kimchi fermented cabbage, vibrant red color, ceramic pot, traditional, food photography, 4k',
+              '해초':'korean seaweed salad, fresh green, sesame dressing, light healthy, food photography, 4k',
+              '두부':'korean silken tofu dish, delicate texture, sauce, garnish, food photography, 4k',
+              '국':'korean soup warm comforting, rich broth, traditional bowl, steam, food photography, 4k',
+              '찌개':'korean jjigae stew, bubbling, colorful ingredients, traditional stone pot, food photography, 4k',
+              '구이':'korean grilled dish, charcoal marks, caramelized, restaurant quality, food photography, 4k',
+              '볶음':'korean stir fried dish, wok flames, colorful vegetables, restaurant quality, food photography, 4k',
+              '탕':'korean hot pot soup, rich broth, multiple ingredients, premium clay pot, food photography, 4k',
+              '면':'korean noodle dish, silky noodles, rich broth, garnish, restaurant quality, food photography, 4k',
+              '초밥':'premium sushi nigiri assortment, fresh fish, wasabi, ginger, elegant japanese restaurant, food photography, 4k',
+              '라멘':'premium ramen, rich tonkotsu broth, chashu pork, soft egg, nori, restaurant quality, food photography, 4k',
+              '파스타':'premium italian pasta, al dente, rich sauce, parmesan, restaurant quality, dramatic lighting, food photography, 4k',
+              '스테이크':'premium beef steak, perfect sear, medium rare, restaurant quality plating, food photography, 4k',
+              '샐러드':'fresh colorful salad, premium ingredients, elegant restaurant plating, food photography, 4k',
+              '디저트':'premium korean dessert, elegant plating, soft lighting, restaurant quality, food photography, 4k',
+              '케이크':'premium slice of cake, elegant decoration, soft lighting, cafe quality, food photography, 4k',
+              '커피':'premium coffee latte art, cafe quality, warm lighting, food photography, 4k',
+              '음료':'premium beverage drink, elegant glass, cafe quality, food photography, 4k',
             };
             const catMap = {
-              '밥상':'korean table set meal banchan multiple dishes food photography',
-              '프리미엄':'korean premium deluxe meal set food photography elegant',
-              '단품':'korean single dish food photography',
-              '사이드':'korean side dish food photography',
+              '밥상':'korean traditional table set meal, multiple banchan side dishes, elegant wooden table, restaurant quality, food photography, 4k',
+              '프리미엄':'korean premium luxury meal set, finest ingredients, michelin star plating, dramatic lighting, food photography, 4k',
+              '단품':'korean single dish restaurant quality, perfect plating, professional presentation, food photography, 4k',
+              '사이드':'korean side dish banchan, small ceramic bowl, colorful, restaurant quality, food photography, 4k',
+              '세트':'korean meal set combination, balanced nutrition, restaurant quality plating, food photography, 4k',
+              '주류':'premium korean alcohol drink, elegant glass, restaurant setting, food photography, 4k',
             };
             function autoImg(name, category) {
               let prompt = '';
-              for (const [k, v] of Object.entries(nameMap)) {
-                if (name.includes(k)) { prompt = v; break; }
+              // 메뉴명 키워드 매칭 (긴 키워드 우선)
+              const sortedKeys = Object.keys(nameMap).sort((a,b) => b.length - a.length);
+              for (const k of sortedKeys) {
+                if (name.includes(k)) { prompt = nameMap[k]; break; }
               }
               if (!prompt && category && catMap[category]) prompt = catMap[category];
-              if (!prompt) prompt = 'korean food dish food photography delicious';
+              if (!prompt) prompt = `korean restaurant quality food dish "${name}", professional food photography, elegant plating, soft natural lighting, 4k high resolution`;
               const seed = name.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 9999;
-              return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=400&height=400&nologo=true&seed=${seed}`;
+              // 고화질 설정: 800x800, flux 모델
+              return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=800&nologo=true&seed=${seed}&model=flux&enhance=true`;
             }
             // 해당 딜러 메뉴 전체 조회
             const qr = await fetch(`${FS_BASE}:runQuery`, {
