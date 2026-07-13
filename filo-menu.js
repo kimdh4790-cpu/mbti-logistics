@@ -779,6 +779,7 @@ function _filoMenuAddModal(did, menu, cat){
   var category=(document.getElementById('menu-cat-inp').value||'기타').trim();
   var emoji=(document.getElementById('menu-emoji-inp').value||'🍽').trim();
   var stock=document.getElementById('menu-stock-inp').value!==''?parseInt(document.getElementById('menu-stock-inp').value):null;
+  var stockMin=document.getElementById('menu-stock-min-inp')?parseInt(document.getElementById('menu-stock-min-inp').value||'0'):0;
   var forSale=document.getElementById('menu-forsale-inp').checked;
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
@@ -790,6 +791,8 @@ function _filoMenuAddModal(did, menu, cat){
   promise.then(function(ref){
    _filoToast(isEdit?'✅ 수정됐습니다! 번역 중...':'✅ 등록됐습니다! 번역 중...');
    mo.remove();
+   // 재고 하한선 체크 → 푸시 알림
+   if(stock!=null && stockMin>0 && stock<=stockMin) _filoStockLowAlert(name, stock, stockMin);
    // 메뉴 저장 후 자동 번역 → Firestore에 저장
    var docId=isEdit?menu._id:(ref&&ref.id);
    if(docId && name){
