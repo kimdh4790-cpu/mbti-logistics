@@ -6,7 +6,7 @@
   ⚠️ 수정 시 주의:
   - JS 로직은 dine.js에 있음
   - GitHub push → 자동배포 (GitHub Actions)
-  - KV keys: dine.html, dine.js
+  - KV keys: dine.html, dine.js, dine-staff.js, dine-payroll.js, dine-sales.js, dine-analytics.js, dine-tax.js, dine-member.js
   
   Firebase: mbti-logistics 프로젝트
   companies.platform = "dine" 으로 데이터 분리
@@ -503,7 +503,13 @@ document.addEventListener('touchstart',function(e){
  }
 });
 </script>
-<script src="/dine.js?v=1"></script>
+<script src="/dine.js?v=2"></script>
+<script src="/dine-staff.js?v=1"></script>
+<script src="/dine-payroll.js?v=1"></script>
+<script src="/dine-sales.js?v=1"></script>
+<script src="/dine-analytics.js?v=1"></script>
+<script src="/dine-tax.js?v=1"></script>
+<script src="/dine-member.js?v=1"></script>
 <script>
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('/dine-sw.js').catch(function(){});
