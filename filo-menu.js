@@ -505,7 +505,13 @@ function _filoPageMenuMgmt(el){
 }
 
 function _filoLoadMenuMgmt(did){
- _db.collection('filo_menus').where('dealerId','==',did).get().then(function(snap){
+ Promise.all([
+  _db.collection('filo_menus').where('dealerId','==',did).get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get()
+ ]).then(function(results){
+  var snap=results[0],costSnap=results[1];
+  var costMap={};
+  costSnap.forEach(function(doc){var d=doc.data();if(d.name&&d.cost!=null)costMap[d.name]=+d.cost;});
   /* 카테고리 목록 */
   var cats=[];
   snap.forEach(function(doc){
