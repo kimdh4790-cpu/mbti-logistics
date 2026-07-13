@@ -117,7 +117,7 @@ var DINE_APIKEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
   if(_pp[0] && _rsv.indexOf(_pp[0])===-1)
    window._DINE_SLUG=decodeURIComponent(_pp[0]);
  }
- if(window._DINE_SLUG) console.log('[DINE] slug 인식:', window._DINE_SLUG);
+ // slug 인식 로그 제거됨
  if(window.__DINE_STORE__){
   var s=window.__DINE_STORE__;
   // 로고 아래 매장명 표시
