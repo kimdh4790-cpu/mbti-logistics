@@ -1,4 +1,15 @@
-// 테이블 펄스 애니메이션 CSS 주입
+/**
+ * @title       FILO · DINE — 외식업 통합 운영 플랫폼
+ * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
+ * @author      김형우 (kimdh4790@gmail.com)
+ * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
+ * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
+ *              저작권법 및 관련 법령에 의해 보호됩니다.
+ *              사업자등록번호: 373-86-02536
+ *              filo.ai.kr | dine.ne.kr
+ * @module      filo-table.js
+ * @description 테이블 현황·색상시각화·예약관리·실시간연동
+ */
 (function(){
  var st=document.createElement('style');
  st.textContent='@keyframes tablePulse{0%,100%{opacity:1}50%{opacity:.6}}';
