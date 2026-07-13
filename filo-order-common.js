@@ -366,3 +366,55 @@ function _openAddrPopup(){
 function _closeAddrPopup(){var p=document.querySelector('[style*="z-index:9999"]');if(p)p.remove();}
 function _confirmAddr(){_openAddrPopup();}
 function _searchAddr(){_openAddrPopup();}
+
+// ── 시간대별 AI 메뉴 추천 배너 ──────────────────────────────────────────────
+function _renderRecommendBanner(menus, did){
+ var bannerId='recommend-banner';
+ var existing=document.getElementById(bannerId);
+ if(existing)existing.remove();
+
+ var h=new Date().getHours();
+ var timeLabel=h>=6&&h<11?'🌅 아침 추천':h>=11&&h<14?'☀️ 점심 추천':h>=14&&h<17?'☕ 오후 추천':h>=17&&h<21?'🌆 저녁 추천':'🌙 야식 추천';
+
+ // 시간대별 기본 카테고리 우선순위
+ var timePrefs={
+  morning:['커피','음료','디저트','샐러드','토스트'],
+  lunch:['밥','면','정식','국','찌개','비빔밥','냉면'],
+  afternoon:['커피','음료','디저트','케이크','스낵'],
+  dinner:['고기','치킨','피자','맥주','삼겹살','갈비'],
+  night:['치킨','피자','족발','보쌈','야식']
+ };
+ var prefKey=h>=6&&h<11?'morning':h>=11&&h<14?'lunch':h>=14&&h<17?'afternoon':h>=17&&h<21?'dinner':'night';
+ var prefs=timePrefs[prefKey];
+
+ // 메뉴 점수 계산
+ var scored=menus.filter(function(m){return m.stock==null||m.stock>0;}).map(function(m){
+  var score=0;
+  prefs.forEach(function(p,i){if(m.name.includes(p)||m.category===p)score+=10-i;});
+  if(m.category)prefs.forEach(function(p){if(m.category.includes(p))score+=5;});
+  return {m:m,score:score};
+ }).sort(function(a,b){return b.score-a.score;}).slice(0,5);
+
+ if(!scored.length)return;
+
+ var banner=document.createElement('div');
+ banner.id=bannerId;
+ banner.style.cssText='margin:0 0 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(59,130,246,.08));border:1px solid rgba(124,58,237,.2);border-radius:14px;';
+ banner.innerHTML='<div style="font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:8px;letter-spacing:.5px">'+timeLabel+'</div>'+
+  '<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none">'+
+  scored.map(function(s){
+   var m=s.m;
+   var imgHtml=m.imageUrl?'<img src="'+m.imageUrl+'" style="width:56px;height:56px;object-fit:cover;border-radius:8px;display:block" loading="lazy" onerror="this.style.display=\'none\'">'
+    :'<div style="width:56px;height:56px;border-radius:8px;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;font-size:24px">'+(m.emoji||'🍽')+'</div>';
+   return '<div style="min-width:64px;text-align:center;cursor:pointer" onclick="_openMdlCommon('+JSON.stringify(m)+')">'+
+    imgHtml+
+    '<div style="font-size:10px;font-weight:700;color:var(--t1);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:64px">'+m.name+'</div>'+
+    '<div style="font-size:10px;color:#22c55e;font-weight:700">₩'+Number(m.price||0).toLocaleString()+'</div>'+
+    '</div>';
+  }).join('')+
+  '</div>';
+
+ // 메뉴 그리드 앞에 삽입
+ var grid=document.getElementById('menu-grid');
+ if(grid&&grid.parentNode) grid.parentNode.insertBefore(banner,grid);
+}
