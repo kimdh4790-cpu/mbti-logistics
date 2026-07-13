@@ -1685,6 +1685,10 @@ async function acceptExchange(){
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus-bulk' && method === 'POST') {
+        const adminEmail = request.headers.get('X-Admin-Email') || '';
+        if (!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(adminEmail)) {
+          return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+        }
         try {
           const body = await request.json();
           const { menus, dealerId, action } = body;
@@ -3091,7 +3095,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     // /sync-kv — GitHub 최신 파일 KV 저장 (터미널 없이 배포)
     if (path === '/sync-kv') {
       const secret = url.searchParams.get('s');
-      if (secret !== 'donway2026') return new Response('unauthorized',{status:401});
+      const syncSecret = env.SYNC_KV_SECRET || 'donway2026';
+      if (secret !== syncSecret) return new Response('unauthorized',{status:401});
       const files=['kiosk.html','inventory.html','qrpos.html','mbtico_hub.html','join.html','admin_sub.html','order.html','donway_landing.html'];
       const e2=env||_env_ref;
       const out=[];
