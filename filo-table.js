@@ -1,3 +1,10 @@
+// 테이블 펄스 애니메이션 CSS 주입
+(function(){
+ var st=document.createElement('style');
+ st.textContent='@keyframes tablePulse{0%,100%{opacity:1}50%{opacity:.6}}';
+ document.head.appendChild(st);
+})();
+
 // filo-table.js - 테이블QR, 예약, 착석, 비움, 모달, 이동
 // 의존성: filo-common.js
 // 관련 컬렉션: filo_tables, filo_orders, filo_payments, filo_bookings
