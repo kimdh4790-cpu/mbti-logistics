@@ -410,6 +410,33 @@ function _dineAfterLogin(){
  _dineWatchAttend();
  _dineWatchFiloSales();  // FILO POS 실시간 연동
  _dineWatchReservations(); // 예약 실시간 연동
+ _dineWatchStock(); // FILO 재고 부족 실시간
+}
+
+// FILO 재고 부족 → DINE 알림
+function _dineWatchStock(){
+ if(window._dineStockUnsub)window._dineStockUnsub();
+ var did=_CU&&_CU.dealerId;
+ if(!did||!_db)return;
+ window._dineStockUnsub=_db.collection('filo_menus')
+  .where('dealerId','==',did)
+  .onSnapshot(function(snap){
+   var low=[];
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)
+     low.push(d.name+'('+d.stock+'개)');
+   });
+   var el=document.getElementById('dine-stock-badge');
+   if(el){el.textContent=low.length>0?'⚠️ 재고부족 '+low.length+'개':'';el.style.display=low.length>0?'block':'none';}
+   if(low.length>0&&window._dineStockPrev!==low.join()){
+    window._dineStockPrev=low.join();
+    _dineToast('⚠️ 재고 부족: '+low.slice(0,3).join(', '));
+    if('Notification' in window&&Notification.permission==='granted'){
+     new Notification('재고 부족',{body:low.join(', '),icon:'/dine-icon-192.png'});
+    }
+   }
+  },function(){});
 }
 
 // FILO POS 매출 실시간 감시 (FILO→DINE 연동)
