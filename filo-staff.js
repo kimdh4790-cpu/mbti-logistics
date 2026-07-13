@@ -27,6 +27,19 @@ function _filoPageStaffQR(el){
  '<div id="qr-checkout-timer" style="font-size:10px;color:var(--t3)">갱신 대기중...</div>'+
  '</div>'+
  '</div>'+
+ /* 휴식 QR */
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'+
+ '<div style="text-align:center;padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:12px">'+
+ '<div style="font-size:11px;font-weight:800;color:#f59e0b;margin-bottom:6px">☕ 휴식 시작</div>'+
+ '<div id="qr-break-start" style="background:#fff;border-radius:8px;padding:5px;display:inline-block;margin-bottom:4px"></div>'+
+ '<div id="qr-break-timer" style="font-size:9px;color:var(--t3)">갱신 대기중...</div>'+
+ '</div>'+
+ '<div style="text-align:center;padding:12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:12px">'+
+ '<div style="font-size:11px;font-weight:800;color:#6366f1;margin-bottom:6px">🏃 휴식 종료</div>'+
+ '<div id="qr-break-end" style="background:#fff;border-radius:8px;padding:5px;display:inline-block;margin-bottom:4px"></div>'+
+ '<div style="font-size:9px;color:var(--t3)">위와 동일 갱신</div>'+
+ '</div>'+
+ '</div>'+
  '<div style="margin-top:10px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px;font-size:10px;color:var(--t3)">'+
  '💡 직원이 본인 스마트폰으로 스캔 → 이름 확인 후 출퇴근 자동 기록<br>30초마다 코드 변경으로 대리 출퇴근 방지</div>'+
  '</div>'+
