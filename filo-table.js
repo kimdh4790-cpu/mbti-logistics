@@ -1322,7 +1322,25 @@ function _filoReservationEdit(id,did){
   if(!snap.exists)return;
   var d=snap.data();
   _filoReservationAdd(did,d.date);
-  /* TODO: 기존 데이터 채우기 */
+  // 기존 데이터 폼에 자동 채우기
+  setTimeout(function(){
+   var fName=document.getElementById('rsv-name');
+   var fPhone=document.getElementById('rsv-phone');
+   var fPeople=document.getElementById('rsv-people');
+   var fNote=document.getElementById('rsv-note');
+   var fTime=document.getElementById('rsv-time');
+   if(fName)fName.value=d.name||'';
+   if(fPhone)fPhone.value=d.phone||'';
+   if(fPeople)fPeople.value=d.people||2;
+   if(fNote)fNote.value=d.note||'';
+   if(fTime)fTime.value=d.time||'';
+   // 수정 모드 표시 — 저장 시 기존 doc 업데이트
+   var saveBtn=document.getElementById('rsv-save');
+   if(saveBtn){
+    saveBtn.textContent='✏️ 예약 수정';
+    saveBtn.dataset.editId=id;
+   }
+  },150);
  });
 }
 function _filoPageTableMgmt(el){
