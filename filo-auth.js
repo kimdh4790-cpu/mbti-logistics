@@ -383,11 +383,13 @@ function _filoPageHome(el){
  '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#22c55e"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
  '</div></div></div>'+
 
- '<div class="kpi-grid" id="home-stats">'+
+ '<div class="kpi-grid" id="home-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">'+
  [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'💰',id:'hs-0'},
+  {t:'오늘 순이익',c:'kpi-profit',vc:'#22c55e',ic:'📈',id:'hs-profit'},
+  {t:'마진율',c:'kpi-margin',vc:'#f59e0b',ic:'📊',id:'hs-margin'},
   {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'🔔',id:'hs-1'},
-  {t:'재고 부족',c:'kpi-margin',vc:'#f59e0b',ic:'⚠️',id:'hs-2'},
-  {t:'출근 인원',c:'kpi-profit',vc:'#22c55e',ic:'👥',id:'hs-3'}
+  {t:'재고 부족',c:'kpi-warn',vc:'#f59e0b',ic:'⚠️',id:'hs-2'},
+  {t:'출근 인원',c:'kpi-staff',vc:'#38bdf8',ic:'👥',id:'hs-3'}
  ].map(function(s){
  return '<div class="kpi-card '+s.c+' card-hover">'+ 
  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
