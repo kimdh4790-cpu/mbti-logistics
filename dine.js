@@ -515,9 +515,11 @@ function _dineDashboard(el){
  var kpi=document.createElement('div');
  kpi.className='kpi-grid';
  [{id:'kpi-sales',label:'오늘 매출',icon:'💰',color:'#38bdf8'},
-  {id:'kpi-orders',label:'주문 건수',icon:'🛒',color:'#a78bfa'},
-  {id:'kpi-staff',label:'출근 인원',icon:'👥',color:'#22c55e'},
-  {id:'kpi-labor',label:'인건비율',icon:'📈',color:'#f59e0b'}
+  {id:'kpi-profit',label:'오늘 순이익',icon:'📈',color:'#22c55e'},
+  {id:'kpi-margin',label:'마진율',icon:'📊',color:'#a78bfa'},
+  {id:'kpi-orders',label:'주문 건수',icon:'🛒',color:'#8b5cf6'},
+  {id:'kpi-staff',label:'출근 인원',icon:'👥',color:'#38bdf8'},
+  {id:'kpi-labor',label:'인건비율',icon:'💼',color:'#f59e0b'}
  ].forEach(function(k){
   var card=document.createElement('div');
   card.className='kpi-card';
@@ -554,6 +556,23 @@ function _dineDashboard(el){
 
 function _dineWatchAttend(){
  if(_attendInterval)clearInterval(_attendInterval);
+ if(window._dineAttendUnsub)window._dineAttendUnsub();
+ var today=new Date().toISOString().slice(0,10);
+ var did=_CU&&_CU.dealerId;
+ if(!did||!_db)return;
+ window._dineAttendUnsub=_db.collection('attendance')
+  .where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var ins={},outs={};
+   snap.forEach(function(doc){var d=doc.data();if(d.type==='in')ins[d.memberId]=d;else outs[d.memberId]=d;});
+   var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
+   var el=document.getElementById('tb-attend-cnt');
+   if(el)el.textContent=working+'명 출근중';
+   var se=document.getElementById('kpi-staff');
+   if(se)se.textContent=working+'명';
+  },function(e){console.warn('attend:',e);});
+ // 폴링은 fallback으로만
+ function loadAttend(){
  function loadAttend(){
   var today=new Date().toISOString().slice(0,10);
   _firestoreQuery('attendance',[{field:'dealerId',value:_CU.dealerId},{field:'date',value:today}])
@@ -599,6 +618,10 @@ function _dineLoadDashboard(did,today){
 
   /* KPI */
   _countUp('kpi-sales',totalSales,'₩','');
+  var ePr=document.getElementById('kpi-profit');
+  if(ePr){_countUp('kpi-profit',Math.max(0,todayProfit),'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
+  var eMg=document.getElementById('kpi-margin');
+  if(eMg){eMg.textContent=marginRate+'%';eMg.style.color=marginRate>=60?'#22c55e':marginRate>=40?'#f59e0b':'#ef4444';}
   _countUp('kpi-orders',orderCnt,'','건');
   var se=document.getElementById('kpi-staff');if(se)se.textContent=working.length+'명';
   var lr=document.getElementById('kpi-labor');if(lr)lr.textContent=laborRate+'%';
