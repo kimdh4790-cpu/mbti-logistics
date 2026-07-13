@@ -431,7 +431,24 @@ function _filoPageHome(el){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
  '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
- }).join('')+'</div></div></div>';
+ }).join('')+'</div></div>'+
+
+ '<div class="card fade-up-4" style="margin-top:12px">'+
+ '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+ '<div style="font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">🔗 DINE 실시간</div>'+
+ '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block"></span>'+
+ '</div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+ '<div style="padding:10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
+ '<div style="font-size:10px;color:var(--t3)">오늘 예약</div>'+
+ '<div id="filo-dine-res-badge" style="font-size:14px;font-weight:900;color:#38bdf8;margin-top:2px">—</div>'+
+ '</div>'+
+ '<div style="padding:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
+ '<div style="font-size:10px;color:var(--t3)">테이블 주문</div>'+
+ '<div id="filo-dine-sales" style="font-size:14px;font-weight:900;color:#22c55e;margin-top:2px">—</div>'+
+ '</div>'+
+ '</div></div>'+
+ '</div>';
 
  if(did){
  var ym=today.slice(0,7);
