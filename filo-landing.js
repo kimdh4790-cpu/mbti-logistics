@@ -140,6 +140,52 @@ var MODALS={
     ic:'🍽',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
     title:'레시피·원가 계산',tagline:'메뉴별 원가율과 마진을 자동으로 계산',
     body:function(){return '<div class="feat-list"><div class="feat-row"><div class="feat-row-ic">📝</div><div class="feat-row-body"><div class="feat-row-title">메뉴별 레시피 등록</div><div class="feat-row-desc">메뉴에 들어가는 재료와 사용량 입력. 재료 단가와 자동 연산으로 원가 즉시 계산</div></div></div><div class="feat-row"><div class="feat-row-ic">💹</div><div class="feat-row-body"><div class="feat-row-title">마진율 자동 계산</div><div class="feat-row-desc">(판매가 - 원가) ÷ 판매가 × 100. 메뉴별 마진율 한눈에 비교. 저마진 메뉴 즉시 파악</div></div></div><div class="feat-row"><div class="feat-row-ic">📦</div><div class="feat-row-body"><div class="feat-row-title">재고 소모 연동</div><div class="feat-row-desc">POS 판매 시 레시피 기반으로 재고 자동 차감. 별도 출고 등록 없이 정확한 재고 유지</div></div></div><div class="feat-row"><div class="feat-row-ic">💡</div><div class="feat-row-body"><div class="feat-row-title">판매가 추천</div><div class="feat-row-desc">목표 마진율 입력 시 적정 판매가 자동 제안. 가격 책정에 데이터 근거 제공</div></div></div></div>';}
+  },break_qr:{
+    ic:'☕',color:'rgba(245,158,11,.15)',border:'rgba(245,158,11,.3)',
+    title:'휴식 QR',tagline:'휴식시작·종료 QR 스캔 → 급여에서 자동 차감',
+    body:function(){return '<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">☕</div><div class="feat-row-body"><div class="feat-row-title">휴식 시작 QR</div><div class="feat-row-desc">직원이 휴식 시작 시 QR 스캔 → 휴식 시작 시각 자동 기록</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🏃</div><div class="feat-row-body"><div class="feat-row-title">휴식 종료 QR</div><div class="feat-row-desc">복귀 시 QR 스캔 → 실제 휴식시간 자동 계산</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">💰</div><div class="feat-row-body"><div class="feat-row-title">급여 자동 차감</div><div class="feat-row-desc">휴식시간 급여 자동 차감. 수동 입력 불필요</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🔐</div><div class="feat-row-body"><div class="feat-row-title">동적 QR 보안</div><div class="feat-row-desc">30초마다 갱신 → 캡처·대리 스캔 완전 차단</div></div></div>'+
+      '</div>';}
+  },ai_image:{
+    ic:'🤖',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
+    title:'AI 메뉴 이미지 자동생성',tagline:'메뉴 이름만 입력하면 4K 음식 사진 자동 생성',
+    body:function(){return '<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">📸</div><div class="feat-row-body"><div class="feat-row-title">4K 고품질 이미지</div><div class="feat-row-desc">메뉴명 입력 → 전문 음식 사진 수준 이미지 자동 생성</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">🌏</div><div class="feat-row-body"><div class="feat-row-title">3개국어 자동번역</div><div class="feat-row-desc">메뉴 등록 즉시 영어·중국어·일본어 자동 번역. 외국인 고객도 QR주문 가능</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">⚡</div><div class="feat-row-body"><div class="feat-row-title">50개+ 메뉴 일괄 생성</div><div class="feat-row-desc">버튼 하나로 전체 메뉴 이미지 일괄 생성</div></div></div>'+
+      '</div>';}
+  },ai_recommend:{
+    ic:'✨',color:'rgba(124,58,237,.15)',border:'rgba(124,58,237,.3)',
+    title:'AI 메뉴 추천',tagline:'시간대별 고객 취향에 맞는 메뉴 자동 추천 배너',
+    body:function(){return '<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">🌅</div><div class="feat-row-body"><div class="feat-row-title">시간대별 자동 추천</div><div class="feat-row-desc">아침·점심·오후·저녁·야식 시간대에 맞는 메뉴 자동 배너 표시</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">📱</div><div class="feat-row-body"><div class="feat-row-title">QR주문 화면 배너</div><div class="feat-row-desc">고객 주문 화면에 추천 메뉴 이미지 배너 자동 표시 → 객단가 상승</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">📦</div><div class="feat-row-body"><div class="feat-row-title">재고 연동</div><div class="feat-row-desc">재고 부족 메뉴는 추천에서 자동 제외</div></div></div>'+
+      '</div>';}
+  },profit_dash:{
+    ic:'📊',color:'rgba(34,197,94,.15)',border:'rgba(34,197,94,.3)',
+    title:'순이익·마진율 대시보드',tagline:'매출-원가 실시간 계산. 오늘 얼마 남았는지 즉시 확인',
+    body:function(){return '<div class="mini-stat-row">'+
+      '<div class="mini-stat"><div class="mini-stat-val" style="color:#38bdf8">₩247,000</div><div class="mini-stat-lbl">오늘 순이익</div></div>'+
+      '<div class="mini-stat"><div class="mini-stat-val" style="color:#22c55e">64%</div><div class="mini-stat-lbl">마진율</div></div>'+
+      '<div class="mini-stat"><div class="mini-stat-val" style="color:#f59e0b">28%</div><div class="mini-stat-lbl">인건비율</div></div>'+
+      '</div><div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">💰</div><div class="feat-row-body"><div class="feat-row-title">순이익 실시간</div><div class="feat-row-desc">매출 - 원가 자동 계산. 홈 대시보드에 실시간 표시</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">📊</div><div class="feat-row-body"><div class="feat-row-title">메뉴별 마진율</div><div class="feat-row-desc">원가 입력 시 마진율 자동 계산. 60%↑초록 / 40%↑노랑 / 미만 빨강</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">⚠️</div><div class="feat-row-body"><div class="feat-row-title">재고 부족 푸시알림</div><div class="feat-row-desc">재고 하한선 설정 → 부족 시 브라우저 푸시알림 자동 발송</div></div></div>'+
+      '</div>';}
+  },dine_sync:{
+    ic:'🔗',color:'rgba(8,145,178,.15)',border:'rgba(8,145,178,.3)',
+    title:'DINE 실시간 연동',tagline:'FILO·DINE 양방향 Firestore 실시간 동기화',
+    body:function(){return '<div class="feat-list">'+
+      '<div class="feat-row"><div class="feat-row-ic">📅</div><div class="feat-row-body"><div class="feat-row-title">DINE 예약 즉시반영</div><div class="feat-row-desc">DINE 예약 확정 시 FILO 테이블에 즉시 표시</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">👥</div><div class="feat-row-body"><div class="feat-row-title">출퇴근 실시간</div><div class="feat-row-desc">DINE QR 출퇴근 → FILO 홈 출근인원 즉시 반영</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">⚠️</div><div class="feat-row-body"><div class="feat-row-title">재고부족 DINE 알림</div><div class="feat-row-desc">FILO 재고 부족 → DINE 대시보드 즉시 알림</div></div></div>'+
+      '<div class="feat-row"><div class="feat-row-ic">💰</div><div class="feat-row-body"><div class="feat-row-title">POS 매출 자동반영</div><div class="feat-row-desc">FILO POS 결제 즉시 DINE 매출 대시보드 반영</div></div></div>'+
+      '</div>';}
   }
 };
 
