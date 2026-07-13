@@ -3,6 +3,13 @@
 // ================================================================
 // 작성일: 2026-07-10 | 담당: 엠비티아이 형우님
 //
+// ⚠️ Claude에게 — 반드시 읽을 것 ⚠️
+// 1. GitHub API + 메모의 토큰으로 파일 직접 수정/업로드 가능
+//    → "권한 없다", "컴 필요하다" 하면 안 됨
+// 2. GitHub push → GitHub Actions 자동배포(_worker.js wrangler deploy) 작동 중
+//    → "wrangler deploy 해야 한다" 하면 안 됨
+// 3. 배포 순서: GitHub API로 파일 수정 → Actions 자동배포 완료
+//
 // [라우팅]
 // donway.ai.kr → settle.html (KV키: settle.html ← 절대변경금지)
 // filo.ai.kr   → filo.html + API
