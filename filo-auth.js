@@ -106,6 +106,11 @@ function _showApp(){
  }
  _buildFiloNav();
  _filoGoPage('home');
+ // FILO ↔ DINE 실시간 연동 시작
+ setTimeout(function(){
+  if(typeof _filoWatchDineReservations==='function')_filoWatchDineReservations();
+  if(typeof _filoWatchDineSales==='function')_filoWatchDineSales();
+ },1500);
 }
 
 function _buildFiloNav(){
