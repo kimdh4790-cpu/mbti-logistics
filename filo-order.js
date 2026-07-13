@@ -443,7 +443,7 @@ function _filoSendOrderAlimtalk(phone,name,items,total,status){
   rejected:'죄송합니다. 매장 사정으로 주문이 거절됐습니다.',
   delivered:'배달이 완료됐습니다. 맛있게 드세요!'
  };
- console.log('[알림톡]', phone, msgs[status]);
+ // console.log('[알림톡]', phone, msgs[status]);
  // TODO: 알림톡 API 연동
 }
 
