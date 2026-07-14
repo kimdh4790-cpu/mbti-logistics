@@ -48,6 +48,23 @@ if(paymentKey&&oid&&amount){
   db.collection('toss_orders').doc(oid).update({status:'paid',paymentKey:paymentKey,paidAt:new Date().toISOString()});
   /* FILO 앱에 주문 알림용 filo_table_orders 저장 */
   db.collection('filo_table_orders').add({dealerId:did,tableId:tid,orderId:oid,status:'ordered',notified:false,createdAt:new Date().toISOString()});
+   /* FCM 영수증 발송 — toss_orders에서 fcmToken 조회 */
+   db.collection('toss_orders').doc(oid).get().then(function(snap){
+    if(!snap.exists)return;
+    var tok=snap.data().fcmToken;
+    var items=snap.data().items||[];
+    var total=snap.data().total||parseInt(amount)||0;
+    if(!tok||tok.length<20)return;
+    fetch('/fcm/notify-drivers',{method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+      tokens:[tok],
+      title:'✅ 결제 완료 · ₩'+total.toLocaleString(),
+      body:items.slice(0,3).map(function(it){return (it.name||it[1]&&it[1].name||'');}).join(' · ')||'주문이 완료됐습니다',
+      type:'receipt',url:'/'
+     })
+    }).catch(function(){});
+   }).catch(function(){});
  }).catch(function(){});
 }
 
