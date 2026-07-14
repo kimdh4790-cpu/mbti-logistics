@@ -428,8 +428,7 @@ function doPostpay(){
   };
   if(fcmToken)orderData.fcmToken=fcmToken;
   _db.collection('filo_orders').add(orderData).then(function(){
-    alert('✅ 주문이 접수됐습니다!
-식사 후 카운터에서 결제해주세요');
+    alert('✅ 주문이 접수됐습니다! 식사 후 카운터에서 결제해주세요');
     _cart={};renderCart();
   }).catch(function(e){alert('오류: '+e.message);});
 }
