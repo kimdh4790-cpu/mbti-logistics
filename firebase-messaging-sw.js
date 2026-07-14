@@ -104,20 +104,27 @@ self.addEventListener('notificationclick', function(e) {
   if (e.action === 'close') return;
 
   const rawUrl = (e.notification.data && e.notification.data.url) || '/settle';
-  // 상대경로면 절대경로로 보정 (도메인은 SW 등록 출처 기준)
+  const type   = (e.notification.data && e.notification.data.type) || '';
+  // 상대경로면 절대경로로 보정
   const url = rawUrl.startsWith('http') ? rawUrl : (self.location.origin + rawUrl);
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(wins) {
-      // 이미 열린 탭이 있으면 포커스 + 페이지 이동
       for (var i = 0; i < wins.length; i++) {
-        if (wins[i].url.includes('donway.ai.kr') || wins[i].url.includes('filo.ai.kr') || wins[i].url.includes('dine.ne.kr') || wins[i].url.includes('localhost')) {
-          wins[i].focus();
-          wins[i].navigate(url);
+        var w = wins[i];
+        // pickup/receipt: 이미 열린 order 탭이면 포커스만 (navigate 금지 — 주문완료 화면 유지)
+        if ((type === 'pickup' || type === 'receipt') && w.url.includes('/order')) {
+          w.focus();
+          return;
+        }
+        // 그 외: 도메인 일치하면 포커스 + 이동
+        if (w.url.includes('donway.ai.kr') || w.url.includes('filo.ai.kr') || w.url.includes('dine.ne.kr') || w.url.includes('localhost')) {
+          w.focus();
+          w.navigate(url);
           return;
         }
       }
-      // 없으면 새 탭
+      // 열린 탭 없으면 새 탭
       return clients.openWindow(url);
     })
   );
