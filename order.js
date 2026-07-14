@@ -194,25 +194,10 @@ function _doOrder(payType){
   var dn=document.getElementById('done');
   var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
-  // 선불/후불 표기
-  var payMsg=document.getElementById('done-pay-msg');
-  if(payMsg){
-   if(payType==='prepay'){
-    payMsg.innerHTML='<span style="display:inline-block;padding:6px 14px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:20px;color:#22c55e;font-size:13px;font-weight:700">💳 선결제 완료</span>';
-   } else {
-    payMsg.innerHTML='<span style="display:inline-block;padding:6px 14px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:20px;color:#f59e0b;font-size:13px;font-weight:700">🧾 후불 결제 · 식사 후 카운터에서 결제</span>';
-   }
-  }
-  // 영수증 버튼 문구 구분
-  var rcptBtn=document.getElementById('receipt-fcm-btn');
-  if(rcptBtn){
-   rcptBtn.textContent=payType==='prepay'?'🧾 결제 영수증 받기':'🧾 영수증 알림 받기 (결제 후 발송)';
-  }
-  // 현재 주문 ID 전역 저장 (FCM 토큰 업데이트용)
-  _lastOrderId=ref.id;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
   // 픽업 감지 시작
+  _lastOrderId=ref.id;
   _listenPickup(ref.id);
   // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
@@ -307,7 +292,7 @@ function _changeTable(){
  var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
  if(!newNum||!newNum.trim())return;
  newNum=newNum.trim();
- if(!_lastOrderId){_filoToast('⚠️ 주문 정보를 찾을 수 없습니다');return;}
+ if(!_lastOrderId){alert('주문 정보를 찾을 수 없습니다');return;}
  _db.collection('filo_orders').doc(_lastOrderId).update({
   tableNum:newNum,
   tableName:'테이블 '+newNum,
@@ -316,8 +301,8 @@ function _changeTable(){
  }).then(function(){
   _tNum=newNum;
   var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
-  _filoToast('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
- }).catch(function(e){_filoToast('❌ 변경 실패: '+e.message);});
+  alert('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
+ }).catch(function(e){alert('변경 실패: '+e.message);});
 }
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
@@ -376,10 +361,7 @@ function _initFCM(){
     if(token){
      _fcmToken=token;
      try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
-     // 토큰 발급 성공 → 현재 주문에 즉시 저장
-     if(_lastOrderId){
-      _db.collection('filo_orders').doc(_lastOrderId).update({fcmToken:token}).catch(function(){});
-     }
+     // [FCM] 토큰 발급 성공
     }
     if(gate)gate.style.display='none';
    }).catch(function(e){
@@ -410,6 +392,7 @@ function _callStaff(){
 
 
 // ── 영수증 알림 받기 ─────────────────────────────────────────────
+var _VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
 function reqReceiptFCM(){
   var btn=document.getElementById('receipt-fcm-btn');
   var st=document.getElementById('receipt-fcm-status');
@@ -428,26 +411,19 @@ function reqReceiptFCM(){
     st.textContent='영수증 준비 중...';
     navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
       .then(function(reg){
-        return firebase.messaging().getToken({vapidKey:_VAPID_KEY,serviceWorkerRegistration:reg});
+        return firebase.messaging().getToken({vapidKey:_VAPID,serviceWorkerRegistration:reg});
       }).then(function(tok){
         if(!tok)throw new Error('토큰 발급 실패');
         try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}
-        // filo_orders에 fcmToken 저장 → 직원 후불 결제 시 이 토큰으로 영수증 발송
-        if(_lastOrderId){
-          _db.collection('filo_orders').doc(_lastOrderId).update({fcmToken:tok}).catch(function(){});
-        }
-        // 주문확인 푸시 즉시 발송 (영수증 알림 받기 탭 시)
-        var dnum=document.getElementById('done-num');
-        var numTxt=dnum?dnum.textContent:'';
-        var ditems=document.getElementById('done-items');
-        var itemsTxt=ditems?ditems.textContent.split('\n').slice(0,2).join(' · '):'';
         return fetch('/fcm/notify-drivers',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             tokens:[tok],
-            title:'🧾 주문 확인 · '+numTxt,
-            body:itemsTxt||'주문이 접수됐습니다',
+            title:'🧾 영수증',
+            body:document.getElementById('done-num')
+              ?document.getElementById('done-num').textContent+' 주문 완료'
+              :'주문 완료',
             type:'receipt',
             url:location.href
           })
