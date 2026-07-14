@@ -383,6 +383,15 @@ function _changeTable(){
  }).then(function(){
   _tNum=newNum;
   var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
+  // 영수증 표시 중이면 헤더 테이블 번호도 갱신
+  var hdr=document.getElementById('order-receipt-header');
+  if(hdr&&hdr.querySelector('div')){
+   var now=new Date();
+   var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+   hdr.innerHTML='🧾 주문 영수증'+
+    '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
+    '🪑 테이블 '+newNum+'번 &nbsp;|&nbsp; 🕐 '+timeStr+'</div>';
+  }
   _filoToast('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
  }).catch(function(e){_filoToast('❌ 변경 실패: '+e.message);});
 }
