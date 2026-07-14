@@ -1,0 +1,21 @@
+name: Force KV v4
+on:
+  workflow_dispatch:
+jobs:
+  kv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload
+        env:
+          CF_EMAIL: kimdh4790@gmail.com
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          ACC="02709cbec18d848913b4246015b9148f"
+          NS="7f0e90efaea64f3ab08ff00f8970b28b"
+          for f in table-order.html order-done.html; do
+            R=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces/$NS/values/$f" \
+              -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+              -H "Content-Type: text/html; charset=utf-8" --data-binary @$f)
+            echo "$R" | grep -q '"success":true' && echo "✅ $f" || echo "⚠️ $f: $R"
+          done
