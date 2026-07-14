@@ -431,3 +431,18 @@ function _renderRecommendBanner(menus){
  var grid=document.getElementById('menu-grid');
  if(grid&&grid.parentNode)grid.parentNode.insertBefore(banner,grid);
 }
+
+// ── 메뉴 로드 (order.js / store.js 공통) ────────────────────────────────────
+function _loadMenus(){
+ fetch('/api/menus?did='+encodeURIComponent(_did))
+ .then(function(r){return r.json();})
+ .then(function(d){
+  _menus=d.menus||[];
+  _renderCatBar(_menus,'cat-bar');
+  _renderMenuGrid(_menus,'menu-grid');
+  _renderRecommendBanner(_menus);
+ }).catch(function(){
+  var g=document.getElementById('menu-grid');
+  if(g)g.innerHTML='<div class="empty"><div class="empty-ico">😅</div><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
+ });
+}
