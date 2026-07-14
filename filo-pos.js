@@ -570,23 +570,33 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
          batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
         });
         batch.commit().then(function(){
-          // batch 완료 후 FCM 영수증 발송 (cleared 직후)
-          if(fcmTok && method !== 'cash') {
-            var rUrl = "https://filo.ai.kr/order-done?oid="+(fcmOrdId||"")+"&did="+did+"&t="+tableNum;
-            var iNames = items.slice(0,3).map(function(it){return it.name+(it.qty>1?" ×"+it.qty:"");}).join(" · ");
-            if(items.length>3) iNames += " 외 "+(items.length-3)+"건";
+          // 결제 완료 → filo_orders에서 fcmToken 수집 → 고객 폰 영수증 FCM 발송
+          var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
+          if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
+          // pendingIds 기준으로 fcmToken 조회
+          var tokenSet={};var ordId=pendingIds[0]||'';
+          var rUrl='https://filo.ai.kr/order-done?oid='+ordId+'&did='+did+'&t='+tableNum;
+          Promise.all(pendingIds.map(function(id){
+            return _db.collection('filo_orders').doc(id).get();
+          })).then(function(docs){
+            docs.forEach(function(doc){
+              var tk=doc.exists&&doc.data().fcmToken;
+              if(tk&&tk.length>20)tokenSet[tk]=true;
+            });
+            var tokens=Object.keys(tokenSet);
+            if(!tokens.length)return; // 고객이 알림 미허용 → 조용히 스킵
             fetch('/fcm/notify-drivers',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
               body:JSON.stringify({
-                tokens:[fcmTok],
-                title:methodLabel+" 완료 · ₩"+total.toLocaleString(),
+                tokens:tokens,
+                title:'🧾 영수증 · '+methodLabel+' ₩'+total.toLocaleString(),
                 body:iNames,
                 type:'receipt',
                 url:rUrl
               })
             }).catch(function(){});
-          }
+          }).catch(function(){});
         }).catch(function(){});
        }
       }).catch(function(){});
