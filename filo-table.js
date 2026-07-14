@@ -733,13 +733,24 @@ function _filoTableOrderModal(did,table,order){
 
    var inner=mo.querySelector('div');
    inner.style.cssText='background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px 20px 36px';
+   var orderNumHtml='';
+   if(hasOrder&&order.orders&&order.orders.length){
+    orderNumHtml='<div style="margin-bottom:10px">'+order.orders.map(function(o){
+     return '<span style="font-size:11px;color:var(--t3);background:var(--bd);padding:2px 8px;border-radius:10px;margin-right:4px;display:inline-block">#'+o.id.slice(-6).toUpperCase()+'</span>';
+    }).join('')+'</div>';
+   } else if(hasOrder&&order.ids&&order.ids.length){
+    orderNumHtml='<div style="margin-bottom:10px">'+order.ids.map(function(id){
+     return '<span style="font-size:11px;color:var(--t3);background:var(--bd);padding:2px 8px;border-radius:10px;margin-right:4px;display:inline-block">#'+id.slice(-6).toUpperCase()+'</span>';
+    }).join('')+'</div>';
+   }
    inner.innerHTML=
     '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px"></div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
     '<div style="font-size:18px;font-weight:900">🪑 '+table.name+'</div>'+
     (s==='occupied'?'<span style="font-size:11px;font-weight:700;color:#ef4444;background:rgba(239,68,68,.1);padding:4px 10px;border-radius:20px">사용 중</span>':
      s==='empty'?'<span style="font-size:11px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.1);padding:4px 10px;border-radius:20px">빈 테이블</span>':'')+
     '</div>'+
+    orderNumHtml+
     '<div style="margin-bottom:4px">'+itemsHtml+'</div>'+
     (hasOrder?'<div style="border-top:2px solid var(--bd);margin-top:4px">'+summaryHtml+paymentsHtml+'</div>':'')+
     '<div id="modal-btn-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>';
