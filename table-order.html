@@ -135,7 +135,6 @@ firebase.initializeApp(FB_CFG);
 var _db=firebase.firestore();
 
 var params=new URLSearchParams(location.search);
-// did/d, tid/t 둘 다 지원 (order.js는 d/t, table-order는 did/tid)
 var DID=params.get('did')||params.get('d')||'';
 var TID=params.get('tid')||params.get('t')||'';
 var _menus=[];
@@ -143,26 +142,6 @@ var _cart={};
 var _curCat='전체';
 var _tossKey='test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
 var _lang=localStorage.getItem('filo_lang')||'ko';
-var _fcmToken=null; // FCM 영수증 발송용 토큰
-
-// FCM 토큰 초기화 (알림 허용 시)
-function _initTableFCM(){
-  try {
-    var saved = localStorage.getItem('filo_fcm_'+DID);
-    if(saved){ _fcmToken=saved; return; }
-    if(!('Notification' in window)||!('serviceWorker' in navigator))return;
-    if(Notification.permission==='granted'){
-      navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'}).then(function(reg){
-        return firebase.messaging().getToken({
-          vapidKey:'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A',
-          serviceWorkerRegistration:reg
-        });
-      }).then(function(tok){
-        if(tok){ _fcmToken=tok; try{localStorage.setItem('filo_fcm_'+DID,tok);}catch(e){} }
-      }).catch(function(){});
-    }
-  } catch(e){}
-}
 var _transCache={}; /* {lang: {ko텍스트: 번역텍스트}} */
 var _transMenus=[]; /* 현재 언어로 번역된 메뉴 */
 
@@ -275,7 +254,6 @@ function _applyTranslation(lang){
 
 /* ── 매장 + 메뉴 로드 ── */
 function init(){
-  _initTableFCM(); // FCM 토큰 초기화
   if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 잘못된 QR코드입니다.</div>';return;}
   applyUIText();
   document.getElementById('table-label').textContent='테이블 '+TID+' · 주문';
@@ -403,7 +381,6 @@ window.doOrder=function(){
 
   var orderData={
     dealerId:DID,tableId:TID,orderId:orderId,
-    fcmToken:_fcmToken||null, // FCM 영수증 발송용
     items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
     total:total,status:'pending_payment',
     source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
