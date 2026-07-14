@@ -734,7 +734,7 @@ function _dineCheckLaborLaw(did,mems,atts){
 // ── 스케줄 관련 함수 ──
 function _dineScheduleAdd(did){
  _db.collection('staff').where('dealerId','==',did).get().then(function(snap){
-  if(snap.empty){alert('등록된 직원이 없습니다');return;}
+  if(snap.empty){_dineToast('⚠️ 등록된 직원이 없습니다');return;}
   var opts=snap.docs.map(function(d){return '<option value="'+d.id+'">'+d.data().name+'</option>';}).join('');
   var mo=document.createElement('div');mo.className='mo';
   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
@@ -789,7 +789,7 @@ function _dineScheduleSave(did){
  var endTime=document.getElementById('sch-end').value;
  var note=document.getElementById('sch-note').value.trim();
  var pushOn=document.getElementById('sch-push').checked;
- if(!date){alert('날짜를 선택해주세요');return;}
+ if(!date){_dineToast('⚠️ 날짜를 선택해주세요');return;}
  _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,pushOn);
 }
 
