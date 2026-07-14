@@ -439,7 +439,7 @@ function _filoImportMenuExcel(input){
    var wb=XLSX.read(e.target.result,{type:'array'});
    var ws=wb.Sheets[wb.SheetNames[0]];
    var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-   if(!rows.length){alert('데이터가 없습니다.');return;}
+   if(!rows.length){_filoToast('⚠️ 데이터가 없습니다');return;}
    var batch=[];
    rows.forEach(function(r){
     var name=r['메뉴명']||r['name']||'';
@@ -450,7 +450,7 @@ function _filoImportMenuExcel(input){
     if(!name||!price)return;
     batch.push({name:name,price:price,category:category,emoji:emoji,description:description,forSale:true,dealerId:did,stock:null,minStock:null});
    });
-   if(!batch.length){alert('유효한 메뉴가 없습니다.');return;}
+   if(!batch.length){_filoToast('⚠️ 유효한 메뉴가 없습니다');return;}
    var db=firebase.firestore();
    /* 기존 filo_menus 삭제 후 재등록 */
    db.collection('filo_menus').where('dealerId','==',did).get().then(function(old){
@@ -465,10 +465,10 @@ function _filoImportMenuExcel(input){
     });
     return bw2.commit();
    }).then(function(){
-    alert(batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다.');
+    _filoToast('✅ '+batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다');
     _filoPageKiosk(document.getElementById('content'));
-   }).catch(function(e){alert('저장 오류: '+e.message);});
-  }catch(e){alert('파일 읽기 오류: '+e.message);}
+   }).catch(function(e){_filoToast('❌ 저장 오류: '+e.message);});
+  }catch(e){_filoToast('❌ 파일 읽기 오류: '+e.message);}
  };
  reader.readAsArrayBuffer(file);
  input.value='';
