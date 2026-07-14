@@ -36,8 +36,8 @@
  *
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
