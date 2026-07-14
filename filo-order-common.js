@@ -1,14 +1,42 @@
-/**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
- * @module      filo-order-common.js
- * @description QR주문 공통·AI메뉴추천·다국어지원
+/*
+ * filo-order-common.js — order.js + store.js 공통 함수 모듈
+ * Copyright (c) 2024-2025 유한회사 엠비티아이
+ *
+ * ── 주요 함수 ─────────────────────────────────────────────────
+ *   _loadMenus(did, gridId)     — 메뉴 로드 (filo_menus 조회)
+ *   _renderMenuGrid(menus, id)  — 메뉴 카드 그리드 렌더링
+ *   _renderCatBar(menus)        — 카테고리 탭 렌더링
+ *   _openMdlCommon(m)           — 메뉴 상세 모달 열기
+ *   _openMdl(m)                 — _openMdlCommon 래퍼
+ *   _closeMdl()                 — 모달 닫기 (#mdl.open 제거)
+ *   _tlQty(d)                   — 모달 수량 조절
+ *   _updFab()                   — 장바구니 FAB 업데이트
+ *   _openCart() / _closeCart()  — 장바구니 시트 열기/닫기
+ *   _setLang(lang)              — 언어 변경 (ko/en/zh/ja)
+ *
+ * ── 읽는 컬렉션 ──────────────────────────────────────────────
+ *   filo_menus    ← 메뉴 목록 (dealerId 기준)
+ *   filo_dealers  ← 매장 정보 (이름, 설정)
+ *
+ * ── 전역 변수 (공유) ──────────────────────────────────────────
+ *   _cart        : 장바구니 { [name]: {name,price,qty,emoji} }
+ *   _curMdlMenu  : 현재 모달에 열린 메뉴 객체
+ *   _tlQtyVal    : 모달 수량
+ *   _lang        : 현재 언어
+ *   _tlCache     : 번역 캐시
+ *
+ * ── 모달 HTML 구조 ────────────────────────────────────────────
+ *   #mdl (배경)
+ *   └ #mdl-box (flex column)
+ *     ├ #mdl-scroll (overflow-y:auto) ← 이미지+상세 스크롤
+ *     └ #mdl-btns (fixed bottom)      ← X + 담기 버튼 항상 노출
+ *
+ * ── 의존 ─────────────────────────────────────────────────────
+ *   order.html / store.html — DOM 구조
+ *   _db (Firebase Firestore)
+ *   /api/translate — 메뉴명 번역 (Anthropic → Google 폴백)
+ *
+ * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
 var _i18n_common = {
  ko:{cart:'🛒 장바구니',order:'주문하기',total:'합계',sold:'품절',add:'담기',
