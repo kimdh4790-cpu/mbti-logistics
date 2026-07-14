@@ -57,6 +57,13 @@ var _fcmToken=null, _messaging=null;
 // FILO FCM VAPID 키
 var _VAPID_KEY='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
 
+// SW → order.js postMessage 수신 (알림 탭 시 onSnapshot 끊겼을 경우 대비)
+navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', function(e) {
+  if (!e.data) return;
+  if (e.data.type === 'pickup') _showPickupAlert && _showPickupAlert();
+  if (e.data.type === 'receipt') { /* 영수증 처리 필요 시 추가 */ }
+});
+
 // ── 초기화 ────────────────────────────────────────────────────────────────────
 window.onload=function(){
  firebase.initializeApp({
