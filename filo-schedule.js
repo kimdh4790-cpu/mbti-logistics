@@ -237,6 +237,47 @@ function _filoReservationEdit(id,did){
   if(!snap.exists)return;
   var d=snap.data();
   _filoReservationAdd(did,d.date);
-  /* TODO: 기존 데이터 채우기 */
+  // 폼 렌더링 후 기존 데이터 자동 채우기
+  setTimeout(function(){
+   var fName=document.getElementById('rsv-name');
+   var fPhone=document.getElementById('rsv-phone');
+   var fDate=document.getElementById('rsv-date');
+   var fTime=document.getElementById('rsv-time');
+   var fService=document.getElementById('rsv-service');
+   var fMemo=document.getElementById('rsv-memo');
+   var saveBtn=document.getElementById('rsv-save');
+   if(fName)fName.value=d.customerName||'';
+   if(fPhone)fPhone.value=d.phone||'';
+   if(fDate)fDate.value=d.date||'';
+   if(fTime)fTime.value=d.time||'';
+   if(fService)fService.value=d.service||'';
+   if(fMemo)fMemo.value=d.memo||'';
+   // 타이틀 수정 모드로 변경
+   var titleEl=document.querySelector('.mo div[style*="font-size:15px"]');
+   if(titleEl)titleEl.textContent='✏️ 예약 수정';
+   // 저장 버튼 → 수정 버튼으로 교체
+   var saveBtnEl=document.querySelector('.mo button[style*="flex:2"]');
+   if(saveBtnEl){
+    saveBtnEl.textContent='✅ 예약 수정';
+    saveBtnEl.onclick=function(){
+     var name=(document.getElementById('rsv-name').value||'').trim();
+     var date=(document.getElementById('rsv-date').value||'').trim();
+     if(!name||!date){_filoToast('고객명과 날짜는 필수입니다');return;}
+     _db.collection('filo_bookings').doc(id).update({
+      customerName:name,
+      phone:document.getElementById('rsv-phone').value||'',
+      date:date,
+      time:document.getElementById('rsv-time').value||'',
+      service:document.getElementById('rsv-service').value||'',
+      memo:document.getElementById('rsv-memo').value||'',
+      updatedAt:new Date().toISOString()
+     }).then(function(){
+      _filoToast('✅ 예약이 수정됐습니다!');
+      document.querySelector('.mo')&&document.querySelector('.mo').remove();
+      _filoRenderCalendar(did);
+     }).catch(function(e){_filoToast('❌ '+e.message);});
+    };
+   }
+  },150);
  });
 }
