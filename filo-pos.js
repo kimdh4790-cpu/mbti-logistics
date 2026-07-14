@@ -537,10 +537,13 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
        var orderTotal=0;
        var pendingIds=[];
        oSnap.forEach(function(doc){
+       var fcmTok = null, fcmOrdId = null;
         var d=doc.data();
         if((String(d.tableNum)===String(tableNum)||d.tableName===tableName)&&d.status!=='cleared'){
          orderTotal+=(d.total||0);
          pendingIds.push(doc.id);
+         // fcmToken 수집 (cleared 전에)
+         if(!fcmTok){var ft=d.fcmToken;if(ft&&ft.length>20){fcmTok=ft;fcmOrdId=doc.id;}}
         }
        });
        if(orderTotal>0&&paidTotal>=orderTotal&&pendingIds.length){
@@ -548,27 +551,31 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
         pendingIds.forEach(function(id){
          batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
         });
-        batch.commit().catch(function(){});
+        batch.commit().then(function(){
+          // batch 완료 후 FCM 영수증 발송 (cleared 직후)
+          if(fcmTok && method !== 'cash') {
+            var rUrl = "https://filo.ai.kr/order-done?oid="+(fcmOrdId||"")+"&did="+did+"&t="+tableNum;
+            var iNames = items.slice(0,3).map(function(it){return it.name+(it.qty>1?" ×"+it.qty:"");}).join(" · ");
+            if(items.length>3) iNames += " 외 "+(items.length-3)+"건";
+            fetch('/fcm/notify-drivers',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                tokens:[fcmTok],
+                title:methodLabel+" 완료 · ₩"+total.toLocaleString(),
+                body:iNames,
+                type:'receipt',
+                url:rUrl
+              })
+            }).catch(function(){});
+          }
+        }).catch(function(){});
        }
       }).catch(function(){});
     }).catch(function(){});
   }
   _filoToast(methodLabel+' ₩'+total.toLocaleString()+' 결제 완료! ✅');
 
-   // ── 결제완료 FCM 영수증 푸시 ────────────────────────────────
-   // 💵 현금: 미발송 / 💳 카드·🟡 카카오: filo_orders에서 fcmToken 조회
-   if(method !== 'cash') {
-     (function(_did, _tNum, _items, _total, _label, _tName){
-       // pending 또는 오늘 cleared 된 주문에서 fcmToken 조회
-       _db.collection('filo_orders')
-         .where('dealerId','==',_did)
-         .where('tableNum','==',parseInt(_tNum))
-         .where('date','==',new Date().toISOString().slice(0,10))
-         .get().then(function(snap){
-           var tok = null, orderId = null;
-           snap.forEach(function(doc){
-             var t = doc.data().fcmToken;
-             if(t && t.length > 20){ tok = t; orderId = doc.id; }
            });
            if(!tok) return;
            // 영수증 페이지 URL 생성
