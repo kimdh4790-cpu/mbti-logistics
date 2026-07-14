@@ -115,6 +115,8 @@ self.addEventListener('notificationclick', function(e) {
         // pickup/receipt: 이미 열린 order 탭이면 포커스만 (navigate 금지 — 주문완료 화면 유지)
         if ((type === 'pickup' || type === 'receipt') && w.url.includes('/order')) {
           w.focus();
+          // onSnapshot이 끊겼을 수 있으니 postMessage로 픽업 팝업 강제 실행
+          w.postMessage({ type: type });
           return;
         }
         // 그 외: 도메인 일치하면 포커스 + 이동
