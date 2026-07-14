@@ -407,3 +407,58 @@ function _callStaff(){
   if(toast){toast.style.display='block';setTimeout(function(){toast.style.display='none';},2000);}
  }).catch(function(){});
 }
+
+
+// ── 영수증 알림 받기 ─────────────────────────────────────────────
+var _VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
+function reqReceiptFCM(){
+  var btn=document.getElementById('receipt-fcm-btn');
+  var st=document.getElementById('receipt-fcm-status');
+  if(!btn||btn.dataset.done==='1')return;
+  btn.textContent='⏳ 처리 중...';btn.disabled=true;
+  st.style.display='block';st.textContent='알림 권한 확인 중...';
+  if(!('Notification' in window)){
+    st.textContent='이 브라우저는 알림을 지원하지 않아요';
+    btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;return;
+  }
+  Notification.requestPermission().then(function(perm){
+    if(perm!=='granted'){
+      st.textContent='알림을 허용해야 영수증을 받을 수 있어요';
+      btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;return;
+    }
+    st.textContent='영수증 준비 중...';
+    navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+      .then(function(reg){
+        return firebase.messaging().getToken({vapidKey:_VAPID,serviceWorkerRegistration:reg});
+      }).then(function(tok){
+        if(!tok)throw new Error('토큰 발급 실패');
+        try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}
+        return fetch('/fcm/notify-drivers',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            tokens:[tok],
+            title:'🧾 영수증',
+            body:document.getElementById('done-num')
+              ?document.getElementById('done-num').textContent+' 주문 완료'
+              :'주문 완료',
+            type:'receipt',
+            url:location.href
+          })
+        });
+      }).then(function(r){return r.json();})
+      .then(function(d){
+        if(d.sent>0){
+          btn.textContent='✅ 영수증 발송됨';
+          btn.style.background='rgba(34,197,94,.08)';
+          btn.style.borderColor='rgba(34,197,94,.3)';
+          btn.style.color='#16a34a';
+          btn.dataset.done='1';
+          st.textContent='잠시 후 알림으로 영수증이 전송됩니다 😊';
+        }else{throw new Error('발송 실패');}
+      }).catch(function(e){
+        st.textContent='오류: '+(e.message||'다시 시도해주세요');
+        btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;
+      });
+  });
+}
