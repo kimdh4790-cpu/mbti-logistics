@@ -54,6 +54,32 @@ var _menus=[], _cart={}, _lang='ko';
 var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
+var _lastOrderItems=[], _lastOrderTotal=0, _lastPayType='';
+
+// ── 주문 영수증 표시 ──────────────────────────────────────────────────────────
+function _showOrderReceipt(items, total, payType, method){
+ var rc=items||_lastOrderItems, rt=total||_lastOrderTotal, rp=payType||_lastPayType;
+ var box=document.getElementById('order-receipt-box');
+ var riEl=document.getElementById('order-receipt-items');
+ var rtEl=document.getElementById('order-receipt-total');
+ var rpEl=document.getElementById('order-receipt-pay');
+ var cashNotice=document.getElementById('cash-receipt-notice');
+ var choice=document.getElementById('receipt-choice');
+ if(!box||!rc||!rc.length)return;
+ if(riEl)riEl.innerHTML=rc.map(function(i){
+  return '<div style="display:flex;justify-content:space-between">'+
+   '<span>'+(i.emoji||'🍽')+' '+(i.name||'')+(i.qty>1?' ×'+i.qty:'')+'</span>'+
+   '<span style="font-weight:700">₩'+((i.price||0)*(i.qty||1)).toLocaleString()+'</span></div>';
+ }).join('');
+ if(rtEl)rtEl.textContent='₩'+rt.toLocaleString();
+ if(rpEl){
+  var mLabel=method==='card'?'💳 카드':method==='cash'?'💵 현금':rp==='postpay'?'💳 후불결제':'';
+  rpEl.textContent=mLabel?'결제방법: '+mLabel:'';
+ }
+ if(cashNotice)cashNotice.style.display=(method==='cash')?'block':'none';
+ if(choice)choice.style.display='none';
+ box.style.display='block';
+}
 // FILO FCM VAPID 키
 var _VAPID_KEY='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
 
@@ -61,7 +87,12 @@ var _VAPID_KEY='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDs
 navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', function(e) {
   if (!e.data) return;
   if (e.data.type === 'pickup') _showPickupAlert && _showPickupAlert();
-  if (e.data.type === 'receipt') { /* 영수증 처리 필요 시 추가 */ }
+  if (e.data.type === 'receipt') {
+    // 후불 결제 영수증 FCM 탭 → 영수증 화면 표시
+    var box=document.getElementById('order-receipt-box');
+    if(box&&box.style.display==='block')return; // 이미 표시 중
+    _showOrderReceipt(_lastOrderItems,_lastOrderTotal,_lastPayType,'card');
+  }
 });
 
 // ── 초기화 ────────────────────────────────────────────────────────────────────
@@ -225,6 +256,18 @@ function _doOrder(payType){
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
+  // payType별 영수증 UI
+  _lastOrderItems=items; _lastOrderTotal=total; _lastPayType=payType;
+  var rcChoice=document.getElementById('receipt-choice');
+  var postNotice=document.getElementById('postpay-notice');
+  if(payType==='postpay'){
+   // 후불: 카운터 안내 + 영수증 선택 (주문 영수증)
+   if(postNotice)postNotice.style.display='block';
+   if(rcChoice)rcChoice.style.display='block';
+  } else {
+   // 선불: 영수증 선택만 (결제 영수증은 선불 완료 시 따로 표시)
+   if(rcChoice)rcChoice.style.display='block';
+  }
   // 픽업 감지 시작
   _lastOrderId=ref.id;
   _listenPickup(ref.id);
