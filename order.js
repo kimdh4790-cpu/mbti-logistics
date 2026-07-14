@@ -109,7 +109,7 @@ window.onload=function(){
     var dn=document.getElementById('done');
     var dnum=document.getElementById('done-num');
     var ditems=document.getElementById('done-items');
-    if(dnum)dnum.textContent='주문번호 #'+lastId.slice(-6).toUpperCase();
+    if(dnum)dnum.textContent='테이블 '+d.tableNum+'번 · 주문번호 #'+lastId.slice(-6).toUpperCase();
     if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
     if(dn)dn.style.display='flex';
     _listenPickup(lastId);
