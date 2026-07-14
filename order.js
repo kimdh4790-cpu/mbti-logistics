@@ -216,6 +216,65 @@ function _doOrder(payType){
   _listenPickup(ref.id);
   // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
+
+  // 주문 완료 즉시 영수증 푸시 자동 발송
+  // 기존 토큰 있으면 바로, 없으면 버튼으로 유도
+  var _autoSendReceipt=function(orderId,payType2){
+   var itemInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join(' · ');
+   var totalStr='₩'+total.toLocaleString();
+   var payLabel=payType2==='prepay'?'💳 선결제':'🧾 후불';
+   var title='주문완료 · '+payLabel+' '+totalStr;
+   var body=itemInfo.length>50?itemInfo.slice(0,50)+'…':itemInfo;
+
+   function _sendPush(tok){
+    if(!tok)return;
+    // filo_orders에 fcmToken 저장
+    _db.collection('filo_orders').doc(orderId).update({fcmToken:tok}).catch(function(){});
+    fetch('/fcm/notify-drivers',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+      tokens:[tok],
+      title:title,
+      body:body,
+      type:'receipt',
+      url:location.href
+     })
+    }).then(function(r){return r.json();}).then(function(d){
+     if(d.sent>0){
+      // 버튼 상태 업데이트 (이미 발송됨)
+      var rb=document.getElementById('receipt-fcm-btn');
+      var rs=document.getElementById('receipt-fcm-status');
+      if(rb){rb.textContent='✅ 주문 영수증 발송됨';rb.dataset.done='1';
+       rb.style.background='rgba(34,197,94,.08)';
+       rb.style.borderColor='rgba(34,197,94,.3)';
+       rb.style.color='#16a34a';}
+      if(rs){rs.style.display='block';rs.textContent='주문 내역이 알림으로 전송됐어요 😊';}
+     }
+    }).catch(function(){});
+   }
+
+   // 1순위: 기존 저장된 토큰
+   var cached=null;
+   try{cached=localStorage.getItem('filo_fcm_'+_did);}catch(e){}
+   if(cached&&cached.length>20){
+    _sendPush(cached);
+    return;
+   }
+   // 2순위: 알림 이미 허용된 경우 토큰 재발급
+   if('Notification' in window && Notification.permission==='granted'){
+    navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+     .then(function(reg){
+      return firebase.messaging().getToken({vapidKey:_VAPID_KEY,serviceWorkerRegistration:reg});
+     }).then(function(tok){
+      if(tok){try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}}
+      _sendPush(tok);
+     }).catch(function(){});
+   }
+   // 3순위: 알림 미허용 → 버튼으로 유도 (버튼 그대로 표시)
+  };
+  _autoSendReceipt(ref.id, payType);
+
  }).catch(function(e){
   _filoToast('❌ 주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
