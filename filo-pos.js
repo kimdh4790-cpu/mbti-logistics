@@ -570,33 +570,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
          batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
         });
         batch.commit().then(function(){
-          // 결제 완료 → filo_orders에서 fcmToken 수집 → 고객 폰 영수증 FCM 발송
-          var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
-          if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
-          // pendingIds 기준으로 fcmToken 조회
-          var tokenSet={};var ordId=pendingIds[0]||'';
-          var rUrl='https://filo.ai.kr/order-done?oid='+ordId+'&did='+did+'&t='+tableNum;
-          Promise.all(pendingIds.map(function(id){
-            return _db.collection('filo_orders').doc(id).get();
-          })).then(function(docs){
-            docs.forEach(function(doc){
-              var tk=doc.exists&&doc.data().fcmToken;
-              if(tk&&tk.length>20)tokenSet[tk]=true;
-            });
-            var tokens=Object.keys(tokenSet);
-            if(!tokens.length)return; // 고객이 알림 미허용 → 조용히 스킵
-            fetch('/fcm/notify-drivers',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({
-                tokens:tokens,
-                title:'🧾 영수증 · '+methodLabel+' ₩'+total.toLocaleString(),
-                body:iNames,
-                type:'receipt',
-                url:rUrl
-              })
-            }).catch(function(){});
-          }).catch(function(){});
+          // filo_orders cleared 완료 — 영수증 FCM은 _filoReceiptNotify 팝업에서 직원이 탭할 때 발송
         }).catch(function(){});
        }
       }).catch(function(){});
@@ -819,16 +793,20 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
     status.textContent = '\uc190\ub2d8 \ud3f0\uc73c\ub85c \uc601\uc218\uc99d \ubc1c\uc1a1 \uc911...';
     clearTimeout(timer);
 
-    _db.collection('filo_orders')
-      .where('dealerId','==',did)
-      .where('tableNum','==',parseInt(tableNum))
-      .where('date','==',new Date().toISOString().slice(0,10))
-      .get().then(function(snap){
-        var tok = null, ordId = null;
+    var _today=new Date().toISOString().slice(0,10);
+    var _tNum=parseInt(tableNum)||tableNum;
+    Promise.all([
+      _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',_tNum).where('date','==',_today).get(),
+      _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).where('date','==',_today).get()
+    ]).then(function(results){
+      var tok = null, ordId = null, seen={};
+      results.forEach(function(snap){
         snap.forEach(function(doc){
+          if(seen[doc.id])return; seen[doc.id]=true;
           var t = doc.data().fcmToken;
           if(t && t.length > 20){ tok = t; ordId = doc.id; }
         });
+      });
         if(!tok){
           sendBtn.textContent = '\u274c \ud1a0\ud070 \uc5c6\uc74c';
           status.textContent = '\uc190\ub2d8\uc774 \uc54c\ub9bc\uc744 \ud5c8\uc6a9\ud558\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4';
@@ -864,8 +842,8 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
           sendBtn.textContent = '\u274c \uc624\ub958';
           sendBtn.disabled = false;
         });
-      }).catch(function(){
-        sendBtn.textContent = '\u274c \uc870\ud68c\uc2e4\ud328';
+    }).catch(function(){
+        sendBtn.textContent = '❌ 조회실패';
         sendBtn.disabled = false;
       });
   };
