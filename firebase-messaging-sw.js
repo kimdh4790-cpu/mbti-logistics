@@ -103,7 +103,9 @@ self.addEventListener('notificationclick', function(e) {
   e.notification.close();
   if (e.action === 'close') return;
 
-  const url = (e.notification.data && e.notification.data.url) || '/settle';
+  const rawUrl = (e.notification.data && e.notification.data.url) || '/settle';
+  // 상대경로면 절대경로로 보정 (도메인은 SW 등록 출처 기준)
+  const url = rawUrl.startsWith('http') ? rawUrl : (self.location.origin + rawUrl);
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(wins) {
