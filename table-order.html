@@ -135,8 +135,9 @@ firebase.initializeApp(FB_CFG);
 var _db=firebase.firestore();
 
 var params=new URLSearchParams(location.search);
-var DID=params.get('did')||'';
-var TID=params.get('tid')||'';
+// did/d, tid/t 둘 다 지원 (order.js는 d/t, table-order는 did/tid)
+var DID=params.get('did')||params.get('d')||'';
+var TID=params.get('tid')||params.get('t')||'';
 var _menus=[];
 var _cart={};
 var _curCat='전체';
