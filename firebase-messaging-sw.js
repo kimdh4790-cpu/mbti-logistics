@@ -41,13 +41,15 @@ messaging.onBackgroundMessage(function(payload) {
     body:    body,
     icon:    cfg.icon,
     badge:   cfg.badge,
-    tag:     'donway-' + type,
+    tag:     'donway-' + type + '-' + Date.now(),
     renotify: true,
     silent:  false,
     vibrate: type === 'pickup'
       ? [500,100,500,100,500,100,500,100,1000]  // 픽업: 강하고 긴 진동 패턴
+      : type === 'receipt'
+      ? [400,100,400,100,400]                   // 영수증: 결제 완료 진동
       : [300, 100, 300, 100, 300],
-    requireInteraction: (type === 'pickup' || type === 'leave' || type === 'payslip'),
+    requireInteraction: (type === 'pickup' || type === 'leave' || type === 'payslip' || type === 'receipt'),
     data:    { url: url, type: type },
     actions: type === 'pickup'
       ? [{ action: 'open', title: '✅ 픽업하러 가기' }]
