@@ -537,13 +537,10 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
        var orderTotal=0;
        var pendingIds=[];
        oSnap.forEach(function(doc){
-       var fcmTok = null, fcmOrdId = null;
         var d=doc.data();
         if((String(d.tableNum)===String(tableNum)||d.tableName===tableName)&&d.status!=='cleared'){
          orderTotal+=(d.total||0);
          pendingIds.push(doc.id);
-         // fcmToken 수집 (cleared 전에)
-         if(!fcmTok){var ft=d.fcmToken;if(ft&&ft.length>20){fcmTok=ft;fcmOrdId=doc.id;}}
         }
        });
        if(orderTotal>0&&paidTotal>=orderTotal&&pendingIds.length){
@@ -574,7 +571,8 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
       }).catch(function(){});
     }).catch(function(){});
   }
-  _filoToast(methodLabel+' ₩'+total.toLocaleString()+' 결제 완료! ✅');
+  // 결제완료 알림 + 영수증 발송 버튼
+  _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
  }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
 }
@@ -728,4 +726,100 @@ function _toUpdateCart(){
  }
  if(tw)tw.style.display=items.length?'block':'none';
  if(te)te.textContent='₩'+total.toLocaleString();
+}
+
+
+// ── 영수증 발송 (수동) ─────────────────────────────────────────────────────
+// 결제 완료 후 POS에서 직원이 영수증 버튼 탭 → 손님 폰 FCM 발송
+// 발행/미발행 상태 표시
+function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
+  // 1. 결제완료 토스트 + 영수증 발송 버튼
+  var tId = 'receipt-toast-' + Date.now();
+  var toastEl = document.createElement('div');
+  toastEl.id = tId;
+  toastEl.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+    'background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:16px;' +
+    'padding:14px 18px;z-index:9999;min-width:280px;text-align:center;' +
+    'box-shadow:0 8px 32px rgba(0,0,0,.4)';
+  toastEl.innerHTML =
+    '<div style="font-size:14px;font-weight:800;color:#f0f0ff;margin-bottom:10px">' +
+    '✅ ' + methodLabel + ' ₩' + total.toLocaleString() + ' 결제 완료!</div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button id="' + tId + '-send" style="flex:1;padding:8px;background:#0891b2;border:none;' +
+    'border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">🧾 영수증 발송</button>' +
+    '<button onclick="document.getElementById('' + tId + '').remove()" ' +
+    'style="padding:8px 12px;background:rgba(255,255,255,.1);border:none;border-radius:10px;' +
+    'color:#94a3b8;font-size:12px;cursor:pointer">✕</button>' +
+    '</div>' +
+    '<div id="' + tId + '-status" style="font-size:11px;color:#94a3b8;margin-top:6px;display:none"></div>';
+  document.body.appendChild(toastEl);
+
+  // 5초 후 자동 제거
+  var autoRemove = setTimeout(function(){ toastEl.remove(); }, 8000);
+
+  // 영수증 발송 버튼 클릭
+  document.getElementById(tId + '-send').onclick = function() {
+    var btn = this;
+    var status = document.getElementById(tId + '-status');
+    btn.disabled = true;
+    btn.textContent = '⏳ 발송 중...';
+    status.style.display = 'block';
+    status.textContent = '손님 폰으로 영수증 발송 중...';
+    clearTimeout(autoRemove);
+
+    // filo_orders에서 오늘 테이블 fcmToken 조회
+    _db.collection('filo_orders')
+      .where('dealerId','==',did)
+      .where('tableNum','==',parseInt(tableNum))
+      .where('date','==',new Date().toISOString().slice(0,10))
+      .get().then(function(snap){
+        var tok = null, ordId = null;
+        snap.forEach(function(doc){
+          var t = doc.data().fcmToken;
+          if(t && t.length > 20){ tok = t; ordId = doc.id; }
+        });
+
+        if(!tok) {
+          btn.textContent = '❌ 토큰 없음';
+          status.textContent = '손님이 알림을 허용하지 않았습니다';
+          setTimeout(function(){ toastEl.remove(); }, 3000);
+          return;
+        }
+
+        var rUrl = 'https://filo.ai.kr/order-done?oid='+(ordId||'')+'&did='+did+'&t='+tableNum;
+        var iNames = items.slice(0,3)
+          .map(function(it){ return it.name+(it.qty>1?' ×'+it.qty:''); }).join(' · ');
+        if(items.length > 3) iNames += ' 외 '+(items.length-3)+'건';
+
+        fetch('/fcm/notify-drivers', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            tokens: [tok],
+            title: '🧾 영수증 · ₩' + total.toLocaleString(),
+            body: iNames,
+            type: 'receipt',
+            url: rUrl
+          })
+        }).then(function(r){ return r.json(); }).then(function(d){
+          if(d.sent > 0) {
+            btn.textContent = '✅ 영수증 발송됨';
+            btn.style.background = '#16a34a';
+            status.textContent = '손님 폰으로 영수증이 발송됐습니다!';
+            setTimeout(function(){ toastEl.remove(); }, 3000);
+          } else {
+            btn.textContent = '❌ 발송 실패';
+            status.textContent = '발송에 실패했습니다. 다시 시도해주세요.';
+            btn.disabled = false;
+          }
+        }).catch(function(){
+          btn.textContent = '❌ 오류';
+          status.textContent = '네트워크 오류가 발생했습니다.';
+          btn.disabled = false;
+        });
+      }).catch(function(){
+        btn.textContent = '❌ 조회 실패';
+        btn.disabled = false;
+      });
+  };
 }
