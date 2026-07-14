@@ -571,7 +571,10 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
       }).catch(function(){});
     }).catch(function(){});
   }
-  // 결제완료 알림 + 영수증 발송 버튼
+  // 결제완료 → 매장 영수증 즉시 출력 + 직원용 발송 팝업
+  var now2=new Date();
+  var payId='table-'+tableNum+'-'+now2.getTime();
+  _filoShowReceipt(payId, items, total, method, methodLabel, now2);
   _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
  }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
@@ -726,6 +729,103 @@ function _toUpdateCart(){
  }
  if(tw)tw.style.display=items.length?'block':'none';
  if(te)te.textContent='₩'+total.toLocaleString();
+}
+
+
+
+// ── 영수증 수동 발송 ─────────────────────────────────────────────
+function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);'
+    + 'background:#1e293b;border:1px solid rgba(255,255,255,.1);border-radius:16px;'
+    + 'padding:14px 18px;z-index:9999;min-width:280px;text-align:center;'
+    + 'box-shadow:0 8px 32px rgba(0,0,0,.4)';
+
+  var ttl = document.createElement('div');
+  ttl.style.cssText = 'font-size:14px;font-weight:800;color:#f0f0ff;margin-bottom:10px';
+  ttl.textContent = '\u2705 ' + methodLabel + ' \u20a9' + total.toLocaleString() + ' \uacb0\uc81c \uc644\ub8cc!';
+  wrap.appendChild(ttl);
+
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px';
+
+  var sendBtn = document.createElement('button');
+  sendBtn.style.cssText = 'flex:1;padding:8px;background:#0891b2;border:none;'
+    + 'border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+  sendBtn.textContent = '\ud83e\udde7 \uc601\uc218\uc99d \ubc1c\uc1a1';
+  row.appendChild(sendBtn);
+
+  var closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'padding:8px 12px;background:rgba(255,255,255,.1);border:none;'
+    + 'border-radius:10px;color:#94a3b8;font-size:12px;cursor:pointer';
+  closeBtn.textContent = '\u2715';
+  closeBtn.onclick = function(){ wrap.remove(); };
+  row.appendChild(closeBtn);
+  wrap.appendChild(row);
+
+  var status = document.createElement('div');
+  status.style.cssText = 'font-size:11px;color:#94a3b8;margin-top:6px;display:none';
+  wrap.appendChild(status);
+
+  document.body.appendChild(wrap);
+  var autoRemove = setTimeout(function(){ wrap.remove(); }, 8000);
+
+  sendBtn.onclick = function() {
+    sendBtn.disabled = true;
+    sendBtn.textContent = '\u23f3 \ubc1c\uc1a1 \uc911...';
+    status.style.display = 'block';
+    status.textContent = '\uc190\ub2d8 \ud3f0\uc73c\ub85c \uc601\uc218\uc99d \ubc1c\uc1a1 \uc911...';
+    clearTimeout(autoRemove);
+
+    _db.collection('filo_orders')
+      .where('dealerId','==',did)
+      .where('tableNum','==',parseInt(tableNum))
+      .where('date','==',new Date().toISOString().slice(0,10))
+      .get().then(function(snap){
+        var tok = null, ordId = null;
+        snap.forEach(function(doc){
+          var t = doc.data().fcmToken;
+          if(t && t.length > 20){ tok = t; ordId = doc.id; }
+        });
+        if(!tok){
+          sendBtn.textContent = '\u274c \ud1a0\ud070 \uc5c6\uc74c';
+          status.textContent = '\uc190\ub2d8\uc774 \uc54c\ub9bc\uc744 \ud5c8\uc6a9\ud558\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4';
+          setTimeout(function(){ wrap.remove(); }, 3000);
+          return;
+        }
+        var rUrl = 'https://filo.ai.kr/order-done?oid='+(ordId||'')+'&did='+did+'&t='+tableNum;
+        var iNames = items.slice(0,3)
+          .map(function(it){ return it.name+(it.qty>1?' \xd7'+it.qty:''); }).join(' \xb7 ');
+        if(items.length>3) iNames += ' \uc678 '+(items.length-3)+'\uac74';
+        fetch('/fcm/notify-drivers',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            tokens:[tok],
+            title:'\ud83e\udde7 \uc601\uc218\uc99d \xb7 \u20a9'+total.toLocaleString(),
+            body:iNames,
+            type:'receipt',
+            url:rUrl
+          })
+        }).then(function(r){return r.json();}).then(function(d){
+          if(d.sent>0){
+            sendBtn.textContent = '\u2705 \uc601\uc218\uc99d \ubc1c\uc1a1\ub428';
+            sendBtn.style.background = '#16a34a';
+            status.textContent = '\uc190\ub2d8 \ud3f0\uc73c\ub85c \uc601\uc218\uc99d\uc774 \ubc1c\uc1a1\ub410\uc2b5\ub2c8\ub2e4!';
+            setTimeout(function(){ wrap.remove(); }, 3000);
+          } else {
+            sendBtn.textContent = '\u274c \ubc1c\uc1a1 \uc2e4\ud328';
+            sendBtn.disabled = false;
+          }
+        }).catch(function(){
+          sendBtn.textContent = '\u274c \uc624\ub958';
+          sendBtn.disabled = false;
+        });
+      }).catch(function(){
+        sendBtn.textContent = '\u274c \uc870\ud68c \uc2e4\ud328';
+        sendBtn.disabled = false;
+      });
+  };
 }
 
 
