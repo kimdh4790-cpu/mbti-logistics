@@ -1977,15 +1977,28 @@ async function acceptExchange(){
               method:'POST',
               headers:{'Authorization':'Bearer '+accessToken2,'Content-Type':'application/json'},
               body:JSON.stringify({message:{token:token,
+                notification:{title:title||'🔔 알림',body:msgBody||''},
                 data:Object.assign({
                   type:msgType||'pickup',
                   title:title||'🔔 알림',
                   body:msgBody||'',
                   url:(extraData&&extraData.url)||'/'
                 },extraData||{}),
-                android:{priority:'high'},
-                apns:{payload:{aps:{sound:'default','content-available':1}}},
-                webpush:{fcm_options:{link:(extraData&&extraData.url)||'/'}}
+                android:{priority:'high',notification:{
+                  sound:'default',
+                  channel_id:'filo_'+(msgType||'pickup'),
+                  defaultSound:true
+                }},
+                apns:{payload:{aps:{sound:'default',badge:1,'content-available':1}}},
+                webpush:{
+                  notification:{
+                    icon:'/filo-icon-192.png',
+                    badge:'/filo-icon-192.png',
+                    requireInteraction:true,
+                    vibrate:[300,100,300,100,300]
+                  },
+                  fcm_options:{link:(extraData&&extraData.url)||'/'}
+                }
               }})
             });
             if(resp.ok)sent2++; else errors2.push(await resp.text());
