@@ -88,18 +88,29 @@ function _filoConfirmPay(method, methodLabel){
      });
    }
    _cartClear();
-  } else {
-   // 선불: 영수증 출력 + FCM 영수증 발송
-   _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
-   // FCM 영수증 발송 (테이블 주문이고 fcmToken 있을 때)
-   if(tableId && saveData.fcmToken) {
-     _filoSendReceiptPush(saveData.fcmToken, {
-       items: items, total: total,
-       methodLabel: methodLabel, tableName: tableName
-     });
+   } else {
+    // 선불: 영수증 출력
+    _filoShowReceipt(ref.id, items, total, method, methodLabel, now);
+    _cartClear();
+
+    // ── 결제 수단별 후처리 ──────────────────────
+    if(method === 'cash') {
+      // 💵 현금: 현금영수증 안내 (직원이 발급)
+      setTimeout(function(){
+        _filoToast('💵 현금 ₩'+total.toLocaleString()+' 결제 완료\n현금영수증 필요 시 직원에게 문의해주세요', 4000);
+      }, 400);
+    } else {
+      // 💳 카드 / 🟡 카카오페이: FCM 영수증 푸시
+      var fcmTok = saveData.fcmToken;
+      if(!fcmTok && tableId) fcmTok = window._lastFcmToken || null;
+      if(fcmTok) {
+        _filoSendReceiptPush(fcmTok, {
+          items: items, total: total,
+          methodLabel: methodLabel, tableName: tableName
+        });
+      }
+    }
    }
-   _cartClear();
-  }
  }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
