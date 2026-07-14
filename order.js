@@ -66,6 +66,16 @@ function _showOrderReceipt(items, total, payType, method){
  var cashNotice=document.getElementById('cash-receipt-notice');
  var choice=document.getElementById('receipt-choice');
  if(!box||!rc||!rc.length)return;
+ // 시간 포맷 (HH:MM)
+ var now=new Date();
+ var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+ // 헤더에 테이블 번호 + 시간 삽입
+ var hdrEl=document.getElementById('order-receipt-header');
+ if(hdrEl){
+  hdrEl.innerHTML='🧾 주문 영수증'+
+   '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
+   '🪑 테이블 '+_tNum+'번 &nbsp;|&nbsp; 🕐 '+timeStr+'</div>';
+ }
  if(riEl)riEl.innerHTML=rc.map(function(i){
   return '<div style="display:flex;justify-content:space-between">'+
    '<span>'+(i.emoji||'🍽')+' '+(i.name||'')+(i.qty>1?' ×'+i.qty:'')+'</span>'+
