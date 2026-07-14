@@ -194,10 +194,25 @@ function _doOrder(payType){
   var dn=document.getElementById('done');
   var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
+  // 선불/후불 표기
+  var payMsg=document.getElementById('done-pay-msg');
+  if(payMsg){
+   if(payType==='prepay'){
+    payMsg.innerHTML='<span style="display:inline-block;padding:6px 14px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:20px;color:#22c55e;font-size:13px;font-weight:700">💳 선결제 완료</span>';
+   } else {
+    payMsg.innerHTML='<span style="display:inline-block;padding:6px 14px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:20px;color:#f59e0b;font-size:13px;font-weight:700">🧾 후불 결제 · 식사 후 카운터에서 결제</span>';
+   }
+  }
+  // 영수증 버튼 문구 구분
+  var rcptBtn=document.getElementById('receipt-fcm-btn');
+  if(rcptBtn){
+   rcptBtn.textContent=payType==='prepay'?'🧾 결제 영수증 받기':'🧾 영수증 알림 받기 (결제 후 발송)';
+  }
+  // 현재 주문 ID 전역 저장 (FCM 토큰 업데이트용)
+  _lastOrderId=ref.id;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
   // 픽업 감지 시작
-  _lastOrderId=ref.id;
   _listenPickup(ref.id);
   // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
@@ -415,15 +430,22 @@ function reqReceiptFCM(){
       }).then(function(tok){
         if(!tok)throw new Error('토큰 발급 실패');
         try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}
+        // filo_orders에 fcmToken 저장 → 직원 후불 결제 시 이 토큰으로 영수증 발송
+        if(_lastOrderId){
+          _db.collection('filo_orders').doc(_lastOrderId).update({fcmToken:tok}).catch(function(){});
+        }
+        // 주문확인 푸시 즉시 발송 (영수증 알림 받기 탭 시)
+        var dnum=document.getElementById('done-num');
+        var numTxt=dnum?dnum.textContent:'';
+        var ditems=document.getElementById('done-items');
+        var itemsTxt=ditems?ditems.textContent.split('\n').slice(0,2).join(' · '):'';
         return fetch('/fcm/notify-drivers',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             tokens:[tok],
-            title:'🧾 영수증',
-            body:document.getElementById('done-num')
-              ?document.getElementById('done-num').textContent+' 주문 완료'
-              :'주문 완료',
+            title:'🧾 주문 확인 · '+numTxt,
+            body:itemsTxt||'주문이 접수됐습니다',
             type:'receipt',
             url:location.href
           })
