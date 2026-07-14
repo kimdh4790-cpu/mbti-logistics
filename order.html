@@ -343,16 +343,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
   <div class="done-sub" id="done-sub">잠시 후 준비됩니다</div>
   <div class="done-num" id="done-num"></div>
   <div class="done-items" id="done-items"></div>
-  <div id="done-pay-msg" style="font-size:14px;margin-bottom:12px;line-height:1.6;text-align:center"></div>
-  <!-- 영수증 알림 받기 -->
-  <button id="receipt-fcm-btn" onclick="reqReceiptFCM()"
-    style="width:100%;padding:14px;background:rgba(8,145,178,.08);border:1.5px solid rgba(8,145,178,.3);
-    border-radius:16px;color:#0891b2;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">
-    🧾 영수증 알림 받기
-  </button>
-  <div id="receipt-fcm-status" style="font-size:12px;color:#64748b;text-align:center;margin-bottom:8px;display:none"></div>
+  <div id="done-pay-msg" style="font-size:13px;color:#64748b;margin-bottom:10px;line-height:1.6;text-align:center"></div>
+
+  <!-- 영수증 선택 (주문 직후 노출) -->
+  <div id="receipt-choice" style="width:100%;max-width:320px;margin-bottom:12px;display:none">
+    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;text-align:center">🧾 주문 영수증을 받으시겠어요?</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="_showOrderReceipt()" style="flex:1;padding:12px;background:#0891b2;border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer">✅ 받기</button>
+      <button onclick="document.getElementById('receipt-choice').style.display='none'" style="flex:1;padding:12px;background:#f1f5f9;border:none;border-radius:12px;color:#64748b;font-size:14px;font-weight:700;cursor:pointer">괜찮아요</button>
+    </div>
+  </div>
+
+  <!-- 주문 영수증 표시 영역 -->
+  <div id="order-receipt-box" style="width:100%;max-width:320px;margin-bottom:12px;display:none;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:16px;text-align:left">
+    <div style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:10px;text-align:center;border-bottom:1px dashed #e2e8f0;padding-bottom:8px">🧾 주문 영수증</div>
+    <div id="order-receipt-items" style="font-size:13px;color:#334155;line-height:2"></div>
+    <div style="border-top:1px dashed #e2e8f0;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-size:14px;font-weight:900">
+      <span>합계</span><span id="order-receipt-total" style="color:#0891b2"></span>
+    </div>
+    <div id="order-receipt-pay" style="margin-top:6px;font-size:12px;color:#64748b"></div>
+    <div id="cash-receipt-notice" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(245,158,11,.1);border-radius:8px;font-size:11px;color:#92400e;line-height:1.6">
+      💡 현금영수증이 필요하신 경우<br>카운터 직원에게 문의해 주세요
+    </div>
+  </div>
+
+  <!-- 후불: 카운터 결제 안내 -->
+  <div id="postpay-notice" style="display:none;width:100%;max-width:320px;margin-bottom:12px;padding:12px 16px;background:rgba(99,102,241,.08);border:1.5px solid rgba(99,102,241,.2);border-radius:14px;text-align:center;font-size:13px;color:#4f46e5;line-height:1.7">
+    💳 식사 후 카운터에서 결제해 주세요<br>
+    <span style="font-size:11px;color:#94a3b8">결제 완료 시 영수증을 보내드려요</span>
+  </div>
+
   <!-- 픽업 대기 안내 -->
-  <div id="pickup-wait" style="margin:16px 0;padding:14px 20px;background:rgba(8,145,178,.1);border:1.5px solid rgba(8,145,178,.3);border-radius:16px;text-align:center;max-width:320px;width:100%">
+  <div id="pickup-wait" style="margin:12px 0;padding:14px 20px;background:rgba(8,145,178,.1);border:1.5px solid rgba(8,145,178,.3);border-radius:16px;text-align:center;max-width:320px;width:100%">
     <div style="font-size:13px;font-weight:700;color:#0891b2;margin-bottom:4px">🔔 픽업 알림 안내</div>
     <div style="font-size:12px;color:#475569;line-height:1.8">
       음식이 준비되면 <b>폰 알림</b>으로 알려드려요!<br>
