@@ -393,7 +393,6 @@ function _callStaff(){
 
 
 // ── 영수증 알림 받기 ─────────────────────────────────────────────
-var _VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
 function reqReceiptFCM(){
   var btn=document.getElementById('receipt-fcm-btn');
   var st=document.getElementById('receipt-fcm-status');
@@ -411,8 +410,9 @@ function reqReceiptFCM(){
     }
     st.textContent='영수증 준비 중...';
     navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+      .then(function(reg){ return reg.update().then(function(){return reg;}); })
       .then(function(reg){
-        return firebase.messaging().getToken({vapidKey:_VAPID,serviceWorkerRegistration:reg});
+        return firebase.messaging().getToken({vapidKey:_VAPID_KEY,serviceWorkerRegistration:reg});
       }).then(function(tok){
         if(!tok)throw new Error('토큰 발급 실패');
         try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}
