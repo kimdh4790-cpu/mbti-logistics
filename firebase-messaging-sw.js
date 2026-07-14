@@ -6,8 +6,8 @@ firebase.initializeApp({
   authDomain:'mbti-logistics.firebaseapp.com',
   projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.firebasestorage.app',
-  messagingSenderId:'40761160761',
-  appId:'1:40761160761:web:20545b610f03f534e949e8'
+  messagingSenderId:'862900137263',
+  appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'
 });
 
 const messaging = firebase.messaging();
