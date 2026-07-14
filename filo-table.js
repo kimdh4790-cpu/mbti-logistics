@@ -830,7 +830,7 @@ function _filoTableOrderModal(did,table,order){
        tokens:tokens,
        title:'🔔 픽업 알림',
        body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요 😊',
-       data:{type:'pickup',tableNum:String(tNum),url:'/order?d='+d+'&t='+tNum}
+       data:{type:'pickup',tableNum:String(tNum),url:'https://filo.ai.kr/order?d='+d+'&t='+tNum}
       })
      }).catch(function(){});
      _filoToast('🔔 테이블 '+tNum+' 픽업 알림 전송!');
