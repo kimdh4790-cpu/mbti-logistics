@@ -233,8 +233,7 @@ function _doPrePay(method){
    _closeCart();_cart={};_updFab();
 
    // 완료 화면
-   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('
-');
+   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
    var dn=document.getElementById('done');
    var dnum=document.getElementById('done-num');
    if(dnum)dnum.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
