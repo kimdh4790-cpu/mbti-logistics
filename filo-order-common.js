@@ -161,7 +161,7 @@ function _openMdlCommon(m){
  if(m.imageUrl){
   var img=document.createElement('img');
   img.className='mdl-img-full';img.src=m.imageUrl;img.alt=m.name;
-  img.style.cssText='width:100%;max-height:240px;object-fit:cover;display:block';
+  img.style.cssText='width:100%;max-height:320px;object-fit:contain;background:#f8fafc;display:block';
   scrollEl.insertBefore(img,mdlContent);
  } else {
   var emojiEl=document.createElement('div');
