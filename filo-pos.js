@@ -553,23 +553,36 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
          batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
         });
         batch.commit().then(function(){
-          // batch 완료 후 FCM 영수증 발송 (cleared 직후)
-          if(fcmTok && method !== 'cash') {
-            var rUrl = "https://filo.ai.kr/order-done?oid="+(fcmOrdId||"")+"&did="+did+"&t="+tableNum;
-            var iNames = items.slice(0,3).map(function(it){return it.name+(it.qty>1?" ×"+it.qty:"");}).join(" · ");
-            if(items.length>3) iNames += " 외 "+(items.length-3)+"건";
+          // batch 완료 후 filo_orders에서 fcmToken 수집 → FCM 영수증 자동 발송
+          Promise.all([
+            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).get(),
+            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',parseInt(tableNum)||0).get()
+          ]).then(function(results){
+            var tokens=[]; var seen={};
+            results.forEach(function(snap){
+              snap.forEach(function(doc){
+                if(seen[doc.id])return; seen[doc.id]=true;
+                var tk=doc.data().fcmToken;
+                if(tk&&tk.length>20&&tokens.indexOf(tk)<0)tokens.push(tk);
+              });
+            });
+            if(!tokens.length)return;
+            var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
+            if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
             fetch('/fcm/notify-drivers',{
               method:'POST',
               headers:{'Content-Type':'application/json'},
               body:JSON.stringify({
-                tokens:[fcmTok],
-                title:methodLabel+" 완료 · ₩"+total.toLocaleString(),
+                tokens:tokens,
+                title:methodLabel+' 완료 · ₩'+total.toLocaleString(),
                 body:iNames,
                 type:'receipt',
-                url:rUrl
+                url:'https://filo.ai.kr/order?d='+did+'&t='+tableNum+'#done'
               })
+            }).then(function(r){return r.json();}).then(function(d){
+              if(d.sent>0)_filoToast('📱 손님 영수증 발송 완료');
             }).catch(function(){});
-          }
+          }).catch(function(){});
         }).catch(function(){});
        }
       }).catch(function(){});
