@@ -16,6 +16,8 @@ jobs:
           for f in table-order.html order-done.html; do
             R=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces/$NS/values/$f" \
               -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
-              -H "Content-Type: text/html; charset=utf-8" --data-binary @$f)
+              -H "Content-Type: text/html; charset=utf-8" \
+              -H "Cache-Control: no-cache, no-store, must-revalidate" \
+              --data-binary @$f)
             echo "$R" | grep -q '"success":true' && echo "✅ $f" || echo "⚠️ $f: $R"
           done
