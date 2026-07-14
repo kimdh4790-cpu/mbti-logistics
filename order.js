@@ -139,26 +139,8 @@ function _checkExistingOrder(){
 }
 
 // ── 메뉴 로드 ─────────────────────────────────────────────────────────────────
-function _loadMenus(){
- fetch('/api/menus?did='+encodeURIComponent(_did))
- .then(function(r){return r.json();})
- .then(function(d){
-  _menus=d.menus||[];
-  _renderCatBar(_menus,'cat-bar');
-  _renderMenuGrid(_menus,'menu-grid');
-  _renderRecommendBanner(_menus);
- }).catch(function(){
-  var g=document.getElementById('menu-grid');
-  if(g)g.innerHTML='<div class="empty"><div class="empty-ico">😅</div><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
- });
-}
 
 // ── 모달 열기/닫기 ────────────────────────────────────────────────────────────
-function _openMdl(m){_openMdlCommon(m);}
-function _closeMdl(){
- document.getElementById('mdl').classList.remove('open');
- _curMdlMenu=null;
-}
 
 // ── 장바구니에 담기 ───────────────────────────────────────────────────────────
 function _addFromMdl(){
@@ -310,7 +292,7 @@ function _changeTable(){
  var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
  if(!newNum||!newNum.trim())return;
  newNum=newNum.trim();
- if(!_lastOrderId){_filoToast('⚠️ 주문 정보를 찾을 수 없습니다');return;}
+ if(!_lastOrderId){alert('주문 정보를 찾을 수 없습니다');return;}
  _db.collection('filo_orders').doc(_lastOrderId).update({
   tableNum:newNum,
   tableName:'테이블 '+newNum,
@@ -319,8 +301,8 @@ function _changeTable(){
  }).then(function(){
   _tNum=newNum;
   var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
-  _filoToast('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
- }).catch(function(e){_filoToast('❌ 변경 실패: '+e.message);});
+  alert('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
+ }).catch(function(e){alert('변경 실패: '+e.message);});
 }
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
