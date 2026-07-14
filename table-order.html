@@ -128,6 +128,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'App
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="https://js.tosspayments.com/v1/payment"></script>
 <script>
 var FB_CFG={apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",authDomain:"mbti-logistics.firebaseapp.com",projectId:"mbti-logistics",storageBucket:"mbti-logistics.appspot.com",messagingSenderId:"862900137263",appId:"1:862900137263:web:a1b2c3d4e5f6a7b8"};
@@ -253,6 +254,39 @@ function _applyTranslation(lang){
 }
 
 /* ── 매장 + 메뉴 로드 ── */
+
+// ── FCM 토큰 발급 및 저장 ────────────────────────────────────────
+var _fcmToken = null;
+var _VAPID = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
+
+function _initFCM() {
+  if(!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  // localStorage 캐시 확인
+  try {
+    var saved = localStorage.getItem('filo_fcm_' + DID);
+    if(saved && saved.length > 20) { _fcmToken = saved; return; }
+  } catch(e) {}
+
+  if(Notification.permission === 'denied') return;
+
+  navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
+    .then(function(reg) {
+      var messaging = firebase.messaging();
+      return messaging.getToken({ vapidKey: _VAPID, serviceWorkerRegistration: reg });
+    }).then(function(token) {
+      if(!token) return;
+      _fcmToken = token;
+      try { localStorage.setItem('filo_fcm_' + DID, token); } catch(e) {}
+    }).catch(function() {});
+}
+
+function _requestFCMPermission() {
+  if(!('Notification' in window)) return;
+  Notification.requestPermission().then(function(perm) {
+    if(perm === 'granted') _initFCM();
+  });
+}
+
 function init(){
   if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">⚠️ 잘못된 QR코드입니다.</div>';return;}
   applyUIText();
@@ -385,6 +419,7 @@ window.doOrder=function(){
     total:total,status:'pending_payment',
     source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
   };
+  if(_fcmToken) orderData.fcmToken = _fcmToken;
   _db.collection('toss_orders').doc(orderId).set(orderData).then(function(){
     var toss=TossPayments(_tossKey);
     toss.requestPayment('카드',{
