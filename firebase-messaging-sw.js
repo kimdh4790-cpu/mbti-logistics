@@ -1,5 +1,5 @@
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
@@ -71,7 +71,7 @@ self.addEventListener('notificationclick', function(e) {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(wins) {
       // 이미 열린 탭이 있으면 포커스 + 페이지 이동
       for (var i = 0; i < wins.length; i++) {
-        if (wins[i].url.includes('donway.ai.kr') || wins[i].url.includes('localhost')) {
+        if (wins[i].url.includes('donway.ai.kr') || wins[i].url.includes('filo.ai.kr') || wins[i].url.includes('dine.ne.kr') || wins[i].url.includes('localhost')) {
           wins[i].focus();
           wins[i].navigate(url);
           return;
