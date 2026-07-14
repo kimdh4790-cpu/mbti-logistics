@@ -188,12 +188,112 @@ function _openPayMdl(){
  var pm=document.getElementById('pay-mdl');if(pm)pm.classList.add('open');
 }
 
+// ── 선결제 모달 ──────────────────────────────────────────────────
+function _openPrePayMdl(){
+ var total=Object.values(_cart).reduce(function(s,i){return s+i.price*i.qty;},0);
+ // 후불 모달 닫기
+ var pm=document.getElementById('pay-mdl');if(pm)pm.classList.remove('open');
+ // 선결제 모달 열기
+ var pt=document.getElementById('prepay-total-amt');
+ if(pt)pt.textContent='₩'+total.toLocaleString();
+ var pp=document.getElementById('prepay-mdl');if(pp)pp.classList.add('open');
+}
+
+function _closePrePayMdl(){
+ var pp=document.getElementById('prepay-mdl');if(pp)pp.classList.remove('open');
+}
+
+// 선결제 수단 선택 후 처리
+// ※ 테스트 모드: 실제 PG 연동 전까지 가짜 결제 완료 처리
+// TODO: PG 연동 시 카카오페이/토스페이먼츠/나이스페이 API 호출로 교체
+function _doPrePay(method){
+ _closePrePayMdl();
+ var items=Object.values(_cart).filter(function(i){return i.qty>0;});
+ var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+ var methodLabel=method==='kakao'?'🟡 카카오페이':method==='card'?'💳 카드':method==='naver'?'🟢 네이버페이':'결제';
+
+ // 결제 처리 중 표시
+ _filoToast('⏳ '+methodLabel+' 결제 처리 중...');
+
+ // TODO: 실제 PG 결제 처리 (현재 1.5초 딜레이 후 완료 처리)
+ setTimeout(function(){
+  // 주문 저장 (prepay + paid 상태)
+  var orderData={
+   dealerId:_did, type:'table', status:'paid',
+   payType:'prepay', payMethod:method, methodLabel:methodLabel,
+   tableNum:_tNum, tableName:_tName,
+   items:items, total:total,
+   createdAt:new Date().toISOString(),
+   date:new Date().toISOString().slice(0,10),
+   paidAt:new Date().toISOString()
+  };
+  if(_fcmToken)orderData.fcmToken=_fcmToken;
+
+  _db.collection('filo_orders').add(orderData).then(function(ref){
+   _closeCart();_cart={};_updFab();
+
+   // 완료 화면
+   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('
+');
+   var dn=document.getElementById('done');
+   var dnum=document.getElementById('done-num');
+   if(dnum)dnum.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
+   var ditems=document.getElementById('done-items');
+   if(ditems)ditems.textContent=orderInfo;
+
+   // 선결제 완료 메시지
+   var payMsg=document.getElementById('done-pay-msg');
+   if(payMsg)payMsg.innerHTML=
+    '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;margin-bottom:8px">'+
+    '<div style="font-size:15px;font-weight:900;color:#16a34a;margin-bottom:4px">'+methodLabel+' 결제 완료! ✅</div>'+
+    '<div style="font-size:12px;color:#15803d">카운터 방문 없이 식사하세요 😊</div>'+
+    '</div>';
+
+   if(dn)dn.style.display='flex';
+   _lastOrderId=ref.id;
+   _listenPickup(ref.id);
+   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
+
+   // FCM 영수증 즉시 발송
+   if(_fcmToken&&_fcmToken.length>20){
+    fetch('/fcm/notify-drivers',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({
+      tokens:[_fcmToken],
+      title:methodLabel+' 완료 · ₩'+total.toLocaleString(),
+      body:items.slice(0,3).map(function(i){return i.name+' ×'+i.qty;}).join(' · ')+
+           (items.length>3?' 외 '+(items.length-3)+'건':''),
+      type:'receipt',
+      url:'/'
+     })
+    }).then(function(r){
+     console.log('[FCM 영수증]', r.status===200?'발송 완료':'실패');
+    }).catch(function(e){
+     console.log('[FCM 영수증 오류]', e.message);
+    });
+   }
+
+  }).catch(function(e){
+   _filoToast('❌ 주문 실패: '+e.message);
+  });
+ }, 1500); // 1.5초 딜레이 (PG 연동 시 제거)
+}
+
 function _closePayMdl(){
  var pm=document.getElementById('pay-mdl');if(pm)pm.classList.remove('open');
 }
 
 function _doOrder(payType){
  _closePayMdl();
+ // 선결제 → 결제 수단 선택 모달
+ if(payType==='prepay'){
+  if(!Object.values(_cart).filter(function(i){return i.qty>0;}).length){
+   _filoToast('🛒 메뉴를 선택해주세요');return;
+  }
+  _openPrePayMdl();
+  return;
+ }
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');if(btn){btn.disabled=true;btn.textContent='주문 중...';}
