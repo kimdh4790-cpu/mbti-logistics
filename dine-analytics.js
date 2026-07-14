@@ -762,7 +762,7 @@ function _dineCostSave(did){
   price:parseInt(document.getElementById('c-price').value)||0,
   cost:parseInt(document.getElementById('c-cost').value)||0,
   createdAt:new Date().toISOString()};
- if(!data.name){alert('메뉴명 입력');return;}
+ if(!data.name){_dineToast('⚠️ 메뉴명을 입력해주세요');return;}
  _db.collection('menu_costs').add(data).then(function(){
   _dineToast('✅ 등록됐습니다');document.querySelector('.mo')?.remove();_dineCost(document.getElementById('content'));
  });
