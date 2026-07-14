@@ -2,73 +2,366 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>주문 완료</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>결제 완료</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#07071a;color:#f0f0ff;font-family:'Apple SD Gothic Neo','Pretendard',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.box{text-align:center;max-width:360px;width:100%}
-.icon{font-size:64px;margin-bottom:16px}
-.title{font-size:24px;font-weight:900;margin-bottom:8px}
-.sub{font-size:14px;color:#9898c0;line-height:1.7;margin-bottom:24px}
-.order-num{background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.3);border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px;color:#9898c0}
-.order-num b{display:block;font-size:20px;font-weight:900;color:#38bdf8;margin-top:4px}
-.btn{padding:12px 28px;background:linear-gradient(135deg,#0891b2,#0e7490);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+:root{--bg:#07071a;--bg2:#0e0e2a;--bg3:#161633;--bd:rgba(255,255,255,.08);
+  --tx:#f0f0ff;--tx2:#9898c0;--tx3:#4a4a7a;--blue:#0891b2;--green:#22c55e;--gold:#f59e0b}
+body{background:var(--bg);color:var(--tx);font-family:'Apple SD Gothic Neo','Pretendard',sans-serif;
+  min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:0 0 40px}
+
+/* 상단 헤더 */
+.header{width:100%;background:var(--bg2);border-bottom:1px solid var(--bd);
+  padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+.header-ico{font-size:28px}
+.header-ttl{font-size:16px;font-weight:900;color:var(--tx)}
+.header-sub{font-size:11px;color:var(--tx2);margin-top:2px}
+
+/* 결제 완료 배너 */
+.done-banner{width:100%;max-width:440px;margin:20px auto 0;padding:0 16px}
+.done-card{background:linear-gradient(135deg,rgba(8,145,178,.15),rgba(14,158,126,.08));
+  border:1px solid rgba(8,145,178,.3);border-radius:20px;padding:24px;text-align:center}
+.done-icon{font-size:52px;margin-bottom:12px}
+.done-ttl{font-size:22px;font-weight:900;margin-bottom:6px}
+.done-sub{font-size:13px;color:var(--tx2);line-height:1.6}
+.done-amount{font-size:32px;font-weight:900;color:#38bdf8;margin:12px 0 4px;letter-spacing:-1px}
+.done-method{font-size:12px;color:var(--tx2)}
+
+/* 주문번호 */
+.order-num-box{margin:12px 0;padding:10px 16px;background:rgba(8,145,178,.08);
+  border:1px solid rgba(8,145,178,.2);border-radius:12px;display:inline-flex;
+  align-items:center;gap:8px;font-size:12px;color:var(--tx2)}
+.order-num-box b{font-size:15px;font-weight:900;color:#38bdf8}
+
+/* 섹션 */
+.section{width:100%;max-width:440px;margin:12px auto 0;padding:0 16px}
+.section-card{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;overflow:hidden}
+.section-head{padding:14px 16px;border-bottom:1px solid var(--bd);
+  font-size:12px;font-weight:700;color:var(--tx2);letter-spacing:.5px}
+.section-body{padding:4px 0}
+
+/* 주문 아이템 */
+.item-row{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04)}
+.item-row:last-child{border-bottom:none}
+.item-name{font-size:14px;font-weight:600}
+.item-qty{font-size:12px;color:var(--tx2);margin-top:2px}
+.item-price{font-size:14px;font-weight:800;color:#38bdf8}
+
+/* 합계 */
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 16px}
+.total-label{font-size:14px;font-weight:700}
+.total-amt{font-size:18px;font-weight:900;color:#38bdf8}
+
+/* 결제 정보 */
+.info-row{display:flex;justify-content:space-between;padding:11px 16px;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--tx2)}
+.info-val{font-weight:600;text-align:right}
+
+/* 포인트 배너 */
+.point-banner{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.05));
+  border:1px solid rgba(245,158,11,.25);border-radius:16px;padding:16px;
+  display:flex;align-items:center;gap:12px}
+.point-ico{font-size:28px;flex-shrink:0}
+.point-ttl{font-size:14px;font-weight:800;color:var(--gold)}
+.point-sub{font-size:11px;color:var(--tx2);margin-top:3px}
+
+/* 버튼 */
+.btns{display:flex;gap:10px}
+.btn-main{flex:1;padding:14px;background:linear-gradient(135deg,#0891b2,#0e7490);
+  border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;transition:.2s}
+.btn-main:active{transform:scale(.97)}
+.btn-sub{flex:1;padding:14px;background:var(--bg2);border:1px solid var(--bd);
+  border-radius:14px;color:var(--tx2);font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-sub:active{transform:scale(.97)}
+.btn-share{width:100%;padding:13px;background:rgba(245,198,24,.1);border:1px solid rgba(245,198,24,.3);
+  border-radius:14px;color:#f5c618;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+
+/* 로딩 */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:100}
+.spin{width:40px;height:40px;border:3px solid var(--bd);border-top-color:#38bdf8;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;color:var(--tx2)}
+
+/* 오류 */
+.error-card{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  border-radius:16px;padding:20px;text-align:center}
+.error-ico{font-size:40px;margin-bottom:10px}
+.error-ttl{font-size:16px;font-weight:800;color:#f87171;margin-bottom:6px}
+.error-sub{font-size:12px;color:var(--tx2);line-height:1.6}
 </style>
 </head>
 <body>
-<div class="box">
- <div class="icon">🎉</div>
- <div class="title">주문 완료!</div>
- <div class="sub">결제가 완료됐습니다.<br>잠시만 기다려주세요.</div>
- <div class="order-num">주문번호<b id="order-num">확인중...</b></div>
- <button class="btn" onclick="goBack()">추가 주문하기</button>
+
+<!-- 로딩 -->
+<div class="loading-overlay" id="loading">
+  <div class="spin"></div>
+  <div class="loading-txt">결제 확인 중...</div>
 </div>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-ico">🧾</div>
+  <div>
+    <div class="header-ttl" id="store-name">FILO DINE</div>
+    <div class="header-sub" id="table-label">테이블 주문</div>
+  </div>
+</div>
+
+<!-- 결제 완료 배너 -->
+<div class="done-banner">
+  <div class="done-card" id="done-card" style="display:none">
+    <div class="done-icon" id="done-icon">✅</div>
+    <div class="done-ttl" id="done-ttl">결제 완료!</div>
+    <div class="done-sub" id="done-sub">주문이 접수됐습니다</div>
+    <div class="done-amount" id="done-amount">₩0</div>
+    <div class="done-method" id="done-method"></div>
+    <div class="order-num-box">
+      주문번호 &nbsp;<b id="order-num">-</b>
+    </div>
+  </div>
+  <!-- 오류 -->
+  <div class="error-card" id="error-card" style="display:none">
+    <div class="error-ico">❌</div>
+    <div class="error-ttl" id="error-ttl">결제 오류</div>
+    <div class="error-sub" id="error-sub"></div>
+  </div>
+</div>
+
+<!-- 주문 내역 -->
+<div class="section" id="items-section" style="display:none">
+  <div class="section-card">
+    <div class="section-head">🍽 주문 내역</div>
+    <div class="section-body" id="items-list"></div>
+    <div style="border-top:1px solid var(--bd)">
+      <div class="total-row">
+        <div class="total-label">합계</div>
+        <div class="total-amt" id="total-amt">₩0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 결제 정보 -->
+<div class="section" id="pay-info-section" style="display:none">
+  <div class="section-card">
+    <div class="section-head">💳 결제 정보</div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-label">결제 수단</span><span class="info-val" id="pay-method-txt">-</span></div>
+      <div class="info-row"><span class="info-label">결제 일시</span><span class="info-val" id="pay-time">-</span></div>
+      <div class="info-row"><span class="info-label">주문번호</span><span class="info-val" id="pay-ordnum">-</span></div>
+      <div class="info-row" id="table-row"><span class="info-label">테이블</span><span class="info-val" id="pay-table">-</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 포인트 적립 -->
+<div class="section" id="point-section" style="display:none">
+  <div class="point-banner">
+    <div class="point-ico">🎁</div>
+    <div>
+      <div class="point-ttl" id="point-ttl">포인트 적립!</div>
+      <div class="point-sub" id="point-sub">다음 방문 시 할인에 사용하세요</div>
+    </div>
+  </div>
+</div>
+
+<!-- 버튼 -->
+<div class="section" id="btn-section" style="display:none">
+  <div class="btns">
+    <button class="btn-sub" onclick="goBack()">➕ 추가 주문</button>
+    <button class="btn-main" onclick="goHome()">🏠 처음으로</button>
+  </div>
+  <button class="btn-share" onclick="shareReceipt()">💬 카카오로 영수증 공유</button>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-firebase.initializeApp({apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",authDomain:"mbti-logistics.firebaseapp.com",projectId:"mbti-logistics",storageBucket:"mbti-logistics.appspot.com",messagingSenderId:"862900137263",appId:"1:862900137263:web:a1b2c3d4e5f6a7b8"});
-var db=firebase.firestore();
-var p=new URLSearchParams(location.search);
-var oid=p.get('oid')||'';
-var did=p.get('did')||'';
-var tid=p.get('tid')||'';
-var paymentKey=p.get('paymentKey')||'';
-var amount=p.get('amount')||'';
+firebase.initializeApp({
+  apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
+  authDomain:"mbti-logistics.firebaseapp.com",
+  projectId:"mbti-logistics",
+  storageBucket:"mbti-logistics.firebasestorage.app",
+  messagingSenderId:"40761160761",
+  appId:"1:40761160761:web:20545b610f03f534e949e8"
+});
+var db = firebase.firestore();
+var p = new URLSearchParams(location.search);
+var oid = p.get('oid') || '';
+var did = p.get('did') || '';
+var tid = p.get('tid') || p.get('t') || '';
+var paymentKey = p.get('paymentKey') || '';
+var amount = p.get('amount') || '';
 
-document.getElementById('order-num').textContent=oid.slice(-8)||'-';
+// 매장명 로드
+if(did){
+  db.collection('companies').doc(did).get().then(function(d){
+    if(d.exists){
+      var f = d.data();
+      var nm = f.storeName || f.companyName || f.name || 'FILO DINE';
+      document.getElementById('store-name').textContent = nm;
+      document.title = nm + ' · 영수증';
+    }
+  }).catch(function(){});
+}
+if(tid) document.getElementById('table-label').textContent = '테이블 ' + tid + ' · 영수증';
 
-/* 결제 승인 */
-if(paymentKey&&oid&&amount){
- fetch('/toss/confirm',{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({paymentKey:paymentKey,orderId:oid,amount:parseInt(amount)})
- }).then(function(r){return r.json();}).then(function(d){
-  if(d.error){document.querySelector('.title').textContent='결제 오류';document.querySelector('.sub').textContent=d.error;return;}
-  /* 주문 상태 업데이트 */
-  db.collection('toss_orders').doc(oid).update({status:'paid',paymentKey:paymentKey,paidAt:new Date().toISOString()});
-  /* FILO 앱에 주문 알림용 filo_table_orders 저장 */
-  db.collection('filo_table_orders').add({dealerId:did,tableId:tid,orderId:oid,status:'ordered',notified:false,createdAt:new Date().toISOString()});
-   /* FCM 영수증 발송 — toss_orders에서 fcmToken 조회 */
-   db.collection('toss_orders').doc(oid).get().then(function(snap){
-    if(!snap.exists)return;
-    var tok=snap.data().fcmToken;
-    var items=snap.data().items||[];
-    var total=snap.data().total||parseInt(amount)||0;
-    if(!tok||tok.length<20)return;
-    fetch('/fcm/notify-drivers',{method:'POST',
-     headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({
-      tokens:[tok],
-      title:'✅ 결제 완료 · ₩'+total.toLocaleString(),
-      body:items.slice(0,3).map(function(it){return (it.name||it[1]&&it[1].name||'');}).join(' · ')||'주문이 완료됐습니다',
-      type:'receipt',url:'/'
-     })
-    }).catch(function(){});
-   }).catch(function(){});
- }).catch(function(){});
+// 날짜 포맷
+function fmtDate(iso){
+  if(!iso) return '-';
+  var d = new Date(iso);
+  return d.getFullYear()+'.'+(d.getMonth()+1).toString().padStart(2,'0')+'.'+
+    d.getDate().toString().padStart(2,'0')+' '+
+    d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
 }
 
-function goBack(){location.href='/order?did='+did+'&tid='+tid;}
+// 완료 화면 렌더링
+function showDone(items, total, method, orderId, paidAt){
+  document.getElementById('loading').style.display = 'none';
+
+  // 배너
+  document.getElementById('done-card').style.display = 'block';
+  document.getElementById('done-amount').textContent = '₩' + total.toLocaleString();
+  document.getElementById('done-method').textContent = method || '';
+  document.getElementById('order-num').textContent = (orderId || '').slice(-8).toUpperCase();
+
+  // 주문 내역
+  var itemsHtml = '';
+  var parsedItems = [];
+  items.forEach(function(it){
+    var nm = it.name || (it[1] && it[1].name) || '-';
+    var qty = it.qty || (it[1] && it[1].qty) || 1;
+    var price = it.price || (it[1] && it[1].price) || 0;
+    var subtotal = it.subtotal || (price * qty);
+    parsedItems.push({name:nm, qty:qty, subtotal:subtotal});
+    itemsHtml += '<div class="item-row">' +
+      '<div><div class="item-name">'+nm+'</div><div class="item-qty">×'+qty+'</div></div>' +
+      '<div class="item-price">₩'+subtotal.toLocaleString()+'</div>' +
+      '</div>';
+  });
+  document.getElementById('items-list').innerHTML = itemsHtml;
+  document.getElementById('total-amt').textContent = '₩' + total.toLocaleString();
+  document.getElementById('items-section').style.display = 'block';
+
+  // 결제 정보
+  document.getElementById('pay-method-txt').textContent = method || '-';
+  document.getElementById('pay-time').textContent = fmtDate(paidAt || new Date().toISOString());
+  document.getElementById('pay-ordnum').textContent = (orderId || '').slice(-8).toUpperCase();
+  if(tid) document.getElementById('pay-table').textContent = '테이블 ' + tid;
+  document.getElementById('pay-info-section').style.display = 'block';
+
+  // 포인트 (총액의 1%)
+  var pts = Math.floor(total * 0.01);
+  if(pts > 0){
+    document.getElementById('point-ttl').textContent = '🎁 ' + pts.toLocaleString() + 'P 적립!';
+    document.getElementById('point-sub').textContent = '다음 방문 시 ' + pts.toLocaleString() + '원 할인에 사용하세요';
+    document.getElementById('point-section').style.display = 'block';
+  }
+
+  document.getElementById('btn-section').style.display = 'block';
+}
+
+function showError(msg){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-sub').textContent = msg;
+  document.getElementById('error-card').style.display = 'block';
+  document.getElementById('btn-section').style.display = 'block';
+}
+
+// ── 토스페이먼츠 결제 승인 ──────────────────────────────────────
+if(paymentKey && oid && amount){
+  fetch('/toss/confirm', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({paymentKey:paymentKey, orderId:oid, amount:parseInt(amount)})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){
+      showError(d.error.message || '결제 오류가 발생했습니다');
+      return;
+    }
+    // toss_orders 상태 업데이트
+    var now = new Date().toISOString();
+    db.collection('toss_orders').doc(oid).update({
+      status:'paid', paymentKey:paymentKey, paidAt:now
+    });
+    // filo_table_orders 저장 (KDS 연동)
+    db.collection('filo_table_orders').add({
+      dealerId:did, tableId:tid, orderId:oid,
+      status:'ordered', notified:false,
+      createdAt:now
+    }).catch(function(){});
+
+    // 주문 데이터 조회 후 화면 렌더링
+    db.collection('toss_orders').doc(oid).get().then(function(snap){
+      if(!snap.exists){ showError('주문 정보를 찾을 수 없습니다'); return; }
+      var data = snap.data();
+      var items = data.items || [];
+      var total = data.total || parseInt(amount) || 0;
+      var method = d.method || '카드';
+      showDone(items, total, method, oid, now);
+
+      // FCM 영수증 푸시
+      var tok = data.fcmToken;
+      if(tok && tok.length > 20){
+        var itemNames = items.slice(0,3).map(function(it){
+          return it.name || (it[1] && it[1].name) || '';
+        }).filter(Boolean).join(' · ');
+        fetch('/fcm/notify-drivers',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            tokens:[tok],
+            title:'✅ 결제 완료 · ₩'+total.toLocaleString(),
+            body:itemNames + (items.length > 3 ? ' 외 '+(items.length-3)+'건' : ''),
+            type:'receipt',
+            url:location.href  // 영수증 페이지 URL 그대로 전달
+          })
+        }).catch(function(){});
+      }
+    });
+  }).catch(function(e){
+    showError('네트워크 오류: ' + e.message);
+  });
+
+} else if(oid) {
+  // paymentKey 없는 경우 — filo_orders에서 직접 조회 (후불 완료 등)
+  db.collection('filo_orders').doc(oid).get().then(function(snap){
+    if(!snap.exists){ showError('주문 정보를 찾을 수 없습니다'); return; }
+    var d = snap.data();
+    showDone(d.items||[], d.total||0, d.methodLabel||'결제 완료', oid, d.paidAt||d.createdAt);
+  }).catch(function(){ showError('주문 조회 실패'); });
+
+} else {
+  showError('올바르지 않은 접근입니다');
+}
+
+function goBack(){
+  location.href = '/order?d='+did+'&t='+tid;
+}
+function goHome(){
+  location.href = '/order?d='+did+'&t='+tid;
+}
+
+// 카카오 영수증 공유
+function shareReceipt(){
+  var txt = document.getElementById('store-name').textContent + ' 영수증\n' +
+    document.getElementById('done-amount').textContent + ' 결제 완료\n' +
+    '주문번호: #' + document.getElementById('order-num').textContent + '\n' +
+    '영수증 확인: ' + location.href;
+  if(navigator.share){
+    navigator.share({title:'영수증', text:txt}).catch(function(){});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(function(){
+      alert('영수증이 클립보드에 복사됐습니다!');
+    });
+  }
+}
 </script>
 </body>
 </html>
