@@ -65,20 +65,32 @@ self.addEventListener('notificationclick', function(e) {
   e.notification.close();
   if (e.action === 'close') return;
 
-  const url = (e.notification.data && e.notification.data.url) || '/settle';
+  const data = e.notification.data || {};
+  const type = data.type || 'alert';
+  const url  = data.url || (type === 'receipt' || type === 'pickup' ? 'https://filo.ai.kr/' : '/settle');
 
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(wins) {
-      // 이미 열린 탭이 있으면 포커스 + 페이지 이동
+      // receipt/pickup: order 탭 우선 포커스
+      if (type === 'receipt' || type === 'pickup') {
+        for (var i = 0; i < wins.length; i++) {
+          if (wins[i].url.includes('/order')) {
+            wins[i].focus();
+            if (url && url !== wins[i].url) wins[i].navigate(url);
+            return;
+          }
+        }
+      }
+      // 이미 열린 탭 포커스
       for (var i = 0; i < wins.length; i++) {
         if (wins[i].url.includes('donway.ai.kr') || wins[i].url.includes('filo.ai.kr') || wins[i].url.includes('dine.ne.kr') || wins[i].url.includes('localhost')) {
           wins[i].focus();
-          wins[i].navigate(url);
+          if (url) wins[i].navigate(url);
           return;
         }
       }
       // 없으면 새 탭
-      return clients.openWindow(url);
+      return clients.openWindow(url || 'https://filo.ai.kr/');
     })
   );
 });
