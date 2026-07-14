@@ -286,6 +286,7 @@ function init(){
   }).catch(function(){});
 
   fetch('/api/menus?did='+DID).then(function(r){return r.json();}).then(function(resp){
+    var menus=Array.isArray(resp)?resp:(resp.menus||resp.items||[]);
     if(!menus||!menus.length){
       document.getElementById('menu-area').innerHTML='<div class="loading">'+t('noMenu')+'<br><span style="font-size:12px;color:var(--t3)">FILO 앱 → 메뉴관리에서 추가해주세요</span></div>';
       return;
