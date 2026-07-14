@@ -2,38 +2,50 @@
  * order.js — FILO 테이블 QR 고객 주문 모듈
  * Copyright (c) 2024-2025 유한회사 엠비티아이
  *
- * ── 역할 ──────────────────────────────────────────────────────
- *   고객이 QR 스캔 후 메뉴 주문, 결제방식 선택
- *   FCM 토큰 발급 → filo_orders.fcmToken 저장
- *   픽업 알림 수신 대기 (_listenPickup)
+ * ── 주요 함수 ─────────────────────────────────────────────────
+ *   _showFCMGate()    — 알림 허용 팝업 (localStorage 토큰 있으면 스킵)
+ *   _initFCM()        — FCM 토큰 발급 → localStorage + filo_orders 저장
+ *   _doOrder(payType) — 주문 Firestore 저장 (fcmToken 포함)
+ *   _listenPickup(id) — 픽업 알림 실시간 감지 (onSnapshot)
+ *   _changeTable()    — 테이블 번호 변경 (filo_orders 업데이트)
+ *   reqReceiptFCM()   — 영수증 알림 받기 버튼 (토큰 발급 + FCM 발송)
  *
- * ── 핵심 흐름 ─────────────────────────────────────────────────
- *   QR 스캔 → window.onload
- *   → _showFCMGate() — 알림 허용 팝업
- *   → _initFCM() — FCM 토큰 발급 → localStorage + filo_orders 저장
- *   → 메뉴 주문 → _submitOrder() → _openPayMdl()
- *   → _doOrder(payType) — filo_orders 저장
- *     payType: 'postpay'(후불) / 'prepay'(선결제-준비중)
- *   → 주문완료 화면 (선불/후불 뱃지, 영수증 알림 받기 버튼)
- *   → _listenPickup() — 픽업 알림 대기
+ * ── Firestore 저장 ────────────────────────────────────────────
+ *   filo_orders ← 주문 저장
+ *     { dealerId, type:'table', status:'pending', payType,
+ *       tableNum, tableName, items, total, fcmToken,
+ *       createdAt, date }
+ *   filo_orders ← fcmToken 업데이트 (_initFCM 토큰 발급 후)
+ *   filo_orders ← tableNum/tableName 업데이트 (_changeTable)
  *
- * ── FCM 토큰 저장 ─────────────────────────────────────────────
- *   _initFCM() 비동기 → 토큰 발급 성공 시:
- *   localStorage.setItem('filo_fcm_'+_did, token)
- *   _lastOrderId 있으면 filo_orders.fcmToken 업데이트
- *   → 직원이 준비완료/결제처리 시 이 토큰으로 FCM 발송
+ * ── 읽는 컬렉션 ──────────────────────────────────────────────
+ *   filo_orders ← status 감지 (onSnapshot) → 픽업/결제 완료 감지
+ *   filo_tables ← (filo-order-common.js에서 메뉴 로드)
+ *   filo_menus  ← 메뉴 목록
  *
- * ── 의존 ──────────────────────────────────────────────────────
+ * ── localStorage ──────────────────────────────────────────────
+ *   filo_fcm_{dealerId}   ← FCM 토큰 캐시
+ *   filo_order_{dealerId} ← 현재 주문 ID (QR 재스캔 이동용)
+ *   filo_lang             ← 선택 언어 (ko/en/zh/ja)
+ *
+ * ── FCM 토큰 흐름 ─────────────────────────────────────────────
+ *   _initFCM() → getToken(vapidKey:_VAPID_KEY, SW등록)
+ *   → 성공: localStorage 저장 + filo_orders.fcmToken 업데이트
+ *   → 이 토큰을 직원이 준비완료/결제 시 꺼내서 FCM 발송
+ *   ⚠️ 비동기 타이밍: 주문보다 늦게 발급될 수 있음
+ *      → _initFCM 성공 시 _lastOrderId 있으면 즉시 업데이트로 해결
+ *
+ * ── 상수 ──────────────────────────────────────────────────────
+ *   _VAPID_KEY : FCM 웹 푸시 인증서 (Firebase Console → 클라우드 메시징)
+ *   _did       : dealerId (URL ?d= 파라미터)
+ *   _tNum      : 테이블 번호 (URL ?t= 파라미터)
+ *   _fcmToken  : 발급된 FCM 토큰
+ *   _lastOrderId: 현재 주문 Firestore 문서 ID
+ *
+ * ── 의존 ─────────────────────────────────────────────────────
  *   filo-order-common.js — _renderMenuGrid, _openMdl, _closeMdl,
- *                          _tlQty, _updFab, _openCart 등
+ *                          _tlQty, _updFab, _openCart, _loadMenus
  *   firebase-messaging-sw.js — 백그라운드 FCM 수신
- *
- * ── 주요 상수 ─────────────────────────────────────────────────
- *   _VAPID_KEY: FCM 웹 푸시 인증서 키
- *   _did: dealerId (URL params)
- *   _tNum: 테이블 번호
- *   _fcmToken: 발급된 FCM 토큰
- *   _lastOrderId: 현재 주문 Firestore ID
  *
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
