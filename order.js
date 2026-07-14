@@ -221,7 +221,7 @@ function _doOrder(payType){
   // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='주문번호 #'+ref.id.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+_tNum+'번 · 주문번호 #'+ref.id.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
