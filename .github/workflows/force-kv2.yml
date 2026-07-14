@@ -1,0 +1,24 @@
+name: Force KV Upload v2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  force-kv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Force upload order.js + order.html to KV
+        env:
+          CF_EMAIL: kimdh4790@gmail.com
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          ACC="02709cbec18d848913b4246015b9148f"
+          NS="7f0e90efaea64f3ab08ff00f8970b28b"
+          for f in order.js order.html filo-pos.js filo-payment.js; do
+            echo "=== $f 업로드 ==="
+            R=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces/$NS/values/$f" \
+              -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+              -H "Content-Type: application/javascript" --data-binary @$f)
+            echo "$R" | grep -q '"success":true' && echo "✅ $f OK" || echo "❌ $f FAIL: $R"
+          done
