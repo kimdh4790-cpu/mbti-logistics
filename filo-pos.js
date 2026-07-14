@@ -571,8 +571,35 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
       }).catch(function(){});
     }).catch(function(){});
   }
-  // 결제완료 알림 + 영수증 발송 버튼
-  _filoReceiptNotify(did, tableNum, items, total, methodLabel);
+  // 결제완료 자동 영수증 FCM (픽업과 동일 방식)
+  Promise.all([
+   _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',parseInt(tableNum)).where('date','==',now.toISOString().slice(0,10)).get(),
+   _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).where('date','==',now.toISOString().slice(0,10)).get()
+  ]).then(function(results){
+   var tokens=[],seen={};
+   results.forEach(function(snap){
+    snap.forEach(function(doc){
+     if(seen[doc.id])return;seen[doc.id]=true;
+     var tk=doc.data().fcmToken;
+     if(tk&&tk.length>20&&tokens.indexOf(tk)<0)tokens.push(tk);
+    });
+   });
+   if(!tokens.length)return;
+   var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
+   if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
+   fetch('/fcm/notify-drivers',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+     tokens:tokens,
+     title:'🧾 결제완료 · '+methodLabel+' ₩'+total.toLocaleString(),
+     body:iNames,
+     type:'receipt',
+     url:'https://filo.ai.kr/order?d='+did+'&t='+tableNum
+    })
+   }).catch(function(){});
+  }).catch(function(){});
+  _filoToast('✅ '+tableName+' 결제 완료!');
 
  }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
 }
