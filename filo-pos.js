@@ -554,29 +554,6 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
     }).catch(function(){});
   }
   _filoToast(methodLabel+' ₩'+total.toLocaleString()+' 결제 완료! ✅');
-
-   // ── FCM 영수증 푸시 ─────────────────────────────────
-   // 💳카드·🟡카카오: filo_orders에서 fcmToken 조회 후 발송
-   // 💵현금: FCM 미발송 (카운터에서 현금영수증 직접 처리)
-   if(method !== 'cash') {
-     _db.collection('filo_orders')
-       .where('dealerId','==',did)
-       .where('tableNum','==',parseInt(tableNum))
-       .where('status','==','pending')
-       .get().then(function(snap){
-         var tok=null;
-         snap.forEach(function(doc){
-           var t=doc.data().fcmToken;
-           if(t&&t.length>20)tok=t;
-         });
-         if(tok&&typeof _filoSendReceiptPush==='function'){
-           _filoSendReceiptPush(tok,{
-             items:items,total:total,
-             methodLabel:methodLabel,tableName:tableName
-           });
-         }
-       }).catch(function(){});
-   }
  }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
 }
 
