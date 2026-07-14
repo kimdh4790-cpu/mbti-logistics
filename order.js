@@ -97,8 +97,29 @@ window.onload=function(){
  _loadMenus();
  _listenOrders(); // 픽업 알림
  _checkExistingOrder(); // 기존 주문 테이블 이동 감지
- // FCM 알림 허용 팝업 표시
- _showFCMGate();
+ // FCM 알림 탭으로 새 탭 열렸을 때 (#done 해시) → done 화면 바로 복원
+ if(location.hash==='#done'){
+  var lastId=localStorage.getItem('filo_order_'+_did);
+  if(lastId){
+   _db.collection('filo_orders').doc(lastId).get().then(function(doc){
+    if(!doc.exists)return;
+    var d=doc.data();
+    if(d.status!=='pending'&&d.status!=='ready'&&d.status!=='served')return;
+    _lastOrderId=lastId;
+    var dn=document.getElementById('done');
+    var dnum=document.getElementById('done-num');
+    var ditems=document.getElementById('done-items');
+    if(dnum)dnum.textContent='주문번호 #'+lastId.slice(-6).toUpperCase();
+    if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
+    if(dn)dn.style.display='flex';
+    _listenPickup(lastId);
+    if(d.status==='ready')_showPickupAlert();
+   }).catch(function(){});
+  }
+ } else {
+  // FCM 알림 허용 팝업 표시
+  _showFCMGate();
+ }
 };
 
 // ── 기존 주문 감지 (QR 재스캔 시 테이블 이동) ────────────────────────────────
