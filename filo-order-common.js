@@ -449,3 +449,11 @@ function _loadMenus(){
   if(g)g.innerHTML='<div class="empty"><div class="empty-ico">😅</div><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
  });
 }
+
+// ── 모달 열기/닫기 ──────────────────────────────────────────────────────────
+function _openMdl(m){_openMdlCommon(m);}
+function _closeMdl(){
+ var mdl=document.getElementById('mdl');
+ if(mdl)mdl.classList.remove('open');
+ _curMdlMenu=null;
+}
