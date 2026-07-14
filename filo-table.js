@@ -734,15 +734,16 @@ function _filoTableOrderModal(did,table,order){
    var inner=mo.querySelector('div');
    inner.style.cssText='background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:24px 20px 36px';
    var orderNumHtml='';
-   if(hasOrder&&order.orders&&order.orders.length){
-    orderNumHtml='<div style="margin-bottom:10px">'+order.orders.map(function(o){
-     return '<span style="font-size:11px;color:var(--t3);background:var(--bd);padding:2px 8px;border-radius:10px;margin-right:4px;display:inline-block">#'+o.id.slice(-6).toUpperCase()+'</span>';
-    }).join('')+'</div>';
-   } else if(hasOrder&&order.ids&&order.ids.length){
-    orderNumHtml='<div style="margin-bottom:10px">'+order.ids.map(function(id){
-     return '<span style="font-size:11px;color:var(--t3);background:var(--bd);padding:2px 8px;border-radius:10px;margin-right:4px;display:inline-block">#'+id.slice(-6).toUpperCase()+'</span>';
-    }).join('')+'</div>';
-   }
+   try{
+    var numIds=(order&&order.orders&&order.orders.length)
+     ? order.orders.map(function(o){return o.id||'';}).filter(Boolean)
+     : (order&&order.ids&&order.ids.length) ? order.ids.filter(Boolean) : [];
+    if(hasOrder&&numIds.length){
+     orderNumHtml='<div style="margin-bottom:10px">'+numIds.map(function(id){
+      return '<span style="font-size:11px;color:var(--t3);background:var(--bd);padding:2px 8px;border-radius:10px;margin-right:4px;display:inline-block">#'+id.slice(-6).toUpperCase()+'</span>';
+     }).join('')+'</div>';
+    }
+   }catch(e){}
    inner.innerHTML=
     '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px"></div>'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
@@ -871,7 +872,9 @@ function _filoTableOrderModal(did,table,order){
    closeBtn.textContent='닫기';
    closeBtn.onclick=function(){mo.remove();};
    btnRow.appendChild(closeBtn);
-  }).catch(function(){
+  }).catch(function(e){
+   console.error('[TableModal]',e);
+   if(typeof _filoToast==='function')_filoToast('❌ '+(e&&e.message||'오류'));
    mo.remove();
   });
 }
