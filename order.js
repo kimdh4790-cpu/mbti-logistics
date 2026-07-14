@@ -376,7 +376,10 @@ function _initFCM(){
     if(token){
      _fcmToken=token;
      try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
-     // [FCM] 토큰 발급 성공
+     // 토큰 발급 성공 → 현재 주문에 즉시 저장
+     if(_lastOrderId){
+      _db.collection('filo_orders').doc(_lastOrderId).update({fcmToken:token}).catch(function(){});
+     }
     }
     if(gate)gate.style.display='none';
    }).catch(function(e){
