@@ -559,10 +559,11 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
    // 💵 현금: 미발송 / 💳 카드·🟡 카카오: filo_orders에서 fcmToken 조회
    if(method !== 'cash') {
      (function(_did, _tNum, _items, _total, _label, _tName){
+       // pending 또는 오늘 cleared 된 주문에서 fcmToken 조회
        _db.collection('filo_orders')
          .where('dealerId','==',_did)
          .where('tableNum','==',parseInt(_tNum))
-         .where('status','==','pending')
+         .where('date','==',new Date().toISOString().slice(0,10))
          .get().then(function(snap){
            var tok = null, orderId = null;
            snap.forEach(function(doc){
