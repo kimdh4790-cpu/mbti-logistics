@@ -139,26 +139,8 @@ function _checkExistingOrder(){
 }
 
 // ── 메뉴 로드 ─────────────────────────────────────────────────────────────────
-function _loadMenus(){
- fetch('/api/menus?did='+encodeURIComponent(_did))
- .then(function(r){return r.json();})
- .then(function(d){
-  _menus=d.menus||[];
-  _renderCatBar(_menus,'cat-bar');
-  _renderMenuGrid(_menus,'menu-grid');
-  _renderRecommendBanner(_menus);
- }).catch(function(){
-  var g=document.getElementById('menu-grid');
-  if(g)g.innerHTML='<div class="empty"><div class="empty-ico">😅</div><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
- });
-}
 
 // ── 모달 열기/닫기 ────────────────────────────────────────────────────────────
-function _openMdl(m){_openMdlCommon(m);}
-function _closeMdl(){
- document.getElementById('mdl').classList.remove('open');
- _curMdlMenu=null;
-}
 
 // ── 장바구니에 담기 ───────────────────────────────────────────────────────────
 function _addFromMdl(){
