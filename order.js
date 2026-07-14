@@ -1,52 +1,41 @@
-/**
- * @module      order.js
+/*
+ * order.js — FILO 테이블 QR 고객 주문 모듈
+ * Copyright (c) 2024-2025 유한회사 엠비티아이
  *
- * ══════════════════════════════════════════════════════
- * 📋 이 파일의 역할 & 연결 구조
- * ══════════════════════════════════════════════════════
- * 역할: 고객 QR 주문 (테이블오더)
- *   URL: filo.ai.kr/order?d={dealerId}&t={tableNum}
+ * ── 역할 ──────────────────────────────────────────────────────
+ *   고객이 QR 스캔 후 메뉴 주문, 결제방식 선택
+ *   FCM 토큰 발급 → filo_orders.fcmToken 저장
+ *   픽업 알림 수신 대기 (_listenPickup)
  *
- * 저장 컬렉션:
- *   filo_orders  — 고객 주문 저장
- *     필드: dealerId, tableNum, items, total, fcmToken,
- *           status(pending/done), createdAt, payType
- *   filo_menus   — 메뉴 목록 조회
- *   filo_members — 회원 포인트·쿠폰 조회
+ * ── 핵심 흐름 ─────────────────────────────────────────────────
+ *   QR 스캔 → window.onload
+ *   → _showFCMGate() — 알림 허용 팝업
+ *   → _initFCM() — FCM 토큰 발급 → localStorage + filo_orders 저장
+ *   → 메뉴 주문 → _submitOrder() → _openPayMdl()
+ *   → _doOrder(payType) — filo_orders 저장
+ *     payType: 'postpay'(후불) / 'prepay'(선결제-준비중)
+ *   → 주문완료 화면 (선불/후불 뱃지, 영수증 알림 받기 버튼)
+ *   → _listenPickup() — 픽업 알림 대기
  *
- * FCM 흐름:
- *   1. QR 스캔 → _showFCMGate() 호출
- *   2. 알림 허용 → getToken() → localStorage('filo_fcm_'+did) 저장
- *   3. 주문 시 → filo_orders.fcmToken 필드에 저장
- *   4. 매장에서 준비완료 → filo-table.js _filoSendPickupPush()
- *      → 이 fcmToken으로 FCM 발송
- *   5. 결제 완료 → filo-payment.js _filoSendReceiptPush()
- *      → 동일 fcmToken으로 영수증 알림 (신규)
+ * ── FCM 토큰 저장 ─────────────────────────────────────────────
+ *   _initFCM() 비동기 → 토큰 발급 성공 시:
+ *   localStorage.setItem('filo_fcm_'+_did, token)
+ *   _lastOrderId 있으면 filo_orders.fcmToken 업데이트
+ *   → 직원이 준비완료/결제처리 시 이 토큰으로 FCM 발송
  *
- *   ⚠️ 주의: _did는 window.onload(32줄)에서 URL params로 세팅
- *            _showFCMGate() 호출 전 반드시 _did 세팅 완료되어야 함
+ * ── 의존 ──────────────────────────────────────────────────────
+ *   filo-order-common.js — _renderMenuGrid, _openMdl, _closeMdl,
+ *                          _tlQty, _updFab, _openCart 등
+ *   firebase-messaging-sw.js — 백그라운드 FCM 수신
  *
- * 전역변수:
- *   _did        — dealerId (URL params에서)
- *   _tableNum   — 테이블 번호
- *   _fcmToken   — FCM 토큰 (localStorage 또는 신규 발급)
- *   _cartItems  — 장바구니
- *   _lang       — 현재 언어 (ko/en/zh/ja)
+ * ── 주요 상수 ─────────────────────────────────────────────────
+ *   _VAPID_KEY: FCM 웹 푸시 인증서 키
+ *   _did: dealerId (URL params)
+ *   _tNum: 테이블 번호
+ *   _fcmToken: 발급된 FCM 토큰
+ *   _lastOrderId: 현재 주문 Firestore ID
  *
- * 주요 함수:
- *   _showFCMGate()     — FCM 알림 허용 팝업 (localStorage 우선 확인)
- *   _doOrder(payType)  — 주문 Firestore 저장 (fcmToken 포함)
- *   _renderMenu()      — 메뉴 화면 렌더링
- *   _applyAIBanner()   — AI 시간대별 추천 배너
- *
- * 연결 파일:
- *   filo-order-common.js — AI추천·다국어·공통 UI
- *   filo-table.js        — 준비완료 → 픽업알림
- *   filo-payment.js      — 결제완료 → 영수증알림
- *   firebase-messaging-sw.js — 백그라운드 수신
- *     type: pickup  → 픽업 알림
- *     type: receipt → 결제 영수증 (신규)
- * ══════════════════════════════════════════════════════
+ * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
 var _did='', _tNum='', _tName='';
 var _menus=[], _cart={}, _lang='ko';
