@@ -576,28 +576,6 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
   }
   _filoToast(methodLabel+' ₩'+total.toLocaleString()+' 결제 완료! ✅');
 
-           });
-           if(!tok) return;
-           // 영수증 페이지 URL 생성
-           var receiptUrl = 'https://filo.ai.kr/order-done?oid='+(orderId||'')
-             +'&did='+_did+'&t='+_tNum;
-           var itemNames = _items.slice(0,3)
-             .map(function(it){return it.name+(it.qty>1?" ×"+it.qty:"");}).join(" · ");
-           if(_items.length > 3) itemNames += " 외 "+(_items.length-3)+"건";
-           fetch('/fcm/notify-drivers', {
-             method: 'POST',
-             headers: {'Content-Type':'application/json'},
-             body: JSON.stringify({
-               tokens: [tok],
-               title: _label + ' 완료 · ₩' + _total.toLocaleString(),
-               body: itemNames,
-               type: 'receipt',
-               url: receiptUrl
-             })
-           }).catch(function(){});
-         }).catch(function(){});
-     })(did, tableNum, items, total, methodLabel, tableName);
-   }
  }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
 }
 
