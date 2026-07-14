@@ -2009,7 +2009,7 @@ async function acceptExchange(){
 
 
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
-      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order2.html', 'text/html');
       if (path === '/api/store') {
         const slug = new URL(request.url).searchParams.get('slug');
         if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
