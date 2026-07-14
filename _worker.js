@@ -1967,7 +1967,7 @@ async function acceptExchange(){
       if (path === '/firebase-messaging-sw.js') return serveKVFile(env, 'firebase-messaging-sw.js', 'application/javascript');
       if (path === '/fcm/notify-drivers' && method === 'POST') {
         const body2 = await request.json();
-        const { tokens, title, body: msgBody, data: extraData } = body2;
+        const { tokens, title, body: msgBody, data: extraData, type: msgType } = body2;
         if (!tokens || !tokens.length) return new Response(JSON.stringify({ok:true,sent:0}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const accessToken2 = await getAccessToken(env);
         let sent2=0; const errors2=[];
@@ -1977,8 +1977,8 @@ async function acceptExchange(){
               method:'POST',
               headers:{'Authorization':'Bearer '+accessToken2,'Content-Type':'application/json'},
               body:JSON.stringify({message:{token:token,
-                notification:{title:title||'🔔 픽업 알림',body:msgBody||'음식이 준비됐습니다!'},
-                data:Object.assign({type:'pickup'},extraData||{}),
+                notification:{title:title||'🔔 알림',body:msgBody||''},
+                data:Object.assign({type:msgType||'pickup', url:(extraData&&extraData.url)||''},extraData||{}),
                 android:{priority:'high',notification:{sound:'default',channel_id:'filo_pickup',defaultSound:true,vibrateTimings:['0.5s','0.1s','0.5s','0.1s','0.5s','0.1s','0.5s','0.1s','1s']}},
                 apns:{payload:{aps:{sound:'default',badge:1,'content-available':1}}},
                 webpush:{notification:{icon:'/filo-icon-192.png',badge:'/filo-icon-192.png',vibrate:[300,100,300],requireInteraction:true},fcm_options:{link:'/'}}
