@@ -13,7 +13,7 @@ jobs:
         run: |
           ACC="02709cbec18d848913b4246015b9148f"
           NS="7f0e90efaea64f3ab08ff00f8970b28b"
-          for f in table-order.html order.html order2.html order-done.html; do
+          for f in table-order.html order.html order-done.html; do
             R=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces/$NS/values/$f" \
               -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
               -H "Content-Type: text/html; charset=utf-8" --data-binary @$f)
