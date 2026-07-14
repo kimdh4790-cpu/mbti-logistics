@@ -101,14 +101,26 @@ function _filoConfirmPay(method, methodLabel){
       }, 400);
     } else {
       // 💳 카드 / 🟡 카카오페이: FCM 영수증 푸시
-      var fcmTok = saveData.fcmToken;
-      if(!fcmTok && tableId) fcmTok = window._lastFcmToken || null;
-      if(fcmTok) {
-        _filoSendReceiptPush(fcmTok, {
-          items: items, total: total,
-          methodLabel: methodLabel, tableName: tableName
-        });
-      }
+      // POS 결제는 saveData에 fcmToken 없음
+      // → filo_orders(pending)에서 해당 테이블 fcmToken 직접 조회
+      (function(){
+        var _i=items, _t=total, _m=methodLabel, _n=tableName, _did2=did;
+        function _send(tok){
+          if(!tok||tok.length<20)return;
+          _filoSendReceiptPush(tok,{items:_i,total:_t,methodLabel:_m,tableName:_n});
+        }
+        if(tableId){
+          _db.collection('filo_orders')
+            .where('dealerId','==',_did2)
+            .where('tableNum','==',parseInt(tableId))
+            .where('status','==','pending')
+            .get().then(function(snap){
+              var tok=null;
+              snap.forEach(function(doc){var t=doc.data().fcmToken;if(t&&t.length>20)tok=t;});
+              _send(tok);
+            }).catch(function(){});
+        }
+      })();
     }
    }
  }).catch(function(e){_filoToast('❌ '+e.message);});
