@@ -343,6 +343,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
   <div class="done-sub" id="done-sub">잠시 후 준비됩니다</div>
   <div class="done-num" id="done-num"></div>
   <div class="done-items" id="done-items"></div>
+  <div id="done-pay-msg" style="font-size:14px;margin-bottom:12px;line-height:1.6;text-align:center"></div>
+  <!-- 영수증 알림 받기 -->
+  <button id="receipt-fcm-btn" onclick="reqReceiptFCM()"
+    style="width:100%;padding:14px;background:rgba(8,145,178,.08);border:1.5px solid rgba(8,145,178,.3);
+    border-radius:16px;color:#0891b2;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">
+    🧾 영수증 알림 받기
+  </button>
+  <div id="receipt-fcm-status" style="font-size:12px;color:#64748b;text-align:center;margin-bottom:8px;display:none"></div>
   <!-- 픽업 대기 안내 -->
   <div id="pickup-wait" style="margin:16px 0;padding:14px 20px;background:rgba(8,145,178,.1);border:1.5px solid rgba(8,145,178,.3);border-radius:16px;text-align:center;max-width:320px;width:100%">
     <div style="font-size:13px;font-weight:700;color:#0891b2;margin-bottom:4px">🔔 픽업 알림 안내</div>
