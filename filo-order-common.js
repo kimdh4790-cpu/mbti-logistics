@@ -153,17 +153,20 @@ function _openMdlCommon(m){
 
  var tlBox=document.getElementById(boxId);
  if(!tlBox)return;
- var oldHdr=tlBox.querySelector('.mdl-img-full,.mdl-emoji');
+ // mdl-scroll 있으면 그 안에서, 없으면 tlBox 직접 사용
+ var scrollEl=document.getElementById('mdl-scroll')||tlBox;
+ var oldHdr=scrollEl.querySelector('.mdl-img-full,.mdl-emoji');
  if(oldHdr)oldHdr.remove();
- var mdlContent=tlBox.querySelector('.mdl-content');
+ var mdlContent=scrollEl.querySelector('.mdl-content');
  if(m.imageUrl){
   var img=document.createElement('img');
   img.className='mdl-img-full';img.src=m.imageUrl;img.alt=m.name;
-  tlBox.insertBefore(img,mdlContent);
+  img.style.cssText='width:100%;max-height:240px;object-fit:cover;display:block';
+  scrollEl.insertBefore(img,mdlContent);
  } else {
   var emojiEl=document.createElement('div');
   emojiEl.className='mdl-emoji';emojiEl.textContent=m.emoji||'🍽';
-  tlBox.insertBefore(emojiEl,mdlContent);
+  scrollEl.insertBefore(emojiEl,mdlContent);
  }
  var nameEl=document.getElementById(nameId);if(nameEl)nameEl.textContent=m.name;
  var priceEl=document.getElementById(priceId);if(priceEl)priceEl.textContent='₩'+(m.price||0).toLocaleString();
