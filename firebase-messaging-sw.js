@@ -126,8 +126,11 @@ self.addEventListener('notificationclick', function(e) {
           return;
         }
       }
-      // 열린 탭 없으면 새 탭
-      return clients.openWindow(url);
+      // 열린 탭 없으면 새 탭 — pickup/receipt는 #done 해시 붙여서 주문완료 화면 바로 복원
+      var openUrl = ((type === 'pickup' || type === 'receipt') && !url.includes('#'))
+        ? url + '#done'
+        : url;
+      return clients.openWindow(openUrl);
     })
   );
 });
