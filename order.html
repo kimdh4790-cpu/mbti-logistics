@@ -74,7 +74,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 .mi:active{transform:scale(.97);box-shadow:none}
 
 /* 이미지 있을 때: 풀스크린 비율 */
-.mi-img-wrap{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden}
+.mi-img-wrap{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden}
 .mi-img{width:100%;height:100%;object-fit:cover;display:block;transition:.3s}
 .mi:active .mi-img{transform:scale(1.03)}
 
@@ -139,7 +139,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 /* ── 메뉴 상세 모달 v3 ── */
 #mdl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity .2s}
 #mdl.open{pointer-events:all;opacity:1}
-#mdl-box{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:32px}
+#mdl-box{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+#mdl-scroll{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch}
+#mdl-btns{padding:12px 20px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
 .mdl-img-full{width:100%;max-height:260px;object-fit:cover;display:block}
 .mdl-emoji{font-size:80px;text-align:center;padding:28px 0 16px;display:block;line-height:1;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
 .mdl-content{padding:20px 20px 0}
@@ -281,21 +283,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 <!-- 메뉴 상세 모달 v3 -->
 <div id="mdl" onclick="if(event.target===this)_closeMdl()">
   <div id="mdl-box">
-    <!-- 이미지/이모지는 JS에서 동적 생성 -->
-    <div class="mdl-content">
-      <div class="mdl-name" id="mdl-name"></div>
-      <div class="mdl-tr" id="mdl-tr"></div>
-      <div class="mdl-desc" id="mdl-desc"></div>
-      <div class="mdl-price" id="mdl-price"></div>
-      <div class="mdl-qty-row">
-        <button class="mdl-qty-btn" onclick="_tlQty(-1)">−</button>
-        <span class="mdl-qty" id="tl-qty">1</span>
-        <button class="mdl-qty-btn" onclick="_tlQty(1)">+</button>
+    <div id="mdl-scroll">
+      <!-- 이미지/이모지는 JS에서 동적 생성 -->
+      <div class="mdl-content">
+        <div class="mdl-name" id="mdl-name"></div>
+        <div class="mdl-tr" id="mdl-tr"></div>
+        <div class="mdl-desc" id="mdl-desc"></div>
+        <div class="mdl-price" id="mdl-price"></div>
+        <div class="mdl-qty-row">
+          <button class="mdl-qty-btn" onclick="_tlQty(-1)">−</button>
+          <span class="mdl-qty" id="tl-qty">1</span>
+          <button class="mdl-qty-btn" onclick="_tlQty(1)">+</button>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;padding:0 20px;margin-bottom:8px">
-      <button onclick="_closeMdl()" style="width:48px;height:54px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);font-size:20px;cursor:pointer;flex-shrink:0">✕</button>
-      <button class="mdl-add" id="mdl-add" onclick="_addFromMdl()" style="flex:1;width:auto;margin:0">담기 — ₩0</button>
+    <div id="mdl-btns">
+      <div style="display:flex;gap:8px">
+        <button onclick="_closeMdl()" style="width:54px;height:54px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);font-size:22px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+        <button class="mdl-add" id="mdl-add" onclick="_addFromMdl()" style="flex:1;width:auto;margin:0">담기 — ₩0</button>
+      </div>
     </div>
   </div>
 </div>
@@ -385,7 +391,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="/filo-order-common.js?v=2"></script>
-<script src="/order.js?v=8"></script>
+<script src="/order.js?v=9"></script>
 
 <div id="call-btn" onclick="_callStaff()">
   <span class="cb-ico">🔔</span>
