@@ -1,26 +1,25 @@
 /**
  * @module      filo-auth.js
  * ══════════════════════════════════════════════════════
- * 역할: 로그인·회원가입·권한 관리
- *
- * 저장 컬렉션:
- *   filo_dealers — 사업자 정보 (dealerId, name, role, fcmToken)
- *
- * FCM:
- *   로그인 완료 → FCM 토큰 체크/재발급
- *   filo_dealers.fcmToken 갱신
- *   ※ 고객 FCM은 order.js에서 별도 처리
- *
- * 권한 구조:
- *   owner  — 모든 기능 (사장)
- *   staff  — 주문·테이블·출퇴근
- *   viewer — 조회만
+ * 역할: 로그인·회원가입·권한관리·사이드바 빌드
  *
  * 주요 함수:
- *   _filoLogin(email, pw)    — 로그인
- *   _filoLogout()            — 로그아웃
- *   _filoCheckAuth()         — 권한 체크 (페이지 진입 시)
- *   _filoUpdateFCMToken(did) — FCM 토큰 갱신
+ *   _filoLogin()           — 로그인
+ *   _filoLogout()          — 로그아웃
+ *   _buildFiloNav()        — 사이드바 메뉴 동적 생성
+ *   _filoGoPage(p)         — 페이지 전환
+ *
+ * 확정 메뉴 (2026-07-15):
+ *   홈 → 대시보드
+ *   🛒 판매 → POS결제/메뉴관리/주문대기/배달주문
+ *   📦 재고 → 재고현황/레시피원가/자동발주
+ *   🏪 운영 → 직원QR/테이블QR/예약달력
+ *   ⚙️ 설정 → 세무사연동/설정/구독관리
+ *
+ * ⚠️ 새 페이지 추가 시:
+ *   1) _buildFiloNav() 메뉴 배열에 항목 추가
+ *   2) _filoGoPage() if/else 분기 추가
+ *   3) 해당 JS 파일 + Worker + deploy.yml 동시 등록
  * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
