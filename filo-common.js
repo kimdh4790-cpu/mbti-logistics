@@ -1,14 +1,13 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-common.js
- * @description 공통 유틸리티·동적QR·FCM 알림·사이드바
+ * ══════════════════════════════════════════════════════
+ * 역할: 공통 초기화 · Firebase · 네비게이션 · 유틸
+ *
+ * 전역: _CU, _db, _storage, _cachedCompanyDoc, _cartItems
+ * 의존: filo-auth.js (먼저 로드)
+ * ⚠️ 2026-07-15 리팩토링:
+ *   _filoRmAddRow / _filoRmAddRowDOM → filo-menu.js 로 이동
+ * ══════════════════════════════════════════════════════
  */
 // 의존성: Firebase SDK
 // 전역변수: _CU, _db, _storage, _cachedCompanyDoc, _cartItems
@@ -24,62 +23,7 @@
    입고단가 자동 환산으로 원가 계산
    ══════════════════════════════════════════ */
 
-function _filoRmAddRowDOM(wrap,invItems,selId,amount,unit){
- if(!wrap)wrap=document.getElementById('rm-ings');
- if(!wrap)return;
- var units=['g','ml','개','스푼','봉','컵','장'];
-
- var row=document.createElement('div');
- row.className='rm-row';
- row.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;margin-bottom:7px;align-items:center';
-
- /* 재료 선택 */
- var sel=document.createElement('select');
- sel.className='rm-item';
- sel.style.cssText='padding:8px 8px;background:var(--bg3);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:12px;outline:none';
- var defOpt=document.createElement('option');
- defOpt.value='';defOpt.textContent='재료 선택';
- sel.appendChild(defOpt);
- invItems.forEach(function(it){
-  var opt=document.createElement('option');
-  opt.value=it.id;opt.textContent=it.name;
-  if(it.id===selId)opt.selected=true;
-  sel.appendChild(opt);
- });
-
- /* 사용량 */
- var amtInp=document.createElement('input');
- amtInp.className='rm-amount';amtInp.type='number';amtInp.placeholder='사용량';
- amtInp.style.cssText=sel.style.cssText;
- if(amount)amtInp.value=amount;
-
- /* 단위 */
- var unitSel=document.createElement('select');
- unitSel.className='rm-unit';
- unitSel.style.cssText=sel.style.cssText;
- units.forEach(function(u){
-  var opt=document.createElement('option');
-  opt.value=u;opt.textContent=u;
-  if(u===unit)opt.selected=true;
-  unitSel.appendChild(opt);
- });
-
- /* 삭제 버튼 */
- var delBtn=document.createElement('button');
- delBtn.style.cssText='padding:8px 10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r);color:var(--red);font-size:12px;cursor:pointer';
- delBtn.textContent='✕';
- delBtn.onclick=function(){row.remove();};
-
- row.appendChild(sel);row.appendChild(amtInp);row.appendChild(unitSel);row.appendChild(delBtn);
- wrap.appendChild(row);
-}
-
 /* 호환용 - 기존 _filoRmAddRow 호출 대응 */
-function _filoRmAddRow(invOpts){
- var wrap=document.getElementById('rm-ings');
- _filoRmAddRowDOM(wrap,_rmInvItems,'','','g');
-}
-
 
 function _filoStartDynamicQR(did){
  if(_dynamicQRTimer)clearInterval(_dynamicQRTimer);
