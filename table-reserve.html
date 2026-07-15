@@ -87,13 +87,11 @@ var BASE='/api';
 var params=new URLSearchParams(location.search);
 var DID=params.get('did')||'';
 var PRE_TABLE=params.get('tid')||null;
-
 var _tables=[];
 var _selectedTable=null;
 var _seats=2;
 var _pollTimer=null;
 
-/* 매장+테이블 로드 */
 function loadStore(){
  if(!DID){showError('매장 정보가 없습니다. QR코드를 다시 스캔해주세요.');return;}
  fetch(BASE+'/tables?did='+DID)
@@ -158,7 +156,7 @@ window._openTable=function(num){
 };
 
 function openForm(t){
- _selectedTable=t; _seats=2;
+ _selectedTable=t;_seats=2;
  document.getElementById('main-view').innerHTML=
   '<div class="form-box">'+
   '<div class="form-title">📋 예약하기 — '+t.name+'</div>'+
@@ -183,21 +181,19 @@ window._setSeat=function(n){
 window._submitReserve=function(){
  var name=(document.getElementById('r-name')||{}).value||'';
  var phone=(document.getElementById('r-phone')||{}).value||'';
- name=name.trim(); phone=phone.trim();
+ name=name.trim();phone=phone.trim();
  if(!name||!phone){alert('이름과 연락처를 입력해주세요');return;}
  var btn=document.querySelector('.btn-submit');
- btn.disabled=true; btn.textContent='예약 중...';
+ btn.disabled=true;btn.textContent='예약 중...';
  var now=new Date().toISOString();
  var rDate=now.slice(0,10);
  var rTime=now.slice(11,16);
  fetch(BASE+'/booking',{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({
-   did:DID,tableId:_selectedTable.id,tableNum:_selectedTable.num,
+  body:JSON.stringify({did:DID,tableId:_selectedTable.id,tableNum:_selectedTable.num,
    tableName:_selectedTable.name,customerName:name,phone:phone,
    seats:_seats,memo:(document.getElementById('r-memo')||{}).value||'',
-   date:rDate,time:rTime
-  })
+   date:rDate,time:rTime})
  }).then(function(r){return r.json();}).then(function(d){
   if(d.error){btn.disabled=false;btn.textContent='✅ 예약 확정';alert('오류: '+d.error);return;}
   showDone(name,_selectedTable.name,_seats,rDate,rTime,d.bookingId);
