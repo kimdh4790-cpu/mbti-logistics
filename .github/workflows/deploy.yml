@@ -1,4 +1,16 @@
 name: Deploy
+# ================================================================
+# deploy.yml — GitHub Actions 자동배포
+# ================================================================
+# 트리거: main 브랜치 push 시 자동 실행
+#
+# 작업 순서:
+#   1) npx wrangler deploy — Cloudflare Worker 배포
+#   2) KV 업로드 — filo/dine/donway HTML·JS 파일 전체
+#   3) Firestore Rules 배포 (FIREBASE_SA_KEY 있을 때)
+#
+# ⚠️ 새 JS/HTML 파일 추가 시 KV for FILE in 목록에 반드시 추가
+# ================================================================
 
 on:
   push:
