@@ -611,20 +611,33 @@ function _filoTableOrderModal(did,table,order){
    }
 
    var itemsHtml='';
-   if(allItemsList.length){
+   if(hasOrder&&order.orders&&order.orders.length){
+    // 주문 단위로 렌더 → 각 주문의 paid 여부로 정확히 표시
+    var rowsHtml='';
+    order.orders.forEach(function(ord){
+     var isOrdPaid=ord.paid;
+     (ord.items||[]).forEach(function(it){
+      rowsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
+       '<span style="'+(isOrdPaid?'color:#818cf8':'')+'">'+
+       (isOrdPaid?'✅ ':'⏳ ')+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
+       '<span style="font-weight:700;'+(isOrdPaid?'color:#818cf8':'')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+     });
+    });
+    itemsHtml=rowsHtml||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
+   } else if(allItemsList.length){
     itemsHtml=allItemsList.map(function(it){
-     var isPaid=paidNames.indexOf(it.name)>=0;
      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
-      '<span style="'+(isPaid?'color:#818cf8':'')+'">'+
-      (isPaid?'✅ ':'⏳ ')+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
-      '<span style="font-weight:700;'+(isPaid?'color:#818cf8':'')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+      '<span>⏳ '+(it.emoji||'🍽')+' '+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
+      '<span style="font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
     }).join('');
    } else {
     itemsHtml='<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
    }
 
-   var pendingTotal=Math.max(0,(order.total||0)-paidTotal);
-   var isAllPaid=pendingTotal<=0&&paidTotal>0;
+   // orderMap에서 이미 계산된 pendingTotal/paidTotal 우선 사용
+   var pendingTotal=order.pendingTotal!=null?order.pendingTotal:Math.max(0,(order.total||0)-paidTotal);
+   var resolvedPaidTotal=order.paidTotal!=null?order.paidTotal:paidTotal;
+   var isAllPaid=pendingTotal<=0&&resolvedPaidTotal>0;
 
    var summaryHtml='';
    if(hasOrder){
