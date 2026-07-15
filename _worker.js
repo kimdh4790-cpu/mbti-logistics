@@ -1927,6 +1927,70 @@ async function acceptExchange(){
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
         });return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
       }
+
+      // ── /api/tables — 테이블 현황 (비로그인 손님용) ──
+      if (path === '/api/tables') {
+        const did = new URL(request.url).searchParams.get('did');
+        const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:cors});
+        try {
+          const token = await getAccessToken(env);
+          const tRes = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_tables'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},orderBy:[{field:{fieldPath:'tableNum'},direction:'ASCENDING'}]}})
+          });
+          const rows = await tRes.json();
+          const tables=(rows||[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            const gf=(k)=>{const x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):x.booleanValue||null;};
+            return {id:r.document.name.split('/').pop(),num:gf('tableNum')||1,name:gf('tableName')||'테이블',status:gf('status')||'empty',seats:gf('seats')||4,occupiedSince:gf('occupiedSince')||'',reservedName:gf('reservedName')||''};
+          });
+          const cRes=await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+          const cDoc=await cRes.json();
+          const cf=cDoc.fields||{};
+          const storeName=(cf.storeName&&cf.storeName.stringValue)||(cf.companyName&&cf.companyName.stringValue)||(cf.name&&cf.name.stringValue)||'매장';
+          return new Response(JSON.stringify({tables,storeName}),{headers:cors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+      }
+
+      // ── /api/booking — 예약 저장 (비로그인 손님용) ──
+      if (path === '/api/booking' && method === 'POST') {
+        const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        try {
+          const body=await request.json();
+          const {did,tableId,tableNum,tableName,customerName,phone,seats,memo,date,time}=body;
+          if(!did||!customerName||!phone) return new Response(JSON.stringify({error:'필수값 누락'}),{status:400,headers:cors});
+          const token=await getAccessToken(env);
+          const now=new Date().toISOString();
+          const bRes=await fetch(`${FS_BASE}/filo_bookings`,{
+            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({fields:{dealerId:{stringValue:did},tableId:{stringValue:tableId||''},tableNum:{integerValue:tableNum||0},tableName:{stringValue:tableName||''},customerName:{stringValue:customerName},phone:{stringValue:phone},seats:{integerValue:seats||2},memo:{stringValue:memo||''},status:{stringValue:'pending'},date:{stringValue:date||now.slice(0,10)},time:{stringValue:time||now.slice(11,16)},source:{stringValue:'qr_walk_in'},createdAt:{stringValue:now}}})
+          });
+          const bDoc=await bRes.json();
+          if(bDoc.error) return new Response(JSON.stringify({error:bDoc.error.message}),{status:400,headers:cors});
+          const bookingId=bDoc.name?bDoc.name.split('/').pop():'';
+          await fetch(`${FS_BASE}/filo_tables/${did}_${tableId}?updateMask.fieldPaths=status&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt`,{
+            method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({fields:{status:{stringValue:'reserved'},reservedName:{stringValue:customerName},updatedAt:{stringValue:now}}})
+          }).catch(()=>{});
+          return new Response(JSON.stringify({bookingId}),{headers:cors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+      }
+
+      // ── /api/booking-status — 예약 상태 확인 (비로그인 손님용) ──
+      if (path === '/api/booking-status') {
+        const bid=new URL(request.url).searchParams.get('bid');
+        const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        if(!bid) return new Response(JSON.stringify({error:'bid required'}),{status:400,headers:cors});
+        try {
+          const token=await getAccessToken(env);
+          const r2=await fetch(`${FS_BASE}/filo_bookings/${bid}`,{headers:{'Authorization':'Bearer '+token}});
+          const doc=await r2.json();
+          const status=(doc.fields&&doc.fields.status&&doc.fields.status.stringValue)||'pending';
+          return new Response(JSON.stringify({status}),{headers:cors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+      }
+
       if (path === '/firebase-messaging-sw.js') return serveKVFile(env, 'firebase-messaging-sw.js', 'application/javascript');
       if (path === '/fcm/notify-drivers' && method === 'POST') {
         const body2 = await request.json();
@@ -1966,71 +2030,6 @@ async function acceptExchange(){
             });
             if(resp.ok)sent2++; else errors2.push(await resp.text());
           }catch(e){errors2.push(e.message);}
-        }
-
-        // ── /api/tables — 테이블 현황 공개 조회 (비로그인 손님용) ──
-        if (path === '/api/tables') {
-          const did = new URL(request.url).searchParams.get('did');
-          const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:cors});
-          try {
-            const token = await getAccessToken(env);
-            const tRes = await fetch(`${FS_BASE}:runQuery`,{
-              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_tables'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},orderBy:[{field:{fieldPath:'tableNum'},direction:'ASCENDING'}]}})
-            });
-            const rows = await tRes.json();
-            const tables=(rows||[]).filter(r=>r.document).map(r=>{
-              const f=r.document.fields||{};
-              const gf=(k)=>{const x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):x.booleanValue||null;};
-              return {id:r.document.name.split('/').pop(),num:gf('tableNum')||1,name:gf('tableName')||'테이블',status:gf('status')||'empty',seats:gf('seats')||4,occupiedSince:gf('occupiedSince')||'',reservedName:gf('reservedName')||''};
-            });
-            const cRes=await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
-            const cDoc=await cRes.json();
-            const cf=cDoc.fields||{};
-            const gf2=(k)=>{const x=cf[k];if(!x)return null;return x.stringValue||null;};
-            const storeName=gf2('storeName')||gf2('companyName')||gf2('name')||'매장';
-            return new Response(JSON.stringify({tables,storeName}),{headers:cors});
-          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
-        }
-
-        // ── /api/booking — 예약 저장 (비로그인 손님용) ──
-        if (path === '/api/booking' && method === 'POST') {
-          const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          try {
-            const body=await request.json();
-            const {did,tableId,tableNum,tableName,customerName,phone,seats,memo,date,time}=body;
-            if(!did||!customerName||!phone) return new Response(JSON.stringify({error:'필수값 누락'}),{status:400,headers:cors});
-            const token=await getAccessToken(env);
-            const now=new Date().toISOString();
-            const bRes=await fetch(`${FS_BASE}/filo_bookings`,{
-              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({fields:{dealerId:{stringValue:did},tableId:{stringValue:tableId||''},tableNum:{integerValue:tableNum||0},tableName:{stringValue:tableName||''},customerName:{stringValue:customerName},phone:{stringValue:phone},seats:{integerValue:seats||2},memo:{stringValue:memo||''},status:{stringValue:'pending'},date:{stringValue:date||now.slice(0,10)},time:{stringValue:time||now.slice(11,16)},source:{stringValue:'qr_walk_in'},createdAt:{stringValue:now}}})
-            });
-            const bDoc=await bRes.json();
-            if(bDoc.error) return new Response(JSON.stringify({error:bDoc.error.message}),{status:400,headers:cors});
-            const bookingId=bDoc.name?bDoc.name.split('/').pop():'';
-            await fetch(`${FS_BASE}/filo_tables/${did}_${tableId}?updateMask.fieldPaths=status&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt`,{
-              method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({fields:{status:{stringValue:'reserved'},reservedName:{stringValue:customerName},updatedAt:{stringValue:now}}})
-            });
-            return new Response(JSON.stringify({bookingId}),{headers:cors});
-          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
-        }
-
-        // ── /api/booking-status — 예약 상태 확인 (비로그인 손님용) ──
-        if (path === '/api/booking-status') {
-          const bid=new URL(request.url).searchParams.get('bid');
-          const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          if(!bid) return new Response(JSON.stringify({error:'bid required'}),{status:400,headers:cors});
-          try {
-            const token=await getAccessToken(env);
-            const r2=await fetch(`${FS_BASE}/filo_bookings/${bid}`,{headers:{'Authorization':'Bearer '+token}});
-            const doc=await r2.json();
-            const f=doc.fields||{};
-            const status=f.status?f.status.stringValue:'pending';
-            return new Response(JSON.stringify({status}),{headers:cors});
-          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
         }
 ));
         return new Response(JSON.stringify({ok:true,sent:sent2,errors:errors2}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
