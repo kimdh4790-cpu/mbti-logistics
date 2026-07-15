@@ -1,5 +1,33 @@
 // ================================================================
-// ⚠️ _worker.js — Claude 인수인계 필독
+// _worker.js — Cloudflare Worker (mbti-logistics)
+// ================================================================
+// 최종수정: 2026-07-15 | 담당: 엠비티아이 형우님
+//
+// [라우팅 구조]
+//   donway.ai.kr  → settle.html (정산)
+//   filo.ai.kr    → filo.html (매장운영 SaaS)
+//   dine.ne.kr    → dine.html (경영·인사·정산 SaaS)
+//
+// [공개 API (비로그인 가능)]
+//   /api/menus?did=        — 메뉴 목록
+//   /api/tables?did=       — 테이블 현황 (손님 예약용)
+//   /api/booking POST      — 예약 저장
+//   /api/booking-status?bid= — 예약 상태 확인
+//   /api/translate         — 메뉴 다국어 번역
+//   /api/store?did=        — 배달 매장 정보
+//
+// [JS 파일 서빙 목록]
+//   filo-*.js, dine-*.js, order.js, store.js, donway_landing.js 등
+//   ⚠️ 새 JS 파일 추가 시 반드시 이 파일 서빙 배열에도 추가!
+//
+// [Secrets]
+//   ANTHROPIC_API_KEY — 번역 AI
+//   FIREBASE_SA_KEY   — Firestore 서버 접근
+//   CRON_SECRET       — 구독 만료 크론
+//
+// [배포]
+//   GitHub push → Actions 자동배포 (deploy.yml)
+//   수동: npx wrangler deploy (mbti-logistics 폴더에서)
 // ================================================================
 // 작성일: 2026-07-10 | 담당: 엠비티아이 형우님
 //
