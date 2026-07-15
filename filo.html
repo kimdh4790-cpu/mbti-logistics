@@ -11,76 +11,80 @@
 <!--
   filo.html - FILO 관리자 앱 (HTML 뼈대 + CSS)
   URL: filo.ai.kr/:slug
-  
+
   ⚠️ 수정 시 주의:
   - JS 로직은 filo-*.js 파일들에 분리되어 있음
   - GitHub push → 자동배포 (GitHub Actions)
-  
-  JS 모듈 구조 (2026-07-15 리팩토링 완료):
-  - filo-auth.js      : 로그인, 회원가입, Firebase 초기화
-  - filo-common.js    : 공통 유틸, 네비, 동적QR, toast
-  - filo-pos.js       : POS 카트, 테이블 결제, 각자계산, 분할결제 (15개)
-  - filo-table.js     : 테이블QR, 착석, 비움, 이동, 픽업알림, 직원호출, 설정 (27개)
-  - filo-booking.js   : 예약, 달력, 스케줄, 예약확정/거절, 알림 (9개)
-    ※ filo-schedule.js 흡수 완료 (스케줄/캘린더)
-  - filo-menu.js      : 메뉴관리, 레시피, 원가, 유통기한, 재고이력 (24개)
-  - filo-order.js     : 주문대기, 배달주문, 자동발주알림 (14개)
-  - filo-inventory.js : 재고현황, 입고, 출고, 자동발주 (6개)
-  - filo-staff.js     : QR출퇴근, 직원QR, 출퇴근대시보드, 근무표 (9개)
-  - filo-payment.js   : 결제처리, QR결제, 0원체크, FCM영수증 (5개)
-    ※ filo-staff.js QR 함수 흡수 완료
-  - filo-payroll2.js  : 급여자동계산, 4대보험공제, 명세서발송 (7개)
-  - filo-report.js    : 매출분석, POS리포트, 차트, 세무사공유 (11개)
-  - filo-margin.js    : 마진분석, AI인사이트, 실시간대시보드 (8개)
-    ※ filo-report.js 중복 제거 완료 (이 파일이 원본)
-  - filo-settings.js  : 설정, 구독관리, 알림톡, 리뷰답글 (8개)
-  - filo-members.js   : 회원관리, 멤버십, 포인트 (10개)
-  - filo-schedule.js  : DEPRECATED → filo-table.js 참조
+  - 새 JS 파일 추가 시 반드시 3곳 동시 업데이트:
+    1) filo.html <script src> 태그 추가
+    2) _worker.js JS 서빙 목록 추가
+    3) deploy.yml KV 업로드 목록 추가
+
+  JS 모듈 구조 (2026-07-15 확정):
+  - filo-auth.js      : 로그인·회원가입·권한·사이드바 빌드 (_buildFiloNav)
+  - filo-common.js    : 공통 유틸·Firebase·네비·toast·동적QR
+  - filo-pos.js       : POS 카트·테이블결제·각자계산·분할결제 (15개)
+  - filo-table.js     : 테이블현황·QR·착석·비움·이동·픽업알림 (27개)
+  - filo-booking.js   : 예약·달력·스케줄·예약확정/거절·알림 (9개)
+  - filo-menu.js      : 메뉴관리·레시피·원가·유통기한·재고이력 (24개)
+  - filo-order.js     : 주문대기·배달주문·자동발주알림 (14개)
+  - filo-inventory.js : 재고현황·입고·출고·자동발주 (6개)
+  - filo-staff.js     : QR출퇴근·직원QR·출퇴근대시보드·근무표 (9개)
+  - filo-payment.js   : 결제처리·QR결제·FCM영수증 (5개)
+  - filo-payroll2.js  : 급여자동계산·4대보험공제·명세서발송 (7개)
+  - filo-report.js    : 매출분석·POS리포트·차트·세무사공유 (11개)
+  - filo-margin.js    : 마진분석·AI인사이트·실시간대시보드 (8개)
+  - filo-settings.js  : 설정·구독관리·알림톡·리뷰답글 (8개)
+  - filo-members.js   : 회원관리·멤버십·포인트 (10개)
+  - filo-schedule.js  : DEPRECATED → filo-booking.js 참조
 
   Firestore 컬렉션:
-  - companies, users: 회사/사용자 정보
+  - companies, users        : 회사/사용자 정보
   - filo_menus, menu_recipes: 메뉴/레시피
   - filo_sales, filo_orders, filo_payments: 매출/주문/결제
   - filo_tables, filo_bookings: 테이블/예약
-  - staff_calls: 직원호출
   - filo_inventory, filo_purchases: 재고/발주
   - members, attendance, payslips: 직원/출퇴근/급여
+  - staff_calls: 직원호출
 -->
 <!--
 ================================================================
 ⚠️ FILO filo.html — Claude 인수인계 필독
 ================================================================
-작성일: 2026-07-15 | 담당: 엠비티아이 형우님
+최종수정: 2026-07-15 | 담당: 엠비티아이 형우님
 
-[현재 메뉴 구조 — 확정 2026-07-10]
+[확정 사이드바 메뉴 구조]
+🏠 대시보드
 🛒 판매: POS결제 / 메뉴관리 / 주문대기 / 배달주문
 📦 재고: 재고현황 / 레시피원가 / 자동발주
-👥 인사: QR출퇴근 / 직원QR
-🎁 고객: 테이블QR
-⚙️ 설정: 설정 / 구독관리
+🏪 운영: 직원QR / 테이블QR / 예약달력
+⚙️ 설정: 세무사연동 / 설정 / 구독관리
 
-[리팩토링 완료 — 2026-07-15]
-✅ filo-schedule.js → filo-table.js 흡수 (deprecated)
-✅ filo-staff.js QR함수 → filo-payment.js 이동
-✅ filo-report.js 마진함수 → filo-margin.js 이동
-✅ filo-common.js RmAddRow → filo-menu.js 이동
-✅ filo-members.js Expiry/StockHistory → filo-menu.js 이동
-✅ filo-settings.js 카테고리/마진 → 전담 파일 이동
-중복 함수 총 29개 제거 완료
+[리팩토링 이력]
+✅ 2026-07-15: filo-schedule.js → filo-booking.js 분리
+✅ 2026-07-15: filo-table.js 예약블록 → filo-booking.js 이동
+✅ 2026-07-15: 사이드바 확정 메뉴 구조 적용 (_buildFiloNav)
+✅ 2026-07-15: 중복 함수 29개 제거 (54,807자 감소)
+✅ 2026-07-15: 불필요 워크플로우 7개 삭제
+
+[새 JS 파일 추가 규칙 — 반드시 3곳 동시]
+1. filo.html <script src="/파일명.js?v=1"> 추가
+2. _worker.js JS 서빙 배열에 '/파일명.js' 추가
+3. deploy.yml KV for FILE in 목록에 파일명.js 추가
+
+[PENDING — 박람회 전 (8/19까지)]
+- 테이블 모달 버튼 정리 (현재 9개 → 4개로)
+- 토스페이먼츠 TOSS_CLIENT_KEY 연동
+- 배달대행 API (바로고/생각대로/부릉)
+- 웨이팅 시스템 (대기번호 발급 → 푸시알림)
 
 [수정 규칙]
 1. GitHub 최신 SHA 확인 후 수정
-2. JS 문법 검증 후 배포
-3. KV + GitHub 동시 업로드
-4. 박람회 전 UI 고도화 예정 (8/19까지)
-5. 다음 리팩토링: 박람회 후 (8/23~9/05)
+2. node --check로 JS 문법 검증 후 배포
+3. KV + GitHub 동시 업로드 (Actions 자동)
 
-[PENDING]
-- filo-margin.js setKpi 내부 함수 확인
-- 토스페이먼츠 TOSS_CLIENT_KEY 연동
-- 배달대행 API 연동 (바로고/생각대로/부릉)
-
-[도메인] filo.ai.kr | [KV키] filo.html
+[도메인] filo.ai.kr | [KV NS] 7f0e90efaea64f3ab08ff00f8970b28b
+[Firebase] mbti-logistics | [딜러ID] 9XD2K3W1tIhIs6XM74YT0xfRFEP2
 ================================================================
 -->
 <html lang="ko">
