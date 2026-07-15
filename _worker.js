@@ -1925,132 +1925,7 @@ async function acceptExchange(){
             if(dt.ja)descTranslations.ja=dt.ja.stringValue||'';
           }
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
-        });
-
-        // ── /api/tables — 테이블 현황 공개 조회 (비로그인 손님용) ──
-        if (path === '/api/tables') {
-          const did = new URL(request.url).searchParams.get('did');
-          const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:cors});
-          try {
-            const token = await getAccessToken(env);
-            // filo_tables 조회
-            const tRes = await fetch(`${FS_BASE}:runQuery`,{
-              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({structuredQuery:{
-                from:[{collectionId:'filo_tables'}],
-                where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
-                orderBy:[{field:{fieldPath:'tableNum'},direction:'ASCENDING'}]
-              }})
-            });
-            const rows = await tRes.json();
-            const tables = (rows||[]).filter(r=>r.document).map(r=>{
-              const f=r.document.fields||{};
-              const gf=(k)=>{const x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):x.booleanValue||null;};
-              return {id:r.document.name.split('/').pop(),num:gf('tableNum')||1,name:gf('tableName')||'테이블',status:gf('status')||'empty',seats:gf('seats')||4,occupiedSince:gf('occupiedSince')||'',reservedName:gf('reservedName')||''};
-            });
-            // companies 조회 (매장명)
-            const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
-            const cDoc = await cRes.json();
-            const cf = cDoc.fields||{};
-            const gf2=(k)=>{const x=cf[k];if(!x)return null;return x.stringValue||null;};
-            const storeName = gf2('storeName')||gf2('companyName')||gf2('name')||'매장';
-            return new Response(JSON.stringify({tables,storeName}),{headers:cors});
-          } catch(e) {
-            return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});
-          }
-        }
-
-        // ── /api/booking — 예약 저장 (비로그인 손님용) ──
-        if (path === '/api/booking' && method === 'POST') {
-          const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          try {
-            const body = await request.json();
-            const {did,tableId,tableNum,tableName,customerName,phone,seats,memo,date,time} = body;
-            if (!did||!customerName||!phone) return new Response(JSON.stringify({error:'필수값 누락'}),{status:400,headers:cors});
-            const token = await getAccessToken(env);
-            const now = new Date().toISOString();
-            // filo_bookings 저장
-            const bRes = await fetch(`${FS_BASE}/filo_bookings`,{
-              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({fields:{
-                dealerId:{stringValue:did},tableId:{stringValue:tableId||''},
-                tableNum:{integerValue:tableNum||0},tableName:{stringValue:tableName||''},
-                customerName:{stringValue:customerName},phone:{stringValue:phone},
-                seats:{integerValue:seats||2},memo:{stringValue:memo||''},
-                status:{stringValue:'pending'},date:{stringValue:date||now.slice(0,10)},
-                time:{stringValue:time||now.slice(11,16)},
-                source:{stringValue:'qr_walk_in'},createdAt:{stringValue:now}
-              }})
-            });
-            const bDoc = await bRes.json();
-            if (bDoc.error) return new Response(JSON.stringify({error:bDoc.error.message}),{status:400,headers:cors});
-            const bookingId = bDoc.name?bDoc.name.split('/').pop():'';
-            // filo_tables 상태 업데이트
-            await fetch(`${FS_BASE}/filo_tables/${did}_${tableId}?updateMask.fieldPaths=status&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt`,{
-              method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-              body:JSON.stringify({fields:{status:{stringValue:'reserved'},reservedName:{stringValue:customerName},updatedAt:{stringValue:now}}})
-            });
-            return new Response(JSON.stringify({bookingId}),{headers:cors});
-          } catch(e) {
-            return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});
-          }
-        }
-
-        // ── /api/booking-status — 예약 상태 확인 (비로그인 손님용) ──
-        if (path === '/api/booking-status') {
-          const bid = new URL(request.url).searchParams.get('bid');
-          const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-          if (!bid) return new Response(JSON.stringify({error:'bid required'}),{status:400,headers:cors});
-          try {
-            const token = await getAccessToken(env);
-            const r2 = await fetch(`${FS_BASE}/filo_bookings/${bid}`,{headers:{'Authorization':'Bearer '+token}});
-            const doc = await r2.json();
-            const f = doc.fields||{};
-            const status = f.status?f.status.stringValue:'pending';
-            return new Response(JSON.stringify({status}),{headers:cors});
-          } catch(e) {
-            return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});
-          }
-        }
-
-        // 카테고리/메뉴명 키워드별 고정 이미지
-        const IMG_MAP = [
-          ['마카롱','https://images.unsplash.com/photo-1569864358642-9d1684040f43?w=500&q=80'],
-          ['애플파이','https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?w=500&q=80'],
-          ['치즈케이크','https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'],
-          ['떡볶이','https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80'],
-          ['순대','https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=500&q=80'],
-          ['어니언링','https://images.unsplash.com/photo-1639024471283-03518883512d?w=500&q=80'],
-          ['슈림프','https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80'],
-          ['새우','https://images.unsplash.com/photo-1625944525533-473f1a3d54e7?w=500&q=80'],
-          ['뿌링','https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&q=80'],
-          ['양념','https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=500&q=80'],
-          ['콤비네이션','https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80'],
-          ['콤보','https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=500&q=80'],
-          ['파이','https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?w=500&q=80'],
-          ['버거','https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80'],
-          ['치킨','https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=500&q=80'],
-          ['피자','https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80'],
-          ['분식','https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=500&q=80'],
-          ['케이크','https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80'],
-          ['디저트','https://images.unsplash.com/photo-1488477181946-6428a0291777?w=500&q=80'],
-          ['커피','https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=500&q=80'],
-          ['음료','https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&q=80'],
-          ['샐러드','https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80'],
-          ['파스타','https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=500&q=80'],
-          ['세트','https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=500&q=80'],
-        ];
-        const DEFAULT_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80';
-        const menusWithImg = menus.map(function(m){
-          if(m.imageUrl) return m;
-          const n = m.name||''; const c = m.category||'';
-          const found = IMG_MAP.find(function(e){return n.includes(e[0])||c.includes(e[0]);});
-          m.imageUrl = found ? found[1] : DEFAULT_IMG;
-          return m;
-        });
-
-        return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
+        });return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
       }
       if (path === '/firebase-messaging-sw.js') return serveKVFile(env, 'firebase-messaging-sw.js', 'application/javascript');
       if (path === '/fcm/notify-drivers' && method === 'POST') {
@@ -2091,7 +1966,73 @@ async function acceptExchange(){
             });
             if(resp.ok)sent2++; else errors2.push(await resp.text());
           }catch(e){errors2.push(e.message);}
-        }));
+        }
+
+        // ── /api/tables — 테이블 현황 공개 조회 (비로그인 손님용) ──
+        if (path === '/api/tables') {
+          const did = new URL(request.url).searchParams.get('did');
+          const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+          if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:cors});
+          try {
+            const token = await getAccessToken(env);
+            const tRes = await fetch(`${FS_BASE}:runQuery`,{
+              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_tables'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},orderBy:[{field:{fieldPath:'tableNum'},direction:'ASCENDING'}]}})
+            });
+            const rows = await tRes.json();
+            const tables=(rows||[]).filter(r=>r.document).map(r=>{
+              const f=r.document.fields||{};
+              const gf=(k)=>{const x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):x.booleanValue||null;};
+              return {id:r.document.name.split('/').pop(),num:gf('tableNum')||1,name:gf('tableName')||'테이블',status:gf('status')||'empty',seats:gf('seats')||4,occupiedSince:gf('occupiedSince')||'',reservedName:gf('reservedName')||''};
+            });
+            const cRes=await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+            const cDoc=await cRes.json();
+            const cf=cDoc.fields||{};
+            const gf2=(k)=>{const x=cf[k];if(!x)return null;return x.stringValue||null;};
+            const storeName=gf2('storeName')||gf2('companyName')||gf2('name')||'매장';
+            return new Response(JSON.stringify({tables,storeName}),{headers:cors});
+          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+        }
+
+        // ── /api/booking — 예약 저장 (비로그인 손님용) ──
+        if (path === '/api/booking' && method === 'POST') {
+          const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+          try {
+            const body=await request.json();
+            const {did,tableId,tableNum,tableName,customerName,phone,seats,memo,date,time}=body;
+            if(!did||!customerName||!phone) return new Response(JSON.stringify({error:'필수값 누락'}),{status:400,headers:cors});
+            const token=await getAccessToken(env);
+            const now=new Date().toISOString();
+            const bRes=await fetch(`${FS_BASE}/filo_bookings`,{
+              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({fields:{dealerId:{stringValue:did},tableId:{stringValue:tableId||''},tableNum:{integerValue:tableNum||0},tableName:{stringValue:tableName||''},customerName:{stringValue:customerName},phone:{stringValue:phone},seats:{integerValue:seats||2},memo:{stringValue:memo||''},status:{stringValue:'pending'},date:{stringValue:date||now.slice(0,10)},time:{stringValue:time||now.slice(11,16)},source:{stringValue:'qr_walk_in'},createdAt:{stringValue:now}}})
+            });
+            const bDoc=await bRes.json();
+            if(bDoc.error) return new Response(JSON.stringify({error:bDoc.error.message}),{status:400,headers:cors});
+            const bookingId=bDoc.name?bDoc.name.split('/').pop():'';
+            await fetch(`${FS_BASE}/filo_tables/${did}_${tableId}?updateMask.fieldPaths=status&updateMask.fieldPaths=reservedName&updateMask.fieldPaths=updatedAt`,{
+              method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({fields:{status:{stringValue:'reserved'},reservedName:{stringValue:customerName},updatedAt:{stringValue:now}}})
+            });
+            return new Response(JSON.stringify({bookingId}),{headers:cors});
+          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+        }
+
+        // ── /api/booking-status — 예약 상태 확인 (비로그인 손님용) ──
+        if (path === '/api/booking-status') {
+          const bid=new URL(request.url).searchParams.get('bid');
+          const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+          if(!bid) return new Response(JSON.stringify({error:'bid required'}),{status:400,headers:cors});
+          try {
+            const token=await getAccessToken(env);
+            const r2=await fetch(`${FS_BASE}/filo_bookings/${bid}`,{headers:{'Authorization':'Bearer '+token}});
+            const doc=await r2.json();
+            const f=doc.fields||{};
+            const status=f.status?f.status.stringValue:'pending';
+            return new Response(JSON.stringify({status}),{headers:cors});
+          } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+        }
+));
         return new Response(JSON.stringify({ok:true,sent:sent2,errors:errors2}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
 
