@@ -71,9 +71,10 @@ var _API='/api';
 var _P=new URLSearchParams(location.search);
 var _DID=_P.get('did')||'';
 var _PRE=_P.get('tid')||null;
-var _TBL=[],_SEL=null,_SEATS=2,_TMR=null;
+var _TBL=[],_SEL=null,_SEATS=2,_TMR=null,_DONE=false;
 
 function _load(){
+ _DONE=false; /* 예약 화면 종료 → 폴링 재개 가능 */
  if(!_DID){_err('매장 정보가 없습니다. QR코드를 다시 스캔해주세요.');return;}
  fetch(_API+'/tables?did='+_DID)
  .then(function(r){return r.json();})
@@ -91,9 +92,10 @@ function _load(){
  .catch(function(){_err('네트워크 오류. 잠시 후 다시 시도해주세요.');});
 }
 function _poll(){
+ if(_DONE)return; /* 예약 완료 화면 중 폴링 중단 */
  fetch(_API+'/tables?did='+_DID)
  .then(function(r){return r.json();})
- .then(function(d){if(d.tables){_TBL=d.tables;_render();}})
+ .then(function(d){if(d.tables&&!_DONE){_TBL=d.tables;_render();}})
  .catch(function(){});
 }
 function _render(){
@@ -134,6 +136,7 @@ window._sub=function(){
  }).catch(function(){b.disabled=false;b.textContent='✅ 예약 확정';alert('오류가 발생했습니다');});
 };
 function _done(n,tn,s,rd,rt,bid){
+ _DONE=true;clearInterval(_TMR); /* 테이블 폴링 중단 */
  document.getElementById('main-view').innerHTML='<div class="done-box"><div class="done-icon" id="di">⏳</div><div class="done-title" id="dt">확인 중...</div><div id="ds" class="done-sub"><b style="color:#38bdf8">'+tn+'</b><br>'+n+'님 <b>'+s+'인</b><br>'+rd+' '+rt+'<br><br><span style="color:var(--t3);font-size:12px">매장에서 예약을 확인하고 있습니다.<br>잠시만 기다려주세요.</span></div></div>';
  if(!bid)return;
  var ti=setInterval(function(){
