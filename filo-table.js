@@ -1,23 +1,25 @@
 /**
  * @module      filo-table.js
  * ══════════════════════════════════════════════════════
- * 역할: 테이블 현황 · QR주문 · 착석/비움 · 이동 · 직원호출 · 테이블설정
+ * 역할: 테이블 현황·QR주문·착석·비움·이동·직원호출·테이블설정
  *
  * 저장 컬렉션:
  *   filo_tables   — 테이블 상태 (empty/occupied/reserved)
  *   filo_orders   — 테이블 주문
  *   filo_payments — 결제 기록
- *   filo_bookings — 예약 (확정/거절 처리 → filo-booking.js)
+ *   filo_bookings — 예약 (확정/거절 → filo-booking.js)
  *   staff_calls   — 직원 호출
  *
- * 의존: filo-common.js (_CU, _db, _filoToast)
- *       filo-booking.js (_filoBookingConfirm/Reject/Notify — 로드 후 사용)
+ * 의존: filo-common.js, filo-booking.js (예약 함수)
+ *
+ * 테이블 모달 버튼 (사용중):
+ *   💳 후불결제 / 👥 각자 / ✂️ 분할 / 🟢 비움 / 🔔준비완료 / ↔️이동 / 닫기
  *
  * ⚠️ 2026-07-15 분리:
  *   예약/달력/스케줄 → filo-booking.js
- *   (_filoPageSchedule, _filoRenderCalendar, _filoCalDayClick,
- *    _filoRenderTodayReservations, _filoReservationAdd/Delete/Edit,
- *    _filoBookingConfirm, _filoBookingReject, _filoNotifyReservation)
+ *   (_filoPageSchedule, _filoRenderCalendar 등 9개 함수)
+ *
+ * PENDING: 테이블 모달 버튼 4개로 정리 (박람회 전)
  * ══════════════════════════════════════════════════════
  */
 // 관련 컬렉션: filo_tables, filo_orders, filo_payments, filo_bookings
