@@ -592,7 +592,7 @@ export default {
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
     const pathNoQ = path.split('?')[0]; // 쿼리스트링 제거
-    if (['/filo-common.js','/filo-auth.js','/filo-margin.js','/filo-members.js','/filo-payroll2.js','/filo-payment.js','/filo-schedule.js','/filo-settings.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-order-common.js','/store.js','/order.js','/dine.js','/dine-staff.js','/dine-payroll.js','/dine-sales.js','/dine-analytics.js','/dine-tax.js','/dine-member.js','/donway_landing.js','/filo-landing.js'].indexOf(pathNoQ) !== -1) {
+    if (['/filo-common.js','/filo-auth.js','/filo-margin.js','/filo-members.js','/filo-payroll2.js','/filo-payment.js','/filo-schedule.js','/filo-settings.js','/filo-pos.js','/filo-table.js','/filo-menu.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-booking.js','/filo-order-common.js','/store.js','/order.js','/dine.js','/dine-staff.js','/dine-payroll.js','/dine-sales.js','/dine-analytics.js','/dine-tax.js','/dine-member.js','/donway_landing.js','/filo-landing.js'].indexOf(pathNoQ) !== -1) {
       return serveKVFile(env, pathNoQ.slice(1), 'application/javascript');
     }
     if (path === '/firebase-app-compat.js') {
