@@ -1925,7 +1925,12 @@ async function acceptExchange(){
             if(dt.ja)descTranslations.ja=dt.ja.stringValue||'';
           }
           return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
-        });return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
+        });
+        const menusWithImg = menus.map(function(m){
+          if(m.imageUrl) return m;
+          return Object.assign({},m,{imageUrl:''});
+        });
+        return new Response(JSON.stringify({menus:menusWithImg}),{status:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'}});
       }
 
       // ── /api/tables — 테이블 현황 (비로그인 손님용) ──
