@@ -1,7 +1,7 @@
 /**
  * @module      filo-booking.js
  * ══════════════════════════════════════════════════════
- * 역할: 예약 · 달력 · 스케줄 · 예약확정/거절 · 알림
+ * 역할: 예약·달력·스케줄·예약확정/거절·알림
  *
  * 저장 컬렉션:
  *   filo_bookings — 예약 정보 (status: pending/confirmed/rejected)
@@ -11,22 +11,23 @@
  *       filo-table.js (_filoTableLoad — 예약 확정/거절 후 테이블 갱신)
  *
  * 전역:
- *   window._calYear, window._calMonth — 캘린더 현재 연/월
- *   window._calUnsub                  — 달력 onSnapshot 리스너 해제용 (월 이동/페이지 이탈 시 자동 해제)
- *   window._bookingUnsub              — 테이블카드 예약 리스너 해제용
- *   window._filoBookingConfirm(bid,did) — 테이블카드에서 인라인 호출
- *   window._filoBookingReject(bid,did)  — 테이블카드에서 인라인 호출
- *   window._filoConfirmCall(callId,did) — 직원호출 확인 (filo-table.js에서 이동)
+ *   window._calYear, window._calMonth  — 캘린더 현재 연/월
+ *   window._calUnsub                   — onSnapshot 리스너 해제용
+ *   window._filoBookingConfirm(bid,did) — 테이블카드 인라인 호출
+ *   window._filoBookingReject(bid,did)  — 테이블카드 인라인 호출
  *
  * 노출 함수:
- *   _filoPageSchedule(el)             — 예약·달력 페이지 진입
- *   _filoRenderCalendar(did)          — 달력 렌더링
- *   _filoCalDayClick(did,dateStr)     — 날짜 클릭
- *   _filoRenderTodayReservations(did,todayStr,bookings)
- *   _filoReservationAdd(did,dateStr,dateLabel)
- *   _filoReservationDelete(id)
- *   _filoReservationEdit(id,did)
- *   _filoNotifyReservation(did,booking,status) — 예약 알림 발송
+ *   _filoPageSchedule(el)              — 예약·달력 페이지 진입
+ *   _filoRenderCalendar(did)           — 달력 렌더링 (onSnapshot 실시간)
+ *   _filoReservationAdd/Delete/Edit()  — 예약 CRUD
+ *   _filoNotifyReservation()           — 예약 알림 발송
+ *
+ * ⚠️ 2026-07-15 분리:
+ *   filo-table.js에서 예약/스케줄 블록 이동
+ *   filo-schedule.js → DEPRECATED (이 파일로 통합)
+ *
+ * ⚠️ Worker 등록 필수:
+ *   _worker.js JS 서빙 배열에 '/filo-booking.js' 포함 확인
  * ══════════════════════════════════════════════════════
  */
 
