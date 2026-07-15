@@ -16,40 +16,40 @@
   - JS 로직은 filo-*.js 파일들에 분리되어 있음
   - GitHub push → 자동배포 (GitHub Actions)
   
-  JS 모듈 구조:
-  - filo-common.js  : 공통 유틸/QR/재고입출 (슬림화 완료 2026-07-13)
-- filo-auth.js    : 로그인, 회원가입, Firebase 초기화
-- filo-margin.js  : 마진분석, AI인사이트, 대시보드
-- filo-members.js : 회원관리, 출퇴근, 재고이력
-- filo-payroll2.js: 급여, 명세서
-- filo-payment.js : 결제, 분할결제, QR
-- filo-schedule.js: 스케줄, 예약, 캘린더
-- filo-settings.js: 설정, 구독, 세금공유, 공지, 카테고리
-  - filo-pos.js     : POS 결제, 영수증, 분할결제, 각자계산 (16개 함수)
-  - filo-table.js   : 테이블 QR, 예약, 착석, 직원호출 (11개 함수)
-  - filo-menu.js    : 메뉴 관리, 레시피, 원가 (18개 함수)
-  - filo-order.js   : 주문대기, 배달주문 (13개 함수)
-  - filo-inventory.js: 재고 현황, 입출고, 자동발주 (6개 함수)
-  - filo-staff.js   : 직원QR, 출퇴근, 급여, 근무표 (9개 함수)
-  - filo-report.js  : 매출분석, 차트 (10개 함수)
-  
-  KV keys: filo.html, filo-common.js, filo-auth.js, filo-margin.js, filo-members.js, filo-payroll2.js, filo-payment.js, filo-schedule.js, filo-settings.js, filo-pos.js, filo-table.js,
-           filo-menu.js, filo-order.js, filo-inventory.js, filo-staff.js, filo-report.js
-  
+  JS 모듈 구조 (2026-07-15 리팩토링 완료):
+  - filo-auth.js      : 로그인, 회원가입, Firebase 초기화
+  - filo-common.js    : 공통 유틸, 네비, 동적QR, toast
+  - filo-pos.js       : POS 카트, 테이블 결제, 각자계산, 분할결제 (15개)
+  - filo-table.js     : 테이블QR, 예약, 착석, 비움, 이동, 픽업알림 (41개)
+    ※ filo-schedule.js 흡수 완료 (스케줄/캘린더)
+  - filo-menu.js      : 메뉴관리, 레시피, 원가, 유통기한, 재고이력 (24개)
+  - filo-order.js     : 주문대기, 배달주문, 자동발주알림 (14개)
+  - filo-inventory.js : 재고현황, 입고, 출고, 자동발주 (6개)
+  - filo-staff.js     : QR출퇴근, 직원QR, 출퇴근대시보드, 근무표 (9개)
+  - filo-payment.js   : 결제처리, QR결제, 0원체크, FCM영수증 (5개)
+    ※ filo-staff.js QR 함수 흡수 완료
+  - filo-payroll2.js  : 급여자동계산, 4대보험공제, 명세서발송 (7개)
+  - filo-report.js    : 매출분석, POS리포트, 차트, 세무사공유 (11개)
+  - filo-margin.js    : 마진분석, AI인사이트, 실시간대시보드 (8개)
+    ※ filo-report.js 중복 제거 완료 (이 파일이 원본)
+  - filo-settings.js  : 설정, 구독관리, 알림톡, 리뷰답글 (8개)
+  - filo-members.js   : 회원관리, 멤버십, 포인트 (10개)
+  - filo-schedule.js  : DEPRECATED → filo-table.js 참조
+
   Firestore 컬렉션:
   - companies, users: 회사/사용자 정보
   - filo_menus, menu_recipes: 메뉴/레시피
-  - filo_sales, filo_orders: 매출/주문
+  - filo_sales, filo_orders, filo_payments: 매출/주문/결제
   - filo_tables, filo_bookings: 테이블/예약
   - staff_calls: 직원호출
-  - inventory, inventory_in/out: 재고
+  - filo_inventory, filo_purchases: 재고/발주
   - members, attendance, payslips: 직원/출퇴근/급여
 -->
 <!--
 ================================================================
 ⚠️ FILO filo.html — Claude 인수인계 필독
 ================================================================
-작성일: 2026-07-10 | 담당: 엠비티아이 형우님
+작성일: 2026-07-15 | 담당: 엠비티아이 형우님
 
 [현재 메뉴 구조 — 확정 2026-07-10]
 🛒 판매: POS결제 / 메뉴관리 / 주문대기 / 배달주문
@@ -58,15 +58,26 @@
 🎁 고객: 테이블QR
 ⚙️ 설정: 설정 / 구독관리
 
-[중복 제거 완료 — DINE 전담]
-직원관리/급여현황/회원QR/포인트/회원권/예약/세무사 → DINE
+[리팩토링 완료 — 2026-07-15]
+✅ filo-schedule.js → filo-table.js 흡수 (deprecated)
+✅ filo-staff.js QR함수 → filo-payment.js 이동
+✅ filo-report.js 마진함수 → filo-margin.js 이동
+✅ filo-common.js RmAddRow → filo-menu.js 이동
+✅ filo-members.js Expiry/StockHistory → filo-menu.js 이동
+✅ filo-settings.js 카테고리/마진 → 전담 파일 이동
+중복 함수 총 29개 제거 완료
 
 [수정 규칙]
 1. GitHub 최신 SHA 확인 후 수정
 2. JS 문법 검증 후 배포
 3. KV + GitHub 동시 업로드
 4. 박람회 전 UI 고도화 예정 (8/19까지)
-5. 리팩토링은 박람회 후 (8/23~9/05)
+5. 다음 리팩토링: 박람회 후 (8/23~9/05)
+
+[PENDING]
+- filo-margin.js setKpi 내부 함수 확인
+- 토스페이먼츠 TOSS_CLIENT_KEY 연동
+- 배달대행 API 연동 (바로고/생각대로/부릉)
 
 [도메인] filo.ai.kr | [KV키] filo.html
 ================================================================
