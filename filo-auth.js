@@ -142,19 +142,21 @@ function _buildFiloNav(){
  var subs=d.subscriptions||{};
  var today=new Date().toISOString().slice(0,10);
  function hasSub(k){
-  /* combo = 전체 포함 */
   if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
   var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
  }
  var isAdmin=(_CU.role!=='member');
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
-
- var menus=[];
  var hasAll=isSA||hasSub('combo');
 
- menus.push({s:'🏠 홈',items:[
+ var menus=[];
+
+ /* ── 홈 ── */
+ menus.push({s:'홈',items:[
   {ic:'🏠',l:'대시보드',p:'home'},
  ]});
+
+ /* ── 판매 (키오스크 구독) ── */
  if(hasAll||hasSub('kiosk')){
   menus.push({s:'🛒 판매',items:[
    {ic:'🖥️',l:'POS 결제',p:'kiosk'},
@@ -163,6 +165,8 @@ function _buildFiloNav(){
    {ic:'🛵',l:'배달 주문',p:'delivery'},
   ]});
  }
+
+ /* ── 재고 (인벤토리 구독) ── */
  if(hasAll||hasSub('inventory')){
   menus.push({s:'📦 재고',items:[
    {ic:'📊',l:'재고 현황',p:'inventory'},
@@ -170,62 +174,52 @@ function _buildFiloNav(){
    {ic:'🔔',l:'자동 발주',p:'auto_order'},
   ]});
  }
- if(hasAll||hasSub('qr')){
-  menus.push({s:'👥 인사',items:[
+
+ /* ── 운영 (QR·테이블) ── */
+ if(hasAll||hasSub('qr')||hasSub('kiosk')){
+  menus.push({s:'🏪 운영',items:[
    {ic:'👤',l:'직원 QR',p:'qr_staff'},
-  ]});
- }
- if(hasAll||hasSub('kiosk')){
-  menus.push({s:'🎁 고객',items:[
    {ic:'📋',l:'테이블 QR',p:'table_qr'},
+   {ic:'🗓',l:'예약·달력',p:'schedule'},
   ]});
  }
+
+ /* ── 설정·관리 (항상 표시) ── */
  menus.push({s:'⚙️ 설정',items:[
-  {ic:'🗓',l:'예약·달력',p:'schedule'},
   {ic:'🧾',l:'세무사 연동',p:'tax_share'},
   {ic:'⚙️',l:'설정',p:'settings'},
   {ic:'💳',l:'구독 관리',p:'subscription'},
  ]});
 
  var html='';
-
- var _closedG=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');
+ var _closedG=[];
+ try{_closedG=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');}catch(e){}
 
  menus.forEach(function(g,gi){
-
   var isClosed=_closedG.indexOf(gi)>=0;
-
   var labelCls='ns-label ns-toggle'+(isClosed?' collapsed':'');
-
   var arrowTxt=isClosed?'▸':'▾';
-
   var groupStyle=isClosed?' style="max-height:0;overflow:hidden"':'';
 
-  html+='<div class="'+labelCls+'" onclick="_toggleNavGroup('+gi+',this)" data-gi="'+gi+'">'+
-
-   '<span>'+g.s+'</span><span class="ns-arrow">'+arrowTxt+'</span></div>';
-
-  html+='<div class="ns-group" id="nav-g-'+gi+'"'+groupStyle+'>';
+  if(g.s==='홈'){
+   /* 홈은 그룹 헤더 없이 바로 아이템 */
+   html+='<div class="ns-group" id="nav-g-'+gi+'">';
+  } else {
+   html+='<div class="'+labelCls+'" onclick="_toggleNavGroup('+gi+',this)" data-gi="'+gi+'">'+
+    '<span>'+g.s+'</span><span class="ns-arrow">'+arrowTxt+'</span></div>';
+   html+='<div class="ns-group" id="nav-g-'+gi+'"'+groupStyle+'>';
+  }
 
   g.items.forEach(function(m){
-
-   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
-
+   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(''+m.p+'')">'
    +'<span style="font-size:15px">'+m.ic+'</span>'
-
    +'<span>'+m.l+'</span></div>';
-
   });
-
   html+='</div>';
-
  });
 
  document.getElementById('nav-menu').innerHTML=html;
-
 }
-
-
 
 function _toggleNavGroup(gi,el){
 
