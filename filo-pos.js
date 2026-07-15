@@ -1,48 +1,27 @@
 /*
- * filo-pos.js — FILO 테이블 POS 결제/영수증 모듈
- * Copyright (c) 2024-2025 유한회사 엠비티아이
+ * filo-pos.js — FILO POS 결제·카트·각자계산·분할결제
+ * Copyright (c) 2024-2026 유한회사 엠비티아이
  *
- * ── 주요 함수 ─────────────────────────────────────────────────
- *   _filoTablePay(did,items,total,tableNum,tableName,method,orderIds)
- *     테이블 후불 결제 (카드/현금)
- *     ⚠️ PENDING: 결제완료 후 영수증 FCM 자동발송
- *       → filo_orders에서 fcmToken 조회(String/Int 둘 다)
- *       → /fcm/notify-drivers POST (type:'receipt', title:'🧾 결제완료')
- *       → 픽업과 완전 동일 구조, type/title만 다름
- *       → 수정 위치: _filoTablePay() 맨 아래 _filoToast 위에 삽입
+ * 저장 컬렉션:
+ *   filo_sales    — 매출 기록
+ *   filo_orders   — 테이블 주문 (후불)
+ *   filo_payments — 결제 기록 (각자계산)
  *
- *   _filoTableSelfPay(did,order,tableNum,tableName)  — 각자계산 모달
- *   _filoShowReceipt(id,items,total,method,label,now) — 직원 영수증 모달
- *   _filoReceiptNotify(did,tableNum,items,total,label) — 직원용 발송 팝업
+ * 의존: filo-common.js (_cartItems, _filoToast)
+ *       filo-table.js (_filoTableLoad)
+ *       filo-payment.js (_filoConfirmPay, QR결제)
  *
- * ── Firestore 저장 ────────────────────────────────────────────
- *   filo_payments  ← 결제 기록 (dealerId, tableNum, items, amount, method, date)
- *   filo_sales     ← 매출 연동 (DINE 매출 통계용)
- *   filo_orders    ← status:'cleared', paidAt 업데이트 (결제완료 처리)
+ * 주요 함수 (15개):
+ *   _cartAdd/Clear/Render/Qty   — 카트 관리
+ *   _filoTablePay(did,...)      — 테이블 후불결제 (통합)
+ *   _filoTableSelfPay(...)      — 각자계산 (filo_payments 기반)
+ *   _filoSplitPay(total)        — 분할결제
+ *   _filoShowReceipt(...)       — 영수증 출력
+ *   _filoPageKiosk(el)          — POS 키오스크 페이지
  *
- * ── 읽는 컬렉션 ──────────────────────────────────────────────
- *   filo_payments  ← 이미 결제된 금액 차감 (각자계산/분할)
- *   filo_orders    ← 미결제 주문 목록 + fcmToken (FCM 발송용)
- *
- * ── FCM 발송 ─────────────────────────────────────────────────
- *   엔드포인트: POST /fcm/notify-drivers
- *   Worker(_worker.js) → fcm.googleapis.com/v1/projects/mbti-logistics/messages:send
- *   payload: { tokens:[], title, body, type:'pickup'|'receipt', url }
- *
- * ── 픽업 알림 흐름 (정상작동 중) ─────────────────────────────
- *   filo-table.js 준비완료 버튼
- *   → filo_orders.where(dealerId,tableNum,status:'pending').get()
- *   → fcmToken 수집 (String/Int 둘 다 조회)
- *   → /fcm/notify-drivers POST (type:'pickup')
- *   → 고객 폰 백그라운드 푸시
- *
- * ── 의존 ─────────────────────────────────────────────────────
- *   filo-table.js   — 테이블 현황, 준비완료, 후불결제 진입점
- *   filo-payment.js — 분할결제(_filoSplitPay)
- *   _db (Firebase Firestore)
- *   _filoToast (filo-common.js)
- *
- * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
+ * ⚠️ 결제 흐름:
+ *   _filoTablePay → filo_payments 저장 → filo_sales 저장
+ *   원본 filo_orders는 절대 수정하지 않음
  */
 // 관련 컬렉션: filo_sales, filo_payments, filo_orders, filo_menus
 // ⚠️ 2026-07-12 리팩토링:
