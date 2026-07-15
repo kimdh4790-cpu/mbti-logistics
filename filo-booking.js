@@ -12,7 +12,8 @@
  *
  * 전역:
  *   window._calYear, window._calMonth — 캘린더 현재 연/월
- *   window._bookingUnsub              — Firestore 리스너 해제용
+ *   window._calUnsub                  — 달력 onSnapshot 리스너 해제용 (월 이동/페이지 이탈 시 자동 해제)
+ *   window._bookingUnsub              — 테이블카드 예약 리스너 해제용
  *   window._filoBookingConfirm(bid,did) — 테이블카드에서 인라인 호출
  *   window._filoBookingReject(bid,did)  — 테이블카드에서 인라인 호출
  *   window._filoConfirmCall(callId,did) — 직원호출 확인 (filo-table.js에서 이동)
@@ -90,6 +91,8 @@ function _filoPageSchedule(el){
  var now=new Date();
  window._calYear=now.getFullYear();
  window._calMonth=now.getMonth();
+ /* 이전 리스너 해제 */
+ if(window._calUnsub){window._calUnsub();window._calUnsub=null;}
  el.innerHTML='';
 
  var wrap=document.createElement('div');
@@ -135,9 +138,12 @@ function _filoRenderCalendar(did){
  var startStr=year+'-'+(month+1).toString().padStart(2,'0')+'-01';
  var endStr=year+'-'+(month+1).toString().padStart(2,'0')+'-'+daysInMonth.toString().padStart(2,'0');
 
- _db.collection('filo_bookings').where('dealerId','==',did)
+ /* 기존 달력 리스너 해제 */
+ if(window._calUnsub) window._calUnsub();
+
+ window._calUnsub=_db.collection('filo_bookings').where('dealerId','==',did)
   .where('date','>=',startStr).where('date','<=',endStr)
-  .get().then(function(snap){
+  .onSnapshot(function(snap){
    var bookingMap={};
    snap.forEach(function(doc){
     var d=doc.data();
