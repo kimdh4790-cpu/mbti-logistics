@@ -211,7 +211,7 @@ function _buildFiloNav(){
   }
 
   g.items.forEach(function(m){
-   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(''+m.p+'')">'
+   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
    +'<span style="font-size:15px">'+m.ic+'</span>'
    +'<span>'+m.l+'</span></div>';
   });
