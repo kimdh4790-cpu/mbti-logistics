@@ -1,14 +1,14 @@
 /**
- * @title       FILO · DINE — 외식업 통합 운영 플랫폼
- * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
- * @author      김형우 (kimdh4790@gmail.com)
- * @license     All Rights Reserved. 무단 복제·배포·수정 금지.
- * @description 본 소프트웨어는 유한회사 엠비티아이가 독자적으로 개발한 저작물입니다.
- *              저작권법 및 관련 법령에 의해 보호됩니다.
- *              사업자등록번호: 373-86-02536
- *              filo.ai.kr | dine.ne.kr
  * @module      filo-settings.js
- * @description 매장설정·구독관리·세금공유·카테고리
+ * ══════════════════════════════════════════════════════
+ * 역할: 설정 · 구독관리 · 알림톡 · 리뷰답글 · 세금공유 · 공지
+ *
+ * 의존: filo-common.js
+ * ⚠️ 2026-07-15 리팩토링:
+ *   _filoAddCategory / _filoDeleteCategory → filo-table.js 로 이동
+ *   _toAddItem / _toDecItem → filo-table.js 로 이동
+ *   _filoMarginLoadRange → filo-report.js 로 이동
+ * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
@@ -210,191 +210,8 @@ var _tableMgmtUnsub=null;
    🛵 배달 주문 관리 페이지
    배민/쿠팡이츠/요기요 주문 수동 접수
    ══════════════════════════════════════ */
-function _filoAddCategory(did){
- var inp=document.getElementById('new-cat-inp');
- var cat=(inp.value||'').trim();
- if(!cat){_filoToast('카테고리명을 입력하세요');return;}
- inp.value='';
- _filoToast('✅ 카테고리 추가됐습니다');
- _filoLoadMenuMgmt(did);
-}
-
-function _filoDeleteCategory(did,cat){
- if(!confirm('['+cat+'] 카테고리의 메뉴를 모두 삭제하시겠습니까?'))return;
- _db.collection('filo_menus').where('dealerId','==',did).where('category','==',cat).get().then(function(snap){
-  var batch=_db.batch();
-  snap.forEach(function(doc){batch.delete(doc.ref);});
-  return batch.commit();
- }).then(function(){
-  _filoToast('🗑 ['+cat+'] 카테고리 삭제됐습니다');
-  _filoPageMenuMgmt(document.getElementById('content'));
- });
-}
-
-function _filoMarginLoadRange(from,to){
- if(!from){var f=document.getElementById('sf-from');var t2=document.getElementById('sf-to');if(f)from=f.value;if(t2)to=t2.value;}
- if(!from||!to){_filoToast('날짜를 선택하세요');return;}
- var did=_CU.dealerId||_CU.uid||(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
- if(!did)return;
- var heroSub=document.getElementById('hero-sub');
- if(heroSub)heroSub.textContent=from+' ~ '+to+' 조회 중...';
- _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get().then(function(snap){
-  var total=0,cnt=0,items={},methods={};
-  snap.forEach(function(doc){
-   var d=doc.data();
-   if(d.status==='cancelled')return;
-   total+=d.total||0;cnt++;
-   var method=d.payMethod||d.method||'기타';
-   methods[method]=(methods[method]||0)+(d.total||0);
-   (d.items||[]).forEach(function(it){items[it.name]=(items[it.name]||0)+(it.qty||1);});
-  });
-  var paySorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
-  if(heroSub)heroSub.textContent=from+(from!==to?' ~ '+to:'')+'·'+cnt+'건·₩'+total.toLocaleString();
-  ['today-sales','month-sales'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent='₩'+total.toLocaleString();});
-  ['today-cnt','month-cnt'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=cnt+'건';});
-
-  /* 결제수단별 집계 표시 */
-  var payEl=document.getElementById('pay-method-breakdown');
-  if(payEl){
-   var methodIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','삼성페이':'📱','기타':'💰'};
-   var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
-   payEl.innerHTML=sorted.length?sorted.map(function(m){
-    var pct=total>0?Math.round(m[1]/total*100):0;
-    var ic=methodIcons[m[0]]||'💰';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-     '<span style="font-size:16px">'+ic+'</span>'+
-     '<div style="flex:1">'+
-     '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
-     '<span style="font-size:13px;font-weight:700">'+m[0]+'</span>'+
-     '<span style="font-size:13px;font-weight:900;color:#22c55e">₩'+m[1].toLocaleString()+'</span>'+
-     '</div>'+
-     '<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">'+
-     '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--br),#22c55e);border-radius:2px;transition:width .5s"></div>'+
-     '</div>'+
-     '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+pct+'% · 비중</div>'+
-     '</div></div>';
-   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">데이터 없음</div>';
-  }
-
-  /* 인기메뉴 */
-  var topEl=document.getElementById('top-menus');
-  if(topEl){
-   var sorted2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-   topEl.innerHTML=sorted2.length?sorted2.map(function(e,i){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-     '<span style="font-size:13px"><span style="color:var(--br);font-weight:800;margin-right:6px">'+(i+1)+'위</span>'+e[0]+'</span>'+
-     '<span style="font-size:13px;font-weight:700">'+e[1]+'개</span></div>';
-   }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">판매 데이터 없음</div>';
-  }
- /* 차트 렌더링 */
-  var liveEl=document.getElementById('sales-chart-extra');if(!liveEl){liveEl=document.createElement('div');liveEl.id='sales-chart-extra';var mainEl2=document.getElementById('content');if(mainEl2)mainEl2.appendChild(liveEl);}liveEl.innerHTML='';
-  if(liveEl){
-   /* 시간대별 집계 */
-   var hourStats2={};
-   snap.forEach(function(doc){
-    var d2=doc.data();
-    if(d2.status==='cancelled')return;
-    var h=d2.createdAt?(new Date(d2.createdAt).getHours()):(new Date().getHours());
-    hourStats2[h]=(hourStats2[h]||0)+(d2.total||0);
-   });
-   var hourEntries2=Object.keys(hourStats2).sort(function(a,b){return a-b;}).map(function(h){return [h,hourStats2[h]];});
-
-   var chartHtml='';
-   if(hourEntries2.length){
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div>'+
-     '<div style="position:relative;height:160px"><canvas id="hour-chart-canvas"></canvas></div></div>';
-   }
-   if(paySorted&&paySorted.length){
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div>'+
-     '<div style="position:relative;height:160px"><canvas id="pay-donut-canvas"></canvas></div></div>';
-   }
-   if(Object.keys(items).length){
-    var menuEntries2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div>'+
-     menuEntries2.map(function(kv,i){
-      var rank=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
-      var pct=total>0?Math.round(kv[1]/total*100):0;
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
-       '<span style="font-size:15px">'+rank+'</span>'+
-       '<div style="flex:1"><div style="display:flex;justify-content:space-between">'+
-       '<span style="font-size:12px;font-weight:700">'+kv[0]+'</span>'+
-       '<span style="font-size:12px;font-weight:900;color:#22c55e">'+kv[1]+'개</span>'+
-       '</div>'+
-       '<div style="height:3px;background:var(--surface3);border-radius:2px;margin-top:4px">'+
-       '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
-       '</div></div></div>';
-     }).join('')+'</div>';
-   }
-
-   if(chartHtml) liveEl.innerHTML=(liveEl.innerHTML||'')+chartHtml;
-
-   setTimeout(function(){
-    /* 시간대 바차트 */
-    var hc=document.getElementById('hour-chart-canvas');
-    if(hc&&window.Chart&&hourEntries2.length){
-     if(hc._chart)hc._chart.destroy();
-     var maxVal=Math.max.apply(null,hourEntries2.map(function(h){return h[1];}));
-     hc._chart=new Chart(hc,{type:'bar',
-      data:{labels:hourEntries2.map(function(h){return h[0]+'시';}),
-       datasets:[{label:'매출',data:hourEntries2.map(function(h){return h[1];}),
-        backgroundColor:hourEntries2.map(function(h){return h[1]===maxVal?'rgba(167,139,250,.9)':'rgba(124,58,237,.5)';}),
-        borderColor:'rgba(124,58,237,.8)',borderWidth:1,borderRadius:6}]},
-      options:{responsive:true,maintainAspectRatio:false,
-       animation:{duration:800,easing:'easeOutQuart'},
-       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:function(ctx){return String.fromCharCode(8361)+ctx.raw.toLocaleString();}}}},
-       scales:{x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:11}}},
-        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:10},
-         callback:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v;}}}}}});
-    }
-    /* 결제수단 금액 카드 */
-    var payCanvas=document.getElementById('pay-donut-canvas');
-    if(payCanvas&&paySorted&&paySorted.length){
-     var payColors={'카드':'#60a5fa','현금':'#22c55e','카카오페이':'#f59e0b','네이버페이':'#10b981','카운터결제':'#a78bfa','기타':'#9898c0'};
-     var payParent=payCanvas.parentElement;
-     if(payParent){
-      payParent.style.height='auto';
-      var payHtmlStr='<div style="display:flex;flex-direction:column;gap:8px">';
-      paySorted.forEach(function(p){
-       var ic={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪'}[p[0]]||'💰';
-       var col=payColors[p[0]]||'#9898c0';
-       var pct=total>0?Math.round(p[1]/total*100):0;
-       payHtmlStr+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:12px;border:1px solid var(--bd2)">'+
-        '<span style="font-size:18px">'+ic+'</span>'+
-        '<div style="flex:1"><div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
-        '<span style="font-size:13px;font-weight:700">'+p[0]+'</span>'+
-        '<span style="font-size:16px;font-weight:900;color:'+col+'">'+String.fromCharCode(8361)+p[1].toLocaleString()+'</span>'+
-        '</div><div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">'+
-        '<div class="pay-bar" data-pct="'+pct+'" style="height:100%;width:0%;background:'+col+';border-radius:2px;transition:width .8s ease"></div>'+
-        '</div><span style="font-size:10px;color:var(--t3)">'+pct+'% 비중</span></div></div>';
-      });
-      payHtmlStr+='</div>';
-      payParent.innerHTML=payHtmlStr;
-      setTimeout(function(){
-       payParent.querySelectorAll('.pay-bar').forEach(function(b){b.style.width=b.dataset.pct+'%';});
-      },50);
-     }
-    }
-   },150);
-  }
- }).catch(function(e){if(heroSub)heroSub.textContent='오류: '+e.message;});
-}
 
 var _toTable=null,_toCart={};
-
-
-
-
-
-function _toAddItem(id,name,price){
- if(!_toCart[id])_toCart[id]={name:name,price:price,qty:0};
- _toCart[id].qty++;_toUpdateCart();_toShowMenuGrid(window._toAllMenus||[]);
-}
-function _toDecItem(id){
- if(!_toCart[id])return;
- _toCart[id].qty--;if(_toCart[id].qty<=0)delete _toCart[id];
- _toUpdateCart();_toShowMenuGrid(window._toAllMenus||[]);
-}
 
 // ── AI 리뷰 답글 생성기 ─────────────────────────────────────────────────────
 function _filoPageReviewReply(el){
