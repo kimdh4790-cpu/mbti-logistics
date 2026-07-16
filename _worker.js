@@ -2341,6 +2341,7 @@ async function acceptExchange(){
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
+      if (path === '/control' || path === '/control/') return serveKVFile(env, 'mbtico_control.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
       if (path === '/delivery' || path === '/delivery.html') {
