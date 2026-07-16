@@ -259,9 +259,9 @@ function _ctrlLoadJoin() {
           '<td>' + createdStr + '</td>' +
           '<td>' + statusBadge + '</td>' +
           '<td>' +
-            '<button class="ctrl-btn ctrl-btn-ok" data-id="' + id + '" onclick="_ctrlApprove(this.dataset.id)">✅</button> ' +
-            '<button class="ctrl-btn ctrl-btn-err" data-id="' + id + '" onclick="_ctrlReject(this.dataset.id)">❌</button> ' +
-            '<button class="ctrl-btn ctrl-btn-sub" data-id="' + id + '" onclick="_ctrlHold(this.dataset.id)">⏸</button>' +
+            '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove('' + id + '')">✅</button> ' +
+            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject('' + id + '')">❌</button> ' +
+            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold('' + id + '')">⏸</button>' +
           '</td></tr>';
       });
       html += '</tbody></table></div>';
@@ -375,12 +375,12 @@ function _renderCompanies() {
         '<span>🔗 슬러그: ' + (d.slug||'-') + '</span>' +
       '</div>' +
       '<div class="comp-actions">' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenDetail(\'' + d.id + '\')">📋 상세</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenChat(\'' + d.id + '\',\'' + (d.companyName||'') + '\')">💬 채팅</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlExtendTrial(\'' + d.id + '\')">⏰ 연장</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlOpenDetail(this.dataset.id)">📋 상세</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" data-nm="' + (d.companyName||'').replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">💬 채팅</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlExtendTrial(this.dataset.id)">⏰ 연장</button>' +
         (d.status !== 'suspended'
-          ? '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlSuspend(\'' + d.id + '\')">⏸ 정지</button>'
-          : '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlUnsuspend(\'' + d.id + '\')">▶ 복구</button>') +
+          ? '<button class="ctrl-btn ctrl-btn-err" data-id="' + d.id + '" onclick="_ctrlSuspend(this.dataset.id)">⏸ 정지</button>'
+          : '<button class="ctrl-btn ctrl-btn-ok" data-id="' + d.id + '" onclick="_ctrlUnsuspend(this.dataset.id)">▶ 복구</button>') +
       '</div>' +
       // 기능 on/off
       '<div class="comp-features">' +
@@ -548,7 +548,7 @@ function _ctrlLoadChatList() {
         var d = doc.data();
         var unread = d.unreadSA || 0;
         var active = _chatDealerId === doc.id ? ' chat-item-active' : '';
-        html += '<div class="chat-item' + active + '" onclick="_ctrlOpenChat(\'' + doc.id + '\',\'' + (d.companyName||doc.id) + '\')">' +
+    var html = '<div class="chat-item' + active + '" data-id="' + doc.id + '" data-nm="' + (d.companyName||doc.id).replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' +
           '<div class="chat-item-name">' + (d.companyName||doc.id) +
             (unread ? '<span class="chat-badge">' + unread + '</span>' : '') +
           '</div>' +
