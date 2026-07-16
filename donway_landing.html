@@ -599,10 +599,13 @@ function _tab(i){
   document.querySelectorAll('.tab').forEach(function(t,j){t.classList.toggle('on',j===i);});
   var el = document.getElementById('fitems');
   el.innerHTML = INDUSTRY[i].map(function(d,j){
-    return '<div class="fitem" onclick="_dwModalOpen('+i+','+j+')" style="cursor:pointer"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
+    return '<div class="fitem" data-ind="'+i+'" data-feat="'+j+'" onclick="_dwModalOpen(this.dataset.ind,this.dataset.feat)" style="cursor:pointer"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
   }).join('');
 }
 _tab(0);
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') _dwModalClose();
+});
 
 
 // ── 기능 상세 모달 ──────────────────────────────────────
@@ -737,7 +740,7 @@ var DW_PROBLEMS = {
 };
 
 function _dwModalOpen(indIdx, featIdx) {
-  var key = indIdx + '-' + featIdx;
+  var key = parseInt(indIdx) + '-' + parseInt(featIdx);
   var d = DW_DETAILS[key];
   if (!d) return;
   _dwShowModal(d);
@@ -775,7 +778,7 @@ function _dwShowModal(d) {
 }
 
 function _dwModalClose(e) {
-  if (e && e.target !== document.getElementById('dw-modal-overlay')) return;
+  if (e && e.target && e.target !== document.getElementById('dw-modal-overlay') && !e.target.classList.contains('dw-modal-close')) return;
   document.getElementById('dw-modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
