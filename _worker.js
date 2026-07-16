@@ -2341,7 +2341,264 @@ async function acceptExchange(){
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
-      if (path === '/control' || path === '/control/') return serveKVFile(env, 'mbtico_control.html', 'text/html');
+      if (path === '/control' || path === '/control/') {
+        const ctrlHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>엠비티아이 관제센터</title>
+<style>
+:root{
+  --bg:#07080F;--bg2:#0D1117;--bg3:#161B22;--bd:rgba(255,255,255,.08);
+  --tx:#F0F4FF;--tx2:#8B949E;--tx3:#484F58;
+  --blue:#0066FF;--green:#22c55e;--red:#ef4444;--gold:#f59e0b;--purple:#7C3AED;
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-serif;font-size:14px}
+
+/* ── 로그인 ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999}
+.login-box{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:36px 28px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+.login-logo{font-size:22px;font-weight:900;text-align:center;margin-bottom:8px;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-sub{font-size:12px;color:var(--tx2);text-align:center;margin-bottom:4px}
+
+/* ── 메인 레이아웃 ── */
+#main-screen{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.top-bar{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.top-logo{font-size:16px;font-weight:900;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-space{flex:1}
+#ctrl-user{font-size:11px;color:var(--tx2)}
+.top-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:12px;cursor:pointer}
+.top-btn:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.main-scroll{flex:1;overflow-y:auto;padding:16px}
+.main-scroll::-webkit-scrollbar{width:4px}
+.main-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+
+/* ── 아코디언 ── */
+.acc-item{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.acc-header{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;transition:.15s}
+.acc-header:hover{background:rgba(255,255,255,.03)}
+.acc-icon{font-size:12px;color:var(--tx2);width:14px;flex-shrink:0}
+.acc-title{font-size:14px;font-weight:700;flex:1}
+.acc-badge{background:var(--red);color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 6px}
+.acc-body{display:none;padding:0 18px 18px;border-top:1px solid var(--bd)}
+
+/* ── 공통 컴포넌트 ── */
+.ctrl-input{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg3);color:var(--tx);font-size:13px;font-family:inherit;outline:none}
+.ctrl-input:focus{border-color:var(--blue)}
+.ctrl-select{padding:8px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg3);color:var(--tx);font-size:13px;cursor:pointer;outline:none}
+.ctrl-label{font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px}
+.ctrl-btn{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.ctrl-btn-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.ctrl-btn-ok:hover{background:rgba(34,197,94,.25)}
+.ctrl-btn-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.ctrl-btn-err:hover{background:rgba(239,68,68,.25)}
+.ctrl-btn-sub{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.ctrl-btn-sub:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.ctrl-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.ctrl-loading{padding:24px;text-align:center;color:var(--tx2);font-size:13px}
+.ctrl-empty{padding:24px;text-align:center;color:var(--tx3);font-size:13px}
+.ctrl-table-wrap{overflow-x:auto}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:13px}
+.ctrl-table th{padding:8px 12px;text-align:left;background:var(--bg3);color:var(--tx2);font-weight:700;font-size:12px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.ctrl-table td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.ctrl-table tr:last-child td{border-bottom:none}
+.ctrl-table td .ctrl-btn{margin:2px}
+.ctrl-hint{font-size:11px;color:var(--tx3);margin-top:12px;text-align:center}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-warn{background:rgba(245,158,11,.15);color:var(--gold)}
+.badge-err{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-hold{background:rgba(124,58,237,.15);color:var(--purple)}
+
+/* ── 대시보드 ── */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+@media(max-width:500px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
+.dash-card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;text-align:center}
+.dash-val{font-size:28px;font-weight:900;margin-bottom:4px}
+.dash-label{font-size:11px;color:var(--tx2);font-weight:600}
+
+/* ── 고객사 카드 ── */
+.comp-cards{display:flex;flex-direction:column;gap:10px}
+.comp-card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.comp-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.comp-name{font-size:14px;font-weight:800}
+.comp-email{font-size:11px;color:var(--tx2);margin-top:2px}
+.comp-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--tx2);margin-bottom:10px}
+.comp-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.comp-features{display:flex;flex-wrap:wrap;gap:5px;padding-top:10px;border-top:1px solid var(--bd)}
+.feat-label{font-size:11px;color:var(--tx2);width:100%;margin-bottom:4px}
+.feat-btn{padding:4px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:.1s}
+.feat-on{background:rgba(34,197,94,.15);color:var(--green)}
+.feat-off{background:var(--bg2);color:var(--tx3);border:1px solid var(--bd)}
+
+/* ── 채팅 ── */
+.chat-layout{display:flex;gap:12px;height:400px}
+.chat-list{width:200px;flex-shrink:0;border:1px solid var(--bd);border-radius:8px;overflow-y:auto;background:var(--bg3)}
+.chat-item{padding:10px 12px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.1s}
+.chat-item:hover,.chat-item-active{background:rgba(0,102,255,.1)}
+.chat-item-name{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.chat-item-last{font-size:11px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-badge{background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+.chat-room{flex:1;display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.chat-room-hdr{padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--bd);font-size:13px;font-weight:700;flex-shrink:0}
+.chat-room-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.chat-msgs::-webkit-scrollbar{width:3px}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1)}
+.chat-msg{max-width:75%;display:flex;flex-direction:column;gap:2px}
+.chat-msg-sa{align-self:flex-end;align-items:flex-end}
+.chat-msg-dealer{align-self:flex-start;align-items:flex-start}
+.chat-msg-text{padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word}
+.chat-msg-sa .chat-msg-text{background:var(--blue);color:#fff;border-radius:12px 12px 4px 12px}
+.chat-msg-dealer .chat-msg-text{background:var(--bg3);color:var(--tx);border:1px solid var(--bd);border-radius:12px 12px 12px 4px}
+.chat-msg-time{font-size:10px;color:var(--tx3)}
+.chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
+.chat-input-row .ctrl-input{flex:1}
+@media(max-width:540px){.chat-layout{flex-direction:column;height:auto}.chat-list{width:100%;height:150px}.chat-room{height:300px}}
+
+/* ── 공지 ── */
+.notice-form{display:flex;flex-direction:column;gap:4px;max-width:520px}
+.notice-item{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:8px}
+.notice-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.notice-body{font-size:12px;color:var(--tx2);margin-bottom:6px}
+.notice-meta{font-size:11px;color:var(--tx3)}
+
+/* ── 결제 ── */
+.billing-total{padding:10px 0;font-size:14px;margin-bottom:8px}
+
+/* ── 상세 모달 ── */
+#detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#detail-overlay.open{display:flex}
+#detail-box{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto}
+.modal-hdr{padding:16px 20px;display:flex;align-items:center;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);z-index:1}
+.modal-title{font-size:15px;font-weight:900;flex:1}
+.modal-close{background:rgba(255,255,255,.06);border:none;color:var(--tx2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px}
+.modal-body{padding:16px 20px 24px}
+.detail-row{padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px;display:flex;gap:8px}
+.detail-row b{color:var(--tx2);font-size:12px;min-width:80px;flex-shrink:0}
+.detail-section{font-size:12px;font-weight:700;color:var(--tx2);margin:14px 0 8px;text-transform:uppercase}
+.doc-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.doc-label{flex:1;font-size:13px}
+.doc-none{font-size:12px;color:var(--tx3)}
+
+/* ── Toast ── */
+.ctrl-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;animation:fadeIn .2s ease;pointer-events:none}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🏢 엠비티아이 관제센터</div>
+    <div class="login-sub">슈퍼어드민 전용</div>
+    <input id="l-email" class="ctrl-input" type="email" placeholder="이메일" value="kimdh4790@gmail.com">
+    <input id="l-pw"    class="ctrl-input" type="password" placeholder="비밀번호"
+      onkeydown="if(event.key==='Enter')_ctrlLogin()">
+    <button onclick="_ctrlLogin()"
+      style="padding:12px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
+      로그인
+    </button>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div id="main-screen">
+  <div class="top-bar">
+    <div class="top-logo">🏢 관제센터</div>
+    <div class="top-space"></div>
+    <span id="ctrl-user"></span>
+    <button class="top-btn" onclick="_ctrlLogout()">로그아웃</button>
+  </div>
+
+  <div class="main-scroll">
+
+    <!-- 📊 대시보드 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('dashboard')">
+        <span class="acc-icon" id="ico-dashboard">▶</span>
+        <span class="acc-title">📊 대시보드</span>
+      </div>
+      <div class="acc-body" id="acc-dashboard"></div>
+    </div>
+
+    <!-- ✅ 가입 승인 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('join')">
+        <span class="acc-icon" id="ico-join">▶</span>
+        <span class="acc-title">✅ 가입 승인</span>
+        <span class="acc-badge" id="badge-join"></span>
+      </div>
+      <div class="acc-body" id="acc-join"></div>
+    </div>
+
+    <!-- 👥 고객사 관리 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('companies')">
+        <span class="acc-icon" id="ico-companies">▶</span>
+        <span class="acc-title">👥 고객사 관리</span>
+      </div>
+      <div class="acc-body" id="acc-companies"></div>
+    </div>
+
+    <!-- 💬 채팅 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('chat')">
+        <span class="acc-icon" id="ico-chat">▶</span>
+        <span class="acc-title">💬 1:1 채팅</span>
+        <span class="acc-badge" id="badge-chat"></span>
+      </div>
+      <div class="acc-body" id="acc-chat"></div>
+    </div>
+
+    <!-- 📢 공지 발송 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('notice')">
+        <span class="acc-icon" id="ico-notice">▶</span>
+        <span class="acc-title">📢 공지 발송</span>
+      </div>
+      <div class="acc-body" id="acc-notice"></div>
+    </div>
+
+    <!-- 💰 결제 현황 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('billing')">
+        <span class="acc-icon" id="ico-billing">▶</span>
+        <span class="acc-title">💰 결제 현황</span>
+      </div>
+      <div class="acc-body" id="acc-billing"></div>
+    </div>
+
+  </div><!-- /main-scroll -->
+</div><!-- /main-screen -->
+
+<!-- 상세 모달 -->
+<div id="detail-overlay" onclick="if(event.target===this)_ctrlCloseDetail()">
+  <div id="detail-box"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/mbtico-ctrl.js?v=1"></script>
+<script>
+  // 앱 시작
+  window.addEventListener('DOMContentLoaded', _ctrlInit);
+  // ESC → 모달 닫기
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') _ctrlCloseDetail();
+  });
+</script>
+</body>
+</html>
+`;
+        return new Response(ctrlHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
+      }
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
       if (path === '/delivery' || path === '/delivery.html') {
