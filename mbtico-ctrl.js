@@ -64,13 +64,10 @@ function _ctrlLogout() {
 // ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
 function _ctrlStartListeners() {
   // 가입 대기 뱃지
-  // 가입대기 뱃지: companies pending 카운트
-  var u1 = _db.collection('companies')
-    .where('status','in',['pending','hold'])
+  var u1 = _db.collection('join_requests')
+    .where('status','==','pending')
     .onSnapshot(function(snap) {
       _ctrlBadge('badge-join', snap.size);
-    }, function() {
-      // 복합인덱스 없을 경우 무시
     });
   _unsubs.push(u1);
 
@@ -226,69 +223,87 @@ function _ctrlLoadJoin() {
   var c = document.getElementById('acc-join');
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
 
-  _db.collection('join_requests').orderBy('createdAt','desc').limit(50)
-    .onSnapshot(function(snap) {
-      if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">대기 중인 신청이 없습니다</div>'; return; }
+  // companies 컬렉션에서 pending/hold 상태 직접 조회
+  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+    .get().then(function(snap) {
+      var docs = snap.docs.filter(function(d) {
+        return ['pending','hold'].includes(d.data().status);
+      });
+      if (!docs.length) {
+        c.innerHTML = '<div class="ctrl-empty">대기 중인 신청이 없습니다</div>';
+        return;
+      }
       var html = '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
-        '<th>업체명</th><th>이메일</th><th>플랜</th><th>신청일</th><th>상태</th><th>처리</th>' +
+        '<th>업체명</th><th>이메일</th><th>도메인</th><th>신청일</th><th>상태</th><th>처리</th>' +
         '</tr></thead><tbody>';
-      snap.forEach(function(doc) {
+      docs.forEach(function(doc) {
         var d = doc.data(), id = doc.id;
-        var statusBadge = {
-          pending:   '<span class="badge badge-warn">대기</span>',
-          approved:  '<span class="badge badge-ok">승인</span>',
-          rejected:  '<span class="badge badge-err">거절</span>',
-          hold:      '<span class="badge badge-hold">보류</span>'
-        }[d.status] || d.status;
-        var btns = d.status === 'pending'
-          ? '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove(\'' + id + '\')">✅ 승인</button>' +
-            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject(\'' + id + '\')">❌ 거절</button>' +
-            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold(\'' + id + '\')">⏸ 보류</button>'
+        var statusBadge = d.status === 'pending'
+          ? '<span class="badge badge-warn">대기</span>'
+          : '<span class="badge badge-hold">보류</span>';
+        // 도메인 자동 감지
+        var svcs = (d.services||[]).join(',') || d.serviceType || '';
+        var domain = svcs.includes('table_order')||svcs.includes('kiosk')||svcs.includes('filo')
+          ? 'FILO'
+          : svcs.includes('dine') ? 'DINE' : 'DONWAY';
+        var createdStr = d.createdAt
+          ? (d.createdAt.toDate
+              ? d.createdAt.toDate().toISOString().slice(0,10)
+              : String(d.createdAt).slice(0,10))
           : '-';
         html += '<tr>' +
-          '<td><b>' + (d.companyName||'-') + '</b></td>' +
-          '<td>' + (d.email||'-') + '</td>' +
-          '<td>' + (d.plan||d.serviceType||'-') + '</td>' +
-          '<td>' + _ctrlFmtDate(d.createdAt) + '</td>' +
+          '<td><b>' + (d.companyName||d.name||'-') + '</b><br>' +
+            '<span style="font-size:10px;color:var(--tx2)">' + (d.bizNumber||'') + '</span></td>' +
+          '<td style="font-size:11px">' + (d.email||'-') + '</td>' +
+          '<td><span class="badge badge-ok">' + domain + '</span></td>' +
+          '<td>' + createdStr + '</td>' +
           '<td>' + statusBadge + '</td>' +
-          '<td>' + btns + '</td>' +
-          '</tr>';
+          '<td>' +
+            '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove('' + id + '')">✅</button> ' +
+            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject('' + id + '')">❌</button> ' +
+            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold('' + id + '')">⏸</button>' +
+          '</td></tr>';
       });
       html += '</tbody></table></div>';
       c.innerHTML = html;
+    }).catch(function(e) {
+      c.innerHTML = '<div class="ctrl-empty">오류: ' + e.message + '</div>';
     });
 }
-
 function _ctrlApprove(reqId) {
-  // companies 컬렉션에서 직접 처리
-  _db.collection('companies').doc(reqId).get().then(function(doc) {
+  _db.collection('join_requests').doc(reqId).get().then(function(doc) {
     if (!doc.exists) return;
     var d = doc.data();
-    var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
-    // 1. companies.status → approved
-    _db.collection('companies').doc(reqId).update({
+    // 1. join_requests 상태 업데이트
+    _db.collection('join_requests').doc(reqId).update({
       status: 'approved',
-      plan: d.plan === 'pending' ? 'trial' : (d.plan || 'trial'),
-      trialEnd: d.trialEnd || trialEnd,
       approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
       approvedBy: _CU.email
     });
-    // 2. FCM + 카카오 알림
+    // 2. companies 상태 업데이트
+    if (d.uid) {
+      var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+      _db.collection('companies').doc(d.uid).set({
+        status: 'trial',
+        plan: 'trial',
+        trialEnd: trialEnd,
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge: true});
+    }
+    // 3. FCM + 카카오 알림
     _ctrlNotifyApproval({
-      uid: reqId, email: d.email,
-      companyName: d.companyName||d.name, phone: d.phone,
+      uid: d.uid, email: d.email,
+      companyName: d.companyName, phone: d.phone,
       slug: d.slug
     });
-    // 3. Worker /api/approve 호출 (이메일 발송)
-    fetch('https://donway.ai.kr/api/approve?uid=' + reqId).catch(function(){});
-    _ctrlToast('✅ ' + (d.companyName||d.name||'업체') + ' 승인! 이메일+알림 발송됨');
+    _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
   });
 }
 
 function _ctrlReject(reqId) {
   var reason = prompt('거절 사유 (고객에게 전달됩니다):');
   if (reason === null) return;
-  _db.collection('companies').doc(reqId).update({
+  _db.collection('join_requests').doc(reqId).update({
     status: 'rejected',
     rejectReason: reason,
     rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -298,7 +313,7 @@ function _ctrlReject(reqId) {
 function _ctrlHold(reqId) {
   var memo = prompt('보류 메모:');
   if (memo === null) return;
-  _db.collection('companies').doc(reqId).update({
+  _db.collection('join_requests').doc(reqId).update({
     status: 'hold', holdMemo: memo,
     heldAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
