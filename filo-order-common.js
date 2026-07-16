@@ -486,6 +486,13 @@ function _closeMdl(){
  _curMdlMenu=null;
 }
 
+function _closeTlMdl(){
+  var mdl=document.getElementById('tl-mdl');
+  if(mdl)mdl.classList.remove('open');
+  _curMdlMenu=null;
+}
+function _openTlMdl(m){_openMdlCommon(m);}
+
 // ── 날짜 유틸 (order.js, filo-order-common.js 공용) ──
 function _today(){return new Date().toISOString().slice(0,10);}
 function _nowISO(){return new Date().toISOString();}
