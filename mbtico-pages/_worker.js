@@ -1219,7 +1219,727 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="/mbtico-ctrl.js?v=1"></script>
+<script>/**
+ * mbtico-ctrl.js — 관제센터 공통 모듈
+ * 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
+ *
+ * [포함 기능]
+ *   - Firebase 초기화 (Auth/Firestore/Storage/Messaging)
+ *   - 슈퍼어드민 인증 체크
+ *   - 아코디언 UI 컨트롤
+ *   - FCM 푸시 발송 (_ctrlNotify)
+ *   - 공통 유틸 (_ctrlToast, _ctrlFmt, _ctrlBadge)
+ *   - 각 섹션 로더 (가입승인/고객사/채팅/공지/결제)
+ */
+
+// ── Firebase 설정 ────────────────────────────────────────────────
+var _FB_CONFIG = {
+  apiKey: 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain: 'mbti-logistics.firebaseapp.com',
+  projectId: 'mbti-logistics',
+  storageBucket: 'mbti-logistics.firebasestorage.app',
+  messagingSenderId: '40761160761',
+  appId: '1:40761160761:web:20545b610f03f534e949e8'
+};
+
+var _db = null, _auth = null, _storage = null;
+var _CU = null; // 현재 로그인 유저
+var _unsubs = []; // Firestore 리스너 해제용
+
+var SA_EMAILS = ['kimdh4790@gmail.com', 'soungkyekim@naver.com'];
+
+// ── 초기화 ────────────────────────────────────────────────────────
+function _ctrlInit() {
+  if (!firebase.apps.length) firebase.initializeApp(_FB_CONFIG);
+  _db      = firebase.firestore();
+  _auth    = firebase.auth();
+  _storage = firebase.storage();
+
+  _auth.onAuthStateChanged(function(user) {
+    if (!user || !SA_EMAILS.includes(user.email)) {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('main-screen').style.display  = 'none';
+      return;
+    }
+    _CU = user;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display  = 'flex';
+    document.getElementById('ctrl-user').textContent = user.email;
+    _ctrlStartListeners();
+  });
+}
+
+function _ctrlLogin() {
+  var email = document.getElementById('l-email').value.trim();
+  var pw    = document.getElementById('l-pw').value;
+  _auth.signInWithEmailAndPassword(email, pw)
+    .catch(function(e) { _ctrlToast('❌ ' + e.message); });
+}
+
+function _ctrlLogout() {
+  _unsubs.forEach(function(u) { u && u(); });
+  _unsubs = [];
+  _auth.signOut();
+}
+
+// ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
+function _ctrlStartListeners() {
+  // 가입 대기 뱃지
+  var u1 = _db.collection('join_requests')
+    .where('status','==','pending')
+    .onSnapshot(function(snap) {
+      _ctrlBadge('badge-join', snap.size);
+    });
+  _unsubs.push(u1);
+
+  // 채팅 미읽음 뱃지 (슈퍼어드민 기준 unreadSA)
+  var u2 = _db.collection('chats')
+    .onSnapshot(function(snap) {
+      var total = 0;
+      snap.forEach(function(d) { total += (d.data().unreadSA || 0); });
+      _ctrlBadge('badge-chat', total);
+    });
+  _unsubs.push(u2);
+
+  // 대시보드 초기 로드
+  _ctrlLoadDashboard();
+}
+
+// ── 아코디언 ────────────────────────────────────────────────────
+function _ctrlToggle(id) {
+  var body = document.getElementById('acc-' + id);
+  var icon = document.getElementById('ico-' + id);
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  icon.textContent   = open ? '▶' : '▼';
+  if (!open) _ctrlLoad(id); // 처음 열 때만 로드
+}
+
+var _loaded = {}; // 이미 로드한 섹션 기록
+function _ctrlLoad(id) {
+  if (_loaded[id]) return;
+  _loaded[id] = true;
+  var fn = {
+    dashboard: _ctrlLoadDashboard,
+    join:      _ctrlLoadJoin,
+    companies: _ctrlLoadCompanies,
+    chat:      _ctrlLoadChat,
+    notice:    _ctrlLoadNotice,
+    billing:   _ctrlLoadBilling
+  }[id];
+  if (fn) fn();
+}
+
+// ── 공통 유틸 ────────────────────────────────────────────────────
+function _ctrlToast(msg) {
+  var t = document.createElement('div');
+  t.className = 'ctrl-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 3000);
+}
+
+function _ctrlBadge(id, n) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n > 0 ? n : '';
+  el.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
+function _ctrlFmtDate(iso) {
+  if (!iso) return '-';
+  return iso.slice(0, 10);
+}
+
+function _ctrlFmtTs(ts) {
+  if (!ts) return '-';
+  var d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+}
+
+// ── FCM 푸시 발송 ─────────────────────────────────────────────────
+// type: 'dealer' | 'admin' | 'all'
+function _ctrlNotify(type, dealerId, title, body, data) {
+  return fetch('https://donway.ai.kr/api/ctrl-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, dealerId, title, body, data: data || {} })
+  }).catch(function() {});
+}
+
+// 승인 알림 (FCM + 카카오)
+function _ctrlNotifyApproval(dealer) {
+  var url  = 'https://donway.ai.kr/c/' + (dealer.slug || dealer.uid);
+  var body = '가입이 승인됐습니다! 🎉\n전용URL: ' + url + '\n아이디: ' + dealer.email;
+  _ctrlNotify('dealer', dealer.uid, '✅ DONWAY 가입 승인', body, {
+    type: 'approval', url: url, loginId: dealer.email, slug: dealer.slug
+  });
+  // 카카오 알림톡도 발송
+  fetch('https://donway.ai.kr/api/alimtalk', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      phone: dealer.phone || '',
+      template: 'approval',
+      params: { name: dealer.companyName, url, id: dealer.email }
+    })
+  }).catch(function() {});
+}
+
+// ── 📊 대시보드 ──────────────────────────────────────────────────
+function _ctrlLoadDashboard() {
+  var c = document.getElementById('acc-dashboard');
+  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
+
+  Promise.all([
+    _db.collection('companies').get(),
+    _db.collection('join_requests').where('status','==','pending').get(),
+    _db.collection('join_requests').where('status','==','approved')
+      .where('createdAt','>=', new Date(Date.now()-30*86400000).toISOString()).get()
+  ]).then(function(results) {
+    var all     = results[0];
+    var pending = results[1];
+    var thisMonth = results[2];
+
+    var total    = all.size;
+    var active   = 0, trial = 0, suspended = 0;
+    all.forEach(function(d) {
+      var s = d.data().status;
+      if (s === 'approved' || s === 'active') active++;
+      else if (s === 'trial') trial++;
+      else if (s === 'suspended') suspended++;
+    });
+
+    // 만료 임박 (7일 이내)
+    var soon = 0;
+    var cutoff = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+    var today  = new Date().toISOString().slice(0,10);
+    all.forEach(function(d) {
+      var te = d.data().trialEnd || '';
+      if (te >= today && te <= cutoff) soon++;
+    });
+
+    c.innerHTML =
+      '<div class="dash-grid">' +
+        _dashCard('👥 전체 고객사', total, '#0066ff') +
+        _dashCard('✅ 활성', active, '#22c55e') +
+        _dashCard('🎁 체험중', trial, '#f59e0b') +
+        _dashCard('⏸ 정지', suspended, '#ef4444') +
+        _dashCard('🔔 가입 대기', pending.size, '#7c3aed') +
+        _dashCard('⚠️ 만료 임박 7일', soon, '#f97316') +
+      '</div>' +
+      '<div class="ctrl-hint">※ 가입 대기 · 채팅 미읽음은 상단 뱃지에서 실시간 확인</div>';
+  });
+}
+
+function _dashCard(label, val, color) {
+  return '<div class="dash-card">' +
+    '<div class="dash-val" style="color:' + color + '">' + val + '</div>' +
+    '<div class="dash-label">' + label + '</div>' +
+    '</div>';
+}
+
+// ── ✅ 가입 승인 ─────────────────────────────────────────────────
+function _ctrlLoadJoin() {
+  var c = document.getElementById('acc-join');
+  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
+
+  // companies 컬렉션에서 pending/hold 상태 직접 조회
+  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+    .get().then(function(snap) {
+      var docs = snap.docs.filter(function(d) {
+        return ['pending','hold'].includes(d.data().status);
+      });
+      if (!docs.length) {
+        c.innerHTML = '<div class="ctrl-empty">대기 중인 신청이 없습니다</div>';
+        return;
+      }
+      var html = '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+        '<th>업체명</th><th>이메일</th><th>도메인</th><th>신청일</th><th>상태</th><th>처리</th>' +
+        '</tr></thead><tbody>';
+      docs.forEach(function(doc) {
+        var d = doc.data(), id = doc.id;
+        var statusBadge = d.status === 'pending'
+          ? '<span class="badge badge-warn">대기</span>'
+          : '<span class="badge badge-hold">보류</span>';
+        // 도메인 자동 감지
+        var svcs = (d.services||[]).join(',') || d.serviceType || '';
+        var domain = svcs.includes('table_order')||svcs.includes('kiosk')||svcs.includes('filo')
+          ? 'FILO'
+          : svcs.includes('dine') ? 'DINE' : 'DONWAY';
+        var createdStr = d.createdAt
+          ? (d.createdAt.toDate
+              ? d.createdAt.toDate().toISOString().slice(0,10)
+              : String(d.createdAt).slice(0,10))
+          : '-';
+        html += '<tr>' +
+          '<td><b>' + (d.companyName||d.name||'-') + '</b><br>' +
+            '<span style="font-size:10px;color:var(--tx2)">' + (d.bizNumber||'') + '</span></td>' +
+          '<td style="font-size:11px">' + (d.email||'-') + '</td>' +
+          '<td><span class="badge badge-ok">' + domain + '</span></td>' +
+          '<td>' + createdStr + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td>' +
+            '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove('' + id + '')">✅</button> ' +
+            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject('' + id + '')">❌</button> ' +
+            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold('' + id + '')">⏸</button>' +
+          '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      c.innerHTML = html;
+    }).catch(function(e) {
+      c.innerHTML = '<div class="ctrl-empty">오류: ' + e.message + '</div>';
+    });
+}
+function _ctrlApprove(reqId) {
+  _db.collection('join_requests').doc(reqId).get().then(function(doc) {
+    if (!doc.exists) return;
+    var d = doc.data();
+    // 1. join_requests 상태 업데이트
+    _db.collection('join_requests').doc(reqId).update({
+      status: 'approved',
+      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      approvedBy: _CU.email
+    });
+    // 2. companies 상태 업데이트
+    if (d.uid) {
+      var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+      _db.collection('companies').doc(d.uid).set({
+        status: 'trial',
+        plan: 'trial',
+        trialEnd: trialEnd,
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, {merge: true});
+    }
+    // 3. FCM + 카카오 알림
+    _ctrlNotifyApproval({
+      uid: d.uid, email: d.email,
+      companyName: d.companyName, phone: d.phone,
+      slug: d.slug
+    });
+    _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
+  });
+}
+
+function _ctrlReject(reqId) {
+  var reason = prompt('거절 사유 (고객에게 전달됩니다):');
+  if (reason === null) return;
+  _db.collection('join_requests').doc(reqId).update({
+    status: 'rejected',
+    rejectReason: reason,
+    rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() { _ctrlToast('❌ 거절 처리 완료'); });
+}
+
+function _ctrlHold(reqId) {
+  var memo = prompt('보류 메모:');
+  if (memo === null) return;
+  _db.collection('join_requests').doc(reqId).update({
+    status: 'hold', holdMemo: memo,
+    heldAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
+}
+
+// ── 👥 고객사 관리 ────────────────────────────────────────────────
+var _compSearch = '', _compFilter = 'all';
+
+function _ctrlLoadCompanies() {
+  var c = document.getElementById('acc-companies');
+  c.innerHTML =
+    '<div class="ctrl-toolbar">' +
+      '<input id="comp-search" class="ctrl-input" placeholder="🔍 업체명/이메일 검색" ' +
+        'oninput="_compSearch=this.value;_renderCompanies()" style="max-width:220px">' +
+      '<select class="ctrl-select" onchange="_compFilter=this.value;_renderCompanies()">' +
+        '<option value="all">전체</option>' +
+        '<option value="trial">체험중</option>' +
+        '<option value="approved">활성</option>' +
+        '<option value="suspended">정지</option>' +
+      '</select>' +
+    '</div>' +
+    '<div id="comp-list"><div class="ctrl-loading">로딩 중...</div></div>';
+
+  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+    .onSnapshot(function(snap) {
+      window._compDocs = [];
+      snap.forEach(function(d) { window._compDocs.push({id:d.id, ...d.data()}); });
+      _renderCompanies();
+    });
+}
+
+function _renderCompanies() {
+  var docs = (window._compDocs || []).filter(function(d) {
+    var matchSearch = !_compSearch ||
+      (d.companyName||'').includes(_compSearch) ||
+      (d.email||'').includes(_compSearch);
+    var matchFilter = _compFilter === 'all' || d.status === _compFilter ||
+      (d.plan === _compFilter);
+    return matchSearch && matchFilter;
+  });
+
+  var c = document.getElementById('comp-list');
+  if (!docs.length) { c.innerHTML = '<div class="ctrl-empty">검색 결과 없음</div>'; return; }
+
+  var html = '<div class="comp-cards">';
+  docs.forEach(function(d) {
+    var statusColor = {trial:'#f59e0b', approved:'#22c55e', active:'#22c55e', suspended:'#ef4444'}[d.status] || '#888';
+    html += '<div class="comp-card">' +
+      '<div class="comp-card-head">' +
+        '<div>' +
+          '<div class="comp-name">' + (d.companyName||d.name||'이름없음') + '</div>' +
+          '<div class="comp-email">' + (d.email||'-') + '</div>' +
+        '</div>' +
+        '<span class="badge" style="background:' + statusColor + '20;color:' + statusColor + '">' + (d.status||'-') + '</span>' +
+      '</div>' +
+      '<div class="comp-meta">' +
+        '<span>📅 체험만료: ' + _ctrlFmtDate(d.trialEnd) + '</span>' +
+        '<span>📦 플랜: ' + (d.plan||'-') + '</span>' +
+        '<span>🔗 슬러그: ' + (d.slug||'-') + '</span>' +
+      '</div>' +
+      '<div class="comp-actions">' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenDetail(\'' + d.id + '\')">📋 상세</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenChat(\'' + d.id + '\',\'' + (d.companyName||'') + '\')">💬 채팅</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlExtendTrial(\'' + d.id + '\')">⏰ 연장</button>' +
+        (d.status !== 'suspended'
+          ? '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlSuspend(\'' + d.id + '\')">⏸ 정지</button>'
+          : '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlUnsuspend(\'' + d.id + '\')">▶ 복구</button>') +
+      '</div>' +
+      // 기능 on/off
+      '<div class="comp-features">' +
+        '<div class="feat-label">⚙️ 기능:</div>' +
+        _renderFeatureToggles(d.id, d.services || []) +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  c.innerHTML = html;
+}
+
+var _ALL_FEATURES = [
+  {key:'settle',      label:'AI정산'},
+  {key:'table_order', label:'테이블오더'},
+  {key:'kiosk',       label:'키오스크'},
+  {key:'qr_attend',   label:'QR출퇴근'},
+  {key:'inventory',   label:'재고관리'},
+  {key:'reservation', label:'예약관리'},
+  {key:'member_crm',  label:'회원CRM'},
+  {key:'sales_analytics', label:'매출분석'},
+];
+
+function _renderFeatureToggles(dealerId, services) {
+  return _ALL_FEATURES.map(function(f) {
+    var on = services.includes(f.key);
+    return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+      'onclick="_ctrlToggleFeature(\'' + dealerId + '\',\'' + f.key + '\',' + !on + ')">' +
+      (on?'✅ ':'⬜ ') + f.label + '</button>';
+  }).join('');
+}
+
+function _ctrlToggleFeature(dealerId, key, enable) {
+  var op = enable
+    ? firebase.firestore.FieldValue.arrayUnion(key)
+    : firebase.firestore.FieldValue.arrayRemove(key);
+  _db.collection('companies').doc(dealerId).update({services: op})
+    .then(function() {
+      _ctrlToast((enable?'✅ ':'❌ ') + key + ' ' + (enable?'활성화':'비활성화'));
+      // 고객사에게 알림
+      _ctrlNotify('dealer', dealerId,
+        enable ? '✅ 기능 활성화' : '❌ 기능 비활성화',
+        key + ' 기능이 ' + (enable?'활성화':'비활성화') + '됐습니다.',
+        {type:'feature', key, enable}
+      );
+    });
+}
+
+function _ctrlExtendTrial(dealerId) {
+  var days = prompt('연장할 일수 (숫자만):', '30');
+  if (!days || isNaN(days)) return;
+  _db.collection('companies').doc(dealerId).get().then(function(doc) {
+    var cur = doc.data().trialEnd || new Date().toISOString().slice(0,10);
+    var newDate = new Date(new Date(cur).getTime() + parseInt(days)*86400000).toISOString().slice(0,10);
+    _db.collection('companies').doc(dealerId).update({trialEnd: newDate})
+      .then(function() { _ctrlToast('⏰ 체험 ' + newDate + '까지 연장'); });
+  });
+}
+
+function _ctrlSuspend(dealerId) {
+  if (!confirm('정지 처리하시겠습니까?')) return;
+  _db.collection('companies').doc(dealerId).update({status:'suspended'})
+    .then(function() { _ctrlToast('⏸ 정지 처리 완료'); });
+}
+
+function _ctrlUnsuspend(dealerId) {
+  _db.collection('companies').doc(dealerId).update({status:'approved'})
+    .then(function() { _ctrlToast('▶ 계정 복구 완료'); });
+}
+
+// 고객사 상세 (서류 업로드)
+function _ctrlOpenDetail(dealerId) {
+  _db.collection('companies').doc(dealerId).get().then(function(doc) {
+    var d = doc.data();
+    var overlay = document.getElementById('detail-overlay');
+    var box     = document.getElementById('detail-box');
+    box.innerHTML =
+      '<div class="modal-hdr">' +
+        '<div class="modal-title">📋 ' + (d.companyName||'고객사') + ' 상세</div>' +
+        '<button class="modal-close" onclick="_ctrlCloseDetail()">✕</button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div class="detail-row"><b>이메일</b> ' + (d.email||'-') + '</div>' +
+        '<div class="detail-row"><b>연락처</b> ' + (d.phone||'-') + '</div>' +
+        '<div class="detail-row"><b>사업자번호</b> ' + (d.bizNumber||'-') + '</div>' +
+        '<div class="detail-row"><b>플랜</b> ' + (d.plan||'-') + '</div>' +
+        '<div class="detail-row"><b>체험만료</b> ' + _ctrlFmtDate(d.trialEnd) + '</div>' +
+        '<div class="detail-row"><b>슬러그</b> ' + (d.slug||'-') + '</div>' +
+        '<hr>' +
+        '<div class="detail-section">📄 서류</div>' +
+        _renderDocs(dealerId, d) +
+      '</div>';
+    overlay.style.display = 'flex';
+  });
+}
+
+function _renderDocs(dealerId, d) {
+  var docs = [
+    {key:'bizLicenseUrl',  label:'사업자등록증'},
+    {key:'contractUrl',    label:'계약서'},
+    {key:'idCardUrl',      label:'신분증 (선택)'},
+  ];
+  return docs.map(function(doc) {
+    var url = d[doc.key];
+    return '<div class="doc-row">' +
+      '<span class="doc-label">' + doc.label + '</span>' +
+      (url
+        ? '<a href="' + url + '" target="_blank" class="ctrl-btn ctrl-btn-sub">👁 보기</a>'
+        : '<span class="doc-none">미등록</span>') +
+      '<label class="ctrl-btn ctrl-btn-sub" style="cursor:pointer">' +
+        '📤 업로드' +
+        '<input type="file" accept="image/*,.pdf" style="display:none" ' +
+          'onchange="_ctrlUploadDoc(\'' + dealerId + '\',\'' + doc.key + '\',this)">' +
+      '</label>' +
+    '</div>';
+  }).join('');
+}
+
+function _ctrlUploadDoc(dealerId, field, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var ext  = file.name.split('.').pop();
+  var path = 'companies/' + dealerId + '/' + field + '.' + ext;
+  _ctrlToast('📤 업로드 중...');
+  _storage.ref(path).put(file).then(function(snap) {
+    return snap.ref.getDownloadURL();
+  }).then(function(url) {
+    var update = {};
+    update[field] = url;
+    update[field.replace('Url','UploadedAt')] = new Date().toISOString().slice(0,10);
+    return _db.collection('companies').doc(dealerId).update(update);
+  }).then(function() {
+    _ctrlToast('✅ 서류 업로드 완료');
+    _ctrlOpenDetail(dealerId); // 새로고침
+  }).catch(function(e) { _ctrlToast('❌ ' + e.message); });
+}
+
+function _ctrlCloseDetail() {
+  document.getElementById('detail-overlay').style.display = 'none';
+}
+
+// ── 💬 채팅 ──────────────────────────────────────────────────────
+var _chatDealerId = '', _chatUnsub = null;
+
+function _ctrlLoadChat() {
+  var c = document.getElementById('acc-chat');
+  c.innerHTML =
+    '<div class="chat-layout">' +
+      '<div class="chat-list" id="chat-list"><div class="ctrl-loading">로딩 중...</div></div>' +
+      '<div class="chat-room" id="chat-room">' +
+        '<div class="chat-room-empty">← 고객사를 선택하세요</div>' +
+      '</div>' +
+    '</div>';
+  _ctrlLoadChatList();
+}
+
+function _ctrlLoadChatList() {
+  _db.collection('chats').orderBy('lastAt','desc')
+    .onSnapshot(function(snap) {
+      var list = document.getElementById('chat-list');
+      if (!list) return;
+      if (snap.empty) { list.innerHTML = '<div class="ctrl-empty">채팅 없음</div>'; return; }
+      var html = '';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var unread = d.unreadSA || 0;
+        var active = _chatDealerId === doc.id ? ' chat-item-active' : '';
+        html += '<div class="chat-item' + active + '" onclick="_ctrlOpenChat(\'' + doc.id + '\',\'' + (d.companyName||doc.id) + '\')">' +
+          '<div class="chat-item-name">' + (d.companyName||doc.id) +
+            (unread ? '<span class="chat-badge">' + unread + '</span>' : '') +
+          '</div>' +
+          '<div class="chat-item-last">' + (d.lastMsg||'').slice(0,30) + '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+    });
+}
+
+function _ctrlOpenChat(dealerId, companyName) {
+  _chatDealerId = dealerId;
+  if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; }
+
+  // 미읽음 초기화
+  _db.collection('chats').doc(dealerId).set({unreadSA:0},{merge:true});
+
+  var room = document.getElementById('chat-room');
+  if (!room) {
+    // 고객사 관리탭에서 열렸을 경우 채팅탭 활성화
+    _loaded.chat = false;
+    _ctrlToggle('chat');
+    setTimeout(function() { _ctrlOpenChat(dealerId, companyName); }, 500);
+    return;
+  }
+
+  room.innerHTML =
+    '<div class="chat-room-hdr">' + (companyName||dealerId) + '</div>' +
+    '<div class="chat-msgs" id="chat-msgs"></div>' +
+    '<div class="chat-input-row">' +
+      '<input id="chat-input" class="ctrl-input" placeholder="메시지 입력..." ' +
+        'onkeydown="if(event.key===\'Enter\')_ctrlSendChat()">' +
+      '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlSendChat()">전송 ✈️</button>' +
+    '</div>';
+
+  _chatUnsub = _db.collection('chats').doc(dealerId).collection('messages')
+    .orderBy('createdAt','asc').limit(100)
+    .onSnapshot(function(snap) {
+      var msgs = document.getElementById('chat-msgs');
+      if (!msgs) return;
+      var html = '';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var isSA = d.sender === 'sa';
+        html += '<div class="chat-msg ' + (isSA?'chat-msg-sa':'chat-msg-dealer') + '">' +
+          '<div class="chat-msg-text">' + d.text + '</div>' +
+          '<div class="chat-msg-time">' + _ctrlFmtTs(d.createdAt) + '</div>' +
+        '</div>';
+      });
+      msgs.innerHTML = html || '<div class="ctrl-empty">메시지 없음</div>';
+      msgs.scrollTop = msgs.scrollHeight;
+    });
+}
+
+function _ctrlSendChat() {
+  if (!_chatDealerId) return;
+  var input = document.getElementById('chat-input');
+  var text  = (input.value||'').trim();
+  if (!text) return;
+  input.value = '';
+
+  var batch   = _db.batch();
+  var msgRef  = _db.collection('chats').doc(_chatDealerId).collection('messages').doc();
+  batch.set(msgRef, {
+    text: text, sender: 'sa',
+    senderName: '엠비티아이 관리자',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  batch.set(_db.collection('chats').doc(_chatDealerId), {
+    lastMsg: text,
+    lastAt:  firebase.firestore.FieldValue.serverTimestamp(),
+    unreadCustomer: firebase.firestore.FieldValue.increment(1)
+  }, {merge: true});
+  batch.commit().then(function() {
+    // FCM 푸시
+    _ctrlNotify('dealer', _chatDealerId, '💬 관리자 메시지', text, {type:'chat'});
+  });
+}
+
+// ── 📢 공지 발송 ─────────────────────────────────────────────────
+function _ctrlLoadNotice() {
+  var c = document.getElementById('acc-notice');
+  c.innerHTML =
+    '<div class="notice-form">' +
+      '<div class="ctrl-label">수신 대상</div>' +
+      '<select id="n-target" class="ctrl-select">' +
+        '<option value="all">전체 고객사</option>' +
+        '<option value="active">활성 고객사만</option>' +
+        '<option value="trial">체험 중만</option>' +
+      '</select>' +
+      '<div class="ctrl-label" style="margin-top:12px">제목</div>' +
+      '<input id="n-title" class="ctrl-input" placeholder="공지 제목">' +
+      '<div class="ctrl-label" style="margin-top:12px">내용</div>' +
+      '<textarea id="n-body" class="ctrl-input" rows="4" placeholder="공지 내용" style="resize:vertical"></textarea>' +
+      '<div style="margin-top:8px;font-size:12px;color:#888">✅ FCM 푸시 + Firestore notices 동시 저장</div>' +
+      '<button class="ctrl-btn ctrl-btn-ok" style="margin-top:12px;width:100%" onclick="_ctrlSendNotice()">📢 발송</button>' +
+    '</div>' +
+    '<hr>' +
+    '<div class="ctrl-label">최근 공지 (notices 컬렉션)</div>' +
+    '<div id="notice-list"><div class="ctrl-loading">로딩 중...</div></div>';
+
+  _db.collection('notices').orderBy('createdAt','desc').limit(10)
+    .get().then(function(snap) {
+      var list = document.getElementById('notice-list');
+      if (!list) return;
+      if (snap.empty) { list.innerHTML = '<div class="ctrl-empty">공지 없음</div>'; return; }
+      var html = '';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        html += '<div class="notice-item">' +
+          '<div class="notice-title">' + (d.title||'-') + '</div>' +
+          '<div class="notice-body">' + (d.body||'').slice(0,80) + '</div>' +
+          '<div class="notice-meta">' + _ctrlFmtDate(d.createdAt) + ' · ' + (d.target||'전체') + '</div>' +
+        '</div>';
+      });
+      list.innerHTML = html;
+    });
+}
+
+function _ctrlSendNotice() {
+  var title  = (document.getElementById('n-title').value||'').trim();
+  var body   = (document.getElementById('n-body').value||'').trim();
+  var target = document.getElementById('n-target').value;
+  if (!title || !body) { _ctrlToast('제목과 내용을 입력하세요'); return; }
+
+  // Firestore notices 저장
+  _db.collection('notices').add({
+    title, body, target,
+    dealerId: null, // null = 전체공지
+    createdAt: new Date().toISOString(),
+    createdBy: _CU.email
+  });
+  // FCM 푸시 (Worker API)
+  _ctrlNotify(target === 'all' ? 'all' : 'group', target, '📢 ' + title, body, {type:'notice'});
+  _ctrlToast('📢 공지 발송 완료!');
+  document.getElementById('n-title').value = '';
+  document.getElementById('n-body').value  = '';
+  _loaded.notice = false; // 목록 새로고침
+  _ctrlLoadNotice();
+}
+
+// ── 💰 결제 현황 ─────────────────────────────────────────────────
+function _ctrlLoadBilling() {
+  var c = document.getElementById('acc-billing');
+  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
+  _db.collection('payment_requests').orderBy('createdAt','desc').limit(50)
+    .get().then(function(snap) {
+      if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">결제 내역 없음</div>'; return; }
+      var totalAmt = 0;
+      var html = '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+        '<th>업체명</th><th>플랜</th><th>금액</th><th>상태</th><th>일자</th>' +
+        '</tr></thead><tbody>';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        totalAmt += (d.amount || 0);
+        var statusColor = {paid:'#22c55e',pending:'#f59e0b',failed:'#ef4444'}[d.status] || '#888';
+        html += '<tr>' +
+          '<td>' + (d.companyName||'-') + '</td>' +
+          '<td>' + (d.plan||'-') + '</td>' +
+          '<td>₩' + (d.amount||0).toLocaleString() + '</td>' +
+          '<td><span style="color:' + statusColor + '">' + (d.status||'-') + '</span></td>' +
+          '<td>' + _ctrlFmtDate(d.createdAt) + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      html = '<div class="billing-total">이번 조회 합계: <b>₩' + totalAmt.toLocaleString() + '</b></div>' + html;
+      c.innerHTML = html;
+    });
+}
+</script>
 <script>
   // 앱 시작
   window.addEventListener('DOMContentLoaded', _ctrlInit);
