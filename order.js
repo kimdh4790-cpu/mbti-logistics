@@ -169,11 +169,18 @@ function _checkExistingOrder(){
  // localStorage에 이전 주문 ID 있는지 확인
  var lastId=localStorage.getItem('filo_order_'+_did);
  if(!lastId)return;
- // 해당 주문이 아직 pending/ready 상태인지 확인
- _db.collection('filo_orders').doc(lastId).get().then(function(doc){
-  if(!doc.exists)return;
+ // 현재 스캔한 테이블이 비어있으면 localStorage 초기화 후 종료
+ var tDocId=_did+'_t'+_tNum;
+ _db.collection('filo_tables').doc(tDocId).get().then(function(tDoc){
+  if(tDoc.exists&&tDoc.data().status==='empty'){
+   try{localStorage.removeItem('filo_order_'+_did);}catch(e){}
+   return;
+  }
+  // 해당 주문이 아직 pending/ready 상태인지 확인
+  _db.collection('filo_orders').doc(lastId).get().then(function(doc){
+  if(!doc.exists){try{localStorage.removeItem('filo_order_'+_did);}catch(e){}return;}
   var d=doc.data();
-  if(d.status!=='pending'&&d.status!=='ready')return;
+  if(d.status!=='pending'&&d.status!=='ready'){try{localStorage.removeItem('filo_order_'+_did);}catch(e){}return;}
   if(String(d.tableNum)===String(_tNum))return; // 같은 테이블이면 무시
   // 다른 테이블 QR 스캔 → 이동 확인 팝업
   var pop=document.createElement('div');
@@ -205,6 +212,7 @@ function _checkExistingOrder(){
    }).catch(function(e){_filoToast('❌ 이동 실패: '+e.message);pop.remove();});
   };
   document.getElementById('_mv_no').onclick=function(){pop.remove();};
+  }).catch(function(){});
  }).catch(function(){});
 }
 
