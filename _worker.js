@@ -3772,7 +3772,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
               services:      {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
               industryType:  {stringValue: 'coupang'},
               dealerId:      {stringValue: dealerId},
-              trialEnd:      {stringValue: '2026-12-31'},
+              trialEnd:      {stringValue: new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10)},
               createdAt:     {stringValue: new Date().toISOString()}
             }
           };
@@ -3909,7 +3909,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
                   services:     {arrayValue: {values: [{stringValue:'settle'},{stringValue:'qr'},{stringValue:'payroll'}]}},
                   industryType: {stringValue: 'coupang'},
                   dealerId:     {stringValue: dealerId},
-                  trialEnd:     {stringValue: '2026-12-31'},
+                  trialEnd:     {stringValue: new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10)},
                   settlePaid:   {booleanValue: true},
                   qrPaid:       {booleanValue: true},
                   payrollPaid:  {booleanValue: true},
@@ -3936,7 +3936,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
                   payrollPaid:   {booleanValue: true},
                   inventoryPaid: {booleanValue: true},
                   kioskPaid:     {booleanValue: true},
-                  trialEnd:      {stringValue: '2026-12-31'},
+                  trialEnd:      {stringValue: new Date(Date.now()+30*24*60*60*1000).toISOString().slice(0,10)},
                   dealerId:      {stringValue: dealerId}
                 }
               };

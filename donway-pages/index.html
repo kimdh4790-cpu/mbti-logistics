@@ -263,7 +263,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <!-- ★ STEP 1: 기업 정보 -->
       <div id="reg-step1">
         <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
-          🎁 <strong>7일 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
+          🎁 <strong>첫달(30일) 무료 체험</strong> — 오픈 이벤트 · 카드 등록 불필요
         </div>
         <div class="fg"><label>회사명 *</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
         <div class="fg"><label>대표자명 *</label><input id="r-rep" type="text" placeholder="홍길동"></div>
@@ -8742,7 +8742,7 @@ function showApp(){
             }).catch(function(){});
             return;
           }
-          // 만료 7일 전 경고 + 만료 시 결제 팝업
+          // 만료 7일 전 경고 + 만료 시 결제 팝업 (체험 30일)
           if(exp){
             var daysLeft=Math.ceil((exp-now)/(1000*60*60*24));
             if(daysLeft<=0){
@@ -9271,7 +9271,7 @@ function doRegister(){
   var isOwner=OWNER_BIZ.includes(biz)||OWNER_EMAIL.includes(email);
   var plan=isOwner?'OWNER':'trial';
   var now=new Date();
-  var trialEnd=new Date(now.getTime()+7*24*60*60*1000);
+  var trialEnd=new Date(now.getTime()+30*24*60*60*1000);
   var companyCode=generateCompanyCode();
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
@@ -9381,7 +9381,7 @@ function doRegister(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         title:'신규 가입!',
-        body:company+' | 코드: '+companyCode+' | 7일 무료체험',
+        body:company+' | 코드: '+companyCode+' | 30일 무료체험 (오픈 이벤트)',
         type:'join'
       })
     }).catch(function(){});
