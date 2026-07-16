@@ -8447,7 +8447,7 @@ if(window.location.hash==='#join'){
               else if(cd.qrPaid&&!cd.settlePaid&&!cd.payrollPaid)_CU.serviceType='qr';
               else if(cd.settlePaid)_CU.serviceType='settle';
             }
-            var _today=_today();
+            var _todayStr=_today();
             // ★ 승인 대기 체크
             if(cd.status==='pending'&&!isSuperAdmin()){
               (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
@@ -8478,22 +8478,22 @@ if(window.location.hash==='#join'){
               }
             }
             var trialExp=cd.trialExpiry||cd.trialEnd||'';
-            if(trialExp&&trialExp>=_today&&(cd.plan==='trial'||cd.status==='trial')){
+            if(trialExp&&trialExp>=_todayStr&&(cd.plan==='trial'||cd.status==='trial')){
               window._cachedHasPaid=true;
               window._trialActive=true;
               window._trialExpiry=trialExp;
-              var dDiff=Math.ceil((new Date(trialExp)-new Date(_today))/(1000*60*60*24));
+              var dDiff=Math.ceil((new Date(trialExp)-new Date(_todayStr))/(1000*60*60*24));
               if(dDiff<=3){setTimeout(function(){_showTrialBanner(dDiff);},1000);}
-            } else if((cd.plan==='trial'||cd.status==='trial')&&trialExp&&trialExp<_today){
+            } else if((cd.plan==='trial'||cd.status==='trial')&&trialExp&&trialExp<_todayStr){
               window._cachedHasPaid=false;
               window._trialActive=false;
               window._trialExpired=true;
               setTimeout(function(){_showTrialExpiredPopup();},1500);
             } else if(cd.subscriptions&&cd.subscriptions.donway&&cd.subscriptions.donway.active){
               var subExp=cd.subscriptions.donway.expiry||'';
-              if(!subExp||subExp>=_today){window._cachedHasPaid=true;}
+              if(!subExp||subExp>=_todayStr){window._cachedHasPaid=true;}
             }
-            if(cd.plan==='trial'&&cd.trialEnd&&cd.trialEnd>=_today){
+            if(cd.plan==='trial'&&cd.trialEnd&&cd.trialEnd>=_todayStr){
               window._cachedHasPaid=true;
               window._trialActive=true;
             }
@@ -8758,7 +8758,7 @@ function showApp(){
     _db.collection('companies').doc(_trialDid).get().then(function(snap){
       if(snap.exists){
         var _cd=snap.data();
-        var _today=_today();
+        var _todayStr=_today();
         if(_cd.plan==='trial'&&_cd.trialEnd&&_cd.trialEnd>=_today){
           window._cachedHasPaid=true;
           window._trialActive=true;
