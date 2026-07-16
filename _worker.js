@@ -2336,7 +2336,6 @@ async function acceptExchange(){
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
       if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
-      if (path === '/mbti') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/mbtico-join' || path === '/company-join') return serveKVFile(env, 'mbtico_join.html', 'text/html');
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
