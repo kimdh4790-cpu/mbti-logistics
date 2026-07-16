@@ -34,14 +34,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .nav-btn2:hover{border-color:rgba(255,255,255,.3);color:#fff}
 
 /* ── 도트 네비 ── */
-.dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:99}
+.dots{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;flex-direction:row;gap:6px;z-index:100}
 .dot{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);cursor:pointer;transition:.3s}
-.dot.on{height:20px;background:var(--blue)}
+.dot.on{width:20px;background:var(--blue)}
 
 /* ── 슬라이드 ── */
-.wrap{height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth}
+.wrap{height:100dvh;overflow-x:scroll;scroll-snap-type:x mandatory;scroll-behavior:smooth;display:flex;flex-direction:row}
 .wrap::-webkit-scrollbar{display:none}
-.slide{scroll-snap-align:start;min-height:100dvh;width:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:68px 24px 40px;position:relative;overflow:hidden}
+.slide{scroll-snap-align:start;min-height:100dvh;min-width:100vw;width:100vw;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:68px 24px 40px;position:relative;overflow:hidden}
 
 /* ── 글로우 ── */
 .g{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;opacity:.55}
@@ -87,15 +87,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .fitem-desc{font-size:10.5px;color:var(--tx2);line-height:1.45}
 
 /* ── 비교 테이블 ── */
-.comp-table{width:100%;max-width:440px;border-collapse:collapse;font-size:12px}
-.comp-table th{padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--tx2);border-bottom:1px solid var(--bd)}
-.comp-table th.hi{color:var(--blue);font-size:11px}
-.comp-table td{padding:9px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.04)}
-.comp-table td:first-child{text-align:left;color:var(--tx2);font-size:11px}
-.comp-table td.hi{color:var(--green);font-weight:700}
-.comp-table td.no{color:var(--tx3)}
-.comp-row-last td{border-bottom:none;font-weight:800;font-size:13px}
-.comp-row-last td.hi{color:var(--blue)}
+
+
+
+
+
+
+
+
+
 
 /* ── 요금 카드 ── */
 .pcards{display:flex;gap:10px;width:100%;max-width:440px;flex-wrap:wrap;justify-content:center}
@@ -141,7 +141,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .form-input::placeholder{color:var(--tx3)}
 
 /* ── 애니 ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .slide.vis .inner{animation:fadeUp .5s ease both}
@@ -160,14 +160,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .slide.vis .fitem:nth-child(6){animation:fadeUp .45s .34s ease both}
 .slide.vis .platform-card:nth-child(1){animation:fadeUp .5s .1s ease both}
 .slide.vis .platform-card:nth-child(2){animation:fadeUp .5s .22s ease both}
-.slide.vis .comp-row td{opacity:0}
-.slide.vis .comp-row:nth-child(1) td{animation:fadeIn .3s .05s ease forwards}
-.slide.vis .comp-row:nth-child(2) td{animation:fadeIn .3s .12s ease forwards}
-.slide.vis .comp-row:nth-child(3) td{animation:fadeIn .3s .19s ease forwards}
-.slide.vis .comp-row:nth-child(4) td{animation:fadeIn .3s .26s ease forwards}
-.slide.vis .comp-row:nth-child(5) td{animation:fadeIn .3s .33s ease forwards}
-.slide.vis .comp-row:nth-child(6) td{animation:fadeIn .3s .40s ease forwards}
-.slide.vis .comp-row:nth-child(7) td{animation:fadeIn .3s .47s ease forwards}
+.slide.vis 
+.slide.vis 
+.slide.vis 
+.slide.vis 
+.slide.vis 
+.slide.vis 
+.slide.vis 
+.slide.vis 
 .slide.vis .step:nth-child(1){animation:fadeUp .45s .05s ease both}
 .slide.vis .step:nth-child(2){animation:fadeUp .45s .15s ease both}
 .slide.vis .step:nth-child(3){animation:fadeUp .45s .25s ease both}
@@ -291,32 +291,354 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 </div>
 
 <!-- ══ S4 경쟁사 비교 ══════════════════════════════════════════ -->
-<div class="slide" id="s4">
-  <div class="g" style="width:280px;height:280px;background:radial-gradient(var(--purple),transparent);top:-60px;left:-40px;opacity:.3"></div>
-  <div class="inner chip">📊 왜 DONWAY인가?</div>
-  <div class="inner ttl">같은 가격<br><span class="gr-blue">압도적 차이</span></div>
-  <table class="comp-table inner">
-    <thead>
-      <tr>
-        <th style="text-align:left">기능</th>
-        <th class="hi">DONWAY</th>
-        <th>A사</th>
-        <th>B사</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr class="comp-row"><td>업종 무관 지원</td><td class="hi">✅ 전 업종</td><td class="no">택배 전용</td><td class="no">배달 전용</td></tr>
-      <tr class="comp-row"><td>카카오 명세서 발송</td><td class="hi">✅ 자동</td><td class="no">❌</td><td class="no">수동</td></tr>
-      <tr class="comp-row"><td>세무사 자동 연동</td><td class="hi">✅ CSV 자동</td><td class="no">❌</td><td class="no">❌</td></tr>
-      <tr class="comp-row"><td>QR 출퇴근 연동</td><td class="hi">✅ 포함</td><td class="no">❌</td><td class="no">유료 추가</td></tr>
-      <tr class="comp-row"><td>FILO·DINE 연동</td><td class="hi">✅ 실시간</td><td class="no">❌</td><td class="no">❌</td></tr>
-      <tr class="comp-row"><td>맞춤 세팅 지원</td><td class="hi">✅ 무료</td><td class="no">유료</td><td class="no">제한적</td></tr>
-      <tr class="comp-row-last"><td>월 요금 (50명)</td><td class="hi">₩325,000</td><td>₩80,000~</td><td>₩65,000~</td></tr>
-    </tbody>
-  </table>
+<div class="slide" id="s5">
+  <div class="g" style="width:280px;height:280px;background:radial-gradient(var(--gold),transparent);bottom:-60px;right:-40px;opacity:.28"></div>
+  <div class="inner chip">💰 합리적인 요금제</div>
+  <div class="inner ttl">인원 수에 따라<br><span class="gr-blue">자동 할인</span></div>
+  <div class="pcards inner">
+    <div class="pcard">
+      <div class="pcard-name">소규모</div>
+      <div class="pcard-price">₩325,000</div>
+      <div class="pcard-unit">/ 월 · ~50명</div>
+      <ul class="pcard-feats">
+        <li>급여 자동 계산</li>
+        <li>카카오 명세서</li>
+        <li>세무사 연동</li>
+        <li>1개월 무료체험</li>
+      </ul>
+    </div>
+    <div class="pcard best">
+      <div class="pcard-badge">인기</div>
+      <div class="pcard-name">중규모</div>
+      <div class="pcard-price">₩620,000</div>
+      <div class="pcard-unit">/ 월 · ~100명</div>
+      <ul class="pcard-feats">
+        <li>소규모 전체 포함</li>
+        <li>QR 출퇴근 연동</li>
+        <li>마진 분석</li>
+        <li>FILO·DINE 연동</li>
+        <li>전담 세팅 지원</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <div class="pcard-name">대규모</div>
+      <div class="pcard-price">₩2,400,000</div>
+      <div class="pcard-unit">/ 월 · ~500명</div>
+      <ul class="pcard-feats">
+        <li>중규모 전체 포함</li>
+        <li>전담 매니저</li>
+        <li>자동이체 연동</li>
+        <li>맞춤 개발</li>
+      </ul>
+    </div>
+    <div class="pcard">
+      <div class="pcard-name">엔터프라이즈</div>
+      <div class="pcard-price">문의</div>
+      <div class="pcard-unit">500명+</div>
+      <ul class="pcard-feats">
+        <li>대규모 전체 포함</li>
+        <li>전담 개발팀</li>
+        <li>SLA 보장</li>
+        <li>맞춤 계약</li>
+      </ul>
+    </div>
+  </div>
+  <div class="inner" style="margin-top:10px;font-size:11px;color:var(--tx3);text-align:center">카드 등록 없이 1개월 무료체험 · 인원 수에 따라 자동 산정 · 언제든 해지 가능</div>
 </div>
 
-<!-- ══ S5 요금제 ══════════════════════════════════════════ -->
+<!-- ══ S5b 도입 흐름 ══════════════════════════════════════════ -->
+<div class="slide" id="s5b">
+  <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--green),transparent);top:-60px;left:-40px;opacity:.3"></div>
+  <div class="inner chip">🚀 도입 프로세스</div>
+  <div class="inner ttl">세팅까지<br><span class="gr-green">단 2시간</span></div>
+  <div class="steps inner">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div><div class="step-ttl">상담 신청 (10분)</div><div class="step-desc">업종·인원·운영방식 파악 → 맞춤 기능 안내</div></div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div><div class="step-ttl">무료체험 시작 (즉시)</div><div class="step-desc">카드 등록 없이 전체 기능 1개월 무료 체험</div></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div><div class="step-ttl">데이터 등록 (1시간)</div><div class="step-desc">직원명단 + 업종별 단가표 업로드 — 전담 지원</div></div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="background:var(--green)">✓</div>
+      <div><div class="step-ttl">첫 정산 테스트 (30분)</div><div class="step-desc">엑셀 업로드 → 급여 검증 → 카카오 명세서 발송 확인</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S5c 후기 ══════════════════════════════════════════ -->
+<div class="slide" id="s5c">
+  <div class="inner chip">💬 실제 사용자 후기</div>
+  <div class="inner ttl">이미 쓰고 있는<br><span class="gr-blue">사업자들의 이야기</span></div>
+  <div class="reviews inner">
+    <div class="review">
+      <div class="rv-stars">★★★★★</div>
+      <div class="rv-txt">"매달 정산할 때 엑셀 수작업에 2~3시간 걸렸는데 DONWAY 쓰고 5분이면 끝나요. 기사들 명세서도 카카오로 자동 발송되니까 문의 전화가 확 줄었어요."</div>
+      <div class="rv-who">📦 부산 택배 캠프 운영 · 기사 31명</div>
+    </div>
+    <div class="review">
+      <div class="rv-stars">★★★★★</div>
+      <div class="rv-txt">"배달대행 하는데 라이더별 건수 계산이 너무 복잡했어요. DONWAY 쓰고 나서 정산이 자동으로 되고 세무사 자료도 바로 나와서 진짜 편합니다."</div>
+      <div class="rv-who">🛵 대구 배달대행 · 라이더 28명</div>
+    </div>
+    <div class="review">
+      <div class="rv-stars">★★★★★</div>
+      <div class="rv-txt">"FILO로 테이블 주문 받고 DONWAY로 직원 급여 정산하니까 완전 자동이에요. 두 개 연동하니까 매출부터 인건비까지 한눈에 보여요."</div>
+      <div class="rv-who">🍽 부산 외식업 3개 매장 운영</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S6 CTA ══════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="g" style="width:320px;height:320px;background:radial-gradient(var(--blue),transparent);top:-80px;left:-60px;opacity:.4"></div>
+  <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--green),transparent);bottom:-60px;right:-40px;opacity:.3"></div>
+  <div class="inner chip">🎁 지금 시작하세요</div>
+  <div class="inner ttl">1개월 무료체험<br><span class="gr-green">카드 등록 없이</span></div>
+  <div class="inner sub">지금 바로 시작하고 한 달 써보세요<br>마음에 안 들면 언제든 해지</div>
+  <div class="inner btns" style="margin-bottom:20px">
+    <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr/join'">🎁 무료체험 시작</button>
+    <button class="btn-teal" onclick="location.href='https://filo.ai.kr'" >🍽 FILO·DINE 보기</button>
+  </div>
+  <!-- 문의 폼 -->
+  <div class="inner form-wrap">
+    <div style="font-size:13px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px">📩 문의하기</div>
+    <input class="form-input" id="inq-name" placeholder="성함 (선택)">
+    <input class="form-input" id="inq-phone" placeholder="연락처 (선택)">
+    <textarea class="form-input" id="inq-msg" placeholder="문의 내용 (업종, 인원수, 궁금한 점 등)" rows="3" style="resize:none"></textarea>
+    <button onclick="submitInquiry()" style="padding:13px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;transition:.2s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">문의 보내기</button>
+    <div id="inq-result" style="font-size:12px;text-align:center;color:#86efac;display:none">✅ 문의가 접수됐습니다! 빠르게 연락드릴게요.</div>
+  </div>
+  <div class="inner" style="margin-top:16px;font-size:11px;color:var(--tx3);text-align:center">📞 010-4790-3103 · kimdh4790@gmail.com</div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── 업종별 기능 데이터 ─────────────────────────────────────────────
+var INDUSTRY = [
+  [ // 택배
+    {ico:'📊',ttl:'쿠팡 엑셀 자동 파싱',desc:'5가지 포맷 자동 인식 · 라우트·구간·시즌 자동 계산'},
+    {ico:'💬',ttl:'카카오 명세서 발송',desc:'기사별 실지급 명세서 카카오 알림톡 자동 발송'},
+    {ico:'📈',ttl:'캠프별 마진 분석',desc:'캠프별 마진율·건수 실시간 비교 · 이탈 기사 감지'},
+    {ico:'🧾',ttl:'세금계산서 자동',desc:'정산 확정 즉시 사업자별 세금계산서 자동 발행'},
+    {ico:'👨‍💼',ttl:'세무사 자동 연동',desc:'더존 CSV 자동 생성 · 90일 공유 링크'},
+    {ico:'🔗',ttl:'FILO 출퇴근 연동',desc:'QR 출퇴근 → 급여 → 정산 원스톱 자동화'},
+  ],
+  [ // 배달
+    {ico:'🛵',ttl:'배달대행 정산',desc:'쿠팡이츠·배민·바로고 플랫폼별 정산 자동화'},
+    {ico:'💬',ttl:'라이더 명세서',desc:'라이더별 실지급 명세서 카카오 자동 발송'},
+    {ico:'📊',ttl:'차액 정산',desc:'플랫폼 수수료 자동 차감 · 실수령액 계산'},
+    {ico:'📈',ttl:'일별 건수 분석',desc:'라이더별·지역별 배달 건수 통계'},
+    {ico:'🧾',ttl:'세금계산서',desc:'정산 확정 즉시 자동 발행'},
+    {ico:'🔗',ttl:'DINE 배달 연동',desc:'자체 배달 주문 → 정산 자동 통합'},
+  ],
+  [ // 외식업
+    {ico:'🍽',ttl:'직원 급여 자동화',desc:'시급·야간수당·주휴수당 2026 근로기준법 자동'},
+    {ico:'💬',ttl:'카카오 명세서',desc:'직원별 급여 명세서 카카오 자동 발송'},
+    {ico:'🔗',ttl:'FILO QR 출퇴근',desc:'동적 QR 출퇴근 → 급여 자동 계산 연동'},
+    {ico:'📊',ttl:'DINE 매출 연동',desc:'매출·인건비 통합 분석 · 마진율 자동 계산'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달 · 더존 CSV 지원'},
+  ],
+  [ // 청소·용역
+    {ico:'🧹',ttl:'청소 직원 급여',desc:'시급·일급·건당 혼용 자동 계산'},
+    {ico:'💬',ttl:'직원 명세서',desc:'급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'근무표 관리',desc:'주간 근무표 업로드 → 급여 자동 계산'},
+    {ico:'📈',ttl:'지점별 실적',desc:'지점별 매출·마진 실시간 비교'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
+  ],
+  [ // 건설
+    {ico:'🏗️',ttl:'일용직 급여',desc:'날별 인원·금액 다른 일용직 자동 계산'},
+    {ico:'💬',ttl:'작업자 명세서',desc:'일별 작업 내역 명세서 카카오 발송'},
+    {ico:'📋',ttl:'현장별 관리',desc:'현장별 인원·비용 통합 관리'},
+    {ico:'🧾',ttl:'일용직 세금',desc:'일용근로소득세 자동 계산'},
+    {ico:'📈',ttl:'현장 수익 분석',desc:'현장별 마진율 실시간 확인'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'일용직 지급명세서 자동 생성'},
+  ],
+  [ // 뷰티
+    {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산'},
+    {ico:'💬',ttl:'직원 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'QR 근태 관리',desc:'QR 출퇴근 연동 자동 급여 계산'},
+    {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
+  ],
+  [ // 보험
+    {ico:'🛡️',ttl:'설계사 수수료',desc:'상품별 수수료 자동 계산 · 환수 처리'},
+    {ico:'💬',ttl:'설계사 명세서',desc:'월 수수료 명세서 카카오 자동 발송'},
+    {ico:'📊',ttl:'실적 관리',desc:'신계약·유지·환수 통합 관리'},
+    {ico:'📈',ttl:'팀별 실적',desc:'팀장별 팀 실적 통합 분석'},
+    {ico:'🧾',ttl:'세금계산서',desc:'수수료 세금계산서 자동 발행'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 지급 자료 자동 전달'},
+  ],
+  [ // 요양
+    {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산'},
+    {ico:'💬',ttl:'보호사 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
+    {ico:'📋',ttl:'방문 기록',desc:'어르신별 방문 일정·시간 자동 집계'},
+    {ico:'📈',ttl:'센터별 실적',desc:'센터별 방문건수·매출 통계'},
+    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산'},
+    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
+  ],
+];
+
+var curTab = 0;
+function _tab(i){
+  curTab = i;
+  document.querySelectorAll('.tab').forEach(function(t,j){t.classList.toggle('on',j===i);});
+  var el = document.getElementById('fitems');
+  el.innerHTML = INDUSTRY[i].map(function(d){
+    return '<div class="fitem"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
+  }).join('');
+}
+_tab(0);
+
+// ── 도트 & 슬라이드 ───────────────────────────────────────────────
+var wrap = document.getElementById('wrap');
+var slides = wrap.querySelectorAll('.slide');
+var total = slides.length;
+var dotsEl = document.getElementById('dots');
+slides.forEach(function(_,i){
+  var d = document.createElement('div');
+  d.className = 'dot';
+  d.onclick = function(){slides[i].scrollIntoView({behavior:'smooth'});};
+  dotsEl.appendChild(d);
+});
+
+var obs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.add('vis');
+      var i = Array.from(slides).indexOf(e.target);
+      document.querySelectorAll('.dot').forEach(function(d,j){d.classList.toggle('on',j===i);});
+    }
+  });
+},{threshold:0.5});
+slides.forEach(function(s){obs.observe(s);});
+
+// ── 문의 전송 ─────────────────────────────────────────────────────
+async function submitInquiry(){
+  var name = (document.getElementById('inq-name')||{}).value||'';
+  var phone = (document.getElementById('inq-phone')||{}).value||'';
+  var msg = (document.getElementById('inq-msg')||{}).value||'';
+  if(!msg.trim()){alert('문의 내용을 입력해주세요');return;}
+  try{
+    await fetch('https://donway.ai.kr/api/inquiry',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,phone,message:msg,source:'donway_landing',timestamp:new Date().toISOString()})
+    });
+    var r = document.getElementById('inq-result');
+    if(r){r.style.display='block';}
+    ['inq-name','inq-phone','inq-msg'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  }catch(e){alert('오류가 발생했습니다. 전화로 문의해주세요.');}
+}
+</script>
+</body>
+</html><div class="slide" id="s0">
+  <div class="g" style="width:320px;height:320px;background:radial-gradient(var(--blue),transparent);top:-80px;left:-60px;opacity:.4"></div>
+  <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--purple),transparent);bottom:-60px;right:-40px;opacity:.35"></div>
+  <div class="inner chip">🚀 전 업종 정산 자동화 플랫폼</div>
+  <div class="inner ttl">택배·배달·외식업<br>급여 정산 <span class="gr-blue">5분으로 끝</span></div>
+  <div class="inner sub">카카오 명세서 자동 발송 · 세무사 자동 연동<br>업종 무관 — 어떤 사업도 즉시 시작</div>
+  <div class="inner btns">
+    <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr/join'">🎁 1개월 무료체험</button>
+    <button class="btn-g" onclick="document.getElementById('s6').scrollIntoView({behavior:'smooth'})">📩 상담 문의</button>
+  </div>
+  <div class="inner" style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center">
+    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--blue)">5분</div><div style="font-size:10px;color:var(--tx2)">정산 완료</div></div>
+    <div style="width:1px;background:var(--bd)"></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)">10+</div><div style="font-size:10px;color:var(--tx2)">지원 업종</div></div>
+    <div style="width:1px;background:var(--bd)"></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--gold)">0원</div><div style="font-size:10px;color:var(--tx2)">초기 비용</div></div>
+    <div style="width:1px;background:var(--bd)"></div>
+    <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--purple)">자동</div><div style="font-size:10px;color:var(--tx2)">카카오 발송</div></div>
+  </div>
+</div>
+
+<!-- ══ S1 문제 ══════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="g" style="width:280px;height:280px;background:radial-gradient(var(--red),transparent);top:-60px;right:-40px;opacity:.3"></div>
+  <div class="inner chip">😓 이런 문제 있으신가요?</div>
+  <div class="inner ttl">매달 반복되는<br><span class="gr-gold">이 수작업들</span></div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-ico">📊</div>
+      <div><div class="card-ttl" style="color:#f87171">업종별 복잡한 급여 계산</div><div class="card-desc">택배 구간 단가 · 배달 건당 수수료 · 요식업 시급·야간수당 — 매번 엑셀 수작업</div></div>
+    </div>
+    <div class="card">
+      <div class="card-ico">📱</div>
+      <div><div class="card-ttl" style="color:#f87171">명세서 개별 전송 → 문의 폭주</div><div class="card-desc">직원·기사 한 명씩 카카오 메시지 보내다 지침 · 계산 오류로 항의 전화</div></div>
+    </div>
+    <div class="card">
+      <div class="card-ico">🧾</div>
+      <div><div class="card-ttl" style="color:#f87171">세무사 자료 매달 수동 전달</div><div class="card-desc">엑셀 취합 → 이메일 전송 → 오류 수정 반복 · 4대보험 계산도 수작업</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S2 업종별 기능 ══════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="g" style="width:300px;height:300px;background:radial-gradient(var(--blue),transparent);bottom:-80px;left:-60px;opacity:.35"></div>
+  <div class="inner chip">⚡ 업종별 맞춤 기능</div>
+  <div class="inner ttl">내 업종에 딱 맞게<br><span class="gr-blue">자동 설정</span></div>
+  <div class="inner tabs" id="tabs">
+    <button class="tab on" onclick="_tab(0)">📦 택배</button>
+    <button class="tab" onclick="_tab(1)">🛵 배달</button>
+    <button class="tab" onclick="_tab(2)">🍽 외식업</button>
+    <button class="tab" onclick="_tab(3)">🧹 청소·용역</button>
+    <button class="tab" onclick="_tab(4)">🏗️ 건설</button>
+    <button class="tab" onclick="_tab(5)">💄 뷰티</button>
+    <button class="tab" onclick="_tab(6)">🛡️ 보험</button>
+    <button class="tab" onclick="_tab(7)">🏥 요양</button>
+  </div>
+  <div class="fitems" id="fitems"></div>
+</div>
+
+<!-- ══ S3 FILO·DINE 연결 ══════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="g" style="width:300px;height:300px;background:radial-gradient(var(--teal),transparent);top:-80px;right:-60px;opacity:.3"></div>
+  <div class="g" style="width:250px;height:250px;background:radial-gradient(var(--orange),transparent);bottom:-60px;left:-40px;opacity:.25"></div>
+  <div class="inner chip">🔗 DONWAY + 더 강력하게</div>
+  <div class="inner ttl">정산만으론 부족해?<br><span class="gr-teal">이것도 됩니다</span></div>
+  <div class="inner sub">DONWAY로 시작 → FILO·DINE으로 확장<br>주문·재고·직원·매출 통합 운영</div>
+  <div class="platform-grid inner">
+    <a class="platform-card pc-filo" href="https://filo.ai.kr" target="_blank">
+      <div class="pc-logo" style="color:var(--teal)">🍽 FILO</div>
+      <div class="pc-sub">QR 테이블오더 · 재고관리<br>키오스크 POS · QR 출퇴근</div>
+      <div class="pc-tags">
+        <span class="pc-tag" style="background:rgba(14,158,126,.2);color:var(--teal)">외식업</span>
+        <span class="pc-tag" style="background:rgba(14,158,126,.15);color:var(--teal)">카페</span>
+        <span class="pc-tag" style="background:rgba(14,158,126,.15);color:var(--teal)">재고</span>
+      </div>
+    </a>
+    <a class="platform-card pc-dine" href="https://dine.ne.kr" target="_blank">
+      <div class="pc-logo" style="color:var(--orange)">🌟 DINE</div>
+      <div class="pc-sub">매출분석 · 웨이팅관리<br>회원CRM · 배달연동</div>
+      <div class="pc-tags">
+        <span class="pc-tag" style="background:rgba(245,128,62,.2);color:var(--orange)">매출분석</span>
+        <span class="pc-tag" style="background:rgba(245,128,62,.15);color:var(--orange)">예약</span>
+        <span class="pc-tag" style="background:rgba(245,128,62,.15);color:var(--orange)">회원</span>
+      </div>
+    </a>
+  </div>
+  <div class="inner" style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid var(--bd);border-radius:12px;max-width:440px;width:100%">
+    <div style="font-size:11px;color:var(--tx2);text-align:center;line-height:1.65">
+      <span style="color:var(--blue);font-weight:700">DONWAY</span> 정산 자동화 &nbsp;+&nbsp;
+      <span style="color:var(--teal);font-weight:700">FILO</span> 운영 자동화 &nbsp;+&nbsp;
+      <span style="color:var(--orange);font-weight:700">DINE</span> 분석 자동화<br>
+      <span style="color:var(--tx3);font-size:10px">세 플랫폼 Firestore 실시간 연동 — 데이터 자동 통합</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ S4 경쟁사 비교 ══════════════════════════════════════════ -->
 <div class="slide" id="s5">
   <div class="g" style="width:280px;height:280px;background:radial-gradient(var(--gold),transparent);bottom:-60px;right:-40px;opacity:.28"></div>
   <div class="inner chip">💰 합리적인 요금제</div>
