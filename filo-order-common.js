@@ -493,6 +493,19 @@ function _closeTlMdl(){
 }
 function _openTlMdl(m){_openMdlCommon(m);}
 
+// ── 토스트 알림 ───────────────────────────────────────────────────
+function _filoToast(msg, duration){
+  duration = duration || 2500;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(0,0,0,.85);color:#fff;padding:10px 20px;border-radius:20px;' +
+    'font-size:14px;font-weight:600;z-index:9999;white-space:nowrap;' +
+    'animation:fadeIn .2s ease;pointer-events:none;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, duration);
+}
+
 // ── 날짜 유틸 (order.js, filo-order-common.js 공용) ──
 function _today(){return new Date().toISOString().slice(0,10);}
 function _nowISO(){return new Date().toISOString();}
