@@ -236,6 +236,7 @@ function _addToCart(m){
 function _chgQty(name,d){_cartChg(name,d);}
 
 // ── 주문 접수 ─────────────────────────────────────────────────────────────────
+// ── 테이블 QR 주문 제출 (order.html 전용) ──────────────
 function _submitOrder(){
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
  if(!items.length){_filoToast('🛒 메뉴를 선택해주세요');return;}

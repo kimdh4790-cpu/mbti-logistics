@@ -660,12 +660,12 @@ function _dineLoadDashboard(did,today){
   var laborRate=totalSales>0?Math.round(estLabor/totalSales*100):0;
 
   /* KPI */
-  _countUp('kpi-sales',totalSales,'₩','');
+  _dineCountUp('kpi-sales',totalSales,'₩','');
   var ePr=document.getElementById('kpi-profit');
-  if(ePr){_countUp('kpi-profit',Math.max(0,todayProfit),'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
+  if(ePr){_dineCountUp('kpi-profit',Math.max(0,todayProfit),'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
   var eMg=document.getElementById('kpi-margin');
   if(eMg){eMg.textContent=marginRate+'%';eMg.style.color=marginRate>=60?'#22c55e':marginRate>=40?'#f59e0b':'#ef4444';}
-  _countUp('kpi-orders',orderCnt,'','건');
+  _dineCountUp('kpi-orders',orderCnt,'','건');
   var se=document.getElementById('kpi-staff');if(se)se.textContent=working.length+'명';
   var lr=document.getElementById('kpi-labor');if(lr)lr.textContent=laborRate+'%';
   var ss=document.getElementById('kpi-sales-sub');if(ss)ss.textContent='주문 '+orderCnt+'건';
@@ -1079,7 +1079,7 @@ function _dineToast(msg){
  setTimeout(function(){t.remove();},2500);
 }
 
-function _countUp(id,target,prefix,suffix){
+function _dineCountUp(id,target,prefix,suffix){
  var el=document.getElementById(id);if(!el)return;
  var start=0,step=800/60,inc=target/60;
  var t=setInterval(function(){start+=inc;if(start>=target){start=target;clearInterval(t);}

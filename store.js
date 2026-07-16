@@ -94,6 +94,7 @@ function _add(m){
 function _chg(name,d){_cartChg(name,d);}
 
 // ── 주문 접수 ─────────────────────────────────────────────────────────────────
+// ── 배달/픽업 주문 제출 (store.html 전용) ──────────────
 function _submitOrder(){
  var name=(document.getElementById('cust-name')||{}).value||'';
  var phone=(document.getElementById('cust-phone')||{}).value||'';
