@@ -602,11 +602,6 @@ function _tab(i){
     return '<div class="fitem" data-ind="'+i+'" data-feat="'+j+'" onclick="_dwModalOpen(this.dataset.ind,this.dataset.feat)" style="cursor:pointer"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
   }).join('');
 }
-_tab(0);
-document.addEventListener('keydown', function(e){
-  if(e.key==='Escape') _dwModalClose();
-});
-
 
 // ── 기능 상세 모달 ──────────────────────────────────────
 // 업종 기능 상세 데이터
@@ -782,6 +777,12 @@ function _dwModalClose(e) {
   document.getElementById('dw-modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
+
+_tab(0);
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape') _dwModalClose();
+});
+
 
 
 // ── 도트 & 슬라이드 ───────────────────────────────────────────────
