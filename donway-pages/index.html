@@ -6,12 +6,14 @@
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-F3RGSECX2K"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-F3RGSECX2K');</script>
-
+<script>
 // ── 날짜 유틸 ─────────────────────────────────────────
-function _today(){return _today();}
+function _today(){return new Date().toISOString().slice(0,10);}
 function _nowISO(){return new Date().toISOString();}
 function _toDateStr(iso){return iso?iso.slice(0,10):'';}
-function _monthStr(){return _monthStr();}
+function _monthStr(){return new Date().toISOString().slice(0,7);}
+</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#185FA5">
 <meta name="mobile-web-app-capable" content="yes">
