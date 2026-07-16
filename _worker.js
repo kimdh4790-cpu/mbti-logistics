@@ -1981,7 +1981,7 @@ async function acceptExchange(){
             if(dt.zh)descTranslations.zh=dt.zh.stringValue||'';
             if(dt.ja)descTranslations.ja=dt.ja.stringValue||'';
           }
-          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&f.price.integerValue)||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
+          return {name:(f.name&&f.name.stringValue)||'',price:parseInt((f.price&&(f.price.integerValue||f.price.doubleValue||f.price.stringValue))||0),category:(f.category&&f.category.stringValue)||'기타',emoji:(f.emoji&&f.emoji.stringValue)||'🍽',imageUrl:(f.imageUrl&&f.imageUrl.stringValue)||'',description:(f.description&&f.description.stringValue)||'',nameTranslations:nameTranslations,descTranslations:descTranslations};
         });
         const menusWithImg = menus.map(function(m){
           if(m.imageUrl) return m;
