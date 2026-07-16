@@ -1,57 +1,30 @@
-/*
- * filo-order-common.js — order.js + store.js 공통 함수 모듈
- * Copyright (c) 2024-2025 유한회사 엠비티아이
+/**
+ * filo-order-common.js — FILO 고객 주문 공통 모듈
+ * 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
  *
- * ── 주요 함수 ─────────────────────────────────────────────────
- *   _loadMenus(did, gridId)     — 메뉴 로드 (filo_menus 조회)
- *   _renderMenuGrid(menus, id)  — 메뉴 카드 그리드 렌더링
- *   _renderCatBar(menus)        — 카테고리 탭 렌더링
- *   _openMdlCommon(m)           — 메뉴 상세 모달 열기
- *   _openMdl(m)                 — _openMdlCommon 래퍼
- *   _closeMdl()                 — 모달 닫기 (#mdl.open 제거)
- *   _tlQty(d)                   — 모달 수량 조절
- *   _updFab()                   — 장바구니 FAB 업데이트
- *   _openCart() / _closeCart()  — 장바구니 시트 열기/닫기
- *   _setLang(lang)              — 언어 변경 (ko/en/zh/ja)
+ * [용도]
+ *   order.html (테이블QR 주문) + store.html (배달/픽업 주문) 공통 함수
  *
- * ── 읽는 컬렉션 ──────────────────────────────────────────────
- *   filo_menus    ← 메뉴 목록 (dealerId 기준)
- *   filo_dealers  ← 매장 정보 (이름, 설정)
+ * [주요 함수]
+ *   _renderMenuGrid   — 메뉴 카드 그리드 렌더링
+ *   _renderCatBar     — 카테고리 탭 렌더링
+ *   _openMdlCommon    — 메뉴 상세 모달 열기
+ *   _openMdl / _closeMdl    — order.html용 모달 (#mdl)
+ *   _openTlMdl / _closeTlMdl — store.html용 모달 (#tl-mdl)
+ *   _tlQty            — 모달 수량 조절
+ *   _updFab           — 장바구니 FAB 업데이트
+ *   _openCart / _closeCart  — 장바구니 시트 열기/닫기
+ *   _cartChg          — 장바구니 수량 변경
+ *   _setLang          — 언어 변경 (ko/en/zh/ja)
+ *   _loadMenus        — /api/menus?did= 메뉴 로드
+ *   _filoToast        — 토스트 알림 (store.js 공용)
+ *   _today/_nowISO/_toDateStr/_monthStr — 날짜 유틸
  *
- * ── 전역 변수 (공유) ──────────────────────────────────────────
- *   _cart        : 장바구니 { [name]: {name,price,qty,emoji} }
- *   _curMdlMenu  : 현재 모달에 열린 메뉴 객체
- *   _tlQtyVal    : 모달 수량
- *   _lang        : 현재 언어
- *   _tlCache     : 번역 캐시
- *
- * ── 모달 HTML 구조 ────────────────────────────────────────────
- *   #mdl (배경)
- *   └ #mdl-box (flex column)
- *     ├ #mdl-scroll (overflow-y:auto) ← 이미지+상세 스크롤
- *     └ #mdl-btns (fixed bottom)      ← X + 담기 버튼 항상 노출
- *
- * ── 의존 ─────────────────────────────────────────────────────
- *   order.html / store.html — DOM 구조
- *   _db (Firebase Firestore)
- *   /api/translate — 메뉴명 번역 (Anthropic → Google 폴백)
- *
- * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
+ * [2026-07-16 추가]
+ *   _closeTlMdl/_openTlMdl — store.html #tl-mdl용 모달 함수
+ *   _filoToast — store.js에서 호출 (filo-common.js 미로드 우회)
+ *   _today/_nowISO/_toDateStr/_monthStr — order.js 날짜 유틸
  */
-var _i18n_common = {
- ko:{cart:'🛒 장바구니',order:'주문하기',total:'합계',sold:'품절',add:'담기',
-     call:'직원을 호출했습니다!',done:'주문 완료!',sub:'잠시 후 준비됩니다',back:'메뉴로 돌아가기',
-     addr:'📍 주소를 입력해주세요',fab:'주문하기'},
- en:{cart:'🛒 Cart',order:'Order Now',total:'Total',sold:'Sold Out',add:'Add',
-     call:'Staff notified!',done:'Order Complete!',sub:'Your order is being prepared',back:'Back to Menu',
-     addr:'📍 Enter delivery address',fab:'Order Now'},
- zh:{cart:'🛒 购物车',order:'下单',total:'合计',sold:'售罄',add:'加入',
-     call:'已呼叫服务员！',done:'订单完成！',sub:'正在为您准备',back:'返回菜单',
-     addr:'📍 请输入配送地址',fab:'下单'},
- ja:{cart:'🛒 カート',order:'注文する',total:'合計',sold:'売り切れ',add:'追加',
-     call:'スタッフを呼びました！',done:'注文完了！',sub:'ただいま準備中です',back:'メニューへ戻る',
-     addr:'📍 配達住所を入力',fab:'注文する'}
-};
 
 function _t(k){
  return(_i18n_common[_lang]&&_i18n_common[_lang][k])||_i18n_common.ko[k]||k;

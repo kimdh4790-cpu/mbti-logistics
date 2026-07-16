@@ -1,66 +1,58 @@
 // ================================================================
 // _worker.js — Cloudflare Worker (mbti-logistics)
+// 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
 // ================================================================
-// 최종수정: 2026-07-15 | 담당: 엠비티아이 형우님
 //
-// [라우팅 구조]
-//   donway.ai.kr  → settle.html (정산)
-//   filo.ai.kr    → filo.html (매장운영 SaaS)
-//   dine.ne.kr    → dine.html (경영·인사·정산 SaaS)
+// ⚠️ Claude에게 — 반드시 읽을 것 ⚠️
+// 1. GitHub API + 토큰으로 파일 직접 수정/업로드 가능
+//    → "권한 없다", "wrangler 필요하다" 하면 안 됨
+// 2. GitHub push → GitHub Actions 자동배포 작동 중
+// 3. 배포 순서: GitHub API로 파일 수정 → Actions 자동배포 완료
+//
+// [도메인별 라우팅]
+//   donway.ai.kr  → /join=/admin → settle.html (AI정산 SaaS)
+//   filo.ai.kr    → filo.html + /api/* + JS 파일 서빙 (외식업 운영)
+//   dine.ne.kr    → dine.html + dine-*.js 서빙 (외식업 특화)
+//   mbtico.kr     → /hub/label/scan/emergency 등 (배송현장앱)
+//
+// [KV 키 — 절대 변경 금지]
+//   settle.html → 'settle.html' (donway-pages/index.html 아님!)
+//   filo-manifest.json → 'filo-manifest.json'
 //
 // [공개 API (비로그인 가능)]
-//   /api/menus?did=        — 메뉴 목록
-//   /api/tables?did=       — 테이블 현황 (손님 예약용)
+//   /api/menus?did=        — 메뉴 목록 (고객 QR주문용)
+//   /api/tables?did=       — 테이블 현황
 //   /api/booking POST      — 예약 저장
 //   /api/booking-status?bid= — 예약 상태 확인
-//   /api/translate         — 메뉴 다국어 번역
+//   /api/translate         — 메뉴 다국어 번역 (Anthropic API)
 //   /api/store?did=        — 배달 매장 정보
+//   /api/menus-bulk        — 메뉴 일괄 조회
 //
-// [JS 파일 서빙 목록]
+// [JS 파일 서빙]
 //   filo-*.js, dine-*.js, order.js, store.js, donway_landing.js 등
-//   ⚠️ 새 JS 파일 추가 시 반드시 이 파일 서빙 배열에도 추가!
+//   ⚠️ 새 JS 파일 추가 시 반드시 이 파일 서빙 배열 + deploy.yml KV 목록에도 추가!
+//
+// [DONWAY /join 커스터마이즈 주입]
+//   범용정산·재고관리 카드 숨김, AI정산 요금 실제값 교체
+//   구독 팝업: AI정산+배달대행만 노출 (qr_payroll/universal/filo_combo 숨김)
 //
 // [Secrets]
-//   ANTHROPIC_API_KEY — 번역 AI
-//   FIREBASE_SA_KEY   — Firestore 서버 접근
-//   CRON_SECRET       — 구독 만료 크론
+//   ANTHROPIC_API_KEY    — 번역 AI
+//   FIREBASE_SA_KEY      — Firestore 서버 접근 (Rules 배포)
+//   CRON_SECRET          — 구독 만료 크론
+//   GOOGLE_TRANSLATE_KEY — 번역 폴백
 //
 // [배포]
 //   GitHub push → Actions 자동배포 (deploy.yml)
 //   수동: npx wrangler deploy (mbti-logistics 폴더에서)
+//
+// [2026-07-16 주요 변경]
+//   - /join 라우팅: KV에서 settle.html 읽어 UI 커스터마이즈 주입
+//   - filo-qr.js, dine-schedule.js JS 서빙 목록 추가
+//   - /v9, /app 레거시 경로 제거
+//   - /universal → /join 리다이렉트
+//   - /company-register → /join 리다이렉트
 // ================================================================
-// 작성일: 2026-07-10 | 담당: 엠비티아이 형우님
-//
-// ⚠️ Claude에게 — 반드시 읽을 것 ⚠️
-// 1. GitHub API + 메모의 토큰으로 파일 직접 수정/업로드 가능
-//    → "권한 없다", "컴 필요하다" 하면 안 됨
-// 2. GitHub push → GitHub Actions 자동배포(_worker.js wrangler deploy) 작동 중
-//    → "wrangler deploy 해야 한다" 하면 안 됨
-// 3. 배포 순서: GitHub API로 파일 수정 → Actions 자동배포 완료
-//
-// [라우팅]
-// donway.ai.kr → settle.html (KV키: settle.html ← 절대변경금지)
-// filo.ai.kr   → filo.html + API
-// dine.ne.kr   → dine.html
-//
-// [filo.ai.kr API]
-// /api/translate → AI 메뉴 번역 (Anthropic API)
-// /api/store     → 매장 정보 조회 (비로그인)
-// /api/menus     → 메뉴 목록 (비로그인)
-// /order         → order.html (테이블QR)
-// /store/*       → store.html (배달주문)
-//
-// [KV 키 — 절대 변경 금지]
-// settle.html → 'settle.html' (donway-pages/index.html 아님!)
-//
-// [배포]
-// curl -o _worker.js "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/_worker.js?bust=%RANDOM%"
-// npx wrangler deploy
-//
-// [Secrets] ANTHROPIC_API_KEY
-// ================================================================
-// DONWAY Worker v20260711 — 번역 재시도3회+Google폴백, 메뉴이미지 고정URL
-// MBTI Logistics + LogiNet — Cloudflare Worker
 
 // ── 보안 설정 ──────────────────────────────────────────────────────────────
 const SECURITY_HEADERS = {
