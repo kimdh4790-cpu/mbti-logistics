@@ -825,12 +825,6 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 <div class="toast" id="toast"></div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-
-// ── 날짜 유틸 ─────────────────────────────────────────
-function _today(){return _today();}
-function _nowISO(){return new Date().toISOString();}
-function _toDateStr(iso){return iso?iso.slice(0,10):'';}
-function _monthStr(){return _monthStr();}
 // ══ FIREBASE 설정 (6개 값 교체)
 // ═══════════════════════════════════════════════════════════════
 // 🔥 Firebase 설정 — 아래 6개 값을 Firebase Console에서 복사하세요
@@ -1029,7 +1023,7 @@ var _db=null,_st=null,FB=false;
       firebase.initializeApp(FB_CFG);
       _db=firebase.firestore(); _st=firebase.storage();
       // ★ v9.69: 오프라인 캐시 (multi-tab 안전)
-      try{ _db.enablePersistence({synchronizeTabs:true}); }catch(e){ if(e.code!=='failed-precondition'&&e.code!=='unimplemented') }
+      try{ _db.enablePersistence({synchronizeTabs:true}); }catch(e){ if(e.code!=='failed-precondition'&&e.code!=='unimplemented') console.warn('[Persist]',e.code); }
       FB=true;
 
       // ★ 인증 완료 후 리스너 설정 (타이밍 오류 방지)
@@ -1038,12 +1032,13 @@ var _db=null,_st=null,FB=false;
           _setupFbListeners(); // 인증 완료 후 리스너 시작
         } else {
           firebase.auth().signInAnonymously().catch(function(e){
+            console.warn('익명로그인 실패:',e.code);
             _setupFbListeners(); // 실패해도 시도
           });
         }
       });
     }
-  }catch(e){}
+  }catch(e){console.warn('Firebase:',e.message);}
 })();
 
 var _listenersReady=false;
@@ -1072,7 +1067,7 @@ function ls(k){return JSON.parse(localStorage.getItem('mb60_'+k)||'[]');}
 function lss(k,v){localStorage.setItem('mb60_'+k,JSON.stringify(v));}
 async function fbW(col,d){
   // 로컬 먼저 저장 (오프라인/오류 대비)
-  d.id=d.id||(col+'_'+Date.now());d.localTs=_nowISO();
+  d.id=d.id||(col+'_'+Date.now());d.localTs=new Date().toISOString();
   var a=ls(col);a.unshift(d);if(a.length>300)a=a.slice(0,300);lss(col,a);
   // Firebase 쓰기 (최대 3회 재시도)
   if(FB&&_db){
@@ -1093,9 +1088,10 @@ async function fbW(col,d){
         }
         // 3회 실패 시 pending 큐에 저장 (재연결 시 자동 재전송)
         var pq=JSON.parse(localStorage.getItem('mb60_pending_writes')||'[]');
-        pq.push({col:col,d:d,failedAt:_nowISO()});
+        pq.push({col:col,d:d,failedAt:new Date().toISOString()});
         if(pq.length>100)pq=pq.slice(-100);
         localStorage.setItem('mb60_pending_writes',JSON.stringify(pq));
+        console.warn('[fbW] '+col+' 쓰기 실패, pending 저장:', e.message);
       }
     };
     tryWrite();
@@ -1179,6 +1175,7 @@ async function upFile(file,path){
         var url=await ref.getDownloadURL();
         return url;
       }catch(e){
+        console.warn('Storage 실패, base64 사용:', e);
         return b64;
       }
     }
@@ -1195,7 +1192,7 @@ async function upFile(file,path){
 // 백그라운드 업로드 완료 후 저장된 base64를 URL로 교체
 
 // 유틸
-function today(){return _today();}
+function today(){return new Date().toISOString().slice(0,10);}
 function nowT(){var n=new Date();return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
 function nid(k){var n=JSON.parse(localStorage.getItem('mb60_nid')||'{}');var v=n[k]||1;n[k]=v+1;localStorage.setItem('mb60_nid',JSON.stringify(n));return v;}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
@@ -1212,7 +1209,7 @@ function addAct(tp,tx,dr,details){
     mode:S.curMode||'unknown',
     details:details||null,
     t:nowT(),
-    ts:_nowISO()
+    ts:new Date().toISOString()
   };
   a.unshift(entry);
   if(a.length>200)a=a.slice(0,200);  // 로컬은 200건 유지 (기존 80 → 200)
@@ -1228,7 +1225,7 @@ function addAct(tp,tx,dr,details){
         details:details||null,
         timestamp:firebase.firestore.FieldValue.serverTimestamp(),
         clientTime:entry.ts
-      }).catch(function(e){});
+      }).catch(function(e){console.warn('audit log 저장 실패:',e&&e.message);});
     }catch(e){}
   }
 }
@@ -1476,7 +1473,7 @@ function _filterSplashByLastJob(){
     } else {
       resetBtn.style.display='';
     }
-  }catch(e){}
+  }catch(e){console.warn('splash filter:',e);}
 }
 // ── v6.1 비밀번호 SHA-256 해시 (Web Crypto API)
 // ★ v9.70: Firestore 읽기 절감 — 설정 전역 캐시 (TTL 20분)
@@ -1578,7 +1575,7 @@ function goLogout(){
     window._fbUnsubs=[];
     (window._firestoreListeners||[]).forEach(function(u){try{u();}catch(e){}});
     window._firestoreListeners=[];
-  }catch(e){}
+  }catch(e){console.warn('[logout cleanup]',e);}
   if(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth()){try{firebase.auth().signOut();}catch(e){}}
   localStorage.removeItem('mbti_session');
   S.curMode=''; S.curDriver=''; S.curJobtype=''; S.curJobsub=''; S.curPlate='';
@@ -1706,7 +1703,7 @@ async function selfResetPwVerify(){
           found = Object.assign({}, d, {fbId: doc.id});
         }
       });
-    }catch(e){ }
+    }catch(e){ console.warn('셀프 초기화 FB 조회:', e); }
   }
 
   if(!found){
@@ -1751,7 +1748,7 @@ async function selfResetPwSave(){
     // ★ v9.27 fix: pw + password 양쪽 모두 업데이트 (doLogin이 pw 우선 검증)
     drivers[idx].pw = hashed;
     drivers[idx].password = hashed;
-    drivers[idx].pwResetAt = _nowISO();
+    drivers[idx].pwResetAt = new Date().toISOString();
     drivers[idx].pwResetBy = 'self';
     lss('drivers', drivers);
   }
@@ -1763,10 +1760,10 @@ async function selfResetPwSave(){
       await _db.collection('drivers').doc(d.fbId).update({
         pw: hashed,
         password: hashed,
-        pwResetAt: _nowISO(),
+        pwResetAt: new Date().toISOString(),
         pwResetBy: 'self'
       });
-    }catch(e){ }
+    }catch(e){ console.warn('셀프 초기화 FB 저장:', e); }
   }
 
   status.innerHTML = '<span style="color:var(--teal)">✅ 비밀번호가 변경됐습니다! 새 비밀번호로 로그인해주세요.</span>';
@@ -1832,16 +1829,18 @@ function doLogin(){
         // ★ 기사 데이터 강제 로드 (localStorage 비어있으면 Firebase에서 즉시 가져옴)
         setTimeout(function(){
           if(FB&&_db&&!ls('drivers').length){
+            console.log('[Admin Login] 기사 목록 강제 로드...');
             _db.collection('drivers').get().then(function(snap){
               var all=[];
               snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
               if(all.length){
                 lss('drivers',all);
+                console.log('[Admin Login] 기사 '+all.length+'명 로드 완료');
                 updBadge();
                 if(S.page==='dash'||S.page==='drivers') SP(S.page,null);
                 toast('✅ 기사 '+all.length+'명 데이터 로드됨');
               }
-            }).catch(function(e){});
+            }).catch(function(e){console.warn('[Admin] 기사 로드 실패:',e);});
           }
         }, 600);
         // ★ v9.43 fix: initInqListener 호출 안전화 (legacy 함수 — 정의 없으면 skip)
@@ -1879,6 +1878,7 @@ function doLogin(){
           if(q1.empty){q1=await _db.collection('drivers').where('phone','==',id).limit(1).get();}
           if(!q1.empty){var d=q1.docs[0].data();d.fbId=q1.docs[0].id;found=d;}
         }catch(e){
+          console.warn('Firebase 조회 오류',e);
           if(e.code==='permission-denied') toast('⚠️ Firebase 권한 오류');
         }
       }
@@ -1887,7 +1887,7 @@ function doLogin(){
         try{
           var qA=await _db.collection('drivers').limit(300).get();
           qA.forEach(function(doc){var d=doc.data();if(!found&&(d.userId===id||d.phone===id||d.id===id)){d.fbId=doc.id;found=d;}});
-        }catch(e2){}
+        }catch(e2){console.warn('전체스캔 실패',e2);}
       
       }
       // localStorage fallback
@@ -2164,6 +2164,7 @@ async function submitReg(){
     if(!chkPhone.empty){toast('⚠️ 이미 가입된 전화번호입니다\n관리자에게 문의해 주세요 (051-711-3103)');if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}return;}
   }catch(e){
     // Firestore 오류 시 로컬 체크 + 경고
+    console.warn('중복체크 오류(로컬 대체):',e);
     if(e&&e.code==='permission-denied'){
       toast('⚠️ 중복 확인 오류 — 잠시 후 다시 시도해 주세요');
       if(dupBtn){dupBtn.disabled=false;dupBtn.textContent='가입하기';}
@@ -2268,6 +2269,7 @@ function SP(pg,el){
   try{
     document.getElementById('ca').innerHTML=(m[pg]||rDash)();
   }catch(e){
+    console.error('SP 렌더링 오류('+pg+'):',e);
     document.getElementById('ca').innerHTML='<div style="padding:30px;text-align:center;color:var(--red)">⚠️ 화면 로딩 오류<br><small>'+e.message+'</small><br><br><button onclick="SP(\'dash\',null)" class="btn btn-blue" style="margin-top:10px">대시보드로 이동</button></div>';
   }
   if(pg==='mypage'){setTimeout(function(){if(typeof initCampTabs==='function')initCampTabs();},80);}
@@ -2407,7 +2409,7 @@ function loadEntriesHistory(period, col){
       lss(col,a);
       SP(S.page,null); // UI 갱신
     })
-    .catch(function(e){ _historyLoaded[cacheKey]=false; });
+    .catch(function(e){ console.warn('[loadEntriesHistory] 오류:',e); _historyLoaded[cacheKey]=false; });
 }
 function _admDateTabs(key, active){
   var tabs=[
@@ -2826,13 +2828,13 @@ function nextAccSt(idx){
   var next = cur==='접수중' ? '처리중' : (cur==='처리중' ? '완료' : '접수중');
   if(!confirm('사고 상태를 ['+cur+'] → ['+next+']로 변경하시겠습니까?')) return;
   arr[idx].status = next;
-  arr[idx].statusUpdatedAt = _nowISO();
+  arr[idx].statusUpdatedAt = new Date().toISOString();
   lss('accidents', arr);
   // Firebase 동기화
   if(FB && _db && arr[idx].fbId){
     _db.collection('accidents').doc(arr[idx].fbId)
       .update({status:next, statusUpdatedAt:arr[idx].statusUpdatedAt})
-      .catch(function(e){ });
+      .catch(function(e){ console.warn('사고 상태 Firebase 업데이트 실패:', e.message); });
   }
   toast('✅ 사고 상태: '+next);
   // UI 갱신
@@ -3167,7 +3169,7 @@ function autoSendStmtOnApprove(driverName, month, onDone){
       var saveStmt=function(imgUrl){
         var note={type:'settlement',driver:driverName,month:month,
           income:r.income,net:r.net,img:imgUrl,
-          sentAt:_nowISO(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
+          sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
         // 보관함 저장
         try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
           if(!st[driverName])st[driverName]=[];
@@ -3263,12 +3265,13 @@ function autoSendTaxOnApprove(driverName, month){
       var saveNote=function(imgUrl){
         // ★ v9.25: 진단 로그 — 저장 형식 추적
         var imgType = !imgUrl ? '❌ 빈값' : (imgUrl.indexOf('data:image')===0 ? '📦 base64('+(imgUrl.length/1024).toFixed(1)+'KB)' : '🌐 Storage URL');
+        console.log('[세금계산서 저장]', driverName, month, imgType);
         if(!imgUrl){
           toast('⚠️ '+driverName+' 세금계산서 이미지 생성 실패 — 수동 재전달 필요');
           return;
         }
         var note={type:'tax_invoice',driver:driverName,month:month,img:imgUrl,
-          sentAt:_nowISO(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
+          sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자(자동)',autoSent:true};
         try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
           if(!st[driverName])st[driverName]=[];
           var idx2=st[driverName].findIndex(function(it){return it.month===month;});
@@ -3283,7 +3286,7 @@ function autoSendTaxOnApprove(driverName, month){
             var s2=ls('settlements');
             var si=s2.findIndex(function(it){return it.driver===driverName&&it.month===month;});
             if(si>=0){
-              s2[si].taxSent=true; s2[si].taxSentAt=_nowISO();
+              s2[si].taxSent=true; s2[si].taxSentAt=new Date().toISOString();
               lss('settlements',s2);
               var fbKey=s2[si].fbId||driverName+'_'+month;
               _db.collection('settlements').doc(fbKey).set({taxSent:true,taxSentAt:s2[si].taxSentAt},{merge:true}).catch(function(){});
@@ -3306,11 +3309,11 @@ function autoSendTaxOnApprove(driverName, month){
         var ref=_st.ref(storePath);
         var done=false;
         var timer=setTimeout(function(){
-          if(!done){done=true;saveNote(fallbackUrl);}
+          if(!done){done=true;console.warn('Storage 타임아웃, base64 저장');saveNote(fallbackUrl);}
         },10000);
         ref.put(blob).then(function(){return ref.getDownloadURL();})
         .then(function(url){if(!done){done=true;clearTimeout(timer);saveNote(url);}})
-        .catch(function(e){if(!done){done=true;clearTimeout(timer);saveNote(fallbackUrl);}});
+        .catch(function(e){if(!done){done=true;clearTimeout(timer);console.warn('Storage 실패:',e);saveNote(fallbackUrl);}});
       } else {
         saveNote(fallbackUrl);
       }
@@ -3364,14 +3367,14 @@ async function recalcAllSettlements(){
       try{
         await _db.collection('settlements').doc(docId).set({
           damt:x.damt,ramt:x.ramt,income:x.income,emp:x.emp,work:x.work,tax:x.tax,net:x.net,
-          updatedAt:_nowISO()
+          updatedAt:new Date().toISOString()
         },{merge:true});
         fbOk++;
-      }catch(e){fbFail++;}
+      }catch(e){fbFail++;console.warn('재계산 FB 저장 실패:',x.driver,e.message);}
     }
-    toast('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건\nFirebase 저장: '+fbOk+'건'+(fbFail?'\n실패: '+fbFail+'건':''));
+    alert('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건\nFirebase 저장: '+fbOk+'건'+(fbFail?'\n실패: '+fbFail+'건':''));
   } else {
-    toast('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건 (로컬 저장)\n※ Firebase 미연결 — 배포 환경에서 재실행 권장');
+    alert('✅ 전체 정산 재계산 완료\n\n재계산: '+changed+'건 (로컬 저장)\n※ Firebase 미연결 — 배포 환경에서 재실행 권장');
   }
   SP('settle',null);
 }
@@ -3442,7 +3445,7 @@ async function bulkSendSettlements(camp, month, force){
     return true;
   });
   if(!targets.length){
-    toast('📭 전달 대상 없음\n\n'+(force?'승인완료된 정산 건이 없습니다.':'미전달 + 승인완료 건이 없습니다.\n(이미 전달됐거나 아직 미승인)'));
+    alert('📭 전달 대상 없음\n\n'+(force?'승인완료된 정산 건이 없습니다.':'미전달 + 승인완료 건이 없습니다.\n(이미 전달됐거나 아직 미승인)'));
     return;
   }
   var campLabel=camp==='all'?'전체':camp+' 캠프';
@@ -3473,13 +3476,14 @@ async function bulkSendSettlements(camp, month, force){
       });
       done++;
     }catch(e){
+      console.warn('일괄전달 실패:',driverNm, e);
       failed++;
       done++;
     }
     await new Promise(function(r){setTimeout(r,500);}); // 다음 건 전 인터벌
   }
   SP('settle',null);
-  toast('✅ 일괄 전달 완료\n\n성공: '+( done-failed)+'건\n실패: '+failed+'건\n\n실패 건은 개별 명세서에서 수동 전달해주세요.');
+  alert('✅ 일괄 전달 완료\n\n성공: '+( done-failed)+'건\n실패: '+failed+'건\n\n실패 건은 개별 명세서에서 수동 전달해주세요.');
 }
 
 // ★ v9.25: 기사 실시간 위치 Firebase 전송 (30초마다)
@@ -3498,7 +3502,7 @@ function _startDriverLocTracking(){
         camp: me.camp||'',
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
-        updatedAt: _nowISO(),
+        updatedAt: new Date().toISOString(),
         date: today()
       };
       _db.collection('driver_locations').doc(me.name).set(data).catch(function(){});
@@ -3622,22 +3626,22 @@ function _getGoogleApiKey(){
 // ★ v9.27: _getGPS 통합 — 19105 중복 정의 제거 + 양쪽 호출자(_denied 체크/accuracy 사용) 모두 만족
 function _getGPS(){
   return new Promise(function(res){
-    if(!navigator.geolocation){ res({lat:35.1796,lng:129.0756,_denied:true,_reason:'unsupported',ts:_nowISO()}); return; }
+    if(!navigator.geolocation){ res({lat:35.1796,lng:129.0756,_denied:true,_reason:'unsupported',ts:new Date().toISOString()}); return; }
     var done=false;
-    var t=setTimeout(function(){ if(!done){done=true;res({lat:35.1796,lng:129.0756,_denied:true,_reason:'timeout',ts:_nowISO()});} },5000);
+    var t=setTimeout(function(){ if(!done){done=true;res({lat:35.1796,lng:129.0756,_denied:true,_reason:'timeout',ts:new Date().toISOString()});} },5000);
     navigator.geolocation.getCurrentPosition(function(pos){
       if(done) return; done=true; clearTimeout(t);
       res({
         lat:pos.coords.latitude,
         lng:pos.coords.longitude,
         accuracy:Math.round(pos.coords.accuracy||0),
-        ts:_nowISO()
+        ts:new Date().toISOString()
       });
     },function(err){
       if(done) return; done=true; clearTimeout(t);
       // PERMISSION_DENIED(1), POSITION_UNAVAILABLE(2), TIMEOUT(3)
       var reason = err&&err.code===1 ? 'denied' : err&&err.code===2 ? 'unavailable' : 'timeout';
-      res({lat:35.1796,lng:129.0756,_denied:true,_reason:reason,ts:_nowISO()});
+      res({lat:35.1796,lng:129.0756,_denied:true,_reason:reason,ts:new Date().toISOString()});
     },
     {enableHighAccuracy:true,timeout:5000,maximumAge:30000});
   });
@@ -4282,7 +4286,7 @@ function _renderLiveMap(center, driverLocs, emerLocs){
             mk._data = d; // 최신 데이터 갱신
           }
         });
-      }, function(e){ });
+      }, function(e){ console.warn('[LiveMap] 실시간 오류:', e.message); });
 
     // 지도 닫을 때 리스너 해제
     var closeBtn = document.querySelector('#live-map-mo button[onclick*="remove"]');
@@ -4303,6 +4307,7 @@ async function openEmergencyAdmin(){
       snap.forEach(function(d){records.push(Object.assign({id:d.id},d.data()));});
       fbOk = true;
     }catch(e){
+      console.warn('긴급배송 Firebase 조회 실패:', e.code, e.message);
     }
   }
   // ★ v9.25: localStorage도 항상 병합 (Firebase 저장 실패 건도 표시)
@@ -4372,7 +4377,7 @@ async function openEmergencyAdmin(){
 }
 
 async function syncFirebaseSettlements(){
-  if(!FB||!_db){toast('❌ Firebase 연결이 안 되어 있습니다.');return;}
+  if(!FB||!_db){alert('❌ Firebase 연결이 안 되어 있습니다.');return;}
   try{
     toast('🔄 Firebase 동기화 검사 중...');
     var local=ls('settlements');
@@ -4396,7 +4401,7 @@ async function syncFirebaseSettlements(){
     Object.keys(localMap).forEach(function(k){if(!fbMap[k])localOnly.push(localMap[k]);});
     Object.keys(fbMap).forEach(function(k){if(!localMap[k])fbOnly.push(fbMap[k]);});
     if(!localOnly.length&&!fbOnly.length){
-      toast('✅ 이미 동기화됨\n\n로컬: '+local.length+'건\nFirebase: '+fbArr.length+'건');
+      alert('✅ 이미 동기화됨\n\n로컬: '+local.length+'건\nFirebase: '+fbArr.length+'건');
       return;
     }
     // 확인 메시지
@@ -4422,16 +4427,17 @@ async function syncFirebaseSettlements(){
         await _db.collection('settlements').doc(docId).set(x,{merge:true});
         x.fbId=docId; // 로컬 객체에도 fbId 기록
         upOk++;
-      }catch(e){upFail++;}
+      }catch(e){upFail++;console.warn('업로드 실패:',x.driver,e.message);}
     }
     // 2) Firebase → 로컬 다운로드
     if(fbOnly.length)fbOnly.forEach(function(x){local.push(x);});
     // 3) 로컬 저장 (fbId 업데이트 포함)
     lss('settlements',local);
     addAct('sync','Firebase 동기화: 업로드 '+upOk+'건 / 다운로드 '+fbOnly.length+'건',null);
-    toast('✅ 동기화 완료\n\n📤 업로드: '+upOk+'건'+(upFail?' (실패 '+upFail+'건)':'')+'\n📥 다운로드: '+fbOnly.length+'건\n\n총 정산서: '+local.length+'건');
+    alert('✅ 동기화 완료\n\n📤 업로드: '+upOk+'건'+(upFail?' (실패 '+upFail+'건)':'')+'\n📥 다운로드: '+fbOnly.length+'건\n\n총 정산서: '+local.length+'건');
     SP('settle',null);
   }catch(err){
+    console.error('Sync error:',err);
     var emsg=(err&&err.message)||String(err);
     // ★ Target ID already exists 는 Firebase 리스너 중복 충돌 (기능 영향 없음)
     //   페이지 새로고침으로 해결되므로 자동 복구 안내
@@ -4440,7 +4446,7 @@ async function syncFirebaseSettlements(){
         location.reload();
       }
     } else {
-      toast('❌ 동기화 오류: '+emsg);
+      alert('❌ 동기화 오류: '+emsg);
     }
   }
 }
@@ -4561,7 +4567,7 @@ async function cleanDuplicateDrivers(){
       for(var i=1;i<list.length;i++){
         if(list[i].fbId){
           try{await _db.collection('drivers').doc(list[i].fbId).delete();deleted++;}
-          catch(e){}
+          catch(e){console.warn('삭제 실패:',list[i].fbId,e.code);}
         }
       }
     }
@@ -4586,7 +4592,7 @@ async function cleanDuplicateDrivers(){
 }
 function checkDuplicateSettlements(){
   var s=ls('settlements');
-  if(!s.length){toast('정산서가 없습니다.');return;}
+  if(!s.length){alert('정산서가 없습니다.');return;}
   // driver+month 기준 그룹화
   var map={};
   s.forEach(function(x,i){
@@ -4603,7 +4609,7 @@ function checkDuplicateSettlements(){
     }
   });
   if(dupGroups.length===0){
-    toast('✅ 중복 정산서 없음\n\n전체 '+s.length+'건 모두 고유합니다.');
+    alert('✅ 중복 정산서 없음\n\n전체 '+s.length+'건 모두 고유합니다.');
     return;
   }
   // 메시지 구성
@@ -4656,7 +4662,7 @@ function loadIncSettingsFromFB(){
   _fsGetCached('settings/incSettings', 15).then(function(doc){
     if(!doc){
       // ★ 문서 없으면 자동 생성 (첫 실행 시)
-      _db.collection('settings').doc('incSettings').set({_created:_nowISO()},{merge:true}).catch(function(){});
+      _db.collection('settings').doc('incSettings').set({_created:new Date().toISOString()},{merge:true}).catch(function(){});
       return;
     }
     var data=doc;
@@ -5536,7 +5542,7 @@ function editDrvTodayDispatch(fbId, name){
     camp:camp,
     routeNo:routeNo,
     date:today(),
-    assignedAt:_nowISO(),
+    assignedAt:new Date().toISOString(),
     assignedBy:'관리자'
   };
   drs[idx].todayDispatch=dispatch;
@@ -5552,7 +5558,7 @@ function editDrvTodayDispatch(fbId, name){
         subject:'📍 당일 배차 도착',
         body:notifBody,
         category:'배차',
-        sentAt:_nowISO(),
+        sentAt:new Date().toISOString(),
         sentBy:'관리자',
         date:today()
       }).catch(function(){});
@@ -5578,7 +5584,7 @@ function appDriver(id){
     // 승인 알림 activity 기록
     _db.collection('activity').add({
       type:'reg_approve', driver:f.name, userId:f.userId,
-      companyCode:f.companyCode||'', ts:_nowISO(), msg:f.name+' 가입 승인'
+      companyCode:f.companyCode||'', ts:new Date().toISOString(), msg:f.name+' 가입 승인'
     }).catch(()=>{});
   }
   addAct('reg',f.name+'('+f.userId+') 가입 승인 ✅',f.name);
@@ -5651,14 +5657,14 @@ function appDriver(id){
       content: welcomeContent,
       category: '일반',
       pinned: true,
-      sentAt: _nowISO(),
+      sentAt: new Date().toISOString(),
       sentBy: '관리자(자동)',
       autoSent: true,
       isWelcome: true
     };
     _db.collection('driver_notifications').add(welcomeNotif)
-      .then(function(){})
-      .catch(function(e){});
+      .then(function(){console.log('[Welcome] '+f.name+' 환영 공지 발송 완료');})
+      .catch(function(e){console.warn('[Welcome] 발송 실패:',e&&e.message);});
   }
   SP(S.page,null); updBadge(); toast('✅ '+f.name+' 승인 완료 — 환영 공지 자동 발송');
 }
@@ -5763,7 +5769,7 @@ function approveWithdrawal(fbId, driverName){
   
   if(!confirm(msg))return;
   
-  var now=_nowISO();
+  var now=new Date().toISOString();
   d.status='탈퇴';
   d.is_active=false;
   d.withdrawnAt=now;
@@ -5780,7 +5786,7 @@ function approveWithdrawal(fbId, driverName){
       is_active:false,
       withdrawnAt:now,
       withdrawalRequest:d.withdrawalRequest
-    }).catch(function(e){});
+    }).catch(function(e){console.warn('withdrawal approve:',e);});
     
     _db.collection('activity').add({
       type:'withdrawal_approve',
@@ -5816,7 +5822,7 @@ function rejectWithdrawal(fbId, driverName){
   var d=drs.find(function(x){return x.fbId===fbId;});
   if(!d){toast('❌ 기사 정보 없음');return;}
   
-  var now=_nowISO();
+  var now=new Date().toISOString();
   d.withdrawalRequest=Object.assign({},d.withdrawalRequest||{},{
     status:'rejected',
     rejectedAt:now,
@@ -6116,7 +6122,7 @@ function saveEditDriver(fbIdOrId){
   d.insuranceNo=newInsuranceNo;
   d.kakaoId=newKakaoId;
   d.smsOk=newSmsOk;
-  d.updatedAt=_nowISO();
+  d.updatedAt=new Date().toISOString();
   d.updatedBy='관리자';
   
   all[idx]=d;
@@ -6142,6 +6148,7 @@ function saveEditDriver(fbIdOrId){
           syncDriverNameChange(oldName, newName);
         }
       }).catch(function(err){
+        console.warn('기사 수정 FB 저장 실패:', err&&err.message);
         toast('⚠️ 저장 완료 (FB 동기화 일부 실패: '+((err&&err.message)||'')+')');
       });
     }
@@ -6176,6 +6183,7 @@ function saveEditDriver(fbIdOrId){
 // 성명 변경 시 연관 컬렉션 동기화
 function syncDriverNameChange(oldName, newName){
   if(!FB||!_db||!oldName||!newName||oldName===newName)return;
+  console.log('[성명 변경 동기화] '+oldName+' → '+newName);
   
   // settlements 동기화
   _db.collection('settlements').where('driver','==',oldName).get().then(function(snap){
@@ -6184,7 +6192,7 @@ function syncDriverNameChange(oldName, newName){
       doc.ref.update({driver:newName}).catch(function(){});
       cnt++;
     });
-    if(cnt>0)
+    if(cnt>0) console.log('[동기화] settlements '+cnt+'건 → '+newName);
   }).catch(function(){});
   
   // schedules 동기화
@@ -6194,7 +6202,7 @@ function syncDriverNameChange(oldName, newName){
       doc.ref.update({driver:newName}).catch(function(){});
       cnt++;
     });
-    if(cnt>0)
+    if(cnt>0) console.log('[동기화] schedules '+cnt+'건 → '+newName);
   }).catch(function(){});
   
   // entries 동기화
@@ -6204,7 +6212,7 @@ function syncDriverNameChange(oldName, newName){
       doc.ref.update({driver:newName}).catch(function(){});
       cnt++;
     });
-    if(cnt>0)
+    if(cnt>0) console.log('[동기화] entries '+cnt+'건 → '+newName);
   }).catch(function(){});
   
   // deliveries 동기화
@@ -6214,7 +6222,7 @@ function syncDriverNameChange(oldName, newName){
       doc.ref.update({driver:newName}).catch(function(){});
       cnt++;
     });
-    if(cnt>0)
+    if(cnt>0) console.log('[동기화] deliveries '+cnt+'건 → '+newName);
   }).catch(function(){});
   
   // localStorage 내 기록들도 동기화
@@ -6236,7 +6244,7 @@ function syncDriverNameChange(oldName, newName){
         localStorage.removeItem(key);
       }
     }
-  }catch(e){}
+  }catch(e){console.warn('근무표 키 동기화 실패:',e);}
   
   setTimeout(function(){
     toast('✅ 성명 변경 연관 데이터 동기화 완료 ('+oldName+' → '+newName+')');
@@ -6499,7 +6507,7 @@ function rMypage(){
           snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
           lss('drivers',all);
           setTimeout(function(){SP('mypage',null);}, 100);
-        }).catch(function(e){});
+        }).catch(function(e){console.warn('mypage drivers fetch:',e);});
         return '<div class="mypage-box" style="text-align:center;padding:40px 20px">'
           +'<div style="font-size:40px;margin-bottom:14px">⏳</div>'
           +'<div style="font-size:15px;font-weight:700;margin-bottom:8px">기사 정보 불러오는 중...</div>'
@@ -6836,6 +6844,7 @@ function rMypage(){
     html+='</div>';
     return html;
   }catch(e){
+    console.error('rMypage 오류:',e);
     return '<div class="mypage-box" style="text-align:center;padding:40px 20px">'
       +'<div style="font-size:40px;margin-bottom:14px">⚠️</div>'
       +'<div style="font-size:15px;font-weight:700;color:var(--red);margin-bottom:8px">화면 로딩 오류</div>'
@@ -6928,7 +6937,7 @@ function requestWithdrawal(){
   
   var req={
     status:'pending',
-    requestedAt:_nowISO(),
+    requestedAt:new Date().toISOString(),
     reason:reason,
     requestedBy:S.curDriver
   };
@@ -6972,17 +6981,17 @@ function resetDriverVerify(fbIdOrId){
   var drv=drs[idx];
   drs[idx].verifyPinHash='';
   drs[idx].verifiedAt='';
-  drs[idx].verifyResetAt=_nowISO();
+  drs[idx].verifyResetAt=new Date().toISOString();
   lss('drivers',drs);
   if(FB&&_db&&drv.fbId){
     _db.collection('drivers').doc(drv.fbId).update({
       verifyPinHash:firebase.firestore.FieldValue.delete(),
       verifiedAt:firebase.firestore.FieldValue.delete(),
-      verifyResetAt:_nowISO()
+      verifyResetAt:new Date().toISOString()
     }).catch(function(){
       // delete 실패 시 빈 문자열로 대체
       _db.collection('drivers').doc(drv.fbId).update({
-        verifyPinHash:'',verifiedAt:'',verifyResetAt:_nowISO()
+        verifyPinHash:'',verifiedAt:'',verifyResetAt:new Date().toISOString()
       }).catch(function(){});
     });
   }
@@ -7003,7 +7012,7 @@ async function setVerifyPin(){
   var me=ls('drivers').find(function(x){return x.name===S.curDriver||x.userId===S.curDriver;});
   if(!me){toast('❌ 기사 정보 없음');return;}
   var pinHash=await hashPw(pin1);
-  var verifiedAt=_nowISO();
+  var verifiedAt=new Date().toISOString();
   // 로컬 저장
   var drs=ls('drivers');
   var idx=drs.findIndex(function(x){return x.userId===me.userId;});
@@ -7017,7 +7026,7 @@ async function setVerifyPin(){
     _db.collection('drivers').doc(me.fbId).update({
       verifyPinHash:pinHash,
       verifiedAt:verifiedAt
-    }).catch(function(e){});
+    }).catch(function(e){console.warn('verify pin save:',e);});
   }
   addAct('verify',S.curDriver+' 본인확인 완료',S.curDriver);
   toast('✅ 개인 PIN 설정 완료');
@@ -7038,13 +7047,13 @@ async function changeVerifyPin(){
   var idx=drs.findIndex(function(x){return x.userId===me.userId;});
   if(idx>=0){
     drs[idx].verifyPinHash=newHash;
-    drs[idx].verifyPinChangedAt=_nowISO();
+    drs[idx].verifyPinChangedAt=new Date().toISOString();
     lss('drivers',drs);
   }
   if(FB&&_db&&me.fbId){
     _db.collection('drivers').doc(me.fbId).update({
       verifyPinHash:newHash,
-      verifyPinChangedAt:_nowISO()
+      verifyPinChangedAt:new Date().toISOString()
     }).catch(function(){});
   }
   addAct('verify',S.curDriver+' PIN 변경',S.curDriver);
@@ -7281,7 +7290,7 @@ function openSE(name){
   refreshDrvDatalist();
   var _df=ls('drivers').find(d=>d.name===name);var _di=document.getElementById('se-driver-id');if(_di)_di.value=_df&&_df.userId?_df.userId:'';
   document.getElementById('se-driver').value=name;
-  document.getElementById('se-month').value=_monthStr();
+  document.getElementById('se-month').value=new Date().toISOString().slice(0,7);
   ['se-dcnt','se-damt','se-rcnt','se-ramt','se-fresh','se-finc','se-inc','se-nocont','se-nocont-cnt','se-tax','se-emp','se-eq','se-dmg','se-adv','se-etc-plus','se-etc-minus'].forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
   var sw=document.getElementById('se-work');if(sw){sw.value=0;delete sw.dataset.manual;}
   var sr=document.getElementById('se-dmg-reason');if(sr)sr.value='';
@@ -7459,6 +7468,7 @@ function _seRestoreDraft(){
     if(typeof toast === 'function') toast('📝 작성 중이던 데이터 자동 복원 ('+ageStr+')');
     return true;
   }catch(e){
+    console.warn('[seRestoreDraft]', e);
     return false;
   }
 }
@@ -7787,7 +7797,7 @@ function stEditUnitPrice(i, routeIdx){
   if(FB && _db){
     _db.collection('settlements').doc(s[i].fbId || (s[i].driver+'_'+s[i].month))
       .set(s[i], {merge:true})
-      .catch(function(err){ });
+      .catch(function(err){ console.warn('단가 수정 FB 저장 실패:', err&&err.message); });
   }
 
   if(typeof addAct === 'function'){
@@ -7853,7 +7863,7 @@ function stEditRoute(i, routeIdx){
   if(FB && _db){
     _db.collection('settlements').doc(s[i].fbId || (s[i].driver+'_'+s[i].month))
       .set(s[i], {merge:true})
-      .catch(function(err){ });
+      .catch(function(err){ console.warn('라우트명 수정 FB 저장 실패:', err&&err.message); });
   }
   if(typeof addAct === 'function'){
     addAct('settle', x.driver+' 라우트명 '+oldRoute+'→'+nv+' 수정', x.driver);
@@ -7904,7 +7914,7 @@ function stEditDeliveryCnt(i, routeIdx){
   if(FB && _db){
     _db.collection('settlements').doc(s[i].fbId || (s[i].driver+'_'+s[i].month))
       .set(s[i], {merge:true})
-      .catch(function(err){ });
+      .catch(function(err){ console.warn('배송건수 수정 FB 저장 실패:', err&&err.message); });
   }
   if(typeof addAct === 'function'){
     addAct('settle', x.driver+' '+rd.route+' 배송건 '+curCnt+'→'+nv+' 수정', x.driver);
@@ -7956,7 +7966,7 @@ function stEditReturnCnt(i, routeIdx){
   if(FB && _db){
     _db.collection('settlements').doc(s[i].fbId || (s[i].driver+'_'+s[i].month))
       .set(s[i], {merge:true})
-      .catch(function(err){ });
+      .catch(function(err){ console.warn('반품건수 수정 FB 저장 실패:', err&&err.message); });
   }
   if(typeof addAct === 'function'){
     addAct('settle', x.driver+' '+rd.route+' 반품건 '+curRet+'→'+nv+' 수정', x.driver);
@@ -8060,7 +8070,7 @@ function sendStmtToDriver(i){
     var saveStmt=function(imgUrl){
       var note={type:'settlement',driver:x.driver,month:x.month,
         income:r.income,net:r.net,img:imgUrl,
-        sentAt:_nowISO(),status:'전달완료',sentBy:'관리자'};
+        sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
       // ① 보관함 저장
       try{var st=JSON.parse(localStorage.getItem('mbti_stmt_store')||'{}');
         if(!st[x.driver])st[x.driver]=[];
@@ -8089,7 +8099,7 @@ function sendStmtToDriver(i){
       var ref=_st.ref(storePath);
       var done=false;
       var timer=setTimeout(function(){
-        if(!done){done=true;saveStmt(fallbackUrl);}
+        if(!done){done=true;console.warn('Storage 타임아웃, base64 fallback');saveStmt(fallbackUrl);}
       },10000);
       ref.put(blob).then(function(){return ref.getDownloadURL();})
       .then(function(url){if(!done){done=true;clearTimeout(timer);saveStmt(url);}})
@@ -8100,6 +8110,7 @@ function sendStmtToDriver(i){
           if(e&&(e.code==='storage/unauthorized'||String(e.message||'').indexOf('permission')>=0)){
             console.info('[세금계산서] Storage 권한 없음 → base64 폴백 (정상 저장됨)');
           } else {
+            console.warn('[세금계산서] Storage 실패:',e.message||e,'→ base64 폴백');
           }
           saveStmt(fallbackUrl);
         }
@@ -8129,6 +8140,7 @@ function openTaxInvoice(arg1, arg2){
   }
   if(!x){
     toast('❌ 해당 정산 데이터를 찾을 수 없습니다 — 새로고침 후 다시 시도해주세요');
+    console.warn('[openTaxInvoice] settlement 못 찾음:', arg1, arg2);
     return;
   }
   var i = idx;  // ★ v9.31: 함수 내부에서 사용하던 'i' 변수 호환 유지
@@ -8333,14 +8345,14 @@ function saveTaxInvoiceImage(i){
       if(!store[drv])store[drv]=[];
       // 같은 월 있으면 덮어쓰기
       var idx2=store[drv].findIndex(function(it){return it.month===x.month;});
-      var entry={month:x.month||'',img:dataUrl,savedAt:_nowISO()};
+      var entry={month:x.month||'',img:dataUrl,savedAt:new Date().toISOString()};
       if(idx2>=0)store[drv][idx2]=entry; else store[drv].push(entry);
       localStorage.setItem('mbti_tax_store',JSON.stringify(store));
-    }catch(e){}
+    }catch(e){console.warn('보관함 저장 실패',e);}
     // 파일 다운로드
     var a=document.createElement('a');
     a.href=dataUrl;
-    a.download='세금계산서_'+(x.driver||'기사')+'_'+(x.month||_monthStr())+'.png';
+    a.download='세금계산서_'+(x.driver||'기사')+'_'+(x.month||new Date().toISOString().slice(0,7))+'.png';
     a.click();
     toast('🖼 저장 완료 → 보관함에도 자동 저장됨 ('+a.download+')');
   }).catch(function(err){toast('이미지 생성 오류: '+err.message);});
@@ -8697,7 +8709,7 @@ function parseExcel(inp){
             <span>✅ 예상 실지급액</span><span style="color:var(--purple);font-size:16px">₩${netPay.toLocaleString()}</span>
           </div>
         </div>`;
-    }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);}
+    }catch(e){toast('❌ 엑셀 분석 오류: '+e.message);console.error(e);}
   };
   reader.readAsArrayBuffer(file);
 }
@@ -8767,10 +8779,12 @@ function parseRoutePriceExcel(inp){
         +'포맷: '+detected+' | 총 '+Object.keys(result).length+'개\n'
         +'(갱신 '+updated+'개 / 신규 '+added+'개)\n'
         +'저장하려면 [💾 저장] 버튼을 눌러주세요';
-      toast(msg);
+      alert(msg);
+      console.log('[단가표파서]',log.join('\n'));
 
     }catch(err){
       toast('❌ 단가표 파싱 오류: '+err.message);
+      console.error(err);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -8947,6 +8961,7 @@ function DT(tab,el){
       document.getElementById('dpc').innerHTML=_res||'';
     }
   }catch(e){
+    console.error('DT 렌더링 오류('+tab+'):',e);
     document.getElementById('dpc').innerHTML='<div style="padding:30px;text-align:center;color:var(--red)">⚠️ 화면 로딩 오류<br><small>'+e.message+'</small></div>';
   }
   // 내정보 탭 진입 시 캠프탭 초기화
@@ -8984,6 +8999,7 @@ function dViewTax(month, driver, btn){
 
   // ★ v9.27 보안: 본인이 아닌 기사의 세금계산서 조회 차단 (관리자 모드 제외)
   if(S.curMode==='driver' && S.curDriver && drv && drv!==S.curDriver){
+    console.warn('[보안] 다른 기사 세금계산서 조회 차단:', drv, '!=', S.curDriver);
     drv = S.curDriver;  // 본인 것으로 강제 교체
   }
 
@@ -9141,7 +9157,7 @@ function checkDriverNotifications(){
           keys.slice(0,keys.length-100).forEach(function(k){delete notified[k];});
         }
         localStorage.setItem(notifiedKey,JSON.stringify(notified));
-      }catch(e){}
+      }catch(e){console.warn('push notif:',e);}
       items.forEach(function(it){
         if(it.type==='tax_invoice'&&it.img&&it.month){
           try{
@@ -9258,7 +9274,7 @@ function checkDriverNotifications(){
         +unseenItems.map(function(it){return 'm["'+it._id+'"]=Date.now();';}).join('')
         +'localStorage.setItem(k,JSON.stringify(m));'
         +'try{if(window._notiSeen){'+unseenItems.map(function(it){return 'window._notiSeen["dn_'+it._id+'"]=Date.now();';}).join('')+'if(window._notiSeenSave)window._notiSeenSave();}}catch(e){}'
-        +'try{if(typeof FB!=="undefined"&&FB&&_db){'+unseenItems.map(function(it){return '_db.collection("driver_notifications").doc("'+it._id+'").update({readAt:_nowISO(),readStatus:"read"}).catch(function(){});';}).join('')+'}}catch(e){}'
+        +'try{if(typeof FB!=="undefined"&&FB&&_db){'+unseenItems.map(function(it){return '_db.collection("driver_notifications").doc("'+it._id+'").update({readAt:new Date().toISOString(),readStatus:"read"}).catch(function(){});';}).join('')+'}}catch(e){}'
         +'window._drvNotifBoxSig=null;document.getElementById("drv-notification-box")?.remove();';
       box.innerHTML='<div style="background:var(--bg2);border:2px solid var(--blue);border-radius:12px;padding:14px;box-shadow:0 4px 20px rgba(0,0,0,.2)">'
         +'<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">📬 관리자 전달 내역 ('+unseenItems.length+'건)</div>'
@@ -9270,7 +9286,7 @@ function checkDriverNotifications(){
         +'</div>';
       document.body.appendChild(box);
     // ★ onSnapshot 두 번째 파라미터로 에러 핸들러 (기존 .catch() 대신)
-    }, function(e){});
+    }, function(e){console.warn('driver_notifications 리스너 오류:', e.code, e.message);});
 }
 function _vdn(id){
   var item=window._drvNotes&&window._drvNotes[id];
@@ -9295,6 +9311,7 @@ function _vdn(id){
       +'<button onclick="this.parentElement.parentElement.remove()" style="padding:10px 24px;background:var(--teal);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">확인</button>'
       +'</div>';
     document.body.appendChild(moNoImg);
+    console.warn('[세금계산서/명세서 이미지 누락]', {id, type:item.type, month:item.month, hasImg:!!item.img});
     return;
   }
   // ★ v9.25: 한번 본 알림은 자동으로 dismiss 처리 (재팝업 방지)
@@ -9315,9 +9332,9 @@ function _vdn(id){
   // ★ v9.25: Firebase readAt 영구 저장 (다른 기기/브라우저/재로그인 시에도 차단)
   if(FB&&_db&&id){
     _db.collection('driver_notifications').doc(id).update({
-      readAt:_nowISO(),
+      readAt:new Date().toISOString(),
       readStatus:'read'
-    }).catch(function(e){});
+    }).catch(function(e){console.warn('[notif readAt vdn]:',e&&e.message);});
   }
   var mo=document.createElement('div');
   mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:14px';
@@ -9348,6 +9365,7 @@ function viewDriverNotification(el,item){
     // ★ v9.25: 이미지 누락 안내
     var label = (item&&item.type==='tax_invoice')?'세금계산서':'명세서';
     toast('⚠️ '+label+' 이미지를 불러올 수 없습니다 — 관리자에게 재전달 요청');
+    console.warn('[보관함 이미지 누락]', item);
     return;
   }
   if(item.img){
@@ -9429,7 +9447,7 @@ function _viewNotice(id){
       // ★ 모달 먼저 닫고 (즉시 UI 반응)
       _closeUrgentNoticeModal();
       // 백그라운드 읽음 처리 (에러나도 모달은 이미 닫힘)
-      try{_markNoticeRead(_nId, _nocId);}catch(e){}
+      try{_markNoticeRead(_nId, _nocId);}catch(e){console.warn('[markNoticeRead err]',e);}
     });
   }
   if(closeBtn){
@@ -9455,9 +9473,9 @@ function _markNoticeRead(notifId,noticeId){
   // 로컬 읽음 기록 (notifId + noticeId 둘 다 저장)
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
-    readSet[notifId]=_nowISO();
+    readSet[notifId]=new Date().toISOString();
     // ★ v9.25: noticeId 기준으로도 저장 (같은 공지 여러 doc 중복 방지)
-    if(noticeId) readSet['nc_'+noticeId]=_nowISO();
+    if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
 
@@ -9472,9 +9490,9 @@ function _markNoticeRead(notifId,noticeId){
   // ★ Firebase driver_notifications 문서에 readAt 저장
   if(FB&&_db&&notifId){
     _db.collection('driver_notifications').doc(notifId).update({
-      readAt:_nowISO(),
+      readAt:new Date().toISOString(),
       readStatus:'read'
-    }).catch(function(e){});
+    }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
   }
 
   // ★ v9.25: 같은 noticeId를 가진 다른 driver_notifications doc도 일괄 읽음 처리
@@ -9487,7 +9505,7 @@ function _markNoticeRead(notifId,noticeId){
           if(doc.id===notifId)return; // 이미 처리한 것 제외
           if(doc.data().readAt)return; // 이미 읽음 처리된 것 제외
           doc.ref.update({
-            readAt:_nowISO(),
+            readAt:new Date().toISOString(),
             readStatus:'read'
           }).catch(function(){});
         });
@@ -9497,7 +9515,7 @@ function _markNoticeRead(notifId,noticeId){
   // Firebase: 마스터 공지의 readBy에 기록 (관리자 통계용)
   if(FB&&_db&&noticeId){
     var upd={};
-    upd['readBy.'+S.curDriver]=_nowISO();
+    upd['readBy.'+S.curDriver]=new Date().toISOString();
     _db.collection('notices').doc(noticeId).update(upd).catch(function(){});
   }
   
@@ -9631,7 +9649,7 @@ async function doCheckIn(){
     }
   }
 
-  var now=_nowISO();
+  var now=new Date().toISOString();
   // ★ 출근은 하루를 새로 시작 — checkOut/checkOutGps 초기화
   var a={
     checkIn:now,
@@ -9655,8 +9673,8 @@ async function doCheckIn(){
       checkOutGps:null,
       checkOutLat:null,
       checkOutLng:null,
-      updatedAt:_nowISO()
-    },{merge:true}).catch(function(e){});
+      updatedAt:new Date().toISOString()
+    },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
   }
   
   toast('✅ 출근 체크인 완료'+(gps?' 📍':' (GPS 없음)'));
@@ -9694,7 +9712,7 @@ async function doCheckIn(){
         shift:entryShift,   // ★ v9.25: 회차 (D1,D2,F3,1회전,2회전 등)
         time:nowT(), temp:'상온', photos:{},
         gps:gps||null,
-        date:today(), ts:_nowISO()
+        date:today(), ts:new Date().toISOString()
       };
       ents.push({id:nid('entry'),...entryData});
       lss('entries',ents);
@@ -9712,7 +9730,7 @@ async function doCheckIn(){
         lss('entries',ents);
       }
     }
-  }catch(e){}
+  }catch(e){console.warn('자동 입차 등록 실패:',e);}
 }
 
 // ── 퇴근 체크아웃
@@ -9729,7 +9747,7 @@ async function doCheckOut(){
   var gps=await _getGPS();
   // ★ v9.27: GPS 거부 시 부산 폴백 좌표가 attendance DB에 기록되지 않도록 정리
   var gpsForRecord = (gps && !gps._denied && gps.lat) ? gps : null;
-  var now=_nowISO();
+  var now=new Date().toISOString();
   a.checkOut=now;
   a.checkOutGps=gpsForRecord;
   _saveAttend(a);
@@ -9741,8 +9759,8 @@ async function doCheckOut(){
       checkOutGps:gpsForRecord,
       checkOutLat:gpsForRecord?gpsForRecord.lat:null,
       checkOutLng:gpsForRecord?gpsForRecord.lng:null,
-      updatedAt:_nowISO()
-    },{merge:true}).catch(function(e){});
+      updatedAt:new Date().toISOString()
+    },{merge:true}).catch(function(e){console.warn('attendance save:',e);});
   }
   
   var ms=new Date(now)-new Date(a.checkIn);
@@ -9914,9 +9932,9 @@ function _startGeoWatch(){
           window._geoWatchId=null;
           _doAutoCheckIn(gps);
         }
-      }catch(e){}
+      }catch(e){console.warn('[GeoWatch]',e);}
     },
-    function(err){},
+    function(err){console.warn('[GeoWatch] 위치 오류:',err.message);},
     {enableHighAccuracy:false,timeout:10000,maximumAge:30000}
   );
 }
@@ -9930,7 +9948,7 @@ async function _doAutoCheckIn(gps){
   var me=ls('drivers').find(function(d){return d.name===S.curDriver;})||{};
   var jsub=me.jobsub||'쿠팡';
   var myCamp=me.camp||'';
-  var now=_nowISO();
+  var now=new Date().toISOString();
   var nowT=now.slice(11,16);
 
   // 기본 온도 (상온)
@@ -10148,7 +10166,7 @@ async function submitCampSupport(){
     message:msg,
     route:route,
     status:'활성',
-    createdAt:_nowISO(),
+    createdAt:new Date().toISOString(),
     responders:[]
   };
   try{
@@ -10199,7 +10217,7 @@ async function respondCampSupport(fbId){
       var reason=prompt('콜!! 응원 메시지 (선택사항)','');
       if(reason===null)return; // 취소
       await _db.collection('campSupports').doc(fbId).update({
-        responders:firebase.firestore.FieldValue.arrayUnion({driver:S.curDriver,phone:(me&&me.phone)||'',reason:reason,ts:_nowISO()})
+        responders:firebase.firestore.FieldValue.arrayUnion({driver:S.curDriver,phone:(me&&me.phone)||'',reason:reason,ts:new Date().toISOString()})
       });
       // 요청자에게 FCM 알림 발송
       var supDoc=window._campSupports&&window._campSupports.find(function(x){return x.fbId===fbId;});
@@ -10222,7 +10240,7 @@ async function resolveCampSupport(fbId){
   if(!confirm('이 지원 요청을 해결됨으로 표시할까요?'))return;
   if(FB&&_db){
     try{
-      await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:_nowISO()});
+      await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:new Date().toISOString()});
       // 같은 캠프 전체에 해결 알림 발송
       var supDoc=window._campSupports&&window._campSupports.find(function(x){return x.fbId===fbId;});
       var myCamp=(supDoc&&supDoc.camp)||'';
@@ -10367,13 +10385,14 @@ function _loadDrvNotices(){
     },function(){});
     _startDrvNoticeListener();
   }).catch(function(e){
+    console.warn('[공지] notices 로드 실패:', e&&e.message);
     _startDrvNoticeListener();
   });
 }
 function _startDrvNoticeListener(){
   if(!FB||!_db||!S.curDriver)return;
   // ★ v9.25: 페이지 로드 시점 기록 (이전 공지는 알림 발사 X)
-  if(!window._noticeListenStartTime) window._noticeListenStartTime=_nowISO();
+  if(!window._noticeListenStartTime) window._noticeListenStartTime=new Date().toISOString();
   // ★ v9.25: 비용 절감 — limit(50). 30일 정책으로 50개면 충분
   window._drvNoticeUnsub=_db.collection('driver_notifications')
     .where('driver','==',S.curDriver||'')
@@ -10387,6 +10406,7 @@ function _startDrvNoticeListener(){
           var nd=change.doc.data();
           // ★ v9.25 fix: 삭제된 공지 알림 차단
           if(nd.noticeId&&window._masterNoticeIds&&Object.keys(window._masterNoticeIds).length>0&&!window._masterNoticeIds[nd.noticeId]){
+            console.log('[Noti] 삭제된 공지 알림 차단(drvNotice):', nd.noticeId);
             return;
           }
           // ★ v9.25: 이미 읽은 공지 + 페이지 로드 이전 sentAt 차단 (재로그인 시 폭주 방지)
@@ -10436,7 +10456,7 @@ function _startDrvNoticeListener(){
       var card=document.getElementById('drv-notice-card');
       if(card)card.innerHTML=_buildDrvNoticeCard();
       setTimeout(function(){window._drvNoticeReady=true;},1200);
-    },function(e){});
+    },function(e){console.warn('공지 리스너 오류:',e&&e.message);});
 }
 
 // ── 공지 상세 보기 (읽음 처리)
@@ -10499,7 +10519,7 @@ function _viewDrvNotice(id){
       // ★ 모달 먼저 닫고 (즉시 UI 반응)
       _closeDrvNoticeModal();
       // 백그라운드 읽음 처리
-      try{_markDrvNoticeRead(_nId, _nocId);}catch(e){}
+      try{_markDrvNoticeRead(_nId, _nocId);}catch(e){console.warn('[markDrvNoticeRead err]',e);}
     });
   }
   if(closeBtn){
@@ -10528,9 +10548,9 @@ function _markDrvNoticeRead(notifId,noticeId){
   // 1) 로컬 즉시 반영 (UI 반응 속도)
   try{
     var readSet=JSON.parse(localStorage.getItem('drv_notice_read_'+S.curDriver)||'{}');
-    readSet[notifId]=_nowISO();
+    readSet[notifId]=new Date().toISOString();
     // ★ v9.25: noticeId 기준으로도 저장
-    if(noticeId) readSet['nc_'+noticeId]=_nowISO();
+    if(noticeId) readSet['nc_'+noticeId]=new Date().toISOString();
     localStorage.setItem('drv_notice_read_'+S.curDriver,JSON.stringify(readSet));
   }catch(e){}
 
@@ -10542,7 +10562,7 @@ function _markDrvNoticeRead(notifId,noticeId){
   
   // 3) 메모리 리스트 즉시 업데이트
   var list=window._drvNoticeList||[];
-  list.forEach(function(n){if(n._id===notifId){n._read=true;n.readAt=_nowISO();}});
+  list.forEach(function(n){if(n._id===notifId){n._read=true;n.readAt=new Date().toISOString();}});
   
   // 4) 홈 카드 즉시 갱신
   var card=document.getElementById('drv-notice-card');
@@ -10551,16 +10571,16 @@ function _markDrvNoticeRead(notifId,noticeId){
   // 5) Firebase: driver_notifications 문서에 readAt 저장 (확실한 중복 방지)
   if(FB&&_db&&notifId){
     _db.collection('driver_notifications').doc(notifId).update({
-      readAt:_nowISO(),
+      readAt:new Date().toISOString(),
       readStatus:'read'
-    }).catch(function(e){});
+    }).catch(function(e){console.warn('notif readAt:',e&&e.message);});
   }
   
   // 6) Firebase: 마스터 공지 readBy 기록 (관리자 통계용)
   if(FB&&_db&&noticeId){
     var upd={};
-    upd['readBy.'+S.curDriver]=_nowISO();
-    _db.collection('notices').doc(noticeId).update(upd).catch(function(e){});
+    upd['readBy.'+S.curDriver]=new Date().toISOString();
+    _db.collection('notices').doc(noticeId).update(upd).catch(function(e){console.warn('notice readBy:',e&&e.message);});
   }
   
   toast('✓ 확인 완료');
@@ -10856,6 +10876,7 @@ function dHome(){
             var existAtt=_getAttend();
             if(!existAtt.checkIn && d.checkIn){
               _saveAttend({checkIn:d.checkIn,checkOut:d.checkOut||null,gps:d.gps||null});
+              console.log('[출근기록 복원]',d.checkIn);
             }
           }
           // 복원 완료 후 알림 시작
@@ -11101,7 +11122,7 @@ async function saveGoogleApiKey(){
   // Firebase 저장
   if(FB && _db){
     try{
-      await _db.collection('settings').doc('claude_config').set({googleApiKey: key, updatedAt: _nowISO()}, {merge: true});
+      await _db.collection('settings').doc('claude_config').set({googleApiKey: key, updatedAt: new Date().toISOString()}, {merge: true});
       toast('✅ Google Cloud API 키 저장됨 (모든 기기 적용)');
     }catch(e){
       toast('✅ 로컬 저장됨 (Firebase 저장 실패: '+e.code+')');
@@ -11134,7 +11155,7 @@ async function saveAnthropicApiKey(){
     try{
       await _db.collection('settings').doc('claude_config').set({
         anthropicApiKey: key,
-        anthropicUpdatedAt: _nowISO()
+        anthropicUpdatedAt: new Date().toISOString()
       }, {merge: true});
       toast('✅ Anthropic API 키 저장됨 (모든 기기 적용)');
     }catch(e){
@@ -11164,6 +11185,7 @@ function _emerCloseWithCheck(){
   }
   mo.remove();
 }
+
 
 
 // ★ v9.70: 주소 정제 — OCR/파싱 아티팩트 제거
@@ -11211,9 +11233,9 @@ window._geoCacheMem = window._geoCacheMem || {};
         }
       }
       localStorage.setItem('mbti_geo_cache_ver', 'v968');
-      if(removed > 0)
+      if(removed > 0) console.log('[v9.68 CACHE_FLUSH]', removed, '개 항목 자동 무효화 (v9.62 이전 캐시)');
     }
-  }catch(e){ }
+  }catch(e){ console.debug('cache flush skip:', e); }
 })();
 function _geoCacheKey(address){
   if(!address) return '';
@@ -11321,6 +11343,7 @@ async function _emerVerifyWithClaude(file, googleOcrAddr){
     var resp = null, data = null;
     if(apiKey && apiKey.indexOf('sk-ant-') === 0){
       try{
+        console.log('[ClaudeVerify v9.68a] Firestore 키로 직접 호출');
         resp = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST',
           headers:{
@@ -11332,37 +11355,42 @@ async function _emerVerifyWithClaude(file, googleOcrAddr){
           body: JSON.stringify(requestBody)
         });
         if(resp.ok) data = await resp.json();
-        else
-      }catch(e1){ }
+        else console.warn('[ClaudeVerify direct] HTTP', resp.status);
+      }catch(e1){ console.warn('[ClaudeVerify direct] error:', e1.message); }
     }
 
     // ─── 2순위: /claude-ocr 프록시 폴백 ───
     if(!data){
       try{
+        console.log('[ClaudeVerify v9.68a] /claude-ocr 프록시 폴백');
         resp = await fetch('/claude-ocr', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify(requestBody)
         });
         if(resp.ok) data = await resp.json();
-        else
-      }catch(e2){ }
+        else console.warn('[ClaudeVerify proxy] HTTP', resp.status);
+      }catch(e2){ console.warn('[ClaudeVerify proxy] error:', e2.message); }
     }
 
     if(!data){
+      console.warn('[ClaudeVerify] 모든 경로 실패 — Claude 키 확인 필요');
       _geoResultBanner('⚠️ Claude 키 미설정 — 마이페이지에서 등록하세요');
       return null;
     }
     if(data.error){
+      console.warn('[ClaudeVerify] API error:', data.error.message);
       return null;
     }
     var text = (data.content||[]).map(function(x){return x.text||'';}).join('').trim();
     text = text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
     var parsed;
     try{ parsed = JSON.parse(text); }
-    catch(e){ return null; }
+    catch(e){ console.warn('[ClaudeVerify] JSON parse fail:', text.slice(0,200)); return null; }
+    console.log('[ClaudeVerify v9.68a]', parsed);
     return parsed;
   }catch(e){
+    console.warn('[ClaudeVerify] error:', e.message);
     return null;
   }
 }
@@ -11377,6 +11405,7 @@ async function _kakaoGeocode(address){
   var _cached = _geoCacheGet(address);
   if(_cached){
     _geoResultBanner('📍 캐시 | '+_cached.lat.toFixed(5)+', '+_cached.lng.toFixed(5));
+    console.log('[GEO_CACHE_HIT]', _geoCacheKey(address), _cached);
     return {lat:_cached.lat, lng:_cached.lng, src:'cache'};
   }
 
@@ -11387,6 +11416,7 @@ async function _kakaoGeocode(address){
   if(_reuse){
     _geoResultBanner('📍 동일주소 재사용 | '+_reuse.lat.toFixed(5)+', '+_reuse.lng.toFixed(5));
     _geoCacheSet(address, _reuse);
+    console.log('[GEO_REUSE]', _geoCacheKey(address), _reuse);
     return _reuse;
   }
 
@@ -11459,6 +11489,7 @@ async function _kakaoGeocode(address){
     }
     // 중복 제거
     aptAliases = aptAliases.filter(function(v,i,a){ return v && a.indexOf(v)===i; });
+    console.log('[KW_APT_ALIASES]', aptAliases);
 
     // ★ v9.62: 번길 OCR 자리 누락 자동 보정 변형 생성
     //   "19번길" → ["19번길", "192번길", "190번길", "191번길", "193번길", ...]
@@ -11527,6 +11558,7 @@ async function _kakaoGeocode(address){
     }
     // 중복 제거 + 빈값 제거
     kwCands = kwCands.filter(function(v,i,a){ return v && v.length>3 && a.indexOf(v)===i; });
+    console.log('[KAKAO_KW_CANDS v9.62]', kwCands.slice(0,10));
 
     // ★ v9.66: 행정구/행정동 강제 검증 추가
     function _scoreDoc(d){
@@ -11538,6 +11570,7 @@ async function _kakaoGeocode(address){
       // ★ v9.66: 행정구 검증 — OCR에 "사상구"인데 결과가 "진구"면 -100 (강력 거부)
       if(guStrTrim && guStrTrim.length >= 2){
         if(addrFullPn.indexOf(guStrTrim) < 0){
+          console.log('[KW_GU_MISMATCH]', d.place_name, '|', addrFullPn, '≠', guStrTrim);
           return -100; // 행정구 불일치 = 완전 거부
         }
       }
@@ -11579,6 +11612,7 @@ async function _kakaoGeocode(address){
       // ★ v9.64: 도로명만 매칭되고 단지명 매칭 안 되면 -50 (OCR 오인식 위험)
       if(roadMatched && !aptMatched && aptStr){
         sc -= 50;
+        console.log('[KW_PENALTY]', d.place_name, '단지명 미포함 -50');
       }
       // ★ v9.67: 동별 좌표 압도적 우선 — place_name이 "N동"으로 끝나면 +100
       //   예: "모라주공1단지아파트 106동" (동별) vs "모라주공1단지아파트" (단지중심)
@@ -11588,6 +11622,7 @@ async function _kakaoGeocode(address){
         var dongAtEnd = pnTrim.match(/(\d+동)\s*$/);
         if(dongAtEnd && dongAtEnd[1] === dongStr){
           sc += 100; // 동별 핀 강제 우선
+          console.log('[KW_DONG_EXACT]', pnTrim, '+100 (동별 좌표)');
         }
       }
       if(d.category_group_code==='AT4') sc += 5;
@@ -11611,7 +11646,7 @@ async function _kakaoGeocode(address){
           // ★ v9.67: 동별 매칭(+100점) 나올 때까지 기다리기 — 임계값 150
           if(bestScore >= 150) break;
         }
-      }catch(e){ }
+      }catch(e){ console.debug('[KW'+ki+']', e.message); }
     }
 
     if(bestDoc && bestScore >= 50){
@@ -11624,6 +11659,7 @@ async function _kakaoGeocode(address){
       var matchedName = bestDoc.place_name || '';
       var _gpsKW = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_dong', matchedAddr:matchedRoad, matchedName:matchedName};
       _geoCacheSet(address, _gpsKW);
+      console.log('[KAKAO_KW_BEST v9.65]', bestQuery, '→', matchedName, '|', matchedRoad, 'score:', bestScore);
       // ★ v9.65: 카카오 매칭 도로명으로 emer-addr 입력란 강제 재구성
       try{
         var emerAddrEl = document.getElementById('emer-addr');
@@ -11640,10 +11676,11 @@ async function _kakaoGeocode(address){
           rebuilt = rebuilt.replace(/\s+/g,' ').trim();
           if(rebuilt !== curVal && rebuilt.length > 10){
             emerAddrEl.value = rebuilt;
+            console.log('[ADDR_AUTO_REBUILD v9.65]', curVal, '→', rebuilt);
             _geoResultBanner('🔧 주소 자동교정 ✅\n   원본: '+curVal.slice(0,50)+'\n   교정: '+rebuilt);
           }
         }
-      }catch(autoCorrErr){ }
+      }catch(autoCorrErr){ console.debug('addr rebuild skip:', autoCorrErr); }
       return _gpsKW;
     }
     if(bestDoc && bestScore >= 20){
@@ -11651,6 +11688,7 @@ async function _kakaoGeocode(address){
       _geoResultBanner('📍 카카오키워드(단지'+bestScore+'점) ⚠️ | '+bestDoc.y+', '+bestDoc.x);
       var _gpsKW2 = {lat:parseFloat(bestDoc.y), lng:parseFloat(bestDoc.x), src:'kakao_kw_apt'};
       _geoCacheSet(address, _gpsKW2);
+      console.log('[KAKAO_KW_APT]', bestQuery, '→', bestDoc.place_name, 'score:', bestScore);
       return _gpsKW2;
     }
     // 점수 부족 → STEP 1로 fallthrough
@@ -11684,6 +11722,7 @@ async function _kakaoGeocode(address){
     }
 
     var addrCands = makeAddrCandidates(roadBase);
+    console.log('[KAKAO_CANDS]', addrCands.slice(0,4));
 
     for(var ai=0; ai<addrCands.length; ai++){
       try{
@@ -11693,6 +11732,7 @@ async function _kakaoGeocode(address){
         if(ad.documents && ad.documents.length > 0){
           var adoc = ad.documents[0];
           var bno  = adoc.road_address && adoc.road_address.main_building_no;
+          console.log('[KAKAO_ADDR]', addrCands[ai].slice(-30), '→ 건물번호:', bno||'없음');
           if(bno){
             // 건물번호 있는 결과 → 정확한 도로+번지 확인됨
             _geoResultBanner('📍 카카오주소 | '+adoc.y+', '+adoc.x);
@@ -11701,7 +11741,7 @@ async function _kakaoGeocode(address){
             return _gpsS1;
           }
         }
-      }catch(e){ }
+      }catch(e){ console.debug('[A'+ai+']',e.message); }
     }
   }
 
@@ -11726,6 +11766,7 @@ async function _kakaoGeocode(address){
         var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(googleCands[gi])+'&language=ko&region=kr&key='+gKey);
         var gd = await gr.json();
         var fmt = gd.results&&gd.results[0]&&gd.results[0].formatted_address||'';
+        console.log('[GOOGLE]', googleCands[gi].slice(-30), '→', gd.status, fmt.slice(-25));
         if(gd.status==='OK' && gd.results && gd.results[0]){
           var gl = gd.results[0].geometry.location;
           _geoResultBanner('🌐 Google | '+gl.lat.toFixed(5)+', '+gl.lng.toFixed(5));
@@ -11737,7 +11778,7 @@ async function _kakaoGeocode(address){
           _geoResultBanner('❌ Google Geocoding API 미활성 — Cloud Console 확인');
           break;
         }
-      }catch(e){ }
+      }catch(e){ console.debug('[G'+gi+']',e.message); }
     }
   }
 
@@ -11785,6 +11826,7 @@ async function _googleGeocodePin(addrFull, gKey){
 function openEmergencyDelivery(){
   // ★ v9.34: 모달 중복 열림 방지 (빠른 더블탭/이벤트 충돌 차단)
   if(window._emerOpening){
+    console.log('[emer] 이미 열리는 중 — 중복 호출 차단');
     return;
   }
   window._emerOpening = true;
@@ -11856,6 +11898,7 @@ function openEmergencyDelivery(){
 }
 
 
+
 async function emerOcrScan(file, _statusOverride){
   if(!file) return;
   var status = _statusOverride || document.getElementById('emer-ocr-status');
@@ -11893,7 +11936,7 @@ async function emerOcrScan(file, _statusOverride){
             if(bdCodes && bdCodes.length > 0 && bdCodes[0].rawValue){
               resolve(bdCodes[0].rawValue); return;
             }
-          }catch(e){ }
+          }catch(e){ console.warn('[BarcodeDetector 파일직접]', e.message||e); }
         }
 
         // ② jsQR — 원본 픽셀 (iOS Safari 폴백)
@@ -11933,7 +11976,7 @@ async function emerOcrScan(file, _statusOverride){
       _emerHandleScan(qrResult, status);
       return;
     }
-  }catch(e){ }
+  }catch(e){ console.warn('[QR decode]', e); }
 
   // QR 해독 실패 → Google Vision OCR 폴백
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 QR 미인식 → AI OCR 시도 중...</span>';
@@ -11954,7 +11997,7 @@ async function emerOcrScan(file, _statusOverride){
         localStorage.setItem('mbti_google_api_key', apiKey);
         window._cachedGoogleApiKey = apiKey;
       }
-    }catch(e){ }
+    }catch(e){ console.debug('[GoogleKey]', e.message); }
   }
 
   if(!apiKey){
@@ -12047,12 +12090,15 @@ async function emerOcrScan(file, _statusOverride){
 
     // ★ v9.25: responses[0]=바코드, responses[1]=OCR 텍스트
     var barcodeAnnotations = d.responses?.[0]?.barcodeAnnotations
-                           || d.responses?.[0]?.barcodes || [];}).join(' | '));
+                           || d.responses?.[0]?.barcodes || [];
+    console.log('[Vision BARCODE]', barcodeAnnotations.length+'개 감지',
+      barcodeAnnotations.map(function(b){return (b.format||'?')+':'+((b.rawValue||'').slice(0,50));}).join(' | '));
     var qrBarcode = barcodeAnnotations.find(function(b){
       return b.format==='QR_CODE' || b.valueFormat==='TEXT' ||
              (b.rawValue && (b.rawValue.indexOf('|')>=0 || b.rawValue.indexOf('V1')===0));
     });
     if(qrBarcode && qrBarcode.rawValue){
+      console.log('[QR 직접인식]', qrBarcode.rawValue);
       var _qpDirect = _parseQrText(qrBarcode.rawValue);
       if(_qpDirect.tracking_no || _qpDirect.address){
         // QR 데이터로 직접 입력
@@ -12139,6 +12185,7 @@ async function emerOcrScan(file, _statusOverride){
     var _barcodeDbg = barcodeAnnotations.length > 0
       ? '\n[바코드감지] ' + barcodeAnnotations.map(function(b){ return (b.format||'?')+': '+(b.rawValue||'').slice(0,60); }).join(' | ')
       : '\n[바코드감지] 없음 (QR 미인식)';
+    console.log('[OCR 원문]\n' + ocrText + _barcodeDbg);
     // 디버그 모달에도 표시
     var _dbgBtn = document.querySelector('[onclick*="ocr-debug"]');
     if(window._emerOcrDebugText !== undefined) window._emerOcrDebugText = ocrText + _barcodeDbg;
@@ -12355,6 +12402,7 @@ async function emerOcrScan(file, _statusOverride){
       }
       _addrWarnEl.style.cssText = 'font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;border-radius:5px;padding:4px 8px;margin-top:3px';
       _addrWarnEl.innerHTML = '⚠️ 번길 숫자 확인 필요 (예: 19번길→192번길). 틀리면 직접 수정 후 저장하세요.';
+      console.warn('[ADDR_WARN] 2자리 번길 감지:', addrLine);
     }
 
     // 배송메모: 문 앞, 경비실 등
@@ -12466,6 +12514,12 @@ async function emerOcrScan(file, _statusOverride){
     if(tw && window._emerTrackings.length>0) tw.style.display='none';
 
     // ★ v9.70: OCR 결과 디버그
+    console.log('[OCR_RESULT]', JSON.stringify({
+      tracking: p.tracking_no,
+      addr: _cleanAddr(p.address),
+      recipient: p.recipient,
+      ocrLen: (ocrText||'').length
+    }));
 
     // ★ v9.70: 주소 없으면 OCR 전체 텍스트에서 재추출 시도
     if(!p.address && ocrText){
@@ -12477,6 +12531,7 @@ async function emerOcrScan(file, _statusOverride){
         p.address = _addrLine;
         var _adEl = document.getElementById('emer-addr');
         if(_adEl) _adEl.value = _addrLine;
+        console.log('[OCR_ADDR_RETRY]', _addrLine);
       }
     }
 
@@ -12488,6 +12543,7 @@ async function emerOcrScan(file, _statusOverride){
       pinGps = {lat:_qrGps.lat, lng:_qrGps.lng, src:'QR', addr:_cleanAddr(p.address)};
       if(status) status.innerHTML='<span style="color:var(--teal)">✅ QR GPS 사용 (쿠팡 좌표)</span>';
       _geoResultBanner('📍 QR | '+_qrGps.lat.toFixed(5)+', '+_qrGps.lng.toFixed(5));
+      console.log('[GPS] QR 좌표 사용:', _qrGps.lat, _qrGps.lng);
       // ★ v9.60: QR GPS도 캐시 저장 — 같은 동의 다른 송장이 QR 없어도 동일 좌표 사용
       if(p.address) _geoCacheSet(p.address, {lat:_qrGps.lat, lng:_qrGps.lng, src:'QR'});
     } else if(p.address){
@@ -12502,6 +12558,7 @@ async function emerOcrScan(file, _statusOverride){
           if(status) status.innerHTML='<span style="color:var(--teal)">✅ '+_srcLabel+' 좌표 변환 완료</span>';
           _geoResultBanner('📍 '+_srcLabel+' | '+_kkr.lat.toFixed(5)+', '+_kkr.lng.toFixed(5));
         } else {
+          console.warn('[KAKAO_GEO_FAIL] 카카오 실패 → Google 시도');
           var gcRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(_addBusanPrefix(p.address))+'&language=ko&region=kr&key='+apiKey);
           var gcData = await gcRes.json();
           if(gcData.status==='OK' && gcData.results && gcData.results[0]){
@@ -12515,7 +12572,7 @@ async function emerOcrScan(file, _statusOverride){
             if(status) status.innerHTML='<span style="color:#f59e0b">⚠️ Geocoding API 비활성 — 현위치 사용</span>';
           }
         }
-      }catch(geoErr){ }
+      }catch(geoErr){ console.warn('Geocoding 실패:', geoErr); }
     } // end if(p.address)
 
     // ★ v9.68: 카카오 매칭이 단지중심이거나 실패면 Claude Vision으로 동번호 재검증
@@ -12529,6 +12586,7 @@ async function emerOcrScan(file, _statusOverride){
           var ocrDongM = (p.address||'').match(/(\d+동)/);
           var ocrDong = ocrDongM ? ocrDongM[1] : '';
           if(_cv.dong !== ocrDong){
+            console.log('[v9.68 DONG_CORRECT]', ocrDong, '→', _cv.dong);
             _geoResultBanner('🔧 Claude 동번호 교정: '+ocrDong+' → '+_cv.dong);
             // 주소 재구성 후 카카오 재검색
             var newAddr = (_cv.address || p.address || '').trim();
@@ -12546,10 +12604,10 @@ async function emerOcrScan(file, _statusOverride){
                 window._emerGps = {lat:_kkr2.lat, lng:_kkr2.lng, acc:0, src:(_kkr2.src||'kakao_v68'), addr:_cleanAddr(newAddr), matchedAddr:_kkr2.matchedAddr, matchedName:_kkr2.matchedName};
                 if(status) status.innerHTML = '<span style="color:var(--teal)">✅ Claude 검증 + 카카오 재매칭 완료</span>';
               }
-            }catch(reErr){ }
+            }catch(reErr){ console.warn('[v9.68 재매칭 실패]', reErr); }
           }
         }
-      }catch(cvErr){ }
+      }catch(cvErr){ console.warn('[v9.68 Claude 검증 실패]', cvErr); }
     }
 
     // ★ v9.50: 폴백 — Geocoding 실패 시 현위치 강제 사용
@@ -12634,6 +12692,7 @@ async function emerOcrScan(file, _statusOverride){
       hint = '— 밝은 곳에서 라벨 전체가 보이게 다시 찍어주세요';
     }
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패: '+errMsg+' '+hint+'</span>';
+    console.error('[OCR]', errMsg);
   }
 }
 
@@ -13174,6 +13233,7 @@ function emerStartScan(){
     })
     .catch(function(e){
       statusEl.textContent = '❌ 카메라 권한 필요 — 주소창 🔒 → 카메라 허용';
+      console.warn('[cam]', e);
     });
 }
 
@@ -13368,7 +13428,7 @@ function _emerHandleScan(raw, statusEl){
           var gEl2=document.getElementById('emer-gps-status');
           if(gEl2) gEl2.innerHTML='<span style="color:#f59e0b">⚠️ 좌표 변환 실패 — 저장 시 재시도</span>';
         }
-      }).catch(function(e){ });
+      }).catch(function(e){ console.warn('[_emerHandleScan _kakaoGeocode]', e); });
     }
   }
 
@@ -13648,6 +13708,7 @@ async function emerBarcodeScan(file){
     fr2.readAsDataURL(file);
 
   }catch(e){
+    console.warn('바코드 스캔 오류:', e);
     if(status) status.innerHTML = '<span style="color:var(--red)">❌ 바코드 인식 실패: '+(e.message||'알 수 없음')+' — 직접 입력해주세요</span>';
   }
 }
@@ -13831,6 +13892,7 @@ async function emerSave(){
       if(dongM2 && rebuilt2.indexOf(dongM2[1])<0) rebuilt2 += ' ' + dongM2[1];
       if(hoM && rebuilt2.indexOf(hoM[1])<0) rebuilt2 += ' ' + hoM[1];
       rebuilt2 = rebuilt2.replace(/\s+/g,' ').trim();
+      console.log('[emerSave ADDR_OVERRIDE v9.65]', addr, '→', rebuilt2);
       addr = rebuilt2;
       var emerAddrEl2 = document.getElementById('emer-addr');
       if(emerAddrEl2) emerAddrEl2.value = addr;
@@ -13855,6 +13917,7 @@ async function emerSave(){
       window._emerGps.src==='cache')){
     // ★ v9.70: 카카오/QR/Geocode 좌표 모두 재사용 (중복 geocoding 방지)
     gpsClean = {lat:window._emerGps.lat, lng:window._emerGps.lng, acc:0, src:window._emerGps.src};
+    console.debug('[emerSave] 기존 GPS 사용:', window._emerGps.src);
   } else if(addr){
     // GPS 없거나 device GPS인 경우에만 geocoding 시도 (1.5초 타임아웃)
     var apiKey2 = window._cachedGoogleApiKey || localStorage.getItem('mbti_google_api_key') || '';
@@ -13874,7 +13937,7 @@ async function emerSave(){
             gpsClean = { lat: loc2.lat, lng: loc2.lng, acc: 0, src: 'geocode' };
           }
         }
-      }catch(e){ }
+      }catch(e){ console.warn('[emerSave] Geocoding 폴백 실패:', e.message||e); }
     }
   }
 
@@ -13938,7 +14001,7 @@ async function emerSave(){
     var emerList = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
     emerList.push(recordLocal);
     localStorage.setItem('mbti_emergency_del', JSON.stringify(emerList));
-  }catch(e){ }
+  }catch(e){ console.warn('로컬 저장 실패:', e); }
 
   // ★ v9.25: 사진 병렬 업로드 (순차→동시 → 3장이면 3~5초에 완료)
   var uploaded = [];
@@ -14010,6 +14073,7 @@ async function emerSave(){
             }
           }
         }catch(e){
+          console.warn('자동 묶음 검색 실패:', e.code||e.message);
           // 실패 시 그냥 새 핀 생성
         }
       }
@@ -14027,7 +14091,7 @@ async function emerSave(){
           try{
             var _pu=await _emerStorageUpload(_pp.photos[0],'emergency/'+_pp.driver+'/'+_pp.time+'_0.jpg',2);
             if(_pu) await _db.collection('emergency_deliveries').doc(_did).update({photos:[_pu]});
-          }catch(e){ }
+          }catch(e){ console.debug('[BG사진]',e.message); }
         })();
       }
         docId = docRef.id;
@@ -14055,6 +14119,7 @@ async function emerSave(){
       }
       // toast는 아래 통합 처리
     }catch(e){
+      console.error('긴급배송 Firebase 저장 실패:', e);
       window._emerSaving = false;
       var saveBtn2=document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
       if(saveBtn2){saveBtn2.disabled=false;saveBtn2.textContent='🗺️ 지도에 배송핀 생성 + 저장';}
@@ -14116,6 +14181,7 @@ async function emerSave(){
     navigator.vibrate&&navigator.vibrate([40,30,40]); _tts('저장'); _emerIncSave();
   }catch(e){}
   var _gpsMsg = gpsClean ? gpsClean.src+' '+gpsClean.lat.toFixed(4)+','+gpsClean.lng.toFixed(4) : '없음';
+  console.log('[GPS_SAVED]', _gpsMsg, 'addr:', record && record.addr);
   toast('✅ 저장완료');
 }
 
@@ -14390,10 +14456,11 @@ async function _emerStorageUpload(dataUrl, path, maxRetry){
       var ref = _st.ref(path);
       await ref.put(blob);
       var url = await ref.getDownloadURL();
-      if(attempt > 1)
+      if(attempt > 1) console.log('✅ Storage 업로드 성공 (재시도 '+attempt+'회차)');
       return url;
     }catch(e){
       lastErr = e;
+      console.warn('Storage 업로드 실패 ('+attempt+'/'+maxRetry+') —', e.code||e.message);
       if(attempt < maxRetry){
         // 재시도 대기 (점진 백오프: 500ms → 1000ms → 2000ms)
         await new Promise(function(r){ setTimeout(r, 500 * Math.pow(2, attempt-1)); });
@@ -14424,6 +14491,7 @@ async function dcAddPhoto(file){
     dcUpdatePhotoCount();
     toast('✅ 사진 '+window._delivCompletePhotos.length+'장 추가됨');
   }catch(e){
+    console.warn('사진 압축 실패:', e.message);
     toast('❌ 사진 추가 실패: '+e.message);
   }
 }
@@ -14488,6 +14556,7 @@ async function _checkDelivPhotoHo(photoBase64, expectedHo){
     var m = text.match(/(\d+)\s*호/);
     return m ? m[1]+'호' : null;
   }catch(e){
+    console.warn('[배송사진 OCR 실패]', e&&e.message);
     return null;
   }
 }
@@ -14569,7 +14638,7 @@ async function saveDelivComplete(){
         }
       }
     }
-  }catch(e){ }
+  }catch(e){ console.warn('[배송완료 거리 검증 실패]', e&&e.message); }
 
   // ★ v9.48: 호수 오류 감지 — 배송완료 사진 OCR 우선 + 팝업 폴백
   var _pinAddr2 = (window._delivCompletePinData||{}).addr||'';
@@ -14591,6 +14660,7 @@ async function saveDelivComplete(){
       if(_detectedHo !== _expectedHo){
         // 호수 불일치! 자동 감지
         _hoConfirmed = false;
+        console.warn('[호수 불일치] 운송장:', _expectedHo, '/ 사진:', _detectedHo);
       } else {
         // 호수 일치 — 팝업 없이 통과
         toast('✅ 호수 확인: '+_detectedHo+' 일치');
@@ -14703,7 +14773,7 @@ async function saveDelivComplete(){
 
     if(FB&&_db&&fbId){
       try{ await _db.collection('emergency_deliveries').doc(fbId).update(update); }
-      catch(e){ }
+      catch(e){ console.warn('배송완료 저장 실패:',e.message); }
     }
 
     // 로컬 업데이트
@@ -14889,6 +14959,7 @@ function rEmergencyLog(){
         window._emerLogCache = fbRecs; // ★ v9.25: 엑셀 다운로드용 캐시
         _renderContent(fbRecs);
       },function(e){
+        console.warn('emerLog snapshot:',e.code);
         _renderContent([]);
       });
     }catch(e){ _renderContent([]); }
@@ -15057,6 +15128,7 @@ async function emerLogExportExcel(){
               });
             }
           }catch(e){
+            console.warn('사진 행 '+rowIdx+' 삽입 실패:', e.message);
           }
         }
 
@@ -15078,7 +15150,7 @@ async function emerLogExportExcel(){
     var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    var dateStr = _today();
+    var dateStr = new Date().toISOString().slice(0,10);
     a.href = url;
     a.download = '긴급배송기록_'+dateStr+'.xlsx';
     document.body.appendChild(a);
@@ -15090,6 +15162,7 @@ async function emerLogExportExcel(){
     if(btnExcel){ btnExcel.disabled = false; btnExcel.textContent = '📊 엑셀'; }
 
   }catch(e){
+    console.warn('엑셀 생성 오류:', e);
     toast('❌ 엑셀 생성 실패: '+e.message);
     var btn = document.querySelector('button[onclick="emerLogExportExcel()"]');
     if(btn){ btn.disabled = false; btn.textContent = '📊 엑셀'; }
@@ -15106,7 +15179,7 @@ async function emerLogSelectDelete(){
   if(FB&&_db&&fbIds.length){
     var batch=_db.batch();
     fbIds.forEach(function(id){try{batch.delete(_db.collection('emergency_deliveries').doc(id));}catch(e){}});
-    try{await batch.commit();}catch(e){}
+    try{await batch.commit();}catch(e){console.warn('emerDel:',e.code);}
   }
   try{
     var list=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
@@ -15210,7 +15283,7 @@ function submitShiftSwap(){
     theirDate: theirDate,
     msg: msg,
     status: '대기',  // 대기/수락/거절
-    createdAt: _nowISO(),
+    createdAt: new Date().toISOString(),
     camp: (ls('drivers').find(function(d){return d.name===S.curDriver;})||{}).camp||''
   };
 
@@ -15224,7 +15297,7 @@ function submitShiftSwap(){
     _db.collection('driver_notifications').add({
       driver: target, title: title, body: body,
       category: '업무', noticeId: ref.id,
-      sentAt: _nowISO(), read: false, pinned: false,
+      sentAt: new Date().toISOString(), read: false, pinned: false,
       type: 'shift_swap', swapId: ref.id
     });
 
@@ -15284,7 +15357,7 @@ function _loadShiftSwapList(){
 
 function replyShiftSwap(swapId, status, fromName){
   if(!FB||!_db)return;
-  _db.collection('shift_swap_requests').doc(swapId).update({status:status,repliedAt:_nowISO()})
+  _db.collection('shift_swap_requests').doc(swapId).update({status:status,repliedAt:new Date().toISOString()})
     .then(function(){
       toast((status==='수락'?'✅ 수락':'❌ 거절')+'했습니다');
       // 요청자에게 알림
@@ -15292,7 +15365,7 @@ function replyShiftSwap(swapId, status, fromName){
       var body=S.curDriver+' 기사님이 휴무 변경 요청을 '+status+'했습니다';
       _db.collection('driver_notifications').add({
         driver:fromName, title:title, body:body,
-        category:'업무', sentAt:_nowISO(), read:false, pinned:false
+        category:'업무', sentAt:new Date().toISOString(), read:false, pinned:false
       });
       // 수락 시 관리자에게도 알림
       if(status==='수락'){
@@ -15302,7 +15375,7 @@ function replyShiftSwap(swapId, status, fromName){
             title:'🔄 휴무 변경 수락',
             body:x.from+' ↔ '+x.to+' | '+x.myDate+(x.theirDate?' ↔ '+x.theirDate:''),
             type:'shift_swap', swapId:swapId,
-            createdAt:_nowISO(), read:false
+            createdAt:new Date().toISOString(), read:false
           });
         });
       }
@@ -15711,7 +15784,7 @@ function submitEntryAuto(){
     ton:S.jobTon||'', time:timeVal,
     temp:tv||'상온',
     photos:{...S.photos.entry}, date:today(),
-    ts:_nowISO()
+    ts:new Date().toISOString()
   };
   var e=ls('entries');e.push({id:nid('entry'),...data});lss('entries',e);
   fbW('entries',data).catch(()=>{});
@@ -15908,7 +15981,7 @@ async function submitDeliveryMemo(){
     photoUrl:photo,
     time:nowT(),
     date:today(),
-    ts:_nowISO()
+    ts:new Date().toISOString()
   };
   var arr=ls('deliveryMemos');arr.push({id:nid('memo'),...data});lss('deliveryMemos',arr);
   fbW('delivery_memos',data).catch(function(){});
@@ -16262,7 +16335,7 @@ async function camPhoto(inp,slotKey,category,label){
                 lat:pos.coords.latitude,
                 lng:pos.coords.longitude,
                 accuracy:Math.round(pos.coords.accuracy||0),
-                ts:_nowISO()
+                ts:new Date().toISOString()
               });
             },
             function(err){if(done)return; done=true; clearTimeout(timer); res(null);},
@@ -16319,15 +16392,15 @@ async function camPhoto(inp,slotKey,category,label){
       if(me&&me.fbId){
         var upd={};
         upd['photos.'+category+'.'+slotKey]=finalUrl;
-        upd['photos.'+category+'.'+slotKey+'_time']=_nowISO();
+        upd['photos.'+category+'.'+slotKey+'_time']=new Date().toISOString();
         _db.collection('drivers').doc(me.fbId).update(upd)
-          .catch(function(e){});
+          .catch(function(e){console.warn('drivers photo update:',e);});
       }
 
       _db.collection('photo_logs').add({
         driver:S.curDriver, category:category, slotKey:slotKey,
         label:label, url:finalUrl, date:today(),
-        time:_nowISO(),
+        time:new Date().toISOString(),
         gps:gpsData||null,
         gpsLat:gpsData?gpsData.lat:null,
         gpsLng:gpsData?gpsData.lng:null,
@@ -16343,7 +16416,7 @@ async function camPhoto(inp,slotKey,category,label){
           if(!snap.empty){
             var u2={};
             u2['photo_'+slotKey]=finalUrl;
-            u2['photoAt_'+slotKey]=_nowISO();
+            u2['photoAt_'+slotKey]=new Date().toISOString();
             // ★ 모든 문서에 업데이트
             snap.docs.forEach(function(doc){
               var u3=Object.assign({},u2);
@@ -16410,6 +16483,7 @@ window.addEventListener('unhandledrejection', function(event){
   var reason = event.reason;
   var msg = reason && (reason.message || String(reason)) || '';
   if(msg.indexOf('Target ID already exists')>=0 || msg.indexOf('already-exists')>=0){
+    console.warn('[Firestore] Target ID 충돌 (자동 무시):', msg);
     event.preventDefault();  // 브라우저 콘솔 에러 억제
     // 1회만 안내 (새로고침 제안)
     if(!_targetIdAlertShown){
@@ -16589,11 +16663,12 @@ function parseCoupangExcel(inp){
       // ★ v9.25: inputMonth 확정 후 저장 (이전엔 undefined로 저장되는 버그 있었음)
       try{
         var ctKey='coupang_total_'+month.replace('-','_');
-        var ctData={vat_excl:excelGrandTotal,fresh:excelGrandFresh,dmg:excelGrandDmg,vat_incl:Math.round(excelGrandTotal*1.1),updatedAt:_nowISO()};
+        var ctData={vat_excl:excelGrandTotal,fresh:excelGrandFresh,dmg:excelGrandDmg,vat_incl:Math.round(excelGrandTotal*1.1),updatedAt:new Date().toISOString()};
         var ctStore=JSON.parse(localStorage.getItem('mbti_coupang_totals')||'{}');
         ctStore[ctKey]=ctData;
         localStorage.setItem('mbti_coupang_totals',JSON.stringify(ctStore));
-      }catch(e){}
+        console.log('[쿠팡총매출] 저장 완료:',ctKey,'→ VAT포함 ₩'+ctData.vat_incl.toLocaleString());
+      }catch(e){console.warn('[쿠팡총매출] 저장 실패:',e);}
       var added=0,skipped=0,updated=0,skippedIds=[];
       var ncDrivers=0,ncTotalCnt=0,ncTotalAmt=0;  // ★ 미계약건 집계 (v9.25 fix)
 
@@ -16668,8 +16743,8 @@ function parseCoupangExcel(inp){
           eq:0, dmg:dmgAmt, adv:0,
           status:'정산예정',
           routeDetails:routeDetails,
-          updatedAt:_nowISO(),
-          createdAt:_nowISO()
+          updatedAt:new Date().toISOString(),
+          createdAt:new Date().toISOString()
         };
         if(existing>=0){
           // ★ v9.25: 기존 정산 완료/승인된 항목 재업로드 시 상태 보호
@@ -16696,7 +16771,7 @@ function parseCoupangExcel(inp){
           var updateData=Object.assign({},entry,{routeDetails:mergedRoutes});
           delete updateData.status;
           delete updateData.createdAt;
-          updateData.updatedAt=_nowISO();
+          updateData.updatedAt=new Date().toISOString();
           settlements[existing]=Object.assign(prev, updateData, protectedFields);
           settlements[existing].finc=entry.finc;
           updated++;
@@ -16734,7 +16809,7 @@ function parseCoupangExcel(inp){
           var cleanX=_cleanUndef(x);
           promises.push(_db.collection('settlements').doc(docId).set(cleanX)
             .then(function(){fbOk++;x.fbId=docId;})
-            .catch(function(e){fbFail++;}));
+            .catch(function(e){fbFail++;console.warn('FB 저장 실패:',x.driver,e.message);}));
         });
         Promise.all(promises).then(function(){
           if(fbFail>0)toast('⚠️ Firebase '+fbFail+'건 저장 실패 (로컬은 정상)');
@@ -16743,7 +16818,7 @@ function parseCoupangExcel(inp){
       } else {
         _finalize();
       }
-    }catch(err){toast('❌ 파싱 오류: '+err.message);}
+    }catch(err){console.error(err);toast('❌ 파싱 오류: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
   inp.value='';
@@ -16796,7 +16871,7 @@ function exportAllSettlements(){
   var bom='\uFEFF';
   var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='엠비티아이_전체정산_라우트별_'+_monthStr()+'.csv';
+  a.download='엠비티아이_전체정산_라우트별_'+new Date().toISOString().slice(0,7)+'.csv';
   a.click();
   toast('⬇️ 전체 정산 다운로드 완료 ('+s.length+'건 · 라우트 '+allRoutes.length+'개)');
 }
@@ -16935,7 +17010,7 @@ function sendTaxToDriver(driverOrIdx, month){
     }
     var saveNote=function(imgUrl){
       var note={type:'tax_invoice',driver:x.driver,month:x.month,img:imgUrl,
-        sentAt:_nowISO(),status:'전달완료',sentBy:'관리자'};
+        sentAt:new Date().toISOString(),status:'전달완료',sentBy:'관리자'};
       try{var st=JSON.parse(localStorage.getItem('mbti_tax_store')||'{}');
         if(!st[x.driver])st[x.driver]=[];
         var idx2=st[x.driver].findIndex(function(it){return it.month===x.month;});
@@ -16951,7 +17026,7 @@ function sendTaxToDriver(driverOrIdx, month){
           var s=ls('settlements');
           var si=s.findIndex(function(it){return it.driver===x.driver&&it.month===x.month;});
           if(si>=0){
-            s[si].taxSent=true; s[si].taxSentAt=_nowISO();
+            s[si].taxSent=true; s[si].taxSentAt=new Date().toISOString();
             lss('settlements',s);
             var fbKey=s[si].fbId||s[si].driver+'_'+s[si].month;
             _db.collection('settlements').doc(fbKey).set({taxSent:true,taxSentAt:s[si].taxSentAt},{merge:true}).catch(function(){});
@@ -16974,11 +17049,11 @@ function sendTaxToDriver(driverOrIdx, month){
       var ref=_st.ref(storePath);
       var done=false;
       var timer=setTimeout(function(){
-        if(!done){done=true;saveNote(fallbackUrl);}
+        if(!done){done=true;console.warn('Storage 타임아웃, base64 직접 저장');saveNote(fallbackUrl);}
       },10000);
       ref.put(blob).then(function(){return ref.getDownloadURL();})
       .then(function(url){if(!done){done=true;clearTimeout(timer);saveNote(url);}})
-      .catch(function(e){if(!done){done=true;clearTimeout(timer);saveNote(fallbackUrl);}});
+      .catch(function(e){if(!done){done=true;clearTimeout(timer);console.warn('Storage 실패:',e);saveNote(fallbackUrl);}});
     } else {
       saveNote(fallbackUrl);
     }
@@ -17047,6 +17122,7 @@ function loadInquiries(){
       renderInqList();
     })
     .catch(function(e){
+      console.warn('문의함 로드 실패:',e);
       var _ir2=document.getElementById('inq-result');if(_ir2)_ir2.innerHTML='<div style="text-align:center;padding:30px;color:var(--red)">❌ 로드 실패: '+(e.message||'')+'</div>';
     });
 }
@@ -17108,7 +17184,7 @@ function renderInqList(){
 
 function markInqDone(id){
   if(!FB||!_db)return;
-  _db.collection('inquiries').doc(id).update({status:'done',doneAt:_nowISO()})
+  _db.collection('inquiries').doc(id).update({status:'done',doneAt:new Date().toISOString()})
     .then(function(){toast('✅ 답변완료 처리');loadInquiries();})
     .catch(function(e){toast('❌ 실패: '+(e.message||''));});
 }
@@ -17264,7 +17340,7 @@ function auditExportCSV(){
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
   a.href=url;
-  a.download='감사로그_'+_today()+'.csv';
+  a.download='감사로그_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
   URL.revokeObjectURL(url);
   toast('✅ '+filtered.length+'건 CSV 내보내기 완료');
@@ -17588,10 +17664,12 @@ function startListeners(){
         if(gk){ localStorage.setItem('mbti_google_api_key',gk); window._googleApiKey=gk; }
         if(kk){ localStorage.setItem('mbti_kakao_api_key',kk); window._cachedKakaoApiKey=kk; }
         if(window._fsCacheStore) window._fsCacheStore['settings/claude_config']={ts:Date.now(),data:d};
+        console.log('[PRELOAD] API키 로드 완료 — Google:'+(!!gk)+', Kakao:'+(!!kk));
       }
     }).catch(function(){});
   }
   if(_listenersInitDone){
+    console.log('[startListeners] 이미 초기화 완료 - 재진입 차단');
     return;
   }
   _listenersInitDone=true;
@@ -17602,8 +17680,10 @@ function startListeners(){
     var _retryCount=(window._startListenersRetry||0)+1;
     window._startListenersRetry=_retryCount;
     if(_retryCount<=10){
+      console.log('[startListeners] Firebase 준비 대기 ('+_retryCount+'/10)...');
       setTimeout(function(){
         if(FB&&_db){
+          console.log('[startListeners] Firebase 준비 완료 — 재시작');
           window._startListenersRetry=0;
           startListeners();
           // 현재 페이지 새로고침
@@ -17614,6 +17694,7 @@ function startListeners(){
         }
       }, 1000);
     } else {
+      console.warn('[startListeners] Firebase 10초 내 미연결 — 오프라인 모드');
       window._startListenersRetry=0;
     }
     return;
@@ -17658,9 +17739,10 @@ function startListeners(){
           localStorage.setItem(key,JSON.stringify(Object.assign({},existing,grouped[key])));
         });
         if(S.page==='schedule_admin'||S.page==='dash')SP(S.page,null);
+        console.log('[Firebase] schedules 로드 (3개월 윈도우):',snap.size,'건');
       }).catch(function(e){
         if(e&&e.code==='already-exists'){return;} // ★ v9.25: silent — 자동 복구되어 read 발생 안 함
-        window._schedulesGetDone=false;
+        window._schedulesGetDone=false;console.warn('schedules get:',e&&e.message);
       });
     }
   
@@ -17673,7 +17755,7 @@ function startListeners(){
         var merged=Object.assign({},fbMemos,localMemos);
         localStorage.setItem('mbti_memos',JSON.stringify(merged));
         // 병합된 결과를 Firebase에도 저장
-        _db.collection('settings').doc('memos').set({data:merged,updatedAt:_nowISO()},{merge:true}).catch(function(){});
+        _db.collection('settings').doc('memos').set({data:merged,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});
       }
     }).catch(function(){});
   
@@ -17717,6 +17799,7 @@ function startListeners(){
         });
       },function(e){
         if(e.code==='already-exists'){return;} // ★ v9.25: silent
+        console.warn('photo_logs listener 오류:', e.code);
       }));
   
     // ── photo_logs: Firestore → localStorage → UI 직접 반영 (1초 이내)
@@ -17761,12 +17844,13 @@ function startListeners(){
         if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
       }, err=>{
         if(err.code==='already-exists'){return;} // ★ v9.25: silent
+        console.error('drivers onSnapshot 오류:', err.code, err.message);
         // 오류 시 1회성 fetch로 보완
         _db.collection('drivers').get().then(snap=>{
           var a=[]; snap.forEach(doc=>{ var d=doc.data(); d.fbId=doc.id; a.push(d); });
           lss('drivers',a); updBadge();
           if(S.page==='drivers'||S.page==='dash') SP(S.page, null);
-        }).catch(e=>
+        }).catch(e=>console.warn('drivers fetch 실패:', e));
       }));
   
     // ── 운행 데이터 리스너 (entries/deliveries/temp_logs/accidents/settlements)
@@ -17828,6 +17912,7 @@ function startListeners(){
           if(S.page==='dash'||S.page===colPageMap[col]) SP(S.page, null);
         }, err=>{
           if(err.code==='already-exists'){return;} // ★ v9.25: silent
+          console.warn(col+' listener 오류:', err.code);
         }));
     });
   
@@ -17858,6 +17943,7 @@ function startListeners(){
         if(S.page==='memo_log') SP('memo_log',null);
       }, err=>{
         if(err.code==='already-exists'){return;} // ★ v9.25: silent
+        console.warn('delivery_memos listener 오류:', err.code);
       }));
   
     // ★ Firebase 재연결 시 pending 큐 재전송
@@ -18427,13 +18513,13 @@ function sendPwaInstallRequest(){
   var content='관리자 공지 알림을 정상적으로 받으려면 홈 화면에 앱을 설치해 주세요.\n\n① 앱 접속 (크롬 브라우저)\n② 주소창 오른쪽 ⋮ 메뉴 클릭\n③ "홈 화면에 추가" 선택\n④ 설치 완료 후 앱 아이콘으로 접속\n\n설치 후 알림이 더 잘 옵니다!';
   var noticeData={title:title,content:content,category:'업무',
     target:'미설치기사',targetNames:notInstalled.map(function(d){return d.name;}),
-    sentAt:_nowISO(),sentBy:'관리자',pinned:false,reads:[]};
+    sentAt:new Date().toISOString(),sentBy:'관리자',pinned:false,reads:[]};
   _db.collection('notices').add(noticeData).then(function(ref){
     var batch=_db.batch();
     notInstalled.forEach(function(d){
       var nRef=_db.collection('driver_notifications').doc();
       batch.set(nRef,{driver:d.name,title:title,body:content,category:'업무',
-        noticeId:ref.id,sentAt:_nowISO(),read:false,pinned:false});
+        noticeId:ref.id,sentAt:new Date().toISOString(),read:false,pinned:false});
     });
     return batch.commit();
   }).then(function(){
@@ -18457,7 +18543,7 @@ function sendNotiRequest(){
   var noticeData={
     title:title, content:content, category:'업무',
     target:'미허용기사', targetNames:notAllowed.map(function(d){return d.name;}),
-    sentAt:_nowISO(), sentBy:'관리자',
+    sentAt:new Date().toISOString(), sentBy:'관리자',
     pinned:false, reads:[]
   };
   _db.collection('notices').add(noticeData).then(function(ref){
@@ -18468,7 +18554,7 @@ function sendNotiRequest(){
       batch.set(nRef,{
         driver:d.name, title:title, body:content,
         category:'업무', noticeId:ref.id,
-        sentAt:_nowISO(), read:false, pinned:false
+        sentAt:new Date().toISOString(), read:false, pinned:false
       });
     });
     return batch.commit();
@@ -18532,7 +18618,7 @@ async function _uploadNoticeFiles(files){
       await ref.put(f);
       var url=await ref.getDownloadURL();
       urls.push({name:f.name,url:url,type:f.type,size:f.size});
-    }catch(e){}
+    }catch(e){console.warn('[공지 파일 업로드 실패]',f.name,e.message);}
   }
   return urls;
 }
@@ -18602,7 +18688,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
   if(kakaoOpt) extraMsg+='\n• 카톡 복사 대상: '+kakaoList.length+'명';
   if(!confirm('📢 '+targets.length+'명에게 공지를 전송할까요?\n\n제목: '+title+'\n대상: '+target+extraMsg))return;
   
-  var sentAt=_nowISO();
+  var sentAt=new Date().toISOString();
   var notice={
     category:category,
     target:target,
@@ -18645,28 +18731,30 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
     var _targetNames=targets.map(function(d){return d.name;});
     var _noticeId=ref.id; // ★ v9.25: noticeId 포함하여 삭제된 공지 필터링 가능
     function _sendFcmPush(token){
-      if(!token||typeof token!=='string'||token.length<20){return;}
+      if(!token||typeof token!=='string'||token.length<20){console.warn('[FCM push] 토큰 무효');return;}
       fetch(_FCM_URL,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:content,pinned:!!pinned,
           data:{type:'notice',noticeId:_noticeId,title:title,body:content,urgent:pinned?'true':'false'}})
       }).then(function(r){
-        if(r.ok){return;}
+        if(r.ok){console.log('[FCM push] ✅ 전송 성공 → 토큰:',token.substring(0,20)+'...');return;}
         r.text().then(function(t){
+          console.error('[FCM push] ❌ 전송 실패 HTTP'+r.status,t);
           // ★ v9.25: 만료/무효 토큰 자동 삭제 (Device unregistered / NotRegistered)
           if(t&&(t.indexOf('unregistered')>=0||t.indexOf('NotRegistered')>=0||t.indexOf('invalid')>=0)){
+            console.warn('[FCM] 만료 토큰 삭제 시작:', token.substring(0,20)+'...');
             if(FB&&_db){
               // device_tokens 컬렉션에서 삭제
               _db.collection('device_tokens').where('token','==',token).get().then(function(snap){
-                snap.forEach(function(doc){doc.ref.delete();});
+                snap.forEach(function(doc){doc.ref.delete();console.log('[FCM] device_tokens 만료 토큰 삭제됨');});
               }).catch(function(){});
               // drivers 컬렉션에서 fcmToken 필드 삭제
               _db.collection('drivers').where('fcmToken','==',token).get().then(function(snap){
-                snap.forEach(function(doc){doc.ref.update({fcmToken:firebase.firestore.FieldValue.delete()});});
+                snap.forEach(function(doc){doc.ref.update({fcmToken:firebase.firestore.FieldValue.delete()});console.log('[FCM] drivers 만료 토큰 삭제됨');});
               }).catch(function(){});
             }
           }
         });
-      }).catch(function(e){});
+      }).catch(function(e){console.error('[FCM push] ❌ 네트워크 오류:',e.message);});
     }
     // ★ v9.25: drivers 컬렉션 + device_tokens 컬렉션 둘 다 조회 → 빠짐없이 푸시
     var _sentTokens=new Set(); // 중복 방지
@@ -18691,6 +18779,7 @@ function _doSendNotice(allDrs,target,category,title,content,pinned,smsOpt,kakaoO
           if(!dt.token||!dt.driver)return;
           if(_targetNames.indexOf(dt.driver)<0)return;
           _sendFcmPushOnce(dt.token);
+          console.log('[FCM] device_tokens 경로 발송:', dt.driver);
         });
       }).catch(function(){});
     })();
@@ -18903,7 +18992,7 @@ async function submitComplaint(){
   var msg=document.getElementById('cmp-msg')?.value.trim();
   var cat=document.getElementById('cmp-cat')?.value||'기타';
   if(!msg){toast('❌ 내용을 입력해 주세요');return;}
-  var data={type:'complaint',driver:S.curDriver,category:cat,message:msg,status:'미처리',createdAt:_nowISO()};
+  var data={type:'complaint',driver:S.curDriver,category:cat,message:msg,status:'미처리',createdAt:new Date().toISOString()};
   try{
     if(FB&&_db)await _db.collection('complaints').add(data);
     document.getElementById('complaint-mo')?.remove();
@@ -18957,20 +19046,20 @@ function loadComplaints(){
 async function replyComplaint(fbId){
   var reply=prompt('답변 내용 입력:','');
   if(!reply)return;
-  await _db.collection('complaints').doc(fbId).update({reply:reply,status:'처리완료',repliedAt:_nowISO()});
+  await _db.collection('complaints').doc(fbId).update({reply:reply,status:'처리완료',repliedAt:new Date().toISOString()});
   toast('💬 답변 저장 완료');
   loadComplaints();
 }
 async function resolveComplaint(fbId){
   if(!confirm('처리완료로 표시할까요?'))return;
-  await _db.collection('complaints').doc(fbId).update({status:'처리완료',resolvedAt:_nowISO()});
+  await _db.collection('complaints').doc(fbId).update({status:'처리완료',resolvedAt:new Date().toISOString()});
   toast('✅ 처리완료');
   loadComplaints();
 }
 async function adminResolveSupport(fbId){
   if(!fbId||!FB||!_db)return;
   if(!confirm('해결 처리하시겠습니까?'))return;
-  await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:_nowISO()});
+  await _db.collection('campSupports').doc(fbId).update({status:'해결',resolvedAt:new Date().toISOString()});
   toast('✅ 해결 처리 완료');
   loadAllSupports();
 }
@@ -19350,7 +19439,7 @@ function _saveAttendEdit(docId, driverName, date){
   var checkInVal=document.getElementById('edit-checkin').value;
   var checkOutVal=document.getElementById('edit-checkout').value;
   
-  var upd={updatedAt:_nowISO(), editedBy:'관리자'};
+  var upd={updatedAt:new Date().toISOString(), editedBy:'관리자'};
   
   if(checkInVal){
     var dIn=new Date(checkInVal);
@@ -19846,9 +19935,9 @@ function saveScheduleCell(drvName, ds){
     var drv=ls('drivers').find(function(d){return d.name===drvName;});
     var fbKey=(drv&&drv.fbId)?(drv.fbId+'_'+ds):(drvName+'_'+ds);
     _db.collection('schedules').doc(fbKey).set(
-      {driver:drvName, date:ds, status:status, route:route, wave:wave, rotation:rotation, camp:camp, updAt:_nowISO()},
+      {driver:drvName, date:ds, status:status, route:route, wave:wave, rotation:rotation, camp:camp, updAt:new Date().toISOString()},
       {merge:true}
-    ).catch(function(e){});
+    ).catch(function(e){console.warn('근무 셀 저장 FB:', e&&e.message);});
   }
   
   if(typeof addAct==='function'){
@@ -19929,7 +20018,7 @@ async function parseScheduleImage(inp){
       if(doc && doc.anthropicApiKey){
         apiKey = doc.anthropicApiKey.trim();
       }
-    }catch(e){ }
+    }catch(e){ console.warn('Firebase 키 로드 실패:', e); }
   }
   if(!apiKey) apiKey = localStorage.getItem('mbti_anthropic_api_key')||'';
   if(!apiKey){
@@ -20045,6 +20134,7 @@ async function parseScheduleImage(inp){
     claudeResp = await resp.json();
     if(claudeResp.error){
       toast('❌ Claude API 오류: '+claudeResp.error.message);
+      console.error('Claude error:', claudeResp.error);
       return;
     }
   }catch(e){
@@ -20069,6 +20159,7 @@ async function parseScheduleImage(inp){
   try{
     parsed = JSON.parse(responseText);
   }catch(e){
+    console.error('JSON 파싱 실패:', responseText);
     toast('❌ AI 응답 형식 오류 — 콘솔 확인');
     return;
   }
@@ -20264,6 +20355,7 @@ async function _applyScheduleFromImage(){
   var validRecords = data.records.filter(function(r){
     if(!r.matchedName) return false;
     if(r.name.charAt(0) !== r.matchedName.charAt(0)){
+      console.warn('[근무표 매칭 차단] 성이 다름:', r.name, '↔', r.matchedName);
       return false;
     }
     return true;
@@ -20316,7 +20408,7 @@ async function _applyScheduleFromImage(){
             }
           });
           if(cnt>0) return batch.commit();
-        }).catch(function(e){})
+        }).catch(function(e){console.warn('삭제 실패:',name,e&&e.message);})
       );
     });
     try{ await Promise.all(deleteQueue); }catch(e){}
@@ -20360,11 +20452,12 @@ async function _applyScheduleFromImage(){
           route: route,
           camp: camp,
           wave: wave,
-          updatedAt: _nowISO(),
+          updatedAt: new Date().toISOString(),
           source: 'image'
         };
         fbWritePromises.push(
           _db.collection('schedules').add(fbDoc).catch(function(e){
+            console.warn('스케줄 저장 실패:',name,ds,e&&e.message);
           })
         );
       }
@@ -20377,6 +20470,7 @@ async function _applyScheduleFromImage(){
   }
 
   toast('✅ 근무표 저장 완료 — '+count+'건 / '+Object.keys(driverMap).length+'명');
+  console.log('[스케줄 사진업로드] 성공:'+count+' 기사:'+Object.keys(driverMap).length);
 
   document.getElementById('sched-image-preview-mo')?.remove();
   window._schedImageData = null;
@@ -20453,8 +20547,9 @@ function parseScheduleExcel(inp){
           }
           // 디버그 로그 (첫 5개 행만)
           if(count<5 && errors<3){
+            console.log('[DEBUG 날짜변환] raw:', rawDate, 'type:', typeof rawDate, '→ ds:', ds);
           }
-        }catch(dErr){errors++;return;}
+        }catch(dErr){errors++;console.warn('날짜 파싱 실패:',rawDate,dErr);return;}
         
         var name=String(row[iName]).trim();
         if(!name){errors++;return;}
@@ -20496,9 +20591,10 @@ function parseScheduleExcel(inp){
                   }
                 });
                 if(cnt>0){
+                  console.log('[기존삭제]',name,info.minDate,'~',info.maxDate,':',cnt,'건');
                   return batch.commit();
                 }
-              }).catch(function(e){})
+              }).catch(function(e){console.warn('기존삭제 실패:',name,e&&e.message);})
           );
         });
       }
@@ -20533,11 +20629,11 @@ function parseScheduleExcel(inp){
               var info=driverMap[name];
               var fbKey=(info&&info.fbId)?(info.fbId+'_'+ds):(name+'_'+ds);
               _db.collection('schedules').doc(fbKey).set(
-                {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:_nowISO()},{merge:true}
-              ).catch(function(fbErr){});
+                {driver:name,date:ds,status:appStatus,route:route,wave:wave,rotation:rot,camp:camp,updAt:new Date().toISOString()},{merge:true}
+              ).catch(function(fbErr){console.warn('FB save fail:',name,ds,fbErr&&fbErr.message);});
             }
             count++;
-          }catch(ex){errors++;}
+          }catch(ex){errors++;console.warn('parse err:',name,ds,ex.message);}
         });
       };
       
@@ -20545,6 +20641,7 @@ function parseScheduleExcel(inp){
         processQueue();
         finishUpload();
       }).catch(function(e){
+        console.warn('삭제 중 오류, 계속 진행:',e);
         processQueue();
         finishUpload();
       });
@@ -20559,10 +20656,12 @@ function parseScheduleExcel(inp){
         var monthList=Object.keys(monthsTouched).map(function(k){var p=k.split('_');return p[0]+'-'+(parseInt(p[1])+1)+'월';}).join(', ');
         var drvCount=Object.keys(driverMap).length;
         toast('✅ 근무표 '+count+'건 업로드 완료 ('+drvCount+'명)'+(errors?(' (오류 '+errors+'건)'):'')+' — '+monthList);
+        console.log('[스케줄 업로드] 성공:'+count+' 기사:'+drvCount+' 오류:'+errors+' 월:'+monthList+' 첫날:'+firstDs);
         SP('schedule_admin',null);
       }
     }catch(ex){
       toast('❌ 파싱 오류: '+ex.message);
+      console.error('[스케줄 업로드] 실패:',ex);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -20754,12 +20853,14 @@ function downloadScheduleExcel(){
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '근무표');
     
-    var fileName = 'MBTI_근무표_'+rangeLabel+campLabel+'_'+_today()+'.xlsx';
+    var fileName = 'MBTI_근무표_'+rangeLabel+campLabel+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
     XLSX.writeFile(wb, fileName);
     
     toast('✅ '+fileName+' 다운로드 완료 ('+totalCount+'건)');
+    console.log('[근무표 다운로드] '+fileName+' / '+totalCount+'건 / '+allDrivers.length+'명');
   } catch(ex){
     toast('❌ 다운로드 오류: '+ex.message);
+    console.error('[근무표 다운로드] 실패:',ex);
   }
 }
 
@@ -20789,7 +20890,7 @@ function adminSetSchedule(wkKey,ds,drvName,cellId){
   if(next){if(typeof cur==='object'){cur.status=next;sc[ds]=cur;}else{sc[ds]=next;}}
   else{delete sc[ds];}
   localStorage.setItem(wkKey,JSON.stringify(sc));
-  if(FB&&_db){var drv=ls('drivers').find(function(d){return d.name===drvName;});if(drv&&drv.fbId){_db.collection('schedules').doc(drv.fbId+'_'+ds).set({driver:drvName,date:ds,status:next||'',updAt:_nowISO()},{merge:true}).catch(function(){});}}
+  if(FB&&_db){var drv=ls('drivers').find(function(d){return d.name===drvName;});if(drv&&drv.fbId){_db.collection('schedules').doc(drv.fbId+'_'+ds).set({driver:drvName,date:ds,status:next||'',updAt:new Date().toISOString()},{merge:true}).catch(function(){});}}
   // ★ 셀만 즉시 DOM 업데이트 (전체 재렌더 없음)
   var stC={'주':'rgba(59,130,246,.18)','야':'rgba(139,92,246,.18)','휴무':'rgba(107,114,128,.15)','병가':'rgba(239,68,68,.15)'};
   var stT={'주':'#3B82F6','야':'#8B5CF6','휴무':'#9CA3AF','병가':'#EF4444'};
@@ -20901,7 +21002,7 @@ function editMemo(ds){
   localStorage.setItem(KEY,JSON.stringify(memos));
   if(FB&&_db){
     // ★ update로 data 필드 내 특정 날짜만 업데이트 (다른 날짜 보존)
-    var updateObj={updatedAt:_nowISO()};
+    var updateObj={updatedAt:new Date().toISOString()};
     updateObj['data.'+ds]=txt.trim()||firebase.firestore.FieldValue.delete();
     _db.collection('settings').doc('memos').set({data:{}},{merge:true})
       .then(function(){
@@ -20910,7 +21011,7 @@ function editMemo(ds){
       .then(function(){toast('📝 메모 저장됨 ✅');})
       .catch(function(){
         // update 실패 시 전체 set으로 fallback
-        _db.collection('settings').doc('memos').set({data:memos,updatedAt:_nowISO()},{merge:true})
+        _db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true})
         .then(function(){toast('📝 메모 저장됨 ✅');})
         .catch(function(){toast('📝 메모 저장됨 (로컬만)');});
       });
@@ -20973,7 +21074,7 @@ function parseInsExcel(inp){
         if(incIdx<0&&(h.includes('수익')||h.includes('금액')||h.includes('income')||h.includes('배송')))incIdx=i;
       });
       if(incIdx<0){toast('❌ 수익/금액 컬럼 없음');return;}
-      var drs=ls('drivers'), settlements=ls('settlements'), month=_monthStr();
+      var drs=ls('drivers'), settlements=ls('settlements'), month=new Date().toISOString().slice(0,7);
       var matched=0, notFound=[];
       rows.slice(1).forEach(function(row){
         if(!row)return;
@@ -20988,7 +21089,7 @@ function parseInsExcel(inp){
           var emp=Math.round(income*0.008),ind=Math.round(income*0.014),tax=drv.taxRegistered?Math.round(income*0.033):0;
           var eIdx=settlements.findIndex(function(s){return s.driver===drv.name&&s.month===month;});
           if(eIdx>=0){settlements[eIdx].damt=income;settlements[eIdx].emp=emp;settlements[eIdx].tax=tax;}
-          else settlements.push({driver:drv.name,userId:drv.userId||'',month:month,jobsub:drv.jobsub||'쿠팡',damt:income,dcnt:0,rcnt:0,ramt:0,fresh:0,finc:0,inc:income,emp:emp,tax:tax,eq:0,dmg:0,adv:0,work:14000,status:'정산예정',createdAt:_nowISO()});
+          else settlements.push({driver:drv.name,userId:drv.userId||'',month:month,jobsub:drv.jobsub||'쿠팡',damt:income,dcnt:0,rcnt:0,ramt:0,fresh:0,finc:0,inc:income,emp:emp,tax:tax,eq:0,dmg:0,adv:0,work:14000,status:'정산예정',createdAt:new Date().toISOString()});
           matched++;
         } else notFound.push(nameVal||idVal);
       });
@@ -21036,11 +21137,11 @@ function miniCalClick(ds){
   if(txt.trim())memos[ds]=txt.trim();else delete memos[ds];
   localStorage.setItem(KEY,JSON.stringify(memos));
   if(FB&&_db){
-    var updateObj={updatedAt:_nowISO()};
+    var updateObj={updatedAt:new Date().toISOString()};
     updateObj['data.'+ds]=txt.trim()||firebase.firestore.FieldValue.delete();
     _db.collection('settings').doc('memos').set({data:{}},{merge:true})
       .then(function(){return _db.collection('settings').doc('memos').update(updateObj);})
-      .catch(function(){_db.collection('settings').doc('memos').set({data:memos,updatedAt:_nowISO()},{merge:true}).catch(function(){});});
+      .catch(function(){_db.collection('settings').doc('memos').set({data:memos,updatedAt:new Date().toISOString()},{merge:true}).catch(function(){});});
   }
   var el=document.getElementById('mini-cal-wrap');if(el)el.innerHTML=buildMiniCal();
   toast('📝 메모 저장됨');
@@ -21109,7 +21210,7 @@ window._installPromptEvent=null;
 (function registerSW(){
   if(!('serviceWorker' in navigator))return;
   // file:// 환경에서는 등록 불가 (https / localhost / GitHub Pages 만 가능)
-  if(location.protocol==='file:'){return;}
+  if(location.protocol==='file:'){console.warn('[SW] file:// 환경 — SW 등록 생략');return;}
   // ★ v9.25: 샌드박스/미리보기/Cloudflare Workers 환경 감지 (sw.js 미배치 호스트)
   var host=location.hostname||'';
   var skipHosts=['claudeusercontent','codepen','jsfiddle','codesandbox'];
@@ -21127,9 +21228,11 @@ window._installPromptEvent=null;
       }
       navigator.serviceWorker.register('./sw.js',{scope:'./'})
         .then(function(reg){
+          console.log('[SW] 등록 완료, scope:', reg.scope);
           // ★ v9.25: SW active 확인 후 저장 (FCM 토큰 발급 타이밍 보장)
           function _setReg(){
             window._swRegistration=reg;
+            console.log('[SW] active 확인 — FCM 토큰 발급 준비 완료');
             // ★ v9.25: SW 활성화되면 디바이스 소유자가 있는 경우 즉시 알림 초기화
             //   (로그인하지 않아도 마지막 사용자용 알림 수신 시작)
             setTimeout(function(){
@@ -21148,12 +21251,13 @@ window._installPromptEvent=null;
             if(!newSw)return;
             newSw.addEventListener('statechange',function(){
               if(newSw.state==='installed'&&navigator.serviceWorker.controller){
+                console.log('[SW] 새 버전 감지 — 다음 새로고침 시 적용');
                 if(typeof toast==='function')toast('🔄 앱이 업데이트되었습니다 (새로고침 시 적용)');
               }
             });
           });
         })
-        .catch(function(e){});
+        .catch(function(e){console.warn('[SW] 등록 실패:',e&&e.message||e);});
     }).catch(function(){console.info('[SW] sw.js fetch 실패 — SW 등록 생략');});
   });
   // SW에서 메인 페이지로 메시지 (백그라운드 동기화 등)
@@ -21163,6 +21267,7 @@ window._installPromptEvent=null;
     }
     // ★ v9.25: SW 업데이트 감지 → FCM 토큰 강제 재발급 (백그라운드 알림 복구)
     if(e.data&&e.data.type==='SW_UPDATED'){
+      console.log('[FCM] SW 업데이트 감지 — FCM 토큰 강제 재발급');
       window._fcmTokenRegistered=false;
       window._fcmFailed=false;
       setTimeout(function(){if(typeof _registerFCMToken==='function')_registerFCMToken();},1500);
@@ -21249,6 +21354,7 @@ async function requestNotiPermission(silent){
 // 로컬 알림 표시 (SW 우선, fallback Notification)
 function sendLocalNoti(opts){
   if(!('Notification' in window)||Notification.permission!=='granted'){
+    console.warn('[Noti] 권한 없음:', Notification.permission);
     return;
   }
   opts=opts||{};
@@ -21257,6 +21363,7 @@ function sendLocalNoti(opts){
   // (앱이 백그라운드/닫혔을 때는 firebase-messaging-sw.js가 처리, 포그라운드만 sendLocalNoti)
   var isForeground=!document.hidden;
   if(!isForeground){
+    console.log('[Noti] 백그라운드 — FCM SW가 처리, 로컬 알림 생략');
     return;
   }
   // 소리+진동 (포그라운드)
@@ -21283,14 +21390,16 @@ function sendLocalNoti(opts){
         badge:opts.badge||'',
         data:{url:'/',cat:opts.cat||''}
       });
+      console.log('[Noti] SW showNotification 성공:', opts.title);
     }).catch(function(e){
+      console.warn('[Noti] SW ready 실패, fallback:', e);
       try{new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag});}catch(ne){}
     });
     return;
   }
   try{
     new Notification(opts.title||'MBTI 물류',{body:opts.body||'',tag:notiTag});
-  }catch(e){}
+  }catch(e){console.warn('[Noti]',e);}
 }
 
 // Firestore 실시간 리스너 (공지/캠프지원/긴급 알림)
@@ -21318,7 +21427,7 @@ function startNotiListeners(){
   var me=ls('drivers').find(function(x){return x.name===S.curDriver;});
   if(!me)return;
   var myCamp=me.camp||''; var myCampFull=myCamp.indexOf('캠프')<0?myCamp+'캠프':myCamp;
-  var startTime=_nowISO();
+  var startTime=new Date().toISOString();
   
   // 1. 본인에게 온 공지/세금계산서/명세서 알림 실시간 감지
   var unsub1=_db.collection('driver_notifications')
@@ -21341,6 +21450,7 @@ function startNotiListeners(){
         // ★ v9.25: 삭제된 공지 알림 차단 — notices 마스터에 없으면 skip
         if(d.type==='notice'&&d.noticeId&&window._masterNoticeIds&&Object.keys(window._masterNoticeIds).length>0){
           if(!window._masterNoticeIds[d.noticeId]){
+            console.log('[Noti] 삭제된 공지 알림 차단:', d.noticeId);
             return;
           }
         }
@@ -21355,7 +21465,7 @@ function startNotiListeners(){
           _showInstantAlert({title:title,body:body,urgent:urgent});
         }
       });
-    },function(err){});
+    },function(err){console.warn('[Noti] driver_notifications:',err.message);});
   window._firestoreListeners.push(unsub1);
   
   // 2. 같은 캠프 배송 지원 요청 실시간 감지
@@ -21371,6 +21481,7 @@ function startNotiListeners(){
           // ★ v9.32 fix: 30분 이상 지난 요청은 알림 발송 안 함 (캐시 삭제 후 옛 요청 재알림 차단)
           var createdMs = d.createdAt ? new Date(d.createdAt).getTime() : 0;
           if(createdMs && (Date.now() - createdMs) > 30*60*1000){
+            console.log('[Noti] 30분 지난 배송지원 알림 무시:', change.doc.id);
             return;
           }
           // 해결됨 상태도 알림 무시
@@ -21400,7 +21511,7 @@ function startNotiListeners(){
           // 캠프지원 카드 새로고침
           if(typeof _loadCampSupports==='function')_loadCampSupports();
         });
-      },function(err){});
+      },function(err){console.warn('[Noti] campSupports:',err.message);});
     window._firestoreListeners.push(unsub2);
 
     // ★ v10.0: 3. 같은 캠프 사고 접수 실시간 감지
@@ -21434,9 +21545,11 @@ function startNotiListeners(){
             });
           }
         });
-      },function(err){});
+      },function(err){console.warn('[Noti] accidents:',err&&err.message);});
     window._firestoreListeners.push(unsub3);
   }
+  
+  console.log('[Noti] 리스너 활성화 — 기사:',S.curDriver,'캠프:',myCampFull);
 }
 function stopNotiListeners(){
   (window._firestoreListeners||[]).forEach(function(unsub){try{unsub();}catch(e){}});
@@ -21468,7 +21581,7 @@ function _setDeviceOwner(driverName,fbId){
   if(!driverName)return;
   try{
     localStorage.setItem('mbti_device_owner',JSON.stringify({
-      driver:driverName, fbId:fbId||'', updatedAt:_nowISO()
+      driver:driverName, fbId:fbId||'', updatedAt:new Date().toISOString()
     }));
   }catch(e){}
 }
@@ -21489,16 +21602,20 @@ function _scheduleNotiInit(){
     
     // ★ v9.25: 권한 상태 진단 로그
     var perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
+    console.log('[Noti] 알림 권한 상태:', perm, '/ 로그인:', loggedIn);
     if(perm==='denied'){
+      console.warn('[Noti] ⚠️ 알림 권한 차단됨 — 브라우저 설정에서 허용해야 FCM 작동');
       if(loggedIn) toast('⚠️ 알림이 차단되어 있습니다. 브라우저 주소창 🔒 → 알림 허용으로 변경해 주세요');
     }
     // 권한 1회만 자동 요청 (현재 로그인 중인 경우만)
     if(loggedIn && !window._notiPermAsked && perm==='default'){
       window._notiPermAsked=true;
       requestNotiPermission(true).then(function(granted){
+        console.log('[Noti] 권한 요청 결과:', granted);
         if(granted) _registerFCMToken();
       });
     } else if(perm==='granted'){
+      console.log('[Noti] 권한 이미 허용 → _registerFCMToken 호출');
       _registerFCMToken();
     }
     if(loggedIn) startNotiListeners();
@@ -21514,18 +21631,21 @@ window._fcmOnMessageBound=false; // ★ v9.25: 포그라운드 핸들러 중복 
 // 앱 시작 2초 후 자동 초기화 (로그인 여부 무관)
 
 async function _registerFCMToken(){
-  if(window._fcmTokenRegistered){return;}
-  if(window._fcmFailed){return;}
-  if(!FB||!_db){return;}
-  if(typeof firebase.messaging!=='function'){return;}
+  console.log('[FCM] _registerFCMToken 시작 — registered:'+window._fcmTokenRegistered+' failed:'+window._fcmFailed);
+  if(window._fcmTokenRegistered){console.debug('[FCM] 이미 등록됨 — skip');return;}
+  if(window._fcmFailed){console.warn('[FCM] 이전 실패 플래그 — skip');return;}
+  if(!FB||!_db){console.warn('[FCM] Firebase 미연결');return;}
+  if(typeof firebase.messaging!=='function'){console.warn('[FCM] messaging 함수 없음');return;}
   // SW 등록 대기 (최대 10초)
   var swWait=0;
   while(!window._swRegistration&&swWait<20){await new Promise(function(r){setTimeout(r,500);});swWait++;}
-  if(!window._swRegistration){return;}
+  if(!window._swRegistration){console.warn('[FCM] SW 미등록 — 토큰 발급 생략');return;}
+  console.log('[FCM] SW 확인 완료, 인증 대기...');
   // Firebase 익명 인증 완료 대기 (최대 10초)
   var authWait=0;
   while(!firebase.auth().currentUser&&authWait<20){await new Promise(function(r){setTimeout(r,500);});authWait++;}
-  if(!firebase.auth().currentUser){return;}
+  if(!firebase.auth().currentUser){console.warn('[FCM] 인증 미완료 — 토큰 발급 생략');return;}
+  console.log('[FCM] 인증 완료, 토큰 발급 시도...');
   
   // ★ v9.25: 토큰 저장 대상 결정 - 현재 로그인 중인 기사 우선, 없으면 마지막 기기 소유자
   var targetDriverName=null, targetFbId=null;
@@ -21536,10 +21656,11 @@ async function _registerFCMToken(){
     // ★ 로그인 중이면 이전 기사 토큰 정리 (다른 사람으로 바뀐 경우)
     var prevOwner = _getDeviceOwner();
     if(prevOwner && prevOwner.driver && prevOwner.driver !== targetDriverName){
+      console.log('[FCM] 기사 변경 감지: ' + prevOwner.driver + ' → ' + targetDriverName + ' — 이전 토큰 정리');
       // 이전 기사의 fcmToken 필드 삭제 (Firebase)
       if(prevOwner.fbId){
         _db.collection('drivers').doc(prevOwner.fbId).update({fcmToken:firebase.firestore.FieldValue.delete()})
-          .then(function(){})
+          .then(function(){console.log('[FCM] 이전 기사(' + prevOwner.driver + ') 토큰 삭제 완료');})
           .catch(function(){});
       }
     }
@@ -21548,10 +21669,12 @@ async function _registerFCMToken(){
     // ★ 로그아웃 상태 — 마지막 디바이스 소유자로 토큰 등록
     var owner = _getDeviceOwner();
     if(!owner){
+      console.warn('[FCM] 로그인된 기사도 없고 디바이스 소유자 정보도 없음 — 토큰 발급 생략');
       return;
     }
     targetDriverName = owner.driver;
     targetFbId = owner.fbId;
+    console.log('[FCM] 로그아웃 상태 — 디바이스 소유자(' + targetDriverName + ') 기준으로 토큰 등록');
   }
   
   try{
@@ -21562,15 +21685,18 @@ async function _registerFCMToken(){
     try{
       fcmSwReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js', {scope:'./'});
       await fcmSwReg.update();
+      console.log('[FCM] firebase-messaging-sw.js 등록 완료');
     }catch(swErr){
+      console.warn('[FCM] firebase-messaging-sw.js 등록 실패, sw.js로 폴백:', swErr.message);
       fcmSwReg = window._swRegistration;
     }
     var token=await msg.getToken({
       vapidKey:'BAcfjIAqO1zwJtkKBv5dI8SlSjHci1BDbb5dVENG-KVlI8qzBVa646bt2lSoUhzmZGN08s8AxAALFhFr8Jkwdjs',
       serviceWorkerRegistration: fcmSwReg || window._swRegistration
     });
-    if(!token){return;}
+    if(!token){console.warn('[FCM] 토큰 발급 실패');return;}
     window._fcmTokenRegistered=true;
+    console.log('[FCM] 토큰 발급 완료 → 대상:', targetDriverName);
     
     if(window._fcmLastToken===token){window._fcmTokenRegistered=true;window._fcmRegistering=false;return;}
     window._fcmLastToken=token;
@@ -21581,7 +21707,7 @@ async function _registerFCMToken(){
       token: token,
       driver: targetDriverName,
       driverFbId: targetFbId || '',
-      lastSeenAt: _nowISO(),
+      lastSeenAt: new Date().toISOString(),
       userAgent: navigator.userAgent.substring(0,200),
       isLoggedIn: (S.curMode==='driver' && S.curDriver===targetDriverName)
     };
@@ -21589,14 +21715,14 @@ async function _registerFCMToken(){
     // ① drivers 컬렉션 저장
     if(targetFbId){
       _db.collection('drivers').doc(targetFbId).update({fcmToken:token})
-        .then(function(){})
+        .then(function(){console.debug('[FCM] drivers.fcmToken 저장 완료 (fbId)');})
         .catch(function(){});
     } else if(targetDriverName) {
       _db.collection('drivers').where('name','==',targetDriverName).limit(1).get()
         .then(function(snap){
           if(!snap.empty){
             snap.docs[0].ref.update({fcmToken:token})
-              .then(function(){})
+              .then(function(){console.log('[FCM] drivers.fcmToken 저장 완료 (name 조회)');})
               .catch(function(){});
             // fbId 갱신
             if(!targetFbId){
@@ -21611,13 +21737,14 @@ async function _registerFCMToken(){
     //    토큰 자체가 ID — 같은 기기에서 토큰이 갱신되면 자동 덮어씀
     var tokenDocId = token.substring(0, 80).replace(/[^a-zA-Z0-9_-]/g,'_');
     _db.collection('device_tokens').doc(tokenDocId).set(deviceTokenDoc, {merge:true})
-      .then(function(){})
-      .catch(function(e){});
+      .then(function(){console.log('[FCM] device_tokens 저장 완료 (영구 매핑)');})
+      .catch(function(e){console.warn('[FCM] device_tokens 저장 실패:', e.message);});
     
     // ★ v9.25: 포그라운드 핸들러를 등록 (중복 방지)
     if(!window._fcmOnMessageBound){
       window._fcmOnMessageBound=true;
       msg.onMessage(function(payload){
+        console.log('[FCM] 포그라운드 수신:',payload);
         var n=payload.notification||{};
         var d=payload.data||{};
         var title=n.title||d.title||'📬 새 알림';
@@ -21633,9 +21760,11 @@ async function _registerFCMToken(){
     var isAuthErr=e.message&&(e.message.indexOf('401')>=0||e.message.indexOf('auth')>=0||e.message.indexOf('messaging/token-subscribe-failed')>=0);
     if(isAuthErr){
       window._fcmFailed=true;
+      console.warn('[FCM] VAPID 키 불일치 — 재시도 중단. Firebase Console → Cloud Messaging → 웹 푸시 인증서 확인하세요.');
     }else{
       // SW 미준비 등 일시 오류 → 5분 후 재시도
       window._fcmTokenRegistered=false;
+      console.warn('[FCM] 토큰 등록 일시 오류 (5분 후 재시도):', e.message);
       setTimeout(function(){
         window._fcmTokenRegistered=false;
         _registerFCMToken();
@@ -21655,6 +21784,7 @@ document.addEventListener('visibilitychange',function(){
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   window._installPromptEvent=e;
+  console.log('[PWA] 설치 가능');
   // 7일 동안 거부했으면 표시 안 함
   try{
     var dismissedTs=+localStorage.getItem('pwa_install_dismissed_ts')||0;
@@ -21664,6 +21794,7 @@ window.addEventListener('beforeinstallprompt',function(e){
 });
 
 window.addEventListener('appinstalled',function(){
+  console.log('[PWA] 설치 완료');
   if(typeof toast==='function')toast('✅ MBTI 물류 앱 설치 완료');
   hideInstallBanner();
   window._installPromptEvent=null;
@@ -21675,12 +21806,13 @@ function _savePwaInstalled(){
   if(!FB||!_db||!S.curDriver)return;
   var drv=ls('drivers').find(function(d){return d.name===S.curDriver;});
   if(!drv||!drv.fbId)return;
-  _db.collection('drivers').doc(drv.fbId).update({pwaInstalled:true,pwaInstalledAt:_nowISO()})
+  _db.collection('drivers').doc(drv.fbId).update({pwaInstalled:true,pwaInstalledAt:new Date().toISOString()})
     .then(function(){
       var drs=ls('drivers');
       var idx=drs.findIndex(function(d){return d.name===S.curDriver;});
       if(idx>=0){drs[idx].pwaInstalled=true;lss('drivers',drs);}
-    }).catch(function(e){});
+      console.log('[PWA] 설치 기록 저장 완료:', S.curDriver);
+    }).catch(function(e){console.warn('[PWA] 설치 기록 저장 실패:', e.message);});
 }
 
 function showInstallBanner(){
@@ -21835,7 +21967,7 @@ function _showInstantAlert(opts){
   
   banner.onclick=function(){
     banner.remove();
-    if(typeof onClick==='function')try{onClick();}catch(e){}
+    if(typeof onClick==='function')try{onClick();}catch(e){console.warn(e);}
   };
   document.body.appendChild(banner);
   
@@ -21927,7 +22059,7 @@ function _playBeepSound(urgent){
       _tone(494,0.5,0.22,0.28,'sine');
       _tone(659,0.75,0.35,0.32,'sine');
     }
-  }catch(e){}
+  }catch(e){console.warn('[Sound]',e&&e.message);}
 }
 
 // ── index에서 로그인 버튼 클릭 시 수신
@@ -22184,7 +22316,7 @@ async function otpSetupStart(){
         var url=otpBuildAuthUrl(secret, adminInfo.userId||'admin', 'MBTI Logistics');
         new QRCode(qrBox, {text:url, width:200, height:200, colorDark:'#000000', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M});
       }
-    }catch(e){ }
+    }catch(e){ console.error('QR 생성 오류',e); }
     var inp=document.getElementById('otp-verify-input');
     if(inp) inp.focus();
   }, 100);
