@@ -9340,7 +9340,17 @@ function doRegister(){
       services:services,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(){});
+    // ★ 사업자등록증 Storage 업로드 후 companies 저장
+  var _uploadBizDoc=Promise.resolve('');
+  if(_bizDocFile){
+    var _ext=_bizDocFile.name.split('.').pop().toLowerCase();
+    var _storagePath='companies/'+uid+'/bizLicense.'+_ext;
+    _uploadBizDoc=_uploadToStorage(_storagePath,_bizDocFile);
+  }
+  return _uploadBizDoc.then(function(bizUrl){
+    if(bizUrl) companyDoc.bizLicenseUrl=bizUrl;
     return _db.collection('companies').doc(uid).set(companyDoc);
+  });
   }).then(function(){
     // ★ 사업자번호 영구 블랙리스트 저장 (삭제해도 재가입 불가)
     if(biz) _db.collection('used_biz_numbers').doc(biz.replace(/-/g,'')).set({
