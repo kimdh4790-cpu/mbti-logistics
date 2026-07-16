@@ -3268,7 +3268,35 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         // manifest 링크를 슬러그 기반으로 교체
         html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
-        html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n</head>');
+        // AI정산·QR+급여만 노출 (delivery/universal/filo_combo 숨김)
+        const hideScript = '<style>' +
+          '.sub-amt-delivery,.sub-tier-label-delivery{display:none!important}' +
+          '</style>' +
+          '<script>' +
+          '(function(){' +
+          'var HIDE=["delivery","universal","filo_combo"];' +
+          'function _hideCards(){' +
+          'document.querySelectorAll("button[data-pkey]").forEach(function(btn){' +
+          'if(HIDE.indexOf(btn.dataset.pkey)>-1){' +
+          // 버튼에서 위로 올라가며 카드 div 찾기 (background:var(--bg3) 포함 div)
+          'var el=btn;' +
+          'for(var i=0;i<5;i++){' +
+          'el=el.parentElement;' +
+          'if(!el)break;' +
+          'if(el.style&&(el.style.background||"").indexOf("bg3")>-1||' +
+          '(el.getAttribute&&(el.getAttribute("style")||"").indexOf("bg3")>-1)){' +
+          'el.style.display="none";break;' +
+          '}' +
+          '}' +
+          '}' +
+          '});' +
+          '}' +
+          'var obs=new MutationObserver(_hideCards);' +
+          'obs.observe(document.body,{childList:true,subtree:true});' +
+          '_hideCards();' +
+          '})();' +
+          '</script>';
+        html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n' + hideScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
         slugHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
