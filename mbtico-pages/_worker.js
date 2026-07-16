@@ -1942,7 +1942,6 @@ function _ctrlLoadBilling() {
     });
 }
 
-  // 앱 시작
   window.addEventListener('DOMContentLoaded', _ctrlInit);
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') _ctrlCloseDetail();
