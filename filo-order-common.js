@@ -485,3 +485,9 @@ function _closeMdl(){
  if(mdl)mdl.classList.remove('open');
  _curMdlMenu=null;
 }
+
+// ── 날짜 유틸 (order.js, filo-order-common.js 공용) ──
+function _today(){return new Date().toISOString().slice(0,10);}
+function _nowISO(){return new Date().toISOString();}
+function _toDateStr(iso){return iso?iso.slice(0,10):'';}
+function _monthStr(){return new Date().toISOString().slice(0,7);}
