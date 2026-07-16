@@ -22,3 +22,7 @@ zone_name = "filo.ai.kr"
 [[routes]]
 pattern = "dine.ne.kr/*"
 zone_name = "dine.ne.kr"
+
+[[routes]]
+pattern = "mbtico.kr/*"
+zone_name = "mbtico.kr"
