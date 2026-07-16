@@ -9281,6 +9281,7 @@ function doRegister(){
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
+  var slugVal='';
   var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     uid=cred.user.uid;
@@ -9291,7 +9292,7 @@ function doRegister(){
     var invIndustry=(document.getElementById('r-inv-industry')||{value:'liquor'}).value||'liquor';
     // ★ slug: 이메일 @ 앞부분 → 영문+숫자만 추출 (URL 안전)
     var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-    var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
+    slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
       emailPrefix||uid.substring(0,8);
     var companyDoc={
       companyName:company,
