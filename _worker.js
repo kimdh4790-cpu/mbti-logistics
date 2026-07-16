@@ -3270,11 +3270,11 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         // AI정산·QR+급여만 노출 (delivery/universal/filo_combo 숨김)
         const hideScript = '<style>' +
-          '.sub-amt-delivery,.sub-tier-label-delivery{display:none!important}' +
+          '.sub-amt-qr_payroll,.sub-tier-label-qr_payroll{display:none!important}' +
           '</style>' +
           '<script>' +
           '(function(){' +
-          'var HIDE=["delivery","universal","filo_combo"];' +
+          'var HIDE=["qr_payroll","universal","filo_combo"];' +
           'function _hideCards(){' +
           'document.querySelectorAll("button[data-pkey]").forEach(function(btn){' +
           'if(HIDE.indexOf(btn.dataset.pkey)>-1){' +
