@@ -2347,7 +2347,7 @@ async function acceptExchange(){
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
-      if (path === '/app') return serveKVFile(env, '엠비티아이_물류관리_v9.html', 'text/html');
+      // /app 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
       if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
       // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
@@ -2357,7 +2357,7 @@ async function acceptExchange(){
       }
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
-      if (path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
+      // /v9 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
