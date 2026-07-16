@@ -285,33 +285,132 @@ function _filoQRPrint1(num,name){
  var imgEl=wrap.querySelector('img');
  var img=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
  if(!img)return;
- var w=window.open('','_blank','width=400,height=500');
- w.document.write('<html><head><title>'+name+'</title>'+
-  '<style>*{margin:0;padding:0}body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}h2{font-size:22px;font-weight:900;margin-bottom:16px}img{width:220px;height:220px}p{font-size:13px;color:#666;margin-top:10px}</style></head>'+
-  '<body onload="window.print()"><h2>'+name+'</h2><img src="'+img+'"><p>QR 스캔 → 주문</p></body></html>');
+ var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
+ var w=window.open('','_blank','width=440,height=560');
+ w.document.write('<html><head><meta charset="UTF-8"><title>'+name+'</title>'+
+  '<style>'+
+  '*{margin:0;padding:0;box-sizing:border-box}'+
+  'html,body{width:400px;height:500px;overflow:hidden}'+
+  'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#fff}'+
+  '.card{width:400px;height:500px;position:relative;overflow:hidden;background:#0A0E2A}'+
+  '.gold-top{height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.header{padding:22px 28px 14px;text-align:center;position:relative;z-index:1}'+
+  '.rest-label{font-size:11px;color:rgba(201,168,76,.65);letter-spacing:4px;font-weight:500;margin-bottom:6px}'+
+  '.store-name{font-size:32px;font-weight:900;color:#fff;letter-spacing:6px;line-height:1;margin-bottom:10px}'+
+  '.divider{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}'+
+  '.divider-line{height:1px;width:36px;background:rgba(201,168,76,.5)}'+
+  '.brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:3px}'+
+  '.brand-filo{font-size:14px;font-weight:800;color:#00CFFF;letter-spacing:3px}'+
+  '.brand-dine{font-size:14px;font-weight:800;color:#00E890;letter-spacing:3px}'+
+  '.brand-dot{color:rgba(201,168,76,.7);font-size:10px}'+
+  '.sub{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:2px}'+
+  '.sep{margin:0 28px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}'+
+  '.qr-wrap{padding:14px 0 10px;text-align:center;position:relative;z-index:1}'+
+  '.qr-box{background:#fff;border-radius:14px;padding:10px;display:inline-block}'+
+  '.table-badge{text-align:center;padding:2px 0 10px;position:relative;z-index:1}'+
+  '.badge-inner{display:inline-flex;align-items:center;gap:8px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:7px 24px;background:rgba(201,168,76,.07)}'+
+  '.badge-label{font-size:11px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
+  '.badge-num{font-size:22px;font-weight:900;color:#C9A84C;line-height:1}'+
+  '.footer{text-align:center;padding:4px 0 8px;position:relative;z-index:1}'+
+  '.footer p{font-size:8px;color:rgba(255,255,255,.2);letter-spacing:1.5px}'+
+  '.deco1{position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(201,168,76,.12);z-index:0}'+
+  '.deco2{position:absolute;bottom:-30px;left:-30px;width:130px;height:130px;border-radius:50%;border:1px solid rgba(201,168,76,.08);z-index:0}'+
+  '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'+
+  '</style></head>'+
+  '<body onload="window.print()">'+
+  '<div class="card">'+
+  '<div class="gold-top"></div>'+
+  '<div class="deco1"></div>'+
+  '<div class="deco2"></div>'+
+  '<div class="header">'+
+  (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
+  '<div class="divider"><div class="divider-line"></div><span style="color:#C9A84C;font-size:9px">✦</span><div class="divider-line"></div></div>'+
+  '<div class="brand"><span class="brand-filo">FILO</span><span class="brand-dot">✦</span><span class="brand-dine">DINE</span></div>'+
+  '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
+  '</div>'+
+  '<div class="sep"></div>'+
+  '<div class="qr-wrap"><div class="qr-box"><img src="'+img+'" style="width:170px;height:170px;display:block"></div></div>'+
+  '<div class="table-badge"><div class="badge-inner"><span class="badge-label">TABLE</span><span class="badge-num">'+num+'</span></div></div>'+
+  '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+  '<div class="gold-bot"></div>'+
+  '</div>'+
+  '</body></html>');
  w.document.close();
 }
 
 function _filoQRPrintAll(){
  var wraps=document.querySelectorAll('[id^="qr-c-"]');
  if(!wraps.length){_filoToast('❌ QR 코드 없음');return;}
- var imgs='';
+ var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
+ var cards='';
  wraps.forEach(function(wrap){
   var num=wrap.id.replace('qr-c-','');
   var canvas=wrap.querySelector('canvas');
   var imgEl=wrap.querySelector('img');
   var src=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
   if(!src)return;
-  imgs+='<div style="display:inline-block;margin:12px;text-align:center;page-break-inside:avoid">'+
-   '<div style="font-size:16px;font-weight:700;margin-bottom:8px">테이블 '+num+'</div>'+
-   '<img src="'+src+'" style="width:160px;height:160px;display:block">'+
-   '<div style="font-size:11px;color:#666;margin-top:6px">QR 스캔 → 주문</div></div>';
+  cards+=
+  '<div class="sticker">'+
+  '<div class="gold-top"></div>'+
+  '<div class="deco1"></div>'+
+  '<div class="header">'+
+  (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
+  '<div class="divider"><div class="dline"></div><span class="ddot">✦</span><div class="dline"></div></div>'+
+  '<div class="brand"><span class="bf">FILO</span><span class="bdot">✦</span><span class="bd">DINE</span></div>'+
+  '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
+  '</div>'+
+  '<div class="sep"></div>'+
+  '<div class="qr-wrap"><div class="qr-box"><img src="'+src+'" style="width:140px;height:140px;display:block"></div></div>'+
+  '<div class="badge-wrap"><div class="badge-inner"><span class="blabel">TABLE</span><span class="bnum">'+num+'</span></div></div>'+
+  '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+  '<div class="gold-bot"></div>'+
+  '</div>';
  });
  var w=window.open('','_blank');
- w.document.write('<html><head><title>테이블 QR 전체</title>'+
-  '<style>body{font-family:sans-serif;padding:20px}@media print{.no-print{display:none}}</style></head>'+
-  '<body><h2 style="margin-bottom:20px">📱 테이블 QR 코드</h2>'+imgs+
-  '<br><button class="no-print" onclick="window.print()" style="padding:10px 24px;margin-top:16px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">🖨️ 인쇄</button></body></html>');
+ w.document.write('<html><head><meta charset="UTF-8"><title>테이블 QR 전체 인쇄</title>'+
+  '<style>'+
+  '*{margin:0;padding:0;box-sizing:border-box}'+
+  'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#f5f5f5;padding:20px}'+
+  '.no-print{margin-bottom:16px}'+
+  '.grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:flex-start}'+
+  '.sticker{width:200px;height:250px;position:relative;overflow:hidden;background:#0A0E2A;border-radius:14px;flex-shrink:0;page-break-inside:avoid}'+
+  '.gold-top{height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.deco1{position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(201,168,76,.12)}'+
+  '.header{padding:10px 14px 6px;text-align:center;position:relative;z-index:1}'+
+  '.rest-label{font-size:7px;color:rgba(201,168,76,.65);letter-spacing:3px;margin-bottom:3px}'+
+  '.store-name{font-size:16px;font-weight:900;color:#fff;letter-spacing:4px;line-height:1;margin-bottom:5px}'+
+  '.divider{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px}'+
+  '.dline{height:1px;width:20px;background:rgba(201,168,76,.5)}'+
+  '.ddot{color:#C9A84C;font-size:7px}'+
+  '.brand{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:2px}'+
+  '.bf{font-size:9px;font-weight:800;color:#00CFFF;letter-spacing:2px}'+
+  '.bd{font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px}'+
+  '.bdot{color:rgba(201,168,76,.7);font-size:7px}'+
+  '.sub{font-size:6px;color:rgba(255,255,255,.3);letter-spacing:1.5px}'+
+  '.sep{margin:0 14px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}'+
+  '.qr-wrap{padding:7px 0 5px;text-align:center;position:relative;z-index:1}'+
+  '.qr-box{background:#fff;border-radius:8px;padding:6px;display:inline-block}'+
+  '.badge-wrap{text-align:center;padding:2px 0 5px;position:relative;z-index:1}'+
+  '.badge-inner{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(201,168,76,.55);border-radius:50px;padding:4px 14px;background:rgba(201,168,76,.07)}'+
+  '.blabel{font-size:7px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
+  '.bnum{font-size:14px;font-weight:900;color:#C9A84C;line-height:1}'+
+  '.footer{text-align:center;padding:2px 0 5px;position:relative;z-index:1}'+
+  '.footer p{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px}'+
+  '@media print{'+
+  '.no-print{display:none}'+
+  'body{background:#fff;padding:10px}'+
+  '.sticker{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  '}'+
+  '</style></head>'+
+  '<body>'+
+  '<div class="no-print" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'+
+  '<span style="font-size:16px;font-weight:800">📱 테이블 QR 전체 인쇄</span>'+
+  '<button onclick="window.print()" style="padding:8px 20px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
+  '</div>'+
+  '<div class="grid">'+cards+'</div>'+
+  '</body></html>');
  w.document.close();
 }
 
