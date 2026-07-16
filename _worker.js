@@ -2150,7 +2150,7 @@ async function acceptExchange(){
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
-      if (path === '/universal' || path === '/universal.html') return serveKVFile(env, 'universal_settle.html', 'text/html');
+      if (path === '/universal' || path === '/universal.html') return Response.redirect('https://donway.ai.kr/join', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
@@ -2473,7 +2473,7 @@ async function acceptExchange(){
           const liqResp = await fetchAsset('/mbetco_liquor.html', request, env);
           return liqResp;
         }
-        const mbResp = await fetchAsset('/universal_settle.html', request, env);
+        const mbResp = await fetchAsset('/settle.html', request, env);
         const mbH = new Headers();
         mbH.set('Content-Type', 'text/html; charset=utf-8');
         mbH.set('Cache-Control', 'no-cache');
@@ -3367,8 +3367,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
 
     // 회사 신규 등록
-    if (path === '/company-register' || path === '/company-register/') {
-      const resp = await fetchAsset('/company-register.html', request);
+    if (path === '/company-register' || path === '/company-register/') { return Response.redirect('https://donway.ai.kr/join', 302);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
