@@ -176,6 +176,28 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .slide.vis .review:nth-child(1){animation:fadeUp .5s .05s ease both}
 .slide.vis .review:nth-child(2){animation:fadeUp .5s .18s ease both}
 .slide.vis .review:nth-child(3){animation:fadeUp .5s .31s ease both}
+
+/* ── 기능 상세 모달 ── */
+#dw-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+#dw-modal-overlay.open{display:flex}
+#dw-modal-box{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;padding:0}
+#dw-modal-box::-webkit-scrollbar{width:3px}
+#dw-modal-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+.dw-modal-hdr{padding:20px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);border-radius:20px 20px 0 0;z-index:1}
+.dw-modal-ic{font-size:32px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:14px;flex-shrink:0}
+.dw-modal-ttl{font-size:16px;font-weight:900;margin-bottom:3px}
+.dw-modal-sub{font-size:11px;color:var(--tx2);line-height:1.4}
+.dw-modal-close{margin-left:auto;background:rgba(255,255,255,.06);border:none;color:var(--tx2);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;flex-shrink:0}
+.dw-modal-body{padding:16px 20px 24px}
+.dw-feat-list{display:flex;flex-direction:column;gap:10px}
+.dw-feat-item{display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--bd)}
+.dw-feat-item-ico{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.dw-feat-item-ttl{font-size:12px;font-weight:700;margin-bottom:3px}
+.dw-feat-item-desc{font-size:11px;color:var(--tx2);line-height:1.5}
+.fitem{cursor:pointer;transition:.2s}
+.fitem:active{transform:scale(.97)}
+.card{cursor:pointer;transition:.2s}
+.card:active{transform:scale(.97)}
 </style>
 </head>
 <body>
@@ -221,15 +243,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
   <div class="inner chip">😓 이런 문제 있으신가요?</div>
   <div class="inner ttl">매달 반복되는<br><span class="gr-gold">이 수작업들</span></div>
   <div class="cards">
-    <div class="card">
+    <div class="card" onclick="_dwProblemModal('pay')">
       <div class="card-ico">📊</div>
       <div><div class="card-ttl" style="color:#f87171">업종별 복잡한 급여 계산</div><div class="card-desc">택배 구간 단가 · 배달 건당 수수료 · 요식업 시급·야간수당 — 매번 엑셀 수작업</div></div>
     </div>
-    <div class="card">
+    <div class="card" onclick="_dwProblemModal('kakao')">
       <div class="card-ico">📱</div>
       <div><div class="card-ttl" style="color:#f87171">명세서 개별 전송 → 문의 폭주</div><div class="card-desc">직원·기사 한 명씩 카카오 메시지 보내다 지침 · 계산 오류로 항의 전화</div></div>
     </div>
-    <div class="card">
+    <div class="card" onclick="_dwProblemModal('tax')">
       <div class="card-ico">🧾</div>
       <div><div class="card-ttl" style="color:#f87171">세무사 자료 매달 수동 전달</div><div class="card-desc">엑셀 취합 → 이메일 전송 → 오류 수정 반복 · 4대보험 계산도 수작업</div></div>
     </div>
@@ -576,11 +598,188 @@ function _tab(i){
   curTab = i;
   document.querySelectorAll('.tab').forEach(function(t,j){t.classList.toggle('on',j===i);});
   var el = document.getElementById('fitems');
-  el.innerHTML = INDUSTRY[i].map(function(d){
-    return '<div class="fitem"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
+  el.innerHTML = INDUSTRY[i].map(function(d,j){
+    return '<div class="fitem" onclick="_dwModalOpen('+i+','+j+')" style="cursor:pointer"><div class="fitem-ico">'+d.ico+'</div><div><div class="fitem-ttl">'+d.ttl+'</div><div class="fitem-desc">'+d.desc+'</div></div></div>';
   }).join('');
 }
 _tab(0);
+
+
+// ── 기능 상세 모달 ──────────────────────────────────────
+// 업종 기능 상세 데이터
+var DW_DETAILS = {
+  // 택배
+  '0-0':{ic:'📊',color:'rgba(0,102,255,.15)',ttl:'쿠팡 엑셀 자동 파싱',
+    sub:'5가지 쿠팡 포맷 자동 인식 → 라우트·구간·시즌 계산',
+    feats:[
+      {ic:'📁',ttl:'5종 엑셀 포맷 자동 인식',desc:'쿠팡 일반·신선·반품·CJ·기타 — 컬럼명 달라도 자동 매핑'},
+      {ic:'🛣️',ttl:'라우트별 구간 단가 자동',desc:'기사별 라우트 배정 → 구간 단가 자동 적용'},
+      {ic:'🌙',ttl:'시즌·야간 할증 자동',desc:'야간·주말·시즌 할증 자동 계산'},
+      {ic:'⚡',ttl:'5분 안에 전체 정산 완료',desc:'업로드 → 계산 → 명세서 발송 원클릭'},
+    ]},
+  '0-1':{ic:'💬',color:'rgba(34,197,94,.15)',ttl:'카카오 명세서 발송',
+    sub:'기사별 실지급 명세서 카카오 알림톡 자동 발송',
+    feats:[
+      {ic:'📲',ttl:'전체 기사 동시 발송',desc:'버튼 하나로 전체 기사 카카오 알림톡 일괄 발송'},
+      {ic:'🧾',ttl:'실지급액 명세서',desc:'공제·가산 내역 포함 상세 명세서 자동 생성'},
+      {ic:'✅',ttl:'발송 확인 실시간',desc:'수신 확인·미확인 현황 실시간 추적'},
+      {ic:'📞',ttl:'문의 전화 80% 감소',desc:'명세서 자동 발송 후 계산 오류 문의 급감'},
+    ]},
+  '0-2':{ic:'📈',color:'rgba(245,158,11,.15)',ttl:'캠프별 마진 분석',
+    sub:'캠프별 마진율·건수 실시간 비교 · 이탈 기사 감지',
+    feats:[
+      {ic:'📊',ttl:'캠프별 마진율 비교',desc:'전체 캠프 마진율 한눈에 — 수익성 낮은 캠프 즉시 파악'},
+      {ic:'👥',ttl:'기사별 생산성 분석',desc:'기사별 건수·수익 랭킹 — 이탈 위험 기사 자동 감지'},
+      {ic:'📅',ttl:'월별 추이 분석',desc:'월별 매출·비용·마진 추이 차트 자동 생성'},
+      {ic:'📤',ttl:'리포트 엑셀 다운로드',desc:'분석 결과 엑셀 한 번에 다운로드'},
+    ]},
+  '0-3':{ic:'🧾',color:'rgba(139,92,246,.15)',ttl:'세금계산서 자동',
+    sub:'정산 확정 즉시 사업자별 세금계산서 자동 발행',
+    feats:[
+      {ic:'⚡',ttl:'정산 확정 즉시 발행',desc:'정산 버튼 클릭 → 사업자별 세금계산서 자동 생성'},
+      {ic:'📧',ttl:'이메일 자동 발송',desc:'거래처별 이메일 자동 발송 — 수동 전달 불필요'},
+      {ic:'📁',ttl:'월별 자동 보관',desc:'발행 내역 월별 자동 분류·보관'},
+      {ic:'🔗',ttl:'세무사 자동 전달',desc:'더존 CSV 자동 생성 → 세무사 직접 전달'},
+    ]},
+  '0-4':{ic:'👨‍💼',color:'rgba(16,185,129,.15)',ttl:'세무사 자동 연동',
+    sub:'더존 CSV 자동 생성 · 90일 공유 링크',
+    feats:[
+      {ic:'📊',ttl:'더존 CSV 자동 생성',desc:'매월 급여·정산 데이터 더존 형식 자동 변환'},
+      {ic:'🔗',ttl:'90일 공유 링크',desc:'세무사에게 링크 하나로 데이터 공유 — 이메일 불필요'},
+      {ic:'📱',ttl:'카카오로 전달',desc:'링크를 카카오로 전송 — 세무사 접근 즉시 가능'},
+      {ic:'🔄',ttl:'자동 업데이트',desc:'정산 수정 시 링크 데이터 자동 반영'},
+    ]},
+  '0-5':{ic:'🔗',color:'rgba(8,145,178,.15)',ttl:'FILO 출퇴근 연동',
+    sub:'QR 출퇴근 → 급여 → 정산 원스톱 자동화',
+    feats:[
+      {ic:'📱',ttl:'QR 출퇴근 자동 기록',desc:'기사·직원 QR 스캔 → 출퇴근 자동 기록'},
+      {ic:'💰',ttl:'근무 시간 → 급여 자동',desc:'출퇴근 기록 → 시급·수당 자동 계산'},
+      {ic:'📊',ttl:'DONWAY 정산 통합',desc:'FILO 근태 데이터 → DONWAY 정산 자동 반영'},
+      {ic:'🔄',ttl:'실시간 연동',desc:'FILO·DONWAY 데이터 Firestore 실시간 동기화'},
+    ]},
+  // 배달
+  '1-0':{ic:'🛵',color:'rgba(220,38,38,.15)',ttl:'배달대행 정산',
+    sub:'쿠팡이츠·배민·바로고 플랫폼별 정산 자동화',
+    feats:[
+      {ic:'📊',ttl:'플랫폼별 자동 파싱',desc:'쿠팡이츠·배민·바로고 정산 엑셀 자동 인식·계산'},
+      {ic:'💰',ttl:'차액 자동 보전',desc:'플랫폼 수수료 자동 차감 → 라이더 실수령액 계산'},
+      {ic:'💬',ttl:'라이더 명세서 발송',desc:'라이더별 실지급 명세서 카카오 자동 발송'},
+      {ic:'📈',ttl:'일별 건수 분석',desc:'라이더별·지역별 배달 건수 통계 자동 집계'},
+    ]},
+  '1-1':{ic:'💬',color:'rgba(34,197,94,.15)',ttl:'라이더 명세서',
+    sub:'라이더별 실지급 명세서 카카오 자동 발송',
+    feats:[
+      {ic:'📲',ttl:'전체 라이더 동시 발송',desc:'버튼 하나로 전체 라이더 카카오 알림톡 일괄 발송'},
+      {ic:'🧾',ttl:'차감·가산 상세 내역',desc:'수수료·보험료 차감 및 가산 내역 포함 명세서'},
+      {ic:'✅',ttl:'수신 확인 실시간',desc:'누가 확인했는지 실시간 추적'},
+      {ic:'📞',ttl:'문의 전화 감소',desc:'상세 명세서로 계산 오류 문의 급감'},
+    ]},
+  '1-2':{ic:'📊',color:'rgba(0,102,255,.15)',ttl:'차액 정산',
+    sub:'플랫폼 수수료 자동 차감 · 실수령액 계산',
+    feats:[
+      {ic:'💸',ttl:'플랫폼 수수료 자동 차감',desc:'쿠팡이츠·배민 수수료 자동 계산·차감'},
+      {ic:'💰',ttl:'라이더 실수령액',desc:'수수료 차감 후 실수령액 라이더별 자동 계산'},
+      {ic:'📊',ttl:'차액 자동 보전',desc:'플랫폼과 라이더 간 차액 자동 정산'},
+      {ic:'📋',ttl:'정산 내역 엑셀',desc:'정산 완료 내역 엑셀 다운로드'},
+    ]},
+  '1-3':{ic:'📈',color:'rgba(245,158,11,.15)',ttl:'일별 건수 분석',
+    sub:'라이더별·지역별 배달 건수 통계',
+    feats:[
+      {ic:'📊',ttl:'라이더별 건수 랭킹',desc:'일별·월별 라이더 건수 랭킹 자동 집계'},
+      {ic:'📅',ttl:'월별 추이',desc:'월별 건수 변화 추이 차트'},
+      {ic:'📤',ttl:'리포트 다운로드',desc:'분석 결과 엑셀 다운로드'},
+    ]},
+  '1-4':{ic:'🧾',color:'rgba(139,92,246,.15)',ttl:'세금계산서',
+    sub:'정산 확정 즉시 자동 발행',
+    feats:[
+      {ic:'⚡',ttl:'정산 확정 즉시 발행',desc:'정산 버튼 클릭 → 세금계산서 자동 생성'},
+      {ic:'📧',ttl:'이메일 자동 발송',desc:'거래처별 이메일 자동 발송'},
+      {ic:'🔗',ttl:'세무사 자동 전달',desc:'더존 CSV 자동 생성 → 세무사 전달'},
+    ]},
+  '1-5':{ic:'🔗',color:'rgba(8,145,178,.15)',ttl:'DINE 배달 연동',
+    sub:'자체 배달 주문 → 정산 자동 통합',
+    feats:[
+      {ic:'📱',ttl:'자체 배달앱 주문',desc:'DINE 자체 배달앱 주문 실시간 수신'},
+      {ic:'💰',ttl:'배달비 자동 정산',desc:'주문별 배달비 자동 계산·정산'},
+      {ic:'📊',ttl:'매출 통합 분석',desc:'DINE 매출 + 배달 수익 통합 대시보드'},
+    ]},
+};
+
+// 수작업 문제 상세
+var DW_PROBLEMS = {
+
+  pay:{ic:'📊',color:'rgba(248,113,113,.15)',ttl:'업종별 복잡한 급여 계산',
+    sub:'매번 다른 계산 방식 — 이제 자동으로',
+    feats:[
+      {ic:'📦',ttl:'택배 구간 단가',desc:'라우트별 구간 단가 · 야간·시즌 할증 자동 적용'},
+      {ic:'🛵',ttl:'배달 건당 수수료',desc:'플랫폼별 수수료 자동 차감 · 차액 자동 보전'},
+      {ic:'🍽',ttl:'요식업 시급·야간수당',desc:'2026 최저임금 자동 적용 · 주휴수당·야간수당 자동'},
+      {ic:'⚡',ttl:'DONWAY 하나로 해결',desc:'모든 업종 계산 방식 자동 처리 — 엑셀 수작업 0'},
+    ]},
+  kakao:{ic:'📱',color:'rgba(248,113,113,.15)',ttl:'명세서 개별 전송 → 문의 폭주',
+    sub:'카카오 일괄 발송으로 문의 80% 감소',
+    feats:[
+      {ic:'💬',ttl:'전체 일괄 발송',desc:'버튼 하나로 전 직원·기사 카카오 알림톡 동시 발송'},
+      {ic:'🧾',ttl:'상세 명세서 자동 생성',desc:'공제·가산 내역 포함 — 계산 오류 문의 급감'},
+      {ic:'✅',ttl:'수신 확인 실시간',desc:'누가 확인했는지 실시간 추적 · 미확인자 재발송'},
+      {ic:'📞',ttl:'항의 전화 차단',desc:'명확한 명세서로 오류 문의 · 항의 전화 80% 감소'},
+    ]},
+};
+
+  tax:{ic:'📋',color:'rgba(248,113,113,.15)',ttl:'세무사 자료 매달 수동 전달',
+    sub:'자동 생성으로 매달 수작업 0',
+    feats:[
+      {ic:'📊',ttl:'더존 CSV 자동 생성',desc:'매월 급여·정산 데이터 더존 형식 자동 변환'},
+      {ic:'🔗',ttl:'90일 공유 링크',desc:'세무사에게 링크 하나로 공유 — 이메일 불필요'},
+      {ic:'📱',ttl:'카카오로 전달',desc:'링크를 카카오로 전송 — 세무사 즉시 접근'},
+      {ic:'🔄',ttl:'자동 업데이트',desc:'정산 수정 시 링크 데이터 자동 반영'},
+    ]},
+};
+
+function _dwModalOpen(indIdx, featIdx) {
+  var key = indIdx + '-' + featIdx;
+  var d = DW_DETAILS[key];
+  if (!d) return;
+  _dwShowModal(d);
+}
+
+function _dwProblemModal(key) {
+  var d = DW_PROBLEMS[key];
+  if (!d) return;
+  _dwShowModal(d);
+}
+
+function _dwShowModal(d) {
+  var overlay = document.getElementById('dw-modal-overlay');
+  var hdr = document.getElementById('dw-modal-hdr');
+  var body = document.getElementById('dw-modal-body');
+  if (!overlay || !hdr || !body) return;
+
+  hdr.innerHTML =
+    '<div class="dw-modal-ic" style="background:' + d.color + '">' + d.ic + '</div>' +
+    '<div><div class="dw-modal-ttl">' + d.ttl + '</div>' +
+    '<div class="dw-modal-sub">' + d.sub + '</div></div>' +
+    '<button class="dw-modal-close" onclick="_dwModalClose()">✕</button>';
+
+  body.innerHTML = '<div class="dw-feat-list">' +
+    d.feats.map(function(f) {
+      return '<div class="dw-feat-item">' +
+        '<div class="dw-feat-item-ico">' + f.ic + '</div>' +
+        '<div><div class="dw-feat-item-ttl">' + f.ttl + '</div>' +
+        '<div class="dw-feat-item-desc">' + f.desc + '</div></div>' +
+        '</div>';
+    }).join('') + '</div>';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _dwModalClose(e) {
+  if (e && e.target !== document.getElementById('dw-modal-overlay')) return;
+  document.getElementById('dw-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
 
 // ── 도트 & 슬라이드 ───────────────────────────────────────────────
 var wrap = document.getElementById('wrap');
@@ -623,5 +822,13 @@ async function submitInquiry(){
   }catch(e){alert('오류가 발생했습니다. 전화로 문의해주세요.');}
 }
 </script>
+
+<!-- ── 기능 상세 모달 ── -->
+<div id="dw-modal-overlay" onclick="_dwModalClose(event)">
+  <div id="dw-modal-box">
+    <div class="dw-modal-hdr" id="dw-modal-hdr"></div>
+    <div class="dw-modal-body" id="dw-modal-body"></div>
+  </div>
+</div>
 </body>
 </html>
