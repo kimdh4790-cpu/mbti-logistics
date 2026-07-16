@@ -3562,7 +3562,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         }
         const calcedAmt = _calcPlanAmt(planType, headcount, subType);
 
-        await fsPatch(token, \`\${FS_BASE}/subscriptions/\${uid}\`, {
+        await fsPatch(token, `${FS_BASE}/subscriptions/${uid}`, {
           plan:       { stringValue: planType },
           status:     { stringValue: 'active' },
           expireDate: { timestampValue: newExpire.toISOString() },
