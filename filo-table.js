@@ -160,10 +160,57 @@ function _filoQRPrint(num,name){
  var canvas=el.querySelector('canvas');
  var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
  if(!src)return;
- var w=window.open('','_blank','width=400,height=500');
- w.document.write('<html><head><title>'+name+'</title>'+
-  '<style>body{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif}h2{margin-bottom:16px}img{width:220px;height:220px}p{margin-top:10px;font-size:13px;color:#666}</style></head>'+
-  '<body onload="window.print()"><h2>'+name+'</h2><img src="'+src+'"><p>QR 스캔 → 주문</p></body></html>');
+ var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
+ var w=window.open('','_blank','width=440,height=560');
+ w.document.write('<html><head><meta charset="UTF-8"><title>'+name+'</title>'+
+  '<style>'+
+  '*{margin:0;padding:0;box-sizing:border-box}'+
+  'html,body{width:400px;height:500px;overflow:hidden}'+
+  'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#fff}'+
+  '.card{width:400px;height:500px;position:relative;overflow:hidden;background:#0A0E2A}'+
+  '.gold-top{height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '.header{padding:22px 28px 14px;text-align:center;position:relative;z-index:1}'+
+  '.rest-label{font-size:11px;color:rgba(201,168,76,.65);letter-spacing:4px;font-weight:500;margin-bottom:6px}'+
+  '.store-name{font-size:32px;font-weight:900;color:#fff;letter-spacing:6px;line-height:1;margin-bottom:10px}'+
+  '.divider{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}'+
+  '.divider-line{height:1px;width:36px;background:rgba(201,168,76,.5)}'+
+  '.brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:3px}'+
+  '.brand-filo{font-size:14px;font-weight:800;color:#00CFFF;letter-spacing:3px}'+
+  '.brand-dine{font-size:14px;font-weight:800;color:#00E890;letter-spacing:3px}'+
+  '.brand-dot{color:rgba(201,168,76,.7);font-size:10px}'+
+  '.sub{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:2px}'+
+  '.sep{margin:0 28px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}'+
+  '.qr-wrap{padding:14px 0 10px;text-align:center;position:relative;z-index:1}'+
+  '.qr-box{background:#fff;border-radius:14px;padding:10px;display:inline-block}'+
+  '.table-badge{text-align:center;padding:2px 0 10px;position:relative;z-index:1}'+
+  '.badge-inner{display:inline-flex;align-items:center;gap:8px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:7px 24px;background:rgba(201,168,76,.07)}'+
+  '.badge-label{font-size:11px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
+  '.badge-num{font-size:22px;font-weight:900;color:#C9A84C;line-height:1}'+
+  '.footer{text-align:center;padding:4px 0 8px;position:relative;z-index:1}'+
+  '.footer p{font-size:8px;color:rgba(255,255,255,.22);letter-spacing:1.5px}'+
+  '.deco1{position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(201,168,76,.12);z-index:0}'+
+  '.deco2{position:absolute;bottom:-30px;left:-30px;width:130px;height:130px;border-radius:50%;border:1px solid rgba(201,168,76,.08);z-index:0}'+
+  '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'+
+  '</style></head>'+
+  '<body onload="window.print()">'+
+  '<div class="card">'+
+  '<div class="gold-top"></div>'+
+  '<div class="deco1"></div>'+
+  '<div class="deco2"></div>'+
+  '<div class="header">'+
+  (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
+  '<div class="divider"><div class="divider-line"></div><span style="color:#C9A84C;font-size:9px">✦</span><div class="divider-line"></div></div>'+
+  '<div class="brand"><span class="brand-filo">FILO</span><span class="brand-dot">✦</span><span class="brand-dine">DINE</span></div>'+
+  '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
+  '</div>'+
+  '<div class="sep"></div>'+
+  '<div class="qr-wrap"><div class="qr-box"><img src="'+src+'" style="width:170px;height:170px;display:block"></div></div>'+
+  '<div class="table-badge"><div class="badge-inner"><span class="badge-label">TABLE</span><span class="badge-num">'+num+'</span></div></div>'+
+  '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+  '<div class="gold-bot"></div>'+
+  '</div>'+
+  '</body></html>');
  w.document.close();
 }
 
