@@ -3268,34 +3268,34 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         // manifest 링크를 슬러그 기반으로 교체
         html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
         const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
-        // AI정산·QR+급여만 노출 (delivery/universal/filo_combo 숨김)
+        // 구독 팝업: AI정산+배달대행만 노출 / 회사등록: 범용·재고 숨김 / 요금 실제값으로 교체
         const hideScript = '<style>' +
+          '#svc-universal-card,#svc-inventory-card{display:none!important}' +
           '.sub-amt-qr_payroll,.sub-tier-label-qr_payroll{display:none!important}' +
           '</style>' +
-          '<script>' +
-          '(function(){' +
+          '<script>(function(){' +
+          // 구독 팝업 카드 숨김
           'var HIDE=["qr_payroll","universal","filo_combo"];' +
-          'function _hideCards(){' +
-          'document.querySelectorAll("button[data-pkey]").forEach(function(btn){' +
-          'if(HIDE.indexOf(btn.dataset.pkey)>-1){' +
-          // 버튼에서 위로 올라가며 카드 div 찾기 (background:var(--bg3) 포함 div)
-          'var el=btn;' +
-          'for(var i=0;i<5;i++){' +
-          'el=el.parentElement;' +
-          'if(!el)break;' +
-          'if(el.style&&(el.style.background||"").indexOf("bg3")>-1||' +
-          '(el.getAttribute&&(el.getAttribute("style")||"").indexOf("bg3")>-1)){' +
-          'el.style.display="none";break;' +
+          'function _hideCards(){document.querySelectorAll("button[data-pkey]").forEach(function(btn){' +
+          'if(HIDE.indexOf(btn.dataset.pkey)>-1){var el=btn;for(var i=0;i<5;i++){el=el.parentElement;if(!el)break;' +
+          'if(el.getAttribute&&(el.getAttribute("style")||"").indexOf("bg3")>-1){el.style.display="none";break;}}}' +
+          '});}' +
+          'var obs=new MutationObserver(_hideCards);obs.observe(document.body,{childList:true,subtree:true});_hideCards();' +
+          // 요금 옵션 실제값으로 교체
+          'function _fixPrices(){' +
+          'var sel=document.getElementById("settle-tier-select");if(!sel||sel.dataset.fixed)return;sel.dataset.fixed="1";' +
+          '[["50","~50명 — 20만원/월"],["100","~100명 — 40만원/월"],["200","~200명 — 80만원/월"],' +
+          '["300","~300명 — 120만원/월"],["500","~500명 — 200만원/월"],["700","~700명 — 280만원/월"],' +
+          '["1000","~1000명 — 400만원/월"],["1500","~1500명 — 600만원/월"],["2000","~2000명 — 800만원/월"],' +
+          '["9999","2000명+ — 별도 문의"]].forEach(function(r){var o=sel.querySelector("option[value=\""+r[0]+"\"]");if(o)o.textContent=r[1];});' +
+          'var card=document.getElementById("svc-settle-card");if(card){' +
+          'card.querySelectorAll("div").forEach(function(d){' +
+          'if(d.textContent.indexOf("32.5만")>-1)d.textContent="개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 (VAT별도)";' +
+          'if(d.textContent.indexOf("26.5만")>-1)d.textContent="단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)";' +
+          '});}' +
           '}' +
-          '}' +
-          '}' +
-          '});' +
-          '}' +
-          'var obs=new MutationObserver(_hideCards);' +
-          'obs.observe(document.body,{childList:true,subtree:true});' +
-          '_hideCards();' +
-          '})();' +
-          '</script>';
+          'var obs2=new MutationObserver(_fixPrices);obs2.observe(document.body,{childList:true,subtree:true});_fixPrices();' +
+          '})();</script>';
         html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n' + hideScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
