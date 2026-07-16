@@ -64,10 +64,13 @@ function _ctrlLogout() {
 // ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
 function _ctrlStartListeners() {
   // 가입 대기 뱃지
-  var u1 = _db.collection('join_requests')
-    .where('status','==','pending')
+  // 가입대기 뱃지: companies pending 카운트
+  var u1 = _db.collection('companies')
+    .where('status','in',['pending','hold'])
     .onSnapshot(function(snap) {
       _ctrlBadge('badge-join', snap.size);
+    }, function() {
+      // 복합인덱스 없을 경우 무시
     });
   _unsubs.push(u1);
 
@@ -257,39 +260,35 @@ function _ctrlLoadJoin() {
 }
 
 function _ctrlApprove(reqId) {
-  _db.collection('join_requests').doc(reqId).get().then(function(doc) {
+  // companies 컬렉션에서 직접 처리
+  _db.collection('companies').doc(reqId).get().then(function(doc) {
     if (!doc.exists) return;
     var d = doc.data();
-    // 1. join_requests 상태 업데이트
-    _db.collection('join_requests').doc(reqId).update({
+    var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+    // 1. companies.status → approved
+    _db.collection('companies').doc(reqId).update({
       status: 'approved',
+      plan: d.plan === 'pending' ? 'trial' : (d.plan || 'trial'),
+      trialEnd: d.trialEnd || trialEnd,
       approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
       approvedBy: _CU.email
     });
-    // 2. companies 상태 업데이트
-    if (d.uid) {
-      var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
-      _db.collection('companies').doc(d.uid).set({
-        status: 'trial',
-        plan: 'trial',
-        trialEnd: trialEnd,
-        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, {merge: true});
-    }
-    // 3. FCM + 카카오 알림
+    // 2. FCM + 카카오 알림
     _ctrlNotifyApproval({
-      uid: d.uid, email: d.email,
-      companyName: d.companyName, phone: d.phone,
+      uid: reqId, email: d.email,
+      companyName: d.companyName||d.name, phone: d.phone,
       slug: d.slug
     });
-    _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
+    // 3. Worker /api/approve 호출 (이메일 발송)
+    fetch('https://donway.ai.kr/api/approve?uid=' + reqId).catch(function(){});
+    _ctrlToast('✅ ' + (d.companyName||d.name||'업체') + ' 승인! 이메일+알림 발송됨');
   });
 }
 
 function _ctrlReject(reqId) {
   var reason = prompt('거절 사유 (고객에게 전달됩니다):');
   if (reason === null) return;
-  _db.collection('join_requests').doc(reqId).update({
+  _db.collection('companies').doc(reqId).update({
     status: 'rejected',
     rejectReason: reason,
     rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -299,7 +298,7 @@ function _ctrlReject(reqId) {
 function _ctrlHold(reqId) {
   var memo = prompt('보류 메모:');
   if (memo === null) return;
-  _db.collection('join_requests').doc(reqId).update({
+  _db.collection('companies').doc(reqId).update({
     status: 'hold', holdMemo: memo,
     heldAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
