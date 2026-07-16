@@ -317,8 +317,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <span style="font-size:20px">🤖</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 32.5만 · 100명 62만 · 200명 114만 · 300명 159만 · 500명 240만 · 700명 315만원/월</div>
-                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 26.5만 · 100명 50만 · 200명 92만 · 300명 126만 (VAT별도)</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 · 700명+ 280만/월</div>
+                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)</div>
               </div>
             </div>
             <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -327,15 +327,15 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
               <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
               <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                <option value="50">~50명 — 32.5만원/월</option>
-                <option value="100">~100명 — 62만원/월</option>
-                <option value="200">~200명 — 114만원/월</option>
-                <option value="300">~300명 — 159만원/월</option>
-                <option value="500">~500명 — 240만원/월</option>
-                <option value="700">~700명 — 315만원/월</option>
-                <option value="1000">~1000명 — 450만원/월</option>
-                <option value="1500">~1500명 — 675만원/월</option>
-                <option value="2000">~2000명 — 786만원/월</option>
+                <option value="50">~50명 — 20만원/월</option>
+                <option value="100">~100명 — 40만원/월</option>
+                <option value="200">~200명 — 80만원/월</option>
+                <option value="300">~300명 — 120만원/월</option>
+                <option value="500">~500명 — 200만원/월</option>
+                <option value="700">~700명 — 280만원/월</option>
+                <option value="1000">~1000명 — 400만원/월</option>
+                <option value="1500">~1500명 — 600만원/월</option>
+                <option value="2000">~2000명 — 800만원/월</option>
                 <option value="9999">2000명+ — 별도 문의</option>
               </select>
             </div>
@@ -354,7 +354,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
         </div>
 
         <!-- 범용 정산 -->
-        <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
+        <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="display:none;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:20px">📋</span>
@@ -368,7 +368,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
         </div>
 
         <!-- 재고관리 -->
-        <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
+        <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="display:none;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:20px">📦</span>
@@ -9146,17 +9146,17 @@ function _setPlanType(type){
     pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
   }
   var tiers=[
-    {v:'50',  p:'32.5만', g:'26.5만'},
-    {v:'100', p:'62만',   g:'50만'},
-    {v:'200', p:'114만',  g:'92만'},
-    {v:'300', p:'159만',  g:'126만'},
-    {v:'500', p:'240만',  g:'190만'},
-    {v:'700', p:'315만',  g:'245만'},
-    {v:'1000',p:'450만',  g:'330만'},
-    {v:'1500',p:'675만',  g:'495만'},
-    {v:'2000',p:'900만',  g:'660만'},
+    {v:'50',  p:'20만',   g:'15만'},
+    {v:'100', p:'40만',   g:'30만'},
+    {v:'200', p:'80만',   g:'60만'},
+    {v:'300', p:'120만',  g:'90만'},
+    {v:'500', p:'200만',  g:'150만'},
+    {v:'700', p:'280만',  g:'210만'},
+    {v:'1000',p:'400만',  g:'300만'},
+    {v:'1500',p:'600만',  g:'450만'},
+    {v:'2000',p:'800만',  g:'600만'},
     {v:'9999',p:'별도문의',g:'별도문의'}
-  ];
+    ];
   var sel=document.getElementById('settle-tier-select');
   if(sel){
     var cur=sel.value;
