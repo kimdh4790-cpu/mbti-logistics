@@ -375,12 +375,12 @@ function _renderCompanies() {
         '<span>🔗 슬러그: ' + (d.slug||'-') + '</span>' +
       '</div>' +
       '<div class="comp-actions">' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlOpenDetail(this.dataset.id)">📋 상세</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" data-nm="' + (d.companyName||'').replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">💬 채팅</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlExtendTrial(this.dataset.id)">⏰ 연장</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenDetail(\'' + d.id + '\')">📋 상세</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenChat(\'' + d.id + '\',\'' + (d.companyName||'') + '\')">💬 채팅</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlExtendTrial(\'' + d.id + '\')">⏰ 연장</button>' +
         (d.status !== 'suspended'
-          ? '<button class="ctrl-btn ctrl-btn-err" data-id="' + d.id + '" onclick="_ctrlSuspend(this.dataset.id)">⏸ 정지</button>'
-          : '<button class="ctrl-btn ctrl-btn-ok" data-id="' + d.id + '" onclick="_ctrlUnsuspend(this.dataset.id)">▶ 복구</button>') +
+          ? '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlSuspend(\'' + d.id + '\')">⏸ 정지</button>'
+          : '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlUnsuspend(\'' + d.id + '\')">▶ 복구</button>') +
       '</div>' +
       // 기능 on/off
       '<div class="comp-features">' +
@@ -408,7 +408,7 @@ function _renderFeatureToggles(dealerId, services) {
   return _ALL_FEATURES.map(function(f) {
     var on = services.includes(f.key);
     return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
-      'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on===\'true\')">' +
+      'onclick="_ctrlToggleFeature(\'' + dealerId + '\',\'' + f.key + '\',' + !on + ')">' +
       (on?'✅ ':'⬜ ') + f.label + '</button>';
   }).join('');
 }
