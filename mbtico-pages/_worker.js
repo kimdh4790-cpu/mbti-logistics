@@ -1942,7 +1942,12 @@ function _ctrlLoadBilling() {
     });
 }
 
-  window.addEventListener('DOMContentLoaded', _ctrlInit);
+  // body 끝에 위치하므로 DOM 준비됨 → 즉시 실행
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _ctrlInit);
+  } else {
+    _ctrlInit();
+  }
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') _ctrlCloseDetail();
   });
