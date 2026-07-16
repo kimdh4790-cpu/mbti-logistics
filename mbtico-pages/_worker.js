@@ -1219,7 +1219,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script>/**
+
+<script>
+/**
  * mbtico-ctrl.js — 관제센터 공통 모듈
  * 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
  *
@@ -1939,11 +1941,9 @@ function _ctrlLoadBilling() {
       c.innerHTML = html;
     });
 }
-</script>
-<script>
+
   // 앱 시작
   window.addEventListener('DOMContentLoaded', _ctrlInit);
-  // ESC → 모달 닫기
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') _ctrlCloseDetail();
   });
