@@ -14,7 +14,7 @@
 
 function _dineSales(el){
  var did=_CU.dealerId;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
@@ -28,7 +28,7 @@ function _dineSales(el){
 }
 
 function _dineLoadSales(did){
- var date=document.getElementById('sales-date')?.value||new Date().toISOString().slice(0,10);
+ var date=document.getElementById('sales-date')?.value||_today();
  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',date).get()
   .then(function(snap){
    var total=0,cnt=0,methods={};
@@ -188,11 +188,11 @@ function _dineSaveDeliveryData(r){
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
    body:JSON.stringify({fields:{
     dealerId:{stringValue:did},platform:{stringValue:r.platform},
-    date:{stringValue:o.date||new Date().toISOString().slice(0,10)},
+    date:{stringValue:o.date||_today()},
     total:{integerValue:o.amt},fee:{integerValue:o.fee||0},
     status:{stringValue:'completed'},payMethod:{stringValue:r.platform},
     source:{stringValue:'excel_import'},
-    createdAt:{stringValue:(o.date?o.date+'T12:00:00.000Z':new Date().toISOString())}
+    createdAt:{stringValue:(o.date?o.date+'T12:00:00.000Z':_nowISO())}
    }})
   });
  });
@@ -219,7 +219,7 @@ function _dineSettle(el){
 }
 
 function _dineCalcSettle(did){
- var ym=document.getElementById('settle-ym')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('settle-ym')?.value||_monthStr();
  var from=ym+'-01',to=ym+'-31';
  var res=document.getElementById('settle-result');
  if(!res)return;
@@ -317,7 +317,7 @@ function _dineSaveStore(did){
   empCount:parseInt(document.getElementById('st-empCount')?.value)||5,
   defaultWage:parseInt(document.getElementById('st-defaultWage')?.value)||MIN_WAGE,
   payDate:parseInt(document.getElementById('st-payDate')?.value)||25,
-  updatedAt:new Date().toISOString()
+  updatedAt:_nowISO()
  };
  /* REST API PATCH */
  var fields={};

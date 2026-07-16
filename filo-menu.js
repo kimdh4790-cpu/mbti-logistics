@@ -332,8 +332,8 @@ function _filoRecipeSave(did,oldMenuName){
  }).then(function(){
   /* menu_costs 동기화 */
   return _db.collection('menu_costs').where('dealerId','==',did).where('name','==',menuName).get().then(function(snap){
-   if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:0,createdAt:new Date().toISOString()});
-   return snap.docs[0].ref.update({price:price,updatedAt:new Date().toISOString()});
+   if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:0,createdAt:_nowISO()});
+   return snap.docs[0].ref.update({price:price,updatedAt:_nowISO()});
   });
  }).then(function(){
   document.querySelector('.mo')&&document.querySelector('.mo').remove();
@@ -356,8 +356,8 @@ function _filoSetMenuPriceRecipe(did,menuName,suggestedCost){
  var price=parseInt(prompt('판매가를 입력하세요\n원가: ₩'+suggestedCost.toLocaleString()+'\n권장(마진 65%): ₩'+Math.round(suggestedCost/0.35).toLocaleString()))||0;
  if(!price)return;
  _db.collection('menu_costs').where('dealerId','==',did).where('name','==',menuName).get().then(function(snap){
-  if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:suggestedCost,createdAt:new Date().toISOString()});
-  return snap.docs[0].ref.update({price:price,cost:suggestedCost,updatedAt:new Date().toISOString()});
+  if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:suggestedCost,createdAt:_nowISO()});
+  return snap.docs[0].ref.update({price:price,cost:suggestedCost,updatedAt:_nowISO()});
  }).then(function(){_filoToast('✅ 판매가 저장');_filoLoadRecipes(did);});
 }
 
@@ -412,7 +412,7 @@ function _filoSaveCost(did){
  var price=parseInt(document.getElementById('mc-price').value)||0;
  var cost=parseInt(document.getElementById('mc-cost').value)||0;
  if(!name){_filoToast('메뉴명을 입력하세요');return;}
- _db.collection('menu_costs').add({dealerId:did,name:name,price:price,cost:cost,createdAt:new Date().toISOString()}).then(function(){
+ _db.collection('menu_costs').add({dealerId:did,name:name,price:price,cost:cost,createdAt:_nowISO()}).then(function(){
   _filoToast('✅ 원가 등록 완료');
   document.getElementById('mc-name').value='';
   document.getElementById('mc-price').value='';
@@ -796,10 +796,10 @@ function _filoMenuAddModal(did, menu, cat){
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
   var description=(document.getElementById('menu-desc-inp')?document.getElementById('menu-desc-inp').value||'':'').trim();
-  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:stockMin>0?stockMin:null,description:description,updatedAt:new Date().toISOString()};
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:stockMin>0?stockMin:null,description:description,updatedAt:_nowISO()};
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
-   _db.collection('filo_menus').add(Object.assign(data,{createdAt:new Date().toISOString()}));
+   _db.collection('filo_menus').add(Object.assign(data,{createdAt:_nowISO()}));
   promise.then(function(ref){
    _filoToast(isEdit?'✅ 수정됐습니다! 번역 중...':'✅ 등록됐습니다! 번역 중...');
    mo.remove();
@@ -976,7 +976,7 @@ function _filoPageExpiry(el){
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  firebase.firestore().collection('inventory').where('dealerId','==',did).get().then(function(snap){
  var expired=[],warn=[],ok=[];
  snap.forEach(function(doc){

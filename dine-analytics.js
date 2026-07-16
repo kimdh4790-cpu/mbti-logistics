@@ -455,7 +455,7 @@ function _dineWatchFiloSales(){
  if(window._dineFiloSalesUnsub)window._dineFiloSalesUnsub();
  var did=_CU&&_CU.dealerId;
  if(!did||!_db)return;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var totalEl=document.getElementById('filo-live-total');
  window._dineFiloSalesUnsub=_db.collection('filo_sales')
   .where('dealerId','==',did).where('date','==',today)
@@ -476,7 +476,7 @@ function _dineWatchReservations(){
  if(window._dineResUnsub)window._dineResUnsub();
  var did=_CU&&_CU.dealerId;
  if(!did||!_db)return;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  window._dineResUnsub=_db.collection('filo_bookings')
   .where('dealerId','==',did).where('date','==',today).where('status','==','pending')
   .onSnapshot(function(snap){
@@ -552,7 +552,7 @@ function _dineMyPayroll(el){
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">💰 내 급여</div><div class="page-sub">'+_CU.name+'님의 급여 현황</div></div>'+
   '<div style="display:flex;gap:8px;margin-bottom:14px">'+
-  '<input type="month" id="my-pay-ym" class="inp" style="width:auto" value="'+new Date().toISOString().slice(0,7)+'">'+
+  '<input type="month" id="my-pay-ym" class="inp" style="width:auto" value="'+_monthStr()+'">'+
   '<button class="btn btn-primary btn-sm" onclick="_dineLoadMyPayroll()">조회</button>'+
   '</div>'+
   '<div id="my-payroll-result"><div style="text-align:center;padding:30px;color:var(--t3)">월을 선택 후 조회하세요</div></div>';
@@ -761,7 +761,7 @@ function _dineCostSave(did){
   emoji:document.getElementById('c-emoji').value||'🍽',
   price:parseInt(document.getElementById('c-price').value)||0,
   cost:parseInt(document.getElementById('c-cost').value)||0,
-  createdAt:new Date().toISOString()};
+  createdAt:_nowISO()};
  if(!data.name){_dineToast('⚠️ 메뉴명을 입력해주세요');return;}
  _db.collection('menu_costs').add(data).then(function(){
   _dineToast('✅ 등록됐습니다');document.querySelector('.mo')?.remove();_dineCost(document.getElementById('content'));

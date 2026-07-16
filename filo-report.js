@@ -179,7 +179,7 @@ function _filoEnsureChartJS(cb){
 }
 
 function _filoLoadSalesCharts(did){
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var ym=today.slice(0,7);
  var from=ym+'-01',to=today;
  _filoRenderSalesCharts(did,from,to);
@@ -390,7 +390,7 @@ function _filoTaxSendReport(type){
    _db.collection('alimtalk_queue').add({
     type:'tax_report',to:email,dealerId:did,
     reportData:{period:startDate+'~'+endDate,total:total,cnt:cnt,topMenus:topMenus},
-    createdAt:new Date().toISOString(),status:'pending'
+    createdAt:_nowISO(),status:'pending'
    }).then(function(){_filoToast('✅ 리포트가 발송됐습니다!');});
   });
 }

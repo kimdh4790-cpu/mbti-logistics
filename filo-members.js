@@ -16,7 +16,7 @@ window._filoExpSave=function(did){
  var itemId=document.getElementById('exp-item').value;
  var date=document.getElementById('exp-date').value;
  if(!itemId||!date){_filoToast('품목과 유통기한을 선택해주세요');return;}
- firebase.firestore().collection('inventory').doc(itemId).update({expiryDate:date,updatedAt:new Date().toISOString()})
+ firebase.firestore().collection('inventory').doc(itemId).update({expiryDate:date,updatedAt:_nowISO()})
  .then(function(){_filoToast('✅ 저장됨');_filoPageExpiry(document.getElementById('content'));})
  .catch(function(e){_filoToast('❌ '+e.message);});
 };
@@ -83,7 +83,7 @@ function _filoAddMember(){
  if(!name){_filoToast('이름을 입력하세요');return;}
  _db.collection('members').add({
  dealerId:did,name:name,phone:phone,role:role,wage:wage,dept:dept,
- createdAt:new Date().toISOString(),is_active:true
+ createdAt:_nowISO(),is_active:true
  }).then(function(){
  document.querySelector('.mo')&&document.querySelector('.mo').remove();
  _filoToast('✅ '+name+' 추가 완료');
@@ -158,7 +158,7 @@ function _filoStartLiveTicker(){
 }
 function _filoRenderLive(){
  var did=_CU.dealerId||_CU.uid;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('type','==','in').get(),
   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('type','==','out').get(),

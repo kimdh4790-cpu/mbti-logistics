@@ -34,7 +34,7 @@
 
 function _filoTableLoad(did){
  did=did||_CU.dealerId||_CU.uid;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  /* 기존 리스너 해제 */
  if(window._tableUnsub)window._tableUnsub();
  if(window._bookingUnsub)window._bookingUnsub();
@@ -102,7 +102,7 @@ function _filoTableLoad(did){
   });
  var tableSnap=null,bookingSnap=null,orderMap={};
  // 실시간 주문 감지 (테이블별 주문금액)
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
   .onSnapshot(function(snap){
    orderMap={};
@@ -231,7 +231,7 @@ function _filoTableLoad(did){
 }
 
 window._filoTableSeat=function(docId,did,num){
- var now=new Date().toISOString();
+ var now=_nowISO();
  var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
  _db.collection('filo_tables').doc(id).set({
   dealerId:did,tableNum:parseInt(num),tableName:'테이블 '+num,
@@ -240,7 +240,7 @@ window._filoTableSeat=function(docId,did,num){
 };
 
 window._filoTableClear=function(docId,did,num){
- var now=new Date().toISOString();
+ var now=_nowISO();
  var today=now.slice(0,10);
  // docId 없으면 기본값 생성
  var id=docId&&!docId.startsWith('auto_')&&docId!==did+'_t'+num?docId:(did+'_t'+num);
@@ -294,7 +294,7 @@ function _filoTableOrderModal(did,table,order){
  var hasOrder=order&&order.total>0;
  // 주문/결제 있으면 occupied로 보정
  if(s==='empty'&&hasOrder)s='occupied';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
 
  // 로딩 화면 먼저 표시
  var inner=document.createElement('div');
@@ -476,7 +476,7 @@ function _filoTableOrderModal(did,table,order){
     results.forEach(function(snap){
      snap.forEach(function(doc){
       if(seen[doc.id])return;seen[doc.id]=true;
-      batch.update(doc.ref,{status:'ready',readyAt:new Date().toISOString()});
+      batch.update(doc.ref,{status:'ready',readyAt:_nowISO()});
       var tk=doc.data().fcmToken;
       if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
      });
@@ -532,7 +532,7 @@ function _filoTableOrderModal(did,table,order){
 function _filoMarkPaid(did,tableNum,docId,btn,mo){
  if(!confirm('결제 완료 처리하시겠습니까?'))return;
  btn.disabled=true;btn.textContent='처리 중...';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
 
  // 해당 테이블 미결제 주문 전체 조회
  _db.collection('filo_orders')
@@ -593,7 +593,7 @@ function _filoMarkPaid(did,tableNum,docId,btn,mo){
       _filoTablePay(did,items,pendingTotal,tableNum,tableName,method,orderIds);
       // 테이블 비움
       if(docId&&!docId.startsWith('auto_'))
-       _db.collection('filo_tables').doc(docId).set({status:'empty',occupiedSince:'',updatedAt:new Date().toISOString()},{merge:true});
+       _db.collection('filo_tables').doc(docId).set({status:'empty',occupiedSince:'',updatedAt:_nowISO()},{merge:true});
      }
 
      pb.querySelector('#mp-card').onclick=function(){doPay('card');};
@@ -606,7 +606,7 @@ window._filoConfirmCall=function(idsStr,tableNum){
  var ids=idsStr.split(',');
  var batch=_db.batch();
  ids.forEach(function(id){
-  if(id)batch.update(_db.collection('staff_calls').doc(id),{status:'confirmed',confirmedAt:new Date().toISOString()});
+  if(id)batch.update(_db.collection('staff_calls').doc(id),{status:'confirmed',confirmedAt:_nowISO()});
  });
  batch.commit().then(function(){
   _filoToast('✅ 테이블 '+tableNum+' 호출 확인됨');
@@ -616,7 +616,7 @@ window._filoConfirmCall=function(idsStr,tableNum){
 window._filoTableInit=function(){
  var did=_CU.dealerId||_CU.uid;
  var count=parseInt(document.getElementById('table-count-inp').value)||10;
- var now=new Date().toISOString();
+ var now=_nowISO();
  var batch=_db.batch();
  Array.from({length:count},function(_,i){
   var n=i+1;
@@ -735,7 +735,7 @@ function _filoTableMoveModal(did,fromNum,fromName,order){
 
 window._filoDoTableMove=function(did,fromNum,toNum,moEl){
  var db=firebase.firestore();
- var now=new Date().toISOString();
+ var now=_nowISO();
  var toName='테이블 '+toNum;
 
  // filo_orders: fromNum → toNum (숫자/문자 모두)
@@ -889,7 +889,7 @@ function _filoRenderTableMgmt(did,tables){
 
  wrap.innerHTML=html;
  /* 오늘 예약 현황 실시간 */
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today)
   .orderBy('time').get().then(function(snap){
    if(snap.empty)return;
@@ -950,8 +950,8 @@ function _filoRenderTableMgmt(did,tables){
 function _filoTableStatusChange(did,docId,currentStatus){
  var next={empty:'occupied',occupied:'cleaning',cleaning:'empty',reserved:'empty'};
  var nextStatus=next[currentStatus]||'empty';
- var update={status:nextStatus,updatedAt:new Date().toISOString()};
- if(nextStatus==='occupied')update.since=new Date().toISOString();
+ var update={status:nextStatus,updatedAt:_nowISO()};
+ if(nextStatus==='occupied')update.since=_nowISO();
  else if(nextStatus==='empty')update.since=null;
  _db.collection('filo_tables').doc(docId).update(update).then(function(){
   _filoToast('✅ 상태 변경: '+nextStatus);
@@ -1018,7 +1018,7 @@ function _filoCreateTables(did,count,seats){
    creates.push(_db.collection('filo_tables').add({
     dealerId:did,tableId:i,seats:seats,
     status:'empty',since:null,
-    createdAt:new Date().toISOString()
+    createdAt:_nowISO()
    }));
   }
   return Promise.all(creates);

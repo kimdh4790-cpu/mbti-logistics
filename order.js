@@ -198,7 +198,7 @@ function _checkExistingOrder(){
   document.getElementById('_mv_ok').onclick=function(){
    _db.collection('filo_orders').doc(lastId).update({
     tableNum:_tNum,tableName:'테이블 '+_tNum,
-    movedFrom:d.tableNum,movedAt:new Date().toISOString()
+    movedFrom:d.tableNum,movedAt:_nowISO()
    }).then(function(){
     _lastOrderId=lastId;
     _listenPickup(lastId);
@@ -262,8 +262,8 @@ function _doOrder(payType){
   dealerId:_did,type:'table',status:'pending',
   payType:payType,tableNum:_tNum,tableName:_tName,
   items:items,total:total,
-  createdAt:new Date().toISOString(),
-  date:new Date().toISOString().slice(0,10)
+  createdAt:_nowISO(),
+  date:_today()
  };
  if(_fcmToken)orderData.fcmToken=_fcmToken;
  _db.collection('filo_orders').add(orderData).then(function(ref){
@@ -388,7 +388,7 @@ function _changeTable(){
   tableNum:newNum,
   tableName:'테이블 '+newNum,
   movedFrom:_tNum,
-  movedAt:new Date().toISOString()
+  movedAt:_nowISO()
  }).then(function(){
   _tNum=newNum;
   var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
@@ -483,7 +483,7 @@ function _callStaff(){
  if(!_db||!_did)return;
  _db.collection('staff_calls').add({
   dealerId:_did,tableNum:_tNum,tableName:_tName,
-  createdAt:new Date().toISOString(),status:'pending'
+  createdAt:_nowISO(),status:'pending'
  }).then(function(){
   var toast=document.getElementById('call-toast');
   if(toast){toast.style.display='block';setTimeout(function(){toast.style.display='none';},2000);}

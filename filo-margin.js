@@ -14,7 +14,7 @@
 
 function _filoGenerateAIInsight(did){
  var el=document.getElementById('ai-insight-content');if(!el)return;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var from=today.slice(0,7)+'-01';
  Promise.all([
   _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',today).get(),
@@ -58,7 +58,7 @@ function _filoMgTab(idx){
  });
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  var ymEl=document.getElementById('mg-ym');
- var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+ var ym=ymEl?ymEl.value:_monthStr();
  if(idx===0)_filoRenderMarginAnalysis(did,ym);
  else if(idx===1)_filoRenderCostMgmt(did);
  else _filoRenderInsights(did,ym);
@@ -73,7 +73,7 @@ function _filoMarginLoad(){
  if(!did)return;
  _marginDid=did;
  var ymEl=document.getElementById('mg-ym');
- var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+ var ym=ymEl?ymEl.value:_monthStr();
 
  /* 원가 맵 먼저 로드 후 실시간 리스너 시작 */
  _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
@@ -87,7 +87,7 @@ function _filoStartMarginLive(did,ym){
  /* 기존 리스너 해제 */
  if(_marginUnsub){_marginUnsub();_marginUnsub=null;}
  var start=ym+'-01',end=ym+'-31';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
 
  /* filo_sales(POS) 실시간 onSnapshot */
  _marginUnsub=_db.collection('filo_sales')

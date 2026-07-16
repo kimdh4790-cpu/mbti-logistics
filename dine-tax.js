@@ -14,7 +14,7 @@
 
 function _dineTax(el){
  var did=_CU.dealerId;
- var ym=new Date().toISOString().slice(0,7);
+ var ym=_monthStr();
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
 
@@ -155,7 +155,7 @@ function _dineTaxSaveFixed(did){
    cardFee:{integerValue:parseInt(document.getElementById('tax-card-fee')?.value)||0},
    other:{integerValue:parseInt(document.getElementById('tax-other')?.value)||0},
    memo:{stringValue:document.getElementById('tax-memo')?.value||''},
-   updatedAt:{stringValue:new Date().toISOString()}
+   updatedAt:{stringValue:_nowISO()}
   };
   /* 영수증 URL 추가 */
   Object.keys(_taxReceiptUrls).forEach(function(k){
@@ -171,7 +171,7 @@ function _dineTaxSaveFixed(did){
 }
 
 function _dineTaxGenerate(did){
- var ym=document.getElementById('tax-ym')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('tax-ym')?.value||_monthStr();
  var from=ym+'-01',to=ym+'-31';
  var res=document.getElementById('tax-result');
  if(!res)return;

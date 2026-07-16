@@ -35,7 +35,7 @@ function _filoPageInventory(el){
  '<div id="fi-expiry-warn" class="fade-up-4"></div>'+
  '</div>';
 
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var ym=today.slice(0,7);
  /* 월선택 현재달로 설정 */
  setTimeout(function(){var ymEl=document.getElementById('mg-ym');if(ymEl)ymEl.value=ym;},50);

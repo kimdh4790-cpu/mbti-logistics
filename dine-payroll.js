@@ -59,7 +59,7 @@ function _dinePayroll(el){
 }
 
 function _dineCalcPayroll(did){
- var ym=document.getElementById('pay-ym')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('pay-ym')?.value||_monthStr();
  var from=ym+'-01',to=ym+'-31';
  var list=document.getElementById('payroll-list');
  if(!list)return;

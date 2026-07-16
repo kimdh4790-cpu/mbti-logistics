@@ -100,7 +100,7 @@ function _filoRenderStaffQRs(did){
    ══════════════════════════════════════════ */
 function _filoPageAttendance(el){
  var did=_CU.dealerId||_CU.uid;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var qrUrl='https://donway.ai.kr/qr?did='+did+'&action=checkin';
  var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(qrUrl);
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
@@ -171,7 +171,7 @@ function _filoPageAttendance(el){
 
 function _filoPageAttendDash(el){
  var did=_CU.dealerId||_CU.uid;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  el.innerHTML='<div class="slide-up" style="max-width:800px;margin:0 auto">'+
  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
  '<div class="live-dot"></div>'+
@@ -189,7 +189,7 @@ function _filoPageAttendDash(el){
 function _filoLoadAttendDash(){
  var did=_CU.dealerId||_CU.uid;
  var dateEl=document.getElementById('ad-date');
- var date=dateEl?dateEl.value:new Date().toISOString().slice(0,10);
+ var date=dateEl?dateEl.value:_today();
  if(_attendUnsub)_attendUnsub();
  _attendUnsub=_db.collection('attendance')
  .where('dealerId','==',did).where('date','==',date)
@@ -279,7 +279,7 @@ var _liveTickerTimer=null;
 function _filoLoadPayroll(){
  var did=_CU.dealerId||_CU.uid;
  var ymEl=document.getElementById('pay-ym');
- var ym=ymEl?ymEl.value:new Date().toISOString().slice(0,7);
+ var ym=ymEl?ymEl.value:_monthStr();
  var startDate=ym+'-01';
  var endDate=ym+'-31';
  Promise.all([

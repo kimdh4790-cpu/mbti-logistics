@@ -74,7 +74,7 @@ function _filoPageKiosk(el){
  function _loadKioskTableBar(){
   var bar=document.getElementById('kiosk-table-bar');
   if(!bar)return;
-  var today=new Date().toISOString().slice(0,10);
+  var today=_today();
   // 주문 맵 로드
   _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
    .onSnapshot(function(oSnap){
@@ -575,7 +575,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
 
 // ── 테이블 각자 계산 ─────────────────────────────────────────────────────────
 function _filoTableSelfPay(did,order,tableNum,tableName){
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
 
  // filo_payments에서 이미 결제된 항목 조회
  _db.collection('filo_payments')
@@ -787,7 +787,7 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
     _db.collection('filo_orders')
       .where('dealerId','==',did)
       .where('tableNum','==',parseInt(tableNum))
-      .where('date','==',new Date().toISOString().slice(0,10))
+      .where('date','==',_today())
       .get().then(function(snap){
         var tok = null, ordId = null;
         snap.forEach(function(doc){

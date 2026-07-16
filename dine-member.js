@@ -30,7 +30,7 @@ function _dineMember(el){
    if(kpi)kpi.innerHTML=
     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">👥 총 회원</div><div class="kpi-val" style="color:#38bdf8">'+snap.size+'명</div></div>'+
     '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">⭐ 포인트 보유</div><div class="kpi-val" style="color:#22c55e">'+snap.docs.filter(function(d){return (d.data().point||0)>0;}).length+'명</div></div>'+
-    '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">📅 이번달 신규</div><div class="kpi-val" style="color:#f59e0b">'+snap.docs.filter(function(d){return (d.data().createdAt||'').startsWith(new Date().toISOString().slice(0,7));}).length+'명</div></div>';
+    '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">📅 이번달 신규</div><div class="kpi-val" style="color:#f59e0b">'+snap.docs.filter(function(d){return (d.data().createdAt||'').startsWith(_monthStr());}).length+'명</div></div>';
 
    var list=document.getElementById('member-list');if(!list)return;
    if(snap.empty){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">FILO QR 회원가입으로 자동 등록됩니다</div>';return;}
@@ -83,8 +83,8 @@ function _dineAddMember(did,memberId,existing){
    stamp:parseInt(document.getElementById('mb-stamp').value)||0,
    grade:document.getElementById('mb-grade').value,
    memo:document.getElementById('mb-memo').value.trim(),
-   updatedAt:new Date().toISOString()};
-  var pr=memberId?_db.collection('filo_customers').doc(memberId).set(data,{merge:true}):_db.collection('filo_customers').add(Object.assign(data,{createdAt:new Date().toISOString()}));
+   updatedAt:_nowISO()};
+  var pr=memberId?_db.collection('filo_customers').doc(memberId).set(data,{merge:true}):_db.collection('filo_customers').add(Object.assign(data,{createdAt:_nowISO()}));
   pr.then(function(){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('member',null);}).catch(function(e){alert(e.message);});
  };
  mo.appendChild(box);
@@ -94,7 +94,7 @@ function _dineAddMember(did,memberId,existing){
 
 function _dineReservation(el){
  var did=_CU.dealerId;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
@@ -109,7 +109,7 @@ function _dineReservation(el){
 }
 
 function _dineLoadReservation(did){
- var date=document.getElementById('res-date')?.value||new Date().toISOString().slice(0,10);
+ var date=document.getElementById('res-date')?.value||_today();
  if(window._dineResListUnsub)window._dineResListUnsub();
  window._dineResListUnsub=_db.collection('filo_bookings').where('dealerId','==',did).where('date','==',date)
   .orderBy('time').onSnapshot(function(snap){
@@ -150,7 +150,7 @@ function _dineCancelRes(id,did){
 function _dineAddReservation(did){
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📆 예약 추가</div>'+
   '<div class="input-group"><label>고객명</label><input id="r-name" class="inp" placeholder="홍길동"></div>'+
   '<div class="input-group"><label>연락처</label><input id="r-phone" class="inp" type="tel" placeholder="010-0000-0000"></div>'+
@@ -175,7 +175,7 @@ function _dineSaveReservation(did){
   time:document.getElementById('r-time').value,
   seats:parseInt(document.getElementById('r-seats').value)||2,
   memo:document.getElementById('r-memo').value,
-  status:'pending',createdAt:new Date().toISOString()};
+  status:'pending',createdAt:_nowISO()};
  if(!data.customerName){_dineToast('고객명 입력');return;}
  _db.collection('filo_bookings').add(data).then(function(){
   _dineToast('✅ 예약 등록됐습니다');document.querySelector('.mo')?.remove();

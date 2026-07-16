@@ -139,7 +139,7 @@ function _showApp(){
 function _buildFiloNav(){
  var d=_cachedCompanyDoc||{};
  var subs=d.subscriptions||{};
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  function hasSub(k){
   if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
   var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
@@ -386,7 +386,7 @@ function _countUp(el, target, duration, prefix, suffix){
 function _filoPageHome(el){
  var d=_cachedCompanyDoc||{};
  var subs=d.subscriptions||{};
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var did=d.dealerId||d.uid||'';
  function hasSub(k){
   /* combo = 전체 포함 */
@@ -622,7 +622,7 @@ function _filoRegister(){
  _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
  var uid=cred.user.uid;
  var subs={};
- var trial={active:true,plan:'trial',start:new Date().toISOString(),expiry:new Date(Date.now()+7*86400000).toISOString()};
+ var trial={active:true,plan:'trial',start:_nowISO(),expiry:new Date(Date.now()+7*86400000).toISOString()};
  svc.split(',').forEach(function(s){subs[s]=trial;});
  return _db.collection('companies').doc(uid).set({
  uid:uid,companyName:company,name:name,email:email,phone:phone,
@@ -714,7 +714,7 @@ function _filoWatchDineReservations(){
  var d=_cachedCompanyDoc||{};
  var did=d.dealerId||d.uid||'';
  if(!did||!_db)return;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  window._filoDineResUnsub=_db.collection('filo_bookings')
   .where('dealerId','==',did).where('date','==',today).where('status','==','pending')
   .onSnapshot(function(snap){
@@ -739,7 +739,7 @@ function _filoWatchDineSales(){
  var d=_cachedCompanyDoc||{};
  var did=d.dealerId||d.uid||'';
  if(!did||!_db)return;
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  window._filoDineSalesUnsub=_db.collection('filo_sales')
   .where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(snap){

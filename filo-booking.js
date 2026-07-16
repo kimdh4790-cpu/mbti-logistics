@@ -34,7 +34,7 @@
 window._filoBookingConfirm=function(bid,did){
  _db.collection('filo_bookings').doc(bid).get().then(function(snap){
   var d=snap.data()||{};
-  _db.collection('filo_bookings').doc(bid).update({status:'confirmed',confirmedAt:new Date().toISOString()})
+  _db.collection('filo_bookings').doc(bid).update({status:'confirmed',confirmedAt:_nowISO()})
   .then(function(){_filoToast('✅ 예약 확정');_filoTableLoad(did);_filoNotifyReservation(did,d,'confirmed');});
  });
 };
@@ -43,7 +43,7 @@ window._filoBookingReject=function(bid,did){
  if(!confirm('예약을 거절하시겠습니까?')) return;
  _db.collection('filo_bookings').doc(bid).get().then(function(snap){
   var d=snap.data()||{};
-  _db.collection('filo_bookings').doc(bid).update({status:'rejected',rejectedAt:new Date().toISOString()})
+  _db.collection('filo_bookings').doc(bid).update({status:'rejected',rejectedAt:_nowISO()})
   .then(function(){_filoToast('❌ 예약 거절');_filoTableLoad(did);_filoNotifyReservation(did,d,'rejected');});
  });
 };
@@ -248,7 +248,7 @@ function _filoReservationAdd(did,dateStr,dateLabel){
  var fields=[
   {id:'rsv-name',l:'고객명 *',type:'text',ph:'홍길동'},
   {id:'rsv-phone',l:'연락처',type:'tel',ph:'010-0000-0000'},
-  {id:'rsv-date',l:'날짜 *',type:'date',ph:'',val:dateStr||new Date().toISOString().slice(0,10)},
+  {id:'rsv-date',l:'날짜 *',type:'date',ph:'',val:dateStr||_today()},
   {id:'rsv-time',l:'시간',type:'time',ph:'',val:'10:00'},
   {id:'rsv-service',l:'서비스/내용',type:'text',ph:'예: 커트, 컬러, 마사지...'},
   {id:'rsv-memo',l:'메모',type:'text',ph:'특이사항'},
@@ -283,7 +283,7 @@ function _filoReservationAdd(did,dateStr,dateLabel){
    service:document.getElementById('rsv-service').value||'',
    memo:document.getElementById('rsv-memo').value||'',
    status:'confirmed',type:window._filoIndustry||'cafe',
-   createdAt:new Date().toISOString()
+   createdAt:_nowISO()
   }).then(function(){
    _filoToast('✅ 예약이 등록됐습니다!');
    mo.remove();

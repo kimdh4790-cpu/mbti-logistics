@@ -17,6 +17,13 @@
  * ══════════════════════════════════════════════════════
  */
 
+// ── 날짜 유틸 (filo-common.js 미로드 환경용) ──────────────────────────────────
+function _today(){return _today();}
+function _nowISO(){return _nowISO();}
+function _toDateStr(iso){return iso?iso.slice(0,10):'';}
+function _monthStr(){return _monthStr();}
+
+
 function _dineScheduleAdd(did){
  _db.collection('staff').where('dealerId','==',did).get().then(function(snap){
   if(snap.empty){_dineToast('⚠️ 등록된 직원이 없습니다');return;}
@@ -25,7 +32,7 @@ function _dineScheduleAdd(did){
   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
   box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 근무 스케줄 등록</div>'+
    '<div class="input-group"><label>직원 *</label><select id="sch-staff" class="inp">'+opts+'</select></div>'+
-   '<div class="input-group"><label>날짜 *</label><input id="sch-date" class="inp" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+   '<div class="input-group"><label>날짜 *</label><input id="sch-date" class="inp" type="date" value="'+_today()+'"></div>'+
    '<div style="display:flex;gap:8px">'+
    '<div class="input-group" style="flex:1"><label>출근</label><input id="sch-start" class="inp" type="time" value="09:00"></div>'+
    '<div class="input-group" style="flex:1"><label>퇴근</label><input id="sch-end" class="inp" type="time" value="18:00"></div>'+
@@ -90,7 +97,7 @@ function _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,p
  _db.collection('dine_schedules').add({
   dealerId:did,staffId:staffId,staffName:staffName,
   date:date,startTime:startTime,endTime:endTime,
-  note:note,createdAt:new Date().toISOString()
+  note:note,createdAt:_nowISO()
  }).then(function(){
   _dineToast('✅ 스케줄 등록됐습니다');
   document.querySelector('.mo')?.remove();
@@ -146,7 +153,7 @@ function _dineScheduleUpdate(docId,staffId,staffName,date,did){
  var endTime=document.getElementById('sch-edit-end').value;
  var note=document.getElementById('sch-edit-note').value.trim();
  var pushOn=document.getElementById('sch-edit-push').checked;
- _db.collection('dine_schedules').doc(docId).update({startTime:startTime,endTime:endTime,note:note,updatedAt:new Date().toISOString()})
+ _db.collection('dine_schedules').doc(docId).update({startTime:startTime,endTime:endTime,note:note,updatedAt:_nowISO()})
  .then(function(){
   _dineToast('✅ 수정됐습니다');document.querySelector('.mo')?.remove();
   if(pushOn){
@@ -176,7 +183,7 @@ function _dineScheduleDelete(docId,did){
 function _dineScheduleWeek(offset){ window._schedWeekOffset=(window._schedWeekOffset||0)+offset; _dineSchedule(document.getElementById('content')); }
 
 function _dineAutoPayroll(did){
- var ym=document.getElementById('pay-ym')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('pay-ym')?.value||_monthStr();
  var cycleFilter=document.getElementById('pay-cycle-filter')?.value||'month';
  var filterPart=document.getElementById('pay-part')?.value||'';
  var filterEmp=document.getElementById('pay-emptype')?.value||'';
@@ -185,7 +192,7 @@ function _dineAutoPayroll(did){
   var dw=new Date();dw.setDate(dw.getDate()-dw.getDay()+1);dateFrom=dw.toISOString().slice(0,10);
   var dw2=new Date();dw2.setDate(dw2.getDate()-dw2.getDay()+7);dateTo=dw2.toISOString().slice(0,10);
  } else if(cycleFilter==='day'){
-  dateFrom=dateTo=new Date().toISOString().slice(0,10);
+  dateFrom=dateTo=_today();
  } else { dateFrom=ym+'-01';dateTo=ym+'-31'; }
  if(window._payrollUnsub) window._payrollUnsub();
  _dineToast('🔄 실시간 급여 계산 중...');
@@ -273,7 +280,7 @@ function _dinePayslip(el){
  var did=_CU.dealerId;
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- var ym=new Date().toISOString().slice(0,7);
+ var ym=_monthStr();
  wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
   '<div><div class="page-title">📋 급여명세서</div><div class="page-sub">직원별 월별 명세서</div></div>'+
@@ -286,7 +293,7 @@ function _dinePayslip(el){
 }
 
 function _dinePayslipList(did){
- var ym=document.getElementById('ps-ym')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('ps-ym')?.value||_monthStr();
  var from=ym+'-01',to=ym+'-31';
  var list=document.getElementById('ps-list');
  if(!list)return;

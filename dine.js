@@ -35,6 +35,13 @@
  *   _dineRenderReviews()   — 리뷰 관리
  * ══════════════════════════════════════════════════════
  */
+
+// ── 날짜 유틸 (filo-common.js 미로드 환경용) ──────────────────────────────────
+function _today(){return _today();}
+function _nowISO(){return _nowISO();}
+function _toDateStr(iso){return iso?iso.slice(0,10):'';}
+function _monthStr(){return _monthStr();}
+
 firebase.initializeApp({
  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
  authDomain:'filo.ai.kr',
@@ -60,7 +67,7 @@ function _dineInitFCM(did){
       navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg){
         msg.getToken({vapidKey:DINE_FCM_VAPID,serviceWorkerRegistration:reg}).then(function(token){
           if(!token) return;
-          _db.collection('companies').doc(did).update({fcmToken:token,fcmTokenUpdatedAt:new Date().toISOString()}).catch(function(){});
+          _db.collection('companies').doc(did).update({fcmToken:token,fcmTokenUpdatedAt:_nowISO()}).catch(function(){});
         }).catch(function(){});
       }).catch(function(){});
     }
@@ -218,7 +225,7 @@ function _dineStaffJoin(){
      name:{stringValue:name},phone:{stringValue:phone},
      companyName:{stringValue:coName},role:{stringValue:'staff'},
      platform:{stringValue:'dine'},status:{stringValue:'active'},
-     createdAt:{stringValue:new Date().toISOString()}
+     createdAt:{stringValue:_nowISO()}
     }})
    }).then(function(){
     err.style.color='#22c55e';err.textContent='✅ 가입 완료! 로그인해주세요';
@@ -253,7 +260,7 @@ function _dineMemberJoin(){
     phone:{stringValue:phone},birth:{stringValue:birth},
     point:{integerValue:0},stamp:{integerValue:0},
     grade:{stringValue:'일반'},platform:{stringValue:'dine'},
-    createdAt:{stringValue:new Date().toISOString()}
+    createdAt:{stringValue:_nowISO()}
    }})
   }).then(function(){
    err.style.color='#22c55e';err.textContent='✅ 등록 완료!';
@@ -313,7 +320,7 @@ function _dineRegister(){
     email:{stringValue:email},
     phone:{stringValue:phone},
     platform:{stringValue:'dine'},
-    createdAt:{stringValue:new Date().toISOString()},
+    createdAt:{stringValue:_nowISO()},
     status:{stringValue:'active'}
    }})
   }).then(function(){
@@ -578,7 +585,7 @@ function _dineDashboard(el){
 function _dineWatchAttend(){
  if(_attendInterval)clearInterval(_attendInterval);
  if(window._dineAttendUnsub)window._dineAttendUnsub();
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var did=_CU&&_CU.dealerId;
  if(!did||!_db)return;
  window._dineAttendUnsub=_db.collection('attendance')
@@ -595,7 +602,7 @@ function _dineWatchAttend(){
  // 폴링은 fallback으로만
  function loadAttend(){
  function loadAttend(){
-  var today=new Date().toISOString().slice(0,10);
+  var today=_today();
   _firestoreQuery('attendance',[{field:'dealerId',value:_CU.dealerId},{field:'date',value:today}])
   .then(function(docs){
    var ins={},outs={};

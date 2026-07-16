@@ -47,7 +47,7 @@ function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;
  var naver=document.getElementById('review-naver')?.value.trim()||'';
  var kakao=document.getElementById('review-kakao')?.value.trim()||'';
- _db.collection('companies').doc(did).update({reviewUrlNaver:naver,reviewUrlKakao:kakao,updatedAt:new Date().toISOString()})
+ _db.collection('companies').doc(did).update({reviewUrlNaver:naver,reviewUrlKakao:kakao,updatedAt:_nowISO()})
  .then(function(){
   if(_cachedCompanyDoc){_cachedCompanyDoc.reviewUrlNaver=naver;_cachedCompanyDoc.reviewUrlKakao=kakao;}
   _filoToast('✅ 리뷰 링크 저장됨');
@@ -166,7 +166,7 @@ function _filoTaxSaveEmail(){
  if(!email||!email.includes('@')){_filoToast('올바른 이메일을 입력하세요');return;}
  var did=_CU.dealerId||_CU.uid;
  _db.collection('settings').doc(did+'_tax').set({
-  dealerId:did,taxEmail:email,updatedAt:new Date().toISOString()
+  dealerId:did,taxEmail:email,updatedAt:_nowISO()
  },{merge:true}).then(function(){
   _filoToast('✅ 세무사 이메일이 등록됐습니다');
   document.getElementById('tax-status-txt').textContent='✅ 연동 중';

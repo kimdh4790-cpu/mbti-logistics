@@ -160,3 +160,13 @@ function _filoPageMembership(el){
  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">회원권</div>'+
  '<div style="font-size:12px;color:var(--t3)">회원권 관리 기능 곧 추가됩니다</div></div>';
 }
+// ── 날짜 유틸 ─────────────────────────────────────────────────────────────────
+// 사용법:
+//   _today()         → '2026-07-16' (오늘 날짜 YYYY-MM-DD)
+//   _nowISO()        → '2026-07-16T05:30:00.000Z' (현재 ISO 문자열)
+//   _toDateStr(iso)  → '2026-07-16' (ISO 문자열 → YYYY-MM-DD)
+//   _monthStr()      → '2026-07' (이번 달 YYYY-MM)
+function _today(){return new Date().toISOString().slice(0,10);}
+function _nowISO(){return new Date().toISOString();}
+function _toDateStr(iso){return iso?iso.slice(0,10):'';}
+function _monthStr(){return new Date().toISOString().slice(0,7);}

@@ -131,7 +131,7 @@ function _dineAddStaff(did,staffId,existing){
   '<div class="input-group" style="margin:0"><label>연락처</label><input id="sf-phone" class="inp" type="tel" placeholder="010-0000-0000" value="'+(e.phone||'')+'"></div>'+
   '</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
-  '<div class="input-group" style="margin:0"><label>입사일</label><input id="sf-hire" class="inp" type="date" value="'+(e.hireDate||new Date().toISOString().slice(0,10))+'"></div>'+
+  '<div class="input-group" style="margin:0"><label>입사일</label><input id="sf-hire" class="inp" type="date" value="'+(e.hireDate||_today())+'"></div>'+
   '<div class="input-group" style="margin:0"><label>상태</label><select id="sf-status" class="inp">'+
   ['active|재직','leave|휴직','resigned|퇴직'].map(function(s){var p=s.split('|');return '<option value="'+p[0]+'"'+((e.status||'active')===p[0]?' selected':'')+'>'+p[1]+'</option>';}).join('')+
   '</select></div>'+
@@ -218,11 +218,11 @@ function _dineAddStaff(did,staffId,existing){
    transportAllowance:parseInt(document.getElementById('sf-transport').value)||0,
    healthExpiry:document.getElementById('sf-health').value||'',
    memo:document.getElementById('sf-memo').value.trim(),
-   updatedAt:new Date().toISOString()
+   updatedAt:_nowISO()
   };
   if(payType==='hourly')data.hourlyWage=wage;
   else data.monthlySalary=wage;
-  var pr=staffId?_db.collection('members').doc(staffId).set(data,{merge:true}):_db.collection('members').add(Object.assign(data,{createdAt:new Date().toISOString()}));
+  var pr=staffId?_db.collection('members').doc(staffId).set(data,{merge:true}):_db.collection('members').add(Object.assign(data,{createdAt:_nowISO()}));
   pr.then(function(){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}).catch(function(err){_dineToast('❌ '+err.message);});
  };
  mo.appendChild(box);
@@ -322,7 +322,7 @@ function _dineAttend(el){
  var did=_CU.dealerId;
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- var today=new Date().toISOString().slice(0,10);
+ var today=_today();
  var ym=today.slice(0,7);
 
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
@@ -360,7 +360,7 @@ function _dineAttendTab(tab){
 }
 
 function _dineLoadAttend(did){
- var date=document.getElementById('att-date')?.value||new Date().toISOString().slice(0,10);
+ var date=document.getElementById('att-date')?.value||_today();
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','==',date).get(),
   _db.collection('members').where('dealerId','==',did).get()
@@ -459,7 +459,7 @@ function _dineLoadAttend(did){
 
 /* 월별 누적 근무 현황 */
 function _dineLoadAttendMonth(did){
- var ym=document.getElementById('att-date')?.value||new Date().toISOString().slice(0,7);
+ var ym=document.getElementById('att-date')?.value||_monthStr();
  var from=ym+'-01',to=ym+'-31';
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
@@ -536,7 +536,7 @@ function _dineAttendSave(memberId,date,inDocId,outDocId){
  var did=_CU.dealerId;
  var inTime=document.getElementById('ae-in').value;
  var outTime=document.getElementById('ae-out').value;
- var now=new Date().toISOString();
+ var now=_nowISO();
  var promises=[];
  if(inTime){
   var inISO=date+'T'+inTime+':00';
