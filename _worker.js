@@ -1,6 +1,6 @@
 // ================================================================
 // _worker.js — Cloudflare Worker (mbti-logistics)
-// 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
+// 최종수정: 2026-07-17 | 담당: 엠비티아이 김형우
 // ================================================================
 //
 // ⚠️ Claude에게 — 반드시 읽을 것 ⚠️
@@ -53,6 +53,15 @@
 //   - filo-auth.js services 기반 메뉴 on/off 연동
 //   - Storage Rules 강화 (dealerId 경로 격리)
 //   - admin_tokens FCM 보안 강화 (본인/SA만)
+//   - Firestore Rules SA 쓰기 차단 (읽기 전용으로 변경)
+//   - 슬러그 중복 검사 추가 (가입 시 실시간 조회)
+//   - 계좌이체 결제 안내 (하나은행 270-910019-24204)
+//   - 이메일 라우팅: filo-dine@donway.ai.kr → skypjh1101@naver.com
+//   - 월별카드 쿠팡총매출 isIdSupportCreated 기사 제외
+//
+// ⚠️ mbtico.kr는 mbtico-pages/_worker.js 별도 서빙 (이 파일 아님!)
+// ⚠️ settle.html = donway-pages/index.html (KV키: settle.html)
+// ⚠️ GitHub 토큰은 topics/infrastructure.md 참고
 //
 // [2026-07-16 주요 변경]
 //   - /join 라우팅: KV에서 settle.html 읽어 UI 커스터마이즈 주입
@@ -2708,7 +2717,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
-          return Response.redirect('https://mbtico.kr/control', 302);
+          const r = return Response.redirect('https://mbtico.kr/control', 302);
           const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
           Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
           return new Response(r.body, {status:r.status, headers:h});
@@ -3546,7 +3555,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
     // /admin_sub → 구독 어드민 (donway.ai.kr)
     if (path === '/admin_sub' || path === '/admin_sub.html') {
-      return Response.redirect('https://mbtico.kr/control', 302);
+      const adResp = return Response.redirect('https://mbtico.kr/control', 302);
       const adH = new Headers();
       adH.set('Content-Type', 'text/html; charset=utf-8');
       adH.set('Cache-Control', 'no-cache');
