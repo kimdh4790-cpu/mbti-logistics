@@ -148,6 +148,14 @@ function _buildFiloNav(){
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
  var hasAll=isSA||hasSub('combo');
 
+ // ── 관제센터 services 배열 기반 기능 on/off ──────────────────
+ var _services = d.services || [];
+ function hasFeature(key) {
+  if(hasAll) return true;           // 슈퍼어드민·콤보 구독은 전부 허용
+  if(_services.includes(key)) return true;  // 관제센터에서 켠 기능
+  return false;
+ }
+
  var menus=[];
 
  /* ── 홈 ── */
@@ -156,7 +164,7 @@ function _buildFiloNav(){
  ]});
 
  /* ── 판매 (키오스크 구독) ── */
- if(hasAll||hasSub('kiosk')){
+ if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
   menus.push({s:'🛒 판매',items:[
    {ic:'🖥️',l:'POS 결제',p:'kiosk'},
    {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
@@ -165,8 +173,17 @@ function _buildFiloNav(){
   ]});
  }
 
+ /* ── 테이블오더 (table_order 기능) ── */
+ if(hasAll||hasSub('kiosk')||hasFeature('table_order')){
+  menus.push({s:'🍽 테이블',items:[
+   {ic:'📱',l:'테이블 현황',p:'table_qr'},
+   {ic:'🛒',l:'주문 접수',p:'orders'},
+   {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
+  ]});
+ }
+
  /* ── 재고 (인벤토리 구독) ── */
- if(hasAll||hasSub('inventory')){
+ if(hasAll||hasSub('inventory')||hasFeature('inventory')){
   menus.push({s:'📦 재고',items:[
    {ic:'📊',l:'재고 현황',p:'inventory'},
    {ic:'🍽',l:'레시피·원가',p:'recipe'},
@@ -175,11 +192,35 @@ function _buildFiloNav(){
  }
 
  /* ── 운영 (QR·테이블) ── */
- if(hasAll||hasSub('qr')||hasSub('kiosk')){
+ if(hasAll||hasSub('qr')||hasSub('kiosk')||hasFeature('qr_attend')||hasFeature('table_order')){
   menus.push({s:'🏪 운영',items:[
    {ic:'👤',l:'직원 QR',p:'qr_staff'},
    {ic:'📋',l:'테이블 QR',p:'table_qr'},
    {ic:'🗓',l:'예약·달력',p:'schedule'},
+  ]});
+ }
+
+ /* ── 예약 (reservation 기능) ── */
+ if(hasAll||hasFeature('reservation')){
+  menus.push({s:'📅 예약',items:[
+   {ic:'📅',l:'예약 관리',p:'schedule'},
+   {ic:'👥',l:'회원 관리',p:'members'},
+  ]});
+ }
+
+ /* ── 회원CRM (member_crm 기능) ── */
+ if(hasAll||hasFeature('member_crm')){
+  menus.push({s:'👤 회원',items:[
+   {ic:'👤',l:'회원 목록',p:'members'},
+   {ic:'🎁',l:'포인트·멤버십',p:'membership'},
+  ]});
+ }
+
+ /* ── 매출분석 (sales_analytics 기능) ── */
+ if(hasAll||hasFeature('sales_analytics')){
+  menus.push({s:'📈 분석',items:[
+   {ic:'📈',l:'매출 리포트',p:'sales'},
+   {ic:'💰',l:'마진 분석',p:'margin'},
   ]});
  }
 
