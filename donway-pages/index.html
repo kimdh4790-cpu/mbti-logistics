@@ -4292,8 +4292,8 @@ function _showBankTransferModal(plan, persons, months, total, planKey, did){
       '⚠️ 입금자명에 <b>회사명</b>을 반드시 기재해주세요.<br>입금 확인 후 서비스가 활성화됩니다.' +
     '</div>' +
     '<div style="display:flex;gap:8px">' +
-      '<button onclick="this.closest('div[style*=fixed]').remove()" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">닫기</button>' +
-      '<button onclick="_submitBankTransfer('' + planKey + '','' + plan.label + '',' + persons + ',' + months + ',' + total + ','' + did + '');this.closest('div[style*=fixed]').remove()" style="flex:2;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 입금 완료 신청</button>' +
+      '<button onclick="var p=this;while(p&&!p.style.position.includes(\'fixed\'))p=p.parentElement;if(p)p.remove()" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:13px;cursor:pointer">닫기</button>' +
+      '<button data-pk="' + planKey + '" data-pl="' + (plan.label||'').replace(/"/g,\'\') + '" data-ps="' + persons + '" data-mo="' + months + '" data-to="' + total + '" data-did="' + did + '" onclick="_submitBankTransfer(this.dataset.pk,this.dataset.pl,+this.dataset.ps,+this.dataset.mo,+this.dataset.to,this.dataset.did);var p=this;while(p&&!p.style.position.includes(\'fixed\'))p=p.parentElement;if(p)p.remove()" style="flex:2;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 입금 완료 신청</button>' +
     '</div>' +
   '</div>';
   document.body.appendChild(overlay);
