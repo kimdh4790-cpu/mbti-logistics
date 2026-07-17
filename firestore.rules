@@ -59,7 +59,7 @@ service cloud.firestore {
     match /error_logs/{docId}            { allow create: if isAuth(); allow read: if isSuperAdmin(); }
     match /admin_events/{docId}          { allow read, write: if isSuperAdmin(); }
     match /admin_notifications/{docId}   { allow read, write: if isSuperAdmin(); }
-    match /admin_tokens/{docId}          { allow read, write: if isAuth(); }
+    match /admin_tokens/{docId}          { allow read, write: if isAuth() && (request.auth.uid == docId || isSuperAdmin()); }
     match /cron_logs/{docId}             { allow read: if isSuperAdmin(); allow write: if false; }
     match /subscription_logs/{docId}     { allow read, create: if isSuperAdmin(); }
     match /audit_logs/{docId}            { allow read: if isSuperAdmin(); allow create: if isAuth(); }
@@ -207,7 +207,7 @@ service cloud.firestore {
     match /filo_orders/{docId}            {
       allow read: if canRead();
       allow create: if true;   // 비로그인 고객 주문
-      allow update: if true;   // 주문 상태 업데이트 (주방/POS)
+      allow update: if isAuth();   // 주문 상태 업데이트 (주방/POS 로그인 필요)
       allow delete: if canOwn();
     }
 
