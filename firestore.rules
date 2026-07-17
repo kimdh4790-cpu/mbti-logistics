@@ -49,9 +49,10 @@ service cloud.firestore {
       );
     }
 
-    function canRead()  { return ownsDoc()    || isSuperAdmin(); }
-    function canWrite() { return ownsNewDoc() || isSuperAdmin(); }
-    function canOwn()   { return ownsDoc()    || isSuperAdmin(); }
+    function canRead()  { return ownsDoc()    || isSuperAdmin(); }  // SA 읽기 허용
+    function canWrite() { return ownsNewDoc(); }  // ★ SA 쓰기 차단 — 본인 dealerId만
+    function canOwn()   { return ownsDoc(); }     // ★ SA 쓰기 차단 — 본인 dealerId만
+    // ★ SA는 읽기 전용 (디버깅/모니터링용) — 쓰기는 Worker API 통해서만
 
     // ── 시스템 컬렉션 ──────────────────────────────────────────────────────────
     match /admins/{docId}                { allow read: if isAuth(); allow write: if isSuperAdmin(); }
