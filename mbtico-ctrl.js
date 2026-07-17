@@ -435,25 +435,25 @@ function _renderCompanies() {
 // ── 도메인별 기능 정의 ─────────────────────────────────────────
 var _DOMAIN_FEATURES = {
   donway: [
-    {key:'settle',   label:'AI정산',    desc:'택배·물류·배달 정산 자동화'},
-    {key:'delivery', label:'배달대행',   desc:'배달대행 수수료 정산'},
-    {key:'qr_payroll',label:'QR출퇴근+급여', desc:'QR 근태관리 + 급여 계산'},
+    {key:'settle',   label:'🤖 AI정산',    desc:'택배·물류·배달 정산 자동화'},
+    {key:'delivery', label:'🛵 배달대행',   desc:'배달대행 수수료 정산'},
+    {key:'qr_payroll',label:'🔐 QR출퇴근+급여', desc:'QR 근태관리 + 급여 계산'},
   ],
   filo: [
-    {key:'kiosk',          label:'키오스크/POS', desc:'POS 결제 + 메뉴관리'},
-    {key:'table_order',    label:'테이블오더',    desc:'QR 테이블 주문'},
-    {key:'inventory',      label:'재고관리',      desc:'재고 현황 + 자동발주'},
-    {key:'qr_attend',      label:'QR출퇴근',      desc:'직원 QR 근태관리'},
-    {key:'reservation',    label:'예약관리',      desc:'예약 + 회원관리'},
-    {key:'member_crm',     label:'회원CRM',       desc:'포인트 + 멤버십'},
-    {key:'sales_analytics',label:'매출분석',      desc:'매출 리포트 + 마진'},
+    {key:'kiosk',          label:'🖥️ 키오스크/POS', desc:'POS 결제 + 메뉴관리'},
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'inventory',      label:'📦 재고관리',      desc:'재고 현황 + 자동발주'},
+    {key:'qr_attend',      label:'🔐 QR출퇴근',      desc:'직원 QR 근태관리'},
+    {key:'reservation',    label:'📅 예약관리',      desc:'예약 + 회원관리'},
+    {key:'member_crm',     label:'👤 회원CRM',       desc:'포인트 + 멤버십'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'매출 리포트 + 마진'},
   ],
   dine: [
-    {key:'table_order',    label:'테이블오더',    desc:'QR 테이블 주문'},
-    {key:'dine_delivery',  label:'배달연동',      desc:'배달앱 연동 매출'},
-    {key:'sales_analytics',label:'매출분석',      desc:'일/월 매출 분석'},
-    {key:'staff_mgmt',     label:'직원관리',      desc:'출퇴근 + 급여'},
-    {key:'tax_invoice',    label:'세금계산서',    desc:'세무사 연동'},
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'dine_delivery',  label:'🛵 배달연동',      desc:'배달앱 연동 매출'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'일/월 매출 분석'},
+    {key:'staff_mgmt',     label:'👥 직원관리',      desc:'출퇴근 + 급여'},
+    {key:'tax_invoice',    label:'🧾 세금계산서',    desc:'세무사 연동'},
   ],
 };
 
