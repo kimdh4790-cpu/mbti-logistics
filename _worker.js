@@ -3301,7 +3301,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com'], subject:`[DONWAY 신규가입] ${companyName}`, html})
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'], subject:`[DONWAY 신규가입] ${companyName}`, html})
         });
         
         // FCM 푸시 (슈퍼어드민 전체 기기 - admin_tokens 컬렉션 사용)
@@ -3326,7 +3326,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const res = await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com'], subject:'[DONWAY] 이메일 테스트', html:'<p>이메일 발송 테스트입니다.</p>'})
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'], subject:'[DONWAY] 이메일 테스트', html:'<p>이메일 발송 테스트입니다.</p>'})
         });
         const data = await res.json();
         return new Response(JSON.stringify({ok:res.ok, status:res.status, data, keyPrefix:emailKey.slice(0,8)+'...'}), {headers:{'Content-Type':'application/json'}});
@@ -3486,7 +3486,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com'], subject:`[DONWAY 문의] ${name}`, html})
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'], subject:`[DONWAY 문의] ${name}`, html})
         });
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       } catch(e) {
