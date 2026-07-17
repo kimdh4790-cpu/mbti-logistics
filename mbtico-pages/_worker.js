@@ -931,8 +931,8 @@ export default {
       }
     }
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
-      if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
+      if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
       if (!path.startsWith('/api/') && method === 'GET') {
         const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
@@ -966,7 +966,7 @@ export default {
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
   if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
-      if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/admin_sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
     }
 
     // ★ mbtico.kr → 엠비티아이 배송앱
@@ -2063,7 +2063,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')_ctrlCloseDe
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
       if (path === '/v9') return serveKVFile(env, 'index.html', 'text/html');
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
