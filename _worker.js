@@ -4777,6 +4777,106 @@ service cloud.firestore {
       }
     }
 
+    // ── 관제센터 알림 발송 (/api/ctrl-notify) ──
+    if (path === '/api/ctrl-notify' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { type, dealerId, title, body: msgBody, data } = body;
+        const fsToken = await getAccessToken(env);
+
+        // 고객사 FCM 토큰 조회 (companies/{dealerId}.fcmTokens 배열)
+        async function getDealerTokens(did) {
+          const res = await fetch(`${FS_BASE}/companies/${did}`, {
+            headers: { Authorization: `Bearer ${fsToken}` }
+          });
+          if (!res.ok) return [];
+          const doc = await res.json();
+          const tokens = doc.fields?.fcmTokens?.arrayValue?.values || [];
+          return tokens.map(t => t.stringValue).filter(Boolean);
+        }
+
+        // 단일 FCM 토큰에 발송
+        async function sendFCM(fcmToken, t, b, d) {
+          const accessToken = await getAccessToken(env);
+          return fetch(
+            `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`,
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: {
+                  token: fcmToken,
+                  notification: { title: t, body: b },
+                  data: { ...( d || {}), click_action: d?.url || 'https://donway.ai.kr' },
+                  android: { priority: 'high', notification: { click_action: d?.url || '' } },
+                  apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+                  webpush: {
+                    notification: { title: t, body: b, icon: '/mbtico-192.png' },
+                    fcm_options: { link: d?.url || 'https://donway.ai.kr' }
+                  }
+                }
+              })
+            }
+          );
+        }
+
+        let sent = 0;
+
+        if (type === 'dealer' && dealerId) {
+          // 특정 고객사에게 발송
+          const tokens = await getDealerTokens(dealerId);
+          await Promise.allSettled(tokens.map(t => sendFCM(t, title, msgBody, data)));
+          sent = tokens.length;
+        } else if (type === 'admin') {
+          // 슈퍼어드민에게 발송
+          await notifyAdmins(env, fsToken, { title, body: msgBody, type: data?.type || 'ctrl' });
+          sent = 1;
+        } else if (type === 'all' || type === 'group') {
+          // 전체 또는 그룹 발송 — companies 컬렉션에서 fcmTokens 있는 고객사 전체
+          const res = await fetch(`${FS_BASE}/companies?pageSize=100`, {
+            headers: { Authorization: `Bearer ${fsToken}` }
+          });
+          if (res.ok) {
+            const docs = (await res.json()).documents || [];
+            const tasks = [];
+            for (const doc of docs) {
+              const status = doc.fields?.status?.stringValue;
+              if (type === 'group' && title !== 'all' && status !== type) continue;
+              const tokens = (doc.fields?.fcmTokens?.arrayValue?.values || [])
+                .map(t => t.stringValue).filter(Boolean);
+              tokens.forEach(t => tasks.push(sendFCM(t, title, msgBody, data)));
+            }
+            await Promise.allSettled(tasks);
+            sent = tasks.length;
+          }
+        }
+
+        // 이메일 발송 (type==='email' 일 때)
+        if (type === 'email' && body.to) {
+          const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
+          if (emailKey) {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${emailKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: body.from || 'DONWAY <all@donway.ai.kr>',
+                to: body.to,
+                subject: body.subject || title,
+                html: body.html || `<p>${msgBody}</p>`
+              })
+            });
+            sent++;
+          }
+        }
+
+        return new Response(JSON.stringify({ ok: true, sent }),
+          { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }),
+          { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
+    }
+
     // ── 계좌 등록 (/api/register-bank) ──
     if (path === '/api/register-bank' && method === 'POST') {
       // 인증 불필요 — 명세서 토큰으로 검증
