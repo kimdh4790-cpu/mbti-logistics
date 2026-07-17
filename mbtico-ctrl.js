@@ -259,9 +259,9 @@ function _ctrlLoadJoin() {
           '<td>' + createdStr + '</td>' +
           '<td>' + statusBadge + '</td>' +
           '<td>' +
-            '<button class="ctrl-btn ctrl-btn-ok" data-id="' + id + '" onclick="_ctrlApprove(this.dataset.id)">✅</button> ' +
-            '<button class="ctrl-btn ctrl-btn-err" data-id="' + id + '" onclick="_ctrlReject(this.dataset.id)">❌</button> ' +
-            '<button class="ctrl-btn ctrl-btn-sub" data-id="' + id + '" onclick="_ctrlHold(this.dataset.id)">⏸</button>' +
+            '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove('' + id + '')">✅</button> ' +
+            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject('' + id + '')">❌</button> ' +
+            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold('' + id + '')">⏸</button>' +
           '</td></tr>';
       });
       html += '</tbody></table></div>';
