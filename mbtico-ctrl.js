@@ -63,12 +63,12 @@ function _ctrlLogout() {
 
 // ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
 function _ctrlStartListeners() {
-  // 가입 대기 뱃지
-  var u1 = _db.collection('join_requests')
-    .where('status','==','pending')
+  // 가입 대기 뱃지 — companies pending/hold
+  var u1 = _db.collection('companies')
     .onSnapshot(function(snap) {
-      _ctrlBadge('badge-join', snap.size);
-    });
+      var cnt=0; snap.forEach(function(d){if(['pending','hold'].includes(d.data().status))cnt++;});
+      _ctrlBadge('badge-join', cnt);
+    }, function(){});
   _unsubs.push(u1);
 
   // 채팅 미읽음 뱃지 (슈퍼어드민 기준 unreadSA)
@@ -172,7 +172,7 @@ function _ctrlLoadDashboard() {
 
   Promise.all([
     _db.collection('companies').get(),
-    _db.collection('join_requests').where('status','==','pending').get(),
+    _db.collection('companies').where('status','==','pending').get(),
     _db.collection('join_requests').where('status','==','approved')
       .where('createdAt','>=', new Date(Date.now()-30*86400000).toISOString()).get()
   ]).then(function(results) {
@@ -224,8 +224,7 @@ function _ctrlLoadJoin() {
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
 
   // companies 컬렉션에서 pending/hold 상태 직접 조회
-  _db.collection('companies').orderBy('createdAt','desc').limit(100)
-    .get().then(function(snap) {
+  _db.collection('companies').limit(200).get().then(function(snap) {
       var docs = snap.docs.filter(function(d) {
         return ['pending','hold'].includes(d.data().status);
       });
