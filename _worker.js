@@ -61,7 +61,7 @@
 //
 // ⚠️ mbtico.kr는 mbtico-pages/_worker.js 별도 서빙 (이 파일 아님!)
 // ⚠️ settle.html = donway-pages/index.html (KV키: settle.html)
-// ⚠️ GitHub 토큰은 topics/infrastructure.md 참고
+// ⚠️ GitHub 토큰은 Claude 메모리 참고
 //
 // [2026-07-16 주요 변경]
 //   - /join 라우팅: KV에서 settle.html 읽어 UI 커스터마이즈 주입
