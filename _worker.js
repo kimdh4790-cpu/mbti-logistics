@@ -2303,6 +2303,7 @@ async function acceptExchange(){
         if (filoHtml) {
           const storeKey = decodeURIComponent(filoPath);
           let storeName = storeKey;
+          let dealerId = '';
           try {
             // dineSlug로 먼저 조회
             const r1 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
@@ -2314,6 +2315,8 @@ async function acceptExchange(){
             const doc1 = d1 && d1[0] && d1[0].document;
             if (doc1) {
               storeName = (doc1.fields.companyName || doc1.fields.name || {}).stringValue || storeKey;
+              dealerId = (doc1.fields.dealerId || doc1.fields.uid || {}).stringValue || '';
+              if(!dealerId && doc1.name) dealerId = doc1.name.split('/').pop();
             } else {
               // slug 필드로 재시도 (관제센터 slug 기반)
               const r2 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
@@ -2325,6 +2328,8 @@ async function acceptExchange(){
               const doc2 = d2 && d2[0] && d2[0].document;
               if (doc2) {
                 storeName = (doc2.fields.companyName || doc2.fields.name || {}).stringValue || storeKey;
+                dealerId = (doc2.fields.dealerId || doc2.fields.uid || {}).stringValue || '';
+                if(!dealerId && doc2.name) dealerId = doc2.name.split('/').pop();
               } else {
                 // companyName으로 마지막 재시도
                 const r3 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
@@ -2334,12 +2339,19 @@ async function acceptExchange(){
                 });
                 const d3 = await r3.json();
                 const doc3 = d3 && d3[0] && d3[0].document;
-                if (doc3) storeName = (doc3.fields.companyName || doc3.fields.name || {}).stringValue || storeKey;
+                if (doc3) {
+                  storeName = (doc3.fields.companyName || doc3.fields.name || {}).stringValue || storeKey;
+                  dealerId = (doc3.fields.dealerId || doc3.fields.uid || {}).stringValue || '';
+                  if(!dealerId && doc3.name) dealerId = doc3.name.split('/').pop();
+                }
               }
             }
           } catch(e) {}
           const injected = filoHtml.replace('</head>',
-            '<script>window.__FILO_STORE__=' + JSON.stringify(storeName) + ';window.__FILO_SLUG__=' + JSON.stringify(storeKey) + ';</script></head>'
+            '<script>window.__FILO_STORE__=' + JSON.stringify(storeName) +
+            ';window.__FILO_SLUG__=' + JSON.stringify(storeKey) +
+            ';window.__FILO_DEALER_ID__=' + JSON.stringify(dealerId || '') +
+            ';</script></head>'
           );
           return new Response(injected, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
         }

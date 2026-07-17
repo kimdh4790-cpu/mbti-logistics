@@ -52,7 +52,37 @@ function _initFirebase(){
  }catch(e){console.error('Firebase init:',e);}
 }
 
+
+// ── 슬러그 기반 회사 데이터 로딩 헬퍼 ─────────────────────────────
+function _loadCompanyByDealer(dealerId, uid, role){
+ _db.collection('companies').doc(dealerId).get().then(function(snap){
+  var data = snap.exists ? snap.data() : {};
+  _cachedCompanyDoc = data;
+  _CU.dealerId = dealerId;
+  _CU.role = role || data.role || 'dealer';
+  _CU.companyName = data.companyName || data.name || '';
+  _showApp();
+ }).catch(function(){ _showApp(); });
+}
+
 function _loadCompany(uid){
+ // ── 슬러그 기반 dealerId 체크 ────────────────────────────────
+ // /slug 접속 시 해당 매장 dealerId만 허용
+ var _targetDealer = window.__FILO_DEALER_ID__ || '';
+ if(_targetDealer && _targetDealer !== uid){
+  // 직원(members)이면 허용, 관리자면 차단
+  _db.collection('members').where('uid','==',uid).where('dealerId','==',_targetDealer).limit(1).get()
+   .then(function(ms){
+    if(!ms.empty){
+     // 직원으로 해당 매장 소속 → 해당 매장 dealerId로 로딩
+     _loadCompanyByDealer(_targetDealer, uid, 'member');
+    } else {
+     // 다른 회사 관리자 → 자기 회사로 로딩 (슬러그 무시)
+     _loadCompanyByDealer(uid, uid, 'dealer');
+    }
+   }).catch(function(){ _loadCompanyByDealer(uid, uid, 'dealer'); });
+  return;
+ }
  _db.collection('companies').doc(uid).get().then(function(snap){
  var data=snap.exists?snap.data():{};
  _cachedCompanyDoc=data;
