@@ -1219,7 +1219,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
 <script>
 /**
  * mbtico-ctrl.js — 관제센터 공통 모듈
@@ -1348,15 +1347,25 @@ function _ctrlBadge(id, n) {
   el.style.display = n > 0 ? 'inline-flex' : 'none';
 }
 
-function _ctrlFmtDate(iso) {
-  if (!iso) return '-';
-  return iso.slice(0, 10);
+function _ctrlFmtDate(val) {
+  if (!val) return '-';
+  // Firestore Timestamp 객체
+  if (val && typeof val.toDate === 'function') return val.toDate().toISOString().slice(0,10);
+  // 문자열
+  if (typeof val === 'string') return val.slice(0,10);
+  // 숫자 (ms)
+  if (typeof val === 'number') return new Date(val).toISOString().slice(0,10);
+  return '-';
 }
 
 function _ctrlFmtTs(ts) {
   if (!ts) return '-';
-  var d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  try {
+    var d = (ts && typeof ts.toDate === 'function') ? ts.toDate()
+          : (typeof ts === 'string' || typeof ts === 'number') ? new Date(ts)
+          : ts;
+    return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return '-'; }
 }
 
 // ── FCM 푸시 발송 ─────────────────────────────────────────────────
@@ -1447,7 +1456,7 @@ function _ctrlLoadJoin() {
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
 
   // companies 컬렉션에서 pending/hold 상태 직접 조회
-  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+  _db.collection('companies').limit(100)
     .get().then(function(snap) {
       var docs = snap.docs.filter(function(d) {
         return ['pending','hold'].includes(d.data().status);
@@ -1482,9 +1491,9 @@ function _ctrlLoadJoin() {
           '<td>' + createdStr + '</td>' +
           '<td>' + statusBadge + '</td>' +
           '<td>' +
-            '<button class="ctrl-btn ctrl-btn-ok"  onclick="_ctrlApprove('' + id + '')">✅</button> ' +
-            '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlReject('' + id + '')">❌</button> ' +
-            '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlHold('' + id + '')">⏸</button>' +
+            '<button class="ctrl-btn ctrl-btn-ok" data-id="' + id + '" onclick="_ctrlApprove(this.dataset.id)">✅</button> ' +
+            '<button class="ctrl-btn ctrl-btn-err" data-id="' + id + '" onclick="_ctrlReject(this.dataset.id)">❌</button> ' +
+            '<button class="ctrl-btn ctrl-btn-sub" data-id="' + id + '" onclick="_ctrlHold(this.dataset.id)">⏸</button>' +
           '</td></tr>';
       });
       html += '</tbody></table></div>';
@@ -1560,7 +1569,7 @@ function _ctrlLoadCompanies() {
     '</div>' +
     '<div id="comp-list"><div class="ctrl-loading">로딩 중...</div></div>';
 
-  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+  _db.collection('companies').limit(100)
     .onSnapshot(function(snap) {
       window._compDocs = [];
       snap.forEach(function(d) { window._compDocs.push({id:d.id, ...d.data()}); });
@@ -1598,12 +1607,12 @@ function _renderCompanies() {
         '<span>🔗 슬러그: ' + (d.slug||'-') + '</span>' +
       '</div>' +
       '<div class="comp-actions">' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenDetail(\'' + d.id + '\')">📋 상세</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlOpenChat(\'' + d.id + '\',\'' + (d.companyName||'') + '\')">💬 채팅</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" onclick="_ctrlExtendTrial(\'' + d.id + '\')">⏰ 연장</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlOpenDetail(this.dataset.id)">📋 상세</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" data-nm="' + (d.companyName||'').replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">💬 채팅</button>' +
+        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + d.id + '" onclick="_ctrlExtendTrial(this.dataset.id)">⏰ 연장</button>' +
         (d.status !== 'suspended'
-          ? '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlSuspend(\'' + d.id + '\')">⏸ 정지</button>'
-          : '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlUnsuspend(\'' + d.id + '\')">▶ 복구</button>') +
+          ? '<button class="ctrl-btn ctrl-btn-err" data-id="' + d.id + '" onclick="_ctrlSuspend(this.dataset.id)">⏸ 정지</button>'
+          : '<button class="ctrl-btn ctrl-btn-ok" data-id="' + d.id + '" onclick="_ctrlUnsuspend(this.dataset.id)">▶ 복구</button>') +
       '</div>' +
       // 기능 on/off
       '<div class="comp-features">' +
@@ -1761,7 +1770,7 @@ function _ctrlLoadChat() {
 }
 
 function _ctrlLoadChatList() {
-  _db.collection('chats').orderBy('lastAt','desc')
+  _db.collection('chats')
     .onSnapshot(function(snap) {
       var list = document.getElementById('chat-list');
       if (!list) return;
@@ -1771,7 +1780,7 @@ function _ctrlLoadChatList() {
         var d = doc.data();
         var unread = d.unreadSA || 0;
         var active = _chatDealerId === doc.id ? ' chat-item-active' : '';
-        html += '<div class="chat-item' + active + '" onclick="_ctrlOpenChat(\'' + doc.id + '\',\'' + (d.companyName||doc.id) + '\')">' +
+    var html = '<div class="chat-item' + active + '" data-id="' + doc.id + '" data-nm="' + (d.companyName||doc.id).replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' +
           '<div class="chat-item-name">' + (d.companyName||doc.id) +
             (unread ? '<span class="chat-badge">' + unread + '</span>' : '') +
           '</div>' +
@@ -1873,7 +1882,7 @@ function _ctrlLoadNotice() {
     '<div class="ctrl-label">최근 공지 (notices 컬렉션)</div>' +
     '<div id="notice-list"><div class="ctrl-loading">로딩 중...</div></div>';
 
-  _db.collection('notices').orderBy('createdAt','desc').limit(10)
+  _db.collection('notices').limit(10)
     .get().then(function(snap) {
       var list = document.getElementById('notice-list');
       if (!list) return;
@@ -1917,7 +1926,7 @@ function _ctrlSendNotice() {
 function _ctrlLoadBilling() {
   var c = document.getElementById('acc-billing');
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
-  _db.collection('payment_requests').orderBy('createdAt','desc').limit(50)
+  _db.collection('payment_requests').limit(50)
     .get().then(function(snap) {
       if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">결제 내역 없음</div>'; return; }
       var totalAmt = 0;
@@ -1942,15 +1951,14 @@ function _ctrlLoadBilling() {
     });
 }
 
-  // body 끝에 위치하므로 DOM 준비됨 → 즉시 실행
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _ctrlInit);
-  } else {
-    _ctrlInit();
-  }
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') _ctrlCloseDetail();
-  });
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _ctrlInit);
+} else {
+  _ctrlInit();
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') _ctrlCloseDetail();
+});
 </script>
 </body>
 </html>

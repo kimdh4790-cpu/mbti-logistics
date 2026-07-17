@@ -125,15 +125,25 @@ function _ctrlBadge(id, n) {
   el.style.display = n > 0 ? 'inline-flex' : 'none';
 }
 
-function _ctrlFmtDate(iso) {
-  if (!iso) return '-';
-  return iso.slice(0, 10);
+function _ctrlFmtDate(val) {
+  if (!val) return '-';
+  // Firestore Timestamp 객체
+  if (val && typeof val.toDate === 'function') return val.toDate().toISOString().slice(0,10);
+  // 문자열
+  if (typeof val === 'string') return val.slice(0,10);
+  // 숫자 (ms)
+  if (typeof val === 'number') return new Date(val).toISOString().slice(0,10);
+  return '-';
 }
 
 function _ctrlFmtTs(ts) {
   if (!ts) return '-';
-  var d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  try {
+    var d = (ts && typeof ts.toDate === 'function') ? ts.toDate()
+          : (typeof ts === 'string' || typeof ts === 'number') ? new Date(ts)
+          : ts;
+    return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return '-'; }
 }
 
 // ── FCM 푸시 발송 ─────────────────────────────────────────────────
