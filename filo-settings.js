@@ -56,6 +56,12 @@ function _filoSaveReviewUrls(){
 function _filoPageSubscription(el){
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🚀 구독 관리</div>'+
+ '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;margin-bottom:20px">'+
+ '<div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px">💳 계좌이체 결제 안내</div>'+
+ '<div style="font-size:18px;font-weight:900;color:#111;letter-spacing:1px">270-910019-24204</div>'+
+ '<div style="font-size:13px;color:#555;margin-top:4px">하나은행 · (유)엠비티아이</div>'+
+ '<div style="font-size:11px;color:#e67e00;margin-top:8px">⚠️ 입금자명에 업체명 기재 필수 · 입금 후 051-711-3103 확인 요청</div>'+
+ '</div>'+
  '<div class="card">'+
  '<div style="text-align:center;padding:20px">'+
  '<div style="font-size:40px;margin-bottom:12px">💎</div>'+
