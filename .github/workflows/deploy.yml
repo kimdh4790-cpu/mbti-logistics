@@ -73,4 +73,5 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json
           firebase deploy --only firestore:rules --project mbti-logistics --non-interactive 2>&1 || echo "⚠️ Rules 배포 실패"
           firebase deploy --only firestore:indexes --project mbti-logistics --non-interactive 2>&1 || echo "⚠️ Indexes 배포 실패"
+          firebase deploy --only storage --project mbti-logistics --non-interactive 2>&1 || echo "⚠️ Storage Rules 배포 실패"
           rm -f /tmp/sa-key.json
