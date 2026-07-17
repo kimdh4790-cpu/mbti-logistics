@@ -2708,7 +2708,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
-          const r = return Response.redirect('https://mbtico.kr/control', 302);
+          return Response.redirect('https://mbtico.kr/control', 302);
           const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
           Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
           return new Response(r.body, {status:r.status, headers:h});
@@ -3546,7 +3546,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
     // /admin_sub → 구독 어드민 (donway.ai.kr)
     if (path === '/admin_sub' || path === '/admin_sub.html') {
-      const adResp = return Response.redirect('https://mbtico.kr/control', 302);
+      return Response.redirect('https://mbtico.kr/control', 302);
       const adH = new Headers();
       adH.set('Content-Type', 'text/html; charset=utf-8');
       adH.set('Cache-Control', 'no-cache');
