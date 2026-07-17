@@ -4333,20 +4333,6 @@ function _submitBankTransfer(planKey, planLabel, persons, months, total, did){
   }).then(function(){
     toast('✅ 입금 완료 신청됐습니다! 확인 후 서비스 활성화해드릴게요.');
   }).catch(function(){});
-  // 관리자 이메일 알림
-  if(false){var expiry=new Date();expiry.setMonth(expiry.getMonth()+months);
-    return _db.collection('subscriptions').add({
-      dealerId:did,plan:planKey,planName:planLabel,
-      personCount:persons,months:months,amount:total,status:'active',
-      period:new Date().toISOString().slice(0,7)+' ~ '+expiry.toISOString().slice(0,7),
-      createdAt:new Date().toISOString(),
-    });
-  }).then(function(){
-    _closeTopModal();
-    if(window._dealerData)window._dealerData.plan=planKey;
-    toast('✅ '+plan.label+' 구독 완료!');
-    setTimeout(function(){location.reload();},1500);
-  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function _startDowngradeFlow(){
