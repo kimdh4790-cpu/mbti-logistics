@@ -46,6 +46,14 @@
 //   GitHub push → Actions 자동배포 (deploy.yml)
 //   수동: npx wrangler deploy (mbti-logistics 폴더에서)
 //
+// [2026-07-17 주요 변경]
+//   - /api/ctrl-notify 관제센터 FCM/이메일 알림 API 추가
+//   - admin.html/admin_sub.html 삭제 → /control 리다이렉트
+//   - 슬러그 기반 고객사 데이터 분리 (__FILO_DEALER_ID__ 주입)
+//   - filo-auth.js services 기반 메뉴 on/off 연동
+//   - Storage Rules 강화 (dealerId 경로 격리)
+//   - admin_tokens FCM 보안 강화 (본인/SA만)
+//
 // [2026-07-16 주요 변경]
 //   - /join 라우팅: KV에서 settle.html 읽어 UI 커스터마이즈 주입
 //   - filo-qr.js, dine-schedule.js JS 서빙 목록 추가
@@ -1568,7 +1576,7 @@ async function acceptExchange(){
     }
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
-      if (path === '/admin-sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
 
 
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
@@ -2145,7 +2153,7 @@ async function acceptExchange(){
       if (path === '/universal' || path === '/universal.html') return Response.redirect('https://donway.ai.kr/join', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
-      if (path === '/admin_sub' || path === '/admin_sub.html') return serveKVFile(env, 'admin_sub.html', 'text/html');
+      if (path === '/admin_sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
@@ -2632,7 +2640,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
       // /v9 경로 제거됨 (레거시 물류앱v9 삭제)
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'admin.html', 'text/html');
+      if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
@@ -2700,7 +2708,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
-          const r = await fetchAsset('/admin_sub.html', request, env);
+          const r = return Response.redirect('https://mbtico.kr/control', 302);
           const h = new Headers(); h.set('Content-Type','text/html; charset=utf-8'); h.set('Cache-Control','no-cache');
           Object.entries(SECURITY_HEADERS).forEach(([k,v]) => h.set(k,v));
           return new Response(r.body, {status:r.status, headers:h});
@@ -3538,7 +3546,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
     // /admin_sub → 구독 어드민 (donway.ai.kr)
     if (path === '/admin_sub' || path === '/admin_sub.html') {
-      const adResp = await fetchAsset('/admin_sub.html', request, env);
+      const adResp = return Response.redirect('https://mbtico.kr/control', 302);
       const adH = new Headers();
       adH.set('Content-Type', 'text/html; charset=utf-8');
       adH.set('Cache-Control', 'no-cache');
