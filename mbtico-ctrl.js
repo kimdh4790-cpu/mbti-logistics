@@ -432,24 +432,90 @@ function _renderCompanies() {
   c.innerHTML = html;
 }
 
-var _ALL_FEATURES = [
-  {key:'settle',      label:'AI정산'},
-  {key:'table_order', label:'테이블오더'},
-  {key:'kiosk',       label:'키오스크'},
-  {key:'qr_attend',   label:'QR출퇴근'},
-  {key:'inventory',   label:'재고관리'},
-  {key:'reservation', label:'예약관리'},
-  {key:'member_crm',  label:'회원CRM'},
-  {key:'sales_analytics', label:'매출분석'},
-];
+// ── 도메인별 기능 정의 ─────────────────────────────────────────
+var _DOMAIN_FEATURES = {
+  donway: [
+    {key:'settle',   label:'🤖 AI정산',    desc:'택배·물류·배달 정산 자동화'},
+    {key:'delivery', label:'🛵 배달대행',   desc:'배달대행 수수료 정산'},
+    {key:'qr_payroll',label:'🔐 QR출퇴근+급여', desc:'QR 근태관리 + 급여 계산'},
+  ],
+  filo: [
+    {key:'kiosk',          label:'🖥️ 키오스크/POS', desc:'POS 결제 + 메뉴관리'},
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'inventory',      label:'📦 재고관리',      desc:'재고 현황 + 자동발주'},
+    {key:'qr_attend',      label:'🔐 QR출퇴근',      desc:'직원 QR 근태관리'},
+    {key:'reservation',    label:'📅 예약관리',      desc:'예약 + 회원관리'},
+    {key:'member_crm',     label:'👤 회원CRM',       desc:'포인트 + 멤버십'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'매출 리포트 + 마진'},
+  ],
+  dine: [
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'dine_delivery',  label:'🛵 배달연동',      desc:'배달앱 연동 매출'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'일/월 매출 분석'},
+    {key:'staff_mgmt',     label:'👥 직원관리',      desc:'출퇴근 + 급여'},
+    {key:'tax_invoice',    label:'🧾 세금계산서',    desc:'세무사 연동'},
+  ],
+};
+
+// 고객사 도메인 감지
+function _detectDomain(services) {
+  services = services || [];
+  var isFiloDine = services.some(function(s) {
+    return ['kiosk','table_order','inventory','qr_attend','reservation','member_crm','sales_analytics','dine_delivery','staff_mgmt','tax_invoice'].includes(s);
+  });
+  var isDine = services.some(function(s) {
+    return ['dine_delivery','staff_mgmt','tax_invoice'].includes(s);
+  });
+  var isDonway = !isFiloDine || services.some(function(s) {
+    return ['settle','delivery','qr_payroll'].includes(s);
+  });
+  return {donway: isDonway || !isFiloDine, filo: isFiloDine && !isDine, dine: isDine};
+}
 
 function _renderFeatureToggles(dealerId, services) {
-  return _ALL_FEATURES.map(function(f) {
-    var on = services.includes(f.key);
-    return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
-      'onclick="_ctrlToggleFeature(\'' + dealerId + '\',\'' + f.key + '\',' + !on + ')">' +
-      (on?'✅ ':'⬜ ') + f.label + '</button>';
-  }).join('');
+  services = services || [];
+  var html = '';
+
+  // DONWAY 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">📦 DONWAY</div>' +
+    _DOMAIN_FEATURES.donway.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  // FILO 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">🍽 FILO</div>' +
+    _DOMAIN_FEATURES.filo.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  // DINE 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">🌿 DINE</div>' +
+    _DOMAIN_FEATURES.dine.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  return html;
 }
 
 function _ctrlToggleFeature(dealerId, key, enable) {
