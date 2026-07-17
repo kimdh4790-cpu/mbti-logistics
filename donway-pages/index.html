@@ -408,7 +408,12 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <div id="reg-step3" style="display:none">
         <div class="fg">
           <label>영문 약자 <span style="color:var(--red);font-size:10px">*</span></label>
-          <input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');document.getElementById('r-slug-preview').textContent=this.value||'XXXX'">
+          <input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="
+  this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  document.getElementById('r-slug-preview').textContent=this.value||'XXXX';
+  _checkSlugDuplicate(this.value);
+">
+<div id="r-slug-status" style="font-size:11px;margin-top:4px"></div>
           <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.7">최대 4자 · 로그인 링크: donway.ai.kr/c/<b id="r-slug-preview">XXXX</b></div>
         </div>
         <div class="fg"><label>관리자 이메일 *</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
@@ -9279,6 +9284,30 @@ function _regNext(n){
     if(i<4){var ln=document.getElementById('rline'+i);if(ln)ln.style.background=i<n?'var(--green)':'var(--border)';}
   });
 }
+
+// 슬러그 중복 검사
+var _slugCheckTimer = null;
+function _checkSlugDuplicate(val) {
+  var statusEl = document.getElementById('r-slug-status');
+  if (!statusEl) return;
+  if (!val || val.length < 2) {
+    statusEl.innerHTML = '';
+    return;
+  }
+  statusEl.innerHTML = '<span style="color:#888">⏳ 확인 중...</span>';
+  clearTimeout(_slugCheckTimer);
+  _slugCheckTimer = setTimeout(function() {
+    if (!_db) { statusEl.innerHTML = ''; return; }
+    _db.collection('companies').where('slug','==',val).limit(1).get()
+      .then(function(snap) {
+        if (!snap.empty) {
+          statusEl.innerHTML = '<span style="color:#ef4444">❌ 이미 사용 중인 코드예요. 다른 코드를 입력해주세요.</span>';
+        } else {
+          statusEl.innerHTML = '<span style="color:#22c55e">✅ 사용 가능한 코드예요!</span>';
+        }
+      }).catch(function() { statusEl.innerHTML = ''; });
+  }, 500);
+}
 function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var rep=(document.getElementById('r-rep')||{value:''}).value.trim();
@@ -9323,6 +9352,13 @@ function doRegister(){
   if(!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
+
+  // ★ 슬러그 중복 최종 확인
+  var _slugStatusEl = document.getElementById('r-slug-status');
+  if (_slugStatusEl && _slugStatusEl.innerHTML.includes('❌')) {
+    err.textContent='이미 사용 중인 전용 코드입니다. 다른 코드를 입력해주세요.';
+    err.style.color='red'; err.style.display='block'; return;
+  }
 
   var slugVal='';
   var uid='';
