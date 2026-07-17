@@ -63,12 +63,12 @@ function _ctrlLogout() {
 
 // ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
 function _ctrlStartListeners() {
-  // 가입 대기 뱃지 — companies pending/hold
-  var u1 = _db.collection('companies')
+  // 가입 대기 뱃지
+  var u1 = _db.collection('join_requests')
+    .where('status','==','pending')
     .onSnapshot(function(snap) {
-      var cnt=0; snap.forEach(function(d){if(['pending','hold'].includes(d.data().status))cnt++;});
-      _ctrlBadge('badge-join', cnt);
-    }, function(){});
+      _ctrlBadge('badge-join', snap.size);
+    });
   _unsubs.push(u1);
 
   // 채팅 미읽음 뱃지 (슈퍼어드민 기준 unreadSA)
@@ -172,7 +172,7 @@ function _ctrlLoadDashboard() {
 
   Promise.all([
     _db.collection('companies').get(),
-    _db.collection('companies').where('status','==','pending').get(),
+    _db.collection('join_requests').where('status','==','pending').get(),
     _db.collection('join_requests').where('status','==','approved')
       .where('createdAt','>=', new Date(Date.now()-30*86400000).toISOString()).get()
   ]).then(function(results) {
@@ -224,7 +224,8 @@ function _ctrlLoadJoin() {
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
 
   // companies 컬렉션에서 pending/hold 상태 직접 조회
-  _db.collection('companies').limit(200).get().then(function(snap) {
+  _db.collection('companies').limit(100)
+    .get().then(function(snap) {
       var docs = snap.docs.filter(function(d) {
         return ['pending','hold'].includes(d.data().status);
       });
@@ -336,7 +337,7 @@ function _ctrlLoadCompanies() {
     '</div>' +
     '<div id="comp-list"><div class="ctrl-loading">로딩 중...</div></div>';
 
-  _db.collection('companies').orderBy('createdAt','desc').limit(100)
+  _db.collection('companies').limit(100)
     .onSnapshot(function(snap) {
       window._compDocs = [];
       snap.forEach(function(d) { window._compDocs.push({id:d.id, ...d.data()}); });
@@ -537,7 +538,7 @@ function _ctrlLoadChat() {
 }
 
 function _ctrlLoadChatList() {
-  _db.collection('chats').orderBy('lastAt','desc')
+  _db.collection('chats')
     .onSnapshot(function(snap) {
       var list = document.getElementById('chat-list');
       if (!list) return;
@@ -649,7 +650,7 @@ function _ctrlLoadNotice() {
     '<div class="ctrl-label">최근 공지 (notices 컬렉션)</div>' +
     '<div id="notice-list"><div class="ctrl-loading">로딩 중...</div></div>';
 
-  _db.collection('notices').orderBy('createdAt','desc').limit(10)
+  _db.collection('notices').limit(10)
     .get().then(function(snap) {
       var list = document.getElementById('notice-list');
       if (!list) return;
@@ -693,7 +694,7 @@ function _ctrlSendNotice() {
 function _ctrlLoadBilling() {
   var c = document.getElementById('acc-billing');
   c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
-  _db.collection('payment_requests').orderBy('createdAt','desc').limit(50)
+  _db.collection('payment_requests').limit(50)
     .get().then(function(snap) {
       if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">결제 내역 없음</div>'; return; }
       var totalAmt = 0;
