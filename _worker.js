@@ -3301,7 +3301,14 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'], subject:`[DONWAY 신규가입] ${companyName}`, html})
+          body:JSON.stringify({
+          from: (services||[]).some(s=>['filo','dine','table_order','kiosk','inventory'].includes(s))
+            ? 'FILO·DINE <filo-dine@donway.ai.kr>'
+            : 'DONWAY <all@donway.ai.kr>',
+          to: (services||[]).some(s=>['filo','dine','table_order','kiosk','inventory'].includes(s))
+            ? ['skypjh1101@naver.com','kimdh4790@gmail.com']
+            : ['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'],
+          subject:`[신규가입] ${companyName}`, html})
         });
         
         // FCM 푸시 (슈퍼어드민 전체 기기 - admin_tokens 컬렉션 사용)
