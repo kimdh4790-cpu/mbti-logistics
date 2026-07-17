@@ -483,7 +483,7 @@ function _renderFeatureToggles(dealerId, services) {
       var on = services.includes(f.key);
       return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
         'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
-        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
         'title="' + f.desc + '">' +
         (on?'✅ ':'⬜ ') + f.label + '</button>';
     }).join('') +
@@ -496,7 +496,7 @@ function _renderFeatureToggles(dealerId, services) {
       var on = services.includes(f.key);
       return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
         'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
-        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
         'title="' + f.desc + '">' +
         (on?'✅ ':'⬜ ') + f.label + '</button>';
     }).join('') +
@@ -509,7 +509,7 @@ function _renderFeatureToggles(dealerId, services) {
       var on = services.includes(f.key);
       return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
         'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
-        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==='true')" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
         'title="' + f.desc + '">' +
         (on?'✅ ':'⬜ ') + f.label + '</button>';
     }).join('') +

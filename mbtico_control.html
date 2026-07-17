@@ -370,15 +370,25 @@ function _ctrlBadge(id, n) {
   el.style.display = n > 0 ? 'inline-flex' : 'none';
 }
 
-function _ctrlFmtDate(iso) {
-  if (!iso) return '-';
-  return iso.slice(0, 10);
+function _ctrlFmtDate(val) {
+  if (!val) return '-';
+  // Firestore Timestamp 객체
+  if (val && typeof val.toDate === 'function') return val.toDate().toISOString().slice(0,10);
+  // 문자열
+  if (typeof val === 'string') return val.slice(0,10);
+  // 숫자 (ms)
+  if (typeof val === 'number') return new Date(val).toISOString().slice(0,10);
+  return '-';
 }
 
 function _ctrlFmtTs(ts) {
   if (!ts) return '-';
-  var d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  try {
+    var d = (ts && typeof ts.toDate === 'function') ? ts.toDate()
+          : (typeof ts === 'string' || typeof ts === 'number') ? new Date(ts)
+          : ts;
+    return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return '-'; }
 }
 
 // ── FCM 푸시 발송 ─────────────────────────────────────────────────
@@ -398,7 +408,7 @@ function _ctrlNotifyApproval(dealer) {
   _ctrlNotify('dealer', dealer.uid, '✅ DONWAY 가입 승인', body, {
     type: 'approval', url: url, loginId: dealer.email, slug: dealer.slug
   });
-  // 카카오 알림톡도 발송
+  // 카카오 알림톡 발송
   fetch('https://donway.ai.kr/api/alimtalk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -406,6 +416,35 @@ function _ctrlNotifyApproval(dealer) {
       phone: dealer.phone || '',
       template: 'approval',
       params: { name: dealer.companyName, url, id: dealer.email }
+    })
+  }).catch(function() {});
+  // 관리자 이메일 알림 (승인 완료)
+  var svcs = dealer.services || [];
+  var isFiloDine = svcs.some(function(s) {
+    return ['filo','dine','table_order','kiosk','inventory'].includes(s);
+  });
+  var fromEmail = isFiloDine ? 'FILO·DINE <filo-dine@donway.ai.kr>' : 'DONWAY <all@donway.ai.kr>';
+  var toEmails  = isFiloDine
+    ? ['skypjh1101@naver.com','kimdh4790@gmail.com']
+    : ['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'];
+  fetch('https://donway.ai.kr/api/ctrl-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'email',
+      from: fromEmail,
+      to: toEmails,
+      subject: '[관제센터] ' + (dealer.companyName||'업체') + ' 가입 승인 완료',
+      html: '<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">' +
+        '<h2 style="color:#0066ff">✅ 가입 승인 완료</h2>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        '<tr><td style="padding:8px;font-weight:700;color:#666">업체명</td><td style="padding:8px">' + (dealer.companyName||'-') + '</td></tr>' +
+        '<tr style="background:#f8fafc"><td style="padding:8px;font-weight:700;color:#666">이메일</td><td style="padding:8px">' + (dealer.email||'-') + '</td></tr>' +
+        '<tr><td style="padding:8px;font-weight:700;color:#666">전용URL</td><td style="padding:8px"><a href="' + url + '">' + url + '</a></td></tr>' +
+        '</table>' +
+        '<div style="margin-top:16px;padding:12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#666">' +
+        '승인자: ' + (_CU ? _CU.email : '-') + ' · ' + new Date().toLocaleString('ko-KR') +
+        '</div></div>'
     })
   }).catch(function() {});
 }
@@ -638,24 +677,90 @@ function _renderCompanies() {
   c.innerHTML = html;
 }
 
-var _ALL_FEATURES = [
-  {key:'settle',      label:'AI정산'},
-  {key:'table_order', label:'테이블오더'},
-  {key:'kiosk',       label:'키오스크'},
-  {key:'qr_attend',   label:'QR출퇴근'},
-  {key:'inventory',   label:'재고관리'},
-  {key:'reservation', label:'예약관리'},
-  {key:'member_crm',  label:'회원CRM'},
-  {key:'sales_analytics', label:'매출분석'},
-];
+// ── 도메인별 기능 정의 ─────────────────────────────────────────
+var _DOMAIN_FEATURES = {
+  donway: [
+    {key:'settle',   label:'🤖 AI정산',    desc:'택배·물류·배달 정산 자동화'},
+    {key:'delivery', label:'🛵 배달대행',   desc:'배달대행 수수료 정산'},
+    {key:'qr_payroll',label:'🔐 QR출퇴근+급여', desc:'QR 근태관리 + 급여 계산'},
+  ],
+  filo: [
+    {key:'kiosk',          label:'🖥️ 키오스크/POS', desc:'POS 결제 + 메뉴관리'},
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'inventory',      label:'📦 재고관리',      desc:'재고 현황 + 자동발주'},
+    {key:'qr_attend',      label:'🔐 QR출퇴근',      desc:'직원 QR 근태관리'},
+    {key:'reservation',    label:'📅 예약관리',      desc:'예약 + 회원관리'},
+    {key:'member_crm',     label:'👤 회원CRM',       desc:'포인트 + 멤버십'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'매출 리포트 + 마진'},
+  ],
+  dine: [
+    {key:'table_order',    label:'📱 테이블오더',    desc:'QR 테이블 주문'},
+    {key:'dine_delivery',  label:'🛵 배달연동',      desc:'배달앱 연동 매출'},
+    {key:'sales_analytics',label:'📈 매출분석',      desc:'일/월 매출 분석'},
+    {key:'staff_mgmt',     label:'👥 직원관리',      desc:'출퇴근 + 급여'},
+    {key:'tax_invoice',    label:'🧾 세금계산서',    desc:'세무사 연동'},
+  ],
+};
+
+// 고객사 도메인 감지
+function _detectDomain(services) {
+  services = services || [];
+  var isFiloDine = services.some(function(s) {
+    return ['kiosk','table_order','inventory','qr_attend','reservation','member_crm','sales_analytics','dine_delivery','staff_mgmt','tax_invoice'].includes(s);
+  });
+  var isDine = services.some(function(s) {
+    return ['dine_delivery','staff_mgmt','tax_invoice'].includes(s);
+  });
+  var isDonway = !isFiloDine || services.some(function(s) {
+    return ['settle','delivery','qr_payroll'].includes(s);
+  });
+  return {donway: isDonway || !isFiloDine, filo: isFiloDine && !isDine, dine: isDine};
+}
 
 function _renderFeatureToggles(dealerId, services) {
-  return _ALL_FEATURES.map(function(f) {
-    var on = services.includes(f.key);
-    return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
-      'onclick="_ctrlToggleFeature(\'' + dealerId + '\',\'' + f.key + '\',' + !on + ')">' +
-      (on?'✅ ':'⬜ ') + f.label + '</button>';
-  }).join('');
+  services = services || [];
+  var html = '';
+
+  // DONWAY 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">📦 DONWAY</div>' +
+    _DOMAIN_FEATURES.donway.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  // FILO 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">🍽 FILO</div>' +
+    _DOMAIN_FEATURES.filo.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  // DINE 섹션
+  html += '<div class="feat-section">' +
+    '<div class="feat-section-title">🌿 DINE</div>' +
+    _DOMAIN_FEATURES.dine.map(function(f) {
+      var on = services.includes(f.key);
+      return '<button class="feat-btn ' + (on?'feat-on':'feat-off') + '" ' +
+        'data-did="' + dealerId + '" data-key="' + f.key + '" data-on="' + !on + '" ' +
+        'onclick="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.dataset.on==String(true))" ' +
+        'title="' + f.desc + '">' +
+        (on?'✅ ':'⬜ ') + f.label + '</button>';
+    }).join('') +
+  '</div>';
+
+  return html;
 }
 
 function _ctrlToggleFeature(dealerId, key, enable) {
