@@ -2315,15 +2315,27 @@ async function acceptExchange(){
             if (doc1) {
               storeName = (doc1.fields.companyName || doc1.fields.name || {}).stringValue || storeKey;
             } else {
-              // companyName으로 재시도
+              // slug 필드로 재시도 (관제센터 slug 기반)
               const r2 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'companies' }],
-                  where: { fieldFilter: { field: { fieldPath: 'companyName' }, op: 'EQUAL', value: { stringValue: storeKey } } }, limit: 1 }})
+                  where: { fieldFilter: { field: { fieldPath: 'slug' }, op: 'EQUAL', value: { stringValue: storeKey } } }, limit: 1 }})
               });
               const d2 = await r2.json();
               const doc2 = d2 && d2[0] && d2[0].document;
-              if (doc2) storeName = (doc2.fields.companyName || doc2.fields.name || {}).stringValue || storeKey;
+              if (doc2) {
+                storeName = (doc2.fields.companyName || doc2.fields.name || {}).stringValue || storeKey;
+              } else {
+                // companyName으로 마지막 재시도
+                const r3 = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'companies' }],
+                    where: { fieldFilter: { field: { fieldPath: 'companyName' }, op: 'EQUAL', value: { stringValue: storeKey } } }, limit: 1 }})
+                });
+                const d3 = await r3.json();
+                const doc3 = d3 && d3[0] && d3[0].document;
+                if (doc3) storeName = (doc3.fields.companyName || doc3.fields.name || {}).stringValue || storeKey;
+              }
             }
           } catch(e) {}
           const injected = filoHtml.replace('</head>',
