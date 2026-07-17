@@ -34673,12 +34673,17 @@ function pagePrices(tabMode){
   // ★ SA 열람 시 _adminViewDealerId 우선
   var did=window._adminViewDealerId||_CU.dealerId;
   // 단가표 + routeCampMap 동시 로드
-  Promise.all([
-    _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
-    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
-  ]).then(function(results){
+  var _loadPriceData = function() {
+    return Promise.all([
+      _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
+      _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
+      _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
+      _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
+    ]);
+  };
+  // ★ 네트워크 오류 시 1회 재시도
+  _loadPriceData().catch(function(){ return new Promise(function(res){ setTimeout(function(){ _loadPriceData().then(res).catch(function(){ res([null,null,null,null]); }); }, 1500); }); })
+  .then(function(results){
     var rpSnap=results[0],rcSnap=results[1],raSnap=results[2],ccSnap=results[3];
     if(rpSnap&&rpSnap.exists){
       var data=rpSnap.data();
