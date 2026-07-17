@@ -32298,6 +32298,13 @@ function _saveSECurrent(){
   if(cached&&cached.bizType&&!bizType)payload.bizType=cached.bizType;
   if(cached&&cached.bizItem)payload.bizItem=cached.bizItem;
   if(rds.length)payload.routeDetails=rds;
+  // ★ coupangTotal 저장 — 월별 카드 총매출 표시용 (hiddenCT = VAT포함)
+  var _hiddenCT = document.getElementById('se-coupang-total');
+  if(_hiddenCT && _hiddenCT.value) {
+    payload.coupangTotal = Math.round(Number(_hiddenCT.value) / 1.1); // VAT제외로 저장 (기존 포맷 유지)
+  } else if(cached && cached.coupangTotal) {
+    payload.coupangTotal = cached.coupangTotal; // 기존값 유지
+  }
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
   var p=id
