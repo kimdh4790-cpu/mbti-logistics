@@ -1385,7 +1385,7 @@ function _ctrlNotifyApproval(dealer) {
   _ctrlNotify('dealer', dealer.uid, '✅ DONWAY 가입 승인', body, {
     type: 'approval', url: url, loginId: dealer.email, slug: dealer.slug
   });
-  // 카카오 알림톡도 발송
+  // 카카오 알림톡 발송
   fetch('https://donway.ai.kr/api/alimtalk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1393,6 +1393,35 @@ function _ctrlNotifyApproval(dealer) {
       phone: dealer.phone || '',
       template: 'approval',
       params: { name: dealer.companyName, url, id: dealer.email }
+    })
+  }).catch(function() {});
+  // 관리자 이메일 알림 (승인 완료)
+  var svcs = dealer.services || [];
+  var isFiloDine = svcs.some(function(s) {
+    return ['filo','dine','table_order','kiosk','inventory'].includes(s);
+  });
+  var fromEmail = isFiloDine ? 'FILO·DINE <filo-dine@donway.ai.kr>' : 'DONWAY <all@donway.ai.kr>';
+  var toEmails  = isFiloDine
+    ? ['skypjh1101@naver.com','kimdh4790@gmail.com']
+    : ['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'];
+  fetch('https://donway.ai.kr/api/ctrl-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'email',
+      from: fromEmail,
+      to: toEmails,
+      subject: '[관제센터] ' + (dealer.companyName||'업체') + ' 가입 승인 완료',
+      html: '<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">' +
+        '<h2 style="color:#0066ff">✅ 가입 승인 완료</h2>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        '<tr><td style="padding:8px;font-weight:700;color:#666">업체명</td><td style="padding:8px">' + (dealer.companyName||'-') + '</td></tr>' +
+        '<tr style="background:#f8fafc"><td style="padding:8px;font-weight:700;color:#666">이메일</td><td style="padding:8px">' + (dealer.email||'-') + '</td></tr>' +
+        '<tr><td style="padding:8px;font-weight:700;color:#666">전용URL</td><td style="padding:8px"><a href="' + url + '">' + url + '</a></td></tr>' +
+        '</table>' +
+        '<div style="margin-top:16px;padding:12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#666">' +
+        '승인자: ' + (_CU ? _CU.email : '-') + ' · ' + new Date().toLocaleString('ko-KR') +
+        '</div></div>'
     })
   }).catch(function() {});
 }
