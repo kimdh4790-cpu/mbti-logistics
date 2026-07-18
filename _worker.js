@@ -584,7 +584,7 @@ async function syncKVFromGitHub(env) {
   const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const FILES = [
     'settle.html', 'inventory.html', 'qrpos.html', 'kiosk.html',
-    'mbtico_hub.html', 'join.html', 'admin_sub.html', 'order.html', 'donway_landing.html'
+    'mbtico_hub.html', 'join.html', 'admin_sub.html', 'add.html', 'order.html', 'donway_landing.html'
   ];
   
   const results = [];
