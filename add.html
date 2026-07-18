@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>FILO — 빵 담기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:#f8fafc;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:20px;padding:32px 24px;max-width:340px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center}
+.icon{font-size:64px;margin-bottom:16px}
+.name{font-size:22px;font-weight:900;color:#111;margin-bottom:8px}
+.price{font-size:18px;font-weight:700;color:#0066ff;margin-bottom:24px}
+.msg{font-size:14px;color:#666;margin-bottom:28px;line-height:1.6}
+.btn-add{width:100%;padding:16px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px;transition:.15s}
+.btn-add:active{transform:scale(.97)}
+.btn-more{width:100%;padding:12px;background:#f1f5f9;color:#333;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer}
+.cart-preview{background:#f0f9ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;text-align:left}
+.cart-preview-title{font-size:11px;color:#0066ff;font-weight:700;margin-bottom:8px}
+.cart-item{font-size:13px;color:#333;padding:3px 0;display:flex;justify-content:space-between}
+.added-badge{background:#dcfce7;color:#16a34a;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;display:inline-block;margin-bottom:16px}
+.qty-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px}
+.qty-btn{width:36px;height:36px;border-radius:50%;border:2px solid #ddd;background:#fff;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qty-btn:active{background:#f0f9ff}
+.qty-num{font-size:24px;font-weight:900;color:#111;min-width:32px}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="icon" id="menu-icon">🥐</div>
+  <div class="name" id="menu-name">로딩 중...</div>
+  <div class="price" id="menu-price"></div>
+
+  <!-- 수량 선택 -->
+  <div class="qty-row">
+    <button class="qty-btn" onclick="changeQty(-1)">−</button>
+    <span class="qty-num" id="qty-num">1</span>
+    <button class="qty-btn" onclick="changeQty(1)">+</button>
+  </div>
+
+  <!-- 현재 담긴 것들 -->
+  <div class="cart-preview" id="cart-preview" style="display:none">
+    <div class="cart-preview-title">🛒 현재 담긴 항목</div>
+    <div id="cart-items"></div>
+  </div>
+
+  <div class="msg" id="msg">담기 버튼을 누르면<br>테이블에서 주문 시 자동으로 추가돼요</div>
+  <button class="btn-add" id="btn-add" onclick="addToCart()">🧺 담기</button>
+  <button class="btn-more" onclick="goBack()">← 더 담기</button>
+</div>
+
+<script>
+var _did = '', _menuId = '', _menuName = '', _menuPrice = 0, _menuEmoji = '🥐', _qty = 1;
+var STORAGE_KEY = '';
+
+function getParam(k){
+  return new URLSearchParams(location.search).get(k) || '';
+}
+
+function fmt(n){ return Number(n).toLocaleString(); }
+
+function changeQty(d){
+  _qty = Math.max(1, _qty + d);
+  document.getElementById('qty-num').textContent = _qty;
+}
+
+function loadCart(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+
+function saveCart(cart){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+}
+
+function renderCartPreview(){
+  var cart = loadCart();
+  var preview = document.getElementById('cart-preview');
+  var itemsEl = document.getElementById('cart-items');
+  if(!cart.length){ preview.style.display='none'; return; }
+  preview.style.display = 'block';
+  itemsEl.innerHTML = cart.map(function(i){
+    return '<div class="cart-item"><span>'+i.emoji+' '+i.name+'</span><span>'+i.qty+'개 · ₩'+fmt(i.price*i.qty)+'</span></div>';
+  }).join('');
+}
+
+function addToCart(){
+  var cart = loadCart();
+  var existing = cart.find(function(i){ return i.name === _menuName; });
+  if(existing){
+    existing.qty += _qty;
+  } else {
+    cart.push({ name:_menuName, price:_menuPrice, qty:_qty, emoji:_menuEmoji, menuId:_menuId });
+  }
+  saveCart(cart);
+
+  // 담기 완료 UI
+  var btn = document.getElementById('btn-add');
+  btn.textContent = '✅ 담겼어요!';
+  btn.style.background = '#16a34a';
+  btn.disabled = true;
+  document.getElementById('msg').innerHTML =
+    '<span style="color:#16a34a;font-weight:700">'+_menuEmoji+' '+_menuName+' '+_qty+'개</span>가 담겼어요!<br>테이블 QR 스캔 시 자동으로 추가돼요 😊';
+
+  renderCartPreview();
+
+  // 2초 후 다시 담기 가능
+  setTimeout(function(){
+    btn.textContent = '🧺 더 담기';
+    btn.style.background = '#0066ff';
+    btn.disabled = false;
+    _qty = 1;
+    document.getElementById('qty-num').textContent = '1';
+  }, 2000);
+}
+
+function goBack(){
+  history.back();
+}
+
+// 초기화
+window.onload = function(){
+  _did       = getParam('d');
+  _menuId    = getParam('m');
+  _menuName  = decodeURIComponent(getParam('n') || '빵');
+  _menuPrice = parseInt(getParam('p') || '0', 10);
+  _menuEmoji = decodeURIComponent(getParam('e') || '🥐');
+  STORAGE_KEY = 'filo_bakery_cart_' + _did;
+
+  document.getElementById('menu-name').textContent = _menuName;
+  document.getElementById('menu-price').textContent = _menuPrice ? '₩' + fmt(_menuPrice) : '';
+  document.getElementById('menu-icon').textContent = _menuEmoji;
+  document.title = 'FILO — ' + _menuName;
+
+  renderCartPreview();
+};
+</script>
+</body>
+</html>
