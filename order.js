@@ -137,7 +137,8 @@ window.onload=function(){
  document.getElementById('app').style.display='flex';
  _loadMenus();
  _listenOrders(); // 픽업 알림
- _checkExistingOrder(); // 기존 주문 테이블 이동 감지
+ _checkExistingOrder();
+ _loadBakeryCart(); // 빵 진열대 QR 스캔 카트 자동 로드 // 기존 주문 테이블 이동 감지
  // FCM 알림 탭으로 새 탭 열렸을 때 (#done 해시) → done 화면 바로 복원
  if(location.hash==='#done'){
   var lastId=localStorage.getItem('filo_order_'+_did);
@@ -231,6 +232,31 @@ function _addToCart(m){
  if(!_cart[m.name])_cart[m.name]={name:m.name,price:m.price,qty:0,emoji:m.emoji||'🍽',imageUrl:m.imageUrl||''};
  _cart[m.name].qty++;
  _updFab();
+}
+
+// ── 빵 진열대 QR 스캔 카트 자동 로드 ─────────────────────────
+function _loadBakeryCart(){
+  var key = 'filo_bakery_cart_' + _did;
+  try {
+    var saved = JSON.parse(localStorage.getItem(key) || '[]');
+    if(!saved.length) return;
+    var added = [];
+    saved.forEach(function(item){
+      if(!item.name || !item.price) return;
+      if(!_cart[item.name]){
+        _cart[item.name] = {name:item.name, price:item.price, qty:0, emoji:item.emoji||'🥐', imageUrl:''};
+      }
+      _cart[item.name].qty += (item.qty || 1);
+      added.push((item.emoji||'🥐')+' '+item.name+' '+item.qty+'개');
+    });
+    _updFab();
+    if(added.length){
+      _filoToast('🧺 진열대에서 담은 빵이 추가됐어요!
+' + added.join(', '));
+    }
+    // 로드 후 초기화 (중복 방지)
+    localStorage.removeItem(key);
+  } catch(e){}
 }
 
 function _chgQty(name,d){_cartChg(name,d);}
