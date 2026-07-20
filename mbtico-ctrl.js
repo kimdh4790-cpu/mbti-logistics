@@ -447,6 +447,7 @@ var _DOMAIN_FEATURES = {
     {key:'reservation',    ic:'📅', label:'예약관리',      desc:'예약 + 회원관리'},
     {key:'member_crm',     ic:'👤', label:'회원CRM',       desc:'포인트 + 멤버십'},
     {key:'sales_analytics',ic:'📈', label:'매출분석',      desc:'매출 리포트 + 마진'},
+    {key:'bakery_qr',      ic:'🥐', label:'빵QR담기',       desc:'진열대 명판 QR → 테이블오더 자동 연동'},
   ],
   dine: [
     {key:'table_order',    ic:'📱', label:'테이블오더',    desc:'QR 테이블 주문'},
