@@ -251,8 +251,7 @@ function _loadBakeryCart(){
     });
     _updFab();
     if(added.length){
-      _filoToast('🧺 진열대에서 담은 빵이 추가됐어요!
-' + added.join(', '));
+      _filoToast('🧺 진열대에서 담은 빵이 추가됐어요! ' + added.join(', '));
     }
     // 로드 후 초기화 (중복 방지)
     localStorage.removeItem(key);
