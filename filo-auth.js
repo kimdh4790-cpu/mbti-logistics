@@ -254,6 +254,14 @@ function _buildFiloNav(){
   ]});
  }
 
+ /* ── QR 관리 (bakery_qr 기능) ── */
+ if(hasAll||hasFeature('bakery_qr')||hasFeature('table_order')||hasFeature('kiosk')){
+  menus.push({s:'📱 QR관리',items:[
+   {ic:'📱',l:'테이블 QR',p:'qr_mgmt'},
+   {ic:'🥐',l:'빵·디저트 QR',p:'bakery_qr_mgmt'},
+  ]});
+ }
+
  /* ── 설정·관리 (항상 표시) ── */
  menus.push({s:'⚙️ 설정',items:[
   {ic:'🧾',l:'세무사 연동',p:'tax_share'},
@@ -393,6 +401,8 @@ function _filoGoPage(p){
  if(p==='home') _filoPageHome(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
+ else if(p==='qr_mgmt') { if(typeof _filoPageQrMgmt==='function') _filoPageQrMgmt(el); }
+ else if(p==='bakery_qr_mgmt') { if(typeof _filoBakeryQrMgmt==='function') _filoBakeryQrMgmt(el); }
  else if(p==='orders') _filoPageOrders(el);
  else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='sales_report') _filoPageSales(el);
