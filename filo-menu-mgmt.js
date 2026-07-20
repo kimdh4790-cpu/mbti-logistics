@@ -568,3 +568,123 @@ function _filoRmAddRow(invOpts){
  var wrap=document.getElementById('rm-ings');
  _filoRmAddRowDOM(wrap,_rmInvItems,'','','g');
 }
+// ── QR 관리 페이지 ────────────────────────────────────────────
+function _filoPageQrMgmt(el) {
+  var did = _CU.dealerId||_CU.uid;
+  var slug = window._companySlug || did;
+  var base = 'https://filo.ai.kr';
+
+  el.innerHTML =
+    '<div class="slide-up" style="max-width:600px;margin:0 auto">' +
+    '<div style="font-size:17px;font-weight:900;margin-bottom:4px">📱 QR 관리</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">테이블 QR과 빵·디저트 명판 QR을 한곳에서 관리해요</div>' +
+
+    // 테이블 QR 섹션
+    '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:16px">' +
+    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🍽 테이블 QR</div>' +
+    '<div id="qr-table-list">로딩 중...</div>' +
+    '</div>' +
+
+    // 빵 QR 섹션
+    '<div style="background:var(--bg2);border-radius:12px;padding:16px">' +
+    '<div style="font-size:14px;font-weight:800;margin-bottom:4px">🥐 빵·디저트 명판 QR</div>' +
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">메뉴에서 빵/디저트 카테고리 항목의 QR이에요. 인쇄해서 진열대 명판에 붙여주세요!</div>' +
+    '<div id="qr-bakery-list">로딩 중...</div>' +
+    '</div>' +
+    '</div>';
+
+  // 테이블 QR 로드
+  _db.collection('filo_tables').where('dealerId','==',did).orderBy('num').get()
+    .then(function(snap) {
+      var tables = snap.docs.map(function(d) { return Object.assign({id:d.id},d.data()); });
+      if(!tables.length) {
+        document.getElementById('qr-table-list').innerHTML =
+          '<div style="color:var(--t3);font-size:12px">등록된 테이블이 없어요</div>';
+        return;
+      }
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">';
+      tables.forEach(function(t) {
+        var url = base + '/c/' + slug + '?t=' + t.num;
+        html += '<div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">' +
+          '<div id="qrt-'+t.num+'" style="width:100px;height:100px;margin:0 auto 8px"></div>' +
+          '<div style="font-size:12px;font-weight:700">테이블 '+t.num+'</div>' +
+          '<div style="font-size:10px;color:var(--t3);margin:4px 0">'+t.name+'</div>' +
+          '<button onclick="_qrDownload('qrt-'+t.num+'','테이블'+t.num+'')" '+
+            'style="width:100%;padding:5px;background:#0066ff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">⬇ 저장</button>' +
+        '</div>';
+        // QR 생성
+        setTimeout(function(num, qUrl){ return function(){
+          if(typeof QRCode !== 'undefined') new QRCode(document.getElementById('qrt-'+num), {text:qUrl,width:100,height:100});
+        }; }(t.num, url), 100);
+      });
+      html += '</div>';
+      document.getElementById('qr-table-list').innerHTML = html;
+    }).catch(function(){ document.getElementById('qr-table-list').innerHTML='<div style="color:red;font-size:12px">로딩 실패</div>'; });
+
+  // 빵·디저트 QR 로드 (카테고리 = 빵, 디저트, 케이크 등)
+  _db.collection('filo_menus').where('dealerId','==',did).get()
+    .then(function(snap) {
+      var bakeryKw = ['빵','베이커리','디저트','케이크','쿠키','마카롱','타르트','스콘','머핀','도넛'];
+      var menus = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); })
+        .filter(function(m){
+          var cat = (m.category||'').toLowerCase();
+          var name = (m.name||'').toLowerCase();
+          return bakeryKw.some(function(k){ return cat.includes(k)||name.includes(k); }) || m.isBakery;
+        });
+
+      if(!menus.length) {
+        document.getElementById('qr-bakery-list').innerHTML =
+          '<div style="color:var(--t3);font-size:12px">빵/디저트 카테고리 메뉴가 없어요.<br>메뉴 등록 시 카테고리를 "빵" 또는 "디저트"로 설정해주세요</div>';
+        return;
+      }
+
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">';
+      menus.forEach(function(m) {
+        var addUrl = base + '/add?d=' + did +
+          '&n=' + encodeURIComponent(m.name) +
+          '&p=' + (m.price||0) +
+          '&e=' + encodeURIComponent(m.emoji||'🥐');
+        var qid = 'qrb-' + m.id;
+        html += '<div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center">' +
+          '<div id="'+qid+'" style="width:100px;height:100px;margin:0 auto 8px"></div>' +
+          '<div style="font-size:12px;font-weight:700">'+(m.emoji||'🥐')+' '+m.name+'</div>' +
+          '<div style="font-size:11px;color:#0066ff;margin:2px 0">₩'+(m.price||0).toLocaleString()+'</div>' +
+          '<button onclick="_qrDownload(''+qid+'',''+m.name+'')" '+
+            'style="width:100%;padding:5px;background:#0066ff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-top:4px">⬇ 저장</button>' +
+        '</div>';
+        setTimeout(function(qId, qUrl){ return function(){
+          if(typeof QRCode !== 'undefined') new QRCode(document.getElementById(qId), {text:qUrl,width:100,height:100});
+        }; }(qid, addUrl), 200);
+      });
+      html += '</div>';
+      document.getElementById('qr-bakery-list').innerHTML = html;
+    }).catch(function(){ document.getElementById('qr-bakery-list').innerHTML='<div style="color:red;font-size:12px">로딩 실패</div>'; });
+
+  // QRCode 라이브러리 동적 로드
+  if(typeof QRCode === 'undefined') {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = function(){ _filoPageQrMgmt(el); };
+    document.head.appendChild(s);
+    el.innerHTML = '<div style="text-align:center;padding:40px">QR 라이브러리 로딩 중...</div>';
+  }
+}
+
+// 빵QR 페이지 (bakery_qr_mgmt) = qr_mgmt와 동일
+function _filoBakeryQrMgmt(el){ _filoPageQrMgmt(el); }
+
+// QR 이미지 저장
+function _qrDownload(divId, name) {
+  var div = document.getElementById(divId);
+  if(!div) return;
+  var img = div.querySelector('img') || div.querySelector('canvas');
+  if(!img) return;
+  var a = document.createElement('a');
+  if(img.tagName === 'CANVAS') {
+    a.href = img.toDataURL('image/png');
+  } else {
+    a.href = img.src;
+  }
+  a.download = name + '_QR.png';
+  a.click();
+}
