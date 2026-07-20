@@ -395,7 +395,7 @@ function _filoGoPage(p){
  auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
- tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
+ tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',qr_mgmt:'QR 관리',bakery_qr_mgmt:'빵·디저트 QR',menu_mgmt:'메뉴 관리'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
  if(p==='home') _filoPageHome(el);
