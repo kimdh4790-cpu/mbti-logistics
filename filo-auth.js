@@ -24,6 +24,22 @@
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
+
+// ── JS 파일 동적 로드 후 콜백 실행 ─────────────────────────────
+function _filoLoadAndRun(jsFile, callback) {
+  // 이미 로드됐으면 바로 실행
+  if(document.querySelector('script[data-filo="'+jsFile+'"]')) {
+    if(typeof callback === 'function') callback();
+    return;
+  }
+  var s = document.createElement('script');
+  s.src = '/' + jsFile + '?v=' + Date.now();
+  s.setAttribute('data-filo', jsFile);
+  s.onload = function() { if(typeof callback === 'function') callback(); };
+  s.onerror = function() { console.error('로드 실패:', jsFile); };
+  document.head.appendChild(s);
+}
+
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
 function _initFirebase(){
  if(_fbApp)return;
@@ -395,14 +411,18 @@ function _filoGoPage(p){
  auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
- tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',qr_mgmt:'QR 관리',bakery_qr_mgmt:'빵·디저트 QR',menu_mgmt:'메뉴 관리'};
+ tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
  if(p==='home') _filoPageHome(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
- else if(p==='qr_mgmt') { if(typeof _filoPageQrMgmt==='function') _filoPageQrMgmt(el); }
- else if(p==='bakery_qr_mgmt') { if(typeof _filoBakeryQrMgmt==='function') _filoBakeryQrMgmt(el); }
+ else if(p==='qr_mgmt') {
+  _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoPageQrMgmt(el); });
+ }
+ else if(p==='bakery_qr_mgmt') {
+  _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoBakeryQrMgmt(el); });
+ }
  else if(p==='orders') _filoPageOrders(el);
  else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='sales_report') _filoPageSales(el);
