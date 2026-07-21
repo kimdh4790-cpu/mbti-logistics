@@ -408,13 +408,21 @@ function _filoImportMenuExcel(input){
    if(!rows.length){_filoToast('⚠️ 데이터가 없습니다');return;}
    var batch=[];
    rows.forEach(function(r){
-    var name=r['메뉴명']||r['name']||'';
-    var price=parseInt(r['가격']||r['price']||0);
-    var category=r['카테고리']||r['category']||'기타';
-    var emoji=r['이모지']||r['emoji']||'🍽';
-    var description=r['설명(참고용)']||r['설명']||r['description']||'';
+    // 컬럼명 유연하게 파싱 (한글/영문/괄호 포함 모두 지원)
+    function col(keys){ for(var k in r){ var kl=k.replace(/[*\(\)]/g,'').trim(); for(var i=0;i<keys.length;i++){if(kl===keys[i]||k===keys[i])return r[k];} } return ''; }
+    var name     = col(['메뉴명','name']) || '';
+    var price    = parseInt(col(['가격','price']) || 0);
+    var category = col(['카테고리','category']) || '기타';
+    var emoji    = col(['이모지','emoji']) || '🍽';
+    var desc     = col(['설명','description']) || '';
+    var isBakery = String(col(['빵/디저트여부','isBakery','bakery'])||'').toLowerCase()==='true';
+    var soldOut  = String(col(['품절여부','soldOut'])||'').toLowerCase()==='true';
+    // category 키워드로 isBakery 자동 설정
+    var bakeryKw=['빵','베이커리','디저트','케이크','쿠키','마카롱','타르트','스콘','머핀','도넛','크루아상','소금빵'];
+    if(!isBakery) isBakery = bakeryKw.some(function(k){return (category||'').includes(k)||(name||'').includes(k);});
     if(!name||!price)return;
-    batch.push({name:name,price:price,category:category,emoji:emoji,description:description,forSale:true,dealerId:did,stock:null,minStock:null});
+    batch.push({name:name,price:price,category:category,emoji:emoji,description:desc,
+      isBakery:isBakery,soldOut:soldOut,forSale:true,dealerId:did,stock:null,minStock:null});
    });
    if(!batch.length){_filoToast('⚠️ 유효한 메뉴가 없습니다');return;}
    var db=firebase.firestore();
