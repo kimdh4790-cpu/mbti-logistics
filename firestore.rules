@@ -250,6 +250,47 @@ service cloud.firestore {
     match /dine_schedules/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /dine_waiting/{docId}           { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn() || isAuth(); }
 
+    // ── 용차 (yongcha.app) 컬렉션 ─────────────────────────────────────────────
+    match /yongcha_users/{uid} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.auth.uid == uid;
+      allow update: if request.auth.uid == uid || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_posts/{docId} {
+      allow read: if isAuth();                        // 로그인한 기사/대리점 모두 조회
+      allow create: if isAuth();                      // 대리점 공고 등록
+      allow update: if isAuth() && (
+        resource.data.agencyId == request.auth.uid   // 본인 공고만 수정
+        || isSuperAdmin()
+      );
+      allow delete: if isAuth() && resource.data.agencyId == request.auth.uid || isSuperAdmin();
+    }
+    match /yongcha_applies/{docId} {
+      allow read: if isAuth() && (
+        resource.data.driverId == request.auth.uid   // 기사 본인
+        || resource.data.agencyId == request.auth.uid // 대리점
+        || isSuperAdmin()
+      );
+      allow create: if isAuth();                      // 기사 지원
+      allow update: if isAuth() && (
+        resource.data.agencyId == request.auth.uid   // 대리점 승인/거절
+        || isSuperAdmin()
+      );
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_reviews/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isSuperAdmin();
+    }
+    match /yongcha_jobs/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.agencyId == request.auth.uid || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
     // ── 슈퍼어드민 전용 폴백 ────────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if isSuperAdmin();
