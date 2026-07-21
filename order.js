@@ -1,6 +1,16 @@
 /*
  * order.js — FILO 테이블 QR 고객 주문 모듈
- * Copyright (c) 2024-2025 유한회사 엠비티아이
+   *
+   * 2026-07-21 추가:
+   *   _loadBakeryCart()     — 빵 진열대 QR 스캔 카트 자동 로드
+   *   _toggleDark()         — 다크모드 토글 (localStorage 저장)
+   *   _setView(mode)        — 카드형/목록형 뷰 전환
+   *   _checkOpenStatus()    — 영업 중 배지 표시
+   *
+   * 빵 진열대 QR 흐름:
+   *   손님 명판 QR 스캔 → add.html → localStorage 저장
+   *   → 테이블 QR 스캔 → order.js 로딩 시 자동 카트 추가
+ * Copyright (c) 2024-2026 유한회사 엠비티아이
  *
  * ── 주요 함수 ─────────────────────────────────────────────────
  *   _showFCMGate()    — 알림 허용 팝업 (localStorage 토큰 있으면 스킵)
