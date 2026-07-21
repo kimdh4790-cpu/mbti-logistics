@@ -239,7 +239,14 @@ firebase.initializeApp({
 _db   = firebase.firestore();
 _auth = firebase.auth();
 
+// 3초 후에도 로딩 중이면 강제로 로그인 화면 표시
+var _ldTimer = setTimeout(function(){
+  document.getElementById('ld').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}, 3000);
+
 _auth.onAuthStateChanged(function(u) {
+  clearTimeout(_ldTimer);
   document.getElementById('ld').style.display = 'none';
   if(u) {
     _db.collection('yongcha_users').doc(u.uid).get().then(function(snap) {
@@ -249,6 +256,8 @@ _auth.onAuthStateChanged(function(u) {
       } else {
         document.getElementById('login-screen').style.display = 'flex';
       }
+    }).catch(function(){
+      document.getElementById('login-screen').style.display = 'flex';
     });
   } else {
     document.getElementById('login-screen').style.display = 'flex';
@@ -275,13 +284,17 @@ function _yLogin() {
   var email = (document.getElementById('l-email').value||'').trim();
   var pw    = (document.getElementById('l-pw').value||'').trim();
   var errEl = document.getElementById('l-err');
+  var btn   = document.querySelector('#form-login .btn-main');
   if(!email||!pw){ errEl.textContent='이메일과 비밀번호를 입력하세요'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
-  _auth.signInWithEmailAndPassword(email, pw).catch(function(e) {
-    errEl.textContent = e.code==='auth/wrong-password'?'비밀번호가 틀렸어요':
-                        e.code==='auth/user-not-found'?'존재하지 않는 계정이에요':'로그인 실패: '+e.message;
-    errEl.style.display = 'block';
-  });
+  if(btn){ btn.textContent='로그인 중...'; btn.disabled=true; }
+  _auth.signInWithEmailAndPassword(email, pw)
+    .catch(function(e) {
+      if(btn){ btn.textContent='로그인'; btn.disabled=false; }
+      errEl.textContent = e.code==='auth/wrong-password'?'비밀번호가 틀렸어요':
+                          e.code==='auth/user-not-found'?'존재하지 않는 계정이에요':'로그인 실패: '+e.message;
+      errEl.style.display = 'block';
+    });
 }
 
 // ── 회원가입 ─────────────────────────────────────────────────
