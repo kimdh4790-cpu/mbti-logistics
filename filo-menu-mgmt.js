@@ -404,14 +404,10 @@ function _filoImportMenuExcel(input){
   try{
    var wb=XLSX.read(e.target.result,{type:'array'});
    var ws=wb.Sheets[wb.SheetNames[0]];
-   // 1행 헤더(category,name...) 기준 파싱
-   var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-   // 한글설명행 제거 (name이 '메뉴명' 또는 숫자 아닌 경우)
-   rows=rows.filter(function(r){
-     var n=String(r['name']||'').trim();
-     var p=r['price'];
-     return n!=='' && n!=='메뉴명' && n!=='메뉴명(name)' && !isNaN(Number(p)) && Number(p)>0;
-   });
+   // range:2 = 0-based → 3번째 행(category,name...)을 헤더로 인식
+   var rows=XLSX.utils.sheet_to_json(ws,{defval:'',range:2});
+   // 4행 한글설명 행 제거
+   rows=rows.filter(function(r){ var n=String(r['name']||''); return n!=='' && n!=='메뉴명' && n.indexOf('*')<0; });
    if(!rows.length){_filoToast('⚠️ 데이터가 없습니다');return;}
    var batch=[];
    rows.forEach(function(r){
@@ -433,21 +429,29 @@ function _filoImportMenuExcel(input){
    });
    if(!batch.length){_filoToast('⚠️ 유효한 메뉴가 없습니다');return;}
    var db=firebase.firestore();
-   /* 기존 filo_menus 삭제 후 재등록 */
-   db.collection('filo_menus').where('dealerId','==',did).get().then(function(old){
-    var bwD=db.batch();
-    old.forEach(function(oc){bwD.delete(oc.ref);});
-    return bwD.commit();
-   }).then(function(){
-    var bw2=db.batch();
+   /* ★ 기존 메뉴 유지 + 새 메뉴 추가 (중복 메뉴명은 업데이트) */
+   db.collection('filo_menus').where('dealerId','==',did).get().then(function(existing){
+    // 기존 메뉴명 → doc ref 맵
+    var existMap={};
+    existing.forEach(function(doc){ existMap[doc.data().name]=doc.ref; });
+
+    var bw=db.batch();
+    var addCnt=0, updCnt=0;
     batch.forEach(function(m){
-     var ref=db.collection('filo_menus').doc();
-     bw2.set(ref,m);
+     if(existMap[m.name]){
+      // 같은 이름 있으면 업데이트 (가격/카테고리 등)
+      bw.update(existMap[m.name], m);
+      updCnt++;
+     } else {
+      // 새 메뉴 추가
+      bw.set(db.collection('filo_menus').doc(), m);
+      addCnt++;
+     }
     });
-    return bw2.commit();
-   }).then(function(){
-    _filoToast('✅ '+batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다');
-    _filoPageKiosk(document.getElementById('content'));
+    return bw.commit().then(function(){
+     _filoToast('✅ 신규 '+addCnt+'개 추가 / '+updCnt+'개 업데이트 완료!');
+     _filoLoadMenuMgmt(document.getElementById('content'), did);
+    });
    }).catch(function(e){_filoToast('❌ 저장 오류: '+e.message);});
   }catch(e){_filoToast('❌ 파일 읽기 오류: '+e.message);}
  };
