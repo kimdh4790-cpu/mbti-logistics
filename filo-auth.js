@@ -214,7 +214,7 @@ function _buildFiloNav(){
   menus.push({s:'🛒 판매',items:[
    {ic:'🖥️',l:'POS 결제',p:'kiosk'},
    {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
-   {ic:'🔔',l:'주문 대기',p:'orders'},
+   {ic:'🔔',l:'주문 대기',p:'orders'},{ic:'🧾',l:'정산 리포트',p:'settlement'},
    {ic:'🛵',l:'배달 주문',p:'delivery'},
   ]});
  }
@@ -426,6 +426,7 @@ function _filoGoPage(p){
  else if(p==='orders') _filoPageOrders(el);
  else if(p==='delivery') _filoPageDelivery(el);
  else if(p==='sales_report') _filoPageSales(el);
+ else if(p==='settlement') { _filoLoadAndRun('filo-report.js',function(){_filoPageSalesReport(el);}); }
  else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='inventory') _filoPageInventory(el);
  else if(p==='stock_in') _filoPageStockIn(el);
