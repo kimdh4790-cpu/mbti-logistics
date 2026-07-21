@@ -332,3 +332,151 @@ function _filoReservationEdit(id,did){
   },150);
  });
 }
+
+// ── 웨이팅 관리 페이지 ──────────────────────────────────────────
+function _filoPageWaiting(el) {
+  var did = _CU.dealerId||_CU.uid;
+  if(window._waitUnsub){ window._waitUnsub(); window._waitUnsub=null; }
+
+  var today = _today();
+  el.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.className = 'slide-up';
+  wrap.style.cssText = 'max-width:700px;margin:0 auto';
+
+  // 헤더
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+  hdr.innerHTML = '<div><div style="font-size:20px;font-weight:900;color:var(--tx)">웨이팅 관리</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-top:2px">실시간 대기 현황 및 호출 관리</div></div>';
+  var addBtn = document.createElement('button');
+  addBtn.style.cssText = 'padding:10px 16px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer';
+  addBtn.textContent = '+ 대기 등록';
+  addBtn.onclick = function(){ _filoWaitingAdd(did); };
+  hdr.appendChild(addBtn);
+  wrap.appendChild(hdr);
+
+  // 통계
+  var stats = document.createElement('div');
+  stats.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px';
+  stats.innerHTML =
+    '<div class="card" style="padding:16px;border-radius:16px;text-align:center">' +
+    '<div style="font-size:28px;font-weight:900;color:var(--br)" id="wait-cnt">0팀</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-top:2px">현재 대기중</div></div>' +
+    '<div class="card" style="padding:16px;border-radius:16px;text-align:center">' +
+    '<div style="font-size:28px;font-weight:900;color:#f59e0b" id="wait-time">없음</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-top:2px">예상 대기시간</div></div>';
+  wrap.appendChild(stats);
+
+  // 빠른 작업
+  var quick = document.createElement('div');
+  quick.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px';
+  var callBtn = document.createElement('button');
+  callBtn.style.cssText = 'padding:14px;background:#7c3aed;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer';
+  callBtn.textContent = 'CALL 다음 팀 호출';
+  callBtn.onclick = function(){ _filoWaitingCallNext(did); };
+  quick.appendChild(callBtn);
+  wrap.appendChild(quick);
+
+  // 목록
+  var listTitle = document.createElement('div');
+  listTitle.innerHTML = '<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:10px">현재 대기 목록</div>';
+  wrap.appendChild(listTitle);
+
+  var list = document.createElement('div');
+  list.id = 'wait-list';
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--t3);font-size:13px">대기자 없음</div>';
+  wrap.appendChild(list);
+  el.appendChild(wrap);
+
+  // 실시간
+  window._waitUnsub = _db.collection('dine_waiting')
+    .where('dealerId','==',did).where('date','==',today).where('status','==','waiting')
+    .orderBy('createdAt')
+    .onSnapshot(function(snap){
+      var cntEl=document.getElementById('wait-cnt');
+      var timeEl=document.getElementById('wait-time');
+      var listEl=document.getElementById('wait-list');
+      if(!listEl) return;
+      var cnt=snap.size;
+      if(cntEl) cntEl.textContent=cnt+'팀';
+      if(timeEl) timeEl.textContent=cnt>0?(cnt*5)+'분':'없음';
+      if(!cnt){ listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);font-size:13px">대기자 없음</div>'; return; }
+      listEl.innerHTML='';
+      var num=1;
+      snap.forEach(function(doc){
+        var w=Object.assign({id:doc.id},doc.data());
+        var waitMin=w.createdAt?Math.floor((Date.now()-(w.createdAt.seconds||0)*1000)/60000):0;
+        var card=document.createElement('div');
+        card.className='card';
+        card.style.cssText='padding:14px 16px;margin-bottom:8px;border-radius:14px;display:flex;align-items:center;gap:12px';
+        var numBadge=document.createElement('div');
+        numBadge.style.cssText='width:32px;height:32px;border-radius:50%;background:var(--br);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0';
+        numBadge.textContent=num;
+        var info=document.createElement('div');
+        info.style.cssText='flex:1;min-width:0';
+        info.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--tx)">'+(w.name||'손님')+'</div>'+
+          '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+(w.seats||1)+'명 · 대기 '+waitMin+'분</div>';
+        var btns=document.createElement('div');
+        btns.style.cssText='display:flex;gap:6px;flex-shrink:0';
+        var did2=did;
+        var wid=doc.id;
+        var wname=w.name||'손님';
+        var callBtn2=document.createElement('button');
+        callBtn2.style.cssText='padding:6px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+        callBtn2.textContent='호출';
+        callBtn2.onclick=function(){_filoWaitingCall(wid,did2,wname);};
+        var doneBtn=document.createElement('button');
+        doneBtn.style.cssText='padding:6px 12px;background:var(--surface2);color:var(--tx);border:1px solid var(--bd);border-radius:8px;font-size:12px;cursor:pointer';
+        doneBtn.textContent='착석';
+        doneBtn.onclick=function(){_filoWaitingDone(wid,did2);};
+        var cancelBtn=document.createElement('button');
+        cancelBtn.style.cssText='padding:6px 10px;background:#fee2e2;color:#ef4444;border:none;border-radius:8px;font-size:12px;cursor:pointer';
+        cancelBtn.textContent='취소';
+        cancelBtn.onclick=function(){_filoWaitingCancel(wid,did2);};
+        btns.appendChild(callBtn2);
+        btns.appendChild(doneBtn);
+        btns.appendChild(cancelBtn);
+        card.appendChild(numBadge);
+        card.appendChild(info);
+        card.appendChild(btns);
+        listEl.appendChild(card);
+        num++;
+      });
+    },function(){});
+}
+
+function _filoWaitingAdd(did){
+  var name=prompt('손님 성함')||'손님';
+  var seats=parseInt(prompt('인원수')||'2')||2;
+  var phone=prompt('연락처 (선택)')||'';
+  _db.collection('dine_waiting').add({
+    dealerId:did,name:name,seats:seats,phone:phone,
+    date:_today(),status:'waiting',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){_filoToast('대기 등록됐어요!');}).catch(function(e){_filoToast('오류: '+e.message);});
+}
+function _filoWaitingCall(wid,did,name){
+  _db.collection('dine_waiting').doc(wid).update({status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){_filoToast('📢 '+name+'님 호출!');});
+}
+function _filoWaitingDone(wid,did){
+  _db.collection('dine_waiting').doc(wid).update({status:'seated',seatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){_filoToast('착석 처리됐어요!');});
+}
+function _filoWaitingCancel(wid,did){
+  if(!confirm('대기를 취소하시겠어요?')) return;
+  _db.collection('dine_waiting').doc(wid).update({status:'cancelled'})
+    .then(function(){_filoToast('취소됐어요');});
+}
+function _filoWaitingCallNext(did){
+  _db.collection('dine_waiting').where('dealerId','==',did).where('date','==',_today())
+    .where('status','==','waiting').orderBy('createdAt').limit(1).get()
+    .then(function(snap){
+      if(snap.empty){_filoToast('대기자 없음');return;}
+      var doc=snap.docs[0];
+      var name=doc.data().name||'손님';
+      doc.ref.update({status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()});
+      _filoToast('📢 '+name+'님 호출!');
+    });
+}
