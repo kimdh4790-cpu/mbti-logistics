@@ -288,11 +288,19 @@ function _yLogin() {
   if(!email||!pw){ errEl.textContent='이메일과 비밀번호를 입력하세요'; errEl.style.display='block'; return; }
   errEl.style.display = 'none';
   if(btn){ btn.textContent='로그인 중...'; btn.disabled=true; }
+  console.log('[용차] 로그인 시도:', email);
+  console.log('[용차] _auth:', _auth);
   _auth.signInWithEmailAndPassword(email, pw)
+    .then(function(cred){
+      console.log('[용차] 로그인 성공:', cred.user.uid);
+    })
     .catch(function(e) {
+      console.error('[용차] 로그인 오류:', e.code, e.message);
       if(btn){ btn.textContent='로그인'; btn.disabled=false; }
       errEl.textContent = e.code==='auth/wrong-password'?'비밀번호가 틀렸어요':
-                          e.code==='auth/user-not-found'?'존재하지 않는 계정이에요':'로그인 실패: '+e.message;
+                          e.code==='auth/user-not-found'?'존재하지 않는 계정이에요':
+                          e.code==='auth/network-request-failed'?'네트워크 오류! 인터넷 확인해주세요':
+                          '로그인 실패: '+e.message;
       errEl.style.display = 'block';
     });
 }
