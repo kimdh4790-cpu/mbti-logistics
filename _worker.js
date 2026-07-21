@@ -6287,10 +6287,10 @@ async function handleYongcha(request, env, ctx) {
     return serveKVFile(env, path.slice(1), 'application/javascript');
   }
 
-  // 메인 페이지 (모든 경로 → yongcha.html)
-  const html = await env.DONWAY_ASSETS.get('yongcha.html');
-  if (html) {
-    return new Response(html, {
+  // 메인 페이지 (모든 경로 → yongcha.html KV 서빙)
+  const yongchaHtml = await env.DONWAY_ASSETS.get('yongcha.html');
+  if (yongchaHtml) {
+    return new Response(yongchaHtml, {
       headers: { 'Content-Type': 'text/html;charset=utf-8',
                  'Cache-Control': 'no-cache' }
     });
