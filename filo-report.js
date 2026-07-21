@@ -574,3 +574,265 @@ function _filoMarginLoadRange(from,to){
 
 var _toTable=null,_toCart={};
 
+
+// ── 정산 리포트 UI (사진 2번 스타일) ────────────────────────────
+function _filoPageSalesReport(el) {
+  var did = (_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+  if(!did){ el.innerHTML='<div class="card" style="text-align:center;padding:40px">로그인 후 이용하세요</div>'; return; }
+
+  var today = _today();
+  var ym = today.slice(0,7);
+
+  // 기간 계산 (이번주 기본)
+  var now = new Date();
+  var dayOfWeek = now.getDay();
+  var monday = new Date(now); monday.setDate(now.getDate() - (dayOfWeek===0?6:dayOfWeek-1));
+  var sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  var dateFrom = monday.toISOString().slice(0,10);
+  var dateTo   = sunday.toISOString().slice(0,10);
+
+  el.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.className = 'slide-up';
+  wrap.style.cssText = 'max-width:960px;margin:0 auto';
+
+  // ── 헤더 ──
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px';
+  hdr.innerHTML =
+    '<div>' +
+    '<div style="font-size:22px;font-weight:900;color:var(--tx)">정산 리포트</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-top:4px" id="sr-period-label">일별 정산 · ' + dateFrom + ' ~ ' + dateTo + '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<div style="display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:4px">' +
+    ['이번주','이번달','지난달'].map(function(l,i){
+      return '<button onclick="_filoSalesReportPeriod('+i+',''+did+'')" class="sr-period-btn'+(i===0?' sr-period-on':'')+'" style="padding:6px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:'+(i===0?'var(--br)':'transparent')+';color:'+(i===0?'#fff':'var(--t3)')+'">'+l+'</button>';
+    }).join('') +
+    '</div>' +
+    '<button onclick="_filoSalesReportExport()" style="padding:8px 16px;background:var(--surface);border:1px solid var(--bd);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx)">⬇ 내보내기</button>' +
+    '</div>';
+  wrap.appendChild(hdr);
+
+  // ── KPI 4열 ──
+  var kpi = document.createElement('div');
+  kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px';
+  kpi.innerHTML = [
+    {id:'sr-card',   ic:'💳', lbl:'카드 매출',  c:'#0891b2'},
+    {id:'sr-cash',   ic:'💵', lbl:'현금 매출',  c:'#059669'},
+    {id:'sr-fee',    ic:'🏷', lbl:'수수료',     c:'#ef4444'},
+    {id:'sr-net',    ic:'💰', lbl:'순수익',     c:'#7c3aed'},
+  ].map(function(k){
+    return '<div class="card" style="padding:16px;border-radius:16px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+      '<span style="font-size:16px">'+k.ic+'</span>' +
+      '<span style="font-size:11px;font-weight:700;color:var(--t3)">'+k.lbl+'</span>' +
+      '</div>' +
+      '<div style="font-size:18px;font-weight:900;color:'+k.c+'" id="'+k.id+'">—</div>' +
+      '<div style="font-size:10px;color:var(--t3);margin-top:4px" id="'+k.id+'-diff">전주 대비 —</div>' +
+      '</div>';
+  }).join('');
+  wrap.appendChild(kpi);
+
+  // ── 차트 영역 ──
+  var chartCard = document.createElement('div');
+  chartCard.className = 'card';
+  chartCard.style.cssText = 'padding:20px;border-radius:18px;margin-bottom:14px';
+  chartCard.innerHTML =
+    '<div style="font-size:13px;font-weight:800;color:var(--t3);margin-bottom:16px">일별 정산 추이</div>' +
+    '<canvas id="sr-chart" height="160"></canvas>' +
+    '<div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">' +
+    ['카드 매출:#0891b2','현금 매출:#059669','순수익:#7c3aed'].map(function(item){
+      var parts = item.split(':');
+      return '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:'+parts[1]+'"></div><span style="font-size:11px;color:var(--t3)">'+parts[0]+'</span></div>';
+    }).join('') +
+    '</div>';
+  wrap.appendChild(chartCard);
+
+  // ── 하단 2열 (일별 상세 + 정산 요약) ──
+  var bottom = document.createElement('div');
+  bottom.style.cssText = 'display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:14px';
+
+  // 일별 상세
+  var detailCard = document.createElement('div');
+  detailCard.className = 'card';
+  detailCard.style.cssText = 'padding:20px;border-radius:18px';
+  detailCard.innerHTML =
+    '<div style="font-size:13px;font-weight:800;color:var(--t3);margin-bottom:12px">일별 상세 정산</div>' +
+    '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+    '<thead><tr style="border-bottom:2px solid var(--bd)">' +
+    ['날짜','카드','현금','수수료','순수익'].map(function(h){
+      return '<th style="padding:8px 6px;text-align:left;font-weight:700;color:var(--t3)">'+h+'</th>';
+    }).join('') +
+    '</tr></thead>' +
+    '<tbody id="sr-table-body"><tr><td colspan="5" style="padding:20px;text-align:center;color:var(--t3)">로딩 중...</td></tr></tbody>' +
+    '</table></div>';
+  bottom.appendChild(detailCard);
+
+  // 정산 요약
+  var summaryCard = document.createElement('div');
+  summaryCard.className = 'card';
+  summaryCard.style.cssText = 'padding:20px;border-radius:18px';
+  summaryCard.innerHTML =
+    '<div style="font-size:13px;font-weight:800;color:var(--t3);margin-bottom:16px">정산 요약</div>' +
+    '<div id="sr-summary" style="display:flex;flex-direction:column;gap:12px">' +
+    '<div style="text-align:center;color:var(--t3);font-size:12px">로딩 중...</div>' +
+    '</div>' +
+    '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bd);font-size:10px;color:var(--t3)">* 수수료는 카드 매출의 3.5%로 자동 계산됩니다</div>';
+  bottom.appendChild(summaryCard);
+
+  wrap.appendChild(bottom);
+  el.appendChild(wrap);
+
+  // 데이터 로딩
+  _filoSalesReportLoad(did, dateFrom, dateTo);
+}
+
+// 정산 리포트 데이터 로딩
+function _filoSalesReportLoad(did, dateFrom, dateTo) {
+  _db.collection('filo_sales')
+    .where('dealerId','==',did)
+    .where('date','>=',dateFrom)
+    .where('date','<=',dateTo)
+    .get()
+    .then(function(snap){
+      // 날짜별 집계
+      var byDate = {};
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var dt = d.date||'';
+        if(!byDate[dt]) byDate[dt]={card:0,cash:0,total:0};
+        if(d.payType==='card'||d.payType==='카드'){
+          byDate[dt].card += (d.total||0);
+        } else {
+          byDate[dt].cash += (d.total||0);
+        }
+        byDate[dt].total += (d.total||0);
+      });
+
+      // 날짜 정렬
+      var dates = Object.keys(byDate).sort();
+      var totalCard=0,totalCash=0,totalFee=0,totalNet=0;
+
+      dates.forEach(function(dt){
+        var d = byDate[dt];
+        var fee = Math.round(d.card*0.035);
+        d.fee = fee;
+        d.net = d.total - fee;
+        totalCard += d.card;
+        totalCash += d.cash;
+        totalFee  += fee;
+        totalNet  += d.net;
+      });
+
+      // KPI 업데이트
+      var fmt = function(n){ return '₩'+Math.round(n).toLocaleString(); };
+      var el1=document.getElementById('sr-card');
+      var el2=document.getElementById('sr-cash');
+      var el3=document.getElementById('sr-fee');
+      var el4=document.getElementById('sr-net');
+      if(el1) el1.textContent=fmt(totalCard);
+      if(el2) el2.textContent=fmt(totalCash);
+      if(el3) el3.textContent=fmt(totalFee);
+      if(el4) el4.textContent=fmt(totalNet);
+
+      // 테이블
+      var tbody = document.getElementById('sr-table-body');
+      if(tbody){
+        if(!dates.length){
+          tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--t3)">데이터 없음</td></tr>';
+        } else {
+          tbody.innerHTML = dates.reverse().map(function(dt){
+            var d=byDate[dt];
+            var dayNames=['일','월','화','수','목','금','토'];
+            var day=new Date(dt); var dayName=dayNames[day.getDay()];
+            return '<tr style="border-bottom:1px solid var(--bd)">' +
+              '<td style="padding:8px 6px;color:var(--t3)">'+dt.slice(5)+'('+dayName+')</td>' +
+              '<td style="padding:8px 6px;font-weight:600">'+fmt(d.card)+'</td>' +
+              '<td style="padding:8px 6px;font-weight:600">'+fmt(d.cash)+'</td>' +
+              '<td style="padding:8px 6px;color:#ef4444">'+fmt(d.fee)+'</td>' +
+              '<td style="padding:8px 6px;font-weight:800;color:#7c3aed">'+fmt(d.net)+'</td>' +
+              '</tr>';
+          }).join('');
+        }
+      }
+
+      // 요약
+      var summary = document.getElementById('sr-summary');
+      if(summary){
+        summary.innerHTML = [
+          {l:'총 매출',   v:fmt(totalCard+totalCash), c:'var(--tx)'},
+          {l:'카드 매출', v:fmt(totalCard),            c:'#0891b2'},
+          {l:'현금 매출', v:fmt(totalCash),            c:'#059669'},
+          {l:'총 수수료', v:fmt(totalFee),             c:'#ef4444'},
+          {l:'총 순수익', v:fmt(totalNet),             c:'#7c3aed'},
+        ].map(function(row){
+          return '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<span style="font-size:13px;color:var(--t3)">'+row.l+'</span>' +
+            '<span style="font-size:15px;font-weight:800;color:'+row.c+'">'+row.v+'</span>' +
+            '</div>';
+        }).join('');
+      }
+
+      // 차트 (Chart.js)
+      _filoEnsureChartJS(function(){
+        var canvas = document.getElementById('sr-chart');
+        if(!canvas) return;
+        if(window._srChart) window._srChart.destroy();
+        var sortedDates = Object.keys(byDate).sort();
+        window._srChart = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: sortedDates.map(function(d){ return d.slice(5); }),
+            datasets: [
+              {label:'카드 매출', data:sortedDates.map(function(d){return byDate[d].card;}), borderColor:'#0891b2', backgroundColor:'rgba(8,145,178,.1)', tension:.4, fill:true, borderWidth:2, pointRadius:4},
+              {label:'현금 매출', data:sortedDates.map(function(d){return byDate[d].cash;}), borderColor:'#059669', backgroundColor:'rgba(5,150,105,.08)', tension:.4, fill:true, borderWidth:2, pointRadius:4},
+              {label:'순수익',   data:sortedDates.map(function(d){return byDate[d].net;}),  borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.08)', tension:.4, fill:false, borderWidth:2, borderDash:[4,4], pointRadius:4},
+            ]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{display:false}},
+            scales:{
+              x:{grid:{display:false},ticks:{font:{size:11}}},
+              y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11},callback:function(v){return '₩'+(v/10000).toFixed(0)+'만';}}}
+            }
+          }
+        });
+      });
+    }).catch(function(e){ console.error(e); });
+}
+
+// 기간 버튼 전환
+function _filoSalesReportPeriod(idx, did) {
+  document.querySelectorAll('.sr-period-btn').forEach(function(b,i){
+    b.style.background = i===idx ? 'var(--br)' : 'transparent';
+    b.style.color = i===idx ? '#fff' : 'var(--t3)';
+  });
+  var now = new Date();
+  var from, to;
+  if(idx===0){ // 이번주
+    var dow = now.getDay();
+    var mon = new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
+    var sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    from = mon.toISOString().slice(0,10);
+    to   = sun.toISOString().slice(0,10);
+  } else if(idx===1){ // 이번달
+    from = now.toISOString().slice(0,7)+'-01';
+    to   = now.toISOString().slice(0,10);
+  } else { // 지난달
+    var last = new Date(now.getFullYear(), now.getMonth(), 0);
+    var first = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    from = first.toISOString().slice(0,10);
+    to   = last.toISOString().slice(0,10);
+  }
+  var lbl = document.getElementById('sr-period-label');
+  if(lbl) lbl.textContent = '일별 정산 · '+from+' ~ '+to;
+  _filoSalesReportLoad(did, from, to);
+}
+
+// 내보내기 (간단 CSV)
+function _filoSalesReportExport() {
+  _filoToast('준비 중입니다!');
+}
