@@ -259,3 +259,182 @@ function _filoPay(){
 }
 
 // ── 분할 결제 (현금+카드) ──
+// ── 급여 명세서 관리 UI (사진 3번 스타일) ───────────────────────
+function _filoPagePayslip(el) {
+  var did = (_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+  if(!did){ el.innerHTML='<div class="card" style="text-align:center;padding:40px">로그인 후 이용하세요</div>'; return; }
+
+  var now = new Date();
+  var ym = now.toISOString().slice(0,7);
+
+  el.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.className = 'slide-up';
+  wrap.style.cssText = 'max-width:960px;margin:0 auto';
+
+  // ── 헤더 ──
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px';
+  hdr.innerHTML =
+    '<div>' +
+    '<div style="font-size:22px;font-weight:900;color:var(--tx)">급여 명세서 관리</div>' +
+    '<div style="font-size:12px;color:var(--t3);margin-top:4px">직원들의 월 급여 명세서를 관리하고 지급 처리를 진행합니다</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button onclick="_filoPayslipExcel()" style="padding:8px 14px;background:var(--surface);border:1px solid var(--bd);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx)">⬇ 엑셀 다운로드</button>' +
+    '<button onclick="_filoPayslipGenerate(''+did+'')" style="padding:8px 14px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 명세서 생성</button>' +
+    '</div>';
+  wrap.appendChild(hdr);
+
+  // ── KPI 4열 ──
+  var kpi = document.createElement('div');
+  kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px';
+  kpi.innerHTML = [
+    {id:'ps-total-staff',   ic:'👥', lbl:'총 직원수',       c:'#0891b2'},
+    {id:'ps-total-pay',     ic:'💰', lbl:'이번달 총 지급액', c:'#7c3aed'},
+    {id:'ps-avg-hours',     ic:'⏱',  lbl:'평균 근무시간',    c:'#f59e0b'},
+    {id:'ps-pending',       ic:'⚠️',  lbl:'미지급 건수',     c:'#ef4444'},
+  ].map(function(k){
+    return '<div class="card" style="padding:16px;border-radius:16px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+      '<span style="font-size:16px">'+k.ic+'</span>' +
+      '<span style="font-size:11px;font-weight:700;color:var(--t3)">'+k.lbl+'</span>' +
+      '</div>' +
+      '<div style="font-size:20px;font-weight:900;color:'+k.c+'" id="'+k.id+'">—</div>' +
+      (k.id==='ps-pending'?'<div style="font-size:10px;color:#ef4444;margin-top:2px">확인 필요</div>':'') +
+      '</div>';
+  }).join('');
+  wrap.appendChild(kpi);
+
+  // ── 월 선택 + 필터 ──
+  var filterBar = document.createElement('div');
+  filterBar.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap';
+  filterBar.innerHTML =
+    '<div style="font-size:15px;font-weight:900;color:var(--tx)" id="ps-month-title">'+ym.replace('-','년 ')+'월 급여 명세서</div>' +
+    '<div style="flex:1"></div>' +
+    '<select id="ps-filter-status" onchange="_filoPayslipFilter(''+did+'')" style="padding:7px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--surface);color:var(--tx);font-size:12px;cursor:pointer">' +
+    '<option value="all">지급상태: 전체</option>' +
+    '<option value="paid">지급완료</option>' +
+    '<option value="pending">지급대기</option>' +
+    '</select>';
+  wrap.appendChild(filterBar);
+
+  // ── 직원 급여 테이블 ──
+  var tableCard = document.createElement('div');
+  tableCard.className = 'card';
+  tableCard.style.cssText = 'padding:20px;border-radius:18px;margin-bottom:14px';
+  tableCard.innerHTML =
+    '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px" id="ps-table">' +
+    '<thead><tr style="border-bottom:2px solid var(--bd)">' +
+    ['직원명','부서/직급','근무시간','기본급','연장수당','공제액','실지급액','지급일','상태','관리'].map(function(h){
+      return '<th style="padding:10px 8px;text-align:left;font-weight:700;color:var(--t3);white-space:nowrap">'+h+'</th>';
+    }).join('') +
+    '</tr></thead>' +
+    '<tbody id="ps-table-body"><tr><td colspan="10" style="padding:30px;text-align:center;color:var(--t3)">로딩 중...</td></tr></tbody>' +
+    '</table></div>';
+  wrap.appendChild(tableCard);
+  el.appendChild(wrap);
+
+  // 데이터 로딩
+  _filoPayslipLoad(did, ym);
+}
+
+// 급여 데이터 로딩
+function _filoPayslipLoad(did, ym) {
+  var db = firebase.firestore();
+
+  Promise.all([
+    db.collection('members').where('dealerId','==',did).where('status','==','active').get(),
+    db.collection('attendance').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+    db.collection('payroll_records').where('dealerId','==',did).where('ym','==',ym).get()
+  ]).then(function(res){
+    var members = res[0].docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    var attDocs = res[1].docs.map(function(d){ return d.data(); });
+    var payDocs = {};
+    res[2].docs.forEach(function(d){ payDocs[d.data().memberId]=d.data(); });
+
+    // 직원별 근무시간 계산
+    var hoursMap = {};
+    attDocs.forEach(function(a){
+      if(!hoursMap[a.memberId]) hoursMap[a.memberId]=0;
+      hoursMap[a.memberId]+=(a.workHours||8);
+    });
+
+    var totalPay=0, pending=0, totalHours=0;
+    var tbody = document.getElementById('ps-table-body');
+    if(!tbody) return;
+
+    if(!members.length){
+      tbody.innerHTML='<tr><td colspan="10" style="padding:30px;text-align:center;color:var(--t3)">등록된 직원이 없어요</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = members.map(function(m){
+      var hours = hoursMap[m.id]||0;
+      var wage  = m.hourlyWage||m.wage||10000;
+      var base  = Math.round(hours * wage);
+      var overtime = hours>160 ? Math.round((hours-160)*wage*1.5) : 0;
+      var deduct = Math.round((base+overtime)*0.033);
+      var net   = base + overtime - deduct;
+      var pay   = payDocs[m.id];
+      var isPaid = pay && pay.status==='paid';
+      var payDate = pay ? (pay.paidAt||'').slice(0,10) : '';
+      totalPay += net;
+      totalHours += hours;
+      if(!isPaid) pending++;
+
+      var avatar = (m.name||'?').slice(0,1);
+      var colors = ['#7c3aed','#0891b2','#059669','#f59e0b','#ef4444'];
+      var color  = colors[Math.abs(m.id.charCodeAt(0))%5];
+
+      return '<tr style="border-bottom:1px solid var(--bd)">' +
+        '<td style="padding:12px 8px;white-space:nowrap">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+        '<div style="width:30px;height:30px;border-radius:50%;background:'+color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">'+avatar+'</div>' +
+        '<span style="font-weight:700">'+m.name+'</span></div></td>' +
+        '<td style="padding:12px 8px;color:var(--t3)"><div>'+(m.department||'—')+'</div><div style="font-size:10px">'+(m.position||'—')+'</div></td>' +
+        '<td style="padding:12px 8px;font-weight:600">'+hours+'h</td>' +
+        '<td style="padding:12px 8px">₩'+base.toLocaleString()+'</td>' +
+        '<td style="padding:12px 8px">₩'+overtime.toLocaleString()+'</td>' +
+        '<td style="padding:12px 8px;color:#ef4444">₩'+deduct.toLocaleString()+'</td>' +
+        '<td style="padding:12px 8px;font-weight:800;color:#7c3aed">₩'+net.toLocaleString()+'</td>' +
+        '<td style="padding:12px 8px;color:var(--t3);font-size:11px">'+(payDate||'—')+'</td>' +
+        '<td style="padding:12px 8px">' +
+        '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
+        (isPaid?'✅ 지급완료':'⏳ 지급대기')+'</span></td>' +
+        '<td style="padding:12px 8px">' +
+        (!isPaid?'<button onclick="_filoPayslipProcess(''+m.id+'',''+did+'',''+ym+'')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
+        '</td>' +
+        '</tr>';
+    }).join('');
+
+    // KPI 업데이트
+    var e1=document.getElementById('ps-total-staff');
+    var e2=document.getElementById('ps-total-pay');
+    var e3=document.getElementById('ps-avg-hours');
+    var e4=document.getElementById('ps-pending');
+    if(e1) e1.textContent=members.length+'명';
+    if(e2) e2.textContent='₩'+totalPay.toLocaleString();
+    if(e3) e3.textContent=members.length?Math.round(totalHours/members.length)+'h':'—';
+    if(e4){ e4.textContent=pending+'건'; e4.style.color=pending>0?'#ef4444':'#22c55e'; }
+
+  }).catch(function(e){ console.error('급여 로딩 오류:', e); });
+}
+
+// 지급 처리
+function _filoPayslipProcess(memberId, did, ym) {
+  if(!confirm('지급 처리하시겠어요?')) return;
+  firebase.firestore().collection('payroll_records').add({
+    dealerId:did, memberId:memberId, ym:ym,
+    status:'paid', paidAt:new Date().toISOString(),
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _filoToast('지급 처리됐어요!');
+    _filoPayslipLoad(did, ym);
+  }).catch(function(e){ _filoToast('오류: '+e.message); });
+}
+
+function _filoPayslipFilter(did){ _filoToast('필터 기능 준비 중'); }
+function _filoPayslipExcel(){ _filoToast('엑셀 다운로드 준비 중'); }
+function _filoPayslipGenerate(did){ _filoToast('명세서 자동 생성 준비 중'); }
