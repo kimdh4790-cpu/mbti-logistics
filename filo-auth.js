@@ -50,7 +50,7 @@ function _initFirebase(){
  projectId:'mbti-logistics',
  storageBucket:'mbti-logistics.appspot.com',
  messagingSenderId:'862900137263',
- appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'
+ appId:'1:40761160761:web:20545b610f03f534e949e8'
  };
  _fbApp=firebase.initializeApp(cfg);
  _db=firebase.firestore();
