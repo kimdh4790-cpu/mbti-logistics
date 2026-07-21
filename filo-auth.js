@@ -231,7 +231,7 @@ function _buildFiloNav(){
  /* ── 재고 (인벤토리 구독) ── */
  if(hasAll||hasSub('inventory')||hasFeature('inventory')){
   menus.push({s:'📦 재고',items:[
-   {ic:'📊',l:'재고 현황',p:'inventory'},
+   {ic:'📊',l:'재고 대시보드',p:'inv_dash'},{ic:'📋',l:'재고 현황',p:'inventory'},
    {ic:'🍽',l:'레시피·원가',p:'recipe'},
    {ic:'🔔',l:'자동 발주',p:'auto_order'},
   ]});
@@ -241,7 +241,7 @@ function _buildFiloNav(){
  if(hasAll||hasSub('qr')||hasSub('kiosk')||hasFeature('qr_attend')||hasFeature('table_order')){
   menus.push({s:'🏪 운영',items:[
    {ic:'👤',l:'직원 QR',p:'qr_staff'},
-   {ic:'📋',l:'테이블 QR',p:'table_qr'},{ic:'🧍',l:'웨이팅',p:'waiting'},{ic:'💼',l:'급여 명세서',p:'payslip'},
+   {ic:'📋',l:'테이블 QR',p:'table_qr'},{ic:'🧍',l:'웨이팅',p:'waiting'},
    {ic:'🗓',l:'예약·달력',p:'schedule'},
   ]});
  }
@@ -428,6 +428,7 @@ function _filoGoPage(p){
  else if(p==='sales_report') _filoPageSales(el);
  else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='inventory') _filoPageInventory(el);
+ else if(p==='inv_dash'){ _filoLoadAndRun('filo-inventory.js',function(){_filoPageInventoryDash(el);}); }
  else if(p==='stock_in') _filoPageStockIn(el);
  else if(p==='stock_out') _filoPageStockOut(el);
  else if(p==='auto_order') _filoPageAutoOrder(el);
@@ -436,7 +437,6 @@ function _filoGoPage(p){
  else if(p==='members') _filoPageMembers(el);
  else if(p==='attend_dash') _filoPageAttendDash(el);
  else if(p==='payroll') _filoPagePayroll(el);
- else if(p==='payslip'){ _filoLoadAndRun('filo-payroll2.js',function(){_filoPagePayslip(el);}); }
  else if(p==='payroll_dine'){ var slug=(_CU&&_CU.dineSlug)||''; var k=slug||(_CU&&(_CU.companyName||_CU.name))||''; var url=k?'https://dine.ne.kr/'+encodeURIComponent(k)+'#payroll':'https://dine.ne.kr/app'; window.open(url,'_blank'); }
  else if(p==='roster') _filoPageRoster(el);
  else if(p==='qr_staff') _filoPageStaffQR(el);
