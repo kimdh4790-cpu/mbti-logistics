@@ -616,6 +616,11 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // ★ yongcha.app 분기
+    if (hostname === 'yongcha.app' || hostname === 'www.yongcha.app') {
+      return handleYongcha(request, env);
+    }
+
     // 보안: 민감 경로 차단
     if (path.match(/^\/\.env|^\/\.git|^\/\.aws|^\/config\.json|^\/wp-|^\/phpmy/i)) {
       return new Response('Not Found', {status:404});
