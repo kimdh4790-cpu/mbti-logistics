@@ -454,10 +454,12 @@ function _filoWaitingAdd(did){
     dealerId:did,name:name,seats:seats,phone:phone,
     date:_today(),status:'waiting',
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
-    _filoToast('대기 등록됐어요!');
-    // ★ 사장님 FCM 푸시 알림
-    _filoWaitingNotify(did, '🧍 새 웨이팅 등록', name+'님 '+seats+'명 대기 등록됐어요!', 'waiting');
+  }).then(function(ref){
+    var wid=ref.id;
+    var waitUrl='https://filo.ai.kr/wait?d='+did+'&w='+wid;
+    _filoToast('등록 완료! 손님에게 QR을 보여주세요');
+    _filoWaitingNotify(did,'🧍 새 웨이팅 등록',name+'님 '+seats+'명 대기!','waiting');
+    _filoShowWaitQR(waitUrl,name,wid);
   }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 function _filoWaitingCall(wid,did,name){
@@ -576,4 +578,44 @@ function _filoWaitingNotify(did, title, body, type) {
   }).catch(function(e){
     console.warn('웨이팅 알림 오류:', e.message);
   });
+}
+
+// ── 손님 웨이팅 QR 모달 ────────────────────────────────────────
+function _filoShowWaitQR(url, name, wid) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surface);border-radius:24px;padding:28px 24px;max-width:300px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)';
+  var qrId = 'wqr'+Date.now();
+  modal.innerHTML =
+    '<div style="font-size:13px;font-weight:800;color:var(--t3);margin-bottom:4px">웨이팅 등록 완료</div>'+
+    '<div style="font-size:16px;font-weight:900;color:var(--tx);margin-bottom:16px">'+name+'님 QR 스캔 안내</div>'+
+    '<div id="'+qrId+'" style="width:160px;height:160px;margin:0 auto 12px"></div>'+
+    '<div style="font-size:12px;color:var(--t3);margin-bottom:16px;line-height:1.6">손님 폰으로 스캔하면<br>실시간 대기 현황 + 호출 알림</div>'+
+    '<button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:14px;background:var(--br);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+  function makeQR(){
+    if(typeof QRCode !== 'undefined'){
+      new QRCode(document.getElementById(qrId), {text:url,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
+    } else {
+      var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=makeQR;document.head.appendChild(s);
+    }
+  }
+  setTimeout(makeQR, 100);
+}
+
+// ── 손님 FCM 푸시 알림 ─────────────────────────────────────────
+function _filoWaitingNotifyGuest(wid, title, body) {
+  _db.collection('dine_waiting').doc(wid).get().then(function(snap){
+    if(!snap.exists) return;
+    var token = snap.data().guestFcmToken;
+    if(!token) return;
+    fetch('/api/ctrl-notify', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'token',token:token,title:title,body:body,data:{page:'wait',wid:wid,action:'called'}})
+    }).catch(function(){});
+  }).catch(function(){});
 }
