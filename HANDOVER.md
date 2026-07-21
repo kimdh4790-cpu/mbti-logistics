@@ -324,5 +324,170 @@ Firestore: companies/{dealerId}.posMode
 
 ---
 
+---
+
+## 14. 용차 앱 기획 (신규 — 개발 예정)
+
+### 비즈니스 모델
+```
+대리점 (구인자)   ←→   엠비티아이 플랫폼   ←→   기사 (구직자)
+노선/물량 공고 등록      수수료 ~10% 마진       지원 및 승인
+```
+
+- 택배 대리점이 노선(배송구역/물량/단가)을 공고로 올림
+- 기사가 공고를 보고 지원 → 대리점이 승인
+- 엠비티아이는 중간 수수료 수익
+- 실제 배송은 각 택배사 앱(CJ/한진 등) 대리점 아이디로 처리
+- API 연동 없음 — 플랫폼은 매칭만 담당
+
+### 시장 분석
+```
+✅ 블루오션 — 전용 플랫폼 없음
+✅ 현재 방식: 카카오 오픈채팅 / 네이버 카페 / 지인소개
+✅ 국내 택배 대리점 약 3만개+
+✅ 택배 기사 약 5만명+
+✅ 규제샌드박스 특례 부여 중 (2026.05 국토부)
+```
+
+### 법적 검토 필요 사항
+```
+화물자동차운송주선사업 허가 검토 필요
+  → 유상으로 화물운송계약 중개 시 주선업 해당
+  → 허가관청: 시·도지사 (부산시)
+  → 자본금: 1억 5천만원 이상
+  → 차량 보유 불필요 (법인/개인 모두 가능)
+
+베타 운영 전략:
+  → 수수료 무료로 먼저 운영 (주선업 미해당)
+  → 규모 확장 시 허가 신청
+  → 규제샌드박스 신청 검토 (최대 5억 지원)
+
+담당 변호사 상담 권장 (30~50만원)
+```
+
+### 추천 도메인
+```
+yongcha.ai.kr  ← 1순위 (기존 패턴 통일)
+  → donway.ai.kr / filo.ai.kr / dine.ne.kr 패턴
+  → Cloudflare 라우트만 추가하면 됨
+  → 별도 도메인 구매 불필요
+```
+
+### 핵심 기능 설계
+
+**대리점 기능:**
+```
+회원가입 / 로그인
+노선 공고 등록
+  → 택배사 / 구역 / 물량 / 단가 / 기간 / 조건
+지원자 목록 조회
+기사 승인 / 거절
+완료 후 정산 요청
+```
+
+**기사 기능:**
+```
+회원가입 / 로그인 / 프로필 (차량정보/경력)
+공고 목록 조회 (지역별/단가별/택배사별 필터)
+공고 상세 보기 + 지원하기
+승인 알림 수신 (FCM)
+일정 관리 (내 노선 캘린더)
+정산 내역 확인
+```
+
+**플랫폼 관리자 기능:**
+```
+수수료 자동 계산
+회원 관리 (대리점/기사)
+공고 모니터링
+분쟁 중재
+정산 관리
+```
+
+### 기술 스택 (예정)
+```
+Firebase: mbti-logistics 기존 공유
+  → Firestore: yongcha_posts / yongcha_applies / yongcha_users
+  → Auth: 기존 공유
+  → FCM: 기존 공유
+
+도메인: yongcha.ai.kr
+Worker: mbtico-pages/_worker.js에 라우트 추가
+  또는 별도 yongcha-pages/_worker.js
+
+파일 구조 (예정):
+  yongcha.html       — 메인 (공고 목록/검색)
+  yongcha-auth.js    — 인증+네비
+  yongcha-post.js    — 공고 등록/관리
+  yongcha-apply.js   — 지원/승인 관리
+  yongcha-settle.js  — 수수료 정산
+```
+
+### Firestore 컬렉션 설계 (예정)
+```
+yongcha_users/{uid}
+  type: 'agency' | 'driver'
+  name / phone / bizNum (대리점)
+  carType / carNum / license (기사)
+  region / company (소속 택배사)
+
+yongcha_posts/{postId}
+  agencyId / title / region
+  courier: 'CJ' | '한진' | '우체국' | ...
+  volume / unitPrice / totalPrice
+  startDate / endDate
+  status: 'open' | 'closed' | 'filled'
+  createdAt
+
+yongcha_applies/{applyId}
+  postId / driverId / agencyId
+  status: 'pending' | 'approved' | 'rejected'
+  appliedAt / approvedAt
+
+yongcha_settlements/{settleId}
+  postId / driverId / agencyId
+  amount / fee / netAmount
+  status: 'pending' | 'paid'
+```
+
+### 개발 우선순위 (박람회 이후)
+```
+1단계 (2주): 기본 뼈대
+  → 회원가입/로그인 (대리점/기사 구분)
+  → 공고 등록 + 목록 조회
+  → 지원하기 + 승인/거절
+
+2단계 (2주): 알림 + 정산
+  → FCM 푸시 알림 (승인/거절 알림)
+  → 수수료 자동 계산
+  → 정산 내역
+
+3단계 (1주): 고도화
+  → 기사 프로필/평점
+  → 지역별 필터
+  → 관리자 대시보드
+
+예상 개발 기간: 5~6주
+```
+
+### 수익 모델
+```
+방법 1: 건당 수수료 (추천)
+  → 매칭 완료 건당 단가의 10%
+  → 정산 완료 후 자동 차감
+
+방법 2: 월 구독
+  → 대리점: 월 X만원 (공고 무제한)
+  → 기사: 무료 (수수료 없음)
+
+방법 3: 하이브리드
+  → 기본 구독 + 건당 소액 수수료
+```
+
+---
+
+*용차 앱 관련 문의: kimdh4790@gmail.com*
+*법적 검토 전 상용 서비스 금지 권장*
+
 *이 문서는 2026-07-21 기준으로 작성됐습니다.*
 *최신 코드는 GitHub: kimdh4790-cpu/mbti-logistics 참고*
