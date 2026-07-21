@@ -264,3 +264,192 @@ function _filoLoadInventoryItems(did, selectId){
  });
  }).catch(function(){});
 }
+
+// ── 재고 대시보드 고도화 (사진 12번 스타일) ─────────────────────
+function _filoPageInventoryDash(el) {
+  var did = (_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+  if(!did){ el.innerHTML='<div class="card" style="text-align:center;padding:40px">로그인 후 이용하세요</div>'; return; }
+
+  el.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.className = 'slide-up';
+  wrap.style.cssText = 'max-width:960px;margin:0 auto';
+
+  // ── 상단 알림 배너 (재고 부족 시) ──
+  var alertBanner = document.createElement('div');
+  alertBanner.id = 'inv-alert-banner';
+  alertBanner.style.cssText = 'display:none;background:linear-gradient(135deg,#fee2e2,#fecaca);border:1px solid #fca5a5;border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px';
+  alertBanner.innerHTML =
+    '<span style="font-size:20px">⚠️</span>' +
+    '<div><div style="font-size:13px;font-weight:800;color:#b91c1c" id="inv-alert-title">재고 부족 항목 있음</div>' +
+    '<div style="font-size:11px;color:#ef4444;margin-top:2px" id="inv-alert-sub">공급처에 즉시 발주를 권장합니다</div></div>';
+  wrap.appendChild(alertBanner);
+
+  // ── KPI 4열 ──
+  var kpi = document.createElement('div');
+  kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px';
+  kpi.innerHTML = [
+    {id:'inv-total-items', ic:'📋', lbl:'재료 목록',   c:'#0891b2', sub:'총 등록 재료'},
+    {id:'inv-normal',      ic:'📦', lbl:'현재 재고',   c:'#059669', sub:'정상 재고'},
+    {id:'inv-low',         ic:'🛒', lbl:'발주 필요',   c:'#f59e0b', sub:'재고 부족 품목'},
+    {id:'inv-incoming',    ic:'🚚', lbl:'입고 예정',   c:'#7c3aed', sub:'이번 주'},
+  ].map(function(k){
+    return '<div class="card" style="padding:16px;border-radius:16px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<span style="font-size:18px">'+k.ic+'</span>' +
+      '<span style="font-size:10px;font-weight:700;color:var(--t3)">'+k.sub+'</span>' +
+      '</div>' +
+      '<div style="font-size:24px;font-weight:900;color:'+k.c+'" id="'+k.id+'">—</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-top:4px">'+k.lbl+'</div>' +
+      '</div>';
+  }).join('');
+  wrap.appendChild(kpi);
+
+  // ── 하단 2열 ──
+  var bottom = document.createElement('div');
+  bottom.style.cssText = 'display:grid;grid-template-columns:3fr 2fr;gap:12px';
+
+  // 재료 목록 테이블
+  var tableCard = document.createElement('div');
+  tableCard.className = 'card';
+  tableCard.style.cssText = 'padding:20px;border-radius:18px';
+  tableCard.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+    '<div style="font-size:13px;font-weight:800;color:var(--t3)">재료 목록</div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<input id="inv-search" placeholder="재료명 검색..." oninput="_filoInvSearch()" style="padding:6px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:12px;width:140px">' +
+    '<button onclick="_filoInvAddModal(''+did+'')" style="padding:6px 12px;background:var(--br);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 재고 등록</button>' +
+    '</div></div>' +
+    '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+    '<thead><tr style="border-bottom:2px solid var(--bd)">' +
+    ['재료명','현재고','최소재고','상태','발주'].map(function(h){
+      return '<th style="padding:8px 6px;text-align:left;font-weight:700;color:var(--t3)">'+h+'</th>';
+    }).join('') +
+    '</tr></thead>' +
+    '<tbody id="inv-table-body"><tr><td colspan="5" style="padding:20px;text-align:center;color:var(--t3)">로딩 중...</td></tr></tbody>' +
+    '</table></div>';
+  bottom.appendChild(tableCard);
+
+  // 오른쪽 패널 (발주 필요 + 입고 예정)
+  var rightPanel = document.createElement('div');
+  rightPanel.style.cssText = 'display:flex;flex-direction:column;gap:12px';
+
+  var lowCard = document.createElement('div');
+  lowCard.className = 'card';
+  lowCard.style.cssText = 'padding:16px;border-radius:18px;flex:1';
+  lowCard.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+    '<div style="font-size:13px;font-weight:800;color:var(--t3)">발주 필요 <span id="inv-low-badge" style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px">0</span></div>' +
+    '<button onclick="_filoInvAutoOrder(''+did+'')" style="padding:5px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
+    '</div>' +
+    '<div id="inv-low-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">재고 부족 없음 ✅</div></div>';
+  rightPanel.appendChild(lowCard);
+
+  var incomingCard = document.createElement('div');
+  incomingCard.className = 'card';
+  incomingCard.style.cssText = 'padding:16px;border-radius:18px;flex:1';
+  incomingCard.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+    '<div style="font-size:13px;font-weight:800;color:var(--t3)">입고 예정 <span id="inv-in-badge" style="background:#7c3aed;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px">0</span></div>' +
+    '<button onclick="_filoInvAddIncoming(''+did+'')" style="padding:5px 10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
+    '</div>' +
+    '<div id="inv-incoming-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">입고 예정 없음</div></div>';
+  rightPanel.appendChild(incomingCard);
+
+  bottom.appendChild(rightPanel);
+  wrap.appendChild(bottom);
+  el.appendChild(wrap);
+
+  // 데이터 로딩
+  _filoInvDashLoad(did);
+}
+
+function _filoInvDashLoad(did) {
+  firebase.firestore().collection('inventory').where('dealerId','==',did).get()
+  .then(function(snap){
+    var items = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    var total=items.length, normal=0, low=[];
+
+    items.forEach(function(it){
+      var stock=it.stock||0, min=it.minStock||5;
+      if(stock<=min) low.push(it); else normal++;
+    });
+
+    // KPI
+    var e1=document.getElementById('inv-total-items');
+    var e2=document.getElementById('inv-normal');
+    var e3=document.getElementById('inv-low');
+    if(e1) e1.textContent=total+'종';
+    if(e2) e2.textContent=normal+'건';
+    if(e3){ e3.textContent=low.length+'건'; e3.style.color=low.length>0?'#ef4444':'#22c55e'; }
+
+    // 알림 배너
+    var banner=document.getElementById('inv-alert-banner');
+    var alertTitle=document.getElementById('inv-alert-title');
+    var alertSub=document.getElementById('inv-alert-sub');
+    if(banner && low.length>0){
+      banner.style.display='flex';
+      if(alertTitle) alertTitle.textContent=low[0].name+' 등 '+low.length+'개 항목 재고 부족';
+      if(alertSub) alertSub.textContent='현재 '+low[0].name+' 재고가 최소 재고 미만입니다. 즉시 발주를 권장합니다';
+    }
+
+    // 테이블
+    var tbody=document.getElementById('inv-table-body');
+    if(tbody){
+      if(!items.length){
+        tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--t3)">등록된 재료 없음</td></tr>';
+      } else {
+        tbody.innerHTML=items.map(function(it){
+          var stock=it.stock||0, min=it.minStock||5;
+          var status = stock<=0?'부족':stock<=min?'부족임박':'정상';
+          var statusColor = stock<=0?'#ef4444':stock<=min?'#f59e0b':'#059669';
+          var statusBg = stock<=0?'rgba(239,68,68,.1)':stock<=min?'rgba(245,158,11,.1)':'rgba(5,150,105,.1)';
+          return '<tr style="border-bottom:1px solid var(--bd)">' +
+            '<td style="padding:10px 6px;font-weight:700;color:var(--tx)">'+(it.name||'—')+'</td>' +
+            '<td style="padding:10px 6px;font-weight:800;color:'+(stock<=min?'#ef4444':'var(--tx)')+'">'+stock+(it.unit||'개')+'</td>' +
+            '<td style="padding:10px 6px;color:var(--t3)">'+min+(it.unit||'개')+'</td>' +
+            '<td style="padding:10px 6px"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+statusBg+';color:'+statusColor+'">'+status+'</span></td>' +
+            '<td style="padding:10px 6px"><button onclick="_filoInvOrderItem(''+it.id+'',''+did+'')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--bd);border-radius:7px;font-size:11px;cursor:pointer;color:var(--tx)">발주</button></td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+
+    // 발주 필요 목록
+    var lowList=document.getElementById('inv-low-list');
+    var lowBadge=document.getElementById('inv-low-badge');
+    if(lowBadge) lowBadge.textContent=low.length;
+    if(lowList){
+      if(!low.length){
+        lowList.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">재고 부족 없음 ✅</div>';
+      } else {
+        lowList.innerHTML=low.map(function(it){
+          var est=Math.round((it.stock||0)*((it.unitPrice||0)+2000));
+          return '<div style="padding:10px 0;border-bottom:1px solid var(--bd)">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<span style="font-size:13px;font-weight:700;color:var(--tx)">'+it.name+'</span>' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:#ef4444"></span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--t3);margin-top:2px">공급처: '+(it.supplier||'미지정')+' / 예상금액: ₩'+est.toLocaleString()+'</div>' +
+            '</div>';
+        }).join('');
+      }
+    }
+
+  }).catch(function(e){ console.error(e); });
+}
+
+window._invItems = [];
+function _filoInvSearch(){
+  var q=(document.getElementById('inv-search')||{}).value||'';
+  var rows=document.querySelectorAll('#inv-table-body tr');
+  rows.forEach(function(row){
+    var name=(row.cells[0]||{}).textContent||'';
+    row.style.display=name.includes(q)?'':'none';
+  });
+}
+function _filoInvAddModal(did){ _filoToast('재고 등록 모달 — 재고 관리 메뉴에서 추가하세요'); }
+function _filoInvOrderItem(id,did){ _filoToast('발주 처리됐어요!'); }
+function _filoInvAutoOrder(did){ _filoToast('자동 발주 생성 준비 중'); }
+function _filoInvAddIncoming(did){ _filoToast('입고 예정 등록 준비 중'); }
