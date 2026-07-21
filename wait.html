@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>FILO — 웨이팅 현황</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:#f8fafc;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:24px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 4px 32px rgba(0,0,0,.08);text-align:center}
+.logo{font-size:32px;margin-bottom:4px}
+.store{font-size:16px;font-weight:800;color:#111;margin-bottom:20px}
+
+/* 웨이팅 번호 */
+.wait-num-wrap{background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:20px;padding:28px 20px;margin-bottom:20px;position:relative;overflow:hidden}
+.wait-num-wrap::before{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.08)}
+.wait-label{font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.wait-num{font-size:72px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px}
+.wait-sub{font-size:13px;color:rgba(255,255,255,.7)}
+
+/* 상태 카드들 */
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.status-card{background:#f8fafc;border-radius:14px;padding:14px 10px;text-align:center}
+.status-val{font-size:22px;font-weight:900;color:#7c3aed;margin-bottom:3px}
+.status-lbl{font-size:11px;font-weight:600;color:#94a3b8}
+
+/* 상태 배지 */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:20px}
+.badge.waiting{background:rgba(124,58,237,.1);color:#7c3aed}
+.badge.called{background:rgba(34,197,94,.1);color:#059669;animation:glow 1s ease infinite}
+.badge.seated{background:rgba(148,163,184,.1);color:#94a3b8}
+.badge-dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* 호출 알림 */
+.call-alert{background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:18px;padding:20px;margin-bottom:20px;display:none}
+.call-alert.show{display:block;animation:bounceIn .5s ease}
+.call-alert-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:4px}
+.call-alert-sub{font-size:13px;color:rgba(255,255,255,.8)}
+@keyframes bounceIn{0%{transform:scale(.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+
+/* 알림 버튼 */
+.notify-btn{width:100%;padding:16px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:.2s}
+.notify-btn:active{transform:scale(.97)}
+.notify-btn.allowed{background:linear-gradient(135deg,#22c55e,#16a34a)}
+.notify-btn.allowed::before{content:'✅ '}
+
+/* 대기 목록 미니 */
+.queue-list{text-align:left;margin-bottom:20px}
+.queue-list-title{font-size:12px;font-weight:800;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.queue-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9}
+.queue-item:last-child{border:none}
+.queue-num{width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.queue-num.mine{background:#f59e0b}
+.queue-info{flex:1;font-size:13px;color:#334155;font-weight:600}
+.queue-time{font-size:11px;color:#94a3b8}
+
+/* 로딩 */
+#loading{text-align:center;padding:40px}
+.spinner{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 만료/오류 */
+#error-screen{text-align:center;padding:20px}
+.error-ico{font-size:48px;margin-bottom:12px}
+.error-msg{font-size:14px;color:#64748b;line-height:1.6}
+
+.refresh-btn{width:100%;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
+.footer{font-size:11px;color:#94a3b8;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- 로딩 -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:#94a3b8">대기 현황 불러오는 중...</div>
+  </div>
+
+  <!-- 메인 화면 -->
+  <div id="main-screen" style="display:none">
+    <div class="logo">🍽</div>
+    <div class="store" id="store-name">매장</div>
+
+    <!-- 호출 알림 (호출됐을 때) -->
+    <div class="call-alert" id="call-alert">
+      <div style="font-size:32px;margin-bottom:8px">🎉</div>
+      <div class="call-alert-title">순서가 됐어요!</div>
+      <div class="call-alert-sub">직원의 안내를 받아 입장해 주세요</div>
+    </div>
+
+    <!-- 웨이팅 번호 -->
+    <div class="wait-num-wrap" id="wait-num-wrap">
+      <div class="wait-label">내 웨이팅 번호</div>
+      <div class="wait-num" id="my-num">—</div>
+      <div class="wait-sub" id="my-name-seats">—</div>
+    </div>
+
+    <!-- 상태 배지 -->
+    <div class="badge waiting" id="status-badge">
+      <span class="badge-dot"></span>
+      <span id="status-text">대기 중</span>
+    </div>
+
+    <!-- 통계 -->
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-val" id="ahead-cnt">—</div>
+        <div class="status-lbl">내 앞 대기팀</div>
+      </div>
+      <div class="status-card">
+        <div class="status-val" id="est-time">—</div>
+        <div class="status-lbl">예상 대기시간</div>
+      </div>
+    </div>
+
+    <!-- 대기 목록 -->
+    <div class="queue-list">
+      <div class="queue-list-title">현재 대기 현황</div>
+      <div id="queue-items"></div>
+    </div>
+
+    <!-- 알림 버튼 -->
+    <button class="notify-btn" id="notify-btn" onclick="_requestPush()">
+      🔔 내 차례 알림 받기
+    </button>
+
+    <button class="refresh-btn" onclick="_refreshStatus()">↻ 새로고침</button>
+
+    <div class="footer">실시간으로 자동 업데이트 돼요</div>
+  </div>
+
+  <!-- 오류 화면 -->
+  <div id="error-screen" style="display:none">
+    <div class="error-ico">😔</div>
+    <div class="error-msg" id="error-msg">대기 정보를 찾을 수 없어요</div>
+    <button class="refresh-btn" onclick="location.reload()">↻ 다시 시도</button>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
+<script>
+// ── 파라미터 ──────────────────────────────────────────────────
+var params  = new URLSearchParams(location.search);
+var _did    = params.get('d') || '';
+var _wid    = params.get('w') || '';
+var _db     = null;
+var _unsub  = null;
+var _myData = null;
+var _pushAllowed = false;
+
+// ── Firebase 초기화 ───────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:            'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:        'mbti-logistics.firebaseapp.com',
+  projectId:         'mbti-logistics',
+  storageBucket:     'mbti-logistics.appspot.com',
+  messagingSenderId: '862900137263',
+  appId:             '1:862900137263:web:a1b2c3d4e5f6a7b8'
+});
+_db = firebase.firestore();
+
+// ── 초기 로딩 ─────────────────────────────────────────────────
+window.onload = function() {
+  if(!_did || !_wid) {
+    showError('잘못된 접속 링크예요');
+    return;
+  }
+  // 매장명 로딩
+  _db.collection('companies').doc(_did).get().then(function(snap) {
+    var name = snap.exists ? (snap.data().companyName || snap.data().name || '매장') : '매장';
+    document.getElementById('store-name').textContent = name;
+  }).catch(function(){});
+
+  // 내 대기 정보 실시간 감지
+  _listenMyWaiting();
+};
+
+// ── 내 대기 실시간 감지 ───────────────────────────────────────
+function _listenMyWaiting() {
+  if(_unsub) _unsub();
+
+  _unsub = _db.collection('dine_waiting').doc(_wid)
+    .onSnapshot(function(snap) {
+      document.getElementById('loading').style.display = 'none';
+
+      if(!snap.exists) { showError('대기 정보가 없어요'); return; }
+
+      _myData = Object.assign({id:snap.id}, snap.data());
+      document.getElementById('main-screen').style.display = 'block';
+
+      // 내 순번 계산 (같은 날 waiting 상태인 것들 중 내 앞)
+      var today = _myData.date || new Date().toISOString().slice(0,10);
+      _db.collection('dine_waiting')
+        .where('dealerId','==',_did)
+        .where('date','==',today)
+        .where('status','==','waiting')
+        .orderBy('createdAt')
+        .get()
+        .then(function(allSnap) {
+          var allList = [];
+          allSnap.forEach(function(d){ allList.push(Object.assign({id:d.id},d.data())); });
+
+          var myIdx = allList.findIndex(function(w){ return w.id===_wid; });
+          var myNum = myIdx + 1;
+          var ahead = myIdx; // 내 앞 팀 수
+
+          // 상태별 UI
+          var status = _myData.status;
+
+          if(status === 'waiting') {
+            // 대기 중
+            document.getElementById('my-num').textContent = myNum || '—';
+            document.getElementById('my-name-seats').textContent = (_myData.name||'손님') + ' · ' + (_myData.seats||1) + '명';
+            document.getElementById('ahead-cnt').textContent = ahead + '팀';
+            document.getElementById('est-time').textContent = ahead > 0 ? (ahead*5)+'분' : '곧 입장';
+
+            var badge = document.getElementById('status-badge');
+            badge.className = 'badge waiting';
+            document.getElementById('status-text').textContent = '대기 중';
+            document.getElementById('wait-num-wrap').style.background = 'linear-gradient(135deg,#7c3aed,#6d28d9)';
+            document.getElementById('call-alert').classList.remove('show');
+
+            // 대기 목록 렌더
+            _renderQueue(allList, _wid);
+
+          } else if(status === 'called') {
+            // 호출됨!
+            document.getElementById('my-num').textContent = '🎉';
+            document.getElementById('my-name-seats').textContent = '입장해 주세요!';
+            document.getElementById('ahead-cnt').textContent = '0팀';
+            document.getElementById('est-time').textContent = '지금';
+
+            var badge2 = document.getElementById('status-badge');
+            badge2.className = 'badge called';
+            document.getElementById('status-text').textContent = '호출됨!';
+            document.getElementById('wait-num-wrap').style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+            document.getElementById('call-alert').classList.add('show');
+
+            // 진동
+            if(navigator.vibrate) navigator.vibrate([300,100,300,100,300]);
+
+          } else if(status === 'seated') {
+            document.getElementById('my-num').textContent = '✅';
+            document.getElementById('my-name-seats').textContent = '착석 완료';
+            var badge3 = document.getElementById('status-badge');
+            badge3.className = 'badge seated';
+            document.getElementById('status-text').textContent = '착석 완료';
+            document.getElementById('call-alert').classList.remove('show');
+            if(_unsub){ _unsub(); _unsub=null; }
+
+          } else if(status === 'cancelled') {
+            showError('대기가 취소됐어요');
+            if(_unsub){ _unsub(); _unsub=null; }
+          }
+        }).catch(function(){});
+
+    }, function(e) { showError('연결 오류: '+e.message); });
+}
+
+// ── 대기 목록 렌더 ────────────────────────────────────────────
+function _renderQueue(list, myWid) {
+  var el = document.getElementById('queue-items');
+  if(!el) return;
+  if(!list.length) { el.innerHTML='<div style="font-size:12px;color:#94a3b8;text-align:center;padding:12px">대기자 없음</div>'; return; }
+  el.innerHTML = list.slice(0,5).map(function(w,i){
+    var isMine = w.id === myWid;
+    var waitMin = w.createdAt ? Math.floor((Date.now()-(w.createdAt.seconds||0)*1000)/60000) : 0;
+    return '<div class="queue-item">' +
+      '<div class="queue-num'+(isMine?' mine':'')+'">'+(i+1)+'</div>' +
+      '<div class="queue-info">'+(isMine?'👤 나':'팀 '+(i+1))+(w.seats?' · '+w.seats+'명':'')+'</div>' +
+      '<div class="queue-time">'+waitMin+'분 대기</div>' +
+      '</div>';
+  }).join('') + (list.length>5?'<div style="font-size:11px;color:#94a3b8;text-align:center;padding:8px">외 '+(list.length-5)+'팀 더...</div>':'');
+}
+
+// ── FCM 푸시 알림 요청 ────────────────────────────────────────
+function _requestPush() {
+  if(!('Notification' in window)){ alert('이 브라우저는 알림을 지원하지 않아요'); return; }
+  Notification.requestPermission().then(function(perm) {
+    if(perm === 'granted') {
+      var btn = document.getElementById('notify-btn');
+      btn.textContent = '알림 설정 완료!';
+      btn.classList.add('allowed');
+      btn.disabled = true;
+      _pushAllowed = true;
+      // FCM 토큰 발급 후 dine_waiting에 저장
+      try {
+        var messaging = firebase.messaging();
+        messaging.getToken({
+          vapidKey: 'BLBz_gqIrmv-Nbo4VATYedmAEGo7iIf0MYrFtSmK2b0TCTKAi5bO8m3gBPkVfmT4YM7Bb0VCOfzHB5V7d3X5NHA'
+        }).then(function(token){
+          if(token && _wid){
+            _db.collection('dine_waiting').doc(_wid).update({ guestFcmToken: token })
+              .catch(function(){});
+          }
+        }).catch(function(){});
+      } catch(e){}
+    } else {
+      alert('알림을 허용해야 호출 알림을 받을 수 있어요');
+    }
+  });
+}
+
+// ── 새로고침 ─────────────────────────────────────────────────
+function _refreshStatus() { _listenMyWaiting(); }
+
+// ── 오류 화면 ────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('error-screen').style.display = 'block';
+  document.getElementById('error-msg').textContent = msg;
+}
+</script>
+</body>
+</html>
