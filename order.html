@@ -21,201 +21,198 @@
 <style>
 :root{
   --brand:#0891b2;
-  --brand-dark:#0e7490;
+  --brand2:#0e7490;
   --brand-light:#e0f2fe;
-  --bg:#f1f5f9;
+  --bg:#f8fafc;
   --surface:#ffffff;
-  --border:#e2e8f0;
+  --border:#f1f5f9;
   --text1:#0f172a;
-  --text2:#475569;
+  --text2:#64748b;
   --text3:#94a3b8;
   --red:#ef4444;
   --green:#22c55e;
-  --radius:16px;
-  --radius-sm:12px;
-  --shadow:0 2px 12px rgba(0,0,0,.08);
-  --shadow-lg:0 8px 32px rgba(0,0,0,.16);
+  --r:16px;
+  --r-sm:12px;
+  --shadow:0 1px 8px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+}
+/* 다크모드 */
+body.dark{
+  --bg:#0f172a;
+  --surface:#1e293b;
+  --border:#334155;
+  --text1:#f1f5f9;
+  --text2:#94a3b8;
+  --text3:#475569;
+  --brand-light:rgba(8,145,178,.15);
+  --shadow:0 1px 8px rgba(0,0,0,.3);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--bg)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--text1)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo',sans-serif;color:var(--text1);transition:background .3s,color .3s}
 
 /* ── 로딩 ── */
-#ld{position:fixed;inset:0;background:linear-gradient(135deg,#0891b2,#0e7490);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:20px}
-#ld .logo{font-size:36px;font-weight:900;color:#fff;letter-spacing:-1px;text-shadow:0 2px 8px rgba(0,0,0,.2)}
-.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+#ld{position:fixed;inset:0;background:linear-gradient(135deg,#0891b2 0%,#0369a1 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
+#ld .logo{font-size:32px;font-weight:900;color:#fff;letter-spacing:-1px}
+#ld .logo span{opacity:.7;font-weight:400}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#ld .hint{font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+#ld .hint{font-size:12px;color:rgba(255,255,255,.6);margin-top:-4px}
 
 /* ── 헤더 ── */
-#hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06)}
-.hdr-left{display:flex;flex-direction:column;gap:2px}
-.store-name{font-size:16px;font-weight:900;color:var(--text1);letter-spacing:-.3px}
-.table-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--brand);font-weight:700;background:var(--brand-light);padding:2px 8px;border-radius:20px;width:fit-content}
+#hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 1px 12px rgba(0,0,0,.06)}
+.hdr-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hdr-info{flex:1;padding:0 10px}
+.store-name{font-size:15px;font-weight:800;color:var(--text1);letter-spacing:-.3px}
+.hdr-meta{display:flex;align-items:center;gap:6px;margin-top:2px}
+.table-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--brand);font-weight:700;background:var(--brand-light);padding:2px 8px;border-radius:20px}
+.open-badge{font-size:10px;color:var(--green);font-weight:700;display:flex;align-items:center;gap:3px}
+.open-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.dark-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:.2s}
 .lang-row{display:flex;gap:4px}
 .lb{height:28px;padding:0 10px;border:1.5px solid var(--border);border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:var(--surface);color:var(--text2);transition:.15s}
 .lb.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 /* ── 카테고리 탭 ── */
-#cat-wrap{background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+#cat-wrap{background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0}
 #cat-wrap::-webkit-scrollbar{display:none}
-#cat-bar{display:flex;padding:0 12px;gap:6px;height:48px;align-items:center;white-space:nowrap}
-.cat-btn{height:34px;padding:0 16px;border-radius:20px;border:none;background:transparent;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:.2s;display:flex;align-items:center;gap:5px}
-.cat-btn.on{background:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(8,145,178,.3)}
-.cat-btn .cat-ico{font-size:15px}
+#cat-bar{display:flex;padding:0 12px;gap:6px;height:50px;align-items:center;white-space:nowrap}
+.cat-btn{height:36px;padding:0 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:.2s;display:flex;align-items:center;gap:5px}
+.cat-btn.on{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 4px 12px rgba(8,145,178,.3)}
+.cat-ico{font-size:15px}
+
+/* ── 공지 배너 ── */
+#notice-banner{margin:12px 14px 0;background:linear-gradient(135deg,var(--brand-light),rgba(224,242,254,.5));border:1px solid rgba(8,145,178,.15);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--brand);font-weight:600;display:none}
 
 /* ── 메뉴 영역 ── */
 #app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-#scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 130px}
-#menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+#scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 140px}
 
-/* ── 메뉴 카드 v3 (풀 이미지) ── */
-.mi{background:var(--surface);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:.2s;box-shadow:var(--shadow);border:none}
-.mi:active{transform:scale(.97);box-shadow:none}
+/* ── 섹션 헤더 ── */
+.sec-hdr{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--text2);margin:16px 2px 10px;text-transform:uppercase;letter-spacing:.5px}
+.sec-hdr::after{content:'';flex:1;height:1px;background:var(--border);margin-left:4px}
 
-/* 이미지 있을 때: 풀스크린 비율 */
-.mi-img-wrap{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden}
-.mi-img{width:100%;height:100%;object-fit:cover;display:block;transition:.3s}
-.mi:active .mi-img{transform:scale(1.03)}
+/* ── 메뉴 그리드 (2열) ── */
+#menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 
-/* 이미지 없을 때: 이모지 */
-.mi-emoji-wrap{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);position:relative}
-.mi-emoji{font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.1))}
+/* ── 메뉴 카드 ── */
+.mi{background:var(--surface);border-radius:var(--r);overflow:hidden;cursor:pointer;position:relative;transition:.2s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow)}
+.mi:active{transform:scale(.96);box-shadow:none}
+.mi-img-wrap{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
+.mi-img{width:100%;height:100%;object-fit:cover;display:block;transition:.4s}
+.mi:active .mi-img{transform:scale(1.05)}
+.mi-emoji-wrap{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
+.mi-emoji{font-size:52px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.08))}
+.mi-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.75));padding:32px 10px 10px}
+.mi-name-img{font-size:13px;font-weight:800;color:#fff;line-height:1.3;word-break:keep-all}
+.mi-price-img{font-size:14px;font-weight:900;color:#fff;margin-top:3px}
+.mi-body{padding:10px 10px 12px}
+.mi-name{font-size:13px;font-weight:700;color:var(--text1);line-height:1.4;margin-bottom:2px;word-break:keep-all}
+.mi-desc{font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mi-price{font-size:14px;font-weight:900;color:var(--brand)}
+.mi-sold{position:absolute;inset:0;background:rgba(255,255,255,.8);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text3);border-radius:var(--r);flex-direction:column;gap:4px}
+body.dark .mi-sold{background:rgba(30,41,59,.85)}
 
-/* 그라디언트 오버레이 (이미지 위 텍스트) */
-.mi-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent 0%,rgba(0,0,0,.7) 100%);padding:40px 12px 12px}
-.mi-name-img{font-size:14px;font-weight:800;color:#fff;line-height:1.3;word-break:keep-all}
-.mi-tr-img{font-size:11px;color:rgba(255,255,255,.8);font-weight:600;margin-top:2px;min-height:14px}
-.mi-price-img{font-size:15px;font-weight:900;color:#fff;margin-top:4px}
+/* ── 담기 버튼 ── */
+.mi-add-btn{position:absolute;bottom:8px;right:8px;width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;border:none;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(8,145,178,.4);transition:.2s;line-height:1}
+.mi-add-btn:active{transform:scale(.88)}
+.mi-qty-badge{position:absolute;top:8px;left:8px;background:var(--brand);color:#fff;font-size:11px;font-weight:800;border-radius:20px;padding:3px 8px;box-shadow:0 2px 8px rgba(8,145,178,.4)}
 
-/* 이미지 없을 때 텍스트 */
-.mi-body{padding:10px 12px 14px}
-.mi-name{font-size:13px;font-weight:700;color:var(--text1);line-height:1.4;margin-bottom:3px;word-break:keep-all}
-.mi-tr{font-size:11px;color:var(--brand);font-weight:600;margin-bottom:3px;min-height:15px}
-.mi-price{font-size:15px;font-weight:900;color:var(--brand)}
+/* ── 메뉴 리스트형 (토글) ── */
+.mi-list{background:var(--surface);border-radius:var(--r-sm);overflow:hidden;cursor:pointer;display:flex;gap:0;transition:.2s;box-shadow:var(--shadow);margin-bottom:8px;border:1px solid var(--border)}
+.mi-list:active{transform:scale(.98);opacity:.9}
+.mi-list-img{width:90px;height:90px;object-fit:cover;flex-shrink:0}
+.mi-list-emoji{width:90px;height:90px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);font-size:36px;flex-shrink:0}
+.mi-list-body{flex:1;padding:12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.mi-list-name{font-size:14px;font-weight:700;color:var(--text1);margin-bottom:3px;word-break:keep-all}
+.mi-list-desc{font-size:11px;color:var(--text2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mi-list-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.mi-list-price{font-size:15px;font-weight:900;color:var(--brand)}
+.mi-list-add{width:28px;height:28px;border-radius:50%;background:var(--brand);color:#fff;border:none;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 
-/* 품절 */
-.mi-sold{position:absolute;inset:0;background:rgba(255,255,255,.75);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text3);border-radius:var(--radius)}
-
-/* 수량 뱃지 */
-.mi-badge{position:absolute;top:8px;right:8px;background:var(--brand);color:#fff;font-size:11px;font-weight:900;min-width:22px;height:22px;border-radius:11px;display:none;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 2px 8px rgba(8,145,178,.5)}
-.mi-badge.on{display:flex}
+/* ── 뷰 토글 ── */
+.view-toggle{display:flex;gap:4px;padding:10px 14px 0}
+.vt-btn{flex:1;height:34px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;transition:.2s}
+.vt-btn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 /* ── 장바구니 FAB ── */
-#cart-fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;border:none;border-radius:50px;padding:0 28px;height:56px;font-size:15px;font-weight:800;cursor:pointer;display:none;box-shadow:0 8px 28px rgba(8,145,178,.5);z-index:200;white-space:nowrap;align-items:center;gap:10px;letter-spacing:-.2px;transition:.3s}
-#cart-fab.show{display:flex;animation:slideUp .3s cubic-bezier(.34,1.56,.64,1)}
-@keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
-#cart-fab .fab-price{opacity:.9;font-weight:700;font-size:14px}
+#cart-fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:30px;padding:0 24px;height:56px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(8,145,178,.4);transition:.35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;z-index:200;min-width:200px;justify-content:center}
+#cart-fab.show{transform:translateX(-50%) translateY(0)}
+.fab-cnt-badge{background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:900}
+.fab-price{font-size:15px;font-weight:900}
+
+/* ── 카트 시트 ── */
+#cart-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.15);transform:translateY(100%);transition:.35s cubic-bezier(.4,0,.2,1);z-index:300;max-height:90vh;display:flex;flex-direction:column}
+#cart-sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;border-radius:4px;background:var(--border);margin:12px auto 0}
+.sheet-title{font-size:17px;font-weight:900;padding:16px 20px 12px;color:var(--text1);display:flex;align-items:center;gap:8px}
+#cart-list{overflow-y:auto;padding:0 16px;flex:1;max-height:50vh}
+.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.ci-img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.ci-body{flex:1;min-width:0}
+.ci-name{font-size:14px;font-weight:700;color:var(--text1);margin-bottom:3px;word-break:keep-all}
+.ci-price{font-size:13px;color:var(--text2)}
+.ci-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text1)}
+.qty-val{font-size:14px;font-weight:800;min-width:20px;text-align:center;color:var(--text1)}
+#cart-footer{padding:16px 20px 28px;border-top:1px solid var(--border);flex-shrink:0}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.cart-total-lbl{font-size:14px;color:var(--text2);font-weight:600}
+.cart-total-val{font-size:20px;font-weight:900;color:var(--brand)}
+#cart-order-btn{width:100%;height:52px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.35);transition:.2s}
+#cart-order-btn:active{transform:scale(.98)}
+#cart-clear-btn{width:100%;height:40px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;margin-top:8px;font-weight:600}
+
+/* ── 메뉴 모달 ── */
+.mdl-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;backdrop-filter:blur(4px);opacity:0;transition:.3s}
+.mdl-bg.show{opacity:1}
+#menu-mdl{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;z-index:401;transform:translateY(100%);transition:.35s cubic-bezier(.4,0,.2,1);max-height:90vh;overflow-y:auto}
+#menu-mdl.open{transform:translateY(0)}
+.mdl-img-full{width:100%;max-height:240px;object-fit:cover;display:block}
+.mdl-body{padding:16px 20px 20px}
+.mdl-name{font-size:20px;font-weight:900;color:var(--text1);margin-bottom:6px}
+.mdl-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.mdl-price{font-size:24px;font-weight:900;color:var(--brand);margin-bottom:20px}
+.mdl-qty-row{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.mdl-qty-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text1)}
+.mdl-qty-val{font-size:22px;font-weight:900;min-width:32px;text-align:center;color:var(--text1)}
+.mdl-add-btn{width:100%;height:52px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.35)}
+.mdl-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.3);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 
 /* ── 오버레이 ── */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;backdrop-filter:blur(3px)}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:250;display:none;backdrop-filter:blur(3px)}
 
-/* ── 장바구니 시트 ── */
-#cart-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;box-shadow:0 -4px 40px rgba(0,0,0,.15);transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);z-index:400;max-height:90vh;display:flex;flex-direction:column}
-#cart-sheet.open{transform:translateY(0)}
-.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 0}
-.sheet-hdr{padding:14px 20px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
-.sheet-title{font-size:17px;font-weight:900}
-.sheet-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text3);line-height:1;padding:4px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-#cart-list{overflow-y:auto;padding:8px 20px;flex:1}
-.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
-.ci-emoji{font-size:28px;flex-shrink:0;width:40px;text-align:center}
-.ci-name{flex:1;font-size:13px;font-weight:700;color:var(--text1);line-height:1.4}
-.ci-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.ci-ctrl button{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text1);font-weight:700;transition:.1s}
-.ci-ctrl button:active{background:var(--brand);border-color:var(--brand);color:#fff}
-.ci-qty{font-size:15px;font-weight:900;min-width:22px;text-align:center}
-.ci-price{font-size:13px;font-weight:800;color:var(--brand);min-width:68px;text-align:right;flex-shrink:0}
-
-/* ── 합계 + 주문 버튼 ── */
-#cart-footer{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:max(14px,env(safe-area-inset-bottom))}
-.total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.total-label{font-size:14px;color:var(--text2);font-weight:600}
-.total-price{font-size:24px;font-weight:900;color:var(--brand)}
-#order-btn{width:100%;height:54px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:800;cursor:pointer;transition:.15s;letter-spacing:-.2px;box-shadow:0 4px 16px rgba(8,145,178,.4)}
-#order-btn:active{background:var(--brand-dark);transform:scale(.99)}
-#order-btn:disabled{background:var(--border);cursor:not-allowed;color:var(--text3);box-shadow:none}
-
-/* ── 메뉴 상세 모달 v3 ── */
-#mdl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(4px);pointer-events:none;opacity:0;transition:opacity .2s}
-#mdl.open{pointer-events:all;opacity:1}
-#mdl-box{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:32px}
-.mdl-img-full{width:100%;max-height:260px;object-fit:cover;display:block}
-.mdl-emoji{font-size:80px;text-align:center;padding:28px 0 16px;display:block;line-height:1;background:linear-gradient(135deg,#f0f9ff,#e0f2fe)}
-.mdl-content{padding:20px 20px 0}
-.mdl-name{font-size:22px;font-weight:900;text-align:center;margin-bottom:4px;letter-spacing:-.3px}
-.mdl-tr{font-size:14px;color:var(--brand);text-align:center;margin-bottom:8px;min-height:20px;font-weight:600}
-.mdl-desc{font-size:13px;color:var(--text2);text-align:center;line-height:1.7;margin-bottom:14px;padding:0 8px}
-.mdl-price{font-size:28px;font-weight:900;color:var(--brand);text-align:center;margin-bottom:20px}
-.mdl-qty-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px}
-.mdl-qty-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:var(--surface);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text1);font-weight:700;transition:.1s}
-.mdl-qty-btn:active{background:var(--brand);border-color:var(--brand);color:#fff}
-.mdl-qty{font-size:22px;font-weight:900;min-width:36px;text-align:center}
-.mdl-add{width:calc(100% - 40px);margin:0 20px;height:54px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:16px;font-weight:800;cursor:pointer;transition:.15s;box-shadow:0 4px 16px rgba(8,145,178,.4)}
-.mdl-add:active{background:var(--brand-dark)}
-.tl-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:var(--brand);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:4px}
-
-/* ── 완료 화면 ── */
-#done{position:fixed;inset:0;background:linear-gradient(135deg,#f0f9ff,#fff);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:600;padding:32px;text-align:center}
-.done-circle{width:88px;height:88px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 24px;animation:pop .5s cubic-bezier(.34,1.56,.64,1);box-shadow:0 8px 32px rgba(34,197,94,.4)}
-@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-.done-title{font-size:26px;font-weight:900;margin-bottom:8px;letter-spacing:-.5px;color:var(--text1)}
-.done-sub{font-size:15px;color:var(--text2);margin-bottom:6px}
-.done-num{font-size:13px;color:var(--text3);margin-bottom:16px;font-weight:600;background:var(--bg);padding:6px 14px;border-radius:20px;display:inline-block}
-.done-items{font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:28px;background:var(--surface);border-radius:var(--radius);padding:16px 20px;width:100%;max-width:320px;box-shadow:var(--shadow);text-align:left}
-#done-back{padding:16px 36px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.4)}
-
-/* ── 배달 정보 폼 ── */
-#delivery-section{padding:12px 20px 8px;border-top:1px solid var(--border)}
-.ds-title{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.ds-inputs{display:flex;flex-direction:column;gap:8px}
-.ds-row{display:flex;gap:8px}
-.ds-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text1);outline:none;background:var(--surface);transition:.15s}
-.ds-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(8,145,178,.1)}
-.addr-btn{width:100%;padding:12px 14px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--brand);background:var(--brand-light);cursor:pointer;text-align:left;transition:.15s}
-.addr-btn:active{opacity:.8}
-
-/* ── 주소 입력 팝업 ── */
-#addr-popup{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:700;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
-#addr-popup.open{display:flex}
-.ap-box{background:var(--surface);border-radius:var(--radius);padding:24px;width:100%;max-width:400px;box-shadow:var(--shadow-lg)}
-.ap-title{font-size:17px;font-weight:900;margin-bottom:16px}
-.ap-input{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;margin-bottom:10px;transition:.15s}
-.ap-input:focus{border-color:var(--brand)}
-.ap-row{display:flex;gap:10px;margin-top:6px}
-.ap-ok{flex:1;padding:13px;background:var(--brand);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer}
-.ap-cancel{padding:13px 18px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;color:var(--text2)}
-
-/* ── 빈 상태 ── */
-.empty{text-align:center;padding:60px 20px;color:var(--text3);grid-column:1/-1}
-.empty-ico{font-size:48px;margin-bottom:16px;opacity:.5}
-.empty-msg{font-size:14px}
+/* ── 결제 모달 ── */
+#pay-mdl{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;z-index:401;transform:translateY(100%);transition:.35s cubic-bezier(.4,0,.2,1);padding:24px 20px 36px}
+#pay-mdl.open{transform:translateY(0)}
+.pay-title{font-size:18px;font-weight:900;color:var(--text1);margin-bottom:4px}
+.pay-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+.pay-amount{font-size:28px;font-weight:900;color:var(--brand);margin-bottom:20px}
+.pay-methods{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.pay-method{display:flex;align-items:center;gap:12px;padding:14px 16px;border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:.2s;background:var(--surface)}
+.pay-method.on{border-color:var(--brand);background:var(--brand-light)}
+.pay-method-ico{font-size:22px}
+.pay-method-info{flex:1}
+.pay-method-name{font-size:14px;font-weight:700;color:var(--text1)}
+.pay-method-sub{font-size:11px;color:var(--text2)}
+.pay-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:.2s}
+.pay-method.on .pay-check{border-color:var(--brand);background:var(--brand)}
+.pay-confirm-btn{width:100%;height:54px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.35)}
 
 /* ── 직원 호출 ── */
-#call-btn{position:fixed;bottom:96px;right:16px;width:54px;height:54px;background:var(--surface);border:2px solid var(--brand);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:199;transition:.2s}
-#call-btn:active{transform:scale(.92);background:#e0f2fe}
-#call-btn .cb-ico{font-size:20px;line-height:1}
-#call-btn .cb-txt{font-size:8px;font-weight:800;color:var(--brand);margin-top:2px}
-#call-toast{position:fixed;top:76px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 22px;border-radius:50px;font-size:13px;font-weight:700;z-index:9999;display:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+#call-btn{position:fixed;bottom:100px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--surface);border:2px solid var(--border);box-shadow:var(--shadow-lg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:190;transition:.2s}
+#call-btn:active{transform:scale(.92)}
 
-/* ── 결제 방식 선택 모달 ── */
-#pay-mdl{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:flex-end;backdrop-filter:blur(4px)}
-#pay-mdl.open{display:flex}
-#pay-mb{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 36px}
-.pay-drag{width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 20px}
-.pay-title{font-size:19px;font-weight:900;color:#0f172a;text-align:center;margin-bottom:4px}
-.pay-sub{font-size:12px;color:#94a3b8;text-align:center;margin-bottom:16px}
-.pay-total{font-size:26px;font-weight:900;color:#0891b2;text-align:center;margin-bottom:20px}
-.pay-opts{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
-.pay-opt{display:flex;align-items:center;gap:16px;padding:18px;border:2px solid #e2e8f0;border-radius:18px;cursor:pointer;transition:.15s}
-.pay-opt:active{background:#f0f9ff;border-color:#0891b2}
-.pay-opt.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
-.pay-opt-ico{font-size:30px;flex-shrink:0}
-.pay-opt-info{flex:1}
-.pay-opt-name{font-size:15px;font-weight:800;color:#0f172a}
-.pay-opt-desc{font-size:11px;color:#94a3b8;margin-top:2px}
-.pay-opt-badge{font-size:10px;font-weight:700;background:#f0f9ff;color:#0891b2;padding:3px 10px;border-radius:12px;flex-shrink:0}
-.pay-cancel{width:100%;padding:15px;background:#f1f5f9;border:none;border-radius:16px;font-size:14px;font-weight:700;color:#64748b;cursor:pointer}
+/* ── 픽업 알림 ── */
+#pickup-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-120px);background:var(--green);color:#fff;padding:12px 20px;border-radius:20px;font-size:14px;font-weight:700;z-index:500;transition:.4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;box-shadow:0 8px 24px rgba(34,197,94,.4)}
+#pickup-toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── 애니메이션 ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounceIn{0%{transform:scale(.5)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+.mi{animation:slideUp .3s ease both}
 </style>
 </head>
 <body>
@@ -228,25 +225,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 
 <div id="app" style="display:none">
   <div id="hdr">
-    <div class="hdr-left">
+    <div class="hdr-logo">🍽</div>
+    <div class="hdr-info">
       <div class="store-name" id="store-name">매장</div>
-      <div class="table-badge">🪑 <span id="table-name">테이블</span></div>
+      <div class="hdr-meta">
+        <div class="table-badge">🪑 <span id="table-name">테이블</span></div>
+        <div class="open-badge" id="open-badge" style="display:none">
+          <span class="open-dot"></span>영업중
+        </div>
+      </div>
     </div>
-    <div class="lang-row">
-      <button class="lb on" id="lb-ko" onclick="_setLang('ko')">KO</button>
-      <button class="lb" id="lb-en" onclick="_setLang('en')">EN</button>
-      <button class="lb" id="lb-zh" onclick="_setLang('zh')">中</button>
-      <button class="lb" id="lb-ja" onclick="_setLang('ja')">日</button>
+    <div class="hdr-right">
+      <button class="dark-btn" onclick="_toggleDark()" id="dark-btn" title="다크모드">🌙</button>
+      <div class="lang-row">
+        <button class="lb on" id="lb-ko" onclick="_setLang('ko')">KO</button>
+        <button class="lb" id="lb-en" onclick="_setLang('en')">EN</button>
+        <button class="lb" id="lb-zh" onclick="_setLang('zh')">中</button>
+      </div>
     </div>
   </div>
   <div id="cat-wrap"><div id="cat-bar"></div></div>
   <div id="scroll-area"><div id="menu-grid"></div></div>
 </div>
 
+<div class="view-toggle">
+  <button class="vt-btn on" id="vt-grid" onclick="_setView('grid')">⊞ 카드형</button>
+  <button class="vt-btn" id="vt-list" onclick="_setView('list')">☰ 목록형</button>
+</div>
 <button id="cart-fab" onclick="_openCart()">
-  🛒 <span id="fab-cnt">0</span>개
+  🛒 <span class="fab-cnt-badge"><span id="fab-cnt">0</span>개</span>
   <span class="fab-price" id="fab-price">₩0</span>
-  &nbsp;·&nbsp; <span id="fab-label">주문하기</span>
+  <span style="opacity:.7">·</span>
+  <span id="fab-label">주문하기</span>
 </button>
 
 <div id="overlay" onclick="_closeCart()"></div>
