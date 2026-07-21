@@ -6288,7 +6288,7 @@ async function handleYongcha(request, env, ctx) {
   }
 
   // 메인 페이지 (모든 경로 → yongcha.html KV 서빙)
-  const yongchaHtml = await env.DONWAY_ASSETS.get('yongcha2.html') || await env.DONWAY_ASSETS.get('yongcha.html');
+  const yongchaHtml = await env.DONWAY_ASSETS.get('yongcha.html');
   if (yongchaHtml) {
     return new Response(yongchaHtml, {
       headers: { 'Content-Type': 'text/html;charset=utf-8',
