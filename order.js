@@ -569,3 +569,52 @@ function reqReceiptFCM(){
       });
   });
 }
+
+// ── 다크모드 ──────────────────────────────────────────────────
+function _toggleDark(){
+  var isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('filo_dark', isDark?'1':'0');
+  var btn = document.getElementById('dark-btn');
+  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+(function(){
+  if(localStorage.getItem('filo_dark')==='1'){
+    document.body.classList.add('dark');
+    var btn = document.getElementById('dark-btn');
+    if(btn) btn.textContent = '☀️';
+  }
+})();
+
+// ── 뷰 전환 (카드/리스트) ─────────────────────────────────────
+var _viewMode = localStorage.getItem('filo_view') || 'grid';
+function _setView(mode){
+  _viewMode = mode;
+  localStorage.setItem('filo_view', mode);
+  document.getElementById('vt-grid').classList.toggle('on', mode==='grid');
+  document.getElementById('vt-list').classList.toggle('on', mode==='list');
+  var grid = document.getElementById('menu-grid');
+  if(grid){
+    grid.style.display = mode==='list' ? 'block' : 'grid';
+  }
+  // 현재 메뉴 다시 렌더
+  if(window._cachedMenus) _renderMenus(window._cachedMenus, window._activeCat||'전체');
+}
+(function(){
+  if(_viewMode==='list'){
+    setTimeout(function(){
+      var g=document.getElementById('vt-grid'),l=document.getElementById('vt-list');
+      if(g)g.classList.remove('on');
+      if(l)l.classList.add('on');
+    },500);
+  }
+})();
+
+// ── 영업 중 배지 표시 ─────────────────────────────────────────
+function _checkOpenStatus(){
+  var now = new Date();
+  var h = now.getHours();
+  var isOpen = h >= 10 && h < 22; // 10시~22시
+  var badge = document.getElementById('open-badge');
+  if(badge) badge.style.display = isOpen ? 'flex' : 'none';
+}
+setTimeout(_checkOpenStatus, 500);
