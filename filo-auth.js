@@ -489,148 +489,236 @@ function _filoPageHome(el){
  var subs=d.subscriptions||{};
  var today=_today();
  var did=d.dealerId||d.uid||'';
+ var ym=today.slice(0,7);
  function hasSub(k){
-  /* combo = 전체 포함 */
   if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
   var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
  }
 
- el.innerHTML='<div style="max-width:900px;margin:0 auto">'+
- '<div class="fade-up hero-card" style="margin-bottom:16px">'+
- '<div style="position:relative;z-index:1"><div style="font-size:10px;font-weight:700;color:rgba(167,139,250,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">FILO · 실시간 운영</div>'+
- '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.8px">'+(d.companyName||d.name||'')+'</div>'+
- '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'+
- '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+today+'</span>'+
- '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#22c55e"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
+ el.innerHTML='<div style="max-width:960px;margin:0 auto;padding-bottom:20px">'+
+
+ /* ── 히어로 카드 ── */
+ '<div class="fade-up hero-card" style="margin-bottom:16px;border-radius:20px;padding:24px;position:relative;overflow:hidden">'+
+ '<div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)"></div>'+
+ '<div style="position:absolute;bottom:-60px;right:20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.04)"></div>'+
+ '<div style="position:relative;z-index:1">'+
+ '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">FILO · 실시간 운영 대시보드</div>'+
+ '<div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-.8px;margin-bottom:12px">'+(d.companyName||d.name||'')+'</div>'+
+ '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+ '<span style="font-size:12px;color:rgba(255,255,255,.5)">📅 '+today+'</span>'+
+ '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#22c55e;background:rgba(34,197,94,.15);padding:3px 10px;border-radius:20px"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
+ '<span style="font-size:11px;color:rgba(255,255,255,.4)">업데이트: <span id="hs-lastupdate">—</span></span>'+
  '</div></div></div>'+
 
- '<div class="kpi-grid" id="home-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">'+
- [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'💰',id:'hs-0'},
-  {t:'오늘 순이익',c:'kpi-profit',vc:'#22c55e',ic:'📈',id:'hs-profit'},
-  {t:'마진율',c:'kpi-margin',vc:'#f59e0b',ic:'📊',id:'hs-margin'},
-  {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'🔔',id:'hs-1'},
-  {t:'재고 부족',c:'kpi-warn',vc:'#f59e0b',ic:'⚠️',id:'hs-2'},
-  {t:'출근 인원',c:'kpi-staff',vc:'#38bdf8',ic:'👥',id:'hs-3'}
- ].map(function(s){
- return '<div class="kpi-card '+s.c+' card-hover">'+ 
- '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
- '<div class="kpi-label">'+s.t+'</div>'+
- '<div style="font-size:18px;opacity:.8">'+s.ic+'</div>'+
- '</div>'+
- '<div class="kpi-val count-anim" id="'+s.id+'" style="color:'+s.vc+'">—</div>'+
- '</div>';
- }).join('')+'</div>'+
+ /* ── KPI 2x2 그리드 (큰 카드) ── */
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
 
- '<div class="card fade-up-2" style="margin-bottom:12px">'+
- '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<div style="font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">이용 중인 기능</div>'+
- '<button onclick="_filoGoPage(\'subscription\')" style="font-size:10px;color:var(--br);background:none;border:none;cursor:pointer;font-weight:700">관리 →</button>'+
+ /* 오늘 매출 */
+ '<div class="card fade-up" style="padding:18px;border-radius:18px">'+
+ '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+ '<div>'+
+ '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:4px">오늘 매출</div>'+
+ '<div style="font-size:22px;font-weight:900;color:var(--tx)" id="hs-today-rev">—</div>'+
  '</div>'+
- '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
- [{k:'inventory',l:'재고',ic:'📦',c:'#7c3aed'},{k:'qr',l:'QR급여',ic:'🔐',c:'#0891b2'},
-  {k:'kiosk',l:'POS',ic:'🖥️',c:'#059669'},{k:'combo',l:'통합',ic:'🚀',c:'#f59e0b'}].map(function(p){
-  var on=hasSub(p.k);
-  return '<div style="padding:10px 8px;border-radius:10px;border:1px solid '+(on?p.c+'60':'var(--bd)')+';background:'+(on?p.c+'12':'var(--surface2)')+';text-align:center">'+
-  '<div style="font-size:20px;margin-bottom:4px">'+p.ic+'</div>'+
-  '<div style="font-size:10px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+p.l+'</div>'+
-  '<div style="font-size:9px;margin-top:2px;color:'+(on?p.c:'var(--t4)')+'">'+(on?'✅ ON':'OFF')+'</div>'+
-  '</div>';
- }).join('')+'</div></div>'+
-
- '<div class="card fade-up-3">'+
- '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
- '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'🖥️',l:'POS',p:'kiosk'},{ic:'🔔',l:'주문대기',p:'orders'},{ic:'🛵',l:'배달',p:'delivery'},
- {ic:'📊',l:'재고',p:'inventory'},{ic:'🍽',l:'레시피',p:'recipe'},{ic:'📈',l:'매출',p:'sales_report'},
- {ic:'💼',l:'급여',p:'payroll'},{ic:'🗓',l:'예약',p:'schedule'}].map(function(m){
- return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
- '<div style="font-size:20px;margin-bottom:4px">'+m.ic+'</div>'+
- '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
- }).join('')+'</div></div>'+
-
- '<div class="card fade-up-4" style="margin-top:12px">'+
- '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<div style="font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">🔗 DINE 실시간</div>'+
- '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block"></span>'+
+ '<div style="width:40px;height:40px;border-radius:12px;background:rgba(167,139,250,.12);display:flex;align-items:center;justify-content:center;font-size:20px">💰</div>'+
  '</div>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
- '<div style="padding:10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
- '<div style="font-size:10px;color:var(--t3)">오늘 예약</div>'+
- '<div id="filo-dine-res-badge" style="font-size:14px;font-weight:900;color:#38bdf8;margin-top:2px">—</div>'+
+ '<div style="display:flex;align-items:center;gap:6px">'+
+ '<span style="font-size:11px;color:var(--t3)">목표</span>'+
+ '<div style="flex:1;height:4px;background:var(--bd);border-radius:4px;overflow:hidden">'+
+ '<div id="hs-goal-bar" style="height:100%;background:linear-gradient(90deg,#a78bfa,#7c3aed);border-radius:4px;width:0%;transition:width .8s ease"></div>'+
  '</div>'+
- '<div style="padding:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
- '<div style="font-size:10px;color:var(--t3)">테이블 주문</div>'+
- '<div id="filo-dine-sales" style="font-size:14px;font-weight:900;color:#22c55e;margin-top:2px">—</div>'+
- '</div>'+
+ '<span style="font-size:11px;font-weight:700;color:#a78bfa" id="hs-goal-pct">0%</span>'+
  '</div></div>'+
+
+ /* 이번달 매출 */
+ '<div class="card fade-up" style="padding:18px;border-radius:18px">'+
+ '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+ '<div>'+
+ '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:4px">이번달 매출</div>'+
+ '<div style="font-size:22px;font-weight:900;color:var(--tx)" id="hs-month-rev">—</div>'+
+ '</div>'+
+ '<div style="width:40px;height:40px;border-radius:12px;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center;font-size:20px">📈</div>'+
+ '</div>'+
+ '<div id="hs-month-diff" style="font-size:11px;color:var(--t3)">전월 대비 —</div>'+
+ '</div>'+
+
+ '</div>'+
+
+ /* ── KPI 4열 (작은 카드) ── */
+ '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
+ [
+  {id:'hs-profit',  lbl:'오늘 순이익', ic:'💎', c:'#0891b2'},
+  {id:'hs-margin',  lbl:'마진율',       ic:'📊', c:'#f59e0b'},
+  {id:'hs-orders',  lbl:'미완료 주문',  ic:'🔔', c:'#ef4444'},
+  {id:'hs-staff',   lbl:'출근 인원',    ic:'👥', c:'#22c55e'},
+ ].map(function(s){
+  return '<div class="card" style="padding:12px;border-radius:14px;text-align:center">'+
+   '<div style="font-size:18px;margin-bottom:4px">'+s.ic+'</div>'+
+   '<div style="font-size:9px;font-weight:700;color:var(--t3);margin-bottom:4px">'+s.lbl+'</div>'+
+   '<div style="font-size:15px;font-weight:900;color:'+s.c+'" id="'+s.id+'">—</div>'+
+   '</div>';
+ }).join('')+
+
+ /* ── 인기 메뉴 + 주문 건수 ── */
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+
+ /* 인기 메뉴 바 차트 */
+ '<div class="card fade-up-2" style="padding:16px;border-radius:16px">'+
+ '<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">⭐ 인기 메뉴</div>'+
+ '<div id="hs-popular" style="display:flex;flex-direction:column;gap:8px">'+
+ '<div style="font-size:11px;color:var(--t3)">데이터 로딩 중...</div>'+
+ '</div>'+
+ '</div>'+
+
+ /* 주문 건수 미니 차트 */
+ '<div class="card fade-up-2" style="padding:16px;border-radius:16px">'+
+ '<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">📦 주문 건수</div>'+
+ '<div style="text-align:center;margin-bottom:8px">'+
+ '<div style="font-size:28px;font-weight:900;color:var(--br)" id="hs-order-cnt">—</div>'+
+ '<div style="font-size:11px;color:var(--t3)">오늘 총 주문</div>'+
+ '</div>'+
+ '<div style="display:flex;gap:4px;align-items:flex-end;height:50px;margin-top:8px" id="hs-order-bars"></div>'+
+ '<div style="display:flex;justify-content:space-between;margin-top:4px">'+
+ '<span style="font-size:10px;color:var(--t3)">6일전</span>'+
+ '<span style="font-size:10px;color:var(--t3)">오늘</span>'+
+ '</div></div>'+
+
+ '</div>'+
+
+ /* ── 빠른 실행 ── */
+ '<div class="card fade-up-3" style="padding:16px;border-radius:16px;margin-bottom:14px">'+
+ '<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">⚡ 빠른 실행</div>'+
+ '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
+ [{ic:'🖥️',l:'POS',p:'kiosk',c:'#7c3aed'},
+  {ic:'🔔',l:'주문대기',p:'orders',c:'#ef4444'},
+  {ic:'🛵',l:'배달',p:'delivery',c:'#f59e0b'},
+  {ic:'📦',l:'재고',p:'inventory',c:'#059669'},
+  {ic:'🍽',l:'메뉴',p:'menu_mgmt',c:'#0891b2'},
+  {ic:'📈',l:'매출',p:'sales_report',c:'#7c3aed'},
+  {ic:'👥',l:'직원',p:'members',c:'#0891b2'},
+  {ic:'🗓',l:'예약',p:'schedule',c:'#059669'},
+ ].map(function(m){
+  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:12px 4px;background:var(--bg3);border:1px solid var(--bd);border-radius:12px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" '+
+   'onmouseover="this.style.borderColor=\''+m.c+'\';this.style.background=\''+m.c+'18\'" '+
+   'onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
+   '<div style="font-size:22px;margin-bottom:4px">'+m.ic+'</div>'+
+   '<div style="font-size:10px;font-weight:700;color:var(--t3)">'+m.l+'</div>'+
+   '</button>';
+ }).join('')+
+ '</div></div>'+
+
  '</div>';
 
- if(did){
- var ym=today.slice(0,7);
- /* POS 실시간 onSnapshot → 홈 KPI 즉시 갱신 */
+ /* ── 실시간 데이터 로딩 ── */
+ if(!did) return;
+
+ // 현재 시각 업데이트
+ var now=new Date();
+ var el2=document.getElementById('hs-lastupdate');
+ if(el2) el2.textContent=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+
+ // 오늘 POS 매출 실시간
  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
- .onSnapshot(function(posSnap){
-  Promise.all([
-   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
-   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
-   firebase.firestore().collection('filo_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
-   firebase.firestore().collection('inventory').where('dealerId','==',did).get(),
-   firebase.firestore().collection('menu_costs').where('dealerId','==',did).get()
-  ]).then(function(res){
-   var costMap={};
-   res[4].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
-   var todayRev=0,monthRev=0,low=0,todayCost=0;
-   /* 오늘 POS */
-   posSnap.forEach(function(doc){
-    var d=doc.data();todayRev+=(d.total||0);
-    (d.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
-   });
-   /* 오늘 수동 매출 */
-   res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-   /* 월 수동 매출 */
-   res[1].forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-   /* 월 POS 매출 */
-   res[2].forEach(function(doc){monthRev+=(doc.data().total||0);});
-   /* 재고 부족 */
-   res[3].forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)low++;});
-   var todayMargin=todayRev>0?Math.round((todayRev-todayCost)/todayRev*100):0;
-   var e0=document.getElementById('hs-0'),e1=document.getElementById('hs-1'),e2=document.getElementById('hs-2'),e3=document.getElementById('hs-3');
-  /* 미완료 주문 실시간 */
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
-   .onSnapshot(function(snap){if(e1){e1.textContent=snap.size+'건';if(snap.size>0){e1.classList.add('bounce-in');setTimeout(function(){e1.classList.remove('bounce-in');},500);}}});
-  /* 재고 부족 */
-  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
-   var low=0;snap.forEach(function(doc){var d=doc.data();if((d.stock||0)<=(d.minStock||5))low++;});
-   if(e2)e2.textContent=low+'개';
+ .onSnapshot(function(snap){
+  var todayRev=0,orderCnt=0;
+  snap.forEach(function(doc){
+   var d2=doc.data();
+   todayRev+=(d2.total||0);
+   if(d2.status!=='cancelled') orderCnt++;
   });
-  /* 출근 인원 실시간 (DINE 출퇴근 연동) */
-  if(window._filoAttendUnsub)window._filoAttendUnsub();
-  window._filoAttendUnsub=_db.collection('attendance')
-   .where('dealerId','==',did).where('date','==',today)
-   .onSnapshot(function(attSnap){
-    var ins={},outs={};
-    attSnap.forEach(function(doc){
-     var d=doc.data();
-     if(d.type==='in')ins[d.memberId]=d;
-     else if(d.type==='out')outs[d.memberId]=d;
-    });
-    var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
-    if(e3)e3.textContent=working+'명';
-    // DINE 연동 카드에도 표시
-    var dineAtt=document.getElementById('filo-dine-att');
-    if(dineAtt)dineAtt.textContent='출근 '+working+'명';
-   },function(){});
-   var todayProfit=todayRev-todayCost;
-   var ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
-   if(e0)_countUp(e0,todayRev,400,'₩','');
-   if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
-   if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
-   if(e1)_countUp(e1,monthRev,600,'₩','');
-   if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
-   if(e3)e3.textContent=document.getElementById('hs-3')?document.getElementById('hs-3').textContent:'';
-  }).catch(function(){});
+  var todayGoal=1500000;
+  var pct=Math.min(100,Math.round(todayRev/todayGoal*100));
+  var eRev=document.getElementById('hs-today-rev');
+  var eBar=document.getElementById('hs-goal-bar');
+  var ePct=document.getElementById('hs-goal-pct');
+  var eCnt=document.getElementById('hs-order-cnt');
+  if(eRev)_countUp(eRev,todayRev,600,'₩','');
+  if(eBar)eBar.style.width=pct+'%';
+  if(ePct)ePct.textContent=pct+'%';
+  if(eCnt)eCnt.textContent=orderCnt+'건';
  });
- }
+
+ // 이번달 매출
+ Promise.all([
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',today).where('date','<=',today).get()
+ ]).then(function(res){
+  var monthRev=0;
+  res[0].forEach(function(doc){monthRev+=(doc.data().total||0);});
+  var eM=document.getElementById('hs-month-rev');
+  var eMd=document.getElementById('hs-month-diff');
+  if(eM)_countUp(eM,monthRev,800,'₩','');
+  if(eMd)eMd.textContent=today.slice(8)+'일 누계';
+ }).catch(function(){});
+
+ // 인기 메뉴 (오늘)
+ _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today).get()
+ .then(function(snap){
+  var menuCnt={};
+  snap.forEach(function(doc){
+   (doc.data().items||[]).forEach(function(it){
+    menuCnt[it.name]=(menuCnt[it.name]||0)+(it.qty||1);
+   });
+  });
+  var sorted=Object.keys(menuCnt).map(function(k){return{n:k,c:menuCnt[k]};})
+   .sort(function(a,b){return b.c-a.c;}).slice(0,5);
+  var maxC=sorted.length?sorted[0].c:1;
+  var colors=['#7c3aed','#0891b2','#059669','#f59e0b','#ef4444'];
+  var el3=document.getElementById('hs-popular');
+  if(!el3) return;
+  if(!sorted.length){el3.innerHTML='<div style="font-size:11px;color:var(--t3)">오늘 주문 없음</div>';return;}
+  el3.innerHTML=sorted.map(function(m,i){
+   var pct=Math.round(m.c/maxC*100);
+   return '<div style="display:flex;align-items:center;gap:8px">'+
+    '<div style="font-size:11px;color:var(--tx);width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">'+m.n+'</div>'+
+    '<div style="flex:1;height:6px;background:var(--bd);border-radius:4px;overflow:hidden">'+
+    '<div style="height:100%;background:'+colors[i]+';border-radius:4px;width:'+pct+'%;transition:width .8s ease"></div>'+
+    '</div>'+
+    '<div style="font-size:11px;font-weight:700;color:'+colors[i]+';width:24px;text-align:right">'+m.c+'</div>'+
+    '</div>';
+  }).join('');
+ }).catch(function(){});
+
+ // 출근 인원
+ _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
+ .onSnapshot(function(snap){
+  var ins={},outs={};
+  snap.forEach(function(doc){
+   var d3=doc.data();
+   if(d3.type==='in')ins[d3.memberId]=1;
+   else if(d3.type==='out')outs[d3.memberId]=1;
+  });
+  var cnt=Object.keys(ins).filter(function(id){return !outs[id];}).length;
+  var el4=document.getElementById('hs-staff');
+  if(el4)el4.textContent=cnt+'명';
+ },function(){});
+
+ // 미완료 주문
+ _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today).where('status','in',['pending','preparing'])
+ .onSnapshot(function(snap){
+  var el5=document.getElementById('hs-orders');
+  if(el5){el5.textContent=snap.size+'건';el5.style.color=snap.size>0?'#ef4444':'#22c55e';}
+ },function(){});
+
+ // 7일 주문 바차트
+ var dates=[];
+ for(var i=6;i>=0;i--){var d4=new Date();d4.setDate(d4.getDate()-i);dates.push(d4.toISOString().slice(0,10));}
+ Promise.all(dates.map(function(dt){
+  return _db.collection('filo_sales').where('dealerId','==',did).where('date','==',dt).get()
+   .then(function(s){return s.size;}).catch(function(){return 0;});
+ })).then(function(cnts){
+  var maxV=Math.max.apply(null,cnts)||1;
+  var barsEl=document.getElementById('hs-order-bars');
+  if(!barsEl) return;
+  barsEl.innerHTML=cnts.map(function(c,i){
+   var h=Math.max(4,Math.round(c/maxV*46));
+   var isToday=i===6;
+   return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
+    '<div style="font-size:9px;color:var(--t3)">'+c+'</div>'+
+    '<div style="width:100%;height:'+h+'px;background:'+(isToday?'var(--br)':'rgba(124,58,237,.3)')+';border-radius:3px 3px 0 0;transition:height .6s ease"></div>'+
+    '</div>';
+  }).join('');
+ }).catch(function(){});
 }
 
 function _filoTab(t){
