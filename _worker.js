@@ -6270,3 +6270,85 @@ service cloud.firestore {
   }
 };
 
+
+// ── yongcha.app 핸들러 ────────────────────────────────────────
+async function handleYongcha(request, env, ctx) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  // KV에서 파일 서빙
+  const kvFiles = ['/yongcha.js', '/yongcha-auth.js', '/yongcha-post.js'];
+  if (kvFiles.includes(path)) {
+    return serveKVFile(env, path.slice(1), 'application/javascript');
+  }
+
+  // 메인 페이지 (모든 경로 → yongcha.html)
+  const html = await env.DONWAY_ASSETS.get('yongcha.html');
+  if (html) {
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html;charset=utf-8',
+                 'Cache-Control': 'no-cache' }
+    });
+  }
+
+  // 준비 중 페이지
+  return new Response(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>용차 — 택배 노선 매칭 플랫폼</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Malgun Gothic',sans-serif;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}
+.wrap{text-align:center;padding:40px 20px}
+.logo{font-size:48px;margin-bottom:16px}
+.title{font-size:32px;font-weight:900;margin-bottom:8px;letter-spacing:-1px}
+.title span{color:#f59e0b}
+.sub{font-size:16px;color:rgba(255,255,255,.6);margin-bottom:32px;line-height:1.6}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:20px;padding:8px 20px;font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:24px}
+.dot{width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;max-width:600px;margin:32px auto}
+.feat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;text-align:left}
+.feat-ico{font-size:28px;margin-bottom:8px}
+.feat-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.feat-desc{font-size:12px;color:rgba(255,255,255,.5);line-height:1.5}
+.footer{margin-top:40px;font-size:12px;color:rgba(255,255,255,.3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">🚚</div>
+  <div class="title">용<span>차</span>.app</div>
+  <div class="sub">택배 대리점 ↔ 기사 노선 매칭 플랫폼<br>지금보다 쉽게, 지금보다 투명하게</div>
+  <div class="badge"><span class="dot"></span>서비스 준비 중</div>
+  <div class="features">
+    <div class="feat">
+      <div class="feat-ico">📋</div>
+      <div class="feat-title">노선 공고</div>
+      <div class="feat-desc">대리점이 구역/물량/단가를 공고로 올려요</div>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">🙋</div>
+      <div class="feat-title">기사 매칭</div>
+      <div class="feat-desc">기사가 원하는 노선에 바로 지원해요</div>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">💰</div>
+      <div class="feat-title">정산 자동화</div>
+      <div class="feat-desc">DONWAY 연동으로 정산이 자동으로</div>
+    </div>
+    <div class="feat">
+      <div class="feat-ico">⭐</div>
+      <div class="feat-title">신뢰 평가</div>
+      <div class="feat-desc">대리점·기사 양방향 평가로 신뢰 구축</div>
+    </div>
+  </div>
+  <div class="footer">© 2026 유한회사 엠비티아이 · yongcha.app</div>
+</div>
+</body>
+</html>`, {
+    headers: { 'Content-Type': 'text/html;charset=utf-8' }
+  });
+}
