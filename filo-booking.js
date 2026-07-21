@@ -454,11 +454,19 @@ function _filoWaitingAdd(did){
     dealerId:did,name:name,seats:seats,phone:phone,
     date:_today(),status:'waiting',
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){_filoToast('대기 등록됐어요!');}).catch(function(e){_filoToast('오류: '+e.message);});
+  }).then(function(){
+    _filoToast('대기 등록됐어요!');
+    // ★ 사장님 FCM 푸시 알림
+    _filoWaitingNotify(did, '🧍 새 웨이팅 등록', name+'님 '+seats+'명 대기 등록됐어요!', 'waiting');
+  }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 function _filoWaitingCall(wid,did,name){
   _db.collection('dine_waiting').doc(wid).update({status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()})
-    .then(function(){_filoToast('📢 '+name+'님 호출!');});
+    .then(function(){
+      _filoToast('📢 '+name+'님 호출!');
+      // ★ 사장님 + 손님 FCM 푸시 알림
+      _filoWaitingNotify(did, '📢 손님 호출', name+'님을 호출했어요! 자리를 안내해 주세요.', 'called');
+    });
 }
 function _filoWaitingDone(wid,did){
   _db.collection('dine_waiting').doc(wid).update({status:'seated',seatedAt:firebase.firestore.FieldValue.serverTimestamp()})
@@ -478,6 +486,7 @@ function _filoWaitingCallNext(did){
       var name=doc.data().name||'손님';
       doc.ref.update({status:'called',calledAt:firebase.firestore.FieldValue.serverTimestamp()});
       _filoToast('📢 '+name+'님 호출!');
+      _filoWaitingNotify(did, '📢 다음 팀 호출', name+'님 테이블로 안내해 주세요!', 'called');
     });
 }
 
@@ -547,4 +556,24 @@ function _tbBook(did,date,time,seats){
   if(!name)return;
   _db.collection('filo_bookings').add({dealerId:did,customerName:name,phone:phone,date:date,time:time||'',seats:seats,status:'pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()})
   .then(function(){_filoToast('✅ '+date+' '+time+' '+seats+'명 예약됐어요!');}).catch(function(e){_filoToast('오류: '+e.message);});
+}
+
+// ── 웨이팅 FCM 푸시 알림 ─────────────────────────────────────
+function _filoWaitingNotify(did, title, body, type) {
+  // /api/ctrl-notify Worker API 호출 (dealer = 사장님 FCM)
+  fetch('/api/ctrl-notify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'dealer',          // 사장님 폰에 전송
+      dealerId: did,
+      title: title,
+      body: body,
+      data: { page: 'waiting', action: type }
+    })
+  }).then(function(res){
+    if(!res.ok) console.warn('웨이팅 알림 실패:', res.status);
+  }).catch(function(e){
+    console.warn('웨이팅 알림 오류:', e.message);
+  });
 }
