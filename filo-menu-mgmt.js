@@ -437,8 +437,11 @@ function _filoImportMenuExcel(input){
     var bakeryKw=['빵','베이커리','디저트','케이크','쿠키','마카롱','타르트','스콘','머핀','도넛','크루아상','소금빵'];
     if(!isBakery) isBakery = bakeryKw.some(function(k){return (category||'').includes(k)||(name||'').includes(k);});
     if(!name||!price)return;
+    var excelImg = col(['imageSearchQuery','이미지검색어']) || '';
+    var autoImg  = excelImg || (typeof _filoAutoImageUrl==='function' ? _filoAutoImageUrl(name,category,emoji) : '');
     batch.push({name:name,price:price,category:category,emoji:emoji,description:desc,
-      isBakery:isBakery,soldOut:soldOut,forSale:true,dealerId:did,stock:null,minStock:null});
+      isBakery:isBakery,soldOut:soldOut,forSale:true,dealerId:did,
+      imageSearchQuery:autoImg,stock:null,minStock:null});
    });
    if(!batch.length){_filoToast('⚠️ 유효한 메뉴가 없습니다');return;}
    var db=firebase.firestore();
