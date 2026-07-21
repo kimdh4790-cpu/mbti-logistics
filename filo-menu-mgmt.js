@@ -404,10 +404,14 @@ function _filoImportMenuExcel(input){
   try{
    var wb=XLSX.read(e.target.result,{type:'array'});
    var ws=wb.Sheets[wb.SheetNames[0]];
-   // range:2 = 0-based → 3번째 행(category,name...)을 헤더로 인식
-   var rows=XLSX.utils.sheet_to_json(ws,{defval:'',range:2});
-   // 4행 한글설명 행 제거
-   rows=rows.filter(function(r){ var n=String(r['name']||''); return n!=='' && n!=='메뉴명' && n.indexOf('*')<0; });
+   // 1행 헤더(category,name...) 기준 파싱
+   var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+   // 한글설명행 제거 (name이 '메뉴명' 또는 숫자 아닌 경우)
+   rows=rows.filter(function(r){
+     var n=String(r['name']||'').trim();
+     var p=r['price'];
+     return n!=='' && n!=='메뉴명' && n!=='메뉴명(name)' && !isNaN(Number(p)) && Number(p)>0;
+   });
    if(!rows.length){_filoToast('⚠️ 데이터가 없습니다');return;}
    var batch=[];
    rows.forEach(function(r){
