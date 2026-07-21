@@ -6281,6 +6281,26 @@ async function handleYongcha(request, env) {
   const url  = new URL(request.url);
   const path = url.pathname;
 
+  if (path.match(/\.(js|css|json|png|jpg|ico)$/)) {
+    return serveKVFile(env, path.slice(1), 'application/javascript');
+  }
+
+  const html = await env.DONWAY_ASSETS.get('yongcha.html');
+  if (html) {
+    return new Response(html, {
+      headers: {
+        'Content-Type': 'text/html;charset=utf-8',
+        'Cache-Control': 'no-store, no-cache'
+      }
+    });
+  }
+  return new Response('준비 중', {headers:{'Content-Type':'text/html'}});
+}
+
+async function handleYongcha(request, env) {
+  const url  = new URL(request.url);
+  const path = url.pathname;
+
   // JS/CSS 파일은 KV에서 서빙
   if (path.match(/\.(js|css|json|png|jpg|ico)$/)) {
     return serveKVFile(env, path.slice(1), 'application/javascript');
