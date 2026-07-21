@@ -584,7 +584,7 @@ async function syncKVFromGitHub(env) {
   const GITHUB_RAW = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main';
   const FILES = [
     'settle.html', 'inventory.html', 'qrpos.html', 'kiosk.html',
-    'mbtico_hub.html', 'join.html', 'admin_sub.html', 'add.html', 'order.html', 'donway_landing.html'
+    'mbtico_hub.html', 'join.html', 'admin_sub.html', 'add.html', 'wait.html', 'order.html', 'donway_landing.html'
   ];
   
   const results = [];
@@ -4796,6 +4796,12 @@ service cloud.firestore {
         const body = await request.json();
         const { type, dealerId, title, body: msgBody, data } = body;
         const fsToken = await getAccessToken(env);
+
+        // ── 특정 토큰 직접 발송 (손님 FCM) ──
+        if (type === 'token' && body.token) {
+          await sendFCM(body.token, title, msgBody, data||{});
+          return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+        }
 
         // 고객사 FCM 토큰 조회 (companies/{dealerId}.fcmTokens 배열)
         async function getDealerTokens(did) {
