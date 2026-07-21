@@ -480,3 +480,71 @@ function _filoWaitingCallNext(did){
       _filoToast('📢 '+name+'님 호출!');
     });
 }
+
+function _filoPageTableBooking(el){
+  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+  var now=new Date(); var selYear=now.getFullYear(); var selMonth=now.getMonth(); var selDate=null; var selTime=null; var seats=2;
+  el.innerHTML=''; var wrap=document.createElement('div'); wrap.className='slide-up'; wrap.style.cssText='max-width:680px;margin:0 auto';
+  var hdr=document.createElement('div'); hdr.innerHTML='<div style="font-size:22px;font-weight:900;color:var(--tx);margin-bottom:4px">테이블 예약</div><div style="font-size:12px;color:var(--t3);margin-bottom:20px">원하시는 날짜와 시간을 선택해 주세요</div>'; wrap.appendChild(hdr);
+  // 달력
+  var calCard=document.createElement('div'); calCard.className='card'; calCard.style.cssText='padding:20px;border-radius:20px;margin-bottom:14px';
+  function renderCal(){
+    calCard.innerHTML='';
+    var calHdr=document.createElement('div'); calHdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
+    var prev=document.createElement('button'); prev.style.cssText='width:32px;height:32px;border-radius:50%;border:1.5px solid var(--bd);background:var(--surface);cursor:pointer;font-size:16px;color:var(--tx)'; prev.textContent='‹'; prev.onclick=function(){selMonth--;if(selMonth<0){selMonth=11;selYear--;}renderCal();};
+    var next=document.createElement('button'); next.style.cssText=prev.style.cssText; next.textContent='›'; next.onclick=function(){selMonth++;if(selMonth>11){selMonth=0;selYear++;}renderCal();};
+    var title=document.createElement('div'); title.style.cssText='font-size:16px;font-weight:800;color:var(--tx)'; title.textContent=selYear+'년 '+(selMonth+1)+'월';
+    calHdr.appendChild(prev); calHdr.appendChild(title); calHdr.appendChild(next); calCard.appendChild(calHdr);
+    var dowRow=document.createElement('div'); dowRow.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:8px';
+    ['일','월','화','수','목','금','토'].forEach(function(d){var c=document.createElement('div');c.style.cssText='text-align:center;font-size:12px;font-weight:700;color:var(--t3);padding:4px 0';c.textContent=d;dowRow.appendChild(c);}); calCard.appendChild(dowRow);
+    var grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(7,1fr);gap:4px';
+    var todayStr=now.toISOString().slice(0,10); var firstDay=new Date(selYear,selMonth,1).getDay(); var lastDate=new Date(selYear,selMonth+1,0).getDate();
+    for(var i=0;i<firstDay;i++){var e=document.createElement('div');grid.appendChild(e);}
+    for(var d=1;d<=lastDate;d++){
+      var dt=selYear+'-'+String(selMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var isPast=dt<todayStr; var isToday=dt===todayStr; var isSel=dt===selDate;
+      var cell=document.createElement('div');
+      cell.style.cssText='text-align:center;padding:8px 4px;border-radius:10px;cursor:'+(isPast?'not-allowed':'pointer')+';font-size:13px;font-weight:'+(isSel||isToday?'800':'500')+';background:'+(isSel?'#7c3aed':isToday?'rgba(124,58,237,.12)':'transparent')+';color:'+(isSel?'#fff':isPast?'var(--t3)':isToday?'#7c3aed':'var(--tx)')+';opacity:'+(isPast?.4:1);
+      cell.textContent=d;
+      if(!isPast){(function(ds){cell.onclick=function(){selDate=ds;renderCal();renderTime();};})(dt);}
+      grid.appendChild(cell);
+    }
+    calCard.appendChild(grid);
+    var hint=document.createElement('div');hint.style.cssText='font-size:11px;color:var(--t3);margin-top:12px;text-align:center';hint.textContent='오늘은 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 입니다';calCard.appendChild(hint);
+  }
+  wrap.appendChild(calCard);
+  // 시간 선택
+  var timeCard=document.createElement('div'); timeCard.className='card'; timeCard.style.cssText='padding:20px;border-radius:20px;margin-bottom:14px'; wrap.appendChild(timeCard);
+  function renderTime(){
+    timeCard.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:12px">⏱ 시간 선택</div>';
+    var slots=['12:00','12:30','13:00','13:30','18:00','18:30','19:00','19:30','20:00'];
+    var g=document.createElement('div');g.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px';
+    slots.forEach(function(t){
+      var b=document.createElement('button');b.style.cssText='padding:12px;border:2px solid var(--bd);border-radius:12px;background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;color:var(--tx);transition:.2s';b.textContent=t;
+      b.onclick=function(){g.querySelectorAll('button').forEach(function(x){x.style.background='var(--surface)';x.style.borderColor='var(--bd)';x.style.color='var(--tx)';});b.style.background='rgba(124,58,237,.15)';b.style.borderColor='#7c3aed';b.style.color='#7c3aed';selTime=t;updateBtn();};
+      g.appendChild(b);
+    });
+    timeCard.appendChild(g);
+  }
+  // 인원수
+  var seatsCard=document.createElement('div');seatsCard.className='card';seatsCard.style.cssText='padding:20px;border-radius:20px;margin-bottom:14px';
+  seatsCard.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:12px">👥 인원수</div>'+
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">'+
+    '<button onclick="window._tbS(-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--bd);background:var(--surface);font-size:20px;cursor:pointer;color:var(--tx)">−</button>'+
+    '<span id="tb-seats" style="font-size:22px;font-weight:900;min-width:40px;text-align:center;color:var(--tx)">2명</span>'+
+    '<button onclick="window._tbS(1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--bd);background:var(--surface);font-size:20px;cursor:pointer;color:var(--tx)">+</button>'+
+    '<span style="font-size:11px;color:var(--t3)">최대 8명까지 예약 가능</span></div>'+
+    '<button id="tb-btn" disabled style="width:100%;height:52px;background:#ccc;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:not-allowed">예약하기</button>';
+  wrap.appendChild(seatsCard);
+  el.appendChild(wrap);
+  window._tbS=function(d){seats=Math.max(1,Math.min(8,seats+d));var e=document.getElementById('tb-seats');if(e)e.textContent=seats+'명';};
+  function updateBtn(){var b=document.getElementById('tb-btn');if(!b)return;var ok=!!selDate&&!!selTime;b.disabled=!ok;b.style.background=ok?'linear-gradient(135deg,#7c3aed,#6d28d9)':'#ccc';b.style.cursor=ok?'pointer':'not-allowed';b.onclick=ok?function(){_tbBook(did,selDate,selTime,seats);}:null;}
+  renderCal(); renderTime();
+}
+function _tbBook(did,date,time,seats){
+  var name=prompt('예약자 성함')||'손님';
+  var phone=prompt('연락처')||'';
+  if(!name)return;
+  _db.collection('filo_bookings').add({dealerId:did,customerName:name,phone:phone,date:date,time:time||'',seats:seats,status:'pending',createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+  .then(function(){_filoToast('✅ '+date+' '+time+' '+seats+'명 예약됐어요!');}).catch(function(e){_filoToast('오류: '+e.message);});
+}
