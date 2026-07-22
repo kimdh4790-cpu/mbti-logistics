@@ -878,12 +878,12 @@ function _pgPostWrite(el){
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역 추가 (우편번호)</label>'+
-  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">🔍 주소 검색으로 구역 추가</button>'+
-  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>'+
+  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소 검색으로 구역 추가</button>'+
+  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:none"></div>'+
   '</div>'+
-  '<div class="map-wrap"><div id="post-map"></div></div>'+
+  '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
   '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
@@ -1198,6 +1198,9 @@ function _removeZone(i){
 }
 function _updateMapZones(){
   if(!_map) return;
+  // 지도 wrap 표시
+  var wrap = document.getElementById('post-map-wrap');
+  if(wrap) wrap.style.display = window._zones.length ? 'block' : 'none';
   // 기존 마커/서클 제거
   (_markers||[]).forEach(function(m){m.setMap(null);});
   _markers = [];
