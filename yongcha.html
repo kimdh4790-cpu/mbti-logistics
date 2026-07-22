@@ -1141,13 +1141,16 @@ function _searchAddr(){
   _loadKakaoMap(function(){
     var ps=new kakao.maps.services.Places();
     var gc=new kakao.maps.services.Geocoder();
-    // 우편번호면 좌표변환
+    // 우편번호면 REST API로 좌표변환
     if(/^\d{5}$/.test(q)){
-      gc.addressSearch(q,function(res,status){
-        if(status===kakao.maps.services.Status.OK){
-          _showAddrResult([{place_name:res[0].address_name,road_address_name:'',x:res[0].x,y:res[0].y}]);
-        } else {_yToast('우편번호를 찾을 수 없어요');}
-      });
+      fetch('/api/geocode?addr='+encodeURIComponent(q))
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d.ok){
+            _showAddrResult([{place_name:d.address_name||q,road_address_name:d.road_address||'',x:String(d.lng),y:String(d.lat)}]);
+          } else {_yToast('우편번호를 찾을 수 없어요');}
+        })
+        .catch(function(){_yToast('검색 중 오류가 발생했어요');});
     } else {
       ps.keywordSearch(q+' 아파트',function(res,status){
         if(status!==kakao.maps.services.Status.OK){_yToast('검색 결과 없음');return;}
