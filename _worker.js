@@ -6278,8 +6278,33 @@ service cloud.firestore {
 
 // ── yongcha.app 핸들러 ────────────────────────────────────────
 async function handleYongcha(request, env, ctx) {
-  const url = new URL(request.url);
-  const path = url.pathname;
+  const url    = new URL(request.url);
+  const path   = url.pathname;
+  const method = request.method;
+
+  // ★ 카카오 설정 API
+  if (path === '/api/kakao-config') {
+    return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY || '' }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
+  }
+
+  // ★ FCM 알림
+  if (path === '/api/ctrl-notify' && method === 'POST') {
+    try {
+      const body = await request.json();
+      if (body.token && env.FCM_SERVER_KEY) {
+        await fetch('https://fcm.googleapis.com/fcm/send', {
+          method: 'POST',
+          headers: { 'Authorization': 'key='+env.FCM_SERVER_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: body.token, notification: { title: body.title||'용차', body: body.body||'' }, data: body.data||{} })
+        });
+      }
+      return new Response(JSON.stringify({ok:true}), { headers: {'Content-Type':'application/json'} });
+    } catch(e) {
+      return new Response(JSON.stringify({ok:false}), { headers: {'Content-Type':'application/json'} });
+    }
+  }
 
   // KV에서 파일 서빙
   const kvFiles = ['/yongcha.js', '/yongcha-auth.js', '/yongcha-post.js'];
