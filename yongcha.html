@@ -211,6 +211,7 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 .zone-tag{display:inline-flex;align-items:center;gap:6px;background:var(--brl);color:var(--br);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:8px;cursor:pointer}
 .zone-tag:hover{background:var(--rdl);color:var(--rd)}
 </style>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </head>
 <body>
 
@@ -861,12 +862,9 @@ function _pgPostWrite(el){
 
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역 검색 (우편번호 또는 동명)</label>'+
-  '<div class="map-search-wrap">'+
-  '<input class="map-search-inp" id="pw-addr-search" placeholder="예: 48060 또는 해운대구 좌동" onkeydown="if(event.key===\'Enter\')_searchAddr()">'+
-  '<button class="map-search-btn" onclick="_searchAddr()">🔍 검색</button>'+
-  '</div>'+
-  '<div class="addr-result" id="addr-result"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 검색</label>'+
+  '<button class="map-search-btn" onclick="_openDaumPost()" style="width:100%;padding:12px;font-size:14px">🔍 주소 검색 (우편번호 / 동명)</button>'+
+  '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '</div>'+
   '<div class="map-wrap"><div id="post-map"></div></div>'+
