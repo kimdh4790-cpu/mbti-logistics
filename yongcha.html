@@ -495,7 +495,7 @@ function _goPage(p){
   if(p==='home')_pgHome(el);
   else if(p==='posts')_pgPosts(el);
   else if(p==='my_posts')_pgMyPosts(el);
-  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,300);}
+  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,600);}
   else if(p==='my_applies')_pgMyApplies(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
@@ -1060,12 +1060,18 @@ function _yLogout(){
 var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
 
 function _loadKakaoMap(callback){
-  if(window.kakao&&window.kakao.maps){if(callback)callback();return;}
+  if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map){if(callback)callback();return;}
   if(_kakaoKey){_initKakaoScript(callback);return;}
   fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
     _kakaoKey=d.key||'';
+    if(!_kakaoKey){console.warn('카카오 키 없음');return;}
     _initKakaoScript(callback);
-  }).catch(function(){console.warn('카카오 키 없음');});
+  }).catch(function(e){
+    console.warn('카카오 키 로딩 실패:',e.message);
+    // yongcha.app 전용 키 직접 사용
+    _kakaoKey='3d5a58a3e1099aa2b6b221c3db2b0d13';
+    _initKakaoScript(callback);
+  });
 }
 
 function _initKakaoScript(callback){
@@ -1082,13 +1088,23 @@ function _initKakaoScript(callback){
 
 // 공고 등록 지도 초기화
 function _initPostMap(){
+  var container=document.getElementById('post-map');
+  if(!container){ setTimeout(_initPostMap,500); return; }
   _loadKakaoMap(function(){
-    var container=document.getElementById('post-map');
+    container=document.getElementById('post-map');
     if(!container)return;
-    var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
-    _map=new kakao.maps.Map(container,opts);
-    _map.setDraggable(true);
-    _map.setZoomable(true);
+    // 컨테이너 크기 강제 지정
+    container.style.width='100%';
+    container.style.height='240px';
+    container.style.display='block';
+    try {
+      var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
+      _map=new kakao.maps.Map(container,opts);
+      _map.setDraggable(true);
+      _map.setZoomable(true);
+      // 지도 크기 재계산
+      _map.relayout();
+    } catch(e){ console.error('카카오맵 오류:',e); }
   });
 }
 
