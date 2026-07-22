@@ -793,7 +793,7 @@ function _pgMyPosts(el){
   _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').get()
     .then(function(snap){
       var list=document.getElementById('my-posts-list');if(!list)return;
-      if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요</div></div>';return;}
+      if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요<br><span style="font-size:11px;color:var(--t2)">uid: '+(_CU&&_CU.uid||'없음')+'</span></div></div>';return;}
       list.innerHTML='';
       snap.forEach(function(doc){
         var d=Object.assign({id:doc.id},doc.data());
@@ -884,6 +884,8 @@ function _pgPostWrite(el){
   '<div id="selected-zones" style="display:none"></div>'+
   '</div>'+
   '<div class="map-wrap"><div id="post-map"></div></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
+  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
@@ -941,13 +943,13 @@ function _submitPost(){
   var get=function(id){return(document.getElementById(id)||{}).value||'';};
   var courier=get('pw-courier'),area=get('pw-area'),volume=get('pw-volume');
   var price=get('pw-price'),est=get('pw-est'),areaType=get('pw-areaType');
-  var date=get('pw-date'),hours=get('pw-hours'),desc=get('pw-desc');
+  var date=get('pw-date'),hours=get('pw-hours'),desc=get('pw-desc'),routeNo=get('pw-routeNo');
   var btn=document.getElementById('submit-btn');
   if(!courier||!area||!volume||!price){_yToast('필수 항목을 입력하세요');return;}
   btn.textContent='등록 중...';btn.disabled=true;
   _db.collection('yongcha_posts').add({
     agencyId:_CU.uid,agencyName:_CU.name,agencyRating:_CU.rating||0,
-    region:_CU.region,courier:courier,area:area,zones:window._zones||[],
+    region:_CU.region,courier:courier,area:area,routeNo:routeNo,zones:window._zones||[],
     volume:parseInt(volume),unitPrice:parseInt(price),
     monthlyEst:parseInt(est)||0,areaType:areaType,
     startDate:date,workHours:hours,desc:desc,
