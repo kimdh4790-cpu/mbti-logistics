@@ -1132,32 +1132,28 @@ function _initPostMap(){
   });
 }
 
-// 주소 검색
-function _searchAddr(){
-  var q=(document.getElementById('pw-addr-search').value||'').trim();
-  if(!q){_yToast('검색어를 입력하세요');return;}
-  _loadKakaoMap(function(){
-    var ps=new kakao.maps.services.Places();
-    var gc=new kakao.maps.services.Geocoder();
-    // 우편번호면 REST API로 좌표변환
-    if(/^\d{5}$/.test(q)){
-      fetch('/api/geocode?addr='+encodeURIComponent(q))
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if(d.ok){
-            _showAddrResult([{place_name:d.address_name||q,road_address_name:d.road_address||'',x:String(d.lng),y:String(d.lat)}]);
-          } else {_yToast('우편번호를 찾을 수 없어요');}
-        })
-        .catch(function(){_yToast('검색 중 오류가 발생했어요');});
-    } else {
-      ps.keywordSearch(q+' 아파트',function(res,status){
-        if(status!==kakao.maps.services.Status.OK){_yToast('검색 결과 없음');return;}
-        _showAddrResult(res.slice(0,5));
+// Daum 우편번호 팝업
+function _openDaumPost(){
+  new daum.Postcode({
+    oncomplete: function(data){
+      var addr = data.roadAddress || data.jibunAddress;
+      _loadKakaoMap(function(){
+        var gc = new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr, function(res, status){
+          if(status === kakao.maps.services.Status.OK){
+            _showAddrResult([{
+              place_name: addr,
+              road_address_name: data.roadAddress||'',
+              x: res[0].x, y: res[0].y
+            }]);
+          } else {
+            _yToast('주소 좌표를 찾을 수 없어요');
+          }
+        });
       });
     }
-  });
+  }).open();
 }
-
 function _showAddrResult(results){
   var el=document.getElementById('addr-result');
   if(!el)return;
