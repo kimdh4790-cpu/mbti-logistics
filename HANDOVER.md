@@ -365,12 +365,13 @@ Firestore: companies/{dealerId}.posMode
 담당 변호사 상담 권장 (30~50만원)
 ```
 
-### 추천 도메인
+### 도메인
 ```
-yongcha.ai.kr  ← 1순위 (기존 패턴 통일)
-  → donway.ai.kr / filo.ai.kr / dine.ne.kr 패턴
-  → Cloudflare 라우트만 추가하면 됨
-  → 별도 도메인 구매 불필요
+yongcha.app  ✅ 등록 완료 (2026-07-21, $14.20/년)
+  → Cloudflare Registrar 자동 갱신
+  → Cloudflare Worker 연결 완료
+  → SSL 자동 (무료)
+  → 만료: 2027-07-21
 ```
 
 ### 핵심 기능 설계
@@ -423,7 +424,7 @@ Worker: mbtico-pages/_worker.js에 라우트 추가
   yongcha-settle.js  — 수수료 정산
 ```
 
-### Firestore 컬렉션 설계 (예정)
+### Firestore 컬렉션 설계 (완료)
 ```
 yongcha_users/{uid}
   type: 'agency' | 'driver'
@@ -450,24 +451,52 @@ yongcha_settlements/{settleId}
   status: 'pending' | 'paid'
 ```
 
-### 개발 우선순위 (박람회 이후)
+### 개발 현황 (2026-07-21 기준)
+
+**완료:**
 ```
-1단계 (2주): 기본 뼈대
-  → 회원가입/로그인 (대리점/기사 구분)
-  → 공고 등록 + 목록 조회
-  → 지원하기 + 승인/거절
+✅ yongcha.app 도메인 등록
+✅ Cloudflare Worker 연결
+✅ Firebase Auth 승인 도메인 추가
+✅ Google Cloud API 키 제한 추가
+✅ Firestore Rules (yongcha 컬렉션)
+✅ yongcha.html 기본 앱 구현
+   → 회원가입 (대리점/기사 구분)
+   → 로그인/로그아웃
+   → 홈 대시보드
+   → 공고 등록 (대리점)
+   → 공고 목록 + 지원 (기사)
+   → 지원자 승인/거절 (대리점)
+   → 내 지원 현황 (기사)
+   → 프로필
+```
 
-2단계 (2주): 알림 + 정산
-  → FCM 푸시 알림 (승인/거절 알림)
-  → 수수료 자동 계산
-  → 정산 내역
+**미완료 (다음 세션):**
+```
+⬜ FCM 푸시 알림 (승인/거절)
+⬜ 기사/대리점 양방향 평가
+⬜ 구역 지도 미리보기
+⬜ 긴급 공고 알림
+⬜ DONWAY 정산 연동
+⬜ 구인구직 탭 (상시 채용)
+⬜ 관리자 대시보드
+```
 
-3단계 (1주): 고도화
-  → 기사 프로필/평점
-  → 지역별 필터
-  → 관리자 대시보드
+**⚠️ 알려진 이슈:**
+```
+yongcha2.html KV 캐시 문제 발생했음
+→ deploy.yml에서 yongcha2.html 완전 제거 완료
+→ KV에서 yongcha2.html 수동 삭제 필요
+→ 브라우저 캐시 강제 삭제 필요
+   (F12 → Application → Clear site data)
+```
 
-예상 개발 기간: 5~6주
+**개발 우선순위 (잔여):**
+```
+1단계: FCM 알림 + 평가 시스템
+2단계: DONWAY 연동
+3단계: 구인구직 + 지도 연동
+예상: 3~4주
 ```
 
 ### 수익 모델
