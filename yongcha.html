@@ -734,7 +734,10 @@ function _showPostDetail(d){
   _openModal();
 
   // 지도 표시
-  if(d.lat&&d.lng){
+  window._detailZones = d.zones||[];
+  if(d.zones&&d.zones.length){
+    setTimeout(function(){_showDetailMap(d.zones[0].lat,d.zones[0].lng,d.zones[0].name);},400);
+  } else if(d.lat&&d.lng){
     setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
   }
 
@@ -1291,3 +1294,24 @@ function _showDetailMap(lat,lng,name){
 </script>
 </body>
 </html>
+function _showZoneOnMap(i){
+  var zones = window._detailZones||[];
+  var z = zones[i];
+  if(!z) return;
+  // 탭 스타일 업데이트
+  zones.forEach(function(_,j){
+    var t = document.getElementById('ztab-'+j);
+    if(!t) return;
+    t.style.background = j===i ? 'var(--ac)' : 'transparent';
+    t.style.color = j===i ? '#000' : 'var(--ac)';
+  });
+  _loadKakaoMap(function(){
+    var pos = new kakao.maps.LatLng(z.lat, z.lng);
+    if(window._detailMap){
+      window._detailMap.setCenter(pos);
+      window._detailMap.setLevel(5);
+      if(window._detailMarker) window._detailMarker.setPosition(pos);
+      if(window._detailCircle) window._detailCircle.setCenter(pos);
+    }
+  });
+}
