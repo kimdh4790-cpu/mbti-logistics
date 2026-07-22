@@ -69,13 +69,61 @@
 
 ### 자동배포 흐름
 ```
-코드 수정 → GitHub push
-→ .github/workflows/deploy.yml 실행
-→ Firestore Rules + Indexes 배포
-→ Storage Rules 배포
-→ 모든 JS/HTML 파일 → Cloudflare KV 업로드
-→ Worker 배포
-→ 완료 (약 70~90초)
+코드 수정 → GitHub push (main 브랜치)
+→ .github/workflows/deploy.yml 자동 실행
+→ ① Cloudflare Worker 배포 (wrangler deploy)
+→ ② 모든 JS/HTML → Cloudflare KV 업로드
+→ ③ Firestore Rules + Indexes 배포
+→ ④ Storage Rules 배포
+→ 완료 (약 70~100초)
+```
+
+### ⚠️ 중요 — 파일 수정 시 규칙
+```
+1. GitHub에 파일 push만 하면 자동 배포됨
+2. Cloudflare 대시보드 직접 수정 절대 금지
+   → GitHub push로만 배포해야 자동화 유지됨
+
+3. 새 JS/HTML 파일 추가 시 반드시:
+   → deploy.yml "for FILE in ..." 목록에 추가
+   → _worker.js KV 서빙 목록에 추가
+
+4. 배포 확인:
+   → https://github.com/kimdh4790-cpu/mbti-logistics/actions
+   → 초록색 ✅ 되면 완료
+   → 보통 70~100초 소요
+```
+
+### ⚠️ KV 캐시 문제 (알려진 이슈)
+```
+증상: 코드 수정 후에도 구버전 화면이 나옴
+원인: Cloudflare KV에 구버전이 남아있음
+
+해결 방법:
+  1. Cloudflare KV 대시보드에서 해당 파일 삭제
+     → https://dash.cloudflare.com/02709cbec18d848913b4246015b9148f/workers/kv/namespaces/7f0e90efaea64f3ab08ff00f8970b28b
+     → 파일명 검색 → 삭제
+     → 재배포 후 시크릿탭으로 확인
+
+  2. 브라우저 캐시 삭제
+     → F12 → Application → Clear site data
+     → 또는 Ctrl+Shift+R 강력 새로고침
+
+  3. 시크릿탭으로 항상 확인 (Ctrl+Shift+N)
+
+⚡ 근본 해결: Cache-Control: no-store 헤더 적용됨
+   → 신규 배포부터는 자동으로 최신버전 서빙
+```
+
+### GitHub Actions 수동 실행
+```
+배포 안 됐을 때 수동으로 트리거:
+  https://github.com/kimdh4790-cpu/mbti-logistics/actions
+  → 최근 workflow 클릭
+  → "Re-run all jobs"
+  
+또는 README.md에 빈 줄 추가 후 push
+→ 자동 트리거됨
 ```
 
 ---
