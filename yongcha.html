@@ -471,7 +471,7 @@ function _buildNav(){
   var tabs;
   if(type==='admin'){
     tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'전체공고',p:'posts'},
-          {ico:'👥',lbl:'회원관리',p:'members'},{ico:'⚙️',lbl:'설정',p:'profile'}];
+          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'👥',lbl:'회원관리',p:'members'},{ico:'⚙️',lbl:'설정',p:'profile'}];
   } else if(type==='agency'){
     tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'내 공고',p:'my_posts'},
           {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'👤',lbl:'내정보',p:'profile'}];
@@ -516,9 +516,9 @@ function _pgHome(el){
   // KPI
   '<div class="kpi-grid col2" id="home-kpi">'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="kpi1">—</div>'+
-  '<div class="kpi-lbl">'+(type==='agency'?'등록 공고':'지원 현황')+'</div></div>'+
+  '<div class="kpi-lbl">'+(type==='admin'?'전체 공고':type==='agency'?'등록 공고':'지원 현황')+'</div></div>'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="kpi2">—</div>'+
-  '<div class="kpi-lbl">'+(type==='agency'?'대기 지원자':'승인 완료')+'</div></div>'+
+  '<div class="kpi-lbl">'+(type==='admin'?'전체 회원':type==='agency'?'대기 지원자':'승인 완료')+'</div></div>'+
   '</div>'+
 
   // 최근 활동
@@ -527,7 +527,14 @@ function _pgHome(el){
   '<div id="home-recent"><div style="text-align:center;padding:20px"><div class="spinner"></div></div></div>';
 
   // KPI 로딩
-  if(type==='agency'){
+  if(type==='admin'){
+    _db.collection('yongcha_posts').where('status','==','open').get().then(function(s){
+      var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
+    });
+    _db.collection('yongcha_users').get().then(function(s){
+      var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'명';
+    });
+  } else if(type==='agency'){
     _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get().then(function(s){
       var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
     });
