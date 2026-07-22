@@ -6315,16 +6315,21 @@ async function handleYongcha(request, env, ctx) {
     const addr = new URL(request.url).searchParams.get('addr') || '';
     if (!addr) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
     const key = env.KAKAO_REST_KEY || '';
-    const r = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr), {
-      headers: { 'Authorization': 'KakaoAK '+key }
-    });
+    const isZip = /^\d{5}$/.test(addr.trim());
+    // 우편번호면 키워드검색, 주소면 주소검색
+    const apiUrl = isZip
+      ? 'https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(addr)
+      : 'https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr);
+    const r = await fetch(apiUrl, { headers: { 'Authorization': 'KakaoAK '+key } });
     const d = await r.json();
     const doc = d.documents && d.documents[0];
     if (doc) {
+      const lat = parseFloat(isZip ? doc.y : doc.y);
+      const lng = parseFloat(isZip ? doc.x : doc.x);
+      const name = isZip ? (doc.address_name || doc.place_name || addr) : (doc.address_name || addr);
+      const road = isZip ? (doc.road_address_name || '') : ((doc.road_address && doc.road_address.address_name) || '');
       return new Response(JSON.stringify({
-        ok:true, lat:parseFloat(doc.y), lng:parseFloat(doc.x),
-        address_name: doc.address_name || '',
-        road_address: (doc.road_address && doc.road_address.address_name) || ''
+        ok:true, lat, lng, address_name: name, road_address: road
       }), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
     }
     return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
