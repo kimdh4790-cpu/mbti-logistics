@@ -155,15 +155,44 @@ function doLogin() {
   if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   err.style.display='none';
   btn.textContent='로그인 중...'; btn.disabled=true;
-  _auth.signInWithEmailAndPassword(e,p)
-    .catch(function(ex){
+  // Firebase REST API로 직접 로그인 (authDomain 우회)
+  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:e,password:p,returnSecureToken:true})
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.error){
       btn.textContent='로그인'; btn.disabled=false;
-      err.textContent=ex.code==='auth/wrong-password'?'비밀번호 틀림':
-                      ex.code==='auth/user-not-found'?'없는 계정':
-                      ex.code==='auth/invalid-email'?'이메일 형식 오류':
-                      '오류: '+ex.message;
+      var code=data.error.message||'';
+      err.textContent=code.includes('WRONG_PASSWORD')||code.includes('INVALID_LOGIN')?'비밀번호가 틀렸어요':
+                      code.includes('EMAIL_NOT_FOUND')?'없는 계정이에요':
+                      code.includes('TOO_MANY_ATTEMPTS')?'잠시 후 다시 시도하세요':
+                      '오류: '+code;
+      err.style.display='block';
+      return;
+    }
+    // 로그인 성공 — UID로 Firestore 조회
+    var uid=data.localId;
+    _db.collection('yongcha_users').doc(uid).get().then(function(snap){
+      if(snap.exists){
+        _CU=Object.assign({uid:uid},snap.data());
+        showApp();
+      } else {
+        // 계정은 있는데 yongcha_users 없음 — 자동 생성
+        btn.textContent='로그인'; btn.disabled=false;
+        err.textContent='용차 계정이 없어요. 회원가입 해주세요';
+        err.style.display='block';
+      }
+    }).catch(function(ex){
+      btn.textContent='로그인'; btn.disabled=false;
+      err.textContent='DB 오류: '+ex.message;
       err.style.display='block';
     });
+  }).catch(function(ex){
+    btn.textContent='로그인'; btn.disabled=false;
+    err.textContent='네트워크 오류: '+ex.message;
+    err.style.display='block';
+  });
 }
 function doRegister() {
   var n=(document.getElementById('r-name').value||'').trim();
