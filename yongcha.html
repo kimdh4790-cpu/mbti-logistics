@@ -213,7 +213,7 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 </style>
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </head>
-<body>
+<body style="visibility:hidden"><script>setTimeout(function(){document.body.style.visibility="visible"},50)</script>
 
 <!-- 로딩 -->
 <div id="ld">
@@ -368,13 +368,13 @@ _auth=firebase.auth();
 
 // 3초 타임아웃
 var _ldTimer=setTimeout(function(){
-  document.getElementById('ld').style.display='none';
+  document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   document.getElementById('login-screen').style.display='flex';
 },3000);
 
 _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
-  document.getElementById('ld').style.display='none';
+  document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   if(u){
     _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
       if(snap.exists){_CU=Object.assign({uid:u.uid},snap.data());_showApp();}
