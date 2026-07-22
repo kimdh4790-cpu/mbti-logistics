@@ -195,6 +195,20 @@ select.inp{cursor:pointer}
 /* ── 스크롤바 ── */
 #content::-webkit-scrollbar{width:0}
 </style>
+/* ── 지도 ── */
+.map-wrap{border-radius:var(--r);overflow:hidden;margin-bottom:14px;border:1px solid var(--bd)}
+#post-map{width:100%;height:240px;background:var(--bg3)}
+.map-search-wrap{display:flex;gap:8px;margin-bottom:10px}
+.map-search-inp{flex:1;padding:11px 14px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none;font-family:inherit}
+.map-search-inp:focus{border-color:var(--br)}
+.map-search-btn{padding:11px 16px;background:var(--br);color:#000;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.addr-result{background:var(--bg3);border-radius:var(--r);overflow:hidden;margin-bottom:10px;display:none}
+.addr-item{padding:12px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--bd);transition:.2s}
+.addr-item:last-child{border:none}
+.addr-item:hover{background:var(--brl);color:var(--br)}
+.zone-tag{display:inline-flex;align-items:center;gap:6px;background:var(--brl);color:var(--br);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:8px;cursor:pointer}
+.zone-tag:hover{background:var(--rdl);color:var(--rd)}
+</style>
 </head>
 <body>
 
@@ -479,7 +493,7 @@ function _goPage(p){
   if(p==='home')_pgHome(el);
   else if(p==='posts')_pgPosts(el);
   else if(p==='my_posts')_pgMyPosts(el);
-  else if(p==='post_write')_pgPostWrite(el);
+  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,300);}
   else if(p==='my_applies')_pgMyApplies(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
@@ -667,6 +681,7 @@ function _showPostDetail(d){
     '</div>'+
     '<div style="font-size:22px;font-weight:900;margin-bottom:14px;line-height:1.3">'+d.region+' '+d.area+'</div>'+
 
+    (d.lat&&d.lng?'<div class="map-wrap" style="margin-bottom:14px"><div id="detail-map" style="width:100%;height:200px;background:var(--bg3)"></div></div>':'')+
     '<div class="detail-grid">'+
     [['📦 일 물량',d.volume+'박스'],['💰 건당 단가',Number(d.unitPrice).toLocaleString()+'원'],
      ['🏢 구역 유형',d.areaType||'혼합'],['📅 시작일',d.startDate||'협의'],
@@ -689,6 +704,11 @@ function _showPostDetail(d){
     (isDriver?'<button class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">🙋 지원하기</button>':'');
 
   _openModal();
+
+  // 지도 표시
+  if(d.lat&&d.lng){
+    setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
+  }
 
   // 이미 지원 여부 확인
   if(isDriver){
@@ -814,8 +834,17 @@ function _pgPostWrite(el){
 
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 검색 (우편번호 또는 동명)</label>'+
+  '<div class="map-search-wrap">'+
+  '<input class="map-search-inp" id="pw-addr-search" placeholder="예: 48060 또는 해운대구 좌동" onkeydown="if(event.key===\'Enter\')_searchAddr()">'+
+  '<button class="map-search-btn" onclick="_searchAddr()">🔍 검색</button>'+
+  '</div>'+
+  '<div class="addr-result" id="addr-result"></div>'+
+  '<div id="selected-zones" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
+  '</div>'+
+  '<div class="map-wrap"><div id="post-map"></div></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대"></div>'+
+  '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
   '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
   ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
@@ -1018,6 +1047,154 @@ function _yLogout(){
   if(!confirm('로그아웃 하시겠어요?'))return;
   _auth.signOut().then(function(){_CU=null;_showLogin();});
 }
+// ── 카카오맵 ────────────────────────────────────────────────
+var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
+
+function _loadKakaoMap(callback){
+  if(window.kakao&&window.kakao.maps){if(callback)callback();return;}
+  if(_kakaoKey){_initKakaoScript(callback);return;}
+  fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
+    _kakaoKey=d.key||'';
+    _initKakaoScript(callback);
+  }).catch(function(){console.warn('카카오 키 없음');});
+}
+
+function _initKakaoScript(callback){
+  if(!_kakaoKey)return;
+  var s=document.createElement('script');
+  s.src='//dapi.kakao.com/v2/maps/sdk.js?appkey='+_kakaoKey+'&libraries=services&autoload=false';
+  s.onload=function(){
+    kakao.maps.load(function(){
+      if(callback)callback();
+    });
+  };
+  document.head.appendChild(s);
+}
+
+// 공고 등록 지도 초기화
+function _initPostMap(){
+  _loadKakaoMap(function(){
+    var container=document.getElementById('post-map');
+    if(!container)return;
+    var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
+    _map=new kakao.maps.Map(container,opts);
+    _map.setDraggable(true);
+    _map.setZoomable(true);
+  });
+}
+
+// 주소 검색
+function _searchAddr(){
+  var q=(document.getElementById('pw-addr-search').value||'').trim();
+  if(!q){_yToast('검색어를 입력하세요');return;}
+  _loadKakaoMap(function(){
+    var ps=new kakao.maps.services.Places();
+    var gc=new kakao.maps.services.Geocoder();
+    // 우편번호면 좌표변환
+    if(/^\d{5}$/.test(q)){
+      gc.addressSearch(q,function(res,status){
+        if(status===kakao.maps.services.Status.OK){
+          _showAddrResult([{place_name:res[0].address_name,road_address_name:'',x:res[0].x,y:res[0].y}]);
+        } else {_yToast('우편번호를 찾을 수 없어요');}
+      });
+    } else {
+      ps.keywordSearch(q+' 아파트',function(res,status){
+        if(status!==kakao.maps.services.Status.OK){_yToast('검색 결과 없음');return;}
+        _showAddrResult(res.slice(0,5));
+      });
+    }
+  });
+}
+
+function _showAddrResult(results){
+  var el=document.getElementById('addr-result');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML=results.map(function(r,i){
+    return '<div class="addr-item" onclick="_selectAddr('+i+')">'+
+      '<div style="font-weight:700;font-size:13px">'+r.place_name+'</div>'+
+      (r.road_address_name?'<div style="font-size:11px;color:var(--t2);margin-top:2px">'+r.road_address_name+'</div>':'')+
+      '</div>';
+  }).join('');
+  window._addrResults=results;
+}
+
+function _selectAddr(idx){
+  var r=window._addrResults[idx];
+  if(!r)return;
+  var el=document.getElementById('addr-result');
+  if(el)el.style.display='none';
+
+  var lat=parseFloat(r.y), lng=parseFloat(r.x);
+  var name=r.place_name;
+
+  // 지도 이동
+  if(_map){
+    var pos=new kakao.maps.LatLng(lat,lng);
+    _map.setCenter(pos);
+    _map.setLevel(4);
+    // 마커 추가
+    var marker=new kakao.maps.Marker({position:pos,map:_map});
+    _markers.push(marker);
+    // 원형 오버레이 (배송 구역 표시)
+    var circle=new kakao.maps.Circle({
+      center:pos, radius:500,
+      strokeWeight:2,strokeColor:'#f59e0b',strokeOpacity:.8,
+      fillColor:'#f59e0b',fillOpacity:.15,
+      map:_map
+    });
+  }
+
+  // 선택 구역 태그
+  if(_selectedZones.indexOf(name)<0){
+    _selectedZones.push(name);
+    _renderZoneTags();
+    // 구역명 자동입력
+    var areaInp=document.getElementById('pw-area');
+    if(areaInp) areaInp.value=_selectedZones.join(', ');
+  }
+
+  window._lastLat=lat;
+  window._lastLng=lng;
+}
+
+function _renderZoneTags(){
+  var el=document.getElementById('selected-zones');
+  if(!el)return;
+  el.innerHTML=_selectedZones.map(function(z,i){
+    return '<span class="zone-tag" onclick="_removeZone('+i+')">'+z+' ✕</span>';
+  }).join('');
+}
+
+function _removeZone(idx){
+  _selectedZones.splice(idx,1);
+  _renderZoneTags();
+  var areaInp=document.getElementById('pw-area');
+  if(areaInp) areaInp.value=_selectedZones.join(', ');
+}
+
+// 공고 상세 지도
+function _showDetailMap(lat,lng,name){
+  _loadKakaoMap(function(){
+    var container=document.getElementById('detail-map');
+    if(!container)return;
+    var pos=new kakao.maps.LatLng(lat,lng);
+    var map=new kakao.maps.Map(container,{center:pos,level:5});
+    new kakao.maps.Marker({position:pos,map:map});
+    new kakao.maps.Circle({
+      center:pos,radius:600,
+      strokeWeight:2,strokeColor:'#f59e0b',strokeOpacity:.8,
+      fillColor:'#f59e0b',fillOpacity:.15,
+      map:map
+    });
+    // 인포윈도우
+    var iw=new kakao.maps.InfoWindow({
+      content:'<div style="padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap">📍 '+name+'</div>'
+    });
+    iw.open(map,new kakao.maps.Marker({position:pos,map:map}));
+  });
+}
+
 </script>
 </body>
 </html>
