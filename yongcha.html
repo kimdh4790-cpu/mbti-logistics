@@ -326,6 +326,24 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 <!-- 토스트 -->
 <div id="toast"></div>
 
+<!-- 카카오맵 미리 로드 -->
+<script>
+(function(){
+  fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
+    if(!d.key) return;
+    var s=document.createElement('script');
+    s.src='//dapi.kakao.com/v2/maps/sdk.js?appkey='+d.key+'&libraries=services&autoload=false';
+    s.onload=function(){
+      kakao.maps.load(function(){
+        window._kakaoReady=true;
+        window._kakaoKey=d.key;
+        console.log('[용차] 카카오맵 로드 완료');
+      });
+    };
+    document.head.appendChild(s);
+  }).catch(function(e){ console.warn('[용차] 카카오 로드 실패:', e); });
+})();
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -495,7 +513,7 @@ function _goPage(p){
   if(p==='home')_pgHome(el);
   else if(p==='posts')_pgPosts(el);
   else if(p==='my_posts')_pgMyPosts(el);
-  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,600);}
+  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,800);}
   else if(p==='my_applies')_pgMyApplies(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
@@ -1060,18 +1078,26 @@ function _yLogout(){
 var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
 
 function _loadKakaoMap(callback){
-  if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map){if(callback)callback();return;}
-  if(_kakaoKey){_initKakaoScript(callback);return;}
-  fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
-    _kakaoKey=d.key||'';
-    if(!_kakaoKey){console.warn('카카오 키 없음');return;}
-    _initKakaoScript(callback);
-  }).catch(function(e){
-    console.warn('카카오 키 로딩 실패:',e.message);
-    // yongcha.app 전용 키 직접 사용
-    _kakaoKey='3d5a58a3e1099aa2b6b221c3db2b0d13';
-    _initKakaoScript(callback);
-  });
+  // 이미 로드됨
+  if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map){
+    if(callback)callback();return;
+  }
+  // 로딩 중 — 대기
+  if(window._kakaoReady===false||document.querySelector('script[src*="dapi.kakao.com"]')){
+    var t=0;
+    var check=setInterval(function(){
+      t++;
+      if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map){
+        clearInterval(check);if(callback)callback();
+      }
+      if(t>20){clearInterval(check);console.warn('카카오맵 로드 타임아웃');}
+    },300);
+    return;
+  }
+  // 직접 로드
+  var key=window._kakaoKey||'3d5a58a3e1099aa2b6b221c3db2b0d13';
+  _kakaoKey=key;
+  _initKakaoScript(callback);
 }
 
 function _initKakaoScript(callback){
