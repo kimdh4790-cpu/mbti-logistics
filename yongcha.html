@@ -709,7 +709,19 @@ function _showPostDetail(d){
     '</div>'+
     '<div style="font-size:22px;font-weight:900;margin-bottom:14px;line-height:1.3">'+d.region+' '+d.area+'</div>'+
 
-    (d.lat&&d.lng?'<div class="map-wrap" style="margin-bottom:14px"><div id="detail-map" style="width:100%;height:200px;background:var(--bg3)"></div></div>':'')+
+    ((d.zones&&d.zones.length||d.lat)?
+      '<div style="margin-bottom:14px">'+
+      (d.zones&&d.zones.length?
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="zone-tab-wrap">'+
+        d.zones.map(function(z,i){
+          return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 12px;border-radius:20px;border:2px solid var(--ac);background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#000':'var(--ac)')+';font-size:12px;font-weight:700;cursor:pointer">'+
+            '📮 '+z.zipcode+'<br><span style="font-weight:400;font-size:10px">'+z.name+'</span></button>';
+        }).join('')+
+        '</div>'
+      :'')+
+      '<div class="map-wrap" style="margin-bottom:0"><div id="detail-map" style="width:100%;height:200px;background:var(--bg3)"></div></div>'+
+      '</div>'
+    :'')+
     '<div class="detail-grid">'+
     [['📦 일 물량',d.volume+'박스'],['💰 건당 단가',Number(d.unitPrice).toLocaleString()+'원'],
      ['🏢 구역 유형',d.areaType||'혼합'],['📅 시작일',d.startDate||'협의'],
