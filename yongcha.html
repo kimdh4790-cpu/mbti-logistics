@@ -614,89 +614,153 @@ var _postFilter={courier:'전체',region:'전체',sort:'최신순'};
 function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">📋 노선 공고</div>'+
-  '<div class="page-sub">원하는 조건으로 필터해보세요</div></div>'+
-
-  // 필터
-  '<div class="filter-scroll">'+
-  '<div class="filter-row" id="filter-courier">'+
-  ['전체','CJ대한통운','한진택배','로젠택배','우체국','롯데택배','쿠팡로지스틱스'].map(function(c,i){
-    return '<button class="filter-btn'+(i===0?' on':'')+'" onclick="_setCourierFilter(\''+c+'\')">'+c+'</button>';
-  }).join('')+'</div></div>'+
-
-  '<div class="filter-scroll" style="margin-top:-6px">'+
-  '<div class="filter-row" id="filter-region">'+
-  ['전체','부산','대구','서울','경기','인천','경남','경북','광주','대전'].map(function(r,i){
-    return '<button class="filter-btn'+(i===0?' on':'')+'" onclick="_setRegionFilter(\''+r+'\')">'+r+'</button>';
-  }).join('')+'</div></div>'+
-
-  '<div id="posts-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
-
-  _loadPosts();
+  '<div class="page-sub">택배사별로 노선을 찾아보세요</div></div>'+
+  '<div id="courier-tabs" style="display:flex;gap:8px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>'+
+  '<div id="posts-sections"></div>';
+  _renderCourierTabs();
 }
 
-function _setCourierFilter(c){
-  _postFilter.courier=c;
-  document.querySelectorAll('#filter-courier .filter-btn').forEach(function(b){
-    b.classList.toggle('on',b.textContent===c);
-  });
-  _loadPosts();
-}
-function _setRegionFilter(r){
-  _postFilter.region=r;
-  document.querySelectorAll('#filter-region .filter-btn').forEach(function(b){
-    b.classList.toggle('on',b.textContent===r);
-  });
-  _loadPosts();
+var _activeCourier='전체';
+var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
+
+function _renderCourierTabs(){
+  var tabEl=document.getElementById('courier-tabs');
+  if(!tabEl)return;
+  tabEl.innerHTML=COURIERS.map(function(c){
+    return '<button onclick="_selectCourier(\''+c+'\')" id="ctab-'+c+'" style="flex-shrink:0;padding:8px 16px;border-radius:20px;border:1.5px solid '+(c===_activeCourier?'var(--ac)':'var(--border)')+';background:'+(c===_activeCourier?'var(--ac)':'transparent')+';color:'+(c===_activeCourier?'#000':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">'+c+'</button>';
+  }).join('');
+  _loadPostsByCourier();
 }
 
-function _loadPosts(){
-  var list=document.getElementById('posts-list');if(!list)return;
-  list.innerHTML='<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
-  var q=_db.collection('yongcha_posts').where('status','==','open').orderBy('createdAt','desc').limit(30);
-  q.get().then(function(snap){
-    if(!list)return;
-    var posts=[];
-    snap.forEach(function(doc){posts.push(Object.assign({id:doc.id},doc.data()));});
-    // 필터
-    if(_postFilter.courier!=='전체') posts=posts.filter(function(p){return p.courier===_postFilter.courier;});
-    if(_postFilter.region!=='전체') posts=posts.filter(function(p){return p.region===_postFilter.region;});
-    // 긴급 먼저
-    posts.sort(function(a,b){return (b.urgent?1:0)-(a.urgent?1:0);});
-    if(!posts.length){
-      list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">해당 조건의 공고가 없어요</div></div>';
-      return;
+function _selectCourier(c){
+  _activeCourier=c;
+  _renderCourierTabs();
+}
+
+function _loadPostsByCourier(){
+  var sec=document.getElementById('posts-sections');
+  if(!sec)return;
+  sec.innerHTML='<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+
+  var couriers = _activeCourier==='전체' ? COURIERS.slice(1) : [_activeCourier];
+
+  // open 공고 + matched/closed 공고 모두 가져오기
+  _db.collection('yongcha_posts').orderBy('createdAt','desc').limit(100).get()
+  .then(function(snap){
+    var all=[];
+    snap.forEach(function(doc){all.push(Object.assign({id:doc.id},doc.data()));});
+
+    var openPosts=all.filter(function(p){return p.status==='open'||p.status==='matched';});
+    var closedPosts=all.filter(function(p){return p.status==='closed';});
+
+    // 긴급 먼저, open 먼저
+    openPosts.sort(function(a,b){
+      if(b.urgent!==a.urgent) return (b.urgent?1:0)-(a.urgent?1:0);
+      if(a.status==='open'&&b.status!=='open') return -1;
+      if(b.status==='open'&&a.status!=='open') return 1;
+      return 0;
+    });
+
+    sec.innerHTML='';
+
+    couriers.forEach(function(courier){
+      var cOpen=openPosts.filter(function(p){return p.courier===courier;});
+      var cClosed=closedPosts.filter(function(p){return p.courier===courier;});
+      if(!cOpen.length&&!cClosed.length) return;
+
+      // 섹션 헤더
+      var hdr=document.createElement('div');
+      hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px';
+      hdr.innerHTML='<div style="font-size:14px;font-weight:800">🚚 '+courier+'</div>'+
+        (cOpen.length>5?'<div style="font-size:11px;color:var(--ac);font-weight:700">'+cOpen.length+'건 →</div>':'');
+      sec.appendChild(hdr);
+
+      // 가로 스크롤 카드열 (최대 5개 표시, 이후 스와이프)
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;-ms-overflow-style:none';
+
+      // open/matched 공고 (최대 5개 우선 노출, 전체 스크롤 가능)
+      cOpen.forEach(function(d){
+        row.appendChild(_makePostCard(d,false));
+      });
+
+      // 완료 공고 구분선 + 카드
+      if(cClosed.length){
+        var divider=document.createElement('div');
+        divider.style.cssText='flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8px';
+        divider.innerHTML='<div style="width:1px;height:60px;background:var(--border)"></div>'+
+          '<div style="font-size:10px;color:var(--t3);white-space:nowrap;margin:4px 0;writing-mode:vertical-rl">완료</div>'+
+          '<div style="width:1px;height:60px;background:var(--border)"></div>';
+        row.appendChild(divider);
+        cClosed.forEach(function(d){ row.appendChild(_makePostCard(d,false)); });
+      }
+
+      if(!row.children.length){
+        var empty=document.createElement('div');
+        empty.style.cssText='padding:20px;color:var(--t3);font-size:13px';
+        empty.textContent='공고가 없어요';
+        row.appendChild(empty);
+      }
+      sec.appendChild(row);
+    });
+
+    if(!sec.children.length){
+      sec.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">공고가 없어요</div></div>';
     }
-    list.innerHTML='';
-    posts.forEach(function(d){list.appendChild(_makePostCard(d,false));});
   }).catch(function(e){
-    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">오류: '+e.message+'</div></div>';
+    if(sec) sec.innerHTML='<div class="empty"><div class="empty-msg">오류: '+e.message+'</div></div>';
   });
 }
+function _setCourierFilter(c){} // legacy stub
+function _setRegionFilter(r){} // legacy stub
+function _loadPosts(){ _loadPostsByCourier(); } // legacy compat
 
 function _makePostCard(d,mini){
-  var card=document.createElement('div');card.className='post-card';
-  if(d.urgent) card.innerHTML='<div class="urgent-tag">🔥 긴급</div>';
-  card.innerHTML+=(d.urgent?'<div style="height:16px"></div>':'')+
+  var isMatched = d.status==='matched';
+  var isClosed = d.status==='closed';
+  var card=document.createElement('div');
+  card.className='post-card';
+  card.style.cssText='flex-shrink:0;width:220px;opacity:'+(isClosed?'0.5':'1');
+
+  var statusHtml = isClosed
+    ? '<span class="status-badge" style="background:#444;color:#fff">마감</span>'
+    : isMatched
+    ? '<span class="status-badge" style="background:var(--gn);color:#fff">✅ 매칭완료</span>'
+    : d.urgent
+    ? '<span class="status-badge badge-urgent">🔥 긴급</span>'
+    : '<span class="status-badge badge-open">모집중</span>';
+
+  // 일 예상수익 계산
+  var dayEst = d.unitPrice&&d.volume ? Math.round(d.unitPrice*d.volume/10000) : 0;
+  var minGuarantee = (d.workShift==='야간') ? 35 : 30;
+
+  card.innerHTML=
     '<div class="post-top">'+
-    '<span class="courier-badge">🚚 '+d.courier+'</span>'+
-    '<span class="status-badge '+(d.urgent?'badge-urgent':'badge-open')+'">'+(d.urgent?'긴급':'모집중')+'</span>'+
+    '<span class="courier-badge" style="font-size:10px">'+d.courier+'</span>'+
+    statusHtml+
     '</div>'+
-    '<div class="post-title">'+d.region+' '+d.area+'</div>'+
-    (mini?'':
-    '<div class="post-stats">'+
-    '<span class="post-stat">📦 일 '+d.volume+'박스</span>'+
-    '<span class="post-stat">🏢 '+d.areaType+'</span>'+
-    '<span class="post-stat">📅 '+d.startDate+'</span>'+
-    '</div>')+
+    '<div class="post-title" style="font-size:14px;margin:6px 0 4px;line-height:1.3">'+d.area+'</div>'+
+    (d.routeNo?'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">📌 '+d.routeNo+'</div>':'')+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">'+
+    (d.workShift?'<span style="font-size:10px;background:var(--bg3);padding:2px 6px;border-radius:8px">'+d.workShift+'</span>':'')+
+    (d.areaAptRatio?'<span style="font-size:10px;background:var(--bg3);padding:2px 6px;border-radius:8px">🏢 아파트'+d.areaAptRatio+'%</span>':'')+
+    (d.vehicleType?'<span style="font-size:10px;background:var(--bg3);padding:2px 6px;border-radius:8px">'+d.vehicleType+'</span>':'')+
+    '</div>'+
     '<div class="post-price-row">'+
-    '<div class="post-price">'+Number(d.unitPrice).toLocaleString()+'원<small>/건</small></div>'+
-    '<div class="post-monthly">예상월수익 <strong>'+d.monthlyEst+'만원</strong></div>'+
+    '<div class="post-price">'+Number(d.unitPrice||0).toLocaleString()+'<small>원/건</small>'+
+    (d.vatIncluded==='별도'?'<span style="font-size:9px;color:var(--t3)"> VAT별도</span>':'<span style="font-size:9px;color:var(--t3)"> VAT포함</span>')+
     '</div>'+
-    '<div class="post-bottom">'+
-    '<span class="post-agency">🏢 '+d.agencyName+'</span>'+
-    '<span class="post-rating">⭐ '+(d.agencyRating||'신규')+'</span>'+
+    '</div>'+
+    '<div style="margin:6px 0;padding:6px 8px;background:var(--gnl);border-radius:8px;font-size:11px;color:var(--gn);font-weight:700">'+
+    '✅ 일 최소보장 '+minGuarantee+'만원'+
+    '</div>'+
+    (dayEst>0?'<div style="font-size:11px;color:var(--t2)">예상 '+dayEst+'만원/일 ('+d.volume+'건)</div>':'')+
+    '<div class="post-bottom" style="margin-top:6px">'+
+    '<span class="post-agency" style="font-size:11px">🏢 '+d.agencyName+'</span>'+
+    (d.settleDay?'<span style="font-size:10px;color:var(--t3)">정산 '+d.settleDay+'</span>':'')+
     '</div>';
-  card.onclick=function(){_showPostDetail(d);};
+
+  card.onclick=function(){if(!isClosed)_showPostDetail(d);};
   return card;
 }
 
@@ -722,13 +786,27 @@ function _showPostDetail(d){
       '<div class="map-wrap" style="margin-bottom:0"><div id="detail-map" style="width:100%;height:200px;background:var(--bg3)"></div></div>'+
       '</div>'
     :'')+
+    '<div style="margin:10px 0;padding:12px;background:var(--gnl);border-radius:10px">'+
+    '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">✅ 플랫폼 최소보장</div>'+
+    '<div style="font-size:18px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
+    '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시에도 보장액 지급 의무</div>'+
+    '</div>'+
     '<div class="detail-grid">'+
-    [['📦 일 물량',d.volume+'박스'],['💰 건당 단가',Number(d.unitPrice).toLocaleString()+'원'],
-     ['🏢 구역 유형',d.areaType||'혼합'],['📅 시작일',d.startDate||'협의'],
-     ['⏰ 근무시간',d.workHours||'협의'],['💵 예상 월수익',d.monthlyEst+'만원']
+    [
+      ['📦 일 물량',d.volume+'건'],
+      ['💰 단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
+      ['🚗 차량',d.vehicleType||'무관'],
+      ['🔑 번호판',d.plateType||'무관'],
+      ['⏰ 시간',d.workHours||'협의'],
+      ['📅 시작일',d.startDate||'협의'],
+      ['🏢 구역',d.areaType||'혼합'],
+      ['🏢 아파트',(d.areaAptRatio||'-')+'%'],
+      ['📆 근무요일',d.workDays||'협의'],
+      ['💳 정산',d.settleDay||'협의']
     ].map(function(r){
       return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
     }).join('')+'</div>'+
+    (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+d.extras.split(',').filter(Boolean).map(function(e){'<span style="font-size:11px;background:var(--bg3);padding:3px 8px;border-radius:8px">'+e+'</span>'}).join('')+'</div>':'')+
 
     (d.desc?'<div class="card" style="margin-bottom:14px">'+
     '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-bottom:8px">공고 상세</div>'+
@@ -862,68 +940,239 @@ function _judgeApply(applyId,status,name){
 
 // ── 공고 등록 ────────────────────────────────────────────────
 function _pgPostWrite(el){
+  window._zones=[];
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">✏️ 공고 등록</div>'+
-  '<div class="page-sub">노선 정보를 상세히 입력할수록 좋은 기사를 만나요</div></div>'+
+  '<div class="page-sub">정확히 입력할수록 좋은 기사를 만나요</div></div>'+
 
+  // 택배사
   '<div class="form-section">'+
-  '<div class="form-section-title">택배사 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
+  '<div class="form-section-title">기본 정보</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span></label>'+
   '<select class="inp" id="pw-courier"><option value="">선택</option>'+
-  ['CJ대한통운','한진택배','로젠택배','우체국','롯데택배','쿠팡로지스틱스'].map(function(c){
-    return '<option>'+c+'</option>';
-  }).join('')+'</select></div>'+
+  ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
+  '</select></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
+  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
   '</div>'+
 
+  // 공고 유형
+  '<div class="form-section">'+
+  '<div class="form-section-title">공고 유형</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-type-group">'+
+  ['하루 대타','주단위','월단위','상시모집'].map(function(t,i){
+    return '<button onclick="_selType(this,\''+t+'\',\'pw-type\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-type">'+
+
+  // 근무 시간대
+  '<div class="form-section">'+
+  '<div class="form-section-title">근무 시간대</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pw-shift-group">'+
+  ['주간','야간','협의'].map(function(s){
+    return '<button onclick="_selType(this,\''+s+'\',\'pw-shift\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
+  }).join('')+
+  '</div>'+
+  '<input type="hidden" id="pw-shift">'+
+  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
+  '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
+  '</div>'+
+
+  // 근무 요일
+  '<div class="form-section">'+
+  '<div class="form-section-title">근무 요일</div>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap" id="pw-days-group">'+
+  ['월','화','수','목','금','토','일'].map(function(d){
+    return '<button onclick="_toggleDay(this,\''+d+'\')" style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+d+'</button>';
+  }).join('')+
+  '</div>'+
+  '<div id="pw-days-val" style="display:none"></div>'+
+  '</div>'+
+
+  // 기간
+  '<div class="form-section">'+
+  '<div class="form-section-title">기간</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
+  '<input class="inp" id="pw-date" type="date"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">종료일</label>'+
+  '<input class="inp" id="pw-enddate" type="date" placeholder="상시모집이면 비워두세요"></div>'+
+  '</div>'+
+
+  // 차량 요건
+  '<div class="form-section">'+
+  '<div class="form-section-title">차량 요건</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">차종</label>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-vehicle-group">'+
+  ['1톤 탑차','1.4톤','다마스/라보','무관'].map(function(v){
+    return '<button onclick="_selType(this,\''+v+'\',\'pw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid '+(v==='1톤 탑차'?'var(--ac)':'var(--border)')+';background:'+(v==='1톤 탑차'?'var(--acl)':'transparent')+';color:'+(v==='1톤 탑차'?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-vehicle" value="1톤 탑차">'+
+  '<div class="inp-wrap"><label class="inp-lbl">영업용 번호판</label>'+
+  '<div style="display:flex;gap:8px" id="pw-plate-group">'+
+  ['아바사자 필수','배넘버 필수','무관'].map(function(p){
+    return '<button onclick="_selType(this,\''+p+'\',\'pw-plate\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+p+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-plate">'+
+  '</div>'+
+
+  // 단가 구조
+  '<div class="form-section">'+
+  '<div class="form-section-title">단가 구조</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">단가 방식</label>'+
+  '<div style="display:flex;gap:8px" id="pw-pricetype-group">'+
+  ['건당','가구당','건당+가구당'].map(function(p){
+    return '<button onclick="_selType(this,\''+p+'\',\'pw-pricetype\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+p+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-pricetype">'+
+  '<div class="inp-wrap"><label class="inp-lbl">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-price" type="number" placeholder="예: 880" oninput="_calcEst()"></div>'+
+  '<div class="inp-wrap" id="pw-houseprice-wrap" style="display:none">'+
+  '<label class="inp-lbl">가구당 단가 (원)</label>'+
+  '<input class="inp" id="pw-houseprice" type="number" placeholder="예: 1200"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">VAT</label>'+
+  '<div style="display:flex;gap:8px" id="pw-vat-group">'+
+  ['별도','포함'].map(function(v){
+    return '<button onclick="_selType(this,\''+v+'\',\'pw-vat\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">VAT '+v+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-vat">'+
+  '</div>'+
+
+  // 물량 및 최소보장
+  '<div class="form-section">'+
+  '<div class="form-section-title">물량</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">예상 일 물량 (건) <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-volume" type="number" placeholder="예: 150" oninput="_calcEst()"></div>'+
+  '<div id="pw-est-display" style="margin:8px 0;padding:12px;background:var(--gnl);border-radius:10px;display:none">'+
+  '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">예상 일 수익</div>'+
+  '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
+  '</div>'+
+  '<div style="padding:12px;background:var(--acl);border-radius:10px;margin-bottom:8px">'+
+  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">✅ 플랫폼 최소보장 (고정)</div>'+
+  '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
+  '</div>'+
+  '</div>'+
+
+  // 정산
+  '<div class="form-section">'+
+  '<div class="form-section-title">정산</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">정산 주기</label>'+
+  '<div style="display:flex;gap:8px" id="pw-settle-group">'+
+  ['주1회','격주','월1회'].map(function(s){
+    return '<button onclick="_selType(this,\''+s+'\',\'pw-settle\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+s+'</button>';
+  }).join('')+
+  '</div></div>'+
+  '<input type="hidden" id="pw-settle">'+
+  '<div class="inp-wrap"><label class="inp-lbl">정산일 <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-settleDay" placeholder="예: 매주 목요일 / 매월 25일"></div>'+
+  '</div>'+
+
+  // 구역
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역 추가 (우편번호)</label>'+
-  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소 검색으로 구역 추가</button>'+
+  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:none"></div>'+
-  '</div>'+
   '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
-  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
+  '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
   '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
   ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
   '</select></div>'+
   '</div>'+
 
+  // 추가 조건
   '<div class="form-section">'+
-  '<div class="form-section-title">물량 & 단가</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">일 물량 (박스) <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-volume" type="number" placeholder="예: 150"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-price" type="number" placeholder="예: 850" oninput="_calcEst()"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">예상 월수익 (만원)</label>'+
-  '<input class="inp" id="pw-est" type="number" placeholder="자동계산" readonly style="color:var(--gn)"></div>'+
+  '<div class="form-section-title">추가 조건</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-extras">'+
+  ['스캐너 지참','핸드카트 지참','집화 포함','편의점 집화','신입 가능','경력자 우대'].map(function(e){
+    return '<button onclick="_toggleExtra(this)" style="padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+e+'</button>';
+  }).join('')+
   '</div>'+
-
-  '<div class="form-section">'+
-  '<div class="form-section-title">근무 조건</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
-  '<input class="inp" id="pw-date" type="date"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">근무 시간</label>'+
-  '<select class="inp" id="pw-hours"><option value="">선택</option>'+
-  ['오전 7시~오후 2시','오전 8시~오후 3시','오전 9시~오후 4시','오후 12시~오후 8시','협의'].map(function(h){return '<option>'+h+'</option>';}).join('')+
-  '</select></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">상세 설명</label>'+
+  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">상세 설명</label>'+
   '<textarea class="inp" id="pw-desc" rows="3" placeholder="구역 특이사항, 요청사항 등" style="resize:none"></textarea></div>'+
   '</div>'+
 
+  // 긴급
   '<div class="form-section">'+
-  '<div class="form-section-title">옵션</div>'+
   '<div class="toggle-row"><div><div class="toggle-lbl">🔥 긴급 공고</div>'+
   '<div class="toggle-desc">상단에 우선 노출돼요</div></div>'+
   '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
   '</div>'+
 
   '<button class="btn-main" id="submit-btn" onclick="_submitPost()">📋 공고 등록하기</button>';
+
+  // 1톤 탑차 기본 선택 처리
+  setTimeout(function(){
+    var v1=document.querySelector('#pw-vehicle-group button');
+    if(v1) _selType(v1,'1톤 탑차','pw-vehicle');
+  },100);
+}
+
+function _selType(btn, val, hiddenId){
+  var grpId = btn.parentElement.id;
+  document.querySelectorAll('#'+grpId+' button').forEach(function(b){
+    b.style.background='transparent';
+    b.style.color='var(--t2)';
+    b.style.borderColor='var(--border)';
+  });
+  btn.style.background='var(--acl)';
+  btn.style.color='var(--ac)';
+  btn.style.borderColor='var(--ac)';
+  var h=document.getElementById(hiddenId);
+  if(h) h.value=val;
+  // 가구당 단가 필드 토글
+  if(hiddenId==='pw-pricetype'){
+    var wrap=document.getElementById('pw-houseprice-wrap');
+    if(wrap) wrap.style.display=(val==='가구당'||val==='건당+가구당')?'block':'none';
+  }
+  // 최소보장 표시 업데이트
+  if(hiddenId==='pw-shift'){
+    var g=document.getElementById('pw-guarantee-display');
+    if(g) g.textContent=val==='야간'?'야간: 일 35만원 보장 (플랫폼 고정)':'주간: 일 30만원 보장 (플랫폼 고정)';
+  }
+}
+
+var _selectedDays=[];
+function _toggleDay(btn, day){
+  var idx=_selectedDays.indexOf(day);
+  if(idx>=0){
+    _selectedDays.splice(idx,1);
+    btn.style.background='transparent';
+    btn.style.color='var(--t2)';
+    btn.style.borderColor='var(--border)';
+  } else {
+    _selectedDays.push(day);
+    btn.style.background='var(--acl)';
+    btn.style.color='var(--ac)';
+    btn.style.borderColor='var(--ac)';
+  }
+}
+
+var _selectedExtras=[];
+function _toggleExtra(btn){
+  var txt=btn.textContent;
+  var idx=_selectedExtras.indexOf(txt);
+  if(idx>=0){
+    _selectedExtras.splice(idx,1);
+    btn.style.background='transparent';
+    btn.style.color='var(--t2)';
+    btn.style.borderColor='var(--border)';
+  } else {
+    _selectedExtras.push(txt);
+    btn.style.background='var(--acl)';
+    btn.style.color='var(--ac)';
+    btn.style.borderColor='var(--ac)';
+  }
 }
 
 var _isUrgent=false;
@@ -932,32 +1181,57 @@ function _toggleUrgent(){
   document.getElementById('toggle-urgent').classList.toggle('on',_isUrgent);
 }
 function _calcEst(){
-  var v=parseInt(document.getElementById('pw-volume').value)||0;
-  var p=parseInt(document.getElementById('pw-price').value)||0;
-  var est=Math.round(v*p*25/10000);
-  var e=document.getElementById('pw-est');
-  if(e&&est>0) e.value=est;
+  var v=parseInt((document.getElementById('pw-volume')||{}).value)||0;
+  var p=parseInt((document.getElementById('pw-price')||{}).value)||0;
+  var dayEst=Math.round(v*p/10000);
+  var disp=document.getElementById('pw-est-display');
+  var val=document.getElementById('pw-est-val');
+  if(disp&&val&&dayEst>0){
+    disp.style.display='block';
+    var shift=(document.getElementById('pw-shift')||{}).value||'주간';
+    var minG=shift==='야간'?35:30;
+    var actual=Math.max(dayEst,minG);
+    val.textContent='약 '+dayEst+'만원/일 (최소보장 적용시 '+actual+'만원)';
+  }
 }
 
 function _submitPost(){
   var get=function(id){return(document.getElementById(id)||{}).value||'';};
-  var courier=get('pw-courier'),area=get('pw-area'),volume=get('pw-volume');
-  var price=get('pw-price'),est=get('pw-est'),areaType=get('pw-areaType');
-  var date=get('pw-date'),hours=get('pw-hours'),desc=get('pw-desc'),routeNo=get('pw-routeNo');
+  var courier=get('pw-courier'), area=get('pw-area'), volume=get('pw-volume');
+  var price=get('pw-price'), areaType=get('pw-areaType'), date=get('pw-date');
+  var hours=get('pw-hours'), desc=get('pw-desc'), routeNo=get('pw-routeNo');
+  var postType=get('pw-type'), workShift=get('pw-shift'), vatIncluded=get('pw-vat');
+  var vehicle=get('pw-vehicle'), plate=get('pw-plate'), settle=get('pw-settle');
+  var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
+  var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
+  var aptRatio=get('pw-apt');
   var btn=document.getElementById('submit-btn');
-  if(!courier||!area||!volume||!price){_yToast('필수 항목을 입력하세요');return;}
+
+  if(!courier||!area||!volume||!price||!settleDay){
+    _yToast('필수 항목을 입력하세요 (택배사/구역/물량/단가/정산일)');return;
+  }
+
+  var minGuarantee = workShift==='야간' ? 350000 : 300000;
+
   btn.textContent='등록 중...';btn.disabled=true;
   _db.collection('yongcha_posts').add({
-    agencyId:_CU.uid,agencyName:_CU.name,agencyRating:_CU.rating||0,
-    region:_CU.region,courier:courier,area:area,routeNo:routeNo,zones:window._zones||[],
-    volume:parseInt(volume),unitPrice:parseInt(price),
-    monthlyEst:parseInt(est)||0,areaType:areaType,
-    startDate:date,workHours:hours,desc:desc,
-    urgent:_isUrgent,status:'open',
+    agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
+    region:_CU.region, courier:courier, area:area, routeNo:routeNo,
+    zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
+    postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
+    workHours:hours, startDate:date, endDate:endDate,
+    vehicleType:vehicle, plateType:plate,
+    priceType:priceType||'건당', unitPrice:parseInt(price),
+    housePricePerUnit:housePrice?parseInt(housePrice):null,
+    vatIncluded:vatIncluded, volume:parseInt(volume),
+    minGuarantee:minGuarantee, areaType:areaType,
+    settleFreq:settle, settleDay:settleDay,
+    extras:_selectedExtras.join(','), desc:desc,
+    urgent:_isUrgent, status:'open',
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 공고가 등록됐어요!');
-    _isUrgent=false;
+    _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
     _goPage('my_posts');
   }).catch(function(e){
     btn.textContent='📋 공고 등록하기';btn.disabled=false;
