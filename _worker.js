@@ -6310,6 +6310,26 @@ async function handleYongcha(request, env, ctx) {
     });
   }
 
+  // ★ 주소/우편번호 → 좌표 변환
+  if (path === '/api/geocode' && method === 'GET') {
+    const addr = new URL(request.url).searchParams.get('addr') || '';
+    if (!addr) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    const key = env.KAKAO_REST_KEY || '';
+    const r = await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(addr), {
+      headers: { 'Authorization': 'KakaoAK '+key }
+    });
+    const d = await r.json();
+    const doc = d.documents && d.documents[0];
+    if (doc) {
+      return new Response(JSON.stringify({
+        ok:true, lat:parseFloat(doc.y), lng:parseFloat(doc.x),
+        address_name: doc.address_name || '',
+        road_address: (doc.road_address && doc.road_address.address_name) || ''
+      }), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    }
+    return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+  }
+
   // ★ FCM 알림
   if (path === '/api/ctrl-notify' && method === 'POST') {
     try {
