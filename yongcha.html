@@ -514,7 +514,7 @@ function _goPage(p){
   if(p==='home')_pgHome(el);
   else if(p==='posts')_pgPosts(el);
   else if(p==='my_posts')_pgMyPosts(el);
-  else if(p==='post_write'){_pgPostWrite(el);setTimeout(_initPostMap,800);}
+  else if(p==='post_write'){_pgPostWrite(el);}
   else if(p==='my_applies')_pgMyApplies(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
@@ -1404,12 +1404,13 @@ function _initKakaoScript(callback){
 
 // 공고 등록 지도 초기화
 function _initPostMap(){
+  var wrap=document.getElementById('post-map-wrap');
+  if(wrap&&wrap.style.display==='none') return; // 구역 추가 전엔 초기화 안 함
   var container=document.getElementById('post-map');
-  if(!container){ setTimeout(_initPostMap,500); return; }
+  if(!container){ return; }
   _loadKakaoMap(function(){
     container=document.getElementById('post-map');
     if(!container)return;
-    // 컨테이너 크기 강제 지정
     container.style.width='100%';
     container.style.height='240px';
     container.style.display='block';
@@ -1418,7 +1419,6 @@ function _initPostMap(){
       _map=new kakao.maps.Map(container,opts);
       _map.setDraggable(true);
       _map.setZoomable(true);
-      // 지도 크기 재계산
       _map.relayout();
     } catch(e){ console.error('카카오맵 오류:',e); }
   });
@@ -1457,11 +1457,12 @@ function _openDaumPost(){
 function _renderZoneTags(){
   var el = document.getElementById('zone-tags');
   if(!el) return;
-  if(!window._zones.length){el.innerHTML='';return;}
+  if(!window._zones||!window._zones.length){el.innerHTML='';return;}
   el.innerHTML = window._zones.map(function(z,i){
-    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--ac);color:#000;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700">'
-      +'📮 '+z.zipcode+' <span style="font-weight:400">'+z.name+'</span>'
-      +'<button onclick="_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0;margin-left:2px;color:#000">×</button>'
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--ac);color:#000;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700">'
+      +'📮 '+z.zipcode
+      +' <span style="font-weight:500">'+z.name+'</span>'
+      +'<button onclick="event.stopPropagation();_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 0 0 4px;color:#000;line-height:1">×</button>'
       +'</span>';
   }).join('');
 }
@@ -1471,14 +1472,23 @@ function _removeZone(i){
   _updateMapZones();
 }
 function _updateMapZones(){
-  if(!_map) return;
-  // 지도 wrap 표시
+  // 구역 있으면 지도 표시
   var wrap = document.getElementById('post-map-wrap');
-  if(wrap) wrap.style.display = window._zones.length ? 'block' : 'none';
-  // 기존 마커/서클 제거
+  if(wrap){
+    wrap.style.display = window._zones.length ? 'block' : 'none';
+    if(window._zones.length && !_map){
+      _initPostMap();
+      setTimeout(_doUpdateMapZones, 800);
+      return;
+    }
+  }
+  _doUpdateMapZones();
+}
+function _doUpdateMapZones(){
+  if(!_map) return;
   (_markers||[]).forEach(function(m){m.setMap(null);});
   _markers = [];
-  (_circles||[]).forEach(function(c){c.setMap(null);});
+  (window._circles||[]).forEach(function(c){c.setMap(null);});
   window._circles = [];
   window._zones.forEach(function(z){
     var pos = new kakao.maps.LatLng(z.lat, z.lng);
@@ -1491,6 +1501,7 @@ function _updateMapZones(){
     var last = window._zones[window._zones.length-1];
     _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
     _map.setLevel(5);
+    _map.relayout();
   }
 }
 function _showAddrResult(results){
