@@ -862,10 +862,11 @@ function _pgPostWrite(el){
 
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역 검색</label>'+
-  '<button class="map-search-btn" onclick="_openDaumPost()" style="width:100%;padding:12px;font-size:14px">🔍 주소 검색 (우편번호 / 동명)</button>'+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 추가 (우편번호)</label>'+
+  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">🔍 주소 검색으로 구역 추가</button>'+
+  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>'+
   '<div id="addr-result"></div>'+
-  '<div id="selected-zones" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
+  '<div id="selected-zones" style="display:none"></div>'+
   '</div>'+
   '<div class="map-wrap"><div id="post-map"></div></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
@@ -931,7 +932,7 @@ function _submitPost(){
   btn.textContent='등록 중...';btn.disabled=true;
   _db.collection('yongcha_posts').add({
     agencyId:_CU.uid,agencyName:_CU.name,agencyRating:_CU.rating||0,
-    region:_CU.region,courier:courier,area:area,
+    region:_CU.region,courier:courier,area:area,zones:window._zones||[],
     volume:parseInt(volume),unitPrice:parseInt(price),
     monthlyEst:parseInt(est)||0,areaType:areaType,
     startDate:date,workHours:hours,desc:desc,
@@ -1132,20 +1133,28 @@ function _initPostMap(){
   });
 }
 
-// Daum 우편번호 팝업
+// Daum 우편번호 팝업 - 다중 구역 추가
+window._zones = window._zones || [];
 function _openDaumPost(){
   new daum.Postcode({
     oncomplete: function(data){
       var addr = data.roadAddress || data.jibunAddress;
+      var zipcode = data.zonecode;
+      var sigungu = (data.sido||'') + ' ' + (data.sigungu||'') + ' ' + (data.bname||data.bname1||'');
       _loadKakaoMap(function(){
         var gc = new kakao.maps.services.Geocoder();
         gc.addressSearch(addr, function(res, status){
           if(status === kakao.maps.services.Status.OK){
-            _showAddrResult([{
-              place_name: addr,
-              road_address_name: data.roadAddress||'',
-              x: res[0].x, y: res[0].y
-            }]);
+            var lat = parseFloat(res[0].y), lng = parseFloat(res[0].x);
+            // 중복 체크
+            var dup = window._zones.some(function(z){return z.zipcode===zipcode;});
+            if(dup){_yToast('이미 추가된 우편번호예요');return;}
+            window._zones.push({zipcode:zipcode, name:sigungu.trim(), lat:lat, lng:lng});
+            _renderZoneTags();
+            _updateMapZones();
+            // 구역명 자동입력
+            var areaInp = document.getElementById('pw-area');
+            if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
           } else {
             _yToast('주소 좌표를 찾을 수 없어요');
           }
@@ -1153,6 +1162,42 @@ function _openDaumPost(){
       });
     }
   }).open();
+}
+function _renderZoneTags(){
+  var el = document.getElementById('zone-tags');
+  if(!el) return;
+  if(!window._zones.length){el.innerHTML='';return;}
+  el.innerHTML = window._zones.map(function(z,i){
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--ac);color:#000;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700">'
+      +'📮 '+z.zipcode+' <span style="font-weight:400">'+z.name+'</span>'
+      +'<button onclick="_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0;margin-left:2px;color:#000">×</button>'
+      +'</span>';
+  }).join('');
+}
+function _removeZone(i){
+  window._zones.splice(i,1);
+  _renderZoneTags();
+  _updateMapZones();
+}
+function _updateMapZones(){
+  if(!_map) return;
+  // 기존 마커/서클 제거
+  (_markers||[]).forEach(function(m){m.setMap(null);});
+  _markers = [];
+  (_circles||[]).forEach(function(c){c.setMap(null);});
+  window._circles = [];
+  window._zones.forEach(function(z){
+    var pos = new kakao.maps.LatLng(z.lat, z.lng);
+    var m = new kakao.maps.Marker({position:pos, map:_map});
+    _markers.push(m);
+    var c = new kakao.maps.Circle({center:pos,radius:600,strokeWeight:2,strokeColor:'#f59e0b',strokeOpacity:.8,fillColor:'#f59e0b',fillOpacity:.15,map:_map});
+    window._circles.push(c);
+  });
+  if(window._zones.length){
+    var last = window._zones[window._zones.length-1];
+    _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
+    _map.setLevel(5);
+  }
 }
 function _showAddrResult(results){
   var el=document.getElementById('addr-result');
