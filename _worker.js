@@ -163,7 +163,7 @@ async function serveKVFile(env, fileName, contentType) {
     // KV 우선 서빙
     const _e = env || _env_ref;
     if (_e && _e.DONWAY_ASSETS) {
-      const kvVal_sf = await _e.DONWAY_ASSETS.get(fileName, 'text');
+      const kvVal_sf = await _e.DONWAY_ASSETS.get(fileName, {type:'text', cacheTtl:0});
       if (kvVal_sf) {
         const body_sf = contentType === 'text/html' ? _injectMeta(kvVal_sf) : kvVal_sf;
         return new Response(body_sf, { headers: { 'Content-Type': contentType+'; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', 'Pragma': 'no-cache', 'Surrogate-Control': 'no-store', 'X-Served-From': 'KV', ...SECURITY_HEADERS } });
@@ -6359,7 +6359,7 @@ async function handleYongcha(request, env, ctx) {
   }
 
   // 메인 페이지 (모든 경로 → yongcha.html KV 서빙)
-  const yongchaHtml = await env.DONWAY_ASSETS.get('yongcha.html');
+  const yongchaHtml = await env.DONWAY_ASSETS.get('yongcha.html', {cacheTtl: 0});
   if (yongchaHtml) {
     return new Response(yongchaHtml, {
       headers: { 'Content-Type': 'text/html;charset=utf-8',
