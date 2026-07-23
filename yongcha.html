@@ -1004,7 +1004,7 @@ function _pgPostWrite(el){
   '<div class="form-section-title">차량 요건</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">차종</label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-vehicle-group">'+
-  ['1톤 탑차','1.4톤','다마스/라보','무관'].map(function(v){
+  ['1톤 하이탑','1톤 로우탑','1.4톤','무관'].map(function(v){
     return '<button onclick="_selType(this,\''+v+'\',\'pw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid '+(v==='1톤 탑차'?'var(--ac)':'var(--border)')+';background:'+(v==='1톤 탑차'?'var(--acl)':'transparent')+';color:'+(v==='1톤 탑차'?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
   }).join('')+
   '</div></div>'+
