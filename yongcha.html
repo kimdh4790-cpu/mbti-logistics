@@ -465,7 +465,7 @@ function _yRegister(){
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
     return _db.collection('yongcha_users').doc(c.user.uid).set({
-      uid:c.user.uid,type:_regType,name:n,email:e,phone:ph,region:rg,
+      uid:c.user.uid,type:_regType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
