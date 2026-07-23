@@ -25,14 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy yongcha Worker
-        env:
-          CF_EMAIL: kimdh4790@gmail.com
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-        run: |
-          npm install -g wrangler@4 --silent
-          CLOUDFLARE_API_KEY=$CF_KEY CLOUDFLARE_EMAIL=$CF_EMAIL npx wrangler deploy --env yongcha 2>&1
-
       - name: Deploy Worker (Global API Key)
         env:
           CF_EMAIL: kimdh4790@gmail.com
