@@ -27,14 +27,6 @@ zone_name = "dine.ne.kr"
 pattern = "mbtico.kr/*"
 zone_name = "mbtico.kr"
 
-# ── 용차 앱 전용 Worker ──────────────────────────────────────
-[[env.yongcha]]
-name = "yongcha-worker"
-main = "yongcha-worker.js"
-compatibility_date = "2025-11-01"
-account_id = "02709cbec18d848913b4246015b9148f"
-workers_dev = false
-
-[[env.yongcha.routes]]
+[[routes]]
 pattern = "yongcha.app/*"
 zone_name = "yongcha.app"
