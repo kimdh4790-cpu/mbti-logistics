@@ -416,7 +416,9 @@ function _filoGoPage(p){
 
  if(p==='home') _filoPageHome(el);
  else if(p==='kiosk') _filoPageKiosk(el);
- else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
+ else if(p==='menu_mgmt') {
+  _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoPageMenuMgmt(el); });
+ }
  else if(p==='qr_mgmt') {
   _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoPageQrMgmt(el); });
  }
