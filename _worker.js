@@ -2156,6 +2156,40 @@ async function acceptExchange(){
       if (path === '/store.js') return serveKVFile(env, 'store.js', 'application/javascript');
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
+      // ★ /{slug} 직접 접속 → filo.html 서빙 + dealerId 주입
+      const filoSlugMatch = path.match(/^\/([A-Za-z0-9\-_]+)$/);
+      if (filoSlugMatch && !path.startsWith('/api') && !path.startsWith('/c/')) {
+        const filoSlug = filoSlugMatch[1];
+        const skipPaths = ['app','order','inventory','qr','kiosk','store','kitchen','member','staff','register','login','control','join','mbtico'];
+        if (!skipPaths.includes(filoSlug)) {
+          // Firestore에서 slug로 dealerId 조회
+          try {
+            const fsT = await getAccessToken(env);
+            const qRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+              method:'POST',
+              headers:{'Authorization':'Bearer '+fsT,'Content-Type':'application/json'},
+              body: JSON.stringify({structuredQuery:{
+                from:[{collectionId:'companies'}],
+                where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:filoSlug}}},
+                limit:1
+              }})
+            });
+            const qData = await qRes.json();
+            const fields = qData[0]?.document?.fields || {};
+            const dealerId = fields.dealerId?.stringValue || fields.uid?.stringValue || '';
+            if (dealerId) {
+              let filoHtml = await env.DONWAY_ASSETS.get('filo.html', 'text');
+              if (filoHtml) {
+                filoHtml = filoHtml.replace('__FILO_DEALER_ID__', dealerId);
+                return new Response(filoHtml, {
+                  headers: {'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store',...SECURITY_HEADERS}
+                });
+              }
+            }
+          } catch(e) { console.error('[filo-slug]', e.message); }
+        }
+      }
+
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
