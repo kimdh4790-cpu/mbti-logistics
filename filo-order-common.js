@@ -244,6 +244,9 @@ function _openMdlCommon(m){
    }
   }
  }
+ // 모달 열기
+ var mdlEl = document.getElementById(mdlId);
+ if(mdlEl) mdlEl.classList.add('open');
 }
 
 // ── 수량 조절 ────────────────────────────────────────────────────────────────
