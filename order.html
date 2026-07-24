@@ -79,7 +79,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 #cat-wrap{background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0}
 #cat-wrap::-webkit-scrollbar{display:none}
 #cat-bar{display:flex;padding:0 12px;gap:6px;height:50px;align-items:center;white-space:nowrap}
-.cat-btn{height:36px;padding:0 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:.2s;display:flex;align-items:center;gap:5px}
+.cat-btn{height:36px;padding:0 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;flex-shrink:0;transition:.2s;display:flex;align-items:center;gap:5px;touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .cat-btn.on{background:var(--brand);color:#fff;border-color:var(--brand);box-shadow:0 4px 12px rgba(8,145,178,.3)}
 .cat-ico{font-size:15px}
 
@@ -238,7 +238,7 @@ body.dark .mi-sold{background:rgba(30,41,59,.85)}
     <div class="hdr-right">
       <button class="dark-btn" onclick="_toggleDark()" id="dark-btn" title="다크모드">🌙</button>
       <div class="lang-row">
-        <button class="lb on" id="lb-ko" onclick="_setLang('ko')">KO</button>
+        <button class="lb on" id="lb-ko" onclick="_setLang('ko')" ontouchend="event.preventDefault();_setLang('ko')">KO</button>
         <button class="lb" id="lb-en" onclick="_setLang('en')" ontouchend="event.preventDefault();_setLang('en')">EN</button>
         <button class="lb" id="lb-zh" onclick="_setLang('zh')" ontouchend="event.preventDefault();_setLang('zh')">中</button>
       </div>
@@ -416,8 +416,8 @@ body.dark .mi-sold{background:rgba(30,41,59,.85)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="/filo-order-common.js?v=7"></script>
-<script src="/order.js?v=9"></script>
+<script src="/filo-order-common.js?v=8"></script>
+<script src="/order.js?v=10"></script>
 
 <div id="call-btn" onclick="_callStaff()">
   <span class="cb-ico">🔔</span>
