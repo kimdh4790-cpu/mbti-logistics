@@ -49,7 +49,7 @@ function _renderMenuGrid(menus, gridId){
  menus.forEach(function(m){
   var item=document.createElement('div');
   item.className='mi';
-  item.dataset.cat=m.category||'기타';
+  item.dataset.cat=(m.category&&m.category.trim())||'기타';
   var trId='tr-'+m.name.replace(/\W/g,'_');
   var badgeId='badge-'+m.name.replace(/\W/g,'_');
   var inCart=_cart[m.name]&&_cart[m.name].qty>0;
@@ -89,7 +89,7 @@ function _renderCatBar(menus, barId, gridId){
  var bar=document.getElementById(barId||'cat-bar');
  if(!bar)return;
  var cats=['전체'];
- menus.forEach(function(m){if(m.category&&cats.indexOf(m.category)<0)cats.push(m.category);});
+ menus.forEach(function(m){var c=(m.category&&m.category.trim())||'기타';if(cats.indexOf(c)<0)cats.push(c);});
  bar.innerHTML='';
  cats.forEach(function(cat,i){
   var btn=document.createElement('button');
@@ -100,7 +100,8 @@ function _renderCatBar(menus, barId, gridId){
    document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('on');});
    btn.classList.add('on');
    document.querySelectorAll('.mi').forEach(function(item){
-    item.style.display=(cat==='전체'||item.dataset.cat===cat)?'':'none';
+    var itemCat=item.dataset.cat||'기타';
+   item.style.display=(cat==='전체'||itemCat===cat)?'':'none';
    });
    var sa=document.getElementById('scroll-area');if(sa)sa.scrollTop=0;
   };
