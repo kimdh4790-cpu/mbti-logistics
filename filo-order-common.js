@@ -119,15 +119,18 @@ function _renderCatBar(menus, barId, gridId){
   btn.className='cat-btn'+(i===0?' on':'');
   btn.dataset.cat=cat;
   btn.innerHTML=(_catIco[cat]||'')?' <span class="cat-ico">'+(_catIco[cat]||'')+'</span>'+cat:cat;
-  btn.onclick=function(){
+  var _catClick=function(e){
+   if(e) e.preventDefault();
    document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('on');});
    btn.classList.add('on');
    document.querySelectorAll('.mi').forEach(function(item){
     var itemCat=item.dataset.cat||'기타';
-   item.style.display=(cat==='전체'||itemCat===cat)?'':'none';
+    item.style.display=(cat==='전체'||itemCat===cat)?'':'none';
    });
    var sa=document.getElementById('scroll-area');if(sa)sa.scrollTop=0;
   };
+  btn.onclick=_catClick;
+  btn.ontouchend=_catClick;
   bar.appendChild(btn);
  });
 }
