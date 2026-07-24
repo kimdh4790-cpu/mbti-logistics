@@ -29,6 +29,26 @@
 // ── 전역 공유 변수 (order.js / store.js 와 공유) ──────────────────────────────
 var _menus=[], _did='', _lang='ko', _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 
+// ── UI 다국어 텍스트 ────────────────────────────────────────────────────────
+var _i18n_common={
+ ko:{cart:'장바구니',order:'주문하기',total:'합계',fab:'주문하기',
+     done:'주문 완료!',sub:'잠시 후 준비됩니다',back:'메뉴 더 담기',
+     addr:'주소 입력',sold:'품절',call:'직원 호출',close:'닫기',
+     qty:'수량',add:'담기'},
+ en:{cart:'Cart',order:'Order',total:'Total',fab:'Order',
+     done:'Order Placed!',sub:'Your order is being prepared',back:'Add More',
+     addr:'Enter Address',sold:'Sold Out',call:'Call Staff',close:'Close',
+     qty:'Qty',add:'Add to Cart'},
+ zh:{cart:'购物车',order:'点餐',total:'合计',fab:'点餐',
+     done:'下单成功！',sub:'请稍候，正在准备中',back:'继续点餐',
+     addr:'输入地址',sold:'售罄',call:'呼叫服务员',close:'关闭',
+     qty:'数量',add:'加入购物车'},
+ ja:{cart:'カート',order:'注文する',total:'合計',fab:'注文する',
+     done:'ご注文完了！',sub:'少々お待ちください',back:'メニューに戻る',
+     addr:'住所入力',sold:'売切れ',call:'スタッフ呼出',close:'閉じる',
+     qty:'数量',add:'カートに追加'}
+};
+
 function _t(k){
  return(_i18n_common[_lang]&&_i18n_common[_lang][k])||_i18n_common.ko[k]||k;
 }
