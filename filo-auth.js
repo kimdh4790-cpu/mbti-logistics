@@ -443,7 +443,9 @@ function _filoGoPage(p){
  else if(p==='roster') _filoPageRoster(el);
  else if(p==='qr_staff') _filoPageStaffQR(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
- else if(p==='table_qr') _filoPageTableQR(el);
+ else if(p==='table_qr') {
+  _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoPageQrMgmt(el); });
+ }
  else if(p==='table_mgmt') _filoPageTableMgmt(el);
  else if(p==='points') _filoPagePoints(el);
  else if(p==='membership') _filoPageMembership(el);
