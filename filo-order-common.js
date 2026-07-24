@@ -26,6 +26,9 @@
  *   _today/_nowISO/_toDateStr/_monthStr — order.js 날짜 유틸
  */
 
+// ── 전역 공유 변수 (order.js / store.js 와 공유) ──────────────────────────────
+var _menus=[], _did='', _lang='ko', _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
+
 function _t(k){
  return(_i18n_common[_lang]&&_i18n_common[_lang][k])||_i18n_common.ko[k]||k;
 }
