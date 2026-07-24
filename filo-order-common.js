@@ -118,6 +118,9 @@ function _renderCatBar(menus, barId, gridId){
  cats.forEach(function(cat,i){
   var btn=document.createElement('button');
   btn.className='cat-btn'+(i===0?' on':'');
+ btn.style.touchAction='manipulation';
+ btn.style.cursor='pointer';
+ btn.style.webkitTapHighlightColor='transparent';
   btn.dataset.cat=cat;
   btn.innerHTML=(_catIco[cat]||'')?' <span class="cat-ico">'+(_catIco[cat]||'')+'</span>'+cat:cat;
   var _catClick=function(e){
