@@ -100,7 +100,8 @@ function _renderMenuGrid(menus, gridId){
    sold.textContent=_t('sold');
    item.appendChild(sold);
   }
-  (function(menu){item.onclick=function(){if(menu.stock!=null&&menu.stock<=0)return;_openMdlCommon(menu);};})(m);
+  (function(menu){item.onclick=function(){if(menu.stock!=null&&menu.stock<=0)return;_openMdlCommon(menu);};
+  item.ontouchend=function(e){e.preventDefault();if(menu.stock!=null&&menu.stock<=0)return;_openMdlCommon(menu);};})(m);
   grid.appendChild(item);
  });
  // 언어 반영
@@ -452,7 +453,8 @@ function _renderRecommendBanner(menus){
   priceEl.textContent='₩'+Number(m.price||0).toLocaleString();
   card.appendChild(priceEl);
   // 클릭 — closure로 안전하게
-  (function(menu){card.onclick=function(){_openMdlCommon(menu);};;})(m);
+  (function(menu){card.onclick=function(){_openMdlCommon(menu);};
+  card.ontouchend=function(e){e.preventDefault();_openMdlCommon(menu);};})(m);
   row.appendChild(card);
  });
 
