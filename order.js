@@ -60,8 +60,7 @@
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
 var _did='', _tNum='', _tName='';
-var _cart={}, _lang='ko'; // _menus는 filo-order-common.js 전역 변수 사용
-var _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
+var _cart={}; // _menus/_lang/_tlCache/_curMdlMenu/_tlQtyVal 는 filo-order-common.js 공유
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
 var _lastOrderItems=[], _lastOrderTotal=0, _lastPayType='';
