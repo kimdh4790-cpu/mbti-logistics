@@ -69,6 +69,8 @@ function _renderMenuGrid(menus, gridId){
  var grid=document.getElementById(gridId||'menu-grid');
  if(!grid)return;
  grid.innerHTML='';
+ // 전역 _menus 업데이트 (번역 등에서 참조)
+ if(!gridId || gridId==='menu-grid') _menus = menus;
  menus.forEach(function(m){
   var item=document.createElement('div');
   item.className='mi';
