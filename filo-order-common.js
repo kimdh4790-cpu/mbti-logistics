@@ -146,7 +146,10 @@ function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
  menus.forEach(function(m){
   var trId='tr-'+m.name.replace(/\W/g,'_');
+  // tr-엘리먼트 (번역) + name-img 도 번역
   var el=document.getElementById(trId);
+  var nameImgEls=document.querySelectorAll('.mi-name-img,.mi-name');
+  // 해당 메뉴 카드의 이름 엘리먼트 찾기
   if(!el) return;
   var ck=m.name+'_'+_lang;
   if(_tlCache[ck]){el.textContent=_tlCache[ck];return;}
@@ -361,6 +364,14 @@ function _setLang(l){
  if(_menus&&_menus.length)_applyTranslationsToGrid(_menus);
  // 품절 텍스트
  document.querySelectorAll('.mi-sold').forEach(function(s){s.textContent=_t('sold');});
+ // 메뉴 그리드 번역
+ if(_menus&&_menus.length) _applyTranslationsToGrid(_menus);
+ // 담기 버튼 텍스트 갱신
+ var addBtn=document.getElementById('mdl-add')||document.getElementById('tl-add');
+ if(addBtn&&_curMdlMenu){
+  var p=(_curMdlMenu.price||0)*(_tlQtyVal||1);
+  addBtn.textContent=_t('add')+' — ₩'+p.toLocaleString();
+ }
 }
 
 // ── 주소 입력 팝업 ────────────────────────────────────────────────────────────
