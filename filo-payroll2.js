@@ -282,7 +282,7 @@ function _filoPagePayslip(el) {
     '</div>' +
     '<div style="display:flex;gap:8px">' +
     '<button onclick="_filoPayslipExcel()" style="padding:8px 14px;background:var(--surface);border:1px solid var(--bd);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx)">⬇ 엑셀 다운로드</button>' +
-    '<button onclick="_filoPayslipGenerate(''+did+'')" style="padding:8px 14px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 명세서 생성</button>' +
+    '<button onclick="_filoPayslipGenerate('+did+')" style="padding:8px 14px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 명세서 생성</button>' +
     '</div>';
   wrap.appendChild(hdr);
 
@@ -312,7 +312,7 @@ function _filoPagePayslip(el) {
   filterBar.innerHTML =
     '<div style="font-size:15px;font-weight:900;color:var(--tx)" id="ps-month-title">'+ym.replace('-','년 ')+'월 급여 명세서</div>' +
     '<div style="flex:1"></div>' +
-    '<select id="ps-filter-status" onchange="_filoPayslipFilter(''+did+'')" style="padding:7px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--surface);color:var(--tx);font-size:12px;cursor:pointer">' +
+    '<select id="ps-filter-status" onchange="_filoPayslipFilter('+did+')" style="padding:7px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--surface);color:var(--tx);font-size:12px;cursor:pointer">' +
     '<option value="all">지급상태: 전체</option>' +
     '<option value="paid">지급완료</option>' +
     '<option value="pending">지급대기</option>' +
@@ -404,7 +404,7 @@ function _filoPayslipLoad(did, ym) {
         '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
         (isPaid?'✅ 지급완료':'⏳ 지급대기')+'</span></td>' +
         '<td style="padding:12px 8px">' +
-        (!isPaid?'<button onclick="_filoPayslipProcess(''+m.id+'',''+did+'',''+ym+'')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
+        (!isPaid?'<button onclick="_filoPayslipProcess(''+m.id+'','+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
         '</td>' +
         '</tr>';
     }).join('');
