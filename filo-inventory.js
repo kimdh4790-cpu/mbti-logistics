@@ -318,7 +318,7 @@ function _filoPageInventoryDash(el) {
     '<div style="font-size:13px;font-weight:800;color:var(--t3)">재료 목록</div>' +
     '<div style="display:flex;gap:8px">' +
     '<input id="inv-search" placeholder="재료명 검색..." oninput="_filoInvSearch()" style="padding:6px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font-size:12px;width:140px">' +
-    '<button onclick="_filoInvAddModal(''+did+'')" style="padding:6px 12px;background:var(--br);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 재고 등록</button>' +
+    '<button onclick="_filoInvAddModal('+did+')" style="padding:6px 12px;background:var(--br);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 재고 등록</button>' +
     '</div></div>' +
     '<div style="overflow-x:auto">' +
     '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
@@ -341,7 +341,7 @@ function _filoPageInventoryDash(el) {
   lowCard.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
     '<div style="font-size:13px;font-weight:800;color:var(--t3)">발주 필요 <span id="inv-low-badge" style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px">0</span></div>' +
-    '<button onclick="_filoInvAutoOrder(''+did+'')" style="padding:5px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
+    '<button onclick="_filoInvAutoOrder('+did+')" style="padding:5px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
     '</div>' +
     '<div id="inv-low-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">재고 부족 없음 ✅</div></div>';
   rightPanel.appendChild(lowCard);
@@ -352,7 +352,7 @@ function _filoPageInventoryDash(el) {
   incomingCard.innerHTML =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
     '<div style="font-size:13px;font-weight:800;color:var(--t3)">입고 예정 <span id="inv-in-badge" style="background:#7c3aed;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px">0</span></div>' +
-    '<button onclick="_filoInvAddIncoming(''+did+'')" style="padding:5px 10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
+    '<button onclick="_filoInvAddIncoming('+did+')" style="padding:5px 10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
     '</div>' +
     '<div id="inv-incoming-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">입고 예정 없음</div></div>';
   rightPanel.appendChild(incomingCard);
@@ -410,7 +410,7 @@ function _filoInvDashLoad(did) {
             '<td style="padding:10px 6px;font-weight:800;color:'+(stock<=min?'#ef4444':'var(--tx)')+'">'+stock+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px;color:var(--t3)">'+min+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+statusBg+';color:'+statusColor+'">'+status+'</span></td>' +
-            '<td style="padding:10px 6px"><button onclick="_filoInvOrderItem(''+it.id+'',''+did+'')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--bd);border-radius:7px;font-size:11px;cursor:pointer;color:var(--tx)">발주</button></td>' +
+            '<td style="padding:10px 6px"><button onclick="_filoInvOrderItem(''+it.id+'','+did+')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--bd);border-radius:7px;font-size:11px;cursor:pointer;color:var(--tx)">발주</button></td>' +
             '</tr>';
         }).join('');
       }
