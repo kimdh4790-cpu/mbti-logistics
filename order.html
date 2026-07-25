@@ -109,6 +109,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic 
 .mi-name-img{font-size:13px;font-weight:800;color:#fff;line-height:1.3;word-break:keep-all}
 .mi-price-img{font-size:14px;font-weight:900;color:#fff;margin-top:3px}
 .mi-body{padding:10px 10px 12px}
+.mi-img-wrap{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden}
+.mi-img{width:100%;height:100%;object-fit:cover;display:block}
+.mi-overlay{position:absolute;bottom:0;left:0;right:0;padding:8px 10px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff}
+.mi-name-img{font-size:13px;font-weight:700;line-height:1.3;margin-bottom:2px;word-break:keep-all}
+.mi-tr-img{font-size:11px;opacity:.8;margin-bottom:2px}
+.mi-price-img{font-size:13px;font-weight:900;color:#ffd700}
+.mi-emoji-wrap{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;background:var(--bg2);font-size:48px}
+.mi-body{padding:8px 10px}
 .mi-name{font-size:13px;font-weight:700;color:var(--text1);line-height:1.4;margin-bottom:2px;word-break:keep-all}
 .mi-desc{font-size:11px;color:var(--text2);margin-bottom:5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mi-price{font-size:14px;font-weight:900;color:var(--brand)}
@@ -419,7 +427,7 @@ body.dark .mi-sold{background:rgba(30,41,59,.85)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="/filo-order-common.js?v=9"></script>
+<script src="/filo-order-common.js?v=10"></script>
 <script src="/order.js?v=10"></script>
 
 <div id="call-btn" onclick="_callStaff()">
