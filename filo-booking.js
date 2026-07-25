@@ -592,7 +592,7 @@ function _filoShowWaitQR(url, name, wid) {
     '<div style="font-size:16px;font-weight:900;color:var(--tx);margin-bottom:16px">'+name+'님 QR 스캔 안내</div>'+
     '<div id="'+qrId+'" style="width:160px;height:160px;margin:0 auto 12px"></div>'+
     '<div style="font-size:12px;color:var(--t3);margin-bottom:16px;line-height:1.6">손님 폰으로 스캔하면<br>실시간 대기 현황 + 호출 알림</div>'+
-    '<button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:14px;background:var(--br);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
+    '<button onclick="this.closest("[style*=fixed]").remove()" style="width:100%;padding:14px;background:var(--br);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">확인</button>';
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
