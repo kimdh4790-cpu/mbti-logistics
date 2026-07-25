@@ -432,19 +432,34 @@ function _yLogin(){
       err.style.display='block';return;
     }
     var uid=data.localId,email=data.email||'';
+    // Firestore 조회 타임아웃 5초
+    var _loginTimer=setTimeout(function(){
+      btn.textContent='로그인';btn.disabled=false;
+      err.textContent='서버 응답 지연 - 다시 시도해주세요';err.style.display='block';
+    },5000);
     _db.collection('yongcha_users').doc(uid).get().then(function(snap){
+      clearTimeout(_loginTimer);
       if(snap.exists){_CU=Object.assign({uid:uid},snap.data());_showApp();}
       else if(ADMINS.indexOf(email)>=0){
         var doc={uid:uid,type:'admin',name:'관리자',email:email,phone:'051-711-3103',
           region:'부산',rating:5,reviewCount:0,status:'active',
           createdAt:firebase.firestore.FieldValue.serverTimestamp()};
         _db.collection('yongcha_users').doc(uid).set(doc).then(function(){
+          clearTimeout(_loginTimer);
           _CU=Object.assign({uid:uid},doc);_showApp();
+        }).catch(function(e){
+          clearTimeout(_loginTimer);
+          btn.textContent='로그인';btn.disabled=false;
+          err.textContent='계정 생성 실패: '+e.message;err.style.display='block';
         });
       } else {
         btn.textContent='로그인';btn.disabled=false;
         err.textContent='용차 계정이 없어요. 회원가입 해주세요';err.style.display='block';
       }
+    }).catch(function(e){
+      clearTimeout(_loginTimer);
+      btn.textContent='로그인';btn.disabled=false;
+      err.textContent='DB 오류: '+e.message;err.style.display='block';
     });
   }).catch(function(ex){
     btn.textContent='로그인';btn.disabled=false;
