@@ -153,6 +153,7 @@ function _filoQRPrint(num,name){
  if(!src)return;
  var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
  var w=window.open('','_blank','width=440,height=560');
+ if(!w||!w.document){alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');return;}
  w.document.write('<html><head><meta charset="UTF-8"><title>'+name+'</title>'+
   '<style>'+
   '*{margin:0;padding:0;box-sizing:border-box}'+
@@ -324,6 +325,7 @@ function _filoQRPrint1(num,name){
  if(!img)return;
  var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
  var w=window.open('','_blank','width=440,height=560');
+ if(!w||!w.document){alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');return;}
  w.document.write('<html><head><meta charset="UTF-8"><title>'+name+'</title>'+
   '<style>'+
   '*{margin:0;padding:0;box-sizing:border-box}'+
