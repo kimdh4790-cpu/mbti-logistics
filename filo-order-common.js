@@ -210,6 +210,25 @@ function _openMdlCommon(m){
   scrollEl.insertBefore(emojiEl,mdlContent);
  }
  var nameEl=document.getElementById(nameId);if(nameEl)nameEl.textContent=m.name;
+ // 언어가 ko가 아니면 모달 이름도 번역
+ if(_lang!=='ko'&&nameEl){
+  var mnCk=m.name+'_'+_lang;
+  if(_tlCache[mnCk]){nameEl.textContent=_tlCache[mnCk];}
+  else if(m.nameTranslations&&m.nameTranslations[_lang]&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(m.nameTranslations[_lang])){
+   nameEl.textContent=m.nameTranslations[_lang];
+   _tlCache[mnCk]=m.nameTranslations[_lang];
+  } else {
+   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:m.name,lang:_lang})})
+   .then(function(r){return r.json();})
+   .then(function(d){
+    if(d.translated&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(d.translated)){
+     _tlCache[mnCk]=d.translated;
+     if(_curMdlMenu&&_curMdlMenu.name===m.name&&nameEl)nameEl.textContent=d.translated;
+    }
+   }).catch(function(){});
+  }
+ }
  var priceEl=document.getElementById(priceId);if(priceEl)priceEl.textContent='₩'+(m.price||0).toLocaleString();
  var qtyEl=document.getElementById(qtyId);if(qtyEl)qtyEl.textContent='1';
  var addEl=document.getElementById(addId);if(addEl)addEl.textContent='담기 — ₩'+(m.price||0).toLocaleString();
