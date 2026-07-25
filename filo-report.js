@@ -607,7 +607,7 @@ function _filoPageSalesReport(el) {
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
     '<div style="display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:4px">' +
     ['이번주','이번달','지난달'].map(function(l,i){
-      return '<button onclick="_filoSalesReportPeriod('+i+',''+did+'')" class="sr-period-btn'+(i===0?' sr-period-on':'')+'" style="padding:6px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:'+(i===0?'var(--br)':'transparent')+';color:'+(i===0?'#fff':'var(--t3)')+'">'+l+'</button>';
+      return '<button onclick="_filoSalesReportPeriod('+i+','+did+')" class="sr-period-btn'+(i===0?' sr-period-on':'')+'" style="padding:6px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:'+(i===0?'var(--br)':'transparent')+';color:'+(i===0?'#fff':'var(--t3)')+'">'+l+'</button>';
     }).join('') +
     '</div>' +
     '<button onclick="_filoSalesReportExport()" style="padding:8px 16px;background:var(--surface);border:1px solid var(--bd);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx)">⬇ 내보내기</button>' +
