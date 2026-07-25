@@ -154,9 +154,13 @@ function _applyTranslationsToGrid(menus){
   var ck=m.name+'_'+_lang;
   if(_tlCache[ck]){el.textContent=_tlCache[ck];return;}
   if(m.nameTranslations&&m.nameTranslations[_lang]){
-   _tlCache[ck]=m.nameTranslations[_lang];
-   el.textContent=m.nameTranslations[_lang];
-   return;
+   var saved=m.nameTranslations[_lang];
+   // 저장된 값이 한글이면 무시하고 API 재번역
+   if(saved && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
+    _tlCache[ck]=saved;
+    el.textContent=saved;
+    return;
+   }
   }
   // API 번역
   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
