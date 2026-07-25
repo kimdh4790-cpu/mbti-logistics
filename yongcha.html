@@ -389,7 +389,15 @@ _auth.onAuthStateChanged(function(u){
           _CU=Object.assign({uid:u.uid},doc);_showApp();
         }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] set error:',e);_showLogin();});
       } else {clearTimeout(_authTimer);_showLogin();}
-    }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] get error:',e);_showLogin();});
+    }).catch(function(e){
+      clearTimeout(_authTimer);
+      // 로그인 화면에 에러 표시
+      _showLogin();
+      setTimeout(function(){
+        var err=document.getElementById('l-err');
+        if(err){err.textContent='DB오류: '+e.code+' / '+e.message;err.style.display='block';}
+      },300);
+    });
   } else {_showLogin();}
 });
 
@@ -466,7 +474,7 @@ function _yLogin(){
     });
   }).catch(function(ex){
     btn.textContent='로그인';btn.disabled=false;
-    err.textContent='네트워크 오류';err.style.display='block';
+    err.textContent='오류: '+ex.message;err.style.display='block';
   });
 }
 
