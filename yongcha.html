@@ -357,7 +357,7 @@ var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 firebase.initializeApp({
   apiKey:API_KEY,
-  authDomain:'yongcha.app',
+  authDomain:'mbti-logistics.firebaseapp.com',
   projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.appspot.com',
   messagingSenderId:'40761160761',
@@ -377,7 +377,9 @@ _auth.onAuthStateChanged(function(u){
   document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   if(u){
     var _authTimer=setTimeout(function(){_showLogin();},8000);
-    _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
+    u.getIdToken(true).then(function(){
+      return _db.collection('yongcha_users').doc(u.uid).get();
+    }).then(function(snap){
       clearTimeout(_authTimer);
       var _lBtn=document.getElementById('l-btn');
       if(_lBtn){_lBtn.textContent='로그인';_lBtn.disabled=false;}
