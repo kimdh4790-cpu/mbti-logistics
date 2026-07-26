@@ -250,7 +250,7 @@ service cloud.firestore {
     match /dine_schedules/{docId}         { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /dine_waiting/{docId}           { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn() || isAuth(); }
 
-    // ── 용차 (yongcha.app) 컬렉션 ─────────────────────────────────────────────
+    // ── 용차 (yongcha.app) 컬렉션 ─ updated: 2026-07-26 21:50:37 ─────────────────────────────
     match /yongcha_users/{uid} {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == uid;
