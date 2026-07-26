@@ -357,7 +357,7 @@ var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 firebase.initializeApp({
   apiKey:API_KEY,
-  authDomain:'mbti-logistics.firebaseapp.com',
+  authDomain:'yongcha.app',
   projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.appspot.com',
   messagingSenderId:'40761160761',
@@ -431,28 +431,15 @@ function _yLogin(){
   if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   err.style.display='none';
   btn.textContent='로그인 중...';btn.disabled=true;
-  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:e,password:p,returnSecureToken:true})
-  }).then(function(r){return r.json();}).then(function(data){
-    if(data.error){
-      btn.textContent='로그인';btn.disabled=false;
-      var c=data.error.message||'';
-      err.textContent=c.includes('WRONG_PASSWORD')||c.includes('INVALID_LOGIN')?'비밀번호가 틀렸어요':
-                      c.includes('EMAIL_NOT_FOUND')?'없는 계정이에요':
-                      c.includes('TOO_MANY')?'잠시 후 다시 시도하세요':
-                      '오류: '+c;
-      err.style.display='block';return;
-    }
-    // identitytoolkit 성공 → Firebase Auth SDK로 로그인 (토큰 확보)
-    // onAuthStateChanged가 Firestore 조회 처리
-    _auth.signInWithEmailAndPassword(e, p).catch(function(ex){
-      btn.textContent='로그인';btn.disabled=false;
-      err.textContent='인증 오류: '+ex.message;err.style.display='block';
-    });
-  }).catch(function(ex){
+  _auth.signInWithEmailAndPassword(e,p).catch(function(ex){
     btn.textContent='로그인';btn.disabled=false;
-    err.textContent='오류: '+ex.message;err.style.display='block';
+    var c=ex.code||'';
+    err.textContent=c==='auth/wrong-password'||c==='auth/invalid-credential'?'비밀번호가 틀렸어요':
+                    c==='auth/user-not-found'?'없는 계정이에요':
+                    c==='auth/too-many-requests'?'잠시 후 다시 시도하세요':
+                    c==='auth/invalid-email'?'이메일 형식을 확인하세요':
+                    '오류: '+c;
+    err.style.display='block';
   });
 }
 
