@@ -1618,14 +1618,19 @@ async function acceptExchange(){
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/api/find-company') {
-        // 비로그인 직원/회원 가입 시 매장 slug 조회 (SA 토큰 사용)
-        const slug = new URL(request.url).searchParams.get('slug');
-        const platform = new URL(request.url).searchParams.get('platform') || 'dine';
-        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // slug(가입용) 또는 uid(로그인용)로 매장 조회 (SA 토큰, 비로그인 가능)
+        const params = new URL(request.url).searchParams;
+        const slug = params.get('slug');
+        const uid  = params.get('uid');
+        const platform = params.get('platform') || 'dine';
+        if (!slug && !uid) return new Response(JSON.stringify({error:'slug or uid required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
+        // slug → slug 필드, uid → uid 필드로 조회
+        const filterField = slug ? 'slug' : 'uid';
+        const filterValue = slug ? slug : uid;
         const res2 = await fetch(`${FS_BASE}:runQuery`,{
           method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}}]}},limit:1}})
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:filterField},op:'EQUAL',value:{stringValue:filterValue}}}]}},limit:1}})
         });
         const rows = await res2.json();
         const docs = (rows||[]).filter(r=>r.document);
