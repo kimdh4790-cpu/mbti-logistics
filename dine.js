@@ -335,10 +335,14 @@ function _dineRegister(){
 var _dineToken  = null;
 
 function _dineLogin(){
- var email = document.getElementById('li-email').value.trim();
+ var emailRaw = document.getElementById('li-email').value.trim();
  var pw    = document.getElementById('li-pw').value;
  var err   = document.getElementById('li-err');
- if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';return;}
+ if(!emailRaw||!pw){err.textContent='이메일 또는 연락처와 비밀번호를 입력하세요';return;}
+ // 연락처 입력 시 @dine.staff 변환
+ var email = /^[0-9\-]+$/.test(emailRaw)
+   ? emailRaw.replace(/-/g,'')+'@dine.staff'
+   : emailRaw;
  err.textContent='로그인 중...';
  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+DINE_APIKEY,{
   method:'POST',
@@ -347,7 +351,7 @@ function _dineLogin(){
  }).then(function(r){return r.json();}).then(function(d){
   if(d.error){
    var msg=d.error.message||'';
-   err.textContent=msg==='INVALID_PASSWORD'||msg==='EMAIL_NOT_FOUND'?'이메일 또는 비밀번호가 올바르지 않습니다':'로그인 실패: '+msg;
+   err.textContent=msg==='INVALID_PASSWORD'||msg==='EMAIL_NOT_FOUND'||msg==='INVALID_LOGIN_CREDENTIALS'?'연락처(이메일) 또는 비밀번호가 올바르지 않습니다':'로그인 실패: '+msg;
    return;
   }
   err.textContent='';
