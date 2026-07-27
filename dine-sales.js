@@ -307,32 +307,44 @@ function _dineStore(el){
 }
 
 function _dineSaveStore(did){
+ function gv(id){
+  var el=document.getElementById(id)||document.getElementById(id.replace('store-','st-'));
+  return el?el.value:'';
+ }
  var data={
   uid:did,dealerId:did,
-  storeName:document.getElementById('st-storeName')?.value||'',
-  dineSlug:document.getElementById('st-dineSlug')?.value.trim()||'',
-  bizNo:document.getElementById('st-bizNo')?.value||'',
-  address:document.getElementById('st-address')?.value||'',
-  phone:document.getElementById('st-phone')?.value||'',
-  empCount:parseInt(document.getElementById('st-empCount')?.value)||5,
-  defaultWage:parseInt(document.getElementById('st-defaultWage')?.value)||MIN_WAGE,
-  payDate:parseInt(document.getElementById('st-payDate')?.value)||25,
+  storeName:gv('store-storeName'),
+  dineSlug:gv('store-dineSlug').trim(),
+  bizNo:gv('store-bizNo'),
+  address:gv('store-address'),
+  phone:gv('store-phone')||gv('reg-phone'),
+  empCount:parseInt(gv('store-empCount'))||5,
+  defaultWage:parseInt(gv('store-defaultWage'))||MIN_WAGE,
+  payDate:parseInt(gv('store-payDate'))||25,
   updatedAt:_nowISO()
  };
- /* REST API PATCH */
  var fields={};
  Object.keys(data).forEach(function(k){
   var v=data[k];
   if(typeof v==='number')fields[k]={integerValue:v};
-  else fields[k]={stringValue:v};
+  else fields[k]={stringValue:v||''};
  });
- fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/'+did+'?updateMask.fieldPaths='+Object.keys(data).join('&updateMask.fieldPaths='),{
-  method:'PATCH',
-  headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
-  body:JSON.stringify({fields:fields})
+ var mask=Object.keys(data).map(function(k){return 'updateMask.fieldPaths='+k;}).join('&');
+ (_auth&&_auth.currentUser?_auth.currentUser.getIdToken(true):Promise.resolve(_dineToken||''))
+ .then(function(tok){
+  return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/'+did+'?'+mask,{
+   method:'PATCH',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+   body:JSON.stringify({fields:fields})
+  });
  }).then(function(r){
-  if(r.ok){_dineToast('✅ 저장됐습니다');}
-  else{return r.json().then(function(e){_dineToast('❌ '+(e.error&&e.error.message||'저장 실패'));});}
+  if(r.ok){
+   _dineToast('✅ 저장됐습니다');
+   if(data.storeName)_CU.name=data.storeName;
+   if(data.dineSlug)_CU.dineSlug=data.dineSlug;
+  } else {
+   return r.json().then(function(e){_dineToast('❌ '+(e.error&&e.error.message||'저장 실패'));});
+  }
  }).catch(function(e){_dineToast('❌ '+e.message);});
 }
 
