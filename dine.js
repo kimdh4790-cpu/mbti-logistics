@@ -190,12 +190,26 @@ function _dineStaffJoin(){
  var err=document.getElementById('st-err');
  if(!name||!phone||!code||pw.length<6){err.textContent='모든 항목을 입력하세요 (비밀번호 6자 이상)';return;}
  err.textContent='처리 중...';
- /* Worker API로 매장 slug 조회 (비로그인 가능) */
- fetch('/api/find-company?slug='+encodeURIComponent(code.toLowerCase())+'&platform=dine')
- .then(function(r){return r.json();}).then(function(res){
-  if(!res.found){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
-  var did=res.dealerId;
-  var coName=res.companyName;
+ /* 매장 코드로 companies 조회 */
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
+ }).then(function(r){return r.json();}).then(function(rows){
+  var docs=(rows||[]).filter(function(r){return r.document;});
+  if(!docs.length){
+   /* companyName 없으면 name 필드로 재시도 */
+   return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
+   }).then(function(r){return r.json();});
+  }
+  return rows;
+ }).then(function(rows){
+  var docs=(rows||[]).filter(function(r){return r.document;});
+  var co=docs[0]&&docs[0].document;
+  if(!co){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
+  var did=co.name.split('/').pop();
+  var coName=(co.fields.companyName||co.fields.name||{}).stringValue||'';
   /* Firebase Auth 계정 생성 */
   var email=phone.replace(/-/g,'')+'@dine.staff';
   fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+DINE_APIKEY,{
@@ -321,43 +335,55 @@ function _dineRegister(){
 var _dineToken  = null;
 
 function _dineLogin(){
- var emailRaw=document.getElementById('li-email').value.trim();
- var pw=document.getElementById('li-pw').value;
- var err=document.getElementById('li-err');
- if(!emailRaw||!pw){err.textContent='이메일 또는 연락처와 비밀번호를 입력하세요';return;}
- var email=/^[0-9\-]+$/.test(emailRaw)?emailRaw.replace(/-/g,'')+'@dine.staff':emailRaw;
+ var email = document.getElementById('li-email').value.trim();
+ var pw    = document.getElementById('li-pw').value;
+ var err   = document.getElementById('li-err');
+ if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';return;}
  err.textContent='로그인 중...';
  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+DINE_APIKEY,{
-  method:'POST',headers:{'Content-Type':'application/json'},
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
   body:JSON.stringify({email:email,password:pw,returnSecureToken:true})
  }).then(function(r){return r.json();}).then(function(d){
   if(d.error){
    var msg=d.error.message||'';
-   err.textContent=msg==='INVALID_PASSWORD'||msg==='EMAIL_NOT_FOUND'||msg==='INVALID_LOGIN_CREDENTIALS'?'연락처(이메일) 또는 비밀번호가 올바르지 않습니다':'로그인 실패: '+msg;
+   err.textContent=msg==='INVALID_PASSWORD'||msg==='EMAIL_NOT_FOUND'?'이메일 또는 비밀번호가 올바르지 않습니다':'로그인 실패: '+msg;
    return;
   }
   err.textContent='';
-  _dineToken=d.idToken;
-  var _lid=d.localId; var _lemail=d.email;
-  /* Worker API로 매장주 여부 확인 (uid 기준) */
-  fetch('/api/find-company?uid='+encodeURIComponent(_lid)+'&platform=dine')
-  .then(function(r2){return r2.json();}).then(function(res){
-   if(res.found){
-    _CU={uid:_lid,email:_lemail,dealerId:res.dealerId,name:res.companyName||_lemail.split('@')[0],role:'owner'};
+  _dineToken = d.idToken;
+  var _lid = d.localId; var _lemail = d.email;
+  /* Firestore REST API로 companies 조회 */
+  fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.idToken},
+   body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_lid}}},limit:1}})
+  }).then(function(r){return r.json();}).then(function(rows){
+   var co=null;
+   if(rows&&rows[0]&&rows[0].document){
+    var f=rows[0].document.fields||{};
+    co={name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||''};
+   }
+   if(co){
+    // 매장주 로그인
+    _CU={uid:_lid,email:_lemail,dealerId:_lid,name:(co&&co.name)||_lemail.split('@')[0],company:co,role:'owner'};
     _dineAfterLogin();
    } else {
-    /* 직원 로그인 시도 */
+    // 직원 로그인 시도 - members 컬렉션 조회
     fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_lid,{
      headers:{'Authorization':'Bearer '+d.idToken}
-    }).then(function(r3){return r3.json();}).then(function(mem){
-     if(mem&&mem.fields&&(mem.fields.role||{}).stringValue==='staff'){
+    }).then(function(r){return r.json();}).then(function(mem){
+     if(mem&&mem.fields&&mem.fields.role&&mem.fields.role.stringValue==='staff'){
       var mf=mem.fields;
-      _CU={uid:_lid,email:_lemail,
+      _CU={
+       uid:_lid,email:_lemail,
        dealerId:(mf.dealerId&&mf.dealerId.stringValue)||_lid,
        name:(mf.name&&mf.name.stringValue)||_lemail.split('@')[0],
-       role:'staff',staffId:_lid,
+       role:'staff',
+       staffId:_lid,
        part:(mf.part&&mf.part.stringValue)||'',
-       phone:(mf.phone&&mf.phone.stringValue)||''};
+       phone:(mf.phone&&mf.phone.stringValue)||''
+      };
       _dineAfterLogin();
      } else {
       _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
@@ -369,13 +395,35 @@ function _dineLogin(){
     });
    }
   }).catch(function(){
-   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
-   _dineAfterLogin();
+   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],company:null};
+   if(co){
+    // 매장주 로그인
+    _CU.role='owner';
+    _dineAfterLogin();
+   } else {
+    // 직원 로그인 시도
+    fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_CU.uid,{
+     headers:{'Authorization':'Bearer '+d.idToken}
+    }).then(function(r2){return r2.json();}).then(function(mem){
+     if(mem&&mem.fields&&(mem.fields.role||{}).stringValue==='staff'){
+      var mf=mem.fields;
+      _CU.role='staff';
+      _CU.staffId=_CU.uid;
+      _CU.dealerId=(mf.dealerId&&mf.dealerId.stringValue)||_CU.uid;
+      _CU.part=(mf.part&&mf.part.stringValue)||'';
+      _CU.phone=(mf.phone&&mf.phone.stringValue)||'';
+      _CU.name=(mf.name&&mf.name.stringValue)||_CU.name;
+     } else {
+      _CU.role='owner';
+     }
+     _dineAfterLogin();
+    }).catch(function(){_CU.role='owner';_dineAfterLogin();});
+   }
   });
- }).catch(function(ex){
-  err.textContent='네트워크 오류: '+ex.message;
- });
+ }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
+document.getElementById('li-pw').addEventListener('keydown',function(e){if(e.key==='Enter')_dineLogin();});
+
 function _dineGoFiloPage(page){
  var slug=(_CU&&_CU.dineSlug)||'';
  var base=slug?'https://filo.ai.kr/'+encodeURIComponent(slug):'https://filo.ai.kr/app';
