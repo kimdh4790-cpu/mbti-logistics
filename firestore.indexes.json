@@ -57,6 +57,24 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "attendance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "dealerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "memberId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
