@@ -72,7 +72,8 @@ service cloud.firestore {
 
     // ── 회사·사용자·구독 ────────────────────────────────────────────────────────
     match /companies/{dealerId} {
-      allow read: if isDealer(dealerId);
+      // 비로그인 직원/회원 가입 시 slug로 매장 확인 허용
+      allow read: if isDealer(dealerId) || request.auth == null;
       allow create: if isAuth();
       allow update: if isDealer(dealerId);
       allow delete: if isSuperAdmin();
