@@ -1617,6 +1617,24 @@ async function acceptExchange(){
 
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
+      if (path === '/api/find-company') {
+        // 비로그인 직원/회원 가입 시 매장 slug 조회 (SA 토큰 사용)
+        const slug = new URL(request.url).searchParams.get('slug');
+        const platform = new URL(request.url).searchParams.get('platform') || 'dine';
+        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token = await getAccessToken(env);
+        const res2 = await fetch(`${FS_BASE}:runQuery`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}}]}},limit:1}})
+        });
+        const rows = await res2.json();
+        const docs = (rows||[]).filter(r=>r.document);
+        if (!docs.length) return new Response(JSON.stringify({found:false}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const co = docs[0].document;
+        const did = co.name.split('/').pop();
+        const coName = (co.fields.companyName||co.fields.name||{}).stringValue||'';
+        return new Response(JSON.stringify({found:true,dealerId:did,companyName:coName}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/dine.js') return serveKVFile(env, 'dine.js', 'application/javascript');
       if (path === '/dine-staff.js') return serveKVFile(env, 'dine-staff.js', 'application/javascript');
       if (path === '/dine-payroll.js') return serveKVFile(env, 'dine-payroll.js', 'application/javascript');
@@ -1976,24 +1994,7 @@ async function acceptExchange(){
           return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         }
       }
-      if (path === '/api/find-company') {
-        // 비로그인 직원/회원 가입 시 매장 slug 조회 (SA 토큰 사용)
-        const slug = new URL(request.url).searchParams.get('slug');
-        const platform = new URL(request.url).searchParams.get('platform') || 'dine';
-        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const token = await getAccessToken(env);
-        const res2 = await fetch(`${FS_BASE}:runQuery`,{
-          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}}]}},limit:1}})
-        });
-        const rows = await res2.json();
-        const docs = (rows||[]).filter(r=>r.document);
-        if (!docs.length) return new Response(JSON.stringify({found:false}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const co = docs[0].document;
-        const did = co.name.split('/').pop();
-        const coName = (co.fields.companyName||co.fields.name||{}).stringValue||'';
-        return new Response(JSON.stringify({found:true,dealerId:did,companyName:coName}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-      } else if (path === '/api/menus') {
+      if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
         if (!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
@@ -2313,24 +2314,7 @@ async function acceptExchange(){
         }
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
-      if (path === '/api/find-company') {
-        // 비로그인 직원/회원 가입 시 매장 slug 조회 (SA 토큰 사용)
-        const slug = new URL(request.url).searchParams.get('slug');
-        const platform = new URL(request.url).searchParams.get('platform') || 'dine';
-        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const token = await getAccessToken(env);
-        const res2 = await fetch(`${FS_BASE}:runQuery`,{
-          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}}]}},limit:1}})
-        });
-        const rows = await res2.json();
-        const docs = (rows||[]).filter(r=>r.document);
-        if (!docs.length) return new Response(JSON.stringify({found:false}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const co = docs[0].document;
-        const did = co.name.split('/').pop();
-        const coName = (co.fields.companyName||co.fields.name||{}).stringValue||'';
-        return new Response(JSON.stringify({found:true,dealerId:did,companyName:coName}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-      } else if (path === '/api/menus') {
+      if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
         if (!did) return new Response(JSON.stringify({error:'did required'}), {status:400, headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
         const token = await getAccessToken(env);
