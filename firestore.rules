@@ -72,8 +72,7 @@ service cloud.firestore {
 
     // ── 회사·사용자·구독 ────────────────────────────────────────────────────────
     match /companies/{dealerId} {
-      // 비로그인 직원/회원 가입 시 slug로 매장 확인 허용
-      allow read: if isDealer(dealerId) || request.auth == null;
+      allow read: if isDealer(dealerId);
       allow create: if isAuth();
       allow update: if isDealer(dealerId);
       allow delete: if isSuperAdmin();
@@ -125,7 +124,7 @@ service cloud.firestore {
       allow delete: if canOwn();
     }
 
-    match /members/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if canWrite() || isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /leaves/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaveBalance/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
