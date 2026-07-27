@@ -395,30 +395,9 @@ function _dineLogin(){
     });
    }
   }).catch(function(){
-   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],company:null};
-   if(co){
-    // 매장주 로그인
-    _CU.role='owner';
-    _dineAfterLogin();
-   } else {
-    // 직원 로그인 시도
-    fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_CU.uid,{
-     headers:{'Authorization':'Bearer '+d.idToken}
-    }).then(function(r2){return r2.json();}).then(function(mem){
-     if(mem&&mem.fields&&(mem.fields.role||{}).stringValue==='staff'){
-      var mf=mem.fields;
-      _CU.role='staff';
-      _CU.staffId=_CU.uid;
-      _CU.dealerId=(mf.dealerId&&mf.dealerId.stringValue)||_CU.uid;
-      _CU.part=(mf.part&&mf.part.stringValue)||'';
-      _CU.phone=(mf.phone&&mf.phone.stringValue)||'';
-      _CU.name=(mf.name&&mf.name.stringValue)||_CU.name;
-     } else {
-      _CU.role='owner';
-     }
-     _dineAfterLogin();
-    }).catch(function(){_CU.role='owner';_dineAfterLogin();});
-   }
+   /* companies 조회 실패 시 → 직원으로 폴백 */
+   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
+   _dineAfterLogin();
   });
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }
