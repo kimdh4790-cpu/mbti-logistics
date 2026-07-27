@@ -582,7 +582,6 @@ function _dineWatchAttend(){
   },function(e){console.warn('attend:',e);});
  // 폴링은 fallback으로만
  function loadAttend(){
- function loadAttend(){
   var today=_today();
   _firestoreQuery('attendance',[{field:'dealerId',value:_CU.dealerId},{field:'date',value:today}])
   .then(function(docs){
@@ -740,4 +739,3 @@ function _dineCountUp(id,target,prefix,suffix){
 }
 
 // util end
-}
