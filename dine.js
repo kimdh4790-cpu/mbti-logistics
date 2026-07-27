@@ -294,6 +294,8 @@ function _dineShowRegister(){
 
 function _dineRegister(){
  var store=document.getElementById('rg-store').value.trim();
+ // URL 형식 입력 허용: dine.ne.kr/mbti → mbti
+ store=store.replace(/^https?:\/\//,'').replace(/^dine\.ne\.kr\//,'').replace(/\/$/,'').trim();
  var email=document.getElementById('rg-email').value.trim();
  var pw=document.getElementById('rg-pw').value;
  var phone=document.getElementById('rg-phone').value.trim();
