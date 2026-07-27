@@ -339,9 +339,9 @@ function _dineLogin(){
   err.textContent='';
   _dineToken=d.idToken;
   var _lid=d.localId; var _lemail=d.email;
-  /* Worker API로 매장주 여부 확인 */
+  /* Worker API로 매장주 여부 확인 (uid 기준) */
   fetch('/api/find-company?uid='+encodeURIComponent(_lid)+'&platform=dine')
-  .then(function(r){return r.json();}).then(function(res){
+  .then(function(r2){return r2.json();}).then(function(res){
    if(res.found){
     _CU={uid:_lid,email:_lemail,dealerId:res.dealerId,name:res.companyName||_lemail.split('@')[0],role:'owner'};
     _dineAfterLogin();
@@ -349,7 +349,7 @@ function _dineLogin(){
     /* 직원 로그인 시도 */
     fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_lid,{
      headers:{'Authorization':'Bearer '+d.idToken}
-    }).then(function(r2){return r2.json();}).then(function(mem){
+    }).then(function(r3){return r3.json();}).then(function(mem){
      if(mem&&mem.fields&&(mem.fields.role||{}).stringValue==='staff'){
       var mf=mem.fields;
       _CU={uid:_lid,email:_lemail,
@@ -369,7 +369,6 @@ function _dineLogin(){
     });
    }
   }).catch(function(){
-   /* /api/find-company 실패 시 직원으로 폴백 */
    _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
    _dineAfterLogin();
   });
@@ -377,6 +376,166 @@ function _dineLogin(){
   err.textContent='네트워크 오류: '+ex.message;
  });
 }
+function _dineGoFiloPage(page){
+ var slug=(_CU&&_CU.dineSlug)||'';
+ var base=slug?'https://filo.ai.kr/'+encodeURIComponent(slug):'https://filo.ai.kr/app';
+ window.open(base+'#'+page,'_blank');
+}
+
+function _dineGoFilo(){
+ var slug=(_CU&&_CU.dineSlug)||(_CU&&_CU.dealerId)||'';
+ var storeName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'';
+ // slug 있으면 filo.ai.kr/slug, 없으면 filo.ai.kr/app
+ var url=slug?'https://filo.ai.kr/'+encodeURIComponent(slug):'https://filo.ai.kr/app';
+ window.open(url,'_blank');
+}
+
+function _dineLogout(){
+ if(!confirm('로그아웃하시겠습니까?'))return;
+ _dineToken=null; _CU={};
+ document.getElementById('login-wrap').style.display='flex';
+ document.getElementById('app-wrap').style.display='none';
+}
+
+/* onAuthStateChanged는 REST 로그인 시 트리거 안 됨 - 로그아웃 감지용으로만 유지 */
+_auth.onAuthStateChanged(function(u){
+ if(u){
+  /* SDK 로그인 세션 복원 시 (페이지 새로고침 등) - .ne.kr에서는 보통 미실행 */
+  if(_CU && _CU.uid) return; /* REST 로그인 후 중복 방지 */
+  _db.collection('companies').where('uid','==',u.uid).limit(1).get()
+   .then(function(s){
+    var co = s.empty ? null : s.docs[0].data();
+    _CU = {uid:u.uid,email:u.email,dealerId:u.uid,name:(co&&co.name)||u.email.split('@')[0],company:co};
+    document.getElementById('login-wrap').style.display='none';
+    var aw=document.getElementById('app-wrap');aw.style.display='flex';
+    document.getElementById('tb-user-name').textContent=_CU.name;
+    _dinePage('dashboard',document.querySelector('.nav-item'));
+    _dineUpdateSidebar();
+    _dineWatchAttend();
+   });
+ } else {
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('app-wrap').style.display='none';
+ }
+});
+
+
+function _dineToggleGroup(titleEl){
+  titleEl.classList.toggle('collapsed');
+  var items=titleEl.nextElementSibling;
+  if(items&&items.classList.contains('nav-group-items')){
+    items.classList.toggle('collapsed');
+  }
+}
+function _dinePage(p,el){
+ document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+ if(el)el.classList.add('active');
+ var c=document.getElementById('content');
+ if(p==='dashboard') _dineDashboard(c);
+ else if(p==='staff')    _dineStaff(c);
+ else if(p==='attend')   _dineAttend(c);
+ else if(p==='payroll')  _dinePayroll(c);
+ else if(p==='payslip')  _dinePayslip(c);
+ else if(p==='sales')    _dineSales(c);
+ else if(p==='delivery') _dineDelivery(c);
+ else if(p==='settle')   _dineSettle(c);
+ else if(p==='analytics') _dineAnalytics(c);
+ else if(p==='table')    _dineTable(c);
+ else if(p==='orders')   _dineOrders(c);
+ else if(p==='schedule') _dineSchedule(c);
+ else if(p==='cost')     _dineCost(c);
+ else if(p==='tax')      _dineTax(c);
+ else if(p==='member')   _dineMember(c);
+ else if(p==='reservation') _dineReservation(c);
+ else if(p==='store')    _dineStore(c);
+ else if(p==='alimtalk') _dineAlimtalk(c);
+}
+
+
+var _attendUnsub=null;
+/* ── REST API 헬퍼 ── */
+function _firestoreQuery(collection, filters, token){
+ var filterList=filters.map(function(f){
+  return {fieldFilter:{field:{fieldPath:f.field},op:f.op||'EQUAL',value:{stringValue:f.value}}};
+ });
+ var query=filterList.length===1
+  ?{fieldFilter:filterList[0].fieldFilter}
+  :{compositeFilter:{op:'AND',filters:filterList}};
+ return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','Authorization':'Bearer '+(token||_dineToken||'')},
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:collection}],where:query}})
+ }).then(function(r){return r.json();}).then(function(rows){
+  return (rows||[]).filter(function(r){return r.document;}).map(function(r){
+   var f=r.document.fields||{};
+   var data={_id:r.document.name.split('/').pop()};
+   Object.keys(f).forEach(function(k){
+    data[k]=f[k].stringValue!==undefined?f[k].stringValue:
+             f[k].integerValue!==undefined?parseInt(f[k].integerValue):
+             f[k].doubleValue!==undefined?parseFloat(f[k].doubleValue):
+             f[k].booleanValue!==undefined?f[k].booleanValue:
+             f[k].arrayValue?f[k].arrayValue:null;
+   });
+   return data;
+  });
+ });
+}
+
+/* 실시간 출퇴근 카운트 (REST 폴링) */
+var _attendInterval=null;
+function _dineDashboard(el){
+ var did=_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');
+ wrap.className='slide-up';
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
+ hdr.innerHTML='<div><div class="page-title">📊 오늘 현황</div><div class="page-sub" id="dash-date"></div></div>';
+ var now=new Date();
+ wrap.appendChild(hdr);
+
+ var kpi=document.createElement('div');
+ kpi.className='kpi-grid';
+ [{id:'kpi-sales',label:'오늘 매출',icon:'💰',color:'#38bdf8'},
+  {id:'kpi-profit',label:'오늘 순이익',icon:'📈',color:'#22c55e'},
+  {id:'kpi-margin',label:'마진율',icon:'📊',color:'#a78bfa'},
+  {id:'kpi-orders',label:'주문 건수',icon:'🛒',color:'#8b5cf6'},
+  {id:'kpi-staff',label:'출근 인원',icon:'👥',color:'#38bdf8'},
+  {id:'kpi-labor',label:'인건비율',icon:'💼',color:'#f59e0b'}
+ ].forEach(function(k){
+  var card=document.createElement('div');
+  card.className='kpi-card';
+  card.style.borderTop='2px solid '+k.color;
+  card.innerHTML='<div class="kpi-label">'+k.icon+' '+k.label+'</div>'+
+   '<div class="kpi-val" id="'+k.id+'" style="color:'+k.color+'">-</div>'+
+   '<div class="kpi-sub" id="'+k.id+'-sub">로딩중</div>';
+  kpi.appendChild(card);
+ });
+ wrap.appendChild(kpi);
+
+ var grid=document.createElement('div');
+ grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px';
+ var attCard=document.createElement('div');
+ attCard.className='card';
+ attCard.innerHTML='<div class="sec-title" style="margin-bottom:10px"><span class="attend-live"><span class="live-dot"></span>실시간 출퇴근</span></div>'+
+  '<div id="dash-attend-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ grid.appendChild(attCard);
+ var lawCard=document.createElement('div');
+ lawCard.className='card';
+ lawCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">⚖️ 근로법 알림</div>'+
+  '<div id="dash-law-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ grid.appendChild(lawCard);
+ wrap.appendChild(grid);
+ el.appendChild(wrap);
+
+ var days=['일','월','화','수','목','금','토'];
+ document.getElementById('dash-date').textContent=
+  now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 ('+days[now.getDay()]+')';
+
+ var today=now.toISOString().slice(0,10);
+ _dineLoadDashboard(did,today);
+}
+
 function _dineWatchAttend(){
  if(_attendInterval)clearInterval(_attendInterval);
  if(window._dineAttendUnsub)window._dineAttendUnsub();
