@@ -2245,7 +2245,91 @@ async function acceptExchange(){
 
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
-      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
+      if (path === '/qr') {
+        // 직원 출퇴근 QR 처리 (filo-common.js _filoGenDynamicQR 연동)
+        const params = new URL(request.url).searchParams;
+        const did    = params.get('did');
+        const action = params.get('action'); // in, out, break_start, break_end
+        const uid    = params.get('uid');    // 개인 QR 용
+        if (!did || !action) return serveKVFile(env, 'qrpos.html', 'text/html');
+
+        const actionMap = {in:'출근', out:'퇴근', break_start:'휴식시작', break_end:'휴식종료'};
+        const typeMap   = {in:'in',  out:'out', break_start:'break_start', break_end:'break_end'};
+        const iconMap   = {in:'🟢', out:'🔴', break_start:'☕', break_end:'✨'};
+        const label = actionMap[action] || action;
+        const type  = typeMap[action]  || action;
+        const icon  = iconMap[action]  || '📋';
+
+        try {
+          const now = new Date();
+          const kst = new Date(now.getTime() + 9*3600*1000);
+          const date = kst.toISOString().slice(0,10);
+          const timeStr = kst.toISOString().slice(11,16);
+
+          // SA 토큰으로 attendance 저장
+          const token = await getAccessToken(env);
+
+          // uid 있으면 members에서 이름 조회
+          let memberName = '';
+          let memberId   = uid || '';
+          if (uid) {
+            const mr = await fetch(`${FS_BASE}/members/${uid}`, {
+              headers:{'Authorization':'Bearer '+token}
+            });
+            const md = await mr.json();
+            memberName = (md.fields&&md.fields.name&&md.fields.name.stringValue)||'';
+          }
+
+          // attendance 문서 저장
+          await fetch(`${FS_BASE}/attendance`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              memberId:   {stringValue: memberId},
+              memberName: {stringValue: memberName},
+              type:       {stringValue: type},
+              date:       {stringValue: date},
+              time:       {stringValue: now.toISOString()},
+              createdAt:  {stringValue: now.toISOString()}
+            }})
+          });
+
+          // 결과 HTML 반환
+          const html = `<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>${label} 완료</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:40px 32px;text-align:center;max-width:320px;width:90%;}
+.icon{font-size:72px;margin-bottom:16px;}
+.label{font-size:28px;font-weight:900;margin-bottom:8px;}
+.name{font-size:16px;color:#666680;margin-bottom:4px;}
+.time{font-size:14px;color:#444460;}
+.ok{color:#00ff88;}
+.btn{display:block;margin:24px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
+  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;}
+</style>
+</head><body>
+<div class="card">
+  <div class="icon">${icon}</div>
+  <div class="label ok">${label} 완료</div>
+  ${memberName ? `<div class="name">${memberName}</div>` : ''}
+  <div class="time">${date} ${timeStr}</div>
+  <a class="btn" onclick="window.close();history.back()">확인</a>
+</div>
+</body></html>`;
+          return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
+        } catch(e) {
+          return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
+            {headers:{'Content-Type':'text/html'}});
+        }
+      }
+      if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/universal' || path === '/universal.html') return Response.redirect('https://donway.ai.kr/join', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
@@ -2750,7 +2834,91 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
-      if (path === '/qr' || path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
+      if (path === '/qr') {
+        // 직원 출퇴근 QR 처리 (filo-common.js _filoGenDynamicQR 연동)
+        const params = new URL(request.url).searchParams;
+        const did    = params.get('did');
+        const action = params.get('action'); // in, out, break_start, break_end
+        const uid    = params.get('uid');    // 개인 QR 용
+        if (!did || !action) return serveKVFile(env, 'qrpos.html', 'text/html');
+
+        const actionMap = {in:'출근', out:'퇴근', break_start:'휴식시작', break_end:'휴식종료'};
+        const typeMap   = {in:'in',  out:'out', break_start:'break_start', break_end:'break_end'};
+        const iconMap   = {in:'🟢', out:'🔴', break_start:'☕', break_end:'✨'};
+        const label = actionMap[action] || action;
+        const type  = typeMap[action]  || action;
+        const icon  = iconMap[action]  || '📋';
+
+        try {
+          const now = new Date();
+          const kst = new Date(now.getTime() + 9*3600*1000);
+          const date = kst.toISOString().slice(0,10);
+          const timeStr = kst.toISOString().slice(11,16);
+
+          // SA 토큰으로 attendance 저장
+          const token = await getAccessToken(env);
+
+          // uid 있으면 members에서 이름 조회
+          let memberName = '';
+          let memberId   = uid || '';
+          if (uid) {
+            const mr = await fetch(`${FS_BASE}/members/${uid}`, {
+              headers:{'Authorization':'Bearer '+token}
+            });
+            const md = await mr.json();
+            memberName = (md.fields&&md.fields.name&&md.fields.name.stringValue)||'';
+          }
+
+          // attendance 문서 저장
+          await fetch(`${FS_BASE}/attendance`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              memberId:   {stringValue: memberId},
+              memberName: {stringValue: memberName},
+              type:       {stringValue: type},
+              date:       {stringValue: date},
+              time:       {stringValue: now.toISOString()},
+              createdAt:  {stringValue: now.toISOString()}
+            }})
+          });
+
+          // 결과 HTML 반환
+          const html = `<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>${label} 완료</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:40px 32px;text-align:center;max-width:320px;width:90%;}
+.icon{font-size:72px;margin-bottom:16px;}
+.label{font-size:28px;font-weight:900;margin-bottom:8px;}
+.name{font-size:16px;color:#666680;margin-bottom:4px;}
+.time{font-size:14px;color:#444460;}
+.ok{color:#00ff88;}
+.btn{display:block;margin:24px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
+  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;}
+</style>
+</head><body>
+<div class="card">
+  <div class="icon">${icon}</div>
+  <div class="label ok">${label} 완료</div>
+  ${memberName ? `<div class="name">${memberName}</div>` : ''}
+  <div class="time">${date} ${timeStr}</div>
+  <a class="btn" onclick="window.close();history.back()">확인</a>
+</div>
+</body></html>`;
+          return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
+        } catch(e) {
+          return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
+            {headers:{'Content-Type':'text/html'}});
+        }
+      }
+      if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
     }
