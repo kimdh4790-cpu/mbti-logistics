@@ -1643,11 +1643,11 @@ async function acceptExchange(){
         }
 
         // slug 조회 — slug필드, name필드, companyName필드 순서로 폴백
-        const fields = ['slug','dineSlug','name','companyName'];
+        const fields = ['slug','dineSlug','storeName','name','companyName'];
         for (const field of fields) {
           const r2 = await fetch(`${FS_BASE}:runQuery`,{
             method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:slug}}}]}},limit:1}})
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:field},op:'EQUAL',value:{stringValue:slug}}},limit:1}})
           });
           const rows = await r2.json();
           const docs = (rows||[]).filter(r=>r.document);
