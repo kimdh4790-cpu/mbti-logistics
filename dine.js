@@ -213,10 +213,15 @@ function _dineStaffJoin(){
      platform:{stringValue:'dine'},status:{stringValue:'active'},
      createdAt:{stringValue:_nowISO()}
     }})
-   }).then(function(){
+   }).then(function(r2){
+    if(r2&&r2.ok===false){
+     return r2.json().then(function(e){
+      err.textContent='저장 오류: '+(e.error&&e.error.message||'members 저장 실패');
+     });
+    }
     err.style.color='#22c55e';err.textContent='✅ 가입 완료! 로그인해주세요';
     setTimeout(function(){_dineTab('login');},1500);
-   });
+   }).catch(function(e){err.textContent='저장 오류: '+e.message;});
   });
  }).catch(function(e){err.textContent='오류: '+e.message;});
 }
