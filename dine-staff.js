@@ -34,9 +34,10 @@ function _dineStaff(el){
  wrap.appendChild(grid);
  el.appendChild(wrap);
 
- if(window._staffUnsub) window._staffUnsub();
- window._staffUnsub=_db.collection('members').where('dealerId','==',did).orderBy('name').onSnapshot(function(snap){
-   if(snap.empty){
+ fetch('/api/get-members?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();}).then(function(res){
+  var snap={docs:(res.members||[]),empty:!(res.members&&res.members.length)};
+  snap.forEach=function(cb){snap.docs.forEach(function(m){cb({id:m.id,data:function(){return m;}});});};
+  if(snap.empty){
     grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">직원이 없습니다. + 직원 등록을 눌러주세요</div>';
     return;
    }
