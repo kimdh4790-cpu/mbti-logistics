@@ -449,6 +449,9 @@ function _dineToggleGroup(titleEl){
   }
 }
 function _dinePage(p,el){
+ // 직원 접근 제한 — 허용되지 않은 페이지 차단
+ var staffAllowed=['schedule','attend','payroll','payslip'];
+ if(_CU&&_CU.role==='staff'&&staffAllowed.indexOf(p)<0) return;
  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
  if(el)el.classList.add('active');
  var c=document.getElementById('content');
