@@ -321,10 +321,14 @@ function _dineRegister(){
 var _dineToken  = null;
 
 function _dineLogin(){
- var email = document.getElementById('li-email').value.trim();
+ var emailRaw = document.getElementById('li-email').value.trim();
  var pw    = document.getElementById('li-pw').value;
  var err   = document.getElementById('li-err');
- if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';return;}
+ if(!emailRaw||!pw){err.textContent='이메일과 비밀번호를 입력하세요';return;}
+ // 연락처 입력 시 이메일로 변환 (직원 로그인)
+ var email = /^[0-9\-]+$/.test(emailRaw)
+  ? emailRaw.replace(/-/g,'')+'@dine.staff'
+  : emailRaw;
  err.textContent='로그인 중...';
  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+DINE_APIKEY,{
   method:'POST',
