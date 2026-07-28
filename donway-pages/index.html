@@ -6961,8 +6961,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].rawFreshAmt=(drvMap[cleanId].rawFreshAmt||0)+freshVal; // ★ 검증용
           // ★ 날짜별 프레시백 수집 (아이디지원용)
           if(rowDate&&freshVal>0){
+            var _freshDate=_nd?_nd(rowDate):rowDate;
             if(!drvMap[cleanId].dateFresh)drvMap[cleanId].dateFresh={};
-            drvMap[cleanId].dateFresh[rowDate]=(drvMap[cleanId].dateFresh[rowDate]||0)+freshVal;
+            drvMap[cleanId].dateFresh[_freshDate]=(drvMap[cleanId].dateFresh[_freshDate]||0)+freshVal;
           }
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
           continue;
