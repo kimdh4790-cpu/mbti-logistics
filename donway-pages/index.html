@@ -7599,6 +7599,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               };
 
               // ① fromId dateRoutes에서 건수/금액 집계
+              // 단가: settlements routeDetails.unitPrice → fd.routes.unitPrc → RPRICE 순 fallback
+              var _fsForPrice = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
               var _rtAgg = {}; // {route: {cnt, ret, price}}
               var _totalFresh = 0;
               if(fd.dateRoutes){
@@ -7607,7 +7609,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var up = (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || (rd.unitPrc||0) || 0;
+                    var _rdPrice = _fsForPrice && _fsForPrice.routeDetails && (_fsForPrice.routeDetails.find(function(r){return r.route===rt;})||{}).unitPrice || 0;
+                    var up = _rdPrice || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
                     if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
