@@ -7666,11 +7666,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 }
                 // ★ 해당 날짜 프레시백 fromId에서 차감 (실제 배송한 기사에게 귀속)
                 if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
-                // ★ etcMinus 차감 기록 — 사유는 항상, 금액은 지원받는기사(tid)가 엑셀에 있는 경우만
-                var _tsExists = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
+                // ★ etcMinus 사유만 기록 (금액 차감 없음 — 건수 차감으로 이미 배송금액에서 빠짐)
                 if(tot > 0){
                   var _minusPv = (fs.etcMinusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+tid+')')!==0;}).join(' / ');
-                  if(_tsExists) fs.etcMinus = (fs.etcMinus||0) + tot;
                   fs.etcMinusReason = (_minusPv?_minusPv+' / ':'') + '아이디지원('+tid+') '+pts.join('·');
                 }
               }
