@@ -7607,7 +7607,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var up = RPRICE[rt] || (rd.unitPrc||0) || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || 0;
+                    var up = (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || (rd.unitPrc||0) || 0;
                     if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
