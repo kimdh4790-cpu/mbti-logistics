@@ -124,7 +124,7 @@ service cloud.firestore {
       allow delete: if canOwn();
     }
 
-    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create, update: if isAuth() && request.auth.uid == docId; allow delete: if canOwn(); }
+    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create, update: if isAuth(); allow delete: if canOwn(); }
     match /leaves/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaveBalance/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
