@@ -1616,6 +1616,26 @@ async function acceptExchange(){
 
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
+      if (path === '/api/get-members') {
+        const dealerId = new URL(request.url).searchParams.get('dealerId');
+        if (!dealerId) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token = await getAccessToken(env);
+        const res2 = await fetch(`${FS_BASE}:runQuery`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]}})
+        });
+        const rows = await res2.json();
+        const docs = (rows||[]).filter(r=>r.document).map(r=>{
+          const f=r.document.fields||{};
+          const obj={id:r.document.name.split('/').pop()};
+          Object.keys(f).forEach(k=>{
+            const v=f[k];
+            obj[k]=v.stringValue??v.integerValue??v.booleanValue??v.doubleValue??null;
+          });
+          return obj;
+        });
+        return new Response(JSON.stringify({ok:true,members:docs}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/api/save-member' && method === 'POST') {
         // 사장님이 직원 등록/수정 — SA 토큰으로 Firestore 저장
         try {
