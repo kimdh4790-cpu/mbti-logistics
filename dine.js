@@ -359,8 +359,10 @@ function _dineLogin(){
     fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+_lid,{
      headers:{'Authorization':'Bearer '+d.idToken}
     }).then(function(r){return r.json();}).then(function(mem){
-     if(mem&&mem.fields&&mem.fields.role&&mem.fields.role.stringValue==='staff'){
-      var mf=mem.fields;
+     var mf=mem&&mem.fields||{};
+     var isDineStaff=(mf.role&&mf.role.stringValue==='staff')&&
+      (mf.platform&&mf.platform.stringValue==='dine');
+     if(isDineStaff){
       _CU={
        uid:_lid,email:_lemail,
        dealerId:(mf.dealerId&&mf.dealerId.stringValue)||_lid,
@@ -372,8 +374,9 @@ function _dineLogin(){
       };
       _dineAfterLogin();
      } else {
-      _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
-      _dineAfterLogin();
+      // DONWAY 직원이거나 platform 불일치 → DINE 직원 아님
+      err.textContent='DINE 직원 계정이 없습니다. 직원 가입을 먼저 해주세요';
+      return;
      }
     }).catch(function(){
      _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
