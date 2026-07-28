@@ -7598,9 +7598,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 return dt >= _eff && (!rEnd || dt <= rEnd);
               };
 
+              // ① fromId(대신배송기사) settlements에서 단가 미리 확보
+              var _fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
+              var _priceMap = {}; // {route: unitPrice}
+              if(_fs && _fs.routeDetails){
+                _fs.routeDetails.forEach(function(rd){ if(rd.unitPrice>0) _priceMap[rd.route]=rd.unitPrice; });
+              }
               // ① fromId dateRoutes에서 건수/금액 집계
-              // 단가: settlements routeDetails.unitPrice → fd.routes.unitPrc → RPRICE 순 fallback
-              var _fsForPrice = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
               var _rtAgg = {}; // {route: {cnt, ret, price}}
               var _totalFresh = 0;
               if(fd.dateRoutes){
@@ -7609,8 +7613,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var _rdPrice = _fsForPrice && _fsForPrice.routeDetails && (_fsForPrice.routeDetails.find(function(r){return r.route===rt;})||{}).unitPrice || 0;
-                    var up = _rdPrice || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
+                    var up = _priceMap[rt] || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
                     if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
@@ -7641,7 +7644,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(!tot) return;
 
               // ③ fromId(앞=대신배송기사): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
-              var fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
+              var fs = _fs; // ①에서 미리 찾아둔 대신배송기사 settlements
               if(fs){
                 if(fs.routeDetails && fs.routeDetails.length){
                   if(fd.dateRoutes){
