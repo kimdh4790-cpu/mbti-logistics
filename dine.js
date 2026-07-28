@@ -230,14 +230,10 @@ function _dineMemberJoin(){
  var err=document.getElementById('mb-reg-err');
  if(!name||!phone||!code){err.textContent='이름, 연락처, 매장 코드를 입력하세요';return;}
  err.textContent='처리 중...';
- fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
-  method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
- }).then(function(r){return r.json();}).then(function(rows){
-  var docs=(rows||[]).filter(function(r){return r.document;});
-  var co=docs[0]&&docs[0].document;
-  if(!co){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
-  var did=co.name.split('/').pop();
+ fetch('/api/find-company?slug='+encodeURIComponent(code.toLowerCase()))
+ .then(function(r){return r.json();}).then(function(res){
+  if(!res.found){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
+  var did=res.dealerId;
   /* filo_customers에 저장 */
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/filo_customers',{
    method:'POST',headers:{'Content-Type':'application/json'},
