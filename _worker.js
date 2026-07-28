@@ -1616,6 +1616,33 @@ async function acceptExchange(){
 
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
+      if (path === '/api/save-member' && method === 'POST') {
+        // 사장님이 직원 등록/수정 — SA 토큰으로 Firestore 저장
+        try {
+          const body = await request.json();
+          if (!body.dealerId || !body.name) return new Response(JSON.stringify({error:'dealerId and name required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const docId = body.staffId || body.phone || (body.dealerId+'_'+Date.now());
+          const fields = {};
+          Object.keys(body).forEach(k => {
+            const v = body[k];
+            if (v === null || v === undefined) return;
+            if (typeof v === 'number') fields[k] = {integerValue: v};
+            else if (typeof v === 'boolean') fields[k] = {booleanValue: v};
+            else fields[k] = {stringValue: String(v)};
+          });
+          const res2 = await fetch(`${FS_BASE}/members/${encodeURIComponent(docId)}`,{
+            method:'PATCH',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({fields})
+          });
+          const result = await res2.json();
+          if (result.error) return new Response(JSON.stringify({ok:false,error:result.error.message}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          return new Response(JSON.stringify({ok:true,id:docId}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
       if (path === '/api/find-company') {
         const params = new URL(request.url).searchParams;
         const slug = params.get('slug');
