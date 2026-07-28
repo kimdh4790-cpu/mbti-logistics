@@ -222,8 +222,13 @@ function _dineAddStaff(did,staffId,existing){
   };
   if(payType==='hourly')data.hourlyWage=wage;
   else data.monthlySalary=wage;
-  var pr=staffId?_db.collection('members').doc(staffId).set(data,{merge:true}):_db.collection('members').add(Object.assign(data,{createdAt:_nowISO()}));
-  pr.then(function(){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}).catch(function(err){_dineToast('❌ '+err.message);});
+  if(!staffId) data.createdAt=_nowISO();
+  if(staffId) data.staffId=staffId;
+  fetch('/api/save-member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+  .then(function(r){return r.json();}).then(function(res){
+   if(res.ok){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}
+   else{_dineToast('❌ '+( res.error||'저장 실패'));}
+  }).catch(function(err){_dineToast('❌ '+err.message);});
  };
  mo.appendChild(box);
  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
