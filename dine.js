@@ -204,7 +204,7 @@ function _dineStaffJoin(){
   }).then(function(r){return r.json();}).then(function(d){
    if(d.error){err.textContent='가입 실패: '+(d.error.message==='EMAIL_EXISTS'?'이미 가입된 연락처입니다':d.error.message);return;}
    /* members 컬렉션에 저장 — PATCH(upsert)로 직접 지정 경로에 저장 */
-   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+d.localId+'?currentDocument.exists=false',{
+   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/'+d.localId,{
     method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+d.idToken},
     body:JSON.stringify({fields:{
      uid:{stringValue:d.localId},dealerId:{stringValue:did},
