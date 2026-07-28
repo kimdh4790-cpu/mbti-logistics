@@ -124,7 +124,7 @@ service cloud.firestore {
       allow delete: if canOwn();
     }
 
-    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if canWrite() || isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
+    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if canWrite() || isAuth(); allow update: if canOwn() || (isAuth() && request.auth.uid == docId); allow delete: if canOwn(); }
     match /leaves/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaveBalance/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -199,7 +199,7 @@ service cloud.firestore {
     // filo_sales: 매출 데이터 — 본인 dealerId만 읽기
     match /filo_sales/{docId}             {
       allow read: if canRead();
-      allow create: if isAuth() || request.auth == null; // 고객 주문 시 비로그인 create 허용
+      allow create: if isAuth(); // Worker API 또는 로그인 사용자만
       allow update: if canOwn();
       allow delete: if canOwn();
     }
@@ -212,7 +212,7 @@ service cloud.firestore {
       allow delete: if canOwn();
     }
 
-    match /filo_customers/{docId}         { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
+    match /filo_customers/{docId}         { allow read: if canRead(); allow create: if true; allow update: if canOwn() || (isAuth() && request.auth.uid == docId); allow delete: if canOwn(); }
     match /filo_services/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
 
     // filo_bookings: 고객 예약 create 허용, 읽기는 본인 dealerId만
