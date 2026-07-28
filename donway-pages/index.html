@@ -7572,7 +7572,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             _rules.forEach(function(rule){
               var fid = (rule.fromId||'').replace(/@df$/i,'').trim();
               var tid = (rule.toId||'').replace(/@df$/i,'').trim();
-              var fd = drvMap[tid]; if(!fd) return; // 대신배송기사(뒤) 데이터로 건수 집계
+              var fd = drvMap[fid]; if(!fd) return;
 
               // 날짜 목록 (dates 배열 정규화)
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
@@ -7635,8 +7635,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(_totalFresh > 0){ tot += _totalFresh; pts.push('프레시백 ₩'+_totalFresh.toLocaleString()); }
               if(!tot) return;
 
-              // ③ 대신배송기사(뒤,tid): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
-              var fs = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
+              // ③ fromId(앞=대신배송기사): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
+              var fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
               if(fs){
                 if(fs.routeDetails && fs.routeDetails.length){
                   if(fd.dateRoutes){
@@ -7659,8 +7659,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
               }
 
-              // ④ 지원받는기사(앞,fid): 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
-              var ts = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
+              // ④ toId(뒤=지원받는기사): 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
+              var ts = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
               if(!ts){
                 // 엑셀에 없는 기사(용차 등) — fromId 건수를 그대로 흡수해서 정산 생성
                 var _newRds = [];
@@ -7694,7 +7694,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 // 엑셀에 있는 기사 — etcPlus로 가산 (중복 방지)
                 var pv2=(ts.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
                 ts.etcPlus = (ts.etcPlus||0) + tot;
-                ts.etcPlusReason = (pv2?pv2+' / ':'') + '아이디지원('+tid+') '+pts.join('·'); // tid=대신배송기사
+                ts.etcPlusReason = (pv2?pv2+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
               }
             });
           })();
