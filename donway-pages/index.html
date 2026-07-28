@@ -7582,14 +7582,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 
               // 날짜 필터: dates 배열 있으면 exact match, 없으면 startDate~endDate 범위
               // dates도 없고 startDate도 없으면 → 룰 무효 (전체 건수 방지)
-              // 정산 기간 시작일 계산 (정산월 전월 26일)
-              var _periodStart = (function(){
-                var ym = (month||'').split('-');
-                if(ym.length < 2) return '';
-                var y=parseInt(ym[0]), m=parseInt(ym[1])-1;
-                if(m<1){m=12;y--;}
-                return y+'-'+(m<10?'0'+m:m)+'-26';
-              })();
+              // 정산 기간 시작일 (전월 26일) — startDate가 이전이면 지난달 규칙 → 스킵
+              var _pYM=(month||'').split('-'),_pY=parseInt(_pYM[0]||0),_pM=parseInt(_pYM[1]||0)-1;
+              if(_pM<1){_pM=12;_pY--;}
+              var _periodStart=_pY+'-'+(_pM<10?'0'+_pM:String(_pM))+'-26';
+              if(!_dates.length && rStart && _periodStart && rStart < _periodStart) return;
               var _dateOk = function(dt){
                 if(_dates.length) return _dates.indexOf(dt) >= 0;
                 if(!rStart && !rEnd) return false; // 날짜 정보 없음 → 무효
