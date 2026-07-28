@@ -7069,9 +7069,10 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
-            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0,unitPrc:unitPrc||0};
             drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
             drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
+            if(unitPrc>0) drvMap[cleanId].dateRoutes[rowDate][route].unitPrc=unitPrc;
           }
 
           // 시즌 기간별 분리 집계
@@ -7606,7 +7607,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var up = RPRICE[rt] || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || 0;
+                    var up = RPRICE[rt] || (rd.unitPrc||0) || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || 0;
                     if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
