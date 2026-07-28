@@ -501,51 +501,34 @@ function _dineWatchReservations(){
 }
 
 function _dineUpdateSidebarStaff(){
- // 직원용 사이드바: 스케줄/출퇴근만
- var groups = document.querySelectorAll('.nav-group');
- groups.forEach(function(g){
+ // 직원용: 내 급여, 내 명세서, 스케줄, 출퇴근만 표시
+ var allowed = ['내 급여','내 명세서','근무 스케줄','출퇴근 현황'];
+ // 모든 nav-item 순회
+ document.querySelectorAll('.nav-item').forEach(function(item){
+  var txt = item.textContent.trim();
+  var show = allowed.some(function(a){return txt.includes(a);});
+  item.style.display = show ? 'flex' : 'none';
+ });
+ // 모든 nav-group-title도 하위 항목 전부 숨겨진 그룹은 숨김
+ document.querySelectorAll('.nav-group').forEach(function(g){
+  var visible = Array.from(g.querySelectorAll('.nav-item')).some(function(i){return i.style.display!=='none';});
   var title = g.querySelector('.nav-group-title');
-  if(!title) return;
-  var t = title.textContent.trim();
-  if(t==='직원 관리'){
-   // 직원 관리 내 스케줄/출퇴근만 보이고 나머지 숨김
-   g.querySelectorAll('.nav-item').forEach(function(item){
-    var txt = item.textContent.trim();
-    if(txt.includes('근무 스케줄')||txt.includes('출퇴근 현황')){
-     item.style.display='flex';
-    } else {
-     item.style.display='none';
-    }
-   });
-  } else if(t==='정산'||t==='고객'||t==='설정'){
-   g.style.display='none';
-  } else if(t==='홈'||t===''){
-   // 홈(오늘 현황)은 숨김
-   g.querySelectorAll('.nav-item').forEach(function(item){
-    item.style.display='none';
-   });
+  if(title) title.style.display = visible ? '' : 'none';
+ });
+ // 하단 탭바도 직원용으로 제한
+ document.querySelectorAll('.mt-item').forEach(function(btn){
+  var txt = btn.textContent.trim();
+  if(!txt.includes('출퇴근')&&!txt.includes('급여')&&!txt.includes('더보기')){
+   btn.style.display='none';
   }
  });
- // 급여/명세서는 본인것만 추가
- var staffMenuGroup = document.querySelector('.nav-group-items');
- // 내 급여 메뉴 추가
- var myPayNav = document.createElement('div');
- myPayNav.className='nav-item';
- myPayNav.innerHTML='<span class="ic">💰</span>내 급여';
- myPayNav.onclick=function(){_dineMyPayroll(document.getElementById('content'));};
- // 내 명세서 메뉴
- var mySlipNav = document.createElement('div');
- mySlipNav.className='nav-item';
- mySlipNav.innerHTML='<span class="ic">📋</span>내 명세서';
- mySlipNav.onclick=function(){_dineMyPayslip(document.getElementById('content'));};
- // 첫번째 nav-group-items에 추가
- if(staffMenuGroup){
-  staffMenuGroup.appendChild(myPayNav);
-  staffMenuGroup.appendChild(mySlipNav);
- }
+ // 더보기 메뉴도 스케줄/명세서만
+ document.querySelectorAll('.mm-item').forEach(function(item){
+  var txt = item.textContent.trim();
+  var show = txt.includes('근무 스케줄')||txt.includes('급여명세서');
+  item.style.display = show ? 'flex' : 'none';
+ });
 }
-
-// 직원 본인 급여 조회
 function _dineMyPayroll(el){
  if(!_CU.staffId){el.innerHTML='<div class="empty">직원 정보 없음</div>';return;}
  el.innerHTML='<div class="slide-up">';
