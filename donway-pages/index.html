@@ -7586,13 +7586,15 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var _pYM=(month||'').split('-'),_pY=parseInt(_pYM[0]||0),_pM=parseInt(_pYM[1]||0)-1;
               if(_pM<1){_pM=12;_pY--;}
               var _periodStart=_pY+'-'+(_pM<10?'0'+_pM:String(_pM))+'-26';
-              if(!_dates.length && rStart && _periodStart && rStart < _periodStart) return;
+              var _periodEnd = (month||'')+'-25';
+              // 날짜 필터: 정산기간(_periodStart~_periodEnd) 안에서만 적용
               var _dateOk = function(dt){
+                if(dt < _periodStart || dt > _periodEnd) return false; // 정산기간 밖 스킵
                 if(_dates.length) return _dates.indexOf(dt) >= 0;
-                if(!rStart && !rEnd) return false; // 날짜 정보 없음 → 무효
-                // rStart가 정산 기간 시작일보다 이전이면 이미 지난 달 규칙 → 스킵
-                if(rStart && _periodStart && rStart < _periodStart) return false;
-                return (!rStart || dt >= rStart) && (!rEnd || dt <= rEnd);
+                if(!rStart && !rEnd) return false;
+                // startDate가 정산기간 이전이면 정산기간 시작일부터 적용
+                var _eff = (rStart && rStart > _periodStart) ? rStart : _periodStart;
+                return dt >= _eff && (!rEnd || dt <= rEnd);
               };
 
               // ① fromId dateRoutes에서 건수/금액 집계
