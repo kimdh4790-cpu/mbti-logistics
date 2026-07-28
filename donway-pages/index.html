@@ -7624,11 +7624,14 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
               }
               // ② 프레시백 — fid dateFresh에서 해당 날짜분만 집계 → tid에게 이전
-              if(fd.dateFresh){
+              if(fd.dateFresh && Object.keys(fd.dateFresh).length){
                 Object.keys(fd.dateFresh).forEach(function(dt){
                   if(!_dateOk(dt)) return;
                   _totalFresh += (fd.dateFresh[dt]||0);
                 });
+              } else if(_fs && (_fs.fresh||0) > 0){
+                // dateFresh 없으면 settlements.fresh 전체 사용
+                _totalFresh = _fs.fresh||0;
               }
 
               // 금액 계산
