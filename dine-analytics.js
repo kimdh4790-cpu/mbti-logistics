@@ -501,32 +501,30 @@ function _dineWatchReservations(){
 }
 
 function _dineUpdateSidebarStaff(){
- // 직원용: 내 급여, 내 명세서, 스케줄, 출퇴근만 표시
+ // 직원 허용 페이지
  var allowed = ['급여 계산','급여명세서','근무 스케줄','출퇴근 현황'];
- // 모든 nav-item 순회
+ // 비허용 nav-item DOM 자체 삭제
  document.querySelectorAll('.nav-item').forEach(function(item){
   var txt = item.textContent.trim();
-  var show = allowed.some(function(a){return txt.includes(a);});
-  item.style.display = show ? 'flex' : 'none';
+  var ok = allowed.some(function(a){return txt.includes(a);});
+  if(!ok) item.parentNode && item.parentNode.removeChild(item);
  });
- // 모든 nav-group-title도 하위 항목 전부 숨겨진 그룹은 숨김
+ // 빈 nav-group 삭제
  document.querySelectorAll('.nav-group').forEach(function(g){
-  var visible = Array.from(g.querySelectorAll('.nav-item')).some(function(i){return i.style.display!=='none';});
-  var title = g.querySelector('.nav-group-title');
-  if(title) title.style.display = visible ? '' : 'none';
+  if(!g.querySelector('.nav-item')) g.parentNode && g.parentNode.removeChild(g);
  });
- // 하단 탭바도 직원용으로 제한
+ // 하단 탭바 — 비허용 버튼 삭제
  document.querySelectorAll('.mt-item').forEach(function(btn){
   var txt = btn.textContent.trim();
   if(!txt.includes('출퇴근')&&!txt.includes('급여')&&!txt.includes('더보기')){
-   btn.style.display='none';
+   btn.parentNode && btn.parentNode.removeChild(btn);
   }
  });
- // 더보기 메뉴도 스케줄/명세서만
+ // 더보기 메뉴 — 비허용 항목 삭제
  document.querySelectorAll('.mm-item').forEach(function(item){
   var txt = item.textContent.trim();
-  var show = txt.includes('근무 스케줄')||txt.includes('급여명세서');
-  item.style.display = show ? 'flex' : 'none';
+  var ok = txt.includes('근무 스케줄')||txt.includes('급여명세서');
+  if(!ok) item.parentNode && item.parentNode.removeChild(item);
  });
 }
 function _dineMyPayroll(el){
