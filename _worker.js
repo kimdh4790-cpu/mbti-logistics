@@ -1643,7 +1643,7 @@ async function acceptExchange(){
         }
 
         // slug 조회 — slug필드, name필드, companyName필드 순서로 폴백
-        const fields = ['slug','name','companyName'];
+        const fields = ['slug','dineSlug','name','companyName'];
         for (const field of fields) {
           const r2 = await fetch(`${FS_BASE}:runQuery`,{
             method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
