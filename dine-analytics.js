@@ -502,7 +502,7 @@ function _dineWatchReservations(){
 
 function _dineUpdateSidebarStaff(){
  // 직원 허용 페이지
- var allowed = ['급여 계산','급여명세서','근무 스케줄','출퇴근 현황'];
+ var allowed = ['내 급여','급여명세서','근무 스케줄','출퇴근 현황'];
  // 비허용 nav-item DOM 자체 삭제
  document.querySelectorAll('.nav-item').forEach(function(item){
   var txt = item.textContent.trim();
