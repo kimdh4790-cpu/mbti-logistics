@@ -190,26 +190,12 @@ function _dineStaffJoin(){
  var err=document.getElementById('st-err');
  if(!name||!phone||!code||pw.length<6){err.textContent='모든 항목을 입력하세요 (비밀번호 6자 이상)';return;}
  err.textContent='처리 중...';
- /* 매장 코드로 companies 조회 */
- fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
-  method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:code.toLowerCase()}}}]}},limit:5}})
- }).then(function(r){return r.json();}).then(function(rows){
-  var docs=(rows||[]).filter(function(r){return r.document;});
-  if(!docs.length){
-   /* companyName 없으면 name 필드로 재시도 */
-   return fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:'dine'}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:code}}}]}},limit:5}})
-   }).then(function(r){return r.json();});
-  }
-  return rows;
- }).then(function(rows){
-  var docs=(rows||[]).filter(function(r){return r.document;});
-  var co=docs[0]&&docs[0].document;
-  if(!co){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
-  var did=co.name.split('/').pop();
-  var coName=(co.fields.companyName||co.fields.name||{}).stringValue||'';
+ /* Worker API로 매장 slug 조회 (비로그인 허용) */
+ fetch('/api/find-company?slug='+encodeURIComponent(code.toLowerCase())+'&platform=dine')
+ .then(function(r){return r.json();}).then(function(res){
+  if(!res.found){err.textContent='매장을 찾을 수 없습니다. dine.ne.kr/ 뒤 주소를 정확히 입력해주세요';return;}
+  var did=res.dealerId;
+  var coName=res.companyName||'';
   /* Firebase Auth 계정 생성 */
   var email=phone.replace(/-/g,'')+'@dine.staff';
   fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+DINE_APIKEY,{
