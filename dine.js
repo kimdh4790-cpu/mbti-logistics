@@ -450,7 +450,7 @@ function _dineToggleGroup(titleEl){
 }
 function _dinePage(p,el){
  // 직원 접근 제한 — 허용되지 않은 페이지 차단
- var staffAllowed=['schedule','attend','payroll','payslip'];
+ var staffAllowed=['schedule','attend','mypay','payslip'];
  if(_CU&&_CU.role==='staff'&&staffAllowed.indexOf(p)<0) return;
  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
  if(el)el.classList.add('active');
@@ -458,6 +458,7 @@ function _dinePage(p,el){
  if(p==='dashboard') _dineDashboard(c);
  else if(p==='staff')    _dineStaff(c);
  else if(p==='attend')   _dineAttend(c);
+ else if(p==='mypay')    _dineMyPayroll(c);
  else if(p==='payroll')  _dinePayroll(c);
  else if(p==='payslip')  _dinePayslip(c);
  else if(p==='sales')    _dineSales(c);
