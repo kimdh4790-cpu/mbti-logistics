@@ -502,7 +502,7 @@ function _dineWatchReservations(){
 
 function _dineUpdateSidebarStaff(){
  // 직원용: 내 급여, 내 명세서, 스케줄, 출퇴근만 표시
- var allowed = ['내 급여','내 명세서','근무 스케줄','출퇴근 현황'];
+ var allowed = ['급여 계산','급여명세서','근무 스케줄','출퇴근 현황'];
  // 모든 nav-item 순회
  document.querySelectorAll('.nav-item').forEach(function(item){
   var txt = item.textContent.trim();
