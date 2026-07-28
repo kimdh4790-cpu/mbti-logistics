@@ -7579,6 +7579,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
               var rStart = _nd(rule.startDate) || (_dates.length ? _dates[0] : '');
               var rEnd   = _nd(rule.endDate)   || (_dates.length ? _dates[_dates.length-1] : '');
+              // dates 없고 startDate만 있으면 → 해당 날짜 하루만
+              if(!_dates.length && rStart && !_nd(rule.endDate)) rEnd = rStart;
               var tR = rule.routes || [];
 
               // 날짜 필터: dates 배열 있으면 exact match, 없으면 startDate~endDate 범위
