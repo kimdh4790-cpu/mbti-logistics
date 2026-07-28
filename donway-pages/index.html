@@ -6961,9 +6961,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           drvMap[cleanId].rawFreshAmt=(drvMap[cleanId].rawFreshAmt||0)+freshVal; // ★ 검증용
           // ★ 날짜별 프레시백 수집 (아이디지원용)
           if(rowDate&&freshVal>0){
-            var _freshDate=_nd?_nd(rowDate):rowDate;
             if(!drvMap[cleanId].dateFresh)drvMap[cleanId].dateFresh={};
-            drvMap[cleanId].dateFresh[_freshDate]=(drvMap[cleanId].dateFresh[_freshDate]||0)+freshVal;
+            drvMap[cleanId].dateFresh[rowDate]=(drvMap[cleanId].dateFresh[rowDate]||0)+freshVal;
           }
           if(campName&&campName!=='기타'&&drvMap[cleanId].camp==='기타') drvMap[cleanId].camp=campName;
           continue;
@@ -7627,7 +7626,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               // ② 프레시백 — fid dateFresh에서 해당 날짜분만 집계 → tid에게 이전
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(!_dateOk(_nd(dt))) return;
+                  if(!_dateOk(dt)) return;
                   _totalFresh += (fd.dateFresh[dt]||0);
                 });
               }
