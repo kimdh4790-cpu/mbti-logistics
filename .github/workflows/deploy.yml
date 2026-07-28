@@ -73,7 +73,7 @@ jobs:
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           [ -f "donway-pages/index.html" ] && \
           RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/settle.html" \
-            -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+            -H "Authorization: Bearer $CF_KEY" \
             --data-binary @donway-pages/index.html) && \
           echo "$RESULT" | grep -q '"success":true' && echo "✅ settle.html" || echo "❌ settle.html: $RESULT"
 
