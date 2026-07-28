@@ -27,7 +27,6 @@ jobs:
 
       - name: Deploy Worker (Global API Key)
         env:
-          CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           npm install -g wrangler@4 --silent
@@ -35,7 +34,6 @@ jobs:
 
       - name: Upload HTML/JS assets to KV
         env:
-          CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
@@ -46,7 +44,7 @@ jobs:
             SUCCESS=false
             for ATTEMPT in 1 2 3; do
               RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                -H "X-Auth-Email: $CF_EMAIL" -H "X-Auth-Key: $CF_KEY" \
+                -H "Authorization: Bearer $CF_KEY" \
                 --data-binary @"$FILE")
               if echo "$RESULT" | grep -q '"success":true'; then
                 echo "✅ $FILE"
@@ -69,7 +67,6 @@ jobs:
 
       - name: Upload settle.html to KV
         env:
-          CF_EMAIL: kimdh4790@gmail.com
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
