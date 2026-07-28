@@ -1616,6 +1616,27 @@ async function acceptExchange(){
 
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
+      if (path === '/api/find-company') {
+        const params = new URL(request.url).searchParams;
+        const slug = params.get('slug');
+        const uid  = params.get('uid');
+        const platform = params.get('platform') || 'dine';
+        if (!slug && !uid) return new Response(JSON.stringify({error:'slug or uid required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const token = await getAccessToken(env);
+        const filterField = slug ? 'slug' : 'uid';
+        const filterValue = slug ? slug : uid;
+        const res2 = await fetch(`${FS_BASE}:runQuery`,{
+          method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}}},{fieldFilter:{field:{fieldPath:filterField},op:'EQUAL',value:{stringValue:filterValue}}}]}},limit:1}})
+        });
+        const rows = await res2.json();
+        const docs = (rows||[]).filter(r=>r.document);
+        if (!docs.length) return new Response(JSON.stringify({found:false}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const co = docs[0].document;
+        const did = co.name.split('/').pop();
+        const coName = (co.fields.companyName||co.fields.name||{}).stringValue||'';
+        return new Response(JSON.stringify({found:true,dealerId:did,companyName:coName}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       if (path === '/dine.js') return serveKVFile(env, 'dine.js', 'application/javascript');
       if (path === '/dine-staff.js') return serveKVFile(env, 'dine-staff.js', 'application/javascript');
       if (path === '/dine-payroll.js') return serveKVFile(env, 'dine-payroll.js', 'application/javascript');
