@@ -7604,6 +7604,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(_fs && _fs.routeDetails){
                 _fs.routeDetails.forEach(function(rd){ if(rd.unitPrice>0) _priceMap[rd.route]=rd.unitPrice; });
               }
+              console.log('[아이디지원] fid='+fid+' tid='+tid+' _fs='+(!!_fs)+' priceMap='+JSON.stringify(_priceMap)+' dateRoutes='+(fd.dateRoutes?Object.keys(fd.dateRoutes).length:0));
               // ① fromId dateRoutes에서 건수/금액 집계
               var _rtAgg = {}; // {route: {cnt, ret, price}}
               var _totalFresh = 0;
