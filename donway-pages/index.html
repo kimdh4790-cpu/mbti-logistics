@@ -39081,9 +39081,8 @@ function _promoImportFromExcel(file){
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
       if(rate>0){
-        var s=_getIncSetting(m.drv,m.route);
-        if(!s.on)_setIncSetting(m.drv,m.route,true,rate);
-        else _setIncSetting(m.drv,m.route,true,rate);
+        // 해당 있음 → ON + 단가 설정
+        _setIncSetting(m.drv,m.route,true,rate);
         var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
         if(togBtn){togBtn.textContent='ON';togBtn.style.background='#059669';}
         var rateBtns=document.querySelectorAll('.inc-rate-btn[data-k="'+k+'"]');
@@ -39094,6 +39093,11 @@ function _promoImportFromExcel(file){
           rb.style.borderColor=on?'#2563eb':'#d1d5db';
         });
         cnt++;
+      } else if(rm){
+        // 둘 다 미해당 → OFF
+        _setIncSetting(m.drv,m.route,false,0);
+        var togBtn2=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
+        if(togBtn2){togBtn2.textContent='OFF';togBtn2.style.background='#6b7280';}
       }
     });
     toast('✅ 가중요인 적용 '+cnt+'건');
