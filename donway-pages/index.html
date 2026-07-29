@@ -30476,8 +30476,8 @@ function _renderSettlePage(settles,c){
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
       +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){
-  // ★ 아이디지원 신규생성 기사는 쿠팡 수입 제외 (정산현황과 동일 로직)
-  if(x.isIdSupportCreated) return s;
+  // ★ 신규생성(아이디지원/팀장 배송없음) 기사는 쿠팡 수입 제외
+  if(x.isIdSupportCreated||x.isTLCreated) return s;
   var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;
   return s+(ct?Math.round(ct*1.1):(calcNet(x).income||0));
 },0))+'</span>'
