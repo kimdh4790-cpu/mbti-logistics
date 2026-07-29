@@ -2554,7 +2554,6 @@ fetch('/qr/members?did='+DID)
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/admin_sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
-      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
       /* ★ 메뉴 공개 API (로그인 불필요) */
@@ -2689,7 +2688,6 @@ fetch('/qr/members?did='+DID)
           headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*',...SECURITY_HEADERS}
         });
       }
-      if (path === '/order' || path === '/order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');

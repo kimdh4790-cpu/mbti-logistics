@@ -368,6 +368,64 @@ function shareReceipt(){
     });
   }
 }
+
+// FCM 영수증 알림
+var _VAPID_DONE = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
+
+function requestFCMReceipt(){
+  var btn = document.getElementById('fcm-receipt-btn');
+  var status = document.getElementById('fcm-receipt-status');
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){
+    if(status){ status.style.display='block'; status.textContent='이 브라우저는 알림을 지원하지 않습니다'; }
+    return;
+  }
+  var saved;
+  try { saved = localStorage.getItem('filo_fcm_' + did); } catch(e){}
+  if(saved && saved.length > 20){ _sendFCMReceipt(saved, btn, status); return; }
+  Notification.requestPermission().then(function(perm){
+    if(perm !== 'granted'){
+      if(status){ status.style.display='block'; status.textContent='알림을 허용해야 영수증을 받을 수 있어요'; }
+      return;
+    }
+    navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
+      .then(function(reg){
+        return firebase.messaging().getToken({vapidKey:_VAPID_DONE, serviceWorkerRegistration:reg});
+      }).then(function(tok){
+        if(!tok){ if(status){ status.style.display='block'; status.textContent='토큰 발급 실패'; } return; }
+        try { localStorage.setItem('filo_fcm_' + did, tok); } catch(e){}
+        _sendFCMReceipt(tok, btn, status);
+      }).catch(function(){
+        if(status){ status.style.display='block'; status.textContent='알림 설정 중 오류가 발생했습니다'; }
+      });
+  });
+}
+
+function _sendFCMReceipt(tok, btn, status){
+  if(btn){ btn.disabled=true; btn.textContent='⏳ 발송 중...'; }
+  if(status){ status.style.display='block'; status.textContent='영수증 발송 중...'; }
+  fetch('/fcm/notify-drivers',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      tokens:[tok],
+      title:'🧾 영수증',
+      body:'주문 #'+(oid.slice(-6)||'').toUpperCase()+' · 영수증을 확인하세요',
+      type:'receipt',
+      url:location.href
+    })
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.sent>0){
+      if(btn){ btn.textContent='✅ 영수증 발송 완료'; btn.style.background='rgba(34,197,94,.15)'; btn.style.borderColor='rgba(34,197,94,.4)'; btn.style.color='#22c55e'; }
+      if(status){ status.textContent='잠시 후 알림으로 영수증이 전송됩니다'; }
+    } else {
+      if(btn){ btn.textContent='🧾 영수증 알림 받기'; btn.disabled=false; }
+      if(status){ status.textContent='발송 실패. 다시 시도해주세요'; }
+    }
+  }).catch(function(){
+    if(btn){ btn.textContent='🧾 영수증 알림 받기'; btn.disabled=false; }
+    if(status){ status.textContent='오류가 발생했습니다'; }
+  });
+}
 </script>
 </body>
 </html>
