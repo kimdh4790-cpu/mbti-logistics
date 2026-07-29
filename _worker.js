@@ -2297,87 +2297,237 @@ async function acceptExchange(){
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr') {
-        // 직원 출퇴근 QR 처리 (filo-common.js _filoGenDynamicQR 연동)
+        // 직원 출퇴근 QR — 직원선택 + GPS + 기기 중복방지
         const params = new URL(request.url).searchParams;
         const did    = params.get('did');
-        const action = params.get('action'); // in, out, break_start, break_end
-        const uid    = params.get('uid');    // 개인 QR 용
-        if (!did || !action) return serveKVFile(env, 'qrpos.html', 'text/html');
+        const action = params.get('action') || 'in';
+        if (!did) return serveKVFile(env, 'qrpos.html', 'text/html');
 
-        const actionMap = {in:'출근', out:'퇴근', break_start:'휴식시작', break_end:'휴식종료'};
-        const typeMap   = {in:'in',  out:'out', break_start:'break_start', break_end:'break_end'};
-        const iconMap   = {in:'🟢', out:'🔴', break_start:'☕', break_end:'✨'};
-        const label = actionMap[action] || action;
-        const type  = typeMap[action]  || action;
-        const icon  = iconMap[action]  || '📋';
+        const actionMap = {in:'출근', out:'퇴근'};
+        const iconMap   = {in:'🟢', out:'🔴'};
+        const label = actionMap[action] || '출근';
+        const icon  = iconMap[action]  || '🟢';
 
         try {
-          const now = new Date();
-          const kst = new Date(now.getTime() + 9*3600*1000);
-          const date = kst.toISOString().slice(0,10);
-          const timeStr = kst.toISOString().slice(11,16);
-
-          // SA 토큰으로 attendance 저장
           const token = await getAccessToken(env);
-
-          // uid 있으면 members에서 이름 조회
-          let memberName = '';
-          let memberId   = uid || '';
-          if (uid) {
-            const mr = await fetch(`${FS_BASE}/members/${uid}`, {
-              headers:{'Authorization':'Bearer '+token}
-            });
-            const md = await mr.json();
-            memberName = (md.fields&&md.fields.name&&md.fields.name.stringValue)||'';
-          }
-
-          // attendance 문서 저장
-          await fetch(`${FS_BASE}/attendance`, {
+          // members 조회
+          const mRes = await fetch(`${FS_BASE}:runQuery`, {
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body: JSON.stringify({fields:{
-              dealerId:   {stringValue: did},
-              memberId:   {stringValue: memberId},
-              memberName: {stringValue: memberName},
-              type:       {stringValue: type},
-              date:       {stringValue: date},
-              time:       {stringValue: now.toISOString()},
-              createdAt:  {stringValue: now.toISOString()}
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'members'}],
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
             }})
           });
+          const mDocs = await mRes.json();
+          const members = (Array.isArray(mDocs)?mDocs:[]).filter(d=>d.document).map(d=>{
+            const f=d.document.fields||{};
+            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
+          });
 
-          // 결과 HTML 반환
+          // 매장 GPS 좌표 조회
+          const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+          const cData = await cRes.json();
+          const shopLat = cData.fields?.lat?.doubleValue||cData.fields?.lat?.integerValue||0;
+          const shopLng = cData.fields?.lng?.doubleValue||cData.fields?.lng?.integerValue||0;
+
+          const membersJson = JSON.stringify(members);
           const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>${label} 완료</title>
+<title>${label}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:40px 32px;text-align:center;max-width:320px;width:90%;}
-.icon{font-size:72px;margin-bottom:16px;}
-.label{font-size:28px;font-weight:900;margin-bottom:8px;}
-.name{font-size:16px;color:#666680;margin-bottom:4px;}
-.time{font-size:14px;color:#444460;}
-.ok{color:#00ff88;}
-.btn{display:block;margin:24px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
-  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;}
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:28px 20px;max-width:360px;width:100%;}
+h2{font-size:20px;font-weight:900;text-align:center;margin-bottom:20px;color:#00ff88;}
+.mem-btn{width:100%;padding:14px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:12px;
+  color:#e8e8f0;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:left;}
+.mem-btn:active{background:#2a2a4e;}
+.status{text-align:center;font-size:14px;color:#666680;margin-top:12px;min-height:20px;}
+.done-card{text-align:center;}
+.done-icon{font-size:64px;margin-bottom:12px;}
+.done-label{font-size:24px;font-weight:900;color:#00ff88;margin-bottom:6px;}
+.done-name{font-size:16px;color:#888;margin-bottom:4px;}
+.done-time{font-size:13px;color:#555;}
+.btn{display:block;margin:20px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
+  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;cursor:pointer;}
+.err{color:#ff4466;text-align:center;padding:12px;}
 </style>
 </head><body>
-<div class="card">
-  <div class="icon">${icon}</div>
-  <div class="label ok">${label} 완료</div>
-  ${memberName ? `<div class="name">${memberName}</div>` : ''}
-  <div class="time">${date} ${timeStr}</div>
-  <a class="btn" onclick="window.close();history.back()">확인</a>
+<div class="card" id="main">
+  <h2>${icon} ${label}</h2>
+  <div id="list"></div>
+  <div class="status" id="status">본인 이름을 선택하세요</div>
 </div>
+<script>
+var DID='${did}';
+var ACTION='${action}';
+var SHOP_LAT=${shopLat};
+var SHOP_LNG=${shopLng};
+var MEMBERS=${membersJson};
+var GPS_RADIUS=300; // 매장 반경 300m
+
+function getKST(){var n=new Date();return new Date(n.getTime()+9*3600000);}
+function getToday(){return getKST().toISOString().slice(0,10);}
+function getDeviceId(){
+  var k='filo_dev_id';
+  var id=localStorage.getItem(k);
+  if(!id){id='dev_'+Math.random().toString(36).slice(2)+'_'+Date.now();localStorage.setItem(k,id);}
+  return id;
+}
+function getDistM(lat1,lng1,lat2,lng2){
+  var R=6371000;
+  var dLat=(lat2-lat1)*Math.PI/180;
+  var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function setStatus(msg,col){
+  var el=document.getElementById('status');
+  if(el){el.textContent=msg;if(col)el.style.color=col;}
+}
+
+function renderList(){
+  var ul=document.getElementById('list');
+  if(!ul)return;
+  if(!MEMBERS.length){ul.innerHTML='<div class="err">등록된 직원이 없습니다</div>';return;}
+  ul.innerHTML=MEMBERS.map(function(m){
+    return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
+  }).join('');
+}
+
+function selectMember(uid,name){
+  setStatus('위치 확인 중...','#aaa');
+  var deviceId=getDeviceId();
+  var today=getToday();
+
+  // 기기 중복 체크
+  var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
+  if(localStorage.getItem(dupKey)){
+    setStatus('이미 '+name+'님의 '+('${label}')+'이 처리됐습니다','#ff4466');
+    return;
+  }
+
+  // GPS 확인
+  if(SHOP_LAT&&SHOP_LNG&&navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var dist=getDistM(pos.coords.latitude,pos.coords.longitude,SHOP_LAT,SHOP_LNG);
+      if(dist>GPS_RADIUS){
+        setStatus('매장에서 '+Math.round(dist)+'m 떨어져 있습니다 (최대 '+GPS_RADIUS+'m)','#ff4466');
+        return;
+      }
+      doSave(uid,name,deviceId,dupKey,pos.coords.latitude,pos.coords.longitude);
+    },function(){
+      // GPS 실패 시 그냥 진행
+      doSave(uid,name,deviceId,dupKey,0,0);
+    },{timeout:8000});
+  } else {
+    doSave(uid,name,deviceId,dupKey,0,0);
+  }
+}
+
+function doSave(uid,name,deviceId,dupKey,lat,lng){
+  setStatus('저장 중...','#aaa');
+  var now=new Date();
+  var kst=new Date(now.getTime()+9*3600000);
+  var date=kst.toISOString().slice(0,10);
+  var timeStr=kst.toISOString().slice(11,16);
+
+  fetch('/qr/confirm',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng})
+  }).then(function(r){return r.json();}).then(function(res){
+    if(res.ok){
+      localStorage.setItem(dupKey,'1');
+      var card=document.getElementById('main');
+      card.innerHTML='<div class="done-card">'+
+        '<div class="done-icon">'+(ACTION==='in'?'🟢':'🔴')+'</div>'+
+        '<div class="done-label">'+(ACTION==='in'?'출근':'퇴근')+' 완료</div>'+
+        '<div class="done-name">'+name+'</div>'+
+        '<div class="done-time">'+date+' '+timeStr+'</div>'+
+        '<button class="btn" onclick="window.close();history.back()">확인</button>'+
+        '</div>';
+    } else {
+      setStatus(res.error||'오류가 발생했습니다','#ff4466');
+    }
+  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
+}
+
+renderList();
+</script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
         } catch(e) {
           return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
             {headers:{'Content-Type':'text/html'}});
+        }
+      }
+
+      // /qr/confirm — 출퇴근 저장
+      if (path === '/qr/confirm' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did, uid, name, action, deviceId, lat, lng} = body;
+          if (!did || !uid || !action) return Response.json({ok:false,error:'파라미터 오류'});
+
+          const now = new Date();
+          const kst = new Date(now.getTime() + 9*3600*1000);
+          const date = kst.toISOString().slice(0,10);
+          const type = action === 'out' ? 'out' : 'in';
+
+          const token = await getAccessToken(env);
+
+          // 오늘 같은 uid+type 중복 체크 (서버 사이드)
+          const dupRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'attendance'}],
+              where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:uid}}},
+                {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}},
+                {fieldFilter:{field:{fieldPath:'type'},op:'EQUAL',value:{stringValue:type}}}
+              ]}}
+            }})
+          });
+          const dupDocs = await dupRes.json();
+          const hasDup = Array.isArray(dupDocs) && dupDocs.some(d=>d.document);
+          if (hasDup) return Response.json({ok:false,error:'이미 '+( type==='in'?'출근':'퇴근')+'처리됐습니다'});
+
+          // members에서 이름 조회
+          const mr = await fetch(`${FS_BASE}/members/${uid}`, {headers:{'Authorization':'Bearer '+token}});
+          const md = await mr.json();
+          const memberName = md.fields?.name?.stringValue || name || '';
+
+          await fetch(`${FS_BASE}/attendance`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              memberId:   {stringValue: uid},
+              memberName: {stringValue: memberName},
+              type:       {stringValue: type},
+              date:       {stringValue: date},
+              time:       {stringValue: now.toISOString()},
+              deviceId:   {stringValue: deviceId||''},
+              lat:        {doubleValue: lat||0},
+              lng:        {doubleValue: lng||0},
+              createdAt:  {stringValue: now.toISOString()}
+            }})
+          });
+
+          return Response.json({ok:true});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
         }
       }
       if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
@@ -2886,87 +3036,237 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr') {
-        // 직원 출퇴근 QR 처리 (filo-common.js _filoGenDynamicQR 연동)
+        // 직원 출퇴근 QR — 직원선택 + GPS + 기기 중복방지
         const params = new URL(request.url).searchParams;
         const did    = params.get('did');
-        const action = params.get('action'); // in, out, break_start, break_end
-        const uid    = params.get('uid');    // 개인 QR 용
-        if (!did || !action) return serveKVFile(env, 'qrpos.html', 'text/html');
+        const action = params.get('action') || 'in';
+        if (!did) return serveKVFile(env, 'qrpos.html', 'text/html');
 
-        const actionMap = {in:'출근', out:'퇴근', break_start:'휴식시작', break_end:'휴식종료'};
-        const typeMap   = {in:'in',  out:'out', break_start:'break_start', break_end:'break_end'};
-        const iconMap   = {in:'🟢', out:'🔴', break_start:'☕', break_end:'✨'};
-        const label = actionMap[action] || action;
-        const type  = typeMap[action]  || action;
-        const icon  = iconMap[action]  || '📋';
+        const actionMap = {in:'출근', out:'퇴근'};
+        const iconMap   = {in:'🟢', out:'🔴'};
+        const label = actionMap[action] || '출근';
+        const icon  = iconMap[action]  || '🟢';
 
         try {
-          const now = new Date();
-          const kst = new Date(now.getTime() + 9*3600*1000);
-          const date = kst.toISOString().slice(0,10);
-          const timeStr = kst.toISOString().slice(11,16);
-
-          // SA 토큰으로 attendance 저장
           const token = await getAccessToken(env);
-
-          // uid 있으면 members에서 이름 조회
-          let memberName = '';
-          let memberId   = uid || '';
-          if (uid) {
-            const mr = await fetch(`${FS_BASE}/members/${uid}`, {
-              headers:{'Authorization':'Bearer '+token}
-            });
-            const md = await mr.json();
-            memberName = (md.fields&&md.fields.name&&md.fields.name.stringValue)||'';
-          }
-
-          // attendance 문서 저장
-          await fetch(`${FS_BASE}/attendance`, {
+          // members 조회
+          const mRes = await fetch(`${FS_BASE}:runQuery`, {
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body: JSON.stringify({fields:{
-              dealerId:   {stringValue: did},
-              memberId:   {stringValue: memberId},
-              memberName: {stringValue: memberName},
-              type:       {stringValue: type},
-              date:       {stringValue: date},
-              time:       {stringValue: now.toISOString()},
-              createdAt:  {stringValue: now.toISOString()}
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'members'}],
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
             }})
           });
+          const mDocs = await mRes.json();
+          const members = (Array.isArray(mDocs)?mDocs:[]).filter(d=>d.document).map(d=>{
+            const f=d.document.fields||{};
+            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
+          });
 
-          // 결과 HTML 반환
+          // 매장 GPS 좌표 조회
+          const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+          const cData = await cRes.json();
+          const shopLat = cData.fields?.lat?.doubleValue||cData.fields?.lat?.integerValue||0;
+          const shopLng = cData.fields?.lng?.doubleValue||cData.fields?.lng?.integerValue||0;
+
+          const membersJson = JSON.stringify(members);
           const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>${label} 완료</title>
+<title>${label}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:40px 32px;text-align:center;max-width:320px;width:90%;}
-.icon{font-size:72px;margin-bottom:16px;}
-.label{font-size:28px;font-weight:900;margin-bottom:8px;}
-.name{font-size:16px;color:#666680;margin-bottom:4px;}
-.time{font-size:14px;color:#444460;}
-.ok{color:#00ff88;}
-.btn{display:block;margin:24px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
-  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;}
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
+.card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:28px 20px;max-width:360px;width:100%;}
+h2{font-size:20px;font-weight:900;text-align:center;margin-bottom:20px;color:#00ff88;}
+.mem-btn{width:100%;padding:14px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:12px;
+  color:#e8e8f0;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:left;}
+.mem-btn:active{background:#2a2a4e;}
+.status{text-align:center;font-size:14px;color:#666680;margin-top:12px;min-height:20px;}
+.done-card{text-align:center;}
+.done-icon{font-size:64px;margin-bottom:12px;}
+.done-label{font-size:24px;font-weight:900;color:#00ff88;margin-bottom:6px;}
+.done-name{font-size:16px;color:#888;margin-bottom:4px;}
+.done-time{font-size:13px;color:#555;}
+.btn{display:block;margin:20px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
+  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;cursor:pointer;}
+.err{color:#ff4466;text-align:center;padding:12px;}
 </style>
 </head><body>
-<div class="card">
-  <div class="icon">${icon}</div>
-  <div class="label ok">${label} 완료</div>
-  ${memberName ? `<div class="name">${memberName}</div>` : ''}
-  <div class="time">${date} ${timeStr}</div>
-  <a class="btn" onclick="window.close();history.back()">확인</a>
+<div class="card" id="main">
+  <h2>${icon} ${label}</h2>
+  <div id="list"></div>
+  <div class="status" id="status">본인 이름을 선택하세요</div>
 </div>
+<script>
+var DID='${did}';
+var ACTION='${action}';
+var SHOP_LAT=${shopLat};
+var SHOP_LNG=${shopLng};
+var MEMBERS=${membersJson};
+var GPS_RADIUS=300; // 매장 반경 300m
+
+function getKST(){var n=new Date();return new Date(n.getTime()+9*3600000);}
+function getToday(){return getKST().toISOString().slice(0,10);}
+function getDeviceId(){
+  var k='filo_dev_id';
+  var id=localStorage.getItem(k);
+  if(!id){id='dev_'+Math.random().toString(36).slice(2)+'_'+Date.now();localStorage.setItem(k,id);}
+  return id;
+}
+function getDistM(lat1,lng1,lat2,lng2){
+  var R=6371000;
+  var dLat=(lat2-lat1)*Math.PI/180;
+  var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function setStatus(msg,col){
+  var el=document.getElementById('status');
+  if(el){el.textContent=msg;if(col)el.style.color=col;}
+}
+
+function renderList(){
+  var ul=document.getElementById('list');
+  if(!ul)return;
+  if(!MEMBERS.length){ul.innerHTML='<div class="err">등록된 직원이 없습니다</div>';return;}
+  ul.innerHTML=MEMBERS.map(function(m){
+    return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
+  }).join('');
+}
+
+function selectMember(uid,name){
+  setStatus('위치 확인 중...','#aaa');
+  var deviceId=getDeviceId();
+  var today=getToday();
+
+  // 기기 중복 체크
+  var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
+  if(localStorage.getItem(dupKey)){
+    setStatus('이미 '+name+'님의 '+('${label}')+'이 처리됐습니다','#ff4466');
+    return;
+  }
+
+  // GPS 확인
+  if(SHOP_LAT&&SHOP_LNG&&navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var dist=getDistM(pos.coords.latitude,pos.coords.longitude,SHOP_LAT,SHOP_LNG);
+      if(dist>GPS_RADIUS){
+        setStatus('매장에서 '+Math.round(dist)+'m 떨어져 있습니다 (최대 '+GPS_RADIUS+'m)','#ff4466');
+        return;
+      }
+      doSave(uid,name,deviceId,dupKey,pos.coords.latitude,pos.coords.longitude);
+    },function(){
+      // GPS 실패 시 그냥 진행
+      doSave(uid,name,deviceId,dupKey,0,0);
+    },{timeout:8000});
+  } else {
+    doSave(uid,name,deviceId,dupKey,0,0);
+  }
+}
+
+function doSave(uid,name,deviceId,dupKey,lat,lng){
+  setStatus('저장 중...','#aaa');
+  var now=new Date();
+  var kst=new Date(now.getTime()+9*3600000);
+  var date=kst.toISOString().slice(0,10);
+  var timeStr=kst.toISOString().slice(11,16);
+
+  fetch('/qr/confirm',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng})
+  }).then(function(r){return r.json();}).then(function(res){
+    if(res.ok){
+      localStorage.setItem(dupKey,'1');
+      var card=document.getElementById('main');
+      card.innerHTML='<div class="done-card">'+
+        '<div class="done-icon">'+(ACTION==='in'?'🟢':'🔴')+'</div>'+
+        '<div class="done-label">'+(ACTION==='in'?'출근':'퇴근')+' 완료</div>'+
+        '<div class="done-name">'+name+'</div>'+
+        '<div class="done-time">'+date+' '+timeStr+'</div>'+
+        '<button class="btn" onclick="window.close();history.back()">확인</button>'+
+        '</div>';
+    } else {
+      setStatus(res.error||'오류가 발생했습니다','#ff4466');
+    }
+  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
+}
+
+renderList();
+</script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
         } catch(e) {
           return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
             {headers:{'Content-Type':'text/html'}});
+        }
+      }
+
+      // /qr/confirm — 출퇴근 저장
+      if (path === '/qr/confirm' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did, uid, name, action, deviceId, lat, lng} = body;
+          if (!did || !uid || !action) return Response.json({ok:false,error:'파라미터 오류'});
+
+          const now = new Date();
+          const kst = new Date(now.getTime() + 9*3600*1000);
+          const date = kst.toISOString().slice(0,10);
+          const type = action === 'out' ? 'out' : 'in';
+
+          const token = await getAccessToken(env);
+
+          // 오늘 같은 uid+type 중복 체크 (서버 사이드)
+          const dupRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'attendance'}],
+              where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:uid}}},
+                {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}},
+                {fieldFilter:{field:{fieldPath:'type'},op:'EQUAL',value:{stringValue:type}}}
+              ]}}
+            }})
+          });
+          const dupDocs = await dupRes.json();
+          const hasDup = Array.isArray(dupDocs) && dupDocs.some(d=>d.document);
+          if (hasDup) return Response.json({ok:false,error:'이미 '+( type==='in'?'출근':'퇴근')+'처리됐습니다'});
+
+          // members에서 이름 조회
+          const mr = await fetch(`${FS_BASE}/members/${uid}`, {headers:{'Authorization':'Bearer '+token}});
+          const md = await mr.json();
+          const memberName = md.fields?.name?.stringValue || name || '';
+
+          await fetch(`${FS_BASE}/attendance`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              memberId:   {stringValue: uid},
+              memberName: {stringValue: memberName},
+              type:       {stringValue: type},
+              date:       {stringValue: date},
+              time:       {stringValue: now.toISOString()},
+              deviceId:   {stringValue: deviceId||''},
+              lat:        {doubleValue: lat||0},
+              lng:        {doubleValue: lng||0},
+              createdAt:  {stringValue: now.toISOString()}
+            }})
+          });
+
+          return Response.json({ok:true});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
         }
       }
       if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
