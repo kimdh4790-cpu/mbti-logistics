@@ -2311,28 +2311,14 @@ async function acceptExchange(){
         try {
           const token = await getAccessToken(env);
           // members 조회
-          const mRes = await fetch(`${FS_BASE}:runQuery`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body: JSON.stringify({structuredQuery:{
-              from:[{collectionId:'members'}],
-              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
-              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
-            }})
-          });
-          const mDocs = await mRes.json();
-          const members = (Array.isArray(mDocs)?mDocs:[]).filter(d=>d.document).map(d=>{
-            const f=d.document.fields||{};
-            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
-          });
-
           // 매장 GPS 좌표 조회
           const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
           const cData = await cRes.json();
           const shopLat = cData.fields?.lat?.doubleValue||cData.fields?.lat?.integerValue||0;
           const shopLng = cData.fields?.lng?.doubleValue||cData.fields?.lng?.integerValue||0;
 
-          const membersJson = JSON.stringify(members);
+          // members는 클라이언트에서 Firebase SDK로 로드
+          const membersJson = '[]'; // 클라이언트에서 로드
           const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
@@ -2461,7 +2447,31 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
-renderList();
+// Firebase SDK로 members 로드
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBhP0gm9WMlXvXXXXXXXXXXXXXXXXXXXX",
+  projectId: "mbti-logistics"
+};
+
+// Firestore REST API로 members 조회 (비인증)
+fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body: JSON.stringify({structuredQuery:{
+    from:[{collectionId:'members'}],
+    where:{compositeFilter:{op:'AND',filters:[
+      {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:DID}}},
+      {fieldFilter:{field:{fieldPath:'active'},op:'NOT_EQUAL',value:{booleanValue:false}}}
+    ]}},
+    orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
+  }})
+}).then(function(r){return r.json();}).then(function(docs){
+  MEMBERS=(Array.isArray(docs)?docs:[]).filter(function(d){return d.document;}).map(function(d){
+    var f=d.document.fields||{};
+    return {id:d.document.name.split('/').pop(), name:f.name&&f.name.stringValue||''};
+  });
+  renderList();
+}).catch(function(){renderList();});
 </script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
@@ -3050,28 +3060,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         try {
           const token = await getAccessToken(env);
           // members 조회
-          const mRes = await fetch(`${FS_BASE}:runQuery`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body: JSON.stringify({structuredQuery:{
-              from:[{collectionId:'members'}],
-              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
-              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
-            }})
-          });
-          const mDocs = await mRes.json();
-          const members = (Array.isArray(mDocs)?mDocs:[]).filter(d=>d.document).map(d=>{
-            const f=d.document.fields||{};
-            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
-          });
-
           // 매장 GPS 좌표 조회
           const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
           const cData = await cRes.json();
           const shopLat = cData.fields?.lat?.doubleValue||cData.fields?.lat?.integerValue||0;
           const shopLng = cData.fields?.lng?.doubleValue||cData.fields?.lng?.integerValue||0;
 
-          const membersJson = JSON.stringify(members);
+          // members는 클라이언트에서 Firebase SDK로 로드
+          const membersJson = '[]'; // 클라이언트에서 로드
           const html = `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8">
@@ -3200,7 +3196,31 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
-renderList();
+// Firebase SDK로 members 로드
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBhP0gm9WMlXvXXXXXXXXXXXXXXXXXXXX",
+  projectId: "mbti-logistics"
+};
+
+// Firestore REST API로 members 조회 (비인증)
+fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body: JSON.stringify({structuredQuery:{
+    from:[{collectionId:'members'}],
+    where:{compositeFilter:{op:'AND',filters:[
+      {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:DID}}},
+      {fieldFilter:{field:{fieldPath:'active'},op:'NOT_EQUAL',value:{booleanValue:false}}}
+    ]}},
+    orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
+  }})
+}).then(function(r){return r.json();}).then(function(docs){
+  MEMBERS=(Array.isArray(docs)?docs:[]).filter(function(d){return d.document;}).map(function(d){
+    var f=d.document.fields||{};
+    return {id:d.document.name.split('/').pop(), name:f.name&&f.name.stringValue||''};
+  });
+  renderList();
+}).catch(function(){renderList();});
 </script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
