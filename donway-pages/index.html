@@ -29854,11 +29854,12 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      // ★ 아이디지원으로 신규생성된 용차는 쿠팡 수입 아니므로 총매출 제외
-      var ct=s.isIdSupportCreated?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
-      totCoupang+=ct?Math.round(ct*1.1):(s.isIdSupportCreated?0:(r.income||0));
-      // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
-      totTaxBase+=(r.income||r.totalAmt||0);
+      // ★ 신규생성(아이디지원/팀장 배송없음)은 쿠팡 수입 아니므로 총매출 제외
+      var _isCreated=s.isIdSupportCreated||s.isTLCreated;
+      var ct=_isCreated?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
+      totCoupang+=ct?Math.round(ct*1.1):(_isCreated?0:(r.income||0));
+      // 기사 세금계산서 = income 그대로 (신규생성 제외)
+      totTaxBase+=_isCreated?0:(r.income||r.totalAmt||0);
       // 추가 지출 (팀장수수료 + 기타+ — 쿠팡수입 초과분)
       totExtraOut+=(+s.etcPlusTL||0)+(+s.etcPlus||0);
       totNet+=r.net||0;
