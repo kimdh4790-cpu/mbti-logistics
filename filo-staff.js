@@ -101,7 +101,7 @@ function _filoRenderStaffQRs(did){
 function _filoPageAttendance(el){
  var did=_CU.dealerId||_CU.uid;
  var today=_today();
- var qrUrl='https://donway.ai.kr/qr?did='+did+'&action=checkin';
+ var qrUrl='https://filo.ai.kr/qr?did='+did+'&action=in';
  var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(qrUrl);
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🔐 QR 출퇴근</div>'+
