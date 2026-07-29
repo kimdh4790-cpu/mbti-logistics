@@ -2447,37 +2447,45 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
-// Firebase SDK로 members 로드
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBhP0gm9WMlXvXXXXXXXXXXXXXXXXXXXX",
-  projectId: "mbti-logistics"
-};
-
-// Firestore REST API로 members 조회 (비인증)
-fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body: JSON.stringify({structuredQuery:{
-    from:[{collectionId:'members'}],
-    where:{compositeFilter:{op:'AND',filters:[
-      {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:DID}}},
-      {fieldFilter:{field:{fieldPath:'active'},op:'NOT_EQUAL',value:{booleanValue:false}}}
-    ]}},
-    orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
-  }})
-}).then(function(r){return r.json();}).then(function(docs){
-  MEMBERS=(Array.isArray(docs)?docs:[]).filter(function(d){return d.document;}).map(function(d){
-    var f=d.document.fields||{};
-    return {id:d.document.name.split('/').pop(), name:f.name&&f.name.stringValue||''};
-  });
-  renderList();
-}).catch(function(){renderList();});
+// /qr/members API로 직원 목록 로드
+fetch('/qr/members?did='+DID)
+  .then(function(r){return r.json();})
+  .then(function(res){
+    if(res.members) MEMBERS=res.members;
+    renderList();
+  }).catch(function(){renderList();});
 </script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
         } catch(e) {
           return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
             {headers:{'Content-Type':'text/html'}});
+        }
+      }
+
+      // /qr/members — 직원 목록 조회 (SA 토큰)
+      if (path === '/qr/members') {
+        const did = new URL(request.url).searchParams.get('did');
+        if (!did) return Response.json({members:[]});
+        try {
+          const token = await getAccessToken(env);
+          const res = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'members'}],
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
+            }})
+          });
+          const docs = await res.json();
+          const members = (Array.isArray(docs)?docs:[]).filter(d=>d.document).map(d=>{
+            const f=d.document.fields||{};
+            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
+          }).filter(m=>m.name);
+          return Response.json({members});
+        } catch(e) {
+          return Response.json({members:[], error:e.message});
         }
       }
 
@@ -3196,37 +3204,45 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
-// Firebase SDK로 members 로드
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBhP0gm9WMlXvXXXXXXXXXXXXXXXXXXXX",
-  projectId: "mbti-logistics"
-};
-
-// Firestore REST API로 members 조회 (비인증)
-fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery', {
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body: JSON.stringify({structuredQuery:{
-    from:[{collectionId:'members'}],
-    where:{compositeFilter:{op:'AND',filters:[
-      {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:DID}}},
-      {fieldFilter:{field:{fieldPath:'active'},op:'NOT_EQUAL',value:{booleanValue:false}}}
-    ]}},
-    orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
-  }})
-}).then(function(r){return r.json();}).then(function(docs){
-  MEMBERS=(Array.isArray(docs)?docs:[]).filter(function(d){return d.document;}).map(function(d){
-    var f=d.document.fields||{};
-    return {id:d.document.name.split('/').pop(), name:f.name&&f.name.stringValue||''};
-  });
-  renderList();
-}).catch(function(){renderList();});
+// /qr/members API로 직원 목록 로드
+fetch('/qr/members?did='+DID)
+  .then(function(r){return r.json();})
+  .then(function(res){
+    if(res.members) MEMBERS=res.members;
+    renderList();
+  }).catch(function(){renderList();});
 </script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
         } catch(e) {
           return new Response(`<h2 style="font-family:sans-serif;padding:40px;color:#fff;background:#0a0a14">오류: ${e.message}</h2>`,
             {headers:{'Content-Type':'text/html'}});
+        }
+      }
+
+      // /qr/members — 직원 목록 조회 (SA 토큰)
+      if (path === '/qr/members') {
+        const did = new URL(request.url).searchParams.get('did');
+        if (!did) return Response.json({members:[]});
+        try {
+          const token = await getAccessToken(env);
+          const res = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'members'}],
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]
+            }})
+          });
+          const docs = await res.json();
+          const members = (Array.isArray(docs)?docs:[]).filter(d=>d.document).map(d=>{
+            const f=d.document.fields||{};
+            return {id:d.document.name.split('/').pop(), name:f.name?.stringValue||''};
+          }).filter(m=>m.name);
+          return Response.json({members});
+        } catch(e) {
+          return Response.json({members:[], error:e.message});
         }
       }
 
