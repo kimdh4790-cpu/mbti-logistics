@@ -669,6 +669,10 @@ export default {
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
       }
+      // /settle/{id} → settle.html 서빙 (공유 명세서 링크)
+      if (path.startsWith('/settle/') || path === '/settle') {
+        return serveKVFile(env, 'settle.html', 'text/html');
+      }
       // /join → settle.html 서빙 + UI 커스터마이즈 주입
       if (path === '/join' || path === '/join/') {
         const joinKv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html', {type:'text'}) : null;
