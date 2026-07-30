@@ -922,7 +922,10 @@ function _showPostDetail(d){
     '<div style="font-size:16px;font-weight:800;color:var(--br)">⭐ '+(d.agencyRating||'신규')+'</div>'+
     '</div></div>'+
 
-    (isDriver?'<button class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">🙋 지원하기</button>':'');
+    (isDriver?
+    '<button class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">🙋 지원하기</button>'+
+    '<button onclick="_reportFakePost(\''+d.id+'\',\''+d.agencyId+'\')" style="width:100%;padding:12px;background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">⚠️ 허위공고 신고</button>'
+    :'');
 
   _openModal();
 
@@ -1025,7 +1028,10 @@ function _showApplicants(postId){
         '<div class="judge-row">'+
         '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
         '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
-        '</div>':'');
+        '</div>':
+        a.status==='approved'?
+        '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="width:100%;padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">'+(a.agencyReviewed?'✅ 평가 완료':'⭐ 기사 평가하기')+'</button>'
+        :'');
       body.appendChild(card);
     });
     _openModal();
@@ -1385,7 +1391,9 @@ function _pgMyApplies(el){
           '<div style="font-size:12px;color:var(--t2)">지원일: '+date+'</div>'+
           (a.status==='approved'?
           '<div style="margin-top:10px;padding:10px;background:var(--gnl);border-radius:10px;font-size:12px;color:var(--gn);font-weight:700">'+
-          '🎉 승인됐어요! 대리점에 연락해주세요</div>':'');
+          '🎉 승인됐어요! 대리점에 연락해주세요</div>'+
+          '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="width:100%;padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">'+(a.driverReviewed?'✅ 평가 완료':'⭐ 대리점 평가하기')+'</button>'
+          :'');
         list.appendChild(card);
       });
     });
@@ -1413,7 +1421,34 @@ function _pgProfile(el){
       '<span style="font-size:13px;font-weight:600">'+r[1]+'</span></div>';
   }).join('')+
 
-  '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>';
+  '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
+
+  '<div style="margin-top:20px">'+
+  '<div style="font-size:15px;font-weight:800;margin-bottom:10px">💬 받은 후기</div>'+
+  '<div id="my-reviews-list"><div style="text-align:center;padding:30px"><div class="spinner"></div></div></div>'+
+  '</div>';
+
+  _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).orderBy('createdAt','desc').limit(20).get()
+    .then(function(snap){
+      var list=document.getElementById('my-reviews-list');if(!list)return;
+      if(snap.empty){list.innerHTML='<div class="empty" style="padding:20px"><div class="empty-ico" style="font-size:32px">💬</div><div class="empty-msg">받은 후기가 없어요</div></div>';return;}
+      list.innerHTML='';
+      snap.forEach(function(doc){
+        var r=doc.data();
+        var stars='';for(var i=1;i<=5;i++)stars+='<span style="color:'+(i<=r.rating?'var(--br)':'var(--bd)')+'">★</span>';
+        var div=document.createElement('div');div.className='card';div.style.marginBottom='8px';
+        div.innerHTML=
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+          '<div style="font-size:13px;font-weight:700">'+(r.reviewerType==='agency'?'🏢':'🚗')+' '+r.reviewerName+'</div>'+
+          '<div style="font-size:16px">'+stars+'</div>'+
+          '</div>'+
+          (r.criteria&&r.criteria.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'+
+          r.criteria.map(function(c){return '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--brl);color:var(--br)">'+c+'</span>';}).join('')+
+          '</div>':'')+
+          (r.comment?'<div style="font-size:12px;color:var(--t2);line-height:1.5">'+r.comment+'</div>':'');
+        list.appendChild(div);
+      });
+    }).catch(function(){});
 }
 
 // ── 회원 관리 (관리자) ───────────────────────────────────────
@@ -1976,6 +2011,125 @@ function _careerLabel(c){
   var map={'신입':'신입','1년 미만':'1년 미만','1~3년':'1~3년','3~5년':'3~5년','5년 이상':'5년 이상',
     '1년 이상':'1년 이상','3년 이상':'3년 이상','무관':'무관'};
   return map[c]||c||'무관';
+}
+
+// ── 양방향 평가 ──────────────────────────────────────────────
+function _showReviewModal(targetId,targetName,targetType,applyId){
+  var isDriver=targetType==='driver';
+  var criteria=isDriver?['시간 준수','친절한 응대','꼼꼼한 배송','빠른 배송','물건 안전']:['정확한 단가','빠른 승인','친절한 소통','약속 이행','정산 정확'];
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="font-size:20px;font-weight:900;margin-bottom:4px">⭐ '+(isDriver?'기사':'대리점')+' 평가</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">'+(isDriver?'🚗':'🏢')+' '+targetName+'님을 평가해주세요</div>'+
+
+    '<div style="text-align:center;margin-bottom:18px">'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">별점</div>'+
+    '<div id="rv-stars" style="display:flex;justify-content:center;gap:6px;font-size:38px;cursor:pointer">'+
+    [1,2,3,4,5].map(function(n){return '<span class="star" data-n="'+n+'" onclick="_setStars('+n+')" onmouseover="_hoverStar('+n+')" onmouseleave="_leaveStar()">★</span>';}).join('')+
+    '</div>'+
+    '<input type="hidden" id="rv-rating" value="0">'+
+    '<div id="rv-star-label" style="font-size:12px;color:var(--t2);margin-top:8px;font-weight:600">별점을 선택해주세요</div>'+
+    '</div>'+
+
+    '<div style="margin-bottom:16px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">평가 항목 (복수 선택)</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px" id="rv-criteria">'+
+    criteria.map(function(c){
+      return '<button onclick="_toggleCriteria(this)" data-c="'+c+'" style="padding:7px 14px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">'+c+'</button>';
+    }).join('')+
+    '</div></div>'+
+
+    '<div class="inp-wrap">'+
+    '<label class="inp-lbl">한줄 평 (선택)</label>'+
+    '<textarea class="inp" id="rv-comment" rows="2" placeholder="간단한 후기를 남겨주세요" style="resize:none"></textarea></div>'+
+
+    '<button onclick="_submitReview(\''+targetId+'\',\''+targetName+'\',\''+targetType+'\',\''+applyId+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" id="rv-submit">⭐ 평가 제출하기</button>';
+  _openModal();
+}
+
+function _setStars(n){
+  document.getElementById('rv-rating').value=n;
+  var labels=['','별로예요','아쉬워요','보통이에요','좋아요','아주 좋아요'];
+  var lbl=document.getElementById('rv-star-label');if(lbl)lbl.textContent=labels[n]||'';
+  document.querySelectorAll('#rv-stars .star').forEach(function(s,i){s.classList.toggle('on',i<n);});
+}
+function _hoverStar(n){document.querySelectorAll('#rv-stars .star').forEach(function(s,i){s.style.color=i<n?'var(--br)':'var(--bd)';});}
+function _leaveStar(){
+  var n=parseInt((document.getElementById('rv-rating')||{}).value)||0;
+  document.querySelectorAll('#rv-stars .star').forEach(function(s,i){s.style.color=i<n?'var(--br)':'var(--bd)';});
+}
+
+function _toggleCriteria(btn){
+  btn.classList.toggle('on');
+  var on=btn.classList.contains('on');
+  btn.style.borderColor=on?'var(--br)':'var(--bd)';
+  btn.style.background=on?'var(--brl)':'var(--bg3)';
+  btn.style.color=on?'var(--br)':'var(--t2)';
+}
+
+function _submitReview(targetId,targetName,targetType,applyId){
+  var rating=parseInt((document.getElementById('rv-rating')||{}).value)||0;
+  if(!rating){_yToast('별점을 선택해주세요');return;}
+  var comment=(document.getElementById('rv-comment')||{}).value||'';
+  var criteria=[];
+  document.querySelectorAll('#rv-criteria .on').forEach(function(b){criteria.push(b.dataset.c);});
+  var btn=document.getElementById('rv-submit');btn.textContent='제출 중...';btn.disabled=true;
+
+  _db.collection('yongcha_reviews').add({
+    reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
+    revieweeId:targetId,revieweeName:targetName,revieweeType:targetType,
+    applyId:applyId,rating:rating,criteria:criteria,comment:comment,isFake:false,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    var updateField=_CU.type==='agency'?{agencyReviewed:true}:{driverReviewed:true};
+    return applyId?_db.collection('yongcha_applies').doc(applyId).update(updateField):Promise.resolve();
+  }).then(function(){
+    _calcTrustScore(targetId);
+    _yToast('✅ 평가가 등록됐어요!');
+    _closeModal();
+  }).catch(function(e){btn.textContent='⭐ 평가 제출하기';btn.disabled=false;_yToast('오류: '+e.message);});
+}
+
+function _calcTrustScore(userId){
+  _db.collection('yongcha_reviews').where('revieweeId','==',userId).get().then(function(snap){
+    if(snap.empty)return;
+    var total=0,count=0,fakeCount=0;
+    snap.forEach(function(doc){var d=doc.data();total+=d.rating||0;count++;if(d.isFake)fakeCount++;});
+    var avg=count>0?Math.round((total/count)*10)/10:0;
+    _db.collection('yongcha_users').doc(userId).update({rating:avg,reviewCount:count,fakeCount:fakeCount}).catch(function(){});
+  }).catch(function(){});
+}
+
+function _reportFakePost(postId,agencyId){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="text-align:center;padding:16px 0 8px">'+
+    '<div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
+    '<div style="font-size:18px;font-weight:900;margin-bottom:8px">허위공고 신고</div>'+
+    '<div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:16px">이 공고가 허위 정보를 포함하고 있나요?<br>허위 신고 시 불이익이 있을 수 있어요.</div>'+
+    '</div>'+
+    '<div class="inp-wrap">'+
+    '<label class="inp-lbl">신고 사유 <span style="color:var(--rd)">*</span></label>'+
+    '<textarea class="inp" id="fake-reason" rows="3" placeholder="허위 내용을 구체적으로 알려주세요 (예: 실제 단가 다름, 존재하지 않는 공고)" style="resize:none"></textarea></div>'+
+    '<button onclick="_doReportFake(\''+postId+'\',\''+agencyId+'\')" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:1.5px solid var(--rd);border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px" id="fake-submit">⚠️ 신고 제출</button>'+
+    '<button onclick="_closeModal()" style="width:100%;padding:12px;background:var(--bg3);color:var(--t2);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>';
+  _openModal();
+}
+
+function _doReportFake(postId,agencyId){
+  var reason=(document.getElementById('fake-reason')||{}).value||'';
+  if(!reason.trim()){_yToast('신고 사유를 입력해주세요');return;}
+  var btn=document.getElementById('fake-submit');btn.textContent='신고 중...';btn.disabled=true;
+  _db.collection('yongcha_reviews').add({
+    reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
+    revieweeId:agencyId,revieweeType:'agency',
+    postId:postId,applyId:'',rating:1,isFake:true,criteria:[],comment:reason,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _calcTrustScore(agencyId);
+    _yToast('신고가 접수됐어요. 검토 후 처리됩니다.');
+    _closeModal();
+  }).catch(function(e){btn.textContent='⚠️ 신고 제출';btn.disabled=false;_yToast('오류: '+e.message);});
 }
 
 // ── FCM 알림 ─────────────────────────────────────────────────
