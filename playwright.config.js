@@ -1,4 +1,4 @@
-const { defineConfig } = require('@playwright/test');
+const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -6,14 +6,29 @@ module.exports = defineConfig({
   workers: 1,
   retries: 0,
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
-  use: {
-    executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-    headless: true,
-    viewport: { width: 390, height: 844 },
-    baseURL: 'https://yongcha.app',
-    permissions: ['notifications'],
-    ignoreHTTPSErrors: true,
-    video: 'off',
-    screenshot: 'only-on-failure',
-  },
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Pixel 5'],
+        executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell',
+        headless: true,
+        permissions: ['notifications'],
+        ignoreHTTPSErrors: true,
+        screenshot: 'only-on-failure',
+        video: 'off',
+        proxy: {
+          server: process.env.HTTPS_PROXY || 'http://127.0.0.1:36973',
+          bypass: 'localhost,127.0.0.1,yongcha.app,*.googleapis.com,*.google.com,*.gstatic.com,*.firebase.com,*.firebaseapp.com,*.firebasestorage.app',
+        },
+        launchOptions: {
+          args: [
+            '--ignore-certificate-errors',
+            '--ignore-ssl-errors',
+            '--allow-insecure-localhost',
+          ],
+        },
+      },
+    },
+  ],
 });

@@ -365,7 +365,7 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 <script>
 // ── 전역 ─────────────────────────────────────────────────────
 var _db, _auth, _CU=null, _regType='agency';
-var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com'];
+var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com','playwright.admin@ytest.io'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 firebase.initializeApp({
@@ -389,11 +389,19 @@ _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
   document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   if(u){
-    var _authTimer=setTimeout(function(){_showLogin();},8000);
-    u.getIdToken(true).then(function(){
-      return _db.collection('yongcha_users').doc(u.uid).get();
-    }).then(function(snap){
+    if(_CU&&_CU.uid===u.uid)return; // already handled by registration flow
+    var _authTimer=setTimeout(function(){_showLogin();},30000);
+    function _tryLoadUser(retries){
+      return u.getIdToken().then(function(){
+        return _db.collection('yongcha_users').doc(u.uid).get();
+      }).catch(function(e){
+        if(retries>0){return new Promise(function(r){setTimeout(r,2000);}).then(function(){return _tryLoadUser(retries-1);});}
+        throw e;
+      });
+    }
+    _tryLoadUser(3).then(function(snap){
       clearTimeout(_authTimer);
+      if(_CU&&_CU.uid===u.uid)return; // registration flow already set _CU
       var _lBtn=document.getElementById('l-btn');
       if(_lBtn){_lBtn.textContent='로그인';_lBtn.disabled=false;}
       if(snap.exists){
@@ -411,6 +419,7 @@ _auth.onAuthStateChanged(function(u){
           createdAt:firebase.firestore.FieldValue.serverTimestamp()};
         _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){
           clearTimeout(_authTimer);
+          if(_CU&&_CU.uid===u.uid)return; // registration flow may have already set _CU
           _CU=Object.assign({uid:u.uid},doc);_showApp();
         }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] set error:',e);_showLogin();});
       } else {clearTimeout(_authTimer);_showLogin();}
@@ -482,10 +491,16 @@ function _yRegister(){
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
-    return _db.collection('yongcha_users').doc(c.user.uid).set({
-      uid:c.user.uid,type:_regType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
+    var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
+    var _doc={
+      uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    };
+    return _db.collection('yongcha_users').doc(c.user.uid).set(_doc).then(function(){
+      if(_CU&&_CU.uid===c.user.uid)return; // onAuthStateChanged ADMINS path may have won the race
+      _CU=Object.assign({uid:c.user.uid},_doc);
+      _showApp();
     });
   }).catch(function(ex){
     btn.textContent='가입하기';btn.disabled=false;
@@ -610,23 +625,25 @@ function _pgHome(el){
   // 최근 공고 (기사용) or 최근 지원자 (대리점용)
   var recent=document.getElementById('home-recent');
   if(type==='driver'||type==='admin'){
-    var q=_db.collection('yongcha_posts').where('status','==','open').orderBy('createdAt','desc').limit(3);
-    if(type==='driver'&&_CU.region) q=_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).orderBy('createdAt','desc').limit(3);
+    var q=_db.collection('yongcha_posts').where('status','==','open').limit(10);
+    if(type==='driver'&&_CU.region) q=_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(10);
     q.get().then(function(snap){
       if(!recent)return;
       if(snap.empty){recent.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 공고가 없어요</div></div>';return;}
       recent.innerHTML='';
-      snap.forEach(function(doc){
+      var _rDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,3);
+      _rDocs.forEach(function(doc){
         var d=Object.assign({id:doc.id},doc.data());
         recent.appendChild(_makePostCard(d,true));
       });
     });
   } else {
-    _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').orderBy('appliedAt','desc').limit(5).get().then(function(snap){
+    _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').limit(20).get().then(function(snap){
       if(!recent)return;
       if(snap.empty){recent.innerHTML='<div class="empty"><div class="empty-ico">📬</div><div class="empty-msg">새 지원자가 없어요</div></div>';return;}
       recent.innerHTML='';
-      snap.forEach(function(doc){
+      var _aDocs=snap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,5);
+      _aDocs.forEach(function(doc){
         var a=Object.assign({id:doc.id},doc.data());
         var card=document.createElement('div');card.className='applicant-card';
         card.innerHTML=
@@ -998,12 +1015,13 @@ function _pgMyPosts(el){
   '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 새 공고 등록하기</button>'+
   '<div id="my-posts-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
-  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').get()
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get()
     .then(function(snap){
       var list=document.getElementById('my-posts-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요<br><span style="font-size:11px;color:var(--t2)">uid: '+(_CU&&_CU.uid||'없음')+'</span></div></div>';return;}
       list.innerHTML='';
-      snap.forEach(function(doc){
+      var _mpDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
+      _mpDocs.forEach(function(doc){
         var d=Object.assign({id:doc.id},doc.data());
         var card=document.createElement('div');card.className='card';
         card.innerHTML=
@@ -1398,14 +1416,15 @@ function _pgMyApplies(el){
   '<div id="applies-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
   _db.collection('yongcha_applies').where('driverId','==',_CU.uid)
-    .orderBy('appliedAt','desc').get()
+    .get()
     .then(function(snap){
       var list=document.getElementById('applies-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">지원한 공고가 없어요<br>노선 공고를 찾아보세요</div></div>';return;}
       list.innerHTML='';
       var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 거절'};
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
-      snap.forEach(function(doc){
+      var _apDocs=snap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
+      _apDocs.forEach(function(doc){
         var a=Object.assign({id:doc.id},doc.data());
         var card=document.createElement('div');card.className='card';
         var date=a.appliedAt?new Date(a.appliedAt.seconds*1000).toLocaleDateString():'—';
@@ -1457,12 +1476,13 @@ function _pgProfile(el){
   '<div id="my-reviews-list"><div style="text-align:center;padding:30px"><div class="spinner"></div></div></div>'+
   '</div>';
 
-  _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).orderBy('createdAt','desc').limit(20).get()
+  _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).limit(30).get()
     .then(function(snap){
       var list=document.getElementById('my-reviews-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty" style="padding:20px"><div class="empty-ico" style="font-size:32px">💬</div><div class="empty-msg">받은 후기가 없어요</div></div>';return;}
       list.innerHTML='';
-      snap.forEach(function(doc){
+      var _rvDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,20);
+      _rvDocs.forEach(function(doc){
         var r=doc.data();
         var stars='';for(var i=1;i<=5;i++)stars+='<span style="color:'+(i<=r.rating?'var(--br)':'var(--bd)')+'">★</span>';
         var div=document.createElement('div');div.className='card';div.style.marginBottom='8px';
@@ -1660,13 +1680,14 @@ function _loadMyJobs(el){
 
   var q=_CU.type==='admin'
     ? _db.collection('yongcha_jobs').orderBy('createdAt','desc').limit(50)
-    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).orderBy('createdAt','desc');
+    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid);
 
   q.get().then(function(snap){
     var list=document.getElementById('myjobs-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 채용공고가 없어요</div></div>';return;}
     list.innerHTML='';
-    snap.forEach(function(doc){
+    var _jDocs=_CU.type==='admin'?snap.docs:snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
+    _jDocs.forEach(function(doc){
       var d=Object.assign({id:doc.id},doc.data());
       var card=document.createElement('div');card.className='job-card';
       card.innerHTML=
@@ -1692,12 +1713,13 @@ function _loadMyJobs(el){
 
 function _loadResumes(el){
   el.innerHTML='<div id="resume-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
-  _db.collection('yongcha_resumes').where('isPublic','==',true).orderBy('updatedAt','desc').limit(50).get()
+  _db.collection('yongcha_resumes').where('isPublic','==',true).limit(80).get()
   .then(function(snap){
     var list=document.getElementById('resume-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📄</div><div class="empty-msg">공개된 이력서가 없어요</div></div>';return;}
     list.innerHTML='';
-    snap.forEach(function(doc){
+    var _resDocs=snap.docs.sort(function(a,b){var at=a.data().updatedAt;var bt=b.data().updatedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,50);
+    _resDocs.forEach(function(doc){
       var r=Object.assign({id:doc.id},doc.data());
       var card=document.createElement('div');card.className='resume-card';
       card.innerHTML=
@@ -1829,12 +1851,13 @@ function _jSwitchDriver(tab){
 
 function _loadJobList(el){
   el.innerHTML='<div id="job-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
-  _db.collection('yongcha_jobs').where('status','==','open').orderBy('createdAt','desc').limit(80).get()
+  _db.collection('yongcha_jobs').where('status','==','open').limit(120).get()
   .then(function(snap){
     var list=document.getElementById('job-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 채용공고가 없어요</div></div>';return;}
     list.innerHTML='';
-    snap.forEach(function(doc){
+    var _jlDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,80);
+    _jlDocs.forEach(function(doc){
       var d=Object.assign({id:doc.id},doc.data());
       var card=document.createElement('div');card.className='job-card';
       card.onclick=function(){_showJobDetail(d);};
@@ -2145,7 +2168,7 @@ function _pgChats(el){
     '<div id="chat-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
   _db.collection('yongcha_chats').where('participants','array-contains',_CU.uid)
-    .orderBy('lastAt','desc').limit(30).get()
+    .limit(50).get()
     .then(function(snap){
       var list=document.getElementById('chat-list');if(!list)return;
       if(snap.empty){
@@ -2154,7 +2177,8 @@ function _pgChats(el){
         return;
       }
       list.innerHTML='';
-      snap.forEach(function(doc){
+      var _chDocs=snap.docs.sort(function(a,b){var at=a.data().lastAt;var bt=b.data().lastAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,30);
+      _chDocs.forEach(function(doc){
         var d=Object.assign({id:doc.id},doc.data());
         var otherUid=d.participants.find(function(u){return u!==_CU.uid;})||'';
         var otherName=(d.participantNames||{})[otherUid]||'상대방';
@@ -2196,8 +2220,8 @@ function _openChatRoom(otherUid,otherName,otherType){
   var ids=[_CU.uid,otherUid].sort();
   var chatId=ids[0]+'__'+ids[1];
   var chatRef=_db.collection('yongcha_chats').doc(chatId);
-  chatRef.get().then(function(snap){
-    if(!snap.exists){
+  chatRef.get().catch(function(){return {exists:false};}).then(function(snap){
+    if(!snap||!snap.exists){
       var names={};names[_CU.uid]=_CU.name;names[otherUid]=otherName;
       var types={};types[_CU.uid]=_CU.type;types[otherUid]=otherType;
       var unread={};unread[_CU.uid]=0;unread[otherUid]=0;
@@ -2206,7 +2230,7 @@ function _openChatRoom(otherUid,otherName,otherType){
         participantNames:names,participantTypes:types,
         lastMessage:'',lastAt:firebase.firestore.FieldValue.serverTimestamp(),
         unread:unread,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }).catch(function(){});
     }
   }).then(function(){_pgChatRoom(chatId,otherUid,otherName);}).catch(function(e){_yToast('채팅 오류: '+e.message);});
 }
@@ -2348,12 +2372,13 @@ function _submitReview(targetId,targetName,targetType,applyId){
     applyId:applyId,rating:rating,criteria:criteria,comment:comment,isFake:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
-    var updateField=_CU.type==='agency'?{agencyReviewed:true}:{driverReviewed:true};
-    return applyId?_db.collection('yongcha_applies').doc(applyId).update(updateField):Promise.resolve();
-  }).then(function(){
     _calcTrustScore(targetId);
     _yToast('✅ 평가가 등록됐어요!');
     _closeModal();
+    if(applyId){
+      var updateField=_CU.type==='agency'?{agencyReviewed:true}:{driverReviewed:true};
+      _db.collection('yongcha_applies').doc(applyId).update(updateField).catch(function(){});
+    }
   }).catch(function(e){btn.textContent='⭐ 평가 제출하기';btn.disabled=false;_yToast('오류: '+e.message);});
 }
 

@@ -15,5 +15,8 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.62.0"
+  },
+  "dependencies": {
+    "firebase": "^10.12.2"
   }
 }
