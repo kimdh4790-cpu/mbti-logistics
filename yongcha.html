@@ -661,7 +661,7 @@ function _pgHome(el){
 }
 
 // ── 노선 공고 목록 ───────────────────────────────────────────
-var _pf={courier:'전체',region:'전체',urgentOnly:false};
+var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,priceRange:''};
 var _allPosts=[];
 var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
@@ -691,12 +691,19 @@ function _pgPosts(el){
   }).join('')+
   '</div></div>'+
 
-  // 긴급 토글 + 카운트
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-    '<button onclick="_pfToggleUrgent()" id="pf-urgent-btn" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:1.5px solid '+(_pf.urgentOnly?'var(--rd)':'var(--bd)')+';background:'+(_pf.urgentOnly?'var(--rdl)':'transparent')+';color:'+(_pf.urgentOnly?'var(--rd)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+
-      '🔥 긴급만 보기'+
+  // 가격대 + 인증 + 긴급 필터 행
+  '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
+    '<button onclick="_pfToggleUrgent()" id="pf-urgent-btn" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:1.5px solid '+(_pf.urgentOnly?'var(--rd)':'var(--bd)')+';background:'+(_pf.urgentOnly?'var(--rdl)':'transparent')+';color:'+(_pf.urgentOnly?'var(--rd)':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+
+      '🔥 긴급만'+
     '</button>'+
-    '<span id="pf-count" style="font-size:12px;color:var(--t2)"></span>'+
+    '<button onclick="_pfToggleVerified()" id="pf-verified-btn" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:1.5px solid '+(_pf.verifiedOnly?'var(--gn)':'var(--bd)')+';background:'+(_pf.verifiedOnly?'var(--gnl)':'transparent')+';color:'+(_pf.verifiedOnly?'var(--gn)':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+
+      '✅ 인증대리점만'+
+    '</button>'+
+    '<select onchange="_pfSetPrice(this.value)" style="padding:6px 10px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+
+    '<option value="">단가 전체</option>'+
+    ['~700원','700~900원','900~1100원','1100원~'].map(function(r,i){return '<option value="'+i+'"'+(String(_pf.priceRange)===String(i)?' selected':'')+'>'+r+'</option>';}).join('')+
+    '</select>'+
+    '<span id="pf-count" style="font-size:12px;color:var(--t2);margin-left:auto"></span>'+
   '</div>'+
 
   '<div id="posts-list"></div>';
@@ -728,6 +735,21 @@ function _pfToggleUrgent(){
   _renderPostList();
 }
 
+function _pfToggleVerified(){
+  _pf.verifiedOnly=!_pf.verifiedOnly;
+  var btn=document.getElementById('pf-verified-btn');
+  if(btn){
+    btn.style.borderColor=_pf.verifiedOnly?'var(--gn)':'var(--bd)';
+    btn.style.background=_pf.verifiedOnly?'var(--gnl)':'transparent';
+    btn.style.color=_pf.verifiedOnly?'var(--gn)':'var(--t2)';
+  }
+  _renderPostList();
+}
+function _pfSetPrice(val){
+  _pf.priceRange=val;
+  _renderPostList();
+}
+
 window._yStats=window._yStats||{};
 function _loadFilteredPosts(){
   var list=document.getElementById('posts-list');
@@ -755,10 +777,19 @@ function _renderPostList(){
   var list=document.getElementById('posts-list');
   if(!list)return;
 
+  var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var filtered=_allPosts.filter(function(p){
     if(_pf.courier!=='전체'&&p.courier!==_pf.courier)return false;
     if(_pf.region!=='전체'&&p.region!==_pf.region)return false;
     if(_pf.urgentOnly&&!p.urgent)return false;
+    if(_pf.verifiedOnly){
+      var ag=_trustGrade(p.agencyRating||0,p.agencyReviewCount||0,p.agencyFakeCount||0);
+      if(ag.label!=='✅ 인증'&&ag.label!=='💎 프리미엄')return false;
+    }
+    if(_pf.priceRange!==''){
+      var pr=priceRanges[parseInt(_pf.priceRange)];
+      if(pr){var up=p.unitPrice||0;if(up<pr[0]||up>=pr[1])return false;}
+    }
     return true;
   });
 
@@ -815,6 +846,10 @@ function _trustGrade(rating,reviewCount,fakeCount){
   return{label:'신규',color:'var(--t3)',bg:'var(--bg3)'};
 }
 
+function _courierIcon(courier){
+  var icons={'CJ대한통운':'📦','한진택배':'🟡','롯데택배':'🔴','우체국':'🇰🇷','로젠택배':'🟠','쿠팡로지스틱스':'🛒'};
+  return icons[courier]||'🚚';
+}
 function _makePostCard(d){
   var isOpen=d.status==='open';
   var isMatched=d.status==='matched';
@@ -862,9 +897,12 @@ function _makePostCard(d){
     // 긴급 배너
     (urgLabel?'<div style="display:inline-flex;align-items:center;gap:4px;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:8px">'+urgLabel+'</div><br>':'')+
 
-    // 상단: 택배사 + 상태
+    // 상단: 택배사 로고 + 상태 + 신뢰배지
     '<div class="post-top">'+
-      '<span class="courier-badge">🚚 '+d.courier+'</span>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<span class="courier-badge">'+_courierIcon(d.courier)+' '+d.courier+'</span>'+
+        '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:'+grade.bg+';color:'+grade.color+'">'+grade.label+'</span>'+
+      '</div>'+
       statusHtml+
     '</div>'+
 
@@ -921,7 +959,7 @@ function _makePostCard(d){
     '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bd)">'+
       '<div>'+
         '<div style="font-size:12px;font-weight:700;color:var(--tx)">🏢 '+d.agencyName+'</div>'+
-        '<div style="font-size:11px;margin-top:2px;font-weight:700;color:'+grade.color+'">'+grade.label+'</div>'+
+        (d.applicantCount?'<div style="font-size:10px;color:var(--t3);margin-top:1px">지원자 '+d.applicantCount+'명</div>':'')+
       '</div>'+
       '<div style="display:flex;gap:6px">'+
         (mapHref?'<a href="'+mapHref+'" target="_blank" onclick="event.stopPropagation()" style="padding:7px 10px;background:var(--bg3);border-radius:10px;color:var(--t2);font-size:11px;font-weight:700;text-decoration:none">🗺 지도</a>':'')+
