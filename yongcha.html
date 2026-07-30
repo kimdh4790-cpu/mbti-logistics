@@ -881,6 +881,17 @@ function _makePostCard(d){
       '<div style="font-size:11px;color:var(--t2)">최소보장 '+minG+'만원</div>'+
     '</div>':'')+
 
+    // 상차지 + 거리
+    (d.loadingAddr?
+    '<div style="font-size:11px;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:4px">'+
+    '<span style="font-weight:700;color:var(--br)">🏭 상차지</span> '+
+    d.loadingAddr.substring(0,30)+(d.loadingAddr.length>30?'…':'')+
+    (d.loadingLat&&d.zones&&d.zones.length&&d.zones[0].lat?(function(){
+      var dists=d.zones.map(function(z){return _yHaversine(d.loadingLat,d.loadingLng,z.lat,z.lng);});
+      var avg=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+      return ' <span style="background:var(--acl);color:var(--ac);padding:1px 6px;border-radius:8px;font-size:10px;font-weight:700">구역까지 '+avg.toFixed(1)+'km</span>';
+    })():'')+'</div>':'')+
+
     // 태그 행
     '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'+
       (d.workShift?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">'+d.workShift+'</span>':'')+
@@ -1257,7 +1268,13 @@ function _pgPostWrite(el){
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널"></div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
+  '</div>'+
+  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
+  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
+  '</div>'+
   '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
@@ -1388,6 +1405,8 @@ function _submitPost(){
   var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
   var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
   var aptRatio=get('pw-apt'), loadingAddr=get('pw-loadingAddr');
+  var loadingLat=parseFloat(get('pw-loadingLat'))||null;
+  var loadingLng=parseFloat(get('pw-loadingLng'))||null;
   var btn=document.getElementById('submit-btn');
 
   if(!courier||!area||!volume||!price||!settleDay){
@@ -1438,7 +1457,7 @@ function _submitPost(){
       return _db.collection('yongcha_posts').add({
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
         region:_CU.region, courier:courier, area:area, routeNo:routeNo,
-        loadingAddr:loadingAddr,
+        loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
         zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
         postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
         workHours:hours, startDate:date, endDate:endDate,
@@ -2659,6 +2678,47 @@ function _initPostMap(){
   });
 }
 
+// 좌표간 직선거리 (km) — Haversine
+function _yHaversine(lat1,lng1,lat2,lng2){
+  var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// 상차지 주소 주소검색 → 좌표 저장
+function _geocodeLoadingAddr(){
+  new daum.Postcode({
+    oncomplete:function(data){
+      var addr=data.roadAddress||data.jibunAddress;
+      var inp=document.getElementById('pw-loadingAddr');
+      if(inp)inp.value=addr;
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status===kakao.maps.services.Status.OK){
+            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+            var latInp=document.getElementById('pw-loadingLat');
+            var lngInp=document.getElementById('pw-loadingLng');
+            if(latInp)latInp.value=lat;
+            if(lngInp)lngInp.value=lng;
+            // 구역과의 거리 미리보기
+            var prev=document.getElementById('loading-dist-preview');
+            if(prev&&window._zones&&window._zones.length){
+              var dists=window._zones.map(function(z){return _yHaversine(lat,lng,z.lat,z.lng);});
+              var avgD=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+              prev.textContent='📍 배송구역 중심까지 약 '+avgD.toFixed(1)+'km';
+            } else if(prev){
+              prev.textContent='✅ 좌표 저장됨 (구역 추가 후 거리 표시)';
+            }
+          } else {
+            _yToast('주소 좌표를 찾을 수 없어요');
+          }
+        });
+      });
+    }
+  }).open();
+}
+
 // Daum 우편번호 팝업 - 다중 구역 추가
 window._zones = window._zones || [];
 function _openDaumPost(){
@@ -2700,6 +2760,15 @@ function _renderZoneTags(){
       +'<button onclick="event.stopPropagation();_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 0 0 4px;color:#000;line-height:1">×</button>'
       +'</span>';
   }).join('');
+  // 상차지 좌표 있으면 거리 미리보기 갱신
+  var llat=parseFloat((document.getElementById('pw-loadingLat')||{}).value)||null;
+  var llng=parseFloat((document.getElementById('pw-loadingLng')||{}).value)||null;
+  var prev=document.getElementById('loading-dist-preview');
+  if(prev&&llat&&llng&&window._zones.length){
+    var dists=window._zones.map(function(z){return _yHaversine(llat,llng,z.lat,z.lng);});
+    var avgD=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+    prev.textContent='📍 배송구역 중심까지 약 '+avgD.toFixed(1)+'km';
+  }
 }
 function _removeZone(i){
   window._zones.splice(i,1);
