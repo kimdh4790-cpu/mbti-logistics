@@ -186,7 +186,9 @@ var _db=null;
   }catch(e){console.warn('FB:',e);}
 })();
 
-var _allRecords=[], _filterLoc='';
+var _allRecords=[], _filterLoc='', _adminUnsub=null;
+function _isIn(r){return r.type==='in'||r.type==='출근';}
+function _isOut(r){return r.type==='out'||r.type==='퇴근';}
 
 // 날짜 초기화
 document.addEventListener('DOMContentLoaded',function(){
@@ -208,14 +210,14 @@ function load(){
   var el=document.getElementById('emp-list');
   el.innerHTML='<div class="empty"><span class="spin"></span> 로딩 중...</div>';
   if(!_db)return;
-
-  _db.collection('attendance').where('date','==',date)
-    .orderBy('timestamp','asc').limit(500).get()
-    .then(function(snap){
+  if(_adminUnsub){_adminUnsub();_adminUnsub=null;}
+  _adminUnsub=_db.collection('attendance').where('date','==',date)
+    .orderBy('timestamp','asc').limit(500)
+    .onSnapshot(function(snap){
       _allRecords=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
       _buildLocTabs();
       _render();
-    }).catch(function(e){
+    },function(e){
       el.innerHTML='<div class="empty">오류: '+esc(e.message)+'</div>';
     });
 }
@@ -250,13 +252,13 @@ function _render(){
   });
 
   var emps=Object.values(empMap);
-  var inCnt=records.filter(function(r){return r.type==='in';}).length;
-  var outCnt=records.filter(function(r){return r.type==='out';}).length;
+  var inCnt=records.filter(_isIn).length;
+  var outCnt=records.filter(_isOut).length;
   var ppl=emps.length;
   // 근무중 = 출근은 있는데 퇴근 없는 사람
   var working=emps.filter(function(e){
-    var ins=e.records.filter(function(r){return r.type==='in';});
-    var outs=e.records.filter(function(r){return r.type==='out';});
+    var ins=e.records.filter(_isIn);
+    var outs=e.records.filter(_isOut);
     return ins.length>0&&outs.length===0;
   }).length;
 
@@ -269,8 +271,8 @@ function _render(){
 
   // 직원 카드 렌더
   document.getElementById('emp-list').innerHTML=emps.map(function(emp,idx){
-    var ins=emp.records.filter(function(r){return r.type==='in';});
-    var outs=emp.records.filter(function(r){return r.type==='out';});
+    var ins=emp.records.filter(_isIn);
+    var outs=emp.records.filter(_isOut);
     var lastIn=ins[ins.length-1];
     var lastOut=outs[outs.length-1];
     var isWorking=ins.length>0&&outs.length===0;
@@ -289,7 +291,7 @@ function _render(){
     else statusHtml='<span class="status-none">○ 미출근</span>';
 
     var timeline=emp.records.map(function(r){
-      var isIn=r.type==='in';
+      var isIn=_isIn(r);
       var badges='<span class="tl-badge b-qr">QR</span>';
       if(r.gpsUsed)badges+='<span class="tl-badge b-gps">GPS</span>';
       if(r.networkType&&r.networkType!=='unknown')badges+='<span class="tl-badge b-wifi">'+(r.networkType==='wifi'?'Wi-Fi':r.networkType)+'</span>';
@@ -337,7 +339,7 @@ function exportCSV(){
   var rows=[['이름','거점','유형','시각','GPS','네트워크','날짜']];
   _allRecords.forEach(function(r){
     rows.push([
-      r.name||'',r.loc||r.camp||'',r.type==='in'?'출근':'퇴근',
+      r.name||'',r.loc||r.camp||'',_isIn(r)?'출근':'퇴근',
       r.time||'',r.gpsUsed?'O':'X',r.networkType||'',r.date||''
     ]);
   });
@@ -352,12 +354,7 @@ function exportCSV(){
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.className='show';clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// 30초마다 자동 새로고침
-setInterval(function(){
-  var d=document.getElementById('sel-date').value;
-  var today=new Date().toISOString().slice(0,10);
-  if(d===today)load();
-},30000);
+// onSnapshot이 실시간 업데이트를 처리합니다
 </script>
 </body>
 </html>

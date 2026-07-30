@@ -324,6 +324,8 @@ function _dineStaffDetail(id){
  });
 }
 
+var _dineAttUnsub=null;
+
 function _dineAttend(el){
  var did=_CU.dealerId;
  el.innerHTML='';
@@ -367,99 +369,96 @@ function _dineAttendTab(tab){
 
 function _dineLoadAttend(did){
  var date=document.getElementById('att-date')?.value||_today();
- Promise.all([
-  _db.collection('attendance').where('dealerId','==',did).where('date','==',date).get(),
-  _db.collection('members').where('dealerId','==',did).get()
- ]).then(function(results){
-  var attSnap=results[0],memSnap=results[1];
+ if(_dineAttUnsub){_dineAttUnsub();_dineAttUnsub=null;}
+ var kpi=document.getElementById('att-kpi');
+ var table=document.getElementById('att-table');
+ if(table)table.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div>';
+ _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
   var memMap={};memSnap.forEach(function(doc){memMap[doc.id]=doc.data();});
   var allMem=[];memSnap.forEach(function(doc){allMem.push({id:doc.id,data:doc.data()});});
-  var ins={},outs={};
-  attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')ins[d.memberId]=d;else outs[d.memberId]=d;});
-
-  /* KPI */
-  var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
-  var done=Object.keys(ins).filter(function(id){return !!outs[id];}).length;
-  var absent=allMem.filter(function(m){return !ins[m.id]&&(m.data.status||'active')==='active';}).length;
-  var totalPay=0;
-  Object.keys(ins).forEach(function(id){
-   var m=memMap[id]||{};
-   var inT=new Date(ins[id].time);
-   var outT=outs[id]?new Date(outs[id].time):new Date();
-   var diff=(outT-inT)/60000;var br=diff>=480?60:diff>=240?30:0;
-   var h=(diff-br)/60;
-   var nightH=0;var ns=new Date(inT);ns.setHours(22,0,0,0);
-   if(outT>ns)nightH=(outT-Math.max(inT,ns))/3600000;
-   totalPay+=Math.round(h*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
-  });
-  var kpi=document.getElementById('att-kpi');
-  if(kpi)kpi.innerHTML=
-   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🟢 근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">✅ 완료</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">❌ 미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">💰 예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
-
-  var table=document.getElementById('att-table');if(!table)return;
-  var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
-  if(!allIds.length){table.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 직원 없음</div>';return;}
-
-  var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-   '<thead><tr style="border-bottom:2px solid var(--bd);background:var(--bg3)">'+
-   '<th style="padding:8px;text-align:left">이름</th>'+
-   '<th style="padding:8px;text-align:left">파트</th>'+
-   '<th style="padding:8px;text-align:center">출근</th>'+
-   '<th style="padding:8px;text-align:center">퇴근</th>'+
-   '<th style="padding:8px;text-align:center">근무시간</th>'+
-   '<th style="padding:8px;text-align:center">야간</th>'+
-   '<th style="padding:8px;text-align:right">예상급여</th>'+
-   '<th style="padding:8px;text-align:center">상태</th>'+
-   '<th style="padding:8px;text-align:center">수정</th>'+
-   '</tr></thead><tbody>';
-
-  allIds.forEach(function(id){
-   var m=memMap[id]||{};
-   if((m.status||'active')==='resigned')return;
-   var inT=ins[id]?new Date(ins[id].time):null;
-   var outT=outs[id]?new Date(outs[id].time):null;
-   var diffH=0,nightH=0,estPay=0,isLate=false;
-   if(inT&&outT){
-    var diffMin=(outT-inT)/60000;var br=diffMin>=480?60:diffMin>=240?30:0;
-    diffH=Math.round((diffMin-br)/60*10)/10;
-    var ns=new Date(inT);ns.setHours(22,0,0,0);
-    if(outT>ns)nightH=Math.round((outT-Math.max(inT,ns))/3600000*10)/10;
-    estPay=Math.round(diffH*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
-   } else if(inT&&!outT){
-    var now2=new Date();
-    var diffMin2=(now2-inT)/60000;var br2=diffMin2>=480?60:diffMin2>=240?30:0;
-    diffH=Math.round((diffMin2-br2)/60*10)/10;
-    var ns2=new Date(inT);ns2.setHours(22,0,0,0);
-    if(now2>ns2)nightH=Math.round((now2-Math.max(inT,ns2))/3600000*10)/10;
-    estPay=Math.round(diffH*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
-   }
-   var isWorking=inT&&!outT;
-   var isAbsent=!inT;
-   var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
-   var statusBg=isWorking?'rgba(34,197,94,.12)':isAbsent?'rgba(239,68,68,.06)':'';
-   html+='<tr style="border-bottom:1px solid var(--bd);'+(statusBg?'background:'+statusBg:'')+'">'+
-    '<td style="padding:8px;font-weight:700">'+(m.name||id)+'</td>'+
-    '<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+partColor+'">'+({'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||'-')+'</span></td>'+
-    '<td style="padding:8px;text-align:center">'+(inT?'<span style="'+(isLate?'color:#ef4444;font-weight:700':'')+'">'+inT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>':'<span style="color:#ef4444">-</span>')+'</td>'+
-    '<td style="padding:8px;text-align:center">'+(outT?outT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):isWorking?'<span style="color:#22c55e;font-weight:700">근무중</span>':'-')+'</td>'+
-    '<td style="padding:8px;text-align:center;font-weight:700;color:var(--br)">'+(diffH?diffH+'h':'-')+'</td>'+
-    '<td style="padding:8px;text-align:center;color:#f59e0b">'+(nightH?nightH+'h':'-')+'</td>'+
-    '<td style="padding:8px;text-align:right;font-weight:700;color:#22c55e">'+(estPay?'₩'+estPay.toLocaleString():'-')+'</td>'+
-    '<td style="padding:8px;text-align:center">'+
-    (isWorking?'<span style="font-size:10px;font-weight:700;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:2px 8px">● 근무중</span>':
-     isAbsent?'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border-radius:20px;padding:2px 8px">미출근</span>':
-     '<span style="font-size:10px;color:var(--t3)">완료</span>')+
-    '</td>'+
-    '<td style="padding:8px;text-align:center">'+
-    '<button data-mid="'+id+'" data-dt="'+date+'" onclick="_dineAttendEdit(this.dataset.mid,this.dataset.dt)" style="font-size:9px;padding:2px 7px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--t3);cursor:pointer">수정</button>'+
-    '</td>'+
-    '</tr>';
-  });
-  html+='</tbody></table></div>';
-  table.innerHTML=html;
+  _dineAttUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','==',date)
+   .onSnapshot(function(attSnap){
+    var ins={},outs={};
+    attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')ins[d.memberId]=d;else outs[d.memberId]=d;});
+    /* KPI */
+    var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
+    var done=Object.keys(ins).filter(function(id){return !!outs[id];}).length;
+    var absent=allMem.filter(function(m){return !ins[m.id]&&(m.data.status||'active')==='active';}).length;
+    var totalPay=0;
+    Object.keys(ins).forEach(function(id){
+     var m=memMap[id]||{};
+     var inT=new Date(ins[id].time);
+     var outT=outs[id]?new Date(outs[id].time):new Date();
+     var diff=(outT-inT)/60000;var br=diff>=480?60:diff>=240?30:0;
+     var h=(diff-br)/60;
+     var nightH=0;var ns=new Date(inT);ns.setHours(22,0,0,0);
+     if(outT>ns)nightH=(outT-Math.max(inT,ns))/3600000;
+     totalPay+=Math.round(h*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
+    });
+    if(kpi)kpi.innerHTML=
+     '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🟢 근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">✅ 완료</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">❌ 미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">💰 예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
+    var tbl=document.getElementById('att-table');if(!tbl)return;
+    var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
+    if(!allIds.length){tbl.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 직원 없음</div>';return;}
+    var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+     '<thead><tr style="border-bottom:2px solid var(--bd);background:var(--bg3)">'+
+     '<th style="padding:8px;text-align:left">이름</th>'+
+     '<th style="padding:8px;text-align:left">파트</th>'+
+     '<th style="padding:8px;text-align:center">출근</th>'+
+     '<th style="padding:8px;text-align:center">퇴근</th>'+
+     '<th style="padding:8px;text-align:center">근무시간</th>'+
+     '<th style="padding:8px;text-align:center">야간</th>'+
+     '<th style="padding:8px;text-align:right">예상급여</th>'+
+     '<th style="padding:8px;text-align:center">상태</th>'+
+     '<th style="padding:8px;text-align:center">수정</th>'+
+     '</tr></thead><tbody>';
+    allIds.forEach(function(id){
+     var m=memMap[id]||{};
+     if((m.status||'active')==='resigned')return;
+     var inT=ins[id]?new Date(ins[id].time):null;
+     var outT=outs[id]?new Date(outs[id].time):null;
+     var diffH=0,nightH=0,estPay=0,isLate=false;
+     if(inT&&outT){
+      var diffMin=(outT-inT)/60000;var br=diffMin>=480?60:diffMin>=240?30:0;
+      diffH=Math.round((diffMin-br)/60*10)/10;
+      var ns=new Date(inT);ns.setHours(22,0,0,0);
+      if(outT>ns)nightH=Math.round((outT-Math.max(inT,ns))/3600000*10)/10;
+      estPay=Math.round(diffH*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
+     } else if(inT&&!outT){
+      var now2=new Date();
+      var diffMin2=(now2-inT)/60000;var br2=diffMin2>=480?60:diffMin2>=240?30:0;
+      diffH=Math.round((diffMin2-br2)/60*10)/10;
+      var ns2=new Date(inT);ns2.setHours(22,0,0,0);
+      if(now2>ns2)nightH=Math.round((now2-Math.max(inT,ns2))/3600000*10)/10;
+      estPay=Math.round(diffH*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
+     }
+     var isWorking=inT&&!outT;
+     var isAbsent=!inT;
+     var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
+     var statusBg=isWorking?'rgba(34,197,94,.12)':isAbsent?'rgba(239,68,68,.06)':'';
+     html+='<tr style="border-bottom:1px solid var(--bd);'+(statusBg?'background:'+statusBg:'')+'">'+
+      '<td style="padding:8px;font-weight:700">'+(m.name||id)+'</td>'+
+      '<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+partColor+'">'+({'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||'-')+'</span></td>'+
+      '<td style="padding:8px;text-align:center">'+(inT?'<span style="'+(isLate?'color:#ef4444;font-weight:700':'')+'">'+inT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>':'<span style="color:#ef4444">-</span>')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+(outT?outT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):isWorking?'<span style="color:#22c55e;font-weight:700">근무중</span>':'-')+'</td>'+
+      '<td style="padding:8px;text-align:center;font-weight:700;color:var(--br)">'+(diffH?diffH+'h':'-')+'</td>'+
+      '<td style="padding:8px;text-align:center;color:#f59e0b">'+(nightH?nightH+'h':'-')+'</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:700;color:#22c55e">'+(estPay?'₩'+estPay.toLocaleString():'-')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+
+      (isWorking?'<span style="font-size:10px;font-weight:700;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:2px 8px">● 근무중</span>':
+       isAbsent?'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border-radius:20px;padding:2px 8px">미출근</span>':
+       '<span style="font-size:10px;color:var(--t3)">완료</span>')+
+      '</td>'+
+      '<td style="padding:8px;text-align:center">'+
+      '<button data-mid="'+id+'" data-dt="'+date+'" onclick="_dineAttendEdit(this.dataset.mid,this.dataset.dt)" style="font-size:9px;padding:2px 7px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--t3);cursor:pointer">수정</button>'+
+      '</td></tr>';
+    });
+    html+='</tbody></table></div>';
+    tbl.innerHTML=html;
+   });
  });
 }
 
@@ -531,7 +530,7 @@ function _dineAttendEdit(memberId,date){
    '<div class="input-group"><label>퇴근 시간</label><input id="ae-out" class="inp" type="time" value="'+outTime+'"></div>'+
    '<div style="font-size:10px;color:var(--t3);margin-bottom:12px">⚠️ 수동 수정은 기록에 남습니다</div>'+
    '<div style="display:flex;gap:8px">'+
-   '<button class="btn btn-primary" style="flex:1" data-mid="'+memberId+'" data-dt="'+date+'" data-in="'+(inDocId||'')+'" data-out="'+(outDocId||'')+'" onclick="_dineAttendSave(this.dataset.mid,this.dataset.dt,this.dataset.in,this.dataset.out)">저장</button>'+
+   '<button class="btn btn-primary" style="flex:1" data-mid="'+memberId+'" data-dt="'+date+'" data-in="'+(inDoc||'')+'" data-out="'+(outDoc||'')+'" onclick="_dineAttendSave(this.dataset.mid,this.dataset.dt,this.dataset.in,this.dataset.out)">저장</button>'+
    '<button class="btn btn-ghost" onclick="this.closest(&apos;.mo&apos;).remove()">취소</button>'+
    '</div>';
   mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};document.body.appendChild(mo);

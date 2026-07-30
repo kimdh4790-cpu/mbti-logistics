@@ -162,7 +162,7 @@ function _dineCalcPayroll(did){
       '</div></div>';
     })()+
     '<div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">'+
-   '<button class="btn btn-ghost btn-sm" data-mid="'+id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">📋 명세서</button>'+
+   '<button class="btn btn-ghost btn-sm" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">📋 명세서</button>'+
     '<button class="btn btn-sm btn-primary" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)">📤 알림톡</button>'+
     '</div>'+
     '</div>';
@@ -280,16 +280,19 @@ function _calcPayFull(m,att,empCnt,ym){
 
 /* 급여명세서 모달 */
 function _dinePayslipModal(memberId,ym){
- _db.collection('members').doc(memberId).get().then(function(doc){
+ var from=ym+'-01',to=ym+'-31';
+ Promise.all([
+  _db.collection('members').doc(memberId).get(),
+  _db.collection('members').where('dealerId','==',_CU.dealerId).get(),
+  _db.collection('attendance').where('dealerId','==',_CU.dealerId).where('memberId','==',memberId).where('date','>=',from).where('date','<=',to).get()
+ ]).then(function(results){
+  var doc=results[0],allMem=results[1],attSnap=results[2];
   if(!doc.exists)return;
   var m=doc.data();m._id=doc.id;
-  var from=ym+'-01',to=ym+'-31';
-  _db.collection('attendance').where('dealerId','==',_CU.dealerId)
-   .where('memberId','==',memberId).where('date','>=',from).where('date','<=',to).get()
-   .then(function(attSnap){
-    var att={ins:[],outs:[]};
-    attSnap.forEach(function(d){var dd=d.data();if(dd.type==='in')att.ins.push(dd);else att.outs.push(dd);});
-    var r=_calcPayFull(m,att,10,ym);
+  var empCnt=allMem.size;
+  var att={ins:[],outs:[]};
+  attSnap.forEach(function(d){var dd=d.data();if(dd.type==='in')att.ins.push(dd);else att.outs.push(dd);});
+  var r=_calcPayFull(m,att,empCnt,ym);
     var mo=document.createElement('div');mo.className='mo';
     var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
     box.innerHTML='<div class="payslip">'+
@@ -309,13 +312,91 @@ function _dinePayslipModal(memberId,ym){
      '<div style="font-size:10px;color:var(--t3);margin-top:8px">근무시간 '+r.monthlyHours+'h | 2026 근로기준법 적용</div>'+
      '</div>'+
      '<button class="btn btn-ghost" style="width:100%;margin-top:12px" onclick="this.closest(\'.mo\').remove()">닫기</button>';
-    mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
-    document.body.appendChild(mo);
-   });
+  mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
  });
 }
 
 function _dineSendPayslip(memberId,ym){
  _dineToast('💬 알림톡 발송 기능은 알림톡 설정에서 활성화 후 사용 가능합니다');
+}
+
+/* 실시간 급여 자동 계산 (onSnapshot) */
+var _payrollUnsub=null;
+function _dineAutoPayroll(did){
+ var ym=document.getElementById('pay-ym')?.value||_monthStr();
+ var from=ym+'-01',to=ym+'-31';
+ var list=document.getElementById('payroll-list');
+ if(!list)return;
+ if(_payrollUnsub){_payrollUnsub();_payrollUnsub=null;_dineToast('🔴 실시간 계산 중지됨');return;}
+ list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 실시간 연결 중...</div>';
+ _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
+  var empCnt=memSnap.size;
+  _payrollUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to)
+   .onSnapshot(function(attSnap){
+    var attMap={};
+    attSnap.forEach(function(doc){
+     var d=doc.data();
+     if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[],breaks:[]};
+     if(d.type==='in')attMap[d.memberId].ins.push(d);
+     else if(d.type==='out')attMap[d.memberId].outs.push(d);
+     else if(d.type==='break_start'||d.type==='break_end')attMap[d.memberId].breaks.push(d);
+    });
+    var cards=[];
+    memSnap.forEach(function(doc){var m=doc.data();m._id=doc.id;var att=attMap[doc.id]||{ins:[],outs:[]};cards.push({m:m,r:_calcPayFull(m,att,empCnt,ym)});});
+    var totalNet=cards.reduce(function(s,c){return s+c.r.netSalary;},0);
+    var html='<div style="font-size:12px;color:var(--cyan);padding:8px;margin-bottom:8px;background:rgba(0,212,255,.06);border-radius:8px">'+
+     '🔴 실시간 연결됨 · 총 실수령 합계: <b>₩'+totalNet.toLocaleString()+'</b> ('+cards.length+'명)</div>';
+    cards.forEach(function(c){
+     var m=c.m,r=c.r;
+     html+='<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px">'+
+      '<div><div style="font-weight:800">'+m.name+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">'+r.monthlyHours+'h · '+({'hourly':'시급','monthly':'월급'}[m.payType]||m.payType)+'</div></div>'+
+      '<div style="text-align:right">'+
+      '<div style="font-weight:900;color:var(--gr)">₩'+r.netSalary.toLocaleString()+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">총지급 ₩'+r.grossSalary.toLocaleString()+'</div></div></div>';
+    });
+    list.innerHTML=html;
+   });
+  _dineToast('🟢 실시간 급여 계산 시작됨');
+ });
+}
+
+/* 급여 확정 저장 */
+function _dinePayrollLock(ym){
+ if(!confirm(ym+' 급여를 확정하시겠습니까?\n확정 후 Firestore에 저장됩니다.'))return;
+ var did=_CU.dealerId;
+ var from=ym+'-01',to=ym+'-31';
+ Promise.all([
+  _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
+  _db.collection('members').where('dealerId','==',did).get()
+ ]).then(function(results){
+  var attSnap=results[0],memSnap=results[1];
+  var empCnt=memSnap.size;
+  var attMap={};
+  attSnap.forEach(function(doc){
+   var d=doc.data();
+   if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[],breaks:[]};
+   if(d.type==='in')attMap[d.memberId].ins.push(d);
+   else if(d.type==='out')attMap[d.memberId].outs.push(d);
+   else if(d.type==='break_start'||d.type==='break_end')attMap[d.memberId].breaks.push(d);
+  });
+  var saves=[];
+  memSnap.forEach(function(doc){
+   var m=doc.data();m._id=doc.id;
+   var att=attMap[doc.id]||{ins:[],outs:[]};
+   var r=_calcPayFull(m,att,empCnt,ym);
+   saves.push(_db.collection('payroll').add({
+    dealerId:did,memberId:doc.id,memberName:m.name,ym:ym,
+    basePay:r.basePay,weeklyHoliday:r.weeklyHoliday,nightPay:r.nightPay,
+    overPay:r.overPay,grossSalary:r.grossSalary,insTotal:r.insTotal,
+    taxTotal:r.taxTotal,netSalary:r.netSalary,monthlyHours:r.monthlyHours,
+    lockedAt:new Date().toISOString(),status:'locked'
+   }));
+  });
+  return Promise.all(saves);
+ }).then(function(){
+  _dineToast('✅ '+ym+' 급여 확정 완료! Firestore에 저장됐습니다.');
+ }).catch(function(e){_dineToast('❌ '+e.message);});
 }
 

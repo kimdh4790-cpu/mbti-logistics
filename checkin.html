@@ -459,7 +459,8 @@ async function doCheckin(){
       .orderBy('recordedAt','desc').limit(1).get();
 
     var lastType=lastSnap.empty?null:lastSnap.docs[0].data().type;
-    var newType=(!lastType||lastType==='퇴근')?'출근':'퇴근';
+    var lastWasIn=lastType==='in'||lastType==='출근';
+    var newType=(!lastType||!lastWasIn)?'in':'out';
     var now=new Date();
 
     await _db.collection('attendance').add({
@@ -475,14 +476,22 @@ async function doCheckin(){
     document.getElementById('main-card').style.display='none';
     var rc=document.getElementById('result-card');
     rc.style.display='block';
-    document.getElementById('res-icon').textContent=newType==='출근'?'🟢':'🔴';
-    document.getElementById('res-title').textContent=newType+' 완료';
+    document.getElementById('res-icon').textContent=newType==='in'?'🟢':'🔴';
+    document.getElementById('res-title').textContent=(newType==='in'?'출근':'퇴근')+' 완료';
     document.getElementById('res-sub').innerHTML=
       '<b>'+empId+'</b><br>'+
       now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     var rt=document.getElementById('res-type');
-    rt.textContent=newType;
-    rt.className='result-type '+(newType==='출근'?'in':'out');
+    rt.textContent=newType==='in'?'출근':'퇴근';
+    rt.className='result-type '+(newType==='in'?'in':'out');
+    // 현재 출근 인원 표시
+    try{
+      var allSnap=await _db.collection('attendance').where('dealerId','==',_dealerId).where('date','==',today).get();
+      var empMap={};
+      allSnap.forEach(function(d){var dd=d.data();if(!empMap[dd.empId])empMap[dd.empId]={in:false,out:false};if(dd.type==='in')empMap[dd.empId].in=true;else if(dd.type==='out')empMap[dd.empId].out=true;});
+      var working=Object.values(empMap).filter(function(e){return e.in&&!e.out;}).length;
+      document.getElementById('res-sub').innerHTML+='<br><div style="margin-top:10px;padding:7px 12px;background:rgba(0,212,255,.1);border-radius:8px;font-size:13px;font-weight:700;color:var(--cyan)">🏢 현재 출근중 '+working+'명</div>';
+    }catch(e){}
 
     // 5초 후 자동 초기화
     setTimeout(reset,5000);
