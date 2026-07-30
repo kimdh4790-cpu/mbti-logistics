@@ -139,6 +139,7 @@ canvas#scan-canvas{display:none}
     <div class="success-type" id="sp-type"></div>
     <div class="success-time" id="sp-time"></div>
     <div class="success-detail" id="sp-detail"></div>
+    <div id="sp-headcount" style="font-size:12px;color:var(--cyan);margin-bottom:8px;min-height:18px"></div>
     <div class="success-badges" id="sp-badges"></div>
     <button class="success-close" onclick="closeSuccess()">확인</button>
   </div>
@@ -242,7 +243,7 @@ var _db=null;
 
 var _type='in', _SECRET='DONWAY2026QR';
 var _stream=null,_scanRaf=null,_paused=false,_facingMode='environment';
-var _lastQR='', _lastScanTime=0;
+var _lastQR='', _lastScanTime=0, _myLogUnsub=null;
 
 // ════════════════════════════════
 // ★ 3중 복합 인증 상태
@@ -441,6 +442,7 @@ function _doFullAuth(qrResult, now){
         if(navigator.vibrate)navigator.vibrate([100,50,200]);
   _DONWAY_SOUND.attendance(_type,(document.getElementById('my-name')||{}).value||'직원');
         loadMyLog();
+        _updateHeadcount(record.loc, record.date);
       }).catch(function(e){
         _showFail('저장 실패',e.message,'❌');
       });
@@ -476,6 +478,7 @@ function _showFail(msg, sub, icon){
 }
 function closeSuccess(){
   document.getElementById('success-popup').style.display='none';
+  var hc=document.getElementById('sp-headcount');if(hc)hc.textContent='';
   _paused=false;_lastQR='';
   if(_stream)_scanRaf=requestAnimationFrame(_scanLoop);
   else startCamera();
@@ -540,14 +543,15 @@ function setType(t){
   if(t!=='out')document.getElementById('btn-out').style.borderColor='var(--border2)';
 }
 
-// 기록 로드
+// 기록 로드 (실시간 onSnapshot)
 function loadMyLog(){
   var listEl=document.getElementById('my-log');if(!listEl||!_db)return;
   var today=new Date().toISOString().slice(0,10);
   var name=(document.getElementById('my-name').value||'').trim();
   if(!name){listEl.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">이름을 입력하세요</div>';return;}
-  _db.collection('attendance').where('date','==',today).where('name','==',name).orderBy('timestamp','asc').limit(20).get()
-    .then(function(snap){
+  if(_myLogUnsub){_myLogUnsub();_myLogUnsub=null;}
+  _myLogUnsub=_db.collection('attendance').where('date','==',today).where('name','==',name).orderBy('timestamp','asc').limit(20)
+    .onSnapshot(function(snap){
       if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:12px;color:var(--gray);font-size:12px">오늘 기록 없음</div>';return;}
       listEl.innerHTML=snap.docs.map(function(d){
         var r=d.data();var isIn=r.type==='in';
@@ -557,6 +561,19 @@ function loadMyLog(){
         return '<div class="log-row"><div><div class="log-loc">'+esc(r.loc||'')+'</div><div class="log-sub">'+badges+'</div></div>'
           +'<div class="'+(isIn?'log-in':'log-out')+'">'+(isIn?'🟢 출근':'🔴 퇴근')+'<div class="log-time">'+esc(r.time||'')+'</div></div></div>';
       }).join('');
+    },function(){});
+}
+
+// 현재 근무중 인원 수 (거점별)
+function _updateHeadcount(loc, date){
+  if(!_db||!loc)return;
+  _db.collection('attendance').where('date','==',date).where('loc','==',loc).get()
+    .then(function(snap){
+      var empMap={};
+      snap.forEach(function(d){var r=d.data();if(!empMap[r.name])empMap[r.name]={i:false,o:false};if(r.type==='in')empMap[r.name].i=true;else if(r.type==='out')empMap[r.name].o=true;});
+      var working=Object.values(empMap).filter(function(e){return e.i&&!e.o;}).length;
+      var el=document.getElementById('sp-headcount');
+      if(el)el.textContent='🏢 '+esc(loc)+' 현재 출근중 '+working+'명';
     }).catch(function(){});
 }
 
