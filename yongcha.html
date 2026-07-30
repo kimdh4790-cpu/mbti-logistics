@@ -396,7 +396,15 @@ _auth.onAuthStateChanged(function(u){
       clearTimeout(_authTimer);
       var _lBtn=document.getElementById('l-btn');
       if(_lBtn){_lBtn.textContent='로그인';_lBtn.disabled=false;}
-      if(snap.exists){_CU=Object.assign({uid:u.uid},snap.data());_showApp();}
+      if(snap.exists){
+        var _ud=snap.data();
+        if(_ud.suspended){
+          _auth.signOut();_showLogin();
+          setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='계정이 정지되었습니다. 관리자에게 문의하세요.';err.style.display='block';}},300);
+          return;
+        }
+        _CU=Object.assign({uid:u.uid},_ud);_showApp();
+      }
       else if(ADMINS.indexOf(u.email||'')>=0){
         var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,
           phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',
@@ -559,6 +567,10 @@ function _pgHome(el){
   '<div class="kpi-lbl">'+(type==='admin'?'전체 공고':type==='agency'?'등록 공고':'지원 현황')+'</div></div>'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="kpi2">—</div>'+
   '<div class="kpi-lbl">'+(type==='admin'?'전체 회원':type==='agency'?'대기 지원자':'승인 완료')+'</div></div>'+
+  (type==='admin'
+    ?'<div class="kpi-card"><div class="kpi-val" style="color:var(--pu)" id="kpi3">—</div><div class="kpi-lbl">⭐ 프리미엄</div></div>'+
+      '<div class="kpi-card"><div class="kpi-val" style="color:var(--rd)" id="kpi4">—</div><div class="kpi-lbl">정지 회원</div></div>'
+    :'')+
   '</div>'+
 
   // 최근 활동
@@ -573,7 +585,12 @@ function _pgHome(el){
     });
     _db.collection('yongcha_users').get().then(function(s){
       var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'명';
+      var suspended=0;s.forEach(function(d){if(d.data().suspended)suspended++;});
+      var e4=document.getElementById('kpi4');if(e4)e4.textContent=suspended+'명';
     });
+    _db.collection('yongcha_posts').where('premium','==',true).get().then(function(s){
+      var e=document.getElementById('kpi3');if(e)e.textContent=s.size+'건';
+    }).catch(function(){});
   } else if(type==='agency'){
     _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get().then(function(s){
       var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
@@ -1463,49 +1480,142 @@ function _pgProfile(el){
     }).catch(function(){});
 }
 
-// ── 회원 관리 (관리자) ───────────────────────────────────────
-function _pgMembers(el){
-  el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">👥 회원 관리</div>'+
-  '<div class="page-sub">전체 회원 및 공고를 관리해요</div></div>'+
+// ── 관리자 대시보드 ──────────────────────────────────────────
+var _admTab='members';
 
+function _pgMembers(el){
+  _admTab='members';
+  el.innerHTML=
+  '<div class="page-hdr"><div class="page-title">🛡 관리자 대시보드</div>'+
+  '<div class="page-sub">회원 및 공고를 통합 관리해요</div></div>'+
+  '<div class="sub-tab-row">'+
+  '<button class="sub-tab on" onclick="_admSwitch(\'members\')">👥 회원 관리</button>'+
+  '<button class="sub-tab" onclick="_admSwitch(\'posts\')">📋 공고 관리</button>'+
+  '</div>'+
+  '<div id="adm-content"></div>';
+
+  _admLoadMembers();
+}
+
+function _admSwitch(tab){
+  _admTab=tab;
+  document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('on');});
+  var btns=document.querySelectorAll('.sub-tab');
+  if(tab==='members'&&btns[0])btns[0].classList.add('on');
+  if(tab==='posts'&&btns[1])btns[1].classList.add('on');
+  if(tab==='members')_admLoadMembers();
+  else _admLoadPosts();
+}
+
+function _admLoadMembers(){
+  var el=document.getElementById('adm-content');if(!el)return;
+  el.innerHTML=
   '<div class="kpi-grid col2" style="margin-bottom:14px">'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="adm-agency">—</div><div class="kpi-lbl">대리점</div></div>'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="adm-driver">—</div><div class="kpi-lbl">기사</div></div>'+
+  '<div class="kpi-card" style="grid-column:span 2"><div class="kpi-val" style="color:var(--rd)" id="adm-suspended">—</div><div class="kpi-lbl">정지 회원</div></div>'+
   '</div>'+
-
   '<div id="members-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
   _db.collection('yongcha_users').get().then(function(snap){
-    var agencies=0,drivers=0;
+    var agencies=0,drivers=0,suspended=0;
     snap.forEach(function(doc){
-      var t=doc.data().type;
+      var t=doc.data().type,d=doc.data();
       if(t==='agency')agencies++;
       else if(t==='driver')drivers++;
+      if(d.suspended)suspended++;
     });
     var e1=document.getElementById('adm-agency');
     var e2=document.getElementById('adm-driver');
+    var e3=document.getElementById('adm-suspended');
     if(e1)e1.textContent=agencies+'명';
     if(e2)e2.textContent=drivers+'명';
+    if(e3)e3.textContent=suspended+'명';
 
     var list=document.getElementById('members-list');if(!list)return;
     list.innerHTML='';
     snap.forEach(function(doc){
       var u=Object.assign({id:doc.id},doc.data());
       if(u.type==='admin')return;
+      var isSus=!!u.suspended;
       var card=document.createElement('div');card.className='card';
+      card.style.borderLeft='3px solid '+(isSus?'var(--rd)':u.type==='agency'?'var(--br)':'var(--gn)');
       card.innerHTML=
-        '<div style="display:flex;align-items:center;justify-content:space-between">'+
-        '<div>'+
-        '<div style="font-weight:800">'+u.name+'</div>'+
-        '<div style="font-size:12px;color:var(--t2);margin-top:3px">'+u.email+' · '+u.region+'</div>'+
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+u.name+
+          (isSus?'<span style="font-size:10px;background:var(--rdl);color:var(--rd);padding:2px 6px;border-radius:20px;font-weight:700">정지</span>':'')+
         '</div>'+
+        '<div style="font-size:11px;color:var(--t2);margin-top:3px">'+u.email+'</div>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+
+          (u.region||'지역 없음')+
+          (u.rating&&u.reviewCount?' · ⭐ '+Number(u.rating).toFixed(1)+' ('+u.reviewCount+'건)':'')+
+        '</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
         '<span class="status-badge '+(u.type==='agency'?'badge-agency':'badge-driver')+'" style="font-size:11px">'+
-        (u.type==='agency'?'대리점':'기사')+'</span>'+
+          (u.type==='agency'?'대리점':'기사')+'</span>'+
+        '<button onclick="_toggleSuspend(\''+u.id+'\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+          (isSus?'정지 해제':'정지')+'</button>'+
+        '</div>'+
         '</div>';
       list.appendChild(card);
     });
   });
+}
+
+function _toggleSuspend(uid, isSus){
+  _db.collection('yongcha_users').doc(uid).update({suspended:!isSus}).then(function(){
+    _yToast(isSus?'정지가 해제되었습니다':'회원이 정지되었습니다');
+    _admLoadMembers();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _admLoadPosts(){
+  var el=document.getElementById('adm-content');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+  _db.collection('yongcha_posts').orderBy('createdAt','desc').limit(60).get().then(function(snap){
+    if(!el)return;
+    if(snap.empty){el.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">공고가 없어요</div></div>';return;}
+    el.innerHTML='';
+    snap.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var isPremium=!!d.premium;
+      var isOpen=d.status==='open';
+      var card=document.createElement('div');card.className='card';
+      if(isPremium)card.style.borderLeft='3px solid var(--pu)';
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+        '<div style="flex:1;min-width:0">'+
+        (isPremium?'<div style="font-size:10px;color:var(--pu);font-weight:700;margin-bottom:4px">⭐ PREMIUM</div>':'')+
+        '<div style="font-weight:800">'+d.area+'</div>'+
+        '<div style="font-size:11px;color:var(--t2);margin-top:3px">🚚 '+(d.courier||'')+' · 📍 '+(d.region||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+(d.agencyName||'')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
+        '<span class="status-badge '+(isOpen?'badge-open':'badge-closed')+'">'+(isOpen?'모집중':'마감')+'</span>'+
+        '<button onclick="_togglePremium(\''+d.id+'\','+isPremium+')" style="padding:5px 10px;background:rgba(109,40,217,.12);color:var(--pu);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+          (isPremium?'프리미엄 해제':'⭐ 프리미엄')+'</button>'+
+        (isOpen?'<button onclick="_forceClosePost(\''+d.id+'\')" style="padding:5px 10px;background:var(--rdl);color:var(--rd);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">강제 마감</button>':'')+
+        '</div>'+
+        '</div>';
+      el.appendChild(card);
+    });
+  }).catch(function(e){if(el)el.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';});
+}
+
+function _togglePremium(postId,isPremium){
+  _db.collection('yongcha_posts').doc(postId).update({premium:!isPremium}).then(function(){
+    _yToast(isPremium?'프리미엄이 해제되었습니다':'⭐ 프리미엄으로 설정되었습니다');
+    _admLoadPosts();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _forceClosePost(postId){
+  _db.collection('yongcha_posts').doc(postId).update({status:'closed'}).then(function(){
+    _yToast('공고가 강제 마감되었습니다');
+    _admLoadPosts();
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 // ── 구인구직 탭 ──────────────────────────────────────────────

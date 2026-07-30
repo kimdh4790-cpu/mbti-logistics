@@ -129,6 +129,20 @@
       ]
     },
     {
+      "collectionGroup": "yongcha_posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "premium",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "attendance",
       "queryScope": "COLLECTION",
       "fields": [
