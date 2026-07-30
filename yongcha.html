@@ -365,6 +365,7 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 <script>
 // ── 전역 ─────────────────────────────────────────────────────
 var _db, _auth, _CU=null, _regType='agency';
+var _postsUnsub=null, _notifUnsub=null;
 var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com','playwright.admin@ytest.io'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
@@ -519,6 +520,7 @@ function _showApp(){
   badge.className='hdr-badge '+(type==='admin'?'badge-admin':type==='agency'?'badge-agency':'badge-driver');
   _buildNav();_goPage('home');
   setTimeout(_yInitFCM,1200);
+  setTimeout(_yStartNotifListener,1500);
 }
 
 // ── 네비 ────────────────────────────────────────────────────
@@ -546,6 +548,7 @@ function _buildNav(){
 
 function _goPage(p){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
+  if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
   var el=document.getElementById('content');
   el.removeAttribute('style'); // reset chat room inline styles
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
@@ -559,6 +562,41 @@ function _goPage(p){
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
   else if(p==='chat')_pgChats(el);
+  else if(p==='notifications')_pgNotifications(el);
+}
+
+function _pgNotifications(el){
+  el.innerHTML='<div class="page-hdr"><div class="page-title">🔔 알림</div></div>'+
+  '<div id="notif-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+  // 읽음 처리
+  _db.collection('yongcha_notifications').where('userId','==',_CU.uid).where('read','==',false).get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var batch=_db.batch();
+    snap.docs.forEach(function(d){batch.update(d.ref,{read:true});});
+    return batch.commit();
+  }).catch(function(){});
+  // 목록 표시
+  _db.collection('yongcha_notifications').where('userId','==',_CU.uid)
+  .orderBy('createdAt','desc').limit(50).get().then(function(snap){
+    var list=document.getElementById('notif-list');if(!list)return;
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">🔔</div><div class="empty-msg">알림이 없어요</div></div>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var n=doc.data();
+      var date=n.createdAt?new Date(n.createdAt.seconds*1000).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+      var card=document.createElement('div');card.className='card';
+      card.style.opacity=n.read?'0.6':'1';
+      card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
+        '<div><div style="font-size:14px;font-weight:700;margin-bottom:4px">'+n.title+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);line-height:1.4">'+n.body+'</div></div>'+
+        '<div style="font-size:10px;color:var(--t3);white-space:nowrap">'+date+'</div></div>';
+      list.appendChild(card);
+    });
+  }).catch(function(e){
+    var list=document.getElementById('notif-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">'+e.message+'</div></div>';
+  });
 }
 
 // ── 홈 ───────────────────────────────────────────────────────
@@ -593,19 +631,19 @@ function _pgHome(el){
   (type==='driver'?'🔥 내 지역 최신 공고':'📋 최근 활동')+'</div>'+
   '<div id="home-recent"><div style="text-align:center;padding:20px"><div class="spinner"></div></div></div>';
 
-  // KPI 로딩
+  // KPI 로딩 (관리자는 onSnapshot 실시간)
   if(type==='admin'){
-    _db.collection('yongcha_posts').where('status','==','open').get().then(function(s){
+    _db.collection('yongcha_posts').where('status','==','open').onSnapshot(function(s){
       var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
     });
-    _db.collection('yongcha_users').get().then(function(s){
+    _db.collection('yongcha_users').onSnapshot(function(s){
       var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'명';
       var suspended=0;s.forEach(function(d){if(d.data().suspended)suspended++;});
       var e4=document.getElementById('kpi4');if(e4)e4.textContent=suspended+'명';
     });
-    _db.collection('yongcha_posts').where('premium','==',true).get().then(function(s){
+    _db.collection('yongcha_posts').where('premium','==',true).onSnapshot(function(s){
       var e=document.getElementById('kpi3');if(e)e.textContent=s.size+'건';
-    }).catch(function(){});
+    });
   } else if(type==='agency'){
     _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get().then(function(s){
       var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
@@ -755,11 +793,11 @@ function _loadFilteredPosts(){
   var list=document.getElementById('posts-list');
   if(!list)return;
   list.innerHTML='<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
-  _db.collection('yongcha_posts').orderBy('createdAt','desc').limit(150).get()
-  .then(function(snap){
+  if(_postsUnsub){_postsUnsub();_postsUnsub=null;}
+  _postsUnsub=_db.collection('yongcha_posts').orderBy('createdAt','desc').limit(150)
+  .onSnapshot(function(snap){
     _allPosts=[];
     snap.forEach(function(doc){_allPosts.push(Object.assign({id:doc.id},doc.data()));});
-    // 시세 캐시 비동기 로드 (렌더 후 갱신)
     var statsKeys={};
     _allPosts.forEach(function(p){if(p.region&&p.courier)statsKeys[(p.region||'')+'_'+(p.courier||'')]=true;});
     Object.keys(statsKeys).forEach(function(k){
@@ -768,7 +806,8 @@ function _loadFilteredPosts(){
       }).catch(function(){});
     });
     _renderPostList();
-  }).catch(function(e){
+  },function(e){
+    var list=document.getElementById('posts-list');
     if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
   });
 }
@@ -2914,6 +2953,12 @@ function _yInitFCM(){
 
 function _yNotify(recipientId,title,body){
   if(!recipientId||!title)return;
+  // 알림 컬렉션에 저장 (벨 실시간 업데이트용)
+  _db.collection('yongcha_notifications').add({
+    userId:recipientId,title:title,body:body||'',
+    read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
+  // FCM push
   _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
     .then(function(snap){
       if(!snap.exists)return;
@@ -2924,6 +2969,16 @@ function _yNotify(recipientId,title,body){
         body:JSON.stringify({token:token,title:title,body:body||''})
       });
     }).catch(function(){});
+}
+
+function _yStartNotifListener(){
+  if(_notifUnsub){_notifUnsub();_notifUnsub=null;}
+  _notifUnsub=_db.collection('yongcha_notifications')
+    .where('userId','==',_CU.uid).where('read','==',false)
+    .onSnapshot(function(snap){
+      var dot=document.getElementById('notif-dot');
+      if(dot)dot.style.display=snap.size>0?'block':'none';
+    },function(){});
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────
