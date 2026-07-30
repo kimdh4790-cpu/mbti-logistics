@@ -2128,11 +2128,11 @@ function _toggleJobStatus(id, status){
 function _loadJobApplicants(jobId){
   _db.collection('yongcha_applies').where('jobId','==',jobId).get().then(function(snap){
     var body=document.getElementById('modal-body');
-    body.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:16px">👥 채용 지원자</div>';
+    body.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:16px">👥 배차 지원자</div>';
     if(snap.empty){body.innerHTML+='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 지원자가 없어요</div></div>';_openModal();return;}
     snap.forEach(function(doc){
       var a=Object.assign({id:doc.id},doc.data());
-      var statusMap={pending:'⏳ 검토중',approved:'✅ 합격',rejected:'❌ 불합격'};
+      var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 미선발'};
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
       var card=document.createElement('div');card.className='applicant-card';
       card.innerHTML=
@@ -2143,8 +2143,8 @@ function _loadJobApplicants(jobId){
         '<div class="applicant-meta">📍 '+(a.driverRegion||'')+'</div>'+
         (a.status==='pending'?
         '<div class="judge-row">'+
-        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 합격</button>'+
-        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 불합격</button>'+
+        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
+        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 미선발</button>'+
         '</div>':'');
       body.appendChild(card);
     });
@@ -2156,9 +2156,9 @@ function _judgeJobApply(applyId, status, name, driverId){
   _db.collection('yongcha_applies').doc(applyId).update({
     status:status, judgedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
-    _yToast(status==='approved'?'✅ '+name+'님 합격 처리했어요!':'불합격 처리했어요');
+    _yToast(status==='approved'?'✅ '+name+'님 승인 처리했어요!':'미선발 처리했어요');
     if(driverId){
-      if(status==='approved') _yNotify(driverId,'채용 합격 🎉','축하해요! '+_CU.name+'에서 합격 통보가 왔어요!');
+      if(status==='approved') _yNotify(driverId,'채용 승인 🎉','축하해요! '+_CU.name+'에서 승인 통보가 왔어요!');
       else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요');
     }
     _closeModal();
@@ -2289,7 +2289,7 @@ function _applyJob(jobId, agencyId, agencyName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 지원 완료! 대리점 연락을 기다려주세요');
-    _yNotify(agencyId,'채용 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요');
+    _yNotify(agencyId,'배차 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요');
     _closeModal();
   }).catch(function(e){
     if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
