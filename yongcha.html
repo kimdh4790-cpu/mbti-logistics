@@ -661,7 +661,7 @@ function _pgHome(el){
 }
 
 // ── 노선 공고 목록 ───────────────────────────────────────────
-var _pf={courier:'전체',region:'전체',urgentOnly:false};
+var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,priceRange:''};
 var _allPosts=[];
 var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
@@ -691,12 +691,19 @@ function _pgPosts(el){
   }).join('')+
   '</div></div>'+
 
-  // 긴급 토글 + 카운트
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-    '<button onclick="_pfToggleUrgent()" id="pf-urgent-btn" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:1.5px solid '+(_pf.urgentOnly?'var(--rd)':'var(--bd)')+';background:'+(_pf.urgentOnly?'var(--rdl)':'transparent')+';color:'+(_pf.urgentOnly?'var(--rd)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+
-      '🔥 긴급만 보기'+
+  // 가격대 + 인증 + 긴급 필터 행
+  '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">'+
+    '<button onclick="_pfToggleUrgent()" id="pf-urgent-btn" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:1.5px solid '+(_pf.urgentOnly?'var(--rd)':'var(--bd)')+';background:'+(_pf.urgentOnly?'var(--rdl)':'transparent')+';color:'+(_pf.urgentOnly?'var(--rd)':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+
+      '🔥 긴급만'+
     '</button>'+
-    '<span id="pf-count" style="font-size:12px;color:var(--t2)"></span>'+
+    '<button onclick="_pfToggleVerified()" id="pf-verified-btn" style="display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;border:1.5px solid '+(_pf.verifiedOnly?'var(--gn)':'var(--bd)')+';background:'+(_pf.verifiedOnly?'var(--gnl)':'transparent')+';color:'+(_pf.verifiedOnly?'var(--gn)':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+
+      '✅ 인증대리점만'+
+    '</button>'+
+    '<select onchange="_pfSetPrice(this.value)" style="padding:6px 10px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+
+    '<option value="">단가 전체</option>'+
+    ['~700원','700~900원','900~1100원','1100원~'].map(function(r,i){return '<option value="'+i+'"'+(String(_pf.priceRange)===String(i)?' selected':'')+'>'+r+'</option>';}).join('')+
+    '</select>'+
+    '<span id="pf-count" style="font-size:12px;color:var(--t2);margin-left:auto"></span>'+
   '</div>'+
 
   '<div id="posts-list"></div>';
@@ -728,6 +735,22 @@ function _pfToggleUrgent(){
   _renderPostList();
 }
 
+function _pfToggleVerified(){
+  _pf.verifiedOnly=!_pf.verifiedOnly;
+  var btn=document.getElementById('pf-verified-btn');
+  if(btn){
+    btn.style.borderColor=_pf.verifiedOnly?'var(--gn)':'var(--bd)';
+    btn.style.background=_pf.verifiedOnly?'var(--gnl)':'transparent';
+    btn.style.color=_pf.verifiedOnly?'var(--gn)':'var(--t2)';
+  }
+  _renderPostList();
+}
+function _pfSetPrice(val){
+  _pf.priceRange=val;
+  _renderPostList();
+}
+
+window._yStats=window._yStats||{};
 function _loadFilteredPosts(){
   var list=document.getElementById('posts-list');
   if(!list)return;
@@ -736,6 +759,14 @@ function _loadFilteredPosts(){
   .then(function(snap){
     _allPosts=[];
     snap.forEach(function(doc){_allPosts.push(Object.assign({id:doc.id},doc.data()));});
+    // 시세 캐시 비동기 로드 (렌더 후 갱신)
+    var statsKeys={};
+    _allPosts.forEach(function(p){if(p.region&&p.courier)statsKeys[(p.region||'')+'_'+(p.courier||'')]=true;});
+    Object.keys(statsKeys).forEach(function(k){
+      _db.collection('yongcha_stats').doc(k).get().then(function(s){
+        if(s.exists)window._yStats[k]=s.data();
+      }).catch(function(){});
+    });
     _renderPostList();
   }).catch(function(e){
     if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
@@ -746,10 +777,19 @@ function _renderPostList(){
   var list=document.getElementById('posts-list');
   if(!list)return;
 
+  var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var filtered=_allPosts.filter(function(p){
     if(_pf.courier!=='전체'&&p.courier!==_pf.courier)return false;
     if(_pf.region!=='전체'&&p.region!==_pf.region)return false;
     if(_pf.urgentOnly&&!p.urgent)return false;
+    if(_pf.verifiedOnly){
+      var ag=_trustGrade(p.agencyRating||0,p.agencyReviewCount||0,p.agencyFakeCount||0);
+      if(ag.label!=='✅ 인증'&&ag.label!=='💎 프리미엄')return false;
+    }
+    if(_pf.priceRange!==''){
+      var pr=priceRanges[parseInt(_pf.priceRange)];
+      if(pr){var up=p.unitPrice||0;if(up<pr[0]||up>=pr[1])return false;}
+    }
     return true;
   });
 
@@ -799,13 +839,17 @@ function _urgencyLabel(d){
 }
 
 function _trustGrade(rating,reviewCount,fakeCount){
-  if((fakeCount||0)>=3)return{label:'⚠️ 주의',color:'var(--rd)'};
-  if(rating>=4.8&&reviewCount>=50)return{label:'💎 프리미엄',color:'var(--pu)'};
-  if(rating>=4.5&&reviewCount>=20)return{label:'✅ 인증',color:'var(--gn)'};
-  if(reviewCount>0)return{label:'일반',color:'var(--t2)'};
-  return{label:'신규',color:'var(--t3)'};
+  if((fakeCount||0)>=3)return{label:'⚠️ 주의',color:'var(--rd)',bg:'var(--rdl)'};
+  if(rating>=4.8&&reviewCount>=50)return{label:'💎 프리미엄',color:'var(--pu)',bg:'#f3e8ff'};
+  if(rating>=4.5&&reviewCount>=20)return{label:'✅ 인증',color:'var(--gn)',bg:'var(--gnl)'};
+  if(reviewCount>0)return{label:'일반',color:'var(--t2)',bg:'var(--bg3)'};
+  return{label:'신규',color:'var(--t3)',bg:'var(--bg3)'};
 }
 
+function _courierIcon(courier){
+  var icons={'CJ대한통운':'📦','한진택배':'🟡','롯데택배':'🔴','우체국':'🇰🇷','로젠택배':'🟠','쿠팡로지스틱스':'🛒'};
+  return icons[courier]||'🚚';
+}
 function _makePostCard(d){
   var isOpen=d.status==='open';
   var isMatched=d.status==='matched';
@@ -821,6 +865,9 @@ function _makePostCard(d){
   var grade=_trustGrade(d.agencyRating,d.agencyReviewCount,d.agencyFakeCount);
   var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
   var minG=(d.workShift==='야간')?35:30;
+  // 지역 시세 (yongcha_stats 캐시에서)
+  var statsKey=(d.region||'')+'_'+(d.courier||'');
+  var _cachedStats=window._yStats&&window._yStats[statsKey];
 
   var statusHtml=isClosed
     ?'<span class="status-badge badge-closed">마감</span>'
@@ -850,9 +897,12 @@ function _makePostCard(d){
     // 긴급 배너
     (urgLabel?'<div style="display:inline-flex;align-items:center;gap:4px;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:8px">'+urgLabel+'</div><br>':'')+
 
-    // 상단: 택배사 + 상태
+    // 상단: 택배사 로고 + 상태 + 신뢰배지
     '<div class="post-top">'+
-      '<span class="courier-badge">🚚 '+d.courier+'</span>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+
+        '<span class="courier-badge">'+_courierIcon(d.courier)+' '+d.courier+'</span>'+
+        '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:'+grade.bg+';color:'+grade.color+'">'+grade.label+'</span>'+
+      '</div>'+
       statusHtml+
     '</div>'+
 
@@ -867,6 +917,11 @@ function _makePostCard(d){
         '<div style="font-size:16px;font-weight:900;color:var(--br)">'+Number(d.unitPrice||0).toLocaleString()+'<span style="font-size:10px;font-weight:500;color:var(--t2)">원/건</span>'+
         (d.vatIncluded?'<span style="font-size:9px;color:var(--t3)"> VAT'+d.vatIncluded+'</span>':'')+
         '</div>'+
+        (_cachedStats&&_cachedStats.avgUnitPrice?(function(){
+          var pct=Math.round(d.unitPrice/_cachedStats.avgUnitPrice*100);
+          var low=pct<70,color=low?'var(--rd)':pct>=100?'var(--gn)':'var(--t2)';
+          return '<div style="font-size:10px;color:'+color+';margin-top:2px">'+(low?'⚠️':'📊')+' 평균 '+_cachedStats.avgUnitPrice.toLocaleString()+'원 대비 '+pct+'%</div>';
+        })():'')+
       '</div>'+
       '<div style="background:var(--bg3);border-radius:10px;padding:8px 10px">'+
         '<div style="font-size:10px;color:var(--t2);margin-bottom:2px">일 물량</div>'+
@@ -881,6 +936,17 @@ function _makePostCard(d){
       '<div style="font-size:11px;color:var(--t2)">최소보장 '+minG+'만원</div>'+
     '</div>':'')+
 
+    // 상차지 + 거리
+    (d.loadingAddr?
+    '<div style="font-size:11px;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:4px">'+
+    '<span style="font-weight:700;color:var(--br)">🏭 상차지</span> '+
+    d.loadingAddr.substring(0,30)+(d.loadingAddr.length>30?'…':'')+
+    (d.loadingLat&&d.zones&&d.zones.length&&d.zones[0].lat?(function(){
+      var dists=d.zones.map(function(z){return _yHaversine(d.loadingLat,d.loadingLng,z.lat,z.lng);});
+      var avg=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+      return ' <span style="background:var(--acl);color:var(--ac);padding:1px 6px;border-radius:8px;font-size:10px;font-weight:700">구역까지 '+avg.toFixed(1)+'km</span>';
+    })():'')+'</div>':'')+
+
     // 태그 행
     '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'+
       (d.workShift?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">'+d.workShift+'</span>':'')+
@@ -893,7 +959,7 @@ function _makePostCard(d){
     '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bd)">'+
       '<div>'+
         '<div style="font-size:12px;font-weight:700;color:var(--tx)">🏢 '+d.agencyName+'</div>'+
-        '<div style="font-size:11px;margin-top:2px;font-weight:700;color:'+grade.color+'">'+grade.label+'</div>'+
+        (d.applicantCount?'<div style="font-size:10px;color:var(--t3);margin-top:1px">지원자 '+d.applicantCount+'명</div>':'')+
       '</div>'+
       '<div style="display:flex;gap:6px">'+
         (mapHref?'<a href="'+mapHref+'" target="_blank" onclick="event.stopPropagation()" style="padding:7px 10px;background:var(--bg3);border-radius:10px;color:var(--t2);font-size:11px;font-weight:700;text-decoration:none">🗺 지도</a>':'')+
@@ -1054,31 +1120,56 @@ function _showApplicants(postId){
     var body=document.getElementById('modal-body');
     body.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:16px">👥 지원자 목록</div>';
     if(snap.empty){body.innerHTML+='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 지원자가 없어요</div></div>';_openModal();return;}
-    snap.forEach(function(doc){
-      var a=Object.assign({id:doc.id},doc.data());
-      var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 거절'};
-      var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
-      var card=document.createElement('div');card.className='applicant-card';
-      card.innerHTML=
-        '<div class="applicant-top">'+
-        '<span class="applicant-name">🚗 '+a.driverName+'</span>'+
-        '<span style="font-size:12px;font-weight:700;color:'+(statusColor[a.status]||'var(--t2)')+'">'+
-        (statusMap[a.status]||a.status)+'</span></div>'+
-        '<div class="applicant-meta">📍 '+a.driverRegion+' · 📞 '+a.driverPhone+'</div>'+
-        (a.status==='pending'?
-        '<div class="judge-row">'+
-        '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
-        '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
-        '</div>':
-        a.status==='approved'?
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
-        '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
-        '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
-        '</div>'
-        :'');
-      body.appendChild(card);
+    var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 거절'};
+    var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
+    var applyDocs=snap.docs;
+    var profileFetches=applyDocs.map(function(doc){
+      return _db.collection('yongcha_users').doc(doc.data().driverId).get()
+        .then(function(pd){return {a:Object.assign({id:doc.id},doc.data()),p:pd.exists?pd.data():{}};})
+        .catch(function(){return {a:Object.assign({id:doc.id},doc.data()),p:{}};});
     });
-    _openModal();
+    Promise.all(profileFetches).then(function(items){
+      items.forEach(function(item){
+        var a=item.a, p=item.p;
+        var grade=_driverGrade(p.trustScore||0, p.completedRoutes||0);
+        var card=document.createElement('div');card.className='applicant-card';
+        card.innerHTML=
+          '<div class="applicant-top">'+
+          '<span class="applicant-name">🚗 '+a.driverName+'</span>'+
+          '<span style="font-size:12px;font-weight:700;color:'+(statusColor[a.status]||'var(--t2)')+'">'+
+          (statusMap[a.status]||a.status)+'</span></div>'+
+          '<div class="applicant-meta">📍 '+a.driverRegion+' · 📞 '+a.driverPhone+'</div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:8px 0;font-size:11px">'+
+          '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
+          '<div style="color:var(--t3);margin-bottom:2px">차종</div>'+
+          '<div style="font-weight:700">'+(p.carType||'미입력')+'</div></div>'+
+          '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
+          '<div style="color:var(--t3);margin-bottom:2px">완료건수</div>'+
+          '<div style="font-weight:700;color:var(--gn)">'+(p.completedRoutes||0)+'건</div></div>'+
+          '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
+          '<div style="color:var(--t3);margin-bottom:2px">평점</div>'+
+          '<div style="font-weight:700;color:var(--br)">⭐ '+((p.rating||0).toFixed?((p.rating||0).toFixed(1)):(p.rating||0))+'</div></div>'+
+          '</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px">'+
+          '<span style="background:'+grade.bg+';color:'+grade.color+';padding:2px 8px;border-radius:20px;font-weight:700">'+grade.label+'</span>'+
+          '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">점수 '+(p.trustScore||0)+'점</span>'+
+          (p.company?'<span style="color:var(--t2)">🏢 '+p.company+'</span>':'')+'</div>'+
+          (a.status==='pending'?
+          '<div class="judge-row">'+
+          '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
+          '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
+          '</div>':
+          a.status==='approved'?
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
+          '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
+          '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
+          '</div>'
+          :'');
+        body.appendChild(card);
+      });
+      _openModal();
+    });
   });
 }
 
@@ -1088,11 +1179,105 @@ function _judgeApply(applyId,status,name,driverId){
   }).then(function(){
     _yToast(status==='approved'?'✅ '+name+'님 승인했어요!':'거절했어요');
     if(driverId){
-      if(status==='approved') _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
-      else _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+      if(status==='approved'){
+        // 기사 완료건수 +1 및 트러스트 점수 갱신
+        _db.collection('yongcha_users').doc(driverId).update({
+          completedRoutes:firebase.firestore.FieldValue.increment(1)
+        }).then(function(){_calcTrustScore(driverId);}).catch(function(){});
+        _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
+        // 계약서 초안 생성
+        _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
+          if(!ap.exists)return;
+          var a=ap.data();
+          _db.collection('yongcha_contracts').add({
+            applyId:applyId, postId:a.postId||'',
+            agencyId:_CU.uid, agencyName:_CU.name,
+            driverId:driverId, driverName:name,
+            status:'pending_sign',
+            agencySigned:false, driverSigned:false,
+            terms:{courier:a.courier||'',area:a.area||'',unitPrice:a.unitPrice||0,
+                   workShift:a.workShift||'',workDays:a.workDays||'',
+                   settleFreq:a.settleFreq||'',settleDay:a.settleDay||'',
+                   minGuarantee:a.minGuarantee||0,startDate:a.startDate||''},
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          }).then(function(ref){
+            _db.collection('yongcha_applies').doc(applyId).update({contractId:ref.id}).catch(function(){});
+          }).catch(function(){});
+        }).catch(function(){});
+      } else {
+        _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+      }
     }
     _closeModal();
     _pgHome(document.getElementById('content'));
+  });
+}
+
+function _signContract(contractId, role){
+  var field=role==='agency'?'agencySigned':'driverSigned';
+  var upd={};upd[field]=true;upd[field+'At']=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('yongcha_contracts').doc(contractId).update(upd).then(function(){
+    // 양쪽 모두 서명했는지 확인
+    _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
+      if(!snap.exists)return;
+      var c=snap.data();
+      if(c.agencySigned&&c.driverSigned){
+        _db.collection('yongcha_contracts').doc(contractId).update({
+          status:'signed',signedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          _yToast('🤝 계약이 완료됐어요!');
+          // 상대방에게 알림
+          var otherId=role==='agency'?c.driverId:c.agencyId;
+          var otherName=role==='agency'?c.driverName:c.agencyName;
+          _yNotify(otherId,'계약 완료 🤝',_CU.name+'과 계약이 완료됐어요!');
+        });
+      } else {
+        _yToast('✅ 서명했어요. 상대방의 서명을 기다리는 중이에요.');
+        var otherId=role==='agency'?c.driverId:c.agencyId;
+        _yNotify(otherId,'계약 서명 요청 📝',_CU.name+'이 계약서에 서명했어요. 서명해주세요!');
+      }
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _showContract(contractId){
+  _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
+    if(!snap.exists){_yToast('계약서를 찾을 수 없어요');return;}
+    var c=snap.data();
+    var t=c.terms||{};
+    var myRole=_CU.uid===c.agencyId?'agency':'driver';
+    var mySigned=myRole==='agency'?c.agencySigned:c.driverSigned;
+    var body=document.getElementById('modal-body');
+    body.innerHTML=
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📝 계약서</div>'+
+      '<div style="font-size:11px;color:var(--t2);margin-bottom:16px">'+
+      (c.status==='signed'?'✅ 계약 완료':'서명 대기 중')+'</div>'+
+
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;line-height:2">'+
+      '<div><span style="color:var(--t3)">대리점</span> <strong>'+c.agencyName+'</strong></div>'+
+      '<div><span style="color:var(--t3)">기사</span> <strong>'+c.driverName+'</strong></div>'+
+      '<div><span style="color:var(--t3)">택배사</span> <strong>'+(t.courier||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">구역</span> <strong>'+(t.area||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">건당 단가</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">최소보장</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">근무 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">근무 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">정산일</span> <strong>'+(t.settleDay||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">시작일</span> <strong>'+(t.startDate||'—')+'</strong></div>'+
+      '</div>'+
+
+      '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+      '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.agencySigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.agencySigned?'var(--gn)':'var(--t3)')+'">'+
+      (c.agencySigned?'✅ 대리점 서명':'⏳ 대리점 서명 대기')+'</div>'+
+      '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.driverSigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.driverSigned?'var(--gn)':'var(--t3)')+'">'+
+      (c.driverSigned?'✅ 기사 서명':'⏳ 기사 서명 대기')+'</div>'+
+      '</div>'+
+
+      (!mySigned&&c.status!=='signed'?
+      '<button onclick="_signContract(\''+contractId+'\',\''+myRole+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">✍️ 서명하기</button>':
+      '<div style="text-align:center;padding:12px;color:var(--gn);font-weight:700">서명 완료</div>');
+    _openModal();
   });
 }
 
@@ -1187,7 +1372,8 @@ function _pgPostWrite(el){
   '</div></div>'+
   '<input type="hidden" id="pw-pricetype">'+
   '<div class="inp-wrap"><label class="inp-lbl">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-price" type="number" placeholder="예: 880" oninput="_calcEst()"></div>'+
+  '<input class="inp" id="pw-price" type="number" placeholder="예: 880" oninput="_calcEst();_loadRegionStats()"></div>'+
+  '<div id="pw-region-stats" style="display:none;margin:6px 0;padding:10px 12px;background:var(--bg3);border-radius:10px;font-size:11px"></div>'+
   '<div class="inp-wrap" id="pw-houseprice-wrap" style="display:none">'+
   '<label class="inp-lbl">가구당 단가 (원)</label>'+
   '<input class="inp" id="pw-houseprice" type="number" placeholder="예: 1200"></div>'+
@@ -1233,6 +1419,14 @@ function _pgPostWrite(el){
   // 구역
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
+  '</div>'+
+  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
+  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
+  '</div>'+
   '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
@@ -1338,6 +1532,34 @@ function _toggleUrgent(){
   _isUrgent=!_isUrgent;
   document.getElementById('toggle-urgent').classList.toggle('on',_isUrgent);
 }
+var _regionStatsTimer=null;
+function _loadRegionStats(){
+  clearTimeout(_regionStatsTimer);
+  _regionStatsTimer=setTimeout(function(){
+    var courier=(document.getElementById('pw-courier')||{}).value||'';
+    var region=_CU&&_CU.region||'';
+    if(!courier||!region)return;
+    var statsKey=region+'_'+courier;
+    _db.collection('yongcha_stats').doc(statsKey).get().then(function(snap){
+      var el=document.getElementById('pw-region-stats');
+      if(!el)return;
+      if(!snap.exists){el.style.display='none';return;}
+      var s=snap.data();
+      var avg=Math.round(s.avgUnitPrice||0);
+      if(!avg){el.style.display='none';return;}
+      var price=parseInt((document.getElementById('pw-price')||{}).value)||0;
+      var pct=price&&avg?Math.round(price/avg*100):100;
+      var warn=price&&avg&&pct<70;
+      el.style.display='block';
+      el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between">'+
+        '<span style="color:var(--t2)">📊 이 지역·택배사 현재 평균</span>'+
+        '<span style="font-weight:900;color:var(--br)">'+avg.toLocaleString()+'원/건</span>'+
+        '</div>'+
+        (s.postCount?'<div style="color:var(--t3);margin-top:2px">최근 공고 '+s.postCount+'건 기준</div>':'')+
+        (warn?'<div style="color:var(--rd);font-weight:700;margin-top:4px">⚠️ 입력 단가가 평균의 70% 미만입니다</div>':'');
+    }).catch(function(){});
+  },600);
+}
 function _calcEst(){
   var v=parseInt((document.getElementById('pw-volume')||{}).value)||0;
   var p=parseInt((document.getElementById('pw-price')||{}).value)||0;
@@ -1362,50 +1584,107 @@ function _submitPost(){
   var vehicle=get('pw-vehicle'), plate=get('pw-plate'), settle=get('pw-settle');
   var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
   var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
-  var aptRatio=get('pw-apt');
+  var aptRatio=get('pw-apt'), loadingAddr=get('pw-loadingAddr');
+  var loadingLat=parseFloat(get('pw-loadingLat'))||null;
+  var loadingLng=parseFloat(get('pw-loadingLng'))||null;
   var btn=document.getElementById('submit-btn');
 
   if(!courier||!area||!volume||!price||!settleDay){
     _yToast('필수 항목을 입력하세요 (택배사/구역/물량/단가/정산일)');return;
   }
+  if(!loadingAddr){
+    _yToast('상차지 주소를 입력하세요');return;
+  }
+
+  // 허위공고 누적 제재 확인
+  if(_CU.postSuspended){
+    _yToast('⛔ 허위공고 10건 이상 — 공고 등록이 영구 정지됐어요. 관리자에게 문의하세요.');return;
+  }
+  if((_CU.fakeCount||0)>=5&&_CU.postRestrictedAt){
+    var restrictedDate=_CU.postRestrictedAt.toDate?_CU.postRestrictedAt.toDate():new Date(_CU.postRestrictedAt);
+    var threeDaysAgo=new Date(Date.now()-3*24*60*60*1000);
+    if(restrictedDate>threeDaysAgo){
+      _yToast('⛔ 허위공고 5건 이상 — 최근 신고 후 3일간 공고 등록이 제한됩니다');return;
+    }
+  }
+  if((_CU.fakeCount||0)>=3){
+    _yToast('⚠️ 주의: 허위공고 신고 3건 이상으로 "주의" 대리점으로 표시됩니다');
+  }
 
   var minGuarantee = workShift==='야간' ? 350000 : 300000;
 
-  btn.textContent='등록 중...';btn.disabled=true;
-  _db.collection('yongcha_posts').add({
-    agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
-    region:_CU.region, courier:courier, area:area, routeNo:routeNo,
-    zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
-    postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
-    workHours:hours, startDate:date, endDate:endDate,
-    vehicleType:vehicle, plateType:plate,
-    priceType:priceType||'건당', unitPrice:parseInt(price),
-    housePricePerUnit:housePrice?parseInt(housePrice):null,
-    vatIncluded:vatIncluded, volume:parseInt(volume),
-    minGuarantee:minGuarantee, areaType:areaType,
-    settleFreq:settle, settleDay:settleDay,
-    extras:_selectedExtras.join(','), desc:desc,
-    urgent:_isUrgent, status:'open',
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
-    _yToast('✅ 공고가 등록됐어요!');
-    // 긴급공고 → 같은 지역 기사들에게 FCM 알림
-    if(_isUrgent){
-      _db.collection('yongcha_fcm_tokens').where('type','==','driver').where('region','==',_CU.region).get()
-        .then(function(snap){
-          snap.forEach(function(doc){
-            var t=doc.data().token;
-            if(t) fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({token:t,title:'🔥 긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
-          });
-        }).catch(function(){});
-    }
-    _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
-    _goPage('my_posts');
-  }).catch(function(e){
-    btn.textContent='📋 공고 등록하기';btn.disabled=false;
-    _yToast('오류: '+e.message);
-  });
+  btn.textContent='확인 중...';btn.disabled=true;
+
+  // 중복 공고 방지: 24시간 내 동일 대리점+택배사+구역 공고 확인
+  var cutoff=new Date(Date.now()-24*60*60*1000);
+  _db.collection('yongcha_posts')
+    .where('agencyId','==',_CU.uid)
+    .where('courier','==',courier)
+    .where('area','==',area)
+    .get()
+    .then(function(dupSnap){
+      var hasDup=false;
+      dupSnap.forEach(function(d){
+        var ct=d.data().createdAt;
+        if(ct&&ct.toDate&&ct.toDate()>cutoff) hasDup=true;
+      });
+      if(hasDup){
+        _yToast('⚠️ 동일 공고가 24시간 내 이미 등록됐어요');
+        btn.textContent='📋 공고 등록하기';btn.disabled=false;
+        return;
+      }
+      btn.textContent='등록 중...';
+      return _db.collection('yongcha_posts').add({
+        agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
+        region:_CU.region, courier:courier, area:area, routeNo:routeNo,
+        loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
+        zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
+        postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
+        workHours:hours, startDate:date, endDate:endDate,
+        vehicleType:vehicle, plateType:plate,
+        priceType:priceType||'건당', unitPrice:parseInt(price),
+        housePricePerUnit:housePrice?parseInt(housePrice):null,
+        vatIncluded:vatIncluded, volume:parseInt(volume),
+        minGuarantee:minGuarantee, areaType:areaType,
+        settleFreq:settle, settleDay:settleDay,
+        extras:_selectedExtras.join(','), desc:desc,
+        urgent:_isUrgent, status:'open',
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function(){
+        _yToast('✅ 공고가 등록됐어요!');
+        if(_isUrgent){
+          _db.collection('yongcha_fcm_tokens').where('type','==','driver').where('region','==',_CU.region).get()
+            .then(function(snap){
+              snap.forEach(function(doc){
+                var t=doc.data().token;
+                if(t) fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({token:t,title:'🔥 긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
+              });
+            }).catch(function(){});
+        }
+        _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
+        // 지역 시세 통계 업데이트
+        if(_CU.region&&courier&&parseInt(price)){
+          var statsKey=_CU.region+'_'+courier;
+          _db.collection('yongcha_stats').doc(statsKey).get().then(function(snap){
+            var s=snap.exists?snap.data():{avgUnitPrice:0,postCount:0};
+            var newCount=(s.postCount||0)+1;
+            var newAvg=Math.round(((s.avgUnitPrice||0)*(s.postCount||0)+parseInt(price))/newCount);
+            _db.collection('yongcha_stats').doc(statsKey).set({
+              region:_CU.region,courier:courier,avgUnitPrice:newAvg,postCount:newCount,
+              updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+            },{merge:true}).catch(function(){});
+          }).catch(function(){});
+        }
+        _goPage('my_posts');
+      }).catch(function(e){
+        btn.textContent='📋 공고 등록하기';btn.disabled=false;
+        _yToast('오류: '+e.message);
+      });
+    }).catch(function(e){
+      btn.textContent='📋 공고 등록하기';btn.disabled=false;
+      _yToast('오류: '+e.message);
+    });
 }
 
 // ── 지원 현황 (기사) ─────────────────────────────────────────
@@ -1415,15 +1694,53 @@ function _pgMyApplies(el){
   '<div class="page-sub">내가 지원한 공고 목록이에요</div></div>'+
   '<div id="applies-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
-  _db.collection('yongcha_applies').where('driverId','==',_CU.uid)
-    .get()
-    .then(function(snap){
-      var list=document.getElementById('applies-list');if(!list)return;
-      if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">지원한 공고가 없어요<br>노선 공고를 찾아보세요</div></div>';return;}
-      list.innerHTML='';
+  var appliesP=_db.collection('yongcha_applies').where('driverId','==',_CU.uid).get();
+  var scoutsP=_db.collection('yongcha_scouts').where('driverId','==',_CU.uid).get();
+
+  Promise.all([appliesP,scoutsP]).then(function(results){
+    var apSnap=results[0], scSnap=results[1];
+    var list=document.getElementById('applies-list');if(!list)return;
+    list.innerHTML='';
+
+    // 스카웃 섹션
+    if(!scSnap.empty){
+      var scDiv=document.createElement('div');
+      scDiv.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--pu);margin-bottom:8px">💌 받은 스카웃 제안</div>';
+      scSnap.docs.forEach(function(doc){
+        var s=Object.assign({id:doc.id},doc.data());
+        var statusMap={pending:'⏳ 미응답',accepted:'✅ 수락',rejected:'❌ 거절'};
+        var date=s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleDateString():'—';
+        var card=document.createElement('div');card.className='card';
+        card.style.borderColor='var(--pu)';
+        card.innerHTML=
+          '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+          '<div style="font-weight:800;color:var(--pu)">💌 '+s.agencyName+'</div>'+
+          '<span style="font-size:11px;color:var(--t2)">'+date+'</span></div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">'+s.message+'</div>'+
+          (s.status==='pending'?
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<button onclick="_replyScout(\''+s.id+'\',true)" style="padding:8px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✅ 수락</button>'+
+          '<button onclick="_replyScout(\''+s.id+'\',false)" style="padding:8px;background:var(--bg3);color:var(--t2);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">❌ 거절</button>'+
+          '</div>':
+          '<div style="font-size:12px;font-weight:700;color:'+(s.status==='accepted'?'var(--gn)':'var(--t3)')+'">'+statusMap[s.status]+'</div>'
+          );
+        scDiv.appendChild(card);
+      });
+      list.appendChild(scDiv);
+    }
+
+    if(apSnap.empty&&scSnap.empty){
+      list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">지원한 공고가 없어요<br>노선 공고를 찾아보세요</div></div>';return;
+    }
+    if(!apSnap.empty){
+      var apDiv=document.createElement('div');
+      var apTitle=document.createElement('div');
+      apTitle.style.cssText='font-size:13px;font-weight:800;color:var(--t2);margin:8px 0';
+      apTitle.textContent='📋 지원 내역';
+      if(!scSnap.empty)apDiv.appendChild(apTitle);
       var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 거절'};
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
-      var _apDocs=snap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
+      var _apDocs=apSnap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
       _apDocs.forEach(function(doc){
         var a=Object.assign({id:doc.id},doc.data());
         var card=document.createElement('div');card.className='card';
@@ -1440,11 +1757,14 @@ function _pgMyApplies(el){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
           '<button onclick="_openChatRoom(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
           '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.driverReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
-        list.appendChild(card);
+        apDiv.appendChild(card);
       });
-    });
+      list.appendChild(apDiv);
+    }
+  });
 }
 
 // ── 내 정보 ──────────────────────────────────────────────────
@@ -1460,6 +1780,20 @@ function _pgProfile(el){
   '<div style="font-size:20px;font-weight:900;margin-bottom:4px">'+_CU.name+'</div>'+
   '<div style="font-size:12px;color:'+typeColor+';font-weight:700;margin-bottom:4px">'+typeLabel+'</div>'+
   '<div style="font-size:12px;color:var(--t2)">📍 '+(_CU.region||'—')+'</div>'+
+  (function(){
+    if(type==='driver'){
+      var dg=_driverGrade(_CU.trustScore||0,_CU.completedRoutes||0);
+      return '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px">'+
+        '<span style="background:'+dg.bg+';color:'+dg.color+';padding:4px 14px;border-radius:20px;font-size:13px;font-weight:800">'+dg.label+'</span>'+
+        '<span style="font-size:12px;color:var(--t3)">신뢰점수 '+(_CU.trustScore||0)+'점</span>'+
+        '<span style="font-size:12px;color:var(--t3)">완료 '+(_CU.completedRoutes||0)+'건</span>'+
+        '</div>';
+    } else if(type==='agency'){
+      var ag=_trustGrade(_CU.rating||0,_CU.reviewCount||0,_CU.fakeCount||0);
+      return '<div style="margin-top:10px"><span style="background:'+ag.bg+';color:'+ag.color+';padding:4px 14px;border-radius:20px;font-size:13px;font-weight:800">'+ag.label+'</span></div>';
+    }
+    return '';
+  })()+
   (_CU.rating>0?'<div style="font-size:16px;font-weight:800;color:var(--br);margin-top:8px">⭐ '+_CU.rating.toFixed(1)+' ('+_CU.reviewCount+'개 후기)</div>':'')+
   '</div>'+
 
@@ -1761,16 +2095,25 @@ function _scoutDriver(driverId, driverName, driverPhone){
 function _sendScout(driverId, driverName){
   var msg=(document.getElementById('scout-msg')||{}).value||'';
   if(!msg.trim()){_yToast('메시지를 입력해주세요');return;}
-  _db.collection('yongcha_applies').add({
-    type:'scout',
-    postId:'',agencyId:_CU.uid,agencyName:_CU.name,
+  _db.collection('yongcha_scouts').add({
+    agencyId:_CU.uid,agencyName:_CU.name,
     driverId:driverId,driverName:driverName,
-    scoutMessage:msg,status:'pending',
-    appliedAt:firebase.firestore.FieldValue.serverTimestamp()
+    message:msg,status:'pending',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 스카웃 제안을 보냈어요!');
     _yNotify(driverId,'스카웃 제안 💌',_CU.name+'에서 스카웃 제안이 왔어요! 확인해보세요');
     _closeModal();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _replyScout(scoutId, accept){
+  _db.collection('yongcha_scouts').doc(scoutId).update({
+    status:accept?'accepted':'rejected',
+    repliedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast(accept?'✅ 스카웃 제안을 수락했어요!':'스카웃 제안을 거절했어요');
+    _pgMyApplies(document.getElementById('content'));
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
@@ -2322,6 +2665,18 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
     '<div id="rv-star-label" style="font-size:12px;color:var(--t2);margin-top:8px;font-weight:600">별점을 선택해주세요</div>'+
     '</div>'+
 
+    // 대리점 평가 시 공고 정확도 항목 추가
+    (!isDriver?
+    '<div style="margin-bottom:16px;padding:14px;background:var(--bg3);border-radius:12px">'+
+    '<div style="font-size:12px;font-weight:700;margin-bottom:10px">📋 공고 정확도 평가</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">실제 근무 내용이 공고 내용과 일치했나요?</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button id="acc-yes" onclick="_setAccuracy(true)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✅ 일치했어요</button>'+
+    '<button id="acc-no" onclick="_setAccuracy(false)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">❌ 달랐어요</button>'+
+    '</div>'+
+    '<input type="hidden" id="rv-accuracy" value="">'+
+    '</div>':'') +
+
     '<div style="margin-bottom:16px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">평가 항목 (복수 선택)</div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px" id="rv-criteria">'+
@@ -2338,6 +2693,13 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
   _openModal();
 }
 
+function _setAccuracy(accurate){
+  document.getElementById('rv-accuracy').value=accurate?'yes':'no';
+  var yes=document.getElementById('acc-yes'),no=document.getElementById('acc-no');
+  if(!yes||!no)return;
+  yes.style.background=accurate?'var(--gnl)':'var(--bg3)';yes.style.color=accurate?'var(--gn)':'var(--t2)';yes.style.borderColor=accurate?'var(--gn)':'var(--bd)';
+  no.style.background=!accurate?'var(--rdl)':'var(--bg3)';no.style.color=!accurate?'var(--rd)':'var(--t2)';no.style.borderColor=!accurate?'var(--rd)':'var(--bd)';
+}
 function _setStars(n){
   document.getElementById('rv-rating').value=n;
   var labels=['','별로예요','아쉬워요','보통이에요','좋아요','아주 좋아요'];
@@ -2364,12 +2726,15 @@ function _submitReview(targetId,targetName,targetType,applyId){
   var comment=(document.getElementById('rv-comment')||{}).value||'';
   var criteria=[];
   document.querySelectorAll('#rv-criteria .on').forEach(function(b){criteria.push(b.dataset.c);});
+  var accuracyVal=(document.getElementById('rv-accuracy')||{}).value||'';
+  var postAccurate=accuracyVal==='yes'?true:accuracyVal==='no'?false:null;
   var btn=document.getElementById('rv-submit');btn.textContent='제출 중...';btn.disabled=true;
 
   _db.collection('yongcha_reviews').add({
     reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
     revieweeId:targetId,revieweeName:targetName,revieweeType:targetType,
-    applyId:applyId,rating:rating,criteria:criteria,comment:comment,isFake:false,
+    applyId:applyId,rating:rating,criteria:criteria,comment:comment,
+    postAccurate:postAccurate,isFake:postAccurate===false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _calcTrustScore(targetId);
@@ -2382,13 +2747,46 @@ function _submitReview(targetId,targetName,targetType,applyId){
   }).catch(function(e){btn.textContent='⭐ 평가 제출하기';btn.disabled=false;_yToast('오류: '+e.message);});
 }
 
+function _driverGrade(score, completedRoutes){
+  var s=score||0, r=completedRoutes||0;
+  if(s>=91&&r>=30)return{label:'👑 VIP',color:'#b45309',bg:'#fef3c7',short:'VIP'};
+  if(s>=71&&r>=10)return{label:'⭐ 우수',color:'#1d4ed8',bg:'#dbeafe',short:'우수'};
+  if(s>=41||r>=3)return{label:'일반',color:'var(--t2)',bg:'var(--bg3)',short:'일반'};
+  return{label:'🌱 새내기',color:'var(--t3)',bg:'var(--bg3)',short:'새내기'};
+}
+
 function _calcTrustScore(userId){
   _db.collection('yongcha_reviews').where('revieweeId','==',userId).get().then(function(snap){
     if(snap.empty)return;
-    var total=0,count=0,fakeCount=0;
-    snap.forEach(function(doc){var d=doc.data();total+=d.rating||0;count++;if(d.isFake)fakeCount++;});
+    var total=0,count=0,fakeCount=0,lastFakeAt=null,highRatingCount=0;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      total+=d.rating||0;count++;
+      if(d.isFake){
+        fakeCount++;
+        var ct=d.createdAt;
+        if(ct&&(!lastFakeAt||(ct.seconds||0)>(lastFakeAt.seconds||0)))lastFakeAt=ct;
+      }
+      if((d.rating||0)>=4.5)highRatingCount++;
+    });
     var avg=count>0?Math.round((total/count)*10)/10:0;
-    _db.collection('yongcha_users').doc(userId).update({rating:avg,reviewCount:count,fakeCount:fakeCount}).catch(function(){});
+    var upd={rating:avg,reviewCount:count,fakeCount:fakeCount};
+    if(lastFakeAt)upd.lastFakeAt=lastFakeAt;
+    if(fakeCount>=10)upd.postSuspended=true;
+    else if(fakeCount>=5)upd.postRestrictedAt=lastFakeAt||firebase.firestore.FieldValue.serverTimestamp();
+    // 기사 트러스트 포인트 갱신 (완료건수는 별도 관리)
+    _db.collection('yongcha_users').doc(userId).get().then(function(us){
+      if(!us.exists)return;
+      var ud=us.data();
+      if(ud.type==='driver'){
+        var completed=ud.completedRoutes||0;
+        var score=Math.min(100, completed*5 + highRatingCount*10);
+        upd.trustScore=score;
+      }
+      _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
+    }).catch(function(){
+      _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
+    });
   }).catch(function(){});
 }
 
@@ -2412,12 +2810,22 @@ function _doReportFake(postId,agencyId){
   var reason=(document.getElementById('fake-reason')||{}).value||'';
   if(!reason.trim()){_yToast('신고 사유를 입력해주세요');return;}
   var btn=document.getElementById('fake-submit');btn.textContent='신고 중...';btn.disabled=true;
-  _db.collection('yongcha_reviews').add({
+  var now=firebase.firestore.FieldValue.serverTimestamp();
+  var batch=_db.batch();
+  var reviewRef=_db.collection('yongcha_reviews').doc();
+  batch.set(reviewRef,{
     reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
     revieweeId:agencyId,revieweeType:'agency',
     postId:postId,applyId:'',rating:1,isFake:true,criteria:[],comment:reason,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
+    createdAt:now
+  });
+  var reportRef=_db.collection('yongcha_reports').doc();
+  batch.set(reportRef,{
+    postId:postId,agencyId:agencyId,
+    reporterId:_CU.uid,reporterName:_CU.name,
+    reason:reason,status:'pending',createdAt:now
+  });
+  batch.commit().then(function(){
     _calcTrustScore(agencyId);
     _yToast('신고가 접수됐어요. 검토 후 처리됩니다.');
     _closeModal();
@@ -2547,6 +2955,47 @@ function _initPostMap(){
   });
 }
 
+// 좌표간 직선거리 (km) — Haversine
+function _yHaversine(lat1,lng1,lat2,lng2){
+  var R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// 상차지 주소 주소검색 → 좌표 저장
+function _geocodeLoadingAddr(){
+  new daum.Postcode({
+    oncomplete:function(data){
+      var addr=data.roadAddress||data.jibunAddress;
+      var inp=document.getElementById('pw-loadingAddr');
+      if(inp)inp.value=addr;
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status===kakao.maps.services.Status.OK){
+            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+            var latInp=document.getElementById('pw-loadingLat');
+            var lngInp=document.getElementById('pw-loadingLng');
+            if(latInp)latInp.value=lat;
+            if(lngInp)lngInp.value=lng;
+            // 구역과의 거리 미리보기
+            var prev=document.getElementById('loading-dist-preview');
+            if(prev&&window._zones&&window._zones.length){
+              var dists=window._zones.map(function(z){return _yHaversine(lat,lng,z.lat,z.lng);});
+              var avgD=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+              prev.textContent='📍 배송구역 중심까지 약 '+avgD.toFixed(1)+'km';
+            } else if(prev){
+              prev.textContent='✅ 좌표 저장됨 (구역 추가 후 거리 표시)';
+            }
+          } else {
+            _yToast('주소 좌표를 찾을 수 없어요');
+          }
+        });
+      });
+    }
+  }).open();
+}
+
 // Daum 우편번호 팝업 - 다중 구역 추가
 window._zones = window._zones || [];
 function _openDaumPost(){
@@ -2588,6 +3037,15 @@ function _renderZoneTags(){
       +'<button onclick="event.stopPropagation();_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 0 0 4px;color:#000;line-height:1">×</button>'
       +'</span>';
   }).join('');
+  // 상차지 좌표 있으면 거리 미리보기 갱신
+  var llat=parseFloat((document.getElementById('pw-loadingLat')||{}).value)||null;
+  var llng=parseFloat((document.getElementById('pw-loadingLng')||{}).value)||null;
+  var prev=document.getElementById('loading-dist-preview');
+  if(prev&&llat&&llng&&window._zones.length){
+    var dists=window._zones.map(function(z){return _yHaversine(llat,llng,z.lat,z.lng);});
+    var avgD=dists.reduce(function(a,b){return a+b;},0)/dists.length;
+    prev.textContent='📍 배송구역 중심까지 약 '+avgD.toFixed(1)+'km';
+  }
 }
 function _removeZone(i){
   window._zones.splice(i,1);
