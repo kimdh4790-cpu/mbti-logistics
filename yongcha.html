@@ -1397,6 +1397,21 @@ function _submitPost(){
     _yToast('상차지 주소를 입력하세요');return;
   }
 
+  // 허위공고 누적 제재 확인
+  if(_CU.postSuspended){
+    _yToast('⛔ 허위공고 10건 이상 — 공고 등록이 영구 정지됐어요. 관리자에게 문의하세요.');return;
+  }
+  if((_CU.fakeCount||0)>=5&&_CU.postRestrictedAt){
+    var restrictedDate=_CU.postRestrictedAt.toDate?_CU.postRestrictedAt.toDate():new Date(_CU.postRestrictedAt);
+    var threeDaysAgo=new Date(Date.now()-3*24*60*60*1000);
+    if(restrictedDate>threeDaysAgo){
+      _yToast('⛔ 허위공고 5건 이상 — 최근 신고 후 3일간 공고 등록이 제한됩니다');return;
+    }
+  }
+  if((_CU.fakeCount||0)>=3){
+    _yToast('⚠️ 주의: 허위공고 신고 3건 이상으로 "주의" 대리점으로 표시됩니다');
+  }
+
   var minGuarantee = workShift==='야간' ? 350000 : 300000;
 
   btn.textContent='확인 중...';btn.disabled=true;
@@ -2374,6 +2389,18 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
     '<div id="rv-star-label" style="font-size:12px;color:var(--t2);margin-top:8px;font-weight:600">별점을 선택해주세요</div>'+
     '</div>'+
 
+    // 대리점 평가 시 공고 정확도 항목 추가
+    (!isDriver?
+    '<div style="margin-bottom:16px;padding:14px;background:var(--bg3);border-radius:12px">'+
+    '<div style="font-size:12px;font-weight:700;margin-bottom:10px">📋 공고 정확도 평가</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">실제 근무 내용이 공고 내용과 일치했나요?</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button id="acc-yes" onclick="_setAccuracy(true)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">✅ 일치했어요</button>'+
+    '<button id="acc-no" onclick="_setAccuracy(false)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">❌ 달랐어요</button>'+
+    '</div>'+
+    '<input type="hidden" id="rv-accuracy" value="">'+
+    '</div>':'') +
+
     '<div style="margin-bottom:16px">'+
     '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">평가 항목 (복수 선택)</div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px" id="rv-criteria">'+
@@ -2390,6 +2417,13 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
   _openModal();
 }
 
+function _setAccuracy(accurate){
+  document.getElementById('rv-accuracy').value=accurate?'yes':'no';
+  var yes=document.getElementById('acc-yes'),no=document.getElementById('acc-no');
+  if(!yes||!no)return;
+  yes.style.background=accurate?'var(--gnl)':'var(--bg3)';yes.style.color=accurate?'var(--gn)':'var(--t2)';yes.style.borderColor=accurate?'var(--gn)':'var(--bd)';
+  no.style.background=!accurate?'var(--rdl)':'var(--bg3)';no.style.color=!accurate?'var(--rd)':'var(--t2)';no.style.borderColor=!accurate?'var(--rd)':'var(--bd)';
+}
 function _setStars(n){
   document.getElementById('rv-rating').value=n;
   var labels=['','별로예요','아쉬워요','보통이에요','좋아요','아주 좋아요'];
@@ -2416,12 +2450,15 @@ function _submitReview(targetId,targetName,targetType,applyId){
   var comment=(document.getElementById('rv-comment')||{}).value||'';
   var criteria=[];
   document.querySelectorAll('#rv-criteria .on').forEach(function(b){criteria.push(b.dataset.c);});
+  var accuracyVal=(document.getElementById('rv-accuracy')||{}).value||'';
+  var postAccurate=accuracyVal==='yes'?true:accuracyVal==='no'?false:null;
   var btn=document.getElementById('rv-submit');btn.textContent='제출 중...';btn.disabled=true;
 
   _db.collection('yongcha_reviews').add({
     reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
     revieweeId:targetId,revieweeName:targetName,revieweeType:targetType,
-    applyId:applyId,rating:rating,criteria:criteria,comment:comment,isFake:false,
+    applyId:applyId,rating:rating,criteria:criteria,comment:comment,
+    postAccurate:postAccurate,isFake:postAccurate===false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _calcTrustScore(targetId);
@@ -2437,10 +2474,23 @@ function _submitReview(targetId,targetName,targetType,applyId){
 function _calcTrustScore(userId){
   _db.collection('yongcha_reviews').where('revieweeId','==',userId).get().then(function(snap){
     if(snap.empty)return;
-    var total=0,count=0,fakeCount=0;
-    snap.forEach(function(doc){var d=doc.data();total+=d.rating||0;count++;if(d.isFake)fakeCount++;});
+    var total=0,count=0,fakeCount=0,lastFakeAt=null;
+    snap.forEach(function(doc){
+      var d=doc.data();
+      total+=d.rating||0;count++;
+      if(d.isFake){
+        fakeCount++;
+        var ct=d.createdAt;
+        if(ct&&(!lastFakeAt||(ct.seconds||0)>(lastFakeAt.seconds||0)))lastFakeAt=ct;
+      }
+    });
     var avg=count>0?Math.round((total/count)*10)/10:0;
-    _db.collection('yongcha_users').doc(userId).update({rating:avg,reviewCount:count,fakeCount:fakeCount}).catch(function(){});
+    var upd={rating:avg,reviewCount:count,fakeCount:fakeCount};
+    if(lastFakeAt)upd.lastFakeAt=lastFakeAt;
+    // 공고 게시 제재: fakeCount >= 10 → 정지, >= 5 → 3일 제한
+    if(fakeCount>=10)upd.postSuspended=true;
+    else if(fakeCount>=5)upd.postRestrictedAt=lastFakeAt||firebase.firestore.FieldValue.serverTimestamp();
+    _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
   }).catch(function(){});
 }
 
@@ -2464,12 +2514,22 @@ function _doReportFake(postId,agencyId){
   var reason=(document.getElementById('fake-reason')||{}).value||'';
   if(!reason.trim()){_yToast('신고 사유를 입력해주세요');return;}
   var btn=document.getElementById('fake-submit');btn.textContent='신고 중...';btn.disabled=true;
-  _db.collection('yongcha_reviews').add({
+  var now=firebase.firestore.FieldValue.serverTimestamp();
+  var batch=_db.batch();
+  var reviewRef=_db.collection('yongcha_reviews').doc();
+  batch.set(reviewRef,{
     reviewerId:_CU.uid,reviewerName:_CU.name,reviewerType:_CU.type,
     revieweeId:agencyId,revieweeType:'agency',
     postId:postId,applyId:'',rating:1,isFake:true,criteria:[],comment:reason,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
+    createdAt:now
+  });
+  var reportRef=_db.collection('yongcha_reports').doc();
+  batch.set(reportRef,{
+    postId:postId,agencyId:agencyId,
+    reporterId:_CU.uid,reporterName:_CU.name,
+    reason:reason,status:'pending',createdAt:now
+  });
+  batch.commit().then(function(){
     _calcTrustScore(agencyId);
     _yToast('신고가 접수됐어요. 검토 후 처리됩니다.');
     _closeModal();

@@ -244,6 +244,28 @@ service cloud.firestore {
         allow create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/yongcha_chats/$(chatId)).data.participants && request.resource.data.senderId == request.auth.uid;
       }
     }
+    match /yongcha_reports/{docId} {
+      allow read: if isAuth() && (resource.data.reporterId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_scouts/{docId} {
+      allow read: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid);
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_contracts/{docId} {
+      allow read: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid);
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_stats/{region} {
+      allow read: if isAuth();
+      allow write: if isSuperAdmin();
+    }
 
     match /{document=**} {
       allow read, write: if isSuperAdmin();
