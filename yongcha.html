@@ -1560,15 +1560,53 @@ function _pgMyApplies(el){
   '<div class="page-sub">내가 지원한 공고 목록이에요</div></div>'+
   '<div id="applies-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
 
-  _db.collection('yongcha_applies').where('driverId','==',_CU.uid)
-    .get()
-    .then(function(snap){
-      var list=document.getElementById('applies-list');if(!list)return;
-      if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">지원한 공고가 없어요<br>노선 공고를 찾아보세요</div></div>';return;}
-      list.innerHTML='';
+  var appliesP=_db.collection('yongcha_applies').where('driverId','==',_CU.uid).get();
+  var scoutsP=_db.collection('yongcha_scouts').where('driverId','==',_CU.uid).get();
+
+  Promise.all([appliesP,scoutsP]).then(function(results){
+    var apSnap=results[0], scSnap=results[1];
+    var list=document.getElementById('applies-list');if(!list)return;
+    list.innerHTML='';
+
+    // 스카웃 섹션
+    if(!scSnap.empty){
+      var scDiv=document.createElement('div');
+      scDiv.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--pu);margin-bottom:8px">💌 받은 스카웃 제안</div>';
+      scSnap.docs.forEach(function(doc){
+        var s=Object.assign({id:doc.id},doc.data());
+        var statusMap={pending:'⏳ 미응답',accepted:'✅ 수락',rejected:'❌ 거절'};
+        var date=s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleDateString():'—';
+        var card=document.createElement('div');card.className='card';
+        card.style.borderColor='var(--pu)';
+        card.innerHTML=
+          '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+          '<div style="font-weight:800;color:var(--pu)">💌 '+s.agencyName+'</div>'+
+          '<span style="font-size:11px;color:var(--t2)">'+date+'</span></div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">'+s.message+'</div>'+
+          (s.status==='pending'?
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          '<button onclick="_replyScout(\''+s.id+'\',true)" style="padding:8px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✅ 수락</button>'+
+          '<button onclick="_replyScout(\''+s.id+'\',false)" style="padding:8px;background:var(--bg3);color:var(--t2);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">❌ 거절</button>'+
+          '</div>':
+          '<div style="font-size:12px;font-weight:700;color:'+(s.status==='accepted'?'var(--gn)':'var(--t3)')+'">'+statusMap[s.status]+'</div>'
+          );
+        scDiv.appendChild(card);
+      });
+      list.appendChild(scDiv);
+    }
+
+    if(apSnap.empty&&scSnap.empty){
+      list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">지원한 공고가 없어요<br>노선 공고를 찾아보세요</div></div>';return;
+    }
+    if(!apSnap.empty){
+      var apDiv=document.createElement('div');
+      var apTitle=document.createElement('div');
+      apTitle.style.cssText='font-size:13px;font-weight:800;color:var(--t2);margin:8px 0';
+      apTitle.textContent='📋 지원 내역';
+      if(!scSnap.empty)apDiv.appendChild(apTitle);
       var statusMap={pending:'⏳ 검토중',approved:'✅ 승인',rejected:'❌ 거절'};
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
-      var _apDocs=snap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
+      var _apDocs=apSnap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
       _apDocs.forEach(function(doc){
         var a=Object.assign({id:doc.id},doc.data());
         var card=document.createElement('div');card.className='card';
@@ -1587,9 +1625,11 @@ function _pgMyApplies(el){
           '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.driverReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
           '</div>'
           :'');
-        list.appendChild(card);
+        apDiv.appendChild(card);
       });
-    });
+      list.appendChild(apDiv);
+    }
+  });
 }
 
 // ── 내 정보 ──────────────────────────────────────────────────
@@ -1906,16 +1946,25 @@ function _scoutDriver(driverId, driverName, driverPhone){
 function _sendScout(driverId, driverName){
   var msg=(document.getElementById('scout-msg')||{}).value||'';
   if(!msg.trim()){_yToast('메시지를 입력해주세요');return;}
-  _db.collection('yongcha_applies').add({
-    type:'scout',
-    postId:'',agencyId:_CU.uid,agencyName:_CU.name,
+  _db.collection('yongcha_scouts').add({
+    agencyId:_CU.uid,agencyName:_CU.name,
     driverId:driverId,driverName:driverName,
-    scoutMessage:msg,status:'pending',
-    appliedAt:firebase.firestore.FieldValue.serverTimestamp()
+    message:msg,status:'pending',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 스카웃 제안을 보냈어요!');
     _yNotify(driverId,'스카웃 제안 💌',_CU.name+'에서 스카웃 제안이 왔어요! 확인해보세요');
     _closeModal();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _replyScout(scoutId, accept){
+  _db.collection('yongcha_scouts').doc(scoutId).update({
+    status:accept?'accepted':'rejected',
+    repliedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast(accept?'✅ 스카웃 제안을 수락했어요!':'스카웃 제안을 거절했어요');
+    _pgMyApplies(document.getElementById('content'));
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
