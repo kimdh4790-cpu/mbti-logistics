@@ -269,6 +269,24 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isSuperAdmin();
     }
+    match /yongcha_daily_records/{docId} {
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_notifications/{docId} {
+      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid || isSuperAdmin();
+    }
+    match /yongcha_settlements/{docId} {
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth() && (request.resource.data.driverId == request.auth.uid || request.resource.data.agencyId == request.auth.uid);
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
 
     match /{document=**} {
       allow read, write: if isSuperAdmin();

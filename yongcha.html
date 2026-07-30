@@ -2155,6 +2155,7 @@ function _pgMembers(el){
   '<div class="sub-tab-row">'+
   '<button class="sub-tab on" onclick="_admSwitch(\'members\')">👥 회원 관리</button>'+
   '<button class="sub-tab" onclick="_admSwitch(\'posts\')">📋 공고 관리</button>'+
+  '<button class="sub-tab" onclick="_admSwitch(\'cleanup\')">🗑 데이터 정리</button>'+
   '</div>'+
   '<div id="adm-content"></div>';
 
@@ -2167,8 +2168,10 @@ function _admSwitch(tab){
   var btns=document.querySelectorAll('.sub-tab');
   if(tab==='members'&&btns[0])btns[0].classList.add('on');
   if(tab==='posts'&&btns[1])btns[1].classList.add('on');
+  if(tab==='cleanup'&&btns[2])btns[2].classList.add('on');
   if(tab==='members')_admLoadMembers();
-  else _admLoadPosts();
+  else if(tab==='posts')_admLoadPosts();
+  else _admLoadCleanup();
 }
 
 function _admLoadMembers(){
@@ -2280,6 +2283,126 @@ function _forceClosePost(postId){
     _yToast('공고가 강제 마감되었습니다');
     _admLoadPosts();
   }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+// ── 데이터 정리 (관리자 전용) ────────────────────────────────
+function _admLoadCleanup(){
+  var el=document.getElementById('adm-content');if(!el)return;
+  el.innerHTML=
+  '<div style="display:flex;flex-direction:column;gap:14px;padding-bottom:40px">'+
+  '<div class="card" style="border-left:3px solid var(--rd)">'+
+    '<div style="font-weight:800;margin-bottom:6px">🧪 테스트 계정 삭제</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">ytest.io 이메일 계정을 모두 삭제합니다</div>'+
+    '<div id="cleanup-test-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">계정 수 확인 중...</div>'+
+    '<button onclick="_yCleanTestAccounts()" style="padding:10px 16px;background:var(--rdl);color:var(--rd);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 테스트 계정 삭제</button>'+
+  '</div>'+
+  '<div class="card" style="border-left:3px solid var(--or,#ff6b00)">'+
+    '<div style="font-weight:800;margin-bottom:6px">📋 Playwright 테스트 공고 삭제</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">자동화 테스트로 생성된 공고를 삭제합니다</div>'+
+    '<div id="cleanup-pw-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">공고 수 확인 중...</div>'+
+    '<button onclick="_yCleanPlaywrightPosts()" style="padding:10px 16px;background:#fff3e0;color:#e65100;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Playwright 공고 삭제</button>'+
+  '</div>'+
+  '<div class="card" style="border-left:3px solid var(--pu)">'+
+    '<div style="font-weight:800;margin-bottom:6px">🔁 중복 공고 정리</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">같은 제목+대리점의 공고 중 최신 1개만 남깁니다</div>'+
+    '<div id="cleanup-dup-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">중복 분석 중...</div>'+
+    '<button onclick="_yCleanDupPosts()" style="padding:10px 16px;background:rgba(109,40,217,.12);color:var(--pu);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 중복 공고 삭제</button>'+
+  '</div>'+
+  '</div>';
+
+  _yCountTestAccounts();
+  _yCountPlaywrightPosts();
+  _yCountDupPosts();
+}
+
+function _yCountTestAccounts(){
+  _db.collection('yongcha_users').where('email','>=','@ytest.io').get().then(function(snap){
+    var count=0;
+    snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))count++;});
+    var el=document.getElementById('cleanup-test-info');
+    if(el)el.textContent='발견된 테스트 계정: '+count+'개';
+  }).catch(function(){
+    _db.collection('yongcha_users').get().then(function(snap){
+      var count=0;
+      snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))count++;});
+      var el=document.getElementById('cleanup-test-info');
+      if(el)el.textContent='발견된 테스트 계정: '+count+'개';
+    });
+  });
+}
+
+function _yCleanTestAccounts(){
+  _db.collection('yongcha_users').get().then(function(snap){
+    var toDelete=[];
+    snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))toDelete.push(doc.id);});
+    if(!toDelete.length){_yToast('삭제할 테스트 계정이 없어요');return;}
+    var batch=_db.batch();
+    toDelete.forEach(function(id){batch.delete(_db.collection('yongcha_users').doc(id));});
+    batch.commit().then(function(){
+      _yToast('✅ 테스트 계정 '+toDelete.length+'개 삭제 완료');
+      _yCountTestAccounts();
+    }).catch(function(e){_yToast('오류: '+e.message);});
+  });
+}
+
+function _yCountPlaywrightPosts(){
+  _db.collection('yongcha_posts').get().then(function(snap){
+    var count=0;
+    snap.forEach(function(doc){
+      var a=doc.data().area||'';
+      if(a.indexOf('Playwright')!==-1||a.indexOf('playwright')!==-1||a.indexOf('테스트')!==-1)count++;
+    });
+    var el=document.getElementById('cleanup-pw-info');
+    if(el)el.textContent='발견된 테스트 공고: '+count+'개';
+  });
+}
+
+function _yCleanPlaywrightPosts(){
+  _db.collection('yongcha_posts').get().then(function(snap){
+    var toDelete=[];
+    snap.forEach(function(doc){
+      var a=doc.data().area||'';
+      if(a.indexOf('Playwright')!==-1||a.indexOf('playwright')!==-1||a.indexOf('채용공고 테스트')!==-1)toDelete.push(doc.id);
+    });
+    if(!toDelete.length){_yToast('삭제할 테스트 공고가 없어요');return;}
+    var batch=_db.batch();
+    toDelete.slice(0,450).forEach(function(id){batch.delete(_db.collection('yongcha_posts').doc(id));});
+    batch.commit().then(function(){
+      _yToast('✅ Playwright 공고 '+toDelete.length+'개 삭제 완료');
+      _yCountPlaywrightPosts();
+    }).catch(function(e){_yToast('오류: '+e.message);});
+  });
+}
+
+function _yCountDupPosts(){
+  _db.collection('yongcha_posts').get().then(function(snap){
+    var seen={},dupCount=0;
+    snap.forEach(function(doc){
+      var d=doc.data(),key=(d.area||'')+'__'+(d.agencyId||'');
+      if(seen[key])dupCount++;
+      else seen[key]=true;
+    });
+    var el=document.getElementById('cleanup-dup-info');
+    if(el)el.textContent='중복 공고(삭제 대상): '+dupCount+'개';
+  });
+}
+
+function _yCleanDupPosts(){
+  _db.collection('yongcha_posts').orderBy('createdAt','desc').get().then(function(snap){
+    var seen={},toDelete=[];
+    snap.forEach(function(doc){
+      var d=doc.data(),key=(d.area||'')+'__'+(d.agencyId||'');
+      if(seen[key]){toDelete.push(doc.id);}
+      else seen[key]=true;
+    });
+    if(!toDelete.length){_yToast('중복 공고가 없어요');return;}
+    var batch=_db.batch();
+    toDelete.slice(0,450).forEach(function(id){batch.delete(_db.collection('yongcha_posts').doc(id));});
+    batch.commit().then(function(){
+      _yToast('✅ 중복 공고 '+toDelete.length+'개 삭제 완료');
+      _yCountDupPosts();
+    }).catch(function(e){_yToast('오류: '+e.message);});
+  });
 }
 
 // ── 구인구직 탭 ──────────────────────────────────────────────
