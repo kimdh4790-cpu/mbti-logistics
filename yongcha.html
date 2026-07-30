@@ -197,6 +197,17 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 .star{color:var(--bd);transition:.15s}
 .star.on{color:var(--br)}
 
+/* ── 구인구직 서브탭 ── */
+.sub-tab-row{display:flex;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;gap:3px}
+.sub-tab{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.2s}
+.sub-tab.on{background:var(--bg2);color:var(--tx);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* ── 직업/이력서 카드 ── */
+.job-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:15px;margin-bottom:9px;cursor:pointer;transition:.2s;position:relative}
+.job-card:active{transform:scale(.99)}
+.job-type-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--pul);color:var(--pu);margin-right:6px}
+.resume-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:8px}
+
 /* ── 스크롤바 ── */
 #content::-webkit-scrollbar{width:0}
 /* ── 지도 ── */
@@ -492,13 +503,13 @@ function _buildNav(){
   var tabs;
   if(type==='admin'){
     tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'전체공고',p:'posts'},
-          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'👥',lbl:'회원관리',p:'members'},{ico:'⚙️',lbl:'설정',p:'profile'}];
+          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👥',lbl:'회원관리',p:'members'}];
   } else if(type==='agency'){
     tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'내 공고',p:'my_posts'},
-          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'👤',lbl:'내정보',p:'profile'}];
+          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
   } else {
     tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'🔍',lbl:'노선공고',p:'posts'},
-          {ico:'📌',lbl:'지원현황',p:'my_applies'},{ico:'👤',lbl:'내정보',p:'profile'}];
+          {ico:'📌',lbl:'지원현황',p:'my_applies'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
   }
   document.getElementById('bnav').innerHTML=tabs.map(function(t){
     return '<button class="bnav-btn" id="bnav-'+t.p+'" onclick="_goPage(\''+t.p+'\')">'+
@@ -515,6 +526,7 @@ function _goPage(p){
   else if(p==='my_posts')_pgMyPosts(el);
   else if(p==='post_write'){_pgPostWrite(el);}
   else if(p==='my_applies')_pgMyApplies(el);
+  else if(p==='jobs')_pgJobs(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
 }
@@ -1430,6 +1442,517 @@ function _pgMembers(el){
       list.appendChild(card);
     });
   });
+}
+
+// ── 구인구직 탭 ──────────────────────────────────────────────
+var _jSubTab='list'; // 'list'|'resume' for driver, 'myjobs'|'resumes' for agency
+
+function _pgJobs(el){
+  if(_CU.type==='driver') _pgJobsDriver(el);
+  else _pgJobsAgency(el);
+}
+
+// ── 대리점/관리자 구인구직 뷰 ──
+function _pgJobsAgency(el){
+  var activeTab=_jSubTab==='resumes'?'resumes':'myjobs';
+  el.innerHTML=
+  '<div class="page-hdr"><div class="page-title">💼 구인구직</div>'+
+  '<div class="page-sub">정규직 기사 채용 공고를 관리해요</div></div>'+
+  '<div class="sub-tab-row">'+
+  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\'myjobs\')">📋 내 채용공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\'resumes\')">📄 이력서 찾기</button>'+
+  '</div>'+
+  '<div id="jobs-content"></div>';
+
+  _jSwitchAgency(activeTab);
+}
+
+function _jSwitchAgency(tab){
+  _jSubTab=tab;
+  document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('on');});
+  var btns=document.querySelectorAll('.sub-tab');
+  if(tab==='myjobs'&&btns[0])btns[0].classList.add('on');
+  if(tab==='resumes'&&btns[1])btns[1].classList.add('on');
+  var el=document.getElementById('jobs-content');
+  if(!el)return;
+  if(tab==='myjobs') _loadMyJobs(el);
+  else _loadResumes(el);
+}
+
+function _loadMyJobs(el){
+  el.innerHTML=
+  '<button onclick="_showJobWriteModal()" style="width:100%;padding:13px;background:var(--pul);color:var(--pu);border:1.5px dashed var(--pu);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 채용 공고 등록하기</button>'+
+  '<div id="myjobs-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+
+  var q=_CU.type==='admin'
+    ? _db.collection('yongcha_jobs').orderBy('createdAt','desc').limit(50)
+    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).orderBy('createdAt','desc');
+
+  q.get().then(function(snap){
+    var list=document.getElementById('myjobs-list');if(!list)return;
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 채용공고가 없어요</div></div>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var card=document.createElement('div');card.className='job-card';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<div><span class="job-type-badge">'+d.jobType+'</span>'+
+        '<span style="font-size:10px;color:var(--t2)">🚚 '+(d.courier||'')+'</span></div>'+
+        '<span class="status-badge '+(d.status==='open'?'badge-open':'badge-closed')+'">'+(d.status==='open'?'채용중':'마감')+'</span>'+
+        '</div>'+
+        '<div style="font-size:16px;font-weight:800;margin-bottom:6px">'+d.jobTitle+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">📍 '+(d.region||'')+(d.area?' · '+d.area:'')+
+          ' · 💰 월 '+Number(d.salary||0).toLocaleString()+'원</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<button onclick="event.stopPropagation();_toggleJobStatus(\''+d.id+'\',\''+d.status+'\')" style="padding:9px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감 처리':'재오픈')+'</button>'+
+        '<button onclick="event.stopPropagation();_loadJobApplicants(\''+d.id+'\')" style="padding:9px;background:var(--pul);border:none;border-radius:10px;color:var(--pu);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>'+
+        '</div>';
+      list.appendChild(card);
+    });
+  }).catch(function(e){
+    var list=document.getElementById('myjobs-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
+  });
+}
+
+function _loadResumes(el){
+  el.innerHTML='<div id="resume-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+  _db.collection('yongcha_resumes').where('isPublic','==',true).orderBy('updatedAt','desc').limit(50).get()
+  .then(function(snap){
+    var list=document.getElementById('resume-list');if(!list)return;
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📄</div><div class="empty-msg">공개된 이력서가 없어요</div></div>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var r=Object.assign({id:doc.id},doc.data());
+      var card=document.createElement('div');card.className='resume-card';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<div style="font-size:15px;font-weight:800">🚗 '+r.driverName+'</div>'+
+        '<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--gnl);color:var(--gn)">'+_careerLabel(r.career)+'</span>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">'+
+        '📍 '+r.driverRegion+
+        (r.vehicleType?' · 🚗 '+r.vehicleType:'')+
+        (r.preferPay?' · 희망 월 '+Number(r.preferPay).toLocaleString()+'원':'')+
+        '</div>'+
+        (r.selfIntro?'<div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">'+r.selfIntro.substring(0,80)+(r.selfIntro.length>80?'…':'')+'</div>':'')+
+        '<button onclick="_scoutDriver(\''+r.driverId+'\',\''+r.driverName+'\',\''+r.driverPhone+'\')" style="width:100%;padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📞 스카웃 연락하기</button>';
+      list.appendChild(card);
+    });
+  }).catch(function(e){
+    var list=document.getElementById('resume-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
+  });
+}
+
+function _scoutDriver(driverId, driverName, driverPhone){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+  '<div style="font-size:20px;font-weight:900;margin-bottom:16px">📞 스카웃 연락</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:15px;font-weight:800;margin-bottom:8px">🚗 '+driverName+' 기사님</div>'+
+  '<div style="font-size:13px;color:var(--t2)">📞 '+driverPhone+'</div>'+
+  '</div>'+
+  '<div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6">기사님께 스카웃 제안 메시지를 보낼 수 있어요. 메시지는 앱 알림으로 전달됩니다.</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">스카웃 메시지</label>'+
+  '<textarea class="inp" id="scout-msg" rows="3" placeholder="안녕하세요! [대리점명]입니다. 함께 일하고 싶어 연락드립니다..." style="resize:none">'+
+  '안녕하세요! '+_CU.name+'입니다.\n저희 대리점에서 기사님을 모시고 싶어 연락드립니다.\n관심 있으시면 연락 부탁드립니다!</textarea></div>'+
+  '<button onclick="_sendScout(\''+driverId+'\',\''+driverName+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">📨 스카웃 보내기</button>';
+  _openModal();
+}
+
+function _sendScout(driverId, driverName){
+  var msg=(document.getElementById('scout-msg')||{}).value||'';
+  if(!msg.trim()){_yToast('메시지를 입력해주세요');return;}
+  _db.collection('yongcha_applies').add({
+    type:'scout',
+    postId:'',agencyId:_CU.uid,agencyName:_CU.name,
+    driverId:driverId,driverName:driverName,
+    scoutMessage:msg,status:'pending',
+    appliedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast('✅ 스카웃 제안을 보냈어요!');
+    _closeModal();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _toggleJobStatus(id, status){
+  var next=status==='open'?'closed':'open';
+  _db.collection('yongcha_jobs').doc(id).update({status:next}).then(function(){
+    _yToast(next==='open'?'채용공고 재오픈됐어요':'채용공고 마감됐어요');
+    _pgJobsAgency(document.getElementById('content'));
+  });
+}
+
+function _loadJobApplicants(jobId){
+  _db.collection('yongcha_applies').where('jobId','==',jobId).get().then(function(snap){
+    var body=document.getElementById('modal-body');
+    body.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:16px">👥 채용 지원자</div>';
+    if(snap.empty){body.innerHTML+='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 지원자가 없어요</div></div>';_openModal();return;}
+    snap.forEach(function(doc){
+      var a=Object.assign({id:doc.id},doc.data());
+      var statusMap={pending:'⏳ 검토중',approved:'✅ 합격',rejected:'❌ 불합격'};
+      var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
+      var card=document.createElement('div');card.className='applicant-card';
+      card.innerHTML=
+        '<div class="applicant-top">'+
+        '<span class="applicant-name">🚗 '+a.driverName+'</span>'+
+        '<span style="font-size:12px;font-weight:700;color:'+(statusColor[a.status]||'var(--t2)')+'">'+
+        (statusMap[a.status]||a.status)+'</span></div>'+
+        '<div class="applicant-meta">📍 '+(a.driverRegion||'')+'</div>'+
+        (a.status==='pending'?
+        '<div class="judge-row">'+
+        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\')">✅ 합격</button>'+
+        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\')">❌ 불합격</button>'+
+        '</div>':'');
+      body.appendChild(card);
+    });
+    _openModal();
+  });
+}
+
+function _judgeJobApply(applyId, status, name){
+  _db.collection('yongcha_applies').doc(applyId).update({
+    status:status, judgedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast(status==='approved'?'✅ '+name+'님 합격 처리했어요!':'불합격 처리했어요');
+    _closeModal();
+  });
+}
+
+// ── 기사 구인구직 뷰 ──
+function _pgJobsDriver(el){
+  var activeTab=(_jSubTab==='resume'?'resume':'list');
+  el.innerHTML=
+  '<div class="page-hdr"><div class="page-title">💼 구인구직</div>'+
+  '<div class="page-sub">채용 공고를 찾고 이력서를 등록해요</div></div>'+
+  '<div class="sub-tab-row">'+
+  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\'list\')">📋 채용 공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\'resume\')">📄 내 이력서</button>'+
+  '</div>'+
+  '<div id="jobs-content"></div>';
+
+  _jSwitchDriver(activeTab);
+}
+
+function _jSwitchDriver(tab){
+  _jSubTab=tab;
+  document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('on');});
+  var btns=document.querySelectorAll('.sub-tab');
+  if(tab==='list'&&btns[0])btns[0].classList.add('on');
+  if(tab==='resume'&&btns[1])btns[1].classList.add('on');
+  var el=document.getElementById('jobs-content');
+  if(!el)return;
+  if(tab==='list') _loadJobList(el);
+  else _loadMyResume(el);
+}
+
+function _loadJobList(el){
+  el.innerHTML='<div id="job-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+  _db.collection('yongcha_jobs').where('status','==','open').orderBy('createdAt','desc').limit(80).get()
+  .then(function(snap){
+    var list=document.getElementById('job-list');if(!list)return;
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 채용공고가 없어요</div></div>';return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var card=document.createElement('div');card.className='job-card';
+      card.onclick=function(){_showJobDetail(d);};
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;margin-bottom:8px">'+
+        '<span class="job-type-badge">'+d.jobType+'</span>'+
+        (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700">상시채용</span>':'')+
+        '</div>'+
+        '<div style="font-size:16px;font-weight:800;margin-bottom:6px">'+d.jobTitle+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+
+        '🏢 '+d.agencyName+' · 📍 '+d.region+(d.area?' '+d.area:'')+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:8px 10px">'+
+        '<div style="font-size:10px;color:var(--t2);margin-bottom:2px">월 급여</div>'+
+        '<div style="font-size:15px;font-weight:900;color:var(--br)">'+Number(d.salary||0).toLocaleString()+'<span style="font-size:10px;color:var(--t2)">원</span></div>'+
+        '</div>'+
+        '<div style="background:var(--bg3);border-radius:10px;padding:8px 10px">'+
+        '<div style="font-size:10px;color:var(--t2);margin-bottom:2px">경력</div>'+
+        '<div style="font-size:14px;font-weight:700">'+_careerLabel(d.careerReq)+'</div>'+
+        '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">'+
+        (d.courier?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">🚚 '+d.courier+'</span>':'')+
+        (d.vehicleType?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">🚗 '+d.vehicleType+'</span>':'')+
+        (d.workDays?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">📅 '+d.workDays+'</span>':'')+
+        '</div>'+
+        '<button onclick="event.stopPropagation();_applyJob(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')" style="width:100%;padding:10px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">지원하기 →</button>';
+      list.appendChild(card);
+    });
+  }).catch(function(e){
+    var list=document.getElementById('job-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
+  });
+}
+
+function _showJobDetail(d){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+  '<span class="job-type-badge">'+d.jobType+'</span>'+
+  (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700;margin-left:4px">상시채용</span>':'')+
+  '<div style="font-size:22px;font-weight:900;margin:10px 0 14px">'+d.jobTitle+'</div>'+
+  '<div class="card" style="margin-bottom:14px">'+
+  '<div style="font-weight:800;margin-bottom:6px">🏢 '+d.agencyName+'</div>'+
+  '<div style="font-size:12px;color:var(--t2)">📍 '+d.region+(d.area?' · '+d.area:'')+(d.courier?' · 🚚 '+d.courier:'')+'</div>'+
+  '</div>'+
+  '<div class="detail-grid">'+
+  [
+    ['💰 월 급여',Number(d.salary||0).toLocaleString()+'원'],
+    ['📋 고용형태',d.jobType||'—'],
+    ['🚗 차량',d.vehicleType||'무관'],
+    ['📜 경력',_careerLabel(d.careerReq)],
+    ['👥 채용인원',(d.headcount||1)+'명'],
+    ['📅 근무요일',d.workDays||'협의'],
+    ['⏰ 근무시간',d.workHours||'협의'],
+    ['💳 정산일',d.settleDay||'협의']
+  ].map(function(r){
+    return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
+  }).join('')+'</div>'+
+  (d.desc?'<div class="card" style="margin-bottom:14px">'+
+  '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-bottom:8px">공고 상세</div>'+
+  '<div style="font-size:13px;line-height:1.7;color:var(--t2)">'+d.desc+'</div></div>':'')+
+  (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">'+
+  d.extras.split(',').filter(Boolean).map(function(e){
+    return '<span style="font-size:11px;background:var(--bg3);padding:3px 9px;border-radius:8px;color:var(--t2)">'+e+'</span>';
+  }).join('')+'</div>':'')+
+  '<button id="job-apply-btn" onclick="_applyJob(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">🙋 지원하기</button>';
+  _openModal();
+
+  // 이미 지원 여부
+  _db.collection('yongcha_applies').where('jobId','==',d.id).where('driverId','==',_CU.uid).get().then(function(snap){
+    var btn=document.getElementById('job-apply-btn');
+    if(btn&&!snap.empty){btn.textContent='✅ 이미 지원함';btn.disabled=true;}
+  });
+}
+
+function _applyJob(jobId, agencyId, agencyName){
+  var btn=document.getElementById('job-apply-btn');
+  if(btn){btn.textContent='지원 중...';btn.disabled=true;}
+  _db.collection('yongcha_applies').add({
+    jobId:jobId, postId:'',
+    driverId:_CU.uid, driverName:_CU.name,
+    driverPhone:_CU.phone, driverRegion:_CU.region,
+    agencyId:agencyId, agencyName:agencyName,
+    status:'pending',
+    appliedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast('✅ 지원 완료! 대리점 연락을 기다려주세요');
+    _closeModal();
+  }).catch(function(e){
+    if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
+    _yToast('오류: '+e.message);
+  });
+}
+
+// ── 내 이력서 ──
+function _loadMyResume(el){
+  el.innerHTML='<div id="resume-area"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+  _db.collection('yongcha_resumes').where('driverId','==',_CU.uid).limit(1).get()
+  .then(function(snap){
+    var area=document.getElementById('resume-area');if(!area)return;
+    if(snap.empty){
+      _renderResumeForm(area,null,null);
+    } else {
+      var doc=snap.docs[0];
+      _renderResumeForm(area,doc.id,doc.data());
+    }
+  });
+}
+
+function _renderResumeForm(el, docId, data){
+  var d=data||{};
+  el.innerHTML=
+  '<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">'+
+  '<div style="font-size:15px;font-weight:800">📄 내 이력서</div>'+
+  (docId?'<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:'+(d.isPublic?'var(--gnl)':'var(--bg3)')+';color:'+(d.isPublic?'var(--gn)':'var(--t3)')+';">'+(d.isPublic?'공개중':'비공개')+'</span>':'')+
+  '</div>'+
+
+  '<div class="form-section">'+
+  '<div class="form-section-title">경력</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px" id="rc-career-group">'+
+  ['신입','1년 미만','1~3년','3~5년','5년 이상'].map(function(c){
+    return '<button onclick="_selType(this,\''+c+'\',\'rc-career\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.career===c?'var(--ac)':'var(--border)')+';background:'+(d.career===c?'var(--acl)':'transparent')+';color:'+(d.career===c?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+  }).join('')+
+  '</div><input type="hidden" id="rc-career" value="'+(d.career||'')+'">'+
+  '<div class="inp-wrap"><label class="inp-lbl">경력 상세 (선택)</label>'+
+  '<textarea class="inp" id="rc-careerDesc" rows="2" placeholder="담당 노선, 택배사, 주요 업무 등" style="resize:none">'+(d.careerDesc||'')+'</textarea></div>'+
+  '</div>'+
+
+  '<div class="form-section">'+
+  '<div class="form-section-title">차량 정보</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="rc-vehicle-group">'+
+  ['1톤 하이탑','1톤 로우탑','1.4톤','무관'].map(function(v){
+    return '<button onclick="_selType(this,\''+v+'\',\'rc-vehicle\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.vehicleType===v?'var(--ac)':'var(--border)')+';background:'+(d.vehicleType===v?'var(--acl)':'transparent')+';color:'+(d.vehicleType===v?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
+  }).join('')+
+  '</div><input type="hidden" id="rc-vehicle" value="'+(d.vehicleType||'')+'">'+
+  '</div>'+
+
+  '<div class="form-section">'+
+  '<div class="form-section-title">희망 조건</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">희망 지역</label>'+
+  '<select class="inp" id="rc-region">'+
+  ['부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'].map(function(r){
+    return '<option value="'+r+'"'+(d.preferRegion===r?' selected':'')+'>'+r+'</option>';
+  }).join('')+
+  '</select></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">희망 월 급여 (원)</label>'+
+  '<input class="inp" id="rc-pay" type="number" placeholder="예: 3500000" value="'+(d.preferPay||'')+'"></div>'+
+  '</div>'+
+
+  '<div class="form-section">'+
+  '<div class="form-section-title">자기소개</div>'+
+  '<div class="inp-wrap">'+
+  '<textarea class="inp" id="rc-intro" rows="4" placeholder="간단한 자기소개, 장점, 지원 동기 등을 적어주세요" style="resize:none">'+(d.selfIntro||'')+'</textarea></div>'+
+  '</div>'+
+
+  '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--bg3);border-radius:var(--r);margin-bottom:16px">'+
+  '<div><div style="font-size:14px;font-weight:700">이력서 공개</div>'+
+  '<div style="font-size:11px;color:var(--t2);margin-top:2px">대리점이 내 이력서를 볼 수 있어요</div></div>'+
+  '<button class="toggle '+(d.isPublic?'on':'')+'" id="rc-public-toggle" onclick="this.classList.toggle(\'on\')"></button>'+
+  '</div>'+
+
+  '<button class="btn-main" id="rc-submit-btn" onclick="_submitResume(\''+docId+'\')">'+
+  (docId?'💾 이력서 수정하기':'📄 이력서 등록하기')+'</button>';
+}
+
+function _submitResume(docId){
+  var career=(document.getElementById('rc-career')||{}).value||'';
+  var careerDesc=(document.getElementById('rc-careerDesc')||{}).value||'';
+  var vehicle=(document.getElementById('rc-vehicle')||{}).value||'';
+  var region=(document.getElementById('rc-region')||{}).value||_CU.region||'';
+  var pay=parseInt((document.getElementById('rc-pay')||{}).value)||0;
+  var intro=(document.getElementById('rc-intro')||{}).value||'';
+  var isPublic=document.getElementById('rc-public-toggle')&&document.getElementById('rc-public-toggle').classList.contains('on');
+  var btn=document.getElementById('rc-submit-btn');
+
+  if(!career){_yToast('경력을 선택해주세요');return;}
+  btn.textContent='저장 중...';btn.disabled=true;
+
+  var data={
+    driverId:_CU.uid, driverName:_CU.name,
+    driverPhone:_CU.phone, driverRegion:_CU.region,
+    career:career, careerDesc:careerDesc,
+    vehicleType:vehicle, preferRegion:region,
+    preferPay:pay, selfIntro:intro, isPublic:isPublic,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  var p=docId
+    ? _db.collection('yongcha_resumes').doc(docId).update(data)
+    : _db.collection('yongcha_resumes').add(Object.assign(data,{createdAt:firebase.firestore.FieldValue.serverTimestamp()}));
+
+  p.then(function(){
+    _yToast(docId?'✅ 이력서가 수정됐어요!':'✅ 이력서가 등록됐어요!');
+    _jSubTab='resume';
+    _pgJobsDriver(document.getElementById('content'));
+  }).catch(function(e){
+    btn.textContent=docId?'💾 이력서 수정하기':'📄 이력서 등록하기';btn.disabled=false;
+    _yToast('오류: '+e.message);
+  });
+}
+
+// ── 채용 공고 등록 모달 ──
+function _showJobWriteModal(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+  '<div style="font-size:20px;font-weight:900;margin-bottom:16px">💼 채용 공고 등록</div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">공고 제목 <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 정규기사 채용"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">고용형태 <span style="color:var(--rd)">*</span></label>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="jw-type-group">'+
+  ['정규직','계약직','프리랜서'].map(function(t){
+    return '<button onclick="_selType(this,\''+t+'\',\'jw-type\')" style="padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+t+'</button>';
+  }).join('')+
+  '</div><input type="hidden" id="jw-type"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
+  '<select class="inp" id="jw-courier"><option value="">선택</option>'+
+  ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
+  '</select></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 / 담당 지역</label>'+
+  '<input class="inp" id="jw-area" placeholder="예: 해운대구 좌동 일대"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">차량 요건</label>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="jw-vehicle-group">'+
+  ['1톤 하이탑','1톤 로우탑','1.4톤','무관'].map(function(v){
+    return '<button onclick="_selType(this,\''+v+'\',\'jw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+v+'</button>';
+  }).join('')+
+  '</div><input type="hidden" id="jw-vehicle"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">경력 요건</label>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap" id="jw-career-group">'+
+  ['신입','1년 이상','3년 이상','무관'].map(function(c){
+    return '<button onclick="_selType(this,\''+c+'\',\'jw-career\')" style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+  }).join('')+
+  '</div><input type="hidden" id="jw-career"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">월 급여 (원) <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="jw-salary" type="number" placeholder="예: 3500000"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">정산일</label>'+
+  '<input class="inp" id="jw-settle" placeholder="예: 매월 25일"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 요일</label>'+
+  '<input class="inp" id="jw-days" placeholder="예: 월~금, 주 5일"></div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">채용 인원</label>'+
+  '<input class="inp" id="jw-headcount" type="number" placeholder="1" value="1"></div>'+
+
+  '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:12px">'+
+  '<div><div style="font-size:13px;font-weight:700">상시 채용</div>'+
+  '<div style="font-size:11px;color:var(--t2)">종료일 없이 계속 모집</div></div>'+
+  '<button class="toggle" id="jw-openended-toggle" onclick="this.classList.toggle(\'on\')"></button>'+
+  '</div>'+
+
+  '<div class="inp-wrap"><label class="inp-lbl">공고 상세</label>'+
+  '<textarea class="inp" id="jw-desc" rows="3" placeholder="우대사항, 복지, 기타 안내" style="resize:none"></textarea></div>'+
+
+  '<button onclick="_submitJob()" id="jw-submit" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--pu),#6d28d9);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">📋 채용공고 등록</button>';
+
+  _openModal();
+}
+
+function _submitJob(){
+  var get=function(id){return(document.getElementById(id)||{}).value||'';};
+  var title=get('jw-title'), jobType=get('jw-type'), salary=get('jw-salary');
+  if(!title||!jobType||!salary){_yToast('제목/고용형태/급여는 필수입니다');return;}
+  var btn=document.getElementById('jw-submit');
+  btn.textContent='등록 중...';btn.disabled=true;
+  var openEnded=document.getElementById('jw-openended-toggle')&&document.getElementById('jw-openended-toggle').classList.contains('on');
+  _db.collection('yongcha_jobs').add({
+    agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
+    region:_CU.region, area:get('jw-area'), courier:get('jw-courier'),
+    jobTitle:title, jobType:jobType,
+    vehicleType:get('jw-vehicle'), careerReq:get('jw-career'),
+    salary:parseInt(salary), settleDay:get('jw-settle'),
+    workDays:get('jw-days'), headcount:parseInt(get('jw-headcount'))||1,
+    openEnded:openEnded, desc:get('jw-desc'),
+    status:'open', createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast('✅ 채용공고가 등록됐어요!');
+    _closeModal();
+    _jSubTab='myjobs';
+    _pgJobsAgency(document.getElementById('content'));
+  }).catch(function(e){
+    btn.textContent='📋 채용공고 등록';btn.disabled=false;
+    _yToast('오류: '+e.message);
+  });
+}
+
+function _careerLabel(c){
+  var map={'신입':'신입','1년 미만':'1년 미만','1~3년':'1~3년','3~5년':'3~5년','5년 이상':'5년 이상',
+    '1년 이상':'1년 이상','3년 이상':'3년 이상','무관':'무관'};
+  return map[c]||c||'무관';
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────
