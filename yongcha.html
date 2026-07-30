@@ -365,7 +365,7 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 <script>
 // ── 전역 ─────────────────────────────────────────────────────
 var _db, _auth, _CU=null, _regType='agency';
-var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com'];
+var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
 firebase.initializeApp({
@@ -932,7 +932,7 @@ function _showPostDetail(d){
     ].map(function(r){
       return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
     }).join('')+'</div>'+
-    (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+d.extras.split(',').filter(Boolean).map(function(e){'<span style="font-size:11px;background:var(--bg3);padding:3px 8px;border-radius:8px">'+e+'</span>'}).join('')+'</div>':'')+
+    (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+d.extras.split(',').filter(Boolean).map(function(e){return '<span style="font-size:11px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">'+e+'</span>';}).join('')+'</div>':'')+
 
     (d.desc?'<div class="card" style="margin-bottom:14px">'+
     '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-bottom:8px">공고 상세</div>'+
@@ -1145,10 +1145,10 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">차종</label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-vehicle-group">'+
   ['1톤 하이탑','1톤 로우탑','1.4톤','무관'].map(function(v){
-    return '<button onclick="_selType(this,\''+v+'\',\'pw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid '+(v==='1톤 탑차'?'var(--ac)':'var(--border)')+';background:'+(v==='1톤 탑차'?'var(--acl)':'transparent')+';color:'+(v==='1톤 탑차'?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
+    return '<button onclick="_selType(this,\''+v+'\',\'pw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid '+(v==='1톤 하이탑'?'var(--ac)':'var(--border)')+';background:'+(v==='1톤 하이탑'?'var(--acl)':'transparent')+';color:'+(v==='1톤 하이탑'?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
   }).join('')+
   '</div></div>'+
-  '<input type="hidden" id="pw-vehicle" value="1톤 탑차">'+
+  '<input type="hidden" id="pw-vehicle" value="1톤 하이탑">'+
   '<div class="inp-wrap"><label class="inp-lbl">영업용 번호판</label>'+
   '<div style="display:flex;gap:8px" id="pw-plate-group">'+
   ['아바사자 필수','배넘버 필수','무관'].map(function(p){
@@ -1251,10 +1251,10 @@ function _pgPostWrite(el){
 
   '<button class="btn-main" id="submit-btn" onclick="_submitPost()">📋 공고 등록하기</button>';
 
-  // 1톤 탑차 기본 선택 처리
+  // 1톤 하이탑 기본 선택 처리
   setTimeout(function(){
     var v1=document.querySelector('#pw-vehicle-group button');
-    if(v1) _selType(v1,'1톤 탑차','pw-vehicle');
+    if(v1) _selType(v1,'1톤 하이탑','pw-vehicle');
   },100);
 }
 
