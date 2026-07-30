@@ -519,6 +519,7 @@ function _showApp(){
   var badge=document.getElementById('hdr-badge');
   badge.textContent=type==='admin'?'관리자':type==='agency'?'대리점':'기사';
   badge.className='hdr-badge '+(type==='admin'?'badge-admin':type==='agency'?'badge-agency':'badge-driver');
+  _prefs=_CU.preferences||null;
   _buildNav();_goPage('home');
   setTimeout(_yInitFCM,1200);
   setTimeout(_yStartNotifListener,1500);
@@ -851,14 +852,27 @@ function _renderPostList(){
     return true;
   });
 
-  // 정렬: 긴급 > 프리미엄 > 모집중 > 매칭완료 > 마감
-  var statusOrder={open:0,matched:1,closed:2};
+  // 정렬: 맞춤도 > 긴급(D-0/D-1) > 프리미엄 > 시작일 빠른순 > 단가 높은순
   filtered.sort(function(a,b){
-    if(!!b.urgent!==!!a.urgent)return b.urgent?1:-1;
+    // 1. 기사 맞춤 추천 점수
+    if(_CU&&_CU.type==='driver'&&_prefs){
+      var ms=(_yMatchScore(b)||0)-(_yMatchScore(a)||0);
+      if(ms!==0)return ms;
+    }
+    // 2. D-day 긴급 (당일/내일 시작)
+    var aD=_yDays(a.startDate),bD=_yDays(b.startDate);
+    var aU=aD!==null&&aD<=1,bU=bD!==null&&bD<=1;
+    if(aU!==bU)return bU?1:-1;
+    // 3. 프리미엄
     if(!!b.premium!==!!a.premium)return b.premium?1:-1;
-    var so=(statusOrder[a.status]||0)-(statusOrder[b.status]||0);
-    if(so!==0)return so;
-    return 0;
+    // 4. 시작일 빠른 순 (null은 마지막)
+    if(aD!==bD){
+      if(aD===null)return 1;
+      if(bD===null)return -1;
+      return aD-bD;
+    }
+    // 5. 단가 높은 순
+    return (b.unitPrice||0)-(a.unitPrice||0);
   });
 
   var cnt=document.getElementById('pf-count');
@@ -885,6 +899,8 @@ function _renderCourierTabs(){}
 function _selectCourier(c){_pfSet('courier',c);}
 function _loadPostsByCourier(){_loadFilteredPosts();}
 
+var _prefs=null; // driver 맞춤 추천 조건 (_CU.preferences에서 로딩)
+
 function _urgencyLabel(d){
   if(!d.urgent)return '';
   if(!d.startDate)return '🔥 긴급';
@@ -894,6 +910,42 @@ function _urgencyLabel(d){
   if(diff<=0)return '🔥 당일';
   if(diff===1)return '🔥 내일';
   return '🔥 긴급';
+}
+
+function _yDays(startDate){
+  if(!startDate)return null;
+  var today=new Date();today.setHours(0,0,0,0);
+  var s=new Date(startDate);s.setHours(0,0,0,0);
+  return Math.round((s-today)/(1000*60*60*24));
+}
+
+function _yDayBadge(startDate){
+  var d=_yDays(startDate);
+  if(d===null)return '';
+  if(d<=0)return '<span style="display:inline-flex;align-items:center;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px">🔴 오늘 시작</span>';
+  if(d===1)return '<span style="display:inline-flex;align-items:center;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px">🔴 긴급 D-1</span>';
+  if(d<=3)return '<span style="display:inline-flex;align-items:center;background:#fff3e0;color:#e65100;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px">🟡 D-'+d+'</span>';
+  return '';
+}
+
+function _yMatchScore(p){
+  if(!_prefs)return 0;
+  var score=0;
+  if(_prefs.region&&p.region&&p.region.indexOf(_prefs.region)!==-1)score++;
+  else if(_prefs.region&&p.region&&_prefs.region.indexOf(p.region)!==-1)score++;
+  if(_prefs.carType&&p.carType&&p.carType===_prefs.carType)score++;
+  if(_prefs.courier&&p.courier&&p.courier===_prefs.courier)score++;
+  if(_prefs.minPrice&&(p.unitPrice||0)<_prefs.minPrice)return -1;
+  return score;
+}
+
+function _yMatchBadge(p){
+  if(!_prefs||!_CU||_CU.type!=='driver')return '';
+  var s=_yMatchScore(p);
+  if(s<0)return '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--bg3);color:var(--t3)">단가 미달</span>';
+  if(s>=3)return '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;background:#fef9c3;color:#92400e">⭐ 내 조건 딱 맞음</span>';
+  if(s>=2)return '<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:var(--gnl);color:var(--gn)">✅ 지역·차량 일치</span>';
+  return '';
 }
 
 function _trustGrade(rating,reviewCount,fakeCount){
@@ -920,6 +972,8 @@ function _makePostCard(d){
   if(isClosed)card.style.opacity='0.55';
 
   var urgLabel=_urgencyLabel(d);
+  var dayBadge=_yDayBadge(d.startDate);
+  var matchBadge=_yMatchBadge(d);
   var grade=_trustGrade(d.agencyRating,d.agencyReviewCount,d.agencyFakeCount);
   var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
   var minG=(d.workShift==='야간')?35:30;
@@ -952,8 +1006,12 @@ function _makePostCard(d){
     (isPremium?'<div style="position:absolute;top:0;left:0;right:0;background:var(--pu);color:#fff;font-size:10px;font-weight:700;text-align:center;padding:3px;border-radius:var(--r) var(--r) 0 0;letter-spacing:.5px">⭐ PREMIUM</div>':'')+
     (isPremium?'<div style="height:20px"></div>':'')+
 
-    // 긴급 배너
-    (urgLabel?'<div style="display:inline-flex;align-items:center;gap:4px;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:8px">'+urgLabel+'</div><br>':'')+
+    // D-day / 긴급 / 맞춤 배지 행
+    (dayBadge||urgLabel||matchBadge?'<div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:8px">'+
+      dayBadge+
+      (!dayBadge&&urgLabel?'<span style="display:inline-flex;align-items:center;background:var(--rdl);color:var(--rd);font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px">'+urgLabel+'</span>':'')+
+      matchBadge+
+    '</div>':'')+
 
     // 상단: 택배사 로고 + 상태 + 신뢰배지
     '<div class="post-top">'+
@@ -2112,6 +2170,32 @@ function _pgProfile(el){
       '<span style="font-size:13px;color:var(--t2)">'+r[0]+'</span>'+
       '<span style="font-size:13px;font-weight:600">'+r[1]+'</span></div>';
   }).join('')+
+
+  // 기사 맞춤 추천 설정
+  (type==='driver'?(function(){
+    var p=_prefs||{};
+    return '<div class="card" style="margin-top:8px">'+
+      '<div style="font-size:15px;font-weight:800;margin-bottom:14px">🎯 맞춤 추천 설정</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">입력한 조건과 일치하는 공고가 상단에 표시됩니다</div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">희망 지역</label>'+
+        '<input id="pref-region" class="inp" placeholder="예: 부산 해운대구" value="'+(p.region||'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">보유 차량</label>'+
+        '<select id="pref-carType" class="inp">'+
+          ['','하이탑','로우탑','1톤','2.5톤'].map(function(v){return '<option value="'+v+'"'+(p.carType===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
+        '</select></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">담당 택배사</label>'+
+        '<select id="pref-courier" class="inp">'+
+          ['','CJ대한통운','한진택배','롯데택배','쿠팡로지스틱스','우체국','로젠택배'].map(function(v){return '<option value="'+v+'"'+(p.courier===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
+        '</select></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">희망 최저 단가 (원/건)</label>'+
+        '<input id="pref-price" type="number" class="inp" placeholder="예: 700" value="'+(p.minPrice||'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">희망 시간대</label>'+
+        '<select id="pref-time" class="inp">'+
+          ['','오전','오후','야간'].map(function(v){return '<option value="'+v+'"'+(p.timeSlot===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
+        '</select></div>'+
+      '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">✅ 맞춤 조건 저장</button>'+
+    '</div>';
+  })():'')+
 
   '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
 
@@ -3350,7 +3434,23 @@ function _yToast(msg){
 
 function _yLogout(){
   if(!confirm('로그아웃 하시겠어요?'))return;
-  _auth.signOut().then(function(){_CU=null;_showLogin();});
+  _auth.signOut().then(function(){_CU=null;_prefs=null;_showLogin();});
+}
+
+function _ySavePrefs(){
+  var prefs={
+    region:(document.getElementById('pref-region')||{}).value||'',
+    carType:(document.getElementById('pref-carType')||{}).value||'',
+    courier:(document.getElementById('pref-courier')||{}).value||'',
+    minPrice:parseInt((document.getElementById('pref-price')||{}).value)||0,
+    timeSlot:(document.getElementById('pref-time')||{}).value||''
+  };
+  _db.collection('yongcha_users').doc(_CU.uid).update({preferences:prefs}).then(function(){
+    _CU.preferences=prefs;
+    _prefs=prefs;
+    _yToast('✅ 맞춤 조건이 저장되었습니다!');
+    _renderPostList();
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
 // ── 카카오맵 ────────────────────────────────────────────────
 var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
