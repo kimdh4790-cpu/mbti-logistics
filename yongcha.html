@@ -1180,25 +1180,27 @@ function _judgeApply(applyId,status,name,driverId){
     _yToast(status==='approved'?'✅ '+name+'님 승인했어요!':'거절했어요');
     if(driverId){
       if(status==='approved'){
-        // 기사 완료건수 +1 및 트러스트 점수 갱신
-        _db.collection('yongcha_users').doc(driverId).update({
-          completedRoutes:firebase.firestore.FieldValue.increment(1)
-        }).then(function(){_calcTrustScore(driverId);}).catch(function(){});
-        _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
-        // 계약서 초안 생성
         _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
           if(!ap.exists)return;
           var a=ap.data();
+          var postTitle=a.area||a.courier||'노선';
+          var unitPrice=a.unitPrice||0;
+          var startDate=a.startDate||'미정';
+          // FCM 상세 알림
+          _yNotify(driverId,'🚛 배차 확정되었습니다!',
+            _CU.name+'\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate);
+          // 채팅방 자동 생성 + 첫 메시지
+          _yAutoChat(driverId,name,a,postTitle,unitPrice,startDate);
+          // 계약서 초안 생성
           _db.collection('yongcha_contracts').add({
-            applyId:applyId, postId:a.postId||'',
-            agencyId:_CU.uid, agencyName:_CU.name,
-            driverId:driverId, driverName:name,
-            status:'pending_sign',
-            agencySigned:false, driverSigned:false,
-            terms:{courier:a.courier||'',area:a.area||'',unitPrice:a.unitPrice||0,
+            applyId:applyId,postId:a.postId||'',
+            agencyId:_CU.uid,agencyName:_CU.name,
+            driverId:driverId,driverName:name,
+            status:'pending_sign',agencySigned:false,driverSigned:false,
+            terms:{courier:a.courier||'',area:a.area||'',unitPrice:unitPrice,
                    workShift:a.workShift||'',workDays:a.workDays||'',
                    settleFreq:a.settleFreq||'',settleDay:a.settleDay||'',
-                   minGuarantee:a.minGuarantee||0,startDate:a.startDate||''},
+                   minGuarantee:a.minGuarantee||0,startDate:startDate},
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
           }).then(function(ref){
             _db.collection('yongcha_applies').doc(applyId).update({contractId:ref.id}).catch(function(){});
@@ -1211,6 +1213,47 @@ function _judgeApply(applyId,status,name,driverId){
     _closeModal();
     _pgHome(document.getElementById('content'));
   });
+}
+
+function _yAutoChat(driverId,driverName,applyData,postTitle,unitPrice,startDate){
+  var ids=[_CU.uid,driverId].sort();
+  var chatId=ids[0]+'__'+ids[1];
+  var chatRef=_db.collection('yongcha_chats').doc(chatId);
+  var names={};names[_CU.uid]=_CU.name;names[driverId]=driverName;
+  var types={};types[_CU.uid]='agency';types[driverId]='driver';
+  var unread={};unread[_CU.uid]=0;unread[driverId]=1;
+  var phones={};phones[driverId]=applyData.driverPhone||'';phones[_CU.uid]=_CU.phone||'';
+  var firstMsg='🚛 배차 확정되었습니다! 출근 일정을 조율해주세요 😊\n📍 노선: '+postTitle+'\n💰 단가: '+unitPrice+'원/건\n📅 시작일: '+startDate;
+  chatRef.set({
+    participants:[_CU.uid,driverId],
+    participantNames:names,participantTypes:types,participantPhones:phones,
+    lastMessage:firstMsg,lastAt:firebase.firestore.FieldValue.serverTimestamp(),
+    unread:unread,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(function(){
+    chatRef.collection('messages').add({
+      senderId:'system',senderName:'시스템',text:firstMsg,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(){});
+  }).catch(function(){});
+}
+
+function _yConfirmStart(applyId,postId){
+  var today=new Date().toISOString().split('T')[0];
+  var d=prompt('출근 시작일을 입력해주세요 (YYYY-MM-DD)',today);
+  if(!d)return;
+  var batch=_db.batch();
+  batch.update(_db.collection('yongcha_applies').doc(applyId),{
+    startConfirmed:true,confirmedStartDate:d
+  });
+  if(postId){
+    batch.update(_db.collection('yongcha_posts').doc(postId),{
+      status:'matched',matchedDriverId:_CU.uid,matchedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  batch.commit().then(function(){
+    _yToast('📅 출근 확정됐어요! 시작일: '+d);
+    _pgMyApplies(document.getElementById('content'));
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 function _signContract(contractId, role){
@@ -1753,10 +1796,12 @@ function _pgMyApplies(el){
           '<div style="font-size:12px;color:var(--t2)">지원일: '+date+'</div>'+
           (a.status==='approved'?
           '<div style="margin-top:10px;padding:10px;background:var(--gnl);border-radius:10px;font-size:12px;color:var(--gn);font-weight:700">'+
-          '🎉 승인됐어요! 대리점에 연락해주세요</div>'+
+          '🎉 배차 확정됐어요!'+(a.startConfirmed?' 시작일: '+a.confirmedStartDate:'')+'</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
           '<button onclick="_openChatRoom(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
           '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.driverReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          (!a.startConfirmed?'<button onclick="_yConfirmStart(\''+a.id+'\',\''+(a.postId||'')+'\')" style="padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📅 출근 확정</button>':
+          '<button onclick="_yInputDaily(\''+a.id+'\','+(a.unitPrice||0)+')" style="padding:10px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📦 오늘 건수 입력</button>')+
           (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
@@ -2591,7 +2636,8 @@ function _pgChatRoom(chatId,otherUid,otherName){
   el.innerHTML=
     '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0">'+
     '<button onclick="_goPage(\'chat\')" style="background:none;border:none;color:var(--t2);font-size:24px;cursor:pointer;line-height:1;padding:0;width:32px">‹</button>'+
-    '<div style="font-size:15px;font-weight:800">'+otherName+'</div>'+
+    '<div><div style="font-size:15px;font-weight:800">'+otherName+'</div>'+
+    '<div id="chat-phone" style="font-size:11px;color:var(--t2);display:none"></div></div>'+
     '</div>'+
     '<div id="chat-msgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch"></div>'+
     '<div style="display:flex;gap:8px;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom))">'+
@@ -2600,9 +2646,16 @@ function _pgChatRoom(chatId,otherUid,otherName){
     '<button onclick="_sendMsg(\''+chatId+'\',\''+otherUid+'\')" style="padding:11px 16px;background:var(--br);color:#000;border:none;border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">전송</button>'+
     '</div>';
 
-  // Reset unread
+  // Reset unread + load phone
   var upd={};upd['unread.'+_CU.uid]=0;
   _db.collection('yongcha_chats').doc(chatId).update(upd).catch(function(){});
+  _db.collection('yongcha_chats').doc(chatId).get().then(function(snap){
+    if(!snap.exists)return;
+    var phones=snap.data().participantPhones||{};
+    var phone=phones[otherUid]||'';
+    var phoneEl=document.getElementById('chat-phone');
+    if(phoneEl&&phone){phoneEl.textContent='📞 '+phone;phoneEl.style.display='block';}
+  }).catch(function(){});
 
   // Real-time listener
   _chatUnsub=_db.collection('yongcha_chats').doc(chatId).collection('messages')
