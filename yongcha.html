@@ -406,6 +406,10 @@ _auth.onAuthStateChanged(function(u){
 });
 
 function _showLogin(){
+  var lBtn=document.getElementById('l-btn');
+  if(lBtn){lBtn.textContent='로그인';lBtn.disabled=false;}
+  var rBtn=document.getElementById('r-btn');
+  if(rBtn){rBtn.textContent='가입하기';rBtn.disabled=false;}
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
 }
