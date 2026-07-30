@@ -1124,6 +1124,7 @@ function _showApplicants(postId){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
           '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
           '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
         body.appendChild(card);
@@ -1139,11 +1140,101 @@ function _judgeApply(applyId,status,name,driverId){
   }).then(function(){
     _yToast(status==='approved'?'✅ '+name+'님 승인했어요!':'거절했어요');
     if(driverId){
-      if(status==='approved') _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
-      else _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+      if(status==='approved'){
+        _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
+        // 계약서 초안 생성
+        _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
+          if(!ap.exists)return;
+          var a=ap.data();
+          _db.collection('yongcha_contracts').add({
+            applyId:applyId, postId:a.postId||'',
+            agencyId:_CU.uid, agencyName:_CU.name,
+            driverId:driverId, driverName:name,
+            status:'pending_sign',
+            agencySigned:false, driverSigned:false,
+            terms:{courier:a.courier||'',area:a.area||'',unitPrice:a.unitPrice||0,
+                   workShift:a.workShift||'',workDays:a.workDays||'',
+                   settleFreq:a.settleFreq||'',settleDay:a.settleDay||'',
+                   minGuarantee:a.minGuarantee||0,startDate:a.startDate||''},
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          }).then(function(ref){
+            _db.collection('yongcha_applies').doc(applyId).update({contractId:ref.id}).catch(function(){});
+          }).catch(function(){});
+        }).catch(function(){});
+      } else {
+        _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+      }
     }
     _closeModal();
     _pgHome(document.getElementById('content'));
+  });
+}
+
+function _signContract(contractId, role){
+  var field=role==='agency'?'agencySigned':'driverSigned';
+  var upd={};upd[field]=true;upd[field+'At']=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('yongcha_contracts').doc(contractId).update(upd).then(function(){
+    // 양쪽 모두 서명했는지 확인
+    _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
+      if(!snap.exists)return;
+      var c=snap.data();
+      if(c.agencySigned&&c.driverSigned){
+        _db.collection('yongcha_contracts').doc(contractId).update({
+          status:'signed',signedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          _yToast('🤝 계약이 완료됐어요!');
+          // 상대방에게 알림
+          var otherId=role==='agency'?c.driverId:c.agencyId;
+          var otherName=role==='agency'?c.driverName:c.agencyName;
+          _yNotify(otherId,'계약 완료 🤝',_CU.name+'과 계약이 완료됐어요!');
+        });
+      } else {
+        _yToast('✅ 서명했어요. 상대방의 서명을 기다리는 중이에요.');
+        var otherId=role==='agency'?c.driverId:c.agencyId;
+        _yNotify(otherId,'계약 서명 요청 📝',_CU.name+'이 계약서에 서명했어요. 서명해주세요!');
+      }
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _showContract(contractId){
+  _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
+    if(!snap.exists){_yToast('계약서를 찾을 수 없어요');return;}
+    var c=snap.data();
+    var t=c.terms||{};
+    var myRole=_CU.uid===c.agencyId?'agency':'driver';
+    var mySigned=myRole==='agency'?c.agencySigned:c.driverSigned;
+    var body=document.getElementById('modal-body');
+    body.innerHTML=
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📝 계약서</div>'+
+      '<div style="font-size:11px;color:var(--t2);margin-bottom:16px">'+
+      (c.status==='signed'?'✅ 계약 완료':'서명 대기 중')+'</div>'+
+
+      '<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;line-height:2">'+
+      '<div><span style="color:var(--t3)">대리점</span> <strong>'+c.agencyName+'</strong></div>'+
+      '<div><span style="color:var(--t3)">기사</span> <strong>'+c.driverName+'</strong></div>'+
+      '<div><span style="color:var(--t3)">택배사</span> <strong>'+(t.courier||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">구역</span> <strong>'+(t.area||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">건당 단가</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">최소보장</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">근무 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">근무 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">정산일</span> <strong>'+(t.settleDay||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">시작일</span> <strong>'+(t.startDate||'—')+'</strong></div>'+
+      '</div>'+
+
+      '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+      '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.agencySigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.agencySigned?'var(--gn)':'var(--t3)')+'">'+
+      (c.agencySigned?'✅ 대리점 서명':'⏳ 대리점 서명 대기')+'</div>'+
+      '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.driverSigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.driverSigned?'var(--gn)':'var(--t3)')+'">'+
+      (c.driverSigned?'✅ 기사 서명':'⏳ 기사 서명 대기')+'</div>'+
+      '</div>'+
+
+      (!mySigned&&c.status!=='signed'?
+      '<button onclick="_signContract(\''+contractId+'\',\''+myRole+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">✍️ 서명하기</button>':
+      '<div style="text-align:center;padding:12px;color:var(--gn);font-weight:700">서명 완료</div>');
+    _openModal();
   });
 }
 
@@ -1623,6 +1714,7 @@ function _pgMyApplies(el){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
           '<button onclick="_openChatRoom(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
           '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.driverReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
         apDiv.appendChild(card);
