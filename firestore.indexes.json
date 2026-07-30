@@ -101,6 +101,20 @@
       ]
     },
     {
+      "collectionGroup": "yongcha_reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "revieweeId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "attendance",
       "queryScope": "COLLECTION",
       "fields": [
