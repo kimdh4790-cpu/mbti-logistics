@@ -101,6 +101,20 @@
       ]
     },
     {
+      "collectionGroup": "yongcha_chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participants",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "yongcha_reviews",
       "queryScope": "COLLECTION",
       "fields": [

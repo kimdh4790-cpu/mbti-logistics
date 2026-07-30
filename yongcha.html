@@ -87,9 +87,9 @@ select.inp option{background:#1e293b;color:#f1f5f9}
 
 /* 바텀 탭 */
 .bnav{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-top:1.5px solid var(--bd);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.bnav-btn{flex:1;padding:10px 4px 8px;border:none;background:none;color:var(--t3);font-size:10px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .15s;-webkit-tap-highlight-color:transparent}
+.bnav-btn{flex:1;padding:7px 0 5px;border:none;background:none;color:var(--t3);font-size:9px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .15s;-webkit-tap-highlight-color:transparent}
 .bnav-btn.on{color:var(--br)}
-.bnav-ico{font-size:22px;line-height:1}
+.bnav-ico{font-size:20px;line-height:1}
 
 /* ── 공통 카드 ── */
 .card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:10px}
@@ -503,14 +503,17 @@ function _buildNav(){
   var type=_CU.type;
   var tabs;
   if(type==='admin'){
-    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'전체공고',p:'posts'},
-          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👥',lbl:'회원관리',p:'members'}];
+    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'공고',p:'posts'},
+          {ico:'✏️',lbl:'등록',p:'post_write'},{ico:'💬',lbl:'채팅',p:'chat'},
+          {ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👥',lbl:'회원',p:'members'}];
   } else if(type==='agency'){
-    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'내 공고',p:'my_posts'},
-          {ico:'✏️',lbl:'공고등록',p:'post_write'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
+    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'📋',lbl:'내공고',p:'my_posts'},
+          {ico:'✏️',lbl:'등록',p:'post_write'},{ico:'💬',lbl:'채팅',p:'chat'},
+          {ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
   } else {
-    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'🔍',lbl:'노선공고',p:'posts'},
-          {ico:'📌',lbl:'지원현황',p:'my_applies'},{ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
+    tabs=[{ico:'🏠',lbl:'홈',p:'home'},{ico:'🔍',lbl:'노선',p:'posts'},
+          {ico:'📌',lbl:'지원',p:'my_applies'},{ico:'💬',lbl:'채팅',p:'chat'},
+          {ico:'💼',lbl:'구인구직',p:'jobs'},{ico:'👤',lbl:'내정보',p:'profile'}];
   }
   document.getElementById('bnav').innerHTML=tabs.map(function(t){
     return '<button class="bnav-btn" id="bnav-'+t.p+'" onclick="_goPage(\''+t.p+'\')">'+
@@ -519,9 +522,11 @@ function _buildNav(){
 }
 
 function _goPage(p){
+  if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
+  var el=document.getElementById('content');
+  el.removeAttribute('style'); // reset chat room inline styles
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
   var nb=document.getElementById('bnav-'+p);if(nb)nb.classList.add('on');
-  var el=document.getElementById('content');
   if(p==='home')_pgHome(el);
   else if(p==='posts')_pgPosts(el);
   else if(p==='my_posts')_pgMyPosts(el);
@@ -530,6 +535,7 @@ function _goPage(p){
   else if(p==='jobs')_pgJobs(el);
   else if(p==='profile')_pgProfile(el);
   else if(p==='members')_pgMembers(el);
+  else if(p==='chat')_pgChats(el);
 }
 
 // ── 홈 ───────────────────────────────────────────────────────
@@ -1030,7 +1036,10 @@ function _showApplicants(postId){
         '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
         '</div>':
         a.status==='approved'?
-        '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="width:100%;padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">'+(a.agencyReviewed?'✅ 평가 완료':'⭐ 기사 평가하기')+'</button>'
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
+        '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
+        '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+a.driverName+'\',\'driver\',\''+a.id+'\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+        '</div>'
         :'');
       body.appendChild(card);
     });
@@ -1392,7 +1401,10 @@ function _pgMyApplies(el){
           (a.status==='approved'?
           '<div style="margin-top:10px;padding:10px;background:var(--gnl);border-radius:10px;font-size:12px;color:var(--gn);font-weight:700">'+
           '🎉 승인됐어요! 대리점에 연락해주세요</div>'+
-          '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="width:100%;padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">'+(a.driverReviewed?'✅ 평가 완료':'⭐ 대리점 평가하기')+'</button>'
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+          '<button onclick="_openChatRoom(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
+          '<button onclick="_showReviewModal(\''+a.agencyId+'\',\''+a.agencyName+'\',\'agency\',\''+a.id+'\')" style="padding:10px;background:'+(a.driverReviewed?'var(--gnl)':'var(--brl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--br)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.driverReviewed?'✅ 평가완료':'⭐ 평가하기')+'</button>'+
+          '</div>'
           :'');
         list.appendChild(card);
       });
@@ -2011,6 +2023,151 @@ function _careerLabel(c){
   var map={'신입':'신입','1년 미만':'1년 미만','1~3년':'1~3년','3~5년':'3~5년','5년 이상':'5년 이상',
     '1년 이상':'1년 이상','3년 이상':'3년 이상','무관':'무관'};
   return map[c]||c||'무관';
+}
+
+// ── 채팅 ─────────────────────────────────────────────────────
+var _chatUnsub=null;
+
+function _pgChats(el){
+  el.innerHTML=
+    '<div class="page-hdr"><div class="page-title">💬 채팅</div>'+
+    '<div class="page-sub">대리점·기사와 직접 소통해요</div></div>'+
+    '<div id="chat-list"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></div>';
+
+  _db.collection('yongcha_chats').where('participants','array-contains',_CU.uid)
+    .orderBy('lastAt','desc').limit(30).get()
+    .then(function(snap){
+      var list=document.getElementById('chat-list');if(!list)return;
+      if(snap.empty){
+        list.innerHTML='<div class="empty"><div class="empty-ico">💬</div>'+
+          '<div class="empty-msg">아직 채팅이 없어요<br>승인된 지원에서 채팅을 시작해보세요</div></div>';
+        return;
+      }
+      list.innerHTML='';
+      snap.forEach(function(doc){
+        var d=Object.assign({id:doc.id},doc.data());
+        var otherUid=d.participants.find(function(u){return u!==_CU.uid;})||'';
+        var otherName=(d.participantNames||{})[otherUid]||'상대방';
+        var otherType=(d.participantTypes||{})[otherUid]||'';
+        var unread=(d.unread||{})[_CU.uid]||0;
+        var lastAt='';
+        if(d.lastAt&&d.lastAt.seconds){
+          var dt=new Date(d.lastAt.seconds*1000);
+          var now=new Date();
+          if(now.toDateString()===dt.toDateString())
+            lastAt=dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
+          else lastAt=(dt.getMonth()+1)+'/'+(dt.getDate());
+        }
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;padding:14px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .15s';
+        row.onclick=function(){_pgChatRoom(d.id,otherUid,otherName);};
+        row.innerHTML=
+          '<div style="width:44px;height:44px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;margin-right:12px">'+
+          (otherType==='agency'?'🏢':otherType==='driver'?'🚗':'👤')+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'+
+          '<div style="font-size:14px;font-weight:700">'+otherName+'</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+lastAt+'</div>'+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+          (d.lastMessage||'메시지를 보내보세요')+'</div>'+
+          '</div>'+
+          (unread>0?'<div style="margin-left:8px;background:var(--rd);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+unread+'</div>':'');
+        list.appendChild(row);
+      });
+    }).catch(function(e){
+      var list=document.getElementById('chat-list');
+      if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+e.message+'</div></div>';
+    });
+}
+
+function _openChatRoom(otherUid,otherName,otherType){
+  _closeModal();
+  var ids=[_CU.uid,otherUid].sort();
+  var chatId=ids[0]+'__'+ids[1];
+  var chatRef=_db.collection('yongcha_chats').doc(chatId);
+  chatRef.get().then(function(snap){
+    if(!snap.exists){
+      var names={};names[_CU.uid]=_CU.name;names[otherUid]=otherName;
+      var types={};types[_CU.uid]=_CU.type;types[otherUid]=otherType;
+      var unread={};unread[_CU.uid]=0;unread[otherUid]=0;
+      return chatRef.set({
+        participants:[_CU.uid,otherUid],
+        participantNames:names,participantTypes:types,
+        lastMessage:'',lastAt:firebase.firestore.FieldValue.serverTimestamp(),
+        unread:unread,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }).then(function(){_pgChatRoom(chatId,otherUid,otherName);}).catch(function(e){_yToast('채팅 오류: '+e.message);});
+}
+
+function _pgChatRoom(chatId,otherUid,otherName){
+  if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
+  document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
+  var nb=document.getElementById('bnav-chat');if(nb)nb.classList.add('on');
+
+  var el=document.getElementById('content');
+  el.style.overflowY='hidden';
+  el.style.padding='0';
+  el.style.display='flex';
+  el.style.flexDirection='column';
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0">'+
+    '<button onclick="_goPage(\'chat\')" style="background:none;border:none;color:var(--t2);font-size:24px;cursor:pointer;line-height:1;padding:0;width:32px">‹</button>'+
+    '<div style="font-size:15px;font-weight:800">'+otherName+'</div>'+
+    '</div>'+
+    '<div id="chat-msgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch"></div>'+
+    '<div style="display:flex;gap:8px;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom))">'+
+    '<input class="inp" id="chat-inp" placeholder="메시지 입력..." style="flex:1;margin:0;padding:11px 14px;font-size:14px" '+
+    'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_sendMsg(\''+chatId+'\',\''+otherUid+'\');}">'+
+    '<button onclick="_sendMsg(\''+chatId+'\',\''+otherUid+'\')" style="padding:11px 16px;background:var(--br);color:#000;border:none;border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">전송</button>'+
+    '</div>';
+
+  // Reset unread
+  var upd={};upd['unread.'+_CU.uid]=0;
+  _db.collection('yongcha_chats').doc(chatId).update(upd).catch(function(){});
+
+  // Real-time listener
+  _chatUnsub=_db.collection('yongcha_chats').doc(chatId).collection('messages')
+    .orderBy('createdAt','asc').onSnapshot(function(snap){
+      var msgs=document.getElementById('chat-msgs');if(!msgs)return;
+      msgs.innerHTML='';
+      snap.forEach(function(doc){
+        var m=doc.data();
+        var isMe=m.senderId===_CU.uid;
+        var timeStr='';
+        if(m.createdAt&&m.createdAt.seconds){
+          var dt=new Date(m.createdAt.seconds*1000);
+          timeStr=dt.getHours().toString().padStart(2,'0')+':'+dt.getMinutes().toString().padStart(2,'0');
+        }
+        var div=document.createElement('div');
+        div.style.cssText='display:flex;flex-direction:column;align-items:'+(isMe?'flex-end':'flex-start');
+        div.innerHTML=
+          (!isMe?'<div style="font-size:10px;color:var(--t2);margin-bottom:3px">'+m.senderName+'</div>':'')+
+          '<div style="max-width:72%;padding:10px 14px;border-radius:'+(isMe?'16px 4px 16px 16px':'4px 16px 16px 16px')+
+          ';background:'+(isMe?'var(--br)':'var(--bg3)')+';color:'+(isMe?'#000':'var(--tx)')+
+          ';font-size:14px;line-height:1.5;word-break:break-word;white-space:pre-wrap">'+m.text+'</div>'+
+          '<div style="font-size:10px;color:var(--t3);margin-top:3px">'+timeStr+'</div>';
+        msgs.appendChild(div);
+      });
+      msgs.scrollTop=msgs.scrollHeight;
+    });
+}
+
+function _sendMsg(chatId,otherUid){
+  var inp=document.getElementById('chat-inp');if(!inp)return;
+  var text=inp.value.trim();if(!text)return;
+  inp.value='';
+  var now=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('yongcha_chats').doc(chatId).collection('messages').add({
+    senderId:_CU.uid,senderName:_CU.name,text:text,createdAt:now
+  }).then(function(){
+    var upd={lastMessage:text,lastAt:now};
+    upd['unread.'+otherUid]=firebase.firestore.FieldValue.increment(1);
+    return _db.collection('yongcha_chats').doc(chatId).update(upd);
+  }).then(function(){
+    _yNotify(otherUid,'💬 '+_CU.name,text.substring(0,60));
+  }).catch(function(e){_yToast('전송 실패: '+e.message);});
 }
 
 // ── 양방향 평가 ──────────────────────────────────────────────
