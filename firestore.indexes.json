@@ -73,6 +73,20 @@
       ]
     },
     {
+      "collectionGroup": "yongcha_fcm_tokens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "region",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "yongcha_resumes",
       "queryScope": "COLLECTION",
       "fields": [

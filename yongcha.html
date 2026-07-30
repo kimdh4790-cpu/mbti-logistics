@@ -495,6 +495,7 @@ function _showApp(){
   badge.textContent=type==='admin'?'관리자':type==='agency'?'대리점':'기사';
   badge.className='hdr-badge '+(type==='admin'?'badge-admin':type==='agency'?'badge-agency':'badge-driver');
   _buildNav();_goPage('home');
+  setTimeout(_yInitFCM,1200);
 }
 
 // ── 네비 ────────────────────────────────────────────────────
@@ -610,8 +611,8 @@ function _pgHome(el){
           '<span style="font-size:11px;color:var(--br);font-weight:700">⏳ 검토 대기</span></div>'+
           '<div class="applicant-meta">📍 '+a.driverRegion+' · 📞 '+a.driverPhone+'</div>'+
           '<div class="judge-row">'+
-          '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\')">✅ 승인</button>'+
-          '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\')">❌ 거절</button>'+
+          '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
+          '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
           '</div>';
         recent.appendChild(card);
       });
@@ -955,6 +956,7 @@ function _applyPost(postId,agencyId,agencyName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 지원 완료! 대리점 승인을 기다려주세요');
+    _yNotify(agencyId,'새 지원자 도착! 🚗',_CU.name+'님이 노선공고에 지원했어요');
     _closeModal();
   }).catch(function(e){
     if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
@@ -1021,8 +1023,8 @@ function _showApplicants(postId){
         '<div class="applicant-meta">📍 '+a.driverRegion+' · 📞 '+a.driverPhone+'</div>'+
         (a.status==='pending'?
         '<div class="judge-row">'+
-        '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\')">✅ 승인</button>'+
-        '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\')">❌ 거절</button>'+
+        '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 승인</button>'+
+        '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 거절</button>'+
         '</div>':'');
       body.appendChild(card);
     });
@@ -1030,11 +1032,15 @@ function _showApplicants(postId){
   });
 }
 
-function _judgeApply(applyId,status,name){
+function _judgeApply(applyId,status,name,driverId){
   _db.collection('yongcha_applies').doc(applyId).update({
     status:status,judgedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast(status==='approved'?'✅ '+name+'님 승인했어요!':'거절했어요');
+    if(driverId){
+      if(status==='approved') _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
+      else _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+    }
     _closeModal();
     _pgHome(document.getElementById('content'));
   });
@@ -1333,6 +1339,17 @@ function _submitPost(){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 공고가 등록됐어요!');
+    // 긴급공고 → 같은 지역 기사들에게 FCM 알림
+    if(_isUrgent){
+      _db.collection('yongcha_fcm_tokens').where('type','==','driver').where('region','==',_CU.region).get()
+        .then(function(snap){
+          snap.forEach(function(doc){
+            var t=doc.data().token;
+            if(t) fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({token:t,title:'🔥 긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
+          });
+        }).catch(function(){});
+    }
     _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
     _goPage('my_posts');
   }).catch(function(e){
@@ -1573,6 +1590,7 @@ function _sendScout(driverId, driverName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 스카웃 제안을 보냈어요!');
+    _yNotify(driverId,'스카웃 제안 💌',_CU.name+'에서 스카웃 제안이 왔어요! 확인해보세요');
     _closeModal();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -1603,8 +1621,8 @@ function _loadJobApplicants(jobId){
         '<div class="applicant-meta">📍 '+(a.driverRegion||'')+'</div>'+
         (a.status==='pending'?
         '<div class="judge-row">'+
-        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\')">✅ 합격</button>'+
-        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\')">❌ 불합격</button>'+
+        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+a.driverName+'\',\''+a.driverId+'\')">✅ 합격</button>'+
+        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+a.driverName+'\',\''+a.driverId+'\')">❌ 불합격</button>'+
         '</div>':'');
       body.appendChild(card);
     });
@@ -1612,11 +1630,15 @@ function _loadJobApplicants(jobId){
   });
 }
 
-function _judgeJobApply(applyId, status, name){
+function _judgeJobApply(applyId, status, name, driverId){
   _db.collection('yongcha_applies').doc(applyId).update({
     status:status, judgedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast(status==='approved'?'✅ '+name+'님 합격 처리했어요!':'불합격 처리했어요');
+    if(driverId){
+      if(status==='approved') _yNotify(driverId,'채용 합격 🎉','축하해요! '+_CU.name+'에서 합격 통보가 왔어요!');
+      else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요');
+    }
     _closeModal();
   });
 }
@@ -1744,6 +1766,7 @@ function _applyJob(jobId, agencyId, agencyName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('✅ 지원 완료! 대리점 연락을 기다려주세요');
+    _yNotify(agencyId,'채용 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요');
     _closeModal();
   }).catch(function(e){
     if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
@@ -1953,6 +1976,47 @@ function _careerLabel(c){
   var map={'신입':'신입','1년 미만':'1년 미만','1~3년':'1~3년','3~5년':'3~5년','5년 이상':'5년 이상',
     '1년 이상':'1년 이상','3년 이상':'3년 이상','무관':'무관'};
   return map[c]||c||'무관';
+}
+
+// ── FCM 알림 ─────────────────────────────────────────────────
+function _yInitFCM(){
+  if(!firebase.messaging||!firebase.messaging.isSupported||!firebase.messaging.isSupported())return;
+  if(typeof Notification==='undefined'||Notification.permission==='denied')return;
+  try{
+    var msg=firebase.messaging();
+    Notification.requestPermission().then(function(perm){
+      if(perm!=='granted')return;
+      // VAPID 없이 getToken 시도 (SW에서 VAPID 처리)
+      msg.getToken().then(function(token){
+        if(!token)return;
+        _db.collection('yongcha_fcm_tokens').doc(_CU.uid).set({
+          token:token,userId:_CU.uid,
+          type:_CU.type,region:_CU.region||'',
+          updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(){});
+      }).catch(function(e){console.warn('[FCM] 토큰 오류:',e.code||e.message);});
+    });
+    msg.onMessage(function(payload){
+      var n=(payload||{}).notification||{};
+      _yToast('🔔 '+(n.title||'알림')+(n.body?' — '+n.body:''));
+      var dot=document.getElementById('notif-dot');
+      if(dot)dot.style.display='block';
+    });
+  }catch(e){console.warn('[FCM] 초기화 실패:',e);}
+}
+
+function _yNotify(recipientId,title,body){
+  if(!recipientId||!title)return;
+  _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
+    .then(function(snap){
+      if(!snap.exists)return;
+      var token=snap.data().token;
+      if(!token)return;
+      return fetch('/api/ctrl-notify',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:token,title:title,body:body||''})
+      });
+    }).catch(function(){});
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────
