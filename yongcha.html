@@ -1093,7 +1093,7 @@ function _showApplicants(postId){
     Promise.all(profileFetches).then(function(items){
       items.forEach(function(item){
         var a=item.a, p=item.p;
-        var grade=_trustGrade(p.rating||0, p.reviewCount||0, p.fakeCount||0);
+        var grade=_driverGrade(p.trustScore||0, p.completedRoutes||0);
         var card=document.createElement('div');card.className='applicant-card';
         card.innerHTML=
           '<div class="applicant-top">'+
@@ -1114,6 +1114,7 @@ function _showApplicants(postId){
           '</div>'+
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px">'+
           '<span style="background:'+grade.bg+';color:'+grade.color+';padding:2px 8px;border-radius:20px;font-weight:700">'+grade.label+'</span>'+
+          '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">점수 '+(p.trustScore||0)+'점</span>'+
           (p.company?'<span style="color:var(--t2)">🏢 '+p.company+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
@@ -1141,6 +1142,10 @@ function _judgeApply(applyId,status,name,driverId){
     _yToast(status==='approved'?'✅ '+name+'님 승인했어요!':'거절했어요');
     if(driverId){
       if(status==='approved'){
+        // 기사 완료건수 +1 및 트러스트 점수 갱신
+        _db.collection('yongcha_users').doc(driverId).update({
+          completedRoutes:firebase.firestore.FieldValue.increment(1)
+        }).then(function(){_calcTrustScore(driverId);}).catch(function(){});
         _yNotify(driverId,'지원 승인 ✅',_CU.name+'에서 노선 지원을 승인했어요!');
         // 계약서 초안 생성
         _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
@@ -1737,6 +1742,20 @@ function _pgProfile(el){
   '<div style="font-size:20px;font-weight:900;margin-bottom:4px">'+_CU.name+'</div>'+
   '<div style="font-size:12px;color:'+typeColor+';font-weight:700;margin-bottom:4px">'+typeLabel+'</div>'+
   '<div style="font-size:12px;color:var(--t2)">📍 '+(_CU.region||'—')+'</div>'+
+  (function(){
+    if(type==='driver'){
+      var dg=_driverGrade(_CU.trustScore||0,_CU.completedRoutes||0);
+      return '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px">'+
+        '<span style="background:'+dg.bg+';color:'+dg.color+';padding:4px 14px;border-radius:20px;font-size:13px;font-weight:800">'+dg.label+'</span>'+
+        '<span style="font-size:12px;color:var(--t3)">신뢰점수 '+(_CU.trustScore||0)+'점</span>'+
+        '<span style="font-size:12px;color:var(--t3)">완료 '+(_CU.completedRoutes||0)+'건</span>'+
+        '</div>';
+    } else if(type==='agency'){
+      var ag=_trustGrade(_CU.rating||0,_CU.reviewCount||0,_CU.fakeCount||0);
+      return '<div style="margin-top:10px"><span style="background:'+ag.bg+';color:'+ag.color+';padding:4px 14px;border-radius:20px;font-size:13px;font-weight:800">'+ag.label+'</span></div>';
+    }
+    return '';
+  })()+
   (_CU.rating>0?'<div style="font-size:16px;font-weight:800;color:var(--br);margin-top:8px">⭐ '+_CU.rating.toFixed(1)+' ('+_CU.reviewCount+'개 후기)</div>':'')+
   '</div>'+
 
@@ -2690,10 +2709,18 @@ function _submitReview(targetId,targetName,targetType,applyId){
   }).catch(function(e){btn.textContent='⭐ 평가 제출하기';btn.disabled=false;_yToast('오류: '+e.message);});
 }
 
+function _driverGrade(score, completedRoutes){
+  var s=score||0, r=completedRoutes||0;
+  if(s>=91&&r>=30)return{label:'👑 VIP',color:'#b45309',bg:'#fef3c7',short:'VIP'};
+  if(s>=71&&r>=10)return{label:'⭐ 우수',color:'#1d4ed8',bg:'#dbeafe',short:'우수'};
+  if(s>=41||r>=3)return{label:'일반',color:'var(--t2)',bg:'var(--bg3)',short:'일반'};
+  return{label:'🌱 새내기',color:'var(--t3)',bg:'var(--bg3)',short:'새내기'};
+}
+
 function _calcTrustScore(userId){
   _db.collection('yongcha_reviews').where('revieweeId','==',userId).get().then(function(snap){
     if(snap.empty)return;
-    var total=0,count=0,fakeCount=0,lastFakeAt=null;
+    var total=0,count=0,fakeCount=0,lastFakeAt=null,highRatingCount=0;
     snap.forEach(function(doc){
       var d=doc.data();
       total+=d.rating||0;count++;
@@ -2702,14 +2729,26 @@ function _calcTrustScore(userId){
         var ct=d.createdAt;
         if(ct&&(!lastFakeAt||(ct.seconds||0)>(lastFakeAt.seconds||0)))lastFakeAt=ct;
       }
+      if((d.rating||0)>=4.5)highRatingCount++;
     });
     var avg=count>0?Math.round((total/count)*10)/10:0;
     var upd={rating:avg,reviewCount:count,fakeCount:fakeCount};
     if(lastFakeAt)upd.lastFakeAt=lastFakeAt;
-    // 공고 게시 제재: fakeCount >= 10 → 정지, >= 5 → 3일 제한
     if(fakeCount>=10)upd.postSuspended=true;
     else if(fakeCount>=5)upd.postRestrictedAt=lastFakeAt||firebase.firestore.FieldValue.serverTimestamp();
-    _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
+    // 기사 트러스트 포인트 갱신 (완료건수는 별도 관리)
+    _db.collection('yongcha_users').doc(userId).get().then(function(us){
+      if(!us.exists)return;
+      var ud=us.data();
+      if(ud.type==='driver'){
+        var completed=ud.completedRoutes||0;
+        var score=Math.min(100, completed*5 + highRatingCount*10);
+        upd.trustScore=score;
+      }
+      _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
+    }).catch(function(){
+      _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
+    });
   }).catch(function(){});
 }
 
