@@ -185,6 +185,9 @@ service cloud.firestore {
     match /filo_tables/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /filo_reservations/{docId}      { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /filo_delivery/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /filo_payments/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /payroll_records/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /staff_calls/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
 
     match /dine_sales/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /dine_staff/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }

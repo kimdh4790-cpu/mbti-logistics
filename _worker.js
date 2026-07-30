@@ -3346,6 +3346,10 @@ fetch('/qr/members?did='+DID)
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
     // ── 루트 경로 처리 ──
     if (path === '/' || path === '' || path === '/donway_landing' || path === '/donway_landing/') {
+      // yongcha.app fallback (Worker route 미등록 시 Pages 프록시 경유 가능성 대비)
+      if (hostname === 'yongcha.app' || hostname === 'www.yongcha.app') {
+        return handleYongcha(request, env);
+      }
       // mbetco.kr → universal_settle.html
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
         // mbtico.kr 루트 → 허브 페이지
