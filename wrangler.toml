@@ -7,6 +7,28 @@ workers_dev = false
 [triggers]
 crons = ["* * * * *"]
 
+[vars]
+FIREBASE_API_KEY       = ""
+FIREBASE_WEB_API_KEY   = ""
+ANTHROPIC_API_KEY      = ""
+CLAUDE_API_KEY         = ""
+GOOGLE_TRANSLATE_KEY   = ""
+EMAIL_API_KEY          = ""
+RESEND_API_KEY         = ""
+SOLAPI_KEY             = ""
+SOLAPI_SECRET          = ""
+KAKAO_JS_KEY           = ""
+KAKAO_REST_KEY         = ""
+KAKAO_PF_ID            = "KA01PF260618094439788FzuY2GxDiSW"
+MODUSIGN_API_KEY       = ""
+TOSS_SECRET_KEY        = ""
+TOSS_WEBHOOK_SECRET    = ""
+TOSS_PAYOUT_SECRET_KEY = ""
+BIZ_API_KEY            = "2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4"
+FCM_SERVER_KEY         = ""
+CRON_SECRET            = ""
+SYNC_KV_SECRET         = "donway2026"
+
 [[kv_namespaces]]
 binding = "DONWAY_ASSETS"
 id = "7f0e90efaea64f3ab08ff00f8970b28b"
