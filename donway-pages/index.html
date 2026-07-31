@@ -7526,6 +7526,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   dealerId:_CU?_CU.dealerId:'',
                   camp:bonus.camp||'', jobsub:'쿠팡',
                   dcnt:0, rcnt:0, damt:0, ramt:0, fresh:0, finc:0,
+                  totalAmt:0, vatIncome:0, coupangTotal:0,
                   etcPlus:0, etcPlusReason:'', etcMinus:0, etcMinusReason:'',
                   etcPlusTL:bonus.amount,
                   etcPlusTLReason:'팀장수수료 ('+bonus.amount.toLocaleString()+'원)',
