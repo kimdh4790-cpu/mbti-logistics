@@ -46,8 +46,19 @@ jobs:
             for ATTEMPT in 1 2 3; do
               RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
                 -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" \
+                -H "Content-Type: text/plain; charset=utf-8" -H "Expect:" \
                 --data-binary @"$FILE")
               if echo "$RESULT" | grep -q '"success":true'; then
+                # 되읽기 검증: 저장된 값 앞에 HTTP 헤더가 섞여 들어가면 JS 파싱이 깨진다
+                BACK=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
+                  -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" | head -c 32)
+                case "$BACK" in
+                  Content-Length:*|Content-Type:*)
+                    echo "⚠️ $FILE 값에 HTTP 헤더 혼입 — 재시도 $ATTEMPT/3"
+                    sleep 2
+                    continue
+                    ;;
+                esac
                 echo "✅ $FILE"
                 SUCCESS=true
                 break
