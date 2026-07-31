@@ -189,10 +189,12 @@ function _calcPayFull(m,att,empCnt,ym){
  /* 실제 휴식시간 계산 (QR break_start/break_end) */
  var breakStarts=breaks.filter(function(b){return b.type==='break_start';}).sort(function(a,b){return a.time>b.time?1:-1;});
  var breakEnds=breaks.filter(function(b){return b.type==='break_end';}).sort(function(a,b){return a.time>b.time?1:-1;});
- var actualBreakMin=0;
+ /* FIX: att는 '한 달치'라 월 합계를 매 근무마다 빼면 근무시간이 음수가 된다 */
+ var breakSpans=[];
  for(var bi=0;bi<Math.min(breakStarts.length,breakEnds.length);bi++){
-  var bDiff=(new Date(breakEnds[bi].time)-new Date(breakStarts[bi].time))/60000;
-  if(bDiff>0&&bDiff<240)actualBreakMin+=bDiff;
+  var bS=new Date(breakStarts[bi].time), bE=new Date(breakEnds[bi].time);
+  var bDiff=(bE-bS)/60000;
+  if(bDiff>0&&bDiff<240)breakSpans.push({s:bS,e:bE,min:bDiff});
  }
 
  var totalMin=0,nightMin=0,overMin=0;
@@ -201,8 +203,13 @@ function _calcPayFull(m,att,empCnt,ym){
   var diff=(outT-inT)/60000;
   if(diff<=0||diff>720)continue;
   /* 실제 QR 휴식 있으면 적용, 없으면 자동 추정 */
-  var br=actualBreakMin>0?actualBreakMin:(diff>=480?60:diff>=240?30:0);
-  var net=diff-br;totalMin+=net;
+  /* 이 근무구간 안에서 발생한 휴식만 차감 */
+  var shiftBreak=0;
+  for(var bj=0;bj<breakSpans.length;bj++){
+   if(breakSpans[bj].s>=inT && breakSpans[bj].e<=outT) shiftBreak+=breakSpans[bj].min;
+  }
+  var br=shiftBreak>0?shiftBreak:(diff>=480?60:diff>=240?30:0);
+  var net=Math.max(0,diff-br);totalMin+=net;
   /* 야간 */
   var ns=new Date(inT);ns.setHours(22,0,0,0);
   if(outT>ns)nightMin+=(outT-Math.max(inT,ns))/60000;
