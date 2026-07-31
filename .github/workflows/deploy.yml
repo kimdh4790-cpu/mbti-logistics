@@ -51,7 +51,8 @@ jobs:
                 -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" \
                 -F "value=@$FILE" -F "metadata={}")
               if echo "$RESULT" | grep -q '"success":true'; then
-                echo "✅ $FILE"                SUCCESS=true
+                echo "✅ $FILE"
+                SUCCESS=true
                 break
               else
                 echo "⚠️ $FILE 재시도 $ATTEMPT/3: $RESULT"
