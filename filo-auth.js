@@ -123,6 +123,9 @@ function _loadCompany(uid){
 }
 
 function _showApp(){
+ /* 매장 테마 적용 — _cachedCompanyDoc은 이 시점에 채워져 있다.
+    theme이 없는 기존 매장은 other(기존 퍼플)로 떨어져 화면이 그대로 유지된다. */
+ try{ if(typeof _filoApplyTheme==='function') _filoApplyTheme(_cachedCompanyDoc||{}); }catch(e){}
  document.getElementById('login-screen').style.display='none';
  document.getElementById('login-screen').style.display='none';
  var _appEl=document.getElementById('app');_appEl.style.display='flex';_appEl.classList.add('logged-in');
@@ -727,15 +730,35 @@ function _filoRegister(){
  var subs={};
  var trial={active:true,plan:'trial',start:_nowISO(),expiry:new Date(Date.now()+7*86400000).toISOString()};
  svc.split(',').forEach(function(s){subs[s]=trial;});
+ window._filoNewDealerId=uid;
+ var _th=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[industry])?_FILO_THEMES[industry]:null;
  return _db.collection('companies').doc(uid).set({
  uid:uid,companyName:company,name:name,email:email,phone:phone,
  bizNum:biznum,role:'dealer',dealerId:uid,
  platform:'filo',serviceType:svc,
+ /* 업종 테마 — 기존엔 industry를 읽고도 저장하지 않아 테마/기본메뉴의 기준값이 없었다 */
+ theme:industry,
+ primaryColor:_th?_th.primary:'',
+ bgColor:_th?_th.bg:'',
  subscriptions:subs,
  createdAt:firebase.firestore.FieldValue.serverTimestamp()
  });
  }).then(function(){
+ /* 선택한 업종 테마 즉시 적용 */
+ if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:industry});
  _filoToast('✅ 등록 완료! 1개월 무료 체험을 시작합니다');
+ /* 업종별 기본 메뉴 자동 세팅 — 명세대로 확인 팝업 후 진행 */
+ var tpl=(typeof _FILO_MENU_TEMPLATES!=='undefined')?_FILO_MENU_TEMPLATES[industry]:null;
+ if(tpl&&tpl.length&&typeof _filoSeedDefaultMenus==='function'){
+  setTimeout(function(){
+   var label=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[industry])?_FILO_THEMES[industry].label:industry;
+   if(confirm(label+' 업종에 맞는 기본 메뉴 '+tpl.length+'개를 자동으로 추가할까요?\n\n등록 후 자유롭게 수정·추가·삭제할 수 있습니다.')){
+    _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
+     if(n>0)_filoToast('🍽 기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');
+    }).catch(function(e){_filoToast('❌ 기본 메뉴 등록 실패: '+e.message);});
+   }
+  },600);
+ }
  }).catch(function(e){
  errEl.textContent=e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message;
  errEl.style.display='block';
