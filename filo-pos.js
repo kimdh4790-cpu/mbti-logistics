@@ -784,15 +784,27 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
     status.textContent = '\uc190\ub2d8 \ud3f0\uc73c\ub85c \uc601\uc218\uc99d \ubc1c\uc1a1 \uc911...';
     clearTimeout(timer);
 
-    _db.collection('filo_orders')
-      .where('dealerId','==',did)
-      .where('tableNum','==',parseInt(tableNum))
-      .where('date','==',_today())
-      .get().then(function(snap){
-        var tok = null, ordId = null;
-        snap.forEach(function(doc){
-          var t = doc.data().fcmToken;
-          if(t && t.length > 20){ tok = t; ordId = doc.id; }
+    /* tableNum은 주문 경로에 따라 문자열/숫자로 섞여 저장되고, order-done.html 경로는
+       date 필드를 남기지 않는다. 기존엔 parseInt + date 로만 조회해서 영수증용 주문을
+       한 건도 못 찾고 항상 '토큰 없음'이 떴다. → 양쪽 타입 조회 + date는 관대하게 판정 */
+    var _rcptToday = _today();
+    Promise.all([
+      _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).get(),
+      _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',(parseInt(tableNum,10)||-1)).get()
+    ]).then(function(results){
+        var tok = null, ordId = null, newest = '', seen = {};
+        results.forEach(function(snap){
+          snap.forEach(function(doc){
+            if(seen[doc.id]) return; seen[doc.id] = true;
+            var d = doc.data();
+            var day = d.date || (d.createdAt||'').slice(0,10);
+            if(day && day !== _rcptToday) return;      /* 날짜 정보가 없으면 통과 */
+            var t = d.fcmToken;
+            if(t && t.length > 20){
+              var ts = d.createdAt || '';
+              if(ts >= newest){ newest = ts; tok = t; ordId = doc.id; }
+            }
+          });
         });
         if(!tok){
           sendBtn.textContent = '\u274c \ud1a0\ud070 \uc5c6\uc74c';
