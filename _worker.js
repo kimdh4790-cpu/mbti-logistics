@@ -59,57 +59,6 @@
 // ⚠️ mbtico.kr → mbtico-pages/_worker.js 별도 서빙!
 // ⚠️ settle.html = donway-pages/index.html (KV키: settle.html)
 //
-// ═══════════════════════════════════════════════════════════════
-// 🚨 Claude — 절대 건들면 안 되는 항목 (삭제·이름변경·이동 금지)
-// ═══════════════════════════════════════════════════════════════
-//
-// [DONWAY 정산 핵심 함수 — 절대 삭제 금지]
-//   parseCoupangExcel        — 쿠팡 엑셀 파싱 진입점
-//   _parseCoupangExcelInner  — 내부 파싱 로직
-//   _parseCoupangWing        — Wing 엑셀 파싱
-//   recalcAllSettlements     — 전체 정산 재계산
-//   calcDeliveryBonus        — 배달 인센티브 계산
-//   pageSettle               — 정산 메인 페이지
-//   pageSettlements          — 정산 현황 목록
-//   _renderSettleList        — 정산 목록 렌더링
-//   _renderSettlePage        — 정산 상세 렌더링
-//   _sendAlimtalk            — 알림톡 발송
-//   _sendAlimtalkWithStmt    — 명세서 포함 알림톡 발송
-//
-// [DONWAY 핵심 변수 — 절대 삭제·이름변경 금지]
-//   DW_TIERS_IND      — 개인 요금제 단계
-//   DW_TIERS_GRP      — 단체 요금제 단계
-//   IND_TERMS         — 업종별 서비스 약관 (ai_settle / delivery 포함)
-//   _idSupportRules   — 아이디지원 규칙 (앞=지원받는기사 fid, 뒤=대신배송기사 tid)
-//   _routeCampMap     — 라우트↔캠프 매핑
-//   _routePrices      — 라우트별 단가
-//   dateRoutes        — 날짜별 라우트 정보
-//   _guaranteeAmt     — 보장 금액
-//   _checkAlimtalkQuota — 알림톡 잔액 확인
-//
-// [Worker 라우팅 — 순서·위치 변경 금지]
-//   filo.ai.kr 블록은 반드시 slug 라우팅 체크보다 앞에 위치
-//   /api/* 블록은 도메인 라우팅 블록보다 앞에 위치
-//   mbtico.kr → mbtico-pages/_worker.js 별도 서빙 (이 파일 아님!)
-//
-// [KV 키 이름 — 절대 변경 금지]
-//   'settle.html'       — donway-pages/index.html 의 KV 키
-//   'filo-manifest.json'— FILO PWA 매니페스트
-//   ⚠️ KV 키 ≠ 파일명인 경우 반드시 위 목록 확인 후 작업
-//
-// [의도적 공개 Firestore 규칙 — 보안 강화 명목으로 닫으면 안 됨]
-//   filo_orders create: true    — 비로그인 고객 주문
-//   filo_menus  read:   true    — QR주문 페이지
-//   join_requests create: true  — 가입 신청
-//   statement_share read: true  — 정산서 공유링크
-//   filo_bookings create: true  — 비로그인 예약
-//   filo_point_log create: true — 고객 포인트 적립
-//
-// [filo-common.js — 직접 수정 금지]
-//   리팩토링 완료본. 변경 필요 시 분리된 모듈(filo-order-common.js 등) 수정
-//
-// ═══════════════════════════════════════════════════════════════
-//
 // [2026-07-16 주요 변경]
 //   - /join 라우팅: KV에서 settle.html 읽어 UI 커스터마이즈 주입
 //   - filo-qr.js, dine-schedule.js JS 서빙 목록 추가
@@ -1846,7 +1795,7 @@ async function acceptExchange(){
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
@@ -2076,7 +2025,7 @@ async function acceptExchange(){
                     }
                     nameTranslations[lang] = translated2 || name;
                     // KV 캐시 갱신
-                    const cacheKey2 = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+                    const cacheKey2 = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
                     try{await env.DONWAY_ASSETS.put(cacheKey2, nameTranslations[lang], {expirationTtl:86400});}catch(e){}
                   } catch(e) { nameTranslations[lang] = name; }
                 }
@@ -2681,7 +2630,7 @@ fetch('/qr/members?did='+DID)
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
@@ -2784,17 +2733,23 @@ fetch('/qr/members?did='+DID)
       if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
+      // FIX: wait.html은 KV에 있는데 라우트가 없어 slug catch-all이 filo.html을 반환하고 있었다
+      if (path === '/wait' || path === '/wait.html') return serveKVFile(env, 'wait.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
       // filo JS 모듈 서빙 (slug 라우팅보다 먼저!)
       const cleanPath = path.split('?')[0];
-      if (cleanPath.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
+      if (cleanPath.match(/^\/filo-[a-z0-9_-]+\.js$/)) {
         return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
       }
       if (cleanPath === '/store.js' || cleanPath === '/order.js') {
         return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
       }
+      // FIX: /api /toss /fcm /storage-upload 는 아래 공통 라우터에만 핸들러가 있다.
+      // slug catch-all이 가로채면 JSON 대신 filo.html이 돌아가 호출부가 조용히 실패한다.
+      const _delegateToCommon = cleanPath.startsWith('/api/') || cleanPath.startsWith('/toss/') || cleanPath.startsWith('/fcm/') || cleanPath === '/storage-upload';
+      if (!_delegateToCommon) {
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
       if (filoPath) {
@@ -2856,6 +2811,7 @@ fetch('/qr/members?did='+DID)
         }
       }
       return serveKVFile(env, 'filo.html', 'text/html');
+      } // end _delegateToCommon guard
     }
 
         // ★ mbtico.kr → 엠비티아이 배송앱
@@ -7038,7 +6994,7 @@ service cloud.firestore {
 // ── yongcha.app 핸들러 (KV 없이 직접 서빙) ─────────────────
 // _YONGCHA_HTML removed - using GitHub Raw
 
-async async function handleYongcha(request, env) {
+async function handleYongcha(request, env) {
   const url    = new URL(request.url);
   const path   = url.pathname;
   const method = request.method;
@@ -7068,8 +7024,5 @@ async async function handleYongcha(request, env) {
   }
 
   // 모든 경로 → KV에서 yongcha.html 서빙
-  return serveKVFile(env, 'yongcha.html', 'text/html');date'
-    }
-  });
+  return serveKVFile(env, 'yongcha.html', 'text/html');
 }
-
