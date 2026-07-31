@@ -1846,7 +1846,7 @@ async function acceptExchange(){
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
@@ -2076,7 +2076,7 @@ async function acceptExchange(){
                     }
                     nameTranslations[lang] = translated2 || name;
                     // KV 캐시 갱신
-                    const cacheKey2 = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+                    const cacheKey2 = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
                     try{await env.DONWAY_ASSETS.put(cacheKey2, nameTranslations[lang], {expirationTtl:86400});}catch(e){}
                   } catch(e) { nameTranslations[lang] = name; }
                 }
@@ -2681,7 +2681,7 @@ fetch('/qr/members?did='+DID)
         const lang = body.lang || 'en';
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+encodeURIComponent(name).slice(0,80);
+        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
           if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
@@ -2784,17 +2784,23 @@ fetch('/qr/members?did='+DID)
       if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
+      // FIX: wait.html은 KV에 있는데 라우트가 없어 웨이팅 QR이 filo.html로 빠지고 있었다
+      if (path === '/wait' || path === '/wait.html') return serveKVFile(env, 'wait.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
       // filo JS 모듈 서빙 (slug 라우팅보다 먼저!)
       const cleanPath = path.split('?')[0];
-      if (cleanPath.match(/^\/filo-(common|pos|table|menu|order|inventory|staff|report)\.js$/)) {
+      if (cleanPath.match(/^\/filo-[a-z0-9_-]+\.js$/)) {
         return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
       }
       if (cleanPath === '/store.js' || cleanPath === '/order.js') {
         return serveKVFile(env, cleanPath.slice(1), 'application/javascript');
       }
+      // FIX: /api /toss /fcm /storage-upload 는 아래 공통 라우터에만 핸들러가 있다.
+      // slug catch-all이 가로채면 JSON 대신 filo.html(HTML)이 돌아가 호출부가 조용히 실패한다.
+      const _delegateToCommon = cleanPath.startsWith('/api/') || cleanPath.startsWith('/toss/') || cleanPath.startsWith('/fcm/') || cleanPath === '/storage-upload';
+      if (!_delegateToCommon) {
       // ★ /매장명 or /slug → filo.html + 매장명 주입
       const filoPath = path.replace(/^\//, '');
       if (filoPath) {
@@ -2856,6 +2862,7 @@ fetch('/qr/members?did='+DID)
         }
       }
       return serveKVFile(env, 'filo.html', 'text/html');
+      } // end _delegateToCommon guard
     }
 
         // ★ mbtico.kr → 엠비티아이 배송앱

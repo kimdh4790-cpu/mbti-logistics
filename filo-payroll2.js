@@ -355,10 +355,39 @@ function _filoPayslipLoad(did, ym) {
     res[2].docs.forEach(function(d){ payDocs[d.data().memberId]=d.data(); });
 
     // 직원별 근무시간 계산
-    var hoursMap = {};
+    // FIX: attendance는 근무 '이벤트'(in/out/break_*)라 레코드 수로 세면 안 된다.
+    // (기존: 레코드마다 8시간 가산 -> 출근+퇴근 1일이 16시간으로 계산됨)
+    var attMap = {};
     attDocs.forEach(function(a){
-      if(!hoursMap[a.memberId]) hoursMap[a.memberId]=0;
-      hoursMap[a.memberId]+=(a.workHours||8);
+      if(!a || !a.memberId || !a.time) return;
+      if(!attMap[a.memberId]) attMap[a.memberId]=[];
+      attMap[a.memberId].push(a);
+    });
+    var hoursMap = {};
+    Object.keys(attMap).forEach(function(mid){
+      var evs = attMap[mid].slice().sort(function(x,y){ return x.time<y.time?-1:(x.time>y.time?1:0); });
+      var totalMin=0, openIn=null, breakStart=null, breakMin=0;
+      evs.forEach(function(e){
+        if(e.type==='in'){ if(!openIn) openIn=e; }
+        else if(e.type==='out'){
+          if(!openIn) return;
+          var diff=(new Date(e.time)-new Date(openIn.time))/60000;
+          if(diff>0 && diff<=720){
+            var br = breakMin>0 ? breakMin : (diff>=480?60:(diff>=240?30:0));
+            totalMin += Math.max(0, diff-br);
+          }
+          openIn=null; breakStart=null; breakMin=0;
+        }
+        else if(e.type==='break_start'){ breakStart=e; }
+        else if(e.type==='break_end'){
+          if(breakStart){
+            var b=(new Date(e.time)-new Date(breakStart.time))/60000;
+            if(b>0 && b<240) breakMin+=b;
+          }
+          breakStart=null;
+        }
+      });
+      hoursMap[mid]=totalMin/60;
     });
 
     var totalPay=0, pending=0, totalHours=0;
