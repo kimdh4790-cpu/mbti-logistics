@@ -7016,15 +7016,9 @@ async function handleYongcha(request, env) {
     }
   }
 
-  // 모든 경로 → GitHub Raw에서 최신 yongcha.html 서빙
-  const _ycRes = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/yongcha.html', {
-    cf: { cacheEverything: false, cacheTtl: 0 }
-  });
-  const _ycHtml = await _ycRes.text();
-  return new Response(_ycHtml, {
-    headers: {
-      'Content-Type': 'text/html;charset=utf-8',
-      'Cache-Control': 'no-store, no-cache, must-revalidate'
+  // 모든 경로 → KV에서 yongcha.html 서빙
+  return serveKVFile(env, 'yongcha.html', 'text/html');
+  // dummy: 'no-store, no-cache, must-revalidate'
     }
   });
 }
