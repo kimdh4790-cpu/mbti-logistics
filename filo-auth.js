@@ -123,6 +123,13 @@ function _loadCompany(uid){
 }
 
 function _showApp(){
+ /* 업종별 테마 적용 — _cachedCompanyDoc은 이 시점에 채워져 있다.
+    industry가 없는 기존 매장은 other(기존 보라)로 떨어져 화면이 그대로 유지된다. */
+ try{
+  if(typeof _filoApplyIndustryTheme==='function'){
+   _filoApplyIndustryTheme((_cachedCompanyDoc&&_cachedCompanyDoc.industry)||'other');
+  }
+ }catch(e){}
  document.getElementById('login-screen').style.display='none';
  document.getElementById('login-screen').style.display='none';
  var _appEl=document.getElementById('app');_appEl.style.display='flex';_appEl.classList.add('logged-in');
@@ -727,14 +734,24 @@ function _filoRegister(){
  var subs={};
  var trial={active:true,plan:'trial',start:_nowISO(),expiry:new Date(Date.now()+7*86400000).toISOString()};
  svc.split(',').forEach(function(s){subs[s]=trial;});
+ window._filoNewDealerId=uid;
  return _db.collection('companies').doc(uid).set({
  uid:uid,companyName:company,name:name,email:email,phone:phone,
  bizNum:biznum,role:'dealer',dealerId:uid,
  platform:'filo',serviceType:svc,
+ industry:industry,          /* 업종 저장 - 테마/기본메뉴 세팅의 기준값 (기존엔 읽고 버려졌다) */
  subscriptions:subs,
  createdAt:firebase.firestore.FieldValue.serverTimestamp()
  });
  }).then(function(){
+ /* 업종 테마 즉시 적용 */
+ if(typeof _filoApplyIndustryTheme==='function')_filoApplyIndustryTheme(industry);
+ /* 업종별 기본 메뉴 자동 세팅 (신규 매장이라 기존 메뉴를 덮어쓸 위험 없음) */
+ if(typeof _filoSeedDefaultMenus==='function'){
+  _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
+   if(n>0)_filoToast('🍽 기본 메뉴 '+n+'개가 등록됐습니다');
+  }).catch(function(){});
+ }
  _filoToast('✅ 등록 완료! 1개월 무료 체험을 시작합니다');
  }).catch(function(e){
  errEl.textContent=e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message;
