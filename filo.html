@@ -548,15 +548,9 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
  <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
  </div>
-  <div class="fg"><label>업종 선택 <span style="color:var(--red)">*</span></label>
-  <select id="fr-industry" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">
-  <option value="cafe">☕ 카페·베이커리</option>
-  <option value="restaurant">🍜 식당·분식</option>
-  <option value="beauty">💇 미용실·뷰티</option>
-  <option value="retail">🛒 편의점·소매</option>
-  <option value="fitness">💪 헬스·필라테스</option>
-  <option value="other">🏪 기타</option>
-  </select></div>
+  <!-- 업종 선택은 아래 한 곳(#fr-industry)만 둔다.
+       기존엔 같은 id의 select가 이 폼 안에 두 번 있어 드롭다운이 2개 보였고,
+       getElementById가 위쪽(무인매장이 빠진 목록)을 읽어 선택값이 무시됐다. -->
  <div class="fg"><label>사업자등록번호 <span style="color:var(--red)">*</span></label>
  <div style="display:flex;gap:8px">
  <input id="fr-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')">
