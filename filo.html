@@ -548,15 +548,9 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <div class="fg"><label>회사명 <span style="color:var(--red)">*</span></label>
  <input id="fr-company" type="text" placeholder="예) 엠비티아이 유한회사">
  </div>
-  <div class="fg"><label>업종 선택 <span style="color:var(--red)">*</span></label>
-  <select id="fr-industry" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">
-  <option value="cafe">☕ 카페·베이커리</option>
-  <option value="restaurant">🍜 식당·분식</option>
-  <option value="beauty">💇 미용실·뷰티</option>
-  <option value="retail">🛒 편의점·소매</option>
-  <option value="fitness">💪 헬스·필라테스</option>
-  <option value="other">🏪 기타</option>
-  </select></div>
+  <!-- 업종 선택은 아래 한 곳(#fr-industry)만 둔다.
+       기존엔 같은 id의 select가 이 폼 안에 두 번 있어 드롭다운이 2개 보였고,
+       getElementById가 위쪽 것을 읽어 아래에서 고른 값이 무시됐다. -->
  <div class="fg"><label>사업자등록번호 <span style="color:var(--red)">*</span></label>
  <div style="display:flex;gap:8px">
  <input id="fr-biznum" type="text" placeholder="000-00-00000" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')">
@@ -569,13 +563,13 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <label>업종 선택 <span style="color:var(--red)">*</span></label>
  <select id="fr-industry" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none;margin-bottom:12px">
   <option value="">업종을 선택하세요</option>
-  <option value="cafe">☕ 카페·베이커리</option>
-  <option value="restaurant">🍽 음식점·식당</option>
-  <option value="beauty">💄 미용·뷰티샵</option>
-  <option value="retail">🛒 소매·편의점</option>
-  <option value="fitness">💪 피트니스·학원</option>
-  <option value="unmanned">🤖 무인매장</option>
-  <option value="other">🏢 기타</option>
+  <option value="cafe">☕ 카페/베이커리</option>
+  <option value="korean">🍚 한식당</option>
+  <option value="japanese">🍣 일식/횟집</option>
+  <option value="chinese">🥢 중식당</option>
+  <option value="fastfood">🍢 패스트푸드/분식</option>
+  <option value="izakaya">🍶 이자카야/술집</option>
+  <option value="other">🏪 기타</option>
  </select>
  <label>플랜 선택 <span style="color:var(--red)">*</span></label>
  <div style="font-size:10px;color:var(--t3);margin-bottom:8px">30일 무료 체험 · 이후 월 구독</div>
