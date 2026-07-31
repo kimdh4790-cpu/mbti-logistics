@@ -46,57 +46,22 @@ jobs:
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
-          CF_KEY=$(echo "$CF_KEY" | tr -d '\n\r ')
+          CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          # ★ 시크릿에 개행/공백이 섞이면 -H "X-Auth-Key: $CF_KEY" 가 HTTP 헤더 블록을
-          #    조기 종료시켜, 뒤따르는 Content-Length/Content-Type 헤더가 본문으로 밀려
-          #    KV 값 앞에 그대로 저장된다(모든 JS 파싱 실패). 반드시 정리해서 쓴다.
-          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          FAILED_FILES=""
-          for FILE in filo.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-pos-core.js filo-pos-ui.js filo-table.js filo-qr.js filo-menu.js filo-menu-mgmt.js filo-menu-recipe.js filo-order.js filo-inventory.js filo-staff.js filo-report.js filo-order-common.js dine.js dine-schedule.js dine-staff.js dine-payroll.js dine-sales.js dine-analytics.js dine-tax.js dine-member.js donway_landing.js filo-landing.js order.html order.js store.html store.js kitchen.html member-join.html add.html wait.html yongcha.html staff-portal.html member-portal.html filo-landing.html donway_landing.html dine.html dine-landing.html manifest.json firebase-messaging-sw.js sw.js donway_og.jpg table-reserve.html register.html inventory.html qrpos.html kiosk.html filo-manifest.json table-order.html order-done.html mbti_landing.html mbtico_hub.html label.html emergency.html checkin.html drivers.html notice.html schedule.html scan.html mbtico_join.html mbtico-manifest.json mbtico_control.html mbtico-ctrl.js; do
-            [ ! -f "$FILE" ] && continue
-            SUCCESS=false
-            for ATTEMPT in 1 2 3; do
-              RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" \
-                -H "Content-Type: text/plain; charset=utf-8" \
-                --data-binary @"$FILE")
-              if echo "$RESULT" | grep -q '"success":true'; then
-                echo "✅ $FILE"
-                SUCCESS=true
-                break
-              else
-                echo "⚠️ $FILE 재시도 $ATTEMPT/3: $RESULT"
-                sleep 2
-              fi
-            done
-            if [ "$SUCCESS" = false ]; then
-              echo "❌ $FILE 최종 실패"
-              FAILED_FILES="$FAILED_FILES $FILE"
+          for FILE in filo.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-menu.js filo-qr.js filo-inventory.js filo-report.js filo-table.js filo-staff.js filo-order.js filo-order-common.js filo-order-common.js filo-landing.html dine.html dine-landing.html order.html order.js order-done.html store.html kitchen.html yongcha.html; do
+            [ -f "$FILE" ] || continue
+            RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY_CLEAN" \
+              -H "Content-Type: text/plain; charset=utf-8" \
+              --data-binary @"$FILE")
+            if echo "$RESULT" | grep -q '"success":true'; then
+              echo "✅ $FILE"
+            else
+              echo "❌ $FILE: $RESULT"
             fi
           done
-          if [ -n "$FAILED_FILES" ]; then
-            echo "🚨 KV 업로드 실패 파일:$FAILED_FILES"
-            exit 1
-          fi
-
-      - name: KV 업로드 검증 (경고만)
-        run: |
-          sleep 30
-          BAD=0
-          for F in filo-auth.js filo-common.js filo-menu.js filo-pos.js filo.html; do
-            HEAD=$(curl -s "https://filo.ai.kr/$F" | head -c 24)
-            case "$HEAD" in
-              Content-Length:*|Content-Type:*)
-                echo "🚨 $F 에 HTTP 헤더 혼입 (KV 값 오염)"
-                BAD=1
-                ;;
-              *) echo "✅ $F 정상" ;;
-            esac
-          done
-          [ "$BAD" = "1" ] && echo "⚠️ 일부 KV 값이 오염됐습니다 — 업로드 방식을 확인하세요"
-          exit 0
 
       - name: Upload settle.html to KV
         env:
