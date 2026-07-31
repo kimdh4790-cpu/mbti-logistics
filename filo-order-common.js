@@ -64,6 +64,16 @@ var _catIco={'전체':'🍽','버거':'🍔','치킨':'🍗','피자':'🍕','�
 // ── 번역 캐시 ────────────────────────────────────────────────────────────────
 var _tlCache={};
 
+// ── 메뉴명 → 안전한 DOM id ───────────────────────────────────────────────────
+// 기존 name.replace(/\W/g,'_')는 \w가 ASCII만 인식해서 한글이 전부 '_'로 바뀌었다.
+// 글자 수가 같은 메뉴끼리 id가 겹쳐("김치찌개"·"된장찌개" → 둘 다 'tr-____')
+// 번역문과 장바구니 배지가 엉뚱한 메뉴 카드에 표시되는 문제가 있었다.
+function _menuSlug(name){
+ var s=String(name==null?'':name), h=0x811c9dc5;
+ for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}
+ return h.toString(36)+'_'+s.length;
+}
+
 // ── 메뉴 카드 렌더링 ──────────────────────────────────────────────────────────
 function _renderMenuGrid(menus, gridId){
  var grid=document.getElementById(gridId||'menu-grid');
@@ -75,8 +85,8 @@ function _renderMenuGrid(menus, gridId){
   var item=document.createElement('div');
   item.className='mi';
   item.dataset.cat=(m.category&&m.category.trim())||'기타';
-  var trId='tr-'+m.name.replace(/\W/g,'_');
-  var badgeId='badge-'+m.name.replace(/\W/g,'_');
+  var trId='tr-'+_menuSlug(m.name);
+  var badgeId='badge-'+_menuSlug(m.name);
   var inCart=_cart[m.name]&&_cart[m.name].qty>0;
   if(m.imageUrl){
    item.innerHTML='<div class="mi-img-wrap">'+
@@ -145,7 +155,7 @@ function _renderCatBar(menus, barId, gridId){
 function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
  menus.forEach(function(m){
-  var trId='tr-'+m.name.replace(/\W/g,'_');
+  var trId='tr-'+_menuSlug(m.name);
   // tr-엘리먼트 (번역) + name-img 도 번역
   var el=document.getElementById(trId);
   var nameImgEls=document.querySelectorAll('.mi-name-img,.mi-name');
@@ -299,7 +309,7 @@ function _updFab(){
  }
  // 배지 업데이트
  Object.keys(_cart).forEach(function(name){
-  var badgeEl=document.getElementById('badge-'+name.replace(/\W/g,'_'));
+  var badgeEl=document.getElementById('badge-'+_menuSlug(name));
   if(badgeEl){
    var qty=_cart[name]?_cart[name].qty:0;
    badgeEl.textContent=qty||'';

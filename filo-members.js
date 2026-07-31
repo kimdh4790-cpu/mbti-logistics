@@ -68,7 +68,7 @@ function _filoShowAddMember(){
  '<div class="fg"><label>시급/일급 (원)</label><input id="nm-wage" type="number" placeholder="10030" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
  '<div class="fg"><label>부서 (선택)</label><input id="nm-dept" type="text" placeholder="부서명" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
  '<div style="display:flex;gap:8px;margin-top:4px">'+
- '<button onclick="this.closest(".mo").remove()" class="btn" style="flex:1;background:var(--b3)">취소</button>'+
+ '<button onclick="this.closest(\'.mo\').remove()" class="btn" style="flex:1;background:var(--b3)">취소</button>'+
  '<button onclick="_filoAddMember()" class="btn btn-brand" style="flex:1">추가</button></div></div>';
  _filoShowModal(html);
 }
@@ -109,7 +109,7 @@ function _filoShowMemberDetail(docId){
  '<div style="display:flex;justify-content:space-between;padding:6px 0">'+
  '<span style="font-size:12px;color:var(--t3)">시급</span><span style="font-size:13px;font-weight:700">'+(d.wage?(d.wage.toLocaleString()+'원'):'-')+'</span></div></div>'+
  '<div style="display:flex;gap:8px">'+
- '<button onclick="this.closest(".mo").remove()" class="btn" style="flex:1;background:var(--b3)">닫기</button>'+
+ '<button onclick="this.closest(\'.mo\').remove()" class="btn" style="flex:1;background:var(--b3)">닫기</button>'+
  '<button class="btn del-btn" data-id="'+docId+'" data-name="'+esc(d.name)+'" style="flex:1;background:var(--red);color:#fff">삭제</button></div></div>';
  _filoShowModal(html);
  });
