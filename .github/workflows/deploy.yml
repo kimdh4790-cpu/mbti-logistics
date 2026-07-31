@@ -46,6 +46,7 @@ jobs:
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
+          CF_KEY=$(echo "$CF_KEY" | tr -d '\n\r ')
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
           # ★ 시크릿에 개행/공백이 섞이면 -H "X-Auth-Key: $CF_KEY" 가 HTTP 헤더 블록을
