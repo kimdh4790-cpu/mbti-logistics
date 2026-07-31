@@ -7038,7 +7038,7 @@ service cloud.firestore {
 // ── yongcha.app 핸들러 (KV 없이 직접 서빙) ─────────────────
 // _YONGCHA_HTML removed - using GitHub Raw
 
-async async function handleYongcha(request, env) {
+async function handleYongcha(request, env) {
   const url    = new URL(request.url);
   const path   = url.pathname;
   const method = request.method;
