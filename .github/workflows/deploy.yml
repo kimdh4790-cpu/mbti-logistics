@@ -31,7 +31,20 @@ jobs:
           CF_EMAIL: kimdh4790@gmail.com
         run: |
           npm install -g wrangler@4 --silent
-          CLOUDFLARE_API_KEY=$CF_KEY CLOUDFLARE_EMAIL=$CF_EMAIL npx wrangler deploy 2>&1
+          # 시크릿에 개행/공백이 섞이면 X-Auth-Key 형식 오류(code 6103)로 배포가 실패한다
+          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          # cfk_/긴 문자열은 API 토큰 → CLOUDFLARE_API_TOKEN 으로 전달해야 한다.
+          # (Global API Key 방식으로 보내면 "Invalid format for X-Auth-Key header")
+          case "$CF_KEY" in
+            cfk_*|v1.0-*)
+              echo "auth: API Token"
+              CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy 2>&1
+              ;;
+            *)
+              echo "auth: Global API Key"
+              CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy 2>&1
+              ;;
+          esac
 
       - name: Upload HTML/JS assets to KV
         env:
