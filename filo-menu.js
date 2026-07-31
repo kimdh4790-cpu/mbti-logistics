@@ -82,7 +82,7 @@ function _filoAutoImageUrl(name,category,emoji){
  }
  if(!prompt&&category&&catMap[category])prompt=catMap[category];
  if(!prompt)prompt='korean food dish food photography delicious';
- var // Pexels API로 이미지 검색 (서버사이드)
+
  return fetch('/api/menu-image?q='+encodeURIComponent(prompt))
    .then(function(r){return r.json();})
    .then(function(d){return d.url||'';})
