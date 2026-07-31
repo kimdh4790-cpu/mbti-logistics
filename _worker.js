@@ -2214,6 +2214,27 @@ async function acceptExchange(){
 
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
+      // /api/menu-image — Pexels 음식 이미지 검색
+      if (path === '/api/menu-image') {
+        const q = new URL(request.url).searchParams.get('q') || 'food';
+        const pexelsKey = env.PEXELS_API_KEY || '';
+        if (!pexelsKey) return Response.json({url:''});
+        try {
+          const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5&orientation=square`, {
+            headers: {'Authorization': pexelsKey}
+          });
+          const data = await res.json();
+          const photos = data.photos || [];
+          if (!photos.length) return Response.json({url:''});
+          // 랜덤으로 하나 선택
+          const photo = photos[Math.floor(Math.random() * photos.length)];
+          const url = photo.src?.medium || photo.src?.original || '';
+          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return Response.json({url:''});
+        }
+      }
+
       if (path === '/api/store') {
         const slug = new URL(request.url).searchParams.get('slug');
         if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
@@ -2236,6 +2257,27 @@ async function acceptExchange(){
         const store={id:doc.document.name.split('/').pop(),name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
         return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      // /api/menu-image — Pexels 음식 이미지 검색
+      if (path === '/api/menu-image') {
+        const q = new URL(request.url).searchParams.get('q') || 'food';
+        const pexelsKey = env.PEXELS_API_KEY || '';
+        if (!pexelsKey) return Response.json({url:''});
+        try {
+          const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5&orientation=square`, {
+            headers: {'Authorization': pexelsKey}
+          });
+          const data = await res.json();
+          const photos = data.photos || [];
+          if (!photos.length) return Response.json({url:''});
+          // 랜덤으로 하나 선택
+          const photo = photos[Math.floor(Math.random() * photos.length)];
+          const url = photo.src?.medium || photo.src?.original || '';
+          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return Response.json({url:''});
+        }
+      }
+
       if (path === '/api/store') {
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         const slug = new URL(request.url).searchParams.get('slug')||'';
