@@ -82,8 +82,11 @@ function _filoAutoImageUrl(name,category,emoji){
  }
  if(!prompt&&category&&catMap[category])prompt=catMap[category];
  if(!prompt)prompt='korean food dish food photography delicious';
- var seed=name.split('').reduce(function(a,c){return a+c.charCodeAt(0)},0)%9999;
- return 'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?width=400&height=400&nologo=true&seed='+seed;
+ var // Pexels API로 이미지 검색 (서버사이드)
+ return fetch('/api/menu-image?q='+encodeURIComponent(prompt))
+   .then(function(r){return r.json();})
+   .then(function(d){return d.url||'';})
+   .catch(function(){return '';});
 }
 
 function _filoPageRecipe(el){
