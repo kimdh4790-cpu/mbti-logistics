@@ -7069,7 +7069,7 @@ async function handleYongcha(request, env) {
 
   // 모든 경로 → KV에서 yongcha.html 서빙
   return serveKVFile(env, 'yongcha.html', 'text/html');
-    }
-  });
+  }
+});
 }
 
