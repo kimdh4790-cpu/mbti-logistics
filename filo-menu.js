@@ -1036,34 +1036,36 @@ function _filoPageExpiry(el){
 }
 function _filoLoadStockHistory(did, elId, type){
  var col=type==='in'?'inventory_in':'inventory_out';
- _db.collection(col).where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
- .then(function(snap){
+ /* 품목명 맵을 함께 받아서 렌더링한다.
+    기존엔 이력을 먼저 그린 뒤 inventory를 따로 조회했는데, 이름을 채워 넣는 루프의
+    본문이 비어 있어(아래 querySelectorAll 블록) 화면에 품목명 대신 문서ID가 그대로 보였다. */
+ Promise.all([
+  _db.collection(col).where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get(),
+  _db.collection('inventory').where('dealerId','==',did).get()
+ ])
+ .then(function(res){
+ var snap=res[0];
+ var nameMap={};
+ res[1].forEach(function(doc){nameMap[doc.id]=doc.data().name||doc.id;});
  var el=document.getElementById(elId);if(!el)return;
  if(snap.empty){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">이력 없음</div>';return;}
  el.innerHTML=snap.docs.map(function(doc){
  var d=doc.data();
- var itemName=d.itemName||d.itemId||'';
+ var itemName=d.itemName||nameMap[d.itemId]||d.itemId||'';
  var icon=type==='in'?'📥':'📤';
  var color=type==='in'?'#22c55e':'#ef4444';
  var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
  return '<div class="stock-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px">'+
  '<div style="font-size:18px">'+icon+'</div>'+
  '<div style="flex:1">'+
- '<div style="font-size:13px;font-weight:700">'+esc(d.itemId||'')+(typeLabel?' · '+typeLabel:'')+'</div>'+
- '<div style="font-size:11px;color:var(--t3)">'+(d.supplier||d.memo||'')+(d.expiry?' · 유통기한:'+d.expiry:'')+'</div>'+
+ '<div style="font-size:13px;font-weight:700">'+esc(itemName)+(typeLabel?' · '+typeLabel:'')+'</div>'+
+ '<div style="font-size:11px;color:var(--t3)">'+esc(d.supplier||d.memo||'')+(d.expiry?' · 유통기한:'+esc(d.expiry):'')+'</div>'+
  '</div>'+
  '<div style="text-align:right">'+
  '<div style="font-size:15px;font-weight:900;color:'+color+'">'+(type==='in'?'+':'-')+d.qty+'개</div>'+
  '<div style="font-size:10px;color:var(--t3)">'+(d.date||'')+'</div>'+
  '</div></div>';
  }).join('');
- }).catch(function(){});
- _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
- var map={};
- snap.forEach(function(doc){map[doc.id]=doc.data().name||doc.id;});
- var el=document.getElementById(elId);if(!el)return;
- el.querySelectorAll('.stock-item').forEach(function(row,i){
- });
  }).catch(function(){});
 }
 
