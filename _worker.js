@@ -2271,12 +2271,18 @@ async function acceptExchange(){
         const pexelsKey = env.PEXELS_API_KEY || '';
         if (!pexelsKey) return Response.json({url:''});
         try {
-          const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5&orientation=square`, {
-            headers: {'Authorization': pexelsKey}
-          });
-          const data = await res.json();
-          const photos = data.photos || [];
-          if (!photos.length) return Response.json({url:''});
+          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
+          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
+          const _pex = async (extra) => {
+            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
+              headers: {'Authorization': pexelsKey}
+            });
+            const d = await r.json();
+            return d.photos || [];
+          };
+          let photos = await _pex('&orientation=square');
+          if (!photos.length) photos = await _pex('');
+          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
           // 랜덤으로 하나 선택
           const photo = photos[Math.floor(Math.random() * photos.length)];
           const url = photo.src?.medium || photo.src?.original || '';
@@ -2314,12 +2320,18 @@ async function acceptExchange(){
         const pexelsKey = env.PEXELS_API_KEY || '';
         if (!pexelsKey) return Response.json({url:''});
         try {
-          const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5&orientation=square`, {
-            headers: {'Authorization': pexelsKey}
-          });
-          const data = await res.json();
-          const photos = data.photos || [];
-          if (!photos.length) return Response.json({url:''});
+          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
+          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
+          const _pex = async (extra) => {
+            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
+              headers: {'Authorization': pexelsKey}
+            });
+            const d = await r.json();
+            return d.photos || [];
+          };
+          let photos = await _pex('&orientation=square');
+          if (!photos.length) photos = await _pex('');
+          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
           // 랜덤으로 하나 선택
           const photo = photos[Math.floor(Math.random() * photos.length)];
           const url = photo.src?.medium || photo.src?.original || '';
