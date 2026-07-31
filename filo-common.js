@@ -25,6 +25,111 @@
 
 /* 호환용 - 기존 _filoRmAddRow 호출 대응 */
 
+/* ══════════════════════════════════════════
+   🎨 업종별 커스텀 테마 (filo-test.md 명세)
+   companies/{did} 의 theme / primaryColor / bgColor 로 결정된다.
+   - theme        : 아래 _FILO_THEMES 의 키 (업종)
+   - primaryColor : 있으면 업종 기본색을 덮어씀 (고객 직접 입력)
+   - bgColor      : 있으면 업종 기본 배경을 덮어씀
+   명세 변수(--primary/--bg/--card/--accent)와 기존 앱이 실제로 쓰는
+   변수(--br/--surface 계열)를 함께 세팅해야 화면이 바뀐다.
+   ══════════════════════════════════════════ */
+var _FILO_THEMES = {
+ cafe:     { label:'카페/베이커리',   emoji:'☕', primary:'#c8a96e', bg:'#1a1209' },
+ korean:   { label:'한식당',          emoji:'🍚', primary:'#e05555', bg:'#0f0a0a' },
+ japanese: { label:'일식/횟집',       emoji:'🍣', primary:'#3b82f6', bg:'#0a0f1e' },
+ chinese:  { label:'중식당',          emoji:'🥢', primary:'#f59e0b', bg:'#1a0a0a' },
+ fastfood: { label:'패스트푸드/분식', emoji:'🍢', primary:'#f97316', bg:'#f8f9fa' },
+ izakaya:  { label:'이자카야/술집',   emoji:'🍶', primary:'#d4af37', bg:'#0a0a0a' },
+ other:    { label:'기타',            emoji:'🏪', primary:'#7c3aed', bg:'#07071a' }
+};
+
+function _filoHexToRgb(hex){
+ var h=String(hex||'').trim().replace('#','');
+ if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+ var n=parseInt(h,16);
+ if(!isFinite(n)||h.length!==6) return null;
+ return {r:(n>>16)&255, g:(n>>8)&255, b:n&255};
+}
+function _filoRgbStr(hex,fallback){
+ var c=_filoHexToRgb(hex);
+ return c?(c.r+','+c.g+','+c.b):(fallback||'124,58,237');
+}
+/* amt>0 밝게, amt<0 어둡게 */
+function _filoShade(hex,amt){
+ var c=_filoHexToRgb(hex); if(!c) return hex;
+ function f(v){ return Math.max(0,Math.min(255, Math.round(v + (amt>0?(255-v):v)*amt))); }
+ function hx(v){ var s=v.toString(16); return s.length<2?'0'+s:s; }
+ return '#'+hx(f(c.r))+hx(f(c.g))+hx(f(c.b));
+}
+/* 배경이 밝은 테마(패스트푸드 #f8f9fa)면 글자색을 어둡게 뒤집어야 읽힌다 */
+function _filoIsLight(hex){
+ var c=_filoHexToRgb(hex); if(!c) return false;
+ return (0.299*c.r + 0.587*c.g + 0.114*c.b) > 160;
+}
+
+/**
+ * 매장 테마 적용.
+ * @param {object} co companies 문서 (또는 {theme,primaryColor,bgColor})
+ */
+function _filoApplyTheme(co){
+ co = co || {};
+ var key = String(co.theme||'').trim();
+ var base = _FILO_THEMES[key] || _FILO_THEMES.other;
+ var primary = (co.primaryColor && _filoHexToRgb(co.primaryColor)) ? co.primaryColor : base.primary;
+ var bg      = (co.bgColor      && _filoHexToRgb(co.bgColor))      ? co.bgColor      : base.bg;
+ var light   = _filoIsLight(bg);
+ var card    = light ? _filoShade(bg,-0.04) : _filoShade(bg, 0.06);
+ var accent  = _filoShade(primary, 0.25);
+
+ var r = (typeof document!=='undefined') ? document.documentElement : null;
+ if(!r || !r.style) return {primary:primary,bg:bg,card:card,accent:accent};
+ var S = function(k,v){ r.style.setProperty(k,v); };
+
+ /* 명세 변수 */
+ S('--primary',primary); S('--bg',bg); S('--card',card); S('--accent',accent);
+ /* 기존 앱 변수 매핑 */
+ S('--br',primary);
+ S('--br-l',  _filoShade(primary, 0.18));
+ S('--br-ll', _filoShade(primary, 0.40));
+ S('--br-d',  _filoShade(primary,-0.30));
+ S('--br-glow','rgba('+_filoRgbStr(primary)+',.45)');
+ S('--br-glow2','rgba('+_filoRgbStr(primary)+',.2)');
+ S('--br2',accent);
+ S('--br2-l',_filoShade(accent,0.2));
+ S('--br2-glow','rgba('+_filoRgbStr(accent)+',.35)');
+ S('--brand',primary); S('--brand2',accent);
+ S('--bg2', light?_filoShade(bg,-0.02):_filoShade(bg,0.03));
+ S('--bg3', light?_filoShade(bg,-0.06):_filoShade(bg,0.08));
+ S('--surface',  card);
+ S('--surface2', light?_filoShade(bg,-0.08):_filoShade(bg,0.11));
+ S('--surface3', light?_filoShade(bg,-0.12):_filoShade(bg,0.16));
+ S('--surface4', light?_filoShade(bg,-0.16):_filoShade(bg,0.22));
+ /* 밝은 배경이면 글자색 반전 */
+ if(light){
+  S('--tx','#14141f'); S('--t2','#4b5563'); S('--t3','#6b7280'); S('--t4','#9ca3af');
+  S('--bd','rgba(0,0,0,.12)'); S('--bd2','rgba(0,0,0,.18)');
+ } else {
+  S('--tx','#f0f0ff'); S('--t2','#9898c0'); S('--t3','#565678'); S('--t4','#323250');
+  S('--bd','rgba(255,255,255,.08)'); S('--bd2','rgba(255,255,255,.14)');
+ }
+ var meta=document.querySelector('meta[name="theme-color"]');
+ if(meta) meta.setAttribute('content', primary);
+ r.setAttribute('data-theme-industry', key||'other');
+ r.setAttribute('data-theme-light', light?'1':'0');
+ window._filoTheme = {theme:key||'other', primary:primary, bg:bg, card:card, accent:accent, light:light};
+ return window._filoTheme;
+}
+
+/** 고객 페이지(order/store/kitchen)에서 dealerId로 테마를 읽어 적용 */
+function _filoLoadStoreTheme(db, dealerId){
+ if(!db || !dealerId) return Promise.resolve(null);
+ return db.collection('companies').doc(dealerId).get().then(function(d){
+  var co = d.exists ? d.data() : {};
+  return _filoApplyTheme(co);
+ }).catch(function(){ return null; });
+}
+
 function _filoStartDynamicQR(did){
  if(_dynamicQRTimer)clearInterval(_dynamicQRTimer);
  _filoGenDynamicQR(did);

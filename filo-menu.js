@@ -1082,3 +1082,145 @@ function _filoStockLowAlert(menuName, stock, stockMin){
  // 화면 토스트도 표시
  _filoToast('⚠️ '+menuName+' 재고 부족 ('+stock+'개)');
 }
+
+/* ══════════════════════════════════════════
+   🍽 업종별 기본 메뉴 템플릿 (filo-test.md 명세)
+   업종 키는 filo-common.js 의 _FILO_THEMES 와 동일.
+   q  = Pexels 검색어 (worker /api/menu-image 로 전달)
+   tr = EN/中/日 번역 (등록 즉시 다국어 주문 페이지 노출)
+   ══════════════════════════════════════════ */
+var _FILO_MENU_TEMPLATES = {
+ cafe: [
+  {name:'아메리카노(ICE)',price:4000,category:'커피',emoji:'🧊',q:'iced americano coffee glass',tr:{en:'Iced Americano',zh:'冰美式',ja:'アイスアメリカーノ'}},
+  {name:'아메리카노(HOT)',price:4000,category:'커피',emoji:'☕',q:'hot americano coffee cup',tr:{en:'Hot Americano',zh:'热美式',ja:'ホットアメリカーノ'}},
+  {name:'카페라떼',price:4500,category:'커피',emoji:'🥛',q:'cafe latte art cup',tr:{en:'Cafe Latte',zh:'拿铁',ja:'カフェラテ'}},
+  {name:'카푸치노',price:4500,category:'커피',emoji:'☕',q:'cappuccino foam cup',tr:{en:'Cappuccino',zh:'卡布奇诺',ja:'カプチーノ'}},
+  {name:'크로와상',price:3500,category:'베이커리',emoji:'🥐',q:'croissant bakery',tr:{en:'Croissant',zh:'牛角包',ja:'クロワッサン'}},
+  {name:'스콘',price:3000,category:'베이커리',emoji:'🍞',q:'scone bakery pastry',tr:{en:'Scone',zh:'司康',ja:'スコーン'}},
+  {name:'머핀',price:2800,category:'베이커리',emoji:'🧁',q:'muffin bakery',tr:{en:'Muffin',zh:'玛芬',ja:'マフィン'}},
+  {name:'치즈케이크',price:5000,category:'디저트',emoji:'🍰',q:'cheesecake slice dessert',tr:{en:'Cheesecake',zh:'芝士蛋糕',ja:'チーズケーキ'}},
+  {name:'에이드(자몽/레몬/청포도)',price:5000,category:'음료',emoji:'🍹',q:'fruit ade soda glass',tr:{en:'Fruit Ade',zh:'水果气泡饮',ja:'フルーツエード'}},
+  {name:'스무디',price:5500,category:'음료',emoji:'🥤',q:'fruit smoothie glass',tr:{en:'Smoothie',zh:'冰沙',ja:'スムージー'}}
+ ],
+ korean: [
+  {name:'된장찌개',price:8000,category:'찌개',emoji:'🥘',q:'korean soybean paste stew',tr:{en:'Soybean Paste Stew',zh:'大酱汤',ja:'テンジャンチゲ'}},
+  {name:'김치찌개',price:8000,category:'찌개',emoji:'🍲',q:'kimchi stew korean',tr:{en:'Kimchi Stew',zh:'泡菜汤',ja:'キムチチゲ'}},
+  {name:'순두부찌개',price:8000,category:'찌개',emoji:'🍜',q:'soft tofu stew korean',tr:{en:'Soft Tofu Stew',zh:'嫩豆腐汤',ja:'スンドゥブチゲ'}},
+  {name:'비빔밥',price:9000,category:'식사',emoji:'🍚',q:'bibimbap korean rice bowl',tr:{en:'Bibimbap',zh:'拌饭',ja:'ビビンバ'}},
+  {name:'불고기',price:12000,category:'식사',emoji:'🥩',q:'bulgogi korean beef',tr:{en:'Bulgogi',zh:'烤牛肉',ja:'プルコギ'}},
+  {name:'제육볶음',price:10000,category:'식사',emoji:'🥓',q:'spicy stir fried pork korean',tr:{en:'Spicy Stir-fried Pork',zh:'辣炒猪肉',ja:'豚肉の辛味炒め'}},
+  {name:'공기밥',price:1000,category:'추가',emoji:'🍚',q:'steamed white rice bowl',tr:{en:'Steamed Rice',zh:'米饭',ja:'ライス'}},
+  {name:'냉면',price:10000,category:'면류',emoji:'🍜',q:'korean cold noodles naengmyeon',tr:{en:'Cold Noodles',zh:'冷面',ja:'冷麺'}},
+  {name:'삼겹살(1인분)',price:13000,category:'구이',emoji:'🥓',q:'korean pork belly bbq grill',tr:{en:'Pork Belly (1 serving)',zh:'五花肉(1人份)',ja:'サムギョプサル(1人前)'}}
+ ],
+ japanese: [
+  {name:'연어초밥(2pc)',price:4000,category:'초밥',emoji:'🍣',q:'salmon sushi nigiri',tr:{en:'Salmon Sushi (2pc)',zh:'三文鱼寿司(2贯)',ja:'サーモン寿司(2貫)'}},
+  {name:'참치초밥(2pc)',price:4000,category:'초밥',emoji:'🍣',q:'tuna sushi nigiri',tr:{en:'Tuna Sushi (2pc)',zh:'金枪鱼寿司(2贯)',ja:'マグロ寿司(2貫)'}},
+  {name:'광어회(소)',price:35000,category:'회',emoji:'🐟',q:'flounder sashimi plate',tr:{en:'Flounder Sashimi (S)',zh:'比目鱼刺身(小)',ja:'ヒラメ刺身(小)'}},
+  {name:'모둠회(소)',price:45000,category:'회',emoji:'🍥',q:'assorted sashimi platter',tr:{en:'Assorted Sashimi (S)',zh:'什锦刺身(小)',ja:'刺身盛り合わせ(小)'}},
+  {name:'우동',price:9000,category:'면류',emoji:'🍲',q:'udon noodle soup bowl',tr:{en:'Udon',zh:'乌冬面',ja:'うどん'}},
+  {name:'라멘',price:10000,category:'면류',emoji:'🍜',q:'ramen noodle soup bowl',tr:{en:'Ramen',zh:'拉面',ja:'ラーメン'}},
+  {name:'사케(1홉)',price:8000,category:'주류',emoji:'🍶',q:'japanese sake bottle cup',tr:{en:'Sake (1 go)',zh:'清酒(1合)',ja:'日本酒(1合)'}},
+  {name:'하이볼',price:7000,category:'주류',emoji:'🥃',q:'highball whisky soda glass',tr:{en:'Highball',zh:'高球酒',ja:'ハイボール'}}
+ ],
+ chinese: [
+  {name:'짜장면',price:7000,category:'면류',emoji:'🍜',q:'jajangmyeon black bean noodles',tr:{en:'Jajangmyeon',zh:'炸酱面',ja:'ジャージャー麺'}},
+  {name:'짬뽕',price:8000,category:'면류',emoji:'🍲',q:'jjamppong spicy seafood noodle soup',tr:{en:'Jjamppong',zh:'炒码面',ja:'チャンポン'}},
+  {name:'탕수육(소)',price:18000,category:'요리',emoji:'🍖',q:'sweet and sour pork tangsuyuk',tr:{en:'Sweet & Sour Pork (S)',zh:'糖醋肉(小)',ja:'酢豚(小)'}},
+  {name:'볶음밥',price:8000,category:'식사',emoji:'🍚',q:'chinese fried rice',tr:{en:'Fried Rice',zh:'炒饭',ja:'チャーハン'}},
+  {name:'마파두부',price:10000,category:'요리',emoji:'🌶',q:'mapo tofu chinese dish',tr:{en:'Mapo Tofu',zh:'麻婆豆腐',ja:'マーボー豆腐'}},
+  {name:'깐풍기',price:20000,category:'요리',emoji:'🍗',q:'spicy fried chicken chinese',tr:{en:'Kkanpunggi',zh:'干烹鸡',ja:'カンプンギ'}},
+  {name:'군만두',price:6000,category:'사이드',emoji:'🥟',q:'fried dumplings gyoza',tr:{en:'Fried Dumplings',zh:'煎饺',ja:'焼き餃子'}}
+ ],
+ fastfood: [
+  {name:'떡볶이',price:5000,category:'분식',emoji:'🌶',q:'tteokbokki korean rice cake spicy',tr:{en:'Tteokbokki',zh:'炒年糕',ja:'トッポッキ'}},
+  {name:'순대',price:4000,category:'분식',emoji:'🍢',q:'korean blood sausage sundae',tr:{en:'Sundae',zh:'血肠',ja:'スンデ'}},
+  {name:'튀김(5개)',price:3000,category:'분식',emoji:'🍤',q:'korean fried snack tempura',tr:{en:'Fritters (5pc)',zh:'炸物(5个)',ja:'天ぷら(5個)'}},
+  {name:'라볶이',price:6000,category:'분식',emoji:'🍜',q:'rabokki ramen rice cake',tr:{en:'Rabokki',zh:'拉面炒年糕',ja:'ラポッキ'}},
+  {name:'김밥(1줄)',price:3500,category:'김밥',emoji:'🍙',q:'korean gimbap roll',tr:{en:'Gimbap (1 roll)',zh:'紫菜包饭(1条)',ja:'キンパ(1本)'}},
+  {name:'치즈김밥',price:4000,category:'김밥',emoji:'🧀',q:'cheese gimbap korean roll',tr:{en:'Cheese Gimbap',zh:'芝士紫菜包饭',ja:'チーズキンパ'}},
+  {name:'오뎅국물',price:1000,category:'사이드',emoji:'🍢',q:'korean fish cake soup odeng',tr:{en:'Fish Cake Broth',zh:'鱼饼汤',ja:'おでん汁'}}
+ ],
+ izakaya: [
+  {name:'생맥주(500ml)',price:5000,category:'주류',emoji:'🍺',q:'draft beer glass',tr:{en:'Draft Beer (500ml)',zh:'生啤(500ml)',ja:'生ビール(500ml)'}},
+  {name:'소주',price:4000,category:'주류',emoji:'🍾',q:'korean soju bottle',tr:{en:'Soju',zh:'烧酒',ja:'焼酎'}},
+  {name:'막걸리',price:5000,category:'주류',emoji:'🍶',q:'makgeolli korean rice wine',tr:{en:'Makgeolli',zh:'马格利',ja:'マッコリ'}},
+  {name:'닭꼬치(2개)',price:5000,category:'안주',emoji:'🍢',q:'yakitori chicken skewer',tr:{en:'Chicken Skewer (2pc)',zh:'鸡肉串(2串)',ja:'焼き鳥(2本)'}},
+  {name:'계란말이',price:8000,category:'안주',emoji:'🍳',q:'rolled omelette tamagoyaki',tr:{en:'Rolled Omelette',zh:'鸡蛋卷',ja:'卵焼き'}},
+  {name:'감자전',price:9000,category:'안주',emoji:'🥔',q:'korean potato pancake',tr:{en:'Potato Pancake',zh:'土豆煎饼',ja:'ジャガイモチヂミ'}},
+  {name:'오징어구이',price:12000,category:'안주',emoji:'🦑',q:'grilled squid',tr:{en:'Grilled Squid',zh:'烤鱿鱼',ja:'イカ焼き'}},
+  {name:'삼겹살구이(200g)',price:14000,category:'안주',emoji:'🥓',q:'grilled pork belly',tr:{en:'Grilled Pork Belly (200g)',zh:'烤五花肉(200g)',ja:'豚バラ焼き(200g)'}}
+ ],
+ other: []
+};
+
+/** worker /api/menu-image (Pexels) 로 이미지 1장 조회. 실패하면 빈 문자열 */
+function _filoFetchMenuImage(q){
+ return fetch('/api/menu-image?q='+encodeURIComponent(q))
+  .then(function(r){ return r.json(); })
+  .then(function(d){ return (d && d.url) || ''; })
+  .catch(function(){ return ''; });
+}
+
+/**
+ * 업종별 기본 메뉴 자동 등록.
+ * 이미 메뉴가 하나라도 있으면 아무것도 하지 않는다(덮어쓰기 방지).
+ * 이미지는 등록을 막지 않도록 저장 후 백그라운드에서 순차로 채운다.
+ * @returns {Promise<number>} 등록된 개수
+ */
+function _filoSeedDefaultMenus(did, themeKey){
+ did = did || (window._CU && (_CU.dealerId||_CU.uid));
+ var items=_FILO_MENU_TEMPLATES[String(themeKey||'').trim()];
+ if(!did || !items || !items.length) return Promise.resolve(0);
+
+ return _db.collection('filo_menus').where('dealerId','==',did).limit(1).get()
+ .then(function(snap){
+  if(!snap.empty) return 0;
+  var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+  var batch=_db.batch();
+  var refs=[];
+  items.forEach(function(it){
+   var ref=_db.collection('filo_menus').doc();
+   refs.push({ref:ref, q:it.q});
+   batch.set(ref,{
+    dealerId:did, name:it.name, price:it.price,
+    category:it.category, emoji:it.emoji, forSale:true,
+    imageUrl:'', stock:null, minStock:null, description:'',
+    nameTranslations:it.tr,
+    isTemplate:true, createdAt:now, updatedAt:now
+   });
+  });
+  return batch.commit().then(function(){
+   _filoFillTemplateImages(refs);   /* 이미지는 기다리지 않는다 */
+   return items.length;
+  });
+ });
+}
+
+/* Pexels 호출을 순차·간격을 두고 진행해 레이트 리밋과 UI 멈춤을 피한다 */
+function _filoFillTemplateImages(refs){
+ var i=0;
+ function next(){
+  if(i>=refs.length) return;
+  var cur=refs[i++];
+  _filoFetchMenuImage(cur.q).then(function(url){
+   if(url) return cur.ref.update({imageUrl:url});
+  }).catch(function(){}).then(function(){
+   setTimeout(next, 700);
+  });
+ }
+ next();
+}
+
+/** 기존 매장용 수동 실행 (메뉴가 비어 있을 때만 동작) */
+function _filoSeedDefaultMenusManual(){
+ var did=_CU.dealerId||_CU.uid;
+ var key=(window._cachedCompanyDoc&&_cachedCompanyDoc.theme)||(window._filoTheme&&_filoTheme.theme)||'other';
+ var t=_FILO_MENU_TEMPLATES[key];
+ if(!t||!t.length){_filoToast('이 업종은 기본 메뉴 템플릿이 없습니다');return;}
+ if(!confirm('업종에 맞는 기본 메뉴 '+t.length+'개를 자동으로 추가할까요?\n(이미 등록된 메뉴가 있으면 실행되지 않습니다)'))return;
+ _filoSeedDefaultMenus(did,key).then(function(n){
+  if(n>0){_filoToast('✅ 기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');}
+  else _filoToast('이미 메뉴가 있어 건너뛰었습니다');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
+}

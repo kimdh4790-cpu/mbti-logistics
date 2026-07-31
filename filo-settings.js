@@ -41,7 +41,84 @@ function _filoPageSettings(el){
  '</div>'+
  '<button class="btn btn-brand btn-sm" onclick="_filoSaveReviewUrls()">저장</button>'+
  '</div>'+
+ /* 🎨 업종별 테마 — 매장별 독립 적용 */
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🎨 매장 테마</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">업종을 고르면 색상이 자동 적용됩니다. 원하시면 색을 직접 지정할 수도 있습니다.</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">업종</div>'+
+ '<select id="set-theme" class="inp" style="width:100%;font-size:12px;margin-bottom:10px" onchange="_filoThemePreview()">'+
+ _filoThemeOptions(d.theme||'')+
+ '</select>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">포인트 색</div>'+
+ '<input id="set-primary" type="color" value="'+(d.primaryColor||'#7c3aed')+'" oninput="_filoThemePreview(1)" style="width:100%;height:38px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;cursor:pointer"></div>'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">배경 색</div>'+
+ '<input id="set-bg" type="color" value="'+(d.bgColor||'#07071a')+'" oninput="_filoThemePreview(1)" style="width:100%;height:38px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;cursor:pointer"></div>'+
+ '</div>'+
+ '<div id="theme-preview" style="border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px">'+
+ '<div style="font-size:12px;font-weight:800;margin-bottom:8px">미리보기</div>'+
+ '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+ '<span id="tp-chip" style="display:inline-block;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff">버튼</span>'+
+ '<span id="tp-card" style="display:inline-block;padding:6px 14px;border-radius:8px;font-size:12px;border:1px solid var(--bd)">카드</span>'+
+ '<span id="tp-accent" style="display:inline-block;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;color:#fff">강조</span>'+
+ '</div></div>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+ '<button class="btn btn-brand btn-sm" onclick="_filoSaveTheme()">테마 저장</button>'+
+ '<button class="btn btn-sm" style="background:var(--b3);color:var(--t2)" onclick="_filoResetThemeToIndustry()">업종 기본색으로</button>'+
+ '<button class="btn btn-sm" style="background:var(--b3);color:var(--t2)" onclick="_filoSeedDefaultMenusManual()">기본 메뉴 등록</button>'+
+ '</div>'+
+ '<div style="font-size:10px;color:var(--t3);margin-top:8px">※ 테마는 이 매장에만 적용되며 주문·매장·주방 화면에도 함께 반영됩니다</div>'+
+ '</div>'+
  '</div></div>';
+ _filoThemePreview();
+}
+
+/* 업종 select 옵션 — 코드값은 filo.html #fr-industry / _FILO_THEMES 와 동일 */
+function _filoThemeOptions(cur){
+ var t=(typeof _FILO_THEMES!=='undefined')?_FILO_THEMES:{};
+ var order=['cafe','korean','japanese','chinese','fastfood','izakaya','other'];
+ var html='<option value="">업종을 선택하세요</option>';
+ order.forEach(function(k){
+  var m=t[k]; if(!m)return;
+  html+='<option value="'+k+'"'+(cur===k?' selected':'')+'>'+m.emoji+' '+m.label+'</option>';
+ });
+ return html;
+}
+
+/* 미리보기 갱신. custom=1 이면 색상 입력값 우선 */
+function _filoThemePreview(custom){
+ var sel=document.getElementById('set-theme');
+ var pi=document.getElementById('set-primary');
+ var bi=document.getElementById('set-bg');
+ if(!sel||!pi||!bi)return;
+ var key=sel.value||'other';
+ var base=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[key])?_FILO_THEMES[key]:{primary:'#7c3aed',bg:'#07071a'};
+ if(!custom){ pi.value=base.primary; bi.value=base.bg; }
+ var primary=pi.value, bg=bi.value;
+ var accent=(typeof _filoShade==='function')?_filoShade(primary,0.25):primary;
+ var card  =(typeof _filoShade==='function')?_filoShade(bg,(typeof _filoIsLight==='function'&&_filoIsLight(bg))?-0.04:0.06):bg;
+ var box=document.getElementById('theme-preview');
+ if(box){ box.style.background=bg; box.style.color=(typeof _filoIsLight==='function'&&_filoIsLight(bg))?'#14141f':'#f0f0ff'; }
+ var chip=document.getElementById('tp-chip');   if(chip)chip.style.background=primary;
+ var cd=document.getElementById('tp-card');     if(cd)cd.style.background=card;
+ var ac=document.getElementById('tp-accent');   if(ac)ac.style.background=accent;
+}
+
+function _filoResetThemeToIndustry(){ _filoThemePreview(); _filoToast('업종 기본색으로 되돌렸습니다 (저장하려면 테마 저장)'); }
+
+function _filoSaveTheme(){
+ var did=_CU.dealerId||_CU.uid;
+ var sel=document.getElementById('set-theme');
+ var key=sel?sel.value:'';
+ if(!key){_filoToast('업종을 선택하세요');return;}
+ var primary=document.getElementById('set-primary').value;
+ var bg=document.getElementById('set-bg').value;
+ _db.collection('companies').doc(did).update({theme:key,primaryColor:primary,bgColor:bg,updatedAt:_nowISO()})
+ .then(function(){
+  if(_cachedCompanyDoc){_cachedCompanyDoc.theme=key;_cachedCompanyDoc.primaryColor=primary;_cachedCompanyDoc.bgColor=bg;}
+  if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:key,primaryColor:primary,bgColor:bg});
+  _filoToast('✅ 테마가 적용됐습니다');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;
