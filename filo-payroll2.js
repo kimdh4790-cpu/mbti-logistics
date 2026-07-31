@@ -404,7 +404,7 @@ function _filoPayslipLoad(did, ym) {
         '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
         (isPaid?'✅ 지급완료':'⏳ 지급대기')+'</span></td>' +
         '<td style="padding:12px 8px">' +
-        (!isPaid?'<button onclick="_filoPayslipProcess(''+m.id+'','+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
+        (!isPaid?'<button onclick="_filoPayslipProcess(\"'+m.id+'\",'+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
         '</td>' +
         '</tr>';
     }).join('');
