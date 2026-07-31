@@ -28,9 +28,10 @@ jobs:
       - name: Deploy Worker (Global API Key)
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_EMAIL: kimdh4790@gmail.com
         run: |
           npm install -g wrangler@4 --silent
-          CLOUDFLARE_API_TOKEN=$CF_KEY npx wrangler deploy 2>&1
+          CLOUDFLARE_API_KEY=$CF_KEY CLOUDFLARE_EMAIL=$CF_EMAIL npx wrangler deploy 2>&1
 
       - name: Upload HTML/JS assets to KV
         env:
