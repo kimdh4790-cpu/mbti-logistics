@@ -41,7 +41,45 @@ function _filoPageSettings(el){
  '</div>'+
  '<button class="btn btn-brand btn-sm" onclick="_filoSaveReviewUrls()">저장</button>'+
  '</div>'+
+ /* 업종 설정 — 테마 색상과 기본 메뉴 템플릿의 기준값 */
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🎨 업종 설정</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">업종을 지정하면 앱 브랜드 색상이 업종에 맞게 바뀌고, 업종별 기본 메뉴를 자동으로 등록할 수 있습니다</div>'+
+ '<select id="set-industry" class="inp" style="width:100%;font-size:12px;margin-bottom:10px">'+
+ _filoIndustryOptions(d.industry||'')+
+ '</select>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+ '<button class="btn btn-brand btn-sm" onclick="_filoSaveIndustry()">업종 저장</button>'+
+ '<button class="btn btn-sm" style="background:var(--b3);color:var(--t2)" onclick="_filoSeedDefaultMenusManual()">기본 메뉴 등록</button>'+
+ '</div>'+
+ '<div style="font-size:10px;color:var(--t3);margin-top:8px">※ 기본 메뉴는 등록된 메뉴가 하나도 없을 때만 추가됩니다</div>'+
+ '</div>'+
  '</div></div>';
+}
+
+/* 업종 select 옵션 — 코드값은 filo.html #fr-industry / _FILO_INDUSTRY_THEMES 와 동일하게 유지 */
+function _filoIndustryOptions(cur){
+ var t=(typeof _FILO_INDUSTRY_THEMES!=='undefined')?_FILO_INDUSTRY_THEMES:{};
+ var order=['cafe','restaurant','beauty','retail','fitness','unmanned','other'];
+ var html='<option value="">업종을 선택하세요</option>';
+ order.forEach(function(k){
+  var m=t[k]; if(!m)return;
+  html+='<option value="'+k+'"'+(cur===k?' selected':'')+'>'+m.emoji+' '+m.label+'</option>';
+ });
+ return html;
+}
+
+function _filoSaveIndustry(){
+ var did=_CU.dealerId||_CU.uid;
+ var sel=document.getElementById('set-industry');
+ var ind=sel?sel.value:'';
+ if(!ind){_filoToast('업종을 선택하세요');return;}
+ _db.collection('companies').doc(did).update({industry:ind,updatedAt:_nowISO()})
+ .then(function(){
+  if(_cachedCompanyDoc)_cachedCompanyDoc.industry=ind;
+  if(typeof _filoApplyIndustryTheme==='function')_filoApplyIndustryTheme(ind);
+  _filoToast('✅ 업종이 저장됐습니다 — 테마가 적용됐어요');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;
