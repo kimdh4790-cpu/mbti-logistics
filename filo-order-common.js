@@ -64,6 +64,84 @@ var _catIco={'전체':'🍽','버거':'🍔','치킨':'🍗','피자':'🍕','�
 // ── 번역 캐시 ────────────────────────────────────────────────────────────────
 var _tlCache={};
 
+/* ══════════════════════════════════════════
+   🎨 매장 테마 자동 적용 (고객 페이지)
+   order.html / store.html 이 이 파일을 로드하므로 여기서 한 번에 처리한다.
+   companies/{did} 의 theme / primaryColor / bgColor 를 읽어 적용.
+   고객 페이지는 밝은 디자인이라 어두운 배경을 씌울 땐 글자색도 함께 뒤집는다.
+   ══════════════════════════════════════════ */
+function _ocHexRgb(hex){
+ var h=String(hex||'').trim().replace('#','');
+ if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+ var n=parseInt(h,16);
+ if(!isFinite(n)||h.length!==6) return null;
+ return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function _ocShade(hex,amt){
+ var c=_ocHexRgb(hex); if(!c) return hex;
+ function f(v){return Math.max(0,Math.min(255,Math.round(v+(amt>0?(255-v):v)*amt)));}
+ function hx(v){var s=v.toString(16);return s.length<2?'0'+s:s;}
+ return '#'+hx(f(c.r))+hx(f(c.g))+hx(f(c.b));
+}
+function _ocIsLight(hex){
+ var c=_ocHexRgb(hex); if(!c) return true;
+ return (0.299*c.r+0.587*c.g+0.114*c.b)>160;
+}
+var _OC_THEMES={
+ cafe:{primary:'#c8a96e',bg:'#1a1209'}, korean:{primary:'#e05555',bg:'#0f0a0a'},
+ japanese:{primary:'#3b82f6',bg:'#0a0f1e'}, chinese:{primary:'#f59e0b',bg:'#1a0a0a'},
+ fastfood:{primary:'#f97316',bg:'#f8f9fa'}, izakaya:{primary:'#d4af37',bg:'#0a0a0a'},
+ other:{primary:'#0891b2',bg:'#f8fafc'}
+};
+function _filoApplyCustomerTheme(co){
+ co=co||{};
+ var base=_OC_THEMES[String(co.theme||'').trim()]||_OC_THEMES.other;
+ var primary=(co.primaryColor&&_ocHexRgb(co.primaryColor))?co.primaryColor:base.primary;
+ var bg=(co.bgColor&&_ocHexRgb(co.bgColor))?co.bgColor:base.bg;
+ var light=_ocIsLight(bg);
+ var surface=light?_ocShade(bg,0.6):_ocShade(bg,0.07);
+ var accent=_ocShade(primary,0.22);
+ var r=document.documentElement; if(!r||!r.style) return;
+ var S=function(k,v){r.style.setProperty(k,v);};
+ /* 명세 변수 */
+ S('--primary',primary); S('--accent',accent); S('--bg',bg); S('--card',surface);
+ /* order/store 변수 */
+ S('--brand',primary); S('--brand2',accent); S('--brand-dark',_ocShade(primary,-0.25));
+ S('--brand-light',_ocShade(primary,light?0.85:-0.55));
+ S('--surface',surface);
+ S('--border', light?'#e2e8f0':'rgba(255,255,255,.10)');
+ S('--text1', light?'#0f172a':'#f2f2ff');
+ S('--text2', light?'#475569':'#a8a8c8');
+ S('--text3', light?'#94a3b8':'#6b6b8a');
+ /* kitchen 계열 변수도 함께 */
+ S('--surface2', light?_ocShade(bg,0.45):_ocShade(bg,0.12));
+ S('--bd',  light?'rgba(0,0,0,.10)':'rgba(255,255,255,.08)');
+ S('--bd2', light?'rgba(0,0,0,.16)':'rgba(255,255,255,.12)');
+ S('--tx',  light?'#0f172a':'#f2f2ff');
+ S('--t2',  light?'#475569':'#a8a8c8');
+ S('--t3',  light?'#94a3b8':'#6b6b8a');
+ var meta=document.querySelector('meta[name="theme-color"]');
+ if(meta) meta.setAttribute('content',primary);
+}
+/* dealerId를 URL에서 찾아 firebase 준비되는 대로 적용 (order.js/store.js 수정 불필요) */
+(function _ocThemeAutoInit(){
+ try{
+  var p=new URLSearchParams(location.search);
+  var did=p.get('d')||p.get('did')||p.get('dealerId')||'';
+  if(!did) return;
+  var tries=0;
+  var t=setInterval(function(){
+   tries++;
+   if(typeof firebase!=='undefined' && firebase.apps && firebase.apps.length){
+    clearInterval(t);
+    firebase.firestore().collection('companies').doc(did).get()
+     .then(function(s){ if(s.exists) _filoApplyCustomerTheme(s.data()); })
+     .catch(function(){});
+   } else if(tries>60){ clearInterval(t); }
+  },100);
+ }catch(e){}
+})();
+
 // ── 메뉴명 → 안전한 DOM id ───────────────────────────────────────────────────
 // 기존 name.replace(/\W/g,'_')는 \w가 ASCII만 인식해서 한글이 전부 '_'로 바뀌었다.
 // 글자 수가 같은 메뉴끼리 id가 겹쳐("김치찌개"·"된장찌개" → 둘 다 'tr-____')
