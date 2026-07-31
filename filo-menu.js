@@ -1082,3 +1082,130 @@ function _filoStockLowAlert(menuName, stock, stockMin){
  // 화면 토스트도 표시
  _filoToast('⚠️ '+menuName+' 재고 부족 ('+stock+'개)');
 }
+
+/* ══════════════════════════════════════════
+   🍽 업종별 기본 메뉴 템플릿 자동 세팅
+   회원가입 직후(filo-auth.js) 또는 메뉴관리 화면의 버튼으로 실행된다.
+   - 업종 코드는 filo.html #fr-industry / _FILO_INDUSTRY_THEMES 와 동일
+   - 컬렉션명 filo_menus, 필드 스키마는 기존 메뉴 저장과 동일하게 맞춘다
+   - tr = 미리 준비한 en/zh/ja 번역 (등록 즉시 다국어 주문 페이지에서 노출)
+   - img = 이미지 생성 프롬프트 (기존 _filoAutoImageUrl과 같은 pollinations 방식)
+   ══════════════════════════════════════════ */
+var _FILO_MENU_TEMPLATES = {
+ cafe: [
+  {name:'아메리카노',      price:4000, category:'커피', emoji:'☕', img:'hot americano coffee in white ceramic cup, cafe table, warm light, professional food photography', tr:{en:'Americano',zh:'美式咖啡',ja:'アメリカーノ'}},
+  {name:'아이스 아메리카노',price:4500, category:'커피', emoji:'🧊', img:'iced americano in tall clear glass with ice cubes, condensation, bright cafe, professional food photography', tr:{en:'Iced Americano',zh:'冰美式',ja:'アイスアメリカーノ'}},
+  {name:'카페라떼',        price:5000, category:'커피', emoji:'🥛', img:'cafe latte with rosetta latte art in ceramic cup, wooden table, professional food photography', tr:{en:'Cafe Latte',zh:'拿铁',ja:'カフェラテ'}},
+  {name:'바닐라라떼',      price:5500, category:'커피', emoji:'🍦', img:'vanilla latte in glass cup, creamy foam, vanilla pods beside, professional food photography', tr:{en:'Vanilla Latte',zh:'香草拿铁',ja:'バニララテ'}},
+  {name:'카푸치노',        price:5000, category:'커피', emoji:'☕', img:'cappuccino with thick milk foam and cocoa powder, saucer, professional food photography', tr:{en:'Cappuccino',zh:'卡布奇诺',ja:'カプチーノ'}},
+  {name:'자몽에이드',      price:6000, category:'음료', emoji:'🍊', img:'grapefruit ade in tall glass with fresh grapefruit slices and ice, bright, professional food photography', tr:{en:'Grapefruit Ade',zh:'西柚气泡饮',ja:'グレープフルーツエード'}},
+  {name:'크루아상',        price:4500, category:'베이커리', emoji:'🥐', img:'freshly baked golden croissant on wooden board, flaky layers, bakery, professional food photography', tr:{en:'Croissant',zh:'牛角包',ja:'クロワッサン'}},
+  {name:'치즈케이크',      price:6500, category:'디저트', emoji:'🍰', img:'new york cheesecake slice on white plate, berry garnish, cafe dessert, professional food photography', tr:{en:'Cheesecake',zh:'芝士蛋糕',ja:'チーズケーキ'}}
+ ],
+ restaurant: [
+  {name:'김치찌개',   price:9000,  category:'찌개', emoji:'🍲', img:'korean kimchi jjigae stew bubbling in black stone pot, pork and tofu, side dishes, professional food photography', tr:{en:'Kimchi Stew',zh:'泡菜汤',ja:'キムチチゲ'}},
+  {name:'된장찌개',   price:9000,  category:'찌개', emoji:'🥘', img:'korean doenjang jjigae soybean paste stew in earthenware pot, tofu and zucchini, professional food photography', tr:{en:'Soybean Paste Stew',zh:'大酱汤',ja:'テンジャンチゲ'}},
+  {name:'제육볶음',   price:11000, category:'식사', emoji:'🥓', img:'korean spicy stir fried pork jeyuk bokkeum on plate with lettuce, gochujang glaze, professional food photography', tr:{en:'Spicy Stir-fried Pork',zh:'辣炒猪肉',ja:'豚肉の辛味炒め'}},
+  {name:'비빔밥',     price:10000, category:'식사', emoji:'🍚', img:'korean bibimbap in stone bowl, colorful vegetables and fried egg, gochujang, professional food photography', tr:{en:'Bibimbap',zh:'拌饭',ja:'ビビンバ'}},
+  {name:'불고기정식', price:14000, category:'식사', emoji:'🥩', img:'korean bulgogi beef set meal with rice and banchan side dishes, professional food photography', tr:{en:'Bulgogi Set',zh:'烤肉套餐',ja:'プルコギ定食'}},
+  {name:'물냉면',     price:10000, category:'면류', emoji:'🍜', img:'korean cold buckwheat noodles mul naengmyeon in chilled broth with ice, egg and pear, professional food photography', tr:{en:'Cold Noodles',zh:'冷面',ja:'冷麺'}},
+  {name:'계란말이',   price:7000,  category:'안주', emoji:'🍳', img:'korean rolled omelette gyeran mari sliced on plate, professional food photography', tr:{en:'Rolled Omelette',zh:'鸡蛋卷',ja:'卵焼き'}},
+  {name:'공기밥',     price:1000,  category:'추가', emoji:'🍚', img:'bowl of steamed white rice in korean stainless bowl, simple, professional food photography', tr:{en:'Steamed Rice',zh:'米饭',ja:'ライス'}}
+ ],
+ beauty: [
+  {name:'커트',       price:20000,  category:'헤어', emoji:'✂️', img:'modern hair salon interior, stylist cutting hair, clean bright professional photography', tr:{en:'Haircut',zh:'剪发',ja:'カット'}},
+  {name:'남성 커트',  price:15000,  category:'헤어', emoji:'💈', img:'barber shop mens haircut, clean modern interior, professional photography', tr:{en:'Mens Haircut',zh:'男士剪发',ja:'メンズカット'}},
+  {name:'뿌리염색',   price:60000,  category:'컬러', emoji:'🎨', img:'hair coloring at salon, color brush and bowl, professional photography', tr:{en:'Root Color',zh:'补染发根',ja:'リタッチカラー'}},
+  {name:'전체염색',   price:90000,  category:'컬러', emoji:'🌈', img:'full hair dye at beauty salon, glossy colored hair result, professional photography', tr:{en:'Full Color',zh:'全染',ja:'フルカラー'}},
+  {name:'일반펌',     price:80000,  category:'펌', emoji:'🌀', img:'hair perm rods styling at salon, wavy hair result, professional photography', tr:{en:'Perm',zh:'烫发',ja:'パーマ'}},
+  {name:'클리닉',     price:50000,  category:'케어', emoji:'💧', img:'hair treatment clinic at salon, glossy healthy hair, professional photography', tr:{en:'Hair Treatment',zh:'护发',ja:'トリートメント'}},
+  {name:'두피케어',   price:45000,  category:'케어', emoji:'🧴', img:'scalp care treatment at salon, professional photography', tr:{en:'Scalp Care',zh:'头皮护理',ja:'スカルプケア'}},
+  {name:'드라이',     price:20000,  category:'스타일링', emoji:'💨', img:'blow dry styling at hair salon, round brush, professional photography', tr:{en:'Blow Dry',zh:'吹造型',ja:'ブロー'}}
+ ],
+ retail: [
+  {name:'생수 500ml',   price:900,  category:'음료', emoji:'💧', img:'plain bottled mineral water 500ml on white background, product photography', tr:{en:'Water 500ml',zh:'矿泉水500ml',ja:'ミネラルウォーター500ml'}},
+  {name:'탄산음료',     price:2000, category:'음료', emoji:'🥤', img:'cola soda can chilled with condensation on white background, product photography', tr:{en:'Soft Drink',zh:'碳酸饮料',ja:'炭酸飲料'}},
+  {name:'캔커피',       price:1500, category:'음료', emoji:'☕', img:'canned coffee beverage on white background, product photography', tr:{en:'Canned Coffee',zh:'罐装咖啡',ja:'缶コーヒー'}},
+  {name:'컵라면',       price:1800, category:'식품', emoji:'🍜', img:'instant cup noodles container on white background, product photography', tr:{en:'Cup Noodles',zh:'杯面',ja:'カップ麺'}},
+  {name:'삼각김밥',     price:1500, category:'식품', emoji:'🍙', img:'korean triangle kimbap onigiri in wrapper, convenience store product photography', tr:{en:'Rice Ball',zh:'三角饭团',ja:'おにぎり'}},
+  {name:'과자',         price:1700, category:'스낵', emoji:'🍪', img:'snack chips bag on white background, product photography', tr:{en:'Snack',zh:'零食',ja:'スナック'}},
+  {name:'아이스크림',   price:1500, category:'냉동', emoji:'🍦', img:'ice cream bar on white background, product photography', tr:{en:'Ice Cream',zh:'冰淇淋',ja:'アイス'}},
+  {name:'비닐봉투',     price:100,  category:'기타', emoji:'🛍', img:'plain shopping plastic bag on white background, product photography', tr:{en:'Plastic Bag',zh:'塑料袋',ja:'レジ袋'}}
+ ],
+ fitness: [
+  {name:'1개월 회원권',  price:80000,  category:'회원권', emoji:'🎫', img:'modern gym interior with equipment, bright clean, professional photography', tr:{en:'1-Month Pass',zh:'一个月会员',ja:'1ヶ月会員'}},
+  {name:'3개월 회원권',  price:210000, category:'회원권', emoji:'🎟', img:'fitness club interior wide view, professional photography', tr:{en:'3-Month Pass',zh:'三个月会员',ja:'3ヶ月会員'}},
+  {name:'6개월 회원권',  price:390000, category:'회원권', emoji:'🏅', img:'large gym with cardio machines, professional photography', tr:{en:'6-Month Pass',zh:'六个月会员',ja:'6ヶ月会員'}},
+  {name:'PT 10회',       price:600000, category:'PT', emoji:'🏋️', img:'personal trainer coaching client with dumbbell in gym, professional photography', tr:{en:'PT 10 Sessions',zh:'私教10次',ja:'PT10回'}},
+  {name:'PT 20회',       price:1100000,category:'PT', emoji:'💪', img:'personal training session with barbell in modern gym, professional photography', tr:{en:'PT 20 Sessions',zh:'私教20次',ja:'PT20回'}},
+  {name:'그룹 필라테스',  price:150000, category:'그룹', emoji:'🧘', img:'group pilates class with reformer machines, bright studio, professional photography', tr:{en:'Group Pilates',zh:'团体普拉提',ja:'グループピラティス'}},
+  {name:'락커 이용료',    price:20000,  category:'부가', emoji:'🔐', img:'gym locker room clean modern interior, professional photography', tr:{en:'Locker',zh:'储物柜',ja:'ロッカー'}},
+  {name:'운동복 대여',    price:2000,   category:'부가', emoji:'👕', img:'folded clean gym wear towel and shirt, professional photography', tr:{en:'Gym Wear Rental',zh:'运动服租借',ja:'ウェアレンタル'}}
+ ],
+ unmanned: [
+  {name:'아이스 아메리카노',price:2000, category:'커피', emoji:'🧊', img:'iced americano in takeout cup from vending machine, professional product photography', tr:{en:'Iced Americano',zh:'冰美式',ja:'アイスアメリカーノ'}},
+  {name:'따뜻한 아메리카노',price:1800, category:'커피', emoji:'☕', img:'hot americano in takeout paper cup, professional product photography', tr:{en:'Hot Americano',zh:'热美式',ja:'ホットアメリカーノ'}},
+  {name:'카페라떼',        price:2500, category:'커피', emoji:'🥛', img:'cafe latte in takeout cup, professional product photography', tr:{en:'Cafe Latte',zh:'拿铁',ja:'カフェラテ'}},
+  {name:'생수 500ml',      price:800,  category:'음료', emoji:'💧', img:'bottled mineral water 500ml on white background, product photography', tr:{en:'Water 500ml',zh:'矿泉水500ml',ja:'ミネラルウォーター500ml'}},
+  {name:'이온음료',        price:1800, category:'음료', emoji:'🥤', img:'sports isotonic drink bottle on white background, product photography', tr:{en:'Sports Drink',zh:'运动饮料',ja:'スポーツドリンク'}},
+  {name:'컵라면',          price:1800, category:'식품', emoji:'🍜', img:'instant cup noodles on white background, product photography', tr:{en:'Cup Noodles',zh:'杯面',ja:'カップ麺'}},
+  {name:'과자',            price:1700, category:'스낵', emoji:'🍪', img:'snack chips bag on white background, product photography', tr:{en:'Snack',zh:'零食',ja:'スナック'}}
+ ],
+ other: [
+  {name:'기본 상품',   price:10000, category:'기본', emoji:'📦', img:'simple product box on clean white background, product photography', tr:{en:'Basic Item',zh:'基本商品',ja:'基本商品'}},
+  {name:'기본 서비스', price:30000, category:'기본', emoji:'🧾', img:'clean minimal service counter desk, professional photography', tr:{en:'Basic Service',zh:'基本服务',ja:'基本サービス'}}
+ ]
+};
+
+/* 템플릿 프롬프트 → 이미지 URL (_filoAutoImageUrl과 동일한 pollinations 방식) */
+function _filoTemplateImageUrl(prompt, seedName){
+ var s=String(seedName||prompt||'');
+ var seed=0;
+ for(var i=0;i<s.length;i++) seed=(seed+s.charCodeAt(i))%9999;
+ return 'https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+
+        '?width=800&height=800&nologo=true&seed='+seed+'&model=flux&enhance=true';
+}
+
+/**
+ * 업종별 기본 메뉴 자동 등록.
+ * 이미 메뉴가 1개라도 있으면 아무것도 하지 않는다(덮어쓰기 방지).
+ * @returns {Promise<number>} 실제로 등록된 개수
+ */
+function _filoSeedDefaultMenus(did, industry){
+ did = did || (window._CU && (_CU.dealerId||_CU.uid));
+ var items=_FILO_MENU_TEMPLATES[String(industry||'').trim()];
+ if(!did || !items || !items.length) return Promise.resolve(0);
+
+ return _db.collection('filo_menus').where('dealerId','==',did).limit(1).get()
+ .then(function(snap){
+  if(!snap.empty) return 0;             /* 기존 메뉴가 있으면 건너뛴다 */
+  var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+  var batch=_db.batch();
+  items.forEach(function(it){
+   var ref=_db.collection('filo_menus').doc();
+   batch.set(ref,{
+    dealerId:did, name:it.name, price:it.price,
+    category:it.category, emoji:it.emoji, forSale:true,
+    imageUrl:_filoTemplateImageUrl(it.img,it.name),
+    stock:null, minStock:null, description:'',
+    nameTranslations:it.tr,               /* 번역 미리 채움 → 주문페이지 즉시 다국어 */
+    isTemplate:true,                      /* 자동 생성 표시 (사용자가 지우기 쉽게) */
+    createdAt:now, updatedAt:now
+   });
+  });
+  return batch.commit().then(function(){ return items.length; });
+ });
+}
+
+/** 기존 매장용 수동 실행 (메뉴가 비어 있을 때만 동작) */
+function _filoSeedDefaultMenusManual(){
+ var did=_CU.dealerId||_CU.uid;
+ var ind=(window._cachedCompanyDoc&&_cachedCompanyDoc.industry)||window._filoIndustry||'other';
+ var t=_FILO_MENU_TEMPLATES[ind];
+ if(!t){_filoToast('업종 정보가 없습니다. 설정에서 업종을 먼저 지정해 주세요');return;}
+ if(!confirm(ind+' 업종 기본 메뉴 '+t.length+'개를 등록할까요?\n(이미 등록된 메뉴가 있으면 실행되지 않습니다)'))return;
+ _filoSeedDefaultMenus(did,ind).then(function(n){
+  if(n>0){_filoToast('✅ 기본 메뉴 '+n+'개 등록 완료');if(typeof _filoPageMenu==='function')_filoPageMenu(document.getElementById('content'));}
+  else _filoToast('이미 메뉴가 있어 건너뛰었습니다');
+ }).catch(function(e){_filoToast('❌ '+e.message);});
+}
