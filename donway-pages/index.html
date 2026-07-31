@@ -30445,7 +30445,7 @@ function _renderSettlePage(settles,c){
     var gid='sg_'+mo.replace(/-/g,'');
     var gRows=mmap[mo];
     var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
-    var totIncome=gRows.reduce(function(s,x){var r=calcNet(x);return s+(r.totalAmt||r.income||0);},0);  // ★ v9.26
+    var totIncome=gRows.reduce(function(s,x){if(x.isIdSupportCreated||x.isTLCreated)return s;var r=calcNet(x);return s+(r.totalAmt||r.income||0);},0);  // ★ v9.26
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
     var totWork=gRows.reduce(function(s,x){return s+calcNet(x).work;},0);
     var totDmg=gRows.reduce(function(s,x){return s+(+x.dmg||+x.damage||0);},0);
