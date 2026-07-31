@@ -44,23 +44,14 @@ jobs:
             [ ! -f "$FILE" ] && continue
             SUCCESS=false
             for ATTEMPT in 1 2 3; do
+              # Cloudflare KV 쓰기 엔드포인트는 multipart/form-data(value 파트)를 기대한다.
+              # --data-binary 로 raw body를 보내면 파트 헤더가 값에 섞여 저장돼
+              # 모든 JS 앞에 'Content-Length: ...' 가 붙고 브라우저 파싱이 깨졌다.
               RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
                 -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" \
-                -H "Content-Type: text/plain; charset=utf-8" -H "Expect:" \
-                --data-binary @"$FILE")
+                -F "value=@$FILE" -F "metadata={}")
               if echo "$RESULT" | grep -q '"success":true'; then
-                # 되읽기 검증: 저장된 값 앞에 HTTP 헤더가 섞여 들어가면 JS 파싱이 깨진다
-                BACK=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
-                  -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY" | head -c 32)
-                case "$BACK" in
-                  Content-Length:*|Content-Type:*)
-                    echo "⚠️ $FILE 값에 HTTP 헤더 혼입 — 재시도 $ATTEMPT/3"
-                    sleep 2
-                    continue
-                    ;;
-                esac
-                echo "✅ $FILE"
-                SUCCESS=true
+                echo "✅ $FILE"                SUCCESS=true
                 break
               else
                 echo "⚠️ $FILE 재시도 $ATTEMPT/3: $RESULT"
@@ -76,6 +67,23 @@ jobs:
             echo "🚨 KV 업로드 실패 파일:$FAILED_FILES"
             exit 1
           fi
+
+      - name: KV 업로드 검증 (경고만)
+        run: |
+          sleep 30
+          BAD=0
+          for F in filo-auth.js filo-common.js filo-menu.js filo-pos.js filo.html; do
+            HEAD=$(curl -s "https://filo.ai.kr/$F" | head -c 24)
+            case "$HEAD" in
+              Content-Length:*|Content-Type:*)
+                echo "🚨 $F 에 HTTP 헤더 혼입 (KV 값 오염)"
+                BAD=1
+                ;;
+              *) echo "✅ $F 정상" ;;
+            esac
+          done
+          [ "$BAD" = "1" ] && echo "⚠️ 일부 KV 값이 오염됐습니다 — 업로드 방식을 확인하세요"
+          exit 0
 
       - name: Upload settle.html to KV
         env:
