@@ -183,8 +183,13 @@ function _filoDoStockIn(){
   reader.onload=function(e){
    var base64=e.target.result.split(',')[1];
    var path='receipts/'+did+'/'+now.toISOString().slice(0,10)+'-'+Date.now()+'.'+file.name.split('.').pop();
-   fetch('/storage-upload',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({storagePath:path,base64data:base64,contentType:file.type,idToken:(_auth&&_auth.currentUser)?_auth.currentUser.getIdToken():''})
+   /* getIdToken()은 Promise를 반환한다. 예전엔 이걸 그대로 JSON.stringify 해서
+      idToken:{} 이 전송됐고 서버 인증이 항상 실패했다 → 토큰을 먼저 resolve 한다 */
+   var _tokenP=(_auth&&_auth.currentUser)?_auth.currentUser.getIdToken():Promise.resolve('');
+   _tokenP.catch(function(){return '';}).then(function(idToken){
+    return fetch('/storage-upload',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({storagePath:path,base64data:base64,contentType:file.type,idToken:idToken||''})
+    });
    }).then(function(r){return r.json();}).then(function(d){_saveStockIn(d.url||'');}).catch(function(){_saveStockIn('');});
   };
   reader.readAsDataURL(file);
@@ -230,17 +235,21 @@ function _filoDoStockOut(){
  if(!itemId){_filoToast('품목을 선택하세요');return;}
  if(qty<=0){_filoToast('수량을 입력하세요');return;}
  var now=new Date();
- _db.collection('inventory').doc(itemId).get().then(function(snap){
+ /* 재고 확인과 차감을 트랜잭션으로 묶는다.
+    기존엔 get()으로 확인한 뒤 별도로 increment(-qty)를 했기 때문에
+    두 명이 동시에 출고하면 둘 다 확인을 통과해 재고가 음수가 될 수 있었다.
+    출고 이력도 같은 트랜잭션에 넣어 '차감됐는데 이력이 없는' 상태를 막는다. */
+ var _outRef=_db.collection('inventory_out').doc();
+ _db.runTransaction(function(tx){
+ var ref=_db.collection('inventory').doc(itemId);
+ return tx.get(ref).then(function(snap){
  var cur=snap.exists?(snap.data().stock||0):0;
- if(cur<qty){_filoToast('❌ 재고 부족 (현재 '+cur+'개)');return Promise.reject('재고부족');}
- return _db.collection('inventory_out').add({
+ if(cur<qty){var err=new Error('재고부족');err._stock=cur;throw err;}
+ tx.update(ref,{stock:cur-qty,updatedAt:now.toISOString()});
+ tx.set(_outRef,{
  dealerId:did,itemId:itemId,qty:qty,type:type,memo:memo,
  createdAt:now.toISOString(),date:now.toISOString().slice(0,10),
  createdBy:_CU.name||_CU.userId||''
- }).then(function(){
- return _db.collection('inventory').doc(itemId).update({
- stock:firebase.firestore.FieldValue.increment(-qty),
- updatedAt:now.toISOString()
  });
  });
  }).then(function(){
@@ -248,7 +257,10 @@ function _filoDoStockOut(){
  document.getElementById('so-qty').value='';
  document.getElementById('so-memo').value='';
  _filoLoadStockHistory(did,'so-history','out');
- }).catch(function(e){if(e!=='재고부족')_filoToast('❌ '+(e.message||e));});
+ }).catch(function(e){
+ if(e&&typeof e._stock==='number')_filoToast('❌ 재고 부족 (현재 '+e._stock+'개)');
+ else _filoToast('❌ '+((e&&e.message)||e));
+ });
 }
 
 function _filoLoadInventoryItems(did, selectId){
@@ -410,7 +422,7 @@ function _filoInvDashLoad(did) {
             '<td style="padding:10px 6px;font-weight:800;color:'+(stock<=min?'#ef4444':'var(--tx)')+'">'+stock+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px;color:var(--t3)">'+min+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+statusBg+';color:'+statusColor+'">'+status+'</span></td>' +
-            '<td style="padding:10px 6px"><button onclick="_filoInvOrderItem(''+it.id+'','+did+')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--bd);border-radius:7px;font-size:11px;cursor:pointer;color:var(--tx)">발주</button></td>' +
+            '<td style="padding:10px 6px"><button onclick="_filoInvOrderItem(\''+it.id+'\',\''+did+'\')" style="padding:4px 10px;background:var(--surface2);border:1px solid var(--bd);border-radius:7px;font-size:11px;cursor:pointer;color:var(--tx)">발주</button></td>' +
             '</tr>';
         }).join('');
       }
