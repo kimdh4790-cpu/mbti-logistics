@@ -126,7 +126,7 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
   'X-XSS-Protection': '1; mode=block',
-  'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.tosspayments.com https://cdn.iamport.kr https://static.cloudflareinsights.com https://t1.kakaocdn.net https://t1.daumcdn.net https://developers.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https://donway.ai.kr https://app.donway.ai.kr https://filo.ai.kr https://dine.ne.kr https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://api.anthropic.com https://api.toss.im https://api.tosspayments.com https://*.tosspayments.com https://log.tosspayments.com/v1/log https://event.tosspayments.com https://www.gstatic.com https://api.ipify.org https://dapi.kakao.com https://t1.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'none';",
+  'Content-Security-Policy': "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.tosspayments.com https://cdn.iamport.kr https://static.cloudflareinsights.com https://t1.kakaocdn.net https://t1.daumcdn.net https://developers.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; connect-src 'self' https://donway.ai.kr https://app.donway.ai.kr https://filo.ai.kr https://dine.ne.kr https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com https://api.anthropic.com https://api.toss.im https://api.tosspayments.com https://*.tosspayments.com https://log.tosspayments.com/v1/log https://event.tosspayments.com https://www.gstatic.com https://api.ipify.org https://dapi.kakao.com https://kapi.kakao.com https://t1.daumcdn.net https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; frame-ancestors 'none';",
 };
 
 // Rate Limiting (메모리 기반, Worker 재시작 시 초기화)
@@ -7274,6 +7274,66 @@ async function handleYongcha(request, env) {
     return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY || '' }), {
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
+  }
+
+  // 카카오 OAuth → Firebase Custom Token
+  if (path === '/api/yongcha/kakao-auth' && method === 'OPTIONS') {
+    return new Response(null, { headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    }});
+  }
+  if (path === '/api/yongcha/kakao-auth' && method === 'POST') {
+    try {
+      const body = await request.json();
+      const { accessToken } = body;
+      if (!accessToken) throw new Error('accessToken required');
+      if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not configured');
+
+      // Kakao user info
+      const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!kakaoRes.ok) throw new Error('Kakao API error: ' + kakaoRes.status);
+      const kakaoUser = await kakaoRes.json();
+      if (!kakaoUser.id) throw new Error('Invalid Kakao response');
+
+      const kakaoId = String(kakaoUser.id);
+      const kakaoEmail = (kakaoUser.kakao_account && kakaoUser.kakao_account.email) || null;
+      const kakaoName = (kakaoUser.properties && kakaoUser.properties.nickname) ||
+        (kakaoUser.kakao_account && kakaoUser.kakao_account.profile && kakaoUser.kakao_account.profile.nickname) || null;
+
+      // Firebase Custom Token (signed JWT)
+      const sa = JSON.parse(env.FIREBASE_SA_KEY);
+      const now = Math.floor(Date.now() / 1000);
+      const uid = 'kakao:' + kakaoId;
+      const hdr = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+      const pay = b64url(JSON.stringify({
+        iss: sa.client_email,
+        sub: sa.client_email,
+        aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+        iat: now,
+        exp: now + 3600,
+        uid: uid,
+        claims: { kakaoId: kakaoId }
+      }));
+      const key = await importPrivateKey(sa.private_key);
+      const sig = await crypto.subtle.sign(
+        'RSASSA-PKCS1-v1_5', key,
+        new TextEncoder().encode(`${hdr}.${pay}`)
+      );
+      const firebaseToken = `${hdr}.${pay}.${b64urlBuf(sig)}`;
+
+      return new Response(JSON.stringify({ firebaseToken, kakaoId, kakaoEmail, kakaoName }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch(e) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
   }
 
   // FCM 알림
