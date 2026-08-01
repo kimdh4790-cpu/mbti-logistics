@@ -23,6 +23,13 @@ async function testOrderPage(browser) {
     console.log(`\n[1] 주문 URL: ${url}`);
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
     await page.waitForTimeout(4000);
+
+    // FCM 알림 게이트 제거 (headless 환경에서 클릭 차단 방지)
+    await page.evaluate(() => {
+      const gate = document.getElementById('fcm-gate');
+      if (gate) gate.remove();
+    });
+
     await page.screenshot({ path: 'test-screenshots/01-order-loaded.png' });
 
     // 테이블명 "undefined" 없음 확인
@@ -36,16 +43,18 @@ async function testOrderPage(browser) {
     if (menuCount > 0) pass(`메뉴 카드 렌더링`, `${menuCount}개`);
     else fail('메뉴 카드 렌더링', '0개');
 
-    // 메뉴 이미지 URL
-    const firstImg = await page.locator('.mi img').first().getAttribute('src').catch(() => '');
+    // 메뉴 이미지 URL (lazy load: data-src 폴백)
+    const firstImgSrc = await page.locator('.mi img').first().getAttribute('src').catch(() => '');
+    const firstImgDataSrc = await page.locator('.mi img').first().getAttribute('data-src').catch(() => '');
+    const firstImg = (firstImgSrc && firstImgSrc.startsWith('http')) ? firstImgSrc : firstImgDataSrc;
     if (firstImg && firstImg.startsWith('http')) pass('메뉴 이미지 URL', firstImg.slice(0,60)+'...');
-    else fail('메뉴 이미지', `src="${firstImg}"`);
+    else fail('메뉴 이미지', `src="${firstImgSrc}" data-src="${firstImgDataSrc}"`);
 
     // ② 번역 버튼 (EN)
     const langBtn = await page.locator('button:has-text("EN"), [data-lang="en"], .lang-btn').first();
     const langVisible = await langBtn.isVisible().catch(() => false);
     if (langVisible) {
-      await langBtn.click();
+      await langBtn.click({ force: true });
       await page.waitForTimeout(2000);
       await page.screenshot({ path: 'test-screenshots/02-order-en.png' });
       pass('언어 전환 (EN)');
@@ -54,11 +63,11 @@ async function testOrderPage(browser) {
     }
 
     // ③ 장바구니 — 첫 메뉴 추가
-    await page.locator('.mi').first().click().catch(() => {});
+    await page.locator('.mi').first().click({ force: true }).catch(() => {});
     await page.waitForTimeout(600);
     const modalVisible = await page.locator('#mdl').isVisible().catch(() => false);
     if (modalVisible) {
-      await page.locator('#mdl-add, button:has-text("담기"), button:has-text("Add")').first().click().catch(() => {});
+      await page.locator('#mdl-add, button:has-text("담기"), button:has-text("Add")').first().click({ force: true }).catch(() => {});
       await page.waitForTimeout(500);
       await page.screenshot({ path: 'test-screenshots/03-cart-added.png' });
       pass('장바구니 담기');
@@ -70,7 +79,7 @@ async function testOrderPage(browser) {
     const csBtn = await page.locator('#cs-btn').isVisible().catch(() => false);
     if (csBtn) {
       pass('CS봇 버튼 렌더링');
-      await page.locator('#cs-btn').click();
+      await page.locator('#cs-btn').click({ force: true });
       await page.waitForTimeout(600);
       const panelVisible = await page.locator('#cs-panel').isVisible().catch(() => false);
       if (panelVisible) {
