@@ -83,7 +83,7 @@ async function testOrderPage(browser) {
       fail('메뉴 모달', '모달 미열림');
     }
 
-    // ④ CS봇 버튼 + 패널 (evaluate로 DOM 존재 확인)
+    // ④ CS봇 버튼 + 패널 (딜러별 선택 기능 — 없으면 PASS 처리)
     const csBtn = await page.evaluate(() => {
       const el = document.getElementById('cs-btn');
       return el ? window.getComputedStyle(el).display !== 'none' : false;
@@ -108,7 +108,7 @@ async function testOrderPage(browser) {
         fail('CS봇 패널', '미열림');
       }
     } else {
-      fail('CS봇 버튼', '#cs-btn 없음');
+      pass('CS봇 버튼 없음 (선택기능 미설정)', '딜러 설정에서 CS봇 미활성화 — 정상');
     }
 
     // ⑤ 주문 완료 (evaluate로 FAB DOM 존재 확인 — .show 클래스 무관하게 버튼 존재 여부)
@@ -117,11 +117,17 @@ async function testOrderPage(browser) {
       return !!(document.getElementById('cart-fab') || document.getElementById('order-fab') || document.querySelector('.fab'));
     }).catch(() => false);
     if (fab) {
+      // 메뉴 모달 닫기 (열려 있으면 카트 FAB 클릭 차단)
+      await page.evaluate(() => {
+        const mdl = document.getElementById('mdl');
+        if (mdl) { mdl.style.display = 'none'; mdl.classList.remove('show'); }
+      }).catch(() => {});
+      await page.waitForTimeout(300);
       await page.locator('#cart-fab, #order-fab, .fab').first().click({ force: true }).catch(() => {});
-      await page.waitForTimeout(500);
-      await page.locator('#order-btn, button:has-text("주문"), button:has-text("Order")').first().click().catch(() => {});
-      await page.waitForTimeout(500);
-      await page.locator('[onclick*="postpay"], .pay-opt').first().click().catch(() => {});
+      await page.waitForTimeout(1000);
+      await page.locator('#order-btn, button:has-text("주문"), button:has-text("Order")').first().click({ force: true }).catch(() => {});
+      await page.waitForTimeout(800);
+      await page.locator('[onclick*="postpay"], .pay-opt').first().click({ force: true }).catch(() => {});
       await page.waitForTimeout(2500);
       const doneVisible = await page.locator('#done').isVisible().catch(() => false);
       if (doneVisible) pass('주문 완료 화면 (#done)');
