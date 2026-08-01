@@ -2800,6 +2800,81 @@ fetch('/qr/members?did='+DID)
         }
       }
 
+      // ── /api/demo-seed — 박람회 데모 데이터 생성 (해물밥상 광안점, 2026년 7월)
+      if (path === '/api/demo-seed' && method === 'POST') {
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          const did = body.did || 'haemul_gwangan_2026';
+          if (body.secret !== 'filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
+          function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
+          function rng(seed){let s=(seed|1)>>>0;return()=>{s=Math.imul(s,1664525)+1013904223|0;return(s>>>0)/4294967296;}}
+          const writes=[];
+          writes.push(fsd('companies',did,{name:'해물밥상 광안점',dealerId:did,type:'일식/횟집',businessType:'횟집',address:'부산 수영구 광안해변로 219',phone:'051-752-1234',openHours:'11:00~22:00',status:'active',createdAt:'2026-01-01T00:00:00Z',primaryColor:'#3b82f6',bgColor:'#0a0f1e',theme:'일식/횟집'}));
+          const staff=[{uid:`${did}_m1`,name:'김민형',role:'manager',hourlyRate:11000},{uid:`${did}_m2`,name:'구자경',role:'staff',hourlyRate:10500},{uid:`${did}_m3`,name:'김기현',role:'staff',hourlyRate:11500},{uid:`${did}_m4`,name:'김성운',role:'staff',hourlyRate:10000},{uid:`${did}_m5`,name:'이수진',role:'part',hourlyRate:10000}];
+          staff.forEach(s=>writes.push(fsd('members',s.uid,{...s,dealerId:did,status:'active',joinDate:'2026-01-01'})));
+          const menus=[{id:'m01',name:'모듬회(소)',price:35000,category:'회',emoji:'🐟'},{id:'m02',name:'모듬회(중)',price:55000,category:'회',emoji:'🐟'},{id:'m03',name:'모듬회(대)',price:75000,category:'회',emoji:'🐟'},{id:'m04',name:'광어회(소)',price:40000,category:'회',emoji:'🐠'},{id:'m05',name:'광어회(중)',price:60000,category:'회',emoji:'🐠'},{id:'m06',name:'해물탕',price:35000,category:'탕',emoji:'🦑'},{id:'m07',name:'알탕',price:25000,category:'탕',emoji:'🍲'},{id:'m08',name:'매운탕',price:20000,category:'탕',emoji:'🍲'},{id:'m09',name:'새우구이',price:20000,category:'구이',emoji:'🦐'},{id:'m10',name:'전복구이',price:20000,category:'구이',emoji:'🐚'},{id:'m11',name:'생굴',price:15000,category:'해산물',emoji:'🦪'},{id:'m12',name:'소주',price:5000,category:'주류',emoji:'🍶'},{id:'m13',name:'맥주',price:6000,category:'주류',emoji:'🍺'},{id:'m14',name:'파전',price:10000,category:'안주',emoji:'🥞'},{id:'m15',name:'공기밥',price:1000,category:'밥',emoji:'🍚'}];
+          menus.forEach(m=>writes.push(fsd('filo_menus',`${did}_${m.id}`,{...m,dealerId:did,available:true,createdAt:'2026-01-01T00:00:00Z'})));
+          const popular=[{name:'모듬회(소)',price:35000,emoji:'🐟'},{name:'모듬회(중)',price:55000,emoji:'🐟'},{name:'광어회(소)',price:40000,emoji:'🐠'},{name:'해물탕',price:35000,emoji:'🦑'},{name:'알탕',price:25000,emoji:'🍲'},{name:'새우구이',price:20000,emoji:'🦐'},{name:'소주',price:5000,emoji:'🍶'},{name:'맥주',price:6000,emoji:'🍺'},{name:'파전',price:10000,emoji:'🥞'}];
+          const orderWrites=[];let oidx=0;
+          for(let day=1;day<=31;day++){
+            const dateStr=`2026-07-${String(day).padStart(2,'0')}`;
+            const dow=new Date(Date.UTC(2026,6,day)).getDay();
+            const isWeekend=dow===0||dow===6;
+            const r=rng(day*137+2026);
+            const targetSales=isWeekend?1200000+Math.floor(r()*300000):800000+Math.floor(r()*200000);
+            for(const [sh,eh,ratio] of [[11,14,0.4],[17,21,0.6]]){
+              let sessionTotal=0,safetyCount=0;
+              while(sessionTotal<targetSales*ratio*0.85&&safetyCount<30){
+                safetyCount++;
+                const r2=rng(day*10000+oidx*37+sh);
+                const hour=sh+Math.floor(r2()*(eh-sh));
+                const min=Math.floor(r2()*60);
+                const isoStr=new Date(Date.UTC(2026,6,day,hour-9,min,0)).toISOString();
+                const tableNum=1+Math.floor(r2()*8);
+                const numItems=2+Math.floor(r2()*3);
+                const items=[];let orderTotal=0;
+                for(let i=0;i<numItems;i++){const m=popular[Math.floor(r2()*popular.length)];const qty=1+Math.floor(r2()*2);items.push({name:m.name,price:m.price,qty,emoji:m.emoji});orderTotal+=m.price*qty;}
+                const pr=r2();const payType=pr<0.7?'card':pr<0.8?'cash':'delivery';
+                orderWrites.push(fsd('filo_orders',`demo_${did}_${dateStr}_${String(oidx).padStart(4,'0')}`,{dealerId:did,type:'table',status:'completed',payType,tableNum,tableName:'테이블 '+tableNum,items,total:orderTotal,createdAt:isoStr,date:dateStr}));
+                sessionTotal+=orderTotal;oidx++;
+              }
+            }
+          }
+          const attWrites=[];
+          for(const s of staff){
+            for(let day=1;day<=31;day++){
+              const dow=new Date(Date.UTC(2026,6,day)).getDay();
+              if(dow===0)continue;
+              const r=rng(day*97+staff.indexOf(s)*13+7);
+              if(r()<0.04)continue;
+              if(dow===6&&r()<0.3)continue;
+              const isLate=r()<0.08;
+              const inH=10,inM=isLate?15+Math.floor(r()*16):Math.floor(r()*10);
+              const isEarlyOut=r()<0.05;
+              const outH=isEarlyOut?20:22,outM=Math.floor(r()*60);
+              const dateStr=`2026-07-${String(day).padStart(2,'0')}`;
+              const inIso=new Date(Date.UTC(2026,6,day,inH-9,inM,0)).toISOString();
+              const outIso=new Date(Date.UTC(2026,6,day,outH-9,outM,0)).toISOString();
+              const sfx=s.uid.split('_').pop();
+              attWrites.push(fsd('attendance',`${did}_${sfx}_${dateStr}_in`,{dealerId:did,memberId:s.uid,memberName:s.name,type:'in',date:dateStr,time:inIso,createdAt:inIso}));
+              attWrites.push(fsd('attendance',`${did}_${sfx}_${dateStr}_out`,{dealerId:did,memberId:s.uid,memberName:s.name,type:'out',date:dateStr,time:outIso,createdAt:outIso}));
+            }
+          }
+          const allWrites=[...writes,...orderWrites,...attWrites];
+          const batchUrl=`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:batchWrite`;
+          const hdrs={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+          const batchResults=[];
+          for(let i=0;i<allWrites.length;i+=400){
+            const br=await fetch(batchUrl,{method:'POST',headers:hdrs,body:JSON.stringify({writes:allWrites.slice(i,i+400)})});
+            const bd=await br.json();
+            batchResults.push({batch:Math.floor(i/400)+1,status:br.status,count:allWrites.slice(i,i+400).length,errorCount:(bd.status||[]).filter(x=>x&&x.code&&x.code!==0).length});
+          }
+          return new Response(JSON.stringify({ok:true,did,stats:{base:writes.length,orders:orderWrites.length,attendance:attWrites.length,total:allWrites.length},batches:batchResults}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+      }
+
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         let body;try{body=await request.json();}catch(e){body={};}
