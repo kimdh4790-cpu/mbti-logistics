@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0A1A2E">
+<meta name="description" content="용차 — 전국 택배 노선 기사·대리점 매칭 플랫폼. 공차 없이 일하세요.">
+<title>용차 — 택배 노선 매칭 플랫폼</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A1A2E;--bg2:#0d1f38;--bg3:#162840;
+  --tx:#f0f6ff;--t2:#8ba3c0;--t3:#445566;--bd:#1e3a5f;
+  --ac:#00E5B4;--acl:rgba(0,229,180,.12);
+  --br:#f59e0b;--gn:#00d97c;--rd:#ff4d6a;
+  --r:16px;--r2:24px;
+  --shadow:0 16px 60px rgba(0,0,0,.6);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden}
+
+/* ── 네비 ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 5%;background:rgba(10,26,46,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:22px;font-weight:900;background:linear-gradient(135deg,#00E5B4,#00c49a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.5px}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-link{color:var(--t2);font-size:14px;font-weight:600;text-decoration:none;transition:color .2s}
+.nav-link:hover{color:var(--ac)}
+.nav-cta{padding:9px 20px;background:var(--ac);color:#000;border-radius:24px;font-size:14px;font-weight:800;text-decoration:none;transition:.2s}
+.nav-cta:hover{background:#00c49a;transform:translateY(-1px)}
+
+/* ── 히어로 ── */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 5% 60px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(0,229,180,.12) 0%,transparent 65%)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,180,.1);border:1px solid rgba(0,229,180,.25);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:var(--ac);margin-bottom:24px;animation:fadeUp .6s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.hero-title{font-size:clamp(36px,7vw,72px);font-weight:900;line-height:1.1;letter-spacing:-2px;margin-bottom:18px;animation:fadeUp .7s .1s ease both}
+.hero-title .highlight{background:linear-gradient(135deg,#00E5B4,#00c49a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(15px,2vw,19px);color:var(--t2);line-height:1.7;max-width:560px;margin:0 auto 36px;animation:fadeUp .7s .2s ease both}
+.hero-cta-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;animation:fadeUp .7s .3s ease both}
+.cta-primary{padding:16px 36px;background:linear-gradient(135deg,var(--ac),#00c49a);color:#000;border-radius:30px;font-size:16px;font-weight:900;text-decoration:none;transition:.25s;letter-spacing:-.3px}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,229,180,.35)}
+.cta-secondary{padding:16px 36px;background:transparent;color:var(--tx);border:1.5px solid var(--bd);border-radius:30px;font-size:16px;font-weight:700;text-decoration:none;transition:.25s}
+.cta-secondary:hover{border-color:var(--ac);color:var(--ac)}
+
+/* ── 히어로 통계 ── */
+.hero-stats{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;margin-top:52px;animation:fadeUp .7s .4s ease both}
+.stat-item{text-align:center}
+.stat-num{font-size:32px;font-weight:900;color:var(--ac);letter-spacing:-1px}
+.stat-lbl{font-size:12px;color:var(--t3);margin-top:2px}
+
+/* ── 섹션 공통 ── */
+section{padding:80px 5%;max-width:1100px;margin:0 auto}
+.section-label{font-size:12px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
+.section-title{font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-1px;line-height:1.2;margin-bottom:16px}
+.section-sub{font-size:15px;color:var(--t2);line-height:1.7;max-width:540px}
+
+/* ── 벤토 그리드 ── */
+.bento-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:auto;gap:16px;margin-top:48px}
+.bento{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:28px;overflow:hidden;position:relative}
+.bento::before{content:'';position:absolute;inset:0;border-radius:var(--r2);opacity:0;transition:.3s;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,180,.08),transparent 60%)}
+.bento:hover::before{opacity:1}
+.bento-xl{grid-column:span 7}
+.bento-lg{grid-column:span 5}
+.bento-md{grid-column:span 4}
+.bento-sm{grid-column:span 3}
+.bento-ico{font-size:36px;margin-bottom:14px}
+.bento-tag{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--ac);text-transform:uppercase;margin-bottom:8px}
+.bento-title{font-size:20px;font-weight:800;margin-bottom:8px;line-height:1.3}
+.bento-desc{font-size:13px;color:var(--t2);line-height:1.7}
+/* 모바일 mockup */
+.phone-mock{width:100%;max-width:240px;margin:0 auto;display:block}
+
+/* ── 가격 카드 ── */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:40px}
+.price-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r2);padding:32px;position:relative;transition:.25s}
+.price-card.featured{border-color:var(--ac);background:linear-gradient(135deg,#0d2d4a,#0a1e3a)}
+.price-card.featured::before{content:'추천';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--ac);color:#000;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px}
+.price-who{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.price-title{font-size:22px;font-weight:900;margin-bottom:4px}
+.price-amount{font-size:36px;font-weight:900;color:var(--ac);letter-spacing:-1px;margin:12px 0}
+.price-amount small{font-size:14px;color:var(--t2);font-weight:500}
+.price-list{list-style:none;margin:20px 0 24px}
+.price-list li{font-size:13px;color:var(--t2);padding:6px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.price-list li::before{content:'✓';color:var(--ac);font-weight:700;flex-shrink:0}
+.price-cta{display:block;width:100%;padding:14px;background:var(--ac);color:#000;border-radius:var(--r);font-size:15px;font-weight:800;text-align:center;text-decoration:none;transition:.2s}
+.price-cta:hover{background:#00c49a}
+.price-cta.outline{background:transparent;color:var(--ac);border:1.5px solid var(--ac)}
+.price-cta.outline:hover{background:var(--acl)}
+
+/* ── 기사 후기 ── */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:40px}
+.review-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:22px}
+.review-stars{color:var(--br);font-size:16px;margin-bottom:10px}
+.review-text{font-size:14px;color:var(--tx);line-height:1.7;margin-bottom:14px}
+.review-author{display:flex;align-items:center;gap:10px}
+.review-avatar{width:36px;height:36px;border-radius:50%;background:var(--acl);display:flex;align-items:center;justify-content:center;font-size:16px}
+.review-name{font-size:13px;font-weight:700}
+.review-meta{font-size:11px;color:var(--t3)}
+
+/* ── 다운로드 CTA ── */
+#download{background:linear-gradient(135deg,#0d2d4a,#0a1e3a);border-radius:var(--r2);padding:60px 40px;text-align:center;margin:0 5% 80px;border:1px solid rgba(0,229,180,.2);position:relative;overflow:hidden}
+#download::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,180,.1),transparent 70%)}
+.dl-title{font-size:clamp(24px,4vw,40px);font-weight:900;letter-spacing:-1px;margin-bottom:14px}
+.dl-sub{font-size:15px;color:var(--t2);margin-bottom:32px;line-height:1.7}
+.dl-btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.dl-btn{padding:14px 28px;border-radius:14px;font-size:14px;font-weight:800;text-decoration:none;display:flex;align-items:center;gap:8px;transition:.2s}
+.dl-btn.primary{background:var(--ac);color:#000}
+.dl-btn.primary:hover{background:#00c49a;transform:translateY(-1px)}
+.dl-btn.secondary{background:rgba(255,255,255,.08);color:var(--tx);border:1px solid var(--bd)}
+.dl-btn.secondary:hover{border-color:var(--ac);color:var(--ac)}
+
+/* ── 푸터 ── */
+footer{border-top:1px solid var(--bd);padding:32px 5%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--t3)}
+.footer-logo{font-size:16px;font-weight:900;color:var(--ac)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{color:var(--t3);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--ac)}
+
+/* ── 모바일 ── */
+@media(max-width:768px){
+  .bento-xl,.bento-lg,.bento-md,.bento-sm{grid-column:span 12}
+  .hero-stats{gap:24px}
+  .stat-num{font-size:26px}
+  nav .nav-link:not(.nav-cta){display:none}
+  #download{margin:0 4% 60px;padding:40px 24px}
+}
+@media(max-width:480px){
+  section{padding:60px 5%}
+  .hero-cta-row{flex-direction:column;align-items:stretch;padding:0 16px}
+  .cta-primary,.cta-secondary{text-align:center}
+}
+
+/* ── 스크롤 애니 ── */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- 네비 -->
+<nav>
+  <div class="nav-logo">🚚 용차</div>
+  <div class="nav-right">
+    <a href="#features" class="nav-link">서비스 소개</a>
+    <a href="#pricing" class="nav-link">요금제</a>
+    <a href="https://yongcha.app" class="nav-cta">앱 시작하기</a>
+  </div>
+</nav>
+
+<!-- 히어로 -->
+<section id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-badge">🔥 2026 최신 버전 출시</div>
+  <h1 class="hero-title">
+    공차 없이<br>
+    <span class="highlight">더 많이 버세요</span>
+  </h1>
+  <p class="hero-sub">전국 택배 노선 기사와 대리점을 실시간으로 연결합니다. 평균 건당 단가 11만원, 월 수입 350~500만원.</p>
+  <div class="hero-cta-row">
+    <a href="https://yongcha.app" class="cta-primary">무료로 시작하기 →</a>
+    <a href="#features" class="cta-secondary">서비스 알아보기</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-item"><div class="stat-num">2,400+</div><div class="stat-lbl">등록 기사</div></div>
+    <div class="stat-item"><div class="stat-num">380+</div><div class="stat-lbl">대리점 파트너</div></div>
+    <div class="stat-item"><div class="stat-num">11만원</div><div class="stat-lbl">평균 건당 단가</div></div>
+    <div class="stat-item"><div class="stat-num">2.3%</div><div class="stat-lbl">수수료 (업계 최저)</div></div>
+  </div>
+</section>
+
+<!-- 기능 소개 (벤토 그리드) -->
+<section id="features" style="max-width:1100px;margin:0 auto">
+  <div class="reveal">
+    <div class="section-label">핵심 기능</div>
+    <h2 class="section-title">기사님이 원하는<br>모든 것을 담았습니다</h2>
+    <p class="section-sub">공고 찾기부터 정산·세금계산서까지, 용차 하나로 끝냅니다.</p>
+  </div>
+
+  <div class="bento-grid reveal">
+    <!-- 실시간 매칭 -->
+    <div class="bento bento-xl">
+      <div class="bento-tag">실시간 매칭</div>
+      <div class="bento-ico">⚡</div>
+      <div class="bento-title">내 위치 기반<br>즉시 매칭</div>
+      <div class="bento-desc">FCM 푸시로 새 공고 즉시 알림. 카카오맵에서 내 반경 내 공고를 마커로 확인. 밀어서 지원 — 단 1초.</div>
+      <!-- mock UI -->
+      <div style="margin-top:20px;background:rgba(0,229,180,.06);border:1px solid rgba(0,229,180,.15);border-radius:14px;padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:20px">🚚</span>
+          <div>
+            <div style="font-size:13px;font-weight:700">부산 해운대구 노선</div>
+            <div style="font-size:11px;color:var(--t2)">CJ대한통운 · 850원/박스 · 주간</div>
+          </div>
+          <div style="margin-left:auto;font-size:16px;font-weight:900;color:#f59e0b">월 420만</div>
+        </div>
+        <div style="height:44px;background:rgba(0,229,180,.15);border:1.5px solid rgba(0,229,180,.4);border-radius:22px;display:flex;align-items:center;padding:0 16px">
+          <div style="width:36px;height:36px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px">✅</div>
+          <span style="margin:0 auto;font-size:13px;font-weight:800;color:var(--ac)">밀어서 지원</span>
+          <span style="font-size:18px;color:var(--ac);opacity:.6">›</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수입 대시보드 -->
+    <div class="bento bento-lg">
+      <div class="bento-tag">수입 관리</div>
+      <div class="bento-ico">💰</div>
+      <div class="bento-title">월 수입 실시간<br>목표 달성 트래킹</div>
+      <div class="bento-desc">오늘 건수·단가·공차율을 한눈에. 월 목표 대비 달성률 프로그레스 바.</div>
+      <div style="margin-top:16px">
+        <div style="font-size:28px;font-weight:900;color:var(--ac);letter-spacing:-1px">4,230,000원</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:10px">7월 누적 · 22일 운행</div>
+        <div style="background:rgba(255,255,255,.06);border-radius:20px;height:8px;overflow:hidden">
+          <div style="width:84%;height:100%;background:linear-gradient(90deg,var(--ac),#00c49a);border-radius:20px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:4px"><span>0</span><span>목표 500만원 (84%)</span></div>
+      </div>
+    </div>
+
+    <!-- 낮은 수수료 -->
+    <div class="bento bento-md" style="background:linear-gradient(135deg,rgba(0,229,180,.12),rgba(0,229,180,.04));border-color:rgba(0,229,180,.2)">
+      <div class="bento-tag">수수료</div>
+      <div style="font-size:52px;font-weight:900;color:var(--ac);line-height:1;margin:8px 0">2.3%</div>
+      <div class="bento-title">업계 최저<br>수수료</div>
+      <div class="bento-desc">화물맨(20%+)의 1/10 수준.</div>
+    </div>
+
+    <!-- 당일 정산 -->
+    <div class="bento bento-md">
+      <div class="bento-tag">빠른 정산</div>
+      <div class="bento-ico">⚡</div>
+      <div class="bento-title">7일 이내<br>빠른 정산</div>
+      <div class="bento-desc">정산 예정일 D-day 알림. 세금계산서 팝빌 자동 발행.</div>
+    </div>
+
+    <!-- 세금계산서 -->
+    <div class="bento bento-md">
+      <div class="bento-tag">세무</div>
+      <div class="bento-ico">🧾</div>
+      <div class="bento-title">전자세금계산서<br>자동 발행</div>
+      <div class="bento-desc">정산 완료 시 팝빌 API로 자동 역발행. 별도 처리 불필요.</div>
+    </div>
+
+    <!-- 채팅 -->
+    <div class="bento bento-md">
+      <div class="bento-tag">커뮤니케이션</div>
+      <div class="bento-ico">💬</div>
+      <div class="bento-title">카카오톡 스타일<br>실시간 채팅</div>
+      <div class="bento-desc">대리점-기사 1:1 채팅. 읽음 확인·FCM 푸시 알림.</div>
+    </div>
+
+    <!-- 화주 신뢰도 -->
+    <div class="bento bento-lg" style="background:linear-gradient(135deg,#0d2d4a,#0a1e3a);border-color:rgba(0,229,180,.15)">
+      <div class="bento-tag">신뢰 시스템</div>
+      <div class="bento-ico">⭐</div>
+      <div class="bento-title">대리점 신뢰도<br>평점 공개</div>
+      <div class="bento-desc">운임 미지급 이력·별점·리뷰 수를 공고마다 표시. 나쁜 대리점 사전 차단.</div>
+      <div style="margin-top:16px;display:flex;gap:8px">
+        <div style="background:rgba(0,229,180,.1);border:1px solid rgba(0,229,180,.2);border-radius:10px;padding:8px 12px;font-size:12px">
+          <div style="font-weight:800;color:var(--ac)">⭐ 4.8</div>
+          <div style="font-size:10px;color:var(--t3)">신뢰 A등급</div>
+        </div>
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:8px 12px;font-size:12px">
+          <div style="font-weight:800;color:#f59e0b">⭐ 3.2</div>
+          <div style="font-size:10px;color:var(--t3)">주의 C등급</div>
+        </div>
+        <div style="background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.2);border-radius:10px;padding:8px 12px;font-size:12px">
+          <div style="font-weight:800;color:var(--rd)">⚠ 불량</div>
+          <div style="font-size:10px;color:var(--t3)">미지급 이력</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 요금제 -->
+<section id="pricing" style="max-width:1000px;margin:0 auto">
+  <div class="reveal" style="text-align:center">
+    <div class="section-label">요금제</div>
+    <h2 class="section-title">투명한 요금제</h2>
+    <p class="section-sub" style="margin:0 auto">숨은 수수료 없이 완전히 투명하게.</p>
+  </div>
+
+  <div class="pricing-grid reveal">
+    <!-- 기사 -->
+    <div class="price-card featured">
+      <div class="price-who">기사 (차주)</div>
+      <div class="price-title">🚗 드라이버 플랜</div>
+      <div class="price-amount">무료 <small>/ 항상</small></div>
+      <ul class="price-list">
+        <li>전국 공고 무제한 열람</li>
+        <li>1일 5건 무료 지원</li>
+        <li>실시간 FCM 새 공고 알림</li>
+        <li>월 수입 대시보드</li>
+        <li>기사 평점·포트폴리오</li>
+        <li>빠른 정산 (7일 이내)</li>
+      </ul>
+      <a href="https://yongcha.app" class="price-cta">무료로 시작하기</a>
+    </div>
+
+    <!-- 대리점 기본 -->
+    <div class="price-card">
+      <div class="price-who">대리점</div>
+      <div class="price-title">🏢 스타터</div>
+      <div class="price-amount">무료 <small>/ 월</small></div>
+      <ul class="price-list">
+        <li>공고 등록 월 3건</li>
+        <li>지원자 목록 확인</li>
+        <li>기사 배차 관리</li>
+        <li>기본 채팅</li>
+      </ul>
+      <a href="https://yongcha.app" class="price-cta outline">무료 시작</a>
+    </div>
+
+    <!-- 대리점 프로 -->
+    <div class="price-card">
+      <div class="price-who">대리점</div>
+      <div class="price-title">🚀 프로</div>
+      <div class="price-amount">49,000<small>원 / 월</small></div>
+      <ul class="price-list">
+        <li>공고 무제한 등록</li>
+        <li>프리미엄 상단 노출</li>
+        <li>실시간 배차 지도</li>
+        <li>팝빌 세금계산서 자동 발행</li>
+        <li>월 정산 리포트</li>
+        <li>스카웃 기능</li>
+      </ul>
+      <a href="https://yongcha.app" class="price-cta outline">프로 시작하기</a>
+    </div>
+  </div>
+</section>
+
+<!-- 후기 -->
+<section style="max-width:1000px;margin:0 auto">
+  <div class="reveal" style="text-align:center">
+    <div class="section-label">실제 후기</div>
+    <h2 class="section-title">기사님들의 이야기</h2>
+  </div>
+  <div class="reviews-grid reveal">
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <p class="review-text">"화물맨은 수수료 20%에 좋은 화물은 매크로 봇들이 먼저 낚아채는데, 용차는 공정하고 빨라요. 이번달 공차 없이 480만원 달성했어요."</p>
+      <div class="review-author">
+        <div class="review-avatar">🚚</div>
+        <div><div class="review-name">김철수 기사님</div><div class="review-meta">부산 · 1톤 · 경력 8년</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <p class="review-text">"대리점 입장에서 기사 찾는 게 너무 어려웠는데, 용차 쓰고 이틀 만에 3명 배차 완료했어요. 스카웃 기능도 너무 편리해요."</p>
+      <div class="review-author">
+        <div class="review-avatar">🏢</div>
+        <div><div class="review-name">부산종합대리점</div><div class="review-meta">CJ대한통운 파트너 · 경남 지역</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★☆</div>
+      <p class="review-text">"세금계산서 자동 발행이 진짜 편해요. 전에는 국세청에 따로 들어가서 처리했는데 이제 앱에서 다 끝나네요."</p>
+      <div class="review-author">
+        <div class="review-avatar">🚚</div>
+        <div><div class="review-name">이민준 기사님</div><div class="review-meta">대구 · 2.5톤 · 경력 5년</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 다운로드 CTA -->
+<div id="download" class="reveal">
+  <h2 class="dl-title">지금 바로<br>공차 없이 일하세요</h2>
+  <p class="dl-sub">가입 5분, 지원 10초. 오늘부터 더 많이 버세요.</p>
+  <div class="dl-btn-row">
+    <a href="https://yongcha.app" class="dl-btn primary">
+      <span>🚚</span> 웹앱 바로 시작
+    </a>
+    <a href="https://yongcha.app" class="dl-btn secondary">
+      <span>📱</span> 앱으로 열기
+    </a>
+  </div>
+</div>
+
+<!-- 푸터 -->
+<footer>
+  <div class="footer-logo">🚚 용차</div>
+  <div style="color:var(--t3)">© 2026 용차. 택배 노선 매칭 플랫폼.</div>
+  <div class="footer-links">
+    <a href="https://yongcha.app">앱 접속</a>
+    <a href="#">이용약관</a>
+    <a href="#">개인정보처리방침</a>
+  </div>
+</footer>
+
+<script>
+// 스크롤 reveal
+var reveals=document.querySelectorAll('.reveal');
+var obs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');}});
+},{threshold:0.12});
+reveals.forEach(function(r){obs.observe(r);});
+
+// 통계 카운트업
+function countUp(el,target,suffix,duration){
+  var start=0,step=target/Math.ceil(duration/16);
+  var t=setInterval(function(){
+    start=Math.min(start+step,target);
+    el.textContent=(start>=1000?Math.round(start).toLocaleString():Math.round(start))+suffix;
+    if(start>=target)clearInterval(t);
+  },16);
+}
+var statsObs=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){
+    statsObs.disconnect();
+    var nums=document.querySelectorAll('.stat-num');
+    countUp(nums[0],2400,'+',1200);
+    countUp(nums[1],380,'+',1000);
+  }
+},{threshold:0.5});
+var heroStats=document.querySelector('.hero-stats');
+if(heroStats)statsObs.observe(heroStats);
+</script>
+</body>
+</html>
