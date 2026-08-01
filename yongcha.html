@@ -65,6 +65,32 @@ select.inp option{background:#0d1526;color:#f0f6ff}
 .btn-main:active{transform:scale(.98)}
 .btn-main:disabled{background:var(--bg3);color:var(--t3);cursor:not-allowed}
 
+/* ── 역할 선택 ── */
+.role-title{font-size:14px;font-weight:700;color:var(--t2);text-align:center;margin-bottom:18px;letter-spacing:-.2px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.role-btn{border:2px solid var(--bd);border-radius:var(--r);padding:24px 10px;text-align:center;cursor:pointer;transition:.2s;background:var(--bg3)}
+.role-btn:hover{border-color:var(--ac);background:var(--acl)}
+.role-btn:active{transform:scale(.96)}
+.role-ico{font-size:38px;margin-bottom:10px}
+.role-name{font-size:15px;font-weight:800;color:var(--tx);margin-bottom:4px}
+.role-desc{font-size:11px;color:var(--t2)}
+/* ── 역할별 인증 ── */
+.auth-back{background:none;border:none;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit;padding:0;margin-bottom:18px;display:flex;align-items:center;gap:4px;transition:color .2s}
+.auth-back:hover{color:var(--ac)}
+.auth-role-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.auth-role-ico{font-size:34px}
+.auth-role-title{font-size:19px;font-weight:900;color:var(--tx);letter-spacing:-.3px}
+/* 카카오 버튼 */
+.btn-kakao{width:100%;padding:14px;background:#FEE500;color:#3C1E1E;border:none;border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;transition:.15s}
+.btn-kakao:active{transform:scale(.98);opacity:.9}
+.btn-kakao:disabled{opacity:.5;cursor:not-allowed}
+/* 구분선 */
+.or-divider{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--t3);font-size:11px}
+.or-divider::before,.or-divider::after{content:'';flex:1;border-top:1px solid var(--bd)}
+/* 비밀번호 찾기 */
+.btn-forgot{background:none;border:none;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit;display:block;width:100%;margin-top:10px;padding:6px;text-align:center;transition:color .2s}
+.btn-forgot:hover{color:var(--ac)}
+
 /* ── 앱 ── */
 #app{position:fixed;inset:0;display:none;flex-direction:column;background:var(--bg)}
 
@@ -319,57 +345,78 @@ select.inp option{background:#0d1526;color:#f0f6ff}
 
 <!-- 로그인 -->
 <div id="login-screen">
-<div class="login-card">
+
+<!-- Step 1: 역할 선택 -->
+<div id="role-select-screen" class="login-card">
   <div class="login-logo">
     <div class="login-ico">🚚</div>
     <div class="login-name">용차.app</div>
     <div class="login-sub">대리점과 기사를 연결하는 노선 매칭 플랫폼</div>
+  </div>
+  <div class="role-title">어떤 역할로 시작하시나요?</div>
+  <div class="role-grid">
+    <div class="role-btn" onclick="_selectRole('agency')">
+      <div class="role-ico">🏢</div>
+      <div class="role-name">대리점</div>
+      <div class="role-desc">공고 등록 · 기사 채용</div>
+    </div>
+    <div class="role-btn" onclick="_selectRole('driver')">
+      <div class="role-ico">🚗</div>
+      <div class="role-name">기사</div>
+      <div class="role-desc">노선 지원 · 매칭</div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: 로그인/회원가입 -->
+<div id="auth-screen" class="login-card" style="display:none">
+  <button class="auth-back" onclick="_backToRole()">← 역할 선택으로</button>
+  <div class="auth-role-hdr">
+    <div class="auth-role-ico" id="auth-role-ico">🏢</div>
+    <div>
+      <div class="auth-role-title" id="auth-role-title">대리점 로그인</div>
+      <div class="login-sub">용차 — 택배 노선 매칭 플랫폼</div>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab on" id="tab-login" onclick="_yTab('login')">로그인</button>
     <button class="tab" id="tab-reg" onclick="_yTab('reg')">회원가입</button>
   </div>
 
-  <!-- 로그인 -->
+  <!-- 로그인 폼 -->
   <div id="form-login">
+    <button class="btn-kakao" id="btn-kakao" onclick="_kakaoLogin()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#3C1E1E" d="M9 1.5C4.86 1.5 1.5 4.12 1.5 7.35c0 2.04 1.27 3.83 3.2 4.84L3.88 15a.3.3 0 0 0 .45.33l3.74-2.49c.3.04.62.06.93.06 4.14 0 7.5-2.62 7.5-5.85S13.14 1.5 9 1.5z"/></svg>
+      카카오로 시작하기
+    </button>
+    <div class="or-divider"><span>또는 이메일로</span></div>
     <div class="inp-wrap">
       <label class="inp-lbl">이메일</label>
-      <input class="inp" id="l-email" type="email" placeholder="이메일 입력">
+      <input class="inp" id="l-email" type="email" placeholder="이메일 입력" autocomplete="email">
     </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호</label>
-      <input class="inp" id="l-pw" type="password" placeholder="비밀번호 입력"
+      <input class="inp" id="l-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')_yLogin()">
     </div>
     <div class="err" id="l-err"></div>
     <button class="btn-main" id="l-btn" onclick="_yLogin()">로그인</button>
+    <button class="btn-forgot" onclick="_yForgotPw()">비밀번호 찾기</button>
   </div>
 
-  <!-- 회원가입 -->
+  <!-- 회원가입 폼 -->
   <div id="form-reg" style="display:none">
-    <div class="type-row">
-      <div class="type-card on" id="t-agency" onclick="_setType('agency')">
-        <div class="type-ico">🏢</div>
-        <div class="type-lbl">대리점</div>
-        <div class="type-desc">공고 등록 · 기사 채용</div>
-      </div>
-      <div class="type-card" id="t-driver" onclick="_setType('driver')">
-        <div class="type-ico">🚗</div>
-        <div class="type-lbl">기사</div>
-        <div class="type-desc">노선 지원 · 매칭</div>
-      </div>
-    </div>
     <div class="inp-wrap">
       <label class="inp-lbl" id="r-name-lbl">대리점명</label>
-      <input class="inp" id="r-name" placeholder="상호명 입력">
+      <input class="inp" id="r-name" placeholder="상호명 입력" autocomplete="organization">
     </div>
     <div class="inp-wrap">
       <label class="inp-lbl">이메일</label>
-      <input class="inp" id="r-email" type="email" placeholder="이메일">
+      <input class="inp" id="r-email" type="email" placeholder="이메일" autocomplete="email">
     </div>
     <div class="inp-wrap">
       <label class="inp-lbl">연락처</label>
-      <input class="inp" id="r-phone" type="tel" placeholder="010-0000-0000">
+      <input class="inp" id="r-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel">
     </div>
     <div class="inp-wrap">
       <label class="inp-lbl">지역</label>
@@ -382,14 +429,42 @@ select.inp option{background:#0d1526;color:#f0f6ff}
         <option>충남</option><option>충북</option><option>강원</option><option>제주</option>
       </select>
     </div>
-    <div class="inp-wrap">
+    <!-- 대리점 전용 -->
+    <div id="r-agency-fields">
+      <div class="inp-wrap">
+        <label class="inp-lbl">사업자번호</label>
+        <input class="inp" id="r-biznum" placeholder="000-00-00000">
+      </div>
+      <div class="inp-wrap">
+        <label class="inp-lbl">담당자명</label>
+        <input class="inp" id="r-contact" placeholder="담당자 이름">
+      </div>
+    </div>
+    <!-- 기사 전용 -->
+    <div id="r-driver-fields" style="display:none">
+      <div class="inp-wrap">
+        <label class="inp-lbl">차종</label>
+        <select class="inp" id="r-cartype">
+          <option value="">차종 선택</option>
+          <option>다마스</option><option>라보</option><option>스타렉스</option>
+          <option>봉고3</option><option>포터2</option><option>마스터</option>
+          <option>1톤 화물</option><option>기타</option>
+        </select>
+      </div>
+      <div class="inp-wrap">
+        <label class="inp-lbl">면허번호</label>
+        <input class="inp" id="r-license" placeholder="운전면허 번호">
+      </div>
+    </div>
+    <div class="inp-wrap" id="r-pw-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
-      <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
+      <input class="inp" id="r-pw" type="password" placeholder="비밀번호" autocomplete="new-password">
     </div>
     <div class="err" id="r-err"></div>
     <button class="btn-main" id="r-btn" onclick="_yRegister()">가입하기</button>
   </div>
 </div>
+
 </div>
 
 <!-- 앱 -->
@@ -421,21 +496,28 @@ select.inp option{background:#0d1526;color:#f0f6ff}
 <!-- 토스트 -->
 <div id="toast"></div>
 
-<!-- 카카오맵 미리 로드 -->
+<!-- 카카오 SDK 로드 -->
 <script>
 (function(){
   fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
     if(!d.key) return;
+    // 카카오맵 SDK
     var s=document.createElement('script');
     s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+d.key+'&libraries=services&autoload=false';
     s.onload=function(){
       kakao.maps.load(function(){
         window._kakaoReady=true;
         window._kakaoKey=d.key;
-        console.log('[용차] 카카오맵 로드 완료');
       });
     };
     document.head.appendChild(s);
+    // 카카오 Auth SDK
+    var sa=document.createElement('script');
+    sa.src='https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
+    sa.onload=function(){
+      if(window.Kakao&&!Kakao.isInitialized())Kakao.init(d.key);
+    };
+    document.head.appendChild(sa);
   }).catch(function(e){ console.warn('[용차] 카카오 로드 실패:', e); });
 })();
 </script>
@@ -504,7 +586,7 @@ _auth.onAuthStateChanged(function(u){
           if(_CU&&_CU.uid===u.uid)return; // registration flow may have already set _CU
           _CU=Object.assign({uid:u.uid},doc);_showApp();
         }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] set error:',e);_showLogin();});
-      } else {clearTimeout(_authTimer);_showLogin();}
+      } else {clearTimeout(_authTimer);if(!_kakaoLoginPending&&!_kakaoNewUser){_showLogin();}}
     }).catch(function(e){
       clearTimeout(_authTimer);
       // 로그인 화면에 에러 표시
@@ -522,8 +604,13 @@ function _showLogin(){
   if(lBtn){lBtn.textContent='로그인';lBtn.disabled=false;}
   var rBtn=document.getElementById('r-btn');
   if(rBtn){rBtn.textContent='가입하기';rBtn.disabled=false;}
+  var bKakao=document.getElementById('btn-kakao');
+  if(bKakao)bKakao.disabled=false;
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
+  document.getElementById('role-select-screen').style.display='block';
+  document.getElementById('auth-screen').style.display='none';
+  _kakaoNewUser=null;_kakaoLoginPending=false;
 }
 
 // ── 로그인/회원가입 ──────────────────────────────────────────
@@ -535,10 +622,12 @@ function _yTab(t){
 }
 function _setType(t){
   _regType=t;
-  document.getElementById('t-agency').classList.toggle('on',t==='agency');
-  document.getElementById('t-driver').classList.toggle('on',t==='driver');
   document.getElementById('r-name-lbl').textContent=t==='agency'?'대리점명':'이름';
   document.getElementById('r-name').placeholder=t==='agency'?'상호명 입력':'이름 입력';
+  var af=document.getElementById('r-agency-fields');
+  var df=document.getElementById('r-driver-fields');
+  if(af)af.style.display=t==='agency'?'block':'none';
+  if(df)df.style.display=t==='driver'?'block':'none';
 }
 
 function _yLogin(){
@@ -569,25 +658,112 @@ function _yRegister(){
   var p=(document.getElementById('r-pw').value||'').trim();
   var err=document.getElementById('r-err');
   var btn=document.getElementById('r-btn');
-  if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
-  if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
-  err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
-  _auth.createUserWithEmailAndPassword(e,p).then(function(c){
-    var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
-    var _doc={
-      uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
+  var isKakao=!!_kakaoNewUser;
+  if(!n||!ph||!rg){err.textContent='이름/연락처/지역을 입력하세요';err.style.display='block';return;}
+  if(!isKakao&&(!e||!p)){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
+  if(!isKakao&&p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  var biznum=(_regType==='agency'?((document.getElementById('r-biznum')||{}).value||'').trim():'');
+  var contact=(_regType==='agency'?((document.getElementById('r-contact')||{}).value||'').trim():'');
+  var cartype=(_regType==='driver'?((document.getElementById('r-cartype')||{}).value||'').trim():'');
+  var license=(_regType==='driver'?((document.getElementById('r-license')||{}).value||'').trim():'');
+  err.style.display='none';btn.textContent='저장 중...';btn.disabled=true;
+  function _saveDoc(uid,email){
+    var userType=ADMINS.indexOf(email||'')>=0?'admin':_regType;
+    var doc={uid:uid,type:userType,name:n,email:email||'',phone:ph,region:rg,
       rating:0,reviewCount:0,status:'active',
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-    return _db.collection('yongcha_users').doc(c.user.uid).set(_doc).then(function(){
-      if(_CU&&_CU.uid===c.user.uid)return; // onAuthStateChanged ADMINS path may have won the race
-      _CU=Object.assign({uid:c.user.uid},_doc);
-      _showApp();
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(cartype)doc.carType=cartype;
+    if(license)doc.license=license;
+    if(biznum)doc.bizNum=biznum;
+    if(contact)doc.contactPerson=contact;
+    if(_kakaoNewUser)doc.kakaoId=_kakaoNewUser.kakaoId;
+    return _db.collection('yongcha_users').doc(uid).set(doc).then(function(){
+      _kakaoNewUser=null;
+      if(_CU&&_CU.uid===uid)return;
+      _CU=Object.assign({uid:uid},doc);_showApp();
     });
+  }
+  if(isKakao){
+    _saveDoc(_kakaoNewUser.uid,e||_kakaoNewUser.kakaoEmail||'').catch(function(ex){
+      btn.textContent='가입하기';btn.disabled=false;
+      err.textContent='오류: '+ex.message;err.style.display='block';
+    });
+  } else {
+    _auth.createUserWithEmailAndPassword(e,p).then(function(c){
+      return _saveDoc(c.user.uid,e);
+    }).catch(function(ex){
+      btn.textContent='가입하기';btn.disabled=false;
+      err.textContent=ex.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':'오류: '+ex.message;
+      err.style.display='block';
+    });
+  }
+}
+
+function _selectRole(role){
+  _regType=role;
+  document.getElementById('role-select-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='block';
+  var isAg=role==='agency';
+  document.getElementById('auth-role-ico').textContent=isAg?'🏢':'🚗';
+  document.getElementById('auth-role-title').textContent=isAg?'대리점 로그인':'기사 로그인';
+  _yTab('login');_setType(role);
+}
+function _backToRole(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('role-select-screen').style.display='block';
+  _yTab('login');
+}
+function _yForgotPw(){
+  var e=(document.getElementById('l-email').value||'').trim();
+  var err=document.getElementById('l-err');
+  if(!e){err.textContent='이메일을 먼저 입력하세요';err.style.display='block';return;}
+  err.style.display='none';
+  _auth.sendPasswordResetEmail(e).then(function(){
+    _yToast('비밀번호 재설정 이메일을 보냈어요 📧');
   }).catch(function(ex){
-    btn.textContent='가입하기';btn.disabled=false;
-    err.textContent=ex.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':'오류: '+ex.message;
-    err.style.display='block';
+    err.textContent='이메일 오류: '+(ex.message||ex.code);err.style.display='block';
+  });
+}
+var _kakaoNewUser=null,_kakaoLoginPending=false;
+function _kakaoLogin(){
+  if(!window.Kakao||!Kakao.isInitialized()){
+    _yToast('카카오 SDK 로드 중입니다. 잠시 후 다시 시도해주세요');return;
+  }
+  Kakao.Auth.login({
+    success:function(authObj){
+      var btn=document.getElementById('btn-kakao');
+      if(btn)btn.disabled=true;
+      fetch('/api/yongcha/kakao-auth',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({accessToken:authObj.access_token})
+      }).then(function(r){return r.json();}).then(function(d){
+        if(d.error)throw new Error(d.error);
+        _kakaoLoginPending=true;
+        return _auth.signInWithCustomToken(d.firebaseToken).then(function(cred){
+          _kakaoLoginPending=false;
+          return _db.collection('yongcha_users').doc(cred.user.uid).get().then(function(snap){
+            if(!snap.exists){
+              _kakaoNewUser={uid:cred.user.uid,kakaoId:d.kakaoId,
+                kakaoEmail:d.kakaoEmail,kakaoName:d.kakaoName};
+              _yTab('reg');
+              var ne=document.getElementById('r-name');
+              if(ne&&d.kakaoName)ne.value=d.kakaoName;
+              var ee=document.getElementById('r-email');
+              if(ee&&d.kakaoEmail)ee.value=d.kakaoEmail;
+              var pw=document.getElementById('r-pw-wrap');
+              if(pw)pw.style.display='none';
+              if(btn)btn.disabled=false;
+              _yToast('카카오 연동 완료! 추가 정보를 입력해주세요 ✅');
+            }
+          });
+        });
+      }).catch(function(ex){
+        _kakaoLoginPending=false;
+        _yToast('카카오 로그인 오류: '+ex.message);
+        if(btn)btn.disabled=false;
+      });
+    },
+    fail:function(){_yToast('카카오 로그인이 취소되었어요');}
   });
 }
 
