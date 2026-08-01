@@ -231,12 +231,14 @@ function _filoTableLoad(did){
 }
 
 window._filoTableSeat=function(docId,did,num){
+ var n=parseInt(num);
+ if(isNaN(n)||n<1){console.warn('[filo] _filoTableSeat: invalid num',num);return;}
  var now=_nowISO();
- var id=docId.startsWith('auto_')?(did+'_t'+num):docId;
+ var id=docId.startsWith('auto_')?(did+'_t'+n):docId;
  _db.collection('filo_tables').doc(id).set({
-  dealerId:did,tableNum:parseInt(num),tableName:'테이블 '+num,
+  dealerId:did,tableNum:n,tableName:'테이블 '+n,
   status:'occupied',occupiedSince:now,reservedName:'',updatedAt:now
- },{merge:true}).then(function(){_filoToast('🍽 테이블 '+num+' 착석');_filoTableLoad(did);});
+ },{merge:true}).then(function(){_filoToast('🍽 테이블 '+n+' 착석');_filoTableLoad(did);});
 };
 
 window._filoTableClear=function(docId,did,num){

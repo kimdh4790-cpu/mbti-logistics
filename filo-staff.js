@@ -140,6 +140,7 @@ function _filoPageAttendance(el){
  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
  .then(function(snap){
  var sel=document.getElementById('mc-member');if(!sel)return;
+ while(sel.options.length>1)sel.remove(1);
  snap.forEach(function(doc){
  var opt=document.createElement('option');
  opt.value=doc.id;opt.textContent=doc.data().name||doc.id;

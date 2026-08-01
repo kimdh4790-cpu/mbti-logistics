@@ -148,7 +148,20 @@ function _filoRenderPayList(){
 /* ── 명세서 발송 ── */
 function _filoDoSendPayslip(ym){
  document.querySelector('.mo')&&document.querySelector('.mo').remove();
- _filoToast('📨 급여명세서 발송 기능은 준비 중입니다 (카카오 알림톡 연동 예정)');
+ if(!_payrollData||!_payrollData.length){_filoToast('급여 데이터 없음');return;}
+ var did=_CU&&(_CU.dealerId||_CU.uid)||'';
+ var employees=_payrollData.map(function(p){
+  return {uid:p.uid||p.memberId||'',name:p.name||'',netPay:p.netPay||0,gross:p.gross||0};
+ }).filter(function(e){return e.uid;});
+ fetch('/api/payslip-fcm',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({did:did,ym:ym,employees:employees})
+ }).then(function(r){return r.json();}).then(function(d){
+  _filoToast('📨 급여명세서 FCM 알림 발송 완료 ('+(d.sent||0)+'명)');
+ }).catch(function(e){
+  _filoToast('❌ 발송 실패: '+e.message);
+ });
 }
 
 
