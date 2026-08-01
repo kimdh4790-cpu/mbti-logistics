@@ -7571,6 +7571,11 @@ async function handleYongcha(request, env) {
     });
   }
 
+  // 랜딩 페이지
+  if (path === '/landing' || path === '/landing/') {
+    return serveKVFile(env, 'yongcha-landing.html', 'text/html');
+  }
+
   // 모든 경로 → KV에서 yongcha.html 서빙
   return serveKVFile(env, 'yongcha.html', 'text/html');
 }
