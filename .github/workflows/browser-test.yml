@@ -1,0 +1,42 @@
+name: Browser Test (Demo)
+# 박람회 데모 시나리오 브라우저 테스트 — 수동 실행 전용
+
+on:
+  workflow_dispatch:
+    inputs:
+      dealer_id:
+        description: '매장 Dealer ID'
+        required: false
+        default: 'haemul_gwangan_2026'
+
+jobs:
+  browser-test:
+    runs-on: ubuntu-latest
+    name: "Playwright 브라우저 통합 테스트"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y --silent
+          npm install playwright@latest --silent
+          npx playwright install chromium --with-deps
+
+      - name: Run Demo Browser Tests
+        run: node tests/filo-demo-test.mjs
+        env:
+          DEALER_ID: ${{ github.event.inputs.dealer_id }}
+          TABLE_NUM: "1"
+          BASE: "https://filo.ai.kr"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-screenshots
+          path: test-screenshots/
+          retention-days: 7
