@@ -6140,6 +6140,75 @@ service cloud.firestore {
       }
     }
 
+    // ── DONWAY 팝빌 전자세금계산서 역발행 (/api/popbill-issue) ──
+    if (path === '/api/popbill-issue' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const result = await popbillIssueReverseDonway(env, body);
+        return new Response(JSON.stringify(result), {
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        });
+      }
+    }
+
+    // ── DONWAY 팝빌 웹훅 (/api/popbill-webhook) ──
+    if (path === '/api/popbill-webhook' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { MgtKey, State, StateDate } = body;
+        const fsToken = await getAccessToken(env);
+        if (MgtKey) {
+          const settleId = MgtKey.replace(/^DW/, '');
+          const now = new Date().toISOString();
+          const patchFields = {
+            taxInvoiceState:     { stringValue: State || '알수없음' },
+            taxInvoiceUpdatedAt: { stringValue: StateDate || now },
+            taxInvoiceMgtKey:    { stringValue: MgtKey }
+          };
+          await fetch(`${FS_BASE}/settlements/${settleId}?${
+            Object.keys(patchFields).map(k => `updateMask.fieldPaths=${k}`).join('&')
+          }`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: patchFields })
+          });
+          if (State === '3' || State === '역발행승인') {
+            const settleDoc = await fsGet(fsToken, 'settlements', settleId);
+            const fields = settleDoc.fields || {};
+            const driverToken = fields.driverFcmToken?.stringValue;
+            const agencyToken = fields.agencyFcmToken?.stringValue;
+            const driverName  = fields.driverName?.stringValue || '기사';
+            const agencyName  = fields.agencyName?.stringValue || '대리점';
+            const totalAmt    = fields.totalAmount?.integerValue || fields.totalAmount?.doubleValue || 0;
+            const amtStr      = Number(totalAmt).toLocaleString('ko-KR');
+            const fcmPromises = [];
+            if (driverToken) fcmPromises.push(sendFCMPush(driverToken, '세금계산서 발행 완료',
+              `${agencyName} 세금계산서 ${amtStr}원이 승인되었습니다.`, { type: 'tax_invoice_approved', settleId }));
+            if (agencyToken) fcmPromises.push(sendFCMPush(agencyToken, '세금계산서 역발행 승인 완료',
+              `${driverName} 기사 세금계산서 ${amtStr}원 역발행이 완료되었습니다.`, { type: 'tax_invoice_approved', settleId }));
+            await Promise.allSettled(fcmPromises);
+          }
+          if (State === '역발행거부') {
+            const settleDoc = await fsGet(fsToken, 'settlements', settleId);
+            const fields = settleDoc.fields || {};
+            const agencyToken = fields.agencyFcmToken?.stringValue;
+            const driverName  = fields.driverName?.stringValue || '기사';
+            if (agencyToken) await sendFCMPush(agencyToken, '세금계산서 역발행 거부',
+              `${driverName} 기사가 세금계산서 역발행 요청을 거부했습니다.`, { type: 'tax_invoice_rejected', settleId });
+          }
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), {
+          status: 500, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // ── 로그인 알림 푸시 (/api/send-push) ──
     if (path === '/api/send-push' && method === 'POST') {
       try {
@@ -7759,5 +7828,104 @@ async function popbillIssueReverse(env, params) {
     isTest,
     result: resultData
   };
+}
+
+// ── DONWAY 팝빌 역발행 (운영 모드) ──────────────────────────────────────────
+async function popbillIssueReverseDonway(env, params) {
+  const {
+    settleId, senderCorpNum, senderName, senderCEO, senderEmail,
+    receiverCorpNum, receiverName, receiverEmail,
+    supplyAmt, taxAmt, totalAmt, writeDate, itemName,
+    driverFcmToken, agencyFcmToken
+  } = params;
+
+  if (!senderCorpNum || !receiverCorpNum) throw new Error('공급자/공급받는자 사업자번호 필수');
+  if (!settleId) throw new Error('settleId 필수');
+
+  const mgtKey = `DW${settleId}`.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
+  const BASE = 'https://serviceapi.popbill.com'; // 운영 모드
+
+  const pbToken = await popbillGetToken(env, receiverCorpNum);
+  const wDate = writeDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const supply = Number(supplyAmt) || 0;
+  const tax    = Number(taxAmt)    || Math.round(supply * 0.1);
+  const total  = Number(totalAmt)  || supply + tax;
+
+  const invoiceBody = {
+    MgtKey:           mgtKey,
+    WriteDate:        wDate,
+    IssueType:        '역발행',
+    TaxType:          '과세',
+    InvoiceType:      '일반',
+    PurposeType:      '영수',
+    SupplyCostTotal:  String(supply),
+    TaxTotal:         String(tax),
+    TotalAmount:      String(total),
+    SenderCorpNum:    senderCorpNum,
+    SenderCorpName:   senderName || '',
+    SenderCEOName:    senderCEO  || senderName || '',
+    SenderEmail:      senderEmail || '',
+    SenderBizType:    '개인',
+    ReceiverCorpNum:  receiverCorpNum,
+    ReceiverCorpName: receiverName || '',
+    ReceiverEmail:    receiverEmail || '',
+    DetailList: [{
+      SerialNum:   1,
+      PurchaseDT:  wDate,
+      ItemName:    itemName || '쿠팡 배송 정산비',
+      Qty:         '1',
+      UnitCost:    String(supply),
+      SupplyCost:  String(supply),
+      Tax:         String(tax),
+      TotalAmount: String(total)
+    }],
+    Memo: `DONWAY 정산 #${settleId}`
+  };
+
+  const resp = await fetch(
+    `${BASE}/Taxinvoice/역발행요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(invoiceBody)
+    }
+  );
+
+  const resultText = await resp.text();
+  let resultData;
+  try { resultData = JSON.parse(resultText); } catch { resultData = { raw: resultText }; }
+
+  try {
+    const fsToken = await getAccessToken(env);
+    const patchFields = {
+      taxInvoiceState:    { stringValue: '역발행요청' },
+      taxInvoiceMgtKey:   { stringValue: mgtKey },
+      taxInvoiceIsTest:   { booleanValue: false },
+      taxInvoiceRequestAt:{ stringValue: new Date().toISOString() },
+      ...(driverFcmToken ? { driverFcmToken: { stringValue: driverFcmToken } } : {}),
+      ...(agencyFcmToken ? { agencyFcmToken: { stringValue: agencyFcmToken } } : {}),
+      ...(senderName     ? { driverName:     { stringValue: senderName } }     : {}),
+      ...(receiverName   ? { agencyName:     { stringValue: receiverName } }   : {}),
+      totalAmount:        { integerValue: total }
+    };
+    await fetch(
+      `${FS_BASE}/settlements/${settleId}?${Object.keys(patchFields).map(k => `updateMask.fieldPaths=${k}`).join('&')}`,
+      {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: patchFields })
+      }
+    );
+    if (driverFcmToken) {
+      await sendFCMPush(driverFcmToken, '🧾 전자세금계산서 역발행 요청',
+        `${receiverName || '대리점'}에서 ${total.toLocaleString('ko-KR')}원 세금계산서 역발행을 요청했습니다. 앱에서 확인해주세요.`,
+        { type: 'tax_invoice_request', settleId }
+      );
+    }
+  } catch(e) {
+    console.error('[popbill-donway] Firestore 기록 오류:', e.message);
+  }
+
+  return { ok: resp.ok, resultCode: resultData?.resultCode, message: resultData?.message, mgtKey };
 }
 
