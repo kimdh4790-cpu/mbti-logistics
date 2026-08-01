@@ -1,0 +1,25 @@
+name: Demo Data Seed
+# 박람회 데모 데이터 생성 — 수동 실행 전용
+
+on:
+  workflow_dispatch:
+    inputs:
+      did:
+        description: '매장 Dealer ID'
+        required: false
+        default: 'haemul_gwangan_2026'
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    name: "Firestore 데모 데이터 생성"
+    steps:
+      - name: Call demo-seed API
+        run: |
+          echo "데모 데이터 생성 중... DID=${{ github.event.inputs.did }}"
+          RESULT=$(curl -s -X POST https://filo.ai.kr/api/demo-seed \
+            -H "Content-Type: application/json" \
+            -d "{\"secret\":\"filo2026demo\",\"did\":\"${{ github.event.inputs.did }}\"}" \
+            --max-time 120)
+          echo "응답: $RESULT"
+          echo "$RESULT" | grep -q '"ok":true' && echo "✅ 데모 데이터 생성 완료" || echo "❌ 실패: $RESULT"
