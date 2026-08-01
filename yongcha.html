@@ -580,6 +580,15 @@ var _postsUnsub=null, _notifUnsub=null;
 var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com','playwright.admin@ytest.io'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
+// 글로벌 unhandled rejection 핸들러
+window.addEventListener('unhandledrejection',function(e){
+  var msg=e.reason&&e.reason.message||String(e.reason||'');
+  if(msg.includes('permission-denied')){_yToast('권한이 없습니다. 다시 로그인해주세요');}
+  else if(msg.includes('unavailable')||msg.includes('network')){_yToast('네트워크 오류. 연결을 확인해주세요');}
+  else if(msg.includes('not-found')){}
+  else if(msg){console.warn('[용차] 처리되지 않은 오류:',msg);}
+});
+
 firebase.initializeApp({
   apiKey:API_KEY,
   authDomain:'mbti-logistics.firebaseapp.com',
@@ -1005,14 +1014,14 @@ function _pgHome(el){
       s.forEach(function(d){var st=d.data().status;if(st==='matched')matched++;else if(st==='open')open++;});
       var agD=document.getElementById('ag-dispatched');var agU=document.getElementById('ag-unfilled');
       if(agD)agD.textContent=matched+'건';if(agU)agU.textContent=open+'건';
-    });
+    }).catch(function(){});
     _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').get().then(function(s){
       var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'건';
-    });
+    }).catch(function(){});
     var nowTs2=new Date();var monthStart2=nowTs2.getFullYear()+'-'+(String(nowTs2.getMonth()+1).padStart(2,'0'))+'-01';
     _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','approved').get().then(function(s){
       var agM=document.getElementById('ag-monthly');if(agM)agM.textContent=s.size+'건';
-    });
+    }).catch(function(){});
   } else if(type==='driver'){
     // 이번달 수입/건수/평균 단가/공차율
     var now=new Date();
@@ -1080,6 +1089,8 @@ function _pgHome(el){
         var d=Object.assign({id:doc.id},doc.data());
         recent.appendChild(_makePostCard(d,true));
       });
+    }).catch(function(e){
+      if(recent)recent.innerHTML='<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-msg">공고 로드 실패<br><button onclick="_pgHome(document.getElementById(\'content\'))" style="margin-top:8px;padding:8px 16px;background:var(--acl);border:none;border-radius:8px;color:var(--ac);font-size:12px;font-weight:700;cursor:pointer">다시 시도</button></div></div>';
     });
   } else {
     _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').limit(20).get().then(function(snap){
@@ -1104,6 +1115,8 @@ function _pgHome(el){
           '</div>';
         recent.appendChild(card);
       });
+    }).catch(function(){
+      if(recent)recent.innerHTML='<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-msg">지원자 로드 실패</div></div>';
     });
   }
 }
@@ -2067,7 +2080,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
       _yToast('✅ 건수 저장됐어요! '+cnt+'건 / '+Number(cnt*unitPrice).toLocaleString()+'원');
       _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록');
       _closeModal();
-    });
+    }).catch(function(e){_yToast('저장 실패: '+e.message);});
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
