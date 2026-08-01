@@ -1,0 +1,22 @@
+{
+  "name": "mbti-logistics",
+  "version": "1.0.0",
+  "description": "<!-- Pages rebuild 2026-07-04 21:29 --> <!-- deploy 21:54:18 --> <!-- kv-rebuild 06:20:24 --> <!-- filo-kv 06:32:52 --> <!-- filo-kv-retry 06:35:38 --> <!-- kv-final 06:35:55 --> <!-- all-kv 08:22:27 -->",
+  "main": "_worker.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:41729/git/kimdh4790-cpu/mbti-logistics"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
