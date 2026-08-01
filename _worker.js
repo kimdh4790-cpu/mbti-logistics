@@ -3488,9 +3488,19 @@ ${JSON.stringify(postSummary)}
               for(let oi=0;oi<ordCnt;oi++){const m=d.menus[oi%d.menus.length];dayTotal+=m.p*(1+(oi%3===0?1:0));}
               allW2.push(fsd2('filo_sales',`${did}_${date}`,{dealerId:did,date,total:dayTotal,itemCount:ordCnt,status:'closed'}));
             });
-            // 오늘 출근 기록 (직원 전원)
-            d.staff.forEach(function(s,i){
-              allW2.push(fsd2('attendance',`${did}_att_${todayStr}_m${i+1}`,{dealerId:did,memberId:`${did}_m${i+1}`,memberName:s.n,type:'in',date:todayStr,time:'09:00',createdAt:todayStr+'T00:00:00Z'}));
+            // 출근 기록: 오늘은 in만, 과거 6일은 in+out (급여 계산 호환)
+            sevenDays.forEach(function(date){
+              const isToday=date===todayStr;
+              d.staff.forEach(function(s,si){
+                const inH=8+(si%3);const inM=(si*7)%60;
+                const inIso=`${date}T${String(inH).padStart(2,'0')}:${String(inM).padStart(2,'0')}:00.000Z`;
+                allW2.push(fsd2('attendance',`${did}_att_${date}_m${si+1}_in`,{dealerId:did,memberId:`${did}_m${si+1}`,memberName:s.n,type:'in',date,time:inIso,createdAt:inIso}));
+                if(!isToday){
+                  const outH=17+(si%2);const outM=(si*11)%60;
+                  const outIso=`${date}T${String(outH).padStart(2,'0')}:${String(outM).padStart(2,'0')}:00.000Z`;
+                  allW2.push(fsd2('attendance',`${did}_att_${date}_m${si+1}_out`,{dealerId:did,memberId:`${did}_m${si+1}`,memberName:s.n,type:'out',date,time:outIso,createdAt:outIso}));
+                }
+              });
             });
             // 재고 (3개 부족 시뮬레이션)
             const invList=['쌀(20kg)','참기름(1L)','간장(1.8L)','된장(3kg)','설탕(3kg)','소금(1kg)','고추장(5kg)','식용유(1.8L)','계란(30개)','마늘(1kg)'];
