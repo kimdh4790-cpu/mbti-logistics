@@ -21,7 +21,8 @@ async function testOrderPage(browser) {
   try {
     const url = `${BASE}/order?d=${DEALER_ID}&t=${TABLE_NUM}&name=${encodeURIComponent(TABLE_NAME)}`;
     console.log(`\n[1] 주문 URL: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.waitForTimeout(4000);
     await page.screenshot({ path: 'test-screenshots/01-order-loaded.png' });
 
     // 테이블명 "undefined" 없음 확인
