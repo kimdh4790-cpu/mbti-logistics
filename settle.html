@@ -7558,6 +7558,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               // ① fromId dateRoutes에서 건수/금액 집계
               var _rtAgg = {}; // {route: {cnt, ret, price}}
               var _totalFresh = 0;
+              var _dateFreshMap = {}; // ★ 날짜별 프레시백 (아이디지원 이전용)
               if(fd.dateRoutes){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
                   if(!_dateOk(dt)) return;
@@ -7575,7 +7576,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
                   if(!_dateOk(dt)) return;
-                  _totalFresh += (fd.dateFresh[dt]||0);
+                  var _fv = fd.dateFresh[dt]||0;
+                  _totalFresh += _fv;
+                  if(_fv) _dateFreshMap[dt] = _fv;
                 });
               }
 
@@ -7614,7 +7617,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.rcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.ret||0); }, 0);
                 }
                 // ★ 해당 날짜 프레시백 fromId에서 차감 (실제 배송한 기사에게 귀속)
-                if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
+                if(_totalFresh > 0){
+                  fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
+                  if(!fs.dateFresh) fs.dateFresh = {};
+                  Object.keys(_dateFreshMap).forEach(function(dt){
+                    fs.dateFresh[dt] = Math.max(0, (fs.dateFresh[dt]||0) - (_dateFreshMap[dt]||0));
+                  });
+                }
               }
 
               // ④ toId: 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
@@ -7642,7 +7651,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
                 ts = {userId:tid, driver:tid, month:month,
                   dcnt:_newDcnt, rcnt:_newRcnt, damt:_newDamt, ramt:_newRamt,
-                  fresh:_totalFresh, finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
+                  fresh:_totalFresh, dateFresh:Object.assign({},_dateFreshMap),
+                  finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
                   etcMinus:0, etcMinusReason:'', routeDetails:_newRds,
                   dateRoutes:_newDateRoutes, isIdSupportCreated:true,
                   status:'정산예정', jobsub:'쿠팡', camp:fd.camp||'',
@@ -7653,6 +7663,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 var pv2=(ts.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
                 ts.etcPlus = (ts.etcPlus||0) + tot;
                 ts.etcPlusReason = (pv2?pv2+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
+                // ★ dateFresh 이전 (날짜별 내역 가산)
+                if(_totalFresh > 0){
+                  if(!ts.dateFresh) ts.dateFresh = {};
+                  Object.keys(_dateFreshMap).forEach(function(dt){
+                    ts.dateFresh[dt] = (ts.dateFresh[dt]||0) + (_dateFreshMap[dt]||0);
+                  });
+                }
               }
             });
           })();
@@ -10424,20 +10441,6 @@ function doLogin(){
       sessionStorage.removeItem(_failKey);
       // ★ 세션 타임아웃 30분 설정
       _resetSessionTimeout();
-      // ★ 로그인 알림 푸시 — Worker 경유 (로그아웃 상태에서도 알림 가능)
-      setTimeout(function(){
-        try{
-          var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
-          if(!uid)return;
-          var now=new Date();
-          var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
-          fetch('/api/login-notify',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({dealerId:uid, loginName:email.split('@')[0]||'관리자', timeStr:timeStr})
-          }).catch(function(){});
-        }catch(e){}
-      },2000);
     }).catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
       // 실패 카운터 증가
@@ -30776,7 +30779,8 @@ async function openSendModal(x){
     {icon:'📱',name:'문자(SMS) 발송',sub:phone?phone:'전화번호 없음',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,email,phone);}},
     {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(decodeURIComponent(msgEnc)),email);}}  ,
     {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome);}},
-    {icon:'🧾',name:'세금계산서 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome);}}
+    {icon:'🧾',name:'세금계산서 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome);}},
+    {icon:'🏛',name:'전자세금계산서 발행 (팝빌)',sub:'역발행 · 운영 모드',bg:'#1e40af',color:'#fff',fn:function(){_popbillIssue(x,r,name,month,vatIncome,docId);}}
   ];
   var btnWrap=document.createElement('div');
   btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
@@ -37642,6 +37646,58 @@ function _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl){
       if(j.sent>0) toast('✅ 세금계산서 발송 완료 — '+name+'님'+(imgUrl?' (이미지 포함)':''));
       else toast('⚠️ '+name+'님 푸시 실패 — 알림 등록 필요');
     });
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
+function _popbillIssue(x,r,name,month,vatIncome,docId){
+  if(!_CU||!_db){toast('❌ 로그인 필요');return;}
+  var bizNum=x.bizNum||x.bizNo||x.bizNum2||'';
+  if(!bizNum){toast('❌ 기사 사업자번호 없음 — 기사 정보에서 사업자번호를 입력해주세요');return;}
+  var companyBizNum=(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||(_CU&&_CU.bizNum)||'';
+  if(!companyBizNum){toast('❌ 대리점 사업자번호 없음 — 회사 정보에서 사업자번호를 입력해주세요');return;}
+  var supply=Math.round(vatIncome/1.1);
+  var tax=vatIncome-supply;
+  var mo=(month||'').replace('-','');
+  var wDate=mo?mo+'01':new Date().toISOString().slice(0,10).replace(/-/g,'');
+  if(!confirm('📋 전자세금계산서 역발행 요청\n\n공급자: '+name+' ('+bizNum+')\n공급가: ₩'+supply.toLocaleString()+'\n세액: ₩'+tax.toLocaleString()+'\n합계: ₩'+vatIncome.toLocaleString()+'\n\n기사에게 역발행 승인 요청을 보냅니다.\n계속하시겠습니까?')) return;
+  toast('📤 팝빌 역발행 요청 중...');
+  var uid=x.userId||x.driver||'';
+  var driverEmail=x.email||'';
+  var companyName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'MBTI유한회사';
+  var companyEmail=(_cachedCompanyDoc&&_cachedCompanyDoc.email)||(_CU&&_CU.email)||'';
+  _getFcmToken(_CU.dealerId,uid,name).then(function(driverToken){
+    return fetch('/api/popbill-issue',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        settleId:docId||uid+'_'+month,
+        senderCorpNum:bizNum,
+        senderName:name,
+        senderCEO:name,
+        senderEmail:driverEmail,
+        receiverCorpNum:companyBizNum,
+        receiverName:companyName,
+        receiverEmail:companyEmail,
+        supplyAmt:supply,
+        taxAmt:tax,
+        totalAmt:vatIncome,
+        writeDate:wDate,
+        itemName:month+' 쿠팡 배송 정산비',
+        driverFcmToken:driverToken||''
+      })
+    });
+  }).then(function(res){return res.json();}).then(function(j){
+    if(j.ok||j.resultCode===200||j.resultCode==='200'||j.resultCode===1){
+      toast('✅ 세금계산서 역발행 요청 완료 — '+name+'님');
+      if(docId&&_db){
+        _db.collection('settlements').doc(docId).update({
+          taxInvoiceState:'역발행요청',
+          taxInvoiceRequestAt:new Date().toISOString()
+        }).catch(function(){});
+      }
+    } else {
+      toast('❌ 역발행 실패: '+(j.error||j.message||JSON.stringify(j)));
+    }
   }).catch(function(e){toast('❌ '+e.message);});
 }
 

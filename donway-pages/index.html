@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko" translate="no">
 <head>
 <meta charset="UTF-8">
@@ -133,7 +133,7 @@ tr:hover>td{background:var(--bg3)}
 @keyframes pricePop{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
 @keyframes badgePulse{0%,100%{opacity:1;}50%{opacity:.6;}}
 </style>
-<!-- 토스페이먼츠 미사용 (계좌이체) -->
+<script src="https://js.tosspayments.com/v2/standard"></script>
 <script>
 // 개발자도구 차단 해제 (개발중)
 </script>
@@ -189,7 +189,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
     <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg3);border-radius:10px;padding:4px">
       <button id="tab-login" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('login')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">로그인</button>
       <button id="tab-register" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('register')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">회사 등록</button>
-      <button id="tab-join" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">직원 가입</button>
+      <button id="tab-join" onclick="(function(t){['login','register','join'].forEach(function(x){var b=document.getElementById('tab-'+x),f=document.getElementById('form-'+x);if(x===t){b.style.background='var(--brand)';b.style.color='#fff';f.style.display='block';}else{b.style.background='transparent';b.style.color='var(--text3)';f.style.display='none';}});})('join')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s;display:none">직원 가입</button>
     </div>
 
     <!-- 로그인 폼 -->
@@ -263,7 +263,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <!-- ★ STEP 1: 기업 정보 -->
       <div id="reg-step1">
         <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
-          🎁 <strong>첫달(30일) 무료 체험</strong> — 오픈 이벤트 · 카드 등록 불필요
+          🎁 <strong>1개월 무료 체험</strong> — 카드 등록 불필요 · 사업자번호 1회 한정
         </div>
         <div class="fg"><label>회사명 *</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
         <div class="fg"><label>대표자명 *</label><input id="r-rep" type="text" placeholder="홍길동"></div>
@@ -317,8 +317,8 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <span style="font-size:20px">🤖</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 · 700명+ 280만/월</div>
-                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 32.5만 · 100명 62만 · 200명 114만 · 300명 159만 · 500명 240만 · 700명 315만원/월</div>
+                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 26.5만 · 100명 50만 · 200명 92만 · 300명 126만 (VAT별도)</div>
               </div>
             </div>
             <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -327,34 +327,45 @@ window.onBizDocSelected=onBizDocSelected;</script>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
               <div style="font-size:10px;color:var(--text3);white-space:nowrap">인원 구간:</div>
               <select id="settle-tier-select" onchange="document.getElementById('r-settle-tier').value=this.value" onclick="event.stopPropagation()" style="flex:1;padding:5px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;cursor:pointer">
-                <option value="50">~50명 — 20만원/월</option>
-                <option value="100">~100명 — 40만원/월</option>
-                <option value="200">~200명 — 80만원/월</option>
-                <option value="300">~300명 — 120만원/월</option>
-                <option value="500">~500명 — 200만원/월</option>
-                <option value="700">~700명 — 280만원/월</option>
-                <option value="1000">~1000명 — 400만원/월</option>
-                <option value="1500">~1500명 — 600만원/월</option>
-                <option value="2000">~2000명 — 800만원/월</option>
-                <option value="9999">2000명+ — 별도 문의</option>
+                <option value="50">~50명 — 20만원/월 (VAT별도)</option>
+                <option value="100">~100명 — 40만원/월 (VAT별도)</option>
+                <option value="150">~150명 — 60만원/월 (VAT별도)</option>
+                <option value="200">~200명 — 80만원/월 (VAT별도)</option>
+                <option value="250">~250명 — 100만원/월 (VAT별도)</option>
+                <option value="300">~300명 — 120만원/월 (VAT별도)</option>
+                <option value="350">~350명 — 140만원/월 (VAT별도)</option>
+                <option value="400">~400명 — 160만원/월 (VAT별도)</option>
+                <option value="450">~450명 — 180만원/월 (VAT별도)</option>
+                <option value="500">~500명 — 200만원/월 (VAT별도)</option>
+                <option value="550">~550명 — 220만원/월 (VAT별도)</option>
+                <option value="600">~600명 — 240만원/월 (VAT별도)</option>
+                <option value="650">~650명 — 260만원/월 (VAT별도)</option>
+                <option value="700">~700명 — 280만원/월 (VAT별도)</option>
+                <option value="750">~750명 — 300만원/월 (VAT별도)</option>
+                <option value="800">~800명 — 320만원/월 (VAT별도)</option>
+                <option value="850">~850명 — 340만원/월 (VAT별도)</option>
+                <option value="900">~900명 — 360만원/월 (VAT별도)</option>
+                <option value="950">~950명 — 380만원/월 (VAT별도)</option>
+                <option value="1000">~1000명 — 400만원/월 (VAT별도)</option>
+                <option value="9999">1000명+ — 별도 문의</option>
               </select>
             </div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:6px">업종 선택:</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="coupang" checked onclick="event.stopPropagation()"> 🚚 쿠팡</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="delivery" onclick="event.stopPropagation()"> 🛵 배달대행</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="cleaning" onclick="event.stopPropagation()"> 🧹 청소</label>
+              <label style="display:none"><input type="radio" name="settle-industry" value="cleaning"></label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="insurance" onclick="event.stopPropagation()"> 🛡️ 보험</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="construction" onclick="event.stopPropagation()"> 🏗️ 건설</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="quick" onclick="event.stopPropagation()"> 🚗 퀵·대리</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="other" onclick="event.stopPropagation();document.getElementById('settle-industry-custom').style.display='block'"> 📋 직접설정</label>
+              <label style="display:none"><input type="radio" name="settle-industry" value="other"></label>
             </div>
             <input id="settle-industry-custom" type="text" placeholder="업종명 직접 입력 (예: 골프장, 학원, 요양원)" onclick="event.stopPropagation()" style="display:none;margin-top:6px;width:100%;padding:7px 10px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px">
           </div>
         </div>
 
         <!-- 범용 정산 -->
-        <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="display:none;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
+        <div id="svc-universal-card" onclick="_toggleSvc('universal')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:20px">📋</span>
@@ -368,7 +379,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
         </div>
 
         <!-- 재고관리 -->
-        <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="display:none;border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
+        <div id="svc-inventory-card" onclick="_toggleSvc('inventory')" style="border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:20px">📦</span>
@@ -408,12 +419,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <div id="reg-step3" style="display:none">
         <div class="fg">
           <label>영문 약자 <span style="color:var(--red);font-size:10px">*</span></label>
-          <input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="
-  this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-  document.getElementById('r-slug-preview').textContent=this.value||'XXXX';
-  _checkSlugDuplicate(this.value);
-">
-<div id="r-slug-status" style="font-size:11px;margin-top:4px"></div>
+          <input id="r-short" type="text" placeholder="예) MBTI · ABC · LGD" maxlength="4" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');document.getElementById('r-slug-preview').textContent=this.value||'XXXX'">
           <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.7">최대 4자 · 로그인 링크: donway.ai.kr/c/<b id="r-slug-preview">XXXX</b></div>
         </div>
         <div class="fg"><label>관리자 이메일 *</label><input id="r-email" type="email" placeholder="admin@company.com"></div>
@@ -808,7 +814,12 @@ function checkDispatchBalance(dispatchResult, drivers) {
 }
 
 /* ── 회사 슬러그 모드 ── */
-var _companySlug = window._COMPANY_SLUG || null;
+// slug: Worker inject 우선, 없으면 URL pathname에서 자동 추출
+var _companySlug = window._COMPANY_SLUG || (function(){
+  var p = window.location.pathname.replace(/^\//, '').split('/')[0];
+  var known = ['join','settle','register','admin','admin-sub','stmt','c','manifest.json','api','sw.js','firebase-messaging-sw.js','icon','filo','mbtico'];
+  return (p && p.length > 1 && known.indexOf(p) < 0) ? p : null;
+})();
 var _slugCompany = null; // 슬러그로 조회한 회사 정보
 
 async function _loadSlugCompany(){
@@ -3881,15 +3892,15 @@ function _guardFn(fn, featureName){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var PLAN_DEF = {
   free: {
-    name:'FREE', label:'무료', color:'#666',
+    name:'FREE', label:'무료체험', color:'#666',
     pricePerPerson:0, maxPerson:5,
     features:{
-      settleLimit:3,        // 월 정산 횟수
-      industries:['ai_settle','delivery'], // 사용 가능 업종
+      settleLimit:3,
+      industries:['ai_settle','delivery'],
       allIndustries:false,
       qrBooking:false,
       qrPos:false,
-      alimtalk:0,           // 월 알림톡 건수
+      alimtalk:0,
       taxShare:false,
       beautyKiosk:false,
       customerDb:false,
@@ -3900,39 +3911,38 @@ var PLAN_DEF = {
     }
   },
   starter: {
-    name:'STARTER', label:'스타터', color:'#00d4ff',
-    pricePerPerson:9000, maxPerson:20,
+    name:'STARTER', label:'개인 (4,000원/인)', color:'#00c8f8',
+    pricePerPerson:4000, maxPerson:1000,
     features:{
       settleLimit:999,
-      industries:['ai_settle','delivery','construction','insurance','beauty',
-                  'care','academy','warehouse','event','sales'],
+      industries:['ai_settle','delivery'],
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
-      alimtalk:100,
-      taxShare:false,
+      alimtalk:-1,      // -1 = 인원×3건 기본, 초과 건당 15원
+      taxShare:true,
       beautyKiosk:false,
       customerDb:false,
-      multiCamp:false,
+      multiCamp:true,
       inventory:false,
       excelDownload:true,
       customParser:false,
     }
   },
   pro: {
-    name:'PRO', label:'프로', color:'#7b2fff',
-    pricePerPerson:8000, maxPerson:50,
+    name:'PRO', label:'단체 (3,300원/인)', color:'#f59e0b',
+    pricePerPerson:3300, maxPerson:1000,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
-      qrPos:true,
+      qrPos:false,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
-      customerDb:true,
-      multiCamp:false,
+      beautyKiosk:false,
+      customerDb:false,
+      multiCamp:true,
       inventory:false,
       excelDownload:true,
       customParser:false,
@@ -3940,16 +3950,16 @@ var PLAN_DEF = {
   },
   business: {
     name:'BUSINESS', label:'비즈니스', color:'#ff9500',
-    pricePerPerson:7000, maxPerson:200,
+    pricePerPerson:3300, maxPerson:9999,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
+      beautyKiosk:false,
       customerDb:true,
       multiCamp:true,
       inventory:true,
@@ -3962,13 +3972,13 @@ var PLAN_DEF = {
     pricePerPerson:0, maxPerson:9999,
     features:{
       settleLimit:999,
-      industries:['all'],
-      allIndustries:true,
+      industries:['ai_settle','delivery'],
+      allIndustries:false,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
       taxShare:true,
-      beautyKiosk:true,
+      beautyKiosk:false,
       customerDb:true,
       multiCamp:true,
       inventory:true,
@@ -4109,7 +4119,7 @@ function pageSubscription(){
       ['업종',f.allIndustries?'전체':''+( (f.industries||[]).length)+'개'],
       ['QR예약',f.qrBooking?'✅':'🔒'],
       ['QR POS',f.qrPos?'✅':'🔒'],
-      ['알림톡',f.alimtalk>=999?'무제한':''+( f.alimtalk||0)+'건'],
+      ['알림톡',f.alimtalk===-1?'인원×3건':''+( f.alimtalk||0)+'건'],
       ['세무',f.taxShare?'✅':'🔒'],
       ['키오스크',f.beautyKiosk?'✅':'🔒'],
       ['재고',f.inventory?'✅':'🔒'],
@@ -4122,7 +4132,7 @@ function pageSubscription(){
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
         '<div>'+
           '<div style="font-size:14px;font-weight:900;color:'+p.color+'">'+p.label+(isCur?' <span style="font-size:9px;background:'+p.color+';color:#000;padding:2px 7px;border-radius:20px">현재</span>':'')+'</div>'+
-          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+(p.pricePerPerson>0?p.pricePerPerson.toLocaleString()+'원/인/월 (VAT별도)':'무료')+' · 최대 '+(p.maxPerson>=9999?'무제한':p.maxPerson+'명')+'</div>'+
         '</div>'+btn+
       '</div>'+
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;font-size:10px">'+
@@ -4142,7 +4152,7 @@ function pageSubscription(){
       '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<div>'+
           '<div style="font-size:22px;font-weight:900;color:'+curPlan.color+'">'+curPlan.label+'</div>'+
-          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b>':'무료')+'</div>'+
+          '<div style="font-size:12px;color:var(--text2)">'+(curPlan.pricePerPerson>0?ppc+'명 × '+curPlan.pricePerPerson.toLocaleString()+'원 = <b>'+(ppc*curPlan.pricePerPerson).toLocaleString()+'원/월</b> (VAT별도)':'무료')+'</div>'+
         '</div>'+
         '<div style="text-align:right"><div style="font-size:10px;color:var(--text3)">기한</div><div style="font-size:13px;font-weight:700">'+(dealer.planExpiry||'-')+'</div></div>'+
       '</div>'+
@@ -4151,7 +4161,7 @@ function pageSubscription(){
     planCard('free')+planCard('starter')+planCard('pro')+planCard('business')+
     '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;margin-bottom:24px">'+
       '<div style="font-size:14px;font-weight:900;color:#ff5555;margin-bottom:4px">🏢 ENTERPRISE</div>'+
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">200명 이상 · 커스텀 파서 · 세금계산서</div>'+
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">1,000명 이상 · 대량 계약 · 맞춤 견적 · 세금계산서</div>'+
       '<a href="tel:051-711-3103" style="display:inline-block;padding:10px 24px;background:rgba(255,85,85,.15);border:1px solid rgba(255,85,85,.3);border-radius:10px;color:#ff5555;font-size:12px;font-weight:800;text-decoration:none">📞 도입 문의 051-711-3103</a>'+
     '</div>'+
     '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🧾 구독 내역</div>'+
@@ -4275,69 +4285,26 @@ function _processUpgradePayment(){
   var total=monthly*months;
   if(!_CU||!_db){toast('로그인 후 이용하세요');return;}
   var did=_CU.dealerId||_CU.uid;
-  // ── 계좌이체 안내 모달 표시 ──
-  _showBankTransferModal(plan, persons, months, total, planKey, did);
-}
-function _showBankTransferModal(plan, persons, months, total, planKey, did){
-  var overlay = document.createElement('div');
-  overlay.id = '_bank_modal';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  
-  var box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:16px;padding:28px;max-width:380px;width:100%';
-  
-  box.innerHTML = '<div style="font-size:18px;font-weight:900;color:#0066ff;margin-bottom:16px">💳 계좌이체 안내</div>'
-    + '<div style="background:#f0f9ff;border-radius:10px;padding:16px;margin-bottom:16px">'
-    + '<div style="font-size:13px;color:#666;margin-bottom:8px">입금 계좌</div>'
-    + '<div style="font-size:20px;font-weight:900;color:#111;letter-spacing:1px">270-910019-24204</div>'
-    + '<div style="font-size:14px;font-weight:700;color:#333;margin-top:4px">하나은행 · (유)엠비티아이</div>'
-    + '</div>'
-    + '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">'
-    + '<tr><td style="padding:6px 0;color:#666">플랜</td><td style="font-weight:700">' + (plan.label||'') + ' ' + persons + '명</td></tr>'
-    + '<tr><td style="padding:6px 0;color:#666">기간</td><td style="font-weight:700">' + months + '개월</td></tr>'
-    + '<tr style="border-top:1px solid #eee"><td style="padding:8px 0;color:#0066ff;font-weight:700">입금액</td><td style="font-size:18px;font-weight:900;color:#0066ff">₩' + total.toLocaleString() + '</td></tr>'
-    + '</table>'
-    + '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;margin-bottom:16px">'
-    + '⚠️ 입금자명에 <b>회사명</b>을 반드시 기재해주세요.<br>입금 확인 후 서비스가 활성화됩니다.'
-    + '</div>';
-
-  var btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px';
-
-  var btnClose = document.createElement('button');
-  btnClose.textContent = '닫기';
-  btnClose.style.cssText = 'flex:1;padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:13px;cursor:pointer';
-  btnClose.onclick = function(){ overlay.remove(); };
-
-  var btnSubmit = document.createElement('button');
-  btnSubmit.textContent = '✅ 입금 완료 신청';
-  btnSubmit.style.cssText = 'flex:2;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer';
-  btnSubmit.onclick = function(){
-    _submitBankTransfer(planKey, plan.label||'', persons, months, total, did);
-    overlay.remove();
-  };
-
-  btnRow.appendChild(btnClose);
-  btnRow.appendChild(btnSubmit);
-  box.appendChild(btnRow);
-  overlay.appendChild(box);
-  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
-  document.body.appendChild(overlay);
-}
-function _submitBankTransfer(planKey, planLabel, persons, months, total, did){
+  if(!confirm(plan.label+' '+persons+'명 × '+months+'개월\n총 ₩'+total.toLocaleString()+'원\n\n구독 신청하시겠습니까?'))return;
   var expiry=new Date();
   expiry.setMonth(expiry.getMonth()+months);
-  _db.collection('payment_requests').add({
-    dealerId:did, companyName:_CU.companyName||'',
-    email:_CU.email||'', plan:planKey, planName:planLabel,
-    personCount:persons, months:months, amount:total,
-    status:'pending', type:'bank_transfer',
-    bank:'하나은행', account:'270-910019-24204', accountHolder:'(유)엠비티아이',
-    period:new Date().toISOString().slice(0,7)+' ~ '+expiry.toISOString().slice(0,7),
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  _db.collection('companies').doc(did).update({
+    plan:planKey,planName:plan.label,personCount:persons,
+    planExpiry:expiry.toISOString().slice(0,10),
+    planUpdatedAt:new Date().toISOString(),
   }).then(function(){
-    toast('✅ 입금 완료 신청됐습니다! 확인 후 서비스 활성화해드릴게요.');
-  }).catch(function(){});
+    return _db.collection('subscriptions').add({
+      dealerId:did,plan:planKey,planName:plan.label,
+      personCount:persons,months:months,amount:total,status:'active',
+      period:new Date().toISOString().slice(0,7)+' ~ '+expiry.toISOString().slice(0,7),
+      createdAt:new Date().toISOString(),
+    });
+  }).then(function(){
+    _closeTopModal();
+    if(window._dealerData)window._dealerData.plan=planKey;
+    toast('✅ '+plan.label+' 구독 완료!');
+    setTimeout(function(){location.reload();},1500);
+  }).catch(function(e){toast('❌ '+e.message);});
 }
 
 function _startDowngradeFlow(){
@@ -6910,7 +6877,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
         var isSkipRow=divVal.includes('주간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
         if(!isSkipRow) isSkipRow=divVal.includes('야간')&&(divVal.includes('인센')||divVal.includes('할증')||divVal.includes('추가'));
         if(isSkipRow)continue;
-        var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백')||divVal.includes('재사용포장재');
+        var isFreshRow=divVal.includes('프레시백')||divVal.includes('프레쉬백');
         var isEcoRow=divVal.includes('에코백');
         var isSugi=divVal.includes('수기')&&(divVal.includes('반품')||divVal.includes('회수'));
         // ★ 명절 프로모션 행 감지
@@ -7069,10 +7036,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
           if(rowDate){
             if(!drvMap[cleanId].dateRoutes)drvMap[cleanId].dateRoutes={};
             if(!drvMap[cleanId].dateRoutes[rowDate])drvMap[cleanId].dateRoutes[rowDate]={};
-            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0,unitPrc:unitPrc||0};
+            if(!drvMap[cleanId].dateRoutes[rowDate][route])drvMap[cleanId].dateRoutes[rowDate][route]={cnt:0,ret:0,fresh:0};
             drvMap[cleanId].dateRoutes[rowDate][route].cnt+=dcnt;
             drvMap[cleanId].dateRoutes[rowDate][route].ret+=rcnt;
-            if(unitPrc>0) drvMap[cleanId].dateRoutes[rowDate][route].unitPrc=unitPrc;
           }
 
           // 시즌 기간별 분리 집계
@@ -7515,27 +7481,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
             Object.keys(_tlB).forEach(function(tlId){
               var bonus=_tlB[tlId];
               var tlE=settlements.find(function(s){return s.userId===tlId&&s.month===month;});
-              if(tlE){
-                tlE.etcPlusTL=bonus.amount;
-                tlE.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';
-                toast('✅ 팀장 '+bonus.name+' '+bonus.amount.toLocaleString()+'원 적용');
-              } else {
-                // 팀장 이번달 배송 없음 → 신규 정산서 생성
-                var newTL={
-                  userId:tlId, driver:bonus.name, month:month,
-                  dealerId:_CU?_CU.dealerId:'',
-                  camp:bonus.camp||'', jobsub:'쿠팡',
-                  dcnt:0, rcnt:0, damt:0, ramt:0, fresh:0, finc:0,
-                  totalAmt:0, vatIncome:0, coupangTotal:0,
-                  etcPlus:0, etcPlusReason:'', etcMinus:0, etcMinusReason:'',
-                  etcPlusTL:bonus.amount,
-                  etcPlusTLReason:'팀장수수료 ('+bonus.amount.toLocaleString()+'원)',
-                  routeDetails:[], dateRoutes:{}, dateFresh:{},
-                  status:'정산예정', isTLCreated:true
-                };
-                settlements.push(newTL);
-                toast('✅ 팀장 '+bonus.name+' 신규 정산서 생성 '+bonus.amount.toLocaleString()+'원');
-              }
+              if(tlE){tlE.etcPlusTL=bonus.amount;tlE.etcPlusTLReason='팀장수수료 ('+bonus.amount.toLocaleString()+'원)';toast('✅ 팀장 '+bonus.name+' '+bonus.amount.toLocaleString()+'원 적용');}
+              else{toast('⚠️ 팀장 '+bonus.name+' 이번달 정산 없음');}
             });
           }
           if(TL_PRICES&&TL_PRICES.length){
@@ -7598,55 +7545,40 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var _dates = (rule.dates||[]).map(_nd).filter(Boolean).sort();
               var rStart = _nd(rule.startDate) || (_dates.length ? _dates[0] : '');
               var rEnd   = _nd(rule.endDate)   || (_dates.length ? _dates[_dates.length-1] : '');
-              // dates 없고 startDate만 있으면 → 해당 날짜 하루만
-              if(!_dates.length && rStart && !_nd(rule.endDate)) rEnd = rStart;
               var tR = rule.routes || [];
 
               // 날짜 필터: dates 배열 있으면 exact match, 없으면 startDate~endDate 범위
               // dates도 없고 startDate도 없으면 → 룰 무효 (전체 건수 방지)
-              // 정산 기간 시작일 (전월 26일) — startDate가 이전이면 지난달 규칙 → 스킵
-              var _pYM=(month||'').split('-'),_pY=parseInt(_pYM[0]||0),_pM=parseInt(_pYM[1]||0)-1;
-              if(_pM<1){_pM=12;_pY--;}
-              var _periodStart=_pY+'-'+(_pM<10?'0'+_pM:String(_pM))+'-26';
-              var _periodEnd = (month||'')+'-25';
-              // 날짜 필터: 정산기간(_periodStart~_periodEnd) 안에서만 적용
               var _dateOk = function(dt){
-                if(dt < _periodStart || dt > _periodEnd) return false; // 정산기간 밖 스킵
                 if(_dates.length) return _dates.indexOf(dt) >= 0;
-                if(!rStart && !rEnd) return false;
-                // startDate가 정산기간 이전이면 정산기간 시작일부터 적용
-                var _eff = (rStart && rStart > _periodStart) ? rStart : _periodStart;
-                return dt >= _eff && (!rEnd || dt <= rEnd);
+                if(!rStart && !rEnd) return false; // 날짜 정보 없음 → 무효
+                return (!rStart || dt >= rStart) && (!rEnd || dt <= rEnd);
               };
 
-              // ① fromId(대신배송기사) settlements에서 단가 미리 확보
-              var _fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
-              var _priceMap = {}; // {route: unitPrice}
-              if(_fs && _fs.routeDetails){
-                _fs.routeDetails.forEach(function(rd){ if(rd.unitPrice>0) _priceMap[rd.route]=rd.unitPrice; });
-              }
               // ① fromId dateRoutes에서 건수/금액 집계
               var _rtAgg = {}; // {route: {cnt, ret, price}}
               var _totalFresh = 0;
+              var _dateFreshMap = {}; // ★ 날짜별 프레시백 (아이디지원 이전용)
               if(fd.dateRoutes){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
                   if(!_dateOk(dt)) return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var up = _priceMap[rt] || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
-                    if(!up) return;
+                    var up = RPRICE[rt] || 0; if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
                     _rtAgg[rt].ret += (rd.ret||0);
                   });
                 });
               }
-              // ② 프레시백 — fid dateFresh에서 해당 날짜분만 집계 → tid에게 이전
+              // ② 프레시백 (엑셀 실제 금액)
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
                   if(!_dateOk(dt)) return;
-                  _totalFresh += (fd.dateFresh[dt]||0);
+                  var _fv = fd.dateFresh[dt]||0;
+                  _totalFresh += _fv;
+                  if(_fv) _dateFreshMap[dt] = _fv;
                 });
               }
 
@@ -7664,8 +7596,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               if(_totalFresh > 0){ tot += _totalFresh; pts.push('프레시백 ₩'+_totalFresh.toLocaleString()); }
               if(!tot) return;
 
-              // ③ fromId(앞=대신배송기사): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
-              var fs = _fs; // ①에서 미리 찾아둔 대신배송기사 settlements
+              // ③ fromId: routeDetails 건수차감 + 프레시백 차감 + 사유 기록
+              var fs = settlements.find(function(s){ return (s.userId||s.driver)===fid && s.month===month; });
               if(fs){
                 if(fs.routeDetails && fs.routeDetails.length){
                   if(fd.dateRoutes){
@@ -7685,15 +7617,16 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.rcnt = fs.routeDetails.reduce(function(s,r){ return s+(r.ret||0); }, 0);
                 }
                 // ★ 해당 날짜 프레시백 fromId에서 차감 (실제 배송한 기사에게 귀속)
-                if(_totalFresh > 0) fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
-                // ★ etcMinus 사유만 기록 (금액 차감 없음 — 건수 차감으로 이미 배송금액에서 빠짐)
-                if(tot > 0){
-                  var _minusPv = (fs.etcMinusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+tid+')')!==0;}).join(' / ');
-                  fs.etcMinusReason = (_minusPv?_minusPv+' / ':'') + '아이디지원('+tid+') '+pts.join('·');
+                if(_totalFresh > 0){
+                  fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
+                  if(!fs.dateFresh) fs.dateFresh = {};
+                  Object.keys(_dateFreshMap).forEach(function(dt){
+                    fs.dateFresh[dt] = Math.max(0, (fs.dateFresh[dt]||0) - (_dateFreshMap[dt]||0));
+                  });
                 }
               }
 
-              // ④ toId(뒤=지원받는기사): 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
+              // ④ toId: 정산 있으면 etcPlus, 없으면 건수 흡수해서 새 정산 생성
               var ts = settlements.find(function(s){ return (s.userId||s.driver)===tid && s.month===month; });
               if(!ts){
                 // 엑셀에 없는 기사(용차 등) — fromId 건수를 그대로 흡수해서 정산 생성
@@ -7718,7 +7651,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
                 ts = {userId:tid, driver:tid, month:month,
                   dcnt:_newDcnt, rcnt:_newRcnt, damt:_newDamt, ramt:_newRamt,
-                  fresh:_totalFresh, finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
+                  fresh:_totalFresh, dateFresh:Object.assign({},_dateFreshMap),
+                  finc:0, inc:0, net:0, etcPlus:0, etcPlusReason:'',
                   etcMinus:0, etcMinusReason:'', routeDetails:_newRds,
                   dateRoutes:_newDateRoutes, isIdSupportCreated:true,
                   status:'정산예정', jobsub:'쿠팡', camp:fd.camp||'',
@@ -7729,6 +7663,13 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 var pv2=(ts.etcPlusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+fid+')')!==0;}).join(' / ');
                 ts.etcPlus = (ts.etcPlus||0) + tot;
                 ts.etcPlusReason = (pv2?pv2+' / ':'') + '아이디지원('+fid+') '+pts.join('·');
+                // ★ dateFresh 이전 (날짜별 내역 가산)
+                if(_totalFresh > 0){
+                  if(!ts.dateFresh) ts.dateFresh = {};
+                  Object.keys(_dateFreshMap).forEach(function(dt){
+                    ts.dateFresh[dt] = (ts.dateFresh[dt]||0) + (_dateFreshMap[dt]||0);
+                  });
+                }
               }
             });
           })();
@@ -8487,6 +8428,13 @@ if(window.location.hash==='#join'){
           _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
           d.dealerId=user.uid;
         }
+        // ★ 마지막 로그인 시각 + 로그인 횟수 자동 업데이트
+        _db.doc('users/'+user.uid).update({
+          lastLoginAt:new Date().toISOString(),
+          loginCount:firebase.firestore.FieldValue.increment(1),
+          email:user.email||'',
+          dealerId:d.dealerId||user.uid
+        }).catch(function(){});
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
@@ -8669,6 +8617,37 @@ function _doExcelDownload(){
   if(_isLocked('download')){_showLockPopup('엑셀 다운로드');return;}
   return _downloadRosterExcel.apply(this,arguments);
 }
+// ── 알림톡 월 사용량 체크 (인원×3건 기본, 초과 건당 15원) ──
+async function _checkAlimtalkQuota(){
+  if(isSuperAdmin()) return {ok:true};
+  var did=_CU&&_CU.dealerId;
+  if(!did) return {ok:false, msg:'로그인 필요'};
+  var dealer=window._dealerData||{};
+  var personCount=dealer.personCount||dealer.workerCount||1;
+  var baseQuota=personCount*3; // 기본 인원×3건
+  // 이번 달 발송 건수 조회
+  var now=new Date();
+  var monthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  try{
+    var snap=await _db.collection('message_history')
+      .where('dealerId','==',did)
+      .where('channel','==','alimtalk')
+      .where('sentAt','>=',monthStart)
+      .get();
+    var used=snap.size||0;
+    if(used<baseQuota){
+      return {ok:true, used:used, quota:baseQuota, extra:false};
+    } else {
+      // 초과분 → 건당 15원 과금 안내 후 진행
+      var over=used-baseQuota+1;
+      return {ok:true, used:used, quota:baseQuota, extra:true, overCharge:over*15,
+              msg:'기본 '+baseQuota+'건 초과 ('+used+'건 사용). 이번 건 15원 추가 과금됩니다.'};
+    }
+  } catch(e){
+    return {ok:true}; // 조회 실패 시 허용
+  }
+}
+
 function _sendAlimtalk(){
   if(_isLocked('alimtalk')){_showLockPopup('알림톡 발송');return;}
   return _sendAlimtalk_orig.apply(this,arguments);
@@ -8833,7 +8812,7 @@ function showApp(){
             }).catch(function(){});
             return;
           }
-          // 만료 7일 전 경고 + 만료 시 결제 팝업 (체험 30일)
+          // 만료 7일 전 경고 + 만료 시 결제 팝업
           if(exp){
             var daysLeft=Math.ceil((exp-now)/(1000*60*60*24));
             if(daysLeft<=0){
@@ -9237,17 +9216,17 @@ function _setPlanType(type){
     pb.style.background='transparent';pb.style.color='var(--text3)';pb.style.borderColor='var(--border)';
   }
   var tiers=[
-    {v:'50',  p:'20만',   g:'15만'},
-    {v:'100', p:'40만',   g:'30만'},
-    {v:'200', p:'80만',   g:'60만'},
-    {v:'300', p:'120만',  g:'90만'},
-    {v:'500', p:'200만',  g:'150만'},
-    {v:'700', p:'280만',  g:'210만'},
-    {v:'1000',p:'400만',  g:'300만'},
-    {v:'1500',p:'600만',  g:'450만'},
-    {v:'2000',p:'800만',  g:'600만'},
+    {v:'50',  p:'32.5만', g:'26.5만'},
+    {v:'100', p:'62만',   g:'50만'},
+    {v:'200', p:'114만',  g:'92만'},
+    {v:'300', p:'159만',  g:'126만'},
+    {v:'500', p:'240만',  g:'190만'},
+    {v:'700', p:'315만',  g:'245만'},
+    {v:'1000',p:'450만',  g:'330만'},
+    {v:'1500',p:'675만',  g:'495만'},
+    {v:'2000',p:'900만',  g:'660만'},
     {v:'9999',p:'별도문의',g:'별도문의'}
-    ];
+  ];
   var sel=document.getElementById('settle-tier-select');
   if(sel){
     var cur=sel.value;
@@ -9327,30 +9306,6 @@ function _regNext(n){
     if(i<4){var ln=document.getElementById('rline'+i);if(ln)ln.style.background=i<n?'var(--green)':'var(--border)';}
   });
 }
-
-// 슬러그 중복 검사
-var _slugCheckTimer = null;
-function _checkSlugDuplicate(val) {
-  var statusEl = document.getElementById('r-slug-status');
-  if (!statusEl) return;
-  if (!val || val.length < 2) {
-    statusEl.innerHTML = '';
-    return;
-  }
-  statusEl.innerHTML = '<span style="color:#888">⏳ 확인 중...</span>';
-  clearTimeout(_slugCheckTimer);
-  _slugCheckTimer = setTimeout(function() {
-    if (!_db) { statusEl.innerHTML = ''; return; }
-    _db.collection('companies').where('slug','==',val).limit(1).get()
-      .then(function(snap) {
-        if (!snap.empty) {
-          statusEl.innerHTML = '<span style="color:#ef4444">❌ 이미 사용 중인 코드예요. 다른 코드를 입력해주세요.</span>';
-        } else {
-          statusEl.innerHTML = '<span style="color:#22c55e">✅ 사용 가능한 코드예요!</span>';
-        }
-      }).catch(function() { statusEl.innerHTML = ''; });
-  }, 500);
-}
 function doRegister(){
   var company=document.getElementById('r-company').value.trim();
   var rep=(document.getElementById('r-rep')||{value:''}).value.trim();
@@ -9396,14 +9351,6 @@ function doRegister(){
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
-  // ★ 슬러그 중복 최종 확인
-  var _slugStatusEl = document.getElementById('r-slug-status');
-  if (_slugStatusEl && _slugStatusEl.innerHTML.includes('❌')) {
-    err.textContent='이미 사용 중인 전용 코드입니다. 다른 코드를 입력해주세요.';
-    err.style.color='red'; err.style.display='block'; return;
-  }
-
-  var slugVal='';
   var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     uid=cred.user.uid;
@@ -9414,7 +9361,7 @@ function doRegister(){
     var invIndustry=(document.getElementById('r-inv-industry')||{value:'liquor'}).value||'liquor';
     // ★ slug: 이메일 @ 앞부분 → 영문+숫자만 추출 (URL 안전)
     var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-    slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
+    var slugVal=(document.getElementById('r-slug')||{value:''}).value.trim()||
       emailPrefix||uid.substring(0,8);
     var companyDoc={
       companyName:company,
@@ -9454,25 +9401,27 @@ function doRegister(){
     _db.collection('users').doc(uid).set({
       uid:uid,
       email:email,
+      phone:_verifiedPhone||'',
       name:company,
       companyName:company,
       role:'dealer',
       dealerId:uid,
       serviceType:serviceType,
       services:services,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      camp:'',
+      wave:'',
+      slug:slugVal||'',
+      platform:'donway',
+      is_active:true,
+      status:'active',
+      fcmToken:'',
+      fcmTokens:[],
+      profileImg:'',
+      loginCount:0,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      joinedAt:firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function(){});
-    // ★ 사업자등록증 Storage 업로드 후 companies 저장
-  var _uploadBizDoc=Promise.resolve('');
-  if(_bizDocFile){
-    var _ext=_bizDocFile.name.split('.').pop().toLowerCase();
-    var _storagePath='companies/'+uid+'/bizLicense.'+_ext;
-    _uploadBizDoc=_uploadToStorage(_storagePath,_bizDocFile);
-  }
-  return _uploadBizDoc.then(function(bizUrl){
-    if(bizUrl) companyDoc.bizLicenseUrl=bizUrl;
     return _db.collection('companies').doc(uid).set(companyDoc);
-  });
   }).then(function(){
     // ★ 사업자번호 영구 블랙리스트 저장 (삭제해도 재가입 불가)
     if(biz) _db.collection('used_biz_numbers').doc(biz.replace(/-/g,'')).set({
@@ -9513,7 +9462,7 @@ function doRegister(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         title:'신규 가입!',
-        body:company+' | 코드: '+companyCode+' | 30일 무료체험 (오픈 이벤트)',
+        body:company+' | 코드: '+companyCode+' | 1개월 무료체험',
         type:'join'
       })
     }).catch(function(){});
@@ -9666,7 +9615,12 @@ function doQuickJoin(){
         role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
         bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
         ssn:ssn,joinDate:joinDate,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
+        camp:'',wave:'',slug:'',platform:'donway',
+        is_active:true,status:'active',
+        fcmToken:'',fcmTokens:[],profileImg:'',
+        loginCount:0,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        joinedAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
       return _db.collection('users').doc(uid).set(data).then(function(){
         return _db.collection('drivers').add(Object.assign({},data,{
           userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
@@ -9700,7 +9654,9 @@ function _requestFcmAfterJoin(){
         var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
         if(!uid) return;
         firebase.firestore().collection('users').doc(uid).update({
-          fcmToken:token, fcmUpdatedAt:new Date().toISOString()
+          fcmToken:token,
+          fcmTokens:firebase.firestore.FieldValue.arrayUnion({token:token,updatedAt:new Date().toISOString(),ua:navigator.userAgent.slice(0,80)}),
+          fcmUpdatedAt:new Date().toISOString()
         }).catch(function(){});
         // ★ loginAllowed 배열에 FCM 토큰 누적 저장 (기기별)
         var did2=(_CU&&(_CU.uid||_CU.dealerId))||uid;
@@ -10292,12 +10248,25 @@ function doJoin(){
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
     uid=cred.user.uid;
     var userDoc={
+      uid:uid,
       name:name,driverId:driverId,email:email,
+      phone:'',
       companyId:companyId,dealerId:companyId,companyName:companyName,
       role:joinRole,
       store:joinStore,
       bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      camp:'',
+      wave:'',
+      slug:'',
+      platform:'donway',
+      is_active:true,
+      status:'active',
+      fcmToken:'',
+      fcmTokens:[],
+      profileImg:'',
+      loginCount:0,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      joinedAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     // users 컬렉션 저장
       // ★ members 컬렉션 자동 저장 — 관리자 직원목록·기사관리 즉시 표시
@@ -10416,7 +10385,7 @@ function _showFindPw(){
     +'<div class="fg"><label>이메일</label><input id="find-pw-email" type="email" placeholder="가입한 이메일 주소"></div>'
     +'<div id="find-pw-msg" style="font-size:12px;margin-bottom:8px;display:none"></div>'
     +'<button onclick="_sendFindPw()" class="btn btn-blue" style="width:100%;padding:10px;font-weight:700;margin-bottom:8px">재설정 메일 발송</button>'
-    +'<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" class="btn" style="width:100%;padding:10px">닫기</button>'
+    +'<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" class="btn" style="display:none;width:100%;padding:10px">닫기</button>'
     +'</div>';
   document.body.appendChild(mo);
   setTimeout(function(){var el=document.getElementById('find-pw-email');if(el)el.focus();},100);
@@ -10472,20 +10441,6 @@ function doLogin(){
       sessionStorage.removeItem(_failKey);
       // ★ 세션 타임아웃 30분 설정
       _resetSessionTimeout();
-      // ★ 로그인 알림 푸시 — Worker 경유 (로그아웃 상태에서도 알림 가능)
-      setTimeout(function(){
-        try{
-          var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
-          if(!uid)return;
-          var now=new Date();
-          var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
-          fetch('/api/login-notify',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({dealerId:uid, loginName:email.split('@')[0]||'관리자', timeStr:timeStr})
-          }).catch(function(){});
-        }catch(e){}
-      },2000);
     }).catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
       // 실패 카운터 증가
@@ -10635,50 +10590,45 @@ function pageContract(){
 function _renderContractPaywall(){
   var content=document.getElementById('content');
   var cn=esc((_CU&&_CU.companyName)||'대리점명');
-  content.innerHTML='<div style="max-width:700px;margin:0 auto;padding:16px">'
+  content.innerHTML='<div style="display:none;max-width:700px;margin:0 auto;padding:16px">'
     // 샘플 계약서 미리보기
-    +'<div class="card" style="margin-bottom:16px;position:relative;overflow:hidden">'
-    +'<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
-    +'<div style="font-size:28px;margin-bottom:8px"></div>'
-    +'<div style="color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
-    +'<div style="color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;position:relative;overflow:hidden">'
+    +'<div style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(2px)">'
+    +'<div style="display:none;font-size:28px;margin-bottom:8px"></div>'
+    +'<div style="display:none;color:#fff;font-size:15px;font-weight:800;margin-bottom:4px">결제 후 이용 가능</div>'
+    +'<div style="display:none;color:rgba(255,255,255,.7);font-size:11px">월 9,900원으로 기사별 계약서 자동 생성</div>'
     +'</div>'
-    +'<div style="pointer-events:none">'
-    +'<div style="text-align:center;font-size:14px;font-weight:800;margin-bottom:10px">화물자동차운송 위수탁 표준계약서</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;margin-bottom:10px">'
-    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
-    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 수탁자(기사)</div>'
+    +'<div style="display:none;pointer-events:none">'
+    +'<div style="display:none;text-align:center;font-size:14px;font-weight:800;margin-bottom:10px">화물자동차운송 위수탁 표준계약서</div>'
+    +'<div style="display:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;margin-bottom:10px">'
+    +'<div style="display:none;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;color:var(--text3);margin-bottom:4px;font-size:10px">■ 수탁자(기사)</div>'
     +'<div><b>홍길동</b></div><div>사업자: 000-00-00000</div>'
     +'<div>주소: 부산시 ○○구 ○○로 000</div></div>'
-    +'<div style="background:var(--bg3);padding:10px;border-radius:6px">'
-    +'<div style="color:var(--text3);margin-bottom:4px;font-size:10px">■ 위탁자(대리점)</div>'
+    +'<div style="display:none;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;color:var(--text3);margin-bottom:4px;font-size:10px">■ 위탁자(대리점)</div>'
     +'<div><b>'+cn+'</b></div><div>사업자: 000-00-00000</div>'
     +'<div>주소: 부산시 수영구 수영로 668</div></div>'
     +'</div>'
-    +'<div style="font-size:10px;color:var(--text3);line-height:1.9;background:var(--bg3);padding:10px;border-radius:6px">'
+    +'<div style="display:none;font-size:10px;color:var(--text3);line-height:1.9;background:var(--bg3);padding:10px;border-radius:6px">'
     +'제1조(목적) 본 계약은 위탁자와 수탁자 간의 화물운송 위수탁 관계를 규정함을 목적으로 한다.<br>'
     +'제2조(계약기간) 본 계약의 유효기간은 계약일로부터 1년으로 한다.<br>'
     +'제3조(운임) 배송 1건당 단가는 별도 라우트 단가표에 따른다.<br>'
-    +'<span style="color:var(--brand)">... 서명란 및 전체 내용은 결제 후 열람 가능 ...</span>'
+    +'<span style="display:none;color:var(--brand)">... 서명란 및 전체 내용은 결제 후 열람 가능 ...</span>'
     +'</div></div></div>'
-    +'<div style="max-width:480px;margin:0 auto;text-align:center">'
-    +'<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
-    +'<div class="card" style="margin-bottom:16px;text-align:left">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
-    +'<div style="font-size:12px;color:var(--text2);line-height:2">✅ 영업점-택배기사 위수탁 계약서 양식<br>✅ 기사별 계약서 PDF 업로드·보관<br>✅ 계약서 목록 관리</div>'
+    +'<div style="display:none;max-width:480px;margin:0 auto;text-align:center">'
+    +'<div style="display:none;font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">위수탁 계약서 기능은 별도 결제 후 이용 가능합니다.</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;text-align:left">'
+    +'<div style="display:none;font-size:13px;font-weight:700;margin-bottom:10px">📋 포함 기능</div>'
+    +'<div style="display:none;font-size:12px;color:var(--text2);line-height:2">✅ 영업점-택배기사 위수탁 계약서 양식<br>✅ 기사별 계약서 PDF 업로드·보관<br>✅ 계약서 목록 관리</div>'
     +'</div>'
-    +'<div class="card" style="margin-bottom:16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3)">'
-    +'<div style="font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
-    +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
+    +'<div class="card" style="display:none;margin-bottom:16px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3)">'
+    +'<div style="display:none;font-size:20px;font-weight:900;color:var(--primary);margin-bottom:4px">월 9,900원</div>'
+    +'<div style="display:none;font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
     +'</div>'
-    +'<button onclick="_tossPay(\'contract\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
-    +'<button onclick="_contractPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡 문의</button>'
-    +'<div style="background:#f0f9ff;border-radius:10px;padding:14px;margin-top:10px;text-align:left">'
-    +'<div style="font-size:11px;color:#666;margin-bottom:6px">💳 계좌이체 안내</div>'
-    +'<div style="font-size:16px;font-weight:900;color:#111;letter-spacing:.5px">270-910019-24204</div>'
-    +'<div style="font-size:12px;color:#555;margin-top:3px">하나은행 · (유)엠비티아이</div>'
-    +'<div style="font-size:11px;color:#e67e00;margin-top:6px">⚠️ 입금자명에 회사명 기재 필수</div>'
-    +'</div>'
+    +'<button onclick="_tossPay(\'contract\',9900)" style="display:none;width:100%;padding:14px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
+    +'<button onclick="_contractPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
+    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>DONWAY</strong></div>'
     +'</div>';
 }
 function _contractPayRequest(){
@@ -10845,13 +10795,8 @@ function _renderRosterPaywall(){
     +'<div style="font-size:11px;color:var(--text3)">부가세 포함 · 매월 자동 결제</div>'
     +'</div>'
     +'<button onclick="_tossPay(\'roster\',9900)" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px">💳 카드·계좌이체로 결제하기</button>'
-    +'<button onclick="_rosterPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡 문의</button>'
-    +'<div style="background:#f0f9ff;border-radius:10px;padding:14px;margin-top:10px;text-align:left">'
-    +'<div style="font-size:11px;color:#666;margin-bottom:6px">💳 계좌이체 안내</div>'
-    +'<div style="font-size:16px;font-weight:900;color:#111;letter-spacing:.5px">270-910019-24204</div>'
-    +'<div style="font-size:12px;color:#555;margin-top:3px">하나은행 · (유)엠비티아이</div>'
-    +'<div style="font-size:11px;color:#e67e00;margin-top:6px">⚠️ 입금자명에 회사명 기재 필수</div>'
-    +'</div>'
+    +'<button onclick="_rosterPayRequest()" style="width:100%;padding:12px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:10px">💬 카카오톡으로 결제 문의</button>'
+    +'<div style="font-size:11px;color:var(--text3)">결제 문의: 카카오톡 <strong>DONWAY</strong></div>'
     +'</div>';
 }
 
@@ -17191,7 +17136,7 @@ window._openUnivSubModal=function(){
   html+='</div>';
   html+='<div style="display:flex;gap:8px">';
   html+='<button onclick="this.closest(\'div\').parentElement.remove()" style="flex:1;padding:10px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;cursor:pointer">닫기</button>';
-  html+='<button onclick="_univSubscribe(this,'+JSON.stringify(UNIV_PLANS)+')" style="flex:2;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🚀 7일 무료체험</button>';
+  html+='<button onclick="_univSubscribe(this,'+JSON.stringify(UNIV_PLANS)+')" style="flex:2;padding:10px;background:linear-gradient(135deg,#0066ff,#0891b2);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🚀 1개월 무료체험</button>';
   html+='</div>';
   html+='<div style="margin-top:8px;font-size:10px;color:var(--text3);text-align:center">카드 등록 불필요 · 즉시 사용</div>';
   html+='</div>';
@@ -17208,10 +17153,10 @@ window._univSubscribe=function(btn,plans){
   if(!did){toast('❌ 로그인 필요');return;}
   _db.collection('subscriptions').doc(did).set({
     plan:'universal',univPlanSites:plan.sites,univPlanLabel:plan.label,univPlanPrice:plan.price,
-    trialStart:new Date().toISOString(),trialEnd:new Date(Date.now()+7*86400000).toISOString(),
+    trialStart:new Date().toISOString(),trialEnd:new Date(Date.now()+30*86400000).toISOString(),
     status:'trial',updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   },{merge:true}).then(function(){
-    toast('✅ 7일 무료체험 시작 — '+plan.label);
+    toast('✅ 1개월 무료체험 시작 — '+plan.label);
     document.querySelectorAll('div[style*="position:fixed"]').forEach(function(el){if(el.style.zIndex==='9999')el.remove();});
   }).catch(function(e){toast('❌ '+e.message);});
 };
@@ -21273,7 +21218,8 @@ window._txsDownloadCsv=function(){
   } else {
     csv+='"데이터 없음. 먼저 급여 현황에서 계산해 주세요."\n';
   }
-  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var bom=String.fromCharCode(0xFEFF);
+  var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=compName+'_'+(ym||'정산')+'_세무자료.csv';a.click();
   toast('✅ CSV 다운로드');
@@ -28168,7 +28114,7 @@ function _cleanOrderDetail(orderId){
           '<label style="font-size:11px;color:var(--text3)">상태 변경</label>'+
           '<select id="detail-status" style="width:100%;margin-top:4px;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1)">'+opts+'</select>'+
         '</div>'+
-        '<div style="display:flex;gap:8px;margin-top:12px">'+
+        '<div style="display:flex;flex-direction:row;gap:8px;margin-top:12px;flex-wrap:wrap">'+
           '<button id="detail-close" style="flex:1;padding:10px;background:var(--bg3);color:var(--text2);border:none;border-radius:8px;font-weight:700;cursor:pointer">닫기</button>'+
           '<button id="detail-save" style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">저장</button>'+
         '</div>'+
@@ -28221,7 +28167,7 @@ function _invAutoOrder(){
     csvLines.push(r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(','));
   });
   var csv=csvLines.join('\r\n');
-  var bom='﻿';
+  var bom='\uFEFF';
   var blob=new Blob([bom+csv],{type:'text/csv;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -28555,6 +28501,7 @@ window._invBulkOrder=function(){
     toast('✅ '+items.length+'개 품목 발주 알림톡 발송 완료');
   });
 };
+
 
 function _invRenderStock(){
   var area=document.getElementById('inv-stock-area');
@@ -29075,9 +29022,6 @@ function buildNav(){
       window._cachedCompanyDoc=d;
       window._cachedPlan=d.plan||'';
       window._cachedHasPaid=_isPlanAllowed(d);
-      // ★ services 배열 → _svcs 동기화 (연동현황 표시용)
-      window._svcs = d.services || [];
-      window._svcs2 = d.services || [];
       _buildNavRender(nav,cur,d);
     }).catch(function(){_buildNavRender(nav,cur,{});});
     // SA면 로딩 중에도 전체 메뉴 표시
@@ -29316,7 +29260,7 @@ function _onSuperAdminEvent(d){
   if(type === 'join'){
     icon = '🎉';
     title = '신규 가입!';
-    body = (d.companyName||'?') + ' · ' + (d.bizNumber||'') + ' · 7일 무료체험';
+    body = (d.companyName||'?') + ' · ' + (d.bizNumber||'') + ' · 1개월 무료체험';
     color = 'linear-gradient(135deg,#059669,#10b981)';
   } else if(type === 'pay'){
     icon = '💳';
@@ -29855,12 +29799,11 @@ function pageSettle(){
     var byCamp={};
     filteredSettles.forEach(function(s){
       var r=calcNet(s);
-      // ★ 신규생성(아이디지원/팀장 배송없음)은 쿠팡 수입 아니므로 총매출 제외
-      var _isCreated=s.isIdSupportCreated||s.isTLCreated;
-      var ct=_isCreated?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
-      totCoupang+=ct?Math.round(ct*1.1):(_isCreated?0:(r.income||0));
-      // 기사 세금계산서 = income 그대로 (신규생성 제외)
-      totTaxBase+=_isCreated?0:(r.income||r.totalAmt||0);
+      // ★ 아이디지원으로 신규생성된 용차는 쿠팡 수입 아니므로 총매출 제외
+      var ct=s.isIdSupportCreated?0:(s.coupangTotal||(((s.damt||0)+(s.ramt||0)+(s.fresh||0)+(s.inc||0)+(s.nocont||0)))||0);
+      totCoupang+=ct?Math.round(ct*1.1):(s.isIdSupportCreated?0:(r.income||0));
+      // 기사 세금계산서 = income 그대로 (이미 VAT포함 금액)
+      totTaxBase+=(r.income||r.totalAmt||0);
       // 추가 지출 (팀장수수료 + 기타+ — 쿠팡수입 초과분)
       totExtraOut+=(+s.etcPlusTL||0)+(+s.etcPlus||0);
       totNet+=r.net||0;
@@ -30446,7 +30389,7 @@ function _renderSettlePage(settles,c){
     var gid='sg_'+mo.replace(/-/g,'');
     var gRows=mmap[mo];
     var totNet=gRows.reduce(function(s,x){return s+calcNet(x).net;},0);
-    var totIncome=gRows.reduce(function(s,x){if(x.isIdSupportCreated||x.isTLCreated)return s;var r=calcNet(x);return s+(r.totalAmt||r.income||0);},0);  // ★ v9.26
+    var totIncome=gRows.reduce(function(s,x){var r=calcNet(x);return s+(r.totalAmt||r.income||0);},0);  // ★ v9.26
     var totEmp=gRows.reduce(function(s,x){return s+calcNet(x).emp;},0);
     var totWork=gRows.reduce(function(s,x){return s+calcNet(x).work;},0);
     var totDmg=gRows.reduce(function(s,x){return s+(+x.dmg||+x.damage||0);},0);
@@ -30476,12 +30419,7 @@ function _renderSettlePage(settles,c){
       +'<span style="display:flex;align-items:center;gap:8px"><button onclick="event.stopPropagation();deleteMonthSettlements(\''+mo+'\')" style="padding:3px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑 월 삭제</button><span style="font-size:11px;color:var(--text3)">'+gRows.length+'명</span><span id="'+gid+'_a" style="font-size:11px;color:var(--text3)">'+arrow+'</span></span>'
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px">'
-      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){
-  // ★ 신규생성(아이디지원/팀장 배송없음) 기사는 쿠팡 수입 제외
-  if(x.isIdSupportCreated||x.isTLCreated) return s;
-  var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;
-  return s+(ct?Math.round(ct*1.1):(calcNet(x).income||0));
-},0))+'</span>'
+      +'<span style="padding:2px 8px;background:rgba(59,130,246,.12);border-radius:12px;color:#3b82f6">📦 쿠팡 총매출(VAT포함) ₩'+fmt(gRows.reduce(function(s,x){var ct=x.coupangTotal||(((x.damt||0)+(x.ramt||0)+(x.fresh||0)+(x.inc||0)+(x.nocont||0)))||0;return s+(ct?Math.round(ct*1.1):(calcNet(x).income||0));},0))+'</span>'
       // ★ 프레시백/추가인센/분실파손 — 모두 VAT포함으로 표시 (×1.1)
       +'<span style="padding:2px 8px;background:rgba(16,185,129,.12);border-radius:12px;color:#059669">🧾 프레시백 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.fresh||0);},0)*1.1))+'</span>'
       +(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)>0?'<span style="padding:2px 8px;background:rgba(245,158,11,.12);border-radius:12px;color:#d97706">⭐ 추가인센 ₩'+fmt(Math.round(gRows.reduce(function(s,x){return s+(+x.inc||0);},0)*1.1))+'</span>':'')
@@ -30586,6 +30524,23 @@ function sendOne(id){
 }
 
 async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
+  // 알림톡 할당량 체크
+  var quota=await _checkAlimtalkQuota();
+  if(quota.extra){
+    toast('⚠️ '+quota.msg,'#f59e0b');
+    // Firestore에 초과 과금 기록
+    if(_db&&_CU&&_CU.dealerId){
+      _db.collection('alimtalk_overcharge').add({
+        dealerId:_CU.dealerId,
+        charge:15,
+        used:quota.used,
+        quota:quota.quota,
+        name:name,
+        month:month,
+        createdAt:new Date().toISOString()
+      }).catch(function(){});
+    }
+  }
   if(!phone||phone.replace(/[^0-9]/g,'').length<10){toast('❌ 전화번호 없음');return;}
   toast('📸 명세서 이미지 생성 중...');
   var did=_CU.dealerId||'';
@@ -30824,7 +30779,8 @@ async function openSendModal(x){
     {icon:'📱',name:'문자(SMS) 발송',sub:phone?phone:'전화번호 없음',bg:'var(--blue)',color:'#fff',fn:function(){sendSMS(msgEnc,email,phone);}},
     {icon:'📧',name:'이메일 발송',sub:email||'이메일 없음',bg:'#059669',color:'#fff',fn:function(){sendEmailMsg(encodeURIComponent(decodeURIComponent(msgEnc)),email);}}  ,
     {icon:'🔔',name:'앱 푸시 알림',sub:'명세서 이미지 포함',bg:'var(--brand)',color:'#fff',fn:function(){_sendPayslipPush(x,r,name,month,net,vatIncome);}},
-    {icon:'🧾',name:'세금계산서 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome);}}
+    {icon:'🧾',name:'세금계산서 발송',sub:'이미지+링크',bg:'#7c3aed',color:'#fff',fn:function(){_sendTaxInvoicePush(x,r,name,month,vatIncome);}},
+    {icon:'🏛',name:'전자세금계산서 발행 (팝빌)',sub:'역발행 · 운영 모드',bg:'#1e40af',color:'#fff',fn:function(){_popbillIssue(x,r,name,month,vatIncome,docId);}}
   ];
   var btnWrap=document.createElement('div');
   btnWrap.style.cssText='display:flex;flex-direction:column;gap:8px';
@@ -32300,7 +32256,27 @@ function _saveSECurrent(){
   var dcnt=cached?cached.dcnt||0:0;
   var rcnt=cached?cached.rcnt||0:0;
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
-  var rds=cached?cached.routeDetails||[]:[];
+  var rds=cached?JSON.parse(JSON.stringify(cached.routeDetails||[])):[];
+  // ★ input에서 수정된 건수/단가 반영
+  var rdinps=document.querySelectorAll('.se-rd-inp');
+  if(rdinps.length>0){
+    var byIdx={};
+    rdinps.forEach(function(inp){
+      var idx=+inp.dataset.rdidx;var field=inp.dataset.field;var val=+inp.value||0;
+      if(!byIdx[idx])byIdx[idx]={};
+      byIdx[idx][field]=val;
+    });
+    Object.keys(byIdx).forEach(function(i){
+      var d=byIdx[i];
+      if(rds[+i]){
+        if(d.cnt!==undefined)rds[+i].cnt=d.cnt;
+        if(d.ret!==undefined)rds[+i].ret=d.ret;
+        if(d.price!==undefined)rds[+i].unitPrice=d.price;
+      }
+    });
+    dcnt=rds.reduce(function(s,r){return s+(r.cnt||0);},0);
+    rcnt=rds.reduce(function(s,r){return s+(r.ret||0);},0);
+  }
   var newDamt=0,newRamt=0;
   rds.forEach(function(rd){
     var price=RPRICE[rd.route]>0?RPRICE[rd.route]:(rd.unitPrice||0);
@@ -32347,13 +32323,6 @@ function _saveSECurrent(){
   if(cached&&cached.bizType&&!bizType)payload.bizType=cached.bizType;
   if(cached&&cached.bizItem)payload.bizItem=cached.bizItem;
   if(rds.length)payload.routeDetails=rds;
-  // ★ coupangTotal 저장 — 월별 카드 총매출 표시용 (hiddenCT = VAT포함)
-  var _hiddenCT = document.getElementById('se-coupang-total');
-  if(_hiddenCT && _hiddenCT.value) {
-    payload.coupangTotal = Math.round(Number(_hiddenCT.value) / 1.1); // VAT제외로 저장 (기존 포맷 유지)
-  } else if(cached && cached.coupangTotal) {
-    payload.coupangTotal = cached.coupangTotal; // 기존값 유지
-  }
   var btn=document.querySelector('#mo-se .btn-blue');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
   var p=id
@@ -34717,17 +34686,12 @@ function pagePrices(tabMode){
   // ★ SA 열람 시 _adminViewDealerId 우선
   var did=window._adminViewDealerId||_CU.dealerId;
   // 단가표 + routeCampMap 동시 로드
-  var _loadPriceData = function() {
-    return Promise.all([
-      _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
-      _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
-      _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
-      _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
-    ]);
-  };
-  // ★ 네트워크 오류 시 1회 재시도
-  _loadPriceData().catch(function(){ return new Promise(function(res){ setTimeout(function(){ _loadPriceData().then(res).catch(function(){ res([null,null,null,null]); }); }, 1500); }); })
-  .then(function(results){
+  Promise.all([
+    _db.collection('settings').doc(did+'_routePrices').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_routeCampMap').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_routePricesAdj').get().catch(function(){return null;}),
+    _db.collection('settings').doc(did+'_campConfig').get().catch(function(){return null;})
+  ]).then(function(results){
     var rpSnap=results[0],rcSnap=results[1],raSnap=results[2],ccSnap=results[3];
     if(rpSnap&&rpSnap.exists){
       var data=rpSnap.data();
@@ -35356,30 +35320,52 @@ function addRpCamp(cid){
 // ── 구간별 정액 요금 계산 ──
 // 그룹1: 35,000원/인 | 그룹2: 25,000원/인
 // 구간: 50/100/200/300/500/700명 (AI정산 확정 요금제 2026-07-02 개정, VAT별도)
-// 개인: 인당 4,000원 고정 / 단체: 인당 3,000원 고정 (2026-07-12 개정)
+// 개인: 700명 이상 인당 4,500원 고정 / 단체: 개인 대비 ~19~27% 할인, 700명 이상 인당 3,300원 고정
 var DW_TIERS_IND=[
-  {cap:50,  amt:200000, label:'~50명'},
-  {cap:100,  amt:400000, label:'~100명'},
-  {cap:200,  amt:800000, label:'~200명'},
-  {cap:300,  amt:1200000, label:'~300명'},
-  {cap:500,  amt:2000000, label:'~500명'},
-  {cap:700,  amt:2800000, label:'~700명'},
-  {cap:1000,  amt:4000000, label:'~1000명'},
-  {cap:1500,  amt:6000000, label:'~1500명'},
-  {cap:2000,  amt:8000000, label:'~2000명'},
-  {cap:9999,  amt:0, label:'2000명+'},
+  {cap:50, amt:200000, label:'~50명'},
+  {cap:100, amt:400000, label:'~100명'},
+  {cap:150, amt:600000, label:'~150명'},
+  {cap:200, amt:800000, label:'~200명'},
+  {cap:250, amt:1000000, label:'~250명'},
+  {cap:300, amt:1200000, label:'~300명'},
+  {cap:350, amt:1400000, label:'~350명'},
+  {cap:400, amt:1600000, label:'~400명'},
+  {cap:450, amt:1800000, label:'~450명'},
+  {cap:500, amt:2000000, label:'~500명'},
+  {cap:550, amt:2200000, label:'~550명'},
+  {cap:600, amt:2400000, label:'~600명'},
+  {cap:650, amt:2600000, label:'~650명'},
+  {cap:700, amt:2800000, label:'~700명'},
+  {cap:750, amt:3000000, label:'~750명'},
+  {cap:800, amt:3200000, label:'~800명'},
+  {cap:850, amt:3400000, label:'~850명'},
+  {cap:900, amt:3600000, label:'~900명'},
+  {cap:950, amt:3800000, label:'~950명'},
+  {cap:1000, amt:4000000, label:'~1000명'},
+  {cap:9999,amt:0, label:'1000명+'},
 ];
 var DW_TIERS_GRP=[
-  {cap:50,  amt:150000, label:'~50명'},
-  {cap:100,  amt:300000, label:'~100명'},
-  {cap:200,  amt:600000, label:'~200명'},
-  {cap:300,  amt:900000, label:'~300명'},
-  {cap:500,  amt:1500000, label:'~500명'},
-  {cap:700,  amt:2100000, label:'~700명'},
-  {cap:1000,  amt:3000000, label:'~1000명'},
-  {cap:1500,  amt:4500000, label:'~1500명'},
-  {cap:2000,  amt:6000000, label:'~2000명'},
-  {cap:9999,  amt:0, label:'2000명+'},
+  {cap:50, amt:165000, label:'~50명'},
+  {cap:100, amt:330000, label:'~100명'},
+  {cap:150, amt:495000, label:'~150명'},
+  {cap:200, amt:660000, label:'~200명'},
+  {cap:250, amt:825000, label:'~250명'},
+  {cap:300, amt:990000, label:'~300명'},
+  {cap:350, amt:1155000, label:'~350명'},
+  {cap:400, amt:1320000, label:'~400명'},
+  {cap:450, amt:1485000, label:'~450명'},
+  {cap:500, amt:1650000, label:'~500명'},
+  {cap:550, amt:1815000, label:'~550명'},
+  {cap:600, amt:1980000, label:'~600명'},
+  {cap:650, amt:2145000, label:'~650명'},
+  {cap:700, amt:2310000, label:'~700명'},
+  {cap:750, amt:2475000, label:'~750명'},
+  {cap:800, amt:2640000, label:'~800명'},
+  {cap:850, amt:2805000, label:'~850명'},
+  {cap:900, amt:2970000, label:'~900명'},
+  {cap:950, amt:3135000, label:'~950명'},
+  {cap:1000, amt:3300000, label:'~1000명'},
+  {cap:9999,amt:0, label:'1000명+'},
 ];
 function _tierCap(hc){
   var tiers=DW_TIERS_IND;
@@ -35409,7 +35395,7 @@ function _subPayClick(btn){
   var hc=parseInt(btn.dataset.selcap||50);
   if(!key) return;
   var amt=_tierAmt(key,hc);
-  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리',kiosk:'키오스크·POS'};
+  var planNames={settle:'AI 정산',delivery:'배달대행 정산'};
   var pname=planNames[key]||key;
 
   // 결제 수단 선택 모달
@@ -35439,7 +35425,7 @@ function _subTransfer(planKey, amt, hc){
 }
 
 function _showTransferGuide(planKey, amt, hc){
-  var planNames={settle:'AI 정산',qr_payroll:'QR+급여 통합',qr:'QR 근태',payroll:'급여 관리',delivery:'배달대행 정산',universal:'범용 정산',inventory:'재고관리',kiosk:'키오스크·POS'};
+  var planNames={settle:'AI 정산',delivery:'배달대행 정산'};
   var pname=planNames[planKey]||planKey;
   var discAmt=amt;
   var old=document.getElementById('transfer-guide-modal');if(old)old.remove();
@@ -35451,8 +35437,8 @@ function _showTransferGuide(planKey, amt, hc){
     +'<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px;line-height:2">'
     +'<div>상품: <b>'+pname+' (~'+hc+'명)</b></div>'
     +'<div>금액: <b style="color:var(--acc)">₩'+discAmt.toLocaleString()+'원/월</b></div>'
-    +'<div>은행: <b>부산은행</b></div>'
-    +'<div>계좌: <b onclick="navigator.clipboard&&navigator.clipboard.writeText("30220458901");toast("계좌번호 복사됨")" style="cursor:pointer;color:var(--brand)">302-20-458901 📋</b></div>'
+    +'<div>은행: <b>하나은행</b></div>'
+    +'<div>계좌: <b onclick="navigator.clipboard&&navigator.clipboard.writeText(\'270-910019-24204\');toast(\'계좌번호 복사됨\')" style="cursor:pointer;color:var(--brand)">270-910019-24204 📋</b></div>'
     +'<div>예금주: <b>(유)엠비티아이</b></div>'
     +'</div>'
     +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">입금 후 카카오 채널로 입금 확인을 보내주시면<br>영업일 기준 1일 이내 개통됩니다.</div>'
@@ -35475,33 +35461,27 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
   // ★ QR+급여: 인당 3,500원, 배달대행: AI정산 동일 구간
   // 재고/키오스크: filo.ai.kr 연동 (90,000원/월)
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4725,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4000,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:3500,g:1,color:'#7c3aed',badge:'추천',ptype:'per',
-     tl:'출퇴근부터 급여까지 원스톱 — 인당 3,500원/월',
-     ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4000,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서','기사 앱 명세서·푸시 발송']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:4725,g:1,color:'#7c3aed',badge:'NEW',
-     tl:'쿠팡 외 타업종 / 복합업종 정산',
-     ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
-    {key:'filo_combo',ic:'📦🖥️',nm:'재고+키오스크 콤보',up:110000,g:1,color:'#059669',badge:'FILO',ptype:'fixed',
-     tl:'재고·무인주문·매출·발주 올인원 — DONWAY 연동 할인',
-     ft:['POS·키오스크 판매 시 실시간 재고 자동 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','QR·태블릿 무인주문 (테이블·포장·출장)','실시간 매출 대시보드','DONWAY 정산·급여 연동','단독 이용 시 165,000원/월']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
-    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<div style="display:flex;background:var(--bg3);border-radius:20px;padding:3px;gap:2px">'+
+     '<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="'+(!window._subGrp?'background:#0891b2;color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.4)':'background:transparent;color:var(--text2)')+';padding:7px 18px;border:none;border-radius:17px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s">개인</button>'+
+     '<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="'+(window._subGrp?'background:#7c3aed;color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.4)':'background:transparent;color:var(--text2)')+';padding:7px 18px;border:none;border-radius:17px;font-size:12px;font-weight:800;cursor:pointer;transition:.2s">단체 (20개사+)</button>'+
+     '</div>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[50,100,200,300,500,700,1000,1500,2000,9999].map(function(n,i){
+    +[50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].map(function(n,i){
       var active=i===0;
       var lbl=n===9999?'2000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
-    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 카드 등록 불필요</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 1개월 무료 체험 · 카드 등록 불필요</div>'
     +'</div>'
     
     +'</div>'
@@ -35533,7 +35513,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
 function _selectTier(cap){
   // 2000명+ 별도문의
   if(cap===9999){
-    [50,150,300,500,700,1000,1500,2000,9999].forEach(function(n){
+    [50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].forEach(function(n){
       var btn=document.getElementById('sub-tier-'+n);
       if(!btn) return;
       if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
@@ -35542,11 +35522,11 @@ function _selectTier(cap){
     document.querySelectorAll('.sub-amt-settle,.sub-amt-delivery').forEach(function(el){
       el.innerHTML='<span style="font-size:12px">별도 문의</span>';
     });
-    toast('💬 2000명 이상은 카카오톡으로 문의해주세요');
+    toast('💬 1000명 이상은 카카오톡으로 문의해주세요');
     return;
   }
   // 버튼 스타일 갱신
-  [50,150,300,500,700,1000,1500,2000,9999].forEach(function(n){
+  [50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000,9999].forEach(function(n){
     var btn=document.getElementById('sub-tier-'+n);
     if(!btn) return;
     if(n===cap){btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';}
@@ -35557,11 +35537,9 @@ function _selectTier(cap){
   var _indTier=DW_TIERS_IND.find(function(t){return t.cap===cap;})||{amt:0};
   var _grpTier=DW_TIERS_GRP.find(function(t){return t.cap===cap;})||{amt:0};
   var _tierObj=_subType2==='grp'?_grpTier:_indTier;
-  ['settle','delivery','universal','qr_payroll','filo_combo'].forEach(function(k){
+  ['settle','delivery'].forEach(function(k){
     var amt=_tierAmt(k,cap);
     var amtLabel=amt===0?'별도 문의':amt.toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span>';
-    if(k==='qr_payroll') amtLabel=(cap*3500).toLocaleString()+'<span style="font-size:11px;font-weight:400">원/월</span><span style="font-size:10px;color:var(--text3)"> ('+cap+'명×3,500원)</span>';
-    if(k==='inventory'||k==='kiosk') amtLabel='90,000<span style="font-size:11px;font-weight:400">원/월</span><span style="font-size:10px;color:var(--text3)"> (고정)</span>';
     document.querySelectorAll('.sub-amt-'+k).forEach(function(el){
       el.innerHTML=amtLabel;
     });
@@ -37671,6 +37649,58 @@ function _sendTaxNotification(did,uid,name,title,body,month,vatIncome,imgUrl){
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
+function _popbillIssue(x,r,name,month,vatIncome,docId){
+  if(!_CU||!_db){toast('❌ 로그인 필요');return;}
+  var bizNum=x.bizNum||x.bizNo||x.bizNum2||'';
+  if(!bizNum){toast('❌ 기사 사업자번호 없음 — 기사 정보에서 사업자번호를 입력해주세요');return;}
+  var companyBizNum=(_cachedCompanyDoc&&_cachedCompanyDoc.bizNum)||(_CU&&_CU.bizNum)||'';
+  if(!companyBizNum){toast('❌ 대리점 사업자번호 없음 — 회사 정보에서 사업자번호를 입력해주세요');return;}
+  var supply=Math.round(vatIncome/1.1);
+  var tax=vatIncome-supply;
+  var mo=(month||'').replace('-','');
+  var wDate=mo?mo+'01':new Date().toISOString().slice(0,10).replace(/-/g,'');
+  if(!confirm('📋 전자세금계산서 역발행 요청\n\n공급자: '+name+' ('+bizNum+')\n공급가: ₩'+supply.toLocaleString()+'\n세액: ₩'+tax.toLocaleString()+'\n합계: ₩'+vatIncome.toLocaleString()+'\n\n기사에게 역발행 승인 요청을 보냅니다.\n계속하시겠습니까?')) return;
+  toast('📤 팝빌 역발행 요청 중...');
+  var uid=x.userId||x.driver||'';
+  var driverEmail=x.email||'';
+  var companyName=(_cachedCompanyDoc&&_cachedCompanyDoc.companyName)||(_CU&&_CU.companyName)||'MBTI유한회사';
+  var companyEmail=(_cachedCompanyDoc&&_cachedCompanyDoc.email)||(_CU&&_CU.email)||'';
+  _getFcmToken(_CU.dealerId,uid,name).then(function(driverToken){
+    return fetch('/api/popbill-issue',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        settleId:docId||uid+'_'+month,
+        senderCorpNum:bizNum,
+        senderName:name,
+        senderCEO:name,
+        senderEmail:driverEmail,
+        receiverCorpNum:companyBizNum,
+        receiverName:companyName,
+        receiverEmail:companyEmail,
+        supplyAmt:supply,
+        taxAmt:tax,
+        totalAmt:vatIncome,
+        writeDate:wDate,
+        itemName:month+' 쿠팡 배송 정산비',
+        driverFcmToken:driverToken||''
+      })
+    });
+  }).then(function(res){return res.json();}).then(function(j){
+    if(j.ok||j.resultCode===200||j.resultCode==='200'||j.resultCode===1){
+      toast('✅ 세금계산서 역발행 요청 완료 — '+name+'님');
+      if(docId&&_db){
+        _db.collection('settlements').doc(docId).update({
+          taxInvoiceState:'역발행요청',
+          taxInvoiceRequestAt:new Date().toISOString()
+        }).catch(function(){});
+      }
+    } else {
+      toast('❌ 역발행 실패: '+(j.error||j.message||JSON.stringify(j)));
+    }
+  }).catch(function(e){toast('❌ '+e.message);});
+}
+
 // 팀장 수수료
 var TL_PRICES=[];
 function _loadTeamLeaderPrices(cb){
@@ -39100,11 +39130,13 @@ function _promoImportFromExcel(file){
       if(rm.h1&&rm.h2)rate=25;
       else if(rm.h1)rate=15;
       else if(rm.h2)rate=10;
+      // ★ rate>0이면 ON, rate=0이면 OFF (하나라도 해당이면 ON)
+      var isOn=(rate>0);
+      _setIncSetting(m.drv,m.route,isOn,rate>0?rate:10);
+      // OFF인 경우도 명시적으로 버튼 반영
+      var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
+      if(togBtn){togBtn.textContent=isOn?'ON':'OFF';togBtn.style.background=isOn?'#059669':'#94a3b8';}
       if(rate>0){
-        // 해당 있음 → ON + 단가 설정
-        _setIncSetting(m.drv,m.route,true,rate);
-        var togBtn=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
-        if(togBtn){togBtn.textContent='ON';togBtn.style.background='#059669';}
         var rateBtns=document.querySelectorAll('.inc-rate-btn[data-k="'+k+'"]');
         rateBtns.forEach(function(rb){
           var on=(+rb.dataset.rate===rate);
@@ -39113,11 +39145,6 @@ function _promoImportFromExcel(file){
           rb.style.borderColor=on?'#2563eb':'#d1d5db';
         });
         cnt++;
-      } else if(rm){
-        // 둘 다 미해당 → OFF
-        _setIncSetting(m.drv,m.route,false,0);
-        var togBtn2=document.querySelector('.inc-tog-btn[data-k="'+k+'"]');
-        if(togBtn2){togBtn2.textContent='OFF';togBtn2.style.background='#6b7280';}
       }
     });
     toast('✅ 가중요인 적용 '+cnt+'건');
@@ -41452,7 +41479,7 @@ function openAdminPanel(){
       tr.appendChild(td);tbody.appendChild(tr);
     });
     tbl.appendChild(tbody);
-    body.innerHTML='';body.appendChild(tbl);
+    return tbl;
   }
 
   // companies 컬렉션에서 전체 대리점 로드 (slug/email/plan 포함)
@@ -41486,20 +41513,108 @@ function openAdminPanel(){
       });
     });
     if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
-    items.sort(function(a,b){return b.createdAt-a.createdAt;});// 최신 가입순
-    buildDealerRows(items);
-    // 복사 버튼 이벤트 바인딩
-    setTimeout(function(){
-      items.forEach(function(item){
-        var btn=document.getElementById('slug-copy-'+item.id);
-        if(btn&&item.slug){
-          var url=window.location.origin+'/'+item.slug;
-          btn.onclick=function(){
-            navigator.clipboard.writeText(url).then(function(){toast('✅ URL 복사됨');}).catch(function(){});
-          };
-        }
+    items.sort(function(a,b){return b.createdAt-a.createdAt;});
+
+    var today=new Date().toISOString().slice(0,10);
+    var freeItems=items.filter(function(i){return i.plan==='trial'&&i.trialEnd>=today;});
+    var expiredItems=items.filter(function(i){return i.plan==='trial'&&(!i.trialEnd||i.trialEnd<today);});
+    var paidItems=items.filter(function(i){return i.plan!=='trial';});
+
+    var _dlrFilter='all';
+    var _dlrPage=0;
+    var PAGE_SIZE=10;
+
+    function _getDlrList(){
+      if(_dlrFilter==='paid') return paidItems;
+      if(_dlrFilter==='free') return freeItems;
+      if(_dlrFilter==='expired') return expiredItems;
+      return items;
+    }
+
+    function _renderDlrList(){
+      var list=_getDlrList();
+      var total=list.length;
+      var totalPages=Math.ceil(total/PAGE_SIZE)||1;
+      if(_dlrPage>=totalPages)_dlrPage=totalPages-1;
+      var pageItems=list.slice(_dlrPage*PAGE_SIZE,(_dlrPage+1)*PAGE_SIZE);
+
+      var wrapper=document.createElement('div');
+
+      // 탭 버튼
+      var tabDiv=document.createElement('div');
+      tabDiv.style.cssText='display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;';
+      [
+        {key:'all',   label:'전체 ('+items.length+')', color:'#6366f1'},
+        {key:'paid',  label:'💳 유료 ('+paidItems.length+')', color:'#10b981'},
+        {key:'free',  label:'🎁 무료체험 ('+freeItems.length+')', color:'#f59e0b'},
+        {key:'expired',label:'⏰ 만료 ('+expiredItems.length+')', color:'#6b7280'},
+      ].forEach(function(tab){
+        var btn=document.createElement('button');
+        btn.textContent=tab.label;
+        var isActive=_dlrFilter===tab.key;
+        btn.style.cssText='padding:5px 12px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:'+(isActive?tab.color:'var(--bg3)')+';color:'+(isActive?'#fff':'var(--text)');
+        btn.onclick=function(){_dlrFilter=tab.key;_dlrPage=0;_renderDlrList();};
+        tabDiv.appendChild(btn);
       });
-    },100);
+      wrapper.appendChild(tabDiv);
+
+      // 테이블
+      var tbl=buildDealerRows(pageItems);
+      wrapper.appendChild(tbl);
+
+      // 페이지네이션
+      if(totalPages>1){
+        var pgDiv=document.createElement('div');
+        pgDiv.style.cssText='display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;';
+        var prevBtn=document.createElement('button');
+        prevBtn.textContent='◀';
+        prevBtn.disabled=_dlrPage===0;
+        prevBtn.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;background:var(--bg3);font-size:12px;';
+        prevBtn.onclick=function(){if(_dlrPage>0){_dlrPage--;_renderDlrList();}};
+        pgDiv.appendChild(prevBtn);
+        for(var pi=0;pi<totalPages;pi++){
+          (function(p){
+            var pb=document.createElement('button');
+            pb.textContent=p+1;
+            pb.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;background:'+(p===_dlrPage?'var(--brand)':'var(--bg3)')+';color:'+(p===_dlrPage?'#fff':'var(--text)');
+            pb.onclick=function(){_dlrPage=p;_renderDlrList();};
+            pgDiv.appendChild(pb);
+          })(pi);
+        }
+        var nextBtn=document.createElement('button');
+        nextBtn.textContent='▶';
+        nextBtn.disabled=_dlrPage>=totalPages-1;
+        nextBtn.style.cssText='padding:4px 10px;border:none;border-radius:6px;cursor:pointer;background:var(--bg3);font-size:12px;';
+        nextBtn.onclick=function(){if(_dlrPage<totalPages-1){_dlrPage++;_renderDlrList();}};
+        pgDiv.appendChild(nextBtn);
+        var pageInfo=document.createElement('span');
+        pageInfo.textContent=(_dlrPage*PAGE_SIZE+1)+'~'+Math.min((_dlrPage+1)*PAGE_SIZE,total)+' / '+total+'개';
+        pageInfo.style.cssText='font-size:10px;color:var(--text3);margin-left:6px;';
+        pgDiv.appendChild(pageInfo);
+        wrapper.appendChild(pgDiv);
+      }
+
+      body.innerHTML='';
+      body.appendChild(wrapper);
+
+      // 복사 버튼 이벤트
+      setTimeout(function(){
+        pageItems.forEach(function(item){
+          var btn=document.getElementById('slug-copy-'+item.id);
+          if(btn&&item.slug){
+            var url=window.location.origin+'/'+item.slug;
+            btn.onclick=function(){navigator.clipboard.writeText(url).then(function(){toast('✅ URL 복사됨');}).catch(function(){});};
+          }
+        });
+      },100);
+    }
+
+    _renderDlrList();
+
+    function buildDealerRowsEl(list){
+      return buildDealerRows(list);
+    }
+    // 복사 버튼 이벤트는 _renderDlrList 내부에서 처리
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
 }
 
@@ -41779,27 +41894,51 @@ function _loadFeaturePanel(container){
       return bundle.fields.every(function(f){return item[f]===true;});
     }
 
-    var html='<div style="font-size:11px;color:var(--text3);margin-bottom:12px">회사별 기능을 바로 켜고 끌 수 있습니다</div>';
-    items.forEach(function(item){
-      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">'
-        +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">'+esc(item.companyName||item.id)
-        +(item.isOwner?'<span style="margin-left:6px;font-size:10px;color:#f59e0b">👑 본사</span>':'')+'</div>'
-        +'<div style="display:flex;gap:8px;flex-wrap:wrap">';
-      PLAN_BUNDLES.forEach(function(b){
-        var on=_bundleOn(item,b);
-        html+='<button class="tb-btn" data-cid="'+item.id+'" data-bundle="'+b.id+'" data-val="'+(!on)+'" '
-          +'style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;'
-          +'background:'+(on?b.color:'rgba(255,255,255,.08)')+';'
-          +'color:'+(on?'#fff':'var(--text3)')+';">'
-          +(on?'✅ ':'')+b.label+'</button>';
+    // ★ 업종별 탭 분리
+    var INDUSTRY_TABS=[
+      {id:'delivery', label:'🚚 물류·배송', bundles:['settle','delivery','logistics']},
+      {id:'service',  label:'🛎 서비스업',  bundles:['cleaning','beauty','care','restaurant','academy']},
+      {id:'finance',  label:'💼 금융·기타',  bundles:['insurance','construction','golf','freelance']},
+      {id:'platform', label:'⚙ 플랫폼',    bundles:['universal','qr_payroll','filo_combo','shopping']},
+    ];
+    window._switchInduTab=function(idx){
+      INDUSTRY_TABS.forEach(function(_,i){
+        var btn=document.getElementById('indutab-'+i);
+        var cont=document.getElementById('indutab-content-'+i);
+        if(btn){btn.style.background=i===idx?'var(--brand)':'var(--bg3)';btn.style.color=i===idx?'#fff':'var(--text)';}
+        if(cont)cont.style.display=i===idx?'block':'none';
       });
-      // 임시 비번 표시
-      if(item.tempPassword&&item.needsPasswordChange){
-        html+='<div style="width:100%;margin-top:8px;padding:6px 10px;background:rgba(245,184,0,.08);border:1px solid rgba(245,184,0,.2);border-radius:6px;font-size:11px;">'
-          +'🔑 임시비번: <strong style="letter-spacing:1px;color:var(--gold)">'+esc(item.tempPassword)+'</strong>'
-          +' <span style="color:var(--text3)">(미변경)</span></div>';
-      }
-      html+='</div></div>';
+    };
+    var tabBar='<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">';
+    INDUSTRY_TABS.forEach(function(tab,idx){
+      tabBar+='<button onclick="_switchInduTab('+idx+')" id="indutab-'+idx+'" style="padding:6px 14px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:'+(idx===0?'var(--brand)':'var(--bg3)')+';color:'+(idx===0?'#fff':'var(--text)')+'">'+tab.label+'</button>';
+    });
+    tabBar+='</div>';
+    var html=tabBar+'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">회사별 기능을 바로 켜고 끌 수 있습니다</div>';
+    INDUSTRY_TABS.forEach(function(tab,tabIdx){
+      html+='<div id="indutab-content-'+tabIdx+'" style="display:'+(tabIdx===0?'block':'none')+'">';
+      var tabBundles=PLAN_BUNDLES.filter(function(b){return tab.bundles.indexOf(b.id)>=0;});
+      items.forEach(function(item){
+        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">'
+          +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">'+esc(item.companyName||item.id)
+          +(item.isOwner?'<span style="margin-left:6px;font-size:10px;color:#f59e0b">👑 본사</span>':'')+'</div>'
+          +'<div style="display:flex;gap:8px;flex-wrap:wrap">';
+        tabBundles.forEach(function(b){
+          var on=_bundleOn(item,b);
+          html+='<button class="tb-btn" data-cid="'+item.id+'" data-bundle="'+b.id+'" data-val="'+(!on)+'" '
+            +'style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;'
+            +'background:'+(on?b.color:'rgba(255,255,255,.08)')+';'
+            +'color:'+(on?'#fff':'var(--text3)')+';">'
+            +(on?'✅ ':'')+b.label+'</button>';
+        });
+        if(item.tempPassword&&item.needsPasswordChange){
+          html+='<div style="width:100%;margin-top:8px;padding:6px 10px;background:rgba(245,184,0,.08);border:1px solid rgba(245,184,0,.2);border-radius:6px;font-size:11px;">'
+            +'🔑 임시비번: <strong style="letter-spacing:1px;color:var(--gold)">'+esc(item.tempPassword)+'</strong>'
+            +' <span style="color:var(--text3)">(미변경)</span></div>';
+        }
+        html+='</div></div>';
+      });
+      html+='</div>';
     });
     container.innerHTML=html;
     container.onclick=function(e){
@@ -41847,9 +41986,31 @@ function _toggleBundle(companyId, bundleId, value){
   // 업종 필드도 저장
   if(value) update.industryType=bundleId;
   fields.forEach(function(f){update[f]=value;});
+
+  // ★ services 배열 자동 연동 (DONWAY/FILO/mbtico 통합 아이디)
+  var SVC_MAP={
+    settle:'settle', delivery:'delivery', cleaning:'cleaning',
+    insurance:'insurance', construction:'construction', golf:'golf',
+    academy:'academy', beauty:'beauty', logistics:'logistics',
+    freelance:'freelance', care:'care', restaurant:'restaurant',
+    universal:'universal', qr_payroll:'qr', filo_combo:'filo', shopping:'shopping'
+  };
+  var svcKey=SVC_MAP[bundleId];
+  if(svcKey){
+    if(value){
+      update.services=firebase.firestore.FieldValue.arrayUnion(svcKey);
+    } else {
+      update.services=firebase.firestore.FieldValue.arrayRemove(svcKey);
+    }
+  }
+  // filo_combo 활성화 시 filo.ai.kr 연동 플래그
+  if(bundleId==='filo_combo'&&value) update.filoLinked=true;
+  // qr_payroll 활성화 시 QR 연동 플래그
+  if(bundleId==='qr_payroll'&&value){ update.services=firebase.firestore.FieldValue.arrayUnion('qr','payroll'); }
+
   _db.collection('companies').doc(companyId).set(update,{merge:true})
   .then(function(){
-    toast((value?'✅ ':'⛔ ')+bundleId+' '+(value?'활성화':'비활성화')+' 완료');
+    toast((value?'✅ ':'⛔ ')+bundleId+' '+(value?'활성화 — 통합 아이디 연동 완료':'비활성화')+' 완료');
     var featTab=document.getElementById('admin-tab-2');
     if(featTab) _loadFeaturePanel(featTab);
   }).catch(function(e){toast('❌ '+e.message);});
@@ -46233,16 +46394,22 @@ function _loadPayoutPreview(month, did){
             '<tbody>'+rows+'</tbody>'+
           '</table>'+
         '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:12px">'+
+        '<button id="pout-excel-btn" style="flex:1;padding:14px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📥 하나은행 대량이체 파일</button>'+
         (missingCount===0?
-          '<button id="pout-execute-btn" style="width:100%;margin-top:12px;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💸 전체 송금 실행 ('+settles.length+'명 · ₩'+totalAmt.toLocaleString()+')</button>':
-          '<button disabled style="width:100%;margin-top:12px;padding:14px;background:var(--bg3);color:var(--text3);border:none;border-radius:10px;font-size:13px;cursor:not-allowed">계좌 미등록 인원 해결 후 가능</button>'
+          '<button id="pout-execute-btn" style="flex:1;padding:14px;background:#10b981;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">✅ 송금 완료 처리</button>':
+          '<button disabled style="flex:1;padding:14px;background:var(--bg3);color:var(--text3);border:none;border-radius:10px;font-size:12px;cursor:not-allowed">계좌 미등록 인원 해결 후 가능</button>'
         )+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px;text-align:center">① 파일 다운로드 → ② 하나은행 기업뱅킹 대량이체 업로드 → ③ 이체 후 완료 처리</div>'+
       '</div>';
 
     setTimeout(function(){
+      var excelBtn=document.getElementById('pout-excel-btn');
+      if(excelBtn) excelBtn.onclick=function(){ _downloadPayoutExcel(month, settles, workerMap); };
       var execBtn=document.getElementById('pout-execute-btn');
       if(execBtn) execBtn.onclick=function(){
-        if(!confirm(month+' 정산 '+settles.length+'명 · ₩'+totalAmt.toLocaleString()+'원 송금을 실행합니다. 진행할까요?')) return;
+        if(!confirm(month+' 정산 '+settles.length+'명 송금 완료 처리합니다.\n하나은행 기업뱅킹에서 이체 완료 후 클릭하세요.')) return;
         _executePayout(month, settles, workerMap, totalNeeded, did);
       };
     },100);
@@ -46251,6 +46418,43 @@ function _loadPayoutPreview(month, did){
   });
 }
 
+
+function _downloadPayoutExcel(month, settles, workerMap){
+  var BMAP={'001':'한국은행','002':'산업은행','003':'기업은행','004':'국민은행','007':'수협은행',
+    '011':'농협은행','012':'농협중앙회','020':'우리은행','023':'SC제일은행','027':'씨티은행',
+    '031':'대구은행','032':'부산은행','034':'광주은행','035':'제주은행','037':'전북은행','039':'경남은행',
+    '045':'새마을금고','048':'신협','050':'저축은행','064':'산림조합','071':'우체국','081':'하나은행',
+    '088':'신한은행','089':'케이뱅크','090':'카카오뱅크','092':'토스뱅크','093':'한국투자뱅크',
+    '209':'동양증권','238':'미래에셋증권','240':'삼성증권','243':'한국투자증권',
+    '247':'NH투자증권','264':'키움증권','267':'대신증권','270':'하나금융투자',
+    '278':'신한금융투자','288':'카카오페이증권'};
+  var rows=[['입금은행','입금계좌번호','이체금액','예금주명','적요(통장표시)']];
+  var skipped=[];
+  settles.forEach(function(s){
+    if(s.payoutStatus==='PAID') return;
+    var w=workerMap[s.userId||s.driver]||workerMap[s.driverName||s.driver||s.name]||{};
+    var name=s.driverName||s.driver||s.name||s.userId||'';
+    var amt=s.net||0;
+    if(!amt||amt<=0) return;
+    if(!w.account||!w.bankCode){skipped.push(name);return;}
+    var bankName=BMAP[w.bankCode]||w.bankCode||'';
+    rows.push([bankName,String(w.account),amt,w.holder||name,month+'급여']);
+  });
+  if(skipped.length) toast('⚠️ 계좌 미등록 '+skipped.length+'명 제외: '+skipped.slice(0,3).join(', ')+(skipped.length>3?'...':''));
+  if(rows.length<=1){toast('❌ 이체 대상 없음');return;}
+  if(typeof XLSX==='undefined'){toast('❌ XLSX 라이브러리 없음');return;}
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  var range=XLSX.utils.decode_range(ws['!ref']);
+  for(var R=1;R<=range.e.r;R++){
+    var cell=ws[XLSX.utils.encode_cell({r:R,c:1})];
+    if(cell){cell.t='s';cell.z='@';}
+  }
+  ws['!cols']=[{wch:12},{wch:22},{wch:12},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'대량이체');
+  XLSX.writeFile(wb,'하나은행_대량이체_'+month+'_'+(rows.length-1)+'명.xlsx');
+  toast('✅ 대량이체 파일 다운로드 ('+(rows.length-1)+'명)');
+}
 function _executePayout(month, settles, workerMap, totalNeeded, did){
   var TRANSFER_FEE=200;
   _db.collection('settings').doc(did+'_wallet').get().then(function(snap){
@@ -46987,5 +47191,5 @@ function _pageShopDashboard(c) {
 })();
 </script>
 </body>
-</html
+</html>
 
