@@ -166,11 +166,12 @@ function _renderMenuGrid(menus, gridId){
   var trId='tr-'+_menuSlug(m.name);
   var badgeId='badge-'+_menuSlug(m.name);
   var inCart=_cart[m.name]&&_cart[m.name].qty>0;
+  var nameEsc=m.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   if(m.imageUrl){
    item.innerHTML='<div class="mi-img-wrap">'+
     '<img class="mi-img" src="'+m.imageUrl+'" loading="lazy" alt="'+m.name+'">'+
     '<div class="mi-overlay">'+
-    '<div class="mi-name-img">'+m.name+'</div>'+
+    '<div class="mi-name-img" data-orig="'+nameEsc+'">'+m.name+'</div>'+
     '<div class="mi-tr-img" id="'+trId+'"></div>'+
     '<div class="mi-price-img">₩'+(m.price||0).toLocaleString()+'</div>'+
     '</div></div>'+
@@ -178,7 +179,7 @@ function _renderMenuGrid(menus, gridId){
   } else {
    item.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||'🍽')+'</div></div>'+
     '<div class="mi-body">'+
-    '<div class="mi-name">'+m.name+'</div>'+
+    '<div class="mi-name" data-orig="'+nameEsc+'">'+m.name+'</div>'+
     '<div class="mi-tr" id="'+trId+'"></div>'+
     '<div class="mi-price">₩'+(m.price||0).toLocaleString()+'</div>'+
     '</div>'+
@@ -234,19 +235,23 @@ function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
  menus.forEach(function(m){
   var trId='tr-'+_menuSlug(m.name);
-  // tr-엘리먼트 (번역) + name-img 도 번역
   var el=document.getElementById(trId);
-  var nameImgEls=document.querySelectorAll('.mi-name-img,.mi-name');
-  // 해당 메뉴 카드의 이름 엘리먼트 찾기
   if(!el) return;
+  // 해당 카드의 메인 이름 엘리먼트 찾기 (data-orig 속성으로 식별)
+  var card=el.closest?el.closest('.mi'):null;
+  var nameEl=card?card.querySelector('[data-orig]'):null;
   var ck=m.name+'_'+_lang;
-  if(_tlCache[ck]){el.textContent=_tlCache[ck];return;}
+  if(_tlCache[ck]){
+   if(nameEl)nameEl.textContent=_tlCache[ck];
+   el.textContent='';
+   return;
+  }
   if(m.nameTranslations&&m.nameTranslations[_lang]){
    var saved=m.nameTranslations[_lang];
-   // 저장된 값이 한글이면 무시하고 API 재번역
-   if(saved && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
+   if(saved&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
     _tlCache[ck]=saved;
-    el.textContent=saved;
+    if(nameEl)nameEl.textContent=saved;
+    el.textContent='';
     return;
    }
   }
@@ -255,10 +260,16 @@ function _applyTranslationsToGrid(menus){
    body:JSON.stringify({name:m.name,lang:_lang})})
   .then(function(r){return r.json();})
   .then(function(d){
-   if(d.translated&&d.translated!==m.name){
-    _tlCache[ck]=d.translated;
+   var tr=d.translated;
+   if(tr&&tr!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+    _tlCache[ck]=tr;
     var e2=document.getElementById(trId);
-    if(e2)e2.textContent=d.translated;
+    if(e2){
+     var card2=e2.closest?e2.closest('.mi'):null;
+     var nameEl2=card2?card2.querySelector('[data-orig]'):null;
+     if(nameEl2)nameEl2.textContent=tr;
+     e2.textContent='';
+    }
    }
   }).catch(function(){});
  });
@@ -460,6 +471,9 @@ function _setLang(l){
  ['ko','en','zh','ja'].forEach(function(x){
   var b=document.getElementById('lb-'+x);if(b)b.classList.toggle('on',x===l);
  });
+ // 메뉴 이름 원문(한글) 복원 후 비언어 선택 시 번역 적용
+ document.querySelectorAll('[data-orig]').forEach(function(e){e.textContent=e.dataset.orig;});
+ document.querySelectorAll('[id^="tr-"]').forEach(function(e){e.textContent='';});
  // UI 텍스트 업데이트
  var els={
   'cart-title':_t('cart'),'order-btn':_t('order'),
@@ -471,12 +485,10 @@ function _setLang(l){
  Object.keys(els).forEach(function(id){
   var el=document.getElementById(id);if(el&&els[id])el.textContent=els[id];
  });
- // 메뉴 카드 번역 적용
- if(_menus&&_menus.length)_applyTranslationsToGrid(_menus);
+ // 메뉴 카드 번역 적용 (ko 복원 후 비KO 언어만 적용, 한 번만 호출)
+ if(l!=='ko'&&_menus&&_menus.length) _applyTranslationsToGrid(_menus);
  // 품절 텍스트
  document.querySelectorAll('.mi-sold').forEach(function(s){s.textContent=_t('sold');});
- // 메뉴 그리드 번역
- if(_menus&&_menus.length) _applyTranslationsToGrid(_menus);
  // 담기 버튼 텍스트 갱신
  var addBtn=document.getElementById('mdl-add')||document.getElementById('tl-add');
  if(addBtn&&_curMdlMenu){

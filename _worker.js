@@ -1854,13 +1854,13 @@ async function acceptExchange(){
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
         let translated = '';
-        // Anthropic 재시도 3회 + Google 폴백
+        // Anthropic 재시도 3회 (키 없으면 즉시 Google 폴백)
         const k = (env.ANTHROPIC_API_KEY||'').trim();
         const tl2 = langMap[lang]||'en';
-        for(let attempt=0; attempt<3 && !translated; attempt++) {
-          try {
-            if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
-            if(k) {
+        if(k) {
+          for(let attempt=0; attempt<3 && !translated; attempt++) {
+            try {
+              if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
               const res = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
@@ -1873,8 +1873,8 @@ async function acceptExchange(){
               } else {
                 console.log('[tr] anthropic '+res.status+' attempt '+attempt);
               }
-            }
-          } catch(e){console.log('[tr] anthropic err:'+e.message);}
+            } catch(e){console.log('[tr] anthropic err:'+e.message);}
+          }
         }
         // Google 폴백
         if(!translated || translated===name) {
@@ -1882,16 +1882,20 @@ async function acceptExchange(){
             const gKey = (env.GOOGLE_TRANSLATE_KEY||'').trim();
           if(gKey){
             const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
+            if(!gRes.ok) throw new Error('google-official:'+gRes.status);
             const gData = await gRes.json();
             translated = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||'';
             console.log('[tr] google official:'+translated);
           } else {
-            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
+            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name),{
+              headers:{'User-Agent':'Mozilla/5.0 (compatible; FILO/1.0)','Accept':'application/json, text/plain, */*'}
+            });
+            if(!gRes.ok) throw new Error('google-free:'+gRes.status);
             const gData = await gRes.json();
             translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
             console.log('[tr] google fallback:'+translated);
           }
-          } catch(e){}
+          } catch(e){console.log('[tr] google err:'+e.message);}
         }
         // 한글 포함이면 번역 실패로 처리 → Google 재시도
         const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated);
