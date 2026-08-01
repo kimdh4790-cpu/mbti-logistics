@@ -485,6 +485,13 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 /* 선택 효과 */
 ::selection{background:rgba(124,58,237,.3)}
 
+/* ── 업종별 데모 카드 ── */
+.demo-card{background:var(--surface2);border:1px solid var(--bd2);border-radius:10px;padding:11px 6px;font-size:20px;line-height:1.3;cursor:pointer;transition:.15s;color:var(--tx);width:100%;text-align:center}
+.demo-card span{display:block;font-size:10px;font-weight:700;margin-top:4px;color:var(--t2)}
+.demo-card:hover{border-color:var(--br);background:rgba(124,58,237,.1);transform:translateY(-2px);box-shadow:0 4px 14px rgba(124,58,237,.18)}
+.demo-card:active{transform:translateY(0);opacity:.8}
+#demo-admin-bar{background:rgba(124,58,237,.08);border-bottom:1px solid rgba(124,58,237,.2);padding:5px 16px;display:flex;align-items:center;gap:8px;font-size:11px}
+
 /* ── 영수증 인쇄 ── */
 @media print{
   body>*:not(.mo){display:none!important}
@@ -537,6 +544,19 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
  <button class="btn btn-brand" onclick="_filoLogin()">로그인</button>
  <div style="margin-top:12px;text-align:center">
  <button onclick="_filoFindPw()" style="background:none;border:none;font-size:11px;color:var(--t3);cursor:pointer">비밀번호 찾기</button>
+ </div>
+ <!-- ── 업종별 데모 체험 ── -->
+ <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--bd)">
+  <div style="text-align:center;font-size:11px;font-weight:700;color:var(--t3);margin-bottom:12px;letter-spacing:.6px">업종별 데모 체험</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+   <button class="demo-card" onclick="_filoDemoLogin('cafe')">☕<br><span>카페</span></button>
+   <button class="demo-card" onclick="_filoDemoLogin('korean')">🍚<br><span>한식당</span></button>
+   <button class="demo-card" onclick="_filoDemoLogin('japanese')">🍣<br><span>일식당</span></button>
+   <button class="demo-card" onclick="_filoDemoLogin('snack')">🍢<br><span>분식</span></button>
+   <button class="demo-card" onclick="_filoDemoLogin('western')">🍕<br><span>양식당</span></button>
+   <button class="demo-card" onclick="_filoDemoLogin('bakery')">🥐<br><span>베이커리</span></button>
+  </div>
+  <div id="demo-login-msg" style="text-align:center;font-size:10px;color:var(--t3);margin-top:8px">클릭 한 번으로 샘플 데이터 체험</div>
  </div>
  </div>
 

@@ -197,6 +197,33 @@ function _buildFiloNav(){
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
  var hasAll=isSA||hasSub('combo');
 
+ // ── 슈퍼어드민 데모 매장 전환 바 ──────────────────────────────
+ if(isSA){
+  var _bar=document.getElementById('demo-admin-bar');
+  if(!_bar){
+   _bar=document.createElement('div');
+   _bar.id='demo-admin-bar';
+   _bar.innerHTML='<span style="color:var(--t3)">현재 매장:</span>'+
+    '<strong id="demo-dealer-disp" style="color:var(--acc)">'+esc(_CU.dealerId||'')+'</strong>'+
+    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="margin-left:auto;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer">'+
+    '<option value="">-- 데모 매장 전환 --</option>'+
+    '<option value="demo_cafe">☕ 데모 카페</option>'+
+    '<option value="demo_korean">🍚 데모 한식당</option>'+
+    '<option value="demo_japanese">🍣 데모 일식당</option>'+
+    '<option value="demo_snack">🍢 데모 분식집</option>'+
+    '<option value="demo_western">🍕 데모 양식당</option>'+
+    '<option value="demo_bakery">🥐 데모 베이커리</option>'+
+    '</select>';
+   var _appEl3=document.getElementById('app');
+   if(_appEl3) _appEl3.insertBefore(_bar,_appEl3.firstChild);
+  } else {
+   var _disp=document.getElementById('demo-dealer-disp');
+   if(_disp) _disp.textContent=_CU.dealerId||'';
+   var _dsel=document.getElementById('demo-dealer-sel');
+   if(_dsel) _dsel.value=_CU.dealerId||'';
+  }
+ }
+
  // ── 관제센터 services 배열 기반 기능 on/off ──────────────────
  var _services = d.services || [];
  function hasFeature(key) {
@@ -874,4 +901,43 @@ function _filoWatchDineSales(){
    var el=document.getElementById('filo-dine-sales');
    if(el)el.textContent='DINE ₩'+total.toLocaleString()+'('+cnt+'건)';
   },function(){});
+}
+
+// ── 업종별 데모 로그인 ──────────────────────────────────────────────
+function _filoDemoLogin(type){
+ var msgEl=document.getElementById('demo-login-msg');
+ var errEl=document.getElementById('fl-err');
+ if(msgEl) msgEl.textContent='로그인 중...';
+ fetch('/api/demo-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type})})
+ .then(function(r){return r.json();})
+ .then(function(data){
+  if(!data.ok||!data.token) throw new Error(data.error||'토큰 발급 실패');
+  return _auth.signInWithCustomToken(data.token);
+ })
+ .catch(function(e){
+  if(msgEl) msgEl.textContent='클릭 한 번으로 샘플 데이터 체험';
+  if(errEl){errEl.textContent='데모 로그인 실패: '+e.message;errEl.style.display='block';}
+ });
+}
+
+// ── 관리자 데모 매장 전환 ──────────────────────────────────────────
+function _switchDemoDealer(did){
+ if(!did||!_CU||!_CU.uid) return;
+ var sel=document.getElementById('demo-dealer-sel');
+ if(sel) sel.disabled=true;
+ _db.collection('companies').doc(did).get().then(function(snap){
+  var data=snap.exists?snap.data():{};
+  _cachedCompanyDoc=data;
+  _CU.dealerId=did;
+  _CU.role='dealer';
+  _CU.companyName=data.companyName||data.name||did;
+  try{if(typeof _filoApplyTheme==='function')_filoApplyTheme(data);}catch(e){}
+  var disp=document.getElementById('demo-dealer-disp');
+  if(disp) disp.textContent=did;
+  var nc=document.getElementById('nav-company');
+  if(nc) nc.textContent=_CU.companyName;
+  if(sel){sel.value=did;sel.disabled=false;}
+  _buildFiloNav();
+  _filoGoPage('home');
+ }).catch(function(e){if(sel)sel.disabled=false;console.error('_switchDemoDealer:',e);});
 }
