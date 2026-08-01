@@ -520,6 +520,18 @@ async function makeServiceJWT(sa) {
   );
   return `${hdr}.${pay}.${b64urlBuf(sig)}`;
 }
+async function makeFirebaseCustomToken(sa, uid) {
+  const now = Math.floor(Date.now() / 1000);
+  const hdr = b64url(JSON.stringify({ alg:'RS256', typ:'JWT' }));
+  const pay = b64url(JSON.stringify({
+    iss: sa.client_email, sub: sa.client_email,
+    aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdTokenFactory',
+    uid, iat: now, exp: now + 3600
+  }));
+  const key = await importPrivateKey(sa.private_key);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${hdr}.${pay}`));
+  return `${hdr}.${pay}.${b64urlBuf(sig)}`;
+}
 async function getAccessToken(env) {
   if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not set');
   const sa  = JSON.parse(env.FIREBASE_SA_KEY);
@@ -2876,6 +2888,76 @@ fetch('/qr/members?did='+DID)
             batchResults.push({batch:Math.floor(i/400)+1,status:br.status,count:allWrites.slice(i,i+400).length,errorCount:(bd.status||[]).filter(x=>x&&x.code&&x.code!==0).length});
           }
           return new Response(JSON.stringify({ok:true,did,stats:{base:writes.length,orders:orderWrites.length,attendance:attWrites.length,total:allWrites.length},batches:batchResults}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+      }
+
+      // ── /api/demo-token — 업종별 데모 Firebase 커스텀 토큰 발급
+      if (path === '/api/demo-token' && method === 'POST') {
+        if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          const validTypes=['cafe','korean','japanese','snack','western','bakery'];
+          const type=body.type||'cafe';
+          if(!validTypes.includes(type)) return new Response(JSON.stringify({ok:false,error:'invalid type'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const did=`demo_${type}`;
+          const sa=JSON.parse(env.FIREBASE_SA_KEY);
+          const token=await makeFirebaseCustomToken(sa,did);
+          return new Response(JSON.stringify({ok:true,token,did}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+      }
+
+      // ── /api/demo-seed-all — 6개 업종 데모 데이터 일괄 생성
+      if (path === '/api/demo-seed-all' && method === 'POST') {
+        if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token=await getAccessToken(env);
+          function fsv2(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv2)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv2(x)]))}};return{nullValue:null};}
+          function fsd2(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv2(v)]))}}}
+          const DEMOS={
+            cafe:{name:'데모 카페',type:'카페/베이커리',primaryColor:'#c8a96e',bgColor:'#1a1209',addr:'서울 강남구 테헤란로 123',phone:'02-1234-5678',hours:'08:00~22:00',
+              staff:[{n:'김지현',r:'manager',hw:11000},{n:'박소연',r:'staff',hw:10500},{n:'이민준',r:'part',hw:10000}],
+              menus:[{id:'m01',n:'아메리카노(ICE)',p:4000,c:'커피',e:'☕'},{id:'m02',n:'아메리카노(HOT)',p:4000,c:'커피',e:'☕'},{id:'m03',n:'카페라떼',p:4500,c:'커피',e:'☕'},{id:'m04',n:'카푸치노',p:4500,c:'커피',e:'☕'},{id:'m05',n:'바닐라라떼',p:5000,c:'커피',e:'☕'},{id:'m06',n:'크로와상',p:3500,c:'베이커리',e:'🥐'},{id:'m07',n:'스콘',p:3000,c:'베이커리',e:'🍞'},{id:'m08',n:'치즈케이크',p:5500,c:'케이크',e:'🍰'},{id:'m09',n:'자몽에이드',p:5000,c:'에이드',e:'🍊'},{id:'m10',n:'딸기스무디',p:5500,c:'스무디',e:'🍓'}]},
+            korean:{name:'데모 한식당',type:'한식당',primaryColor:'#d4af37',bgColor:'#0a0f1e',addr:'서울 마포구 합정동 456',phone:'02-2345-6789',hours:'11:00~22:00',
+              staff:[{n:'최영수',r:'manager',hw:11000},{n:'김미영',r:'staff',hw:10500},{n:'박준호',r:'part',hw:10000}],
+              menus:[{id:'m01',n:'된장찌개',p:8000,c:'찌개',e:'🍲'},{id:'m02',n:'김치찌개',p:8000,c:'찌개',e:'🍲'},{id:'m03',n:'순두부찌개',p:8000,c:'찌개',e:'🍲'},{id:'m04',n:'비빔밥',p:9000,c:'밥',e:'🍚'},{id:'m05',n:'불고기',p:12000,c:'고기',e:'🥩'},{id:'m06',n:'제육볶음',p:10000,c:'볶음',e:'🥩'},{id:'m07',n:'냉면',p:10000,c:'면',e:'🍜'},{id:'m08',n:'삼겹살(1인분)',p:13000,c:'고기',e:'🥓'},{id:'m09',n:'공기밥',p:1000,c:'밥',e:'🍚'},{id:'m10',n:'김치',p:2000,c:'반찬',e:'🥬'}]},
+            japanese:{name:'데모 일식당',type:'일식/횟집',primaryColor:'#e05555',bgColor:'#0a0a0a',addr:'서울 송파구 잠실동 789',phone:'02-3456-7890',hours:'11:30~22:00',
+              staff:[{n:'이하준',r:'manager',hw:11500},{n:'정수아',r:'staff',hw:10500},{n:'강민서',r:'part',hw:10000}],
+              menus:[{id:'m01',n:'연어초밥(2pc)',p:4000,c:'초밥',e:'🍣'},{id:'m02',n:'참치초밥(2pc)',p:4000,c:'초밥',e:'🍣'},{id:'m03',n:'광어회(소)',p:35000,c:'회',e:'🐠'},{id:'m04',n:'모듬회(소)',p:45000,c:'회',e:'🐟'},{id:'m05',n:'우동',p:9000,c:'면',e:'🍜'},{id:'m06',n:'라멘',p:10000,c:'면',e:'🍜'},{id:'m07',n:'돈카츠',p:12000,c:'튀김',e:'🍱'},{id:'m08',n:'카이센동',p:18000,c:'덮밥',e:'🍱'},{id:'m09',n:'사케(1홉)',p:8000,c:'술',e:'🍶'},{id:'m10',n:'하이볼',p:7000,c:'술',e:'🥃'}]},
+            snack:{name:'데모 분식집',type:'패스트푸드/분식',primaryColor:'#f97316',bgColor:'#1a0a00',addr:'서울 종로구 인사동 321',phone:'02-4567-8901',hours:'10:00~21:00',
+              staff:[{n:'윤서연',r:'manager',hw:10500},{n:'조현우',r:'staff',hw:10000},{n:'임지원',r:'part',hw:9860}],
+              menus:[{id:'m01',n:'떡볶이',p:5000,c:'분식',e:'🌶️'},{id:'m02',n:'순대',p:4000,c:'분식',e:'🍢'},{id:'m03',n:'튀김(5개)',p:3000,c:'튀김',e:'🍤'},{id:'m04',n:'라볶이',p:6000,c:'분식',e:'🌶️'},{id:'m05',n:'김밥(1줄)',p:3500,c:'김밥',e:'🍙'},{id:'m06',n:'치즈김밥',p:4000,c:'김밥',e:'🍙'},{id:'m07',n:'참치김밥',p:4500,c:'김밥',e:'🍙'},{id:'m08',n:'어묵국물',p:1000,c:'국물',e:'🍵'},{id:'m09',n:'쫄면',p:5500,c:'면',e:'🍜'},{id:'m10',n:'핫도그',p:2500,c:'튀김',e:'🌭'}]},
+            western:{name:'데모 양식당',type:'피자/양식',primaryColor:'#e05555',bgColor:'#f8f9fa',addr:'서울 용산구 이태원동 654',phone:'02-5678-9012',hours:'11:00~23:00',
+              staff:[{n:'한지수',r:'manager',hw:12000},{n:'신동욱',r:'staff',hw:11000},{n:'배수진',r:'part',hw:10000}],
+              menus:[{id:'m01',n:'마르게리타 피자',p:18000,c:'피자',e:'🍕'},{id:'m02',n:'페퍼로니 피자',p:20000,c:'피자',e:'🍕'},{id:'m03',n:'크림 파스타',p:13000,c:'파스타',e:'🍝'},{id:'m04',n:'로제 파스타',p:14000,c:'파스타',e:'🍝'},{id:'m05',n:'토마토 파스타',p:12000,c:'파스타',e:'🍝'},{id:'m06',n:'시저 샐러드',p:10000,c:'샐러드',e:'🥗'},{id:'m07',n:'갈릭 브레드',p:5000,c:'사이드',e:'🥖'},{id:'m08',n:'치킨 윙(6pc)',p:15000,c:'사이드',e:'🍗'},{id:'m09',n:'콜라(Large)',p:3000,c:'음료',e:'🥤'},{id:'m10',n:'스파클링워터',p:3500,c:'음료',e:'💧'}]},
+            bakery:{name:'데모 베이커리',type:'카페/베이커리',primaryColor:'#c8a96e',bgColor:'#faf7f2',addr:'서울 서대문구 연희동 987',phone:'02-6789-0123',hours:'07:30~20:00',
+              staff:[{n:'오채원',r:'manager',hw:11000},{n:'류지훈',r:'staff',hw:10500},{n:'송예은',r:'part',hw:10000}],
+              menus:[{id:'m01',n:'크로와상',p:3500,c:'빵',e:'🥐'},{id:'m02',n:'바게트',p:4500,c:'빵',e:'🥖'},{id:'m03',n:'소금빵',p:2500,c:'빵',e:'🍞'},{id:'m04',n:'치즈케이크',p:5500,c:'케이크',e:'🍰'},{id:'m05',n:'딸기타르트',p:6000,c:'케이크',e:'🍓'},{id:'m06',n:'마카롱(3pc)',p:7500,c:'쿠키',e:'🍬'},{id:'m07',n:'스콘',p:3000,c:'빵',e:'🍞'},{id:'m08',n:'아메리카노(ICE)',p:4000,c:'커피',e:'☕'},{id:'m09',n:'카페라떼',p:4500,c:'커피',e:'☕'},{id:'m10',n:'허브티',p:4000,c:'차',e:'🍵'}]}
+          };
+          const allW2=[];
+          for(const [type,d] of Object.entries(DEMOS)){
+            const did=`demo_${type}`;
+            allW2.push(fsd2('companies',did,{name:d.name,dealerId:did,type:d.type,businessType:d.type,address:d.addr,phone:d.phone,openHours:d.hours,status:'active',createdAt:'2026-01-01T00:00:00Z',primaryColor:d.primaryColor,bgColor:d.bgColor,theme:d.type,demo:true}));
+            d.staff.forEach(function(s,i){const uid=`${did}_m${i+1}`;allW2.push(fsd2('members',uid,{uid,name:s.n,role:s.r,hourlyRate:s.hw,dealerId:did,status:'active',joinDate:'2026-01-01'}));});
+            d.menus.forEach(function(m){allW2.push(fsd2('filo_menus',`${did}_${m.id}`,{name:m.n,price:m.p,category:m.c,emoji:m.e,dealerId:did,available:true,createdAt:'2026-01-01T00:00:00Z'}));});
+            const dates=['2026-07-05','2026-07-10','2026-07-15','2026-07-20','2026-07-25'];
+            dates.forEach(function(date,oi){
+              const items=[];let total=0;
+              d.menus.slice(0,3).forEach(function(m){items.push({name:m.n,price:m.p,qty:1,emoji:m.e});total+=m.p;});
+              const isoStr=`${date}T${String(10+oi).padStart(2,'0')}:30:00.000Z`;
+              allW2.push(fsd2('filo_orders',`${did}_demo_${String(oi+1).padStart(2,'0')}`,{dealerId:did,type:'table',status:'completed',payType:'card',tableNum:oi+1,tableName:`테이블 ${oi+1}`,items,total,createdAt:isoStr,date}));
+            });
+          }
+          const batchUrl2=`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:batchWrite`;
+          const hdrs2={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+          const batchRes2=[];
+          for(let i=0;i<allW2.length;i+=400){
+            const br=await fetch(batchUrl2,{method:'POST',headers:hdrs2,body:JSON.stringify({writes:allW2.slice(i,i+400)})});
+            const bd=await br.json();
+            batchRes2.push({batch:Math.floor(i/400)+1,status:br.status,count:allW2.slice(i,i+400).length,errorCount:(bd.status||[]).filter(x=>x&&x.code&&x.code!==0).length});
+          }
+          return new Response(JSON.stringify({ok:true,stores:Object.keys(DEMOS),total:allW2.length,batches:batchRes2}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
       }
 
