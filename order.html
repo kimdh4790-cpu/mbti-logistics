@@ -223,6 +223,18 @@ body.dark .mi-sold{background:rgba(30,41,59,.85)}
 /* ── 직원 호출 ── */
 #call-btn{position:fixed;bottom:100px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--surface);border:2px solid var(--border);box-shadow:var(--shadow-lg);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:190;transition:.2s}
 #call-btn:active{transform:scale(.92)}
+/* ── AI CS봇 ── */
+#cs-btn{position:fixed;bottom:158px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--brand);border:none;box-shadow:0 4px 14px rgba(8,145,178,.5);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:190;transition:.2s;color:#fff}
+#cs-btn:active{transform:scale(.92)}
+#cs-panel{position:fixed;bottom:0;left:0;right:0;height:70vh;background:var(--surface);border-radius:20px 20px 0 0;z-index:400;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.3);display:none}
+#cs-header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border);font-size:15px;font-weight:800}
+#cs-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.cs-msg{max-width:80%;padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word}
+.cs-user{background:var(--brand);color:#fff;border-radius:14px 14px 4px 14px;align-self:flex-end}
+.cs-bot{background:var(--surface2);color:var(--text);border-radius:14px 14px 14px 4px;align-self:flex-start}
+#cs-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border)}
+#cs-input{flex:1;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:13px;outline:none}
+#cs-input-row button{padding:10px 16px;background:var(--brand);border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
 
 /* ── 픽업 알림 ── */
 #pickup-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-120px);background:var(--green);color:#fff;padding:12px 20px;border-radius:20px;font-size:14px;font-weight:700;z-index:500;transition:.4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;box-shadow:0 8px 24px rgba(34,197,94,.4)}
@@ -443,6 +455,20 @@ body.dark .mi-sold{background:rgba(30,41,59,.85)}
   <span class="cb-txt">호출</span>
 </div>
 <div id="call-toast">✅ 직원을 호출했습니다!</div>
+<div id="cs-btn" onclick="_openCsBot()">💬</div>
+<div id="cs-panel">
+  <div id="cs-header">
+    <span>💬 AI 문의</span>
+    <button onclick="_closeCsBot()" style="background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:0">✕</button>
+  </div>
+  <div id="cs-msgs">
+    <div class="cs-msg cs-bot">안녕하세요! 무엇이 궁금하신가요? 메뉴, 알레르기, 운영시간 등 편하게 물어보세요 😊</div>
+  </div>
+  <div id="cs-input-row">
+    <input id="cs-input" type="text" placeholder="궁금한 점을 입력하세요..." onkeydown="if(event.key==='Enter')_sendCsQuestion()">
+    <button onclick="_sendCsQuestion()">전송</button>
+  </div>
+</div>
 
 <div id="pay-mdl" onclick="if(event.target===this)_closePayMdl()">
   <div id="pay-mb">

@@ -2648,6 +2648,20 @@ fetch('/qr/members?did='+DID)
             }})
           });
 
+          // 사장님 FCM 출퇴근 알림
+          try {
+            const compRes2 = await fetch(`${FS_BASE}/companies/${did}`, {headers:{'Authorization':'Bearer '+token}});
+            const compData2 = await compRes2.json();
+            const fcmArr2 = compData2.fields?.fcmTokens?.arrayValue?.values?.map(v=>v.stringValue).filter(Boolean) || [];
+            const fcmSingle2 = compData2.fields?.fcmToken?.stringValue || '';
+            const allFcmTokens = [...new Set([...fcmArr2, fcmSingle2].filter(Boolean))];
+            const actionLabel = type==='in'?'출근':'퇴근';
+            const kstStr = kst.toISOString().slice(11,16);
+            for(const ft of allFcmTokens) {
+              await sendAdminFCM(env, ft, `👤 ${actionLabel} 알림`, `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`);
+            }
+          } catch(e){}
+
           return Response.json({ok:true});
         } catch(e) {
           return Response.json({ok:false,error:e.message});
@@ -2683,6 +2697,106 @@ fetch('/qr/members?did='+DID)
           return new Response(JSON.stringify({reply}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
           return new Response(JSON.stringify({error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/cs-bot — AI CS봇 (고객 문의 자동 답변 + FCM 푸시)
+      if (path === '/api/cs-bot' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, question, fcmToken, lang } = body;
+          if (!did || !question) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          let compName = '', menuList = '';
+          try {
+            const cr = await fetch(`${FS_BASE}/companies/${did}`, {headers:{'Authorization':'Bearer '+token}});
+            const cd = await cr.json();
+            compName = cd.fields?.compName?.stringValue || cd.fields?.name?.stringValue || '';
+          } catch(e){}
+          try {
+            const mr = await fetch(`${FS_BASE}:runQuery`, {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body: JSON.stringify({structuredQuery:{
+                from:[{collectionId:'filo_menus'}],
+                where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                limit:{value:30}
+              }})
+            });
+            const mDocs = await mr.json();
+            if(Array.isArray(mDocs)){
+              menuList = mDocs.filter(d=>d.document).map(d=>{
+                const f=d.document.fields||{};
+                const n=f.name?.stringValue||'';
+                const p=f.price?.integerValue||f.price?.doubleValue||0;
+                return n&&p?n+'('+p+'원)':n;
+              }).filter(Boolean).slice(0,20).join(', ');
+            }
+          } catch(e){}
+          const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
+          const langInst = lang && lang!=='ko' ? ' Respond in the same language as the customer question.' : '';
+          const prompt = `당신은 "${compName||'저희 매장'}" 식당의 AI 직원입니다. 친절하고 간결하게 답변하세요.${langInst}\n메뉴: ${menuList||'다양한 메뉴가 있습니다'}\n고객 문의: ${question}\n2~3문장으로 간결하게 답변하세요.`;
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001', max_tokens:200, messages:[{role:'user',content:prompt}]})
+          });
+          const d = await resp.json();
+          const answer = (d.content&&d.content[0]&&d.content[0].text)||'죄송합니다. 잠시 후 다시 문의해 주세요.';
+          if (fcmToken) {
+            try { await sendAdminFCM(env, fcmToken, '💬 문의 답변', answer); } catch(e){}
+          }
+          return new Response(JSON.stringify({ok:true,answer}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/filo-push — 사장님 FCM 신규주문/웨이팅/재고부족 알림
+      if (path === '/api/filo-push' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, title, body: msgBody } = body;
+          if (!did || !title) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const compRes = await fetch(`${FS_BASE}/companies/${did}`, {headers:{'Authorization':'Bearer '+token}});
+          const compData = await compRes.json();
+          const fcmArr = compData.fields?.fcmTokens?.arrayValue?.values?.map(v=>v.stringValue).filter(Boolean) || [];
+          const fcmSingle = compData.fields?.fcmToken?.stringValue || '';
+          const allTokens = [...new Set([...fcmArr, fcmSingle].filter(Boolean))];
+          let sent = 0;
+          for(const ft of allTokens) {
+            try { await sendAdminFCM(env, ft, title, msgBody||''); sent++; } catch(e){}
+          }
+          return new Response(JSON.stringify({ok:true,sent}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/payslip-fcm — 직원 급여명세서 FCM 발송
+      if (path === '/api/payslip-fcm' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, ym, employees } = body;
+          if (!did || !employees || !employees.length) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          let sent = 0;
+          for (const emp of employees) {
+            try {
+              const mr = await fetch(`${FS_BASE}/members/${emp.uid}`, {headers:{'Authorization':'Bearer '+token}});
+              const md = await mr.json();
+              const empFcm = md.fields?.fcmToken?.stringValue || '';
+              if (empFcm) {
+                const msg = `${ym} 급여명세서가 발송되었습니다. 실수령액: ₩${Number(emp.netPay||0).toLocaleString()}`;
+                await sendAdminFCM(env, empFcm, '💰 급여명세서', msg);
+                sent++;
+              }
+            } catch(e){}
+          }
+          return new Response(JSON.stringify({ok:true,sent}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         }
       }
 
@@ -3409,6 +3523,20 @@ fetch('/qr/members?did='+DID)
               createdAt:  {stringValue: now.toISOString()}
             }})
           });
+
+          // 사장님 FCM 출퇴근 알림
+          try {
+            const compRes2 = await fetch(`${FS_BASE}/companies/${did}`, {headers:{'Authorization':'Bearer '+token}});
+            const compData2 = await compRes2.json();
+            const fcmArr2 = compData2.fields?.fcmTokens?.arrayValue?.values?.map(v=>v.stringValue).filter(Boolean) || [];
+            const fcmSingle2 = compData2.fields?.fcmToken?.stringValue || '';
+            const allFcmTokens = [...new Set([...fcmArr2, fcmSingle2].filter(Boolean))];
+            const actionLabel = type==='in'?'출근':'퇴근';
+            const kstStr = kst.toISOString().slice(11,16);
+            for(const ft of allFcmTokens) {
+              await sendAdminFCM(env, ft, `👤 ${actionLabel} 알림`, `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`);
+            }
+          } catch(e){}
 
           return Response.json({ok:true});
         } catch(e) {

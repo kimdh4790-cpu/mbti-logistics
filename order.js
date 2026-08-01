@@ -326,6 +326,14 @@ function _doOrder(payType){
   _listenPickup(ref.id);
   // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
   try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
+  // 사장님 FCM 신규주문 알림
+  if(_did){
+   fetch('/api/filo-push',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,title:'🆕 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
+   }).catch(function(){});
+  }
  }).catch(function(e){
   _filoToast('❌ 주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
@@ -524,6 +532,42 @@ function _callStaff(){
  }).catch(function(){});
 }
 
+
+// ── AI CS봇 ─────────────────────────────────────────────────────────────────
+function _openCsBot(){
+ var p=document.getElementById('cs-panel');
+ if(p){p.style.display='flex';var inp=document.getElementById('cs-input');if(inp)inp.focus();}
+}
+function _closeCsBot(){
+ var p=document.getElementById('cs-panel');
+ if(p)p.style.display='none';
+}
+function _escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _sendCsQuestion(){
+ var inp=document.getElementById('cs-input');
+ var msgs=document.getElementById('cs-msgs');
+ if(!inp||!msgs)return;
+ var q=inp.value.trim();
+ if(!q)return;
+ inp.value='';
+ msgs.innerHTML+='<div class="cs-msg cs-user">'+_escHtml(q)+'</div>';
+ var typingId='cs-typing-'+Date.now();
+ msgs.innerHTML+='<div class="cs-msg cs-bot" id="'+typingId+'">⏳ 답변 생성 중...</div>';
+ msgs.scrollTop=msgs.scrollHeight;
+ fetch('/api/cs-bot',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({did:_did,question:q,fcmToken:_fcmToken||undefined,lang:window._lang||'ko'})
+ }).then(function(r){return r.json();}).then(function(d){
+  var typing=document.getElementById(typingId);
+  var answerText=d.answer||'죄송합니다. 잠시 후 다시 문의해 주세요.';
+  if(typing)typing.outerHTML='<div class="cs-msg cs-bot">'+_escHtml(answerText)+'</div>';
+  msgs.scrollTop=msgs.scrollHeight;
+ }).catch(function(){
+  var typing=document.getElementById(typingId);
+  if(typing)typing.outerHTML='<div class="cs-msg cs-bot">연결에 실패했습니다. 잠시 후 다시 시도해 주세요.</div>';
+ });
+}
 
 // ── 영수증 알림 받기 ─────────────────────────────────────────────
 function reqReceiptFCM(){
