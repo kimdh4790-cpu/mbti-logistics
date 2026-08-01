@@ -2658,7 +2658,7 @@ fetch('/qr/members?did='+DID)
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, `👤 ${actionLabel} 알림`, `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`);
+              await sendAdminFCM(env, ft, { title: `👤 ${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
             }
           } catch(e){}
 
@@ -2744,7 +2744,7 @@ fetch('/qr/members?did='+DID)
           const d = await resp.json();
           const answer = (d.content&&d.content[0]&&d.content[0].text)||'죄송합니다. 잠시 후 다시 문의해 주세요.';
           if (fcmToken) {
-            try { await sendAdminFCM(env, fcmToken, '💬 문의 답변', answer); } catch(e){}
+            try { await sendAdminFCM(env, fcmToken, { title: '💬 문의 답변', body: answer }); } catch(e){}
           }
           return new Response(JSON.stringify({ok:true,answer}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
@@ -2766,7 +2766,7 @@ fetch('/qr/members?did='+DID)
           const allTokens = [...new Set([...fcmArr, fcmSingle].filter(Boolean))];
           let sent = 0;
           for(const ft of allTokens) {
-            try { await sendAdminFCM(env, ft, title, msgBody||''); sent++; } catch(e){}
+            try { await sendAdminFCM(env, ft, { title, body: msgBody||'' }); sent++; } catch(e){}
           }
           return new Response(JSON.stringify({ok:true,sent}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
@@ -2789,7 +2789,7 @@ fetch('/qr/members?did='+DID)
               const empFcm = md.fields?.fcmToken?.stringValue || '';
               if (empFcm) {
                 const msg = `${ym} 급여명세서가 발송되었습니다. 실수령액: ₩${Number(emp.netPay||0).toLocaleString()}`;
-                await sendAdminFCM(env, empFcm, '💰 급여명세서', msg);
+                await sendAdminFCM(env, empFcm, { title: '💰 급여명세서', body: msg });
                 sent++;
               }
             } catch(e){}
@@ -3534,7 +3534,7 @@ fetch('/qr/members?did='+DID)
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, `👤 ${actionLabel} 알림`, `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`);
+              await sendAdminFCM(env, ft, { title: `👤 ${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
             }
           } catch(e){}
 
