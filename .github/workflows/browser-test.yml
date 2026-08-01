@@ -22,9 +22,8 @@ jobs:
 
       - name: Install Playwright + Chromium
         run: |
-          npm init -y --silent
-          npm install playwright@latest --silent
-          npx playwright install chromium --with-deps
+          npm install playwright@1.56.1 --no-save --silent
+          ./node_modules/.bin/playwright install chromium --with-deps
 
       - name: Run Demo Browser Tests
         run: node tests/filo-demo-test.mjs
