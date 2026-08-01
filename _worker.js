@@ -3462,13 +3462,39 @@ ${JSON.stringify(postSummary)}
             allW2.push(fsd2('companies',did,{name:d.name,dealerId:did,type:d.type,businessType:d.type,address:d.addr,phone:d.phone,openHours:d.hours,status:'active',createdAt:'2026-01-01T00:00:00Z',primaryColor:d.primaryColor,bgColor:d.bgColor,theme:d.type,demo:true}));
             d.staff.forEach(function(s,i){const uid=`${did}_m${i+1}`;allW2.push(fsd2('members',uid,{uid,name:s.n,role:s.r,hourlyRate:s.hw,dealerId:did,status:'active',joinDate:'2026-01-01'}));});
             d.menus.forEach(function(m){allW2.push(fsd2('filo_menus',`${did}_${m.id}`,{name:m.n,price:m.p,category:m.c,emoji:m.e,dealerId:did,available:true,createdAt:'2026-01-01T00:00:00Z'}));});
-            const dates=['2026-07-05','2026-07-10','2026-07-15','2026-07-20','2026-07-25'];
-            dates.forEach(function(date,oi){
-              const items=[];let total=0;
-              d.menus.slice(0,3).forEach(function(m){items.push({name:m.n,price:m.p,qty:1,emoji:m.e});total+=m.p;});
-              const isoStr=`${date}T${String(10+oi).padStart(2,'0')}:30:00.000Z`;
-              allW2.push(fsd2('filo_orders',`${did}_demo_${String(oi+1).padStart(2,'0')}`,{dealerId:did,type:'table',status:'completed',payType:'card',tableNum:oi+1,tableName:`테이블 ${oi+1}`,items,total,createdAt:isoStr,date}));
+            // 오늘 포함 7일 데이터 (현실적인 50+ 주문)
+            const todayStr=new Date().toISOString().slice(0,10);
+            const sevenDays=[];for(let si=6;si>=0;si--){const sd=new Date();sd.setDate(sd.getDate()-si);sevenDays.push(sd.toISOString().slice(0,10));}
+            const peakHours=[8,9,10,12,13,14,15,16,17,18,19,20];
+            const payTypes=['card','cash','kakaopay','naverpay'];
+            let gon=0;
+            sevenDays.forEach(function(date){
+              const isToday=date===todayStr;
+              const ordCnt=isToday?6:8;
+              const statuses=isToday?['pending','preparing','completed','completed','completed','completed']:['completed'];
+              for(let oi=0;oi<ordCnt;oi++){
+                const h=peakHours[oi%peakHours.length];
+                const mm=(oi*7+3)%58;
+                const status=statuses[oi%statuses.length];
+                const payType=status==='completed'?payTypes[gon%4]:'';
+                const cnt=1+(oi%3===0?1:0);
+                const items=[];let total=0;
+                for(let j=0;j<cnt;j++){const m=d.menus[(gon+j)%d.menus.length];const qty=j===0&&m.p<7000?2:1;items.push({name:m.n,price:m.p,qty,emoji:m.e});total+=m.p*qty;}
+                allW2.push(fsd2('filo_orders',`${did}_${date.replace(/-/g,'')}_${String(oi+1).padStart(2,'0')}`,{dealerId:did,type:'table',status,payType,tableNum:(oi%8)+1,tableName:`테이블 ${(oi%8)+1}`,items,total,createdAt:`${date}T${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00.000Z`,date}));
+                gon++;
+              }
+              // 일별 POS 매출 집계
+              let dayTotal=0;
+              for(let oi=0;oi<ordCnt;oi++){const m=d.menus[oi%d.menus.length];dayTotal+=m.p*(1+(oi%3===0?1:0));}
+              allW2.push(fsd2('filo_sales',`${did}_${date}`,{dealerId:did,date,total:dayTotal,itemCount:ordCnt,status:'closed'}));
             });
+            // 오늘 출근 기록 (직원 전원)
+            d.staff.forEach(function(s,i){
+              allW2.push(fsd2('attendance',`${did}_att_${todayStr}_m${i+1}`,{dealerId:did,memberId:`${did}_m${i+1}`,memberName:s.n,type:'in',date:todayStr,time:'09:00',createdAt:todayStr+'T00:00:00Z'}));
+            });
+            // 재고 (3개 부족 시뮬레이션)
+            const invList=['쌀(20kg)','참기름(1L)','간장(1.8L)','된장(3kg)','설탕(3kg)','소금(1kg)','고추장(5kg)','식용유(1.8L)','계란(30개)','마늘(1kg)'];
+            invList.forEach(function(nm,i){allW2.push(fsd2('inventory',`${did}_inv_${i+1}`,{dealerId:did,name:nm,stock:i<3?3:12+i,minStock:5,unit:'개',category:'식자재',updatedAt:todayStr}));});
           }
           const batchUrl2=`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:batchWrite`;
           const hdrs2={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
