@@ -3,7 +3,6 @@ name: Deploy to Cloudflare Workers
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -19,17 +18,8 @@ jobs:
         run: npm install -g wrangler@3.78.2
       - name: Remove node_modules
         run: rm -rf node_modules
-      - name: Deploy Worker
+      - name: Deploy
         run: wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Upload settle.html to KV
-        run: |
-          npx wrangler kv key put "settle.html" \
-            --path=donway-pages/index.html \
-            --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b \
-            --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
