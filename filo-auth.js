@@ -185,6 +185,41 @@ function _showApp(){
  },1500);
 }
 
+/* ── 라인 아이콘 헬퍼 (Lucide 24px 기준) ── */
+function _svgIcon(n){
+ var s='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">';
+ var p={
+  home:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>',
+  monitor:'<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+  bell:'<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>',
+  truck:'<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  'bar-chart':'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  list:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  grid:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+  package:'<line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27,6.96 12,12.01 20.73,6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  flask:'<path d="M10 2v7.31L5.72 15a3 3 0 001.22 5H17a3 3 0 001.22-5L14 9.31V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>',
+  'user-check':'<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
+  tag:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  users:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>',
+  'user-plus':'<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  'trending-up':'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  'pie-chart':'<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
+  briefcase:'<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>',
+  sliders:'<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  'credit-card':'<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  cpu:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+  megaphone:'<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/>',
+  archive:'<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>',
+  menu:'<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+ };
+ return s+(p[n]||p['sliders'])+'</svg>';
+}
+
 function _buildFiloNav(){
  var d=_cachedCompanyDoc||{};
  var subs=d.subscriptions||{};
@@ -234,86 +269,70 @@ function _buildFiloNav(){
 
  var menus=[];
 
- /* ── 홈 ── */
- menus.push({s:'홈',items:[
-  {ic:'🏠',l:'대시보드',p:'home'},
- ]});
-
- /* ── 판매 (키오스크 구독) ── */
+ /* ── 판매 (항상 — 홈 포함) ── */
+ var _sales=[{ic:'home',l:'대시보드',p:'home'}];
  if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
-  menus.push({s:'🛒 판매',items:[
-   {ic:'🖥️',l:'POS 결제',p:'kiosk'},
-   {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
-   {ic:'🔔',l:'주문 대기',p:'orders'},
-   {ic:'🛵',l:'배달 주문',p:'delivery'},
-  ]});
+  _sales.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
+  _sales.push({ic:'bell',l:'주문 대기',p:'orders'});
+  _sales.push({ic:'truck',l:'배달 주문',p:'delivery'});
+  _sales.push({ic:'bar-chart',l:'매출 집계',p:'pos_report'});
+ }
+ if(isAdmin&&(hasAll||hasSub('kiosk')||hasFeature('kiosk')||hasFeature('table_order'))){
+  _sales.push({ic:'list',l:'메뉴 관리',p:'menu_mgmt'});
+ }
+ _sales.push({ic:'cpu',l:'AI 어시스턴트',p:'ai',badge:'NEW'});
+ menus.push({s:'판매',items:_sales});
+
+ /* ── 테이블 ── */
+ if(hasAll||hasFeature('table_order')||hasSub('kiosk')){
+  var _table=[
+   {ic:'grid',l:'테이블 현황',p:'table_qr'},
+   {ic:'tag',l:'테이블 QR',p:'qr_mgmt'},
+  ];
+  if(hasAll||hasFeature('bakery_qr'))_table.push({ic:'archive',l:'빵·디저트 QR',p:'bakery_qr_mgmt'});
+  menus.push({s:'테이블',items:_table});
  }
 
- /* ── 테이블오더 (table_order 기능) ── */
- if(hasAll||hasSub('kiosk')||hasFeature('table_order')){
-  menus.push({s:'🍽 테이블',items:[
-   {ic:'📱',l:'테이블 현황',p:'table_qr'},
-   {ic:'🛒',l:'주문 접수',p:'orders'},
-   {ic:'🍽',l:'메뉴 관리',p:'menu_mgmt'},
-  ]});
- }
-
- /* ── 재고 (인벤토리 구독) ── */
+ /* ── 재고 ── */
  if(hasAll||hasSub('inventory')||hasFeature('inventory')){
-  menus.push({s:'📦 재고',items:[
-   {ic:'📊',l:'재고 대시보드',p:'inv_dash'},{ic:'📋',l:'재고 현황',p:'inventory'},
-   {ic:'🍽',l:'레시피·원가',p:'recipe'},
-   {ic:'🔔',l:'자동 발주',p:'auto_order'},
+  menus.push({s:'재고',items:[
+   {ic:'bar-chart',l:'재고 대시보드',p:'inv_dash'},
+   {ic:'package',l:'재고 현황',p:'inventory'},
+   {ic:'flask',l:'레시피·원가',p:'recipe'},
+   {ic:'refresh',l:'자동 발주',p:'auto_order'},
   ]});
  }
 
- /* ── 운영 (QR·테이블) ── */
- if(hasAll||hasSub('qr')||hasSub('kiosk')||hasFeature('qr_attend')||hasFeature('table_order')){
-  menus.push({s:'🏪 운영',items:[
-   {ic:'👤',l:'직원 QR',p:'qr_staff'},
-   {ic:'📋',l:'테이블 QR',p:'table_qr'},{ic:'🧍',l:'웨이팅',p:'waiting'},
-   {ic:'🗓',l:'예약·달력',p:'schedule'},
-  ]});
- }
-
- /* ── 예약 (reservation 기능) ── */
+ /* ── 운영 ── */
+ var _ops=[];
+ if(hasAll||hasFeature('qr_attend'))_ops.push({ic:'user-check',l:'직원 QR',p:'qr_staff'});
  if(hasAll||hasFeature('reservation')){
-  menus.push({s:'📅 예약',items:[
-   {ic:'📅',l:'예약 관리',p:'schedule'},
-   {ic:'👥',l:'회원 관리',p:'members'},
-  ]});
+  _ops.push({ic:'calendar',l:'예약·달력',p:'schedule'});
+  _ops.push({ic:'clock',l:'웨이팅',p:'waiting'});
  }
-
- /* ── 회원CRM (member_crm 기능) ── */
+ if(isAdmin)_ops.push({ic:'users',l:'직원 관리',p:'members'});
  if(hasAll||hasFeature('member_crm')){
-  menus.push({s:'👤 회원',items:[
-   {ic:'👤',l:'회원 목록',p:'members'},
-   {ic:'🎁',l:'포인트·멤버십',p:'membership'},
-  ]});
+  _ops.push({ic:'user-plus',l:'회원 관리',p:'members'});
+  _ops.push({ic:'star',l:'포인트·멤버십',p:'membership'});
  }
+ if(_ops.length)menus.push({s:'운영',items:_ops});
 
- /* ── 매출분석 (sales_analytics 기능) ── */
+ /* ── 분석 ── */
+ var _analytics=[];
  if(hasAll||hasFeature('sales_analytics')){
-  menus.push({s:'📈 분석',items:[
-   {ic:'📈',l:'매출 리포트',p:'sales'},
-   {ic:'💰',l:'마진 분석',p:'margin'},
-  ]});
+  _analytics.push({ic:'trending-up',l:'매출 리포트',p:'sales'});
+  _analytics.push({ic:'pie-chart',l:'마진 분석',p:'margin'});
  }
+ if(isAdmin)_analytics.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
+ if(_analytics.length)menus.push({s:'분석',items:_analytics});
 
- /* ── QR 관리 (bakery_qr 기능) ── */
- if(hasAll||hasFeature('bakery_qr')||hasFeature('table_order')||hasFeature('kiosk')){
-  menus.push({s:'📱 QR관리',items:[
-   {ic:'📱',l:'테이블 QR',p:'qr_mgmt'},
-   {ic:'🥐',l:'빵·디저트 QR',p:'bakery_qr_mgmt'},
-  ]});
- }
-
- /* ── 설정·관리 (항상 표시) ── */
- menus.push({s:'⚙️ 설정',items:[
-  {ic:'🧾',l:'세무사 연동',p:'tax_share'},
-  {ic:'⚙️',l:'설정',p:'settings'},
-  {ic:'💳',l:'구독 관리',p:'subscription'},
- ]});
+ /* ── 설정 ── */
+ var _settings=[
+  {ic:'sliders',l:'설정',p:'settings'},
+  {ic:'credit-card',l:'구독 관리',p:'subscription'},
+ ];
+ if(isAdmin)_settings.push({ic:'megaphone',l:'공지사항',p:'notices'});
+ menus.push({s:'설정',items:_settings});
 
  var html='';
  var _closedG=[];
@@ -325,19 +344,16 @@ function _buildFiloNav(){
   var arrowTxt=isClosed?'▸':'▾';
   var groupStyle=isClosed?' style="max-height:0;overflow:hidden"':'';
 
-  if(g.s==='홈'){
-   /* 홈은 그룹 헤더 없이 바로 아이템 */
-   html+='<div class="ns-group" id="nav-g-'+gi+'">';
-  } else {
-   html+='<div class="'+labelCls+'" onclick="_toggleNavGroup('+gi+',this)" data-gi="'+gi+'">'+
-    '<span>'+g.s+'</span><span class="ns-arrow">'+arrowTxt+'</span></div>';
-   html+='<div class="ns-group" id="nav-g-'+gi+'"'+groupStyle+'>';
-  }
+  html+='<div class="'+labelCls+'" onclick="_toggleNavGroup('+gi+',this)" data-gi="'+gi+'">'+
+   '<span>'+g.s+'</span><span class="ns-arrow">'+arrowTxt+'</span></div>';
+  html+='<div class="ns-group" id="nav-g-'+gi+'"'+groupStyle+'>';
 
   g.items.forEach(function(m){
-   html+='<div class="ni" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
-   +'<span style="font-size:15px">'+m.ic+'</span>'
-   +'<span>'+m.l+'</span></div>';
+   html+='<div class="ni'+(m.cls?' '+m.cls:'')+'" id="nav-'+m.p+'" onclick="_filoGoPage(\''+m.p+'\')">'
+   +'<span class="ni-icon">'+_svgIcon(m.ic)+'</span>'
+   +'<span>'+m.l+'</span>'
+   +(m.badge?'<span class="ni-new">'+m.badge+'</span>':'')
+   +'</div>';
   });
   html+='</div>';
  });
@@ -401,7 +417,7 @@ function _toggleSidebar(){
  if(isMobile){
   /* 모바일: 열기/닫기 */
   var isOpen=sb.classList.toggle('open');
-  if(btn)btn.textContent=isOpen?'✕':'☰';
+  if(btn)btn.innerHTML=isOpen?_svgIcon('x'):_svgIcon('menu');
   if(ov)ov.style.display=isOpen?'block':'none';
  } else {
   /* 데스크탑: 축소/확장 */
@@ -411,28 +427,31 @@ function _toggleSidebar(){
   if(isCollapsed){
    if(wrap){wrap.style.marginLeft='52px';wrap.style.width='calc(100% - 52px)';}
    if(content2){content2.style.marginLeft='52px';}
-   if(btn)btn.textContent='☰';
+   if(btn)btn.innerHTML=_svgIcon('menu');
   } else {
    if(wrap){wrap.style.marginLeft='var(--sidebar-w)';wrap.style.width='calc(100% - var(--sidebar-w))';}
    if(content2){content2.style.marginLeft='var(--sidebar-w)';}
-   if(btn)btn.textContent='☰';
+   if(btn)btn.innerHTML=_svgIcon('menu');
   }
   localStorage.setItem('filo_sidebar_collapsed', isCollapsed?'1':'0');
  }
 }
 
 function _filoGoPage(p){
+ /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
+ _filoReleaseWatchers(p);
  var sb=document.getElementById('sidebar');
  if(sb&&sb.classList.contains('open')&&window.innerWidth<=768){
   sb.classList.remove('open');
   var btn=document.getElementById('sidebar-toggle');
-  if(btn)btn.textContent='☰';
+  if(btn)btn.innerHTML=_svgIcon('menu');
   var ov=document.getElementById('sidebar-overlay');
   if(ov)ov.style.display='none';
  }
- document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');});
+ /* CSS는 .ni.active 로 활성 스타일을 정의한다 — 'on' 만 붙이면 하이라이트가 안 뜬다 */
+ document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');el.classList.remove('active');});
  var nav=document.getElementById('nav-'+p);
- if(nav)nav.classList.add('on');
+ if(nav){nav.classList.add('on');nav.classList.add('active');}
  document.getElementById('sidebar').classList.remove('open');
 
  var el=document.getElementById('content');
@@ -441,10 +460,16 @@ function _filoGoPage(p){
  auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
- tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리'};
+ tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',
+ ai:'AI 어시스턴트',waiting:'웨이팅 관리',menu_mgmt:'메뉴 관리',qr_mgmt:'테이블 QR 관리',
+ bakery_qr_mgmt:'빵·디저트 QR',inv_dash:'재고 대시보드',margin:'마진 분석',sales:'매출 리포트',expiry:'유통기한 관리'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
+ /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
+ var _routed=true;
+
  if(p==='home') _filoPageHome(el);
+ else if(p==='ai') _filoPageAI(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
  else if(p==='qr_mgmt') {
@@ -482,6 +507,19 @@ function _filoGoPage(p){
  else if(p==='settings') _filoPageSettings(el);
  else if(p==='subscription') _filoPageSubscription(el);
  else if(p==='cost_mgmt') _filoPageCostMgmt(el);
+ else _routed=false;
+
+ /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */
+ if(!_routed&&el){
+  el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--t3)">'+
+   '<div style="font-size:40px;margin-bottom:12px">🚧</div>'+
+   '<div style="font-weight:700;margin-bottom:6px">'+esc(titles[p]||p)+'</div>'+
+   '<div style="font-size:12px">준비 중입니다</div></div>';
+ }
+
+ /* POS·주문 화면에서만 음성 주문 FAB 노출 */
+ _filoSyncVoiceFab(p);
+
  /* 프리미엄 페이지 전환 */
  if(el){
   el.style.opacity='0';
@@ -496,8 +534,6 @@ function _filoGoPage(p){
    });
   });
  }
-
- else el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">🚧</div><div style="font-weight:700;margin-bottom:6px">'+(titles[p]||p)+'</div><div style="font-size:12px">준비 중입니다</div></div>';
 }
 
 /* 프리미엄 숫자 카운팅 */
@@ -527,19 +563,24 @@ function _filoPageHome(el){
   var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
  }
 
- el.innerHTML='<div style="max-width:900px;margin:0 auto">'+
- '<div class="fade-up hero-card" style="margin-bottom:16px">'+
- '<div style="position:relative;z-index:1"><div style="font-size:10px;font-weight:700;color:rgba(167,139,250,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">FILO · 실시간 운영</div>'+
- '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.8px">'+(d.companyName||d.name||'')+'</div>'+
+ el.innerHTML='<div style="max-width:1180px;margin:0 auto">'+
+ '<div class="ai-hero fade-up">'+
+ '<div class="ai-hero-glow"></div>'+
+ '<div style="position:relative;z-index:1">'+
+ '<div class="ai-hero-eyebrow">FILO · 실시간 운영</div>'+
+ '<div class="ai-hero-title">'+esc(d.companyName||d.name||'')+'</div>'+
  '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'+
  '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+today+'</span>'+
  '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#22c55e"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
- '</div></div></div>'+
+ '</div>'+
+ '<div class="ai-hero-sub" id="home-ai-briefing"><span class="ai-typing">오늘 매장 상황을 분석하는 중</span></div>'+
+ '</div></div>'+
 
  '<div class="kpi-grid" id="home-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">'+
  [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'💰',id:'hs-0'},
   {t:'오늘 순이익',c:'kpi-profit',vc:'#22c55e',ic:'📈',id:'hs-profit'},
   {t:'마진율',c:'kpi-margin',vc:'#f59e0b',ic:'📊',id:'hs-margin'},
+  {t:'이번 달 매출',c:'kpi-month',vc:'#38bdf8',ic:'🗓',id:'hs-month'},
   {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'🔔',id:'hs-1'},
   {t:'재고 부족',c:'kpi-warn',vc:'#f59e0b',ic:'⚠️',id:'hs-2'},
   {t:'출근 인원',c:'kpi-staff',vc:'#38bdf8',ic:'👥',id:'hs-3'}
@@ -597,73 +638,191 @@ function _filoPageHome(el){
  '</div></div>'+
  '</div>';
 
- if(did){
+ if(!did) return;
+
  var ym=today.slice(0,7);
- /* POS 실시간 onSnapshot → 홈 KPI 즉시 갱신 */
- _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
- .onSnapshot(function(posSnap){
-  Promise.all([
-   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
-   firebase.firestore().collection('mbetco_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
-   firebase.firestore().collection('filo_sales').where('dealerId','==',did).where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
-   firebase.firestore().collection('inventory').where('dealerId','==',did).get(),
-   firebase.firestore().collection('menu_costs').where('dealerId','==',did).get()
-  ]).then(function(res){
-   var costMap={};
-   res[4].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
-   var todayRev=0,monthRev=0,low=0,todayCost=0;
-   /* 오늘 POS */
-   posSnap.forEach(function(doc){
-    var d=doc.data();todayRev+=(d.total||0);
-    (d.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
-   });
-   /* 오늘 수동 매출 */
-   res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-   /* 월 수동 매출 */
-   res[1].forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-   /* 월 POS 매출 */
-   res[2].forEach(function(doc){monthRev+=(doc.data().total||0);});
-   /* 재고 부족 */
-   res[3].forEach(function(doc){var d=doc.data();if(d.stock!=null&&d.minStock!=null&&d.stock<=d.minStock)low++;});
-   var todayMargin=todayRev>0?Math.round((todayRev-todayCost)/todayRev*100):0;
-   var e0=document.getElementById('hs-0'),e1=document.getElementById('hs-1'),e2=document.getElementById('hs-2'),e3=document.getElementById('hs-3');
-  /* 미완료 주문 실시간 */
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
-   .onSnapshot(function(snap){if(e1){e1.textContent=snap.size+'건';if(snap.size>0){e1.classList.add('bounce-in');setTimeout(function(){e1.classList.remove('bounce-in');},500);}}});
-  /* 재고 부족 */
-  _db.collection('inventory').where('dealerId','==',did).get().then(function(snap){
-   var low=0;snap.forEach(function(doc){var d=doc.data();if((d.stock||0)<=(d.minStock||5))low++;});
-   if(e2)e2.textContent=low+'개';
-  });
-  /* 출근 인원 실시간 (DINE 출퇴근 연동) */
-  if(window._filoAttendUnsub)window._filoAttendUnsub();
-  window._filoAttendUnsub=_db.collection('attendance')
-   .where('dealerId','==',did).where('date','==',today)
-   .onSnapshot(function(attSnap){
-    var ins={},outs={};
-    attSnap.forEach(function(doc){
-     var d=doc.data();
-     if(d.type==='in')ins[d.memberId]=d;
-     else if(d.type==='out')outs[d.memberId]=d;
+ /* 페이지 재진입 시 이전 리스너 정리 — 중첩 onSnapshot 누수 방지 */
+ _filoStopHomeWatch();
+
+ /* ① 오늘 POS 매출 · 순이익 · 마진율 (실시간) */
+ window._filoHomeUnsubs.push(
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(posSnap){
+   Promise.all([
+    _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
+    _db.collection('menu_costs').where('dealerId','==',did).get()
+   ]).then(function(res){
+    var costMap={};
+    res[1].forEach(function(doc){var c=doc.data();costMap[c.name]=c;});
+    var todayRev=0,todayCost=0;
+    posSnap.forEach(function(doc){
+     var s=doc.data();
+     if(s.status==='cancel'||s.status==='cancelled')return;
+     todayRev+=(s.total||0);
+     (s.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
     });
-    var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
-    if(e3)e3.textContent=working+'명';
-    // DINE 연동 카드에도 표시
-    var dineAtt=document.getElementById('filo-dine-att');
-    if(dineAtt)dineAtt.textContent='출근 '+working+'명';
-   },function(){});
-   var todayProfit=todayRev-todayCost;
-   var ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
-   if(e0)_countUp(e0,todayRev,400,'₩','');
-   if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
-   if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
-   if(e1)_countUp(e1,monthRev,600,'₩','');
+    res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
+
+    var todayProfit=todayRev-todayCost;
+    var todayMargin=todayRev>0?Math.round(todayProfit/todayRev*100):0;
+    var e0=document.getElementById('hs-0'),ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
+    if(e0)_countUp(e0,todayRev,400,'₩','');
+    if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
+    if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
+   }).catch(function(){});
+  },function(){})
+ );
+
+ /* ② 이번 달 매출 (실시간) */
+ window._filoHomeUnsubs.push(
+  _db.collection('filo_sales').where('dealerId','==',did)
+   .where('date','>=',ym+'-01').where('date','<=',ym+'-31')
+  .onSnapshot(function(snap){
+   var monthRev=0;
+   snap.forEach(function(doc){var s=doc.data();if(s.status!=='cancel'&&s.status!=='cancelled')monthRev+=(s.total||0);});
+   _db.collection('mbetco_sales').where('dealerId','==',did)
+    .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get().then(function(ms){
+     ms.forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
+     var eM=document.getElementById('hs-month');
+     if(eM)_countUp(eM,monthRev,600,'₩','');
+    }).catch(function(){
+     var eM=document.getElementById('hs-month');
+     if(eM)_countUp(eM,monthRev,600,'₩','');
+    });
+  },function(){})
+ );
+
+ /* ③ 미완료 주문 (실시간) */
+ window._filoHomeUnsubs.push(
+  _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var pending=0;
+   snap.forEach(function(doc){var o=doc.data();if(o.status!=='completed'&&o.status!=='cleared'&&o.status!=='cancel')pending++;});
+   var e1=document.getElementById('hs-1');
+   if(!e1)return;
+   e1.textContent=pending+'건';
+   e1.style.color=pending>0?'#ef4444':'#22c55e';
+   if(pending>0){e1.classList.add('bounce-in');setTimeout(function(){e1.classList.remove('bounce-in');},500);}
+  },function(){})
+ );
+
+ /* ④ 재고 부족 (실시간) */
+ window._filoHomeUnsubs.push(
+  _db.collection('inventory').where('dealerId','==',did)
+  .onSnapshot(function(snap){
+   var low=0;
+   snap.forEach(function(doc){
+    var i=doc.data();
+    var stock=(i.stock!=null?i.stock:(i.qty||0));
+    var min=(i.minStock!=null?i.minStock:5);
+    if(stock<=min)low++;
+   });
+   var e2=document.getElementById('hs-2');
    if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
-   if(e3)e3.textContent=document.getElementById('hs-3')?document.getElementById('hs-3').textContent:'';
-  }).catch(function(){});
- });
- }
+  },function(){})
+ );
+
+ /* ⑤ 출근 인원 (실시간 · DINE 출퇴근 연동) */
+ window._filoHomeUnsubs.push(
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(attSnap){
+   var ins={},outs={};
+   attSnap.forEach(function(doc){
+    var a=doc.data();
+    if(a.type==='in')ins[a.memberId]=a;
+    else if(a.type==='out')outs[a.memberId]=a;
+   });
+   var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
+   var e3=document.getElementById('hs-3');
+   if(e3)e3.textContent=working+'명';
+   var dineAtt=document.getElementById('filo-dine-att');
+   if(dineAtt)dineAtt.textContent='출근 '+working+'명';
+  },function(){})
+ );
+
+ /* ⑥ DINE 연동 카드 — 오늘 예약 · 테이블 주문 (실시간) */
+ window._filoHomeUnsubs.push(
+  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var b=document.getElementById('filo-dine-res-badge');
+   if(b)b.textContent=snap.size+'건';
+  },function(){})
+ );
+ window._filoHomeUnsubs.push(
+  _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var t=document.getElementById('filo-dine-sales');
+   if(t)t.textContent=snap.size+'건';
+  },function(){})
+ );
+
+ /* ⑦ AI 한줄 브리핑 */
+ if(typeof _filoAiBriefing==='function') _filoAiBriefing('home-ai-briefing');
 }
+
+/* ── 페이지별 실시간 리스너 소유권 표 ──────────────────────────────
+   각 모듈은 자기 페이지의 onSnapshot 해제 함수를 아래 전역에 보관한다.
+   페이지를 벗어날 때 여기서 일괄 해제해 리스너가 누적되지 않게 한다.
+   (같은 페이지로 재진입할 때는 해당 모듈이 스스로 재구독하므로 건너뛴다)
+   ────────────────────────────────────────────────────────────────── */
+var _FILO_WATCHERS=[
+ {pages:['home'],            keys:['_filoHomeUnsubs','_filoAttendUnsub']},
+ {pages:['orders'],          keys:['_ordersUnsub']},
+ {pages:['delivery'],        keys:['_deliveryUnsub']},
+ {pages:['sales_report','margin','sales'], keys:['_marginUnsub']},
+ {pages:['schedule'],        keys:['_calUnsub']},
+ {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub']},
+ {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']}
+];
+
+function _filoReleaseOne(key){
+ var v=window[key];
+ if(!v) return;
+ if(Array.isArray(v)){
+  v.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
+  window[key]=[];
+  return;
+ }
+ if(typeof v==='function'){try{v();}catch(e){}}
+ window[key]=null;
+}
+
+/* nextPage 가 소유한 리스너는 남기고, 나머지는 해제한다 */
+function _filoReleaseWatchers(nextPage){
+ _FILO_WATCHERS.forEach(function(w){
+  if(w.pages.indexOf(nextPage)>=0) return;
+  w.keys.forEach(_filoReleaseOne);
+ });
+ if(nextPage!=='home'&&typeof _filoStopHomeWatch==='function') _filoStopHomeWatch();
+}
+window._filoReleaseWatchers=_filoReleaseWatchers;
+
+/* POS·주문 페이지에서만 음성 주문 FAB을 띄운다 */
+function _filoSyncVoiceFab(p){
+ var show=(p==='kiosk'||p==='orders'||p==='delivery');
+ var fab=document.getElementById('filo-voice-fab');
+ if(!show){ if(fab)fab.remove(); return; }
+ if(fab||typeof _filoVoiceOrderOpen!=='function') return;
+ fab=document.createElement('button');
+ fab.id='filo-voice-fab';
+ fab.className='ai-fab';
+ fab.title='음성 주문';
+ fab.setAttribute('aria-label','음성 주문');
+ fab.textContent='🎙';
+ fab.onclick=function(){_filoVoiceOrderOpen();};
+ document.body.appendChild(fab);
+}
+window._filoSyncVoiceFab=_filoSyncVoiceFab;
+
+/* 대시보드 실시간 리스너 정리 — 페이지 이탈/재진입 시 호출 */
+function _filoStopHomeWatch(){
+ if(!window._filoHomeUnsubs) window._filoHomeUnsubs=[];
+ window._filoHomeUnsubs.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
+ window._filoHomeUnsubs=[];
+ /* 구버전에서 남긴 단일 핸들도 함께 정리 */
+ if(window._filoAttendUnsub){try{window._filoAttendUnsub();}catch(e){}window._filoAttendUnsub=null;}
+}
+window._filoStopHomeWatch=_filoStopHomeWatch;
 
 function _filoTab(t){
  ['login','register','join'].forEach(function(x){
