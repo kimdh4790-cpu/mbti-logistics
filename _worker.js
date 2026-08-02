@@ -1928,6 +1928,31 @@ async function acceptExchange(){
         }
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      /* /api/claude — AI 인사이트·리뷰답글 프록시 (filo-margin.js, filo-settings.js) */
+      if (path === '/api/claude' && method === 'POST') {
+        const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
+        if(!apiKey) return new Response(JSON.stringify({error:'API key not configured'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        try {
+          const body = await request.json();
+          const res = await fetch('https://api.anthropic.com/v1/messages',{
+            method:'POST',
+            headers:{
+              'x-api-key':apiKey,
+              'anthropic-version':'2023-06-01',
+              'content-type':'application/json'
+            },
+            body:JSON.stringify({
+              model: body.model||'claude-sonnet-4-6',
+              max_tokens: Math.min(body.max_tokens||500, 1000),
+              messages: body.messages||[]
+            })
+          });
+          const data = await res.json();
+          return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
       if (path === '/api/menus-bulk' && method === 'POST') {
         const adminEmail = request.headers.get('X-Admin-Email') || '';
         if (!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(adminEmail)) {
@@ -2713,6 +2738,68 @@ fetch('/qr/members?did='+DID)
           return new Response(JSON.stringify({reply}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
           return new Response(JSON.stringify({error:e.message}), {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/routeiq-match — ROUTEIQ AI 맞춤 공고 추천
+      if (path === '/api/routeiq-match' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { driver, posts } = body;
+          if (!driver || !Array.isArray(posts) || !posts.length) {
+            return new Response(JSON.stringify({error:'파라미터 오류',matches:[]}),
+              {status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+          const apiKey = (env.ANTHROPIC_API_KEY || '').trim();
+          if (!apiKey) {
+            // API 키 없으면 지역 점수 기반 폴백
+            const fallback = posts.slice(0,5).map((p,i)=>({id:p.id,score:90-i*8,reason:'지역 기반 추천'}));
+            return new Response(JSON.stringify({matches:fallback}),
+              {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+          const postSummary = posts.slice(0,20).map(p=>({
+            id:p.id,
+            title:p.title||'',
+            region:p.region||'',
+            courier:p.courier||p.courierBrand||'',
+            price:p.price||0,
+            minGuarantee:p.minGuarantee||0,
+            tags:(p.tags||[]).join(',')
+          }));
+          const prompt = `당신은 택배 기사와 노선 공고를 매칭하는 AI입니다. 기사 정보를 보고 공고 적합도를 평가해주세요.
+
+기사 정보:
+- 이름: ${driver.name}
+- 활동 지역: ${driver.region}
+- 보유 차종: ${driver.carType||'미설정'}
+- 선호 택배사: ${(driver.preferredCouriers||[]).join(', ')||'없음'}
+- 최근 실적 평균 단가: ${driver.avgPrice||0}원/건
+- 최근 실적 지역: ${(driver.recentRegions||[]).join(', ')||'없음'}
+
+공고 목록 (JSON):
+${JSON.stringify(postSummary)}
+
+각 공고에 대해 이 기사에게 얼마나 적합한지 0-100점으로 평가하고, 추천 이유를 한 줄(20자 이내)로 작성해주세요.
+상위 5개를 score 내림차순 JSON 배열로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
+형식: [{"id":"...","score":90,"reason":"지역 완벽 일치"},...]`;
+
+          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+            body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:prompt}]})
+          });
+          const d = await resp.json();
+          const text = (d.content&&d.content[0]&&d.content[0].text)||'[]';
+          let matches = [];
+          try {
+            const m = text.match(/\[[\s\S]*?\]/);
+            if (m) matches = JSON.parse(m[0]);
+          } catch(e) { matches = []; }
+          return new Response(JSON.stringify({matches}),
+            {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({error:e.message,matches:[]}),
+            {status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         }
       }
 
