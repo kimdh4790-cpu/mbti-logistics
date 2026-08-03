@@ -13145,7 +13145,8 @@ function _renderUniversalRules(c, r, industry){
 
 
 // ★ 범용 단가표 — AI정산 방식 렌더링
-var _uPriceData = {}; // {route: {price, priceVat, type:'basic'|'leader'|'backup'}}function _uShowPriceTab(ci){
+var _uPriceData = {}; // {route: {price, priceVat, type:'basic'|'leader'|'backup'}}
+function _uShowPriceTab(ci){
   var tabs=document.querySelectorAll('[id^="utab-"]');
   var panels=document.querySelectorAll('[id^="upanel-"]');
   tabs.forEach(function(b,i){
