@@ -13158,7 +13158,8 @@ var _uPriceData = {}; // {route: {price, priceVat, type:'basic'|'leader'|'backup
 
 // ★ 파일 일괄 임포트 (AI정산 importRpFile 방식 차용) // _uDoParseMulti 끝
 
-// ★ 등록 확인 화면function _uShowPriceConfirm(){
+// ★ 등록 확인 화면
+function _uShowPriceConfirm(){
   var basic=[], leaderMap=window._uLeaderMap||{};
   Object.keys(_uPriceData||{}).sort().forEach(function(r){
     var d=_uPriceData[r];
