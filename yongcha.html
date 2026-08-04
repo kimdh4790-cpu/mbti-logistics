@@ -2047,16 +2047,16 @@ function _showPostDetail(d){
     '</div>'+
     '<div class="detail-grid">'+
     [
-      ['📦 일 물량',d.volume+'건'],
-      ['💰 단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
-      ['🚗 차량',d.vehicleType||'무관'],
-      ['🔑 번호판',d.plateType||'무관'],
+      ['일 물량',d.volume+'건'],
+      ['단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
+      ['차량',d.vehicleType||'무관'],
+      ['번호판',d.plateType||'무관'],
       ['시간',d.workHours||'협의'],
-      ['📅 시작일',d.startDate||'협의'],
-      ['🏢 구역',d.areaType||'혼합'],
-      ['🏢 아파트',(d.areaAptRatio||'-')+'%'],
-      ['📆 근무요일',d.workDays||'협의'],
-      ['💳 정산',d.settleDay||'협의']
+      ['시작일',d.startDate||'협의'],
+      ['구역유형',d.areaType||'혼합'],
+      ['아파트',(d.areaAptRatio||'-')+'%'],
+      ['근무요일',d.workDays||'협의'],
+      ['정산',d.settleDay||'협의']
     ].map(function(r){
       return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
     }).join('')+'</div>'+
@@ -2083,7 +2083,11 @@ function _showPostDetail(d){
     })()+
 
     (isDriver?
-    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\')">🙋 지원하기</button>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+    '<span style="font-size:10px;font-weight:900;color:'+(_riqCalcScore(d)>=80?'var(--gn)':_riqCalcScore(d)>=65?'var(--br)':'var(--ac)')+'">ROUTEIQ IQ&thinsp;'+_riqCalcScore(d)+'</span>'+
+    '<span style="font-size:10px;color:var(--t3)">'+(_riqCalcScore(d)>=80?'우수 노선':''+(_riqCalcScore(d)>=65?'평균 이상':'보통 수준'))+'</span>'+
+    '</div>'+
+    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\')">지원하기</button>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
     '<button type="button" onclick="_sharePost(\''+d.id+'\',\''+_jsq(d.area)+'\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">🔗 공유하기</button>'+
     '<button type="button" onclick="_reportFakePost(\''+d.id+'\',\''+d.agencyId+'\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
@@ -2242,12 +2246,12 @@ function _pgMyPosts(el){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
           (d.status==='matched'?
           '<button onclick="_yShowMatchedDrivers(\''+d.id+'\',\''+d.agencyId+'\')" style="padding:10px;background:var(--gnl);border:none;border-radius:10px;color:var(--gn);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2"> 기사 현황 + 정산</button>'+
-          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자</button>':
-          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>')+
+          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">지원자</button>':
+          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">지원자 확인</button>')+
           '<button onclick="_togglePost(\''+d.id+'\',\''+d.status+'\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감처리':d.status==='matched'?'완료처리':'재오픈')+'</button>'+
           // 🤖 AI 배차 추천 — 모집중인 공고에서만 노출
           (d.status==='open'?
-          '<button onclick="_yAiRecommend(\''+d.id+'\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
+          '<button onclick="_yAiRecommend(\''+d.id+'\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">AI 기사 추천 받기</button>':'')+
           '</div>';
         list.appendChild(card);
       });
@@ -5476,7 +5480,7 @@ function _yEndRestNow(){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ROUTEIQ — AI 시세분석 · 실적카드 · AI 맞춤매칭
+// ROUTEIQ — AI 시세분석 · 실적카드 · AI 맞춤매칭 · 개인화 리포트
 // ══════════════════════════════════════════════════════════════════
 var _riqTab='heatmap';
 
@@ -5487,11 +5491,12 @@ function _pgRouteIQ(el){
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
     '<span class="riq-badge">ROUTEIQ</span>'+
     '<h1 class="page-title" style="margin:0">AI 노선 인텔리전스</h1></div>'+
-    '<p class="page-sub">실시간 시세·실적 기반 맞춤 매칭</p></div>'+
+    '<p class="page-sub">실시간 시세·실적·AI 기반 맞춤 매칭</p></div>'+
     '<div class="sub-tab-row" id="riq-tabs">'+
     '<button class="sub-tab on" onclick="_riqSwitch(\'heatmap\')">시세 히트맵</button>'+
     '<button class="sub-tab" onclick="_riqSwitch(\'record\')">실적 카드</button>'+
     (isDriver?'<button class="sub-tab" onclick="_riqSwitch(\'match\')">AI 매칭</button>':'')+
+    '<button class="sub-tab" onclick="_riqSwitch(\'report\')">내 리포트</button>'+
     '</div>'+
     '<div id="riq-body"></div>';
   _riqSwitch('heatmap');
@@ -5499,7 +5504,7 @@ function _pgRouteIQ(el){
 
 function _riqSwitch(tab){
   _riqTab=tab;
-  var tabs_order=['heatmap','record','match'];
+  var tabs_order=['heatmap','record','match','report'];
   document.querySelectorAll('#riq-tabs .sub-tab').forEach(function(b,i){
     b.classList.toggle('on',tabs_order[i]===tab);
   });
@@ -5507,6 +5512,115 @@ function _riqSwitch(tab){
   if(tab==='heatmap')_riqHeatmap(body);
   else if(tab==='record')_riqRecord(body);
   else if(tab==='match')_riqMatch(body);
+  else if(tab==='report')_riqReport(body);
+}
+
+// ── ROUTEIQ 리포트 — 개인화 인사이트 ─────────────────────────────
+function _riqReport(el){
+  el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div class="spinner"></div><p style="color:var(--t2);font-size:13px;margin-top:12px">리포트 생성 중...</p></div>';
+  var isDriver=_CU.type==='driver';
+  var uid=_CU.uid;
+  // 지원 이력 + 공고 이력 병렬 조회
+  var q1=isDriver
+    ? _db.collection('yongcha_applies').where('driverId','==',uid).orderBy('createdAt','desc').limit(30).get()
+    : _db.collection('yongcha_posts').where('agencyId','==',uid).orderBy('createdAt','desc').limit(30).get();
+  var q2=_db.collection('yongcha_posts').where('status','in',['open','matched']).limit(100).get();
+  Promise.all([q1,q2]).then(function(res){
+    var myDocs=res[0]; var allPosts=res[1];
+    // ── 1. 내 활동 통계
+    var total=myDocs.size;
+    var courierCount={};var regionCount={};var priceSum=0;var priceN=0;
+    myDocs.forEach(function(d){
+      var p=d.data();
+      var c=p.courier||p.courierBrand||'기타';
+      var r=p.region||p.driverRegion||'기타';
+      courierCount[c]=(courierCount[c]||0)+1;
+      regionCount[r]=(regionCount[r]||0)+1;
+      if(p.unitPrice){priceSum+=Number(p.unitPrice);priceN++;}
+    });
+    var topCourier=Object.keys(courierCount).sort(function(a,b){return courierCount[b]-courierCount[a];})[0]||'—';
+    var topRegion=Object.keys(regionCount).sort(function(a,b){return regionCount[b]-regionCount[a];})[0]||'—';
+    var avgP=priceN>0?Math.round(priceSum/priceN):0;
+
+    // ── 2. 시장 평균 단가
+    var mktPriceSum=0;var mktPriceN=0;
+    allPosts.forEach(function(d){
+      var p=d.data();if(p.unitPrice){mktPriceSum+=Number(p.unitPrice);mktPriceN++;}
+    });
+    var mktAvg=mktPriceN>0?Math.round(mktPriceSum/mktPriceN):0;
+    var priceDiff=avgP&&mktAvg?Math.round((avgP/mktAvg-1)*100):null;
+    var priceDiffColor=priceDiff===null?'var(--t2)':priceDiff>=0?'var(--gn)':'var(--rd)';
+    var priceDiffTxt=priceDiff===null?'데이터 없음':(priceDiff>=0?'+':'')+priceDiff+'% vs 시장평균';
+
+    // ── 3. IQ 점수 분포 (현재 공개 공고 기준)
+    var postArr=[];allPosts.forEach(function(d){postArr.push(Object.assign({id:d.id},d.data()));});
+    var scores=postArr.map(function(p){return _riqCalcScore(p);});
+    var scoreAvg=scores.length?Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length):0;
+    var highIQ=postArr.filter(function(p,i){return scores[i]>=75;});
+
+    // ── 4. 추천 전략 텍스트
+    var strategy='';
+    if(isDriver){
+      if(avgP&&mktAvg&&avgP<mktAvg*0.9)strategy='현재 지원하신 노선의 평균 단가가 시장 대비 낮습니다. IQ 70 이상 공고를 중심으로 탐색해보세요.';
+      else if(topCourier&&topCourier!=='—')strategy=topCourier+' 노선 경력이 가장 많습니다. 해당 택배사 신규 공고 알림을 설정해두세요.';
+      else strategy='ROUTEIQ IQ 점수 80 이상 공고는 평균보다 높은 단가와 신뢰 대리점 조건을 갖췄습니다.';
+    } else {
+      if(total>=5)strategy='공고 등록 이력이 충분합니다. IQ 점수가 낮은 공고는 단가 조정으로 지원율을 높일 수 있어요.';
+      else strategy='공고를 더 등록할수록 ROUTEIQ 분석이 정교해집니다. 첫 공고를 등록해보세요!';
+    }
+
+    var html=
+      // 요약 스코어카드
+      '<div class="riq-score-card">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<span class="riq-badge">내 ROUTEIQ 리포트</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.35)">'+new Date().toLocaleDateString('ko-KR')+'</span>'+
+      '</div>'+
+      '<div style="font-size:20px;font-weight:900;margin-bottom:2px">'+_esc(_CU.name)+'</div>'+
+      '<div style="font-size:12px;color:var(--t2)">'+_esc(_CU.region||'지역 미설정')+'  ·  '+(isDriver?'기사':'대리점')+'</div>'+
+      '</div>'+
+
+      // KPI 4칸
+      '<div class="kpi-grid col4" style="margin-bottom:16px">'+
+      '<div class="kpi-card"><div class="kpi-val" style="color:var(--ac)">'+(total||0)+'</div><div class="kpi-lbl">'+(isDriver?'총 지원':'총 공고')+'</div></div>'+
+      '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)">'+(avgP?_riqFmtP(avgP):'—')+'</div><div class="kpi-lbl">내 평균 단가</div></div>'+
+      '<div class="kpi-card"><div class="kpi-val" style="color:'+priceDiffColor+'">'+priceDiffTxt+'</div><div class="kpi-lbl">시장 대비</div></div>'+
+      '<div class="kpi-card"><div class="kpi-val" style="color:var(--pu)">'+scoreAvg+'</div><div class="kpi-lbl">시장 IQ 평균</div></div>'+
+      '</div>'+
+
+      // 활동 요약
+      '<div class="card" style="margin-bottom:14px">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">활동 요약</div>'+
+      '<div style="display:flex;flex-direction:column;gap:10px">'+
+      '<div style="display:flex;justify-content:space-between"><span style="color:var(--t2);font-size:13px">주요 택배사</span><b style="font-size:13px">'+_esc(topCourier)+'</b></div>'+
+      '<div style="display:flex;justify-content:space-between"><span style="color:var(--t2);font-size:13px">주요 지역</span><b style="font-size:13px">'+_esc(topRegion)+'</b></div>'+
+      '<div style="display:flex;justify-content:space-between"><span style="color:var(--t2);font-size:13px">IQ 75+ 공고</span><b style="font-size:13px;color:var(--gn)">'+highIQ.length+'건 모집중</b></div>'+
+      '</div></div>'+
+
+      // AI 전략 조언
+      (strategy?'<div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(0,212,170,.07),rgba(0,212,170,.03));border-color:rgba(0,212,170,.15)">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--ac);letter-spacing:.5px;margin-bottom:8px">ROUTEIQ 전략 제안</div>'+
+      '<div style="font-size:13.5px;color:var(--tx);line-height:1.65">'+_esc(strategy)+'</div>'+
+      '</div>':'')+
+
+      // IQ 고점수 공고 3개 미리보기
+      (highIQ.length?'<div class="card" style="margin-bottom:14px">'+
+      '<div style="font-size:14px;font-weight:800;margin-bottom:12px">IQ 75+ 추천 공고</div>'+
+      highIQ.slice(0,3).map(function(p){
+        var sc=_riqCalcScore(p);
+        var sc_c=sc>=80?'var(--gn)':sc>=75?'var(--br)':'var(--ac)';
+        return '<div onclick="_yOpenPost(\''+p.id+'\')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+          '<div><div style="font-size:13.5px;font-weight:800">'+_esc(p.area||p.region||'구역')+'</div>'+
+          '<div style="font-size:11px;color:var(--t2);margin-top:2px">'+_esc(p.courier||'')+'  ·  '+_won(p.unitPrice)+'원</div></div>'+
+          '<span style="font-size:14px;font-weight:900;color:'+sc_c+'">IQ '+sc+'</span>'+
+          '</div>';
+      }).join('')+
+      '</div>':'');
+
+    el.innerHTML=html;
+  }).catch(function(e){
+    el.innerHTML='<div class="card" style="color:var(--rd);text-align:center;padding:24px">리포트 오류: '+_esc(e.message)+'</div>';
+  });
 }
 
 // ── 1. 시세 히트맵 ───────────────────────────────────────────────
