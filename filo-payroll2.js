@@ -125,21 +125,31 @@ function _filoRenderPayList(){
   var typeLabel=m.wageType==='daily'?'일급':m.wageType==='monthly'?'월급':'시급';
   var empLabel=m.empType==='full'?'정직원':m.empType==='monthly'?'월급직':'단기알바';
   var hasWeekly=m.weeklyAllowance>0;
+  var hasOvertime=m.overtimePay>0;
+  var hasNight=m.nightPay>0;
+  var hasBreak=m.breakMin>0;
   return '<div class="pay-card slide-up stagger-'+Math.min(i+1,4)+'" style="flex-direction:column;gap:8px">'+
   '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
-  '<div>'+
+  '<div style="flex:1;min-width:0">'+
   '<div style="font-size:14px;font-weight:900">'+esc(m.name)+
   ' <span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--b3);color:var(--t2)">'+empLabel+'</span></div>'+
   '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+
-  typeLabel+' '+m.wage.toLocaleString()+'원 · '+m.dayCount+'일 · '+Math.floor(m.workHour)+'h '+m.workMin%60+'m</div>'+
+  typeLabel+' '+m.wage.toLocaleString()+'원 · '+m.dayCount+'일 · '+Math.floor(m.workHour)+'h '+m.workMin%60+'m'+
+  (hasBreak?' · 휴식차감 '+m.breakMin+'분':'')+
   '</div>'+
-  '<div style="text-align:right">'+
+  '</div>'+
+  '<div style="text-align:right;flex-shrink:0">'+
   '<div class="pay-amount">₩'+m.gross.toLocaleString()+'</div>'+
-  '<div style="font-size:10px;color:#ef4444">공제 -₩'+m.deduction.toLocaleString()+'</div>'+
-  '<div style="font-size:12px;font-weight:800;color:#22c55e">실수령 ₩'+m.netPay.toLocaleString()+'</div>'+
+  '<div style="font-size:10px;color:#EF4444">공제 -₩'+m.deduction.toLocaleString()+'</div>'+
+  '<div style="font-size:12px;font-weight:800;color:#10B981">실수령 ₩'+m.netPay.toLocaleString()+'</div>'+
   '</div></div>'+
-  (hasWeekly?'<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:6px;padding:4px 8px">'+
-  '📅 주휴수당 +₩'+m.weeklyAllowance.toLocaleString()+' 자동 포함</div>':'')+
+  /* 급여 상세 내역 */
+  '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+  '<div style="font-size:10px;background:rgba(99,102,241,.08);color:#6366F1;border-radius:6px;padding:3px 8px">기본급 ₩'+m.basePay.toLocaleString()+'</div>'+
+  (hasWeekly?'<div style="font-size:10px;background:rgba(245,158,11,.08);color:#F59E0B;border-radius:6px;padding:3px 8px">주휴수당 +₩'+m.weeklyAllowance.toLocaleString()+'</div>':'')+
+  (hasOvertime?'<div style="font-size:10px;background:rgba(239,68,68,.08);color:#EF4444;border-radius:6px;padding:3px 8px">연장수당 +₩'+m.overtimePay.toLocaleString()+'</div>':'')+
+  (hasNight?'<div style="font-size:10px;background:rgba(59,130,246,.08);color:#3B82F6;border-radius:6px;padding:3px 8px">야간수당 +₩'+m.nightPay.toLocaleString()+'</div>':'')+
+  '</div>'+
   (m.insurance?'<div style="font-size:10px;color:var(--t3)">4대보험 ₩'+m.insurance.toLocaleString()+' · 소득세 ₩'+m.tax.toLocaleString()+'</div>':'')+
   '</div>';
  }).join('');
