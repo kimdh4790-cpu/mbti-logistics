@@ -8130,6 +8130,68 @@ async function handleYongcha(request, env) {
     }
   }
 
+  // ── AI 코치 (Claude) ───────────────────────────────────────────────────────
+  if (path === '/api/ai-coach' && method === 'POST') {
+    try {
+      const { driver, posts } = await request.json();
+      const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+
+      const postSummary = (posts || []).slice(0, 6).map(p =>
+        `[${p.id}] ${p.courier} ${p.region} ${p.area} / 단가:${p.unitPrice}원 / ${p.volume}건 / ${p.workShift || ''} / ${p.vehicleType || ''}`
+      ).join('\n');
+
+      const prompt = `당신은 대한민국 택배 기사 수익 최적화 AI입니다. 간결하고 실용적으로 답변하세요.
+
+기사 정보:
+- 이름: ${driver.name || '기사'}
+- 담당 지역: ${driver.region || '미설정'}
+- 차량: ${driver.carType || '미설정'}
+
+현재 공고 목록:
+${postSummary || '공고 없음'}
+
+다음을 JSON으로 답변하세요 (다른 텍스트 없이 순수 JSON만):
+{
+  "summary": "기사에게 도움이 되는 1-2문장 수익 인사이트 (구체적 숫자 포함)",
+  "bestPickId": "가장 추천하는 공고 ID (없으면 null)",
+  "reason": "추천 이유 1문장",
+  "monthlyEst": "예상 월 수익 (예: 420만원)",
+  "applyMsg": "지원 시 쓸 한줄 메시지"
+}`;
+
+      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const claudeData = await claudeRes.json();
+      const raw = claudeData.content?.[0]?.text || '{}';
+      let parsed = {};
+      try { parsed = JSON.parse(raw); } catch(e) {
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) { try { parsed = JSON.parse(m[0]); } catch(e2) {} }
+      }
+
+      return new Response(JSON.stringify({ ok: true, data: parsed }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+  }
+
   // OPTIONS preflight
   if (method === 'OPTIONS') {
     return new Response(null, {
