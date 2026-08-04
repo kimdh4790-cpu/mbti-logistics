@@ -776,19 +776,21 @@ function _filoPageHome(el){
   },function(){})
  );
 
- /* ⑥ DINE 연동 카드 — 오늘 예약 · 테이블 주문 (실시간) */
+ /* ⑥ DINE 연동 카드 — 오늘 예약 (pending) · POS 매출 (실시간) */
  window._filoHomeUnsubs.push(
-  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today)
+  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
   .onSnapshot(function(snap){
    var b=document.getElementById('filo-dine-res-badge');
-   if(b)b.textContent=snap.size+'건';
+   if(b)b.textContent=snap.size>0?snap.size+'건':'없음';
   },function(){})
  );
  window._filoHomeUnsubs.push(
-  _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today)
+  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(snap){
+   var total=0,cnt=0;
+   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
    var t=document.getElementById('filo-dine-sales');
-   if(t)t.textContent=snap.size+'건';
+   if(t)t.textContent='₩'+total.toLocaleString()+'('+cnt+'건)';
   },function(){})
  );
 
@@ -1056,7 +1058,7 @@ function _filoLogout(){
  _auth.signOut();
 }
 
-// FILO ↔ DINE 실시간 예약 뱃지 (FILO 홈에서 DINE 예약 현황 표시)
+// FILO ↔ DINE 실시간 예약 토스트 (새 예약 알림 전용 — 뱃지는 홈 리스너⑥이 담당)
 function _filoWatchDineReservations(){
  if(window._filoDineResUnsub)window._filoDineResUnsub();
  var d=_cachedCompanyDoc||{};
@@ -1066,10 +1068,6 @@ function _filoWatchDineReservations(){
  window._filoDineResUnsub=_db.collection('filo_bookings')
   .where('dealerId','==',did).where('date','==',today).where('status','==','pending')
   .onSnapshot(function(snap){
-   // 홈 대시보드 DINE 예약 카드 갱신
-   var badge=document.getElementById('filo-dine-res-badge');
-   if(badge){badge.textContent=snap.size>0?'📅 예약 '+snap.size+'건':'예약 없음';badge.style.color=snap.size>0?'#f59e0b':'var(--t3)';}
-   // 새 예약 토스트
    if(snap.docChanges){
     snap.docChanges().forEach(function(change){
      if(change.type==='added'){
@@ -1081,22 +1079,7 @@ function _filoWatchDineReservations(){
   },function(){});
 }
 
-// FILO ↔ DINE 실시간 통합 매출 감시
-function _filoWatchDineSales(){
- if(window._filoDineSalesUnsub)window._filoDineSalesUnsub();
- var d=_cachedCompanyDoc||{};
- var did=d.dealerId||d.uid||'';
- if(!did||!_db)return;
- var today=_today();
- window._filoDineSalesUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(snap){
-   var total=0,cnt=0;
-   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
-   var el=document.getElementById('filo-dine-sales');
-   if(el)el.textContent='DINE ₩'+total.toLocaleString()+'('+cnt+'건)';
-  },function(){});
-}
+// _filoWatchDineSales 제거 — 홈 리스너⑥ filo_sales onSnapshot이 동일 기능 수행
 
 // ── 업종별 데모 로그인 ──────────────────────────────────────────────
 function _filoDemoLogin(type){
