@@ -456,18 +456,15 @@ function _dineWatchFiloSales(){
  var did=_CU&&_CU.dealerId;
  if(!did||!_db)return;
  var today=_today();
- var totalEl=document.getElementById('filo-live-total');
  window._dineFiloSalesUnsub=_db.collection('filo_sales')
   .where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(snap){
    var total=0,cnt=0;
    snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
-   // 사이드바/헤더에 실시간 매출 표시
    var liveEl=document.getElementById('dine-live-sales');
-   if(liveEl){liveEl.textContent='POS ₩'+total.toLocaleString();liveEl.style.color='#22c55e';}
-   // 대시보드 KPI 실시간 갱신
+   if(liveEl){liveEl.textContent='POS ₩'+total.toLocaleString();liveEl.style.color='#22c55e';liveEl.style.display='inline-block';}
    var kSales=document.getElementById('kpi-sales');
-   if(kSales&&kSales.dataset.source==='live')kSales.textContent='₩'+total.toLocaleString();
+   if(kSales){kSales.textContent='₩'+total.toLocaleString();kSales.classList.remove('skeleton-val');}
   },function(e){console.warn('filo-sales:',e);});
 }
 
