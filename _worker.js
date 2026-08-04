@@ -2855,6 +2855,268 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // ── /api/ai-insight — 대시보드 한줄 브리핑
+      if (path === '/api/ai-insight' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did } = body;
+          if (!did) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const today = new Date().toISOString().slice(0,10);
+          const weekAgo = new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+          let totalSales=0, txCount=0, lowStockCount=0;
+          try {
+            const sr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_sales'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:weekAgo}}}]}},limit:{value:200}}})});
+            const sd = await sr.json();
+            if(Array.isArray(sd)) sd.filter(d=>d.document).forEach(d=>{const f=d.document.fields||{};if(f.status?.stringValue!=='cancelled'){totalSales+=(f.total?.integerValue||f.total?.doubleValue||0)*1;txCount++;}});
+          } catch(e){}
+          try {
+            const ir = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_inventory'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'qty'},op:'LESS_THAN_OR_EQUAL',value:{integerValue:'5'}}}]}},limit:{value:50}}})});
+            const id = await ir.json();
+            if(Array.isArray(id)) lowStockCount=id.filter(d=>d.document).length;
+          } catch(e){}
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let insight='';
+          if(apiKey && txCount>0){
+            try {
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,messages:[{role:'user',content:`최근 7일 매출: ₩${totalSales.toLocaleString()} (${txCount}건). 재고부족: ${lowStockCount}건. 한 문장(30자 이내) 브리핑:`}]})});
+              const pd=await pr.json();
+              insight=pd.content?.[0]?.text||'';
+            } catch(e){}
+          }
+          if(!insight){
+            if(txCount===0) insight='최근 7일 매출 데이터가 없습니다. 매출을 입력해 주세요.';
+            else insight=`최근 7일 매출 ₩${totalSales.toLocaleString()}(${txCount}건)${lowStockCount>0?' · 재고 부족 '+lowStockCount+'건 확인 필요':''}`;
+          }
+          return new Response(JSON.stringify({ok:true,insight,lowStockCount}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/ai-forecast — AI 매출 예측 (내일+7일)
+      if (path === '/api/ai-forecast' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did } = body;
+          if (!did) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const now = new Date();
+          const today = now.toISOString().slice(0,10);
+          const thirtyAgo = new Date(now-30*86400000).toISOString().slice(0,10);
+          let salesByDate={}, salesByDow=[0,0,0,0,0,0,0], countByDow=[0,0,0,0,0,0,0];
+          try {
+            const sr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_sales'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:thirtyAgo}}},{fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:today}}}]}},limit:{value:500}}})});
+            const sd = await sr.json();
+            if(Array.isArray(sd)) sd.filter(d=>d.document).forEach(d=>{
+              const f=d.document.fields||{};
+              if(f.status?.stringValue==='cancelled') return;
+              const dt=f.date?.stringValue||today;
+              const amt=(f.total?.integerValue||f.total?.doubleValue||0)*1;
+              salesByDate[dt]=(salesByDate[dt]||0)+amt;
+            });
+          } catch(e){}
+          const sampleDays=Object.keys(salesByDate).length;
+          if(sampleDays<3) return new Response(JSON.stringify({ok:true,insufficient:true,message:'매출 예측을 위해 최소 3일 이상의 데이터가 필요합니다. 매출 입력 탭에서 데이터를 입력해 주세요.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          Object.entries(salesByDate).forEach(([dt,amt])=>{
+            const dow=new Date(dt).getDay();
+            salesByDow[dow]+=amt; countByDow[dow]++;
+          });
+          const avgByDow=salesByDow.map((s,i)=>countByDow[i]>0?Math.round(s/countByDow[i]):0);
+          const DOWS=['일','월','화','수','목','금','토'];
+          const week=[];
+          for(let i=1;i<=7;i++){
+            const d=new Date(now.getTime()+i*86400000);
+            const dt=d.toISOString().slice(0,10);
+            const dow=d.getDay();
+            const base=avgByDow[dow]||0;
+            week.push({date:dt,dow:DOWS[dow],amount:base,low:Math.round(base*0.8),high:Math.round(base*1.2)});
+          }
+          const txCount=Object.values(salesByDate).length;
+          const allAmounts=Object.values(salesByDate);
+          const weekTotal=week.reduce((s,w)=>s+w.amount,0);
+          const avgTicket=allAmounts.length?Math.round(allAmounts.reduce((a,b)=>a+b,0)/allAmounts.length):0;
+          const recentHalf=allAmounts.slice(-Math.floor(allAmounts.length/2));
+          const earlyHalf=allAmounts.slice(0,Math.floor(allAmounts.length/2));
+          const recentAvg=recentHalf.length?recentHalf.reduce((a,b)=>a+b,0)/recentHalf.length:0;
+          const earlyAvg=earlyHalf.length?earlyHalf.reduce((a,b)=>a+b,0)/earlyHalf.length:0;
+          const trendPerDay=earlyAvg?Math.round((recentAvg-earlyAvg)/earlyAvg*1000):0;
+          const trend=recentAvg>=earlyAvg?'up':'down';
+          const last7=Object.entries(salesByDate).slice(-7).map(([,v])=>v);
+          const prev7=Object.entries(salesByDate).slice(-14,-7).map(([,v])=>v);
+          const last7Avg=last7.length?last7.reduce((a,b)=>a+b,0)/last7.length:0;
+          const prev7Avg=prev7.length?prev7.reduce((a,b)=>a+b,0)/prev7.length:0;
+          const wowPct=prev7Avg?Math.round((last7Avg-prev7Avg)/prev7Avg*100):0;
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let insight='', aiPowered=false;
+          if(apiKey){
+            try {
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:100,messages:[{role:'user',content:`매출 추세: ${trend==='up'?'상승':'하락'}, 전주대비: ${wowPct}%, 평균 객단가: ₩${avgTicket.toLocaleString()}. 한 문장(40자 이내) 경영 인사이트:`}]})});
+              const pd=await pr.json();
+              insight=pd.content?.[0]?.text||'';
+              aiPowered=!!insight;
+            } catch(e){}
+          }
+          if(!insight) insight=`최근 ${sampleDays}일 데이터 기준, 매출이 ${trend==='up'?'상승':'하락'} 추세입니다.`;
+          return new Response(JSON.stringify({ok:true,tomorrow:week[0],week,confidence:Math.min(95,50+sampleDays),weekTotal,wowPct,avgTicket,trend,trendPerDay,insight,aiPowered,sampleDays,txCount}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/ai-menu-recommend — AI 메뉴 추천 (날씨·시간대·재고)
+      if (path === '/api/ai-menu-recommend' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, lat, lon } = body;
+          if (!did) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const hour = new Date().getHours();
+          const timeLabel = hour<11?'오전':hour<14?'점심':hour<17?'오후':hour<20?'저녁':'야간';
+          let menus=[], lowStock=[];
+          try {
+            const mr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'available'},op:'NOT_EQUAL',value:{booleanValue:false}}}]}},limit:{value:50}}})});
+            const md=await mr.json();
+            if(Array.isArray(md)) menus=md.filter(d=>d.document).map(d=>{const f=d.document.fields||{};return{name:f.name?.stringValue||'',price:(f.price?.integerValue||f.price?.doubleValue||0)*1,emoji:f.emoji?.stringValue||'🍽',category:f.category?.stringValue||'',stock:(f.stock?.integerValue||f.stock?.doubleValue||999)*1};}).filter(m=>m.name);
+          } catch(e){}
+          if(!menus.length) return new Response(JSON.stringify({ok:true,insufficient:true,message:'메뉴가 등록되어 있지 않습니다. 메뉴 관리 탭에서 메뉴를 등록해 주세요.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          lowStock=menus.filter(m=>m.stock<5 && m.stock<999).map(m=>({name:m.name,stockNote:m.stock+'개 남음'}));
+          const avail=menus.filter(m=>m.stock>=5||m.stock===999);
+          const WEATHER_ICONS=['🌙','🌙','🌙','🌙','🌙','🌙','☀️','☀️','☀️','🌤','🌤','☀️','☀️','☀️','☀️','☀️','🌤','🌆','🌆','🌙','🌙','🌙','🌙','🌙'];
+          const WEATHER_LABELS=['야간','야간','야간','새벽','새벽','새벽','아침','아침','아침','오전','오전','점심','점심','점심','점심','오후','오후','저녁','저녁','야간','야간','야간','야간','야간'];
+          let weather=null;
+          const WEATHER_DATA_FALLBACK={icon:WEATHER_ICONS[hour],label:WEATHER_LABELS[hour],temp:25};
+          if(lat&&lon){
+            try{const wr=await fetch(`https://wttr.in/${lat},${lon}?format=j1&lang=ko`,{signal:AbortSignal.timeout(2000)});const wd=await wr.json();const cur=wd?.current_condition?.[0];if(cur){weather={icon:hour>=6&&hour<20?'☀️':'🌙',label:cur.lang_ko?.[0]?.value||'맑음',temp:Number(cur.temp_C||25)};}}catch(e){weather=WEATHER_DATA_FALLBACK;}
+          } else weather=WEATHER_DATA_FALLBACK;
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let recommends=[], advice='', aiPowered=false;
+          if(apiKey && avail.length){
+            try{
+              const menuList=avail.slice(0,30).map(m=>`${m.name}(${m.price}원)`).join(', ');
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`날씨:${weather.label} ${weather.temp}°C, 시간대:${timeLabel}. 메뉴:${menuList}. 상위 3개 추천을 JSON 배열로(name,reason,score 1-100)만 출력:`}]})});
+              const pd=await pr.json();
+              const raw=pd.content?.[0]?.text||'';
+              const match=raw.match(/\[[\s\S]*?\]/);
+              if(match){
+                const parsed=JSON.parse(match[0]);
+                recommends=parsed.slice(0,3).map(r=>{const m=avail.find(x=>x.name===r.name)||avail[0];return{name:r.name||m.name,emoji:m.emoji,reason:r.reason||'추천 메뉴',price:m.price,score:r.score||80};});
+                aiPowered=true;
+                advice=`${weather.label} ${timeLabel}에 어울리는 메뉴를 선정했습니다.`;
+              }
+            } catch(e){}
+          }
+          if(!recommends.length){
+            recommends=avail.slice(0,3).map((m,i)=>({name:m.name,emoji:m.emoji,reason:['인기 메뉴','매출 상위 메뉴','추천 메뉴'][i]||'추천 메뉴',price:m.price,score:90-i*10}));
+            advice=`${timeLabel}에 추천하는 메뉴입니다.`;
+          }
+          return new Response(JSON.stringify({ok:true,weather,hour,timeLabel,recommends,lowStock,advice,aiPowered}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/ai-schedule — AI 직원 스케줄 최적화
+      if (path === '/api/ai-schedule' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did } = body;
+          if (!did) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const today = new Date().toISOString().slice(0,10);
+          const monthAgo = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+          let members=[], salesByDowHour=Array.from({length:7},()=>Array(24).fill(0));
+          try {
+            const mr=await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'active'}}}]}},limit:{value:30}}})});
+            const md=await mr.json();
+            if(Array.isArray(md)) members=md.filter(d=>d.document).map(d=>{const f=d.document.fields||{};return{name:f.name?.stringValue||'직원',role:f.role?.stringValue||'staff',hourlyRate:(f.hourlyRate?.integerValue||f.hourlyRate?.doubleValue||10030)*1};});
+          } catch(e){}
+          try {
+            const sr=await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_sales'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:monthAgo}}}]}},limit:{value:500}}})});
+            const sd=await sr.json();
+            if(Array.isArray(sd)) sd.filter(d=>d.document).forEach(d=>{
+              const f=d.document.fields||{};
+              if(f.status?.stringValue==='cancelled') return;
+              const dt=f.createdAt?.timestampValue||f.date?.stringValue||today;
+              const date=new Date(dt);
+              const dow=date.getDay(); const h=date.getHours();
+              salesByDowHour[dow][h]+=(f.total?.integerValue||f.total?.doubleValue||0)*1;
+            });
+          } catch(e){}
+          const DOWS=['일','월','화','수','목','금','토'];
+          const openFrom=9,openTo=21;
+          const hours=[];for(let h=openFrom;h<=openTo;h++) hours.push(h);
+          let maxRevPerSlot=1;
+          salesByDowHour.forEach(d=>d.forEach(v=>{if(v>maxRevPerSlot)maxRevPerSlot=v;}));
+          const days=DOWS.map((dow,di)=>({dow,blocks:hours.map(h=>({hour:String(h),need:Math.max(1,Math.round(salesByDowHour[di][h]/maxRevPerSlot*3)),revenue:salesByDowHour[di][h]}))}));
+          const weeklyHoursPerMember=40;
+          const assignments=members.slice(0,8).map(m=>{
+            const wPay=Math.round(m.hourlyRate*weeklyHoursPerMember);
+            const hPay=weeklyHoursPerMember>=15?Math.round(wPay/5):0;
+            return{name:m.name,role:m.role,hourlyRate:m.hourlyRate,weeklyHours:weeklyHoursPerMember,weeklyPay:wPay,holidayPay:hPay};
+          });
+          const laborCost=assignments.reduce((s,a)=>s+a.weeklyPay,0);
+          const holidayTotal=assignments.reduce((s,a)=>s+a.holidayPay,0);
+          const totalHeadHours=members.length*weeklyHoursPerMember;
+          const actualCost=Math.round(laborCost*1.1);
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let advice='', aiPowered=false;
+          if(apiKey && members.length){
+            try{
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,messages:[{role:'user',content:`직원 ${members.length}명, 주 인건비 ₩${laborCost.toLocaleString()}. 한 문장(40자) 스케줄 조언:`}]})});
+              const pd=await pr.json();
+              advice=pd.content?.[0]?.text||'';
+              aiPowered=!!advice;
+            } catch(e){}
+          }
+          if(!advice) advice=members.length?`${members.length}명의 매출 곡선 기반 배치입니다. 피크 시간대에 인원을 집중하세요.`:'직원을 먼저 등록해 주세요.';
+          if(!members.length) return new Response(JSON.stringify({ok:true,insufficient:true,message:'직원 데이터가 없습니다. 직원 관리 탭에서 직원을 먼저 등록해 주세요.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          return new Response(JSON.stringify({ok:true,days,totalHeadHours,laborCost,actualCost,saving:actualCost-laborCost,assignments,advice,aiPowered,sampleDays:30,openFrom,openTo,holidayTotal}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
+      // ── /api/ai-voice-order — 음성 주문 파싱
+      if (path === '/api/ai-voice-order' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, text } = body;
+          if (!did || !text) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          let menus=[];
+          try {
+            const mr=await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},limit:{value:60}}})});
+            const md=await mr.json();
+            if(Array.isArray(md)) menus=md.filter(d=>d.document).map(d=>{const f=d.document.fields||{};return{name:f.name?.stringValue||'',price:(f.price?.integerValue||f.price?.doubleValue||0)*1,emoji:f.emoji?.stringValue||'🍽'};}).filter(m=>m.name&&m.price);
+          } catch(e){}
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let items=[];
+          if(apiKey && menus.length){
+            try {
+              const menuList=menus.slice(0,40).map(m=>`${m.name}(${m.price}원)`).join(', ');
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,messages:[{role:'user',content:`메뉴판: ${menuList}\n음성입력: "${text}"\n주문 항목을 JSON 배열로만 출력 [{name,qty}]:`}]})});
+              const pd=await pr.json();
+              const raw=pd.content?.[0]?.text||'';
+              const match=raw.match(/\[[\s\S]*?\]/);
+              if(match){
+                const parsed=JSON.parse(match[0]);
+                items=parsed.map(r=>{const m=menus.find(x=>x.name===r.name||x.name.includes(r.name)||r.name.includes(x.name));return m?{name:m.name,emoji:m.emoji,qty:Math.max(1,parseInt(r.qty)||1),price:m.price}:null;}).filter(Boolean);
+              }
+            } catch(e){}
+          }
+          if(!items.length){
+            /* 규칙 기반 폴백: 숫자 + 메뉴명 패턴 */
+            const NUMS={'하나':1,'한':1,'둘':2,'두':2,'셋':3,'세':3,'넷':4,'네':4,'다섯':5,'한개':1,'두개':2,'세개':3,'네개':4,'1개':1,'2개':2,'3개':3,'4개':4,'1잔':1,'2잔':2,'3잔':3};
+            menus.forEach(m=>{if(text.includes(m.name)){let qty=1;Object.entries(NUMS).forEach(([k,v])=>{if(text.includes(k+' '+m.name)||text.includes(k+m.name))qty=v;});items.push({name:m.name,emoji:m.emoji,qty,price:m.price});}});
+          }
+          const total=items.reduce((s,i)=>s+i.price*i.qty,0);
+          return new Response(JSON.stringify({ok:true,items,total}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // ── /api/filo-push — 사장님 FCM 신규주문/웨이팅/재고부족 알림
       if (path === '/api/filo-push' && method === 'POST') {
         try {

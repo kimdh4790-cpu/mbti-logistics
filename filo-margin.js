@@ -471,3 +471,626 @@ function _filoRenderInsights(did,ym){
   }).join('')+'</div>';
  });
 }
+
+/* ══════════════════════════════════════════════════════
+ * AI 어시스턴트 모듈 (구 filo-ai.js 통합 — 2026-08-04)
+ * ══════════════════════════════════════════════════════
+ * 공개 함수:
+ *   _filoPageAI(el)         — AI 인사이트 허브 페이지 (벤또 그리드)
+ *   _filoAiForecast()       — AI 매출 예측 (내일 / 다음 7일)
+ *   _filoAiMenuRec()        — AI 메뉴 추천 (날씨·시간대·재고)
+ *   _filoAiSchedule()       — AI 직원 스케줄 최적화
+ *   _filoVoiceOrderOpen()   — 음성 주문 인식 (Web Speech API)
+ *   _filoAiChatToggle()     — AI CS봇 플로팅 위젯
+ *   _filoAiBriefing(target) — 대시보드 한줄 브리핑 주입
+ * 백엔드: _worker.js
+ *   POST /api/ai-forecast · /api/ai-menu-recommend · /api/ai-schedule
+ *   POST /api/ai-voice-order · /api/ai-insight · /api/cs-bot
+ * ══════════════════════════════════════════════════════ */
+
+/* ───────────────────────── 공통 유틸 ───────────────────────── */
+
+function _aiDid() {
+  return (window._CU && _CU.dealerId) || (window._cachedCompanyDoc && (_cachedCompanyDoc.dealerId || _cachedCompanyDoc.uid)) || '';
+}
+function _aiWon(n) {
+  return '₩' + Number(n || 0).toLocaleString();
+}
+function _aiEsc(s) {
+  if (typeof esc === 'function') return esc(s);
+  var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML;
+}
+function _aiToast(msg) {
+  if (typeof _filoToast === 'function') return _filoToast(msg);
+  if (typeof _dineToast === 'function') return _dineToast(msg);
+  console.log('[AI]', msg);
+}
+
+/* 스켈레톤 로더 */
+function _aiSkeleton(lines) {
+  var h = '';
+  for (var i = 0; i < (lines || 3); i++) {
+    h += '<div class="ai-skel" style="width:' + (100 - i * 12) + '%"></div>';
+  }
+  return h;
+}
+
+/* POST 헬퍼 — 실패해도 화면이 죽지 않도록 항상 객체를 반환한다 */
+function _aiPost(path, payload) {
+  return fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload || {})
+  }).then(function (r) { return r.json(); })
+    .catch(function (e) { return { ok: false, error: e.message }; });
+}
+
+/* 카드 안에 오류를 그린다 */
+function _aiErr(el, msg, retryFn) {
+  if (!el) return;
+  el.innerHTML =
+    '<div class="ai-empty">' +
+    '<div style="font-size:26px;margin-bottom:8px">⚠️</div>' +
+    '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(msg) + '</div>' +
+    (retryFn ? '<button class="ai-chip" style="margin-top:12px" onclick="' + retryFn + '">다시 시도</button>' : '') +
+    '</div>';
+}
+
+/* ═════════════════════════════════════════════════════════════
+   1. AI 인사이트 허브 페이지 — 벤또박스 그리드 (2026 트렌드)
+   ═════════════════════════════════════════════════════════════ */
+function _filoPageAI(el) {
+  if (!el) el = document.getElementById('content');
+  if (!el) return;
+
+  el.innerHTML =
+  '<div class="ai-page">' +
+
+    /* 히어로 */
+    '<div class="ai-hero fade-up">' +
+      '<div class="ai-hero-glow"></div>' +
+      '<div style="position:relative;z-index:1">' +
+        '<div class="ai-hero-eyebrow">FILO AI · 2026</div>' +
+        '<div class="ai-hero-title">AI 어시스턴트</div>' +
+        '<div class="ai-hero-sub" id="ai-briefing">' +
+          '<span class="ai-typing">매장 데이터를 읽는 중</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    /* 벤또 그리드 */
+    '<div class="bento">' +
+
+      /* ① 매출 예측 — 2×2 */
+      '<section class="bento-item bento-lg fade-up-2" id="ai-card-forecast">' +
+        '<header class="bento-head">' +
+          '<div><span class="bento-icon">📈</span><h3>AI 매출 예측</h3></div>' +
+          '<button class="ai-chip" onclick="_filoAiForecast()">새로고침</button>' +
+        '</header>' +
+        '<div class="bento-body" id="ai-forecast-body">' + _aiSkeleton(4) + '</div>' +
+      '</section>' +
+
+      /* ② 메뉴 추천 — 1×2 */
+      '<section class="bento-item bento-tall fade-up-2" id="ai-card-menu">' +
+        '<header class="bento-head">' +
+          '<div><span class="bento-icon">🍽</span><h3>AI 메뉴 추천</h3></div>' +
+          '<button class="ai-chip" onclick="_filoAiMenuRec()">새로고침</button>' +
+        '</header>' +
+        '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
+      '</section>' +
+
+      /* ③ 음성 주문 — 1×1 */
+      '<section class="bento-item fade-up-3" id="ai-card-voice">' +
+        '<header class="bento-head"><div><span class="bento-icon">🎙</span><h3>음성 주문</h3></div></header>' +
+        '<div class="bento-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center">' +
+          '<button class="ai-mic" onclick="_filoVoiceOrderOpen()" aria-label="음성 주문 시작">' +
+            '<span class="ai-mic-ring"></span><span style="position:relative;z-index:1">🎙</span>' +
+          '</button>' +
+          '<div style="font-size:11px;color:var(--t3);line-height:1.6">말로 주문을 받아<br>바로 장바구니에 담습니다</div>' +
+        '</div>' +
+      '</section>' +
+
+      /* ④ 스케줄 최적화 — 2×1 */
+      '<section class="bento-item bento-wide fade-up-3" id="ai-card-sched">' +
+        '<header class="bento-head">' +
+          '<div><span class="bento-icon">🗓</span><h3>AI 스케줄 최적화</h3></div>' +
+          '<button class="ai-chip" onclick="_filoAiSchedule()">다시 계산</button>' +
+        '</header>' +
+        '<div class="bento-body" id="ai-sched-body">' + _aiSkeleton(3) + '</div>' +
+      '</section>' +
+
+      /* ⑤ CS봇 — 1×1 */
+      '<section class="bento-item fade-up-4" id="ai-card-cs">' +
+        '<header class="bento-head"><div><span class="bento-icon">💬</span><h3>AI CS봇</h3></div></header>' +
+        '<div class="bento-body" style="display:flex;flex-direction:column;gap:10px">' +
+          '<div style="font-size:11px;color:var(--t3);line-height:1.7">' +
+            '메뉴·영업시간·실시간 웨이팅까지 학습한 매장 전용 상담봇입니다.' +
+          '</div>' +
+          '<button class="ai-btn-primary" onclick="_filoAiChatToggle()">상담봇 열기</button>' +
+          '<button class="ai-chip" onclick="_filoAiChatTest()">응답 테스트</button>' +
+        '</div>' +
+      '</section>' +
+
+    '</div>' +
+  '</div>';
+
+  _filoAiBriefing('ai-briefing');
+  _filoAiForecast();
+  _filoAiMenuRec();
+  _filoAiSchedule();
+}
+
+/* ═════════════════════════════════════════════════════════════
+   2. AI 매출 예측
+   ═════════════════════════════════════════════════════════════ */
+function _filoAiForecast() {
+  var body = document.getElementById('ai-forecast-body');
+  if (!body) return;
+  var did = _aiDid();
+  if (!did) { _aiErr(body, '매장 정보를 불러오지 못했습니다. 다시 로그인해 주세요.'); return; }
+
+  body.innerHTML = _aiSkeleton(4);
+  _aiPost('/api/ai-forecast', { did: did }).then(function (r) {
+    if (!r.ok) { _aiErr(body, r.error || '예측을 불러오지 못했습니다.', '_filoAiForecast()'); return; }
+    if (r.insufficient) {
+      body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">📊</div>' +
+        '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
+      return;
+    }
+
+    var t = r.tomorrow;
+    var max = Math.max.apply(null, r.week.map(function (w) { return w.high || w.amount; })) || 1;
+    var trendUp = r.trend === 'up';
+
+    body.innerHTML =
+      /* 내일 예측 대형 수치 */
+      '<div class="ai-metric-row">' +
+        '<div class="ai-metric">' +
+          '<div class="ai-metric-label">내일 (' + _aiEsc(t.date.slice(5)) + ' ' + _aiEsc(t.dow) + ')</div>' +
+          '<div class="ai-metric-val" id="ai-fc-val">' + _aiWon(t.amount) + '</div>' +
+          '<div class="ai-metric-range">' + _aiWon(t.low) + ' ~ ' + _aiWon(t.high) + '</div>' +
+        '</div>' +
+        '<div class="ai-metric-side">' +
+          '<div class="ai-gauge" style="--pct:' + r.confidence + '">' +
+            '<span>' + r.confidence + '<small>%</small></span>' +
+          '</div>' +
+          '<div class="ai-metric-label" style="text-align:center;margin-top:6px">신뢰도</div>' +
+        '</div>' +
+      '</div>' +
+
+      /* 7일 예측 막대 */
+      '<div class="ai-bars">' +
+        r.week.map(function (w) {
+          var h = Math.max(6, Math.round(w.amount / max * 100));
+          return '<div class="ai-bar-col" title="' + _aiEsc(w.date) + ' ' + _aiWon(w.amount) + '">' +
+            '<div class="ai-bar-track"><div class="ai-bar-fill" style="height:' + h + '%"></div></div>' +
+            '<div class="ai-bar-lbl">' + _aiEsc(w.dow) + '</div></div>';
+        }).join('') +
+      '</div>' +
+
+      /* 요약 지표 */
+      '<div class="ai-stat-grid">' +
+        '<div class="ai-stat"><span>다음 7일 합계</span><strong>' + _aiWon(r.weekTotal) + '</strong></div>' +
+        '<div class="ai-stat"><span>최근 7일 대비</span><strong class="' + (r.wowPct >= 0 ? 'up' : 'down') + '">' +
+          (r.wowPct >= 0 ? '▲ +' : '▼ ') + r.wowPct + '%</strong></div>' +
+        '<div class="ai-stat"><span>평균 객단가</span><strong>' + _aiWon(r.avgTicket) + '</strong></div>' +
+        '<div class="ai-stat"><span>추세</span><strong class="' + (trendUp ? 'up' : 'down') + '">' +
+          (trendUp ? '상승' : '하락') + ' ' + _aiWon(Math.abs(r.trendPerDay)) + '/일</strong></div>' +
+      '</div>' +
+
+      /* AI 브리핑 */
+      '<div class="ai-note">' +
+        '<span class="ai-note-tag">' + (r.aiPowered ? 'AI 분석' : '통계 분석') + '</span>' +
+        _aiEsc(r.insight) +
+      '</div>' +
+      '<div class="ai-foot">최근 ' + r.sampleDays + '일 · ' + r.txCount + '건 결제 기준</div>';
+  });
+}
+
+/* ═════════════════════════════════════════════════════════════
+   3. AI 메뉴 추천 (날씨 · 시간대 · 재고)
+   ═════════════════════════════════════════════════════════════ */
+function _filoAiMenuRec() {
+  var body = document.getElementById('ai-menu-body');
+  if (!body) return;
+  var did = _aiDid();
+  if (!did) { _aiErr(body, '매장 정보를 불러오지 못했습니다.'); return; }
+
+  body.innerHTML = _aiSkeleton(5);
+
+  function run(lat, lon) {
+    var payload = { did: did };
+    if (lat != null) { payload.lat = lat; payload.lon = lon; }
+    _aiPost('/api/ai-menu-recommend', payload).then(function (r) {
+      if (!r.ok) { _aiErr(body, r.error || '추천을 불러오지 못했습니다.', '_filoAiMenuRec()'); return; }
+      if (r.insufficient) {
+        body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">🍽</div>' +
+          '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
+        return;
+      }
+      var w = r.weather;
+      body.innerHTML =
+        /* 날씨 · 시간대 컨텍스트 */
+        '<div class="ai-ctx">' +
+          '<div class="ai-ctx-item"><span class="ai-ctx-ic">' + (w ? w.icon : '🕐') + '</span>' +
+            '<div><strong>' + (w ? _aiEsc(w.label) + ' ' + Math.round(w.temp) + '°C' : '날씨 정보 없음') + '</strong>' +
+            '<small>' + r.hour + '시 · ' + _aiEsc(r.timeLabel) + '</small></div></div>' +
+        '</div>' +
+
+        /* 추천 리스트 */
+        '<div class="ai-rec-list">' +
+          r.recommends.map(function (m, i) {
+            return '<div class="ai-rec' + (i === 0 ? ' ai-rec-top' : '') + '">' +
+              '<div class="ai-rec-rank">' + (i + 1) + '</div>' +
+              '<div class="ai-rec-emoji">' + _aiEsc(m.emoji) + '</div>' +
+              '<div class="ai-rec-main">' +
+                '<div class="ai-rec-name">' + _aiEsc(m.name) + '</div>' +
+                '<div class="ai-rec-reason">' + _aiEsc(m.reason) + '</div>' +
+              '</div>' +
+              '<div class="ai-rec-side">' +
+                '<div class="ai-rec-price">' + _aiWon(m.price) + '</div>' +
+                '<div class="ai-rec-score"><i style="width:' + m.score + '%"></i></div>' +
+              '</div></div>';
+          }).join('') +
+        '</div>' +
+
+        /* 재고 부족 경고 */
+        (r.lowStock && r.lowStock.length
+          ? '<div class="ai-warn"><strong>⚠️ 재고 부족으로 제외</strong>' +
+            r.lowStock.map(function (m) { return '<span class="ai-warn-chip">' + _aiEsc(m.name) + ' · ' + _aiEsc(m.stockNote) + '</span>'; }).join('') +
+            '</div>'
+          : '') +
+
+        '<div class="ai-note"><span class="ai-note-tag">' + (r.aiPowered ? 'AI 분석' : '규칙 분석') + '</span>' + _aiEsc(r.advice) + '</div>';
+    });
+  }
+
+  /* 매장 위치 기준 날씨 — 실패하면 서버 기본값(부산)으로 폴백 */
+  if (navigator.geolocation) {
+    var done = false;
+    var tid = setTimeout(function () { if (!done) { done = true; run(); } }, 3000);
+    navigator.geolocation.getCurrentPosition(
+      function (pos) { if (done) return; done = true; clearTimeout(tid); run(pos.coords.latitude, pos.coords.longitude); },
+      function () { if (done) return; done = true; clearTimeout(tid); run(); },
+      { timeout: 2500, maximumAge: 600000 }
+    );
+  } else run();
+}
+
+/* ═════════════════════════════════════════════════════════════
+   4. AI 스케줄 최적화
+   ═════════════════════════════════════════════════════════════ */
+function _filoAiSchedule() {
+  var body = document.getElementById('ai-sched-body');
+  if (!body) return;
+  var did = _aiDid();
+  if (!did) { _aiErr(body, '매장 정보를 불러오지 못했습니다.'); return; }
+
+  body.innerHTML = _aiSkeleton(3);
+  _aiPost('/api/ai-schedule', { did: did }).then(function (r) {
+    if (!r.ok) { _aiErr(body, r.error || '스케줄을 계산하지 못했습니다.', '_filoAiSchedule()'); return; }
+    if (r.insufficient) {
+      body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">👥</div>' +
+        '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
+      return;
+    }
+
+    /* 요일 × 시간 히트맵 */
+    var maxNeed = 1;
+    r.days.forEach(function (d) { d.blocks.forEach(function (b) { if (b.need > maxNeed) maxNeed = b.need; }); });
+
+    var heat = '<div class="ai-heat"><div class="ai-heat-hours"><span></span>' +
+      r.days[0].blocks.map(function (b) { return '<span>' + b.hour + '</span>'; }).join('') + '</div>' +
+      r.days.map(function (d) {
+        return '<div class="ai-heat-row"><span class="ai-heat-dow">' + _aiEsc(d.dow) + '</span>' +
+          d.blocks.map(function (b) {
+            var lvl = b.need === 0 ? 0 : Math.ceil(b.need / maxNeed * 4);
+            return '<i class="ai-heat-cell lv' + lvl + '" title="' + _aiEsc(d.dow) + '요일 ' + b.hour + '시 · ' + b.need + '명 · ' + _aiWon(b.revenue) + '">' +
+              (b.need || '') + '</i>';
+          }).join('') + '</div>';
+      }).join('') + '</div>';
+
+    var savingPositive = r.saving > 0;
+    body.innerHTML =
+      '<div class="ai-stat-grid" style="margin-bottom:14px">' +
+        '<div class="ai-stat"><span>주간 필요 인시</span><strong>' + r.totalHeadHours + '시간</strong></div>' +
+        '<div class="ai-stat"><span>예상 인건비</span><strong>' + _aiWon(r.laborCost) + '</strong></div>' +
+        '<div class="ai-stat"><span>현재 추정</span><strong>' + _aiWon(r.actualCost) + '</strong></div>' +
+        '<div class="ai-stat"><span>' + (savingPositive ? '절감 여지' : '추가 필요') + '</span>' +
+          '<strong class="' + (savingPositive ? 'up' : 'down') + '">' + _aiWon(Math.abs(r.saving)) + '</strong></div>' +
+      '</div>' +
+      heat +
+      '<div class="ai-legend"><span>필요 인력</span>' +
+        '<i class="ai-heat-cell lv0"></i><i class="ai-heat-cell lv1"></i><i class="ai-heat-cell lv2"></i>' +
+        '<i class="ai-heat-cell lv3"></i><i class="ai-heat-cell lv4"></i><span>많음</span></div>' +
+
+      /* 직원별 배치 */
+      '<div class="ai-assign">' +
+        r.assignments.map(function (a) {
+          return '<div class="ai-assign-row">' +
+            '<div class="ai-assign-name">' + _aiEsc(a.name) +
+              '<small>' + _aiEsc(a.role) + ' · ' + _aiWon(a.hourlyRate) + '/h</small></div>' +
+            '<div class="ai-assign-hours">주 ' + a.weeklyHours + '시간</div>' +
+            '<div class="ai-assign-pay">' + _aiWon(a.weeklyPay) +
+              (a.holidayPay > 0 ? '<small class="ai-holiday">주휴 +' + _aiWon(a.holidayPay) + '</small>' : '') +
+            '</div></div>';
+        }).join('') +
+      '</div>' +
+
+      '<div class="ai-note"><span class="ai-note-tag">' + (r.aiPowered ? 'AI 분석' : '통계 분석') + '</span>' + _aiEsc(r.advice) + '</div>' +
+      '<div class="ai-foot">영업시간 ' + r.openFrom + '시~' + (r.openTo + 1) + '시 · 최근 ' + r.sampleDays + '일 매출 곡선 기준 · 주휴수당 합계 ' + _aiWon(r.holidayTotal) + '</div>';
+  });
+}
+
+/* ═════════════════════════════════════════════════════════════
+   5. 음성 주문 인식 (Web Speech API + 서버 파싱)
+   ═════════════════════════════════════════════════════════════ */
+var _aiRecog = null, _aiRecogActive = false;
+
+function _filoVoiceOrderOpen() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    _aiToast('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해 주세요.');
+    return;
+  }
+  if (document.getElementById('ai-voice-modal')) { _aiVoiceStart(); return; }
+
+  var m = document.createElement('div');
+  m.id = 'ai-voice-modal';
+  m.className = 'ai-modal';
+  m.innerHTML =
+    '<div class="ai-modal-inner">' +
+      '<div class="ai-modal-head"><h3>🎙 음성 주문</h3>' +
+        '<button class="ai-x" onclick="_filoVoiceOrderClose()" aria-label="닫기">✕</button></div>' +
+      '<div class="ai-voice-stage">' +
+        '<button class="ai-mic ai-mic-lg" id="ai-voice-btn" onclick="_aiVoiceToggle()">' +
+          '<span class="ai-mic-ring"></span><span style="position:relative;z-index:1">🎙</span></button>' +
+        '<div class="ai-voice-status" id="ai-voice-status">버튼을 누르고 주문을 말씀해 주세요</div>' +
+        '<div class="ai-voice-heard" id="ai-voice-heard"></div>' +
+      '</div>' +
+      '<div id="ai-voice-result"></div>' +
+      '<div class="ai-voice-hint">예시 · "아메리카노 두 잔이랑 크로와상 하나요"</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  requestAnimationFrame(function () { m.classList.add('on'); });
+  setTimeout(_aiVoiceStart, 350);
+}
+
+function _filoVoiceOrderClose() {
+  _aiVoiceStop();
+  var m = document.getElementById('ai-voice-modal');
+  if (!m) return;
+  m.classList.remove('on');
+  setTimeout(function () { if (m.parentNode) m.parentNode.removeChild(m); }, 250);
+}
+
+function _aiVoiceToggle() { if (_aiRecogActive) _aiVoiceStop(); else _aiVoiceStart(); }
+
+function _aiVoiceStart() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  _aiVoiceStop();
+
+  var btn = document.getElementById('ai-voice-btn');
+  var st  = document.getElementById('ai-voice-status');
+  var hd  = document.getElementById('ai-voice-heard');
+
+  _aiRecog = new SR();
+  _aiRecog.lang = 'ko-KR';
+  _aiRecog.continuous = false;
+  _aiRecog.interimResults = true;
+  _aiRecog.maxAlternatives = 1;
+
+  _aiRecog.onstart = function () {
+    _aiRecogActive = true;
+    if (btn) btn.classList.add('listening');
+    if (st) st.textContent = '듣고 있습니다…';
+    if (hd) hd.textContent = '';
+  };
+  _aiRecog.onresult = function (ev) {
+    var interim = '', fin = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) fin += ev.results[i][0].transcript;
+      else interim += ev.results[i][0].transcript;
+    }
+    if (hd) hd.textContent = fin || interim;
+    if (fin) _aiVoiceParse(fin.trim());
+  };
+  _aiRecog.onerror = function (ev) {
+    _aiRecogActive = false;
+    if (btn) btn.classList.remove('listening');
+    var msg = ev.error === 'not-allowed'
+      ? '마이크 권한이 필요합니다. 브라우저 주소창의 자물쇠 아이콘에서 허용해 주세요.'
+      : ev.error === 'no-speech' ? '소리가 들리지 않았습니다. 다시 시도해 주세요.'
+      : '음성 인식 오류: ' + ev.error;
+    if (st) st.textContent = msg;
+  };
+  _aiRecog.onend = function () {
+    _aiRecogActive = false;
+    if (btn) btn.classList.remove('listening');
+    if (st && st.textContent === '듣고 있습니다…') st.textContent = '버튼을 눌러 다시 말씀해 주세요';
+  };
+
+  try { _aiRecog.start(); } catch (e) { if (st) st.textContent = '음성 인식을 시작하지 못했습니다: ' + e.message; }
+}
+
+function _aiVoiceStop() {
+  if (_aiRecog) { try { _aiRecog.stop(); } catch (e) {} }
+  _aiRecogActive = false;
+  var btn = document.getElementById('ai-voice-btn');
+  if (btn) btn.classList.remove('listening');
+}
+
+function _aiVoiceParse(text) {
+  var res = document.getElementById('ai-voice-result');
+  var st  = document.getElementById('ai-voice-status');
+  if (st) st.textContent = '주문 내용을 분석 중…';
+  if (res) res.innerHTML = '<div style="padding:12px 0">' + _aiSkeleton(2) + '</div>';
+
+  _aiPost('/api/ai-voice-order', { did: _aiDid(), text: text }).then(function (r) {
+    if (!res) return;
+    if (!r.ok) { _aiErr(res, r.error || '주문을 인식하지 못했습니다.'); if (st) st.textContent = '다시 시도해 주세요'; return; }
+    if (!r.items.length) {
+      res.innerHTML = '<div class="ai-empty" style="padding:20px 0">' +
+        '<div style="font-size:12px;color:var(--t2)">메뉴판에서 일치하는 항목을 찾지 못했습니다.<br>메뉴명을 또렷하게 말씀해 주세요.</div></div>';
+      if (st) st.textContent = '다시 시도해 주세요';
+      return;
+    }
+    window._aiVoiceItems = r.items;
+    if (st) st.textContent = r.items.length + '개 메뉴를 인식했습니다';
+    res.innerHTML =
+      '<div class="ai-voice-items">' +
+        r.items.map(function (it) {
+          return '<div class="ai-voice-item">' +
+            '<span class="ai-rec-emoji">' + _aiEsc(it.emoji) + '</span>' +
+            '<span class="ai-voice-item-name">' + _aiEsc(it.name) + '</span>' +
+            '<span class="ai-voice-item-qty">× ' + it.qty + '</span>' +
+            '<span class="ai-voice-item-price">' + _aiWon(it.price * it.qty) + '</span>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="ai-voice-total"><span>합계</span><strong>' + _aiWon(r.total) + '</strong></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button class="ai-chip" style="flex:1" onclick="_aiVoiceStart()">다시 말하기</button>' +
+        '<button class="ai-btn-primary" style="flex:2" onclick="_aiVoiceToCart()">장바구니에 담기</button>' +
+      '</div>';
+  });
+}
+
+/* 인식 결과를 POS 카트로 */
+function _aiVoiceToCart() {
+  var items = window._aiVoiceItems || [];
+  if (!items.length) return;
+  if (typeof _cartAdd !== 'function' || typeof window._cartItems === 'undefined') {
+    window._aiPendingCart = items;
+    _aiToast('POS 화면으로 이동합니다');
+    _filoVoiceOrderClose();
+    if (typeof _filoGoPage === 'function') _filoGoPage('kiosk');
+    setTimeout(_aiFlushPendingCart, 900);
+    return;
+  }
+  items.forEach(function (it) {
+    for (var i = 0; i < it.qty; i++) _cartAdd(it.name, it.name, it.price);
+  });
+  _aiToast(items.length + '개 메뉴를 담았습니다');
+  _filoVoiceOrderClose();
+}
+
+function _aiFlushPendingCart() {
+  var items = window._aiPendingCart;
+  if (!items || !items.length) return;
+  if (typeof _cartAdd !== 'function') { setTimeout(_aiFlushPendingCart, 600); return; }
+  items.forEach(function (it) {
+    for (var i = 0; i < it.qty; i++) _cartAdd(it.name, it.name, it.price);
+  });
+  window._aiPendingCart = null;
+  _aiToast('음성 주문 ' + items.length + '건을 담았습니다');
+}
+
+/* ═════════════════════════════════════════════════════════════
+   6. AI CS봇 — 플로팅 위젯 (대화 맥락 유지)
+   ═════════════════════════════════════════════════════════════ */
+var _aiChatHistory = [];
+
+function _filoAiChatToggle() {
+  var w = document.getElementById('ai-chat');
+  if (w) { w.classList.toggle('on'); if (w.classList.contains('on')) _aiChatFocus(); return; }
+
+  var d = document.createElement('div');
+  d.id = 'ai-chat';
+  d.className = 'ai-chat on';
+  d.innerHTML =
+    '<div class="ai-chat-head">' +
+      '<div><strong>AI 상담봇</strong><small>메뉴·영업시간·웨이팅 실시간 응답</small></div>' +
+      '<button class="ai-x" onclick="_filoAiChatToggle()" aria-label="닫기">✕</button>' +
+    '</div>' +
+    '<div class="ai-chat-body" id="ai-chat-body">' +
+      '<div class="ai-msg bot">안녕하세요! 무엇을 도와드릴까요? 😊</div>' +
+      '<div class="ai-chips" id="ai-chat-chips">' +
+        ['영업시간 알려주세요', '지금 대기 얼마나 되나요?', '추천 메뉴가 뭔가요?', '주차 되나요?']
+          .map(function (c) { return '<button class="ai-chip" onclick="_aiChatSend(\'' + c + '\')">' + c + '</button>'; }).join('') +
+      '</div>' +
+    '</div>' +
+    '<div class="ai-chat-input">' +
+      '<input id="ai-chat-inp" placeholder="궁금한 점을 입력하세요" onkeydown="if(event.key===\'Enter\')_aiChatSend()">' +
+      '<button onclick="_aiChatSend()" aria-label="보내기">↑</button>' +
+    '</div>';
+  document.body.appendChild(d);
+  _aiChatFocus();
+}
+
+function _aiChatFocus() {
+  setTimeout(function () { var i = document.getElementById('ai-chat-inp'); if (i) i.focus(); }, 120);
+}
+
+function _aiChatSend(preset) {
+  var inp = document.getElementById('ai-chat-inp');
+  var body = document.getElementById('ai-chat-body');
+  var q = (preset || (inp ? inp.value : '')).trim();
+  if (!q || !body) return;
+  if (inp && !preset) inp.value = '';
+
+  var chips = document.getElementById('ai-chat-chips');
+  if (chips) chips.remove();
+
+  body.insertAdjacentHTML('beforeend', '<div class="ai-msg me">' + _aiEsc(q) + '</div>');
+  body.insertAdjacentHTML('beforeend', '<div class="ai-msg bot" id="ai-msg-wait"><span class="ai-dots"><i></i><i></i><i></i></span></div>');
+  body.scrollTop = body.scrollHeight;
+
+  _aiChatHistory.push({ role: 'user', text: q });
+
+  _aiPost('/api/cs-bot', { did: _aiDid(), question: q, history: _aiChatHistory.slice(0, -1), lang: 'ko' })
+    .then(function (r) {
+      var wait = document.getElementById('ai-msg-wait');
+      var answer = r.ok ? r.answer : ('죄송합니다. 답변을 가져오지 못했습니다.' + (r.error ? ' (' + r.error + ')' : ''));
+      if (wait) { wait.id = ''; wait.innerHTML = _aiEsc(answer); }
+      _aiChatHistory.push({ role: 'bot', text: answer });
+      if (_aiChatHistory.length > 12) _aiChatHistory = _aiChatHistory.slice(-12);
+      if (r.ok && r.chips && r.chips.length) {
+        body.insertAdjacentHTML('beforeend',
+          '<div class="ai-chips">' + r.chips.slice(0, 3).map(function (c) {
+            return '<button class="ai-chip" onclick="_aiChatSend(\'' + _aiEsc(c).replace(/'/g, '') + '\')">' + _aiEsc(c) + '</button>';
+          }).join('') + '</div>');
+      }
+      body.scrollTop = body.scrollHeight;
+    });
+}
+
+/* 관리자용 응답 테스트 */
+function _filoAiChatTest() {
+  _filoAiChatToggle();
+  setTimeout(function () { _aiChatSend('오늘 영업시간이랑 추천 메뉴 알려주세요'); }, 400);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   7. 대시보드 한줄 브리핑
+   ═════════════════════════════════════════════════════════════ */
+function _filoAiBriefing(targetId) {
+  var el = document.getElementById(targetId || 'ai-briefing');
+  if (!el) return;
+  var did = _aiDid();
+  if (!did) { el.textContent = '매장 정보를 불러오는 중입니다'; return; }
+
+  _aiPost('/api/ai-insight', { did: did }).then(function (r) {
+    if (!el.isConnected) return;
+    if (!r.ok) { el.textContent = '오늘의 브리핑을 불러오지 못했습니다'; return; }
+    el.innerHTML = _aiEsc(r.insight) +
+      (r.lowStockCount ? ' <span class="ai-hero-badge">재고 부족 ' + r.lowStockCount + '건</span>' : '');
+  });
+}
+
+/* 전역 노출 (다른 모듈에서 호출) */
+window._filoPageAI         = _filoPageAI;
+window._filoAiForecast     = _filoAiForecast;
+window._filoAiMenuRec      = _filoAiMenuRec;
+window._filoAiSchedule     = _filoAiSchedule;
+window._filoVoiceOrderOpen = _filoVoiceOrderOpen;
+window._filoVoiceOrderClose= _filoVoiceOrderClose;
+window._filoAiChatToggle   = _filoAiChatToggle;
+window._filoAiChatTest     = _filoAiChatTest;
+window._filoAiBriefing     = _filoAiBriefing;
+window._aiVoiceToggle      = _aiVoiceToggle;
+window._aiVoiceStart       = _aiVoiceStart;
+window._aiVoiceToCart      = _aiVoiceToCart;
+window._aiChatSend         = _aiChatSend;
+window._aiFlushPendingCart = _aiFlushPendingCart;

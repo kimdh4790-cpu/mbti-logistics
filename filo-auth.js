@@ -144,8 +144,8 @@ function _showApp(){
  }
  var company=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
  var role=_CU.role==='member'?'직원':'관리자';
- document.getElementById('nav-company').textContent=company;
- document.getElementById('nav-role').textContent=role;
+ var nc=document.getElementById('nav-company');if(nc)nc.textContent=company;
+ var nr=document.getElementById('nav-role');if(nr)nr.textContent=role;
  /* 실시간 시계 */
  if(!window._clockInterval){
   window._clockInterval=setInterval(function(){
@@ -164,16 +164,17 @@ function _showApp(){
   var now2=new Date();
   var hh=now2.getHours().toString().padStart(2,'0');
   var mi2=now2.getMinutes().toString().padStart(2,'0');
-  prof.innerHTML='<div style="padding:14px 16px 12px">'+
-  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-  '<div class="sidebar-avatar" style="background:linear-gradient(135deg,var(--br),var(--br2))">'+esc(company.slice(0,1))+'</div>'+
-  '<div style="min-width:0;flex:1">'+
-  '<div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(company)+'</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:1px">'+role+'</div>'+
-  '</div>'+
-  '<div style="font-size:11px;color:var(--t3);font-weight:700;letter-spacing:.5px">'+hh+':'+mi2+'</div>'+
-  '</div>'+
-  '<div style="height:1px;background:var(--bd)"></div>'+
+  prof.innerHTML=
+  '<div style="padding:16px 14px 14px">'+
+   '<div style="display:flex;align-items:center;gap:11px">'+
+    '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 4px 14px rgba(124,58,237,.3)">'+esc(company.slice(0,1))+'</div>'+
+    '<div style="min-width:0;flex:1">'+
+     '<div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px">'+esc(company)+'</div>'+
+     '<span style="display:inline-flex;align-items:center;margin-top:4px;padding:1px 7px;border-radius:99px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.22);font-size:9px;font-weight:800;color:var(--br-ll);letter-spacing:.6px">'+role+'</span>'+
+    '</div>'+
+    '<div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.5px;font-variant-numeric:tabular-nums;flex-shrink:0">'+hh+':'+mi2+'</div>'+
+   '</div>'+
+   '<div style="margin-top:14px;height:1px;background:linear-gradient(90deg,rgba(124,58,237,.25),rgba(8,145,178,.12),transparent)"></div>'+
   '</div>';
  }
  _buildFiloNav();
@@ -272,12 +273,12 @@ function _buildFiloNav(){
     '<strong id="demo-dealer-disp" style="color:var(--acc)">'+esc(_CU.dealerId||'')+'</strong>'+
     '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="margin-left:auto;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer">'+
     '<option value="">-- 데모 매장 전환 --</option>'+
-    '<option value="demo_cafe">☕ 데모 카페</option>'+
-    '<option value="demo_korean">🍚 데모 한식당</option>'+
-    '<option value="demo_japanese">🍣 데모 일식당</option>'+
-    '<option value="demo_snack">🍢 데모 분식집</option>'+
-    '<option value="demo_western">🍕 데모 양식당</option>'+
-    '<option value="demo_bakery">🥐 데모 베이커리</option>'+
+    '<option value="demo_cafe">데모 카페</option>'+
+    '<option value="demo_korean">데모 한식당</option>'+
+    '<option value="demo_japanese">데모 일식당</option>'+
+    '<option value="demo_snack">데모 분식집</option>'+
+    '<option value="demo_western">데모 양식당</option>'+
+    '<option value="demo_bakery">데모 베이커리</option>'+
     '</select>';
    var _appEl3=document.getElementById('app');
    if(_appEl3) _appEl3.insertBefore(_bar,_appEl3.firstChild);
@@ -409,10 +410,6 @@ function _toggleNavGroup(gi,el){
  var closing=!el.classList.contains('collapsed');
 
  el.classList.toggle('collapsed',closing);
-
- var arrow=el.querySelector('.ns-arrow');
-
- if(arrow)arrow.textContent=closing?'▸':'▾';
 
  if(closing){
 
