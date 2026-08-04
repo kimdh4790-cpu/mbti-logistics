@@ -17,3 +17,22 @@
 - RESEND_API_KEY, TOSS_SECRET_KEY
 - MODUSIGN_API_KEY, BIZ_API_KEY
 - GOOGLE_TRANSLATE_KEY, CRON_SECRET, SYNC_KV_SECRET
+
+## UI 원칙
+- 모든 목록/리스트는 5개씩 표시. 더보기 버튼 또는 페이지네이션
+- 한꺼번에 길게 스크롤되는 UI 절대 금지
+- 초딩 디자인 금지 — 대기업급 럭셔리 디자인
+- 이모지 UI 전면 금지 → Lucide SVG 아이콘
+- Pretendard 폰트 기본
+- 카드 간격/여백/색상 대비 균일하게
+- 모바일 우선 반응형
+
+## 배포 원칙
+- 파일 하나 수정 완료할 때마다 즉시: git commit + git push origin main + KV 배포
+- 전체 완료 기다리지 말고 파일 하나 끝나면 바로 배포
+- git remote: https://kimdh4790-cpu:${GITHUB_TOKEN}@github.com/kimdh4790-cpu/mbti-logistics.git
+- wrangler.toml 절대 수정 금지
+- filo-common.js 절대 수정 금지
+- 새 파일 생성 시 deploy.yml KV 목록 반드시 추가
+- 세션 하나 = 파일 하나 원칙
+- Playwright 실사 테스트 후 통과/실패 표 보고
