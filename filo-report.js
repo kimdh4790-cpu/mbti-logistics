@@ -241,7 +241,7 @@ function _filoRenderSalesCharts(did,from,to){
   var payEl=document.getElementById('pay-method-list');
   if(payEl){
    var payColors={'카드':'#60a5fa','현금':'#22c55e','카카오페이':'#f59e0b','네이버페이':'#10b981','카운터결제':'#a78bfa','기타':'#9898c0'};
-   var payIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','기타':'💰'};
+   var payIcons={'카드':'CARD','현금':'CASH','카카오페이':'KAKAO','네이버페이':'NAVER','카운터결제':'POS','기타':'ETC'};
    var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
    payEl.innerHTML='';
    sorted.forEach(function(m){
@@ -391,7 +391,7 @@ function _filoTaxSendReport(type){
     type:'tax_report',to:email,dealerId:did,
     reportData:{period:startDate+'~'+endDate,total:total,cnt:cnt,topMenus:topMenus},
     createdAt:_nowISO(),status:'pending'
-   }).then(function(){_filoToast('✅ 리포트가 발송됐습니다!');});
+   }).then(function(){_filoToast('리포트가 발송됐습니다!');});
   });
 }
 function _filoSalesFilter(type){
@@ -835,4 +835,44 @@ function _filoSalesReportPeriod(idx, did) {
 // 내보내기 (간단 CSV)
 function _filoSalesReportExport() {
   _filoToast('준비 중입니다!');
+}
+
+/* ── 7월 테스트 데이터 시딩 (데모 매장 전용) ── */
+function _filoSeedJulyData(){
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did){_filoToast('로그인 필요');return;}
+ var confirm=window.confirm('7월 테스트 매출 데이터를 생성합니다. 기존 데이터가 있어도 추가됩니다. 계속할까요?');
+ if(!confirm)return;
+ var menus=[
+  {name:'아메리카노',price:4500},{name:'카페라떼',price:5000},
+  {name:'크로플',price:6500},{name:'치즈케이크',price:7000},
+  {name:'그린티라떼',price:5500},{name:'에이드',price:5500}
+ ];
+ var methods=['카드','카드','카드','현금','카카오페이','카드'];
+ var batch=_db.batch();
+ var count=0;
+ for(var day=1;day<=31;day++){
+  var date='2026-07-'+String(day).padStart(2,'0');
+  var ordersPerDay=Math.floor(Math.random()*30)+20; // 20-50건
+  for(var o=0;o<ordersPerDay;o++){
+   var menuIdx=Math.floor(Math.random()*menus.length);
+   var menu=menus[menuIdx];
+   var qty=Math.random()<0.2?2:1;
+   var hour=Math.floor(Math.random()*12)+9; // 9-20시
+   var ref=_db.collection('filo_sales').doc();
+   batch.set(ref,{
+    dealerId:did,date:date,
+    total:menu.price*qty,
+    payMethod:methods[Math.floor(Math.random()*methods.length)],
+    items:[{name:menu.name,price:menu.price,qty:qty}],
+    createdAt:date+'T'+String(hour).padStart(2,'0')+':'+String(Math.floor(Math.random()*60)).padStart(2,'0')+':00+09:00',
+    status:'done'
+   });
+   count++;
+   if(count%400===0){batch.commit();batch=_db.batch();} // ponytail: Firestore batch 500 limit
+  }
+ }
+ batch.commit().then(function(){
+  _filoToast('7월 테스트 데이터 '+count+'건 생성 완료');
+ }).catch(function(e){_filoToast('시딩 오류: '+e.message);});
 }
