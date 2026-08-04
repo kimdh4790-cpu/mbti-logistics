@@ -219,7 +219,7 @@ function _dineStaffJoin(){
       err.textContent='저장 오류: '+(e.error&&e.error.message||'members 저장 실패');
      });
     }
-    err.style.color='#22c55e';err.textContent='✅ 가입 완료! 로그인해주세요';
+    err.style.color='#22c55e';err.textContent='가입 완료! 로그인해주세요';
     setTimeout(function(){_dineTab('login');},1500);
    }).catch(function(e){err.textContent='저장 오류: '+e.message;});
   });
@@ -250,7 +250,7 @@ function _dineMemberJoin(){
     createdAt:{stringValue:_nowISO()}
    }})
   }).then(function(){
-   err.style.color='#22c55e';err.textContent='✅ 등록 완료!';
+   err.style.color='#22c55e';err.textContent='등록 완료!';
    setTimeout(function(){
     document.getElementById('mb-reg-name').value='';
     document.getElementById('mb-reg-phone').value='';
@@ -314,7 +314,7 @@ function _dineRegister(){
    }})
   }).then(function(){
    err.style.color='var(--gr)';
-   err.textContent='✅ 가입 완료! 로그인해주세요';
+   err.textContent='가입 완료! 로그인해주세요';
    setTimeout(function(){location.reload();},1500);
   });
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
@@ -732,7 +732,7 @@ function _dineCheckLaborLaw(did,mems,atts){
   if(m.payType==='hourly'&&parseInt(m.hourlyWage)<MIN_WAGE)
    alerts.push({type:'rd',icon:'⚠️',msg:(m.name||'직원')+'님 시급 '+m.hourlyWage+'원 — 최저임금 미달!'});
  });
- if(!alerts.length){lawList.innerHTML='<div style="font-size:12px;color:var(--gr);padding:8px">✅ 근로법 이상 없음</div>';return;}
+ if(!alerts.length){lawList.innerHTML='<div style="font-size:12px;color:var(--gr);padding:8px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>근로법 이상 없음</div>';return;}
  var colorMap={yl:'rgba(245,158,11,.08)',gr:'rgba(34,197,94,.08)',rd:'rgba(239,68,68,.08)'};
  var borderMap={yl:'rgba(245,158,11,.2)',gr:'rgba(34,197,94,.2)',rd:'rgba(239,68,68,.2)'};
  var textMap={yl:'#f59e0b',gr:'#22c55e',rd:'#ef4444'};
