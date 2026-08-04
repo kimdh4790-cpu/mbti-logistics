@@ -2529,10 +2529,56 @@ function setStatus(msg,col){
 function renderList(){
   var ul=document.getElementById('list');
   if(!ul)return;
-  if(!MEMBERS.length){ul.innerHTML='<div class="err">등록된 직원이 없습니다</div>';return;}
-  ul.innerHTML=MEMBERS.map(function(m){
-    return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
-  }).join('');
+  var html='';
+  if(MEMBERS.length){
+    html=MEMBERS.map(function(m){
+      return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
+    }).join('');
+  } else {
+    html='<div class="err" style="margin-bottom:10px">등록된 직원이 없습니다</div>';
+  }
+  html+='<button class="mem-btn" style="border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,.12);margin-top:8px" onclick="showRegForm()">+ 내 이름이 없어요 (신규 등록)</button>';
+  ul.innerHTML=html;
+}
+
+function showRegForm(){
+  var ul=document.getElementById('list');
+  if(!ul)return;
+  ul.innerHTML='<div>'+
+    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">📝 신규 직원 등록</div>'+
+    '<input id="r-name" type="text" placeholder="이름을 입력하세요" autocomplete="name" '+
+    'style="width:100%;padding:12px;background:#1a1a2e;border:1.5px solid #7c3aed;border-radius:10px;color:#fff;font-size:15px;margin-bottom:8px;outline:none;display:block">'+
+    '<input id="r-phone" type="tel" placeholder="연락처 (선택사항, 010-0000-0000)" autocomplete="tel" '+
+    'style="width:100%;padding:12px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;display:block">'+
+    '<button onclick="doRegister()" style="width:100%;padding:14px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer">등록 후 ${label}</button>'+
+    '<button onclick="renderList()" style="width:100%;padding:10px;background:transparent;border:none;color:#666;font-size:13px;cursor:pointer;margin-top:6px">← 목록으로 돌아가기</button>'+
+  '</div>';
+  setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
+}
+
+function doRegister(){
+  var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
+  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
+  if(!name){setStatus('이름을 입력하세요','#ff4466');return;}
+  setStatus('등록 중...','#aaa');
+  var deviceId=getDeviceId();
+  var today=getToday();
+  var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
+  if(localStorage.getItem(dupKey)){
+    setStatus('이 기기에서 이미 처리됐습니다','#ff4466');
+    return;
+  }
+  fetch('/qr/register',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:DID,name:name,phone:phone})
+  }).then(function(r){return r.json();}).then(function(res){
+    if(res.ok&&res.uid){
+      doSave(res.uid,name,deviceId,dupKey,0,0);
+    } else {
+      setStatus(res.error||'등록 오류','#ff4466');
+    }
+  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
 function selectMember(uid,name){
@@ -2632,6 +2678,36 @@ fetch('/qr/members?did='+DID)
           return Response.json({members});
         } catch(e) {
           return Response.json({members:[], error:e.message});
+        }
+      }
+
+      // /qr/register — 신규 직원 이름+연락처 등록
+      if (path === '/qr/register' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did, name, phone} = body;
+          if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
+          const token = await getAccessToken(env);
+          const res = await fetch(`${FS_BASE}/members`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              name:       {stringValue: name},
+              phone:      {stringValue: phone||''},
+              role:       {stringValue: 'part'},
+              wage:       {integerValue: 0},
+              wageType:   {stringValue: 'hourly'},
+              is_active:  {booleanValue: true},
+              createdAt:  {stringValue: new Date().toISOString()}
+            }})
+          });
+          const doc = await res.json();
+          const uid = doc.name?.split('/').pop();
+          if (!uid) return Response.json({ok:false,error:'등록 실패'});
+          return Response.json({ok:true, uid});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
         }
       }
 
@@ -3874,10 +3950,56 @@ function setStatus(msg,col){
 function renderList(){
   var ul=document.getElementById('list');
   if(!ul)return;
-  if(!MEMBERS.length){ul.innerHTML='<div class="err">등록된 직원이 없습니다</div>';return;}
-  ul.innerHTML=MEMBERS.map(function(m){
-    return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
-  }).join('');
+  var html='';
+  if(MEMBERS.length){
+    html=MEMBERS.map(function(m){
+      return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
+    }).join('');
+  } else {
+    html='<div class="err" style="margin-bottom:10px">등록된 직원이 없습니다</div>';
+  }
+  html+='<button class="mem-btn" style="border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,.12);margin-top:8px" onclick="showRegForm()">+ 내 이름이 없어요 (신규 등록)</button>';
+  ul.innerHTML=html;
+}
+
+function showRegForm(){
+  var ul=document.getElementById('list');
+  if(!ul)return;
+  ul.innerHTML='<div>'+
+    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">📝 신규 직원 등록</div>'+
+    '<input id="r-name" type="text" placeholder="이름을 입력하세요" autocomplete="name" '+
+    'style="width:100%;padding:12px;background:#1a1a2e;border:1.5px solid #7c3aed;border-radius:10px;color:#fff;font-size:15px;margin-bottom:8px;outline:none;display:block">'+
+    '<input id="r-phone" type="tel" placeholder="연락처 (선택사항, 010-0000-0000)" autocomplete="tel" '+
+    'style="width:100%;padding:12px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;display:block">'+
+    '<button onclick="doRegister()" style="width:100%;padding:14px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer">등록 후 ${label}</button>'+
+    '<button onclick="renderList()" style="width:100%;padding:10px;background:transparent;border:none;color:#666;font-size:13px;cursor:pointer;margin-top:6px">← 목록으로 돌아가기</button>'+
+  '</div>';
+  setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
+}
+
+function doRegister(){
+  var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
+  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
+  if(!name){setStatus('이름을 입력하세요','#ff4466');return;}
+  setStatus('등록 중...','#aaa');
+  var deviceId=getDeviceId();
+  var today=getToday();
+  var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
+  if(localStorage.getItem(dupKey)){
+    setStatus('이 기기에서 이미 처리됐습니다','#ff4466');
+    return;
+  }
+  fetch('/qr/register',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:DID,name:name,phone:phone})
+  }).then(function(r){return r.json();}).then(function(res){
+    if(res.ok&&res.uid){
+      doSave(res.uid,name,deviceId,dupKey,0,0);
+    } else {
+      setStatus(res.error||'등록 오류','#ff4466');
+    }
+  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
 }
 
 function selectMember(uid,name){
@@ -3977,6 +4099,36 @@ fetch('/qr/members?did='+DID)
           return Response.json({members});
         } catch(e) {
           return Response.json({members:[], error:e.message});
+        }
+      }
+
+      // /qr/register — 신규 직원 이름+연락처 등록
+      if (path === '/qr/register' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did, name, phone} = body;
+          if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
+          const token = await getAccessToken(env);
+          const res = await fetch(`${FS_BASE}/members`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              dealerId:   {stringValue: did},
+              name:       {stringValue: name},
+              phone:      {stringValue: phone||''},
+              role:       {stringValue: 'part'},
+              wage:       {integerValue: 0},
+              wageType:   {stringValue: 'hourly'},
+              is_active:  {booleanValue: true},
+              createdAt:  {stringValue: new Date().toISOString()}
+            }})
+          });
+          const doc = await res.json();
+          const uid = doc.name?.split('/').pop();
+          if (!uid) return Response.json({ok:false,error:'등록 실패'});
+          return Response.json({ok:true, uid});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
         }
       }
 

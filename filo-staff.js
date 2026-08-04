@@ -111,7 +111,10 @@ function _filoPageAttendance(el){
  '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">직원이 스캔하면 출근 체크</div>'+
  '<div class="qr-wrap"><img src="'+qrImg+'" style="width:180px;height:180px"></div>'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">'+today+'</div>'+
- '<button onclick="_filoManualCheckin()" class="btn btn-brand btn-sm" style="margin-top:10px;width:100%">수동 출근 체크</button>'+
+ '<div style="display:flex;gap:6px;margin-top:10px">'+
+ '<button onclick="_filoManualCheckin()" class="btn btn-brand btn-sm" style="flex:1">수동 출근 체크</button>'+
+ '<button onclick="_filoShowStaffReg()" class="btn btn-sm" style="flex:1;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa">+ 신규 직원 등록</button>'+
+ '</div>'+
  '</div>'+
  '<div class="qr-card" style="text-align:left">'+
  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">'+
@@ -130,7 +133,18 @@ function _filoPageAttendance(el){
  '<select id="mc-type" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px">'+
  '<option value="in">출근</option><option value="out">퇴근</option></select></div></div>'+
  '<div class="fg"><label>시각</label><input id="mc-time" type="datetime-local" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
- '<button onclick="_filoDoManualCheckin()" class="btn btn-brand" style="width:100%">체크인 저장</button></div>';
+ '<button onclick="_filoDoManualCheckin()" class="btn btn-brand" style="width:100%">체크인 저장</button></div>'+
+ '<div id="staff-reg" style="display:none;margin-top:10px" class="card">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:10px">📝 신규 직원 등록</div>'+
+ '<div class="fg"><label>이름 <span style="color:#ef4444">*</span></label>'+
+ '<input id="nr-name" type="text" placeholder="직원 이름" autocomplete="name" '+
+ 'style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+ '<div class="fg"><label>연락처</label>'+
+ '<input id="nr-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel" '+
+ 'style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+ '<div style="display:flex;gap:8px">'+
+ '<button onclick="_filoShowStaffReg()" class="btn" style="flex:1;background:var(--b3)">취소</button>'+
+ '<button onclick="_filoRegisterStaff()" class="btn btn-brand" style="flex:1">등록</button></div></div>';
 
  var now=new Date();
  var localISO=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
@@ -354,5 +368,51 @@ function _filoPageRoster(el){
  '<div style="font-size:40px;margin-bottom:12px">🗓</div>'+
  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">근무표</div>'+
  '<div style="font-size:12px;color:var(--t3)">주간 근무표 기능 곧 추가됩니다</div></div>';
+}
+
+/* ══════════════════════════════════════════
+   📝 신규 직원 이름+연락처 등록 (근태QR 페이지)
+   ══════════════════════════════════════════ */
+function _filoShowStaffReg(){
+ var el=document.getElementById('staff-reg');
+ if(!el)return;
+ var visible=el.style.display!=='none';
+ el.style.display=visible?'none':'block';
+ if(!visible){
+  var nm=document.getElementById('nr-name');
+  if(nm){nm.value='';nm.focus();}
+  var ph=document.getElementById('nr-phone');
+  if(ph)ph.value='';
+ }
+}
+
+function _filoRegisterStaff(){
+ var did=_CU.dealerId||_CU.uid;
+ var name=(document.getElementById('nr-name')&&document.getElementById('nr-name').value||'').trim();
+ var phone=(document.getElementById('nr-phone')&&document.getElementById('nr-phone').value||'').trim();
+ if(!name){_filoToast('이름을 입력하세요');return;}
+ _db.collection('members').add({
+  dealerId:did,name:name,phone:phone,
+  role:'part',wage:0,wageType:'hourly',
+  createdAt:_nowISO(),is_active:true
+ }).then(function(docRef){
+  _filoToast('✅ '+name+' 등록 완료');
+  document.getElementById('staff-reg').style.display='none';
+  /* 드롭다운 갱신 */
+  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
+  .then(function(snap){
+   var sel=document.getElementById('mc-member');if(!sel)return;
+   while(sel.options.length>1)sel.remove(1);
+   snap.forEach(function(doc){
+    var opt=document.createElement('option');
+    opt.value=doc.id;opt.textContent=doc.data().name||doc.id;
+    sel.appendChild(opt);
+   });
+   sel.value=docRef.id;
+   /* 수동 체크인 섹션 열기 */
+   var mc=document.getElementById('manual-checkin');
+   if(mc)mc.style.display='block';
+  });
+ }).catch(function(e){_filoToast('❌ '+e.message);});
 }
 
