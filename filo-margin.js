@@ -425,7 +425,7 @@ function _filoRenderMarginAnalysis(did,ym){
   [
    {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
    {label:'순이익',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
-   {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'✅':'⚠️',c:totalProfit>=0?'#22c55e':'#ef4444'}
+   {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'달성':'주의',c:totalProfit>=0?'#22c55e':'#ef4444'}
   ].map(function(s){
    return '<div style="background:var(--b3);border-radius:12px;padding:14px 10px">'+
    '<div style="font-size:10px;color:var(--t3);margin-bottom:6px">'+s.label+'</div>'+
@@ -458,7 +458,7 @@ function _filoRenderInsights(did,ym){
   var margin=rev>0?Math.round((rev-cost)/rev*100):0;
   var insights=[];
   if(margin<40)insights.push({icon:'🚨',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
-  else if(margin>=60)insights.push({icon:'✅',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
+  else if(margin>=60)insights.push({icon:'↑',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
   if(posRev>0&&rev===0)insights.push({icon:'💡',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
   if(Object.keys(costMap).length===0)insights.push({icon:'⚙️',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(124,58,237,.08)',border:'rgba(124,58,237,.25)'});
   if(!insights.length)insights.push({icon:'🎯',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
