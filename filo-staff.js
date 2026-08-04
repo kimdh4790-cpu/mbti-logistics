@@ -46,7 +46,7 @@ function _filoPageStaffQR(el){
  /* 휴식 QR */
  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'+
  '<div style="text-align:center;padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:12px">'+
- '<div style="font-size:11px;font-weight:800;color:#f59e0b;margin-bottom:6px">☕ 휴식 시작</div>'+
+ '<div style="font-size:11px;font-weight:800;color:#f59e0b;margin-bottom:6px">휴식 시작</div>'+
  '<div id="qr-break-start" style="background:#fff;border-radius:8px;padding:5px;display:inline-block;margin-bottom:4px"></div>'+
  '<div id="qr-break-timer" style="font-size:9px;color:var(--t3)">갱신 대기중...</div>'+
  '</div>'+
@@ -63,7 +63,7 @@ function _filoPageStaffQR(el){
  /* 직원별 개인 QR */
  '<div class="card">'+
  '<div style="font-size:12px;font-weight:800;color:var(--t3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">직원별 개인 QR</div>'+
- '<div id="staff-qr-list"><div style="text-align:center;padding:20px;color:var(--t3)">⏳ 로딩 중...</div></div>'+
+ '<div id="staff-qr-list"><div style="text-align:center;padding:20px;color:var(--t3)">로딩 중...</div></div>'+
  '</div></div>';
 
  _filoRenderStaffQRs(did);
@@ -121,7 +121,7 @@ function _filoPageAttendance(el){
  '<div class="live-dot"></div>'+
  '<div style="font-size:13px;font-weight:800">오늘 출퇴근 현황</div></div>'+
  '<div id="attend-today" style="max-height:280px;overflow-y:auto">'+
- '<div style="text-align:center;padding:20px;color:var(--t3)">⏳</div></div>'+
+ '<div style="text-align:center;padding:20px;color:var(--t3)">...</div></div>'+
  '</div></div>'+
  '<div id="manual-checkin" style="display:none" class="card">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px">수동 출퇴근 체크</div>'+
@@ -212,8 +212,19 @@ function _filoPageAttendDash(el){
  '<input type="date" id="ad-date" value="'+today+'" onchange="_filoLoadAttendDash()" '+
  'style="padding:8px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px">'+
  '</div>'+
- '<div id="ad-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>'+
- '<div id="ad-list"></div></div>';
+ '<div id="ad-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>'+
+ '<div id="ad-list"></div>'+
+ '<div id="staffiq-ai" style="margin-top:14px;background:linear-gradient(135deg,rgba(34,211,238,.06),rgba(99,102,241,.04));border:1px solid rgba(34,211,238,.2);border-radius:16px;padding:18px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+   '<div style="display:flex;align-items:center;gap:8px">'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>'+
+    '<span style="font-size:13px;font-weight:800;color:#22d3ee">STAFFIQ 근태분석</span>'+
+   '</div>'+
+   '<button onclick="_staffiqAnalyze()" style="padding:6px 14px;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);border-radius:8px;color:#22d3ee;font-size:11px;font-weight:700;cursor:pointer">AI 분석 실행</button>'+
+  '</div>'+
+  '<div id="staffiq-result" style="font-size:12px;color:var(--t2);line-height:1.8;min-height:32px">근태 데이터를 분석하려면 위 버튼을 클릭하세요.</div>'+
+ '</div>'+
+ '</div>';
  _filoLoadAttendDash();
 }
 
@@ -313,11 +324,11 @@ function _filoPagePayroll(el){
  var ym=now.toISOString().slice(0,7);
  el.innerHTML='<div class="slide-up" style="max-width:860px;margin:0 auto">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
- '<div style="font-size:17px;font-weight:900">💼 급여 현황</div>'+
+ '<div style="font-size:17px;font-weight:900;display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>급여 현황</div>'+
  '<div style="display:flex;gap:8px;align-items:center">'+
  '<select id="pay-ym" onchange="_filoLoadPayroll()" style="padding:6px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px">'+
  (function(){var opts='';for(var i=0;i<6;i++){var d=new Date(now.getFullYear(),now.getMonth()-i,1);var v=d.toISOString().slice(0,7);opts+='<option value="'+v+'"'+(i===0?' selected':'')+'>'+v+'</option>';}return opts;})()+'</select>'+
- '<button onclick="_filoPayrollSettle()" style="padding:6px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📨 명세서 발송</button>'+
+ '<button onclick="_filoPayrollSettle()" style="padding:6px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>명세서 발송</button>'+
  '</div></div>'+
  '<!-- 출근중 실시간 섹션 -->'+
  '<div id="pay-live" style="margin-bottom:14px"></div>'+
@@ -475,7 +486,7 @@ function _filoRegisterStaff(){
   role:empType,wage:wage,wageType:wageType,empType:empType,
   createdAt:_nowISO(),is_active:true
  }).then(function(docRef){
-  _filoToast('✅ '+name+' 등록 완료');
+  _filoToast(name+' 등록 완료');
   document.getElementById('staff-reg').style.display='none';
   /* 드롭다운 갱신 */
   _db.collection('members').where('dealerId','==',did).orderBy('name').get()
@@ -492,7 +503,7 @@ function _filoRegisterStaff(){
    var mc=document.getElementById('manual-checkin');
    if(mc)mc.style.display='block';
   });
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 
 /* ══════════════════════════════════════════
@@ -580,3 +591,34 @@ function _calcNightMin(inD, outD){
  return nm;
 }
 
+
+/* ── STAFFIQ AI 근태분석 ── */
+function _staffiqAnalyze(){
+ var btn=document.querySelector('[onclick="_staffiqAnalyze()"]');
+ var res=document.getElementById('staffiq-result');
+ if(!res)return;
+ // 현재 화면의 출퇴근 데이터 수집
+ var rows=[];
+ document.querySelectorAll('#ad-list .pay-card').forEach(function(el){
+  rows.push(el.innerText.replace(/\s+/g,' ').trim());
+ });
+ if(!rows.length){res.textContent='출퇴근 데이터가 없습니다.';return;}
+ if(btn){btn.disabled=true;btn.textContent='분석 중...';}
+ res.innerHTML='<span style="color:var(--t3)">Claude AI 분석 중</span>';
+ var prompt='다음은 오늘의 직원 출퇴근 데이터입니다:\n'+rows.join('\n')+
+  '\n\n다음을 간략히 분석해주세요 (한국어, 3-4줄):'+
+  '\n1. 출퇴근 패턴 이상 여부 (지각·조기퇴근)\n2. 총 근무시간 효율성\n3. 급여 관련 주의사항';
+ fetch('/api/ai-coach',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({message:prompt,type:'staffiq'})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  if(d.reply)res.innerHTML=d.reply.replace(/\n/g,'<br>');
+  else res.textContent='분석 결과를 받지 못했습니다.';
+ }).catch(function(e){
+  res.textContent='분석 오류: '+e.message;
+ }).finally(function(){
+  if(btn){btn.disabled=false;btn.textContent='AI 분석 실행';}
+ });
+}
