@@ -1,1029 +1,159 @@
-/**
- * mbtico-ctrl.js — 관제센터 공통 모듈
- * 최종수정: 2026-08-04 | 담당: 엠비티아이 김형우
- *
- * [포함 기능]
- *   - Firebase 초기화 (Auth/Firestore/Storage)
- *   - 슈퍼어드민 인증 체크
- *   - 아코디언 UI 컨트롤
- *   - FCM 푸시 발송 (_ctrlNotify)
- *   - 공통 유틸 (_ctrlToast, _ctrlFmt, _ctrlBadge)
- *   - 각 섹션 로더 (대시보드/가입승인/고객사/채팅/공지/결제/AI리포트)
- *
- * [버그수정 2026-08-04]
- *   - 채팅목록 var shadowing (html 중복 선언) → 수정
- *   - 아코디언 _loaded 플래그 문제 → toggleOpen 상태 기반으로 교체
- *   - 가입승인: join_requests 대신 companies 조회 → 최초부터 통일
- *   - 대시보드 카운트업 애니메이션 추가
- *   - 테이블 정렬/필터/검색 개선 (sortKey 상태 관리)
- *   - 리스너 누수: 기존 _compUnsub 해제
- *   - feat-btn data-on 문자열 비교 버그 수정
+﻿/**
+ * mbtico-ctrl.js - Ultra Luxury 2026 Edition
+ * 최종수정: 2026-08-04 | Pretendard + Lucide SVG + Glassmorphism
  */
-
-// ── Firebase 설정 ─────────────────────────────────────────────────
-var _FB_CONFIG = {
-  apiKey: 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
-  authDomain: 'mbti-logistics.firebaseapp.com',
-  projectId: 'mbti-logistics',
-  storageBucket: 'mbti-logistics.firebasestorage.app',
-  messagingSenderId: '40761160761',
-  appId: '1:40761160761:web:20545b610f03f534e949e8'
-};
-
-var _db = null, _auth = null, _storage = null;
-var _CU = null;          // 현재 로그인 유저
-var _unsubs = [];         // Firestore 전역 리스너 해제용
-var _compUnsub = null;    // 고객사 실시간 리스너
-
-var SA_EMAILS = ['kimdh4790@gmail.com', 'soungkyekim@naver.com'];
-
-// ── SVG 아이콘 팩 ────────────────────────────────────────────────
-var _ICONS = {
-  users: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M9 6a3 3 0 1 1 6 0A3 3 0 0 1 9 6zM17 15a5 5 0 0 0-10 0h10zM2 12a2.5 2.5 0 1 1 5 0A2.5 2.5 0 0 1 2 12zm6 3H1a4 4 0 0 1 7 0z"/></svg>',
-  check: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>',
-  clock: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm.75-13a.75.75 0 0 0-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 0 0 0-1.5h-3.25V5z" clip-rule="evenodd"/></svg>',
-  warning: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>',
-  bell: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M4.214 3.227a.75.75 0 0 0-1.156-.956 8.97 8.97 0 0 0-1.856 3.826.75.75 0 1 0 1.466.316 7.47 7.47 0 0 1 1.546-3.186zm11.725-.956a.75.75 0 0 0-1.156.956 7.47 7.47 0 0 1 1.547 3.186.75.75 0 1 0 1.466-.316 8.97 8.97 0 0 0-1.857-3.826zM10 2a6 6 0 0 0-6 6c0 1.887-.454 3.665-1.257 5.234a.75.75 0 0 0 .515 1.076 32.91 32.91 0 0 0 3.256.508 3.5 3.5 0 0 0 6.972 0 32.91 32.91 0 0 0 3.256-.508.75.75 0 0 0 .515-1.076A11.448 11.448 0 0 1 16 8a6 6 0 0 0-6-6zm0 15a2 2 0 0 1-1.983-1.737 31.36 31.36 0 0 0 3.966 0A2 2 0 0 1 10 17z"/></svg>',
-  pause: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M5.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75A.75.75 0 0 0 7.25 3h-1.5zm6 0a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75a.75.75 0 0 0-.75-.75h-1.5z"/></svg>',
-  chat: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M3.505 2.365A41.369 41.369 0 0 1 9 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 0 0-.577-.069 43.141 43.141 0 0 0-4.706 0C9.229 4.696 7.5 6.727 7.5 8.998v2.24c0 1.413.67 2.735 1.76 3.562l-2.98 2.98A.75.75 0 0 1 5 17.25v-3.443c-.501-.048-1-.106-1.495-.172C2.033 13.438 1 12.162 1 10.72V5.28c0-1.441 1.033-2.717 2.505-2.914z"/><path d="M14 6c-.762 0-1.52.02-2.271.062C10.157 6.148 9 7.472 9 8.998v2.24c0 1.519 1.147 2.839 2.71 2.935a44.533 44.533 0 0 0 4.271.051 1 1 0 0 0 1.019-1v-5.24c0-1.525-1.157-2.85-2.71-2.935A44.55 44.55 0 0 0 14 6z"/></svg>',
-  trend_up: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M12.577 4.878a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0V6.354l-4.062 4.062a.75.75 0 0 1-1.06 0l-2.5-2.5a.75.75 0 0 1 0-1.06l5.378-5.378a.75.75 0 0 1 1.06 0L18.25 3.97V4.12z" clip-rule="evenodd"/><path fill-rule="evenodd" d="M.572 14.25a.75.75 0 0 1 1.06 0L5 17.69l4.94-4.94a.75.75 0 0 1 1.06 1.06l-5.5 5.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"/></svg>',
-  ai: '<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v1.836a.75.75 0 0 0 1.5 0V2.75zM10 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM3.75 9.25a.75.75 0 0 1 0 1.5H2a.75.75 0 0 1 0-1.5h1.75zM17.25 9.25a.75.75 0 0 1 0 1.5H18a.75.75 0 0 1 0-1.5h-.75zM10 15.25a.75.75 0 0 1 .75.75v1.75a.75.75 0 0 1-1.5 0V16a.75.75 0 0 1 .75-.75zM4.697 4.697a.75.75 0 0 1 1.06 0l1.25 1.25a.75.75 0 0 1-1.06 1.06l-1.25-1.25a.75.75 0 0 1 0-1.06zm9.546 1.06 1.25-1.25a.75.75 0 1 1 1.06 1.06l-1.25 1.25a.75.75 0 1 1-1.06-1.06zM5.757 13.182a.75.75 0 0 1 0 1.06l-1.25 1.25a.75.75 0 0 1-1.06-1.06l1.25-1.25a.75.75 0 0 1 1.06 0zm8.485 0a.75.75 0 0 1 1.06 0l1.25 1.25a.75.75 0 1 1-1.06 1.06l-1.25-1.25a.75.75 0 0 1 0-1.06z"/></svg>'
-};
-
-// ── 초기화 ──────────────────────────────────────────────────────────
-function _ctrlInit() {
-  if (!firebase.apps.length) firebase.initializeApp(_FB_CONFIG);
-  _db      = firebase.firestore();
-  _auth    = firebase.auth();
-  _storage = firebase.storage();
-
-  _auth.onAuthStateChanged(function(user) {
-    if (!user || !SA_EMAILS.includes(user.email)) {
-      document.getElementById('login-screen').style.display = 'flex';
-      document.getElementById('main-screen').style.display  = 'none';
-      return;
-    }
-    _CU = user;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-screen').style.display  = 'flex';
-    document.getElementById('ctrl-user').textContent = user.email;
-    _ctrlStartListeners();
-  });
+var _FB_CONFIG={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'};
+var _db=null,_auth=null,_storage=null,_CU=null,_unsubs=[],_compUnsub=null;
+var _compViewMode='table',_compSearch='',_compFilter='all',_compSort={key:'companyName',asc:true};
+var _chatDealerId='',_chatUnsub=null;
+var SA_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var _I={users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="20" height="20"><polyline points="20 6 9 17 4 12"/></svg>',clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',pause:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',chevD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>',chevR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13"><polyline points="9 18 15 12 9 6"/></svg>',spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>',doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="6 9 12 15 18 9"/></svg>'};
+var _ICONS={check:_I.check,clock:_I.clock,warning:_I.warn,pause:_I.pause,chat:_I.chat,bell:_I.bell,ai:_I.ai,users:_I.users,trend_up:_I.ai};
+function _ctrlInjectCSS(){
+  if(document.getElementById('ctrl-lux-css')) return;
+  var lk=document.createElement('link');lk.rel='stylesheet';lk.href='https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css';document.head.appendChild(lk);
+  var s=document.createElement('style');s.id='ctrl-lux-css';
+  s.textContent='*{box-sizing:border-box;font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif}'
+  +':root{--bg0:#05070f;--bg1:#080b14;--bg2:#0c1018;--sf:rgba(255,255,255,.035);--sf2:rgba(255,255,255,.065);--bd:rgba(255,255,255,.07);--bd2:rgba(255,255,255,.13);--tx1:#f0f4ff;--tx2:#8b9dc3;--tx3:#4a5568;--acc:#6366f1;--acc2:#818cf8;--acc3:#a5b4fc;--grn:#10b981;--grn2:#34d399;--amb:#f59e0b;--amb2:#fbbf24;--red:#ef4444;--red2:#f87171;--blu:#3b82f6;--blu2:#60a5fa;--prp:#8b5cf6;--prp2:#a78bfa;--org:#f97316;--org2:#fb923c;--r:14px;--rs:10px;--rsm:7px;--sh:0 4px 28px rgba(0,0,0,.6);--sh2:0 12px 48px rgba(0,0,0,.75)}'
+  +'::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(99,102,241,.25);border-radius:99px}::-webkit-scrollbar-thumb:hover{background:rgba(99,102,241,.45)}'
+  +'::selection{background:rgba(99,102,241,.28);color:#fff}'
+  +'@keyframes lux-spin{to{transform:rotate(360deg)}}@keyframes lux-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes lux-glow{0%,100%{opacity:.55}50%{opacity:1}}'
+  +'.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:24px}'
+  +'.dash-card{position:relative;overflow:hidden;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:22px 18px 17px;cursor:default;transition:transform .25s cubic-bezier(.34,1.2,.64,1),box-shadow .25s,border-color .25s;animation:lux-up .4s ease both}'
+  +'.dash-card:nth-child(1){animation-delay:.04s}.dash-card:nth-child(2){animation-delay:.09s}.dash-card:nth-child(3){animation-delay:.14s}.dash-card:nth-child(4){animation-delay:.19s}.dash-card:nth-child(5){animation-delay:.24s}.dash-card:nth-child(6){animation-delay:.29s}'
+  +'.dash-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}.dash-card::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .3s;pointer-events:none;border-radius:var(--r)}'
+  +'.dash-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:var(--sh2);border-color:var(--bd2)}.dash-card:hover::after{opacity:1}'
+  +'.grad-blue::before{background:linear-gradient(90deg,#3b82f6,#6366f1,#8b5cf6)}.grad-blue{border-top-color:rgba(59,130,246,.35)!important}.grad-blue::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(59,130,246,.14),transparent)}.grad-blue .dash-icon{color:#60a5fa;background:rgba(59,130,246,.14);box-shadow:0 0 14px rgba(59,130,246,.25)}'
+  +'.grad-green::before{background:linear-gradient(90deg,#10b981,#06b6d4)}.grad-green{border-top-color:rgba(16,185,129,.35)!important}.grad-green::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(16,185,129,.14),transparent)}.grad-green .dash-icon{color:#34d399;background:rgba(16,185,129,.14);box-shadow:0 0 14px rgba(16,185,129,.25)}'
+  +'.grad-amber::before{background:linear-gradient(90deg,#f59e0b,#f97316)}.grad-amber{border-top-color:rgba(245,158,11,.35)!important}.grad-amber::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(245,158,11,.14),transparent)}.grad-amber .dash-icon{color:#fbbf24;background:rgba(245,158,11,.14);box-shadow:0 0 14px rgba(245,158,11,.25)}'
+  +'.grad-red::before{background:linear-gradient(90deg,#ef4444,#ec4899)}.grad-red{border-top-color:rgba(239,68,68,.35)!important}.grad-red::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(239,68,68,.14),transparent)}.grad-red .dash-icon{color:#f87171;background:rgba(239,68,68,.14);box-shadow:0 0 14px rgba(239,68,68,.25)}'
+  +'.grad-purple::before{background:linear-gradient(90deg,#8b5cf6,#6366f1)}.grad-purple{border-top-color:rgba(139,92,246,.35)!important}.grad-purple::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(139,92,246,.14),transparent)}.grad-purple .dash-icon{color:#a78bfa;background:rgba(139,92,246,.14);box-shadow:0 0 14px rgba(139,92,246,.25)}'
+  +'.grad-orange::before{background:linear-gradient(90deg,#f97316,#f59e0b)}.grad-orange{border-top-color:rgba(249,115,22,.35)!important}.grad-orange::after{background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(249,115,22,.14),transparent)}.grad-orange .dash-icon{color:#fb923c;background:rgba(249,115,22,.14);box-shadow:0 0 14px rgba(249,115,22,.25)}'
+  +'.dash-icon{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--rs);margin-bottom:14px;transition:transform .2s}.dash-card:hover .dash-icon{transform:scale(1.12)}.dash-icon svg{width:22px;height:22px}'
+  +'.dash-val{position:relative;z-index:1;font-size:36px;font-weight:900;color:var(--tx1);letter-spacing:-1.5px;line-height:1;margin-bottom:7px;font-variant-numeric:tabular-nums}'
+  +'.dash-label{position:relative;z-index:1;font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.75px;font-weight:700}'
+  +'.ctrl-loading{display:flex;align-items:center;justify-content:center;padding:44px;color:var(--tx3);font-size:13px;gap:10px}'
+  +'.ctrl-loading::before{content:"";width:16px;height:16px;border:2px solid rgba(99,102,241,.2);border-top-color:var(--acc2);border-radius:50%;animation:lux-spin .7s linear infinite;flex-shrink:0}'
+  +'.ctrl-empty{display:flex;align-items:center;justify-content:center;padding:44px;color:var(--tx3);font-size:13px}.ctrl-hint{font-size:11px;color:var(--tx3);margin-top:8px}'
+  +'.ctrl-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:16px}'
+  +'.ctrl-search-wrap{position:relative;flex:1;min-width:160px;max-width:310px}.ctrl-search-wrap .ctrl-input{padding-left:36px}'
+  +'.ctrl-si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none;display:flex}'
+  +'.view-grp{display:flex;border:1px solid var(--bd);border-radius:var(--rsm);overflow:hidden}'
+  +'.view-btn{padding:7px 11px;background:none;border:none;color:var(--tx3);cursor:pointer;display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;transition:all .14s;font-family:inherit}'
+  +'.view-btn.on{background:rgba(99,102,241,.16);color:var(--acc2)}.view-btn:hover:not(.on){background:var(--sf2)}'
+  +'.ctrl-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:1px solid var(--bd);background:var(--sf);color:var(--tx1);font-size:12px;font-weight:500;cursor:pointer;transition:all .18s cubic-bezier(.4,0,.2,1);white-space:nowrap;line-height:1.4;font-family:inherit}'
+  +'.ctrl-btn:hover{background:var(--sf2);border-color:var(--bd2);transform:translateY(-1px)}.ctrl-btn:active{transform:translateY(0)}.ctrl-btn svg{width:13px;height:13px;flex-shrink:0}'
+  +'.ctrl-btn-ok{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(6,182,212,.08));border-color:rgba(16,185,129,.28);color:var(--grn2)}.ctrl-btn-ok:hover{background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(6,182,212,.15));box-shadow:0 0 18px rgba(16,185,129,.18)}'
+  +'.ctrl-btn-err{background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(236,72,153,.07));border-color:rgba(239,68,68,.28);color:var(--red2)}.ctrl-btn-err:hover{background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(236,72,153,.14));box-shadow:0 0 18px rgba(239,68,68,.18)}'
+  +'.ctrl-btn-acc{background:linear-gradient(135deg,rgba(99,102,241,.16),rgba(139,92,246,.12));border-color:rgba(99,102,241,.35);color:var(--acc3)}.ctrl-btn-acc:hover{background:linear-gradient(135deg,rgba(99,102,241,.26),rgba(139,92,246,.2));box-shadow:0 0 20px rgba(99,102,241,.2)}'
+  +'.ctrl-btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important;box-shadow:none!important}'
+  +'.ctrl-input{width:100%;padding:9px 13px;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:var(--rs);color:var(--tx1);font-size:13px;outline:none;transition:border-color .18s,box-shadow .18s;box-sizing:border-box;font-family:inherit}'
+  +'.ctrl-input:focus{border-color:rgba(99,102,241,.55);box-shadow:0 0 0 3px rgba(99,102,241,.1)}.ctrl-input::placeholder{color:var(--tx3)}'
+  +'textarea.ctrl-input{resize:vertical;min-height:90px;line-height:1.6}'
+  +'.ctrl-select{padding:8px 12px;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:var(--rs);color:var(--tx1);font-size:12px;outline:none;cursor:pointer;transition:border-color .18s;font-family:inherit}.ctrl-select:focus{border-color:rgba(99,102,241,.55)}.ctrl-select option{background:#0d1117;color:#f0f4ff}'
+  +'.ctrl-label{font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}'
+  +'.ctrl-table-wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh)}'
+  +'.ctrl-table{width:100%;border-collapse:collapse;font-size:13px}'
+  +'.ctrl-table thead th{padding:11px 15px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);background:rgba(0,0,0,.3);border-bottom:1px solid var(--bd);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;position:sticky;top:0;z-index:2;font-family:inherit}'
+  +'.ctrl-table thead th:hover{color:var(--tx1)}.th-asc,.th-desc{color:var(--acc2)!important}'
+  +'.ctrl-table tbody tr{border-bottom:1px solid rgba(255,255,255,.025);transition:background .12s}.ctrl-table tbody tr:hover{background:rgba(99,102,241,.05)}.ctrl-table tbody tr.row-open{background:rgba(99,102,241,.07)}'
+  +'.ctrl-table td{padding:11px 15px;color:var(--tx1);vertical-align:middle}.feat-expand-row td{padding:0!important;background:rgba(0,0,0,.2)}.feat-expand-inner{padding:14px 18px}'
+  +'.comp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}'
+  +'.comp-card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;transition:border-color .22s,box-shadow .22s,transform .22s cubic-bezier(.34,1.2,.64,1);animation:lux-up .35s ease both}'
+  +'.comp-card:hover{border-color:rgba(99,102,241,.35);box-shadow:0 0 0 1px rgba(99,102,241,.1),var(--sh)}'
+  +'.comp-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}'
+  +'.comp-name{font-weight:700;font-size:14px;color:var(--tx1);letter-spacing:-.01em}.comp-email{font-size:11px;color:var(--tx3);margin-top:3px}'
+  +'.comp-meta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;font-size:11px;color:var(--tx2)}.comp-meta span{display:flex;align-items:center;gap:3px}'
+  +'.comp-actions{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}.comp-features{border-top:1px solid var(--bd);padding-top:14px}'
+  +'.comp-count-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:99px;font-size:11px;color:var(--acc2);font-weight:700}'
+  +'.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:700;letter-spacing:.2px}'
+  +'.badge-ok{background:rgba(52,211,153,.12);color:var(--grn2);border:1px solid rgba(52,211,153,.22)}.badge-warn{background:rgba(251,191,36,.12);color:var(--amb2);border:1px solid rgba(251,191,36,.22)}.badge-hold{background:rgba(167,139,250,.12);color:var(--prp2);border:1px solid rgba(167,139,250,.22)}.badge-err{background:rgba(248,113,113,.12);color:var(--red2);border:1px solid rgba(248,113,113,.22)}.badge-blue{background:rgba(96,165,250,.12);color:var(--blu2);border:1px solid rgba(96,165,250,.22)}'
+  +'.feat-sec{margin-bottom:12px}.feat-sec-ttl{font-size:9.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;opacity:.65}'
+  +'.feat-toggles{display:flex;flex-wrap:wrap;gap:6px}.feat-lbl{font-size:10.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:5px}'
+  +'.feat-toggle{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none;padding:5px 10px;border-radius:99px;border:1px solid var(--bd);background:rgba(0,0,0,.2);transition:all .18s}.feat-toggle:hover{background:var(--sf2);border-color:var(--bd2)}.feat-toggle input{display:none}'
+  +'.tog-track{position:relative;width:32px;height:17px;background:rgba(255,255,255,.1);border-radius:99px;transition:background .22s cubic-bezier(.4,0,.2,1);flex-shrink:0}'
+  +'.tog-track::after{content:"";position:absolute;top:2.5px;left:2.5px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .22s cubic-bezier(.34,1.4,.64,1);box-shadow:0 1px 4px rgba(0,0,0,.5)}'
+  +'input:checked+.tog-track{background:linear-gradient(135deg,var(--acc),var(--prp));box-shadow:0 0 10px rgba(99,102,241,.35)}input:checked+.tog-track::after{transform:translateX(15px)}'
+  +'.tog-lbl{font-size:11px;color:var(--tx2);white-space:nowrap;font-weight:500}input:checked~.tog-lbl,input:checked+.tog-track+.tog-lbl{color:var(--acc3)}'
+  +'.feat-compact{display:flex;flex-wrap:wrap;gap:4px}.feat-chip{padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600}.chip-on{background:rgba(99,102,241,.16);color:var(--acc3);border:1px solid rgba(99,102,241,.2)}.chip-off{background:rgba(255,255,255,.04);color:var(--tx3)}'
+  +'.chat-layout{display:grid;grid-template-columns:245px 1fr;height:560px;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}'
+  +'.chat-list{background:rgba(0,0,0,.25);border-right:1px solid var(--bd);overflow-y:auto;display:flex;flex-direction:column}'
+  +'.chat-list-hdr{padding:14px 16px;font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--bd);flex-shrink:0;display:flex;align-items:center;gap:6px}'
+  +'.chat-item{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.035);cursor:pointer;transition:background .12s;border-left:2px solid transparent}.chat-item:hover{background:var(--sf2)}.chat-item.on{background:rgba(99,102,241,.1);border-left-color:var(--acc2)}'
+  +'.chat-item-name{font-size:13px;font-weight:600;color:var(--tx1);display:flex;align-items:center;justify-content:space-between;gap:6px}.chat-item-last{font-size:11px;color:var(--tx3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+  +'.chat-badge{background:linear-gradient(135deg,var(--red),#ec4899);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:99px;flex-shrink:0;box-shadow:0 0 8px rgba(239,68,68,.4)}'
+  +'.chat-room{display:flex;flex-direction:column;background:var(--bg2)}'
+  +'.chat-room-hdr{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--bd);background:rgba(0,0,0,.2);flex-shrink:0}'
+  +'.chat-room-hdr-name{font-weight:700;font-size:14px;color:var(--tx1);letter-spacing:-.01em}'
+  +'.online-dot{width:8px;height:8px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px rgba(16,185,129,.7);animation:lux-glow 2s ease-in-out infinite}'
+  +'.chat-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;color:var(--tx3);font-size:13px;text-align:center}.chat-empty svg{width:36px;height:36px;opacity:.18}'
+  +'.chat-msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px}'
+  +'.msg{display:flex;flex-direction:column;max-width:75%}.msg-sa{align-self:flex-end;align-items:flex-end}.msg-dealer{align-self:flex-start;align-items:flex-start}'
+  +'.msg-bubble{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;word-break:break-word}'
+  +'.msg-sa .msg-bubble{background:linear-gradient(135deg,#5b5fc7,#7c3aed);color:#fff;border-radius:16px 16px 3px 16px;box-shadow:0 4px 16px rgba(99,102,241,.35)}'
+  +'.msg-dealer .msg-bubble{background:rgba(255,255,255,.065);color:var(--tx1);border:1px solid var(--bd);border-radius:16px 16px 16px 3px}'
+  +'.msg-time{font-size:10px;color:var(--tx3);margin-top:4px;padding:0 3px}.chat-input-row{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--bd);background:rgba(0,0,0,.15);flex-shrink:0}.chat-input-row .ctrl-input{flex:1}'
+  +'.notice-form{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;margin-bottom:16px}'
+  +'.notice-item{padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.05)}.notice-title{font-size:13px;font-weight:600;color:var(--tx1)}.notice-body{font-size:12px;color:var(--tx2);margin:3px 0}.notice-meta{font-size:10px;color:var(--tx3)}'
+  +'.billing-sum{padding:13px 16px;background:linear-gradient(135deg,rgba(16,185,129,.07),rgba(6,182,212,.04));border:1px solid rgba(16,185,129,.18);border-radius:var(--rs);margin-bottom:12px;font-size:13px;color:var(--tx2)}.billing-sum b{color:var(--grn2);font-size:16px}'
+  +'.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--bd);background:rgba(0,0,0,.2)}'
+  +'.modal-title{font-weight:700;font-size:15px;color:var(--tx1)}.modal-close{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rsm);color:var(--tx2);cursor:pointer;font-size:14px;transition:all .15s}.modal-close:hover{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:var(--red2)}'
+  +'.modal-body{padding:16px 20px}.detail-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;color:var(--tx1)}.detail-row b{color:var(--tx3);font-weight:500;min-width:90px;flex-shrink:0}'
+  +'.detail-sec{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;padding:12px 0 6px}.doc-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}.doc-lbl{flex:1;font-size:13px;color:var(--tx1)}.doc-none{font-size:11px;color:var(--tx3)}'
+  +'.ai-wrap{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden}'
+  +'.ai-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd);background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(139,92,246,.04))}'
+  +'.ai-hdr-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;color:var(--tx1)}'
+  +'.ai-out{padding:18px;min-height:220px}.ai-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:50px 24px;color:var(--tx3);font-size:13px;text-align:center}.ai-placeholder svg{width:38px;height:38px;opacity:.18}'
+  +'.ai-meta{font-size:10.5px;color:var(--tx3);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}'
+  +'.ai-meta-dot{width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 6px rgba(16,185,129,.6)}'
+  +'.ai-body{font-size:13px;color:var(--tx1);line-height:1.78}.ai-h4{font-size:13px;font-weight:700;color:var(--tx1);margin:18px 0 8px;display:flex;align-items:center;gap:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.06)}'
+  +'.ai-ul{margin:4px 0 14px;padding:0;list-style:none}.ai-ul li{padding:5px 0 5px 18px;position:relative;color:var(--tx2);font-size:13px;line-height:1.6}.ai-ul li::before{content:"\\25B8";position:absolute;left:0;color:var(--acc);font-size:12px}'
+  +'strong{color:var(--tx1)}'
+  +'.ctrl-toast{position:fixed;bottom:24px;right:24px;padding:12px 17px;background:rgba(8,11,20,.97);border:1px solid var(--bd);border-radius:var(--rs);color:var(--tx1);font-size:13px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:9999;transform:translateY(60px);opacity:0;transition:transform .28s cubic-bezier(.34,1.4,.64,1),opacity .2s;box-shadow:var(--sh);max-width:320px;font-family:inherit}'
+  +'.ctrl-toast.show{transform:translateY(0);opacity:1}.ctrl-toast.ok{border-left:3px solid var(--grn2)}.ctrl-toast.err{border-left:3px solid var(--red2)}';
+  document.head.appendChild(s);
 }
-
-function _ctrlLogin() {
-  var email = document.getElementById('l-email').value.trim();
-  var pw    = document.getElementById('l-pw').value;
-  _auth.signInWithEmailAndPassword(email, pw)
-    .catch(function(e) { _ctrlToast('❌ ' + e.message); });
-}
-
-function _ctrlLogout() {
-  _unsubs.forEach(function(u) { u && u(); });
-  _unsubs = [];
-  if (_compUnsub) { _compUnsub(); _compUnsub = null; }
-  _auth.signOut();
-}
-
-// ── 슈퍼어드민 리스너 시작 ────────────────────────────────────────
-function _ctrlStartListeners() {
-  var u1 = _db.collection('companies')
-    .where('status', '==', 'pending')
-    .onSnapshot(function(snap) {
-      _ctrlBadge('badge-join', snap.size);
-    });
-  _unsubs.push(u1);
-
-  var u2 = _db.collection('chats')
-    .onSnapshot(function(snap) {
-      var total = 0;
-      snap.forEach(function(d) { total += (d.data().unreadSA || 0); });
-      _ctrlBadge('badge-chat', total);
-    });
-  _unsubs.push(u2);
-
-  // 대시보드는 항상 열린 상태로 초기 로드
-  _ctrlLoadDashboard();
-}
-
-// ── 아코디언 ─────────────────────────────────────────────────────
-// 버그수정: _loaded 플래그가 toggle 방향에 관계없이 한번만 로드하던 문제
-// → body.style.display 기반으로 열림/닫힘 판단, 최초 열릴 때만 로드
-function _ctrlToggle(id) {
-  var body = document.getElementById('acc-' + id);
-  var icon = document.getElementById('ico-' + id);
-  var isOpen = body.style.display !== 'none' && body.style.display !== '';
-  if (isOpen) {
-    body.style.display = 'none';
-    icon.innerHTML = _svgChevron('right');
-  } else {
-    body.style.display = 'block';
-    icon.innerHTML = _svgChevron('down');
-    if (!body.dataset.loaded) {
-      body.dataset.loaded = '1';
-      var fn = {
-        dashboard: _ctrlLoadDashboard,
-        join:      _ctrlLoadJoin,
-        companies: _ctrlLoadCompanies,
-        chat:      _ctrlLoadChat,
-        notice:    _ctrlLoadNotice,
-        billing:   _ctrlLoadBilling,
-        aireport:  _ctrlLoadAIReport
-      }[id];
-      if (fn) fn();
-    }
-  }
-}
-
-function _svgChevron(dir) {
-  if (dir === 'down') return '<svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z" clip-rule="evenodd"/></svg>';
-  return '<svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12"><path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1-1.06 1.06L9 7.06l-2.47 2.47a.75.75 0 0 1-1.06-1.06l4.25-4.25z" clip-rule="evenodd"/></svg>';
-}
-
-// ── 공통 유틸 ────────────────────────────────────────────────────
-function _ctrlToast(msg, type) {
-  var t = document.createElement('div');
-  t.className = 'ctrl-toast' + (type ? ' ctrl-toast-' + type : '');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  requestAnimationFrame(function() { t.classList.add('ctrl-toast-show'); });
-  setTimeout(function() {
-    t.classList.remove('ctrl-toast-show');
-    setTimeout(function() { t.remove(); }, 300);
-  }, 3000);
-}
-
-function _ctrlBadge(id, n) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = n > 0 ? n : '';
-  el.style.display = n > 0 ? 'inline-flex' : 'none';
-}
-
-function _ctrlFmtDate(val) {
-  if (!val) return '-';
-  if (val && typeof val.toDate === 'function') return val.toDate().toISOString().slice(0, 10);
-  if (typeof val === 'string') return val.slice(0, 10);
-  if (typeof val === 'number') return new Date(val).toISOString().slice(0, 10);
-  return '-';
-}
-
-function _ctrlFmtTs(ts) {
-  if (!ts) return '-';
-  try {
-    var d = (ts && typeof ts.toDate === 'function') ? ts.toDate()
-          : (typeof ts === 'string' || typeof ts === 'number') ? new Date(ts)
-          : ts;
-    return d.toLocaleDateString('ko') + ' ' + d.toLocaleTimeString('ko', { hour: '2-digit', minute: '2-digit' });
-  } catch (e) { return '-'; }
-}
-
-// ── XSS 방어 ─────────────────────────────────────────────────────
-function _esc(str) {
-  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-// ── 카운트업 애니메이션 ────────────────────────────────────────────
-function _ctrlCountUp(el, target, duration) {
-  duration = duration || 800;
-  var start = 0;
-  var startTime = null;
-  var isFloat = String(target).includes('.');
-  var decimals = isFloat ? (String(target).split('.')[1] || '').length : 0;
-  function step(ts) {
-    if (!startTime) startTime = ts;
-    var progress = Math.min((ts - startTime) / duration, 1);
-    var eased = 1 - Math.pow(1 - progress, 3); // ease-out-cubic
-    var current = eased * target;
-    el.textContent = isFloat ? current.toFixed(decimals) : Math.floor(current).toLocaleString();
-    if (progress < 1) requestAnimationFrame(step);
-    else el.textContent = isFloat ? target.toFixed(decimals) : target.toLocaleString();
-  }
-  requestAnimationFrame(step);
-}
-
-// ── FCM 푸시 발송 ─────────────────────────────────────────────────
-function _ctrlNotify(type, dealerId, title, body, data) {
-  return fetch('https://donway.ai.kr/api/ctrl-notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: type, dealerId: dealerId, title: title, body: body, data: data || {} })
-  }).catch(function() {});
-}
-
-// 승인 알림 (FCM + 카카오 + 이메일)
-function _ctrlNotifyApproval(dealer) {
-  var url  = 'https://donway.ai.kr/c/' + (dealer.slug || dealer.uid);
-  var body = '가입이 승인됐습니다! 🎉\n전용URL: ' + url + '\n아이디: ' + dealer.email;
-  _ctrlNotify('dealer', dealer.uid, '✅ DONWAY 가입 승인', body, {
-    type: 'approval', url: url, loginId: dealer.email, slug: dealer.slug
-  });
-  fetch('https://donway.ai.kr/api/alimtalk', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      phone: dealer.phone || '',
-      template: 'approval',
-      params: { name: dealer.companyName, url: url, id: dealer.email }
-    })
-  }).catch(function() {});
-  var svcs = dealer.services || [];
-  var isFiloDine = svcs.some(function(s) {
-    return ['filo','dine','table_order','kiosk','inventory'].includes(s);
-  });
-  var fromEmail = isFiloDine ? 'FILO·DINE <filo-dine@donway.ai.kr>' : 'DONWAY <all@donway.ai.kr>';
-  var toEmails  = isFiloDine
-    ? ['skypjh1101@naver.com','kimdh4790@gmail.com']
-    : ['kimdh4790@gmail.com','soungkyekim@naver.com','skypjh1101@naver.com'];
-  fetch('https://donway.ai.kr/api/ctrl-notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'email',
-      from: fromEmail,
-      to: toEmails,
-      subject: '[관제센터] ' + (dealer.companyName || '업체') + ' 가입 승인 완료',
-      html: '<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">' +
-        '<h2 style="color:#0066ff">✅ 가입 승인 완료</h2>' +
-        '<table style="width:100%;border-collapse:collapse">' +
-        '<tr><td style="padding:8px;font-weight:700;color:#666">업체명</td><td style="padding:8px">' + _esc(dealer.companyName) + '</td></tr>' +
-        '<tr style="background:#f8fafc"><td style="padding:8px;font-weight:700;color:#666">이메일</td><td style="padding:8px">' + _esc(dealer.email) + '</td></tr>' +
-        '<tr><td style="padding:8px;font-weight:700;color:#666">전용URL</td><td style="padding:8px"><a href="' + url + '">' + url + '</a></td></tr>' +
-        '</table>' +
-        '<div style="margin-top:16px;padding:12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#666">' +
-        '승인자: ' + _esc(_CU ? _CU.email : '-') + ' · ' + new Date().toLocaleString('ko-KR') +
-        '</div></div>'
-    })
-  }).catch(function() {});
-}
-
-// ── 📊 대시보드 KPI 카드 (카운트업 + 그라디언트) ──────────────────
-function _ctrlLoadDashboard() {
-  var c = document.getElementById('acc-dashboard');
-  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
-
-  Promise.all([
-    _db.collection('companies').get(),
-    _db.collection('companies').where('status', '==', 'pending').get()
-  ]).then(function(results) {
-    var all     = results[0];
-    var pending = results[1];
-
-    var total = all.size;
-    var active = 0, trial = 0, suspended = 0;
-    all.forEach(function(d) {
-      var s = d.data().status;
-      if (s === 'approved' || s === 'active') active++;
-      else if (s === 'trial') trial++;
-      else if (s === 'suspended') suspended++;
-    });
-
-    var soon = 0;
-    var cutoff = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    var today  = new Date().toISOString().slice(0, 10);
-    all.forEach(function(d) {
-      var te = d.data().trialEnd || '';
-      if (te >= today && te <= cutoff) soon++;
-    });
-
-    var cards = [
-      { id: 'kpi-total',   label: '전체 고객사',  val: total,        icon: _ICONS.users,   grad: 'grad-blue'   },
-      { id: 'kpi-active',  label: '활성',         val: active,       icon: _ICONS.check,   grad: 'grad-green'  },
-      { id: 'kpi-trial',   label: '체험중',        val: trial,        icon: _ICONS.clock,   grad: 'grad-amber'  },
-      { id: 'kpi-sus',     label: '정지',          val: suspended,    icon: _ICONS.pause,   grad: 'grad-red'    },
-      { id: 'kpi-pending', label: '가입 대기',      val: pending.size, icon: _ICONS.bell,    grad: 'grad-purple' },
-      { id: 'kpi-soon',    label: '만료 임박 7일', val: soon,         icon: _ICONS.warning, grad: 'grad-orange' }
-    ];
-
-    var html = '<div class="dash-grid">';
-    cards.forEach(function(card) {
-      html += '<div class="dash-card ' + card.grad + '">' +
-        '<div class="dash-icon">' + card.icon + '</div>' +
-        '<div class="dash-val" id="' + card.id + '">0</div>' +
-        '<div class="dash-label">' + _esc(card.label) + '</div>' +
-      '</div>';
-    });
-    html += '</div>';
-    html += '<div class="ctrl-hint">※ 가입 대기 · 채팅 미읽음은 상단 뱃지에서 실시간 확인</div>';
-    c.innerHTML = html;
-
-    // 카운트업 개별 실행 (DOM 렌더 후)
-    cards.forEach(function(card) {
-      var el = document.getElementById(card.id);
-      if (el) _ctrlCountUp(el, card.val, 900);
-    });
-  }).catch(function(e) {
-    if (c) c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>';
-  });
-}
-
-// ── ✅ 가입 승인 ──────────────────────────────────────────────────
-// 버그수정: join_requests 와 companies 중복 → companies.status=pending/hold 기준 통일
-function _ctrlLoadJoin() {
-  var c = document.getElementById('acc-join');
-  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
-
-  _db.collection('companies').limit(200).get().then(function(snap) {
-    var docs = snap.docs.filter(function(d) {
-      return ['pending', 'hold'].includes(d.data().status);
-    });
-    if (!docs.length) {
-      c.innerHTML = '<div class="ctrl-empty">대기 중인 신청이 없습니다</div>';
-      return;
-    }
-    var html = '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
-      '<th>업체명</th><th>이메일</th><th>도메인</th><th>신청일</th><th>상태</th><th>처리</th>' +
-      '</tr></thead><tbody>';
-    docs.forEach(function(doc) {
-      var d = doc.data(), id = doc.id;
-      var statusBadge = d.status === 'pending'
-        ? '<span class="badge badge-warn">대기</span>'
-        : '<span class="badge badge-hold">보류</span>';
-      var svcs = (d.services || []).join(',') || d.serviceType || '';
-      var domain = svcs.includes('table_order') || svcs.includes('kiosk') || svcs.includes('filo')
-        ? 'FILO'
-        : svcs.includes('dine') ? 'DINE' : 'DONWAY';
-      var createdStr = _ctrlFmtDate(d.createdAt);
-      html += '<tr>' +
-        '<td><b>' + _esc(d.companyName || d.name || '-') + '</b><br>' +
-          '<span style="font-size:10px;color:var(--tx2)">' + _esc(d.bizNumber || '') + '</span></td>' +
-        '<td style="font-size:11px">' + _esc(d.email || '-') + '</td>' +
-        '<td><span class="badge badge-ok">' + _esc(domain) + '</span></td>' +
-        '<td>' + _esc(createdStr) + '</td>' +
-        '<td>' + statusBadge + '</td>' +
-        '<td>' +
-          '<button class="ctrl-btn ctrl-btn-ok" data-id="' + _esc(id) + '" onclick="_ctrlApprove(this.dataset.id)">' + _ICONS.check + ' 승인</button> ' +
-          '<button class="ctrl-btn ctrl-btn-err" data-id="' + _esc(id) + '" onclick="_ctrlReject(this.dataset.id)">✕ 거절</button> ' +
-          '<button class="ctrl-btn ctrl-btn-sub" data-id="' + _esc(id) + '" onclick="_ctrlHold(this.dataset.id)">' + _ICONS.pause + ' 보류</button>' +
-        '</td></tr>';
-    });
-    html += '</tbody></table></div>';
-    c.innerHTML = html;
-  }).catch(function(e) {
-    c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>';
-  });
-}
-
-function _ctrlApprove(dealerId) {
-  _db.collection('companies').doc(dealerId).get().then(function(doc) {
-    if (!doc.exists) return;
-    var d = doc.data();
-    var trialEnd = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-    _db.collection('companies').doc(dealerId).update({
-      status: 'trial',
-      plan: 'trial',
-      trialEnd: trialEnd,
-      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      approvedBy: _CU.email
-    });
-    _ctrlNotifyApproval({
-      uid: dealerId, email: d.email,
-      companyName: d.companyName, phone: d.phone,
-      slug: d.slug, services: d.services
-    });
-    _ctrlToast('✅ ' + (d.companyName || '업체') + ' 승인 완료! 알림 발송됨', 'ok');
-    // 목록 새로고침
-    setTimeout(function() {
-      var body = document.getElementById('acc-join');
-      if (body) { delete body.dataset.loaded; _ctrlLoadJoin(); }
-    }, 600);
-  });
-}
-
-function _ctrlReject(dealerId) {
-  var reason = prompt('거절 사유 (고객에게 전달됩니다):');
-  if (reason === null) return;
-  _db.collection('companies').doc(dealerId).update({
-    status: 'rejected',
-    rejectReason: reason,
-    rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
-    _ctrlToast('거절 처리 완료', 'err');
-    var body = document.getElementById('acc-join');
-    if (body) { delete body.dataset.loaded; _ctrlLoadJoin(); }
-  });
-}
-
-function _ctrlHold(dealerId) {
-  var memo = prompt('보류 메모:');
-  if (memo === null) return;
-  _db.collection('companies').doc(dealerId).update({
-    status: 'hold', holdMemo: memo,
-    heldAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
-}
-
-// ── 👥 고객사 관리 (정렬/필터/검색 개선) ─────────────────────────
-var _compSearch = '', _compFilter = 'all';
-var _compSort   = { key: 'companyName', asc: true };
-
-function _ctrlLoadCompanies() {
-  // 기존 리스너 정리 (누수 방지)
-  if (_compUnsub) { _compUnsub(); _compUnsub = null; }
-
-  var c = document.getElementById('acc-companies');
-  c.innerHTML =
-    '<div class="ctrl-toolbar">' +
-      '<div class="ctrl-search-wrap">' +
-        '<input id="comp-search" class="ctrl-input ctrl-input-search" placeholder="업체명/이메일 검색" ' +
-          'oninput="_compSearch=this.value;_renderCompanies()" style="max-width:240px">' +
-      '</div>' +
-      '<select class="ctrl-select" onchange="_compFilter=this.value;_renderCompanies()">' +
-        '<option value="all">전체 상태</option>' +
-        '<option value="pending">가입 대기</option>' +
-        '<option value="trial">체험중</option>' +
-        '<option value="approved">활성</option>' +
-        '<option value="active">활성(active)</option>' +
-        '<option value="suspended">정지</option>' +
-      '</select>' +
-      '<select class="ctrl-select" onchange="_compSort.key=this.value;_renderCompanies()">' +
-        '<option value="companyName">이름순</option>' +
-        '<option value="trialEnd">만료일순</option>' +
-        '<option value="createdAt">가입일순</option>' +
-      '</select>' +
-      '<button class="ctrl-btn ctrl-btn-sub" onclick="_compSort.asc=!_compSort.asc;_renderCompanies()" id="sort-dir-btn">↑ 오름차순</button>' +
-    '</div>' +
-    '<div id="comp-count" class="ctrl-hint" style="margin-bottom:8px"></div>' +
-    '<div id="comp-list"><div class="ctrl-loading">로딩 중...</div></div>';
-
-  _compUnsub = _db.collection('companies').limit(200)
-    .onSnapshot(function(snap) {
-      window._compDocs = [];
-      snap.forEach(function(d) {
-        var obj = d.data();
-        obj._id = d.id;
-        window._compDocs.push(obj);
-      });
-      _renderCompanies();
-    }, function(e) {
-      var list = document.getElementById('comp-list');
-      if (list) list.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>';
-    });
-}
-
-function _renderCompanies() {
-  var q = (_compSearch || '').toLowerCase();
-  var docs = (window._compDocs || []).filter(function(d) {
-    var matchSearch = !q ||
-      (d.companyName || '').toLowerCase().includes(q) ||
-      (d.email || '').toLowerCase().includes(q) ||
-      (d.phone || '').includes(q);
-    var matchFilter = _compFilter === 'all' || d.status === _compFilter;
-    return matchSearch && matchFilter;
-  });
-
-  // 정렬
-  var sk = _compSort.key;
-  docs.sort(function(a, b) {
-    var av = a[sk] || '', bv = b[sk] || '';
-    if (typeof av === 'string') av = av.toLowerCase();
-    if (typeof bv === 'string') bv = bv.toLowerCase();
-    if (av < bv) return _compSort.asc ? -1 : 1;
-    if (av > bv) return _compSort.asc ? 1 : -1;
-    return 0;
-  });
-
-  var btn = document.getElementById('sort-dir-btn');
-  if (btn) btn.textContent = _compSort.asc ? '↑ 오름차순' : '↓ 내림차순';
-
-  var countEl = document.getElementById('comp-count');
-  if (countEl) countEl.textContent = docs.length + '개 업체';
-
-  var c = document.getElementById('comp-list');
-  if (!c) return;
-  if (!docs.length) { c.innerHTML = '<div class="ctrl-empty">검색 결과 없음</div>'; return; }
-
-  var html = '<div class="comp-cards">';
-  docs.forEach(function(d) {
-    var id = d._id;
-    var statusMeta = {
-      pending:   { color: '#f59e0b', label: '가입대기' },
-      trial:     { color: '#f59e0b', label: '체험중'   },
-      approved:  { color: '#22c55e', label: '활성'     },
-      active:    { color: '#22c55e', label: '활성'     },
-      suspended: { color: '#ef4444', label: '정지'     }
-    }[d.status] || { color: '#888', label: d.status || '-' };
-
-    html += '<div class="comp-card">' +
-      '<div class="comp-card-head">' +
-        '<div>' +
-          '<div class="comp-name">' + _esc(d.companyName || d.name || '이름없음') + '</div>' +
-          '<div class="comp-email">' + _esc(d.email || '-') + '</div>' +
-        '</div>' +
-        '<span class="badge" style="background:' + statusMeta.color + '20;color:' + statusMeta.color + '">' + statusMeta.label + '</span>' +
-      '</div>' +
-      '<div class="comp-meta">' +
-        '<span>' + _ICONS.clock + ' 만료: ' + _esc(_ctrlFmtDate(d.trialEnd)) + '</span>' +
-        '<span>📦 ' + _esc(d.plan || '-') + '</span>' +
-        '<span>🔗 ' + _esc(d.slug || '-') + '</span>' +
-        '<span>📞 ' + _esc(d.phone || '-') + '</span>' +
-      '</div>' +
-      '<div class="comp-actions">' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + _esc(id) + '" onclick="_ctrlOpenDetail(this.dataset.id)">📋 상세</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + _esc(id) + '" data-nm="' + _esc(d.companyName || id) + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' + _ICONS.chat + ' 채팅</button>' +
-        '<button class="ctrl-btn ctrl-btn-sub" data-id="' + _esc(id) + '" onclick="_ctrlExtendTrial(this.dataset.id)">⏰ 연장</button>' +
-        (d.status !== 'suspended'
-          ? '<button class="ctrl-btn ctrl-btn-err" data-id="' + _esc(id) + '" onclick="_ctrlSuspend(this.dataset.id)">' + _ICONS.pause + ' 정지</button>'
-          : '<button class="ctrl-btn ctrl-btn-ok" data-id="' + _esc(id) + '" onclick="_ctrlUnsuspend(this.dataset.id)">▶ 복구</button>') +
-      '</div>' +
-      '<div class="comp-features">' +
-        '<div class="feat-label">⚙️ 기능 토글</div>' +
-        _renderFeatureToggles(id, d.services || []) +
-      '</div>' +
-    '</div>';
-  });
-  html += '</div>';
-  c.innerHTML = html;
-}
-
-// ── 도메인별 기능 정의 ─────────────────────────────────────────────
-var _DOMAIN_FEATURES = {
-  donway: [
-    { key: 'settle',     label: 'AI정산',        desc: '택배·물류·배달 정산 자동화' },
-    { key: 'delivery',   label: '배달대행',        desc: '배달대행 수수료 정산' },
-    { key: 'qr_payroll', label: 'QR출퇴근+급여',  desc: 'QR 근태관리 + 급여 계산' }
-  ],
-  filo: [
-    { key: 'kiosk',          label: '키오스크/POS', desc: 'POS 결제 + 메뉴관리'          },
-    { key: 'table_order',    label: '테이블오더',   desc: 'QR 테이블 주문'                },
-    { key: 'inventory',      label: '재고관리',     desc: '재고 현황 + 자동발주'           },
-    { key: 'qr_attend',      label: 'QR출퇴근',    desc: '직원 QR 근태관리'               },
-    { key: 'reservation',    label: '예약관리',     desc: '예약 + 회원관리'                },
-    { key: 'member_crm',     label: '회원CRM',      desc: '포인트 + 멤버십'               },
-    { key: 'sales_analytics',label: '매출분석',     desc: '매출 리포트 + 마진'            },
-    { key: 'bakery_qr',      label: '빵QR담기',     desc: '진열대 명판 QR → 테이블오더'   }
-  ],
-  dine: [
-    { key: 'table_order',    label: '테이블오더',   desc: 'QR 테이블 주문'  },
-    { key: 'dine_delivery',  label: '배달연동',     desc: '배달앱 연동 매출' },
-    { key: 'sales_analytics',label: '매출분석',     desc: '일/월 매출 분석'  },
-    { key: 'staff_mgmt',     label: '직원관리',     desc: '출퇴근 + 급여'    },
-    { key: 'tax_invoice',    label: '세금계산서',   desc: '세무사 연동'       }
-  ]
-};
-
-// 기능 토글 UI (개선: SVG 토글 슬라이더 스타일)
-function _renderFeatureToggles(dealerId, services) {
-  services = services || [];
-  var sections = [
-    { title: '📦 DONWAY', feats: _DOMAIN_FEATURES.donway },
-    { title: '🍽 FILO',   feats: _DOMAIN_FEATURES.filo   },
-    { title: '🌿 DINE',   feats: _DOMAIN_FEATURES.dine   }
-  ];
-  return sections.map(function(sec) {
-    return '<div class="feat-section">' +
-      '<div class="feat-section-title">' + sec.title + '</div>' +
-      '<div class="feat-toggles">' +
-      sec.feats.map(function(f) {
-        var on = services.includes(f.key);
-        // 버그수정: data-on 문자열 비교 문제 → 클로저 직접 캡처
-        return '<label class="feat-toggle" title="' + _esc(f.desc) + '">' +
-          '<input type="checkbox" class="feat-chk" ' + (on ? 'checked' : '') +
-            ' data-did="' + _esc(dealerId) + '" data-key="' + _esc(f.key) + '"' +
-            ' onchange="_ctrlToggleFeature(this.dataset.did,this.dataset.key,this.checked)">' +
-          '<span class="feat-slider"></span>' +
-          '<span class="feat-label-txt">' + _esc(f.label) + '</span>' +
-        '</label>';
-      }).join('') +
-      '</div></div>';
-  }).join('');
-}
-
-function _ctrlToggleFeature(dealerId, key, enable) {
-  var op = enable
-    ? firebase.firestore.FieldValue.arrayUnion(key)
-    : firebase.firestore.FieldValue.arrayRemove(key);
-  _db.collection('companies').doc(dealerId).update({ services: op })
-    .then(function() {
-      _ctrlToast((enable ? '✅ ' : '❌ ') + key + ' ' + (enable ? '활성화' : '비활성화'), enable ? 'ok' : 'err');
-      _ctrlNotify('dealer', dealerId,
-        enable ? '✅ 기능 활성화' : '❌ 기능 비활성화',
-        key + ' 기능이 ' + (enable ? '활성화' : '비활성화') + '됐습니다.',
-        { type: 'feature', key: key, enable: enable }
-      );
-    });
-}
-
-function _ctrlExtendTrial(dealerId) {
-  var days = prompt('연장할 일수 (숫자만):', '30');
-  if (!days || isNaN(days)) return;
-  _db.collection('companies').doc(dealerId).get().then(function(doc) {
-    var cur = doc.data().trialEnd || new Date().toISOString().slice(0, 10);
-    var newDate = new Date(new Date(cur).getTime() + parseInt(days, 10) * 86400000).toISOString().slice(0, 10);
-    _db.collection('companies').doc(dealerId).update({ trialEnd: newDate })
-      .then(function() { _ctrlToast('⏰ 체험 ' + newDate + '까지 연장', 'ok'); });
-  });
-}
-
-function _ctrlSuspend(dealerId) {
-  if (!confirm('정지 처리하시겠습니까?')) return;
-  _db.collection('companies').doc(dealerId).update({ status: 'suspended' })
-    .then(function() { _ctrlToast('⏸ 정지 처리 완료', 'err'); });
-}
-
-function _ctrlUnsuspend(dealerId) {
-  _db.collection('companies').doc(dealerId).update({ status: 'approved' })
-    .then(function() { _ctrlToast('▶ 계정 복구 완료', 'ok'); });
-}
-
-// 고객사 상세 (서류 업로드)
-function _ctrlOpenDetail(dealerId) {
-  _db.collection('companies').doc(dealerId).get().then(function(doc) {
-    var d = doc.data();
-    var overlay = document.getElementById('detail-overlay');
-    var box     = document.getElementById('detail-box');
-    box.innerHTML =
-      '<div class="modal-hdr">' +
-        '<div class="modal-title">📋 ' + _esc(d.companyName || '고객사') + ' 상세</div>' +
-        '<button class="modal-close" onclick="_ctrlCloseDetail()">✕</button>' +
-      '</div>' +
-      '<div class="modal-body">' +
-        '<div class="detail-row"><b>이메일</b> ' + _esc(d.email || '-') + '</div>' +
-        '<div class="detail-row"><b>연락처</b> ' + _esc(d.phone || '-') + '</div>' +
-        '<div class="detail-row"><b>사업자번호</b> ' + _esc(d.bizNumber || '-') + '</div>' +
-        '<div class="detail-row"><b>플랜</b> ' + _esc(d.plan || '-') + '</div>' +
-        '<div class="detail-row"><b>체험만료</b> ' + _esc(_ctrlFmtDate(d.trialEnd)) + '</div>' +
-        '<div class="detail-row"><b>슬러그</b> ' + _esc(d.slug || '-') + '</div>' +
-        '<hr>' +
-        '<div class="detail-section">📄 서류</div>' +
-        _renderDocs(dealerId, d) +
-      '</div>';
-    overlay.style.display = 'flex';
-  });
-}
-
-function _renderDocs(dealerId, d) {
-  var docDefs = [
-    { key: 'bizLicenseUrl', label: '사업자등록증' },
-    { key: 'contractUrl',   label: '계약서'       },
-    { key: 'idCardUrl',     label: '신분증 (선택)' }
-  ];
-  return docDefs.map(function(def) {
-    var url = d[def.key];
-    return '<div class="doc-row">' +
-      '<span class="doc-label">' + _esc(def.label) + '</span>' +
-      (url
-        ? '<a href="' + url + '" target="_blank" class="ctrl-btn ctrl-btn-sub" rel="noreferrer noopener">👁 보기</a>'
-        : '<span class="doc-none">미등록</span>') +
-      '<label class="ctrl-btn ctrl-btn-sub" style="cursor:pointer">' +
-        '📤 업로드' +
-        '<input type="file" accept="image/*,.pdf" style="display:none" ' +
-          'data-id="' + _esc(dealerId) + '" data-field="' + _esc(def.key) + '"' +
-          ' onchange="_ctrlUploadDoc(this.dataset.id,this.dataset.field,this)">' +
-      '</label>' +
-    '</div>';
-  }).join('');
-}
-
-function _ctrlUploadDoc(dealerId, field, input) {
-  var file = input.files[0];
-  if (!file) return;
-  var ext  = file.name.split('.').pop();
-  var path = 'companies/' + dealerId + '/' + field + '.' + ext;
-  _ctrlToast('📤 업로드 중...');
-  _storage.ref(path).put(file).then(function(snap) {
-    return snap.ref.getDownloadURL();
-  }).then(function(url) {
-    var update = {};
-    update[field] = url;
-    update[field.replace('Url', 'UploadedAt')] = new Date().toISOString().slice(0, 10);
-    return _db.collection('companies').doc(dealerId).update(update);
-  }).then(function() {
-    _ctrlToast('✅ 서류 업로드 완료', 'ok');
-    _ctrlOpenDetail(dealerId);
-  }).catch(function(e) { _ctrlToast('❌ ' + e.message, 'err'); });
-}
-
-function _ctrlCloseDetail() {
-  document.getElementById('detail-overlay').style.display = 'none';
-}
-
-// ── 💬 채팅 (실시간 리스트 버그수정) ────────────────────────────
-// 버그수정: _ctrlLoadChatList 내부 var html 재선언으로 루프 밖 html이 항상 빈 문자열
-// → 외부 배열로 수집 후 join
-var _chatDealerId = '', _chatUnsub = null;
-
-function _ctrlLoadChat() {
-  var c = document.getElementById('acc-chat');
-  c.innerHTML =
-    '<div class="chat-layout">' +
-      '<div class="chat-list" id="chat-list"><div class="ctrl-loading">로딩 중...</div></div>' +
-      '<div class="chat-room" id="chat-room">' +
-        '<div class="chat-room-empty">' + _ICONS.chat + ' 좌측에서 고객사를 선택하세요</div>' +
-      '</div>' +
-    '</div>';
-  _ctrlLoadChatList();
-}
-
-function _ctrlLoadChatList() {
-  _db.collection('chats').orderBy('lastAt', 'desc')
-    .onSnapshot(function(snap) {
-      var list = document.getElementById('chat-list');
-      if (!list) return;
-      if (snap.empty) { list.innerHTML = '<div class="ctrl-empty">채팅 없음</div>'; return; }
-      var items = [];
-      snap.forEach(function(doc) {
-        var d   = doc.data();
-        var unread = d.unreadSA || 0;
-        var active = _chatDealerId === doc.id ? ' chat-item-active' : '';
-        items.push(
-          '<div class="chat-item' + active + '" data-id="' + _esc(doc.id) + '" data-nm="' + _esc(d.companyName || doc.id) + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' +
-            '<div class="chat-item-name">' + _esc(d.companyName || doc.id) +
-              (unread ? '<span class="chat-badge">' + unread + '</span>' : '') +
-            '</div>' +
-            '<div class="chat-item-last">' + _esc((d.lastMsg || '').slice(0, 30)) + '</div>' +
-          '</div>'
-        );
-      });
-      list.innerHTML = items.join('');
-    });
-}
-
-function _ctrlOpenChat(dealerId, companyName) {
-  _chatDealerId = dealerId;
-  if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; }
-
-  _db.collection('chats').doc(dealerId).set({ unreadSA: 0 }, { merge: true });
-
-  var room = document.getElementById('chat-room');
-  if (!room) {
-    var body = document.getElementById('acc-chat');
-    if (body) { delete body.dataset.loaded; }
-    _ctrlToggle('chat');
-    setTimeout(function() { _ctrlOpenChat(dealerId, companyName); }, 500);
-    return;
-  }
-
-  room.innerHTML =
-    '<div class="chat-room-hdr">' +
-      '<span>' + _ICONS.chat + '</span>' +
-      '<span>' + _esc(companyName || dealerId) + '</span>' +
-    '</div>' +
-    '<div class="chat-msgs" id="chat-msgs"></div>' +
-    '<div class="chat-input-row">' +
-      '<input id="chat-input" class="ctrl-input" placeholder="메시지 입력... (Enter=전송)"' +
-        ' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_ctrlSendChat();}">' +
-      '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlSendChat()">' + _ICONS.chat + ' 전송</button>' +
-    '</div>';
-
-  _chatUnsub = _db.collection('chats').doc(dealerId).collection('messages')
-    .orderBy('createdAt', 'asc').limit(100)
-    .onSnapshot(function(snap) {
-      var msgs = document.getElementById('chat-msgs');
-      if (!msgs) return;
-      var items = [];
-      snap.forEach(function(doc) {
-        var d    = doc.data();
-        var isSA = d.sender === 'sa';
-        items.push(
-          '<div class="chat-msg ' + (isSA ? 'chat-msg-sa' : 'chat-msg-dealer') + '">' +
-            '<div class="chat-msg-text">' + _esc(d.text) + '</div>' +
-            '<div class="chat-msg-time">' + _esc(_ctrlFmtTs(d.createdAt)) + '</div>' +
-          '</div>'
-        );
-      });
-      msgs.innerHTML = items.length ? items.join('') : '<div class="ctrl-empty">메시지 없음</div>';
-      msgs.scrollTop = msgs.scrollHeight;
-    });
-}
-
-function _ctrlSendChat() {
-  if (!_chatDealerId) return;
-  var input = document.getElementById('chat-input');
-  var text  = (input ? input.value : '').trim();
-  if (!text) return;
-  input.value = '';
-
-  var batch  = _db.batch();
-  var msgRef = _db.collection('chats').doc(_chatDealerId).collection('messages').doc();
-  batch.set(msgRef, {
-    text: text, sender: 'sa',
-    senderName: '엠비티아이 관리자',
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  batch.set(_db.collection('chats').doc(_chatDealerId), {
-    lastMsg: text,
-    lastAt:  firebase.firestore.FieldValue.serverTimestamp(),
-    unreadCustomer: firebase.firestore.FieldValue.increment(1)
-  }, { merge: true });
-  batch.commit().then(function() {
-    _ctrlNotify('dealer', _chatDealerId, '💬 관리자 메시지', text, { type: 'chat' });
-  });
-}
-
-// ── 📢 공지 발송 ──────────────────────────────────────────────────
-function _ctrlLoadNotice() {
-  var c = document.getElementById('acc-notice');
-  c.innerHTML =
-    '<div class="notice-form">' +
-      '<div class="ctrl-label">수신 대상</div>' +
-      '<select id="n-target" class="ctrl-select">' +
-        '<option value="all">전체 고객사</option>' +
-        '<option value="active">활성 고객사만</option>' +
-        '<option value="trial">체험 중만</option>' +
-      '</select>' +
-      '<div class="ctrl-label" style="margin-top:12px">제목</div>' +
-      '<input id="n-title" class="ctrl-input" placeholder="공지 제목">' +
-      '<div class="ctrl-label" style="margin-top:12px">내용</div>' +
-      '<textarea id="n-body" class="ctrl-input" rows="4" placeholder="공지 내용" style="resize:vertical"></textarea>' +
-      '<div style="margin-top:8px;font-size:12px;color:#888">✅ FCM 푸시 + Firestore notices 동시 저장</div>' +
-      '<button class="ctrl-btn ctrl-btn-ok" style="margin-top:12px;width:100%" onclick="_ctrlSendNotice()">📢 발송</button>' +
-    '</div>' +
-    '<hr style="border-color:var(--bd);margin:16px 0">' +
-    '<div class="ctrl-label">최근 공지</div>' +
-    '<div id="notice-list"><div class="ctrl-loading">로딩 중...</div></div>';
-
-  _db.collection('notices').orderBy('createdAt', 'desc').limit(10)
-    .get().then(function(snap) {
-      var list = document.getElementById('notice-list');
-      if (!list) return;
-      if (snap.empty) { list.innerHTML = '<div class="ctrl-empty">공지 없음</div>'; return; }
-      var items = [];
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        items.push('<div class="notice-item">' +
-          '<div class="notice-title">' + _esc(d.title || '-') + '</div>' +
-          '<div class="notice-body">' + _esc((d.body || '').slice(0, 80)) + '</div>' +
-          '<div class="notice-meta">' + _esc(_ctrlFmtDate(d.createdAt)) + ' · ' + _esc(d.target || '전체') + '</div>' +
-        '</div>');
-      });
-      list.innerHTML = items.join('');
-    });
-}
-
-function _ctrlSendNotice() {
-  var title  = (document.getElementById('n-title').value || '').trim();
-  var body   = (document.getElementById('n-body').value || '').trim();
-  var target = document.getElementById('n-target').value;
-  if (!title || !body) { _ctrlToast('제목과 내용을 입력하세요'); return; }
-
-  _db.collection('notices').add({
-    title: title, body: body, target: target,
-    dealerId: null,
-    createdAt: new Date().toISOString(),
-    createdBy: _CU.email
-  });
-  _ctrlNotify(target === 'all' ? 'all' : 'group', target, '📢 ' + title, body, { type: 'notice' });
-  _ctrlToast('📢 공지 발송 완료!', 'ok');
-  document.getElementById('n-title').value = '';
-  document.getElementById('n-body').value  = '';
-  // 목록 새로고침
-  var noticeBody = document.getElementById('acc-notice');
-  if (noticeBody) { delete noticeBody.dataset.loaded; _ctrlLoadNotice(); }
-}
-
-// ── 💰 결제 현황 ──────────────────────────────────────────────────
-function _ctrlLoadBilling() {
-  var c = document.getElementById('acc-billing');
-  c.innerHTML = '<div class="ctrl-loading">로딩 중...</div>';
-  _db.collection('payment_requests').orderBy('createdAt', 'desc').limit(50)
-    .get().then(function(snap) {
-      if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">결제 내역 없음</div>'; return; }
-      var totalAmt = 0;
-      var items = [];
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        totalAmt += (d.amount || 0);
-        var statusColor = { paid: '#22c55e', pending: '#f59e0b', failed: '#ef4444' }[d.status] || '#888';
-        items.push('<tr>' +
-          '<td>' + _esc(d.companyName || '-') + '</td>' +
-          '<td>' + _esc(d.plan || '-') + '</td>' +
-          '<td>₩' + (d.amount || 0).toLocaleString() + '</td>' +
-          '<td><span style="color:' + statusColor + '">' + _esc(d.status || '-') + '</span></td>' +
-          '<td>' + _esc(_ctrlFmtDate(d.createdAt)) + '</td>' +
-        '</tr>');
-      });
-      var html = '<div class="billing-total">이번 조회 합계: <b>₩' + totalAmt.toLocaleString() + '</b></div>' +
-        '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
-        '<th>업체명</th><th>플랜</th><th>금액</th><th>상태</th><th>일자</th>' +
-        '</tr></thead><tbody>' + items.join('') + '</tbody></table></div>';
-      c.innerHTML = html;
-    }).catch(function(e) {
-      c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>';
-    });
-}
-
-// ── 🤖 Claude AI 주간 현황 리포트 ──────────────────────────────────
-var _aiReportData = null;
-
-function _ctrlLoadAIReport() {
-  var c = document.getElementById('acc-aireport');
-  c.innerHTML =
-    '<div class="ai-report-wrap">' +
-      '<div class="ai-report-header">' +
-        '<div class="ai-report-title">' + _ICONS.ai + ' Claude AI 주간 현황 리포트</div>' +
-        '<button class="ctrl-btn ctrl-btn-ok" onclick="_ctrlGenAIReport()" id="ai-gen-btn">🔄 리포트 생성</button>' +
-      '</div>' +
-      '<div id="ai-report-out" class="ai-report-out">' +
-        '<div class="ai-report-placeholder">' +
-          '<div>' + _ICONS.ai + '</div>' +
-          '<div>버튼을 눌러 이번 주 현황 AI 분석을 생성하세요</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-}
-
-function _ctrlGenAIReport() {
-  var btn = document.getElementById('ai-gen-btn');
-  var out = document.getElementById('ai-report-out');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ 분석 중...'; }
-  if (out) out.innerHTML = '<div class="ctrl-loading">Claude가 데이터를 분석하고 있습니다...</div>';
-
-  // 1. Firestore에서 주간 데이터 수집
-  var weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  Promise.all([
-    _db.collection('companies').get(),
-    _db.collection('chats').get(),
-    _db.collection('payment_requests').get(),
-    _db.collection('join_requests').limit(50).get()
-  ]).then(function(results) {
-    var companies = results[0];
-    var chats     = results[1];
-    var payments  = results[2];
-    var joins     = results[3];
-
-    var stats = {
-      totalCompanies: companies.size,
-      byStatus: { pending: 0, trial: 0, approved: 0, active: 0, suspended: 0 },
-      totalUnread: 0,
-      totalRevenue: 0,
-      paidCount: 0,
-      pendingJoins: 0,
-      trialExpiringSoon: 0
-    };
-
-    var today  = new Date().toISOString().slice(0, 10);
-    var cutoff = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-
-    companies.forEach(function(d) {
-      var s = d.data().status || 'unknown';
-      if (stats.byStatus.hasOwnProperty(s)) stats.byStatus[s]++;
-      var te = d.data().trialEnd || '';
-      if (te >= today && te <= cutoff) stats.trialExpiringSoon++;
-      if (s === 'pending') stats.pendingJoins++;
-    });
-
-    chats.forEach(function(d) { stats.totalUnread += (d.data().unreadSA || 0); });
-
-    payments.forEach(function(d) {
-      if (d.data().status === 'paid') {
-        stats.totalRevenue += (d.data().amount || 0);
-        stats.paidCount++;
-      }
-    });
-
-    var today2 = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    var prompt = [
-      '당신은 SaaS 플랫폼 운영 분석가입니다.',
-      '다음은 [엠비티아이] 관제센터의 현재 데이터입니다. 한국어로 주간 현황 리포트를 작성해주세요.',
-      '',
-      '=== 현황 데이터 (' + today2 + ') ===',
-      '전체 고객사: ' + stats.totalCompanies + '개',
-      '상태별: 가입대기 ' + stats.byStatus.pending + ', 체험중 ' + stats.byStatus.trial + ', 활성(approved) ' + stats.byStatus.approved + ', 활성(active) ' + stats.byStatus.active + ', 정지 ' + stats.byStatus.suspended,
-      '7일 내 만료 임박: ' + stats.trialExpiringSoon + '개',
-      '채팅 미읽음: ' + stats.totalUnread + '건',
-      '결제 완료 건수: ' + stats.paidCount + '건 / 총 ₩' + stats.totalRevenue.toLocaleString(),
-      '',
-      '=== 리포트 형식 ===',
-      '1. **📊 주요 지표 요약** (2~3줄)',
-      '2. **⚠️ 즉시 조치 필요 사항** (우선순위 top 3)',
-      '3. **💡 운영 인사이트 및 권장 사항** (2~3가지)',
-      '4. **📈 다음 주 예상 포커스**',
-      '',
-      '간결하고 실용적으로 작성하세요. 마크다운 사용 가능.'
-    ].join('\n');
-
-    // 2. Worker API 호출 → Claude Haiku
-    return fetch('https://mbtico.kr/api/ctrl-ai-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt, stats: stats })
-    });
-  }).then(function(resp) {
-    return resp.json();
-  }).then(function(data) {
-    var out = document.getElementById('ai-report-out');
-    var btn = document.getElementById('ai-gen-btn');
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 다시 생성'; }
-    if (!out) return;
-    if (data.error) {
-      out.innerHTML = '<div class="ctrl-empty">❌ ' + _esc(data.error) + '</div>';
-      return;
-    }
-    // 마크다운 간단 렌더링 (bold, heading, list)
-    var md = (data.report || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    md = md.replace(/^#{1,3} (.+)/gm, '<h4 class="ai-h4">$1</h4>');
-    md = md.replace(/^- (.+)/gm, '<li>$1</li>');
-    md = md.replace(/(<li>.*<\/li>)/gs, '<ul class="ai-ul">$1</ul>');
-    md = md.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-    out.innerHTML =
-      '<div class="ai-report-meta">생성: ' + new Date().toLocaleString('ko-KR') + '</div>' +
-      '<div class="ai-report-body">' + md + '</div>';
-  }).catch(function(e) {
-    var out = document.getElementById('ai-report-out');
-    var btn = document.getElementById('ai-gen-btn');
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 리포트 생성'; }
-    if (out) out.innerHTML = '<div class="ctrl-empty">❌ ' + _esc(e.message) + '</div>';
-  });
-}
+function _ctrlInit(){_ctrlInjectCSS();if(!firebase.apps.length)firebase.initializeApp(_FB_CONFIG);_db=firebase.firestore();_auth=firebase.auth();_storage=firebase.storage();_auth.onAuthStateChanged(function(user){if(!user||!SA_EMAILS.includes(user.email)){document.getElementById('login-screen').style.display='flex';document.getElementById('main-screen').style.display='none';return;}_CU=user;document.getElementById('login-screen').style.display='none';document.getElementById('main-screen').style.display='flex';document.getElementById('ctrl-user').textContent=user.email;_ctrlStartListeners();});}
+function _ctrlLogin(){_auth.signInWithEmailAndPassword(document.getElementById('l-email').value.trim(),document.getElementById('l-pw').value).catch(function(e){_ctrlToast('로그인 실패: '+e.message);});}
+function _ctrlLogout(){_unsubs.forEach(function(u){u&&u();});_unsubs=[];if(_compUnsub){_compUnsub();_compUnsub=null;}_auth.signOut();}
+function _ctrlStartListeners(){_unsubs.push(_db.collection('companies').where('status','==','pending').onSnapshot(function(s){_ctrlBadge('badge-join',s.size);}));_unsubs.push(_db.collection('chats').onSnapshot(function(s){var n=0;s.forEach(function(d){n+=(d.data().unreadSA||0);});_ctrlBadge('badge-chat',n);}));_ctrlLoadDashboard();}
+function _ctrlToggle(id){var body=document.getElementById('acc-'+id),icon=document.getElementById('ico-'+id),open=body.style.display!=='none'&&body.style.display!=='';if(open){body.style.display='none';if(icon)icon.innerHTML=_I.chevR;}else{body.style.display='block';if(icon)icon.innerHTML=_I.chevD;if(!body.dataset.loaded){body.dataset.loaded='1';var fns={dashboard:_ctrlLoadDashboard,join:_ctrlLoadJoin,companies:_ctrlLoadCompanies,chat:_ctrlLoadChat,notice:_ctrlLoadNotice,billing:_ctrlLoadBilling,aireport:_ctrlLoadAIReport};if(fns[id])fns[id]();}}}
+function _svgChevron(d){return d==='down'?_I.chevD:_I.chevR;}
+function _ctrlToast(msg,type){var t=document.createElement('div');t.className='ctrl-toast'+(type?' '+type:'');t.textContent=msg;document.body.appendChild(t);requestAnimationFrame(function(){t.classList.add('show');});setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},300);},3400);}
+function _ctrlBadge(id,n){var el=document.getElementById(id);if(!el)return;el.textContent=n>0?n:'';el.style.display=n>0?'inline-flex':'none';}
+function _ctrlFmtDate(v){if(!v)return'-';if(v&&typeof v.toDate==='function')return v.toDate().toISOString().slice(0,10);if(typeof v==='string')return v.slice(0,10);if(typeof v==='number')return new Date(v).toISOString().slice(0,10);return'-';}
+function _ctrlFmtTs(ts){if(!ts)return'-';try{var d=(ts&&typeof ts.toDate==='function')?ts.toDate():(typeof ts==='string'||typeof ts==='number')?new Date(ts):ts;return d.toLocaleDateString('ko')+' '+d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});}catch(e){return'-';}}
+function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function _ctrlCountUp(el,t,dur){dur=dur||1000;var t0=null;function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/dur,1),e=1-Math.pow(1-p,3);el.textContent=Math.floor(e*t).toLocaleString();if(p<1)requestAnimationFrame(step);else el.textContent=t.toLocaleString();}requestAnimationFrame(step);}
+function _trialColor(te){if(!te)return'var(--tx3)';var d=(new Date(te)-new Date())/86400000;return d<0?'var(--red2)':d<7?'var(--amb2)':'var(--tx2)';}
+function _ctrlNotify(type,dealerId,title,body,data){return fetch('https://donway.ai.kr/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,dealerId:dealerId,title:title,body:body,data:data||{}})}).catch(function(){});}
+function _ctrlNotifyApproval(dealer){var url='https://donway.ai.kr/c/'+(dealer.slug||dealer.uid);_ctrlNotify('dealer',dealer.uid,'DONWAY 가입 승인','가입이 승인됐습니다!\n전용URL: '+url,{type:'approval',url:url});fetch('https://donway.ai.kr/api/alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:dealer.phone||'',template:'approval',params:{name:dealer.companyName,url:url,id:dealer.email}})}).catch(function(){});}
+function _ctrlLoadDashboard(){var c=document.getElementById('acc-dashboard');c.innerHTML='<div class="ctrl-loading">데이터 집계 중...</div>';Promise.all([_db.collection('companies').get(),_db.collection('companies').where('status','==','pending').get()]).then(function(res){var all=res[0],pend=res[1],active=0,trial=0,sus=0,soon=0,today=new Date().toISOString().slice(0,10),cut7=new Date(Date.now()+7*86400000).toISOString().slice(0,10);all.forEach(function(d){var s=d.data().status,te=d.data().trialEnd||'';if(s==='approved'||s==='active')active++;else if(s==='trial')trial++;else if(s==='suspended')sus++;if(te>=today&&te<=cut7)soon++;});var cards=[{id:'kpi-tot',label:'전체 고객사',val:all.size,icon:_I.users,grad:'grad-blue'},{id:'kpi-act',label:'활성',val:active,icon:_I.check,grad:'grad-green'},{id:'kpi-tri',label:'체험 중',val:trial,icon:_I.clock,grad:'grad-amber'},{id:'kpi-sus',label:'정지',val:sus,icon:_I.pause,grad:'grad-red'},{id:'kpi-pen',label:'가입 대기',val:pend.size,icon:_I.bell,grad:'grad-purple'},{id:'kpi-exp',label:'만료 임박',val:soon,icon:_I.warn,grad:'grad-orange'}];var html='<div class="dash-grid">';cards.forEach(function(card){html+='<div class="dash-card '+card.grad+'"><div class="dash-icon">'+card.icon+'</div><div class="dash-val" id="'+card.id+'">0</div><div class="dash-label">'+_esc(card.label)+'</div></div>';});c.innerHTML=html+'</div><div class="ctrl-hint">가입 대기, 채팅 미읽음은 상단 뱃지에서 실시간 확인</div>';cards.forEach(function(card){var el=document.getElementById(card.id);if(el)_ctrlCountUp(el,card.val,1100);});}).catch(function(e){c.innerHTML='<div class="ctrl-empty">오류: '+_esc(e.message)+'</div>';});}
+function _ctrlLoadJoin(){var c=document.getElementById('acc-join');c.innerHTML='<div class="ctrl-loading">로딩 중...</div>';_db.collection('companies').limit(200).get().then(function(snap){var docs=snap.docs.filter(function(d){return['pending','hold'].includes(d.data().status);});if(!docs.length){c.innerHTML='<div class="ctrl-empty">대기 중인 신청이 없습니다</div>';return;}var html='<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr><th>업체명</th><th>이메일</th><th>도메인</th><th>신청일</th><th>상태</th><th>처리</th></tr></thead><tbody>';docs.forEach(function(doc){var d=doc.data(),id=doc.id,sb=d.status==='pending'?'<span class="badge badge-warn">대기</span>':'<span class="badge badge-hold">보류</span>',svcs=(d.services||[]).join(',')||d.serviceType||'',dom=svcs.includes('table_order')||svcs.includes('kiosk')||svcs.includes('filo')?'FILO':svcs.includes('dine')?'DINE':'DONWAY';html+='<tr><td><div style="font-weight:700;color:var(--tx1)">'+_esc(d.companyName||d.name||'-')+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">'+_esc(d.bizNumber||'')+'</div></td><td style="font-size:11px;color:var(--tx2)">'+_esc(d.email||'-')+'</td><td><span class="badge badge-blue">'+_esc(dom)+'</span></td><td style="font-size:12px;color:var(--tx3)">'+_esc(_ctrlFmtDate(d.createdAt))+'</td><td>'+sb+'</td><td><div style="display:flex;gap:5px;flex-wrap:wrap"><button class="ctrl-btn ctrl-btn-ok" data-id="'+_esc(id)+'" onclick="_ctrlApprove(this.dataset.id)">'+_I.check+' 승인</button><button class="ctrl-btn ctrl-btn-err" data-id="'+_esc(id)+'" onclick="_ctrlReject(this.dataset.id)">거절</button><button class="ctrl-btn" data-id="'+_esc(id)+'" onclick="_ctrlHold(this.dataset.id)">보류</button></div></td></tr>';});c.innerHTML=html+'</tbody></table></div>';}).catch(function(e){c.innerHTML='<div class="ctrl-empty">오류: '+_esc(e.message)+'</div>';});}
+function _ctrlApprove(dealerId){_db.collection('companies').doc(dealerId).get().then(function(doc){if(!doc.exists)return;var d=doc.data(),trialEnd=new Date(Date.now()+30*86400000).toISOString().slice(0,10);_db.collection('companies').doc(dealerId).update({status:'trial',plan:'trial',trialEnd:trialEnd,approvedAt:firebase.firestore.FieldValue.serverTimestamp(),approvedBy:_CU.email});_ctrlNotifyApproval({uid:dealerId,email:d.email,companyName:d.companyName,phone:d.phone,slug:d.slug,services:d.services});_ctrlToast((d.companyName||'업체')+' 승인 완료!','ok');setTimeout(function(){var b=document.getElementById('acc-join');if(b){delete b.dataset.loaded;_ctrlLoadJoin();}},600);});}
+function _ctrlReject(dealerId){var reason=prompt('거절 사유:');if(reason===null)return;_db.collection('companies').doc(dealerId).update({status:'rejected',rejectReason:reason,rejectedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){_ctrlToast('거절 처리 완료','err');var b=document.getElementById('acc-join');if(b){delete b.dataset.loaded;_ctrlLoadJoin();}});}
+function _ctrlHold(dealerId){var memo=prompt('보류 메모:');if(memo===null)return;_db.collection('companies').doc(dealerId).update({status:'hold',holdMemo:memo,heldAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){_ctrlToast('보류 처리 완료');});}
+function _ctrlLoadCompanies(){if(_compUnsub){_compUnsub();_compUnsub=null;}var c=document.getElementById('acc-companies');var vm=_compViewMode;c.innerHTML='<div class="ctrl-toolbar"><div class="ctrl-search-wrap"><span class="ctrl-si">'+_I.search+'</span><input id="comp-search" class="ctrl-input" placeholder="업체명, 이메일, 전화번호 검색" oninput="_compSearch=this.value;_renderCompanies()"></div><select class="ctrl-select" onchange="_compFilter=this.value;_renderCompanies()"><option value="all">전체 상태</option><option value="pending">가입 대기</option><option value="trial">체험 중</option><option value="approved">활성</option><option value="suspended">정지</option></select><select class="ctrl-select" onchange="_compSort.key=this.value;_renderCompanies()"><option value="companyName">이름순</option><option value="trialEnd">만료일순</option><option value="createdAt">가입일순</option></select><button class="ctrl-btn" onclick="_compSort.asc=!_compSort.asc;_renderCompanies()" id="sort-dir-btn">오름차순</button><div class="view-grp" style="margin-left:auto"><button class="view-btn'+(vm==='table'?' on':'')+'" onclick="_compViewMode=\'table\';_renderCompanies()">'+_I.list+' 테이블</button><button class="view-btn'+(vm==='card'?' on':'')+'" onclick="_compViewMode=\'card\';_renderCompanies()">'+_I.grid+' 카드</button></div></div><div id="comp-meta-row" style="margin-bottom:12px"><span id="comp-cnt"></span></div><div id="comp-list"><div class="ctrl-loading">로딩 중...</div></div>';_compUnsub=_db.collection('companies').limit(200).onSnapshot(function(snap){window._compDocs=[];snap.forEach(function(d){var o=d.data();o._id=d.id;window._compDocs.push(o);});_renderCompanies();},function(e){var l=document.getElementById('comp-list');if(l)l.innerHTML='<div class="ctrl-empty">오류: '+_esc(e.message)+'</div>';});}
+function _renderCompanies(){var q=(_compSearch||'').toLowerCase(),docs=(window._compDocs||[]).filter(function(d){return(!q||(d.companyName||'').toLowerCase().includes(q)||(d.email||'').toLowerCase().includes(q)||(d.phone||'').includes(q))&&(_compFilter==='all'||d.status===_compFilter);}),sk=_compSort.key;docs.sort(function(a,b){var av=a[sk]||'',bv=b[sk]||'';if(typeof av==='string')av=av.toLowerCase();if(typeof bv==='string')bv=bv.toLowerCase();return av<bv?(_compSort.asc?-1:1):av>bv?(_compSort.asc?1:-1):0;});var btn=document.getElementById('sort-dir-btn');if(btn)btn.textContent=_compSort.asc?'오름차순':'내림차순';var cnt=document.getElementById('comp-cnt');if(cnt)cnt.innerHTML='<span class="comp-count-pill">'+docs.length+'개 업체</span>';document.querySelectorAll('.view-btn').forEach(function(b){b.classList.toggle('on',b.textContent.includes('테이블')?_compViewMode==='table':_compViewMode==='card');});var c=document.getElementById('comp-list');if(!c)return;if(!docs.length){c.innerHTML='<div class="ctrl-empty">검색 결과 없음</div>';return;}c.innerHTML=_compViewMode==='table'?_renderCompTable(docs):_renderCompCards(docs);}
+function _statusMeta(s){return{pending:{cls:'badge-warn',label:'가입대기'},trial:{cls:'badge-warn',label:'체험중'},approved:{cls:'badge-ok',label:'활성'},active:{cls:'badge-ok',label:'활성'},suspended:{cls:'badge-err',label:'정지'}}[s]||{cls:'',label:s||'-'};}
+function _renderCompTable(docs){var cols=[{k:'companyName',l:'업체명'},{k:'email',l:'이메일'},{k:'status',l:'상태'},{k:'plan',l:'플랜'},{k:'trialEnd',l:'만료일'},{k:null,l:'서비스'},{k:null,l:'기능'},{k:null,l:'액션'}];var thead='<thead><tr>'+cols.map(function(col){var act=col.k&&_compSort.key===col.k,cls=act?(_compSort.asc?'th-asc':'th-desc'):'',ico=act?(_compSort.asc?' ▲':' ▼'):(col.k?' ⇅':''),oc=col.k?' onclick="_compSort.key=\''+col.k+'\';_compSort.asc='+(act?'!_compSort.asc':'true')+';_renderCompanies()"':'';return'<th class="'+cls+'"'+oc+'>'+col.l+ico+'</th>';}).join('')+'</tr></thead>';var tbody='<tbody>';docs.forEach(function(d){var id=d._id,sm=_statusMeta(d.status),svcs=d.services||[],chips=(svcs.length?svcs:['-']).map(function(s){return'<span class="feat-chip chip-on">'+_esc(s)+'</span>';}).join('');tbody+='<tr class="comp-row" id="crow-'+_esc(id)+'"><td><div style="font-weight:700;font-size:13px">'+_esc(d.companyName||d.name||'-')+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px">'+_esc(d.bizNumber||'')+'</div></td><td style="font-size:11px;color:var(--tx3)">'+_esc(d.email||'-')+'</td><td><span class="badge '+sm.cls+'">'+sm.label+'</span></td><td style="font-size:12px;color:var(--tx2)">'+_esc(d.plan||'-')+'</td><td style="font-size:12px;color:'+_trialColor(d.trialEnd)+'"><b>'+_esc(_ctrlFmtDate(d.trialEnd))+'</b></td><td><div class="feat-compact">'+chips+'</div></td><td><button class="ctrl-btn" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" onclick="_compToggle(this.dataset.id)">'+_I.expand+' 토글</button></td><td><div style="display:flex;gap:4px"><button class="ctrl-btn" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" onclick="_ctrlOpenDetail(this.dataset.id)">'+_I.doc+'</button><button class="ctrl-btn" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" data-nm="'+_esc(d.companyName||id)+'" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">'+_I.chat+'</button><button class="ctrl-btn" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" onclick="_ctrlExtendTrial(this.dataset.id)">+30일</button>'+(d.status!=='suspended'?'<button class="ctrl-btn ctrl-btn-err" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" onclick="_ctrlSuspend(this.dataset.id)">'+_I.pause+'</button>':'<button class="ctrl-btn ctrl-btn-ok" style="font-size:11px;padding:4px 9px" data-id="'+_esc(id)+'" onclick="_ctrlUnsuspend(this.dataset.id)">'+_I.play+'</button>')+'</div></td></tr><tr class="feat-expand-row" id="feat-row-'+_esc(id)+'" style="display:none"><td colspan="8"><div class="feat-expand-inner"><div class="feat-lbl">기능 토글</div>'+_renderFeatToggles(id,svcs)+'</div></td></tr>';});return'<div class="ctrl-table-wrap"><table class="ctrl-table">'+thead+tbody+'</tbody></table></div>';}
+function _compToggle(id){var row=document.getElementById('feat-row-'+id);if(!row)return;var open=row.style.display!=='none';row.style.display=open?'none':'table-row';var crow=document.getElementById('crow-'+id);if(crow)crow.classList.toggle('row-open',!open);}
+function _renderCompCards(docs){var html='<div class="comp-cards">';docs.forEach(function(d){var id=d._id,sm=_statusMeta(d.status);html+='<div class="comp-card"><div class="comp-card-head"><div><div class="comp-name">'+_esc(d.companyName||d.name||'-')+'</div><div class="comp-email">'+_esc(d.email||'-')+'</div></div><span class="badge '+sm.cls+'">'+sm.label+'</span></div><div class="comp-meta"><span>'+_I.clock+' <b style="color:'+_trialColor(d.trialEnd)+'">'+_esc(_ctrlFmtDate(d.trialEnd))+'</b></span><span>'+_esc(d.plan||'-')+'</span><span>'+_esc(d.slug||'-')+'</span></div><div class="comp-actions"><button class="ctrl-btn" data-id="'+_esc(id)+'" onclick="_ctrlOpenDetail(this.dataset.id)">'+_I.doc+' 상세</button><button class="ctrl-btn" data-id="'+_esc(id)+'" data-nm="'+_esc(d.companyName||id)+'" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">'+_I.chat+' 채팅</button><button class="ctrl-btn" data-id="'+_esc(id)+'" onclick="_ctrlExtendTrial(this.dataset.id)">연장</button>'+(d.status!=='suspended'?'<button class="ctrl-btn ctrl-btn-err" data-id="'+_esc(id)+'" onclick="_ctrlSuspend(this.dataset.id)">'+_I.pause+'</button>':'<button class="ctrl-btn ctrl-btn-ok" data-id="'+_esc(id)+'" onclick="_ctrlUnsuspend(this.dataset.id)">'+_I.play+'</button>')+'</div><div class="comp-features"><div class="feat-lbl">기능 토글</div>'+_renderFeatToggles(id,d.services||[])+'</div></div>';});return html+'</div>';}
+var _DOMAIN_FEATURES={donway:[{key:'settle',label:'AI정산',desc:'정산 자동화'},{key:'delivery',label:'배달대행',desc:'수수료 정산'},{key:'qr_payroll',label:'QR출퇴근',desc:'근태+급여'}],filo:[{key:'kiosk',label:'키오스크',desc:'POS 결제'},{key:'table_order',label:'테이블오더',desc:'QR 주문'},{key:'inventory',label:'재고관리',desc:'재고 현황'},{key:'qr_attend',label:'QR출퇴근',desc:'직원 근태'},{key:'reservation',label:'예약관리',desc:'예약'},{key:'member_crm',label:'회원CRM',desc:'포인트'},{key:'sales_analytics',label:'매출분석',desc:'리포트'},{key:'bakery_qr',label:'빵QR담기',desc:'진열 QR'}],dine:[{key:'table_order',label:'테이블오더',desc:'QR 주문'},{key:'dine_delivery',label:'배달연동',desc:'배달앱'},{key:'sales_analytics',label:'매출분석',desc:'분석'},{key:'staff_mgmt',label:'직원관리',desc:'급여'},{key:'tax_invoice',label:'세금계산서',desc:'세무사'}]};
+function _renderFeatToggles(dealerId,services){services=services||[];return[{title:'DONWAY',feats:_DOMAIN_FEATURES.donway},{title:'FILO',feats:_DOMAIN_FEATURES.filo},{title:'DINE',feats:_DOMAIN_FEATURES.dine}].map(function(sec){return'<div class="feat-sec"><div class="feat-sec-ttl">'+sec.title+'</div><div class="feat-toggles">'+sec.feats.map(function(f){return'<label class="feat-toggle" title="'+_esc(f.desc)+'"><input type="checkbox"'+(services.includes(f.key)?' checked':'')+' data-did="'+_esc(dealerId)+'" data-key="'+_esc(f.key)+'" onchange="_ctrlToggleFeat(this.dataset.did,this.dataset.key,this.checked)"><span class="tog-track"></span><span class="tog-lbl">'+_esc(f.label)+'</span></label>';}).join('')+'</div></div>';}).join('');}
+function _ctrlToggleFeat(dealerId,key,enable){var op=enable?firebase.firestore.FieldValue.arrayUnion(key):firebase.firestore.FieldValue.arrayRemove(key);_db.collection('companies').doc(dealerId).update({services:op}).then(function(){_ctrlToast((enable?'활성화: ':'비활성화: ')+key,enable?'ok':'err');});}
+function _ctrlExtendTrial(dealerId){var days=prompt('연장할 일수:','30');if(!days||isNaN(days))return;_db.collection('companies').doc(dealerId).get().then(function(doc){var cur=doc.data().trialEnd||new Date().toISOString().slice(0,10),nd=new Date(new Date(cur).getTime()+parseInt(days,10)*86400000).toISOString().slice(0,10);_db.collection('companies').doc(dealerId).update({trialEnd:nd}).then(function(){_ctrlToast(nd+'까지 연장','ok');});});}
+function _ctrlSuspend(id){if(!confirm('정지 처리하시겠습니까?'))return;_db.collection('companies').doc(id).update({status:'suspended'}).then(function(){_ctrlToast('정지 처리 완료','err');});}
+function _ctrlUnsuspend(id){_db.collection('companies').doc(id).update({status:'approved'}).then(function(){_ctrlToast('계정 복구 완료','ok');});}
+function _ctrlOpenDetail(dealerId){_db.collection('companies').doc(dealerId).get().then(function(doc){var d=doc.data(),ov=document.getElementById('detail-overlay'),bx=document.getElementById('detail-box');bx.innerHTML='<div class="modal-hdr"><div class="modal-title">'+_I.doc+' '+_esc(d.companyName||'고객사')+'</div><button class="modal-close" onclick="_ctrlCloseDetail()">X</button></div><div class="modal-body"><div class="detail-row"><b>이메일</b><span>'+_esc(d.email||'-')+'</span></div><div class="detail-row"><b>연락처</b><span>'+_esc(d.phone||'-')+'</span></div><div class="detail-row"><b>사업자번호</b><span>'+_esc(d.bizNumber||'-')+'</span></div><div class="detail-row"><b>플랜</b><span>'+_esc(d.plan||'-')+'</span></div><div class="detail-row"><b>체험만료</b><span style="color:'+_trialColor(d.trialEnd)+'">'+_esc(_ctrlFmtDate(d.trialEnd))+'</span></div><div class="detail-row"><b>슬러그</b><span>'+_esc(d.slug||'-')+'</span></div><div class="detail-sec">서류</div>'+[{key:'bizLicenseUrl',label:'사업자등록증'},{key:'contractUrl',label:'계약서'},{key:'idCardUrl',label:'신분증'}].map(function(def){var url=d[def.key];return'<div class="doc-row"><span class="doc-lbl">'+_esc(def.label)+'</span>'+(url?'<a href="'+url+'" target="_blank" class="ctrl-btn" rel="noreferrer">보기</a>':'<span class="doc-none">미등록</span>')+'<label class="ctrl-btn" style="cursor:pointer">업로드<input type="file" accept="image/*,.pdf" style="display:none" data-id="'+_esc(dealerId)+'" data-field="'+_esc(def.key)+'" onchange="_ctrlUploadDoc(this.dataset.id,this.dataset.field,this)"></label></div>';}).join('')+'</div>';ov.style.display='flex';});}
+function _ctrlUploadDoc(dealerId,field,input){var file=input.files[0];if(!file)return;var ext=file.name.split('.').pop(),path='companies/'+dealerId+'/'+field+'.'+ext;_ctrlToast('업로드 중...');_storage.ref(path).put(file).then(function(s){return s.ref.getDownloadURL();}).then(function(url){var u={};u[field]=url;u[field.replace('Url','UploadedAt')]=new Date().toISOString().slice(0,10);return _db.collection('companies').doc(dealerId).update(u);}).then(function(){_ctrlToast('서류 업로드 완료','ok');_ctrlOpenDetail(dealerId);}).catch(function(e){_ctrlToast(e.message,'err');});}
+function _ctrlCloseDetail(){document.getElementById('detail-overlay').style.display='none';}
+function _ctrlLoadChat(){var c=document.getElementById('acc-chat');c.innerHTML='<div class="chat-layout"><div class="chat-list" id="chat-list"><div class="chat-list-hdr">'+_I.chat+' 고객사 채팅</div><div class="ctrl-loading">로딩 중...</div></div><div class="chat-room" id="chat-room"><div class="chat-empty">'+_I.chat+'<span>고객사를 선택하세요</span></div></div></div>';_ctrlLoadChatList();}
+function _ctrlLoadChatList(){_db.collection('chats').orderBy('lastAt','desc').onSnapshot(function(snap){var list=document.getElementById('chat-list');if(!list)return;var hdr='<div class="chat-list-hdr">'+_I.chat+' 고객사 채팅</div>';if(snap.empty){list.innerHTML=hdr+'<div class="ctrl-empty" style="padding:20px">채팅 없음</div>';return;}var items=[hdr];snap.forEach(function(doc){var d=doc.data(),unread=d.unreadSA||0,active=_chatDealerId===doc.id?' on':'';items.push('<div class="chat-item'+active+'" data-id="'+_esc(doc.id)+'" data-nm="'+_esc(d.companyName||doc.id)+'" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)"><div class="chat-item-name"><span>'+_esc((d.companyName||doc.id).slice(0,14))+'</span>'+(unread?'<span class="chat-badge">'+unread+'</span>':'')+'</div><div class="chat-item-last">'+_esc((d.lastMsg||'').slice(0,28))+'</div></div>');});list.innerHTML=items.join('');});}
+function _ctrlOpenChat(dealerId,companyName){_chatDealerId=dealerId;if(_chatUnsub){_chatUnsub();_chatUnsub=null;}_db.collection('chats').doc(dealerId).set({unreadSA:0},{merge:true});var room=document.getElementById('chat-room');if(!room){var body=document.getElementById('acc-chat');if(body){delete body.dataset.loaded;}_ctrlToggle('chat');setTimeout(function(){_ctrlOpenChat(dealerId,companyName);},500);return;}room.innerHTML='<div class="chat-room-hdr"><div class="online-dot"></div><div class="chat-room-hdr-name">'+_I.chat+' '+_esc(companyName||dealerId)+'</div></div><div class="chat-msgs" id="chat-msgs"></div><div class="chat-input-row"><input id="chat-inp" class="ctrl-input" placeholder="메시지 입력... (Enter 전송)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_ctrlSendChat();}"><button class="ctrl-btn ctrl-btn-acc" onclick="_ctrlSendChat()" style="padding:9px 15px;flex-shrink:0">'+_I.send+' 전송</button></div>';document.querySelectorAll('.chat-item').forEach(function(el){el.classList.toggle('on',el.dataset.id===dealerId);});_chatUnsub=_db.collection('chats').doc(dealerId).collection('messages').orderBy('createdAt','asc').limit(120).onSnapshot(function(snap){var msgs=document.getElementById('chat-msgs');if(!msgs)return;if(snap.empty){msgs.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx3);font-size:13px">메시지가 없습니다</div>';return;}var items=[];snap.forEach(function(doc){var d=doc.data(),sa=d.sender==='sa';items.push('<div class="msg '+(sa?'msg-sa':'msg-dealer')+'"><div class="msg-bubble">'+_esc(d.text)+'</div><div class="msg-time">'+_esc(_ctrlFmtTs(d.createdAt))+(sa?'':' · '+_esc(d.senderName||'고객'))+'</div></div>');});msgs.innerHTML=items.join('');msgs.scrollTop=msgs.scrollHeight;});}
+function _ctrlSendChat(){if(!_chatDealerId)return;var inp=document.getElementById('chat-inp'),text=(inp?inp.value:'').trim();if(!text)return;inp.value='';inp.focus();var batch=_db.batch(),msgRef=_db.collection('chats').doc(_chatDealerId).collection('messages').doc();batch.set(msgRef,{text:text,sender:'sa',senderName:'엠비티아이 관리자',createdAt:firebase.firestore.FieldValue.serverTimestamp()});batch.set(_db.collection('chats').doc(_chatDealerId),{lastMsg:text,lastAt:firebase.firestore.FieldValue.serverTimestamp(),unreadCustomer:firebase.firestore.FieldValue.increment(1)},{merge:true});batch.commit().then(function(){_ctrlNotify('dealer',_chatDealerId,'관리자 메시지',text,{type:'chat'});});}
+function _ctrlLoadNotice(){var c=document.getElementById('acc-notice');c.innerHTML='<div class="notice-form"><div class="ctrl-label">수신 대상</div><select id="n-target" class="ctrl-select" style="width:100%;margin-bottom:12px"><option value="all">전체 고객사</option><option value="active">활성만</option><option value="trial">체험 중만</option></select><div class="ctrl-label">제목</div><input id="n-title" class="ctrl-input" placeholder="공지 제목" style="margin-bottom:12px"><div class="ctrl-label">내용</div><textarea id="n-body" class="ctrl-input" rows="4" placeholder="공지 내용"></textarea><button class="ctrl-btn ctrl-btn-acc" style="margin-top:12px;width:100%;padding:10px" onclick="_ctrlSendNotice()">전체 발송</button></div><div class="ctrl-label">최근 공지</div><div id="notice-list"><div class="ctrl-loading">로딩 중...</div></div>';_db.collection('notices').orderBy('createdAt','desc').limit(10).get().then(function(snap){var list=document.getElementById('notice-list');if(!list)return;if(snap.empty){list.innerHTML='<div class="ctrl-empty">공지 없음</div>';return;}var items=[];snap.forEach(function(doc){var d=doc.data();items.push('<div class="notice-item"><div class="notice-title">'+_esc(d.title||'-')+'</div><div class="notice-body">'+_esc((d.body||'').slice(0,80))+'</div><div class="notice-meta">'+_esc(_ctrlFmtDate(d.createdAt))+' · '+_esc(d.target||'전체')+'</div></div>');});list.innerHTML=items.join('');});}
+function _ctrlSendNotice(){var title=(document.getElementById('n-title').value||'').trim(),body=(document.getElementById('n-body').value||'').trim(),target=document.getElementById('n-target').value;if(!title||!body){_ctrlToast('제목과 내용을 입력하세요');return;}_db.collection('notices').add({title:title,body:body,target:target,dealerId:null,createdAt:new Date().toISOString(),createdBy:_CU.email});_ctrlNotify(target==='all'?'all':'group',target,title,body,{type:'notice'});_ctrlToast('공지 발송 완료!','ok');document.getElementById('n-title').value='';document.getElementById('n-body').value='';var b=document.getElementById('acc-notice');if(b){delete b.dataset.loaded;_ctrlLoadNotice();}}
+function _ctrlLoadBilling(){var c=document.getElementById('acc-billing');c.innerHTML='<div class="ctrl-loading">결제 데이터 로딩 중...</div>';_db.collection('payment_requests').orderBy('createdAt','desc').limit(50).get().then(function(snap){if(snap.empty){c.innerHTML='<div class="ctrl-empty">결제 내역 없음</div>';return;}var total=0,cnt=0,items=[];snap.forEach(function(doc){var d=doc.data();if(d.status==='paid'){total+=(d.amount||0);cnt++;}var sc={paid:'badge-ok',pending:'badge-warn',failed:'badge-err'}[d.status]||'';items.push('<tr><td style="font-weight:600">'+_esc(d.companyName||'-')+'</td><td style="color:var(--tx2)">'+_esc(d.plan||'-')+'</td><td style="font-weight:700;color:var(--tx1)">'+((d.amount||0).toLocaleString())+'원</td><td><span class="badge '+sc+'">'+_esc(d.status||'-')+'</span></td><td style="color:var(--tx3);font-size:12px">'+_esc(_ctrlFmtDate(d.createdAt))+'</td></tr>');});c.innerHTML='<div class="billing-sum">결제 완료 합계: <b>'+total.toLocaleString()+'원</b> <span style="font-size:11px;color:var(--tx3)">('+cnt+'건)</span></div><div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr><th>업체명</th><th>플랜</th><th>금액</th><th>상태</th><th>일자</th></tr></thead><tbody>'+items.join('')+'</tbody></table></div>';}).catch(function(e){c.innerHTML='<div class="ctrl-empty">오류: '+_esc(e.message)+'</div>';});}
+function _ctrlLoadAIReport(){var c=document.getElementById('acc-aireport');c.innerHTML='<div class="ai-wrap"><div class="ai-hdr"><div class="ai-hdr-title">'+_I.ai+' Claude AI 주간 현황 리포트</div><button class="ctrl-btn ctrl-btn-acc" onclick="_ctrlGenAIReport()" id="ai-gen-btn" style="gap:6px">'+_I.spark+' 리포트 생성</button></div><div id="ai-report-out" class="ai-out"><div class="ai-placeholder">'+_I.ai+'<div>이번 주 플랫폼 현황을 AI가 분석합니다</div><div style="font-size:11px;color:var(--tx3)">Firestore 데이터를 수집해 Claude Haiku가 인사이트를 제공합니다</div><button class="ctrl-btn ctrl-btn-acc" style="margin-top:4px" onclick="_ctrlGenAIReport()">'+_I.spark+' 지금 생성하기</button></div></div></div>';}
+function _ctrlGenAIReport(){var btn=document.getElementById('ai-gen-btn'),out=document.getElementById('ai-report-out');if(btn){btn.disabled=true;btn.innerHTML='분석 중...';}if(out)out.innerHTML='<div class="ctrl-loading">Claude가 데이터를 분석하고 있습니다...</div>';var today=new Date().toISOString().slice(0,10),cut7=new Date(Date.now()+7*86400000).toISOString().slice(0,10);Promise.all([_db.collection('companies').get(),_db.collection('chats').get(),_db.collection('payment_requests').get()]).then(function(res){var co=res[0],ch=res[1],pa=res[2],stats={totalCompanies:co.size,byStatus:{pending:0,trial:0,approved:0,active:0,suspended:0},totalUnread:0,totalRevenue:0,paidCount:0,trialExpiringSoon:0};co.forEach(function(d){var s=d.data().status||'unknown',te=d.data().trialEnd||'';if(stats.byStatus.hasOwnProperty(s))stats.byStatus[s]++;if(te>=today&&te<=cut7)stats.trialExpiringSoon++;});ch.forEach(function(d){stats.totalUnread+=(d.data().unreadSA||0);});pa.forEach(function(d){if(d.data().status==='paid'){stats.totalRevenue+=(d.data().amount||0);stats.paidCount++;}});var today2=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}),prompt=['당신은 SaaS 플랫폼 운영 분석가입니다.','다음은 [엠비티아이] 관제센터의 현재 데이터입니다. 한국어로 주간 현황 리포트를 작성해주세요.','','=== 현황 데이터 ('+today2+') ===','전체 고객사: '+stats.totalCompanies+'개','상태별: 가입대기 '+stats.byStatus.pending+', 체험중 '+stats.byStatus.trial+', 활성 '+(stats.byStatus.approved+stats.byStatus.active)+', 정지 '+stats.byStatus.suspended,'7일 내 만료 임박: '+stats.trialExpiringSoon+'개','채팅 미읽음: '+stats.totalUnread+'건','결제 완료: '+stats.paidCount+'건 / 총 '+stats.totalRevenue.toLocaleString()+'원','','=== 리포트 형식 ===','1. **주요 지표 요약**','2. **즉시 조치 필요 사항** (우선순위 top 3)','3. **운영 인사이트 및 권장 사항**','4. **다음 주 예상 포커스**','','간결하고 실용적으로 작성하세요. 마크다운 사용 가능.'].join('\n');return fetch('https://mbtico.kr/api/ctrl-ai-report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,stats:stats})});}).then(function(r){return r.json();}).then(function(data){var out=document.getElementById('ai-report-out'),btn=document.getElementById('ai-gen-btn');if(btn){btn.disabled=false;btn.innerHTML=_I.spark+' 다시 생성';}if(!out)return;if(data.error){out.innerHTML='<div class="ctrl-empty">오류: '+_esc(data.error)+'</div>';return;}var md=(data.report||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');md=md.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');md=md.replace(/^#{1,3} (.+)/gm,'<h4 class="ai-h4">$1</h4>');md=md.replace(/^- (.+)/gm,'<li>$1</li>');md=md.replace(/(<li>[\s\S]+?<\/li>(?:\s*<li>[\s\S]+?<\/li>)*)/g,'<ul class="ai-ul">$1</ul>');md=md.replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');out.innerHTML='<div class="ai-meta"><span class="ai-meta-dot"></span>생성: '+new Date().toLocaleString('ko-KR')+' · Claude Haiku 분석</div><div class="ai-body">'+md+'</div>';}).catch(function(e){var out=document.getElementById('ai-report-out'),btn=document.getElementById('ai-gen-btn');if(btn){btn.disabled=false;btn.innerHTML=_I.spark+' 리포트 생성';}if(out)out.innerHTML='<div class="ctrl-empty">오류: '+_esc(e.message)+'</div>';});}
