@@ -364,7 +364,7 @@ function _filoSplitPay(total){
  actRow.appendChild(confirmBtn);actRow.appendChild(cancelBtn);
 
  var hdr=document.createElement('div');
- hdr.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">✂️ 분할 결제</div>'+
+ hdr.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>분할 결제</div>'+
   '<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px">'+
   '<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span>총액</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div></div>'+
   '<div style="margin-bottom:8px;font-size:12px;color:var(--t2)">현금 금액 입력</div>';
