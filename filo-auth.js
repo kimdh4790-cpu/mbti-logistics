@@ -239,9 +239,9 @@ function _svgIcon(n){
    GUESTAI : 회원·단골·CRM
 ═══════════════════════════════════════════════════════ */
 var FILO_AI={
- AIVO:    {name:'AIVO',   ic:'sparkles',   color:'#a78bfa'},
- STAFFIQ: {name:'STAFFIQ',ic:'user-check', color:'#22c55e'},
- GUESTAI: {name:'GUESTAI',ic:'gift',       color:'#f59e0b'}
+ AIVO:    {name:'AIVO',   ic:'sparkles',   color:'#8b5cf6'},  // violet — 매출·마진·AI
+ STAFFIQ: {name:'STAFFIQ',ic:'user-check', color:'#22d3ee'},  // cyan — 근태·인력
+ GUESTAI: {name:'GUESTAI',ic:'gift',       color:'#34d399'}   // emerald — 회원·CRM
 };
 function _filoAiBadge(key,size){
  var b=FILO_AI[key]||FILO_AI.AIVO;
@@ -341,7 +341,7 @@ function _buildFiloNav(){
   _ops.push({ic:'calendar',l:'예약·달력',p:'schedule'});
   _ops.push({ic:'clock',l:'웨이팅',p:'waiting'});
  }
- if(isAdmin)_ops.push({ic:'users',l:'직원 관리',p:'members'});
+ // 직원 관리는 STAFFIQ QR 페이지로 통합 (members 중복 제거)
  if(hasAll||hasFeature('member_crm')){
   _ops.push({ic:'user-plus',l:'GUESTAI 회원',p:'members',badge:'GUESTAI'});
   _ops.push({ic:'gift',l:'포인트·멤버십',p:'membership'});
