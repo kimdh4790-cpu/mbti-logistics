@@ -513,49 +513,70 @@ function _dineDashboard(el){
  el.innerHTML='';
  var wrap=document.createElement('div');
  wrap.className='slide-up';
- var hdr=document.createElement('div');
- hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
- hdr.innerHTML='<div><div class="page-title">📊 오늘 현황</div><div class="page-sub" id="dash-date"></div></div>';
  var now=new Date();
+ var days=['일','월','화','수','목','금','토'];
+
+ /* ── 헤더 ── */
+ var hdr=document.createElement('div');
+ hdr.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:8px';
+ hdr.innerHTML=
+  '<div>'+
+  '<div class="page-title" style="font-size:22px;letter-spacing:-.8px">오늘 현황</div>'+
+  '<div class="page-sub" id="dash-date">'+
+   now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 ('+days[now.getDay()]+')</div></div>'+
+  '<div style="display:flex;align-items:center;gap:6px">'+
+  '<span class="dine-ai-badge badge-aivo">'+_DINE_IC.sparkle+'AIVO AI</span>'+
+  '<div id="dine-live-sales" style="font-size:11px;font-weight:800;color:#22c55e;display:none"></div>'+
+  '</div>';
  wrap.appendChild(hdr);
 
+ /* ── KPI 카드 (스켈레톤 → 실데이터) ── */
+ var kpiDefs=[
+  {id:'kpi-sales',  label:'오늘 매출', color:'#38bdf8', ic:_DINE_IC.trending},
+  {id:'kpi-profit', label:'오늘 순이익',color:'#22c55e', ic:_DINE_IC.bar2},
+  {id:'kpi-margin', label:'마진율',    color:'#a78bfa', ic:_DINE_IC.pct},
+  {id:'kpi-orders', label:'주문 건수', color:'#8b5cf6', ic:_DINE_IC.cart},
+  {id:'kpi-staff',  label:'출근 인원', color:'#38bdf8', ic:_DINE_IC.users},
+  {id:'kpi-labor',  label:'인건비율',  color:'#f59e0b', ic:_DINE_IC.brief}
+ ];
  var kpi=document.createElement('div');
  kpi.className='kpi-grid';
- [{id:'kpi-sales',label:'오늘 매출',icon:'💰',color:'#38bdf8'},
-  {id:'kpi-profit',label:'오늘 순이익',icon:'📈',color:'#22c55e'},
-  {id:'kpi-margin',label:'마진율',icon:'📊',color:'#a78bfa'},
-  {id:'kpi-orders',label:'주문 건수',icon:'🛒',color:'#8b5cf6'},
-  {id:'kpi-staff',label:'출근 인원',icon:'👥',color:'#38bdf8'},
-  {id:'kpi-labor',label:'인건비율',icon:'💼',color:'#f59e0b'}
- ].forEach(function(k){
+ kpiDefs.forEach(function(k){
   var card=document.createElement('div');
-  card.className='kpi-card';
+  card.className='kpi-card kpi-lux';
   card.style.borderTop='2px solid '+k.color;
-  card.innerHTML='<div class="kpi-label">'+k.icon+' '+k.label+'</div>'+
-   '<div class="kpi-val" id="'+k.id+'" style="color:'+k.color+'">-</div>'+
-   '<div class="kpi-sub" id="'+k.id+'-sub">로딩중</div>';
+  card.innerHTML=
+   '<div style="display:flex;align-items:center;margin-bottom:10px">'+
+   '<div class="kpi-ico" style="color:'+k.color+';background:'+k.color+'1a">'+k.ic+'</div>'+
+   '</div>'+
+   '<div class="kpi-label">'+k.label+'</div>'+
+   '<div class="kpi-val skeleton-val" id="'+k.id+'" style="color:'+k.color+'">—</div>'+
+   '<div class="kpi-sub skeleton-sub" id="'+k.id+'-sub">&nbsp;</div>';
   kpi.appendChild(card);
  });
  wrap.appendChild(kpi);
 
+ /* ── 하단 그리드 ── */
  var grid=document.createElement('div');
  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px';
+
  var attCard=document.createElement('div');
  attCard.className='card';
- attCard.innerHTML='<div class="sec-title" style="margin-bottom:10px"><span class="attend-live"><span class="live-dot"></span>실시간 출퇴근</span></div>'+
-  '<div id="dash-attend-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ attCard.innerHTML=
+  '<div class="sec-title" style="margin-bottom:10px;display:flex;align-items:center;gap:8px">'+
+  '<span class="dine-ai-badge badge-staffiq">'+_DINE_IC.check+'STAFFIQ</span>'+
+  '<span class="attend-live"><span class="live-dot"></span>실시간 출퇴근</span></div>'+
+  '<div id="dash-attend-list">'+_dineSkelAttend()+'</div>';
  grid.appendChild(attCard);
+
  var lawCard=document.createElement('div');
  lawCard.className='card';
- lawCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">⚖️ 근로법 알림</div>'+
-  '<div id="dash-law-list"><div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">⏳ 로딩중</div></div>';
+ lawCard.innerHTML=
+  '<div class="sec-title" style="margin-bottom:10px">⚖️ 근로법 알림</div>'+
+  '<div id="dash-law-list">'+_dineSkelLaw()+'</div>';
  grid.appendChild(lawCard);
  wrap.appendChild(grid);
  el.appendChild(wrap);
-
- var days=['일','월','화','수','목','금','토'];
- document.getElementById('dash-date').textContent=
-  now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일 ('+days[now.getDay()]+')';
 
  var today=now.toISOString().slice(0,10);
  _dineLoadDashboard(did,today);
@@ -652,10 +673,15 @@ function _dineLoadDashboard(did,today){
   _dineCountUp('kpi-orders',orderCnt,'','건');
   var se=document.getElementById('kpi-staff');if(se)se.textContent=working.length+'명';
   var lr=document.getElementById('kpi-labor');if(lr)lr.textContent=laborRate+'%';
-  var ss=document.getElementById('kpi-sales-sub');if(ss)ss.textContent='주문 '+orderCnt+'건';
-  var os=document.getElementById('kpi-orders-sub');if(os)os.textContent='평균 ₩'+(orderCnt?Math.round(totalSales/orderCnt).toLocaleString():0);
-  var ws=document.getElementById('kpi-staff-sub');if(ws)ws.textContent='오늘 총 '+(working.length+worked)+'명 근무';
-  var ls=document.getElementById('kpi-labor-sub');if(ls)ls.textContent='추산 ₩'+estLabor.toLocaleString();
+  var ss=document.getElementById('kpi-sales-sub');if(ss){ss.textContent='주문 '+orderCnt+'건';ss.classList.remove('skeleton-sub');}
+  var os=document.getElementById('kpi-orders-sub');if(os){os.textContent='평균 ₩'+(orderCnt?Math.round(totalSales/orderCnt).toLocaleString():0);os.classList.remove('skeleton-sub');}
+  var ws=document.getElementById('kpi-staff-sub');if(ws){ws.textContent='오늘 총 '+(working.length+worked)+'명 근무';ws.classList.remove('skeleton-sub');}
+  var ls=document.getElementById('kpi-labor-sub');if(ls){ls.textContent='추산 ₩'+estLabor.toLocaleString();ls.classList.remove('skeleton-sub');}
+  /* margin/labor 스켈레톤 제거 */
+  var emg=document.getElementById('kpi-margin');if(emg)emg.classList.remove('skeleton-val');
+  var elr=document.getElementById('kpi-labor');if(elr)elr.classList.remove('skeleton-val');
+  var epf=document.getElementById('kpi-profit');if(epf)epf.classList.remove('skeleton-val');
+  var ess=document.getElementById('kpi-staff');if(ess)ess.classList.remove('skeleton-val');
 
   /* 출퇴근 리스트 */
   var memMap={};

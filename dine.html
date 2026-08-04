@@ -168,6 +168,36 @@ select.inp option{background:var(--s2)}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--gr);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* ── 럭셔리 KPI 카드 ── */
+.kpi-lux{position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.kpi-lux::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(255,255,255,.03) 0%,transparent 60%);pointer-events:none}
+.kpi-lux:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.kpi-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ── AI 배지 ── */
+.dine-ai-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;vertical-align:middle}
+.badge-aivo{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);color:#a78bfa}
+.badge-staffiq{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#22c55e}
+.badge-guestai{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#f59e0b}
+
+/* ── 스켈레톤 shimmer ── */
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.skel-line,.skel-circle,.skel-pill,.skel-law,.skeleton-val,.skeleton-sub{
+ background:linear-gradient(90deg,var(--s3) 25%,rgba(255,255,255,.04) 50%,var(--s3) 75%);
+ background-size:200% 100%;animation:shimmer 1.8s ease-in-out infinite}
+.skel-line{height:12px;border-radius:6px}
+.skel-circle{width:32px;height:32px;border-radius:50%;flex-shrink:0}
+.skel-pill{width:44px;height:18px;border-radius:999px}
+.skel-law{height:40px;border-radius:10px}
+.skeleton-val{display:block;min-width:80px;height:24px;border-radius:6px;color:transparent!important}
+.skeleton-sub{display:block;min-width:55px;height:12px;border-radius:4px;margin-top:3px;color:transparent!important}
+
+/* ── 사이드바 SVG 아이콘 ── */
+.nav-svg{width:16px;height:16px;flex-shrink:0;opacity:.75;transition:opacity .2s}
+.nav-item:hover .nav-svg,.nav-item.active .nav-svg{opacity:1}
+.nav-item.active{background:rgba(8,145,178,.12);color:#38bdf8;border-right:2px solid var(--br)}
+.nav-badge-wrap{margin-left:auto}
+
 /* ── 반응형 ── */
 @media(max-width:768px){
  :root{--sidebar-w:0px}
@@ -331,52 +361,95 @@ document.addEventListener('touchstart',function(e){
   <!-- 사이드바 -->
   <div id="sidebar">
    <!-- 매장명 -->
-   <div style="padding:16px;border-bottom:1px solid var(--bd)">
-    <div style="font-size:13px;font-weight:800;color:var(--tx)" id="sb-store-name">내 매장</div>
-    <div style="font-size:10px;color:var(--t3);margin-top:2px" id="sb-store-sub">외식업 관리 플랫폼</div>
+   <div style="padding:14px 16px;border-bottom:1px solid var(--bd);background:linear-gradient(135deg,rgba(8,145,178,.04),rgba(124,58,237,.04))">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+     <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0891b2,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0">D</div>
+     <div>
+      <div style="font-size:12px;font-weight:800;color:var(--tx);line-height:1.2" id="sb-store-name">내 매장</div>
+      <div style="font-size:9px;color:var(--t3);margin-top:1px" id="sb-store-sub">외식업 관리 플랫폼</div>
+     </div>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+     <span class="dine-ai-badge badge-aivo" style="font-size:8px">AIVO AI</span>
+     <span class="dine-ai-badge badge-staffiq" style="font-size:8px">STAFFIQ</span>
+     <span class="dine-ai-badge badge-guestai" style="font-size:8px">GUESTAI</span>
+    </div>
    </div>
    <div class="nav-group">
     <div class="nav-group-title">홈</div>
-    <div class="nav-item active" onclick="_dinePage('dashboard',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('dashboard',this)"><span class="ic">📊</span>오늘 현황</div>
+    <div class="nav-item active" onclick="_dinePage('dashboard',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('dashboard',this)">
+     <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>오늘 현황
+    </div>
    </div>
 
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)">직원 관리<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)"><span>직원 관리</span><span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('staff',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('staff',this)"><span class="ic">👥</span>직원 현황</div>
-     <div class="nav-item" onclick="_dinePage('attend',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('attend',this)"><span class="ic">⏱</span>출퇴근 현황</div>
-     <div class="nav-item" onclick="_dinePage('schedule',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('schedule',this)"><span class="ic">📅</span>근무 스케줄</div>
-     <div class="nav-item" onclick="_dinePage('payroll',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payroll',this)"><span class="ic">💰</span>급여 계산</div>
-     <div class="nav-item" onclick="_dinePage('mypay',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('mypay',this)"><span class="ic">💵</span>내 급여</div>
-     <div class="nav-item" onclick="_dinePage('payslip',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payslip',this)"><span class="ic">📋</span>급여명세서</div>
+     <div class="nav-item" onclick="_dinePage('staff',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('staff',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>직원 현황
+      <span class="nav-badge-wrap"><span class="dine-ai-badge badge-staffiq" style="font-size:8px;padding:2px 6px">STAFFIQ</span></span>
+     </div>
+     <div class="nav-item" onclick="_dinePage('attend',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('attend',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>출퇴근 현황
+     </div>
+     <div class="nav-item" onclick="_dinePage('schedule',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('schedule',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>근무 스케줄
+     </div>
+     <div class="nav-item" onclick="_dinePage('payroll',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payroll',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>급여 계산
+     </div>
+     <div class="nav-item" onclick="_dinePage('mypay',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('mypay',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>내 급여
+     </div>
+     <div class="nav-item" onclick="_dinePage('payslip',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('payslip',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>급여명세서
+     </div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)">정산<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)"><span>정산</span><span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:300px">
-     <div class="nav-item" onclick="_dinePage('analytics',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('analytics',this)"><span class="ic">📈</span>매출 분석</div>
-     <div class="nav-item" onclick="_dinePage('settle',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('settle',this)"><span class="ic">📑</span>월 정산</div>
-     <div class="nav-item" onclick="_dinePage('cost',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('cost',this)"><span class="ic">🧾</span>원가 관리</div>
-     <div class="nav-item" onclick="_dinePage('tax',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('tax',this)"><span class="ic">📂</span>세무사 공유</div>
+     <div class="nav-item" onclick="_dinePage('analytics',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('analytics',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>매출 분석
+      <span class="nav-badge-wrap"><span class="dine-ai-badge badge-aivo" style="font-size:8px;padding:2px 6px">AIVO</span></span>
+     </div>
+     <div class="nav-item" onclick="_dinePage('settle',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('settle',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg>월 정산
+     </div>
+     <div class="nav-item" onclick="_dinePage('cost',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('cost',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>원가 관리
+     </div>
+     <div class="nav-item" onclick="_dinePage('tax',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('tax',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>세무사 공유
+     </div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)">고객<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)"><span>고객</span><span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('member',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('member',this)"><span class="ic">🎁</span>회원 관리</div>
+     <div class="nav-item" onclick="_dinePage('member',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('member',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect width="20" height="5" x="2" y="7"/><line x1="12" x2="12" y1="22" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>회원 관리
+      <span class="nav-badge-wrap"><span class="dine-ai-badge badge-guestai" style="font-size:8px;padding:2px 6px">GUESTAI</span></span>
+     </div>
     </div>
    </div>
    <div class="nav-group">
-    <div class="nav-group-title" onclick="_dineToggleGroup(this)">설정<span class="nav-arrow">▾</span></div>
+    <div class="nav-group-title" onclick="_dineToggleGroup(this)"><span>설정</span><span class="nav-arrow">▾</span></div>
     <div class="nav-group-items" style="max-height:100px">
-     <div class="nav-item" onclick="_dinePage('store',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('store',this)"><span class="ic">🏪</span>매장 설정</div>
-     <div class="nav-item" onclick="_dinePage('alimtalk',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('alimtalk',this)"><span class="ic">💬</span>알림톡 설정</div>
+     <div class="nav-item" onclick="_dinePage('store',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('store',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>매장 설정
+     </div>
+     <div class="nav-item" onclick="_dinePage('alimtalk',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('alimtalk',this)">
+      <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>알림톡 설정
+     </div>
     </div>
    </div>
    <!-- FILO 바로가기 -->
    <div style="padding:12px;margin-top:auto;border-top:1px solid var(--bd)">
+    <div id="dine-stock-badge" style="display:none;font-size:10px;color:#f59e0b;font-weight:700;padding:4px 8px;background:rgba(245,158,11,.1);border-radius:6px;margin-bottom:8px;text-align:center"></div>
     <button onclick="_dineGoFilo()" style="width:100%;padding:11px;background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(8,145,178,.2));border:1px solid rgba(124,58,237,.3);border-radius:10px;color:#a78bfa;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-     <span>📦</span><span>FILO 현장 운영</span><span style="font-size:10px;opacity:.7">↗</span>
+     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+     <span>FILO 현장 운영</span><span style="font-size:10px;opacity:.7">↗</span>
     </button>
    </div>
   </div>
