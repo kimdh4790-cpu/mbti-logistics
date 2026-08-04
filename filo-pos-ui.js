@@ -249,9 +249,11 @@ function _filoRenderKiosk(menus){
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
  menuEl.innerHTML=menus.map(function(m,i){
+ var _colors=['#6366f1','#10b981','#f59e0b','#ef4444','#0891b2','#8b5cf6','#ec4899'];
+ var _ci=m.name?m.name.charCodeAt(0)%_colors.length:0;
  var _emIcon=m.emoji&&m.emoji.length<=4
   ?'<div style="font-size:26px;line-height:1;margin-bottom:8px">'+m.emoji+'</div>'
-  :'<div style="width:38px;height:38px;border-radius:11px;background:rgba(99,102,241,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg></div>';
+  :'<div style="width:40px;height:40px;border-radius:12px;background:'+_colors[_ci]+'1a;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:17px;font-weight:900;color:'+_colors[_ci]+'">'+esc((m.name||'?').slice(0,1))+'</div>';
  return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
  _emIcon+
  '<div style="font-size:12.5px;font-weight:800;margin-bottom:5px;letter-spacing:-.2px;line-height:1.3">'+esc(m.name)+'</div>'+

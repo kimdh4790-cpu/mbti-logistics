@@ -503,6 +503,59 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 .demo-card:active{transform:translateY(0);box-shadow:0 1px 4px rgba(0,0,0,.05)}
 #demo-admin-bar{background:rgba(124,58,237,.08);border-bottom:1px solid rgba(124,58,237,.2);padding:5px 16px;display:flex;align-items:center;gap:8px;font-size:11px}
 
+/* ══════════════════════════════════════════════
+   2026 FILO PREMIUM — TOSS/KAKAO/T-ORDER 레벨
+   밝고 세련된 라이트 SaaS — 어두움 전면 금지
+   ══════════════════════════════════════════════ */
+
+/* 전체 앱 배경 강제 화이트 */
+body,#app,#content,#content-wrap,.main{
+  background:#F7F8FA!important;color:#0F172A!important}
+
+/* POS 메뉴 카드 — 토스페이 스타일 */
+.menu-item{
+  background:#fff!important;
+  border:1.5px solid rgba(0,0,0,.07)!important;
+  box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06)!important;
+  border-radius:16px!important;
+  padding:16px 10px 14px!important;
+  transition:all .18s cubic-bezier(.4,0,.2,1)!important}
+.menu-item:hover{
+  border-color:rgba(99,102,241,.35)!important;
+  background:#fff!important;
+  box-shadow:0 6px 24px rgba(99,102,241,.18),0 2px 6px rgba(0,0,0,.06)!important;
+  transform:translateY(-4px) scale(1.02)!important}
+.menu-item:active{transform:translateY(0) scale(.97)!important}
+
+/* 카테고리 필터 칩 — 카카오 스타일 */
+.cat-scroll button,.cat-btn{
+  background:#F1F5F9!important;color:#475569!important;
+  border:1.5px solid transparent!important;
+  border-radius:999px!important;font-weight:700!important;
+  font-size:12px!important;padding:7px 16px!important;
+  white-space:nowrap!important;cursor:pointer!important;
+  transition:.15s!important}
+.cat-scroll button.active,.cat-scroll button.on,.cat-btn.active{
+  background:var(--br)!important;color:#fff!important;
+  box-shadow:0 4px 14px rgba(99,102,241,.35)!important}
+
+/* 카트 패널 */
+.cart-panel{background:#fff!important;border:1.5px solid rgba(0,0,0,.07)!important;
+  box-shadow:0 2px 12px rgba(0,0,0,.08)!important}
+
+/* 테이블 버튼 — 밝은 카드 */
+.table-card,.table-btn{
+  background:#fff!important;border:1.5px solid rgba(0,0,0,.07)!important;
+  border-radius:14px!important;color:#0F172A!important;
+  box-shadow:0 1px 4px rgba(0,0,0,.05)!important}
+
+/* 카드 모두 흰 배경 */
+.card,.kpi-card,.stat-card,.pay-card,.member-card,.attend-row,.stock-item{
+  background:#fff!important}
+
+/* 섹션 배경 오버라이드 */
+.pos-wrap{background:#F7F8FA!important}
+
 /* ── 2026 프리미엄 업그레이드 ── */
 /* 로그인 카드 — 멀티레이어 그림자 + 미세 보더 */
 .login-card{

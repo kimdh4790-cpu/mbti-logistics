@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @title       FILO · DINE — 외식업 통합 운영 플랫폼
  * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
  * @author      김형우 (kimdh4790@gmail.com)
@@ -179,10 +179,10 @@ function _dineLoadAnalytics(did,from,to){
   }
 
   var kpis=[
-   {lbl:'총 매출',id:'kn0',val:total,pre:'₩',suf:'',sub:cnt+'건',color:'#38bdf8',d:dTotal,icon:'💰'},
-   {lbl:'일평균 매출',id:'kn1',val:dayAvg,pre:'₩',suf:'',sub:days2+'일 기준',color:'#22c55e',d:null,icon:'📊'},
+   {lbl:'총 매출',id:'kn0',val:total,pre:'₩',suf:'',sub:cnt+'건',color:'#38bdf8',d:dTotal,icon:''},
+   {lbl:'일평균 매출',id:'kn1',val:dayAvg,pre:'₩',suf:'',sub:days2+'일 기준',color:'#22c55e',d:null,icon:''},
    {lbl:'피크타임',id:'kn2',val:null,pre:'',suf:'',sub:peakH?'₩'+Math.round(peakH[1]).toLocaleString():'없음',color:'#f59e0b',d:null,icon:'⏰'},
-   {lbl:'객단가',id:'kn3',val:avg,pre:'₩',suf:'',sub:'주문당 평균',color:'#a78bfa',d:dCnt,icon:'🎯'},
+   {lbl:'객단가',id:'kn3',val:avg,pre:'₩',suf:'',sub:'주문당 평균',color:'#a78bfa',d:dCnt,icon:''},
   ];
   if(kpi)kpi.innerHTML=kpis.map(function(k){
    var deltaHtml='';
@@ -252,7 +252,7 @@ function _dineLoadAnalytics(did,from,to){
   if(lEl){
    var lRate=laborRate;
    var lColor=lRate<25?'#22c55e':lRate<35?'#f59e0b':'#ef4444';
-   var lMsg=lRate<25?'✅ 양호':lRate<35?'⚠️ 주의':'❌ 과다';
+   var lMsg=lRate<25?' 양호':lRate<35?'경고:  주의':'오류:  과다';
    lEl.innerHTML=
     '<div style="text-align:center;padding:10px 0">'+
     '<div style="font-size:36px;font-weight:900;color:'+lColor+'">'+lRate+'%</div>'+
@@ -439,10 +439,10 @@ function _dineWatchStock(){
      low.push(d.name+'('+d.stock+'개)');
    });
    var el=document.getElementById('dine-stock-badge');
-   if(el){el.textContent=low.length>0?'⚠️ 재고부족 '+low.length+'개':'';el.style.display=low.length>0?'block':'none';}
+   if(el){el.textContent=low.length>0?'경고:  재고부족 '+low.length+'개':'';el.style.display=low.length>0?'block':'none';}
    if(low.length>0&&window._dineStockPrev!==low.join()){
     window._dineStockPrev=low.join();
-    _dineToast('⚠️ 재고 부족: '+low.slice(0,3).join(', '));
+    _dineToast('경고:  재고 부족: '+low.slice(0,3).join(', '));
     if('Notification' in window&&Notification.permission==='granted'){
      new Notification('재고 부족',{body:low.join(', '),icon:'/dine-icon-192.png'});
     }
@@ -528,7 +528,7 @@ function _dineMyPayroll(el){
  if(!_CU.staffId){el.innerHTML='<div class="empty">직원 정보 없음</div>';return;}
  el.innerHTML='<div class="slide-up">';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">💰 내 급여</div><div class="page-sub">'+_CU.name+'님의 급여 현황</div></div>'+
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title"> 내 급여</div><div class="page-sub">'+_CU.name+'님의 급여 현황</div></div>'+
   '<div style="display:flex;gap:8px;margin-bottom:14px">'+
   '<input type="month" id="my-pay-ym" class="inp" style="width:auto" value="'+_monthStr()+'">'+
   '<button class="btn btn-primary btn-sm" onclick="_dineLoadMyPayroll()">조회</button>'+
@@ -600,7 +600,7 @@ function _dineMyPayslip(el){
  var did=_CU.dealerId;var sid=_CU.staffId||_CU.uid;
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📋 내 명세서</div><div class="page-sub">'+_CU.name+'님의 급여명세서</div></div>'+
-  '<div id="my-payslip-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+  '<div id="my-payslip-list"><div style="text-align:center;padding:30px;color:var(--t3)"> 로딩중</div></div>';
  el.innerHTML='';el.appendChild(wrap);
  _db.collection('payslips').where('dealerId','==',did).where('staffId','==',sid)
   .orderBy('ym','desc').limit(12).get()
@@ -690,7 +690,7 @@ function _dineCost(el){
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
   '<div><div class="page-title">🧾 원가 관리</div><div class="page-sub">메뉴별 원가율 · 마진 분석</div></div>'+
   '<button class="btn btn-primary" onclick="_dineCostAdd(\''+did+'\')">+ 원가 등록</button></div>'+
-  '<div id="cost-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+  '<div id="cost-list"><div style="text-align:center;padding:30px;color:var(--t3)"> 로딩중</div></div>';
  el.appendChild(wrap);
 
  _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
@@ -740,8 +740,40 @@ function _dineCostSave(did){
   price:parseInt(document.getElementById('c-price').value)||0,
   cost:parseInt(document.getElementById('c-cost').value)||0,
   createdAt:_nowISO()};
- if(!data.name){_dineToast('⚠️ 메뉴명을 입력해주세요');return;}
+ if(!data.name){_dineToast('경고:  메뉴명을 입력해주세요');return;}
  _db.collection('menu_costs').add(data).then(function(){
-  _dineToast('✅ 등록됐습니다');document.querySelector('.mo')?.remove();_dineCost(document.getElementById('content'));
+  _dineToast(' 등록됐습니다');document.querySelector('.mo')?.remove();_dineCost(document.getElementById('content'));
+ });
+}
+
+/* ── AIVO 매출 인사이트 (Claude API) ── */
+function _dineAivoInsight(){
+ var btn=document.querySelector('[onclick="_dineAivoInsight()"]');
+ var res=document.getElementById('aivo-result');
+ if(!res)return;
+ // 페이지의 KPI 수치 수집
+ var kpiText=[];
+ document.querySelectorAll('.kpi-card,.stat-card').forEach(function(el){
+  var t=el.innerText.replace(/\s+/g,' ').trim();
+  if(t)kpiText.push(t);
+ });
+ if(!kpiText.length){res.textContent='분석할 데이터가 없습니다.';return;}
+ if(btn){btn.disabled=true;btn.textContent='분석 중...';}
+ res.innerHTML='<span style="color:var(--t3)">AIVO 분석 중...</span>';
+ var prompt='다음은 외식업 매출 데이터입니다:\n'+kpiText.join('\n')+
+  '\n\n경영자 관점에서 3-4줄로 핵심 인사이트를 한국어로 분석해주세요. '+
+  '개선점, 강점, 다음주 추천 전략을 포함해주세요.';
+ fetch('/api/ai-coach',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({message:prompt,type:'aivo'})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  if(d.reply)res.innerHTML=d.reply.replace(/\n/g,'<br>');
+  else res.textContent='응답을 받지 못했습니다.';
+ }).catch(function(e){
+  res.textContent='분석 오류: '+e.message;
+ }).finally(function(){
+  if(btn){btn.disabled=false;btn.textContent='AIVO 분석';}
  });
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @title       FILO · DINE — 외식업 통합 운영 플랫폼
  * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
  * @author      김형우 (kimdh4790@gmail.com)
@@ -21,7 +21,7 @@ function _dinePayroll(el){
 
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
- hdr.innerHTML='<div><div class="page-title">💰 급여 계산</div><div class="page-sub">2026 근로기준법 자동 적용</div></div>'+
+ hdr.innerHTML='<div><div class="page-title"> 급여 계산</div><div class="page-sub">2026 근로기준법 자동 적용</div></div>'+
   '<div style="display:flex;gap:8px;align-items:center">'+
   '<input type="month" id="pay-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
   '<select id="pay-part" class="inp" style="width:auto;padding:5px 8px;font-size:11px">'+
@@ -43,7 +43,7 @@ function _dinePayroll(el){
  /* 법정 안내 */
  var lawInfo=document.createElement('div');
  lawInfo.style.cssText='background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.15);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--t2);margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px';
- lawInfo.innerHTML='<span>💡 2026 최저시급 <b style="color:#38bdf8">10,320원</b></span>'+
+ lawInfo.innerHTML='<span> 2026 최저시급 <b style="color:#38bdf8">10,320원</b></span>'+
   '<span>국민연금 <b>4.75%</b></span>'+
   '<span>건강보험 <b>3.595%</b></span>'+
   '<span>장기요양 <b>+13.14%</b></span>'+
@@ -63,7 +63,7 @@ function _dineCalcPayroll(did){
  var from=ym+'-01',to=ym+'-31';
  var list=document.getElementById('payroll-list');
  if(!list)return;
- list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 계산중...</div>';
+ list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"> 계산중...</div>';
 
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
@@ -107,7 +107,7 @@ function _dineCalcPayroll(did){
   },0);
 
   var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
-   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">💰 직원 실수령 합계</div><div class="kpi-val" style="color:#22c55e;font-size:14px">₩'+totalNet.toLocaleString()+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label"> 직원 실수령 합계</div><div class="kpi-val" style="color:#22c55e;font-size:14px">₩'+totalNet.toLocaleString()+'</div></div>'+
    '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">📋 공제 합계</div><div class="kpi-val" style="color:#ef4444;font-size:14px">₩'+(totalGross-totalNet).toLocaleString()+'</div></div>'+
    '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">🏢 사업주 실부담 총액 <span style="font-size:9px">(4대보험+퇴직금)</span></div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalEmployerCost.toLocaleString()+'</div></div>'+
    '</div>'+
@@ -315,7 +315,7 @@ function _dinePayslipModal(memberId,ym){
      '<div class="payslip-row" style="font-weight:700;border-top:1px solid var(--bd);padding-top:8px;margin-top:4px"><span>총 지급액</span><span>₩'+r.grossSalary.toLocaleString()+'</span></div>'+
      (r.insTotal?'<div class="payslip-row deduct"><span>4대보험 공제</span><span>-₩'+r.insTotal.toLocaleString()+'</span></div>':'')+
      (r.taxTotal?'<div class="payslip-row deduct"><span>소득세+지방세</span><span>-₩'+r.taxTotal.toLocaleString()+'</span></div>':'')+
-     '<div class="payslip-row total"><span>💰 실수령액</span><span>₩'+r.netSalary.toLocaleString()+'</span></div>'+
+     '<div class="payslip-row total"><span> 실수령액</span><span>₩'+r.netSalary.toLocaleString()+'</span></div>'+
      '<div style="font-size:10px;color:var(--t3);margin-top:8px">근무시간 '+r.monthlyHours+'h | 2026 근로기준법 적용</div>'+
      '</div>'+
      '<button class="btn btn-ghost" style="width:100%;margin-top:12px" onclick="this.closest(\'.mo\').remove()">닫기</button>';
@@ -336,7 +336,7 @@ function _dineAutoPayroll(did){
  var list=document.getElementById('payroll-list');
  if(!list)return;
  if(_payrollUnsub){_payrollUnsub();_payrollUnsub=null;_dineToast('🔴 실시간 계산 중지됨');return;}
- list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 실시간 연결 중...</div>';
+ list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"> 실시간 연결 중...</div>';
  _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
   var empCnt=memSnap.size;
   _payrollUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to)
@@ -403,7 +403,7 @@ function _dinePayrollLock(ym){
   });
   return Promise.all(saves);
  }).then(function(){
-  _dineToast('✅ '+ym+' 급여 확정 완료! Firestore에 저장됐습니다.');
- }).catch(function(e){_dineToast('❌ '+e.message);});
+  _dineToast(' '+ym+' 급여 확정 완료! Firestore에 저장됐습니다.');
+ }).catch(function(e){_dineToast('오류:  '+e.message);});
 }
 

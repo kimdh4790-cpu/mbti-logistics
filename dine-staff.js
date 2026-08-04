@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @title       FILO · DINE — 외식업 통합 운영 플랫폼
  * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
  * @author      김형우 (kimdh4790@gmail.com)
@@ -30,7 +30,7 @@ function _dineStaff(el){
  var grid=document.createElement('div');
  grid.className='staff-grid';
  grid.id='staff-grid';
- grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">⏳ 로딩중</div>';
+ grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">로딩중...</div>';
  wrap.appendChild(grid);
  el.appendChild(wrap);
 
@@ -74,7 +74,7 @@ function _dineStaff(el){
     if(m.healthExpiry){
      var hExp=new Date(m.healthExpiry);
      var dLeft=Math.floor((hExp-today)/(24*3600*1000));
-     if(dLeft<0)healthWarn='<span style="font-size:9px;background:rgba(239,68,68,.15);color:#ef4444;border-radius:4px;padding:1px 5px;margin-left:4px">⚠️보건증만료</span>';
+     if(dLeft<0)healthWarn='<span style="font-size:9px;background:rgba(239,68,68,.15);color:#ef4444;border-radius:4px;padding:1px 5px;margin-left:4px">보건증만료</span>';
      else if(dLeft<30)healthWarn='<span style="font-size:9px;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:4px;padding:1px 5px;margin-left:4px">보건증 D-'+dLeft+'</span>';
     }
     /* 주휴수당 위험 알림 (계약시간 14h대) */
@@ -108,9 +108,9 @@ function _dineStaff(el){
      '</div>'+
      '<div class="staff-row"><span style="color:var(--t3)">급여</span><span class="staff-pay">'+pay+'</span></div>'+
      '<div class="staff-row"><span style="color:var(--t3)">입사일</span><span>'+(m.hireDate||'-')+'</span></div>'+
-     '<div class="staff-row"><span style="color:var(--t3)">4대보험</span><span>'+(m.insuranceType==='4대보험'?'✅ 4대보험':m.insuranceType==='3.3%'?'📄 3.3%':'❌ 미가입')+'</span></div>'+
+     '<div class="staff-row"><span style="color:var(--t3)">4대보험</span><span>'+(m.insuranceType==='4대보험'?'4대보험':m.insuranceType==='3.3%'?'3.3%':'미가입')+'</span></div>'+
      (leavedays>0?'<div class="staff-row"><span style="color:var(--t3)">잔여연차</span><span style="color:var(--br);font-weight:700">'+leavedays+'일</span></div>':'')+
-     (m.weeklyHours?'<div class="staff-row"><span style="color:var(--t3)">계약 주시간</span><span style="'+(m.weeklyHours>=15?'color:#22c55e;font-weight:700':'')+'">'+m.weeklyHours+'h'+(m.weeklyHours>=15?' ✅':' ⚠️')+'</span></div>':'')+
+     (m.weeklyHours?'<div class="staff-row"><span style="color:var(--t3)">계약 주시간</span><span style="'+(m.weeklyHours>=15?'color:#22c55e;font-weight:700':'')+'">'+m.weeklyHours+'h'+(m.weeklyHours>=15?' (주휴O)':' (주휴X)')+'</span></div>':'')+
      '';
     grid.appendChild(card);
    });
@@ -227,9 +227,9 @@ function _dineAddStaff(did,staffId,existing){
   if(staffId) data.staffId=staffId;
   fetch('/api/save-member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
   .then(function(r){return r.json();}).then(function(res){
-   if(res.ok){_dineToast('✅ 저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}
-   else{_dineToast('❌ '+( res.error||'저장 실패'));}
-  }).catch(function(err){_dineToast('❌ '+err.message);});
+   if(res.ok){_dineToast('저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}
+   else{_dineToast('' + ( res.error||'저장 실패'));}
+  }).catch(function(err){_dineToast(err.message);});
  };
  mo.appendChild(box);
  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
@@ -272,14 +272,14 @@ function _dineStaffDetail(id){
    '<div><span style="color:var(--t3)">입사일</span> <b>'+(m.hireDate||'-')+'</b></div>'+
    '<div><span style="color:var(--t3)">근속</span> <b>'+(years>0?years+'년 '+(months%12)+'개월':months+'개월')+'</b></div>'+
    '<div><span style="color:var(--t3)">연차</span> <b style="color:var(--br)">'+leavedays+'일</b></div>'+
-   '<div><span style="color:var(--t3)">4대보험</span> <b>'+(m.insuranceType==='4대보험'?'✅ 4대보험':m.insuranceType==='3.3%'?'📄 3.3%':'❌ 미가입')+'</b></div>'+
-   (m.weeklyHours?'<div><span style="color:var(--t3)">계약시간</span> <b>주 '+m.weeklyHours+'h'+(m.weeklyHours>=15?' ✅주휴O':' ⚠️주휴X')+'</b></div>':'')+''+
+   '<div><span style="color:var(--t3)">4대보험</span> <b>'+(m.insuranceType==='4대보험'?'4대보험':m.insuranceType==='3.3%'?'3.3%':'미가입')+'</b></div>'+
+   (m.weeklyHours?'<div><span style="color:var(--t3)">계약시간</span> <b>주 '+m.weeklyHours+'h'+(m.weeklyHours>=15?' 주휴O':' 주휴X')+'</b></div>':'')+''+
    (m.healthExpiry?'<div><span style="color:var(--t3)">보건증</span> <b>'+m.healthExpiry+'</b></div>':'')+''+
    '</div>'+
    '</div>'+
    /* 이번달 근무 */
    '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📅 이번달 근무 현황</div>'+
-   '<div id="sd-att-wrap" style="background:var(--bg3);border-radius:10px;padding:12px;font-size:12px;color:var(--t3);text-align:center">⏳ 로딩중...</div>'+
+   '<div id="sd-att-wrap" style="background:var(--bg3);border-radius:10px;padding:12px;font-size:12px;color:var(--t3);text-align:center">로딩중...</div>'+
    /* 버튼 */
    '<div style="display:flex;gap:8px;margin-top:14px">'+
    '<button class="btn btn-primary btn-sm" data-id="'+id+'" onclick="_dineEditStaff(this.dataset.id);this.closest(\'[class=mo]\').remove()">✏️ 수정</button>'+
@@ -344,7 +344,7 @@ function _dineAttend(el){
   '</div></div>'+
   /* 요약 KPI */
   '<div id="att-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"></div>'+
-  '<div class="card" id="att-table"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+  '<div class="card" id="att-table"><div style="text-align:center;padding:30px;color:var(--t3)">로딩중...</div></div>';
  el.appendChild(wrap);
  _dineLoadAttend(did);
 }
@@ -372,7 +372,7 @@ function _dineLoadAttend(did){
  if(_dineAttUnsub){_dineAttUnsub();_dineAttUnsub=null;}
  var kpi=document.getElementById('att-kpi');
  var table=document.getElementById('att-table');
- if(table)table.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div>';
+ if(table)table.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩중...</div>';
  _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
   var memMap={};memSnap.forEach(function(doc){memMap[doc.id]=doc.data();});
   var allMem=[];memSnap.forEach(function(doc){allMem.push({id:doc.id,data:doc.data()});});
@@ -397,8 +397,8 @@ function _dineLoadAttend(did){
     });
     if(kpi)kpi.innerHTML=
      '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🟢 근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">✅ 완료</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">❌ 미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">출근</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
      '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">💰 예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
     var tbl=document.getElementById('att-table');if(!tbl)return;
     var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
@@ -493,7 +493,7 @@ function _dineLoadAttendMonth(did){
     '<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+partColor+'">'+({'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||'-')+'</span></td>'+
     '<td style="padding:8px;text-align:center;font-weight:700;color:var(--br)">'+r.monthlyHours+'h</td>'+
     '<td style="padding:8px;text-align:center;color:#f59e0b">'+(r.nightHour?r.nightHour+'h':'-')+'</td>'+
-    '<td style="padding:8px;text-align:center">'+(weekH>=15?'<span style="color:#22c55e;font-weight:700">✅ '+Math.round(weekH*10)/10+'h</span>':'<span style="color:var(--t3)">'+Math.round(weekH*10)/10+'h</span>')+'</td>'+
+    '<td style="padding:8px;text-align:center">'+(weekH>=15?'<span style="color:#22c55e;font-weight:700">'+Math.round(weekH*10)/10+'h</span>':'<span style="color:var(--t3)">'+Math.round(weekH*10)/10+'h</span>')+'</td>'+
     '<td style="padding:8px;text-align:right;font-weight:700;color:#22c55e">₩'+r.grossSalary.toLocaleString()+'</td>'+
     '<td style="padding:8px;text-align:right;color:#ef4444;font-size:11px">-₩'+r.insTotal.toLocaleString()+'</td>'+
     '<td style="padding:8px;text-align:right;font-weight:700;color:#818cf8">₩'+r.netSalary.toLocaleString()+'</td>'+
@@ -528,7 +528,7 @@ function _dineAttendEdit(memberId,date){
    '<div style="font-size:15px;font-weight:900;margin-bottom:14px">⏱ 출퇴근 수정<span style="font-size:11px;color:var(--t3);font-weight:400;margin-left:8px">'+date+'</span></div>'+
    '<div class="input-group"><label>출근 시간</label><input id="ae-in" class="inp" type="time" value="'+inTime+'"></div>'+
    '<div class="input-group"><label>퇴근 시간</label><input id="ae-out" class="inp" type="time" value="'+outTime+'"></div>'+
-   '<div style="font-size:10px;color:var(--t3);margin-bottom:12px">⚠️ 수동 수정은 기록에 남습니다</div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-bottom:12px">수동 수정은 기록에 남습니다</div>'+
    '<div style="display:flex;gap:8px">'+
    '<button class="btn btn-primary" style="flex:1" data-mid="'+memberId+'" data-dt="'+date+'" data-in="'+(inDoc||'')+'" data-out="'+(outDoc||'')+'" onclick="_dineAttendSave(this.dataset.mid,this.dataset.dt,this.dataset.in,this.dataset.out)">저장</button>'+
    '<button class="btn btn-ghost" onclick="this.closest(&apos;.mo&apos;).remove()">취소</button>'+
@@ -554,10 +554,10 @@ function _dineAttendSave(memberId,date,inDocId,outDocId){
   else{promises.push(_db.collection('attendance').add({dealerId:did,memberId:memberId,type:'out',time:outISO,date:date,manual:true,createdAt:now}));}
  }
  Promise.all(promises).then(function(){
-  _dineToast('✅ 수정됐습니다');
+  _dineToast('수정됐습니다');
   document.querySelector('.mo').remove();
   _dineLoadAttend(did);
- }).catch(function(e){_dineToast('❌ '+e.message);});
+ }).catch(function(e){_dineToast('오류: '+e.message);});
 }
 
 
