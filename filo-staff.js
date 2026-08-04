@@ -135,13 +135,29 @@ function _filoPageAttendance(el){
  '<div class="fg"><label>시각</label><input id="mc-time" type="datetime-local" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
  '<button onclick="_filoDoManualCheckin()" class="btn btn-brand" style="width:100%">체크인 저장</button></div>'+
  '<div id="staff-reg" style="display:none;margin-top:10px" class="card">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:10px">📝 신규 직원 등록</div>'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">직원 등록</div>'+
  '<div class="fg"><label>이름 <span style="color:#ef4444">*</span></label>'+
  '<input id="nr-name" type="text" placeholder="직원 이름" autocomplete="name" '+
- 'style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
- '<div class="fg"><label>연락처</label>'+
- '<input id="nr-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel" '+
- 'style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
+ 'style="width:100%;padding:9px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
+ '<div class="fg"><label>연락처 <span style="color:#ef4444">*</span></label>'+
+ '<input id="nr-phone" type="tel" placeholder="01012345678" autocomplete="tel" '+
+ 'style="width:100%;padding:9px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+ '<div class="fg"><label>시급/임금 (원) <span style="color:#ef4444">*</span></label>'+
+ '<input id="nr-wage" type="number" placeholder="예: 10030" min="0" step="10" '+
+ 'style="width:100%;padding:9px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
+ '<div class="fg"><label>임금 유형</label>'+
+ '<select id="nr-wagetype" '+
+ 'style="width:100%;padding:9px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px">'+
+ '<option value="hourly">시급</option><option value="daily">일급</option><option value="monthly">월급</option></select></div></div>'+
+ '<div class="fg"><label>고용 형태</label>'+
+ '<select id="nr-emptype" '+
+ 'style="width:100%;padding:9px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px">'+
+ '<option value="part">단기알바 (3.3% 원천징수)</option>'+
+ '<option value="full">정직원 (4대보험)</option>'+
+ '<option value="monthly">월급직 (4대보험)</option></select></div>'+
+ '<div style="font-size:10px;color:var(--t3);margin-bottom:10px">'+
+ '2026년 최저시급 10,030원 · 등록 후 급여가 자동 계산됩니다</div>'+
  '<div style="display:flex;gap:8px">'+
  '<button onclick="_filoShowStaffReg()" class="btn" style="flex:1;background:var(--b3)">취소</button>'+
  '<button onclick="_filoRegisterStaff()" class="btn btn-brand" style="flex:1">등록</button></div></div>';
@@ -206,6 +222,11 @@ function _filoLoadAttendDash(){
  var dateEl=document.getElementById('ad-date');
  var date=dateEl?dateEl.value:_today();
  if(_attendUnsub)_attendUnsub();
+ /* 직원 시급 정보 병렬 로드 */
+ var wageMap={};
+ _db.collection('members').where('dealerId','==',did).get().then(function(ms){
+  ms.forEach(function(doc){var d=doc.data();wageMap[doc.id]=d;wageMap[d.name]=d;});
+ }).catch(function(){});
  _attendUnsub=_db.collection('attendance')
  .where('dealerId','==',did).where('date','==',date)
  .orderBy('time','asc')
@@ -214,32 +235,50 @@ function _filoLoadAttendDash(){
  snap.forEach(function(doc){records.push(Object.assign({_id:doc.id},doc.data()));});
  var memberMap={};
  records.forEach(function(r){
- if(!memberMap[r.memberId])memberMap[r.memberId]={name:r.memberName||r.memberId,ins:[],outs:[],workMin:0};
+ if(!memberMap[r.memberId])memberMap[r.memberId]={name:r.memberName||r.memberId,memberId:r.memberId,ins:[],outs:[],brkStarts:[],brkEnds:[],workMin:0};
  if(r.type==='in')memberMap[r.memberId].ins.push(r.time);
- else memberMap[r.memberId].outs.push(r.time);
+ else if(r.type==='out')memberMap[r.memberId].outs.push(r.time);
+ else if(r.type==='break_start')memberMap[r.memberId].brkStarts.push(r.time);
+ else if(r.type==='break_end')memberMap[r.memberId].brkEnds.push(r.time);
  });
  Object.values(memberMap).forEach(function(m){
- m.ins.sort();m.outs.sort();
+ m.ins.sort();m.outs.sort();m.brkStarts.sort();m.brkEnds.sort();
+ var brk=0;
+ for(var j=0;j<Math.min(m.brkStarts.length,m.brkEnds.length);j++){
+  var bd=(new Date(m.brkEnds[j])-new Date(m.brkStarts[j]))/60000;
+  if(bd>0&&bd<120)brk+=bd;
+ }
  var total=0;
  for(var i=0;i<Math.min(m.ins.length,m.outs.length);i++){
- total+=(new Date(m.outs[i])-new Date(m.ins[i]))/60000;
+  total+=(new Date(m.outs[i])-new Date(m.ins[i]))/60000;
  }
- m.workMin=Math.max(0,Math.round(total));
+ /* 현재 출근중이면 지금까지 근무 추가 */
+ if(m.ins.length>m.outs.length){
+  total+=(Date.now()-new Date(m.ins.slice(-1)[0]))/60000;
+ }
+ m.workMin=Math.max(0,Math.round(total-brk));
+ m.breakMin=Math.round(brk);
  m.status=m.ins.length>m.outs.length?'in':'out';
  m.lastTime=(m.status==='in'?m.ins:m.outs).slice(-1)[0]||'';
+ /* 실시간 급여 = 근무시간 × 시급 */
+ var info=wageMap[m.memberId]||wageMap[m.name]||{};
+ m.wage=info.wage||0;
+ m.wageType=info.wageType||'hourly';
+ m.livePay=m.wageType==='hourly'?Math.round((m.workMin/60)*m.wage):0;
  });
  var members=Object.values(memberMap);
  var inCount=members.filter(function(m){return m.status==='in';}).length;
  var outCount=members.filter(function(m){return m.status==='out'&&m.ins.length;}).length;
  var totalMin=members.reduce(function(s,m){return s+m.workMin;},0);
+ var totalPay=members.reduce(function(s,m){return s+m.livePay;},0);
  var sum=document.getElementById('ad-summary');
  if(sum)sum.innerHTML=[
- {label:'현재 출근',val:inCount+'명',color:'#22c55e',icon:'🟢'},
- {label:'퇴근 완료',val:outCount+'명',color:'#94a3b8',icon:'⚪'},
- {label:'총 근무',val:Math.floor(totalMin/60)+'h '+totalMin%60+'m',color:'#a78bfa',icon:'⏱'},
+ {label:'현재 출근',val:inCount+'명',color:'#10B981'},
+ {label:'퇴근 완료',val:outCount+'명',color:'#94a3b8'},
+ {label:'총 근무',val:Math.floor(totalMin/60)+'h '+totalMin%60+'m',color:'#6366F1'},
+ {label:'실시간 급여',val:'₩'+totalPay.toLocaleString(),color:'#F59E0B'},
  ].map(function(s,i){
- return '<div class="stat-card slide-up stagger-'+(i+1)+'">'+
- '<div style="font-size:20px;margin-bottom:6px">'+s.icon+'</div>'+
+ return '<div class="stat-card slide-up stagger-'+(i+1)+'" style="border-top:3px solid '+s.color+'">'+
  '<div style="font-size:22px;font-weight:900;color:'+s.color+'">'+s.val+'</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+s.label+'</div></div>';
  }).join('');
@@ -249,15 +288,21 @@ function _filoLoadAttendDash(){
  list.innerHTML=members.map(function(m,i){
  var inTime=m.ins[0]?(new Date(m.ins[0])).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'--:--';
  var outTime=m.outs.slice(-1)[0]?(new Date(m.outs.slice(-1)[0])).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'--:--';
+ var wageLabel=m.wageType==='daily'?'일급':m.wageType==='monthly'?'월급':'시급';
  return '<div class="pay-card slide-up stagger-'+Math.min(i+1,4)+'">'+
  '<div style="display:flex;align-items:center;gap:10px">'+
  '<div class="attend-dot '+(m.status==='in'?'dot-in':'dot-out')+'"></div>'+
- '<div><div style="font-size:13px;font-weight:800">'+esc(m.name)+'</div>'+
- '<div style="font-size:11px;color:var(--t3)">출근 '+inTime+' · 퇴근 '+outTime+'</div></div></div>'+
+ '<div style="flex:1">'+
+ '<div style="font-size:13px;font-weight:800">'+esc(m.name)+'</div>'+
+ '<div style="font-size:11px;color:var(--t3)">출근 '+inTime+' · 퇴근 '+outTime+
+ (m.breakMin>0?' · 휴식 '+Math.round(m.breakMin)+'분':'')+
+ (m.wage?' · '+wageLabel+' '+m.wage.toLocaleString()+'원':'')+'</div></div></div>'+
  '<div style="text-align:right">'+
- '<div style="font-size:14px;font-weight:900;color:#a78bfa">'+
+ '<div style="font-size:15px;font-weight:900;color:#6366F1">'+
  (m.workMin>0?Math.floor(m.workMin/60)+'h '+m.workMin%60+'m':m.status==='in'?'근무중':'--')+'</div>'+
- '<div style="font-size:10px;color:var(--t3)">'+(m.status==='in'?'🟢 출근중':'⚪ 퇴근')+'</div></div></div>';
+ (m.livePay>0?'<div style="font-size:12px;font-weight:800;color:#10B981">₩'+m.livePay.toLocaleString()+'</div>':'')+
+ '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+(m.status==='in'?
+ '<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:#10B981;display:inline-block;animation:pulse 1.5s infinite"></span>출근중</span>':'퇴근')+'</div></div></div>';
  }).join('');
  },function(){});
 }
@@ -308,33 +353,60 @@ function _filoLoadPayroll(){
   attendSnap.forEach(function(doc){
    var d=doc.data();
    var mid=d.memberId;
-   if(!payMap[mid])payMap[mid]={memberId:mid,name:d.memberName||mid,workMin:0,days:new Set(),ins:[],outs:[]};
+   if(!payMap[mid])payMap[mid]={memberId:mid,name:d.memberName||mid,workMin:0,days:new Set(),ins:[],outs:[],brkStarts:[],brkEnds:[]};
    if(d.type==='in')payMap[mid].ins.push({time:d.time,date:d.date});
-   else payMap[mid].outs.push({time:d.time,date:d.date});
+   else if(d.type==='out')payMap[mid].outs.push({time:d.time,date:d.date});
+   else if(d.type==='break_start')payMap[mid].brkStarts.push({time:d.time,date:d.date});
+   else if(d.type==='break_end')payMap[mid].brkEnds.push({time:d.time,date:d.date});
   });
   Object.values(payMap).forEach(function(p){
    p.ins.sort(function(a,b){return a.time>b.time?1:-1;});
    p.outs.sort(function(a,b){return a.time>b.time?1:-1;});
-   var total=0;
-   for(var i=0;i<Math.min(p.ins.length,p.outs.length);i++){
-    var diff=(new Date(p.outs[i].time)-new Date(p.ins[i].time))/60000;
-    if(diff>0&&diff<720){total+=diff;p.days.add(p.ins[i].date);}
+   p.brkStarts.sort(function(a,b){return a.time>b.time?1:-1;});
+   p.brkEnds.sort(function(a,b){return a.time>b.time?1:-1;});
+   /* 휴식 총 시간(분) */
+   var breakMin=0;
+   for(var j=0;j<Math.min(p.brkStarts.length,p.brkEnds.length);j++){
+    var bd=(new Date(p.brkEnds[j].time)-new Date(p.brkStarts[j].time))/60000;
+    if(bd>0&&bd<120)breakMin+=bd;
    }
+   var total=0,overtimeMin=0,nightMin=0;
+   for(var i=0;i<Math.min(p.ins.length,p.outs.length);i++){
+    var inT=new Date(p.ins[i].time);
+    var outT=new Date(p.outs[i].time);
+    var diff=(outT-inT)/60000;
+    if(diff<=0||diff>720)continue;
+    total+=diff;
+    p.days.add(p.ins[i].date);
+    /* 연장근무: 8h(480분) 초과분 */
+    if(diff>480)overtimeMin+=diff-480;
+    /* 야간근무: 22:00~익일06:00 */
+    nightMin+=_calcNightMin(inT,outT);
+   }
+   total=Math.max(0,total-breakMin);
    p.workMin=Math.round(total);
    p.workHour=p.workMin/60;
    p.dayCount=p.days.size;
+   p.breakMin=Math.round(breakMin);
+   p.overtimeMin=Math.round(overtimeMin);
+   p.nightMin=Math.round(nightMin);
    var member=Object.values(memberMap).find(function(m){return m._id===p.memberId||m.name===p.name;})||{};
    p.wage=member.wage||0;
-   p.wageType=member.wageType||'hourly';   /* hourly/daily/monthly */
-   p.empType=member.empType||'part';        /* part/full/monthly */
-   /* 기본급 계산 */
+   p.wageType=member.wageType||'hourly';
+   p.empType=member.empType||member.role||'part';
+   p.uid=member._id||p.memberId;
+   /* 기본급 */
    if(p.wageType==='monthly'){p.basePay=p.wage;}
    else if(p.wageType==='daily'){p.basePay=Math.round(p.dayCount*p.wage);}
    else{p.basePay=Math.round(p.workHour*p.wage);}
+   /* 연장수당: 연장시간 × 시급 × 0.5 (시급제만, 5인 이상 사업장) */
+   p.overtimePay=(p.wageType==='hourly'&&p.wage)?Math.round((p.overtimeMin/60)*p.wage*0.5):0;
+   /* 야간수당: 야간시간 × 시급 × 0.5 (시급제만) */
+   p.nightPay=(p.wageType==='hourly'&&p.wage)?Math.round((p.nightMin/60)*p.wage*0.5):0;
    /* 주휴수당 */
    p.weeklyAllowance=_calcWeeklyAllowance(p.ins,p.outs,p.wage,p.wageType);
    /* 총지급액 */
-   p.gross=p.basePay+p.weeklyAllowance;
+   p.gross=p.basePay+p.overtimePay+p.nightPay+p.weeklyAllowance;
    /* 공제 */
    var ded=_calcDeduction(p.gross,p.empType);
    p.deduction=ded.total;p.tax=ded.tax;p.insurance=ded.insurance;
@@ -383,6 +455,8 @@ function _filoShowStaffReg(){
   if(nm){nm.value='';nm.focus();}
   var ph=document.getElementById('nr-phone');
   if(ph)ph.value='';
+  var wg=document.getElementById('nr-wage');
+  if(wg)wg.value='';
  }
 }
 
@@ -390,10 +464,15 @@ function _filoRegisterStaff(){
  var did=_CU.dealerId||_CU.uid;
  var name=(document.getElementById('nr-name')&&document.getElementById('nr-name').value||'').trim();
  var phone=(document.getElementById('nr-phone')&&document.getElementById('nr-phone').value||'').trim();
+ var wage=parseInt((document.getElementById('nr-wage')&&document.getElementById('nr-wage').value)||'0')||0;
+ var wageType=(document.getElementById('nr-wagetype')&&document.getElementById('nr-wagetype').value)||'hourly';
+ var empType=(document.getElementById('nr-emptype')&&document.getElementById('nr-emptype').value)||'part';
  if(!name){_filoToast('이름을 입력하세요');return;}
+ if(!phone){_filoToast('연락처를 입력하세요');return;}
+ if(!wage){_filoToast('시급/임금을 입력하세요');return;}
  _db.collection('members').add({
   dealerId:did,name:name,phone:phone,
-  role:'part',wage:0,wageType:'hourly',
+  role:empType,wage:wage,wageType:wageType,empType:empType,
   createdAt:_nowISO(),is_active:true
  }).then(function(docRef){
   _filoToast('✅ '+name+' 등록 완료');
@@ -414,5 +493,90 @@ function _filoRegisterStaff(){
    if(mc)mc.style.display='block';
   });
  }).catch(function(e){_filoToast('❌ '+e.message);});
+}
+
+/* ══════════════════════════════════════════
+   ⏱ 실시간 급여 티커 — 출근중 직원 급여 1분마다 갱신
+   ══════════════════════════════════════════ */
+var _liveTickerTimer=null;
+function _filoStartLiveTicker(){
+ if(_liveTickerTimer)clearInterval(_liveTickerTimer);
+ _liveTickerTimer=setInterval(function(){
+  var liveEl=document.getElementById('pay-live');
+  if(!liveEl){clearInterval(_liveTickerTimer);return;}
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  if(!did)return;
+  var today=_today();
+  /* 현재 출근중인 직원 실시간 급여 표시 */
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
+  .where('type','==','in').get().then(function(inSnap){
+   if(inSnap.empty){liveEl.innerHTML='';return;}
+   _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
+   .where('type','==','out').get().then(function(outSnap){
+    var outIds=new Set();
+    outSnap.forEach(function(d){outIds.add(d.data().memberId);});
+    var working=[];
+    inSnap.forEach(function(d){
+     var r=d.data();
+     if(!outIds.has(r.memberId))working.push(r);
+    });
+    if(!working.length){liveEl.innerHTML='';return;}
+    /* 출근중 직원별 실시간 급여 */
+    var rows=working.map(function(r){
+     var minWorked=(Date.now()-new Date(r.time))/60000;
+     return {name:r.memberName||r.memberId,mid:r.memberId,minWorked:Math.round(minWorked)};
+    });
+    /* 시급 일괄 조회 */
+    _db.collection('members').where('dealerId','==',did).get().then(function(ms){
+     var wm={};ms.forEach(function(d){var m=d.data();wm[d.id]=m;wm[m.name]=m;});
+     var html='<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:12px 14px;margin-bottom:12px">'+
+     '<div style="font-size:11px;font-weight:800;color:#10B981;margin-bottom:8px;display:flex;align-items:center;gap:5px">'+
+     '<span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;animation:pulse 1.5s infinite"></span>출근중 실시간 급여</div>'+
+     '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+     rows.map(function(r){
+      var info=wm[r.mid]||wm[r.name]||{};
+      var wage=info.wage||0;
+      var wageType=info.wageType||'hourly';
+      var livePay=wageType==='hourly'?Math.round((r.minWorked/60)*wage):0;
+      return '<div style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(16,185,129,.2)">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--tx)">'+esc(r.name)+'</div>'+
+      '<div style="font-size:13px;font-weight:900;color:#10B981">₩'+livePay.toLocaleString()+'</div>'+
+      '<div style="font-size:9px;color:var(--t3)">'+Math.floor(r.minWorked/60)+'h '+r.minWorked%60+'m'+
+      (wage?' · '+wageType==='hourly'?wage.toLocaleString()+'원/h':'':'')+'</div></div>';
+     }).join('')+
+     '</div></div>';
+     liveEl.innerHTML=html;
+    }).catch(function(){});
+   }).catch(function(){});
+  }).catch(function(){});
+ },60000); /* 1분마다 갱신 */
+ /* 첫 실행 즉시 */
+ setTimeout(function(){if(_liveTickerTimer)_filoStartLiveTicker();},500);
+}
+
+/* ══════════════════════════════════════════
+   야간시간(분) 계산 헬퍼 — 22:00~익일06:00 구간
+   ══════════════════════════════════════════ */
+function _calcNightMin(inD, outD){
+ var nm=0;
+ var cur=new Date(inD);
+ var end=new Date(outD);
+ if(end-cur<=0||end-cur>86400000)return 0;
+ /* 시간 경계 단위로 순회 (최대 ~24회) */
+ while(cur<end){
+  var h=cur.getHours();
+  var isNight=(h>=22||h<6);
+  var next=new Date(cur);
+  if(isNight){
+   if(h>=22){next.setHours(24,0,0,0);}else{next.setHours(6,0,0,0);}
+   if(next>end)next=new Date(end);
+   nm+=(next-cur)/60000;
+  } else {
+   if(h<22){next.setHours(22,0,0,0);}else{next.setHours(30,0,0,0);}
+   if(next>end)next=new Date(end);
+  }
+  cur=next;
+ }
+ return nm;
 }
 
