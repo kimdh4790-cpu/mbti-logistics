@@ -56,3 +56,15 @@
 - push 전 항상: git pull origin main --rebase
 - push 실패 시: git pull origin main --rebase 후 재시도
 - git stash 사용 금지 — 충돌 원인
+
+## 작업 순서 원칙
+- 모든 파일 작업 전 반드시: 현재 기능 전체 파악 → 버그/미완성 확인 → 고도화 진행
+- 기존 기능 절대 삭제/변경 금지 (추가만 허용)
+- Playwright 실사 테스트로 기존 기능 정상 작동 확인 후 고도화
+
+## 프레시백 회수금액 원칙 (DONWAY 핵심)
+- 아이디지원 시 fid(지원받는기사)의 dateFresh에서 날짜별 프레시백 회수금액 → tid(대신배송기사)에게 이전
+- dateFresh 키 날짜 포맷 반드시 정규화 (YYYY-MM-DD)
+- dateFresh 없으면 freshAmt 전체를 fallback으로 이전
+- 날짜 불일치로 누락되는 인원 없게 할 것
+- 절대 수정 금지 — 급여 계산 핵심 로직
