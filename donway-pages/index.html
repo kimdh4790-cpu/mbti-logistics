@@ -7956,20 +7956,6 @@ function doLogin(){
       sessionStorage.removeItem(_failKey);
       // ★ 세션 타임아웃 30분 설정
       _resetSessionTimeout();
-      // ★ 로그인 알림 푸시 — Worker 경유 (로그아웃 상태에서도 알림 가능)
-      setTimeout(function(){
-        try{
-          var uid=firebase.auth().currentUser?firebase.auth().currentUser.uid:'';
-          if(!uid)return;
-          var now=new Date();
-          var timeStr=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분';
-          fetch('/api/login-notify',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({dealerId:uid, loginName:email.split('@')[0]||'관리자', timeStr:timeStr})
-          }).catch(function(){});
-        }catch(e){}
-      },2000);
     }).catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
       // 실패 카운터 증가
