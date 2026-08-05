@@ -49,3 +49,10 @@
 - 모든 명령어 순차 실행만 (하나 완료 후 다음)
 - git stash pop 후 git push 시 충돌나면 git stash drop 후 재시도
 - git push 실패 시 git pull --rebase 후 재시도
+
+## Git 브랜치 원칙
+- 브랜치는 main 하나만 사용
+- master 브랜치 금지 (삭제 완료)
+- push 전 항상: git pull origin main --rebase
+- push 실패 시: git pull origin main --rebase 후 재시도
+- git stash 사용 금지 — 충돌 원인
