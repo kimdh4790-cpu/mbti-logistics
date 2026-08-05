@@ -5117,7 +5117,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
-                    var up = _priceMap[rt] || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
+                    var up = _priceMap[rt] || rd.unitPrc || (fd.routes&&fd.routes[rt]&&fd.routes[rt].unitPrc) || RPRICE[rt] || 0;
                     if(!up) return;
                     if(!_rtAgg[rt]) _rtAgg[rt] = {cnt:0, ret:0, price:up};
                     _rtAgg[rt].cnt += (rd.cnt||0);
@@ -5135,8 +5135,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   _freshFromDates = true;
                 });
               }
-              // fallback: dateFresh 없거나 날짜 매칭 없으면 freshAmt 전체 이전
-              if(!_freshFromDates && fd.freshAmt){
+              // fallback: dateFresh 자체가 없는 구버전 데이터만 freshAmt 전체 이전
+              // (dateFresh 존재하나 날짜 매칭 없으면 0 — 과다 이전 방지)
+              if(!fd.dateFresh && fd.freshAmt){
                 _totalFresh += (fd.freshAmt||0);
               }
 
