@@ -43,3 +43,9 @@
 - yongcha-worker.js 수정 시 반드시 _worker.js handleYongcha에도 동기화
 - 배포 명령: git pull origin main && npx wrangler deploy
 - KV put yongcha.html 명령어는 효과 없음 — 절대 사용 금지
+
+## 셸 실행 원칙
+- 백그라운드 셸(&, parallel, 동시실행) 절대 금지
+- 모든 명령어 순차 실행만 (하나 완료 후 다음)
+- git stash pop 후 git push 시 충돌나면 git stash drop 후 재시도
+- git push 실패 시 git pull --rebase 후 재시도
