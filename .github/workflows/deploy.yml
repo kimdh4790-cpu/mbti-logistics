@@ -102,3 +102,15 @@ jobs:
           else
             echo "⚠️ 데모 시딩 실패 (무시): $RESULT"
           fi
+
+      - name: Purge Cloudflare Cache
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          for ZONE in donway.ai.kr filo.ai.kr dine.ne.kr mbtico.kr yongcha.app; do
+            ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=$ZONE" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')" 2>/dev/null)
+            [ -z "$ZONE_ID" ] && continue
+            RES=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" -H "Content-Type: application/json" -d '{"purge_everything":true}')
+            echo "$RES" | grep -q '"success":true' && echo "✅ 캐시 퍼지: $ZONE" || echo "❌ $ZONE: $RES"
+          done
