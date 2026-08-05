@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FILO SMART POS · AI 매장 운영 허브</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
   --bg:#050d1a;--bg2:#0d1b2e;--bg3:#132036;--bg4:#1a2a42;
@@ -21,7 +19,7 @@
   --shadow:0 4px 24px rgba(0,0,0,.4);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
-body{font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
 
 /* ── TOP BAR ── */
 #topbar{
@@ -304,6 +302,42 @@ svg.floor-svg{width:100%;height:auto}
 .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block}
 .tag-ai{background:linear-gradient(90deg,var(--purple-dim),var(--teal-dim));color:var(--teal);border:1px solid rgba(0,212,170,.2)}
 .tag-live{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25);animation:blink 1s ease-in-out infinite}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;min-width:320px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6);transform:translateY(10px);transition:transform .2s}
+.modal-overlay.open .modal-box{transform:translateY(0)}
+.modal-title{font-size:15px;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--text2);margin-bottom:16px}
+.modal-section{margin-bottom:14px}
+.modal-section-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.modal-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-action{padding:12px;border-radius:var(--r2);border:1px solid var(--border);background:var(--bg3);cursor:pointer;text-align:center;transition:all .2s}
+.modal-action:hover{border-color:var(--border2);background:var(--bg4)}
+.modal-action-icon{font-size:20px;margin-bottom:4px}
+.modal-action-label{font-size:11px;font-weight:700;color:var(--text)}
+.modal-action-desc{font-size:10px;color:var(--text2);margin-top:2px}
+.modal-action.teal{border-color:rgba(0,212,170,.3);background:var(--teal-dim)}
+.modal-action.teal .modal-action-label{color:var(--teal)}
+.modal-action.purple{border-color:rgba(124,58,237,.3);background:var(--purple-dim)}
+.modal-action.purple .modal-action-label{color:var(--purple2)}
+.modal-action.orange{border-color:rgba(255,107,53,.3);background:var(--orange-dim)}
+.modal-action.orange .modal-action-label{color:var(--orange)}
+.modal-action.blue{border-color:rgba(59,130,246,.3);background:var(--blue-dim)}
+.modal-action.blue .modal-action-label{color:var(--blue)}
+.modal-close{display:block;width:100%;padding:10px;border-radius:var(--r2);border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;transition:all .2s}
+.modal-close:hover{background:var(--bg3)}
+.qr-display{background:white;border-radius:8px;padding:16px;text-align:center;margin:10px 0}
+.qr-url{font-size:10px;color:var(--text3);word-break:break-all;margin-top:6px;padding:6px;background:var(--bg3);border-radius:4px}
+.seat-table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.seat-btn{padding:8px 4px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.seat-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+.seat-btn.occupied{border-color:rgba(59,130,246,.3);color:var(--blue)}
+.seat-btn.empty{border-color:rgba(16,185,129,.3);color:var(--green)}
+.push-result{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;display:none}
+.push-result.ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.push-result.err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25)}
 
 /* ── MISC ── */
 .flex-between{display:flex;justify-content:space-between;align-items:center}
@@ -835,6 +869,58 @@ hr.divider{border:none;border-top:1px solid var(--border);margin:10px 0}
 
 </div><!-- /#main -->
 
+<!-- ═══ 테이블 모달 ═══ -->
+<div class="modal-overlay" id="table-modal" onclick="if(event.target===this)closeTableModal()">
+  <div class="modal-box">
+    <div class="modal-title" id="tmodal-title">테이블 1</div>
+    <div class="modal-sub" id="tmodal-sub">빈 테이블</div>
+
+    <div class="modal-section">
+      <div class="modal-section-label">QR 테이블 주문</div>
+      <div class="qr-display" id="tmodal-qr">
+        <!-- QR 시각화 (SVG 패턴) -->
+        <svg width="100" height="100" viewBox="0 0 100 100" id="qr-svg"></svg>
+      </div>
+      <div class="qr-url" id="tmodal-url">filo.ai.kr/order?did=demo&table=1</div>
+      <button class="btn-sm btn-accept" style="width:100%;margin-top:6px" onclick="copyQRUrl()">링크 복사</button>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-section-label">빠른 작업</div>
+      <div class="modal-action-grid">
+        <div class="modal-action teal" onclick="sendPickupPush()">
+          <div class="modal-action-icon">🔔</div>
+          <div class="modal-action-label">픽업 준비완료</div>
+          <div class="modal-action-desc">주문 준비됐어요 알림</div>
+        </div>
+        <div class="modal-action purple" onclick="openSeatMove()">
+          <div class="modal-action-icon">↗</div>
+          <div class="modal-action-label">자리 이동</div>
+          <div class="modal-action-desc">다른 테이블로 이동 알림</div>
+        </div>
+        <div class="modal-action orange" onclick="sendServicePush()">
+          <div class="modal-action-icon">🫖</div>
+          <div class="modal-action-label">서비스 알림</div>
+          <div class="modal-action-desc">음료·디저트 서비스 안내</div>
+        </div>
+        <div class="modal-action blue" onclick="sendCallPush()">
+          <div class="modal-action-icon">📣</div>
+          <div class="modal-action-label">호출 응답</div>
+          <div class="modal-action-desc">곧 방문합니다 안내</div>
+        </div>
+      </div>
+      <div class="push-result" id="push-result"></div>
+    </div>
+
+    <div class="modal-section" id="seat-move-section" style="display:none">
+      <div class="modal-section-label">이동할 테이블 선택</div>
+      <div class="seat-table-grid" id="seat-table-grid"></div>
+    </div>
+
+    <button class="modal-close" onclick="closeTableModal()">닫기</button>
+  </div>
+</div>
+
 <script>
 // ═══════════ DATA ═══════════
 const AI_INSIGHTS = [
@@ -1115,7 +1201,8 @@ function renderOrderGrid() {
       <div class="eta-bar"><div class="eta-fill" style="width:${etaPct}%"></div></div>
       <div class="order-card-actions">
         ${o.status===0?`<button class="btn-sm btn-accept" onclick="updateOrderStatus('${o.id}',1)">수락</button><button class="btn-sm btn-reject" onclick="updateOrderStatus('${o.id}',99)">거절</button>`:''}
-        ${o.status===1?`<button class="btn-sm btn-complete" onclick="updateOrderStatus('${o.id}',2)">완료</button>`:''}
+        ${o.status===1?`<button class="btn-sm btn-complete" onclick="updateOrderStatus('${o.id}',2)">완료</button><button class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3)" onclick="orderPickupPush('${o.id}','${o.ch}')">픽업 알림</button>`:''}
+        ${o.status===2&&(o.ch==='키오스크'||o.ch==='홀')?`<button class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3)" onclick="orderPickupPush('${o.id}','${o.ch}')">픽업 준비완료</button>`:''}
         ${(o.status===2&&(o.ch==='배민'||o.ch==='요기요'))?`<button class="btn-sm btn-rider" onclick="updateOrderStatus('${o.id}',3)">라이더 배정</button>`:''}
         <span class="order-status ${ST_CLASS[Math.min(o.status,3)]}">${STATUS[Math.min(o.status,3)]}</span>
       </div>
@@ -1125,6 +1212,23 @@ function renderOrderGrid() {
 function updateOrderStatus(id,st) {
   const o=orders.find(o=>o.id===id);
   if(o) { o.status=st; renderOrderGrid(); }
+}
+async function orderPickupPush(id, ch) {
+  const o = orders.find(o => o.id === id);
+  if (!o) return;
+  const title = ch === '홀' || ch === '키오스크' ? '🔔 주문 픽업 안내' : '🚀 배달 출발 준비';
+  const body = ch === '홀' || ch === '키오스크'
+    ? `${o.id} 주문이 준비되었습니다. 픽업 카운터에서 수령해 주세요!`
+    : `${o.id} 주문 픽업 준비 완료. 라이더 배정 후 출발 예정입니다.`;
+  try {
+    await fetch('/api/filo-push', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({did: 'demo', title, body})
+    });
+  } catch(e) {}
+  const btn = document.activeElement;
+  if (btn) { btn.textContent = '발송 완료 ✓'; btn.style.background = 'var(--green)'; btn.style.color = '#fff'; btn.disabled = true; }
 }
 
 // ═══════════ INVENTORY ═══════════
@@ -1179,10 +1283,101 @@ function renderFloorMap() {
     </g>`;
   }).join('');
 }
+let currentTableId = null;
 function tableClick(id) {
-  const t=TABLES.find(t=>t.id===id);
-  if(!t)return;
-  alert(`테이블 ${t.id}\n상태: ${t.status}\n인원: ${t.pax}명${t.time?'\n경과: '+t.time+'분':''}`);
+  const t = TABLES.find(t => t.id === id);
+  if (!t) return;
+  currentTableId = id;
+  const statusMap = {empty:'빈 테이블', dining:'식사 중', payment:'결제 대기', reserved:'예약됨'};
+  document.getElementById('tmodal-title').textContent = t.label;
+  document.getElementById('tmodal-sub').textContent =
+    statusMap[t.status] + (t.pax ? ` · ${t.pax}명` : '') + (t.time ? ` · ${t.time}분 경과` : '');
+  const DID = 'demo';
+  const url = `https://filo.ai.kr/order?did=${DID}&table=${t.id}`;
+  document.getElementById('tmodal-url').textContent = url;
+  drawMiniQR(url);
+  document.getElementById('seat-move-section').style.display = 'none';
+  document.getElementById('push-result').style.display = 'none';
+  document.getElementById('table-modal').classList.add('open');
+}
+function closeTableModal() {
+  document.getElementById('table-modal').classList.remove('open');
+  currentTableId = null;
+}
+function copyQRUrl() {
+  const url = document.getElementById('tmodal-url').textContent;
+  navigator.clipboard.writeText(url).then(() => showPushResult('ok', '링크 복사 완료!'));
+}
+function openSeatMove() {
+  const sec = document.getElementById('seat-move-section');
+  sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+  if (sec.style.display !== 'none') {
+    document.getElementById('seat-table-grid').innerHTML = TABLES
+      .filter(t => t.id !== currentTableId)
+      .map(t => {
+        const cls = t.status === 'empty' ? 'empty' : 'occupied';
+        return `<button class="seat-btn ${cls}" onclick="confirmSeatMove(${t.id})">${t.label}</button>`;
+      }).join('');
+  }
+}
+function confirmSeatMove(toId) {
+  const from = TABLES.find(t => t.id === currentTableId);
+  const to = TABLES.find(t => t.id === toId);
+  if (!from || !to) return;
+  showPushResult('ok', `${from.label} → ${to.label} 자리이동 알림 발송`);
+  document.getElementById('seat-move-section').style.display = 'none';
+  sendFiloPush(`자리 이동 안내`, `${from.label}에서 ${to.label}으로 이동해 주세요 😊`);
+}
+function sendPickupPush() {
+  const t = TABLES.find(t => t.id === currentTableId);
+  const label = t ? t.label : '테이블';
+  sendFiloPush('🔔 주문 준비완료', `${label} 주문이 준비되었습니다. 픽업해 주세요!`);
+}
+function sendServicePush() {
+  const t = TABLES.find(t => t.id === currentTableId);
+  const label = t ? t.label : '테이블';
+  sendFiloPush('🫖 서비스 안내', `${label} 고객님, 서비스 음료를 가져다 드리겠습니다 😊`);
+}
+function sendCallPush() {
+  const t = TABLES.find(t => t.id === currentTableId);
+  const label = t ? t.label : '테이블';
+  sendFiloPush('📣 호출 응답', `${label} 고객님, 곧 방문하겠습니다!`);
+}
+async function sendFiloPush(title, body) {
+  showPushResult('ok', `"${title}" 발송 중...`);
+  try {
+    const res = await fetch('/api/filo-push', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({did: 'demo', title, body})
+    });
+    const data = await res.json();
+    showPushResult('ok', `푸시 발송 완료 (${data.sent || 0}명)`);
+  } catch(e) {
+    showPushResult('ok', '푸시 발송 완료 (시뮬레이션)');
+  }
+}
+function showPushResult(type, msg) {
+  const el = document.getElementById('push-result');
+  el.className = 'push-result ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+function drawMiniQR(url) {
+  const svg = document.getElementById('qr-svg');
+  const size = 100, cells = 7;
+  const cellSize = size / cells;
+  const seed = url.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  let html = '';
+  for (let r = 0; r < cells; r++) {
+    for (let c = 0; c < cells; c++) {
+      const isCorner = (r < 2 && c < 2) || (r < 2 && c >= cells-2) || (r >= cells-2 && c < 2);
+      const filled = isCorner || ((seed * (r+1) * (c+3) * 17) % 3 !== 0);
+      if (filled) html += `<rect x="${c*cellSize+1}" y="${r*cellSize+1}" width="${cellSize-2}" height="${cellSize-2}" fill="#050d1a" rx="1"/>`;
+    }
+  }
+  svg.innerHTML = html;
 }
 
 // ═══════════ WAITING ═══════════
@@ -1197,7 +1392,11 @@ function renderWaiting() {
       <button class="call-btn" onclick="callWaiting('${w.name}')">호출</button>
     </div>`).join('');
 }
-function callWaiting(name) { alert(name + '님 호출 완료!'); }
+function callWaiting(name) {
+  fetch('/api/filo-push', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:'demo',title:'📣 입장 안내',body:`${name}님, 자리가 준비되었습니다. 입구로 오세요!`})}).catch(()=>{});
+  const btns = document.querySelectorAll('.call-btn');
+  btns.forEach(b => { if(b.getAttribute('onclick')?.includes(name)) { b.textContent='호출됨 ✓'; b.style.background='var(--green)'; b.disabled=true; } });
+}
 
 // ═══════════ STAFF ═══════════
 function renderStaff() {
