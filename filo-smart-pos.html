@@ -1,0 +1,1379 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FILO SMART POS · AI 매장 운영 허브</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#050d1a;--bg2:#0d1b2e;--bg3:#132036;--bg4:#1a2a42;
+  --card:rgba(13,27,46,.88);--card2:rgba(19,32,54,.92);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --teal:#00d4aa;--teal2:#00f5c8;--teal-dim:rgba(0,212,170,.13);
+  --purple:#7c3aed;--purple2:#9d5cf6;--purple-dim:rgba(124,58,237,.13);
+  --orange:#ff6b35;--orange-dim:rgba(255,107,53,.13);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,.13);
+  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;
+  --text:#f0f6ff;--text2:#8ba3c7;--text3:#4a6080;
+  --r:12px;--r2:8px;--r3:6px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+body{font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── TOP BAR ── */
+#topbar{
+  display:flex;align-items:center;gap:0;height:56px;min-height:56px;
+  background:rgba(5,13,26,.96);border-bottom:1px solid var(--border);
+  padding:0 20px;position:relative;z-index:100;
+  backdrop-filter:blur(20px);flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:10px;margin-right:24px;flex-shrink:0}
+.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--teal),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:18px;height:18px}
+.brand-name{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.brand-name span{color:var(--teal)}
+.brand-badge{font-size:9px;font-weight:700;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,212,170,.3);padding:2px 6px;border-radius:4px;letter-spacing:.5px}
+
+/* tabs */
+.tab-nav{display:flex;align-items:center;gap:2px;flex:1}
+.tab-btn{padding:6px 14px;border-radius:var(--r3);font-size:13px;font-weight:600;color:var(--text2);background:none;border:none;cursor:pointer;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tab-btn:hover{color:var(--text);background:var(--bg3)}
+.tab-btn.active{color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,212,170,.2)}
+.tab-btn svg{width:14px;height:14px;opacity:.7}
+.tab-btn.active svg{opacity:1}
+
+.header-right{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--teal);background:var(--teal-dim);border:1px solid rgba(0,212,170,.25);padding:4px 10px;border-radius:20px}
+.sync-dot{width:6px;height:6px;background:var(--teal);border-radius:50%;animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+#live-clock{font-size:13px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums}
+.notif-btn{position:relative;width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.notif-btn:hover{border-color:var(--border2);background:var(--bg4)}
+.notif-count{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:9px;font-weight:800;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+.user-btn{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)}
+.user-avatar{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff}
+
+/* ── AI BANNER ── */
+#ai-banner{
+  background:linear-gradient(90deg,rgba(0,212,170,.08),rgba(124,58,237,.08),rgba(0,212,170,.08));
+  border-bottom:1px solid rgba(0,212,170,.15);
+  padding:0 20px;height:44px;min-height:44px;display:flex;align-items:center;gap:12px;flex-shrink:0;
+  overflow:hidden;position:relative;
+}
+.ai-banner-label{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--teal);flex-shrink:0;white-space:nowrap}
+.ai-pulse{width:8px;height:8px;background:var(--teal);border-radius:50%;box-shadow:0 0 0 0 rgba(0,212,170,.4);animation:ai-pulse 2s ease-out infinite}
+@keyframes ai-pulse{0%{box-shadow:0 0 0 0 rgba(0,212,170,.5)}70%{box-shadow:0 0 0 8px rgba(0,212,170,0)}100%{box-shadow:0 0 0 0 rgba(0,212,170,0)}}
+.ai-insight-track{flex:1;overflow:hidden;position:relative;height:100%}
+.ai-insight-text{position:absolute;top:50%;transform:translateY(-50%);font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;transition:opacity .5s,transform .5s;width:100%}
+.ai-insight-text.hidden{opacity:0;transform:translateY(calc(-50% + 10px))}
+.ai-insight-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-act-btn{font-size:11px;font-weight:700;padding:4px 10px;border-radius:5px;border:none;cursor:pointer;transition:all .2s}
+.ai-act-apply{background:var(--teal);color:#fff}
+.ai-act-skip{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.ai-counter{font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums}
+
+/* ── MAIN LAYOUT ── */
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.tab-panel{display:none;flex:1;overflow-y:auto;padding:16px 20px;gap:14px;flex-direction:column}
+.tab-panel.active{display:flex}
+
+/* scrollbar */
+.tab-panel::-webkit-scrollbar{width:4px}.tab-panel::-webkit-scrollbar-track{background:transparent}.tab-panel::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi-card:hover{border-color:var(--border2)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.c-teal::before{background:linear-gradient(90deg,var(--teal),transparent)}
+.kpi-card.c-purple::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.kpi-card.c-orange::before{background:linear-gradient(90deg,var(--orange),transparent)}
+.kpi-card.c-blue::before{background:linear-gradient(90deg,var(--blue),transparent)}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.kpi-label svg{opacity:.6}
+.kpi-value{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:6px;font-variant-numeric:tabular-nums}
+.kpi-card.c-teal .kpi-value{color:var(--teal)}
+.kpi-card.c-purple .kpi-value{color:var(--purple2)}
+.kpi-card.c-orange .kpi-value{color:var(--orange)}
+.kpi-card.c-blue .kpi-value{color:var(--blue)}
+.kpi-delta{font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px}
+.kpi-delta.up{color:var(--green)}.kpi-delta.down{color:var(--red)}
+.kpi-sparkline{position:absolute;bottom:0;right:0;opacity:.25}
+
+/* ── GRID LAYOUTS ── */
+.two-col{display:grid;grid-template-columns:1fr 380px;gap:14px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.two-col-eq{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── CARD BASE ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+.card-title svg{color:var(--text2)}
+.card-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.card-body{padding:14px 16px}
+
+/* ── LIVE ORDER STREAM ── */
+.order-stream{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto}
+.order-stream::-webkit-scrollbar{width:3px}.order-stream::-webkit-scrollbar-thumb{background:var(--bg4)}
+.order-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r2);background:var(--bg3);border:1px solid var(--border);transition:all .3s;animation:slide-in .3s ease-out}
+@keyframes slide-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.order-ch{font-size:10px;font-weight:800;padding:3px 7px;border-radius:4px;flex-shrink:0;letter-spacing:.3px}
+.ch-baemin{background:rgba(0,188,200,.2);color:#00bcc8;border:1px solid rgba(0,188,200,.3)}
+.ch-yogiyo{background:rgba(255,75,43,.2);color:#ff4b2b;border:1px solid rgba(255,75,43,.3)}
+.ch-kiosk{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.ch-hall{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3)}
+.ch-phone{background:var(--purple-dim);color:var(--purple2);border:1px solid rgba(124,58,237,.3)}
+.order-info{flex:1;min-width:0}
+.order-num{font-size:11px;font-weight:700;color:var(--text)}
+.order-items{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.order-amount{font-size:13px;font-weight:700;color:var(--text);flex-shrink:0}
+.order-status{font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;flex-shrink:0}
+.st-new{background:rgba(59,130,246,.2);color:var(--blue);border:1px solid rgba(59,130,246,.3);animation:blink .8s ease-in-out infinite}
+.st-cooking{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,107,53,.3)}
+.st-done{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.st-delivery{background:var(--purple-dim);color:var(--purple2);border:1px solid rgba(124,58,237,.3)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── SALES CHART ── */
+.chart-wrap{padding:14px 16px;position:relative}
+canvas.sales-chart{width:100%;height:180px;display:block}
+
+/* ── POPULAR MENU ── */
+.menu-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.menu-bar-name{font-size:12px;font-weight:600;color:var(--text);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-bar-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.menu-bar-fill{height:100%;border-radius:4px;transition:width .6s ease-out}
+.menu-bar-count{font-size:11px;font-weight:700;color:var(--text2);width:40px;text-align:right;flex-shrink:0}
+
+/* ── LABOR/MARGIN CARD ── */
+.lm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.lm-item{padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)}
+.lm-label{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.lm-value{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.lm-value.profit{color:var(--teal)}
+.lm-sub{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── ORDER MANAGEMENT TAB ── */
+.channel-filter{display:flex;gap:8px;flex-wrap:wrap}
+.ch-filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;transition:all .2s}
+.ch-filter-btn.active,.ch-filter-btn:hover{background:var(--teal-dim);border-color:rgba(0,212,170,.3);color:var(--teal)}
+.order-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.order-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;position:relative;transition:all .2s}
+.order-card:hover{border-color:var(--border2)}
+.order-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.order-card-num{font-size:14px;font-weight:800}
+.order-card-time{font-size:11px;color:var(--text2)}
+.order-card-items{margin:10px 0;font-size:12px;color:var(--text2);line-height:1.6}
+.order-card-item{display:flex;justify-content:space-between}
+.order-card-total{display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border)}
+.order-card-total-label{font-size:11px;color:var(--text2)}
+.order-card-total-val{font-size:16px;font-weight:800;color:var(--teal)}
+.order-card-actions{display:flex;gap:6px;margin-top:10px}
+.btn-sm{padding:6px 12px;border-radius:var(--r3);font-size:11px;font-weight:700;border:none;cursor:pointer;transition:all .2s}
+.btn-accept{background:var(--teal);color:#fff}
+.btn-reject{background:var(--bg4);color:var(--text2);border:1px solid var(--border)}
+.btn-complete{background:var(--green);color:#fff}
+.btn-rider{background:var(--purple);color:#fff}
+.order-eta{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;color:var(--orange)}
+.eta-bar{width:100%;height:3px;background:var(--bg3);border-radius:2px;margin-top:6px;overflow:hidden}
+.eta-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--orange));transition:width .3s}
+
+/* ── INVENTORY TAB ── */
+.inv-alerts{display:flex;gap:10px;margin-bottom:4px}
+.inv-alert{flex:1;padding:12px 14px;border-radius:var(--r2);display:flex;align-items:center;gap:10px}
+.inv-alert.danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25)}
+.inv-alert.warning{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25)}
+.inv-alert.info{background:var(--blue-dim);border:1px solid rgba(59,130,246,.25)}
+.inv-alert-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.inv-alert.danger .inv-alert-icon{background:rgba(239,68,68,.2)}
+.inv-alert.warning .inv-alert-icon{background:rgba(245,158,11,.2)}
+.inv-alert.info .inv-alert-icon{background:var(--blue-dim)}
+.inv-alert-content{flex:1}
+.inv-alert-title{font-size:12px;font-weight:700}
+.inv-alert.danger .inv-alert-title{color:var(--red)}
+.inv-alert.warning .inv-alert-title{color:var(--yellow)}
+.inv-alert.info .inv-alert-title{color:var(--blue)}
+.inv-alert-desc{font-size:11px;color:var(--text2)}
+.inv-table-wrap{overflow-x:auto}
+table.inv-table{width:100%;border-collapse:collapse}
+table.inv-table th{font-size:11px;font-weight:700;color:var(--text2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+table.inv-table td{font-size:12px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+table.inv-table tr:hover td{background:rgba(255,255,255,.02)}
+.inv-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px}
+.inv-ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.inv-low{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,107,53,.25)}
+.inv-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.expiry-bar{width:80px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle}
+.expiry-fill{height:100%;border-radius:3px}
+.order-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;border:1px solid var(--teal);color:var(--teal);background:var(--teal-dim);cursor:pointer;transition:all .2s}
+.order-btn:hover{background:var(--teal);color:#fff}
+
+/* ── TABLE TAB ── */
+.floor-wrap{display:grid;grid-template-columns:1fr 280px;gap:14px}
+.floor-map-container{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.floor-legend{display:flex;gap:14px;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+svg.floor-svg{width:100%;height:auto}
+.table-rect{cursor:pointer;transition:all .2s;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.table-rect:hover{filter:brightness(1.2) drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+.waiting-panel{display:flex;flex-direction:column;gap:8px}
+.waiting-header{display:flex;justify-content:space-between;align-items:center}
+.waiting-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.waiting-stat{background:var(--bg3);border-radius:var(--r2);padding:10px 12px;text-align:center}
+.waiting-stat-val{font-size:20px;font-weight:800;color:var(--teal)}
+.waiting-stat-label{font-size:10px;color:var(--text2)}
+.waiting-list{display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto}
+.waiting-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)}
+.waiting-num{width:28px;height:28px;border-radius:50%;background:var(--teal-dim);border:1px solid rgba(0,212,170,.3);color:var(--teal);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.waiting-info{flex:1}
+.waiting-name{font-size:12px;font-weight:700}
+.waiting-detail{font-size:11px;color:var(--text2)}
+.call-btn{font-size:10px;font-weight:700;padding:5px 10px;border-radius:5px;background:var(--teal);color:#fff;border:none;cursor:pointer}
+
+/* ── STAFF TAB ── */
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.staff-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;transition:border-color .2s}
+.staff-card:hover{border-color:var(--border2)}
+.staff-avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px}
+.staff-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.staff-role{font-size:11px;color:var(--text2);margin-bottom:8px}
+.staff-time-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:4px}
+.staff-time-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:2px}
+.staff-time-label{font-size:10px;color:var(--text3);display:flex;justify-content:space-between}
+.staff-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px}
+.staff-in{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.staff-break{background:var(--yellow);color:#fff}
+.staff-wage{font-size:11px;color:var(--text2);margin-top:8px}
+.staff-wage b{color:var(--text);font-variant-numeric:tabular-nums}
+
+.labor-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.labor-item{background:var(--bg3);border-radius:var(--r2);padding:12px;border:1px solid var(--border)}
+.labor-item-label{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.labor-item-val{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.labor-item-val.highlight{color:var(--teal)}
+
+/* ── CRM TAB ── */
+.tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tier-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;transition:all .2s}
+.tier-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.tier-icon{width:48px;height:48px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.tier-vip .tier-icon{background:linear-gradient(135deg,#ffd700,#ff8c00);box-shadow:0 4px 16px rgba(255,215,0,.3)}
+.tier-gold .tier-icon{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.tier-silver .tier-icon{background:linear-gradient(135deg,#94a3b8,#64748b)}
+.tier-regular .tier-icon{background:linear-gradient(135deg,var(--blue),var(--purple))}
+.tier-name{font-size:12px;font-weight:700;margin-bottom:4px}
+.tier-count{font-size:24px;font-weight:800}
+.tier-benefit{font-size:10px;color:var(--text2);margin-top:4px}
+.promo-card{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(0,212,170,.08));border:1px solid rgba(124,58,237,.25);border-radius:var(--r);padding:16px}
+.promo-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.promo-ai-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--purple),var(--teal));display:flex;align-items:center;justify-content:center}
+.promo-title{font-size:13px;font-weight:700}
+.promo-subtitle{font-size:11px;color:var(--text2)}
+.promo-suggestion{background:var(--bg2);border-radius:var(--r2);padding:12px 14px;margin-bottom:8px;border:1px solid var(--border)}
+.promo-target{font-size:11px;font-weight:700;color:var(--purple2);margin-bottom:4px}
+.promo-message{font-size:12px;color:var(--text);margin-bottom:6px;line-height:1.5}
+.promo-actions{display:flex;gap:8px}
+.promo-send{background:var(--purple);color:#fff;border:none;padding:6px 14px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s}
+.promo-send:hover{background:var(--purple2)}
+.promo-edit{background:transparent;color:var(--text2);border:1px solid var(--border);padding:6px 14px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer}
+.crm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.crm-stat{background:var(--bg3);border-radius:var(--r2);padding:12px;border:1px solid var(--border)}
+.crm-stat-label{font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.crm-stat-val{font-size:18px;font-weight:800}
+
+/* ── ANALYTICS TAB ── */
+.heatmap-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.hm-cell{aspect-ratio:1;border-radius:3px;transition:all .3s}
+.insight-list{display:flex;flex-direction:column;gap:8px}
+.insight-item{display:flex;gap:10px;padding:12px;background:var(--bg3);border-radius:var(--r2);border:1px solid var(--border)}
+.insight-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.insight-text{font-size:12px;color:var(--text);line-height:1.6}
+.insight-text b{color:var(--teal)}
+.trend-canvas{width:100%;height:120px}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── TAGS / BADGES ── */
+.tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block}
+.tag-ai{background:linear-gradient(90deg,var(--purple-dim),var(--teal-dim));color:var(--teal);border:1px solid rgba(0,212,170,.2)}
+.tag-live{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.25);animation:blink 1s ease-in-out infinite}
+
+/* ── MISC ── */
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.gap-8{gap:8px}
+.mt-8{margin-top:8px}
+.mt-12{margin-top:12px}
+.text-sm{font-size:11px;color:var(--text2)}
+.text-xs{font-size:10px;color:var(--text3)}
+hr.divider{border:none;border-top:1px solid var(--border);margin:10px 0}
+.empty-state{text-align:center;padding:40px;color:var(--text3)}
+
+@media(max-width:1200px){
+  .two-col{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:900px){
+  .three-col,.labor-summary,.tier-grid{grid-template-columns:repeat(2,1fr)}
+  .tab-btn .tab-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header id="topbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">FILO <span>SMART</span> POS</div>
+    </div>
+    <div class="brand-badge">AI HUB</div>
+  </div>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('dashboard')" id="tab-btn-dashboard">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 9a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm8-9a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V4zm0 8a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1h-4a1 1 0 01-1-1v-5z"/></svg>
+      <span class="tab-label">대시보드</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('orders')" id="tab-btn-orders">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+      <span class="tab-label">주문 <span id="order-count-badge" class="tag tag-live" style="font-size:9px;padding:1px 5px">0</span></span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('inventory')" id="tab-btn-inventory">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/><path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+      <span class="tab-label">재고</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('tables')" id="tab-btn-tables">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a2 2 0 00-2 2v1h14V6a2 2 0 00-2-2H5zM3 9v6a2 2 0 002 2h10a2 2 0 002-2V9H3zm4 3a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+      <span class="tab-label">테이블</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('staff')" id="tab-btn-staff">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+      <span class="tab-label">직원</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('crm')" id="tab-btn-crm">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+      <span class="tab-label">CRM</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('analytics')" id="tab-btn-analytics">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+      <span class="tab-label">분석</span>
+    </button>
+  </nav>
+
+  <div class="header-right">
+    <div class="sync-badge">
+      <span class="sync-dot"></span>
+      DINE 연동
+    </div>
+    <div id="live-clock">--:--:--</div>
+    <div class="notif-btn" onclick="toggleNotif()">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="#8ba3c7"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+      <span class="notif-count" id="notif-count">3</span>
+    </div>
+    <div class="user-btn">
+      <div class="user-avatar">관</div>
+      관리자
+    </div>
+  </div>
+</header>
+
+<!-- AI INSIGHT BANNER -->
+<div id="ai-banner">
+  <div class="ai-banner-label">
+    <span class="ai-pulse"></span>
+    AI 인사이트
+  </div>
+  <div class="ai-insight-track">
+    <div class="ai-insight-text" id="ai-insight-display"></div>
+  </div>
+  <div class="ai-insight-actions">
+    <span class="ai-counter" id="ai-counter">1/8</span>
+    <button class="ai-act-btn ai-act-apply" onclick="applyAIInsight()">적용</button>
+    <button class="ai-act-btn ai-act-skip" onclick="nextAIInsight()">다음</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div id="main">
+
+<!-- ═══════════════ 대시보드 ═══════════════ -->
+<div class="tab-panel active" id="panel-dashboard">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi-card c-teal">
+      <div class="kpi-label">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/></svg>
+        오늘 총 매출
+      </div>
+      <div class="kpi-value" id="kpi-sales">₩1,248,000</div>
+      <div class="kpi-delta up" id="kpi-sales-delta">▲ 12.5% 어제 대비</div>
+      <svg class="kpi-sparkline" width="80" height="40" viewBox="0 0 80 40">
+        <polyline id="sp-sales" points="0,32 13,28 27,22 40,25 53,15 67,10 80,8" fill="none" stroke="var(--teal)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="kpi-card c-purple">
+      <div class="kpi-label">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+        실시간 순이익
+      </div>
+      <div class="kpi-value" id="kpi-profit">₩342,000</div>
+      <div class="kpi-delta up" id="kpi-profit-delta">▲ 27.4% 마진율</div>
+      <svg class="kpi-sparkline" width="80" height="40" viewBox="0 0 80 40">
+        <polyline points="0,36 13,30 27,26 40,28 53,18 67,12 80,9" fill="none" stroke="var(--purple2)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="kpi-card c-orange">
+      <div class="kpi-label">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
+        누적 주문
+      </div>
+      <div class="kpi-value" id="kpi-orders">128건</div>
+      <div class="kpi-delta up" id="kpi-orders-delta">▲ 35% 재주문율</div>
+      <svg class="kpi-sparkline" width="80" height="40" viewBox="0 0 80 40">
+        <polyline id="sp-orders" points="0,35 13,32 27,25 40,20 53,18 67,14 80,10" fill="none" stroke="var(--orange)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="kpi-card c-blue">
+      <div class="kpi-label">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 4a2 2 0 00-2 2v1h14V6a2 2 0 00-2-2H5zM3 9v6a2 2 0 002 2h10a2 2 0 002-2V9H3z" clip-rule="evenodd"/></svg>
+        테이블 회전율
+      </div>
+      <div class="kpi-value" id="kpi-turnover">2.4회</div>
+      <div class="kpi-delta up" id="kpi-turnover-delta">▲ 0.3 전월 대비</div>
+      <svg class="kpi-sparkline" width="80" height="40" viewBox="0 0 80 40">
+        <polyline points="0,30 13,28 27,24 40,26 53,20 67,16 80,14" fill="none" stroke="var(--blue)" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="two-col">
+    <!-- Sales Chart -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+          시간대별 매출 추이
+        </div>
+        <div style="display:flex;gap:6px">
+          <span class="tag" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.2)">• 카드</span>
+          <span class="tag" style="background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,107,53,.2)">• 현금</span>
+          <span class="tag" style="background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.2)">• 배달</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="salesChart" class="sales-chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- Live Order Stream -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          실시간 주문 피드
+          <span class="tag tag-live" style="font-size:9px">LIVE</span>
+        </div>
+        <span class="tag" style="background:var(--bg3);color:var(--text2)">멀티채널 통합</span>
+      </div>
+      <div class="card-body" style="padding:10px 12px">
+        <div class="order-stream" id="order-stream"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECONDARY GRID -->
+  <div class="two-col-eq">
+    <!-- Popular Menu -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">인기 메뉴 TOP 5</div>
+        <span class="text-xs">오늘 기준</span>
+      </div>
+      <div class="card-body">
+        <div id="popular-menu"></div>
+      </div>
+    </div>
+
+    <!-- Labor & Margin -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+          실시간 인건비 · 마진
+        </div>
+        <span class="tag tag-ai">AI 분석</span>
+      </div>
+      <div class="card-body">
+        <div class="lm-grid">
+          <div class="lm-item">
+            <div class="lm-label">오늘 인건비</div>
+            <div class="lm-value" id="lm-labor">₩210,000</div>
+            <div class="lm-sub">직원 4명 근무 중</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">식재료비</div>
+            <div class="lm-value" id="lm-ingredients">₩380,000</div>
+            <div class="lm-sub">원가율 30.4%</div>
+          </div>
+          <div class="lm-item">
+            <div class="lm-label">실시간 순이익</div>
+            <div class="lm-value profit" id="lm-profit">₩342,000</div>
+            <div class="lm-sub">마진율 27.4%</div>
+          </div>
+        </div>
+        <hr class="divider">
+        <div style="background:linear-gradient(135deg,var(--purple-dim),var(--teal-dim));border:1px solid rgba(124,58,237,.2);border-radius:var(--r2);padding:10px 12px">
+          <div style="font-size:10px;font-weight:700;color:var(--purple2);margin-bottom:4px">AI 수익 인사이트</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5" id="profit-insight">파스타 마진율 72.4% — 500원 인상 시 월 추가 수익 <b style="color:var(--teal)">+₩24만</b> 예측</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ 주문 관리 ═══════════════ -->
+<div class="tab-panel" id="panel-orders">
+  <div class="flex-between" style="align-items:center">
+    <div style="font-size:18px;font-weight:800">실시간 주문 관리</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="tag tag-live">LIVE</span>
+      <span class="text-sm" id="order-summary-text">총 0건 · 처리 대기 0건</span>
+    </div>
+  </div>
+  <div class="channel-filter" id="channel-filter">
+    <button class="ch-filter-btn active" data-ch="all" onclick="filterOrders('all',this)">전체</button>
+    <button class="ch-filter-btn" data-ch="배민" onclick="filterOrders('배민',this)">배달의민족</button>
+    <button class="ch-filter-btn" data-ch="요기요" onclick="filterOrders('요기요',this)">요기요</button>
+    <button class="ch-filter-btn" data-ch="키오스크" onclick="filterOrders('키오스크',this)">키오스크</button>
+    <button class="ch-filter-btn" data-ch="홀" onclick="filterOrders('홀',this)">홀 주문</button>
+    <button class="ch-filter-btn" data-ch="전화" onclick="filterOrders('전화',this)">전화 주문</button>
+  </div>
+  <div class="order-grid" id="order-grid"></div>
+</div>
+
+<!-- ═══════════════ 재고 관리 ═══════════════ -->
+<div class="tab-panel" id="panel-inventory">
+  <div class="flex-between">
+    <div style="font-size:18px;font-weight:800">스마트 재고 관리</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3)">
+        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" style="margin-right:4px"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+        재고 등록
+      </button>
+      <button class="btn-sm" style="background:var(--purple-dim);color:var(--purple2);border:1px solid rgba(124,58,237,.3)">AI 자동 발주</button>
+    </div>
+  </div>
+  <div class="inv-alerts">
+    <div class="inv-alert danger">
+      <div class="inv-alert-icon"><svg width="16" height="16" viewBox="0 0 20 20" fill="#ef4444"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg></div>
+      <div class="inv-alert-content">
+        <div class="inv-alert-title">즉시 발주 필요 · 3종</div>
+        <div class="inv-alert-desc">소고기 · 치즈 · 양상추 최소 재고 미만</div>
+      </div>
+      <button class="btn-sm btn-accept" style="font-size:11px">일괄 발주</button>
+    </div>
+    <div class="inv-alert warning">
+      <div class="inv-alert-icon"><svg width="16" height="16" viewBox="0 0 20 20" fill="#f59e0b"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg></div>
+      <div class="inv-alert-content">
+        <div class="inv-alert-title">유통기한 임박 · 2종</div>
+        <div class="inv-alert-desc">우유 D-1 · 생크림 D-2 — 오늘 우선 사용 권장</div>
+      </div>
+    </div>
+    <div class="inv-alert info">
+      <div class="inv-alert-icon"><svg width="16" height="16" viewBox="0 0 20 20" fill="#3b82f6"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></div>
+      <div class="inv-alert-content">
+        <div class="inv-alert-title">AI 예측 발주 추천</div>
+        <div class="inv-alert-desc">비 예보 80% — 국물 메뉴 재료 20% 추가 발주 권장</div>
+      </div>
+      <button class="btn-sm" style="background:var(--blue-dim);color:var(--blue);border:1px solid rgba(59,130,246,.3)">AI 발주 보기</button>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">식재료 목록</div>
+        <input type="text" placeholder="재료명 검색..." style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 10px;color:var(--text);font-size:12px;width:160px">
+      </div>
+      <div class="inv-table-wrap">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>재료명</th><th>현재고</th><th>최소재고</th><th>상태</th><th>유통기한</th><th>단가</th><th>발주</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">식자재 가격 변동</div>
+        <select style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 8px;color:var(--text2);font-size:11px">
+          <option>밀가루 1kg</option><option>소고기 1kg</option><option>돼지고기 1kg</option>
+        </select>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart" class="trend-canvas" height="120"></canvas>
+      </div>
+      <div class="card-body" style="padding-top:0">
+        <div style="background:var(--bg3);border-radius:var(--r2);padding:10px 12px;border:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--teal);margin-bottom:4px">AI 마진 예측</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.5">밀가루 가격 하락 추세 → <b style="color:var(--green)">파스타 마진 +2.3%p</b> 개선 예상 (7일 내)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ 테이블 ═══════════════ -->
+<div class="tab-panel" id="panel-tables">
+  <div class="flex-between">
+    <div style="font-size:18px;font-weight:800">테이블 · 웨이팅 관리</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" style="background:var(--teal);color:#fff">+ 웨이팅 등록</button>
+      <button class="btn-sm btn-reject">예약 확인</button>
+    </div>
+  </div>
+  <div class="floor-wrap">
+    <div class="floor-map-container">
+      <div class="flex-between" style="margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700">플로어 현황</div>
+        <div class="floor-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>빈 테이블</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>식사 중</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>결제 중</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>예약</div>
+        </div>
+      </div>
+      <svg class="floor-svg" id="floor-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:0">
+      <div class="card-header">
+        <div class="card-title">웨이팅 현황</div>
+        <span class="tag tag-live" style="font-size:9px">실시간</span>
+      </div>
+      <div class="card-body" style="flex:1;display:flex;flex-direction:column;gap:10px">
+        <div class="waiting-stats">
+          <div class="waiting-stat">
+            <div class="waiting-stat-val" id="wait-count">3</div>
+            <div class="waiting-stat-label">대기 팀</div>
+          </div>
+          <div class="waiting-stat">
+            <div class="waiting-stat-val" id="wait-time">15분</div>
+            <div class="waiting-stat-label">예상 대기</div>
+          </div>
+        </div>
+        <div class="waiting-list" id="waiting-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ 직원 ═══════════════ -->
+<div class="tab-panel" id="panel-staff">
+  <div class="flex-between">
+    <div style="font-size:18px;font-weight:800">직원 근무 관리</div>
+    <div style="display:flex;gap:8px">
+      <a href="https://filo.ai.kr/qrpos" target="_blank" class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3);text-decoration:none">QR 출퇴근</a>
+      <button class="btn-sm btn-reject">급여 정산</button>
+    </div>
+  </div>
+  <div class="labor-summary">
+    <div class="labor-item">
+      <div class="labor-item-label">현재 근무 중</div>
+      <div class="labor-item-val highlight" id="staff-on">4명</div>
+    </div>
+    <div class="labor-item">
+      <div class="labor-item-label">오늘 총 인건비</div>
+      <div class="labor-item-val" id="staff-total-labor">₩210,000</div>
+    </div>
+    <div class="labor-item">
+      <div class="labor-item-label">이번 달 총 급여</div>
+      <div class="labor-item-val">₩24,800,000</div>
+    </div>
+    <div class="labor-item">
+      <div class="labor-item-label">미지급 건수</div>
+      <div class="labor-item-val" style="color:var(--red)">2건</div>
+    </div>
+  </div>
+  <div class="staff-grid" id="staff-grid"></div>
+</div>
+
+<!-- ═══════════════ CRM ═══════════════ -->
+<div class="tab-panel" id="panel-crm">
+  <div class="flex-between">
+    <div style="font-size:18px;font-weight:800">CRM · 단골 관리</div>
+    <span class="tag tag-ai" style="font-size:11px;padding:4px 10px">AI 자동 분류</span>
+  </div>
+  <div class="tier-grid">
+    <div class="tier-card tier-vip">
+      <div class="tier-icon">👑</div>
+      <div class="tier-name">VIP</div>
+      <div class="tier-count" style="color:#ffd700">18명</div>
+      <div class="tier-benefit">10% 할인 · 전용 쿠폰</div>
+    </div>
+    <div class="tier-card tier-gold">
+      <div class="tier-icon">⭐</div>
+      <div class="tier-name">GOLD</div>
+      <div class="tier-count" style="color:var(--yellow)">47명</div>
+      <div class="tier-benefit">5% 할인 · 포인트 2배</div>
+    </div>
+    <div class="tier-card tier-silver">
+      <div class="tier-icon">🥈</div>
+      <div class="tier-name">SILVER</div>
+      <div class="tier-count" style="color:#94a3b8">112명</div>
+      <div class="tier-benefit">포인트 적립</div>
+    </div>
+    <div class="tier-card tier-regular">
+      <div class="tier-icon">🫂</div>
+      <div class="tier-name">일반</div>
+      <div class="tier-count" style="color:var(--blue)">389명</div>
+      <div class="tier-benefit">신규 고객</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="promo-card">
+      <div class="promo-header">
+        <div class="promo-ai-icon">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="white"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
+        </div>
+        <div>
+          <div class="promo-title">AI 프로모션 추천</div>
+          <div class="promo-subtitle">고객 구매 패턴 분석 기반</div>
+        </div>
+      </div>
+      <div id="promo-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">고객 분석</div></div>
+      <div class="card-body">
+        <div class="crm-stats">
+          <div class="crm-stat">
+            <div class="crm-stat-label">재방문율</div>
+            <div class="crm-stat-val" style="color:var(--teal)">65%</div>
+          </div>
+          <div class="crm-stat">
+            <div class="crm-stat-label">평균 객단가</div>
+            <div class="crm-stat-val" style="color:var(--purple2)">₩9,800</div>
+          </div>
+          <div class="crm-stat">
+            <div class="crm-stat-label">신규 고객</div>
+            <div class="crm-stat-val" style="color:var(--blue)">12명</div>
+          </div>
+        </div>
+        <hr class="divider">
+        <div class="section-title mt-8">이탈 위험 고객</div>
+        <div id="churn-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ 분석 ═══════════════ -->
+<div class="tab-panel" id="panel-analytics">
+  <div class="flex-between">
+    <div style="font-size:18px;font-weight:800">AI 매장 분석</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3)">리포트 다운로드</button>
+      <button class="btn-sm btn-reject">기간 선택</button>
+    </div>
+  </div>
+  <div class="three-col">
+    <div class="card" style="grid-column:span 2">
+      <div class="card-header">
+        <div class="card-title">주간 매출 트렌드</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" style="background:var(--teal-dim);color:var(--teal);border:1px solid rgba(0,212,170,.3);font-size:10px">주간</button>
+          <button class="btn-sm btn-reject" style="font-size:10px">월간</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="trendChart" class="trend-canvas" height="140"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">고객 방문 시간대</div></div>
+      <div class="chart-wrap"><canvas id="hourChart" class="trend-canvas" height="140"></canvas></div>
+    </div>
+  </div>
+  <div class="two-col-eq">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">매장 이동 동선 히트맵</div>
+        <span class="tag tag-ai">AI 분석</span>
+      </div>
+      <div class="card-body">
+        <div class="heatmap-grid" id="heatmap"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <span style="font-size:10px;color:var(--text3)">낮은 밀도</span>
+          <div style="flex:1;height:4px;background:linear-gradient(90deg,rgba(59,130,246,.2),var(--teal),var(--orange),var(--red));border-radius:2px;margin:0 8px;align-self:center"></div>
+          <span style="font-size:10px;color:var(--text3)">높은 밀도</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">AI 매장 인사이트</div>
+        <span class="tag tag-ai">실시간 분석</span>
+      </div>
+      <div class="card-body">
+        <div class="insight-list" id="insight-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /#main -->
+
+<script>
+// ═══════════ DATA ═══════════
+const AI_INSIGHTS = [
+  {icon:'🌧', text:'오늘 비 예보 80% — 국물 메뉴 재료 20% 추가 발주 권장. 예상 매출 +8%', action:'재고 탭으로 이동'},
+  {icon:'⏰', text:'피크타임 12:30 도래 — 현재 주방 인원으로 대기 18분 발생 예상. 홀 직원 1명 주방 지원 권장', action:'직원 탭으로 이동'},
+  {icon:'💺', text:'테이블 5번 식사 58분 초과 — 서비스 음료 제공으로 자연스러운 회전 유도 권장', action:'테이블 탭으로 이동'},
+  {icon:'💰', text:'파스타 마진율 72.4% 우수 — 500원 인상 시 월 추가 수익 +₩24만 예측. 경쟁 매장 동일 가격대 확인 완료', action:'분석 탭으로 이동'},
+  {icon:'👑', text:'VIP 고객 김지은님 3주 미방문 — 재방문 쿠폰 발송 적기. SNS 활동 감소로 이탈 위험 감지', action:'CRM 탭으로 이동'},
+  {icon:'📦', text:'치즈 재고 2kg — 오늘 소진 예상. AI 자동 발주 대상 등록 완료. 공급처 배송 확인 필요', action:'재고 탭으로 이동'},
+  {icon:'🏪', text:'인근 경쟁 매장 20% 할인 이벤트 감지 — 즉시 대응: 신메뉴 SNS 노출 또는 단골 전용 혜택 발송 권장', action:'CRM 탭으로 이동'},
+  {icon:'⚡', text:'오후 에너지 최적화 — 에어컨 26도→24도 조정 시 전기료 월 ₩32,000 절감 예측. 고객 쾌적도 동일 유지', action:'설정으로 이동'},
+];
+
+const CHANNELS = ['배민','요기요','키오스크','홀','전화'];
+const CH_CLASS = {배민:'ch-baemin',요기요:'ch-yogiyo',키오스크:'ch-kiosk',홀:'ch-hall',전화:'ch-phone'};
+const MENUS = ['파스타','피자','샐러드','리조또','스테이크','닭갈비','된장찌개','삼겹살','라멘','돈까스'];
+const STATUS = ['접수','준비 중','완료','배달 중'];
+const ST_CLASS = ['st-new','st-cooking','st-done','st-delivery'];
+
+const STAFF_DATA = [
+  {name:'김민수',role:'주방·주임',avatar:'민',hours:176,maxHours:209,wage:12000,status:'근무중'},
+  {name:'이서연',role:'홀·사원',avatar:'서',hours:160,maxHours:209,wage:10500,status:'근무중'},
+  {name:'박준호',role:'주방·매니저',avatar:'준',hours:182,maxHours:209,wage:15000,status:'근무중'},
+  {name:'최다영',role:'홀·파트타임',avatar:'다',hours:98,maxHours:120,wage:10000,status:'휴식중'},
+  {name:'정현우',role:'배달·직원',avatar:'현',hours:144,maxHours:209,wage:10800,status:'근무중'},
+  {name:'한소희',role:'홀·사원',avatar:'소',hours:36,maxHours:209,wage:10200,status:'퇴근'},
+];
+
+const INV_DATA = [
+  {name:'소고기',cur:'3kg',min:'5kg',status:'danger',expiry:90,price:'₩85,000/kg',days:7},
+  {name:'돼지고기',cur:'12kg',min:'8kg',status:'ok',expiry:60,price:'₩22,000/kg',days:5},
+  {name:'양상추',cur:'4kg',min:'5kg',status:'warning',expiry:40,price:'₩3,500/kg',days:2},
+  {name:'토마토',cur:'10kg',min:'5kg',status:'ok',expiry:70,price:'₩4,200/kg',days:4},
+  {name:'치즈',cur:'2kg',min:'4kg',status:'danger',expiry:20,price:'₩18,000/kg',days:1},
+  {name:'밀가루',cur:'15kg',min:'10kg',status:'ok',expiry:80,price:'₩1,250/kg',days:30},
+  {name:'우유',cur:'8L',min:'5L',status:'ok',expiry:10,price:'₩2,200/L',days:1},
+  {name:'생크림',cur:'3L',min:'2L',status:'ok',expiry:15,price:'₩4,800/L',days:2},
+];
+
+const WAITING_DATA = [
+  {num:'01',name:'김민수',party:'2명',wait:'12분',tel:'010-****-1234'},
+  {num:'02',name:'박서은',party:'4명',wait:'8분',tel:'010-****-5678'},
+  {num:'03',name:'이준호',party:'3명',wait:'3분',tel:'010-****-9012'},
+];
+
+const PROMO_DATA = [
+  {target:'VIP 고객 18명', message:'매주 화요일 단골님만의 특별 혜택! 전 메뉴 10% 할인 쿠폰을 드립니다 🎁', expected:'방문 예상 +12명'},
+  {target:'3주 이상 미방문 고객 35명', message:'보고 싶었어요! 지금 방문하시면 서비스 음료 드립니다 ☕', expected:'재방문 예상 +8명'},
+];
+
+const CHURN_DATA = [
+  {name:'김지은',tier:'VIP',last:'21일 전',risk:'고위험'},
+  {name:'이철수',tier:'GOLD',last:'18일 전',risk:'중위험'},
+  {name:'박미영',tier:'GOLD',last:'15일 전',risk:'중위험'},
+];
+
+const INSIGHTS = [
+  {color:'#00d4aa', text:'12:00-13:00 피크타임에 주문이 집중됩니다. <b>주방 사전 준비</b>로 대기 시간 50% 단축 가능'},
+  {color:'#7c3aed', text:'토요일 저녁 테이블 회전율 3.1회 — <b>평일 대비 1.5배</b>. 예약 우선 전략 권장'},
+  {color:'#f59e0b', text:'파스타 메뉴가 전체 매출의 <b>38%</b>를 차지. 재료 비용 안정화 중요'},
+  {color:'#3b82f6', text:'신규 고객의 <b>45%</b>가 배달앱 유입. 앱 내 리뷰 관리로 재방문 유도 가능'},
+];
+
+// ═══════════ STATE ═══════════
+let aiIdx = 0;
+let orders = [];
+let orderIdCounter = 200;
+let salesData = [45000,72000,88000,120000,145000,168000,142000,195000,210000,230000,185000,245000];
+
+// ═══════════ INIT ═══════════
+function init() {
+  startClock();
+  initAIBanner();
+  drawSalesChart();
+  renderPopularMenu();
+  renderOrderGrid();
+  renderInventory();
+  renderFloorMap();
+  renderWaiting();
+  renderStaff();
+  renderPromo();
+  renderChurnList();
+  renderInsights();
+  drawPriceChart();
+  drawTrendChart();
+  drawHourChart();
+  renderHeatmap();
+  seedOrders();
+  setInterval(updateKPIs, 5000);
+  setInterval(addRandomOrder, 8000);
+  setInterval(updateLaborCost, 10000);
+  setInterval(nextAIInsight, 6000);
+}
+
+// ═══════════ CLOCK ═══════════
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('live-clock').textContent =
+      now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ═══════════ TABS ═══════════
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  if (name === 'analytics') { drawTrendChart(); drawHourChart(); }
+  if (name === 'inventory') drawPriceChart();
+}
+
+// ═══════════ AI BANNER ═══════════
+function initAIBanner() { showAIInsight(); }
+function showAIInsight() {
+  const el = document.getElementById('ai-insight-display');
+  const ins = AI_INSIGHTS[aiIdx];
+  el.classList.add('hidden');
+  setTimeout(() => {
+    el.textContent = ins.icon + '  ' + ins.text;
+    el.classList.remove('hidden');
+    document.getElementById('ai-counter').textContent = (aiIdx+1)+'/'+AI_INSIGHTS.length;
+  }, 300);
+}
+function nextAIInsight() {
+  aiIdx = (aiIdx + 1) % AI_INSIGHTS.length;
+  showAIInsight();
+}
+function applyAIInsight() {
+  const ins = AI_INSIGHTS[aiIdx];
+  const tab = ins.action.includes('재고') ? 'inventory' :
+               ins.action.includes('직원') ? 'staff' :
+               ins.action.includes('테이블') ? 'tables' :
+               ins.action.includes('CRM') ? 'crm' :
+               ins.action.includes('분석') ? 'analytics' : 'dashboard';
+  switchTab(tab);
+  nextAIInsight();
+}
+
+// ═══════════ KPI UPDATES ═══════════
+function fmtWon(n) { return '₩' + n.toLocaleString('ko-KR'); }
+function updateKPIs() {
+  const s = 1248000 + Math.floor((Math.random()-.3)*30000);
+  const p = Math.floor(s * 0.274);
+  document.getElementById('kpi-sales').textContent = fmtWon(s);
+  document.getElementById('kpi-profit').textContent = fmtWon(p);
+  const orders_count = 128 + Math.floor(Math.random()*5);
+  document.getElementById('kpi-orders').textContent = orders_count + '건';
+}
+
+// ═══════════ SALES CHART ═══════════
+function drawSalesChart() {
+  const canvas = document.getElementById('salesChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio || 600;
+  canvas.height = 180 * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const W = canvas.offsetWidth || 600, H = 180;
+  const labels = ['06','07','08','09','10','11','12','13','14','15','16','17'];
+  const card_data = [30000,48000,62000,95000,112000,135000,158000,180000,165000,198000,175000,220000];
+  const cash_data = [8000,12000,18000,22000,28000,32000,38000,44000,38000,46000,40000,52000];
+  const delivery_data = [7000,12000,8000,3000,5000,1000,4000,16000,12000,12000,10000,13000];
+  function drawLine(data, color, fill) {
+    const max = 260000, pad = {t:20,r:20,b:36,l:54};
+    const cw = W-pad.l-pad.r, ch = H-pad.t-pad.b;
+    const pts = data.map((v,i)=>[pad.l + (i/(data.length-1))*cw, pad.t + ch - (v/max)*ch]);
+    ctx.beginPath();
+    pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    if (fill) {
+      ctx.lineTo(pts[pts.length-1][0], pad.t+ch);
+      ctx.lineTo(pts[0][0], pad.t+ch);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+      grad.addColorStop(0, color.replace(')',',0.25)').replace('rgb','rgba'));
+      grad.addColorStop(1, color.replace(')',',0.0)').replace('rgb','rgba'));
+      ctx.fillStyle = grad; ctx.fill();
+    }
+    return pts;
+  }
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+  const pad={t:20,r:20,b:36,l:54}, cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  [0,65000,130000,195000,260000].forEach((v,i)=>{
+    const y=pad.t+ch-(v/260000)*ch;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle='rgba(139,163,199,0.6)';ctx.font='10px Pretendard,system-ui';
+    ctx.textAlign='right';ctx.fillText(v?'₩'+(v/10000)+'만':'0',pad.l-6,y+4);
+  });
+  // x labels
+  ctx.fillStyle='rgba(139,163,199,0.6)';ctx.textAlign='center';ctx.font='10px Pretendard,system-ui';
+  labels.forEach((l,i)=>{const x=pad.l+(i/(labels.length-1))*cw;ctx.fillText(l+'시',x,H-8);});
+  // lines
+  drawLine(card_data,'#00d4aa',true);
+  drawLine(cash_data,'#ff6b35',false);
+  drawLine(delivery_data,'#3b82f6',false);
+}
+
+// ═══════════ POPULAR MENU ═══════════
+function renderPopularMenu() {
+  const data=[{n:'파스타',c:42,col:'#00d4aa'},{n:'피자',c:35,col:'#7c3aed'},{n:'샐러드',c:28,col:'#3b82f6'},{n:'리조또',c:20,col:'#f59e0b'},{n:'스테이크',c:15,col:'#ff6b35'}];
+  const max=42;
+  document.getElementById('popular-menu').innerHTML=data.map(d=>`
+    <div class="menu-bar-row">
+      <div class="menu-bar-name">${d.n}</div>
+      <div class="menu-bar-track"><div class="menu-bar-fill" style="width:${d.c/max*100}%;background:${d.col}"></div></div>
+      <div class="menu-bar-count">${d.c}건</div>
+    </div>`).join('');
+}
+
+// ═══════════ ORDERS ═══════════
+function seedOrders() {
+  const channels=['배민','요기요','키오스크','홀','전화'];
+  for(let i=0;i<12;i++) addRandomOrder(true);
+  renderOrderGrid();
+}
+function addRandomOrder(silent) {
+  const ch=CHANNELS[Math.floor(Math.random()*CHANNELS.length)];
+  const items=[];
+  const cnt=Math.floor(Math.random()*3)+1;
+  for(let i=0;i<cnt;i++) items.push({name:MENUS[Math.floor(Math.random()*MENUS.length)],qty:Math.floor(Math.random()*2)+1});
+  const total=items.reduce((s,it)=>s+it.qty*(8000+Math.floor(Math.random()*12000)),0);
+  const order={id:'#F'+String(++orderIdCounter).padStart(5,'0'),ch,items,total,status:0,time:new Date(),eta:Math.floor(Math.random()*25)+10};
+  orders.unshift(order);
+  if(orders.length>50) orders.pop();
+  document.getElementById('order-count-badge').textContent=orders.filter(o=>o.status===0).length;
+  document.getElementById('order-summary-text').textContent=`총 ${orders.length}건 · 처리 대기 ${orders.filter(o=>o.status===0).length}건`;
+  if(!silent) {
+    addToStream(order);
+    renderOrderGrid();
+  }
+}
+function addToStream(order) {
+  const stream=document.getElementById('order-stream');
+  const div=document.createElement('div');
+  div.className='order-item';
+  div.innerHTML=`
+    <span class="order-ch ${CH_CLASS[order.ch]}">${order.ch}</span>
+    <div class="order-info">
+      <div class="order-num">${order.id}</div>
+      <div class="order-items">${order.items.map(i=>i.name+' x'+i.qty).join(' · ')}</div>
+    </div>
+    <div class="order-amount">${fmtWon(order.total)}</div>
+    <span class="order-status ${ST_CLASS[order.status]}">${STATUS[order.status]}</span>`;
+  stream.prepend(div);
+  if(stream.children.length>10) stream.lastChild.remove();
+}
+let orderFilter='all';
+function filterOrders(ch,btn) {
+  orderFilter=ch;
+  document.querySelectorAll('.ch-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrderGrid();
+}
+function renderOrderGrid() {
+  const filtered=orderFilter==='all'?orders:orders.filter(o=>o.ch===orderFilter);
+  document.getElementById('order-grid').innerHTML=filtered.slice(0,20).map(o=>{
+    const mins=Math.floor((new Date()-o.time)/60000);
+    const etaPct=Math.min(100,Math.floor(mins/o.eta*100));
+    return `<div class="order-card">
+      <div class="order-card-top">
+        <div>
+          <span class="order-ch ${CH_CLASS[o.ch]}" style="font-size:10px">${o.ch}</span>
+          <span class="order-card-num" style="margin-left:6px">${o.id}</span>
+        </div>
+        <div class="order-card-time">${mins}분 전</div>
+      </div>
+      <div class="order-card-items">${o.items.map(i=>`<div class="order-card-item"><span>${i.name}</span><span>x${i.qty}</span></div>`).join('')}</div>
+      <div class="order-card-total">
+        <span class="order-card-total-label">합계</span>
+        <span class="order-card-total-val">${fmtWon(o.total)}</span>
+      </div>
+      <div class="eta-bar"><div class="eta-fill" style="width:${etaPct}%"></div></div>
+      <div class="order-card-actions">
+        ${o.status===0?`<button class="btn-sm btn-accept" onclick="updateOrderStatus('${o.id}',1)">수락</button><button class="btn-sm btn-reject" onclick="updateOrderStatus('${o.id}',99)">거절</button>`:''}
+        ${o.status===1?`<button class="btn-sm btn-complete" onclick="updateOrderStatus('${o.id}',2)">완료</button>`:''}
+        ${(o.status===2&&(o.ch==='배민'||o.ch==='요기요'))?`<button class="btn-sm btn-rider" onclick="updateOrderStatus('${o.id}',3)">라이더 배정</button>`:''}
+        <span class="order-status ${ST_CLASS[Math.min(o.status,3)]}">${STATUS[Math.min(o.status,3)]}</span>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state">해당 채널 주문이 없습니다</div>';
+}
+function updateOrderStatus(id,st) {
+  const o=orders.find(o=>o.id===id);
+  if(o) { o.status=st; renderOrderGrid(); }
+}
+
+// ═══════════ INVENTORY ═══════════
+function renderInventory() {
+  document.getElementById('inv-tbody').innerHTML=INV_DATA.map(d=>{
+    const barColor=d.expiry>50?'var(--green)':d.expiry>25?'var(--yellow)':'var(--red)';
+    const stClass={ok:'inv-ok',warning:'inv-low',danger:'inv-danger'}[d.status];
+    const stText={ok:'정상',warning:'부족 임박',danger:'부족'}[d.status];
+    return `<tr>
+      <td style="font-weight:700">${d.name}</td>
+      <td style="color:${d.status==='danger'?'var(--red)':d.status==='warning'?'var(--orange)':'var(--text)'};font-weight:600">${d.cur}</td>
+      <td style="color:var(--text2)">${d.min}</td>
+      <td><span class="inv-status ${stClass}">${stText}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="expiry-bar"><div class="expiry-fill" style="width:${d.expiry}%;background:${barColor}"></div></div>
+          <span style="font-size:10px;color:var(--text2)">D-${d.days}</span>
+        </div>
+      </td>
+      <td style="color:var(--text2)">${d.price}</td>
+      <td>${d.status!=='ok'?`<button class="order-btn">발주</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════ FLOOR MAP ═══════════
+const TABLES = [
+  {id:1,x:40,y:40,w:80,h:60,status:'empty',label:'T1',pax:0},
+  {id:2,x:150,y:40,w:80,h:60,status:'dining',label:'T2',pax:4,time:42},
+  {id:3,x:260,y:40,w:80,h:60,status:'dining',label:'T3',pax:2,time:28},
+  {id:4,x:370,y:40,w:80,h:60,status:'reserved',label:'T4',pax:0},
+  {id:5,x:40,y:140,w:80,h:60,status:'dining',label:'T5',pax:3,time:58},
+  {id:6,x:150,y:140,w:80,h:60,status:'payment',label:'T6',pax:2,time:65},
+  {id:7,x:260,y:140,w:80,h:60,status:'empty',label:'T7',pax:0},
+  {id:8,x:370,y:140,w:80,h:60,status:'dining',label:'T8',pax:5,time:15},
+  {id:9,x:40,y:240,w:120,h:70,status:'dining',label:'T9 (단체)',pax:8,time:22},
+  {id:10,x:185,y:240,w:80,h:70,status:'empty',label:'T10',pax:0},
+  {id:11,x:290,y:240,w:80,h:70,status:'reserved',label:'T11',pax:0},
+  {id:12,x:400,y:240,w:80,h:70,status:'empty',label:'T12',pax:0},
+];
+const TABLE_COLORS = {empty:'#10b981',dining:'#3b82f6',payment:'#f59e0b',reserved:'#7c3aed'};
+function renderFloorMap() {
+  const svg=document.getElementById('floor-svg');
+  svg.innerHTML=TABLES.map(t=>{
+    const c=TABLE_COLORS[t.status];
+    const timeStr=t.time?`<text x="${t.x+t.w/2}" y="${t.y+t.h-8}" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="9" font-family="Pretendard,system-ui">${t.time}분</text>`:'';
+    return `<g>
+      <rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="8" fill="${c}" fill-opacity="0.15" stroke="${c}" stroke-width="1.5" class="table-rect" onclick="tableClick(${t.id})"/>
+      <text x="${t.x+t.w/2}" y="${t.y+t.h/2-4}" text-anchor="middle" fill="${c}" font-size="11" font-weight="700" font-family="Pretendard,system-ui">${t.label}</text>
+      ${t.pax?`<text x="${t.x+t.w/2}" y="${t.y+t.h/2+12}" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="10" font-family="Pretendard,system-ui">${t.pax}명</text>`:''}
+      ${timeStr}
+    </g>`;
+  }).join('');
+}
+function tableClick(id) {
+  const t=TABLES.find(t=>t.id===id);
+  if(!t)return;
+  alert(`테이블 ${t.id}\n상태: ${t.status}\n인원: ${t.pax}명${t.time?'\n경과: '+t.time+'분':''}`);
+}
+
+// ═══════════ WAITING ═══════════
+function renderWaiting() {
+  document.getElementById('waiting-list').innerHTML=WAITING_DATA.map(w=>`
+    <div class="waiting-item">
+      <div class="waiting-num">${w.num}</div>
+      <div class="waiting-info">
+        <div class="waiting-name">${w.name} · ${w.party}</div>
+        <div class="waiting-detail">대기 ${w.wait} · ${w.tel}</div>
+      </div>
+      <button class="call-btn" onclick="callWaiting('${w.name}')">호출</button>
+    </div>`).join('');
+}
+function callWaiting(name) { alert(name + '님 호출 완료!'); }
+
+// ═══════════ STAFF ═══════════
+function renderStaff() {
+  const colors=['#3b82f6','#7c3aed','#00d4aa','#f59e0b','#ff6b35','#10b981'];
+  document.getElementById('staff-grid').innerHTML=STAFF_DATA.map((s,i)=>{
+    const pct=Math.floor(s.hours/s.maxHours*100);
+    const earned=fmtWon(s.hours*s.wage);
+    const stClass=s.status==='근무중'?'staff-in':s.status==='휴식중'?'staff-break':'';
+    return `<div class="staff-card">
+      <div class="staff-avatar" style="background:linear-gradient(135deg,${colors[i]},${colors[(i+2)%6]})">${s.avatar}</div>
+      <div class="staff-name">${s.name}</div>
+      <div class="staff-role">${s.role}</div>
+      <span class="staff-status ${stClass}">${s.status==='근무중'?'<svg width="6" height="6" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> ':''} ${s.status}</span>
+      <div class="staff-time-bar mt-8"><div class="staff-time-fill" style="width:${pct}%"></div></div>
+      <div class="staff-time-label"><span>${s.hours}h</span><span>${s.maxHours}h</span></div>
+      <div class="staff-wage">이번 달 급여: <b>${earned}</b></div>
+    </div>`;
+  }).join('');
+}
+function updateLaborCost() {
+  const base=210000+Math.floor(Math.random()*5000);
+  document.getElementById('lm-labor').textContent=fmtWon(base);
+  document.getElementById('staff-total-labor').textContent=fmtWon(base);
+}
+
+// ═══════════ CRM ═══════════
+function renderPromo() {
+  document.getElementById('promo-list').innerHTML=PROMO_DATA.map(p=>`
+    <div class="promo-suggestion">
+      <div class="promo-target">${p.target}</div>
+      <div class="promo-message">${p.message}</div>
+      <div style="font-size:10px;color:var(--teal);margin-bottom:6px">예상 효과: ${p.expected}</div>
+      <div class="promo-actions">
+        <button class="promo-send" onclick="sendPromo(this)">문자 발송</button>
+        <button class="promo-edit">편집</button>
+      </div>
+    </div>`).join('');
+}
+function sendPromo(btn) {
+  btn.textContent='발송 완료 ✓';
+  btn.style.background='var(--green)';
+  btn.disabled=true;
+}
+function renderChurnList() {
+  const riskColor={고위험:'var(--red)',중위험:'var(--yellow)',저위험:'var(--green)'};
+  document.getElementById('churn-list').innerHTML=CHURN_DATA.map(c=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);margin-bottom:6px">
+      <div>
+        <div style="font-size:12px;font-weight:700">${c.name} <span style="color:var(--yellow);font-size:10px">${c.tier}</span></div>
+        <div style="font-size:10px;color:var(--text2)">마지막 방문 ${c.last}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;font-weight:700;color:${riskColor[c.risk]}">${c.risk}</span>
+        <button class="btn-sm" style="background:var(--purple-dim);color:var(--purple2);border:1px solid rgba(124,58,237,.3);font-size:10px">쿠폰 발송</button>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════ ANALYTICS ═══════════
+function renderInsights() {
+  document.getElementById('insight-list').innerHTML=INSIGHTS.map(ins=>`
+    <div class="insight-item">
+      <div class="insight-dot" style="background:${ins.color}"></div>
+      <div class="insight-text">${ins.text}</div>
+    </div>`).join('');
+}
+function renderHeatmap() {
+  const hm=document.getElementById('heatmap');
+  const vals=[0.1,0.2,0.15,0.3,0.5,0.4,0.6,0.8,0.9,0.7,
+              0.2,0.3,0.4,0.5,0.8,0.9,1.0,0.9,0.7,0.5,
+              0.3,0.5,0.7,0.9,1.0,0.9,0.8,0.6,0.4,0.3,
+              0.2,0.4,0.6,0.8,0.9,0.8,0.6,0.4,0.3,0.2,
+              0.1,0.2,0.3,0.4,0.5,0.4,0.3,0.2,0.15,0.1,
+              0.05,0.1,0.2,0.3,0.4,0.3,0.25,0.15,0.1,0.05];
+  hm.innerHTML=vals.map(v=>{
+    const alpha=v;
+    const r=Math.floor(59+(239-59)*v),g=Math.floor(130+(68-130)*v),b=Math.floor(246+(68-246)*v);
+    return `<div class="hm-cell" style="background:rgba(${r},${g},${b},${0.2+v*0.8})" title="밀도: ${Math.round(v*100)}%"></div>`;
+  }).join('');
+}
+function drawPriceChart() {
+  const canvas=document.getElementById('priceChart');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*window.devicePixelRatio||400;
+  canvas.height=120*window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  const W=canvas.offsetWidth||400,H=120;
+  const data=[1380,1350,1320,1290,1310,1280,1260,1250,1240,1250];
+  const labels=['5/1','5/5','5/10','5/15','5/20','5/25','6/1','6/5','6/10','6/15'];
+  const pad={t:16,r:16,b:28,l:52};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const min=1200,max=1450;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
+  [1200,1300,1400].forEach(v=>{
+    const y=pad.t+ch-((v-min)/(max-min))*ch;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle='rgba(139,163,199,0.5)';ctx.font='9px system-ui';ctx.textAlign='right';
+    ctx.fillText('₩'+v,pad.l-4,y+3);
+  });
+  const pts=data.map((v,i)=>[pad.l+(i/(data.length-1))*cw,pad.t+ch-((v-min)/(max-min))*ch]);
+  ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+  ctx.strokeStyle='#00d4aa';ctx.lineWidth=2;ctx.stroke();
+  ctx.lineTo(pts[pts.length-1][0],pad.t+ch);ctx.lineTo(pts[0][0],pad.t+ch);ctx.closePath();
+  const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+  grad.addColorStop(0,'rgba(0,212,170,0.2)');grad.addColorStop(1,'rgba(0,212,170,0)');
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.fillStyle='rgba(139,163,199,0.5)';ctx.font='9px system-ui';ctx.textAlign='center';
+  labels.forEach((l,i)=>{const x=pad.l+(i/(labels.length-1))*cw;ctx.fillText(l,x,H-6);});
+}
+function drawTrendChart() {
+  const canvas=document.getElementById('trendChart');
+  if(!canvas||!canvas.offsetWidth)return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*window.devicePixelRatio;
+  canvas.height=140*window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  const W=canvas.offsetWidth,H=140;
+  const data=[850000,920000,1050000,980000,1100000,1248000,1350000];
+  const labels=['월','화','수','목','금','토','일'];
+  const pad={t:16,r:16,b:28,l:72};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const max=1500000;
+  ctx.clearRect(0,0,W,H);
+  [0,500000,1000000,1500000].forEach(v=>{
+    const y=pad.t+ch-(v/max)*ch;
+    ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();
+    ctx.fillStyle='rgba(139,163,199,0.5)';ctx.font='9px system-ui';ctx.textAlign='right';
+    ctx.fillText(v?'₩'+(v/10000)+'만':'0',pad.l-4,y+3);
+  });
+  const pts=data.map((v,i)=>[pad.l+(i/(data.length-1))*cw,pad.t+ch-(v/max)*ch]);
+  ctx.beginPath();pts.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));
+  ctx.strokeStyle='#7c3aed';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.lineTo(pts[pts.length-1][0],pad.t+ch);ctx.lineTo(pts[0][0],pad.t+ch);ctx.closePath();
+  const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+  grad.addColorStop(0,'rgba(124,58,237,0.25)');grad.addColorStop(1,'rgba(124,58,237,0)');
+  ctx.fillStyle=grad;ctx.fill();
+  pts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle='#7c3aed';ctx.fill();});
+  ctx.fillStyle='rgba(139,163,199,0.6)';ctx.font='10px system-ui';ctx.textAlign='center';
+  labels.forEach((l,i)=>{const x=pad.l+(i/(labels.length-1))*cw;ctx.fillText(l,x,H-8);});
+}
+function drawHourChart() {
+  const canvas=document.getElementById('hourChart');
+  if(!canvas||!canvas.offsetWidth)return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth*window.devicePixelRatio;
+  canvas.height=140*window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio,window.devicePixelRatio);
+  const W=canvas.offsetWidth,H=140;
+  const data=[2,5,8,12,38,67,95,88,45,28,20,42,60,72,55,30,18,10,5,2];
+  const labels=['06','08','10','12','14','16','18','20','22','24'];
+  const pad={t:16,r:12,b:28,l:36};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const max=100,barW=Math.floor(cw/data.length)-2;
+  ctx.clearRect(0,0,W,H);
+  data.forEach((v,i)=>{
+    const x=pad.l+i*(cw/data.length);
+    const bh=(v/max)*ch;
+    const hue=v>60?'#ef4444':v>30?'#f59e0b':'#3b82f6';
+    ctx.fillStyle=hue+'40';
+    ctx.fillRect(x,pad.t+ch-bh,barW,bh);
+    ctx.fillStyle=hue;
+    ctx.fillRect(x,pad.t+ch-bh,barW,2);
+  });
+  ctx.fillStyle='rgba(139,163,199,0.5)';ctx.font='9px system-ui';ctx.textAlign='center';
+  labels.forEach((l,i)=>{const x=pad.l+(i/9)*cw;ctx.fillText(l+'시',x,H-8);});
+}
+
+// ═══════════ NOTIF ═══════════
+function toggleNotif() { alert('알림 3건:\n• 소고기 재고 부족 — 즉시 발주 필요\n• VIP 고객 김지은 3주 미방문\n• 테이블 6번 결제 대기 중'); }
+
+// ═══════════ START ═══════════
+window.addEventListener('load', init);
+window.addEventListener('resize', () => { drawSalesChart(); });
+</script>
+</body>
+</html>
