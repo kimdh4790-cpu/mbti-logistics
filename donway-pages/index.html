@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko" translate="no">
 <head>
 <meta charset="UTF-8">
@@ -340,16 +340,10 @@ window.onBizDocSelected=onBizDocSelected;</script>
               </select>
             </div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:6px">업종 선택:</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="coupang" checked onclick="event.stopPropagation()"> 🚚 쿠팡</label>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px">
+              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="coupang" checked onclick="event.stopPropagation()"> 🚚 쿠팡(택배)</label>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="delivery" onclick="event.stopPropagation()"> 🛵 배달대행</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="cleaning" onclick="event.stopPropagation()"> 🧹 청소</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="insurance" onclick="event.stopPropagation()"> 🛡️ 보험</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="construction" onclick="event.stopPropagation()"> 🏗️ 건설</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="quick" onclick="event.stopPropagation()"> 🚗 퀵·대리</label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:5px 7px" onclick="event.stopPropagation()"><input type="radio" name="settle-industry" value="other" onclick="event.stopPropagation();document.getElementById('settle-industry-custom').style.display='block'"> 📋 직접설정</label>
             </div>
-            <input id="settle-industry-custom" type="text" placeholder="업종명 직접 입력 (예: 골프장, 학원, 요양원)" onclick="event.stopPropagation()" style="display:none;margin-top:6px;width:100%;padding:7px 10px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px">
           </div>
         </div>
 
@@ -2160,12 +2154,6 @@ function parseCoupangExcel(inp){
   var industry=_SA_TEST_INDUSTRY||(_COMPANY_CFG&&_COMPANY_CFG.industryType)||'coupang';
   toast('📂 '+month+' 정산 업로드 중... ['+industry+']');
 
-  if(industry==='cleaning'){_parseCleaningExcel(file,month);return;}
-  if(industry==='insurance'){_parseInsuranceExcel(file,month);return;}
-  if(industry==='construction'){_parseConstructionExcel(file,month);return;}
-  if(industry==='quick'){_parseQuickExcel(file,month);return;}
-  if(industry==='logistics'){_parseLogisticsExcel(file,month);return;}
-
   // 기본: 쿠팡 파서
   var did=window._CU&&window._CU.dealerId;
   var driversPromise=(window._db&&window._CU)
@@ -3032,12 +3020,6 @@ function _industrySettleSaveAll(did, results, month, label){
 var IND_TERMS = {
   ai_settle:  {camp:'캠프',  worker:'기사',    attend:'출퇴근', rate:'건단가', unit:'건',  site:'캠프'},
   delivery:   {camp:'캠프',  worker:'라이더',  attend:'출퇴근', rate:'건단가', unit:'건',  site:'캠프'},
-  construction:{camp:'현장', worker:'인부',    attend:'출역',   rate:'일당',   unit:'일',  site:'현장'},
-  beauty:     {camp:'지점',  worker:'디자이너',attend:'출근',   rate:'시술료', unit:'건',  site:'지점'},
-  insurance:  {camp:'지사',  worker:'설계사',  attend:'출근',   rate:'수수료', unit:'건',  site:'지사'},
-  care:       {camp:'센터',  worker:'요양사',  attend:'방문',   rate:'수가',   unit:'회',  site:'센터'},
-  academy:    {camp:'지점',  worker:'강사',    attend:'출강',   rate:'수강료', unit:'명',  site:'지점'},
-  warehouse:  {camp:'창고',  worker:'직원',    attend:'출근',   rate:'시급',   unit:'시간',site:'창고'},
   event:      {camp:'행사장',worker:'스태프',  attend:'투입',   rate:'일당',   unit:'일',  site:'행사장'},
   sales:      {camp:'지사',  worker:'영업사원',attend:'출근',   rate:'수수료', unit:'건',  site:'지사'},
   freelance:  {camp:'',      worker:'프리랜서',attend:'',       rate:'프로젝트비',unit:'건',site:''},
@@ -3057,13 +3039,7 @@ function _getTerm(key){
   var ind=dealer.industryType||dealer.plan_key||'universal';
   // 메뉴에서 현재 업종 파악
   var curPage=window._curPage||'';
-  if(curPage.indexOf('beauty')>=0)     ind='beauty';
-  else if(curPage.indexOf('delivery')>=0) ind='delivery';
-  else if(curPage.indexOf('construct')>=0) ind='construction';
-  else if(curPage.indexOf('insur')>=0) ind='insurance';
-  else if(curPage.indexOf('care')>=0)  ind='care';
-  else if(curPage.indexOf('academy')>=0) ind='academy';
-  else if(curPage.indexOf('warehouse')>=0) ind='warehouse';
+  if(curPage.indexOf('delivery')>=0) ind='delivery';
   else if(curPage.indexOf('event')>=0) ind='event';
   else if(curPage.indexOf('sales')>=0) ind='sales';
   else if(curPage.indexOf('freelance')>=0) ind='freelance';
@@ -3110,211 +3086,6 @@ function _applyIndTerms(industryKey){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var IND_DB = {
 
-  // ━━ 💄 뷰티·미용 ━━
-  // 헤어/메이크업/네일/속눈썹/피부
-  beauty: {
-    menus: [
-      // 헤어 시술
-      {cat:'헤어·펌', items:[
-        {name:'시그니처펌', avgPrice:150000, matRate:0.15},
-        {name:'볼륨매직', avgPrice:180000, matRate:0.18},
-        {name:'복구매직', avgPrice:200000, matRate:0.20},
-        {name:'디지털펌', avgPrice:160000, matRate:0.15},
-        {name:'가르마펌', avgPrice:130000, matRate:0.12},
-        {name:'히피펌', avgPrice:140000, matRate:0.13},
-        {name:'애즈펌', avgPrice:120000, matRate:0.12},
-      ]},
-      {cat:'헤어·컷', items:[
-        {name:'디자인컷', avgPrice:35000, matRate:0},
-        {name:'허쉬컷', avgPrice:40000, matRate:0},
-        {name:'레이어컷', avgPrice:35000, matRate:0},
-        {name:'남성커트', avgPrice:15000, matRate:0},
-      ]},
-      {cat:'헤어·염색', items:[
-        {name:'뿌리염색', avgPrice:80000, matRate:0.25},
-        {name:'전체염색', avgPrice:120000, matRate:0.30},
-        {name:'발레아쥬', avgPrice:180000, matRate:0.35},
-        {name:'탈색', avgPrice:100000, matRate:0.40},
-        {name:'그라데이션', avgPrice:150000, matRate:0.35},
-      ]},
-      {cat:'헤어·클리닉', items:[
-        {name:'두피스케일링', avgPrice:60000, matRate:0.20},
-        {name:'본드케어', avgPrice:80000, matRate:0.25},
-        {name:'단백질트리트먼트', avgPrice:50000, matRate:0.20},
-      ]},
-      // 메이크업
-      {cat:'메이크업', items:[
-        {name:'웨딩메이크업', avgPrice:200000, matRate:0.10},
-        {name:'일반메이크업', avgPrice:80000, matRate:0.10},
-        {name:'피부메이크업', avgPrice:60000, matRate:0.08},
-      ]},
-      // 네일
-      {cat:'네일', items:[
-        {name:'젤네일(손)', avgPrice:60000, matRate:0.20},
-        {name:'젤네일(발)', avgPrice:50000, matRate:0.20},
-        {name:'젤제거', avgPrice:20000, matRate:0.10},
-        {name:'아트(1개당)', avgPrice:3000, matRate:0.05},
-      ]},
-      // 속눈썹
-      {cat:'속눈썹', items:[
-        {name:'속눈썹연장(클래식)', avgPrice:70000, matRate:0.25},
-        {name:'속눈썹연장(볼륨)', avgPrice:90000, matRate:0.30},
-        {name:'속눈썹제거', avgPrice:20000, matRate:0.05},
-        {name:'눈썹왁싱', avgPrice:15000, matRate:0.10},
-      ]},
-      // 제품 판매
-      {cat:'제품판매', items:[
-        {name:'샴푸', avgPrice:30000, matRate:0.70},
-        {name:'트리트먼트', avgPrice:25000, matRate:0.70},
-        {name:'스타일링제', avgPrice:20000, matRate:0.70},
-      ]}
-    ],
-    commissionRates: [
-      {min:0,      max:2000000,  rate:0.35, label:'~200만'},
-      {min:2000000,max:3000000,  rate:0.40, label:'200~300만'},
-      {min:3000000,max:5000000,  rate:0.45, label:'300~500만'},
-      {min:5000000,max:null,     rate:0.50, label:'500만+'},
-    ],
-    deductions: {
-      cardFeeRate: 0.11,   // 카드수수료+부가세
-      productCommRate: 0.15, // 제품판매 수수료율
-      tax33Rate: 0.033,
-    }
-  },
-
-  // ━━ 🛡️ 보험설계사 ━━
-  // 2025~2026 수수료 개편 반영 (1200%룰 GA 확대)
-  insurance: {
-    products: [
-      // 생명보험
-      {cat:'생명보험', items:[
-        {name:'종신보험',     rate1:0.80, rate2:0.10, rateMaint:0.02, label:'초회80%/2차10%/유지2%'},
-        {name:'정기보험',     rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%/2차8%'},
-        {name:'CI보험',       rate1:0.70, rate2:0.09, rateMaint:0.02, label:'초회70%'},
-        {name:'암보험',       rate1:0.65, rate2:0.08, rateMaint:0.015,label:'초회65%'},
-        {name:'건강보험',     rate1:0.55, rate2:0.07, rateMaint:0.015,label:'초회55%'},
-        {name:'어린이보험',   rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%'},
-      ]},
-      // 손해보험
-      {cat:'손해보험', items:[
-        {name:'실손의료비',   rate1:0.25, rate2:0.05, rateMaint:0.01, label:'초회25% (저수수료)'},
-        {name:'자동차보험',   rate1:0.12, rate2:0,    rateMaint:0,    label:'초회12% (단기)'},
-        {name:'운전자보험',   rate1:0.45, rate2:0.06, rateMaint:0.015,label:'초회45%'},
-        {name:'화재보험',     rate1:0.20, rate2:0.03, rateMaint:0.01, label:'초회20%'},
-        {name:'여행자보험',   rate1:0.15, rate2:0,    rateMaint:0,    label:'단기'},
-      ]},
-      // 연금/저축
-      {cat:'연금·저축', items:[
-        {name:'연금보험',     rate1:0.50, rate2:0.07, rateMaint:0.015,label:'초회50%'},
-        {name:'저축보험',     rate1:0.30, rate2:0.05, rateMaint:0.01, label:'초회30%'},
-        {name:'변액보험',     rate1:0.60, rate2:0.08, rateMaint:0.02, label:'초회60%'},
-      ]},
-    ],
-    // 시책/인센티브 구조
-    incentives: [
-      {name:'우수설계사시책',   type:'monthly', label:'월 실적 기준 추가지급'},
-      {name:'계약유지보너스',   type:'contract',label:'13회차 유지 시 추가'},
-      {name:'환수',             type:'minus',   label:'13회차 이내 해지 시 환수'},
-      {name:'교육수당',         type:'fixed',   label:'월 정액'},
-      {name:'법인활동비',       type:'fixed',   label:'GA 법인 활동비'},
-    ],
-    deductions: {
-      tax33Rate: 0.033,   // 3.3% 사업소득세
-      empInsRate: 0.009,  // 고용보험 (위촉이면 해당X, 고용이면 적용)
-    }
-  },
-
-  // ━━ 🎓 학원·교육 ━━
-  care: {
-    serviceTypes: [
-      {name:'방문요양 30분', unit:'회', rate2026:8680,  careWorkerRate:0.75},
-      {name:'방문요양 60분', unit:'회', rate2026:16190, careWorkerRate:0.75},
-      {name:'방문요양 90분', unit:'회', rate2026:22760, careWorkerRate:0.75},
-      {name:'방문요양 120분',unit:'회', rate2026:28160, careWorkerRate:0.75},
-      {name:'방문요양 150분',unit:'회', rate2026:33260, careWorkerRate:0.75},
-      {name:'방문요양 180분',unit:'회', rate2026:38260, careWorkerRate:0.75},
-      {name:'방문목욕 방문목욕',unit:'회',rate2026:86020, careWorkerRate:0.75},
-      {name:'주야간보호 8시간',unit:'일', rate2026:68360, careWorkerRate:0.75},
-      {name:'단기보호 1일',    unit:'일', rate2026:68530, careWorkerRate:0.75},
-    ],
-    // 처우개선비 (2026년 기준)
-    welfareImprovements: [
-      {name:'처우개선비A',      amount:65000,  label:'방문요양 월정액'},
-      {name:'처우개선비B',      amount:45000,  label:'방문목욕 월정액'},
-      {name:'장기근속장려금',   amount:70000,  label:'5년이상 근속'},
-      {name:'명절수당',         amount:100000, label:'설·추석'},
-    ],
-    deductions: {
-      empInsRate: 0.009,   // 고용보험
-      healthInsRate: 0.035, // 건강보험 (월급제)
-      nationPensionRate: 0.045, // 국민연금
-    }
-  },
-
-  // ━━ 🎓 학원·교육 강사 ━━
-  academy: {
-    subjects: [
-      {cat:'입시·보습', items:[
-        {name:'수학',     avgPerStudent:120000, lectureFeeRate:0.50},
-        {name:'영어',     avgPerStudent:130000, lectureFeeRate:0.50},
-        {name:'국어',     avgPerStudent:100000, lectureFeeRate:0.48},
-        {name:'과학',     avgPerStudent:110000, lectureFeeRate:0.48},
-        {name:'사회',     avgPerStudent:90000,  lectureFeeRate:0.45},
-      ]},
-      {cat:'예체능', items:[
-        {name:'피아노',   avgPerStudent:150000, lectureFeeRate:0.55},
-        {name:'미술',     avgPerStudent:120000, lectureFeeRate:0.55},
-        {name:'태권도',   avgPerStudent:80000,  lectureFeeRate:0.60},
-        {name:'수영',     avgPerStudent:120000, lectureFeeRate:0.45},
-        {name:'발레',     avgPerStudent:130000, lectureFeeRate:0.55},
-      ]},
-      {cat:'어학', items:[
-        {name:'영어회화', avgPerStudent:150000, lectureFeeRate:0.50},
-        {name:'중국어',   avgPerStudent:140000, lectureFeeRate:0.50},
-        {name:'일본어',   avgPerStudent:130000, lectureFeeRate:0.50},
-        {name:'한국어',   avgPerStudent:120000, lectureFeeRate:0.48},
-      ]},
-      {cat:'코딩·IT', items:[
-        {name:'코딩(초중)',avgPerStudent:180000, lectureFeeRate:0.55},
-        {name:'로봇과학', avgPerStudent:200000, lectureFeeRate:0.55},
-        {name:'컴퓨터',   avgPerStudent:100000, lectureFeeRate:0.50},
-      ]},
-    ],
-    // 강사 정산 항목
-    settleItems: [
-      {name:'수강료수입',    calc:'students × perStudentFee × lectureRate'},
-      {name:'교재비수입',    calc:'students × textbookFee × textbookRate'},
-      {name:'특강수당',      calc:'별도 지급'},
-      {name:'시험감독수당',  calc:'회당 지급'},
-      {name:'교재비차감',    calc:'강사 부담분'},
-    ],
-    deductions: {
-      tax33Rate: 0.033,
-      empInsRate: 0.009,
-    }
-  },
-
-  // ━━ 📦 물류창고 ━━
-  warehouse: {
-    shiftTypes: [
-      {name:'주간(09-18)', baseHourlyRate:10030, nightBonus:0},
-      {name:'오후(14-23)', baseHourlyRate:10030, nightBonus:0.25},
-      {name:'야간(22-07)', baseHourlyRate:10030, nightBonus:0.50},
-      {name:'주말특근',    baseHourlyRate:10030, nightBonus:0.50},
-    ],
-    allowances: [
-      {name:'생산장려금',  calc:'건당 단가 × 건수'},
-      {name:'정근수당',    calc:'개근 시 월정액'},
-      {name:'식대',        amount:200000, taxFree:true},
-      {name:'교통비',      amount:100000, taxFree:true},
-    ],
-    deductions: {
-      empInsRate: 0.009,
-      healthInsRate: 0.035,
-      nationPensionRate: 0.045,
-    }
-  },
-
   // ━━ 🎪 행사·이벤트 ━━
   event: {
     roles: [
@@ -3338,38 +3109,6 @@ var IND_DB = {
     deductions: {
       tax33Rate: 0.033,  // 프리랜서
       empInsRate: 0.009, // 일용직
-    }
-  },
-
-  // ━━ 🏗️ 건설·일용직 ━━
-  construction: {
-    // 2025년 상반기 노임단가 (대한건설협회)
-    trades: [
-      {name:'특별인부',    dailyRate:165000},
-      {name:'보통인부',    dailyRate:152000},
-      {name:'형틀목수',    dailyRate:248000},
-      {name:'철근공',      dailyRate:230000},
-      {name:'콘크리트공',  dailyRate:220000},
-      {name:'미장공',      dailyRate:220000},
-      {name:'타일공',      dailyRate:235000},
-      {name:'도배공',      dailyRate:195000},
-      {name:'도장공',      dailyRate:200000},
-      {name:'전기공',      dailyRate:230000},
-      {name:'배관공',      dailyRate:225000},
-      {name:'용접공',      dailyRate:248000},
-      {name:'비계공',      dailyRate:235000},
-      {name:'방수공',      dailyRate:220000},
-      {name:'석공',        dailyRate:240000},
-    ],
-    allowances: [
-      {name:'위험수당',   type:'per_day', amount:20000},
-      {name:'고소작업',   type:'per_day', amount:30000},
-      {name:'식대',       amount:13000, taxFree:true},
-      {name:'원거리수당', type:'per_day', amount:15000},
-    ],
-    deductions: {
-      empInsRate: 0.009,   // 고용보험
-      workInsRate: 0.0088, // 산재보험
     }
   },
 
@@ -3490,47 +3229,6 @@ function _indQuickMenuHTML(industryType, onSelectFn){
   return html;
 }
 
-// 보험 상품별 수수료 계산
-function _calcInsuranceComm(productName, monthlyPremium, isFirstYear, maintMonths){
-  var db=IND_DB.insurance;
-  var found=null;
-  (db.products||[]).forEach(function(cat){
-    (cat.items||[]).forEach(function(p){
-      if(p.name===productName)found=p;
-    });
-  });
-  if(!found)return {comm:0,tax33:0,net:0};
-  var rate=isFirstYear?found.rate1:(maintMonths>12?found.rateMaint:found.rate2);
-  var comm=Math.round(monthlyPremium*rate);
-  var tax33=Math.round(comm*0.033);
-  return {comm:comm,tax33:tax33,net:comm-tax33};
-}
-
-// 요양 수가 계산 (2026년 기준)
-function _calcCareServiceFee(serviceType, count){
-  var db=IND_DB.care;
-  var found=(db.serviceTypes||[]).find(function(s){return s.name===serviceType;});
-  if(!found)return 0;
-  return Math.round(found.rate2026*count*found.careWorkerRate);
-}
-
-// 학원 강사 정산 계산
-function _calcAcademyFee(subject, students, perStudentFee, textbookFee){
-  var db=IND_DB.academy;
-  var found=null;
-  (db.subjects||[]).forEach(function(cat){
-    (cat.items||[]).forEach(function(s){
-      if(s.name===subject)found=s;
-    });
-  });
-  var rate=found?found.lectureFeeRate:0.50;
-  var fee=Math.round(students*perStudentFee*rate);
-  var textbook=textbookFee?Math.round(students*textbookFee*0.30):0;
-  return {fee:fee,textbook:textbook,total:fee+textbook};
-}
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 💳 DONWAY 요금제 정의
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -3592,8 +3290,7 @@ var PLAN_DEF = {
     pricePerPerson:9000, maxPerson:20,
     features:{
       settleLimit:999,
-      industries:['ai_settle','delivery','construction','insurance','beauty',
-                  'care','academy','warehouse','event','sales'],
+      industries:['ai_settle','delivery','event','sales'],
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
@@ -3762,13 +3459,7 @@ function pageSubscription(){
   var el=document.getElementById('content');
   // 업종별 용어 적용
   var indKey='universal';
-  if(p.indexOf('beauty')>=0)     indKey='beauty';
   else if(p.indexOf('delivery')>=0) indKey='delivery';
-  else if(p.indexOf('construct')>=0) indKey='construction';
-  else if(p.indexOf('insur')>=0) indKey='insurance';
-  else if(p.indexOf('care')>=0&&p.indexOf('career')<0) indKey='care';
-  else if(p.indexOf('academy')>=0) indKey='academy';
-  else if(p.indexOf('warehouse')>=0) indKey='warehouse';
   else if(p.indexOf('event')>=0) indKey='event';
   else if(p.indexOf('golf')>=0)  indKey='golf';
   else if(p.indexOf('facility')>=0) indKey='facility';
@@ -4365,21 +4056,6 @@ function _parseUniversalExcel(file, month, industryType, title){
 }
 
 
-// 뷰티 슬라이딩 요율 계산
-function _getBeautyRate(sales, rule){
-  var scale = rule.slidingScale||[
-    {min:0,max:5000000,rate:35},
-    {min:5000001,max:10000000,rate:40},
-    {min:10000001,max:999999999,rate:45}
-  ];
-  for(var i=0;i<scale.length;i++){
-    if(sales>=scale[i].min&&sales<=scale[i].max) return scale[i].rate/100;
-  }
-  return scale[scale.length-1].rate/100;
-}
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🍽️ 음식점·카페 파서 (주휴수당 자동)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -4390,20 +4066,11 @@ function _getBeautyRate(sales, rule){
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📦 물류창고 파서 (화주사별, 파레트)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 🎪 행사·이벤트 파서 (직무별, 실비합산)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎓 학원·교육 파서 (일할계산, 교재비 제외)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-
 function _autoRegisterCleanWorkers(results){
   var did=_CU.dealerId||_CU.uid;
   if(!did||!results||!results.length) return;
@@ -6889,13 +6556,7 @@ function showApp(){
       'universal':   function(f,m){_parseUniversalExcel(f,m,'universal','📋 범용 정산');},
       'coworking':   function(f,m){_parseUniversalExcel(f,m,'coworking','🏢 공유오피스');},
       'creator':     function(f,m){_parseUniversalExcel(f,m,'creator','🎬 크리에이터');},
-      'construction': _parseConstructionExcel,
-      'insurance':    _parseInsuranceExcel,
       'quick':        _parseQuickExcel,
-      'beauty':       _parseBeautyExcel,
-      'care':         _parseCareExcel,
-      'academy':      _parseAcademyExcel,
-      'warehouse':    _parseWarehouseExcel,
       'event':        _parseEventExcel,
       'sales':        _parseSalesExcel,
       'freelance':    _parseFreelanceExcel,
@@ -12895,14 +12556,10 @@ function _renderUniversalRules(c, r, industry){
 
   // 업종별 안내 배너
   var industryLabels={
-    beauty:'💇 뷰티·미용',cleaning:'🧹 청소·파견',
-    insurance:'🛡️ 보험설계사',construction:'🏗️ 건설·일용직',quick:'🚗 퀵·대리운전'
+    cleaning:'🧹 청소·파견',quick:'🚗 퀵·대리운전'
   };
   var industryHints={
-    beauty:'시술 단가표와 수수료율을 설정하세요. 엑셀 컬럼명 = 시술명으로 자동 계산됩니다.',
     cleaning:'현장별 시급/일당을 단가표에 등록하세요. 연장·야간수당은 자동 계산됩니다.',
-    insurance:'팀장 수수료 설정 시 팀원 실적에서 자동 배분됩니다.',
-    construction:'현장별 일당을 단가표에 등록하세요. 주민번호 원천징수 신고에 활용됩니다.',
     quick:'기사별 콜단가와 팀장 수수료를 설정하세요.'
   };
 
@@ -18110,8 +17767,8 @@ function _applyIndustryTerms(industry) {
   }
   window._currentIndustry = industry;
   var badge = document.getElementById('dash-industry-badge');
-  var EMOJIS = {food:'🍽️',beauty:'💇',health:'💪',academy:'📚',laundry:'👕',stay:'🏨',retail:'🛍️',delivery:'🚚',const:'🏗️',insurance:'🛡️',care:'💊'};
-  var NAMES = {food:'음식점·카페',beauty:'미용실·네일',health:'헬스·요가',academy:'학원·교습',laundry:'세탁·수선',stay:'숙박·펜션',retail:'소매·잡화',delivery:'배달·물류',const:'건설·일용직',insurance:'보험·영업',care:'요양·돌봄'};
+  var EMOJIS = {food:'🍽️',health:'💪',laundry:'👕',stay:'🏨',retail:'🛍️',delivery:'🚚'};
+  var NAMES = {food:'음식점·카페',health:'헬스·요가',laundry:'세탁·수선',stay:'숙박·펜션',retail:'소매·잡화',delivery:'배달·물류'};
   if(badge) badge.innerHTML = '<span style="background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;font-size:10px">'+(EMOJIS[industry]||'🏢')+' '+(NAMES[industry]||industry)+'</span>';
 }
 
@@ -21653,13 +21310,7 @@ function _filterMenusByServices(menus){
     inventory:['inventory','free'],
     qr:['qr','qr_payroll','any_paid','free'],
     payroll:['payroll','qr_payroll','any_paid','free'],
-    ind_construction:['ind_construction','any_paid','free'],
-    ind_insurance:['ind_insurance','any_paid','free'],
     ind_quick:['ind_quick','any_paid','free'],
-    ind_beauty:['ind_beauty','any_paid','free'],
-    ind_care:['ind_care','any_paid','free'],
-    ind_academy:['ind_academy','any_paid','free'],
-    ind_warehouse:['ind_warehouse','any_paid','free'],
     ind_event:['ind_event','any_paid','free'],
     ind_sales:['ind_sales','any_paid','free'],
     ind_freelance:['ind_freelance','any_paid','free'],
@@ -21745,54 +21396,17 @@ var MENUS_SETTLE = [
     {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'},
   ]},
   {s:'🏗️ 건설·일용직', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_construction_settle',    plan_key:'ind_construction'},
-    {ic:'📋',l:'정산 관리',       p:'ind_construction_list',      plan_key:'ind_construction'},
-    {ic:'👤',l:'직원 관리',       p:'ind_construction_workers',   plan_key:'ind_construction'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_construction'},
-    {ic:'📋',l:'📋 출역일지',  p:'ind_construction_roster',  plan_key:'ind_construction'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_construction'},
   ]},
   {s:'🛡️ 보험설계사', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_insurance_settle',    plan_key:'ind_insurance'},
-    {ic:'📋',l:'정산 관리',       p:'ind_insurance_list',      plan_key:'ind_insurance'},
-    {ic:'👤',l:'직원 관리',       p:'ind_insurance_workers',   plan_key:'ind_insurance'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_insurance'},
-    {ic:'📋',l:'📋 실적표',  p:'ind_insurance_roster',  plan_key:'ind_insurance'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_insurance'},
   ]},
   
   {s:'💄 뷰티·미용', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_beauty_settle',    plan_key:'ind_beauty'},
-    {ic:'📋',l:'정산 관리',       p:'ind_beauty_list',      plan_key:'ind_beauty'},
-    {ic:'💆',l:'시술 입력',       p:'beauty_kiosk',         plan_key:'ind_beauty'},
-    {ic:'👤',l:'직원 관리',       p:'ind_beauty_workers',   plan_key:'ind_beauty'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_beauty'},
-    {ic:'📋',l:'📋 시술 매출표',  p:'ind_beauty_roster',   plan_key:'ind_beauty'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_beauty'},
   ]},
   {s:'🏥 요양·돌봄', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_care_settle',    plan_key:'ind_care'},
-    {ic:'📋',l:'정산 관리',       p:'ind_care_list',      plan_key:'ind_care'},
-    {ic:'👤',l:'직원 관리',       p:'ind_care_workers',   plan_key:'ind_care'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_care'},
-    {ic:'📋',l:'📋 방문 일지',  p:'ind_care_roster',  plan_key:'ind_care'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_care'},
   ]},
   {s:'🎓 학원·교육', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_academy_settle',    plan_key:'ind_academy'},
-    {ic:'📋',l:'정산 관리',       p:'ind_academy_list',      plan_key:'ind_academy'},
-    {ic:'👤',l:'직원 관리',       p:'ind_academy_workers',   plan_key:'ind_academy'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_academy'},
-    {ic:'📋',l:'📋 강의 스케줄',  p:'ind_academy_roster',  plan_key:'ind_academy'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_academy'},
   ]},
   {s:'📦 물류창고', items:[
-    {ic:'📊',l:'정산 현황',       p:'ind_warehouse_settle',    plan_key:'ind_warehouse'},
-    {ic:'📋',l:'정산 관리',       p:'ind_warehouse_list',      plan_key:'ind_warehouse'},
-    {ic:'👤',l:'직원 관리',       p:'ind_warehouse_workers',   plan_key:'ind_warehouse'},
-    {ic:'💸',l:'송금',            p:'payout',              plan_key:'ind_warehouse'},
-    {ic:'📋',l:'📋 작업 실적표',  p:'ind_warehouse_roster',  plan_key:'ind_warehouse'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',           plan_key:'ind_warehouse'},
   ]},
   {s:'🎪 행사·이벤트', items:[
     {ic:'📊',l:'정산 현황',       p:'ind_event_settle',    plan_key:'ind_event'},
@@ -34884,15 +34498,10 @@ function _hasPlan(d,planKey){
   // 업종별 AI정산
   if(planKey==='courier')      return active('settle')||active('full');
   if(planKey==='cleaning')     return active('cleaning')||active('settle')||active('full');
-  if(planKey==='insurance')    return active('ind_insurance')||active('full');
-  if(planKey==='construction') return active('ind_construction')||active('full');
   if(planKey==='golf')         return active('ind_golf')||active('full');
-  if(planKey==='academy')      return active('ind_academy')||active('full');
-  if(planKey==='beauty')       return active('ind_beauty')||active('full');
   if(planKey==='logistics')    return active('ind_logistics')||active('full');
   if(planKey==='wholesale')    return active('ind_wholesale')||active('full');
   if(planKey==='freelance')    return active('ind_freelance')||active('full');
-  if(planKey==='care')         return active('ind_care')||active('full');
   if(planKey==='restaurant')   return active('ind_restaurant')||active('full');
   // FILO
   if(planKey==='inventory')    return active('inventory')||active('full');
@@ -34905,9 +34514,7 @@ function _hasPlan(d,planKey){
 // 공통: 직원관리, 세무사연동, 달력, 알림톡명세서, 사내공지, 고객공지
 function _hasCommon(d){
   if(isSuperAdmin()) return true;
-  var keys=['settle','delivery','qr','payroll','cleaning','ind_insurance','ind_construction',
-    'ind_golf','ind_academy','ind_beauty','ind_logistics','ind_wholesale','ind_freelance',
-    'ind_care','ind_restaurant','inventory','kiosk','universal','full'];
+  var keys=['settle','delivery','qr','payroll','cleaning','ind_golf','ind_logistics','ind_wholesale','ind_freelance','ind_restaurant','inventory','kiosk','universal','full'];
   var subs=(d&&d.subscriptions)||{};
   var today=new Date().toISOString().slice(0,10);
   return keys.some(function(k){
@@ -35045,7 +34652,6 @@ function _buildNavRender(nav,cur,companyDoc){
     if(plan_key==='ind_logistics') return _hasIndPlan(d,'ind_logistics')||hasPremium;
     if(plan_key==='ind_wholesale') return _hasIndPlan(d,'ind_wholesale')||hasPremium;
     if(plan_key==='ind_freelance') return _hasIndPlan(d,'ind_freelance')||hasPremium;
-    if(plan_key==='ind_care')    return _hasIndPlan(d,'ind_care')||hasPremium;
     if(plan_key==='ind_restaurant') return _hasIndPlan(d,'ind_restaurant')||hasPremium;
     // 업종별 정산 — companies.services 배열에 해당 plan_key 있으면 허용
     if(plan_key==='cleaning')    return isSuperAdmin()||!!(d.cleaningPaid||d.settlePaid);
@@ -35795,14 +35401,9 @@ function _loadFeaturePanel(container){
       {id:'settle',    label:'📦 AI정산',        color:'#0891b2',  fields:['settlePaid']},
       {id:'delivery',  label:'🛵 배달대행',       color:'#dc2626',  fields:['deliveryPaid']},
       {id:'cleaning',  label:'🧹 청소·파견',      color:'#10b981',  fields:['cleaningPaid']},
-      {id:'insurance', label:'🛡️ 보험GA',        color:'#f59e0b',  fields:['insurancePaid']},
-      {id:'construction',label:'🏗️ 건설·일용직', color:'#ef4444',  fields:['constructionPaid']},
       {id:'golf',      label:'⛳ 골프캐디',       color:'#22c55e',  fields:['golfPaid']},
-      {id:'academy',   label:'📚 학원·교육',      color:'#a78bfa',  fields:['academyPaid']},
-      {id:'beauty',    label:'💇 미용·뷰티',      color:'#f472b6',  fields:['beautyPaid']},
       {id:'logistics', label:'🚛 물류·운송',      color:'#0891b2',  fields:['logisticsPaid']},
       {id:'freelance', label:'💼 프리랜서',        color:'#8b5cf6',  fields:['freelancePaid']},
-      {id:'care',      label:'🏥 요양·돌봄',      color:'#06b6d4',  fields:['carePaid']},
       {id:'restaurant',label:'🍽️ 식당·프랜차이즈',color:'#f59e0b', fields:['restaurantPaid']},
       {id:'universal', label:'📋 범용정산',        color:'#7c3aed',  fields:['universalPaid']},
       {id:'qr_payroll',label:'🔐 QR+급여',        color:'#0066ff',  fields:['qrPaid']},
@@ -35863,14 +35464,9 @@ function _toggleBundle(companyId, bundleId, value){
     settle:    ['settlePaid','contractPaid','rosterPaid'],
     delivery:  ['deliveryPaid','contractPaid','rosterPaid'],
     cleaning:  ['cleaningPaid','settlePaid','contractPaid','rosterPaid'],
-    insurance: ['insurancePaid','settlePaid','contractPaid'],
-    construction:['constructionPaid','settlePaid','contractPaid','rosterPaid'],
     golf:      ['golfPaid','settlePaid','contractPaid','rosterPaid'],
-    academy:   ['academyPaid','settlePaid','contractPaid'],
-    beauty:    ['beautyPaid','settlePaid','contractPaid','rosterPaid'],
     logistics: ['logisticsPaid','settlePaid','contractPaid','rosterPaid'],
     freelance: ['freelancePaid','settlePaid','contractPaid'],
-    care:      ['carePaid','settlePaid','contractPaid','rosterPaid'],
     restaurant:['restaurantPaid','settlePaid','qrPaid','payrollPaid','rosterPaid'],
     universal: ['universalPaid','contractPaid'],
     qr_payroll:['qrPaid','payrollPaid'],
@@ -39144,18 +38740,10 @@ function _renderRuleCard(t,rule){
   var hasRule=Object.keys(rule).length>0;
   var summaryHtml='';
 
-  if(t.key==='beauty'&&rule.slidingScale){
-    summaryHtml=rule.slidingScale.map(function(s){
-      return '<span style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:9px;margin-right:4px">'+s.label+' '+s.rate+'%</span>';
-    }).join('');
-  } else if(t.key==='quick'){
+  if(t.key==='quick'){
     summaryHtml='<span style="font-size:10px;color:var(--text3)">콜단가: '+(rule.baseRatePerCall||3500).toLocaleString()+'원 · 야간: '+(rule.nightSurchargeRate||20)+'% · 장비비: '+(rule.dailyEquipFee||1000).toLocaleString()+'원/일</span>';
-  } else if(t.key==='construction'){
-    summaryHtml='<span style="font-size:10px;color:var(--text3)">4대보험: '+( rule.threshold4ins||8)+'일+ · 비과세: '+(rule.taxFreeDaily||100000).toLocaleString()+'원</span>';
   } else if(t.key==='restaurant'){
     summaryHtml='<span style="font-size:10px;color:var(--text3)">최저시급: '+(rule.minWage||10030).toLocaleString()+'원 · 주휴: '+(rule.weeklyHourThreshold||15)+'h+</span>';
-  } else if(t.key==='insurance'){
-    summaryHtml='<span style="font-size:10px;color:var(--text3)">1200%룰 · 담보금: '+(rule.clawbackReserve||10)+'%</span>';
   } else if(t.key==='sales'&&rule.slidingScale){
     summaryHtml=rule.slidingScale.map(function(s){
       return '<span style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:9px;margin-right:4px">'+s.label+' '+s.rate+'%</span>';
