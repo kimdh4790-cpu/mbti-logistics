@@ -36,3 +36,10 @@
 - 새 파일 생성 시 deploy.yml KV 목록 반드시 추가
 - 세션 하나 = 파일 하나 원칙
 - Playwright 실사 테스트 후 통과/실패 표 보고
+
+## yongcha.app 배포 원칙
+- yongcha.app은 KV가 아닌 _worker.js 안의 handleYongcha 함수로 서빙됨
+- yongcha.html KV 업로드 금지 (반영 안 됨)
+- yongcha-worker.js 수정 시 반드시 _worker.js handleYongcha에도 동기화
+- 배포 명령: git pull origin main && npx wrangler deploy
+- KV put yongcha.html 명령어는 효과 없음 — 절대 사용 금지
