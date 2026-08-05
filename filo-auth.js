@@ -543,6 +543,8 @@ function _filoGoPage(p){
  else if(p==='settings') _filoPageSettings(el);
  else if(p==='subscription') _filoPageSubscription(el);
  else if(p==='cost_mgmt') _filoPageCostMgmt(el);
+ else if(p==='sales') _filoPageSales(el);
+ else if(p==='margin') _filoPageMargin(el);
  else _routed=false;
 
  /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @module      filo-margin.js
  * ══════════════════════════════════════════════════════
  * 역할: 마진 분석 · AI 인사이트 · 실시간 대시보드
@@ -7,7 +7,7 @@
  *   filo_sales     — 매출 집계 소스
  *   filo_inventory — 원가 데이터
  * 의존: filo-common.js
- * ⚠️ 2026-07-15: filo-report.js와 중복 정리 완료 (이 파일이 원본)
+ * [경고] 2026-07-15: filo-report.js와 중복 정리 완료 (이 파일이 원본)
  * ══════════════════════════════════════════════════════
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
@@ -33,11 +33,11 @@ function _filoGenerateAIInsight(did){
   var topItem=Object.entries(items).sort(function(a,b){return b[1]-a[1];})[0];
   var avgOrder=cnt?Math.round(total/cnt):0;
   var insights=[
-   peakH?'⏰ <strong>'+peakH[0]+'시</strong>가 가장 바쁜 시간대입니다. 이 시간 직원 배치를 늘려보세요.':'',
-   topItem?'🏆 이번달 최고 인기 메뉴는 <strong>'+topItem[0]+'</strong> ('+topItem[1]+'개)입니다.':'',
-   avgOrder?'💰 평균 객단가는 <strong>₩'+avgOrder.toLocaleString()+'</strong>입니다. '+
+   peakH?'<strong>'+peakH[0]+'시</strong>가 가장 바쁜 시간대입니다. 이 시간 직원 배치를 늘려보세요.':'',
+   topItem?'이번달 최고 인기 메뉴는 <strong>'+topItem[0]+'</strong> ('+topItem[1]+'개)입니다.':'',
+   avgOrder?' 평균 객단가는 <strong>₩'+avgOrder.toLocaleString()+'</strong>입니다. '+
     (avgOrder<5000?'사이드 메뉴 추천으로 객단가를 올려보세요.':'객단가가 양호합니다.'):'',
-   cnt?'📊 이번달 총 <strong>'+cnt+'건</strong> 주문 · 총 매출 <strong>₩'+total.toLocaleString()+'</strong>':'',
+   cnt?'이번달 총 <strong>'+cnt+'건</strong> 주문 · 총 매출 <strong>₩'+total.toLocaleString()+'</strong>':'',
   ].filter(Boolean);
   el.innerHTML='<div style="display:flex;flex-direction:column;gap:10px">'+
    insights.map(function(ins){
@@ -190,13 +190,13 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   /* 인기 메뉴 TOP5 */
   var menuEntries=Object.entries(menuStats).sort(function(a,b){return b[1].qty-a[1].qty;}).slice(0,5);
   /* 결제수단별 카드 */
-  var payIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','삼성페이':'📱','기타':'💰'};
+  var payIcons={'카드':'💳','현금':'💵','카카오페이':'','네이버페이':'','카운터결제':'','삼성페이':'📱','기타':''};
   var paySorted=Object.entries(payStats).sort(function(a,b){return b[1]-a[1];});
   var payHtml=paySorted.length?
-  '<div style="margin-top:14px"><div class="sec-title">💳 결제수단별 매출</div>'+
+  '<div style="margin-top:14px"><div class="sec-title">결제수단별 매출</div>'+
   paySorted.map(function(m){
    var pct=totalRev>0?Math.round(m[1]/totalRev*100):0;
-   var ic=payIcons[m[0]]||'💰';
+   var ic=payIcons[m[0]]||'';
    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
     '<span style="font-size:16px">'+ic+'</span>'+
     '<div style="flex:1">'+
@@ -215,9 +215,9 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var topMenu=menuEntries.length?
   '<div style="margin-top:14px">'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-  '<div><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div>'+
+  '<div><div class="sec-title" style="margin-bottom:10px">인기 메뉴 TOP5</div>'+
   menuEntries.map(function(kv,i){
-   var rank=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
+   var rank=['1위','2위','3위','4위','5위'][i];
    var pct=totalRev>0?Math.round(kv[1].rev/totalRev*100):0;
    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
     '<span style="font-size:15px">'+rank+'</span>'+
@@ -231,7 +231,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
     '</div></div></div>';
   }).join('')+
   '</div>'+
-  '<div><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div>'+
+  '<div><div class="sec-title" style="margin-bottom:10px">결제수단 비중</div>'+
   '<div style="position:relative;height:130px"><canvas id="pay-donut-canvas"></canvas></div>'+
   '</div>'+
   '</div>'+
@@ -242,7 +242,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var hourEntries=Object.keys(hourStats).map(Number).sort(function(a,b){return a-b;});
   var maxHour=hourEntries.length?Math.max.apply(null,hourEntries.map(function(h){return hourStats[h];})):1;
   var hourChart=hourEntries.length?
-  '<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div>'+
+  '<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">시간대별 매출</div>'+
   '<div style="position:relative;height:160px"><canvas id="hour-chart-canvas"></canvas></div>'+
   '</div>'
   :'';
@@ -312,7 +312,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
 function _filoRenderMarginAnalysis(did,ym){
  var content=document.getElementById('mg-content');
  if(!content)return;
- content.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"><div style="font-size:28px;margin-bottom:8px">⏳</div>분석 중...</div>';
+ content.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"><div style="font-size:28px;margin-bottom:8px"></div>분석 중...</div>';
  var start=ym+'-01',end=ym+'-31';
  Promise.all([
   _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
@@ -420,7 +420,7 @@ function _filoRenderMarginAnalysis(did,ym){
 
   /* 인건비 vs 매출 비율 */
   html+='<div class="card">'+
-  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📊 원가 구조 분석</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">원가 구조 분석</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'+
   [
    {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
@@ -457,11 +457,11 @@ function _filoRenderInsights(did,ym){
   var costMap={};res[2].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
   var margin=rev>0?Math.round((rev-cost)/rev*100):0;
   var insights=[];
-  if(margin<40)insights.push({icon:'🚨',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
+  if(margin<40)insights.push({icon:'[!]',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
   else if(margin>=60)insights.push({icon:'↑',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
-  if(posRev>0&&rev===0)insights.push({icon:'💡',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
-  if(Object.keys(costMap).length===0)insights.push({icon:'⚙️',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(124,58,237,.08)',border:'rgba(124,58,237,.25)'});
-  if(!insights.length)insights.push({icon:'🎯',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
+  if(posRev>0&&rev===0)insights.push({icon:'[i]',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
+  if(Object.keys(costMap).length===0)insights.push({icon:'[설정]',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(124,58,237,.08)',border:'rgba(124,58,237,.25)'});
+  if(!insights.length)insights.push({icon:'[목표]',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
   content.innerHTML='<div style="max-width:700px">'+
   insights.map(function(ins){
    return '<div class="insight-card" style="background:'+ins.color+';border-color:'+ins.border+'">'+
@@ -530,7 +530,7 @@ function _aiErr(el, msg, retryFn) {
   if (!el) return;
   el.innerHTML =
     '<div class="ai-empty">' +
-    '<div style="font-size:26px;margin-bottom:8px">⚠️</div>' +
+    '<div style="font-size:26px;margin-bottom:8px">[경고]</div>' +
     '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(msg) + '</div>' +
     (retryFn ? '<button class="ai-chip" style="margin-top:12px" onclick="' + retryFn + '">다시 시도</button>' : '') +
     '</div>';
@@ -736,7 +736,7 @@ function _filoAiMenuRec() {
 
         /* 재고 부족 경고 */
         (r.lowStock && r.lowStock.length
-          ? '<div class="ai-warn"><strong>⚠️ 재고 부족으로 제외</strong>' +
+          ? '<div class="ai-warn"><strong>[경고] 재고 부족으로 제외</strong>' +
             r.lowStock.map(function (m) { return '<span class="ai-warn-chip">' + _aiEsc(m.name) + ' · ' + _aiEsc(m.stockNote) + '</span>'; }).join('') +
             '</div>'
           : '') +
@@ -1094,3 +1094,75 @@ window._aiVoiceStart       = _aiVoiceStart;
 window._aiVoiceToCart      = _aiVoiceToCart;
 window._aiChatSend         = _aiChatSend;
 window._aiFlushPendingCart = _aiFlushPendingCart;
+
+/* ══════════════════════════════════════════════════════
+ * AIVO 마진 분석 페이지 — 프리미엄 대시보드
+ * ══════════════════════════════════════════════════════ */
+function _filoPageMargin(el){
+ if(!el)el=document.getElementById('content');
+ if(!el)return;
+ var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
+ if(!did){el.innerHTML='<div style="text-align:center;padding:60px;color:#94A3B8">로그인 후 이용하세요</div>';return;}
+ var now=new Date();
+ var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0':'')+(now.getMonth()+1);
+
+ var kpiDefs=[
+  {id:'kpi-revenue',label:'이번달 매출',color:'#6366f1',
+   ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
+  {id:'kpi-cost',label:'이번달 원가',color:'#f59e0b',
+   ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>'},
+  {id:'kpi-profit',label:'순이익',color:'#10b981',
+   ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'},
+  {id:'kpi-margin',label:'마진율',color:'#0ea5e9',
+   ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>'},
+ ];
+
+ el.innerHTML='<div class="slide-up" style="max-width:1100px;margin:0 auto;padding-bottom:40px">'
+
+  /* ── 헤더 ── */
+  +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
+  +'<div>'
+  +'<div style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.6px;margin-bottom:8px">'
+  +'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>'
+  +'AIVO 마진 분석</div>'
+  +'<div style="font-size:24px;font-weight:900;color:#0F172A;letter-spacing:-1px;line-height:1.1">마진 분석</div>'
+  +'<div id="hero-sub" style="font-size:12px;color:#64748B;margin-top:4px">실시간 연동 중...</div>'
+  +'</div>'
+  +'<input type="month" id="mg-ym" value="'+ym+'" onchange="_filoMgTab(_mgTabIdx)" '
+  +'style="padding:8px 14px;border:1.5px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;font-weight:600;color:#0F172A;background:#fff;cursor:pointer;box-shadow:0 1px 4px rgba(99,102,241,.1)">'
+  +'</div>'
+
+  /* ── 월 KPI 4개 ── */
+  +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">'
+  +kpiDefs.map(function(k){
+   return '<div style="background:#fff;border:1.5px solid rgba(0,0,0,.06);border-radius:16px;padding:16px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);position:relative;overflow:hidden">'
+    +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+k.color+';border-radius:16px 16px 0 0"></div>'
+    +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;color:'+k.color+'">'+k.ic
+    +'<span style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.4px">'+k.label+'</span></div>'
+    +'<div id="'+k.id+'" style="font-size:20px;font-weight:900;color:'+k.color+';letter-spacing:-.5px">-</div>'
+    +'</div>';
+  }).join('')
+  +'</div>'
+
+  /* ── 오늘 실시간 ── */
+  +'<div id="margin-live" style="margin-bottom:14px"></div>'
+
+  /* ── 탭 바 ── */
+  +'<div style="display:flex;gap:0;margin-bottom:14px;border-bottom:1.5px solid rgba(0,0,0,.07)">'
+  +[['마진 분석','mgt-0'],['원가 등록','mgt-1'],['AI 인사이트','mgt-2']].map(function(t,i){
+   var act=i===0;
+   return '<button id="'+t[1]+'" onclick="_filoMgTab('+i+')" '
+    +'style="padding:10px 16px;border:none;border-bottom:'+(act?'2.5px solid #6366f1':'2px solid transparent')+';cursor:pointer;font-size:13px;font-weight:'+(act?'800':'600')+';background:transparent;color:'+(act?'#6366f1':'#94A3B8')+';transition:.15s">'+t[0]+'</button>';
+  }).join('')
+  +'</div>'
+
+  /* ── 탭 콘텐츠 ── */
+  +'<div id="mg-content" style="background:#fff;border:1.5px solid rgba(0,0,0,.06);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);min-height:200px">'
+  +'<div style="text-align:center;padding:30px;color:#94A3B8;font-size:13px">데이터 로딩 중...</div>'
+  +'</div>'
+  +'</div>';
+
+ _filoMarginLoad();
+}
+window._filoPageMargin=_filoPageMargin;
+

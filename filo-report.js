@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @module      filo-report.js
  * ══════════════════════════════════════════════════════
  * 역할: 매출 분석 · POS 리포트 · 차트 · 세무사 공유
@@ -30,14 +30,14 @@ function _filoPageSales(el){
  /* ── 헤더 ── */
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px';
- hdr.innerHTML='<div><div class="page-title">📊 매출·분석</div><div class="page-sub" id="sales-hero-sub">실시간 연동 중...</div></div>';
+ hdr.innerHTML='<div><div class="page-title"> 매출·분석</div><div class="page-sub" id="sales-hero-sub">실시간 연동 중...</div></div>';
 
  /* 날짜 필터 버튼 */
  var filterWrap=document.createElement('div');
  filterWrap.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:8px';
  var btnRow=document.createElement('div');
  btnRow.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
- [['today','오늘'],['week','이번주'],['month','이번달'],['custom','📅 직접선택']].forEach(function(f,i){
+ [['today','오늘'],['week','이번주'],['month','이번달'],['custom','직접선택']].forEach(function(f,i){
   var btn=document.createElement('button');
   btn.id='sf-'+f[0];btn.textContent=f[1];
   btn.style.cssText='padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:'+(i===0?'none;background:var(--br);color:#fff':'1px solid var(--bd2);background:transparent;color:var(--t2)');
@@ -59,10 +59,10 @@ function _filoPageSales(el){
  var kpiGrid=document.createElement('div');
  kpiGrid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px';
  [
-  {id:'kpi-rev',label:'매출',icon:'💰',color:'#a78bfa',sub:'kpi-rev-sub'},
-  {id:'kpi-cnt',label:'주문',icon:'🛒',color:'#38bdf8',sub:'kpi-cnt-sub'},
-  {id:'kpi-avg',label:'객단가',icon:'📈',color:'#22c55e',sub:'kpi-avg-sub'},
-  {id:'kpi-peak',label:'피크타임',icon:'⏰',color:'#f59e0b',sub:'kpi-peak-sub'},
+  {id:'kpi-rev',label:'매출',icon:'▍',color:'#a78bfa',sub:'kpi-rev-sub'},
+  {id:'kpi-cnt',label:'주문',icon:'▍',color:'#38bdf8',sub:'kpi-cnt-sub'},
+  {id:'kpi-avg',label:'객단가',icon:'',color:'#22c55e',sub:'kpi-avg-sub'},
+  {id:'kpi-peak',label:'피크타임',icon:'',color:'#f59e0b',sub:'kpi-peak-sub'},
  ].forEach(function(k){
   var card=document.createElement('div');
   card.className='kpi-card';
@@ -82,14 +82,14 @@ function _filoPageSales(el){
  /* 시간대별 바차트 */
  var hourCard=document.createElement('div');
  hourCard.className='card';
- hourCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">⏰ 시간대별 매출</div>'+
+ hourCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">시간대별 매출</div>'+
   '<div style="position:relative;height:180px"><canvas id="chart-hour"></canvas></div>';
  chartGrid.appendChild(hourCard);
 
  /* 결제수단 도넛 + 금액 */
  var payCard=document.createElement('div');
  payCard.className='card';
- payCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">💳 결제수단</div>'+
+ payCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">결제수단</div>'+
   '<div id="pay-method-list"></div>';
  chartGrid.appendChild(payCard);
  wrap.appendChild(chartGrid);
@@ -101,14 +101,14 @@ function _filoPageSales(el){
  /* 인기메뉴 TOP5 */
  var menuCard=document.createElement('div');
  menuCard.className='card';
- menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">🏆 인기 메뉴 TOP5</div>'+
+ menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">인기 메뉴 TOP5</div>'+
   '<div id="top-menu-list"></div>';
  bottomGrid.appendChild(menuCard);
 
  /* 요일별 매출 */
  var dayCard=document.createElement('div');
  dayCard.className='card';
- dayCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">📅 요일별 매출</div>'+
+ dayCard.innerHTML='<div class="sec-title" style="margin-bottom:12px"> 요일별 매출</div>'+
   '<div style="position:relative;height:160px"><canvas id="chart-day"></canvas></div>';
  bottomGrid.appendChild(dayCard);
 
@@ -123,7 +123,7 @@ function _filoPageSales(el){
  /* ── 원가·마진 분석 탭 ── */
  var tabRow=document.createElement('div');
  tabRow.style.cssText='display:flex;gap:8px;margin-bottom:14px';
- ['📊 마진 분석','🧾 원가 등록','💡 AI 인사이트'].forEach(function(t,i){
+ [' 마진 분석','🧾 원가 등록','💡 AI 인사이트'].forEach(function(t,i){
   var tb=document.createElement('button');
   tb.style.cssText='padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:none;'+(i===0?'background:var(--br);color:#fff':'background:var(--surface2);color:var(--t2)');
   tb.textContent=t;
@@ -493,16 +493,16 @@ function _filoMarginLoadRange(from,to){
 
    var chartHtml='';
    if(hourEntries2.length){
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">⏰ 시간대별 매출</div>'+
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">시간대별 매출</div>'+
      '<div style="position:relative;height:160px"><canvas id="hour-chart-canvas"></canvas></div></div>';
    }
    if(paySorted&&paySorted.length){
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">💳 결제수단 비중</div>'+
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">결제수단 비중</div>'+
      '<div style="position:relative;height:160px"><canvas id="pay-donut-canvas"></canvas></div></div>';
    }
    if(Object.keys(items).length){
     var menuEntries2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">🏆 인기 메뉴 TOP5</div>'+
+    chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">인기 메뉴 TOP5</div>'+
      menuEntries2.map(function(kv,i){
       var rank=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
       var pct=total>0?Math.round(kv[1]/total*100):0;
@@ -876,3 +876,4 @@ function _filoSeedJulyData(){
   _filoToast('7월 테스트 데이터 '+count+'건 생성 완료');
  }).catch(function(e){_filoToast('시딩 오류: '+e.message);});
 }
+
