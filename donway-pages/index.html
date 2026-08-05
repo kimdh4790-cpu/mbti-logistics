@@ -5126,11 +5126,18 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
               }
               // ② 프레시백 — fid dateFresh에서 해당 날짜분만 집계 → tid에게 이전
+              var _freshFromDates = false;
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(!_dateOk(dt)) return;
+                  var ndt = _nd(dt); // 날짜 포맷 정규화 (YYYY-MM-DD 통일)
+                  if(!ndt || !_dateOk(ndt)) return;
                   _totalFresh += (fd.dateFresh[dt]||0);
+                  _freshFromDates = true;
                 });
+              }
+              // fallback: dateFresh 없거나 날짜 매칭 없으면 freshAmt 전체 이전
+              if(!_freshFromDates && fd.freshAmt){
+                _totalFresh += (fd.freshAmt||0);
               }
 
               // 금액 계산
