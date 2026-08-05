@@ -68,3 +68,11 @@
 - dateFresh 없으면 freshAmt 전체를 fallback으로 이전
 - 날짜 불일치로 누락되는 인원 없게 할 것
 - 절대 수정 금지 — 급여 계산 핵심 로직
+
+## DONWAY 아이디지원 핵심 로직
+- 아이디지원 시 fid(지원받는기사)가 배송한 날짜의 프레시백(PJ) 금액만 tid(대신배송기사)에게 이전
+- fid.dateFresh[날짜] → 해당 날짜에 fid가 배송한 경우만 tid로 이전
+- 날짜 포맷 정규화 필수 (YYYY-MM-DD)
+- fallback: dateFresh 없으면 fid.freshAmt 전체 이전
+- 누락 인원 없게: dateFresh 키 순회 시 모든 날짜 처리
+- 관련 코드: settle.html 5128~5135번 라인
