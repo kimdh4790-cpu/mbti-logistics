@@ -3459,7 +3459,7 @@ function pageSubscription(){
   var el=document.getElementById('content');
   // 업종별 용어 적용
   var indKey='universal';
-  else if(p.indexOf('delivery')>=0) indKey='delivery';
+  if(p.indexOf('delivery')>=0) indKey='delivery';
   else if(p.indexOf('event')>=0) indKey='event';
   else if(p.indexOf('golf')>=0)  indKey='golf';
   else if(p.indexOf('facility')>=0) indKey='facility';
