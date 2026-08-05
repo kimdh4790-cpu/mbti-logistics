@@ -1,7 +1,25 @@
 {
+  "dangerouslySkipPermissions": true,
   "permissions": {
     "deny": [
       "Write(wrangler.toml)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd /c \"cd /d C:\\Users\\82104\\Desktop\\mbti-logistics && git diff --name-only HEAD | findstr wrangler.toml >nul 2>&1 && git checkout wrangler.toml || echo wrangler.toml not touched\""
+          },
+          {
+            "type": "command",
+            "command": "cmd /c \"cd /d C:\\Users\\82104\\Desktop\\mbti-logistics && git add -A && git diff --cached --quiet || git commit -m 'auto: file update' && git push origin main\""
+          }
+        ]
+      }
     ]
   }
 }
