@@ -21349,9 +21349,7 @@ function _filterMenusByServices(menus){
 
 var MENUS_DELIVERY = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
@@ -21367,17 +21365,11 @@ var MENUS_DELIVERY = [
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'}
   ]},
-  {s:'📢 공지·알림', items:[
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
-  ]}
 ];
 
 var MENUS_SETTLE = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -21403,9 +21395,7 @@ var MENUS_SETTLE = [
 
 var MENUS_UNIVERSAL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'📋 범용 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'universal_settle', plan_key:'universal'},
@@ -21425,10 +21415,6 @@ var MENUS_UNIVERSAL = [
     {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'universal'},
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
     {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'universal'}
-  ]},
-  {s:'📢 공지·알림', items:[
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'🔔',l:'알림 발송',        p:'notify_history',   plan_key:'free'}
   ]},
   {s:'🛒 쇼핑몰 정산', items:[
     {ic:'🏪',l:'스마트스토어',     p:'shop_smartstore',  plan_key:'shopping'},
@@ -21451,13 +21437,10 @@ var MENUS_QR_PAYROLL = [
     {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'settle'},
     {ic:'📅',l:'달력',p:'schedule',plan_key:'free'}]},
-  {s:'📢 공지', items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
 var MENUS_QR = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🔐 QR 근태관리', items:[
     {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
@@ -21487,9 +21470,7 @@ var MENUS_QR = [
 // ALL-IN-ONE (풀패키지)
 var MENUS_FULL = [
   {s:'🏠 홈', items:[
-    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'},
-    {ic:'📢',l:'공지사항',         p:'notices',          plan_key:'free'},
-    {ic:'💬',l:'1:1 문의',          p:'chat',             plan_key:'free'}
+    {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
   {s:'🤖 AI 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
@@ -21537,8 +21518,7 @@ var MENUS_HOURLY = [
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'delivery'}
   ]},
   {s:'공통', items:[
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'},
-    {ic:'📢',l:'공지',             p:'notices',   plan_key:'free'}
+    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'}
   ]}
 ];
 
@@ -22250,9 +22230,6 @@ var MENUS_MANAGER = [
     {ic:'👤',l:'기사 관리',p:'drivers',plan_key:'settle'},
     {ic:'💸',l:'송금 관리',p:'payout',plan_key:'settle'},
   ]},
-  {s:'📢 공지', items:[
-    {ic:'📢',l:'공지사항',p:'notices',plan_key:'free'},
-  ]},
 ];
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
@@ -22264,7 +22241,6 @@ var MENUS_DRIVER = [
     {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
     {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
   ]},
-  {s:'커뮤니티',items:[{ic:'📢',l:'공지',p:'notices',plan_key:'free'}]}
 ];
 var MENUS = MENUS_SETTLE; // 기본값
 function _copyCompanyCode(el){
