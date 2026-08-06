@@ -141,7 +141,7 @@ function _filoGenQRs(did){
    if(dlBtn)_filoQRSave(dlBtn.dataset.dl,dlBtn.dataset.name);
    if(prBtn)_filoQRPrint(prBtn.dataset.pr,prBtn.dataset.name);
   });
- }).catch(function(e){_filoToast('+e.message);});
+ }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 
 function _filoQRPrint(num,name){
@@ -313,7 +313,7 @@ function _filoShowTableQRModal(did){
      });
     },300);
    });
-  }).catch(function(e){_filoToast('+e.message);});
+  }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 
 function _filoQRPrint1(num,name){

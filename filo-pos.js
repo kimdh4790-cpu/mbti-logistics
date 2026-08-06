@@ -227,7 +227,7 @@ function _filoRenderKiosk(menus){
  if(menuEl){
  menuEl.innerHTML=menus.map(function(m,i){
  var imgHtml=m.imageUrl?
-  '<div style="height:72px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:var(--surface3)"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentNode.innerHTML=\'<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;opacity:.3\\'>\'+_svgIcon(\'utensils\')+\'</div>\'"></div>':
+  '<div style="height:72px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:var(--surface3)"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display=\'none\'"></div>':
   '<div style="height:48px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;opacity:.3">'+_svgIcon('utensils')+'</div>';
  return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
  imgHtml+

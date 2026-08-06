@@ -86,7 +86,7 @@ function _dineStaff(el){
     card.innerHTML=
      '<div class="staff-top">'+
      '<div class="staff-avatar" style="background:'+(m.part==='kitchen'?'rgba(239,68,68,.15)':'rgba(8,145,178,.15)')+'">'+
-     ''+'
+     '<span style="font-size:16px;font-weight:800">'+((m.name||'?')[0].toUpperCase())+'</span></div>'+
      '<div style="flex:1;min-width:0">'+
      '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
      '<span class="staff-name">'+m.name+'</span>'+

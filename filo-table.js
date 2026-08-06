@@ -339,7 +339,7 @@ function _filoTableOrderModal(did,table,order){
      (ord.items||[]).forEach(function(it){
       rowsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
        '<span style="'+(isOrdPaid?'color:#818cf8':'')+'">'+
-       (it.emoji?it.emoji+' ':'')++(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
+       (it.emoji?it.emoji+' ':'')+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
        '<span style="font-weight:700;'+(isOrdPaid?'color:#818cf8':'')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
      });
     });
@@ -347,7 +347,7 @@ function _filoTableOrderModal(did,table,order){
    } else if(allItemsList.length){
     itemsHtml=allItemsList.map(function(it){
      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
-      '<span>'+(it.emoji?it.emoji+' ':'')++(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
+      '<span>'+(it.emoji?it.emoji+' ':'')+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
       '<span style="font-weight:700">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
     }).join('');
    } else {
