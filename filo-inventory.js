@@ -27,7 +27,7 @@ function _filoPageInventory(el){
  ['오늘 매출','거래건수','재고 부족','마진율'].map(function(t,i){
  return '<div class="stat-card fade-up-'+( i+1)+'" style="flex:1;min-width:130px;text-align:center">'+
  '<div class="metric-ring" style="margin:0 auto 10px;background:'+['rgba(96,165,250,.15)','rgba(34,197,94,.15)','rgba(239,68,68,.15)','rgba(245,158,11,.15)'][i]+'">'+
- ['💰','🛒','⚠️','📊'][i]+'</div>'+
+ ['₩','건','!','개'][i]+'</div>'+
  '<div id="fi-stat-'+i+'" style="font-size:22px;font-weight:900;color:'+['#60a5fa','#22c55e','#ef4444','#f59e0b'][i]+'">—</div>'+
  '<div style="font-size:10px;color:var(--t3);margin-top:3px">'+t+'</div></div>';
  }).join('')+'</div>'+
@@ -66,7 +66,7 @@ function _filoPageInventory(el){
  if(low&&lowStock.length){
  low.innerHTML='<div class="card" style="border-left:3px solid #ef4444;margin-bottom:10px">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;color:#ef4444">⚠️ 재고 부족 '+lowStock.length+'개</div>'+
+ '<div style="font-size:13px;font-weight:800;color:#ef4444">재고 부족 '+lowStock.length+'개</div>'+
  '<button onclick="_filoGoPage(&quot;expiry&quot;)" style="font-size:11px;padding:4px 10px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:6px;cursor:pointer">상세보기</button>'+
  '</div>'+
  lowStock.slice(0,3).map(function(d){
@@ -85,7 +85,7 @@ function _filoPageInventory(el){
  var exp=document.getElementById('fi-expiry-warn');
  if(exp&&expirySoon.length){
  exp.innerHTML='<div class="card" style="border-left:3px solid #f59e0b">'+
- '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">⏰ 7일 내 만료 '+expirySoon.length+'개</div>'+
+ '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">7일 내 만료 '+expirySoon.length+'개</div>'+
  expirySoon.map(function(d){
  var dL=Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000);
  return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd)">'+
@@ -100,7 +100,7 @@ function _filoPageStockIn(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="stock-form slide-up">'+
  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'+
- '<div style="font-size:22px">📥</div>'+
+ ''+
  '<div><div style="font-size:17px;font-weight:900">입고 등록</div>'+
  '<div style="font-size:11px;color:var(--t3)">재고를 입고합니다</div></div></div>'+
  '<div class="card" style="margin-bottom:16px">'+
@@ -117,13 +117,13 @@ function _filoPageStockIn(el){
  '<div class="fg"><label>영수증 첨부 <span style="font-size:10px;color:var(--t3)">(선택 · 사진/PDF)</span></label>'+
  '<div style="display:flex;align-items:center;gap:8px">'+
  '<label style="flex:1;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--t3);cursor:pointer;text-align:center">'+
- '<span id="si-receipt-label">📎 파일 선택</span>'+
+ '<span id="si-receipt-label">파일 선택</span>'+
  '<input id="si-receipt-input" type="file" accept="image/*,.pdf" style="display:none" onchange="_filoReceiptSelected(this)">'+
  '</label>'+
  '<div id="si-receipt-preview" style="display:none;width:48px;height:48px;border-radius:8px;overflow:hidden;border:1px solid var(--bd)">'+
  '<img id="si-receipt-img" style="width:100%;height:100%;object-fit:cover">'+
  '</div></div></div>'+
- '<button onclick="_filoDoStockIn()" class="btn btn-brand" style="width:100%">📥 입고 등록</button>'+
+ '<button onclick="_filoDoStockIn()" class="btn btn-brand" style="width:100%">입고 등록</button>'+
  '</div>'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">최근 입고 이력</div>'+
  '<div id="si-history">'+
@@ -166,19 +166,19 @@ function _filoDoStockIn(){
     updatedAt:now.toISOString()
    });
   }).then(function(){
-   _filoToast('✅ 입고 완료 (+'+qty+'개)'+(receiptUrl?' 📎':''));
+   _filoToast('입고 완료 (+'+qty+'개)');
    document.getElementById('si-qty').value='';
    document.getElementById('si-price').value='';
    document.getElementById('si-memo').value='';
    if(receiptInput)receiptInput.value='';
-   var lbl=document.getElementById('si-receipt-label');if(lbl)lbl.textContent='📎 파일 선택';
+   var lbl=document.getElementById('si-receipt-label');if(lbl)lbl.textContent='파일 선택';
    var pv=document.getElementById('si-receipt-preview');if(pv)pv.style.display='none';
    _filoLoadStockHistory(did,'si-history','in');
-  }).catch(function(e){_filoToast('❌ '+e.message);});
+  }).catch(function(e){_filoToast(e.message);});
  }
 
  if(file){
-  _filoToast('📎 업로드 중...');
+  _filoToast('업로드 중...');
   var reader=new FileReader();
   reader.onload=function(e){
    var base64=e.target.result.split(',')[1];
@@ -202,7 +202,7 @@ function _filoPageStockOut(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="stock-form slide-up">'+
  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">'+
- '<div style="font-size:22px">📤</div>'+
+ ''+
  '<div><div style="font-size:17px;font-weight:900">출고 등록</div>'+
  '<div style="font-size:11px;color:var(--t3)">재고를 출고합니다</div></div></div>'+
  '<div class="card" style="margin-bottom:16px">'+
@@ -220,7 +220,7 @@ function _filoPageStockOut(el){
  '</div>'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">최근 출고 이력</div>'+
  '<div id="so-history">'+
- '<div style="text-align:center;padding:30px;color:var(--t3)">⏳</div>'+
+ '<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>'+
  '</div></div>';
  _filoLoadInventoryItems(did,'so-item');
  _filoLoadStockHistory(did,'so-history','out');
@@ -253,13 +253,13 @@ function _filoDoStockOut(){
  });
  });
  }).then(function(){
- _filoToast('✅ 출고 완료 (-'+qty+'개)');
+ _filoToast('출고 완료 (-'+qty+'개)');
  document.getElementById('so-qty').value='';
  document.getElementById('so-memo').value='';
  _filoLoadStockHistory(did,'so-history','out');
  }).catch(function(e){
- if(e&&typeof e._stock==='number')_filoToast('❌ 재고 부족 (현재 '+e._stock+'개)');
- else _filoToast('❌ '+((e&&e.message)||e));
+ if(e&&typeof e._stock==='number')_filoToast('재고 부족 (현재 '+e._stock+'개)');
+ else _filoToast((e&&e.message)||e);
  });
 }
 
@@ -292,7 +292,7 @@ function _filoPageInventoryDash(el) {
   alertBanner.id = 'inv-alert-banner';
   alertBanner.style.cssText = 'display:none;background:linear-gradient(135deg,#fee2e2,#fecaca);border:1px solid #fca5a5;border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px';
   alertBanner.innerHTML =
-    '<span style="font-size:20px">⚠️</span>' +
+    '' +
     '<div><div style="font-size:13px;font-weight:800;color:#b91c1c" id="inv-alert-title">재고 부족 항목 있음</div>' +
     '<div style="font-size:11px;color:#ef4444;margin-top:2px" id="inv-alert-sub">공급처에 즉시 발주를 권장합니다</div></div>';
   wrap.appendChild(alertBanner);
@@ -301,10 +301,10 @@ function _filoPageInventoryDash(el) {
   var kpi = document.createElement('div');
   kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px';
   kpi.innerHTML = [
-    {id:'inv-total-items', ic:'📋', lbl:'재료 목록',   c:'#0891b2', sub:'총 등록 재료'},
-    {id:'inv-normal',      ic:'📦', lbl:'현재 재고',   c:'#059669', sub:'정상 재고'},
-    {id:'inv-low',         ic:'🛒', lbl:'발주 필요',   c:'#f59e0b', sub:'재고 부족 품목'},
-    {id:'inv-incoming',    ic:'🚚', lbl:'입고 예정',   c:'#7c3aed', sub:'이번 주'},
+    {id:'inv-total-items', ic:'', lbl:'재료 목록',   c:'#0891b2', sub:'총 등록 재료'},
+    {id:'inv-normal',      ic:'', lbl:'현재 재고',   c:'#059669', sub:'정상 재고'},
+    {id:'inv-low',         ic:'', lbl:'발주 필요',   c:'#f59e0b', sub:'재고 부족 품목'},
+    {id:'inv-incoming',    ic:'', lbl:'입고 예정',   c:'#7c3aed', sub:'이번 주'},
   ].map(function(k){
     return '<div class="card" style="padding:16px;border-radius:16px">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +

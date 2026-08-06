@@ -98,10 +98,10 @@ function _filoRenderPaySummary(){
  var sum=document.getElementById('pay-summary');
  if(!sum)return;
  sum.innerHTML=[
-  {label:'총 지급예정',val:'₩'+totalGross.toLocaleString(),color:'#22c55e',icon:'💰'},
-  {label:'총 실수령액',val:'₩'+totalNet.toLocaleString(),color:'#a78bfa',icon:'💳'},
-  {label:'주휴수당 합계',val:'₩'+totalWeekly.toLocaleString(),color:'#f59e0b',icon:'📅'},
-  {label:'총 근무시간',val:Math.round(totalHour)+'h',color:'#38bdf8',icon:'⏱'},
+  {label:'총 지급예정',val:'₩'+totalGross.toLocaleString(),color:'#22c55e',icon:'₩'},
+  {label:'총 실수령액',val:'₩'+totalNet.toLocaleString(),color:'#a78bfa',icon:'₩'},
+  {label:'주휴수당 합계',val:'₩'+totalWeekly.toLocaleString(),color:'#f59e0b',icon:'₩'},
+  {label:'총 근무시간',val:Math.round(totalHour)+'h',color:'#38bdf8',icon:'h'},
  ].map(function(s,i){
   return '<div class="stat-card pop-in stagger-'+(i+1)+'">'+
   '<div style="font-size:18px;margin-bottom:4px">'+s.icon+'</div>'+
@@ -168,9 +168,9 @@ function _filoDoSendPayslip(ym){
   headers:{'Content-Type':'application/json'},
   body:JSON.stringify({did:did,ym:ym,employees:employees})
  }).then(function(r){return r.json();}).then(function(d){
-  _filoToast('📨 급여명세서 FCM 알림 발송 완료 ('+(d.sent||0)+'명)');
+  _filoToast('급여명세서 FCM 알림 발송 완료 ('+(d.sent||0)+'명)');
  }).catch(function(e){
-  _filoToast('❌ 발송 실패: '+e.message);
+  _filoToast('발송 실패: '+e.message);
  });
 }
 
@@ -214,7 +214,7 @@ function _filoPay(){
  var payTypeDiv=document.createElement('div');
  payTypeDiv.style.cssText='display:flex;gap:6px;margin-bottom:12px';
  window._posPayType=window._posPayType||'postpay';
- [{k:'postpay',l:'🧾 후불 (나중에 결제)'},{k:'prepay',l:'💳 선불 (지금 결제)'}].forEach(function(pt){
+ [{k:'postpay',l:'후불 (나중에 결제)'},{k:'prepay',l:'선불 (지금 결제)'}].forEach(function(pt){
   var ptBtn=document.createElement('button');
   ptBtn.style.cssText='flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid '+(window._posPayType===pt.k?'#0891b2':'var(--bd2)')+';background:'+(window._posPayType===pt.k?'rgba(8,145,178,.15)':'var(--surface2)')+';color:'+(window._posPayType===pt.k?'#0891b2':'var(--t2)');
   ptBtn.textContent=pt.l;
@@ -223,7 +223,7 @@ function _filoPay(){
    if(k==='postpay'){
     // 후불: 바로 주문 등록 (결제수단 = 후불)
     document.querySelectorAll('.mo').forEach(function(e){e.remove();});
-    _filoConfirmPay('postpay','🧾 후불');
+    _filoConfirmPay('postpay','후불');
    } else {
     // 선불: 결제 수단 선택 화면으로
     document.querySelectorAll('.mo').forEach(function(e){e.remove();});
@@ -236,9 +236,9 @@ function _filoPay(){
 
  /* 결제 수단 버튼 */
  var methods=[
-  {k:'card',l:'카드',ic:'💳'},{k:'cash',l:'현금',ic:'💵'},
-  {k:'kakao',l:'카카오페이',ic:'🟡'},{k:'samsung',l:'삼성페이',ic:'📱'},
-  {k:'naver',l:'네이버페이',ic:'🟢'},{k:'zero',l:'서비스/무료',ic:'🎁'},
+  {k:'card',l:'카드',ic:'카드'},{k:'cash',l:'현금',ic:'현금'},
+  {k:'kakao',l:'카카오페이',ic:'카카오'},{k:'samsung',l:'삼성페이',ic:'삼성'},
+  {k:'naver',l:'네이버페이',ic:'네이버'},{k:'zero',l:'서비스/무료',ic:'무료'},
  ];
  var grid=document.createElement('div');
  grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px';
@@ -259,14 +259,14 @@ function _filoPay(){
  /* 분할 결제 버튼 */
  var splitBtn=document.createElement('button');
  splitBtn.style.cssText='width:100%;padding:11px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:var(--r);color:#f59e0b;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px';
- splitBtn.textContent='✂️ 분할 결제 (현금+카드)';
+ splitBtn.textContent='분할 결제 (현금+카드)';
  splitBtn.onclick=function(){mo.remove();_filoSplitPay(total);};
  box.appendChild(splitBtn);
 
  /* 각자 계산 버튼 */
  var selfBtn=document.createElement('button');
  selfBtn.style.cssText='width:100%;padding:11px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:var(--r);color:#818cf8;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px';
- selfBtn.textContent='👥 각자 계산';
+ selfBtn.textContent='각자 계산';
  selfBtn.onclick=function(){mo.remove();_filoSelfPay();};
  box.appendChild(selfBtn);
 
@@ -313,10 +313,10 @@ function _filoPagePayslip(el) {
   var kpi = document.createElement('div');
   kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px';
   kpi.innerHTML = [
-    {id:'ps-total-staff',   ic:'👥', lbl:'총 직원수',       c:'#0891b2'},
-    {id:'ps-total-pay',     ic:'💰', lbl:'이번달 총 지급액', c:'#7c3aed'},
-    {id:'ps-avg-hours',     ic:'⏱',  lbl:'평균 근무시간',    c:'#f59e0b'},
-    {id:'ps-pending',       ic:'⚠️',  lbl:'미지급 건수',     c:'#ef4444'},
+    {id:'ps-total-staff',   ic:'', lbl:'총 직원수',       c:'#0891b2'},
+    {id:'ps-total-pay',     ic:'₩', lbl:'이번달 총 지급액', c:'#7c3aed'},
+    {id:'ps-avg-hours',     ic:'h',  lbl:'평균 근무시간',    c:'#f59e0b'},
+    {id:'ps-pending',       ic:'!',  lbl:'미지급 건수',     c:'#ef4444'},
   ].map(function(k){
     return '<div class="card" style="padding:16px;border-radius:16px">' +
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
@@ -454,7 +454,7 @@ function _filoPayslipLoad(did, ym) {
         '<td style="padding:12px 8px;color:var(--t3);font-size:11px">'+(payDate||'—')+'</td>' +
         '<td style="padding:12px 8px">' +
         '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
-        (isPaid?'✅ 지급완료':'⏳ 지급대기')+'</span></td>' +
+        (isPaid?'지급완료':'지급대기')+'</span></td>' +
         '<td style="padding:12px 8px">' +
         (!isPaid?'<button onclick="_filoPayslipProcess(\"'+m.id+'\",'+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
         '</td>' +
