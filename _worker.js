@@ -8375,7 +8375,7 @@ function _buildNav(){
           {ico:'users',lbl:'사용자',p:'admin_users'},{ico:'user',lbl:'내정보',p:'profile'}];
   }
   document.getElementById('bnav').innerHTML=tabs.map(function(tb){
-    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\''+tb.p+'\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
+    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\\''+tb.p+'\\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
   }).join('');
 }
 
@@ -8488,7 +8488,7 @@ function _makePostCard(d,compact){
     '<div class="pc-foot">'+
       '<span class="pc-agency">'+(d.agencyName||'대리점')+'</span>'+
       (!isClosed&&_CU&&_CU.type==='driver'?
-        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">'+
+        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\')">'+
         _SVG.bolt+'원탭 지원</button>':'')+
     '</div>';
   if(!isClosed)div.onclick=function(){_showPostDetail(d);};
@@ -8537,7 +8537,7 @@ function _showPostDetail(d){
       '<div class="p-row"><span class="p-row-lbl">대리점</span><span class="p-row-val">'+(d.agencyName||'—')+'</span></div>'+
     '</div>'+
     (_CU&&_CU.type==='driver'&&d.status==='open'?
-      '<button class="btn-main" style="margin-top:4px" onclick="_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">원탭 지원하기</button>':
+      '<button class="btn-main" style="margin-top:4px" onclick="_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\')">원탭 지원하기</button>':
       '<div style="text-align:center;font-size:13px;color:var(--t2);padding:16px">'+(d.status==='closed'?'마감된 공고예요':'지원 불가')+'</div>');
   _showModal(html);
 }
@@ -8560,7 +8560,7 @@ function _pgHomeDriver(el){
     '</div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
       '<div class="page-title">내 주변 공고</div>'+
-      '<button style="font-size:12px;font-weight:700;color:var(--ac);border:none;background:none;cursor:pointer;font-family:inherit" onclick="_goPage(\'posts\')">지도로 보기 →</button>'+
+      '<button style="font-size:12px;font-weight:700;color:var(--ac);border:none;background:none;cursor:pointer;font-family:inherit" onclick="_goPage(\\'posts\\')">지도로 보기 →</button>'+
     '</div>'+
     '<div id="home-posts"><div class="card"><div style="color:var(--t2);font-size:13px;text-align:center;padding:20px">로딩 중...</div></div></div>';
   _loadHomePosts();
@@ -8630,7 +8630,7 @@ function _pgHomeAgency(el){
         '<div class="stat-card"><div class="stat-val">'+posts.length+'</div><div class="stat-lbl">전체 공고</div></div>'+
         '<div class="stat-card"><div class="stat-val">'+(_CU.region||'—')+'</div><div class="stat-lbl">담당 지역</div></div>'+
       '</div>'+
-      '<button class="btn-main" onclick="_goPage(\'add_post\')">새 공고 등록</button>';
+      '<button class="btn-main" onclick="_goPage(\\'add_post\\')">새 공고 등록</button>';
   });
 }
 function _pgHomeAdmin(el){
@@ -8676,7 +8676,7 @@ function _pgPosts(el){
 function _buildPlatTabs(){
   var el=document.getElementById('plat-tabs');if(!el)return;
   el.innerHTML=PLATFORMS.map(function(p){
-    return '<button class="plat-tab'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\''+p+'\')">'+p+'</button>';
+    return '<button class="plat-tab'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\\''+p+'\\')">'+p+'</button>';
   }).join('');
 }
 function _setPlatFilter(p){_platFilter=p;_pgIdx=0;_buildPlatTabs();_applyFilters();}
@@ -8778,7 +8778,7 @@ function _renderRevSim(el){
       var isSel=sel.indexOf(d.id)>=0;
       var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
       var clr=_courierColor(d.courier||'');
-      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\''+d.id+'\')">'+
+      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\\''+d.id+'\\')">'+
         '<div class="sim-check">'+(isSel?_SVG.check:'')+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:700;margin-bottom:2px">'+(d.region||'')+' '+(d.area||'')+'</div>'+
