@@ -6449,6 +6449,37 @@ service cloud.firestore {
       }
     }
 
+    // ── 배달대행 배차 요청 (/api/delivery-dispatch) ──
+    if (path === '/api/delivery-dispatch' && method === 'POST') {
+      const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const body = await request.json();
+        const {orderId, did, address, customerName, phone, items, total, agency} = body;
+        const token = await getAccessToken(env);
+        const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const now = new Date().toISOString();
+        const dispatchDoc = {fields:{
+          orderId:{stringValue:orderId||''},
+          did:{stringValue:did||''},
+          address:{stringValue:address||''},
+          customerName:{stringValue:customerName||''},
+          phone:{stringValue:phone||''},
+          total:{integerValue:String(total||0)},
+          agency:{stringValue:agency||'barogo'},
+          status:{stringValue:'requested'},
+          createdAt:{stringValue:now}
+        }};
+        await fetch(`${fsBase}/filo_dispatch_requests`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body:JSON.stringify(dispatchDoc)
+        });
+        return new Response(JSON.stringify({ok:true, status:'requested', agency:agency||'barogo'}), {headers:cors});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false, error:e.message}), {status:500, headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
     // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
     if (path === '/api/send-notice' && method === 'POST') {
       try {
