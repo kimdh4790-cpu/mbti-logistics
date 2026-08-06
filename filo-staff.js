@@ -23,7 +23,7 @@
 function _filoPageStaffQR(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:4px">👤 직원 동적 QR</div>'+
+ '<div style="font-size:17px;font-weight:900;margin-bottom:4px">직원 동적 QR</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-bottom:16px">30초마다 자동 변경 · 복사 불가 · 출근/퇴근 구분</div>'+
 
  /* 관리자 뷰: 직원별 QR */
@@ -32,13 +32,13 @@ function _filoPageStaffQR(el){
  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
  /* 출근 QR */
  '<div style="text-align:center;padding:16px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:14px">'+
- '<div style="font-size:12px;font-weight:800;color:#22c55e;margin-bottom:10px">🟢 출근 QR</div>'+
+ '<div style="font-size:12px;font-weight:800;color:#22c55e;margin-bottom:10px">● 출근 QR</div>'+
  '<div id="qr-checkin" style="background:#fff;border-radius:10px;padding:8px;display:inline-block;margin-bottom:8px"></div>'+
  '<div id="qr-checkin-timer" style="font-size:10px;color:var(--t3)">갱신 대기중...</div>'+
  '</div>'+
  /* 퇴근 QR */
  '<div style="text-align:center;padding:16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:14px">'+
- '<div style="font-size:12px;font-weight:800;color:#ef4444;margin-bottom:10px">🔴 퇴근 QR</div>'+
+ '<div style="font-size:12px;font-weight:800;color:#ef4444;margin-bottom:10px">● 퇴근 QR</div>'+
  '<div id="qr-checkout" style="background:#fff;border-radius:10px;padding:8px;display:inline-block;margin-bottom:8px"></div>'+
  '<div id="qr-checkout-timer" style="font-size:10px;color:var(--t3)">갱신 대기중...</div>'+
  '</div>'+
@@ -51,13 +51,13 @@ function _filoPageStaffQR(el){
  '<div id="qr-break-timer" style="font-size:9px;color:var(--t3)">갱신 대기중...</div>'+
  '</div>'+
  '<div style="text-align:center;padding:12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:12px">'+
- '<div style="font-size:11px;font-weight:800;color:#6366f1;margin-bottom:6px">🏃 휴식 종료</div>'+
+ '<div style="font-size:11px;font-weight:800;color:#6366f1;margin-bottom:6px">휴식 종료</div>'+
  '<div id="qr-break-end" style="background:#fff;border-radius:8px;padding:5px;display:inline-block;margin-bottom:4px"></div>'+
  '<div style="font-size:9px;color:var(--t3)">위와 동일 갱신</div>'+
  '</div>'+
  '</div>'+
  '<div style="margin-top:10px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px;font-size:10px;color:var(--t3)">'+
- '💡 직원이 본인 스마트폰으로 스캔 → 이름 확인 후 출퇴근 자동 기록<br>30초마다 코드 변경으로 대리 출퇴근 방지</div>'+
+ '직원이 본인 스마트폰으로 스캔 → 이름 확인 후 출퇴근 자동 기록<br>30초마다 코드 변경으로 대리 출퇴근 방지</div>'+
  '</div>'+
 
  /* 직원별 개인 QR */
@@ -95,7 +95,7 @@ function _filoRenderStaffQRs(did){
 }
 
 /* ══════════════════════════════════════════
-   🎁 회원 QR 페이지
+   회원 QR 페이지
    회원 가입/적립/할인 QR
    ══════════════════════════════════════════ */
 function _filoPageAttendance(el){
@@ -104,7 +104,7 @@ function _filoPageAttendance(el){
  var qrUrl='https://filo.ai.kr/qr?did='+did+'&action=in';
  var qrImg='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(qrUrl);
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🔐 QR 출퇴근</div>'+
+ '<div style="font-size:17px;font-weight:900;margin-bottom:16px">QR 출퇴근</div>'+
  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
  '<div class="qr-card">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:4px">출근 QR</div>'+
@@ -438,7 +438,7 @@ function _filoPayrollSettle(){
  var ymEl=document.getElementById('pay-ym');
  var ym=ymEl?ymEl.value:'';
  _filoShowModal('<div style="padding:24px">'+
- '<div style="font-size:16px;font-weight:900;margin-bottom:8px">📨 급여명세서 발송</div>'+
+ '<div style="font-size:16px;font-weight:900;margin-bottom:8px">급여명세서 발송</div>'+
  '<div style="font-size:13px;color:var(--t3);margin-bottom:16px">'+ym+'월 급여명세서를 카카오 알림톡으로 발송합니다.<br>총 '+_payrollData.length+'명에게 발송됩니다.</div>'+
  '<div style="display:flex;gap:8px">'+
  '<button onclick="document.querySelector(\'.mo\').remove()" style="flex:1;padding:10px;background:var(--b3);border:none;border-radius:8px;color:var(--t2);cursor:pointer">취소</button>'+
@@ -448,13 +448,13 @@ function _filoPayrollSettle(){
 
 function _filoPageRoster(el){
  el.innerHTML='<div class="slide-up card" style="text-align:center;padding:40px">'+
- '<div style="font-size:40px;margin-bottom:12px">🗓</div>'+
+ ''+
  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">근무표</div>'+
  '<div style="font-size:12px;color:var(--t3)">주간 근무표 기능 곧 추가됩니다</div></div>';
 }
 
 /* ══════════════════════════════════════════
-   📝 신규 직원 이름+연락처 등록 (근태QR 페이지)
+   신규 직원 이름+연락처 등록 (근태QR 페이지)
    ══════════════════════════════════════════ */
 function _filoShowStaffReg(){
  var el=document.getElementById('staff-reg');
@@ -507,7 +507,7 @@ function _filoRegisterStaff(){
 }
 
 /* ══════════════════════════════════════════
-   ⏱ 실시간 급여 티커 — 출근중 직원 급여 1분마다 갱신
+   실시간 급여 티커 — 출근중 직원 급여 1분마다 갱신
    ══════════════════════════════════════════ */
 var _liveTickerTimer=null;
 function _filoStartLiveTicker(){

@@ -22,14 +22,14 @@ var _db=null;
 
 // ── i18n (배달 전용) ──────────────────────────────────────────────────────────
 var _i18n_store={
- ko:{menu:'🍽 메뉴',delivery:'📍 배달정보',order:'주문하기',total:'합계',
-     done:'주문이 접수됐습니다!',sub:'곧 배달을 시작합니다 🛵',back:'다시 주문하기'},
- en:{menu:'🍽 Menu',delivery:'📍 Delivery Info',order:'Order Now',total:'Total',
-     done:'Order Received!',sub:'Delivery will start soon 🛵',back:'Order Again'},
- zh:{menu:'🍽 菜单',delivery:'📍 配送信息',order:'下单',total:'合计',
-     done:'订单已接收！',sub:'即将开始配送 🛵',back:'再次订购'},
- ja:{menu:'🍽 メニュー',delivery:'📍 配達情報',order:'注文する',total:'合計',
-     done:'注文を受け付けました！',sub:'まもなく配達を開始します 🛵',back:'もう一度注文'}
+ ko:{menu:'메뉴',delivery:'배달정보',order:'주문하기',total:'합계',
+     done:'주문이 접수됐습니다!',sub:'곧 배달을 시작합니다.',back:'다시 주문하기'},
+ en:{menu:'Menu',delivery:'Delivery Info',order:'Order Now',total:'Total',
+     done:'Order Received!',sub:'Delivery will start soon.',back:'Order Again'},
+ zh:{menu:'菜单',delivery:'配送信息',order:'下单',total:'合计',
+     done:'订单已接收！',sub:'即将开始配送.',back:'再次订购'},
+ ja:{menu:'メニュー',delivery:'配達情報',order:'注文する',total:'合計',
+     done:'注文を受け付けました！',sub:'まもなく配達を開始します.',back:'もう一度注文'}
 };
 function _ts(k){return(_i18n_store[_lang]&&_i18n_store[_lang][k])||_i18n_store.ko[k]||k;}
 
@@ -43,7 +43,7 @@ window.onload=function(){
  _db=firebase.firestore();
  _slug=location.pathname.replace(/^\/store\/?/,'').replace(/\/$/,'').trim()||_p('id')||_p('slug');
  if(!_slug){
-  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:48px">❌</div><div>잘못된 주소입니다</div></div>';
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:14px;margin-bottom:8px">오류</div><div>잘못된 주소입니다</div></div>';
   return;
  }
  fetch('/api/store?slug='+encodeURIComponent(_slug))
@@ -60,7 +60,7 @@ window.onload=function(){
   document.getElementById('cat-wrap').style.display='';
   _loadMenus();
  }).catch(function(e){
-  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:48px">😅</div><div>'+e.message+'</div></div>';
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:14px;margin-bottom:8px;color:#fbbf24">오류</div><div>'+e.message+'</div></div>';
  });
 };
 

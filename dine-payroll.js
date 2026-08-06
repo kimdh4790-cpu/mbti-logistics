@@ -35,7 +35,7 @@ function _dinePayroll(el){
   '<option value="month">월급기준</option><option value="week">주급기준</option><option value="day">일급기준</option>'+
   '</select>'+
   '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(\''+did+'\')">계산</button>'+
-  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(\''+did+'\')">🔄 실시간</button>'+
+  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(\''+did+'\')">실시간</button>'+
   '</div>';
 
  wrap.appendChild(hdr);
@@ -108,12 +108,12 @@ function _dineCalcPayroll(did){
 
   var html='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label"> 직원 실수령 합계</div><div class="kpi-val" style="color:#22c55e;font-size:14px">₩'+totalNet.toLocaleString()+'</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">📋 공제 합계</div><div class="kpi-val" style="color:#ef4444;font-size:14px">₩'+(totalGross-totalNet).toLocaleString()+'</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">🏢 사업주 실부담 총액 <span style="font-size:9px">(4대보험+퇴직금)</span></div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalEmployerCost.toLocaleString()+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">공제 합계</div><div class="kpi-val" style="color:#ef4444;font-size:14px">₩'+(totalGross-totalNet).toLocaleString()+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">사업주 실부담 총액 <span style="font-size:9px">(4대보험+퇴직금)</span></div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalEmployerCost.toLocaleString()+'</div></div>'+
    '</div>'+
    '<div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">'+
    '<div style="font-size:13px;font-weight:700;color:var(--t2)">'+ym+' 급여 계산 결과 <span style="font-size:11px;font-weight:400;color:var(--t3)">총 '+cards.length+'명</span></div>'+
-   '<button class="btn btn-primary btn-sm" data-ym="'+ym+'" onclick="_dinePayrollLock(this.dataset.ym)">📌 급여 확정</button>'+
+   '<button class="btn btn-primary btn-sm" data-ym="'+ym+'" onclick="_dinePayrollLock(this.dataset.ym)">급여 확정</button>'+
    '</div>';
 
   cards.forEach(function(c){
@@ -122,7 +122,7 @@ function _dineCalcPayroll(did){
    html+='<div class="card" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">'+
     '<div style="display:flex;align-items:center;gap:10px">'+
-    '<div style="font-size:20px">'+('kitchen'===m.part?'👨‍🍳':'🧑‍💼')+'</div>'+
+    ''+
     '<div>'+
     '<div style="font-size:14px;font-weight:800">'+m.name+'</div>'+
     '<div style="font-size:11px;color:var(--t3)">'+({'kitchen':'주방','hall':'홀'}[m.part]||m.part)+' · '+
@@ -153,7 +153,7 @@ function _dineCalcPayroll(did){
      var retire=Math.floor(g*0.0833);
      var total=g+empIns+retire;
      return '<div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:11px">'+
-      '<div style="font-weight:700;color:#f59e0b;margin-bottom:4px">🏢 사업주 실부담 (직원 1인)</div>'+
+      '<div style="font-weight:700;color:#f59e0b;margin-bottom:4px">사업주 실부담 (직원 1인)</div>'+
       '<div style="display:flex;gap:12px;flex-wrap:wrap">'+
       '<span>지급액 <b>₩'+g.toLocaleString()+'</b></span>'+
       '<span>+ 사업주 4대보험 <b>₩'+empIns.toLocaleString()+'</b></span>'+
@@ -162,8 +162,8 @@ function _dineCalcPayroll(did){
       '</div></div>';
     })()+
     '<div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">'+
-   '<button class="btn btn-ghost btn-sm" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">📋 명세서</button>'+
-    '<button class="btn btn-sm btn-primary" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)">📤 알림톡</button>'+
+   '<button class="btn btn-ghost btn-sm" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">명세서</button>'+
+    '<button class="btn btn-sm btn-primary" data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)">알림톡</button>'+
     '</div>'+
     '</div>';
   });
@@ -325,7 +325,7 @@ function _dinePayslipModal(memberId,ym){
 }
 
 function _dineSendPayslip(memberId,ym){
- _dineToast('💬 알림톡 발송 기능은 알림톡 설정에서 활성화 후 사용 가능합니다');
+ _dineToast('알림톡 발송 기능은 알림톡 설정에서 활성화 후 사용 가능합니다');
 }
 
 /* 실시간 급여 자동 계산 (onSnapshot) */
@@ -335,7 +335,7 @@ function _dineAutoPayroll(did){
  var from=ym+'-01',to=ym+'-31';
  var list=document.getElementById('payroll-list');
  if(!list)return;
- if(_payrollUnsub){_payrollUnsub();_payrollUnsub=null;_dineToast('🔴 실시간 계산 중지됨');return;}
+ if(_payrollUnsub){_payrollUnsub();_payrollUnsub=null;_dineToast('실시간 계산 중지됨');return;}
  list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"> 실시간 연결 중...</div>';
  _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
   var empCnt=memSnap.size;
@@ -353,7 +353,7 @@ function _dineAutoPayroll(did){
     memSnap.forEach(function(doc){var m=doc.data();m._id=doc.id;var att=attMap[doc.id]||{ins:[],outs:[]};cards.push({m:m,r:_calcPayFull(m,att,empCnt,ym)});});
     var totalNet=cards.reduce(function(s,c){return s+c.r.netSalary;},0);
     var html='<div style="font-size:12px;color:var(--cyan);padding:8px;margin-bottom:8px;background:rgba(0,212,255,.06);border-radius:8px">'+
-     '🔴 실시간 연결됨 · 총 실수령 합계: <b>₩'+totalNet.toLocaleString()+'</b> ('+cards.length+'명)</div>';
+     '● 실시간 연결됨 · 총 실수령 합계: <b>₩'+totalNet.toLocaleString()+'</b> ('+cards.length+'명)</div>';
     cards.forEach(function(c){
      var m=c.m,r=c.r;
      html+='<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px">'+
@@ -365,7 +365,7 @@ function _dineAutoPayroll(did){
     });
     list.innerHTML=html;
    });
-  _dineToast('🟢 실시간 급여 계산 시작됨');
+  _dineToast('실시간 급여 계산 시작됨');
  });
 }
 

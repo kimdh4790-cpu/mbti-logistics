@@ -112,12 +112,12 @@ function _filoPageRecipe(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:860px;margin:0 auto">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
- '<div><div style="font-size:17px;font-weight:900">🍽 레시피 관리</div>'+
+ '<div><div style="font-size:17px;font-weight:900">레시피 관리</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-top:2px">메뉴별 재료·사용량 등록 → AI 원가 자동계산</div></div>'+
  '<button onclick="_filoRecipeAdd(\''+did+'\')" style="padding:8px 14px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">+ 레시피 추가</button>'+
  '</div>'+
  '<div id="recipe-list">'+
- '<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>'+
+ '<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>'+
  '</div></div>';
  _filoLoadRecipes(did);
 }
@@ -166,7 +166,7 @@ function _filoLoadRecipes(did){
   var menuNames=Object.keys(recipeMap);
   if(!menuNames.length){
    list.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">'+
-   '<div style="font-size:32px;margin-bottom:8px">🍽</div>'+
+   ''+
    '<div>등록된 레시피가 없습니다</div>'+
    '<div style="font-size:11px;margin-top:6px">+ 레시피 추가 버튼을 눌러 시작하세요</div></div>';
    return;
@@ -247,7 +247,7 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
   /* 타이틀 */
   var title=document.createElement('div');
   title.style.cssText='font-size:16px;font-weight:900;margin-bottom:16px';
-  title.textContent=menuName?'✏️ 레시피 수정':'🍽 레시피 추가';
+  title.textContent=menuName?'레시피 수정':'레시피 추가';
   box.appendChild(title);
 
   /* 메뉴명 + 판매가 그리드 */
@@ -312,7 +312,7 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
   cancelBtn.onclick=function(){mo.remove();};
   var saveBtn=document.createElement('button');
   saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer';
-  saveBtn.textContent='💾 저장';
+  saveBtn.textContent='저장';
   saveBtn.onclick=function(){_filoRecipeSave(did,menuName);};
   btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
   box.appendChild(btnRow);
@@ -364,7 +364,7 @@ function _filoRecipeSave(did,oldMenuName){
   });
  }).then(function(){
   document.querySelector('.mo')&&document.querySelector('.mo').remove();
-  _filoToast('✅ 레시피 저장 완료');
+  _filoToast('레시피 저장 완료');
   _filoPageRecipe(document.getElementById('content'));
  }).catch(function(e){_filoToast('❌ '+e.message);});
 }
@@ -387,11 +387,11 @@ function _filoSetMenuPriceRecipe(did,menuName,suggestedCost){
  _db.collection('menu_costs').where('dealerId','==',did).where('name','==',menuName).get().then(function(snap){
   if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:suggestedCost,createdAt:_nowISO()});
   return snap.docs[0].ref.update({price:price,cost:suggestedCost,updatedAt:_nowISO()});
- }).then(function(){_filoToast('✅ 판매가 저장');_filoLoadRecipes(did);});
+ }).then(function(){_filoToast('판매가 저장');_filoLoadRecipes(did);});
 }
 
 /* ══════════════════════════════════════════
-   👤 직원 동적 QR 페이지
+   직원 동적 QR 페이지
    직원별 개인 QR — 30초마다 코드 변경
    GPS 검증 + 시간 검증 포함
    ══════════════════════════════════════════ */
@@ -403,7 +403,7 @@ function _filoRenderCostMgmt(did){
   var items=[];
   snap.forEach(function(doc){items.push(Object.assign({_id:doc.id},doc.data()));});
   var html='<div class="card" style="margin-bottom:12px">'+
-  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">⚙️ 메뉴 원가 등록</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">메뉴 원가 등록</div>'+
   '<div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:10px;align-items:end">'+
   '<div><label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px">메뉴명</label>'+
   '<input id="mc-name" placeholder="아이스 아메리카노" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
@@ -413,7 +413,7 @@ function _filoRenderCostMgmt(did){
   '<input id="mc-cost" type="number" placeholder="800" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
   '<button onclick="_filoSaveCost(\''+did+'\')" style="padding:9px 16px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ 추가</button>'+
   '</div>'+
-  '<div style="font-size:10px;color:var(--t3);padding:6px 0">💡 원가 등록 시 POS 결제에서 자동으로 마진 계산됩니다</div>'+
+  '<div style="font-size:10px;color:var(--t3);padding:6px 0">원가 등록 시 POS 결제에서 자동으로 마진 계산됩니다</div>'+
   '</div>';
 
   if(items.length){
@@ -444,7 +444,7 @@ function _filoSaveCost(did){
  var cost=parseInt(document.getElementById('mc-cost').value)||0;
  if(!name){_filoToast('메뉴명을 입력하세요');return;}
  _db.collection('menu_costs').add({dealerId:did,name:name,price:price,cost:cost,createdAt:_nowISO()}).then(function(){
-  _filoToast('✅ 원가 등록 완료');
+  _filoToast('원가 등록 완료');
   document.getElementById('mc-name').value='';
   document.getElementById('mc-price').value='';
   document.getElementById('mc-cost').value='';
@@ -465,7 +465,7 @@ function _filoDelCost(did,id){
 function _filoPageExpiry(el){
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
- el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
+ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>';
  var today=_today();
  firebase.firestore().collection('inventory').where('dealerId','==',did).get().then(function(snap){
  var expired=[],warn=[],ok=[];
@@ -478,7 +478,7 @@ function _filoPageExpiry(el){
  });
  var html='<div style="max-width:860px;margin:0 auto">';
  html+='<div class="card" style="margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📝 유통기한 등록</div>'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">유통기한 등록</div>'+
  '<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end">'+
  '<div class="fg"><label>품목</label><select id="exp-item" class="inp" style="font-size:12px"><option value="">-- 선택 --</option>';
  snap.forEach(function(doc){html+='<option value="'+doc.id+'">'+(doc.data().name||'')+'</option>';});
@@ -488,7 +488,7 @@ function _filoPageExpiry(el){
  '</div></div>';
  if(expired.length){
  html+='<div class="card" style="border:2px solid #ef4444;margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:8px">🚨 만료 ('+expired.length+'개) — 즉시 폐기</div>';
+ '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:8px"> 만료 ('+expired.length+'개) — 즉시 폐기</div>';
  expired.forEach(function(d){
  html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(239,68,68,.2)">'+
  '<span style="font-size:12px;font-weight:700">'+d.name+'</span>'+
@@ -498,7 +498,7 @@ function _filoPageExpiry(el){
  }
  if(warn.length){
  html+='<div class="card" style="border:1px solid #f59e0b;margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">⚠️ 7일 이내 만료 ('+warn.length+'개)</div>';
+ '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px"> 7일 이내 만료 ('+warn.length+'개)</div>';
  warn.forEach(function(d){
  var dL=Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000);
  html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(245,158,11,.2)">'+
@@ -531,7 +531,7 @@ function _filoLoadStockHistory(did, elId, type){
  el.innerHTML=snap.docs.map(function(doc){
  var d=doc.data();
  var itemName=d.itemName||d.itemId||'';
- var icon=type==='in'?'📥':'📤';
+ var icon=type==='in'?'입고':'출고';
  var color=type==='in'?'#22c55e':'#ef4444';
  var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
  return '<div class="stock-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px">'+
@@ -558,7 +558,7 @@ function _filoLoadStockHistory(did, elId, type){
 // 재고 하한선 푸시 알림
 
 function _filoStockLowAlert(menuName, stock, stockMin){
- var title='⚠️ 재고 부족: '+menuName;
+ var title='재고 부족: '+menuName;
  var body='현재 재고 '+stock+'개 (기준: '+stockMin+'개 이하)';
  // 브라우저 푸시 알림
  if('Notification' in window && Notification.permission==='granted'){
@@ -569,5 +569,5 @@ function _filoStockLowAlert(menuName, stock, stockMin){
   });
  }
  // 화면 토스트도 표시
- _filoToast('⚠️ '+menuName+' 재고 부족 ('+stock+'개)');
+ _filoToast(menuName+' 재고 부족 ('+stock+'개)');
 }

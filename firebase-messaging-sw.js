@@ -90,7 +90,7 @@ messaging.onBackgroundMessage(function(payload) {
     requireInteraction: (type === 'pickup' || type === 'leave' || type === 'payslip' || type === 'receipt'),
     data:    { url: url, type: type },
     actions: type === 'pickup'
-      ? [{ action: 'open', title: '✅ 픽업하러 가기' }]
+      ? [{ action: 'open', title: '픽업하러 가기' }]
       : [
           { action: 'open',  title: '확인하기' },
           { action: 'close', title: '닫기' }
