@@ -6446,10 +6446,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               // ???�?�?��?(?�?� ?�제 금??
               if(fd.dateFresh){
                 Object.keys(fd.dateFresh).forEach(function(dt){
-                  if(!_dateOk(dt)) return;
+                  var ndt = _nd(dt)||dt;
+                  if(!_dateOk(ndt)) return;
                   var _fv = fd.dateFresh[dt]||0;
                   _totalFresh += _fv;
-                  if(_fv) _dateFreshMap[dt] = _fv;
+                  if(_fv) _dateFreshMap[ndt] = (_dateFreshMap[ndt]||0) + _fv;
                 });
               }
 
@@ -6491,7 +6492,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                   fs.fresh = Math.max(0, (fs.fresh||0) - _totalFresh);
                   if(!fs.dateFresh) fs.dateFresh = {};
                   Object.keys(_dateFreshMap).forEach(function(dt){
-                    fs.dateFresh[dt] = Math.max(0, (fs.dateFresh[dt]||0) - (_dateFreshMap[dt]||0));
+                    // fs.dateFresh 키가 비정규화일 수 있어 매칭 검색
+                    var _fk = Object.keys(fs.dateFresh).find(function(k){ return (_nd(k)||k)===dt; })||dt;
+                    fs.dateFresh[_fk] = Math.max(0, (fs.dateFresh[_fk]||0) - (_dateFreshMap[dt]||0));
                   });
                 }
               }
@@ -6519,8 +6522,9 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
                 var _newDateFresh={};
                 Object.keys(fd.dateFresh||{}).forEach(function(dt){
-                  if(!_dateOk(dt)) return;
-                  _newDateFresh[dt]=fd.dateFresh[dt];
+                  var ndt = _nd(dt)||dt;
+                  if(!_dateOk(ndt)) return;
+                  _newDateFresh[ndt] = (_newDateFresh[ndt]||0) + (fd.dateFresh[dt]||0);
                 });
                 ts = {userId:tid, driver:tid, month:month,
                   dcnt:_newDcnt, rcnt:_newRcnt, damt:_newDamt, ramt:_newRamt,
