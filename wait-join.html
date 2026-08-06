@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#7c3aed">
+<title>FILO — 웨이팅 등록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#0d0d1a;color:#f2f2ff;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:420px}
+
+.logo-block{text-align:center;margin-bottom:28px}
+.logo-mark{width:64px;height:64px;background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 8px 32px rgba(124,58,237,.35)}
+.store-name{font-size:18px;font-weight:900;color:#f2f2ff;margin-bottom:2px}
+.store-sub{font-size:12px;color:#606080}
+
+.card{background:#1a1a2e;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;margin-bottom:12px}
+
+.field-label{font-size:10px;font-weight:700;color:#606080;letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.field-input{width:100%;padding:13px 14px;background:#10102a;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;color:#f2f2ff;font-size:15px;font-family:inherit;outline:none;transition:.15s}
+.field-input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.field-group{margin-bottom:16px}
+
+.seats-row{display:flex;align-items:center;gap:12px}
+.seats-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.15);background:#10102a;color:#f2f2ff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.seats-btn:hover{border-color:#7c3aed;background:rgba(124,58,237,.15)}
+.seats-val{font-size:22px;font-weight:900;min-width:40px;text-align:center;color:#f2f2ff}
+.seats-unit{font-size:12px;color:#606080}
+
+.submit-btn{width:100%;padding:16px;background:linear-gradient(135deg,#7c3aed,#818cf8);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:-.2px;box-shadow:0 6px 20px rgba(124,58,237,.4);transition:.15s}
+.submit-btn:active{transform:scale(.98)}
+.submit-btn:disabled{background:#2a2a4a;box-shadow:none;cursor:not-allowed;opacity:.6}
+
+.hint{font-size:11px;color:#404060;text-align:center;margin-top:10px;line-height:1.6}
+
+/* 성공 화면 */
+.success{display:none;text-align:center}
+.success-badge{width:72px;height:72px;border-radius:50%;background:rgba(34,197,94,.15);border:2px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.num-display{width:100%;background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:20px;padding:28px 20px;text-align:center;margin-bottom:14px}
+.num-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px}
+.num-val{font-size:72px;font-weight:900;color:#fff;line-height:1}
+.num-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:6px}
+.view-btn{width:100%;padding:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#f2f2ff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.view-btn:hover{background:rgba(255,255,255,.12)}
+
+/* 로딩 */
+.loading{text-align:center;display:none}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 오류 */
+.error-screen{display:none;text-align:center;padding:20px}
+.error-msg{font-size:14px;color:#606080;line-height:1.6;margin-top:12px}
+
+.fade-in{animation:fadeIn .4s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="wrap fade-in">
+  <!-- 로딩 -->
+  <div class="loading" id="screen-loading">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:#606080">매장 정보 불러오는 중...</div>
+  </div>
+
+  <!-- 오류 -->
+  <div class="error-screen" id="screen-error">
+    <div style="display:flex;justify-content:center;margin-bottom:12px">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#606080" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="error-msg" id="error-msg">잘못된 링크예요</div>
+  </div>
+
+  <!-- 등록 폼 -->
+  <div id="screen-form" style="display:none">
+    <div class="logo-block">
+      <div class="logo-mark">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+      </div>
+      <div class="store-name" id="store-name">매장</div>
+      <div class="store-sub">웨이팅 등록</div>
+    </div>
+
+    <div class="card">
+      <div class="field-group">
+        <div class="field-label">성함 *</div>
+        <input class="field-input" id="inp-name" type="text" placeholder="홍길동" maxlength="20" autocomplete="off">
+      </div>
+      <div class="field-group">
+        <div class="field-label">인원수</div>
+        <div class="seats-row">
+          <button class="seats-btn" id="btn-minus" onclick="_seatsAdj(-1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="seats-val" id="seats-val">2</div>
+          <span class="seats-unit">명</span>
+          <button class="seats-btn" id="btn-plus" onclick="_seatsAdj(1)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:0">
+        <div class="field-label">연락처 <span style="color:#404060;font-size:9px">(선택 — 호출 알림 수신)</span></div>
+        <input class="field-input" id="inp-phone" type="tel" placeholder="010-0000-0000" maxlength="13">
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="_submit()">대기 등록하기</button>
+    <div class="hint">등록 후 QR 링크로 순서를 실시간 확인할 수 있어요</div>
+  </div>
+
+  <!-- 성공 -->
+  <div id="screen-success" class="success">
+    <div class="logo-block">
+      <div class="store-name" id="success-store">매장</div>
+      <div class="store-sub" style="margin-top:2px">웨이팅 등록 완료</div>
+    </div>
+    <div class="success-badge">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div class="num-display">
+      <div class="num-label">내 웨이팅 번호</div>
+      <div class="num-val" id="success-num">1</div>
+      <div class="num-sub" id="success-sub">홍길동님 · 2명</div>
+    </div>
+    <div class="card" style="text-align:left;margin-bottom:12px">
+      <div style="font-size:12px;color:#a0a0c0;margin-bottom:8px;font-weight:700">대기 안내</div>
+      <div style="font-size:13px;color:#606080;line-height:1.8">
+        • 순서가 되면 직원이 안내해 드려요<br>
+        • 아래 버튼으로 실시간 현황 확인<br>
+        • 호출 후 5분 내 미입장 시 노쇼 처리될 수 있어요
+      </div>
+    </div>
+    <button class="view-btn" id="view-btn" onclick="_goWait()">
+      <span style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        실시간 대기 현황 보기
+      </span>
+    </button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var _did='', _wid='', _seats=2, _waitNum=0;
+
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.appspot.com',
+  messagingSenderId:'862900137263',
+  appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'
+});
+var _db=firebase.firestore();
+
+function _show(id){
+  ['screen-loading','screen-error','screen-form','screen-success'].forEach(function(s){
+    var el=document.getElementById(s);
+    if(el)el.style.display=s===id?'block':'none';
+  });
+}
+
+window.onload=function(){
+  _show('screen-loading');
+  var p=new URLSearchParams(location.search);
+  _did=p.get('d')||p.get('did')||'';
+  if(!_did){_show('screen-error');document.getElementById('error-msg').textContent='잘못된 링크예요';return;}
+  _db.collection('companies').doc(_did).get().then(function(snap){
+    if(!snap.exists){_show('screen-error');document.getElementById('error-msg').textContent='매장을 찾을 수 없어요';return;}
+    var name=snap.data().companyName||snap.data().name||'매장';
+    document.getElementById('store-name').textContent=name;
+    document.getElementById('success-store').textContent=name;
+    _show('screen-form');
+    document.getElementById('inp-name').focus();
+  }).catch(function(e){_show('screen-error');document.getElementById('error-msg').textContent='오류: '+e.message;});
+};
+
+function _seatsAdj(d){
+  _seats=Math.max(1,Math.min(20,_seats+d));
+  document.getElementById('seats-val').textContent=_seats;
+  document.getElementById('btn-minus').disabled=_seats<=1;
+}
+
+function _submit(){
+  var name=(document.getElementById('inp-name').value||'').trim();
+  if(!name){_shake('inp-name');return;}
+  var phone=(document.getElementById('inp-phone').value||'').trim();
+  var btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='등록 중...';
+
+  var today=new Date().toISOString().slice(0,10);
+  // 오늘 등록된 대기 전체 카운트 → 번호 부여
+  _db.collection('dine_waiting')
+    .where('dealerId','==',_did)
+    .where('date','==',today)
+    .get()
+    .then(function(snap){
+      var waitNum=snap.size+1;
+      return _db.collection('dine_waiting').add({
+        dealerId:_did,name:name,seats:_seats,phone:phone,memo:'',
+        status:'waiting',waitNum:waitNum,date:today,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function(ref){
+        _wid=ref.id;_waitNum=waitNum;
+        document.getElementById('success-num').textContent=waitNum;
+        document.getElementById('success-sub').textContent=name+'님 · '+_seats+'명';
+        _show('screen-success');
+      });
+    })
+    .catch(function(e){
+      btn.disabled=false;btn.textContent='대기 등록하기';
+      alert('오류: '+e.message);
+    });
+}
+
+function _goWait(){
+  location.href='/wait?d='+_did+'&w='+_wid;
+}
+
+function _shake(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.style.animation='none';
+  el.offsetHeight;
+  el.style.animation='shake .3s ease';
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&document.getElementById('screen-form').style.display!=='none')_submit();
+});
+</script>
+<style>
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+</style>
+</body>
+</html>

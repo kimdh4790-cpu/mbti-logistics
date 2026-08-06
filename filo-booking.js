@@ -383,11 +383,19 @@ function _filoPageWaiting(el){
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px';
  hdr.innerHTML='<div><div style="font-size:20px;font-weight:900;color:var(--tx)">웨이팅 관리</div>'+
   '<div style="font-size:12px;color:var(--t3);margin-top:2px">실시간 대기 현황</div></div>';
+ var btnRow2=document.createElement('div');
+ btnRow2.style.cssText='display:flex;gap:8px';
+ var qrBtn=document.createElement('button');
+ qrBtn.style.cssText='padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tx);display:flex;align-items:center;gap:6px';
+ qrBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>입구 QR';
+ qrBtn.onclick=function(){_filoShowEntranceQR(did);};
  var addBtn=document.createElement('button');
  addBtn.style.cssText='padding:10px 16px;background:var(--br);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer';
  addBtn.textContent='+ 대기 등록';
  addBtn.onclick=function(){_filoWaitingAdd(did);};
- hdr.appendChild(addBtn);
+ btnRow2.appendChild(qrBtn);
+ btnRow2.appendChild(addBtn);
+ hdr.appendChild(btnRow2);
  wrap.appendChild(hdr);
 
  // 통계 3열: 대기중 / 예상대기 / 오늘착석
@@ -747,6 +755,33 @@ function _filoShowWaitQR(url,name,wid){
  function makeQR(){
   if(typeof QRCode!=='undefined'){
    new QRCode(document.getElementById(qrId),{text:url,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
+  } else {
+   var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=makeQR;document.head.appendChild(s);
+  }
+ }
+ setTimeout(makeQR,100);
+}
+
+function _filoShowEntranceQR(did){
+ var url='https://filo.ai.kr/wait-join?d='+did;
+ var overlay=document.createElement('div');
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)';
+ var modal=document.createElement('div');
+ modal.style.cssText='background:var(--surface);border-radius:24px;padding:28px 24px;max-width:320px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)';
+ var qrId='eqr'+Date.now();
+ modal.innerHTML=
+  '<div style="font-size:11px;font-weight:800;color:var(--t3);letter-spacing:1px;margin-bottom:4px">입구 QR</div>'+
+  '<div style="font-size:16px;font-weight:900;color:var(--tx);margin-bottom:16px">손님 자가 등록</div>'+
+  '<div id="'+qrId+'" style="width:180px;height:180px;margin:0 auto 12px"></div>'+
+  '<div style="font-size:12px;color:var(--t3);line-height:1.7;margin-bottom:16px">손님이 QR을 스캔하면<br>직접 대기 등록을 할 수 있어요</div>'+
+  '<div style="font-size:10px;color:var(--t3);word-break:break-all;margin-bottom:16px;background:var(--surface2);border-radius:8px;padding:8px">'+esc(url)+'</div>'+
+  '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;padding:14px;background:var(--br);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">닫기</button>';
+ overlay.appendChild(modal);
+ document.body.appendChild(overlay);
+ overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+ function makeQR(){
+  if(typeof QRCode!=='undefined'){
+   new QRCode(document.getElementById(qrId),{text:url,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});
   } else {
    var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=makeQR;document.head.appendChild(s);
   }
