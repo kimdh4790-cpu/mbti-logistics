@@ -107,8 +107,8 @@ function _filoSplitPay(total){
   if(cash<=0){resultDiv.innerHTML='<span style="color:var(--t3)">현금 금액을 입력하세요</span>';return;}
   if(cash>=total){resultDiv.innerHTML='<span style="color:#ef4444">현금 금액이 총액보다 큽니다</span>';return;}
   resultDiv.innerHTML=
-   '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>💵 현금</span><span style="font-weight:700;color:#22c55e">₩'+cash.toLocaleString()+'</span></div>'+
-   '<div style="display:flex;justify-content:space-between"><span>💳 카드</span><span style="font-weight:700;color:#0891b2">₩'+card.toLocaleString()+'</span></div>';
+   '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>현금</span><span style="font-weight:700;color:#22c55e">₩'+cash.toLocaleString()+'</span></div>'+
+   '<div style="display:flex;justify-content:space-between"><span>카드</span><span style="font-weight:700;color:#0891b2">₩'+card.toLocaleString()+'</span></div>';
  }
  cashInp.oninput=calcSplit;
 
@@ -124,13 +124,13 @@ function _filoSplitPay(total){
 
  var confirmBtn=document.createElement('button');
  confirmBtn.style.cssText='flex:2;padding:12px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:14px;font-weight:700;cursor:pointer';
- confirmBtn.textContent='✅ 결제 완료';
+ confirmBtn.textContent='결제 완료';
  confirmBtn.onclick=function(){
   var cash=parseInt(cashInp.value)||0;
   var card=Math.max(0,total-cash);
   if(cash<=0||cash>=total){_filoToast('금액을 확인해주세요');return;}
   mo.remove();
-  _filoConfirmPay('split','💵현금₩'+cash.toLocaleString()+'+💳카드₩'+card.toLocaleString());
+  _filoConfirmPay('split','현금₩'+cash.toLocaleString()+'+카드₩'+card.toLocaleString());
  };
 
  var cancelBtn=document.createElement('button');
@@ -143,7 +143,7 @@ function _filoSplitPay(total){
  actRow.appendChild(confirmBtn);actRow.appendChild(cancelBtn);
 
  var hdr=document.createElement('div');
- hdr.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">✂️ 분할 결제</div>'+
+ hdr.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">분할 결제</div>'+
   '<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px">'+
   '<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span>총액</span><span style="color:#22c55e">₩'+total.toLocaleString()+'</span></div></div>'+
   '<div style="margin-bottom:8px;font-size:12px;color:var(--t2)">현금 금액 입력</div>';
@@ -213,6 +213,6 @@ document.addEventListener('click',function(e){
 
 
 /* ══════════════════════════════════
-   🪑 테이블 관리 페이지
+   테이블 관리 페이지
    테이블 수 설정, 상태 관리, 실시간
    ══════════════════════════════════ */
