@@ -2171,7 +2171,15 @@ async function acceptExchange(){
           body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}}}})
         });
         const d2=await r2.json();
-        const menus=(d2||[]).filter(function(r){return r.document;}).map(function(r){
+        const menus=(d2||[]).filter(function(r){
+          if(!r.document)return false;
+          var fs=r.document.fields||{};
+          // forSale===false → 판매 중지 메뉴 제외
+          if(fs.forSale&&fs.forSale.booleanValue===false)return false;
+          var nm=(fs.name&&fs.name.stringValue)||'';
+          var pr=parseInt((fs.price&&(fs.price.integerValue||fs.price.doubleValue||fs.price.stringValue))||0);
+          return nm&&pr>0;
+        }).map(function(r){
           var f=r.document.fields||{};
           var nameTranslations={};
           if(f.nameTranslations&&f.nameTranslations.mapValue&&f.nameTranslations.mapValue.fields){
@@ -3460,7 +3468,7 @@ ${JSON.stringify(postSummary)}
           }})
         });
         const rows = await r.json();
-        const parseRows = (rows) => (rows||[]).filter(d=>d.document).map(d=>{
+        const parseRows = (rows) => (rows||[]).filter(d=>d.document&&!(d.document.fields?.forSale?.booleanValue===false)).map(d=>{
           const f = d.document.fields||{};
           const g = (k)=>{const v=f[k]; if(!v)return null; return v.stringValue??v.integerValue??v.booleanValue??null;};
           return {
