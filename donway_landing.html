@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0066ff">
 <meta name="description" content="DONWAY — 택배·배달·전 업종 정산 자동화. 급여 계산 5분, 카카오 명세서 자동 발송, FILO·DINE 연동">
 <meta property="og:title" content="DONWAY — 전 업종 정산 자동화">
-<meta property="og:description" content="택배·배달·요식업·뷰티·건설 등 전 업종 급여·정산 자동화 플랫폼">
+<meta property="og:description" content="택배·배달·요식업·뷰티·요양 등 업종별 급여·정산 자동화 플랫폼">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-F3RGSECX2K"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-F3RGSECX2K');</script>
 <title>DONWAY — 전 업종 정산 자동화</title>
@@ -267,11 +267,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <button class="tab on" onclick="_tab(0)">📦 택배</button>
     <button class="tab" onclick="_tab(1)">🛵 배달</button>
     <button class="tab" onclick="_tab(2)">🍽 외식업</button>
-    <button class="tab" onclick="_tab(3)">🧹 청소·용역</button>
-    <button class="tab" onclick="_tab(4)">🏗️ 건설</button>
-    <button class="tab" onclick="_tab(5)">💄 뷰티</button>
-    <button class="tab" onclick="_tab(6)">🛡️ 보험</button>
-    <button class="tab" onclick="_tab(7)">🏥 요양</button>
+    <button class="tab" onclick="_tab(3)">💄 뷰티</button>
+    <button class="tab" onclick="_tab(4)">🏥 요양</button>
   </div>
   <div class="fitems" id="fitems"></div>
 </div>
@@ -551,22 +548,6 @@ var INDUSTRY = [
     {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산'},
     {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달 · 더존 CSV 지원'},
   ],
-  [ // 청소·용역
-    {ico:'🧹',ttl:'청소 직원 급여',desc:'시급·일급·건당 혼용 자동 계산'},
-    {ico:'💬',ttl:'직원 명세서',desc:'급여 명세서 카카오 자동 발송'},
-    {ico:'📋',ttl:'근무표 관리',desc:'주간 근무표 업로드 → 급여 자동 계산'},
-    {ico:'📈',ttl:'지점별 실적',desc:'지점별 매출·마진 실시간 비교'},
-    {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
-  ],
-  [ // 건설
-    {ico:'🏗️',ttl:'일용직 급여',desc:'날별 인원·금액 다른 일용직 자동 계산'},
-    {ico:'💬',ttl:'작업자 명세서',desc:'일별 작업 내역 명세서 카카오 발송'},
-    {ico:'📋',ttl:'현장별 관리',desc:'현장별 인원·비용 통합 관리'},
-    {ico:'🧾',ttl:'일용직 세금',desc:'일용근로소득세 자동 계산'},
-    {ico:'📈',ttl:'현장 수익 분석',desc:'현장별 마진율 실시간 확인'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'일용직 지급명세서 자동 생성'},
-  ],
   [ // 뷰티
     {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산'},
     {ico:'💬',ttl:'직원 명세서',desc:'월 급여 명세서 카카오 자동 발송'},
@@ -574,14 +555,6 @@ var INDUSTRY = [
     {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교'},
     {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
     {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
-  ],
-  [ // 보험
-    {ico:'🛡️',ttl:'설계사 수수료',desc:'상품별 수수료 자동 계산 · 환수 처리'},
-    {ico:'💬',ttl:'설계사 명세서',desc:'월 수수료 명세서 카카오 자동 발송'},
-    {ico:'📊',ttl:'실적 관리',desc:'신계약·유지·환수 통합 관리'},
-    {ico:'📈',ttl:'팀별 실적',desc:'팀장별 팀 실적 통합 분석'},
-    {ico:'🧾',ttl:'세금계산서',desc:'수수료 세금계산서 자동 발행'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 지급 자료 자동 전달'},
   ],
   [ // 요양
     {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산'},
