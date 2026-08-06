@@ -154,7 +154,7 @@ function _filoOrderStatus(orderId, status, src){
     snap.forEach(function(doc){doc.ref.update({status:'done'});});
    }).catch(function(){});
   }
- }).catch(function(e){_filoToast('+e.message);});
+ }).catch(function(e){_filoToast('오류: '+e.message);});
 }
 
 // ── 테이블 QR 생성 ──
@@ -565,7 +565,7 @@ function _filoDeliveryAdd(did){
    _filoToast('배달 주문이 접수됐습니다!');
    mo.remove();
    window._selectedDeliveryApp=null;
-  }).catch(function(e){_filoToast('+e.message);});
+  }).catch(function(e){_filoToast('오류: '+e.message);});
  };
  btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
  box.appendChild(btnRow);
@@ -662,5 +662,5 @@ function _toSubmitOrder(did){
    .get().then(function(snap){if(!snap.empty)snap.docs[0].ref.update({status:'occupied',since:now.toISOString()});});
   _filoToast(''+_toTable.tableId+'번 주문 전송! 주방/주문대기 자동 등록됩니다.');
   _toCart={};_toUpdateCart();_toShowMenuGrid(window._toAllMenus||[]);_toLoadTables(did);
- }).catch(function(e){_filoToast('+e.message);});
+ }).catch(function(e){_filoToast('오류: '+e.message);});
 }
