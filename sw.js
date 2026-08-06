@@ -52,7 +52,7 @@ function _isDuplicate(tag) {
 messaging.onBackgroundMessage(function(payload) {
   const n = payload.notification || {};
   const d = payload.data || {};
-  const title = n.title || d.title || '📢 MBTI 물류';
+  const title = n.title || d.title || 'MBTI 물류';
   const body = n.body || d.body || '';
   const isUrgent = d.urgent === 'true' || d.pinned === 'true';
   const tag = d.tag || 'mbti-' + Date.now();
@@ -67,7 +67,7 @@ messaging.onBackgroundMessage(function(payload) {
       });
   }
   return _showBgNotification(title, body, isUrgent, tag, d,
-    isUrgent ? [{ action: 'open', title: '✅ 확인하기' }, { action: 'close', title: '닫기' }] : []
+    isUrgent ? [{ action: 'open', title: '확인하기' }, { action: 'close', title: '닫기' }] : []
   );
 });
 
@@ -85,7 +85,7 @@ self.addEventListener('message', function(e) {
   if (e.data.type === 'SHOW_NOTI') {
     const d = e.data.data || {};
     const isUrgent = !!d.urgent;
-    self.registration.showNotification(d.title || '📢 MBTI 물류', {
+    self.registration.showNotification(d.title || 'MBTI 물류', {
       body: d.body || '', icon: ICON, badge: BADGE,
       tag: d.tag || 'mbti-' + Date.now(), renotify: true,
       vibrate: isUrgent ? [700,120,700,120,700,500,700,120,700,120,700] : [500,150,500,400,500,150,500],
