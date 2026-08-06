@@ -19,7 +19,7 @@ module.exports = defineConfig({
         video: 'off',
         proxy: {
           server: process.env.HTTPS_PROXY || 'http://127.0.0.1:36973',
-          bypass: 'localhost,127.0.0.1,yongcha.app,*.googleapis.com,*.google.com,*.gstatic.com,*.firebase.com,*.firebaseapp.com,*.firebasestorage.app',
+          bypass: 'localhost,127.0.0.1,filo.ai.kr,dine.ne.kr,donway.ai.kr,yongcha.app,*.googleapis.com,*.google.com,*.gstatic.com,*.firebase.com,*.firebaseapp.com,*.firebasestorage.app,*.cloudfunctions.net',
         },
         launchOptions: {
           args: [
