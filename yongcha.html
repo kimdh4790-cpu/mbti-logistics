@@ -267,6 +267,11 @@ var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대
 var PLATFORMS=['전체','바로고','화물인','화물24','센디'];
 var _MKT={'CJ대한통운':880,'한진택배':855,'롯데택배':860,'우체국':900,'쿠팡로지스틱스':960,'로젠택배':840};
 
+var _ldTimer=setTimeout(function(){
+  document.getElementById('ld').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+},3000);
+
 firebase.initializeApp({
   apiKey:API_KEY,
   authDomain:'mbti-logistics.firebaseapp.com',
@@ -285,11 +290,6 @@ fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(cfg
   s.onload=function(){kakao.maps.load(function(){_kakaoReady=true;});};
   document.head.appendChild(s);
 }).catch(function(){});
-
-var _ldTimer=setTimeout(function(){
-  document.getElementById('ld').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-},3000);
 
 _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
