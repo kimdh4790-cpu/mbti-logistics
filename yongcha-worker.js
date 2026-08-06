@@ -418,7 +418,7 @@ function _showApp(){
   var t=_CU.type,b=document.getElementById('hdr-badge');
   b.textContent=t==='admin'?'관리자':t==='agency'?'대리점':'기사';
   b.className='hdr-badge '+(t==='admin'?'badge-admin':t==='agency'?'badge-agency':'badge-driver');
-  _buildNav();_goPage('home');
+  _buildNav();_goPage(_curPage||'home'); // ponytail: preserve page on token-refresh re-auth
 }
 
 var _SVG={
