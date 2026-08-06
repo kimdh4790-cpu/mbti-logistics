@@ -177,7 +177,7 @@ function _renderMenuGrid(menus, gridId){
     '</div></div>'+
     '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   } else {
-   item.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||'🍽')+'</div></div>'+
+   item.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||_svgIcon('utensils'))+'</div></div>'+
     '<div class="mi-body">'+
     '<div class="mi-name" data-orig="'+nameEsc+'">'+m.name+'</div>'+
     '<div class="mi-tr" id="'+trId+'"></div>'+
@@ -305,7 +305,7 @@ function _openMdlCommon(m){
   scrollEl.insertBefore(img,mdlContent);
  } else {
   var emojiEl=document.createElement('div');
-  emojiEl.className='mdl-emoji';emojiEl.textContent=m.emoji||'🍽';
+  emojiEl.className='mdl-emoji';emojiEl.innerHTML=m.emoji||_svgIcon('utensils');
   scrollEl.insertBefore(emojiEl,mdlContent);
  }
  var nameEl=document.getElementById(nameId);if(nameEl)nameEl.textContent=m.name;
@@ -426,7 +426,7 @@ function _openCart(){
    img.className='ci-img';img.src=menuData.imageUrl;img.alt=item.name;
    mediaEl.appendChild(img);
   } else {
-   mediaEl.className='ci-emoji';mediaEl.textContent=item.emoji||'🍽';
+   mediaEl.className='ci-emoji';mediaEl.innerHTML=item.emoji||_svgIcon('utensils');
   }
   var nameEl=document.createElement('div');nameEl.className='ci-name';nameEl.textContent=item.name;
   var ctrl=document.createElement('div');ctrl.className='ci-ctrl';
@@ -502,7 +502,7 @@ function _openAddrPopup(){
  var pop=document.createElement('div');
  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
  pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:420px">'+
-  '<div style="font-size:16px;font-weight:900;margin-bottom:16px">📍 배달 주소 입력</div>'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:16px">배달 주소 입력</div>'+
   '<input id="_ai1" placeholder="도로명 주소 (예: 수영로 668)" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:8px;box-sizing:border-box;outline:none">'+
   '<input id="_ai2" placeholder="상세주소 (예: 607호)" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;margin-bottom:16px;box-sizing:border-box;outline:none">'+
   '<div style="display:flex;gap:8px">'+
@@ -515,11 +515,11 @@ function _openAddrPopup(){
   var main=(document.getElementById('_ai1')||{}).value||'';
   var detail=(document.getElementById('_ai2')||{}).value||'';
   main=main.trim();detail=detail.trim();
-  if(!main){_filoToast('📍 주소를 입력해주세요');return;}
+  if(!main){_filoToast('주소를 입력해주세요');return;}
   if(typeof _addrFull!=='undefined')_addrFull=main+(detail?' '+detail:'');
   if(typeof _addr!=='undefined')_addr=main+(detail?' '+detail:'');
   var btns=document.querySelectorAll('[id^="addr-btn"]');
-  btns.forEach(function(b){b.textContent='📍 '+(main+(detail?' '+detail:''));});
+  btns.forEach(function(b){b.textContent=main+(detail?' '+detail:'');});
   pop.remove();
  };
  document.getElementById('_acl').onclick=function(){pop.remove();};
@@ -536,7 +536,7 @@ function _renderRecommendBanner(menus){
  if(existing)existing.remove();
 
  var h=new Date().getHours();
- var timeLabel=h>=6&&h<11?'🌅 아침 추천':h>=11&&h<14?'☀️ 점심 추천':h>=14&&h<17?'☕ 오후 추천':h>=17&&h<21?'🌆 저녁 추천':'🌙 야식 추천';
+ var timeLabel=h>=6&&h<11?'아침 추천':h>=11&&h<14?'점심 추천':h>=14&&h<17?'오후 추천':h>=17&&h<21?'저녁 추천':'야식 추천';
 
  var timePrefs={
   morning:['커피','음료','디저트','샐러드','토스트'],
@@ -578,10 +578,10 @@ function _renderRecommendBanner(menus){
    img.src=m.imageUrl;
    img.style.cssText='width:100%;height:100%;object-fit:cover';
    img.loading='lazy';
-   img.onerror=function(){imgWrap.textContent=m.emoji||'🍽';};
+   img.onerror=function(){imgWrap.innerHTML=m.emoji||_svgIcon('utensils');};
    imgWrap.appendChild(img);
   } else {
-   imgWrap.textContent=m.emoji||'🍽';
+   imgWrap.innerHTML=m.emoji||_svgIcon('utensils');
   }
   card.appendChild(imgWrap);
   // 이름
@@ -618,7 +618,7 @@ function _loadMenus(){
   _renderRecommendBanner(_menus);
  }).catch(function(){
   var g=document.getElementById('menu-grid');
-  if(g)g.innerHTML='<div class="empty"><div class="empty-ico">😅</div><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
+  if(g)g.innerHTML='<div class="empty"><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';
  });
 }
 
