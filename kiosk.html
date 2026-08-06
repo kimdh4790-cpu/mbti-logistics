@@ -13,82 +13,124 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <style>
-:root{--bg:#0f1117;--bg2:#171a24;--bg3:#1e2130;--border:#2e3250;--text:#e8eaf6;--text2:#9da3c8;--text3:#5a5f7a;--acc:#f59e0b;--green:#00ff94;--red:#ff4d6d;--blue:#00d4ff;--purple:#a78bfa;--pink:#f472b6}
+:root{
+  --bg:#080c14;--bg2:#0f1520;--bg3:#161e2e;--bg4:#1c2840;
+  --border:rgba(99,120,180,.18);--border2:rgba(99,120,180,.1);
+  --text:#eef0f8;--text2:#8892b0;--text3:#4a5370;
+  --brand:#7b2fff;--brand2:#a855f7;--brand-glow:rgba(123,47,255,.25);
+  --acc:#f59e0b;--green:#10b981;--red:#ef4444;--blue:#38bdf8;--pink:#e879f9;
+  --radius:12px;--radius-lg:18px;--radius-sm:8px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 .app{display:flex;height:100vh;overflow:hidden}
-/* 사이드바 */
-.sidebar{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
-.sb-logo{padding:16px;border-bottom:1px solid var(--border)}
-.sb-logo-title{font-size:16px;font-weight:900;color:var(--pink)}
-.sb-logo-sub{font-size:10px;color:var(--text3);margin-top:2px}
-.sb-user{padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3)}
-.nav{flex:1;overflow-y:auto;padding:6px 0}
-.nav-item{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;color:var(--text2);font-size:12px;font-weight:500;border-left:3px solid transparent;transition:all .15s}
-.nav-item:hover{background:var(--bg3);color:var(--text)}
-.nav-item.active{background:var(--bg3);color:var(--pink);border-left-color:var(--pink)}
-.nav-icon{font-size:15px;width:18px;text-align:center}
-.nav-section{padding:10px 14px 3px;font-size:10px;font-weight:700;color:var(--text3)}
-.sb-footer{padding:10px 14px;border-top:1px solid var(--border)}
-/* 메인 */
-.main{flex:1;overflow-y:auto;padding:20px;background:var(--bg)}
-.page-title{font-size:15px;font-weight:900;margin-bottom:14px}
-/* 카드 */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
-/* 테이블 */
-.table-wrap{overflow-x:auto}
+
+/* ── 사이드바 ── */
+.sidebar{width:216px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;backdrop-filter:blur(12px)}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border2)}
+.sb-logo-title{font-size:15px;font-weight:800;background:linear-gradient(90deg,var(--brand2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px}
+.sb-logo-title svg{width:18px;height:18px;stroke:var(--brand2);flex-shrink:0}
+.sb-logo-sub{font-size:10px;color:var(--text3);margin-top:4px;letter-spacing:.04em}
+.sb-user{padding:12px 18px;border-bottom:1px solid var(--border2);font-size:11px;color:var(--text3)}
+.nav{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 18px;cursor:pointer;color:var(--text3);font-size:12px;font-weight:500;border-left:2px solid transparent;transition:all .15s;line-height:1}
+.nav-item:hover{background:var(--bg3);color:var(--text2)}
+.nav-item.active{background:linear-gradient(90deg,rgba(123,47,255,.12),transparent);color:var(--brand2);border-left-color:var(--brand2);font-weight:700}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active .nav-icon{opacity:1}
+.nav-item:hover .nav-icon{opacity:.9}
+.nav-section{padding:14px 18px 5px;font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.12em;text-transform:uppercase}
+.sb-footer{padding:12px 18px;border-top:1px solid var(--border2)}
+
+/* ── 메인 ── */
+.main{flex:1;overflow-y:auto;padding:24px;background:var(--bg);scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.page-title{font-size:16px;font-weight:800;margin-bottom:16px;color:var(--text);display:flex;align-items:center;gap:8px}
+.page-title svg{width:18px;height:18px;stroke:var(--brand2)}
+
+/* ── 카드 ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:border-color .2s}
+.card:hover{border-color:rgba(99,120,180,.3)}
+
+/* ── 테이블 ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:var(--bg3);padding:7px 10px;text-align:left;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border)}
-td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+th{background:var(--bg3);padding:9px 12px;text-align:left;color:var(--text3);font-weight:700;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.04em}
+td{padding:9px 12px;border-bottom:1px solid var(--border2);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg3)}
-/* 버튼 */
-.btn{padding:7px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
-.btn-acc{background:var(--pink);color:#fff}
-.btn-blue{background:rgba(0,212,255,.15);border:1px solid var(--blue);color:var(--blue)}
+
+/* ── 버튼 ── */
+.btn{padding:8px 14px;border-radius:var(--radius-sm);border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-acc{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 4px 14px var(--brand-glow)}
+.btn-acc:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--brand-glow)}
+.btn-blue{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:var(--blue)}
 .btn-gray{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
-.btn-red{background:rgba(255,77,109,.15);border:1px solid var(--red);color:var(--red)}
-.btn-green{background:rgba(0,255,148,.15);border:1px solid var(--green);color:var(--green)}
-/* 입력 */
-.inp{width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
-.inp:focus{outline:none;border-color:var(--pink)}
-.field{margin-bottom:10px}
-.field-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:3px;display:block}
-/* 배지 */
-.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
-.badge-green{background:rgba(0,255,148,.15);color:var(--green)}
-.badge-red{background:rgba(255,77,109,.15);color:var(--red)}
-.badge-yellow{background:rgba(245,158,11,.15);color:var(--acc)}
-.badge-blue{background:rgba(0,212,255,.15);color:var(--blue)}
-/* 팝업 */
-.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
-.popup-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}
-.popup-title{font-size:14px;font-weight:900;margin-bottom:14px}
-/* 토스트 */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 18px;font-size:12px;z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.btn-gray:hover{background:var(--bg4);color:var(--text)}
+.btn-red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.btn-green{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green)}
+
+/* ── 입력 ── */
+.inp{width:100%;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;transition:border-color .2s}
+.inp:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-glow)}
+.inp::placeholder{color:var(--text3)}
+.field{margin-bottom:12px}
+.field-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px;display:block;letter-spacing:.03em}
+
+/* ── 배지 ── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.02em}
+.badge-green{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.badge-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.badge-yellow{background:rgba(245,158,11,.12);color:var(--acc);border:1px solid rgba(245,158,11,.25)}
+.badge-blue{background:rgba(56,189,248,.12);color:var(--blue);border:1px solid rgba(56,189,248,.25)}
+
+/* ── 팝업 ── */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.popup-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.popup-title{font-size:15px;font-weight:800;margin-bottom:16px}
+
+/* ── 토스트 ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 20px;font-size:12px;font-weight:600;z-index:99999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 #toast.show{opacity:1}
-/* 시술 입력 그리드 */
-.service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
-.service-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:all .2s}
-.service-card:hover,.service-card.selected{border-color:var(--pink);background:rgba(244,114,182,.08)}
-.service-card .s-name{font-size:12px;font-weight:700;margin-bottom:3px}
+
+/* ── 서비스 그리드 ── */
+.service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:16px}
+.service-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;text-align:center;transition:all .2s}
+.service-card:hover{border-color:rgba(232,121,249,.4);transform:translateY(-1px)}
+.service-card.selected{border-color:var(--pink);background:rgba(232,121,249,.07);box-shadow:0 0 0 3px rgba(232,121,249,.12)}
+.service-card .s-name{font-size:12px;font-weight:700;margin-bottom:4px;color:var(--text)}
 .service-card .s-price{font-size:14px;font-weight:900;color:var(--pink)}
-/* 통계 카드 */
-.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-.stat-val{font-size:20px;font-weight:900;color:var(--pink)}
-.stat-label{font-size:11px;color:var(--text3);margin-top:2px}
-/* 모바일 */
+
+/* ── 통계 카드 ── */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;transition:border-color .2s}
+.stat-card:hover{border-color:rgba(99,120,180,.3)}
+.stat-val{font-size:22px;font-weight:900;color:var(--pink)}
+.stat-label{font-size:11px;color:var(--text3);margin-top:3px;letter-spacing:.03em}
+
+/* ── 모바일 ── */
 @media(max-width:600px){
   .sidebar{display:none}
   .mobile-header{display:flex!important}
 }
-.mobile-header{display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:11px 14px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-/* 로그인 */
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px}
-.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:30px 26px;width:100%;max-width:340px}
-/* 예약 카드 */
-.booking-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
+.mobile-header{display:none;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(8px)}
+
+/* ── 로그인 ── */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 60% 20%,rgba(123,47,255,.15) 0%,transparent 60%),var(--bg);padding:20px}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px 28px;width:100%;max-width:340px;box-shadow:0 32px 80px rgba(0,0,0,.5)}
+
+/* ── 예약 카드 ── */
+.booking-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;transition:border-color .2s}
+.booking-card:hover{border-color:rgba(99,120,180,.3)}
+
+/* ── 페이지네이션 ── */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;padding:4px 0}
+.pg-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.pg-btn:hover{background:var(--bg4);color:var(--text)}
+.pg-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -96,10 +138,12 @@ tr:hover td{background:var(--bg3)}
 <!-- 로그인 -->
 <div id="login-screen" style="display:none">
   <div class="login-box">
-    <div style="text-align:center;margin-bottom:22px">
-      <div style="font-size:30px;margin-bottom:6px">🖥️</div>
-      <div style="font-size:18px;font-weight:900;color:var(--pink)">키오스크·POS</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">filo.ai.kr</div>
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:linear-gradient(135deg,var(--brand),var(--brand2));border-radius:14px;margin-bottom:12px;box-shadow:0 8px 24px var(--brand-glow)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:900;background:linear-gradient(90deg,var(--brand2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">키오스크·POS</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:.06em">filo.ai.kr</div>
     </div>
     <div class="field">
       <label class="field-label">이메일</label>
@@ -120,14 +164,19 @@ tr:hover td{background:var(--bg3)}
 <!-- 앱 -->
 <div id="app-screen" style="display:none">
   <div class="mobile-header">
-    <div style="font-size:14px;font-weight:900;color:var(--pink)">🖥️ 키오스크·POS</div>
-    <button class="btn btn-gray" style="padding:5px 9px;font-size:11px" onclick="document.getElementById('sidebar').style.display='flex'">☰</button>
+    <div style="font-size:14px;font-weight:900;background:linear-gradient(90deg,var(--brand2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">키오스크·POS</div>
+    <button class="btn btn-gray" style="padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:5px" onclick="document.getElementById('sidebar').style.display='flex'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>메뉴
+    </button>
   </div>
   <div class="app">
     <div class="sidebar" id="sidebar">
       <div class="sb-logo">
-        <div class="sb-logo-title">🖥️ FILO POS</div>
-        <div class="sb-logo-sub">키오스크·매출·예약</div>
+        <div class="sb-logo-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          FILO POS
+        </div>
+        <div class="sb-logo-sub">키오스크 · 매출 · 예약</div>
       </div>
       <div class="sb-user">
         <div id="sb-company" style="font-weight:700;color:var(--text2);margin-bottom:1px"></div>
@@ -136,29 +185,60 @@ tr:hover td{background:var(--bg3)}
       </div>
       <div class="nav">
         <div class="nav-section">매출</div>
-        <div class="nav-item active" id="nav-input" onclick="_nav(this,'input')"><span class="nav-icon">✍️</span>시술 입력</div>
-        <div class="nav-item" id="nav-today" onclick="_nav(this,'today')"><span class="nav-icon">📊</span>오늘 매출</div>
-        <div class="nav-item" id="nav-staff" onclick="_nav(this,'staff')"><span class="nav-icon">👤</span>직원별 현황</div>
+        <div class="nav-item active" id="nav-input" onclick="_nav(this,'input')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          시술 입력
+        </div>
+        <div class="nav-item" id="nav-today" onclick="_nav(this,'today')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          오늘 매출
+        </div>
+        <div class="nav-item" id="nav-staff" onclick="_nav(this,'staff')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          직원별 현황
+        </div>
         <div class="nav-section">관리</div>
         <div class="nav-item" id="nav-bookings" onclick="_nav(this,'bookings')">
-          <span class="nav-icon">📅</span>오늘 예약
-          <span id="booking-count" style="display:none;margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700"></span>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          오늘 예약
+          <span id="booking-count" style="display:none;margin-left:auto;background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700"></span>
         </div>
-        <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')"><span class="nav-icon">💆</span>서비스 메뉴</div>
-        <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')"><span class="nav-icon">📈</span>매출 통계</div>
-        <div class="nav-item" id="nav-pos-upload" onclick="_nav(this,'pos_upload')"><span class="nav-icon">📤</span>POS 매출 업로드</div>
-    <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')"><span class="nav-icon">🗂</span>고객 DB</div>
+        <div class="nav-item" id="nav-menu" onclick="_nav(this,'menu')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          서비스 메뉴
+        </div>
+        <div class="nav-item" id="nav-stats" onclick="_nav(this,'stats')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          매출 통계
+        </div>
+        <div class="nav-item" id="nav-pos-upload" onclick="_nav(this,'pos_upload')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          POS 업로드
+        </div>
+        <div class="nav-item" id="nav-customer" onclick="_nav(this,'customer')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          고객 DB
+        </div>
         <div class="nav-section">연결</div>
-        <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')"><span class="nav-icon">💰</span>DONWAY 정산</div>
-        <div class="nav-item" onclick="window.open('https://filo.ai.kr/inventory','_blank')"><span class="nav-icon">📦</span>재고관리</div>
-        <div class="nav-item" onclick="window.open('https://filo.ai.kr/qr','_blank')"><span class="nav-icon">🔲</span>QR 관리</div>
+        <div class="nav-item" onclick="window.open('https://donway.ai.kr/settle','_blank')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          DONWAY 정산
+        </div>
+        <div class="nav-item" onclick="window.open('https://filo.ai.kr/inventory','_blank')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          재고관리
+        </div>
+        <div class="nav-item" onclick="window.open('https://filo.ai.kr/qr','_blank')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/></svg>
+          QR 관리
+        </div>
       </div>
       <div class="sb-footer">
         <button class="btn btn-gray" style="width:100%;font-size:11px" onclick="_logout()">로그아웃</button>
       </div>
     </div>
     <div class="main" id="main-content">
-      <div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로딩 중...</div>
+      <div style="text-align:center;padding:40px;color:var(--text3)">로딩 중...</div>
     </div>
   </div>
 </div>
@@ -202,13 +282,15 @@ function _showSubGate(){
     g.id='sub-gate';
     g.style.cssText='position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
     g.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:40px 32px;max-width:400px;width:100%;text-align:center">'+
-      '<div style="font-size:48px;margin-bottom:16px">🔒</div>'+
+      '<div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;background:linear-gradient(135deg,var(--brand),var(--brand2));border-radius:14px;margin-bottom:16px;box-shadow:0 8px 24px var(--brand-glow)">'+
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'+
+      '</div>'+
       '<div style="font-size:18px;font-weight:900;margin-bottom:8px">구독이 필요합니다</div>'+
       '<div style="font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:24px">'+
         '키오스크·POS 기능을 이용하려면<br>filo.ai.kr 구독이 필요합니다.<br>'+
-        '<b style="color:#7b2fff">월 50,000원</b> (VAT별도)'+
+        '<b style="color:var(--brand2)">월 50,000원</b> (VAT별도)'+
       '</div>'+
-      '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,#7b2fff,#a855f7);color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none;margin-bottom:10px">📞 051-711-3103 도입 문의</a>'+
+      '<a href="tel:051-711-3103" style="display:block;padding:14px;background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none;margin-bottom:10px">051-711-3103 도입 문의</a>'+
       '<a href="https://donway.ai.kr/join" style="display:block;padding:12px;background:var(--bg3);color:var(--text2);border-radius:12px;font-size:13px;font-weight:700;text-decoration:none">온라인 신청하기 →</a>'+
     '</div>';
     document.body.appendChild(g);
@@ -272,7 +354,7 @@ function _addSubBtn(){
   var btn = document.createElement('button');
   btn.id = 'sub-store-btn';
   btn.style.cssText = 'width:calc(100% - 24px);margin:8px 12px;padding:9px;background:rgba(123,47,255,.15);color:#7b2fff;border:1px solid rgba(123,47,255,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
-  btn.textContent = '💳 기능 추가 구독';
+  btn.textContent = '기능 추가 구독';
   btn.onclick = _showModuleStore;
   nav.appendChild(btn);
 }
@@ -300,7 +382,7 @@ function _nav(el,page){
   else if(page==='bookings') _pageBookings(c);
   else if(page==='menu') _pageMenu(c);
   else if(page==='customer') _pageCustomer(c);
-  else if(page==='stats') _statsPage(c,_getDid(),'filo_sales','date','finalPrice','💰 매출');
+  else if(page==='stats') _statsPage(c,_getDid(),'filo_sales','date','finalPrice','매출');
   else if(page==='pos_upload') _pagePosUpload(c);
   else if(page==='monthly') _pageMonthly(c);
   else if(page==='payroll') _pagePayroll(c);
@@ -322,7 +404,7 @@ function _pageInput(c){
   if(!c)c=document.getElementById('main-content');
   var did=_getDid();
   c.innerHTML=
-    '<div class="page-title">✍️ 시술 입력</div>'+
+    '<div class="page-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>시술 입력</div>'+
     '<div class="card">'+
       '<div class="field"><label class="field-label">담당 디자이너</label>'+
         '<select class="inp" id="inp-designer">'+
@@ -367,7 +449,7 @@ function _pageInput(c){
           '</select>'+
         '</div>'+
       '</div>'+
-      '<button class="btn btn-acc" style="width:100%;padding:12px;font-size:14px;margin-top:10px" onclick="_saveSale()">💳 결제 완료</button>'+
+      '<button class="btn btn-acc" style="width:100%;padding:13px;font-size:14px;margin-top:10px" onclick="_saveSale()">결제 완료</button>'+
     '</div>';
   window._selectedServices=[];
 }
@@ -452,18 +534,18 @@ function _saveSale(){
         visitCount: firebase.firestore.FieldValue.increment(1)
       });
     }
-    toast('✅ 결제 완료! ₩'+comma(finalPrice),3000);
+    toast('결제 완료! ₩'+comma(finalPrice),3000);
     _selectedServices=[];
     _nav(document.getElementById('nav-input'),'input');
-  }).catch(function(e){toast('❌ '+e.message);});
+  }).catch(function(e){toast('오류: '+e.message);});
 }
 
 // ━━━ 오늘 매출 ━━━
 function _pageToday(c){
   if(!c)c=document.getElementById('main-content');
   var did=_getDid();
-  c.innerHTML='<div class="page-title">📊 오늘 매출 · '+_today+'</div>'+
-    '<div class="stat-grid" id="today-stats"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>'+
+  c.innerHTML='<div class="page-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>오늘 매출 · '+_today+'</div>'+
+    '<div class="stat-grid" id="today-stats"><div style="text-align:center;padding:20px;color:var(--text3)"></div></div>'+
     '<div id="today-list"></div>';
 
   _db.collection('filo_sales').where('dealerId','==',did).where('date','==',_today)
@@ -502,7 +584,7 @@ function _pageStaff(c){
   if(!c)c=document.getElementById('main-content');
   var did=_getDid();
   c.innerHTML='<div class="page-title">👤 직원별 현황 · '+_ym+'</div>'+
-    '<div id="staff-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>';
+    '<div id="staff-list"><div style="text-align:center;padding:20px;color:var(--text3)"></div></div>';
 
   _db.collection('filo_sales').where('dealerId','==',did).where('ym','==',_ym).get()
   .then(function(snap){
@@ -536,10 +618,10 @@ function _pageBookings(c){
   var did=_getDid();
   c.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-      '<div class="page-title" style="margin:0">📅 오늘 예약 · '+_today+'</div>'+
+      '<div class="page-title" style="margin:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>오늘 예약 · '+_today+'</div>'+
       '<button class="btn btn-gray" style="font-size:11px" onclick="_pageBookings()">🔄</button>'+
     '</div>'+
-    '<div id="booking-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>';
+    '<div id="booking-list"><div style="text-align:center;padding:20px;color:var(--text3)"></div></div>';
 
   _db.collection('filo_bookings').where('dealerId','==',did)
   .where('date','==',_today).orderBy('time','asc').get()
@@ -550,7 +632,7 @@ function _pageBookings(c){
     if(badge){badge.textContent=waiting.length;badge.style.display=waiting.length?'inline':'none';}
     if(snap.empty){
       el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3)">'+
-        '<div style="font-size:28px;margin-bottom:8px">📅</div>'+
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
         '<div>오늘 예약 없음</div>'+
         '<div style="font-size:11px;margin-top:6px">QR 예약 링크를 고객에게 공유하세요</div>'+
       '</div>';
@@ -575,7 +657,7 @@ function _pageBookings(c){
         '</div>'+
         (status==='waiting'?
           '<div style="display:flex;gap:6px;margin-top:8px">'+
-            '<button class="btn btn-green" style="flex:1;font-size:11px" data-id="'+id+'" onclick="_bookingDone(this)">✅ 완료</button>'+
+            '<button class="btn btn-green" style="flex:1;font-size:11px" data-id="'+id+'" onclick="_bookingDone(this)">완료</button>'+
             '<button class="btn btn-red" style="flex:1;font-size:11px" data-id="'+id+'" onclick="_bookingCancel(this)">취소</button>'+
           '</div>':'')+'</div>';
     }).join('');
@@ -585,15 +667,15 @@ function _pageBookings(c){
 function _bookingDone(btn){
   _db.collection('filo_bookings').doc(btn.dataset.id)
   .update({status:'done',doneAt:new Date().toISOString()})
-  .then(function(){toast('✅ 완료 처리');_pageBookings();})
-  .catch(function(e){toast('❌ '+e.message);});
+  .then(function(){toast('완료 처리');_pageBookings();})
+  .catch(function(e){toast('오류: '+e.message);});
 }
 function _bookingCancel(btn){
   if(!confirm('예약을 취소하시겠습니까?'))return;
   _db.collection('filo_bookings').doc(btn.dataset.id)
   .update({status:'cancel',cancelAt:new Date().toISOString()})
   .then(function(){toast('취소 처리됨');_pageBookings();})
-  .catch(function(e){toast('❌ '+e.message);});
+  .catch(function(e){toast('오류: '+e.message);});
 }
 
 // 실시간 예약 알림
@@ -608,7 +690,7 @@ function _startBookingListener(){
       snap.docChanges().forEach(function(change){
         if(change.type==='added'&&window._bkListening){
           var v=change.doc.data();
-          toast('🔔 새 예약! '+(v.custName||'')+'님 '+(v.time||''),4000);
+          toast('새 예약! '+(v.custName||'')+'님 '+(v.time||''),4000);
         }
       });
       window._bkListening=true;
@@ -621,7 +703,7 @@ function _pageMenu(c){
   if(!c)c=document.getElementById('main-content');
   var did=_getDid();
   c.innerHTML=
-    '<div class="page-title">💆 서비스 메뉴</div>'+
+    '<div class="page-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>서비스 메뉴</div>'+
     '<div class="card">'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
         '<div class="field" style="margin:0"><label class="field-label">서비스명</label><input class="inp" id="mn" placeholder="예) 커트"></div>'+
@@ -629,7 +711,7 @@ function _pageMenu(c){
       '</div>'+
       '<button class="btn btn-acc" style="width:100%;margin-top:8px" onclick="_addMenu()">+ 추가</button>'+
     '</div>'+
-    '<div id="menu-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>';
+    '<div id="menu-list"><div style="text-align:center;padding:20px;color:var(--text3)"></div></div>';
 
   _db.collection('filo_services').where('dealerId','==',did).get()
   .then(function(snap){
@@ -653,22 +735,22 @@ function _addMenu(){
   if(!n||!p){toast('서비스명과 금액을 입력하세요');return;}
   var did=_getDid();
   _db.collection('filo_services').add({dealerId:did,name:n,price:p,useCount:0,createdAt:new Date().toISOString()})
-  .then(function(){toast('✅ 등록됨');_pageMenu(document.getElementById('main-content'));})
-  .catch(function(e){toast('❌ '+e.message);});
+  .then(function(){toast('등록됨');_pageMenu(document.getElementById('main-content'));})
+  .catch(function(e){toast('오류: '+e.message);});
 }
 function _delMenu(id){
   if(!confirm('삭제하시겠습니까?'))return;
   _db.collection('filo_services').doc(id).delete()
   .then(function(){toast('삭제됨');_pageMenu(document.getElementById('main-content'));})
-  .catch(function(e){toast('❌ '+e.message);});
+  .catch(function(e){toast('오류: '+e.message);});
 }
 
 // ━━━ 고객 DB ━━━
 function _pageCustomer(c){
   if(!c)c=document.getElementById('main-content');
   var did=_getDid();
-  c.innerHTML='<div class="page-title">🗂 고객 DB</div>'+
-    '<div id="cust-list"><div style="text-align:center;padding:20px;color:var(--text3)">⏳</div></div>';
+  c.innerHTML='<div class="page-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>고객 DB</div>'+
+    '<div id="cust-list"><div style="text-align:center;padding:20px;color:var(--text3)"></div></div>';
 
   _db.collection('filo_customers').where('dealerId','==',did)
   .orderBy('lastVisit','desc').limit(50).get()
@@ -740,7 +822,7 @@ function _linkAccount(email){
 function _copyLink(){
   var el = document.getElementById('online-link');
   if(!el) return;
-  navigator.clipboard.writeText(el.textContent).then(function(){ toast('✅ 복사됨'); });
+  navigator.clipboard.writeText(el.textContent).then(function(){ toast('복사됨'); });
 }
 function _openQR(){
   var el = document.getElementById('online-link');
@@ -763,7 +845,7 @@ function _pagePoints(c) {
   if(!c) c = document.getElementById('main-content');
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🎁 포인트 관리</div>' +
+    '<div class="page-title">포인트 관리</div>' +
     // 설정
     '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
       '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">⚙️ 포인트 설정</div>' +
@@ -787,8 +869,8 @@ function _pagePoints(c) {
     '</div>' +
     '<div id="pt-result"></div>' +
     // 전체 포인트 현황
-    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin:12px 0 8px">📊 전체 현황</div>' +
-    '<div id="pt-summary"><div style="text-align:center;padding:16px;color:#475569">⏳</div></div>';
+    '<div style="font-size:12px;font-weight:700;color:var(--blue);margin:12px 0 8px">전체 현황</div>' +
+    '<div id="pt-summary"><div style="text-align:center;padding:16px;color:#475569"></div></div>';
 
   _loadPointSummary(did);
   _loadPointSettings(did);
@@ -818,7 +900,7 @@ function _savePointSettings() {
     pointRate: rate, pointMin: min
   }, {merge:true}).then(function() {
     _POINT_RATE = rate;
-    toast('✅ 포인트 설정 저장');
+    toast('포인트 설정 저장');
   });
 }
 
@@ -827,7 +909,7 @@ function _searchPoint() {
   var phone = (document.getElementById('pt-phone')||{}).value.replace(/\D/g,'');
   if(!phone) { toast('연락처를 입력하세요'); return; }
   var el = document.getElementById('pt-result');
-  if(el) el.innerHTML = '<div style="text-align:center;padding:12px;color:#475569">⏳</div>';
+  if(el) el.innerHTML = '<div style="text-align:center;padding:12px;color:#475569"></div>';
 
   _db.collection('filo_customers').doc(did+'_'+phone).get().then(function(snap) {
     if(!snap.exists) {
@@ -864,7 +946,7 @@ function _addPoint(custId) {
   var ref = _db.collection('filo_customers').doc(custId);
   ref.update({ points: firebase.firestore.FieldValue.increment(pts) })
     .then(function() {
-      toast('✅ ' + pts.toLocaleString() + 'P 적립');
+      toast('' + pts.toLocaleString() + 'P 적립');
       _db.collection('filo_point_log').add({
         custId: custId, type: 'add', pts: pts, amt: amt,
         at: new Date().toISOString()
@@ -880,7 +962,7 @@ function _usePoint(custId, curPts) {
   _db.collection('filo_customers').doc(custId).update({
     points: firebase.firestore.FieldValue.increment(-use)
   }).then(function() {
-    toast('✅ ' + use.toLocaleString() + 'P 사용');
+    toast('' + use.toLocaleString() + 'P 사용');
     _db.collection('filo_point_log').add({
       custId: custId, type: 'use', pts: -use, at: new Date().toISOString()
     });
@@ -914,7 +996,7 @@ function _pageMembership(c) {
   if(!c) c = document.getElementById('main-content');
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💳 회원권 관리</div>' +
+    '<div class="page-title">회원권 관리</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px">' +
       '<button onclick="_mbTab(\'sell\')" id="mb-tab-sell" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">발급</button>' +
       '<button onclick="_mbTab(\'list\')" id="mb-tab-list" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">현황</button>' +
@@ -952,7 +1034,7 @@ function _mbTypeForm(c) {
       '<input id="mbt-value" placeholder="충전금액 / 횟수 / 유효일수" type="number" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
       '<button onclick="_saveMbType()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">등록</button>' +
     '</div>' +
-    '<div id="mbt-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+    '<div id="mbt-list"><div style="text-align:center;padding:12px;color:#475569"></div></div>';
   _loadMbTypes(did);
 }
 
@@ -966,7 +1048,7 @@ function _saveMbType() {
   _db.collection('filo_mb_types').add({
     dealerId:did, name:name, mbType:type, price:price, value:value,
     active:true, createdAt:new Date().toISOString()
-  }).then(function(){ toast('✅ 회원권 상품 등록'); _loadMbTypes(did); });
+  }).then(function(){ toast('회원권 상품 등록'); _loadMbTypes(did); });
 }
 
 function _loadMbTypes(did) {
@@ -1001,7 +1083,7 @@ function _mbSellForm(c) {
         return '<option value="' + d.id + '">' + v.name + ' (₩' + v.price.toLocaleString() + ')</option>';
       }).join('');
     c.innerHTML =
-      '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">💳 회원권 발급</div>' +
+      '<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px">회원권 발급</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
         '<input id="mb-phone" placeholder="고객 연락처" type="tel" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
         '<input id="mb-cname" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
@@ -1009,7 +1091,7 @@ function _mbSellForm(c) {
         '<select id="mb-pay" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
           '<option value="card">카드</option><option value="cash">현금</option><option value="transfer">계좌이체</option>' +
         '</select>' +
-        '<button onclick="_issueMembership()" style="padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💳 발급</button>' +
+        '<button onclick="_issueMembership()" style="padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">발급</button>' +
       '</div>';
     window._mbTypeDocs = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
   });
@@ -1050,14 +1132,14 @@ function _issueMembership() {
       date:startDate, ym:startDate.slice(0,7),
       isMembership:true, createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    toast('✅ 회원권 발급 완료');
+    toast('회원권 발급 완료');
     _mbSellForm(document.getElementById('mb-content'));
   });
 }
 
 function _mbList(c) {
   var did = window._mbDid;
-  c.innerHTML = '<div style="text-align:center;padding:16px;color:#475569">⏳</div>';
+  c.innerHTML = '<div style="text-align:center;padding:16px;color:#475569"></div>';
   _db.collection('filo_memberships').where('dealerId','==',did)
     .where('active','==',true).orderBy('createdAt','desc').limit(30).get()
     .then(function(snap) {
@@ -1095,7 +1177,7 @@ function _useMembership(id, mbType, remain) {
     remainValue: newRemain,
     active: newRemain > 0
   }).then(function(){
-    toast('✅ 사용 처리 완료 (잔여: ' + newRemain + ')');
+    toast('사용 처리 완료 (잔여: ' + newRemain + ')');
     _mbList(document.getElementById('mb-content'));
   });
 }
@@ -1112,7 +1194,7 @@ function _pagePayslip(c) {
       '<div id="slip-ym" style="flex:1;text-align:center;font-size:14px;font-weight:700">' + new Date().toISOString().slice(0,7) + '</div>' +
       '<button onclick="_slipShift(1)" style="padding:8px 12px;background:var(--bg3,#1e3a5f);color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:16px">›</button>' +
     '</div>' +
-    '<div id="slip-list"><div style="text-align:center;padding:16px;color:#475569">⏳</div></div>';
+    '<div id="slip-list"><div style="text-align:center;padding:16px;color:#475569"></div></div>';
 
   window._slipYm = new Date().toISOString().slice(0,7);
   _loadPayslips(did, window._slipYm);
@@ -1261,23 +1343,25 @@ function _pageIndustry(c) {
   if(!c) c = document.getElementById('main-content');
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🏢 업종 설정</div>' +
+    '<div class="page-title">업종 설정</div>' +
     '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px">업종 선택 시 맞춤 기능이 활성화됩니다</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
     [
-      {key:'beauty',icon:'💇',name:'뷰티·미용',desc:'시술관리·동의서·재방문알림'},
-      {key:'nail',icon:'💅',name:'네일·피부',desc:'시술히스토리·전후사진'},
-      {key:'food',icon:'🍽️',name:'음식점·카페',desc:'테이블·주문·배달연동'},
-      {key:'health',icon:'💪',name:'헬스·요가',desc:'기간권·출입QR·PT스케줄'},
-      {key:'academy',icon:'📚',name:'학원·교습소',desc:'수강권·출석·학부모알림'},
-      {key:'laundry',icon:'👕',name:'세탁',desc:'접수·완료알림·픽업'},
-      {key:'stay',icon:'🏨',name:'숙박',desc:'객실·체크인·예약캘린더'},
-      {key:'retail',icon:'🛍️',name:'소매·잡화',desc:'재고·바코드·발주'},
+      {key:'beauty',svg:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>',name:'뷰티·미용',desc:'시술관리·동의서·재방문알림'},
+      {key:'nail',svg:'<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M8 12h8M12 8v8"/>',name:'네일·피부',desc:'시술히스토리·전후사진'},
+      {key:'food',svg:'<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20M21 15V2s-5 2-5 10v5m5 0H16"/><line x1="7" y1="11" x2="7" y2="22"/>',name:'음식점·카페',desc:'테이블·주문·배달연동'},
+      {key:'health',svg:'<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',name:'헬스·요가',desc:'기간권·출입QR·PT스케줄'},
+      {key:'academy',svg:'<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>',name:'학원·교습소',desc:'수강권·출석·학부모알림'},
+      {key:'laundry',svg:'<path d="M21 6H3a2 2 0 00-2 2v10a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2z"/><path d="M16 10a4 4 0 01-8 0"/>',name:'세탁',desc:'접수·완료알림·픽업'},
+      {key:'stay',svg:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',name:'숙박',desc:'객실·체크인·예약캘린더'},
+      {key:'retail',svg:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>',name:'소매·잡화',desc:'재고·바코드·발주'},
     ].map(function(ind) {
-      return '<div onclick="_setIndustry(\'' + ind.key + '\',\'' + did + '\')" style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:10px;padding:14px;text-align:center;cursor:pointer" id="ind-'+ind.key+'">' +
-        '<div style="font-size:28px;margin-bottom:6px">' + ind.icon + '</div>' +
-        '<div style="font-size:12px;font-weight:800">' + ind.name + '</div>' +
-        '<div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4">' + ind.desc + '</div>' +
+      return '<div onclick="_setIndustry(\'' + ind.key + '\',\'' + did + '\')" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all .2s" id="ind-'+ind.key+'">' +
+        '<div style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;background:var(--bg3);border-radius:10px;margin-bottom:8px">' +
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ind.svg+'</svg>' +
+        '</div>' +
+        '<div style="font-size:12px;font-weight:800;color:var(--text)">' + ind.name + '</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:3px;line-height:1.4">' + ind.desc + '</div>' +
       '</div>';
     }).join('') +
     '</div>';
@@ -1302,7 +1386,7 @@ function _setIndustry(key, did) {
     });
     var sel = document.getElementById('ind-'+key);
     if(sel){ sel.style.border='2px solid #0066ff'; sel.style.background='rgba(0,102,255,.1)'; }
-    toast('✅ 업종 설정: ' + key);
+    toast('업종 설정: ' + key);
   });
 }
 
@@ -1315,7 +1399,7 @@ function _pageBeautyRecord(c) {
   if(!c) c = document.getElementById('main-content');
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">💇 시술 기록</div>' +
+    '<div class="page-title">시술 기록</div>' +
     '<div style="display:flex;gap:8px;margin-bottom:12px">' +
       '<input id="br-phone" placeholder="고객 연락처" type="tel" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
       '<button onclick="_loadBeautyRecord()" style="padding:10px 14px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">조회</button>' +
@@ -1328,7 +1412,7 @@ function _loadBeautyRecord() {
   var phone = (document.getElementById('br-phone')||{}).value.replace(/\D/g,'');
   if(!phone){ toast('연락처를 입력하세요'); return; }
   var c = document.getElementById('br-content');
-  if(c) c.innerHTML = '<div style="text-align:center;padding:12px;color:#475569">⏳</div>';
+  if(c) c.innerHTML = '<div style="text-align:center;padding:12px;color:#475569"></div>';
 
   _db.collection('filo_sales').where('dealerId','==',did)
     .where('custPhone','==',phone).orderBy('date','desc').limit(20).get()
@@ -1366,14 +1450,14 @@ function _addBeautyNote(phone) {
   if(!note){ toast('메모를 입력하세요'); return; }
   _db.collection('filo_beauty_notes').add({
     dealerId:did, custPhone:phone, note:note, at:new Date().toISOString()
-  }).then(function(){ toast('✅ 메모 저장'); _loadBeautyRecord(); });
+  }).then(function(){ toast('메모 저장'); _loadBeautyRecord(); });
 }
 
 // 고객 동의서
 function _pageConsent(c) {
   if(!c) c = document.getElementById('main-content');
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📋 시술 동의서</div>' +
+    '<div class="page-title">시술 동의서</div>' +
     '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:16px;margin-bottom:12px">' +
       '<div style="font-size:12px;font-weight:700;margin-bottom:10px">고객 정보</div>' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
@@ -1390,7 +1474,7 @@ function _pageConsent(c) {
     '<canvas id="sig-canvas" style="width:100%;height:120px;background:#fff;border-radius:8px;touch-action:none;border:1px solid rgba(0,102,255,.2)"></canvas>' +
     '<div style="display:flex;gap:8px;margin-top:8px">' +
       '<button onclick="_clearSig()" style="padding:9px 14px;background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:8px;font-size:12px;cursor:pointer">지우기</button>' +
-      '<button onclick="_saveConsent()" style="flex:1;padding:9px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ 동의서 저장</button>' +
+      '<button onclick="_saveConsent()" style="flex:1;padding:9px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">동의서 저장</button>' +
     '</div>';
 
   // 서명 캔버스
@@ -1434,7 +1518,7 @@ function _saveConsent() {
     dealerId:did, custName:name, custPhone:phone,
     service:service, allergy:allergy, signature:sig,
     agreedAt:new Date().toISOString()
-  }).then(function(){ toast('✅ 동의서 저장 완료'); });
+  }).then(function(){ toast('동의서 저장 완료'); });
 }
 
 // ─── 헬스·요가 특화 ───
@@ -1443,7 +1527,7 @@ function _pageSchedule(c) {
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   var today = new Date().toISOString().slice(0,10);
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">📅 수업 스케줄</div>' +
+    '<div class="page-title">수업 스케줄</div>' +
     // 수업 등록
     '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
       '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:10px">+ 수업 등록</div>' +
@@ -1460,7 +1544,7 @@ function _pageSchedule(c) {
     '</div>' +
     // 오늘 스케줄
     '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">📆 오늘 수업 — ' + today + '</div>' +
-    '<div id="sch-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+    '<div id="sch-list"><div style="text-align:center;padding:12px;color:#475569"></div></div>';
 
   _loadSchedules(did, today);
 }
@@ -1478,7 +1562,7 @@ function _saveSchedule() {
     date:date, time:time, maxCapacity:maxcap,
     currentCount:0, ym:date.slice(0,7),
     createdAt:new Date().toISOString()
-  }).then(function(){ toast('✅ 수업 등록'); _loadSchedules(did, date); });
+  }).then(function(){ toast('수업 등록'); _loadSchedules(did, date); });
 }
 
 function _loadSchedules(did, date) {
@@ -1511,7 +1595,7 @@ function _checkInSchedule(id, cur, max) {
   _db.collection('filo_schedules').doc(id).update({
     currentCount: firebase.firestore.FieldValue.increment(1)
   }).then(function(){
-    toast('✅ 출석 처리');
+    toast('출석 처리');
     var today = new Date().toISOString().slice(0,10);
     var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
     _loadSchedules(did, today);
@@ -1524,7 +1608,7 @@ function _pageLaundry(c) {
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   var today = new Date().toISOString().slice(0,10);
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">👕 세탁 접수</div>' +
+    '<div class="page-title">세탁 접수</div>' +
     '<div style="background:var(--bg2,#0d1b3e);border:1px solid var(--border,rgba(0,102,255,.2));border-radius:12px;padding:14px;margin-bottom:12px">' +
       '<div style="display:flex;flex-direction:column;gap:8px">' +
         '<input id="lnd-name" placeholder="고객명" style="padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
@@ -1535,8 +1619,8 @@ function _pageLaundry(c) {
         '<button onclick="_saveLaundry()" style="padding:11px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">접수</button>' +
       '</div>' +
     '</div>' +
-    '<div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">📋 접수 현황</div>' +
-    '<div id="lnd-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+    '<div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">접수 현황</div>' +
+    '<div id="lnd-list"><div style="text-align:center;padding:12px;color:#475569"></div></div>';
   _loadLaundry(did);
 }
 
@@ -1554,7 +1638,7 @@ function _saveLaundry() {
     items:items, dueDate:due, price:price,
     status:'접수', recDate:new Date().toISOString().slice(0,10),
     createdAt:new Date().toISOString()
-  }).then(function(){ toast('✅ 접수 완료 (' + recNo + ')'); _loadLaundry(did); });
+  }).then(function(){ toast('접수 완료 (' + recNo + ')'); _loadLaundry(did); });
 }
 
 function _loadLaundry(did) {
@@ -1588,8 +1672,8 @@ function _loadLaundry(did) {
 function _updateLaundryStatus(id, status) {
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   _db.collection('filo_laundry').doc(id).update({status:status}).then(function(){
-    toast('✅ ' + status + ' 처리');
-    if(status==='완료') toast('고객 연락 후 찾아가도록 안내하세요 📞');
+    toast('' + status + ' 처리');
+    if(status==='완료') toast('고객 연락 후 찾아가도록 안내하세요.');
     _loadLaundry(did);
   });
 }
@@ -1600,7 +1684,7 @@ function _pageRooms(c) {
   var did = _getDid ? _getDid() : (_dealer?_dealer.id:'');
   var today = new Date().toISOString().slice(0,10);
   c.innerHTML =
-    '<div style="font-size:14px;font-weight:800;margin-bottom:12px">🏨 객실 관리</div>' +
+    '<div class="page-title">객실 관리</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:12px">' +
       '<button onclick="_roomTab(\'status\')" id="rm-tab-status" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:#0066ff;color:#fff">현황</button>' +
       '<button onclick="_roomTab(\'checkin\')" id="rm-tab-checkin" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg3,#1e3a5f);color:#94a3b8">체크인</button>' +
@@ -1698,7 +1782,7 @@ function _saveCheckin() {
       date:inDate, ym:inDate.slice(0,7),
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    toast('✅ 체크인 완료'); _roomTab('status');
+    toast('체크인 완료'); _roomTab('status');
   });
 }
 
@@ -1711,7 +1795,7 @@ function _roomSetup(c) {
       '<input id="rm-price" placeholder="기본요금" type="number" style="width:100px;padding:10px;border-radius:8px;border:1px solid var(--border,rgba(0,102,255,.2));background:var(--bg3,#1e3a5f);color:#e2e8f0;font-size:13px">' +
       '<button onclick="_saveRoom()" style="padding:10px 14px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">추가</button>' +
     '</div>' +
-    '<div id="rm-setup-list"><div style="text-align:center;padding:12px;color:#475569">⏳</div></div>';
+    '<div id="rm-setup-list"><div style="text-align:center;padding:12px;color:#475569"></div></div>';
 
   _db.collection('filo_rooms').where('dealerId','==',did).get().then(function(snap){
     var el = document.getElementById('rm-setup-list');
@@ -1734,7 +1818,7 @@ function _saveRoom() {
   if(!name){ toast('객실명을 입력하세요'); return; }
   _db.collection('filo_rooms').add({
     dealerId:did, name:name, price:price, active:true
-  }).then(function(){ toast('✅ 객실 추가'); _roomSetup(document.getElementById('rm-content')); });
+  }).then(function(){ toast('객실 추가'); _roomSetup(document.getElementById('rm-content')); });
 }
 </script>
 <script>// ════════════════════════════════════════════════════════
@@ -1824,7 +1908,7 @@ function _applyAccessControl(coData, isSA) {
         var lock = document.createElement('span');
         lock.className = 'lock-icon';
         lock.style.cssText = 'font-size:10px;margin-left:4px;color:#475569';
-        lock.textContent = '🔒';
+        lock.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>';
         el.appendChild(lock);
       }
     } else {
@@ -1906,7 +1990,7 @@ function _saSelectCompany(companyId) {
     co.id = companyId;
     _dealer = co;
     _activeIndustry = co.industry || '';
-    toast('✅ ' + (co.companyName||co.company||companyId) + ' 데이터로 전환');
+    toast('' + (co.companyName||co.company||companyId) + ' 데이터로 전환');
     // 현재 페이지 리로드
     var active = document.querySelector('.nav-item.active');
     if(active) active.click();
@@ -1924,20 +2008,20 @@ function _showModuleStore() {
   var did = _getDidSafe();
   var html = '<div id="module-store" style="position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-end" onclick="document.getElementById(\'module-store\').remove()">' +
     '<div style="background:var(--bg2,#0d1b3e);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">' +
-      '<div style="font-size:14px;font-weight:800;margin-bottom:4px">💳 기능 추가 구독</div>' +
-      '<div style="font-size:11px;color:#94a3b8;margin-bottom:14px">추가 기능을 구독하면 즉시 활성화됩니다</div>' +
+      '<div style="font-size:14px;font-weight:800;margin-bottom:4px">기능 추가 구독</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">추가 기능을 구독하면 즉시 활성화됩니다</div>' +
       [
-        {key:'crm',     icon:'🗂',  name:'고객 CRM',    desc:'고객관리·알림발송',    price:'문의'},
-        {key:'points',  icon:'🎁',  name:'포인트',       desc:'적립·사용·현황',       price:'문의'},
-        {key:'membership',icon:'💳',name:'회원권',       desc:'금액·횟수·기간권',     price:'문의'},
-        {key:'payroll', icon:'💰',  name:'급여 정산',    desc:'4대보험·명세서',        price:'DONWAY 연동'},
-        {key:'industry',icon:'🏢',  name:'업종 특화',    desc:'뷰티·헬스·세탁·숙박', price:'문의'},
+        {key:'crm',     name:'고객 CRM',    desc:'고객관리·알림발송'},
+        {key:'points',  name:'포인트',       desc:'적립·사용·현황'},
+        {key:'membership',name:'회원권',     desc:'금액·횟수·기간권'},
+        {key:'payroll', name:'급여 정산',    desc:'4대보험·명세서'},
+        {key:'industry',name:'업종 특화',    desc:'뷰티·헬스·세탁·숙박'},
       ].map(function(m) {
         var has = (_activeSub.filo&&(_activeSub.filo.modules||[]).indexOf(m.key)>=0)||_isSA;
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3,#1e3a5f);border-radius:10px;margin-bottom:8px">' +
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border-radius:10px;margin-bottom:8px">' +
           '<div>' +
-            '<div style="font-size:13px;font-weight:800">' + m.icon + ' ' + m.name + '</div>' +
-            '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + m.desc + '</div>' +
+            '<div style="font-size:13px;font-weight:800;color:var(--text)">' + m.name + '</div>' +
+            '<div style="font-size:11px;color:var(--text3);margin-top:2px">' + m.desc + '</div>' +
           '</div>' +
           '<div>' +
             (has ?
@@ -1961,12 +2045,12 @@ function _pagePosUpload(c) {
   var did = _getDid();
   c.innerHTML =
     '<div style="padding:16px">' +
-    '<h3 style="margin:0 0 4px;font-size:15px">📤 POS 매출 업로드</h3>' +
+    '<div class="page-title">POS 매출 업로드</div>' +
     '<p style="margin:0 0 16px;font-size:12px;color:var(--text3)">토스포스·배민·스마트로 등 어떤 POS 엑셀이든 업로드하면 매출로 자동 집계됩니다.</p>' +
 
     // 업로드 박스
     '<div id="pos-upload-box" style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;margin-bottom:16px" onclick="document.getElementById(\'pos-file-inp\').click()">' +
-    '<div style="font-size:32px;margin-bottom:8px">📊</div>' +
+    '<div style="margin-bottom:10px"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>' +
     '<div style="font-size:13px;color:var(--text2)">엑셀 파일을 클릭하거나 드래그해서 업로드</div>' +
     '<div style="font-size:11px;color:var(--text3);margin-top:4px">.xlsx / .xls / .csv 지원</div>' +
     '<input type="file" id="pos-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="_posFileLoaded(this)">' +
@@ -1975,25 +2059,25 @@ function _pagePosUpload(c) {
     // 미리보기 영역
     '<div id="pos-preview" style="display:none">' +
     '<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:12px">' +
-    '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📋 컬럼 매핑 설정</div>' +
+    '<div style="font-size:12px;font-weight:700;margin-bottom:8px">컬럼 매핑 설정</div>' +
     '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">각 항목에 맞는 컬럼을 선택해주세요</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-    '<div><label style="font-size:11px;color:var(--text3)">📅 날짜</label>' +
+    '<div><label style="font-size:11px;color:var(--text3)">날짜</label>' +
     '<select id="map-date" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">선택</option></select></div>' +
-    '<div><label style="font-size:11px;color:var(--text3)">💰 금액</label>' +
+    '<div><label style="font-size:11px;color:var(--text3)">금액</label>' +
     '<select id="map-amount" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">선택</option></select></div>' +
-    '<div><label style="font-size:11px;color:var(--text3)">💳 결제수단 (선택)</label>' +
+    '<div><label style="font-size:11px;color:var(--text3)">결제수단 (선택)</label>' +
     '<select id="map-pay" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">없음</option></select></div>' +
-    '<div><label style="font-size:11px;color:var(--text3)">🍽️ 메뉴/품목 (선택)</label>' +
+    '<div><label style="font-size:11px;color:var(--text3)">메뉴/품목 (선택)</label>' +
     '<select id="map-menu" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;margin-top:2px"><option value="">없음</option></select></div>' +
     '</div></div>' +
 
     // 데이터 미리보기 테이블
-    '<div style="font-size:12px;font-weight:600;margin-bottom:6px">👀 데이터 미리보기 (상위 5행)</div>' +
+    '<div style="font-size:12px;font-weight:600;margin-bottom:6px">데이터 미리보기 (상위 5행)</div>' +
     '<div id="pos-table-wrap" style="overflow-x:auto;margin-bottom:12px"></div>' +
 
     // 저장 버튼
-    '<button onclick="_posSaveData()" style="width:100%;padding:12px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">✅ 매출 데이터 저장</button>' +
+    '<button onclick="_posSaveData()" style="width:100%;padding:12px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">매출 데이터 저장</button>' +
     '<div id="pos-save-result" style="margin-top:8px;font-size:12px;text-align:center"></div>' +
     '</div>' + // pos-preview
     '</div>';
@@ -2152,7 +2236,7 @@ function _posSaveData() {
 
   batch.commit().then(function() {
     result.style.color = 'var(--green)';
-    result.textContent = '✅ ' + count + '건 저장 완료! (스킵: ' + skipped + '건)';
+    result.textContent = count + '건 저장 완료! (스킵: ' + skipped + '건)';
     setTimeout(function(){
       // 매출통계로 이동
       var statsNav = document.getElementById('nav-stats');
@@ -2160,7 +2244,7 @@ function _posSaveData() {
     }, 1500);
   }).catch(function(err) {
     result.style.color = 'red';
-    result.textContent = '❌ 저장 실패: ' + err.message;
+    result.textContent = '저장 실패: ' + err.message;
   });
 }
 </script>
