@@ -6335,6 +6335,49 @@ service cloud.firestore {
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
     }
 
+    // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──
+    if (path === '/api/toss-client-key' && method === 'GET') {
+      return new Response(JSON.stringify({
+        clientKey: env.TOSS_CLIENT_KEY || ''
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+    }
+
+    // ── 토스 POS 결제 성공 콜백 (/toss/pos-success) ──
+    if (path === '/toss/pos-success' && method === 'GET') {
+      const u = new URL(request.url);
+      const paymentKey = u.searchParams.get('paymentKey') || '';
+      const orderId = u.searchParams.get('orderId') || '';
+      const amount = parseInt(u.searchParams.get('amount') || '0');
+      const cors = {'Content-Type':'text/html','Access-Control-Allow-Origin':'*'};
+      if (!paymentKey || !orderId || !amount) {
+        return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:"파라미터 누락"},"*");window.close();</script>',{headers:cors});
+      }
+      try {
+        const secretKey = env.TOSS_SECRET_KEY || '';
+        const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm',{
+          method:'POST',
+          headers:{'Authorization':'Basic '+btoa(secretKey+':'),'Content-Type':'application/json'},
+          body:JSON.stringify({paymentKey,orderId,amount})
+        });
+        const tossData = await tossResp.json();
+        if(tossResp.ok && tossData.status==='DONE'){
+          return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_success",paymentKey:"'+paymentKey+'",orderId:"'+orderId+'",amount:'+amount+',method:"'+((tossData.method)||'카드')+'"},"*");window.close();</script>',{headers:cors});
+        } else {
+          const msg=tossData.message||'결제 실패';
+          return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:"'+msg+'"},"*");window.close();</script>',{headers:cors});
+        }
+      } catch(e){
+        return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:"'+e.message+'"},"*");window.close();</script>',{headers:cors});
+      }
+    }
+
+    // ── 토스 POS 결제 실패 콜백 (/toss/pos-fail) ──
+    if (path === '/toss/pos-fail' && method === 'GET') {
+      const u2 = new URL(request.url);
+      const msg = u2.searchParams.get('message') || '결제 취소';
+      return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:"'+msg+'"},"*");window.close();</script>',{headers:{'Content-Type':'text/html','Access-Control-Allow-Origin':'*'}});
+    }
+
     if (path === '/api/geocode' && method === 'GET') {
       const addr = new URL(request.url).searchParams.get('addr') || '';
       if (!addr) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});

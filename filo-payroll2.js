@@ -241,7 +241,7 @@ function _filoPay(){
   {k:'naver',l:'네이버페이',ic:'네이버'},{k:'zero',l:'서비스/무료',ic:'무료'},
  ];
  var grid=document.createElement('div');
- grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px';
+ grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px';
  methods.forEach(function(m){
   var btn=document.createElement('button');
   btn.style.cssText='padding:14px 6px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;transition:.15s;text-align:center';
@@ -255,6 +255,13 @@ function _filoPay(){
   grid.appendChild(btn);
  });
  box.appendChild(grid);
+
+ /* 토스페이먼츠 온라인 결제 */
+ var tossBtn=document.createElement('button');
+ tossBtn.style.cssText='width:100%;padding:13px;border:1.5px solid rgba(75,180,255,.4);border-radius:var(--r);background:rgba(75,180,255,.08);color:#4bb4ff;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;transition:.15s';
+ tossBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>토스페이먼츠 온라인 결제';
+ tossBtn.onclick=function(){_filoTossPosPay(total,mo);};
+ box.appendChild(tossBtn);
 
  /* 분할 결제 버튼 */
  var splitBtn=document.createElement('button');
@@ -490,3 +497,62 @@ function _filoPayslipProcess(memberId, did, ym) {
 function _filoPayslipFilter(did){ _filoToast('필터 기능 준비 중'); }
 function _filoPayslipExcel(){ _filoToast('엑셀 다운로드 준비 중'); }
 function _filoPayslipGenerate(did){ _filoToast('명세서 자동 생성 준비 중'); }
+
+// ── 토스페이먼츠 POS 결제 ──────────────────────────────────────────
+function _filoTossPosPay(total, parentMo){
+ if(!total||total<=0){_filoToast('결제 금액 없음');return;}
+ // 토스 SDK 로드
+ function _doToss(clientKey){
+  if(!clientKey){_filoToast('토스페이먼츠 키 미설정');return;}
+  var orderId='FILO-'+(_CU&&(_CU.dealerId||_CU.uid)||'').slice(0,6)+'-'+Date.now();
+  var storeName=(_cachedCompanyDoc&&(_cachedCompanyDoc.companyName||_cachedCompanyDoc.name))||'FILO 매장';
+  if(typeof TossPayments==='undefined'){
+   var s=document.createElement('script');
+   s.src='https://js.tosspayments.com/v1/payment';
+   s.onload=function(){_launchToss(clientKey,orderId,storeName,total,parentMo);};
+   document.head.appendChild(s);
+  } else {
+   _launchToss(clientKey,orderId,storeName,total,parentMo);
+  }
+ }
+ // 키 로딩
+ if(window._filoTossClientKey){
+  _doToss(window._filoTossClientKey);
+ } else {
+  fetch('/api/toss-client-key').then(function(r){return r.json();}).then(function(d){
+   window._filoTossClientKey=d.clientKey||'';
+   _doToss(window._filoTossClientKey);
+  }).catch(function(){_filoToast('토스 설정 로딩 실패');});
+ }
+}
+
+function _launchToss(clientKey,orderId,storeName,total,parentMo){
+ var tossPayments=TossPayments(clientKey);
+ // 결제 성공/실패 메시지 수신
+ var handler=function(e){
+  if(!e.data||!e.data.type)return;
+  if(e.data.type==='toss_success'){
+   window.removeEventListener('message',handler);
+   if(parentMo)parentMo.remove();
+   document.querySelectorAll('.mo').forEach(function(el){el.remove();});
+   var methodLabel='토스페이먼츠 '+(e.data.method||'카드');
+   _filoConfirmPay('toss',methodLabel);
+   _filoToast('토스 결제 완료!');
+  } else if(e.data.type==='toss_fail'){
+   window.removeEventListener('message',handler);
+   _filoToast('결제 취소: '+(e.data.reason||''));
+  }
+ };
+ window.addEventListener('message',handler);
+ tossPayments.requestPayment('카드',{
+  amount:total,
+  orderId:orderId,
+  orderName:'FILO POS 결제',
+  customerName:storeName,
+  successUrl:location.origin+'/toss/pos-success',
+  failUrl:location.origin+'/toss/pos-fail'
+ }).catch(function(e){
+  window.removeEventListener('message',handler);
+  if(e.code!=='USER_CANCEL')_filoToast('결제 오류: '+e.message);
+ });
+}
