@@ -337,14 +337,14 @@ select option{background:#13131a;}
       </div>
     </div>
 
-    <button class="btn btn-primary" onclick="submitVisitor()" id="btn-submit">✅ 등록 완료</button>
+    <button class="btn btn-primary" onclick="submitVisitor()" id="btn-submit">등록 완료</button>
     <button class="btn btn-outline" onclick="goPage1()">← 이전</button>
   </div>
 
   <!-- 페이지 3: 완료 -->
   <div class="page" id="page3">
     <div class="done-screen" style="display:block">
-      <div class="done-icon">✅</div>
+      <div class="done-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--green,#22c55e)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       <div class="done-title">방문 등록 완료</div>
       <div class="done-sub" id="done-msg">담당자에게 도착 사실을 알려드렸습니다.<br>잠시만 기다려 주세요.</div>
       <div class="done-code" id="done-code">---</div>
@@ -435,7 +435,7 @@ function formatPhone(el){
 function verifyCode(){
   var code=document.getElementById('v-code').value.trim();
   var st=document.getElementById('code-status');
-  if(code.length!==6){st.style.display='block';st.style.color='var(--red)';st.textContent='❌ 6자리를 입력해주세요';return;}
+  if(code.length!==6){st.style.display='block';st.style.color='var(--red)';st.textContent='6자리를 입력해주세요';return;}
   var SLOT=30000;
   var secret='DONWAY_'+_dealerId;
   function genC(slot){
@@ -449,10 +449,10 @@ function verifyCode(){
   var valid=[cur,cur-1].some(function(s){return genC(s)===code;});
   st.style.display='block';
   if(valid){
-    st.style.color='var(--green)';st.textContent='✅ 코드 확인됨! 아래 정보를 입력해주세요';
+    st.style.color='var(--green)';st.textContent='코드 확인됨! 아래 정보를 입력해주세요';
     document.getElementById('v-code').style.borderColor='var(--green)';
   } else {
-    st.style.color='var(--red)';st.textContent='❌ 코드가 맞지 않습니다. 화면을 다시 확인해주세요';
+    st.style.color='var(--red)';st.textContent='코드가 맞지 않습니다. 화면을 다시 확인해주세요';
   }
 }
 
@@ -461,7 +461,7 @@ function onIdFile(e){
   var file=e.target.files[0];
   if(!file) return;
   _ocrFile=file;
-  document.getElementById('upload-icon').textContent='✅';
+  document.getElementById('upload-icon').textContent='✓';
   var area=document.getElementById('id-upload-area');
   var prev=document.getElementById('id-preview');
   var reader=new FileReader();
@@ -503,16 +503,16 @@ async function runIdOcr(file,b64){
       if(badWords.indexOf(nm)<0){
         document.getElementById('v-name').value=nm;
         _ocrData.name=nm;
-        st.textContent='✅ 이름 자동 인식: '+nm;
+        st.textContent='이름 자동 인식: '+nm;
       } else {
-        st.textContent='⚠️ 자동 인식 실패 — 직접 입력해주세요';
+        st.textContent='자동 인식 실패 — 직접 입력해주세요';
         st.classList.add('error');
       }
     } else {
-      st.textContent='⚠️ 이름을 직접 입력해주세요';
+      st.textContent='이름을 직접 입력해주세요';
     }
   }catch(e){
-    st.textContent='⚠️ OCR 실패 — 직접 입력해주세요';
+    st.textContent='OCR 실패 — 직접 입력해주세요';
     st.classList.add('error');
   }
 }
@@ -569,7 +569,7 @@ async function submitVisitor(){
   if(!agreed){alert('개인정보 수집에 동의해주세요');return;}
 
   var btn=document.getElementById('btn-submit');
-  btn.disabled=true;btn.textContent='⏳ 등록 중...';
+  btn.disabled=true;btn.textContent='등록 중...';
 
   var finalPurpose=purpose==='기타'?(purposeEtc||'기타'):purpose;
   var visitCode=Math.floor(100000+Math.random()*900000).toString();
@@ -615,7 +615,7 @@ async function submitVisitor(){
     setTimeout(function(){location.reload();},30000);
 
   }catch(e){
-    btn.disabled=false;btn.textContent='✅ 등록 완료';
+    btn.disabled=false;btn.textContent='등록 완료';
     alert('등록 중 오류: '+e.message);
   }
 }

@@ -65,7 +65,7 @@ body{padding:16px;max-width:480px;margin:0 auto}
  <div class="legend-item"><div class="dot" style="background:#ef4444"></div>사용 중</div>
  <div class="legend-item"><div class="dot" style="background:#f59e0b"></div>예약 완료</div>
 </div>
-<div id="main-view"><div class="loading">⏳ 테이블 현황 불러오는 중...</div></div>
+<div id="main-view"><div class="loading">테이블 현황 불러오는 중...</div></div>
 <script>
 var _API='/api';
 var _P=new URLSearchParams(location.search);
@@ -103,7 +103,7 @@ function _render(){
  var g='<div class="table-grid">';
  _TBL.forEach(function(t){
   var c='table-card '+t.status;
-  var i=t.status==='empty'?'🪑':t.status==='occupied'?'🍽':'📋';
+  var i=t.status==='empty'?'○':t.status==='occupied'?'●':'▷';
   var s={'empty':'예약 가능','occupied':'사용 중','reserved':'예약 완료'}[t.status]||'';
   var x='';
   if(t.status==='occupied'&&t.occupiedSince){var m=Math.floor((Date.now()-new Date(t.occupiedSince))/60000);if(m>0)x=m+'분째 이용중';}
@@ -118,7 +118,7 @@ function _render(){
 window._ot=function(n){var t=_TBL.find(function(t){return t.num===n;});if(!t||t.status!=='empty')return;_form(t);};
 function _form(t){
  _SEL=t;_SEATS=2;
- document.getElementById('main-view').innerHTML='<div class="form-box"><div class="form-title">📋 예약하기 — '+t.name+'</div><div class="inp-group"><label>이름 *</label><input id="rn" class="inp" placeholder="홍길동" autocomplete="name"></div><div class="inp-group"><label>연락처 *</label><input id="rp" class="inp" type="tel" placeholder="010-0000-0000" autocomplete="tel"></div><div class="inp-group"><label>인원</label><div class="seats-row">'+[1,2,3,4,5,6].map(function(n){return '<div class="seat-btn'+(n===2?' on':'')+'" onclick="_ss('+n+')">'+n+'인</div>';}).join('')+'</div></div><div class="inp-group"><label>요청사항</label><input id="rm" class="inp" placeholder="창가 자리, 생일 등"></div><button class="btn-submit" onclick="_sub()">✅ 예약 확정</button><button class="btn-cancel" onclick="_load()">← 돌아가기</button></div>';
+ document.getElementById('main-view').innerHTML='<div class="form-box"><div class="form-title">예약하기 — '+t.name+'</div><div class="inp-group"><label>이름 *</label><input id="rn" class="inp" placeholder="홍길동" autocomplete="name"></div><div class="inp-group"><label>연락처 *</label><input id="rp" class="inp" type="tel" placeholder="010-0000-0000" autocomplete="tel"></div><div class="inp-group"><label>인원</label><div class="seats-row">'+[1,2,3,4,5,6].map(function(n){return '<div class="seat-btn'+(n===2?' on':'')+'" onclick="_ss('+n+')">'+n+'인</div>';}).join('')+'</div></div><div class="inp-group"><label>요청사항</label><input id="rm" class="inp" placeholder="창가 자리, 생일 등"></div><button class="btn-submit" onclick="_sub()">예약 확정</button><button class="btn-cancel" onclick="_load()">← 돌아가기</button></div>';
 }
 window._ss=function(n){_SEATS=n;document.querySelectorAll('.seat-btn').forEach(function(b){b.classList.remove('on');});document.querySelectorAll('.seat-btn')[n-1].classList.add('on');};
 window._sub=function(){
@@ -131,23 +131,23 @@ window._sub=function(){
  fetch(_API+'/booking',{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({did:_DID,tableId:_SEL.id,tableNum:_SEL.num,tableName:_SEL.name,customerName:n,phone:p,seats:_SEATS,memo:(document.getElementById('rm')||{}).value||'',date:now.slice(0,10),time:now.slice(11,16)})
  }).then(function(r){return r.json();}).then(function(d){
-  if(d.error){b.disabled=false;b.textContent='✅ 예약 확정';alert('오류: '+d.error);return;}
+  if(d.error){b.disabled=false;b.textContent='예약 확정';alert('오류: '+d.error);return;}
   _done(n,_SEL.name,_SEATS,now.slice(0,10),now.slice(11,16),d.bookingId);
- }).catch(function(){b.disabled=false;b.textContent='✅ 예약 확정';alert('오류가 발생했습니다');});
+ }).catch(function(){b.disabled=false;b.textContent='예약 확정';alert('오류가 발생했습니다');});
 };
 function _done(n,tn,s,rd,rt,bid){
  _DONE=true;clearInterval(_TMR); /* 테이블 폴링 중단 */
- document.getElementById('main-view').innerHTML='<div class="done-box"><div class="done-icon" id="di">⏳</div><div class="done-title" id="dt">확인 중...</div><div id="ds" class="done-sub"><b style="color:#38bdf8">'+tn+'</b><br>'+n+'님 <b>'+s+'인</b><br>'+rd+' '+rt+'<br><br><span style="color:var(--t3);font-size:12px">매장에서 예약을 확인하고 있습니다.<br>잠시만 기다려주세요.</span></div></div>';
+ document.getElementById('main-view').innerHTML='<div class="done-box"><div class="done-icon" id="di">...</div><div class="done-title" id="dt">확인 중...</div><div id="ds" class="done-sub"><b style="color:#38bdf8">'+tn+'</b><br>'+n+'님 <b>'+s+'인</b><br>'+rd+' '+rt+'<br><br><span style="color:var(--t3);font-size:12px">매장에서 예약을 확인하고 있습니다.<br>잠시만 기다려주세요.</span></div></div>';
  if(!bid)return;
  var ti=setInterval(function(){
   fetch(_API+'/booking-status?bid='+bid).then(function(r){return r.json();}).then(function(d){
    var ic=document.getElementById('di'),tt=document.getElementById('dt'),ds=document.getElementById('ds');
-   if(d.status==='confirmed'){clearInterval(ti);if(ic)ic.textContent='🎉';if(tt)tt.textContent='예약 확정!';if(ds)ds.innerHTML='<b style="color:#38bdf8">'+tn+'</b><br>'+n+'님 <b>'+s+'인</b><br>'+rd+' '+rt+'<br><br><span style="color:#22c55e;font-size:13px;font-weight:700">✅ 예약이 확정됐습니다!</span>';}
+   if(d.status==='confirmed'){clearInterval(ti);if(ic)ic.textContent='✓';if(tt)tt.textContent='예약 확정!';if(ds)ds.innerHTML='<b style="color:#38bdf8">'+tn+'</b><br>'+n+'님 <b>'+s+'인</b><br>'+rd+' '+rt+'<br><br><span style="color:#22c55e;font-size:13px;font-weight:700">예약이 확정됐습니다!</span>';}
    else if(d.status==='rejected'){clearInterval(ti);if(ic)ic.textContent='😔';if(tt)tt.textContent='예약 불가';if(ds)ds.innerHTML='<span style="color:#ef4444">해당 시간 예약이 어렵습니다.</span><br><button onclick="_load()" style="margin-top:16px;padding:10px 24px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:10px;color:#38bdf8;font-size:13px;cursor:pointer">← 다시 예약</button>';}
   }).catch(function(){});
  },3000);
 }
-function _err(m){document.getElementById('main-view').innerHTML='<div class="loading">⚠️ '+m+'</div>';}
+function _err(m){document.getElementById('main-view').innerHTML='<div class="loading">'+m+'</div>';}
 _load();
 </script>
 </body>
