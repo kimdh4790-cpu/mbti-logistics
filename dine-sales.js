@@ -18,11 +18,11 @@ function _dineSales(el){
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">🛒 POS 매출</div><div class="page-sub attend-live"><span class="live-dot"></span>FILO POS 실시간 연동</div></div>'+
+  '<div><div class="page-title">POS 매출</div><div class="page-sub attend-live"><span class="live-dot"></span>FILO POS 실시간 연동</div></div>'+
   '<input type="date" id="sales-date" value="'+today+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px" onchange="_dineLoadSales(\''+did+'\')">'+
   '</div>'+
   '<div id="sales-kpi" class="kpi-grid" style="grid-template-columns:repeat(3,1fr)"></div>'+
-  '<div class="card" id="sales-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩중</div></div>';
+  '<div class="card" id="sales-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩중</div></div>';
  el.appendChild(wrap);
  _dineLoadSales(did);
 }
@@ -39,9 +39,9 @@ function _dineLoadSales(did){
    });
    var kpi=document.getElementById('sales-kpi');
    if(kpi)kpi.innerHTML=
-    '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">💰 총 매출</div><div class="kpi-val" style="color:#38bdf8">₩'+total.toLocaleString()+'</div><div class="kpi-sub">'+cnt+'건</div></div>'+
-    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🛒 주문 건수</div><div class="kpi-val" style="color:#22c55e">'+cnt+'건</div><div class="kpi-sub">평균 ₩'+(cnt?Math.round(total/cnt).toLocaleString():0)+'</div></div>'+
-    '<div class="kpi-card" style="border-top:2px solid #a78bfa"><div class="kpi-label">💳 주요 결제</div><div class="kpi-val" style="color:#a78bfa;font-size:14px">'+(Object.entries(methods).sort(function(a,b){return b[1]-a[1];})[0]?.[0]||'-')+'</div><div class="kpi-sub">최다 결제수단</div></div>';
+    '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">총 매출</div><div class="kpi-val" style="color:#38bdf8">₩'+total.toLocaleString()+'</div><div class="kpi-sub">'+cnt+'건</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">주문 건수</div><div class="kpi-val" style="color:#22c55e">'+cnt+'건</div><div class="kpi-sub">평균 ₩'+(cnt?Math.round(total/cnt).toLocaleString():0)+'</div></div>'+
+    '<div class="kpi-card" style="border-top:2px solid #a78bfa"><div class="kpi-label">주요 결제</div><div class="kpi-val" style="color:#a78bfa;font-size:14px">'+(Object.entries(methods).sort(function(a,b){return b[1]-a[1];})[0]?.[0]||'-')+'</div><div class="kpi-sub">최다 결제수단</div></div>';
 
    var list=document.getElementById('sales-list');
    if(!list)return;
@@ -65,16 +65,16 @@ function _dineLoadSales(did){
 function _dineDelivery(el){
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">🛵 배달앱 정산</div><div class="page-sub">배민·쿠팡이츠·요기요 엑셀 업로드</div></div>'+
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">배달앱 정산</div><div class="page-sub">배민·쿠팡이츠·요기요 엑셀 업로드</div></div>'+
   '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">'+
   '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">'+
-  '<span>🟢 배민 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'baemin\')">'+
+  '<span>배민 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'baemin\')">'+
   '</label>'+
   '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">'+
-  '<span>🔴 쿠팡이츠 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'coupang\')">'+
+  '<span>쿠팡이츠 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'coupang\')">'+
   '</label>'+
   '<label style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700">'+
-  '<span>🟡 요기요 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'yogiyo\')">'+
+  '<span>요기요 엑셀</span><input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_dineParseDelivery(this,\'yogiyo\')">'+
   '</label>'+
   '</div>'+
   '<div id="delivery-result" class="card"><div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">배달앱 정산서 엑셀을 업로드하면 자동 파싱됩니다</div></div>';
@@ -83,7 +83,7 @@ function _dineDelivery(el){
 
 function _dineParseDelivery(input,platform){
  var file=input.files[0];if(!file)return;
- _dineToast('⏳ 파싱중...');
+ _dineToast('파싱중...');
  var reader=new FileReader();
  reader.onload=function(e){
   try{
@@ -91,7 +91,7 @@ function _dineParseDelivery(input,platform){
    var wb=XLSX.read(data,{type:'array'});
    var ws=wb.Sheets[wb.SheetNames[0]];
    var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-   if(!rows.length){_dineToast('❌ 데이터 없음');return;}
+   if(!rows.length){_dineToast('데이터 없음');return;}
    var result={platform:platform,orders:[],total:0,fee:0,cancel:0,net:0};
    function norm(s){return String(s||'').replace(/[\s\(\)]/g,'').toLowerCase();}
    function toNum(v){return parseInt(String(v||'0').replace(/[^0-9\-]/g,''))||0;}
@@ -138,8 +138,8 @@ function _dineParseDelivery(input,platform){
    });
    result.net=result.total-result.fee-result.cancel;
    _dineShowDeliveryResult(result);
-   _dineToast('✅ '+result.orders.length+'건 파싱 완료');
-  }catch(e){_dineToast('❌ 파싱 오류: '+e.message);console.error(e);}
+   _dineToast(''+result.orders.length+'건 파싱 완료');
+  }catch(e){_dineToast('파싱 오류: '+e.message);console.error(e);}
  };
  reader.readAsArrayBuffer(file);
 }
@@ -147,7 +147,7 @@ function _dineParseDelivery(input,platform){
 function _dineShowDeliveryResult(r){
  var el=document.getElementById('delivery-result');
  if(!el)return;
- var name={'baemin':'🟢 배달의민족','coupang':'🔴 쿠팡이츠','yogiyo':'🟡 요기요'}[r.platform]||r.platform;
+ var name={'baemin':'배달의민족','coupang':'쿠팡이츠','yogiyo':'요기요'}[r.platform]||r.platform;
  var color={'baemin':'#22c55e','coupang':'#ef4444','yogiyo':'#f59e0b'}[r.platform]||'#38bdf8';
  var byDate={};
  r.orders.forEach(function(o){var d=o.date||'미상';byDate[d]=(byDate[d]||0)+o.amt;});
@@ -197,8 +197,8 @@ function _dineSaveDeliveryData(r){
   });
  });
  Promise.all(promises).then(function(){
-  _dineToast('✅ '+r.orders.length+'건 저장! 매출분석에 반영됩니다.');
- }).catch(function(e){_dineToast('❌ 저장 실패: '+e.message);});
+  _dineToast(''+r.orders.length+'건 저장! 매출분석에 반영됩니다.');
+ }).catch(function(e){_dineToast('저장 실패: '+e.message);});
 }
 
 
@@ -209,7 +209,7 @@ function _dineSettle(el){
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">📑 월 정산</div><div class="page-sub">POS 매출 + 배달 매출 + 인건비 통합</div></div>'+
+  '<div><div class="page-title">월 정산</div><div class="page-sub">POS 매출 + 배달 매출 + 인건비 통합</div></div>'+
   '<div style="display:flex;gap:8px">'+
   '<input type="month" id="settle-ym" value="'+ym+'" class="inp" style="width:auto;padding:6px 10px;font-size:12px">'+
   '<button class="btn btn-primary btn-sm" onclick="_dineCalcSettle(\''+did+'\')">정산</button>'+
@@ -223,7 +223,7 @@ function _dineCalcSettle(did){
  var from=ym+'-01',to=ym+'-31';
  var res=document.getElementById('settle-result');
  if(!res)return;
- res.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 정산 계산중...</div>';
+ res.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">정산 계산중...</div>';
 
  Promise.all([
   _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
@@ -244,13 +244,13 @@ function _dineCalcSettle(did){
   var profit=totalSales-totalLabor;
 
   res.innerHTML='<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">'+
-   '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">💰 총 매출</div><div class="kpi-val" style="color:#38bdf8">₩'+totalSales.toLocaleString()+'</div><div class="kpi-sub">POS 매출</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">👥 인건비</div><div class="kpi-val" style="color:#ef4444">₩'+totalLabor.toLocaleString()+'</div><div class="kpi-sub">'+memSnap.size+'명 기준</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">📈 인건비율</div><div class="kpi-val" style="color:#f59e0b">'+laborRate+'%</div><div class="kpi-sub">'+(laborRate<30?'✅ 양호':laborRate<35?'⚠️ 주의':'❌ 과다')+'</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">💵 인건비 차감</div><div class="kpi-val" style="color:#22c55e">₩'+profit.toLocaleString()+'</div><div class="kpi-sub">매출-인건비</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">총 매출</div><div class="kpi-val" style="color:#38bdf8">₩'+totalSales.toLocaleString()+'</div><div class="kpi-sub">POS 매출</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">인건비</div><div class="kpi-val" style="color:#ef4444">₩'+totalLabor.toLocaleString()+'</div><div class="kpi-sub">'+memSnap.size+'명 기준</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">인건비율</div><div class="kpi-val" style="color:#f59e0b">'+laborRate+'%</div><div class="kpi-sub">'+(laborRate<30?'✅ 양호':laborRate<35?'⚠️ 주의':'❌ 과다')+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">인건비 차감</div><div class="kpi-val" style="color:#22c55e">₩'+profit.toLocaleString()+'</div><div class="kpi-sub">매출-인건비</div></div>'+
    '</div>'+
    '<div class="card"><div style="font-size:12px;color:var(--t2)">'+
-   '💡 배달앱 매출은 배달앱 정산 탭에서 엑셀 업로드 후 자동 합산됩니다.<br>'+
+   '배달앱 매출은 배달앱 정산 탭에서 엑셀 업로드 후 자동 합산됩니다.<br>'+
    '외식업 적정 인건비율: <b style="color:var(--gr)">25~30%</b> (매출 대비)</div></div>';
  });
 }
@@ -260,8 +260,8 @@ function _dineStore(el){
  var did=_CU.dealerId;
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">🏪 매장 설정</div><div class="page-sub">매장 정보 및 근로 기준 설정</div></div>'+
-  '<div class="card" id="store-form"><div style="text-align:center;padding:20px;color:var(--t3)">⏳ 로딩중...</div></div>';
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">매장 설정</div><div class="page-sub">매장 정보 및 근로 기준 설정</div></div>'+
+  '<div class="card" id="store-form"><div style="text-align:center;padding:20px;color:var(--t3)">로딩중...</div></div>';
  el.appendChild(wrap);
 
  /* REST API로 companies 조회 */
@@ -291,7 +291,7 @@ function _dineStore(el){
    '<button class="btn btn-primary" style="margin-top:12px" data-did="'+did+'" onclick="_dineSaveStore(this.dataset.did)">저장</button>';
  }).catch(function(){
   var box=document.getElementById('store-form');
-  if(box)box.innerHTML='<div style="color:var(--t3);font-size:12px">⚠️ 정보를 불러올 수 없습니다. 직접 입력해주세요.</div>'+
+  if(box)box.innerHTML='<div style="color:var(--t3);font-size:12px">정보를 불러올 수 없습니다. 직접 입력해주세요.</div>'+
    '<div class="input-group" style="margin-top:12px"><label>매장명</label><input id="store-storeName" class="inp"></div>'+
    '<div class="input-group"><label>URL 슬러그</label><input id="store-dineSlug" class="inp" placeholder="예) mbti"></div>'+
    '<div class="input-group"><label>사업자번호</label><input id="store-bizNo" class="inp"></div>'+
@@ -339,13 +339,13 @@ function _dineSaveStore(did){
   });
  }).then(function(r){
   if(r.ok){
-   _dineToast('✅ 저장됐습니다');
+   _dineToast('저장됐습니다');
    if(data.storeName)_CU.name=data.storeName;
    if(data.dineSlug)_CU.dineSlug=data.dineSlug;
   } else {
-   return r.json().then(function(e){_dineToast('❌ '+(e.error&&e.error.message||'저장 실패'));});
+   return r.json().then(function(e){_dineToast(''+(e.error&&e.error.message||'저장 실패'));});
   }
- }).catch(function(e){_dineToast('❌ '+e.message);});
+ }).catch(function(e){_dineToast(''+e.message);});
 }
 
 

@@ -190,7 +190,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   /* 인기 메뉴 TOP5 */
   var menuEntries=Object.entries(menuStats).sort(function(a,b){return b[1].qty-a[1].qty;}).slice(0,5);
   /* 결제수단별 카드 */
-  var payIcons={'카드':'💳','현금':'💵','카카오페이':'','네이버페이':'','카운터결제':'','삼성페이':'📱','기타':''};
+  var payIcons={'카드':'CARD','현금':'CASH','카카오페이':'KAKAO','네이버페이':'NAVER','카운터결제':'POS','삼성페이':'PAY','기타':'ETC'};
   var paySorted=Object.entries(payStats).sort(function(a,b){return b[1]-a[1];});
   var payHtml=paySorted.length?
   '<div style="margin-top:14px"><div class="sec-title">결제수단별 매출</div>'+
@@ -372,7 +372,7 @@ function _filoRenderMarginAnalysis(did,ym){
   /* 월별 일별 차트 */
   html+='<div class="card" style="margin-bottom:12px">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<div style="font-size:13px;font-weight:800">📅 일별 매출 vs 순이익</div>'+
+  '<div style="font-size:13px;font-weight:800">일별 매출 vs 순이익</div>'+
   '<div style="font-size:11px;color:var(--t3)">'+ym+'</div></div>'+
   '<div style="display:flex;align-items:flex-end;gap:3px;height:100px;overflow-x:auto">';
   if(days.length){
@@ -402,7 +402,7 @@ function _filoRenderMarginAnalysis(did,ym){
   });
   if(menus.length){
    html+='<div class="card" style="margin-bottom:12px">'+
-   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🍽 메뉴별 마진 분석</div>'+
+   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">메뉴별 마진 분석</div>'+
    '<div style="display:grid;grid-template-columns:1fr 60px 70px 60px;gap:6px;padding:0 4px 8px;border-bottom:1px solid var(--bd)">'+
    ['메뉴','판매수','순이익','마진율'].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')+'</div>'+
    menus.map(function(m){
@@ -564,7 +564,7 @@ function _filoPageAI(el) {
       /* ① 매출 예측 — 2×2 */
       '<section class="bento-item bento-lg fade-up-2" id="ai-card-forecast">' +
         '<header class="bento-head">' +
-          '<div><span class="bento-icon">📈</span><h3>AI 매출 예측</h3></div>' +
+          '<div><h3>AI 매출 예측</h3></div>' +
           '<button class="ai-chip" onclick="_filoAiForecast()">새로고침</button>' +
         '</header>' +
         '<div class="bento-body" id="ai-forecast-body">' + _aiSkeleton(4) + '</div>' +
@@ -573,7 +573,7 @@ function _filoPageAI(el) {
       /* ② 메뉴 추천 — 1×2 */
       '<section class="bento-item bento-tall fade-up-2" id="ai-card-menu">' +
         '<header class="bento-head">' +
-          '<div><span class="bento-icon">🍽</span><h3>AI 메뉴 추천</h3></div>' +
+          '<div><h3>AI 메뉴 추천</h3></div>' +
           '<button class="ai-chip" onclick="_filoAiMenuRec()">새로고침</button>' +
         '</header>' +
         '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
@@ -581,10 +581,10 @@ function _filoPageAI(el) {
 
       /* ③ 음성 주문 — 1×1 */
       '<section class="bento-item fade-up-3" id="ai-card-voice">' +
-        '<header class="bento-head"><div><span class="bento-icon">🎙</span><h3>음성 주문</h3></div></header>' +
+        '<header class="bento-head"><div><h3>음성 주문</h3></div></header>' +
         '<div class="bento-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center">' +
           '<button class="ai-mic" onclick="_filoVoiceOrderOpen()" aria-label="음성 주문 시작">' +
-            '<span class="ai-mic-ring"></span><span style="position:relative;z-index:1">🎙</span>' +
+            '<span class="ai-mic-ring"></span>' +
           '</button>' +
           '<div style="font-size:11px;color:var(--t3);line-height:1.6">말로 주문을 받아<br>바로 장바구니에 담습니다</div>' +
         '</div>' +
@@ -593,7 +593,7 @@ function _filoPageAI(el) {
       /* ④ 스케줄 최적화 — 2×1 */
       '<section class="bento-item bento-wide fade-up-3" id="ai-card-sched">' +
         '<header class="bento-head">' +
-          '<div><span class="bento-icon">🗓</span><h3>AI 스케줄 최적화</h3></div>' +
+          '<div><h3>AI 스케줄 최적화</h3></div>' +
           '<button class="ai-chip" onclick="_filoAiSchedule()">다시 계산</button>' +
         '</header>' +
         '<div class="bento-body" id="ai-sched-body">' + _aiSkeleton(3) + '</div>' +
@@ -601,7 +601,7 @@ function _filoPageAI(el) {
 
       /* ⑤ CS봇 — 1×1 */
       '<section class="bento-item fade-up-4" id="ai-card-cs">' +
-        '<header class="bento-head"><div><span class="bento-icon">💬</span><h3>AI CS봇</h3></div></header>' +
+        '<header class="bento-head"><div><h3>AI CS봇</h3></div></header>' +
         '<div class="bento-body" style="display:flex;flex-direction:column;gap:10px">' +
           '<div style="font-size:11px;color:var(--t3);line-height:1.7">' +
             '메뉴·영업시간·실시간 웨이팅까지 학습한 매장 전용 상담봇입니다.' +
@@ -633,7 +633,7 @@ function _filoAiForecast() {
   _aiPost('/api/ai-forecast', { did: did }).then(function (r) {
     if (!r.ok) { _aiErr(body, r.error || '예측을 불러오지 못했습니다.', '_filoAiForecast()'); return; }
     if (r.insufficient) {
-      body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">📊</div>' +
+      body.innerHTML = '<div class="ai-empty">' +
         '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
       return;
     }
@@ -704,7 +704,7 @@ function _filoAiMenuRec() {
     _aiPost('/api/ai-menu-recommend', payload).then(function (r) {
       if (!r.ok) { _aiErr(body, r.error || '추천을 불러오지 못했습니다.', '_filoAiMenuRec()'); return; }
       if (r.insufficient) {
-        body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">🍽</div>' +
+        body.innerHTML = '<div class="ai-empty">' +
           '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
         return;
       }
@@ -712,7 +712,7 @@ function _filoAiMenuRec() {
       body.innerHTML =
         /* 날씨 · 시간대 컨텍스트 */
         '<div class="ai-ctx">' +
-          '<div class="ai-ctx-item"><span class="ai-ctx-ic">' + (w ? w.icon : '🕐') + '</span>' +
+          '<div class="ai-ctx-item"><span class="ai-ctx-ic">' + (w ? w.icon : '○') + '</span>' +
             '<div><strong>' + (w ? _aiEsc(w.label) + ' ' + Math.round(w.temp) + '°C' : '날씨 정보 없음') + '</strong>' +
             '<small>' + r.hour + '시 · ' + _aiEsc(r.timeLabel) + '</small></div></div>' +
         '</div>' +
@@ -770,7 +770,7 @@ function _filoAiSchedule() {
   _aiPost('/api/ai-schedule', { did: did }).then(function (r) {
     if (!r.ok) { _aiErr(body, r.error || '스케줄을 계산하지 못했습니다.', '_filoAiSchedule()'); return; }
     if (r.insufficient) {
-      body.innerHTML = '<div class="ai-empty"><div style="font-size:26px;margin-bottom:8px">👥</div>' +
+      body.innerHTML = '<div class="ai-empty">' +
         '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
       return;
     }
@@ -840,11 +840,11 @@ function _filoVoiceOrderOpen() {
   m.className = 'ai-modal';
   m.innerHTML =
     '<div class="ai-modal-inner">' +
-      '<div class="ai-modal-head"><h3>🎙 음성 주문</h3>' +
-        '<button class="ai-x" onclick="_filoVoiceOrderClose()" aria-label="닫기">✕</button></div>' +
+      '<div class="ai-modal-head"><h3>음성 주문</h3>' +
+        '<button class="ai-x" onclick="_filoVoiceOrderClose()" aria-label="닫기">×</button></div>' +
       '<div class="ai-voice-stage">' +
         '<button class="ai-mic ai-mic-lg" id="ai-voice-btn" onclick="_aiVoiceToggle()">' +
-          '<span class="ai-mic-ring"></span><span style="position:relative;z-index:1">🎙</span></button>' +
+          '<span class="ai-mic-ring"></span></button>' +
         '<div class="ai-voice-status" id="ai-voice-status">버튼을 누르고 주문을 말씀해 주세요</div>' +
         '<div class="ai-voice-heard" id="ai-voice-heard"></div>' +
       '</div>' +
@@ -1002,10 +1002,10 @@ function _filoAiChatToggle() {
   d.innerHTML =
     '<div class="ai-chat-head">' +
       '<div><strong>AI 상담봇</strong><small>메뉴·영업시간·웨이팅 실시간 응답</small></div>' +
-      '<button class="ai-x" onclick="_filoAiChatToggle()" aria-label="닫기">✕</button>' +
+      '<button class="ai-x" onclick="_filoAiChatToggle()" aria-label="닫기">×</button>' +
     '</div>' +
     '<div class="ai-chat-body" id="ai-chat-body">' +
-      '<div class="ai-msg bot">안녕하세요! 무엇을 도와드릴까요? 😊</div>' +
+      '<div class="ai-msg bot">안녕하세요! 무엇을 도와드릴까요?</div>' +
       '<div class="ai-chips" id="ai-chat-chips">' +
         ['영업시간 알려주세요', '지금 대기 얼마나 되나요?', '추천 메뉴가 뭔가요?', '주차 되나요?']
           .map(function (c) { return '<button class="ai-chip" onclick="_aiChatSend(\'' + c + '\')">' + c + '</button>'; }).join('') +

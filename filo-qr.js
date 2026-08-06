@@ -28,12 +28,12 @@ function _filoPageTableQR(el){
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">🪑 테이블 현황 · QR</div><div class="page-sub">실시간 착석 관리 · QR 코드 생성</div></div>'+
+  '<div><div class="page-title">테이블 현황 · QR</div><div class="page-sub">실시간 착석 관리 · QR 코드 생성</div></div>'+
   '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
   '<input id="table-count-inp" type="number" value="10" min="1" max="30" style="width:70px;padding:6px 8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px">'+
   '<button class="btn btn-brand btn-sm" onclick="_filoTableInit()">테이블 설정</button>'+
-  '<button id="table-qr-btn" class="btn btn-sm" style="background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);color:#38bdf8">📱 QR 생성</button>'+
-  '<button class="btn btn-sm" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="_filoTableRefresh()">🔄 새로고침</button>'+
+  '<button id="table-qr-btn" class="btn btn-sm" style="background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);color:#38bdf8">QR 생성</button>'+
+  '<button class="btn btn-sm" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="_filoTableRefresh()">새로고침</button>'+
   '</div></div>'+
   '<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'+
   '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t2)"><div style="width:10px;height:10px;border-radius:50%;background:#22c55e"></div>빈 테이블</div>'+
@@ -42,14 +42,14 @@ function _filoPageTableQR(el){
   '</div>'+
   '<div id="staff-call-banner" style="display:none;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.3);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:none"></div>'+
   '<div id="filo-table-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">'+
-  '<div style="text-align:center;padding:30px;color:var(--t3);grid-column:1/-1">⏳ 로딩중...</div></div>'+
-  '<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">📋 예약 대기</div>'+
+  '<div style="text-align:center;padding:30px;color:var(--t3);grid-column:1/-1">로딩중...</div></div>'+
+  '<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">예약 대기</div>'+
   '<div id="filo-booking-list"><div style="text-align:center;padding:16px;color:var(--t3);font-size:12px">로딩중...</div></div></div>'+
   /* QR 섹션 */
   '<div class="card" style="margin-top:12px;display:none" id="qr-section">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-  '<div style="font-size:13px;font-weight:800">📱 테이블 QR 코드</div>'+
-  '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">🖨️ 전체 인쇄</button>'+
+  '<div style="font-size:13px;font-weight:800">테이블 QR 코드</div>'+
+  '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">전체 인쇄</button>'+
   '</div>'+
   '<div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>'+
   '</div>'+
@@ -57,11 +57,11 @@ function _filoPageTableQR(el){
   '<div class="card" style="margin-top:12px" id="review-qr-section">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
   '<div style="font-size:13px;font-weight:800">⭐ 리뷰 QR</div>'+
-  '<button onclick="_filoReviewQRPrint()" style="padding:5px 12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
+  '<button onclick="_filoReviewQRPrint()" style="padding:5px 12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer">인쇄</button>'+
   '</div>'+
   '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">테이블에 부착하면 고객이 식사 후 바로 리뷰 작성 가능합니다</div>'+
   '<div id="review-qr-wrap" style="display:flex;gap:12px;flex-wrap:wrap"></div>'+
-  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">💡 리뷰 링크는 설정 → 리뷰 링크 설정에서 등록하세요</div>'+
+  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">리뷰 링크는 설정 → 리뷰 링크 설정에서 등록하세요</div>'+
   '</div>';
 
  el.appendChild(wrap);
@@ -77,7 +77,7 @@ function _filoGenQRs(did){
  var grid=document.getElementById('qr-grid');
  if(!sec||!grid)return;
  sec.style.display='block';
- grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ QR 생성중...</div>';
+ grid.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">QR 생성중...</div>';
 
  /* Firestore에서 테이블 목록 가져오기 */
  _db.collection('filo_tables').where('dealerId','==',did).get().then(function(snap){
@@ -106,9 +106,9 @@ function _filoGenQRs(did){
     '<div style="font-size:13px;font-weight:800;margin-bottom:10px">'+t.name+'</div>'+
     '<div id="qr-'+t.num+'" style="background:#fff;padding:6px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
     '<div style="display:flex;gap:4px;justify-content:center">'+
-    '<button data-dl="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer">💾 저장</button>'+
-    '<button data-pr="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
-    '<button onclick="window.open(\''+url+'\',\'_blank\')" style="padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">👁 미리보기</button>'+
+    '<button data-dl="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer">저장</button>'+
+    '<button data-pr="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer">인쇄</button>'+
+    '<button onclick="window.open(\''+url+'\',\'_blank\')" style="padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">미리보기</button>'+
     '</div>';
    grid.appendChild(div);
   });
@@ -141,7 +141,7 @@ function _filoGenQRs(did){
    if(dlBtn)_filoQRSave(dlBtn.dataset.dl,dlBtn.dataset.name);
    if(prBtn)_filoQRPrint(prBtn.dataset.pr,prBtn.dataset.name);
   });
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast('+e.message);});
 }
 
 function _filoQRPrint(num,name){
@@ -235,9 +235,9 @@ function _filoShowTableQRModal(did){
 
    var hdr=document.createElement('div');
    hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px';
-   hdr.innerHTML='<div style="font-size:16px;font-weight:900">📱 테이블 QR 코드</div>';
+   hdr.innerHTML='<div style="font-size:16px;font-weight:900">테이블 QR 코드</div>';
    var closeBtn=document.createElement('button');
-   closeBtn.textContent='✕';
+   closeBtn.textContent='×';
    closeBtn.style.cssText='background:transparent;border:none;color:var(--t3);font-size:22px;cursor:pointer;line-height:1';
    closeBtn.onclick=function(){mo.remove();};
    hdr.appendChild(closeBtn);
@@ -251,7 +251,7 @@ function _filoShowTableQRModal(did){
    var toolBar=document.createElement('div');
    toolBar.style.cssText='display:flex;gap:8px;margin-bottom:16px';
    var printAllBtn=document.createElement('button');
-   printAllBtn.textContent='🖨️ 전체 인쇄';
+   printAllBtn.textContent='전체 인쇄';
    printAllBtn.style.cssText='padding:6px 14px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer';
    printAllBtn.onclick=function(){_filoQRPrintAll();};
    toolBar.appendChild(printAllBtn);
@@ -286,12 +286,12 @@ function _filoShowTableQRModal(did){
     btnWrap.style.cssText='margin-top:10px;display:flex;gap:4px;justify-content:center';
 
     var dlBtn=document.createElement('button');
-    dlBtn.textContent='💾 저장';
+    dlBtn.textContent='저장';
     dlBtn.style.cssText='padding:4px 10px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer';
     (function(tNum,tName){dlBtn.onclick=function(){_filoQRDownload(tNum,tName);};})(t.num,t.name);
 
     var prBtn=document.createElement('button');
-    prBtn.textContent='🖨️ 인쇄';
+    prBtn.textContent='인쇄';
     prBtn.style.cssText='padding:4px 10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer';
     (function(tNum,tName){prBtn.onclick=function(){_filoQRPrint1(tNum,tName);};})(t.num,t.name);
 
@@ -313,7 +313,7 @@ function _filoShowTableQRModal(did){
      });
     },300);
    });
-  }).catch(function(e){_filoToast('❌ '+e.message);});
+  }).catch(function(e){_filoToast('+e.message);});
 }
 
 function _filoQRPrint1(num,name){
@@ -380,7 +380,7 @@ function _filoQRPrint1(num,name){
 
 function _filoQRPrintAll(){
  var wraps=document.querySelectorAll('[id^="qr-c-"]');
- if(!wraps.length){_filoToast('❌ QR 코드 없음');return;}
+ if(!wraps.length){_filoToast('QR 코드 없음');return;}
  var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
  var cards='';
  wraps.forEach(function(wrap){
@@ -445,8 +445,8 @@ function _filoQRPrintAll(){
   '</style></head>'+
   '<body>'+
   '<div class="no-print" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'+
-  '<span style="font-size:16px;font-weight:800">📱 테이블 QR 전체 인쇄</span>'+
-  '<button onclick="window.print()" style="padding:8px 20px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'+
+  '<span style="font-size:16px;font-weight:800">테이블 QR 전체 인쇄</span>'+
+  '<button onclick="window.print()" style="padding:8px 20px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">인쇄</button>'+
   '</div>'+
   '<div class="grid">'+cards+'</div>'+
   '</body></html>');
@@ -466,14 +466,14 @@ function _filoLoadReviewQR(){
  var html='';
  if(naver){
   html+='<div style="text-align:center;padding:12px;background:var(--b2);border:1px solid var(--bd);border-radius:12px">'+
-   '<div style="font-size:11px;font-weight:800;color:#03C75A;margin-bottom:8px">📗 네이버 리뷰</div>'+
+   '<div style="font-size:11px;font-weight:800;color:#03C75A;margin-bottom:8px">네이버 리뷰</div>'+
    '<div style="background:#fff;border-radius:8px;padding:6px;display:inline-block" id="review-qr-naver"></div>'+
    '<div style="font-size:10px;color:var(--t3);margin-top:6px">스캔 후 리뷰 작성</div>'+
    '</div>';
  }
  if(kakao){
   html+='<div style="text-align:center;padding:12px;background:var(--b2);border:1px solid var(--bd);border-radius:12px">'+
-   '<div style="font-size:11px;font-weight:800;color:#FEE500;margin-bottom:8px">💛 카카오맵 리뷰</div>'+
+   '<div style="font-size:11px;font-weight:800;color:#FEE500;margin-bottom:8px">카카오맵 리뷰</div>'+
    '<div style="background:#fff;border-radius:8px;padding:6px;display:inline-block" id="review-qr-kakao"></div>'+
    '<div style="font-size:10px;color:var(--t3);margin-top:6px">스캔 후 리뷰 작성</div>'+
    '</div>';
@@ -495,12 +495,12 @@ function _filoReviewQRPrint(){
  var naver=d.reviewUrlNaver||'';
  var kakao=d.reviewUrlKakao||'';
  var companyName=d.companyName||d.name||'매장';
- if(!naver&&!kakao){_filoToast('⚠️ 설정에서 리뷰 링크를 먼저 등록하세요');return;}
+ if(!naver&&!kakao){_filoToast('설정에서 리뷰 링크를 먼저 등록하세요');return;}
 
  var win=window.open('','_blank');
  var items='';
- if(naver) items+='<div class="qr-item"><div class="platform naver">📗 네이버 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(naver)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
- if(kakao) items+='<div class="qr-item"><div class="platform kakao">💛 카카오맵 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(kakao)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
+ if(naver) items+='<div class="qr-item"><div class="platform naver">네이버 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(naver)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
+ if(kakao) items+='<div class="qr-item"><div class="platform kakao">카카오맵 리뷰</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(kakao)+'" width="200" height="200"><div class="label">QR 스캔 → 리뷰 작성</div></div>';
 
  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>리뷰 QR - '+companyName+'</title>'+
   '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:#fff;padding:20px}'+
@@ -514,7 +514,7 @@ function _filoReviewQRPrint(){
   '.msg{text-align:center;margin-top:20px;font-size:13px;color:#444;font-weight:600;padding:12px;background:#f9f9f9;border-radius:8px}'+
   '@media print{body{padding:10px}}</style></head><body>'+
   '<h1>⭐ 리뷰를 남겨주세요!</h1>'+
-  '<div class="subtitle">'+companyName+' · 소중한 리뷰가 큰 힘이 됩니다 😊</div>'+
+  '<div class="subtitle">'+companyName+' · 소중한 리뷰가 큰 힘이 됩니다</div>'+
   '<div class="qr-wrap">'+items+'</div>'+
   '<div class="msg">QR코드를 스캔하시면 리뷰 페이지로 바로 이동합니다</div>'+
   '</body></html>');

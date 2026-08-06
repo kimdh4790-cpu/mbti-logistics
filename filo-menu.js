@@ -135,12 +135,12 @@ function _filoPageRecipe(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:860px;margin:0 auto">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
- '<div><div style="font-size:17px;font-weight:900">🍽 레시피 관리</div>'+
+ '<div><div style="font-size:17px;font-weight:900">레시피 관리</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-top:2px">메뉴별 재료·사용량 등록 → AI 원가 자동계산</div></div>'+
  '<button onclick="_filoRecipeAdd(\''+did+'\')" style="padding:8px 14px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">+ 레시피 추가</button>'+
  '</div>'+
  '<div id="recipe-list">'+
- '<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>'+
+ '<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>'+
  '</div></div>';
  _filoLoadRecipes(did);
 }
@@ -188,7 +188,7 @@ function _filoLoadRecipes(did){
   var menuNames=Object.keys(recipeMap);
   if(!menuNames.length){
    list.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">'+
-   '<div style="font-size:32px;margin-bottom:8px">🍽</div>'+
+   '<div style="margin-bottom:8px;opacity:.5">'+_svgIcon('utensils')+'</div>'+
    '<div>등록된 레시피가 없습니다</div>'+
    '<div style="font-size:11px;margin-top:6px">+ 레시피 추가 버튼을 눌러 시작하세요</div></div>';
    return;
@@ -228,10 +228,10 @@ function _filoLoadRecipes(did){
     '<div style="font-size:12px;font-weight:700;color:#ef4444">₩'+b.cost+'</div>';
    }).join('')+
    '</div>'+
-   (ings[0]&&unitPriceMap[ings[0].itemId]?'':'<div style="font-size:10px;color:#f59e0b">⚠️ 일부 재료 입고단가 없음 → 입고 등록 필요</div>')+
+   (ings[0]&&unitPriceMap[ings[0].itemId]?'':'<div style="font-size:10px;color:#f59e0b">일부 재료 입고단가 없음 → 입고 등록 필요</div>')+
    '</div>'+
    '<div style="display:flex;gap:6px;margin-top:8px">'+
-   '<button onclick="_filoRecipeEdit(\''+did+'\',\''+menuName+'\')" style="flex:1;padding:7px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer">✏️ 수정</button>'+
+   '<button onclick="_filoRecipeEdit(\''+did+'\',\''+menuName+'\')" style="flex:1;padding:7px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:11px;cursor:pointer">수정</button>'+
    '<button onclick="_filoRecipeDelete(\''+did+'\',\''+menuName+'\')" style="padding:7px 12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;font-size:11px;cursor:pointer">삭제</button>'+
    '</div></div>';
   }).join('');
@@ -266,7 +266,7 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
   /* 타이틀 */
   var title=document.createElement('div');
   title.style.cssText='font-size:16px;font-weight:900;margin-bottom:16px';
-  title.textContent=menuName?'✏️ 레시피 수정':'🍽 레시피 추가';
+  title.textContent=menuName?'레시피 수정':'레시피 추가';
   box.appendChild(title);
 
   /* 메뉴명 + 판매가 그리드 */
@@ -331,7 +331,7 @@ function _filoRecipeModal(did,menuName,salePrice,existingIngs){
   cancelBtn.onclick=function(){mo.remove();};
   var saveBtn=document.createElement('button');
   saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer';
-  saveBtn.textContent='💾 저장';
+  saveBtn.textContent='저장';
   saveBtn.onclick=function(){_filoRecipeSave(did,menuName);};
   btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
   box.appendChild(btnRow);
@@ -382,9 +382,9 @@ function _filoRecipeSave(did,oldMenuName){
   });
  }).then(function(){
   document.querySelector('.mo')&&document.querySelector('.mo').remove();
-  _filoToast('✅ 레시피 저장 완료');
+  _filoToast('레시피 저장 완료');
   _filoPageRecipe(document.getElementById('content'));
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoRecipeDelete(did,menuName){
@@ -403,7 +403,7 @@ function _filoSetMenuPriceRecipe(did,menuName,suggestedCost){
  _db.collection('menu_costs').where('dealerId','==',did).where('name','==',menuName).get().then(function(snap){
   if(snap.empty)return _db.collection('menu_costs').add({dealerId:did,name:menuName,price:price,cost:suggestedCost,createdAt:_nowISO()});
   return snap.docs[0].ref.update({price:price,cost:suggestedCost,updatedAt:_nowISO()});
- }).then(function(){_filoToast('✅ 판매가 저장');_filoLoadRecipes(did);});
+ }).then(function(){_filoToast('판매가 저장');_filoLoadRecipes(did);});
 }
 
 /* ══════════════════════════════════════════
@@ -418,7 +418,7 @@ function _filoRenderCostMgmt(did){
   var items=[];
   snap.forEach(function(doc){items.push(Object.assign({_id:doc.id},doc.data()));});
   var html='<div class="card" style="margin-bottom:12px">'+
-  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">⚙️ 메뉴 원가 등록</div>'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">메뉴 원가 등록</div>'+
   '<div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:10px;align-items:end">'+
   '<div><label style="font-size:10px;color:var(--t3);font-weight:700;display:block;margin-bottom:4px">메뉴명</label>'+
   '<input id="mc-name" placeholder="아이스 아메리카노" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
@@ -428,7 +428,7 @@ function _filoRenderCostMgmt(did){
   '<input id="mc-cost" type="number" placeholder="800" style="width:100%;padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px"></div>'+
   '<button onclick="_filoSaveCost(\''+did+'\')" style="padding:9px 16px;background:var(--br);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ 추가</button>'+
   '</div>'+
-  '<div style="font-size:10px;color:var(--t3);padding:6px 0">💡 원가 등록 시 POS 결제에서 자동으로 마진 계산됩니다</div>'+
+  '<div style="font-size:10px;color:var(--t3);padding:6px 0">원가 등록 시 POS 결제에서 자동으로 마진 계산됩니다</div>'+
   '</div>';
 
   if(items.length){
@@ -458,12 +458,12 @@ function _filoSaveCost(did){
  var cost=parseInt(document.getElementById('mc-cost').value)||0;
  if(!name){_filoToast('메뉴명을 입력하세요');return;}
  _db.collection('menu_costs').add({dealerId:did,name:name,price:price,cost:cost,createdAt:_nowISO()}).then(function(){
-  _filoToast('✅ 원가 등록 완료');
+  _filoToast('원가 등록 완료');
   document.getElementById('mc-name').value='';
   document.getElementById('mc-price').value='';
   document.getElementById('mc-cost').value='';
   _filoRenderCostMgmt(did);
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoDelCost(did,id){
@@ -484,7 +484,7 @@ function _filoImportMenuExcel(input){
    var wb=XLSX.read(e.target.result,{type:'array'});
    var ws=wb.Sheets[wb.SheetNames[0]];
    var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-   if(!rows.length){_filoToast('⚠️ 데이터가 없습니다');return;}
+   if(!rows.length){_filoToast('데이터가 없습니다');return;}
    var batch=[];
    rows.forEach(function(r){
     var name=r['메뉴명']||r['name']||'';
@@ -495,7 +495,7 @@ function _filoImportMenuExcel(input){
     if(!name||!price)return;
     batch.push({name:name,price:price,category:category,emoji:emoji,description:description,forSale:true,dealerId:did,stock:null,minStock:null});
    });
-   if(!batch.length){_filoToast('⚠️ 유효한 메뉴가 없습니다');return;}
+   if(!batch.length){_filoToast('유효한 메뉴가 없습니다');return;}
    var db=firebase.firestore();
    /* 기존 filo_menus 삭제 후 재등록 */
    db.collection('filo_menus').where('dealerId','==',did).get().then(function(old){
@@ -510,10 +510,10 @@ function _filoImportMenuExcel(input){
     });
     return bw2.commit();
    }).then(function(){
-    _filoToast('✅ '+batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다');
+    _filoToast(batch.length+'개 메뉴 등록 완료! 테이블 QR에도 반영됩니다');
     _filoPageKiosk(document.getElementById('content'));
-   }).catch(function(e){_filoToast('❌ 저장 오류: '+e.message);});
-  }catch(e){_filoToast('❌ 파일 읽기 오류: '+e.message);}
+   }).catch(function(e){_filoToast('저장 오류: '+e.message);});
+  }catch(e){_filoToast('파일 읽기 오류: '+e.message);}
  };
  reader.readAsArrayBuffer(file);
  input.value='';
@@ -529,7 +529,7 @@ function _filoPageMenuMgmt(el){
  /* 헤더 */
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px';
- hdr.innerHTML='<div><div class="page-title">🍽 메뉴 관리</div><div class="page-sub">카테고리·메뉴 추가/수정/삭제 및 이미지 등록</div></div>';
+ hdr.innerHTML='<div><div class="page-title">메뉴 관리</div><div class="page-sub">카테고리·메뉴 추가/수정/삭제 및 이미지 등록</div></div>';
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary btn-sm';
  addBtn.textContent='+ 메뉴 추가';
@@ -541,7 +541,7 @@ function _filoPageMenuMgmt(el){
  var catCard=document.createElement('div');
  catCard.className='card';
  catCard.style.marginBottom='14px';
- catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">📂 카테고리</div>'+
+ catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">카테고리</div>'+
   '<div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>'+
   '<div style="display:flex;gap:8px">'+
   '<input id="new-cat-inp" type="text" placeholder="새 카테고리명" style="flex:1;padding:9px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">'+
@@ -552,8 +552,8 @@ function _filoPageMenuMgmt(el){
  /* 메뉴 목록 */
  var menuCard=document.createElement('div');
  menuCard.className='card';
- menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">🍽 메뉴 목록</div>'+
-  '<div id="menu-mgmt-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div></div>';
+ menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">메뉴 목록</div>'+
+  '<div id="menu-mgmt-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div></div>';
  wrap.appendChild(menuCard);
 
  el.appendChild(wrap);
@@ -589,7 +589,7 @@ function _filoLoadMenuMgmt(did){
   var list=document.getElementById('menu-mgmt-list');
   if(!list)return;
   if(snap.empty){
-   list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:32px;margin-bottom:8px">🍽</div>등록된 메뉴가 없습니다<br><div style="font-size:12px;margin-top:8px">+ 메뉴 추가 버튼으로 시작하세요</div></div>';
+   list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)"><div style="margin-bottom:8px;opacity:.5">'+_svgIcon('utensils')+'</div>등록된 메뉴가 없습니다<br><div style="font-size:12px;margin-top:8px">+ 메뉴 추가 버튼으로 시작하세요</div></div>';
    return;
   }
 
@@ -624,10 +624,10 @@ function _filoLoadMenuMgmt(did){
      var img=document.createElement('img');
      img.src=m.imageUrl;
      img.style.cssText='width:100%;height:100%;object-fit:cover';
-     img.onerror=function(){this.style.display='none';imgDiv.textContent=m.emoji||'🍽';};
+     img.onerror=function(){this.style.display='none';imgDiv.innerHTML=m.emoji||_svgIcon('utensils');};
      imgDiv.appendChild(img);
     } else {
-     imgDiv.textContent=m.emoji||'🍽';
+     imgDiv.innerHTML=m.emoji||_svgIcon('utensils');
     }
     card.appendChild(imgDiv);
 
@@ -657,7 +657,7 @@ function _filoLoadMenuMgmt(did){
     (function(id){delBtn.onclick=function(){
      if(!confirm('삭제하시겠습니까?'))return;
      _db.collection('filo_menus').doc(id).delete().then(function(){
-      _filoToast('🗑 삭제됐습니다');
+      _filoToast('삭제됐습니다');
       _filoPageMenuMgmt(document.getElementById('content'));
      });
     };})(m._id);
@@ -683,7 +683,7 @@ function _filoMenuAddModal(did, menu, cat){
  /* 이미지 미리보기 */
  var imgPreview=document.createElement('div');
  imgPreview.style.cssText='width:100%;height:140px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:14px;cursor:pointer;border:2px dashed var(--bd2);overflow:hidden;position:relative';
- imgPreview.textContent=menu?menu.emoji||'🍽':'🍽';
+ imgPreview.innerHTML=menu?(menu.emoji||_svgIcon('utensils')):_svgIcon('utensils');
  if(menu&&menu.imageUrl){
   var pimg=document.createElement('img');
   pimg.src=menu.imageUrl;
@@ -703,12 +703,12 @@ function _filoMenuAddModal(did, menu, cat){
   var file=this.files[0];
   if(!file)return;
   if(file.size>3*1024*1024){_filoToast('이미지는 3MB 이하만 가능합니다');return;}
-  uploadProgress.textContent='⏳ 업로드 중...';
+  uploadProgress.textContent='업로드 중...';
   var ref=_storage.ref('filo_menus/'+did+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9.]/g,'_'));
   var task=ref.put(file);
   task.on('state_changed',
    function(snap){var pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);uploadProgress.textContent=pct+'% 업로드 중...';},
-   function(e){uploadProgress.textContent='❌ '+e.message;},
+   function(e){uploadProgress.textContent=e.message;},
    function(){
     ref.getDownloadURL().then(function(url){
      _imageUrl=url;
@@ -716,7 +716,7 @@ function _filoMenuAddModal(did, menu, cat){
      var ni=document.createElement('img');
      ni.src=url;ni.style.cssText='width:100%;height:100%;object-fit:cover';
      imgPreview.appendChild(ni);
-     uploadProgress.textContent='✅ 이미지 업로드 완료';
+     uploadProgress.textContent='이미지 업로드 완료';
     });
    }
   );
@@ -764,7 +764,7 @@ function _filoMenuAddModal(did, menu, cat){
   });
  },100);
 
- box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">'+(isEdit?'✏️ 메뉴 수정':'➕ 메뉴 추가')+'</div>';
+ box.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">'+(isEdit?'메뉴 수정':'메뉴 추가')+'</div>';
  box.appendChild(imgPreview);
  box.appendChild(uploadProgress);
  box.appendChild(fileInp);
@@ -772,7 +772,7 @@ function _filoMenuAddModal(did, menu, cat){
  /* 이미지 제거 버튼 */
  var rmBtn=document.createElement('button');
  rmBtn.style.cssText='width:100%;padding:6px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-bottom:10px';
- rmBtn.textContent='🗑 이미지 제거 (이모지 사용)';
+ rmBtn.textContent='이미지 제거 (이모지 사용)';
  rmBtn.onclick=function(){_imageUrl='';imgPreview.innerHTML='';imgPreview.textContent=document.getElementById('menu-emoji-inp').value||'🍽';uploadProgress.textContent='';};
  box.appendChild(rmBtn);
 
@@ -796,7 +796,7 @@ function _filoMenuAddModal(did, menu, cat){
   inp.style.cssText='width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none';
   /* 이모지 변경시 미리보기 업데이트 */
   if(f.id==='menu-emoji-inp'){
-   inp.oninput=function(){if(!_imageUrl)imgPreview.textContent=this.value||'🍽';};
+   inp.oninput=function(){if(!_imageUrl)imgPreview.innerHTML=this.value||_svgIcon('utensils');};
   }
   g.appendChild(l);g.appendChild(inp);box.appendChild(g);
  });
@@ -829,7 +829,7 @@ function _filoMenuAddModal(did, menu, cat){
  cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
  var saveBtn=document.createElement('button');
  saveBtn.style.cssText='flex:2;padding:11px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-weight:800;cursor:pointer';
- saveBtn.textContent=isEdit?'✅ 수정 완료':'✅ 메뉴 등록';
+ saveBtn.textContent=isEdit?'수정 완료':'메뉴 등록';
  saveBtn.onclick=function(){
   var name=(document.getElementById('menu-name-inp').value||'').trim();
   var price=parseInt(document.getElementById('menu-price-inp').value)||0;
@@ -846,7 +846,7 @@ function _filoMenuAddModal(did, menu, cat){
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:_nowISO()}));
   promise.then(function(ref){
-   _filoToast(isEdit?'✅ 수정됐습니다! 번역 중...':'✅ 등록됐습니다! 번역 중...');
+   _filoToast(isEdit?'수정됐습니다! 번역 중...':'등록됐습니다! 번역 중...');
    mo.remove();
    // 재고 하한선 체크 → 푸시 알림
    if(stock!=null && stockMin>0 && stock<=stockMin) _filoStockLowAlert(name, stock, stockMin);
@@ -863,7 +863,7 @@ function _filoMenuAddModal(did, menu, cat){
       var updateData={nameTranslations:translations};
       if(description) updateData.descTranslations=descTranslations;
       _db.collection('filo_menus').doc(docId).update(updateData)
-       .then(function(){_filoToast('✅ 번역 저장 완료!');})
+       .then(function(){_filoToast('번역 저장 완료');})
        .catch(function(){});
       _filoPageMenuMgmt(document.getElementById('content'));
      }
@@ -883,7 +883,7 @@ function _filoMenuAddModal(did, menu, cat){
    } else {
     _filoPageMenuMgmt(document.getElementById('content'));
    }
-  }).catch(function(e){_filoToast('❌ '+e.message);});
+  }).catch(function(e){_filoToast(e.message);});
  };
  btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
  box.appendChild(btnRow);
@@ -939,7 +939,7 @@ function _toShowMenuGrid(menus){
   card.style.cssText='background:var(--surface2);border:2px solid '+(qty>0?'rgba(124,58,237,.4)':'var(--bd2)')+';border-radius:var(--r);padding:10px;cursor:pointer;text-align:center;transition:.2s;position:relative';
   var badge=qty>0?'<div style="position:absolute;top:-6px;right:-6px;background:var(--br);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">'+qty+'</div>':'';
   card.innerHTML=badge+
-   '<div style="font-size:24px;margin-bottom:4px">'+(m.emoji||'🍽')+'</div>'+
+   '<div style="font-size:22px;margin-bottom:4px;opacity:.8">'+(m.emoji||_svgIcon('utensils'))+'</div>'+
    '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.name+'</div>'+
    '<div style="font-size:12px;font-weight:900;color:#22c55e">₩'+Number(m.price).toLocaleString()+'</div>';
   if(qty>0){
@@ -1007,7 +1007,7 @@ function _filoRmAddRowDOM(wrap,invItems,selId,amount,unit){
  /* 삭제 버튼 */
  var delBtn=document.createElement('button');
  delBtn.style.cssText='padding:8px 10px;background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r);color:var(--red);font-size:12px;cursor:pointer';
- delBtn.textContent='✕';
+ delBtn.textContent='×';
  delBtn.onclick=function(){row.remove();};
 
  row.appendChild(sel);row.appendChild(amtInp);row.appendChild(unitSel);row.appendChild(delBtn);
@@ -1020,7 +1020,7 @@ function _filoRmAddRow(invOpts){
 function _filoPageExpiry(el){
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
- el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 로딩 중...</div>';
+ el.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>';
  var today=_today();
  firebase.firestore().collection('inventory').where('dealerId','==',did).get().then(function(snap){
  var expired=[],warn=[],ok=[];
@@ -1033,7 +1033,7 @@ function _filoPageExpiry(el){
  });
  var html='<div style="max-width:860px;margin:0 auto">';
  html+='<div class="card" style="margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:12px">📝 유통기한 등록</div>'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">유통기한 등록</div>'+
  '<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:end">'+
  '<div class="fg"><label>품목</label><select id="exp-item" class="inp" style="font-size:12px"><option value="">-- 선택 --</option>';
  snap.forEach(function(doc){html+='<option value="'+doc.id+'">'+(doc.data().name||'')+'</option>';});
@@ -1043,7 +1043,7 @@ function _filoPageExpiry(el){
  '</div></div>';
  if(expired.length){
  html+='<div class="card" style="border:2px solid #ef4444;margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:8px">🚨 만료 ('+expired.length+'개) — 즉시 폐기</div>';
+ '<div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:8px">만료 ('+expired.length+'개) — 즉시 폐기</div>';
  expired.forEach(function(d){
  html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(239,68,68,.2)">'+
  '<span style="font-size:12px;font-weight:700">'+d.name+'</span>'+
@@ -1053,7 +1053,7 @@ function _filoPageExpiry(el){
  }
  if(warn.length){
  html+='<div class="card" style="border:1px solid #f59e0b;margin-bottom:10px">'+
- '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">⚠️ 7일 이내 만료 ('+warn.length+'개)</div>';
+ '<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:8px">7일 이내 만료 ('+warn.length+'개)</div>';
  warn.forEach(function(d){
  var dL=Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000);
  html+='<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(245,158,11,.2)">'+
@@ -1062,7 +1062,7 @@ function _filoPageExpiry(el){
  });
  html+='</div>';
  }
- html+='<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px">📦 전체 목록</div>';
+ html+='<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px">전체 목록</div>';
  snap.forEach(function(doc){
  var d=doc.data();
  var dL=d.expiryDate?Math.ceil((new Date(d.expiryDate)-new Date(today))/86400000):null;
@@ -1085,7 +1085,7 @@ function _filoLoadStockHistory(did, elId, type){
  el.innerHTML=snap.docs.map(function(doc){
  var d=doc.data();
  var itemName=d.itemName||d.itemId||'';
- var icon=type==='in'?'📥':'📤';
+ var icon=type==='in'?'↓':'↑';
  var color=type==='in'?'#22c55e':'#ef4444';
  var typeLabel={'sale':'판매','use':'사용','waste':'폐기','return':'반품','etc':'기타'}[d.type]||'';
  return '<div class="stock-item" style="display:flex;align-items:center;gap:10px;padding:12px 14px">'+
@@ -1111,7 +1111,7 @@ function _filoLoadStockHistory(did, elId, type){
 
 // 재고 하한선 푸시 알림
 function _filoStockLowAlert(menuName, stock, stockMin){
- var title='⚠️ 재고 부족: '+menuName;
+ var title='재고 부족: '+menuName;
  var body='현재 재고 '+stock+'개 (기준: '+stockMin+'개 이하)';
  // 브라우저 푸시 알림
  if('Notification' in window && Notification.permission==='granted'){
@@ -1122,7 +1122,7 @@ function _filoStockLowAlert(menuName, stock, stockMin){
   });
  }
  // 화면 토스트도 표시
- _filoToast('⚠️ '+menuName+' 재고 부족 ('+stock+'개)');
+ _filoToast(menuName+' 재고 부족 ('+stock+'개)');
 }
 
 /* ══════════════════════════════════════════
@@ -1262,7 +1262,7 @@ function _filoSeedDefaultMenusManual(){
  if(!t||!t.length){_filoToast('이 업종은 기본 메뉴 템플릿이 없습니다');return;}
  if(!confirm('업종에 맞는 기본 메뉴 '+t.length+'개를 자동으로 추가할까요?\n(이미 등록된 메뉴가 있으면 실행되지 않습니다)'))return;
  _filoSeedDefaultMenus(did,key).then(function(n){
-  if(n>0){_filoToast('✅ 기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');}
+  if(n>0){_filoToast('기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');}
   else _filoToast('이미 메뉴가 있어 건너뛰었습니다');
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }

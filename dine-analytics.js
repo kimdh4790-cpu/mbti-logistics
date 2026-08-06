@@ -39,7 +39,7 @@ function _dineAnalytics(el){
 
  wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:10px">'+
-  '<div><div class="page-title">📈 매출 분석</div><div class="page-sub">실시간 경영 인사이트</div></div>'+
+  '<div><div class="page-title">매출 분석</div><div class="page-sub">실시간 경영 인사이트</div></div>'+
   '<div style="display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px" id="ana-tabs">'+
   '<button class="ana-tab2 on" data-t="today" onclick="_dineAnaTab2(this)">오늘</button>'+
   '<button class="ana-tab2" data-t="week" onclick="_dineAnaTab2(this)">이번주</button>'+
@@ -49,26 +49,26 @@ function _dineAnalytics(el){
   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="ana-kpi"></div>'+
   /* 일별 추이 + daypart */
   '<div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">'+
-  '<div class="ana-cc"><div class="ana-ct">📅 일별 매출 추이</div><div class="ana-cs" id="ana-trend-sub">기간 트렌드</div>'+
+  '<div class="ana-cc"><div class="ana-ct">일별 매출 추이</div><div class="ana-cs" id="ana-trend-sub">기간 트렌드</div>'+
   '<div style="position:relative;height:160px"><canvas id="ch-trend" aria-label="일별 매출 추이"></canvas></div></div>'+
-  '<div class="ana-cc"><div class="ana-ct">⏱ 영업 타임별</div><div class="ana-cs">브런치/점심/저녁/야간</div>'+
+  '<div class="ana-cc"><div class="ana-ct">영업 타임별</div><div class="ana-cs">브런치/점심/저녁/야간</div>'+
   '<div id="ana-daypart" style="margin-top:4px"></div></div>'+
   '</div>'+
   /* 시간대 + 요일 */
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
-  '<div class="ana-cc"><div class="ana-ct">⏰ 시간대별 매출</div><div class="ana-cs" id="ana-peak-txt">피크타임 분석</div>'+
+  '<div class="ana-cc"><div class="ana-ct">시간대별 매출</div><div class="ana-cs" id="ana-peak-txt">피크타임 분석</div>'+
   '<div style="position:relative;height:170px"><canvas id="ch-hour" aria-label="시간대별 매출"></canvas></div></div>'+
-  '<div class="ana-cc"><div class="ana-ct">📅 요일별 매출</div><div class="ana-cs" id="ana-day-sub">요일 패턴</div>'+
+  '<div class="ana-cc"><div class="ana-ct">요일별 매출</div><div class="ana-cs" id="ana-day-sub">요일 패턴</div>'+
   '<div style="position:relative;height:170px"><canvas id="ch-day" aria-label="요일별 매출"></canvas></div></div>'+
   '</div>'+
   /* 메뉴 + 결제 + 인건비 */
   '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px">'+
-  '<div class="ana-cc"><div class="ana-ct">🏆 인기 메뉴 TOP 5</div><div class="ana-cs">주문 수량 기준</div>'+
+  '<div class="ana-cc"><div class="ana-ct">인기 메뉴 TOP 5</div><div class="ana-cs">주문 수량 기준</div>'+
   '<div id="ana-menu"></div></div>'+
-  '<div class="ana-cc"><div class="ana-ct">💳 결제수단</div><div class="ana-cs" id="ana-pay-sub">비중 분석</div>'+
+  '<div class="ana-cc"><div class="ana-ct">결제수단</div><div class="ana-cs" id="ana-pay-sub">비중 분석</div>'+
   '<div style="position:relative;height:130px"><canvas id="ch-pay" aria-label="결제수단 도넛"></canvas></div>'+
   '<div id="ana-pay-leg" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div></div>'+
-  '<div class="ana-cc"><div class="ana-ct">👥 인건비 분석</div><div class="ana-cs">매출 대비 비율</div>'+
+  '<div class="ana-cc"><div class="ana-ct">인건비 분석</div><div class="ana-cs">매출 대비 비율</div>'+
   '<div id="ana-labor"></div></div>'+
   '</div>';
 
@@ -181,7 +181,7 @@ function _dineLoadAnalytics(did,from,to){
   var kpis=[
    {lbl:'총 매출',id:'kn0',val:total,pre:'₩',suf:'',sub:cnt+'건',color:'#38bdf8',d:dTotal,icon:''},
    {lbl:'일평균 매출',id:'kn1',val:dayAvg,pre:'₩',suf:'',sub:days2+'일 기준',color:'#22c55e',d:null,icon:''},
-   {lbl:'피크타임',id:'kn2',val:null,pre:'',suf:'',sub:peakH?'₩'+Math.round(peakH[1]).toLocaleString():'없음',color:'#f59e0b',d:null,icon:'⏰'},
+   {lbl:'피크타임',id:'kn2',val:null,pre:'',suf:'',sub:peakH?'₩'+Math.round(peakH[1]).toLocaleString():'없음',color:'#f59e0b',d:null,icon:''},
    {lbl:'객단가',id:'kn3',val:avg,pre:'₩',suf:'',sub:'주문당 평균',color:'#a78bfa',d:dCnt,icon:''},
   ];
   if(kpi)kpi.innerHTML=kpis.map(function(k){
@@ -206,17 +206,17 @@ function _dineLoadAnalytics(did,from,to){
    cu('kn3',avg,'₩','');
    if(peakH){var pk=document.getElementById('kn2');if(pk)pk.textContent=peakH[0]+'시대';}
    var pt=document.getElementById('ana-peak-txt');
-   if(pt&&peakH)pt.textContent='🔥 '+peakH[0]+'시대 피크';
+   if(pt&&peakH)pt.textContent=peakH[0]+'시대 피크';
    var ds=document.getElementById('ana-day-sub');
    if(ds&&maxDay)ds.textContent='최다: '+maxDay[0]+'요일';
   },50);
 
   /* Daypart */
   var daypart=[
-   {lbl:'브런치',range:[6,11],icon:'☀️',color:'#f59e0b'},
-   {lbl:'점심',range:[11,15],icon:'🍱',color:'#22c55e'},
-   {lbl:'저녁',range:[17,21],icon:'🌆',color:'#38bdf8'},
-   {lbl:'야간',range:[21,24],icon:'🌙',color:'#a78bfa'},
+   {lbl:'브런치',range:[6,11],icon:'AM',color:'#f59e0b'},
+   {lbl:'점심',range:[11,15],icon:'PM',color:'#22c55e'},
+   {lbl:'저녁',range:[17,21],icon:'EVE',color:'#38bdf8'},
+   {lbl:'야간',range:[21,24],icon:'NITE',color:'#a78bfa'},
   ];
   var dpEl=document.getElementById('ana-daypart');
   if(dpEl){
@@ -378,7 +378,7 @@ function _dineLoadAnalytics(did,from,to){
    var top5=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
    var mmax=top5[0]?top5[0][1]:1;
    var mColors=['#f59e0b','#94a3b8','#cd7f32','#38bdf8','#a78bfa'];
-   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
+   var ranks=['1','2','3','4','5'];
    if(!top5.length){mEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">데이터 없음</div>';return;}
    mEl.innerHTML=top5.map(function(m,i){
     var share=cnt?Math.round((m[1]||0)/cnt*100):0;
@@ -487,7 +487,7 @@ function _dineWatchReservations(){
     snap.docChanges().forEach(function(change){
      if(change.type==='added'){
       var d=change.doc.data();
-      _dineToast('📅 새 예약: '+d.customerName+'님 '+d.seats+'인 ('+d.time+')');
+      _dineToast('새 예약: '+d.customerName+'님 '+d.seats+'인 ('+d.time+')');
       if('Notification' in window&&Notification.permission==='granted'){
        new Notification('새 예약 알림',{body:d.customerName+'님 '+d.seats+'인 '+d.time,icon:'/dine-icon-192.png'});
       }
@@ -599,7 +599,7 @@ function _dineLoadMyPayroll(){
 function _dineMyPayslip(el){
  var did=_CU.dealerId;var sid=_CU.staffId||_CU.uid;
  var wrap=document.createElement('div');wrap.className='slide-up';
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📋 내 명세서</div><div class="page-sub">'+_CU.name+'님의 급여명세서</div></div>'+
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">내 명세서</div><div class="page-sub">'+_CU.name+'님의 급여명세서</div></div>'+
   '<div id="my-payslip-list"><div style="text-align:center;padding:30px;color:var(--t3)"> 로딩중</div></div>';
  el.innerHTML='';el.appendChild(wrap);
  _db.collection('payslips').where('dealerId','==',did).where('staffId','==',sid)
@@ -634,7 +634,7 @@ function _dineSchedule(el){
  var weekStart=new Date(now);
  weekStart.setDate(now.getDate()-now.getDay()+1);
 
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">📅 근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
+ wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
   '<div class="card"><div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px" id="schedule-grid">'+
   '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
   Array.from({length:7},function(_,i){
@@ -688,7 +688,7 @@ function _dineCost(el){
  el.innerHTML='';
  var wrap=document.createElement('div');wrap.className='slide-up';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
-  '<div><div class="page-title">🧾 원가 관리</div><div class="page-sub">메뉴별 원가율 · 마진 분석</div></div>'+
+  '<div><div class="page-title">원가 관리</div><div class="page-sub">메뉴별 원가율 · 마진 분석</div></div>'+
   '<button class="btn btn-primary" onclick="_dineCostAdd(\''+did+'\')">+ 원가 등록</button></div>'+
   '<div id="cost-list"><div style="text-align:center;padding:30px;color:var(--t3)"> 로딩중</div></div>';
  el.appendChild(wrap);
@@ -702,7 +702,7 @@ function _dineCost(el){
    var rate=d.price>0?Math.round((1-d.cost/d.price)*100):0;
    var rateColor=rate>=70?'#22c55e':rate>=50?'#f59e0b':'#ef4444';
    html+='<div class="card" style="padding:14px">'+
-    '<div style="font-size:14px;font-weight:800;margin-bottom:8px">'+(d.emoji||'🍽')+' '+d.name+'</div>'+
+    '<div style="font-size:14px;font-weight:800;margin-bottom:8px">'+(d.emoji?d.emoji+' ':'')+d.name+'</div>'+
     '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
     '<span style="color:var(--t3)">판매가</span><span>₩'+d.price.toLocaleString()+'</span></div>'+
     '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">'+
@@ -722,7 +722,7 @@ function _dineCost(el){
 function _dineCostAdd(did){
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
- box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">🧾 원가 등록</div>'+
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">원가 등록</div>'+
   '<div class="input-group"><label>메뉴명</label><input id="c-name" class="inp" placeholder="아메리카노"></div>'+
   '<div class="input-group"><label>이모지</label><input id="c-emoji" class="inp" value="☕" style="width:80px"></div>'+
   '<div class="input-group"><label>판매가 (원)</label><input id="c-price" class="inp" type="number" placeholder="4000"></div>'+

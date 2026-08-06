@@ -81,9 +81,9 @@ function _showOrderReceipt(items, total, payType, method){
  // 헤더에 테이블 번호 + 시간 삽입
  var hdrEl=document.getElementById('order-receipt-header');
  if(hdrEl){
-  hdrEl.innerHTML='🧾 주문 영수증'+
+  hdrEl.innerHTML='주문 영수증'+
    '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
-   '🪑 테이블 '+_tNum+'번 &nbsp;|&nbsp; 🕐 '+timeStr+'</div>';
+   '테이블 '+_tNum+'번 &nbsp;|&nbsp; '+timeStr+'</div>';
  }
  if(riEl)riEl.innerHTML=rc.map(function(i){
   return '<div style="display:flex;justify-content:space-between">'+
@@ -92,7 +92,7 @@ function _showOrderReceipt(items, total, payType, method){
  }).join('');
  if(rtEl)rtEl.textContent='₩'+rt.toLocaleString();
  if(rpEl){
-  var mLabel=method==='card'?'💳 카드':method==='cash'?'💵 현금':rp==='postpay'?'💳 후불결제':'';
+  var mLabel=method==='card'?'카드':method==='cash'?'현금':rp==='postpay'?'후불결제':'';
   rpEl.textContent=mLabel?'결제방법: '+mLabel:'';
  }
  if(cashNotice)cashNotice.style.display=(method==='cash')?'block':'none';
@@ -129,7 +129,7 @@ window.onload=function(){
  _tNum=_p('t')||'';
  _tName=_p('name')||('테이블 '+_tNum);
  if(!_did){
-  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:48px">❌</div><div style="margin-top:12px">잘못된 주소입니다</div></div>';
+  document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:24px">✕</div><div style="margin-top:12px">잘못된 주소입니다</div></div>';
   return;
  }
  // 매장명 로드
@@ -196,7 +196,7 @@ function _checkExistingOrder(){
   var pop=document.createElement('div');
   pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
   pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:100%">'+
-   '<div style="font-size:40px;margin-bottom:12px">🪑</div>'+
+   '<div style="font-size:40px;margin-bottom:12px"></div>'+
    '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 이동</div>'+
    '<div style="font-size:14px;color:#475569;margin-bottom:20px">'+
    '기존 주문을 <b style="color:#0891b2">테이블 '+_tNum+'</b>번으로<br>이동할까요?</div>'+
@@ -219,7 +219,7 @@ function _checkExistingOrder(){
     var ditems=document.getElementById('done-items');
     if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
     if(dn)dn.style.display='flex';
-   }).catch(function(e){_filoToast('❌ 이동 실패: '+e.message);pop.remove();});
+   }).catch(function(e){_filoToast('이동 실패: '+e.message);pop.remove();});
   };
   document.getElementById('_mv_no').onclick=function(){pop.remove();};
   }).catch(function(){});
@@ -260,7 +260,7 @@ function _loadBakeryCart(){
     });
     _updFab();
     if(added.length){
-      _filoToast('🧺 진열대에서 담은 빵이 추가됐어요! ' + added.join(', '));
+      _filoToast('진열대에서 담은 빵이 추가됐어요! ' + added.join(', '));
     }
     // 로드 후 초기화 (중복 방지)
     localStorage.removeItem(key);
@@ -273,7 +273,7 @@ function _chgQty(name,d){_cartChg(name,d);}
 // ── 테이블 QR 주문 제출 (order.html 전용) ──────────────
 function _submitOrder(){
  var items=Object.values(_cart).filter(function(i){return i.qty>0;});
- if(!items.length){_filoToast('🛒 메뉴를 선택해주세요');return;}
+ if(!items.length){_filoToast('메뉴를 선택해주세요');return;}
  _openPayMdl();
 }
 
@@ -331,11 +331,11 @@ function _doOrder(payType){
    fetch('/api/filo-push',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:_did,title:'🆕 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
+    body:JSON.stringify({did:_did,title:'신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
  }).catch(function(e){
-  _filoToast('❌ 주문 실패: '+e.message);
+  _filoToast('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
  });
 }
@@ -363,17 +363,17 @@ function _listenPickup(orderId){
  // 특정 주문 ID 감지 (주문 완료 후 호출)
  _pickupOrderId=orderId;
  var status=document.getElementById('pickup-status');
- if(status)status.textContent='⏳ 주방에서 준비 중...';
+ if(status)status.textContent='주방에서 준비 중...';
  _db.collection('filo_orders').doc(orderId).onSnapshot(function(doc){
   if(!doc.exists)return;
   var data=doc.data();
   if(data.status==='ready'){
    var status=document.getElementById('pickup-status');
-   if(status){status.textContent='✅ 준비 완료! 카운터에서 수령해주세요';status.style.color='#22c55e';status.style.fontWeight='800';}
+   if(status){status.textContent='준비 완료! 카운터에서 수령해주세요';status.style.color='#22c55e';status.style.fontWeight='800';}
    _showPickupAlert();
   } else if(data.status==='served'){
    var status=document.getElementById('pickup-status');
-   if(status){status.textContent='🍽 서빙 완료!';status.style.color='#0891b2';}
+   if(status){status.textContent='서빙 완료!';status.style.color='#0891b2';}
   }
  });
 }
@@ -385,9 +385,9 @@ function _showPickupAlert(){
  alert.id='pickup-alert';
  alert.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
  alert.innerHTML='<div style="background:#fff;border-radius:24px;padding:32px;text-align:center;max-width:320px;width:100%">'+
-  '<div style="font-size:64px;margin-bottom:16px">🔔</div>'+
+  '<div style="font-size:24px;margin-bottom:16px"></div>'+
   '<div style="font-size:22px;font-weight:900;margin-bottom:8px;color:#0f172a">준비 완료!</div>'+
-  '<div style="font-size:15px;color:#475569;margin-bottom:24px">주문하신 음식이 준비됐습니다.<br>카운터에서 수령해주세요 😊</div>'+
+  '<div style="font-size:15px;color:#475569;margin-bottom:24px">주문하신 음식이 준비됐습니다.<br>카운터에서 수령해주세요</div>'+
   '<button onclick="document.getElementById(\'pickup-alert\').remove()" style="width:100%;padding:16px;background:#0891b2;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer">확인</button>'+
   '</div>';
  document.body.appendChild(alert);
@@ -425,7 +425,7 @@ function _changeTable(){
  var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
  if(!newNum||!newNum.trim())return;
  newNum=newNum.trim();
- if(!_lastOrderId){_filoToast('⚠️ 주문 정보를 찾을 수 없습니다');return;}
+ if(!_lastOrderId){_filoToast('주문 정보를 찾을 수 없습니다');return;}
  _db.collection('filo_orders').doc(_lastOrderId).update({
   tableNum:newNum,
   tableName:'테이블 '+newNum,
@@ -439,12 +439,12 @@ function _changeTable(){
   if(hdr&&hdr.querySelector('div')){
    var now=new Date();
    var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-   hdr.innerHTML='🧾 주문 영수증'+
+   hdr.innerHTML='주문 영수증'+
     '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
-    '🪑 테이블 '+newNum+'번 &nbsp;|&nbsp; 🕐 '+timeStr+'</div>';
+    '테이블 '+newNum+'번 &nbsp;|&nbsp; '+timeStr+'</div>';
   }
-  _filoToast('✅ 테이블 '+newNum+'번으로 변경됐습니다!');
- }).catch(function(e){_filoToast('❌ 변경 실패: '+e.message);});
+  _filoToast('테이블 '+newNum+'번으로 변경됐습니다!');
+ }).catch(function(e){_filoToast('변경 실패: '+e.message);});
 }
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
@@ -477,12 +477,12 @@ function _showFCMGate(){
 function _requestFCM(){
  var btn=document.getElementById('fcm-allow-btn');
  var deniedMsg=document.getElementById('fcm-denied-msg');
- if(btn)btn.textContent='⏳ 처리 중...';
+ if(btn)btn.textContent='처리 중...';
  Notification.requestPermission().then(function(perm){
   if(perm==='granted'){
    _initFCM();
   } else {
-   if(btn)btn.textContent='🔔 알림 허용하기';
+   if(btn)btn.textContent='알림 허용하기';
    if(deniedMsg)deniedMsg.style.display='block';
   }
  });
@@ -552,7 +552,7 @@ function _sendCsQuestion(){
  inp.value='';
  msgs.innerHTML+='<div class="cs-msg cs-user">'+_escHtml(q)+'</div>';
  var typingId='cs-typing-'+Date.now();
- msgs.innerHTML+='<div class="cs-msg cs-bot" id="'+typingId+'">⏳ 답변 생성 중...</div>';
+ msgs.innerHTML+='<div class="cs-msg cs-bot" id="'+typingId+'">답변 생성 중...</div>';
  msgs.scrollTop=msgs.scrollHeight;
  fetch('/api/cs-bot',{
   method:'POST',
@@ -574,16 +574,16 @@ function reqReceiptFCM(){
   var btn=document.getElementById('receipt-fcm-btn');
   var st=document.getElementById('receipt-fcm-status');
   if(!btn||btn.dataset.done==='1')return;
-  btn.textContent='⏳ 처리 중...';btn.disabled=true;
+  btn.textContent='처리 중...';btn.disabled=true;
   st.style.display='block';st.textContent='알림 권한 확인 중...';
   if(!('Notification' in window)){
     st.textContent='이 브라우저는 알림을 지원하지 않아요';
-    btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;return;
+    btn.textContent='영수증 알림 받기';btn.disabled=false;return;
   }
   Notification.requestPermission().then(function(perm){
     if(perm!=='granted'){
       st.textContent='알림을 허용해야 영수증을 받을 수 있어요';
-      btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;return;
+      btn.textContent='영수증 알림 받기';btn.disabled=false;return;
     }
     st.textContent='영수증 준비 중...';
     navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
@@ -598,7 +598,7 @@ function reqReceiptFCM(){
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             tokens:[tok],
-            title:'🧾 영수증',
+            title:'영수증',
             body:document.getElementById('done-num')
               ?document.getElementById('done-num').textContent+' 주문 완료'
               :'주문 완료',
@@ -609,16 +609,16 @@ function reqReceiptFCM(){
       }).then(function(r){return r.json();})
       .then(function(d){
         if(d.sent>0){
-          btn.textContent='✅ 영수증 발송됨';
+          btn.textContent='영수증 발송됨';
           btn.style.background='rgba(34,197,94,.08)';
           btn.style.borderColor='rgba(34,197,94,.3)';
           btn.style.color='#16a34a';
           btn.dataset.done='1';
-          st.textContent='잠시 후 알림으로 영수증이 전송됩니다 😊';
+          st.textContent='잠시 후 알림으로 영수증이 전송됩니다';
         }else{throw new Error('발송 실패');}
       }).catch(function(e){
         st.textContent='오류: '+(e.message||'다시 시도해주세요');
-        btn.textContent='🧾 영수증 알림 받기';btn.disabled=false;
+        btn.textContent='영수증 알림 받기';btn.disabled=false;
       });
   });
 }
@@ -628,13 +628,13 @@ function _toggleDark(){
   var isDark = document.body.classList.toggle('dark');
   localStorage.setItem('filo_dark', isDark?'1':'0');
   var btn = document.getElementById('dark-btn');
-  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+  if(btn) btn.textContent = isDark ? '라이트' : '다크';
 }
 (function(){
   if(localStorage.getItem('filo_dark')==='1'){
     document.body.classList.add('dark');
     var btn = document.getElementById('dark-btn');
-    if(btn) btn.textContent = '☀️';
+    if(btn) btn.textContent = '라이트';
   }
 })();
 

@@ -115,7 +115,7 @@ function _filoPageSales(el){
  /* 일별 매출 추이 */
  var trendCard=document.createElement('div');
  trendCard.className='card';
- trendCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">📈 매출 추이</div>'+
+ trendCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">매출 추이</div>'+
   '<div style="position:relative;height:160px"><canvas id="chart-trend"></canvas></div>';
  bottomGrid.appendChild(trendCard);
  wrap.appendChild(bottomGrid);
@@ -123,7 +123,7 @@ function _filoPageSales(el){
  /* ── 원가·마진 분석 탭 ── */
  var tabRow=document.createElement('div');
  tabRow.style.cssText='display:flex;gap:8px;margin-bottom:14px';
- [' 마진 분석','🧾 원가 등록','💡 AI 인사이트'].forEach(function(t,i){
+ ['마진 분석','원가 등록','AI 인사이트'].forEach(function(t,i){
   var tb=document.createElement('button');
   tb.style.cssText='padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s;border:none;'+(i===0?'background:var(--br);color:#fff':'background:var(--surface2);color:var(--t2)');
   tb.textContent=t;
@@ -143,22 +143,22 @@ function _filoPageSales(el){
  /* 탭1: 마진 분석 */
  var tab1=document.createElement('div');
  tab1.id='sales-live';
- tab1.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">⏳ 데이터 로딩 중...</div>';
+ tab1.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">데이터 로딩 중...</div>';
  tabContent.appendChild(tab1);
 
  /* 탭2: 원가 등록 */
  var tab2=document.createElement('div');
  tab2.style.display='none';
- tab2.innerHTML='<div class="card"><div class="sec-title" style="margin-bottom:12px">🧾 원가 등록</div>'+
+ tab2.innerHTML='<div class="card"><div class="sec-title" style="margin-bottom:12px">원가 등록</div>'+
   '<div style="font-size:12px;color:var(--t2)">메뉴별 원가를 등록하면 마진율이 자동 계산됩니다.</div>'+
-  '<button onclick="_filoGoPage(\'cost_mgmt\')" style="margin-top:12px;padding:10px 20px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">⚙️ 원가 설정하기</button></div>';
+  '<button onclick="_filoGoPage(\'cost_mgmt\')" style="margin-top:12px;padding:10px 20px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">원가 설정하기</button></div>';
  tabContent.appendChild(tab2);
 
  /* 탭3: AI 인사이트 */
  var tab3=document.createElement('div');
  tab3.style.display='none';
- tab3.innerHTML='<div class="card"><div class="sec-title" style="margin-bottom:12px">💡 AI 인사이트</div>'+
-  '<div id="ai-insight-content"><div style="text-align:center;padding:30px;color:var(--t3)">⏳ AI 분석 중...</div></div></div>';
+ tab3.innerHTML='<div class="card"><div class="sec-title" style="margin-bottom:12px">AI 인사이트</div>'+
+  '<div id="ai-insight-content"><div style="text-align:center;padding:30px;color:var(--t3)">AI 분석 중...</div></div></div>';
  tabContent.appendChild(tab3);
  wrap.appendChild(tabContent);
  el.appendChild(wrap);
@@ -247,10 +247,10 @@ function _filoRenderSalesCharts(did,from,to){
    sorted.forEach(function(m){
     var pct=total>0?Math.round(m[1]/total*100):0;
     var col=payColors[m[0]]||'#9898c0';
-    var ic=payIcons[m[0]]||'💰';
+    var ic=payIcons[m[0]]||'ETC';
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)';
-    row.innerHTML='<span style="font-size:16px">'+ic+'</span>'+
+    row.innerHTML='<span style="font-size:10px;font-weight:800;color:var(--t3)">'+ic+'</span>'+
      '<div style="flex:1">'+
      '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
      '<span style="font-size:12px;font-weight:700">'+m[0]+'</span>'+
@@ -270,11 +270,11 @@ function _filoRenderSalesCharts(did,from,to){
   var menuEl=document.getElementById('top-menu-list');
   if(menuEl){
    var topMenus=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-   var ranks=['🥇','🥈','🥉','4️⃣','5️⃣'];
+   var ranks=['1','2','3','4','5'];
    menuEl.innerHTML=topMenus.length?topMenus.map(function(m,i){
     var pct=cnt>0?Math.round(m[1]/cnt*100):0;
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-     '<span style="font-size:16px">'+ranks[i]+'</span>'+
+     '<span style="font-size:11px;font-weight:900;color:var(--br);min-width:16px;text-align:center">'+ranks[i]+'</span>'+
      '<div style="flex:1">'+
      '<div style="display:flex;justify-content:space-between">'+
      '<span style="font-size:12px;font-weight:700">'+m[0]+'</span>'+
@@ -365,7 +365,7 @@ function _filoTaxSendReport(type){
  var did=_CU.dealerId||_CU.uid;
  var email=(document.getElementById('tax-email-inp')&&document.getElementById('tax-email-inp').value)||'';
  if(!email){_filoToast('먼저 세무사 이메일을 등록하세요');return;}
- _filoToast('⏳ 리포트 준비 중...');
+ _filoToast('리포트 준비 중...');
  /* 매출 데이터 수집 */
  var now=new Date();
  var startDate,endDate;
@@ -448,13 +448,13 @@ function _filoMarginLoadRange(from,to){
   /* 결제수단별 집계 표시 */
   var payEl=document.getElementById('pay-method-breakdown');
   if(payEl){
-   var methodIcons={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪','삼성페이':'📱','기타':'💰'};
+   var methodIcons={'카드':'CARD','현금':'CASH','카카오페이':'KAKAO','네이버페이':'NAVER','카운터결제':'POS','삼성페이':'SAMSUNG','기타':'ETC'};
    var sorted=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
    payEl.innerHTML=sorted.length?sorted.map(function(m){
     var pct=total>0?Math.round(m[1]/total*100):0;
-    var ic=methodIcons[m[0]]||'💰';
+    var ic=methodIcons[m[0]]||'ETC';
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-     '<span style="font-size:16px">'+ic+'</span>'+
+     '<span style="font-size:10px;font-weight:800;color:var(--t3)">'+ic+'</span>'+
      '<div style="flex:1">'+
      '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
      '<span style="font-size:13px;font-weight:700">'+m[0]+'</span>'+
@@ -504,10 +504,10 @@ function _filoMarginLoadRange(from,to){
     var menuEntries2=Object.entries(items).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
     chartHtml+='<div style="margin-top:14px"><div class="sec-title" style="margin-bottom:10px">인기 메뉴 TOP5</div>'+
      menuEntries2.map(function(kv,i){
-      var rank=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
+      var rank=['1','2','3','4','5'][i];
       var pct=total>0?Math.round(kv[1]/total*100):0;
       return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
-       '<span style="font-size:15px">'+rank+'</span>'+
+       '<span style="font-size:11px;font-weight:900;color:var(--br);min-width:16px;text-align:center">'+rank+'</span>'+
        '<div style="flex:1"><div style="display:flex;justify-content:space-between">'+
        '<span style="font-size:12px;font-weight:700">'+kv[0]+'</span>'+
        '<span style="font-size:12px;font-weight:900;color:#22c55e">'+kv[1]+'개</span>'+
@@ -548,7 +548,7 @@ function _filoMarginLoadRange(from,to){
       payParent.style.height='auto';
       var payHtmlStr='<div style="display:flex;flex-direction:column;gap:8px">';
       paySorted.forEach(function(p){
-       var ic={'카드':'💳','현금':'💵','카카오페이':'🟡','네이버페이':'🟢','카운터결제':'🏪'}[p[0]]||'💰';
+       var ic={'카드':'CARD','현금':'CASH','카카오페이':'KAKAO','네이버페이':'NAVER','카운터결제':'POS'}[p[0]]||'ETC';
        var col=payColors[p[0]]||'#9898c0';
        var pct=total>0?Math.round(p[1]/total*100):0;
        payHtmlStr+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:12px;border:1px solid var(--bd2)">'+
@@ -618,14 +618,14 @@ function _filoPageSalesReport(el) {
   var kpi = document.createElement('div');
   kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px';
   kpi.innerHTML = [
-    {id:'sr-card',   ic:'💳', lbl:'카드 매출',  c:'#0891b2'},
-    {id:'sr-cash',   ic:'💵', lbl:'현금 매출',  c:'#059669'},
-    {id:'sr-fee',    ic:'🏷', lbl:'수수료',     c:'#ef4444'},
-    {id:'sr-net',    ic:'💰', lbl:'순수익',     c:'#7c3aed'},
+    {id:'sr-card',   ic:'CARD', lbl:'카드 매출',  c:'#0891b2'},
+    {id:'sr-cash',   ic:'CASH', lbl:'현금 매출',  c:'#059669'},
+    {id:'sr-fee',    ic:'FEE', lbl:'수수료',     c:'#ef4444'},
+    {id:'sr-net',    ic:'NET', lbl:'순수익',     c:'#7c3aed'},
   ].map(function(k){
     return '<div class="card" style="padding:16px;border-radius:16px">' +
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
-      '<span style="font-size:16px">'+k.ic+'</span>' +
+      '<span style="font-size:10px;font-weight:800;color:var(--t3)">'+k.ic+'</span>' +
       '<span style="font-size:11px;font-weight:700;color:var(--t3)">'+k.lbl+'</span>' +
       '</div>' +
       '<div style="font-size:18px;font-weight:900;color:'+k.c+'" id="'+k.id+'">—</div>' +

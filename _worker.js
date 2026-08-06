@@ -466,7 +466,7 @@ async function sendWelcomeEmail(env, { email, companyName, tempPassword, planTyp
   const emailKey = env.EMAIL_API_KEY || env.RESEND_API_KEY;
   if (!emailKey) { console.log('[Email] API키 없음:', email); return Promise.resolve({ok:false,reason:'no_key'}); }
   const signupUrl = loginUrl || 'https://donway.ai.kr/settle';
-  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f4ff;font-family:sans-serif"><div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)"><div style="background:linear-gradient(135deg,#0066ff,#00d4ff);padding:32px 24px;text-align:center"><div style="font-size:32px;margin-bottom:8px">🎉</div><div style="color:#fff;font-size:22px;font-weight:900">DONWAY 승인 완료!</div><div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:6px">7일 무료 체험이 시작됩니다</div></div><div style="padding:28px 24px"><p style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:16px">안녕하세요, <b>${companyName}</b> 대표님!</p><p style="font-size:13px;color:#555;line-height:1.7;margin-bottom:24px">DONWAY 도입 신청이 승인되었습니다.<br>지금 바로 <b>7일 무료 체험</b>을 시작하세요!</p><div style="background:#f8faff;border:1px solid #e0e8ff;border-radius:12px;padding:16px;margin-bottom:24px"><div style="font-size:12px;color:#888;margin-bottom:8px">로그인 정보</div><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888">이메일</span><span style="font-weight:700;color:#1a1a2e">${email}</span></div>${tempPassword ? `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:#888">임시 비밀번호</span><span style="font-weight:700;color:#0066ff;font-family:monospace;font-size:15px">${tempPassword}</span></div>` : ''}</div><a href="${signupUrl}" style="display:block;text-align:center;background:linear-gradient(90deg,#0066ff,#00d4ff);color:#fff;padding:15px;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;margin-bottom:16px">🚀 DONWAY 시작하기 →</a><div style="text-align:center;font-size:11px;color:#aaa">문의: 051-711-3103 · 평일 09:00~18:00</div></div><div style="background:#f8faff;padding:16px 24px;text-align:center;font-size:11px;color:#aaa">© 2026 (유)엠비티아이 · DONWAY</div></div></body></html>`;
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f0f4ff;font-family:sans-serif"><div style="max-width:480px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)"><div style="background:linear-gradient(135deg,#0066ff,#00d4ff);padding:32px 24px;text-align:center"><div style="font-size:32px;margin-bottom:8px"></div><div style="color:#fff;font-size:22px;font-weight:900">DONWAY 승인 완료!</div><div style="color:rgba(255,255,255,.8);font-size:13px;margin-top:6px">7일 무료 체험이 시작됩니다</div></div><div style="padding:28px 24px"><p style="font-size:15px;font-weight:700;color:#1a1a2e;margin-bottom:16px">안녕하세요, <b>${companyName}</b> 대표님!</p><p style="font-size:13px;color:#555;line-height:1.7;margin-bottom:24px">DONWAY 도입 신청이 승인되었습니다.<br>지금 바로 <b>7일 무료 체험</b>을 시작하세요!</p><div style="background:#f8faff;border:1px solid #e0e8ff;border-radius:12px;padding:16px;margin-bottom:24px"><div style="font-size:12px;color:#888;margin-bottom:8px">로그인 정보</div><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px"><span style="color:#888">이메일</span><span style="font-weight:700;color:#1a1a2e">${email}</span></div>${tempPassword ? `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:#888">임시 비밀번호</span><span style="font-weight:700;color:#0066ff;font-family:monospace;font-size:15px">${tempPassword}</span></div>` : ''}</div><a href="${signupUrl}" style="display:block;text-align:center;background:linear-gradient(90deg,#0066ff,#00d4ff);color:#fff;padding:15px;border-radius:12px;font-size:15px;font-weight:900;text-decoration:none;margin-bottom:16px">DONWAY 시작하기 →</a><div style="text-align:center;font-size:11px;color:#aaa">문의: 051-711-3103 · 평일 09:00~18:00</div></div><div style="background:#f8faff;padding:16px 24px;text-align:center;font-size:11px;color:#aaa">© 2026 (유)엠비티아이 · DONWAY</div></div></body></html>`;
   return fetch('https://api.resend.com/emails', { method:'POST', headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'}, body: JSON.stringify({ from:'DONWAY <all@donway.ai.kr>', to:[email], subject:`[DONWAY] ${companyName} 계정 승인 완료 — 7일 무료 체험 시작!`, html }) }).then(res => { console.log('[Email] 발송:', res.status, email); return res; }).catch(e => { console.error('[Email] 오류:', e.message); return {ok:false,reason:e.message}; });
 }
 
@@ -623,7 +623,7 @@ async function runExpireJob(env) {
         warned++;
         await fsAdd(token, 'alimtalk_queue', { type:{stringValue:'sub_renew_warning'}, companyId:{stringValue:companyId}, companyName:{stringValue:companyName}, email:{stringValue:adminEmail}, product:{stringValue:product}, expiry:{stringValue:expiry}, daysLeft:{integerValue:7}, status:{stringValue:'pending'}, createdAt:{stringValue:now.toISOString()} }).catch(()=>{});
         if (env.EMAIL_API_KEY) {
-          const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px"><div style="font-size:24px;text-align:center;margin-bottom:12px">⏰</div><div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px">구독 만료 7일 전</div><p style="font-size:13px;color:#555;text-align:center;margin-bottom:20px"><b>${companyName}</b>의 <b>${product}</b> 구독이<br><b>${expiry}</b>에 만료됩니다.</p><a href="tel:051-711-3103" style="display:block;text-align:center;background:linear-gradient(90deg,#0066ff,#00d4ff);color:#fff;padding:14px;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none">📞 051-711-3103 갱신 문의</a></div>`;
+          const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px"><div style="font-size:24px;text-align:center;margin-bottom:12px"></div><div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px">구독 만료 7일 전</div><p style="font-size:13px;color:#555;text-align:center;margin-bottom:20px"><b>${companyName}</b>의 <b>${product}</b> 구독이<br><b>${expiry}</b>에 만료됩니다.</p><a href="tel:051-711-3103" style="display:block;text-align:center;background:linear-gradient(90deg,#0066ff,#00d4ff);color:#fff;padding:14px;border-radius:12px;font-size:14px;font-weight:900;text-decoration:none">051-711-3103 갱신 문의</a></div>`;
           await fetch('https://api.resend.com/emails', { method:'POST', headers:{'Authorization':`Bearer ${env.EMAIL_API_KEY}`,'Content-Type':'application/json'}, body: JSON.stringify({ from:'DONWAY <all@donway.ai.kr>', to:[adminEmail], subject:`[DONWAY] ${companyName} 구독 만료 7일 전 알림`, html }) }).catch(()=>{});
         }
       }
@@ -825,26 +825,26 @@ export default {
           const designers = (wData||[]).filter(r=>r.document).map(r=>r.document.fields?.name?.stringValue||'').filter(Boolean);
           const todayStr = new Date().toISOString().slice(0,10);
           const timeOpts = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'].map(t=>`<option value="${t}">${t}</option>`).join('');
-          const designerSel = designers.length ? `<div class="card"><label>👤 담당 디자이너</label><select id="r-designer"><option value="">-- 선택 (상관없음) --</option>${designers.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>` : '';
+          const designerSel = designers.length ? `<div class="card"><label>담당 디자이너</label><select id="r-designer"><option value="">-- 선택 (상관없음) --</option>${designers.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>` : '';
           const menus = ['시그니처펌','복구매직','디자인컷','본드케어','발레아쥬','뿌리염색','볼륨매직','남성펌','두피케어','네일'];
           const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${coName} 예약</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:16px}.wrap{max-width:480px;margin:0 auto}.header{background:linear-gradient(135deg,#C2185B,#E91E63);border-radius:16px;padding:24px;text-align:center;margin-bottom:20px;color:#fff}.header h1{font-size:22px;font-weight:900;margin-bottom:4px}.header p{font-size:13px;opacity:.85}.card{background:#1e293b;border-radius:14px;padding:16px;margin-bottom:12px}label{font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#94a3b8}input,select{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none}input:focus,select:focus{border-color:#C2185B}.menus{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.menu-btn{padding:7px 14px;border:1.5px solid #334155;border-radius:20px;background:#0f172a;color:#94a3b8;font-size:12px;cursor:pointer}.menu-btn.active{border-color:#C2185B;background:#C2185B22;color:#C2185B;font-weight:700}.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,#C2185B,#E91E63);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px}.btn-submit:disabled{opacity:.5}.success{text-align:center;padding:40px 20px;display:none}.success .icon{font-size:64px;margin-bottom:16px}.success h2{font-size:22px;font-weight:900;color:#C2185B;margin-bottom:8px}.success p{font-size:14px;color:#94a3b8;line-height:1.6}</style></head><body>
 <div class="wrap">
-  <div class="header"><div style="font-size:32px;margin-bottom:8px">💄</div><h1>${coName}</h1><p>온라인 예약</p></div>
+  <div class="header"><div style="font-size:32px;margin-bottom:8px"></div><h1>${coName}</h1><p>온라인 예약</p></div>
   <div id="form-wrap">
-    <div class="card"><label>📅 날짜</label><input type="date" id="r-date" min="${todayStr}"></div>
-    <div class="card"><label>⏰ 시간</label><select id="r-time">${timeOpts}</select></div>
+    <div class="card"><label>날짜</label><input type="date" id="r-date" min="${todayStr}"></div>
+    <div class="card"><label>시간</label><select id="r-time">${timeOpts}</select></div>
     ${designerSel}
-    <div class="card"><label>💆 시술 메뉴</label><div class="menus">${menus.map(m=>`<button class="menu-btn" onclick="selectMenu(this,'${m}')">${m}</button>`).join('')}</div><input type="text" id="r-menu" placeholder="직접 입력 또는 위에서 선택"></div>
-    <div class="card"><label>👤 고객명 *</label><input type="text" id="r-name" placeholder="이름을 입력하세요"></div>
-    <div class="card"><label>📞 연락처 *</label><input type="tel" id="r-phone" placeholder="010-0000-0000"></div>
-    <div class="card"><label>📝 메모 (선택)</label><input type="text" id="r-memo" placeholder="요청사항 등"></div>
+    <div class="card"><label>시술 메뉴</label><div class="menus">${menus.map(m=>`<button class="menu-btn" onclick="selectMenu(this,'${m}')">${m}</button>`).join('')}</div><input type="text" id="r-menu" placeholder="직접 입력 또는 위에서 선택"></div>
+    <div class="card"><label>고객명 *</label><input type="text" id="r-name" placeholder="이름을 입력하세요"></div>
+    <div class="card"><label>연락처 *</label><input type="tel" id="r-phone" placeholder="010-0000-0000"></div>
+    <div class="card"><label>메모 (선택)</label><input type="text" id="r-memo" placeholder="요청사항 등"></div>
     <button class="btn-submit" id="r-submit" onclick="submitReserve()">예약 신청</button>
   </div>
-  <div class="success" id="success-wrap"><div class="icon">🎉</div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p>
-<button onclick="addToHome()" style="margin-top:16px;width:100%;padding:14px;background:#1e293b;border:1.5px solid #C2185B;border-radius:12px;color:#C2185B;font-size:14px;font-weight:700;cursor:pointer">📱 홈 화면에 추가하기</button>
+  <div class="success" id="success-wrap"><div class="icon"></div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p>
+<button onclick="addToHome()" style="margin-top:16px;width:100%;padding:14px;background:#1e293b;border:1.5px solid #C2185B;border-radius:12px;color:#C2185B;font-size:14px;font-weight:700;cursor:pointer">홈 화면에 추가하기</button>
 <p style="margin-top:8px;font-size:11px;color:#475569">다음 예약을 더 편하게!</p></div>
 </div>
 <script>
@@ -975,7 +975,7 @@ async function submitReserve(){
               const swapOnClick = swapBase ? `onclick="(function(){var r=prompt('내가 배송할 라우트 입력 (없으면 빈칸)','');if(r===null)return;location.href='${swapBase}&myRoute='+encodeURIComponent(r);})();return false;"` : '';
               cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
                 <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
-                ${swapBase ? `<a href="#" ${swapOnClick} style="font-size:10px;color:#f59e0b;text-decoration:none">🔄 교체요청</a>` : ''}
+                ${swapBase ? `<a href="#" ${swapOnClick} style="font-size:10px;color:#f59e0b;text-decoration:none">교체요청</a>` : ''}
               </td>`;
             }
             rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
@@ -986,7 +986,7 @@ async function submitReserve(){
 <title>${coName} 근무표</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f8fafc;color:#1e293b;padding:12px}.header{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:14px;padding:16px;text-align:center;margin-bottom:16px;color:#fff}.header h1{font-size:18px;font-weight:900}.header p{font-size:12px;opacity:.85;margin-top:4px}.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.nav a{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;color:#1e40af;text-decoration:none}.nav span{font-size:13px;font-weight:700;color:#374151}.wrap{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;min-width:600px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}.tbl th{padding:10px 6px;background:#1e40af;color:#fff;font-size:12px;text-align:center}.tbl td{vertical-align:middle}</style>
 </head><body>
-<div class="header"><h1>📋 ${coName}</h1><p>${camp||'전체'} 캠프 근무표</p></div>
+<div class="header"><h1>${coName}</h1><p>${camp||'전체'} 캠프 근무표</p></div>
 <div class="nav">
   <a href="${baseUrl}&m=${prevM}">‹ 이전주</a>
   <span>${weekDays[0].slice(5)} ~ ${weekDays[6].slice(5)}</span>
@@ -1181,12 +1181,12 @@ async function submitReserve(){
 </head><body>
 <div class="card">
   <div id="form-wrap">
-    <div class="icon">🔄</div>
+    <div class="icon"></div>
     <div class="title">근무 교체 요청</div>
     <div class="desc">${fromName}님의 <b>${date}</b>${fromRoute?' ('+fromRoute+')':''} 교체 요청<br>이름 입력 후 교체할 날짜를 선택하세요.</div>
     <div class="label">내 이름</div>
     <input type="text" id="swap-name" placeholder="이름 입력 후 조회">
-    <button class="btn" onclick="loadMyDays()">🔍 조회</button>
+    <button class="btn" onclick="loadMyDays()">조회</button>
     <div id="days-wrap" style="display:none">
       <div class="label">교체할 날짜 선택</div>
       <div id="day-list"></div>
@@ -1195,12 +1195,12 @@ async function submitReserve(){
         <input type="text" id="from-route" placeholder="예: 101C" value="${myRouteParam}">
         <div class="label" style="margin-top:8px">내 라우트 <span style="color:#64748b">(교체 후 내가 배송할 라우트)</span></div>
         <input type="text" id="my-route" placeholder="예: 215D (없으면 빈칸)">
-        <button class="btn btn-green" onclick="acceptExchange()">🔄 교체 수락</button>
+        <button class="btn btn-green" onclick="acceptExchange()">교체 수락</button>
       </div>
     </div>
   </div>
   <div id="success-wrap" style="display:none;text-align:center;padding:20px">
-    <div style="font-size:56px;margin-bottom:16px">🎉</div>
+    <div style="font-size:56px;margin-bottom:16px"></div>
     <div style="font-size:18px;font-weight:900;margin-bottom:8px">교체 완료!</div>
     <div id="success-msg" style="font-size:13px;color:#94a3b8;line-height:1.6"></div>
   </div>
@@ -1403,7 +1403,7 @@ async function acceptExchange(){
 
           const dailySec = dailyDates.length ? `
             <div class="sec">
-              <div class="sec-title">📅 일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
+              <div class="sec-title">일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
               ${allPages}
               ${nav}
             </div>` : '';
@@ -1420,7 +1420,7 @@ async function acceptExchange(){
           const driverUid = gs('userId') || gs('driver') || '';
           const idsSec = idsArr.length ? `
             <div class="sec" style="margin-top:12px">
-              <div class="sec-title" style="font-size:12px;font-weight:800;color:#166534;margin-bottom:8px">🔄 아이디 지원 내역</div>
+              <div class="sec-title" style="font-size:12px;font-weight:800;color:#166534;margin-bottom:8px">아이디 지원 내역</div>
               ${idsArr.map(r => {
                 const isFrom = r.fromId === driverUid;
                 const other = isFrom ? r.toId : r.fromId;
@@ -1478,9 +1478,9 @@ async function acceptExchange(){
           // 세금계산서 섹션 (버튼 탭하면 펼침)
           const taxSec = `
             <div class="sec" style="padding-bottom:0">
-              <button onclick="var el=document.getElementById('tax-detail');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'🧾 세금계산서 보기 ▼':'🧾 세금계산서 닫기 ▲'"
+              <button onclick="var el=document.getElementById('tax-detail');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'세금계산서 보기 ▼':'세금계산서 닫기 ▲'"
                 style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">
-                🧾 세금계산서 보기 ▼
+                세금계산서 보기 ▼
               </button>
               <div id="tax-detail" style="display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;margin-bottom:12px">
                 <div style="font-size:11px;font-weight:800;color:#7c3aed;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid #e9d5ff">세금계산서 내역</div>
@@ -1550,12 +1550,12 @@ async function acceptExchange(){
               ${dailySec}${idsSec}
               ${addSec}
               ${taxSec}
-              <div class="net-row"><span style="font-weight:700;font-size:13px">✅ 실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
+              <div class="net-row"><span style="font-weight:700;font-size:13px">실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
               <div class="ft">${coName} · ${contactPhone} · 사업자번호 ${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
               <!-- 계좌 등록 폼 -->
               <div id="bank-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
                 <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
-                  <div style="font-size:12px;font-weight:800;color:#1e3a8a">🏦 계좌 정보 등록</div>
+                  <div style="font-size:12px;font-weight:800;color:#1e3a8a">계좌 정보 등록</div>
                   <div style="font-size:10px;color:#64748b;margin-top:2px">등록된 계좌로 급여가 이체됩니다</div>
                 </div>
                 <div id="bank-form" style="padding:14px;display:flex;flex-direction:column;gap:10px">
@@ -1569,11 +1569,11 @@ async function acceptExchange(){
                     <option>대구은행</option><option>광주은행</option>
                   </select>
                   <input id="bank-num" type="tel" placeholder="계좌번호 (- 없이 숫자만)" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-                  <button onclick="submitBank()" style="padding:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✅ 계좌 등록</button>
+                  <button onclick="submitBank()" style="padding:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">계좌 등록</button>
                   <div id="bank-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
                 </div>
                 <div id="bank-done" style="display:none;padding:14px;text-align:center">
-                  <div style="font-size:24px;margin-bottom:6px">✅</div>
+                  <div style="font-size:24px;margin-bottom:6px"></div>
                   <div style="font-size:13px;font-weight:700;color:#059669">계좌가 등록되었습니다</div>
                   <div style="font-size:11px;color:#64748b;margin-top:4px">관리자에게 전달되었습니다</div>
                 </div>
@@ -1600,7 +1600,7 @@ async function acceptExchange(){
 
           return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' } });
         } catch(e2) {
-          return new Response('<!DOCTYPE html><html><body style="background:#0f1623;color:#f0f4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center"><div><div style="font-size:40px;margin-bottom:16px">⚠️</div><div>명세서를 찾을 수 없거나 만료되었습니다.</div><div style="font-size:11px;color:#94a3b8;margin-top:12px">' + e2.message + '</div></div></body></html>', { status:404, headers:{'Content-Type':'text/html;charset=utf-8'} });
+          return new Response('<!DOCTYPE html><html><body style="background:#0f1623;color:#f0f4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center"><div><div style="font-size:40px;margin-bottom:16px"></div><div>명세서를 찾을 수 없거나 만료되었습니다.</div><div style="font-size:11px;color:#94a3b8;margin-top:12px">' + e2.message + '</div></div></body></html>', { status:404, headers:{'Content-Type':'text/html;charset=utf-8'} });
         }
       }
 
@@ -2272,10 +2272,10 @@ async function acceptExchange(){
               method:'POST',
               headers:{'Authorization':'Bearer '+accessToken2,'Content-Type':'application/json'},
               body:JSON.stringify({message:{token:token,
-                notification:{title:title||'🔔 알림',body:msgBody||''},
+                notification:{title:title||'알림',body:msgBody||''},
                 data:Object.assign({
                   type:msgType||'pickup',
-                  title:title||'🔔 알림',
+                  title:title||'알림',
                   body:msgBody||'',
                   url:(extraData&&extraData.url)||'/'
                 },extraData||{}),
@@ -2451,9 +2451,9 @@ async function acceptExchange(){
         if (!did) return serveKVFile(env, 'qrpos.html', 'text/html');
 
         const actionMap = {in:'출근', out:'퇴근'};
-        const iconMap   = {in:'🟢', out:'🔴'};
+        const iconMap   = {in:'●', out:'○'};
         const label = actionMap[action] || '출근';
-        const icon  = iconMap[action]  || '🟢';
+        const icon  = iconMap[action]  || '●';
 
         try {
           const token = await getAccessToken(env);
@@ -2546,7 +2546,7 @@ function showRegForm(){
   var ul=document.getElementById('list');
   if(!ul)return;
   ul.innerHTML='<div>'+
-    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">📝 신규 직원 등록</div>'+
+    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">신규 직원 등록</div>'+
     '<input id="r-name" type="text" placeholder="이름을 입력하세요" autocomplete="name" '+
     'style="width:100%;padding:12px;background:#1a1a2e;border:1.5px solid #7c3aed;border-radius:10px;color:#fff;font-size:15px;margin-bottom:8px;outline:none;display:block">'+
     '<input id="r-phone" type="tel" placeholder="연락처 (선택사항, 010-0000-0000)" autocomplete="tel" '+
@@ -2628,7 +2628,7 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
       localStorage.setItem(dupKey,'1');
       var card=document.getElementById('main');
       card.innerHTML='<div class="done-card">'+
-        '<div class="done-icon">'+(ACTION==='in'?'🟢':'🔴')+'</div>'+
+        '<div class="done-icon">'+(ACTION==='in'?'출근':'퇴근')+'</div>'+
         '<div class="done-label">'+(ACTION==='in'?'출근':'퇴근')+' 완료</div>'+
         '<div class="done-name">'+name+'</div>'+
         '<div class="done-time">'+date+' '+timeStr+'</div>'+
@@ -2722,7 +2722,7 @@ fetch('/qr/members?did='+DID)
           const now = new Date();
           const kst = new Date(now.getTime() + 9*3600*1000);
           const date = kst.toISOString().slice(0,10);
-          const type = action === 'out' ? 'out' : 'in';
+          const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
 
@@ -2776,7 +2776,7 @@ fetch('/qr/members?did='+DID)
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, { title: `👤 ${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
+              await sendAdminFCM(env, ft, { title: `${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
             }
           } catch(e){}
 
@@ -2924,7 +2924,7 @@ ${JSON.stringify(postSummary)}
           const d = await resp.json();
           const answer = (d.content&&d.content[0]&&d.content[0].text)||'죄송합니다. 잠시 후 다시 문의해 주세요.';
           if (fcmToken) {
-            try { await sendAdminFCM(env, fcmToken, { title: '💬 문의 답변', body: answer }); } catch(e){}
+            try { await sendAdminFCM(env, fcmToken, { title: '문의 답변', body: answer }); } catch(e){}
           }
           return new Response(JSON.stringify({ok:true,answer}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
@@ -3231,7 +3231,7 @@ ${JSON.stringify(postSummary)}
               const empFcm = md.fields?.fcmToken?.stringValue || '';
               if (empFcm) {
                 const msg = `${ym} 급여명세서가 발송되었습니다. 실수령액: ₩${Number(emp.netPay||0).toLocaleString()}`;
-                await sendAdminFCM(env, empFcm, { title: '💰 급여명세서', body: msg });
+                await sendAdminFCM(env, empFcm, { title: '급여명세서', body: msg });
                 sent++;
               }
             } catch(e){}
@@ -3737,7 +3737,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <!-- 로그인 -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">🏢 엠비티아이 관제센터</div>
+    <div class="login-logo">엠비티아이 관제센터</div>
     <div class="login-sub">슈퍼어드민 전용</div>
     <input id="l-email" class="ctrl-input" type="email" placeholder="이메일" value="kimdh4790@gmail.com">
     <input id="l-pw"    class="ctrl-input" type="password" placeholder="비밀번호"
@@ -3752,7 +3752,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <!-- 메인 -->
 <div id="main-screen">
   <div class="top-bar">
-    <div class="top-logo">🏢 관제센터</div>
+    <div class="top-logo">관제센터</div>
     <div class="top-space"></div>
     <span id="ctrl-user"></span>
     <button class="top-btn" onclick="_ctrlLogout()">로그아웃</button>
@@ -3764,7 +3764,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('dashboard')">
         <span class="acc-icon" id="ico-dashboard">▶</span>
-        <span class="acc-title">📊 대시보드</span>
+        <span class="acc-title">대시보드</span>
       </div>
       <div class="acc-body" id="acc-dashboard"></div>
     </div>
@@ -3773,7 +3773,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('join')">
         <span class="acc-icon" id="ico-join">▶</span>
-        <span class="acc-title">✅ 가입 승인</span>
+        <span class="acc-title">가입 승인</span>
         <span class="acc-badge" id="badge-join"></span>
       </div>
       <div class="acc-body" id="acc-join"></div>
@@ -3783,7 +3783,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('companies')">
         <span class="acc-icon" id="ico-companies">▶</span>
-        <span class="acc-title">👥 고객사 관리</span>
+        <span class="acc-title">고객사 관리</span>
       </div>
       <div class="acc-body" id="acc-companies"></div>
     </div>
@@ -3792,7 +3792,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('chat')">
         <span class="acc-icon" id="ico-chat">▶</span>
-        <span class="acc-title">💬 1:1 채팅</span>
+        <span class="acc-title">1:1 채팅</span>
         <span class="acc-badge" id="badge-chat"></span>
       </div>
       <div class="acc-body" id="acc-chat"></div>
@@ -3802,7 +3802,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('notice')">
         <span class="acc-icon" id="ico-notice">▶</span>
-        <span class="acc-title">📢 공지 발송</span>
+        <span class="acc-title">공지 발송</span>
       </div>
       <div class="acc-body" id="acc-notice"></div>
     </div>
@@ -3811,7 +3811,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('billing')">
         <span class="acc-icon" id="ico-billing">▶</span>
-        <span class="acc-title">💰 결제 현황</span>
+        <span class="acc-title">결제 현황</span>
       </div>
       <div class="acc-body" id="acc-billing"></div>
     </div>
@@ -3872,9 +3872,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         if (!did) return serveKVFile(env, 'qrpos.html', 'text/html');
 
         const actionMap = {in:'출근', out:'퇴근'};
-        const iconMap   = {in:'🟢', out:'🔴'};
+        const iconMap   = {in:'●', out:'○'};
         const label = actionMap[action] || '출근';
-        const icon  = iconMap[action]  || '🟢';
+        const icon  = iconMap[action]  || '●';
 
         try {
           const token = await getAccessToken(env);
@@ -3967,7 +3967,7 @@ function showRegForm(){
   var ul=document.getElementById('list');
   if(!ul)return;
   ul.innerHTML='<div>'+
-    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">📝 신규 직원 등록</div>'+
+    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">신규 직원 등록</div>'+
     '<input id="r-name" type="text" placeholder="이름을 입력하세요" autocomplete="name" '+
     'style="width:100%;padding:12px;background:#1a1a2e;border:1.5px solid #7c3aed;border-radius:10px;color:#fff;font-size:15px;margin-bottom:8px;outline:none;display:block">'+
     '<input id="r-phone" type="tel" placeholder="연락처 (선택사항, 010-0000-0000)" autocomplete="tel" '+
@@ -4049,7 +4049,7 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
       localStorage.setItem(dupKey,'1');
       var card=document.getElementById('main');
       card.innerHTML='<div class="done-card">'+
-        '<div class="done-icon">'+(ACTION==='in'?'🟢':'🔴')+'</div>'+
+        '<div class="done-icon">'+(ACTION==='in'?'출근':'퇴근')+'</div>'+
         '<div class="done-label">'+(ACTION==='in'?'출근':'퇴근')+' 완료</div>'+
         '<div class="done-name">'+name+'</div>'+
         '<div class="done-time">'+date+' '+timeStr+'</div>'+
@@ -4143,7 +4143,7 @@ fetch('/qr/members?did='+DID)
           const now = new Date();
           const kst = new Date(now.getTime() + 9*3600*1000);
           const date = kst.toISOString().slice(0,10);
-          const type = action === 'out' ? 'out' : 'in';
+          const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
 
@@ -4197,7 +4197,7 @@ fetch('/qr/members?did='+DID)
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, { title: `👤 ${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
+              await sendAdminFCM(env, ft, { title: `${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
             }
           } catch(e){}
 
@@ -4848,7 +4848,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
         const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
           <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
-            <div style="font-size:24px;font-weight:900;color:#fff">🆕 DONWAY 신규 가입 신청</div>
+            <div style="font-size:24px;font-weight:900;color:#fff">DONWAY 신규 가입 신청</div>
           </div>
           <table style="width:100%;border-collapse:collapse">
             <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;width:120px">회사명</td><td style="padding:12px 16px">${companyName}</td></tr>
@@ -4879,7 +4879,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         // FCM 푸시 (슈퍼어드민 전체 기기 - admin_tokens 컬렉션 사용)
         const fsToken2 = await getAccessToken(env);
         await notifyAdmins(env, fsToken2, {
-          title: '🆕 신규 가입 신청',
+          title: '신규 가입 신청',
           body: `${companyName}님이 가입 신청했습니다. 승인이 필요합니다.`,
           type: 'new_signup'
         });
@@ -4939,23 +4939,23 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         if (custEmail && emailKey) {
           const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:20px">
             <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:28px;border-radius:14px;text-align:center;margin-bottom:24px">
-              <div style="font-size:36px;margin-bottom:8px">🎉</div>
+              <div style="font-size:36px;margin-bottom:8px"></div>
               <div style="font-size:22px;font-weight:900;color:#fff">가입 승인 완료!</div>
               <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:6px">DONWAY 서비스를 이용하실 수 있습니다</div>
             </div>
             <p style="font-size:15px;color:#111;line-height:1.7"><strong>${custName}</strong>님, 가입 신청이 승인되었습니다.<br>아래 버튼을 눌러 바로 로그인하세요!</p>
             <div style="text-align:center;margin:28px 0">
-              <a href="${loginUrl}" style="display:inline-block;padding:16px 36px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;text-decoration:none;border-radius:12px;font-size:16px;font-weight:800">🚀 지금 로그인하기</a>
+              <a href="${loginUrl}" style="display:inline-block;padding:16px 36px;background:linear-gradient(135deg,#0066ff,#7c3aed);color:#fff;text-decoration:none;border-radius:12px;font-size:16px;font-weight:800">지금 로그인하기</a>
             </div>
             <div style="background:#f8fafc;border-radius:10px;padding:14px 18px;font-size:13px;color:#6b7280">
-              <div>📌 로그인 주소: <a href="${loginUrl}" style="color:#0066ff">${loginUrl}</a></div>
-              <div style="margin-top:6px">📞 문의: 051-711-3103</div>
+              <div>로그인 주소: <a href="${loginUrl}" style="color:#0066ff">${loginUrl}</a></div>
+              <div style="margin-top:6px">문의: 051-711-3103</div>
             </div>
           </body></html>`;
           await fetch('https://api.resend.com/emails', {
             method:'POST',
             headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-            body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:[custEmail], subject:`[DONWAY] ${custName}님, 가입이 승인되었습니다 🎉`, html})
+            body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:[custEmail], subject:`[DONWAY] ${custName}님, 가입이 승인되었습니다`, html})
           }).catch(()=>{});
         }
 
@@ -4966,7 +4966,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
             body:JSON.stringify({message:{
               token: custFcm,
-              notification:{title:'🎉 가입 승인 완료!', body:`${custName}님, DONWAY 서비스 이용이 가능합니다. 지금 로그인하세요!`},
+              notification:{title:'가입 승인 완료!', body:`${custName}님, DONWAY 서비스 이용이 가능합니다. 지금 로그인하세요!`},
               android:{priority:'high', notification:{sound:'default', channelId:'donway_admin'}},
               apns:{payload:{aps:{sound:'default', badge:1}}}
             }})
@@ -4983,7 +4983,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
               headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
               body:JSON.stringify({message:{
                 token: laFcm,
-                notification:{title:'✅ 가입 승인', body:'DONWAY 로그인이 가능합니다'},
+                notification:{title:'가입 승인', body:'DONWAY 로그인이 가능합니다'},
                 android:{priority:'high'}
               }})
             }).catch(()=>{});
@@ -5022,7 +5022,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
 
         return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f8fafc">
           <div style="max-width:400px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,.08)">
-            <div style="font-size:56px;margin-bottom:16px">✅</div>
+            <div style="font-size:56px;margin-bottom:16px"></div>
             <h2 style="color:#059669;margin:0 0 8px">승인 완료!</h2>
             <p style="color:#374151;margin:0 0 6px"><strong>${custName}</strong></p>
             <p style="color:#888;font-size:13px;margin:0 0 20px">이메일 · 앱 푸시 · 카카오 알림톡 발송 완료</p>
@@ -5043,7 +5043,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
         const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
           <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
-            <div style="font-size:28px;font-weight:900;color:#fff">📩 DONWAY</div>
+            <div style="font-size:28px;font-weight:900;color:#fff">DONWAY</div>
             <div style="font-size:14px;color:rgba(255,255,255,.8);margin-top:4px">랜딩페이지 문의 접수</div>
           </div>
           <table style="width:100%;border-collapse:collapse">
@@ -5538,7 +5538,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           const adminEmail  = compDoc.fields?.adminEmail?.stringValue || compDoc.fields?.email?.stringValue || '';
           const expireStr   = newExpire.toISOString().slice(0, 10);
           if (env.EMAIL_API_KEY) {
-            const html = '<div style="font-family:sans-serif;padding:24px"><b style="color:#0066ff;font-size:18px">💰 신규 결제</b><br><br>'
+            const html = '<div style="font-family:sans-serif;padding:24px"><b style="color:#0066ff;font-size:18px">신규 결제</b><br><br>'
               + '회사: ' + companyName + '<br>이메일: ' + adminEmail
               + '<br>플랜: ' + planLabel + '<br>금액: ' + Number(amount).toLocaleString() + '원'
               + '<br>만료: ' + expireStr + '<br>주문: ' + orderId + '</div>';
@@ -6292,7 +6292,7 @@ service cloud.firestore {
           });
         }
 
-        const title = sender==='customer'?`💬 ${companyName||'고객'} 문의`:'💬 DONWAY 답변';
+        const title = sender==='customer'?`${companyName||'고객'} 문의`:'DONWAY 답변';
         for (const token of tokens) {
           await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`, {
             method:'POST', headers,
@@ -6614,7 +6614,7 @@ service cloud.firestore {
         if (!tokens.size) return new Response(JSON.stringify({ok:false,reason:'no tokens'}), {headers:{'Content-Type':'application/json'}});
         
         const accessToken = await getAccessToken(env);
-        const title = '🔐 로그인 알림';
+        const title = '로그인 알림';
         const msgBody = `${loginName||'관리자'}님이 ${timeStr||''}에 로그인하였습니다`;
         
         const results = await Promise.all([...tokens].map(async tok => {
@@ -7059,7 +7059,7 @@ service cloud.firestore {
 
         // 7. 관리자 FCM 푸시 알림 (결제 완료)
         await notifyAdmins(env, token, {
-          title: '💳 새 결제 완료!',
+          title: '새 결제 완료!',
           body: `${companyName} · ${planType} 플랜 결제`,
           type: 'pay'
         });
@@ -7089,7 +7089,7 @@ service cloud.firestore {
             if (fcmToken) {
               fcmResult = await sendFCMPush(
                 fcmToken,
-                '🎉 결제 완료! 기능 활성화됨',
+                '결제 완료! 기능 활성화됨',
                 `${PLAN_LABELS[planType]||planType} 이용을 시작하세요`,
                 { loginUrl, planType }
               );
@@ -7201,7 +7201,7 @@ service cloud.firestore {
 
         // 관리자 알림
         await notifyAdmins(env, token, {
-          title: '✅ 수동 활성화 완료',
+          title: '수동 활성화 완료',
           body: `${companyName} · ${plan} · ${months}개월 (${memo||'메모없음'})`,
           type: 'pay'
         });
@@ -7286,7 +7286,7 @@ service cloud.firestore {
                 });
               }
               await notifyAdmins(env, token, {
-                title: '🏦 하나은행 입금 완료!',
+                title: '하나은행 입금 완료!',
                 body: `${companyName||dpstrNm} · ${planType} · ${Number(inAmt||0).toLocaleString()}원`,
                 type: 'pay'
               });
@@ -7305,7 +7305,7 @@ service cloud.firestore {
         const body = await request.json();
         const token = await getAccessToken(env);
         await notifyAdmins(env, token, {
-          title: body.title || '🎉 신규 등록',
+          title: body.title || '신규 등록',
           body: body.body || '',
           type: body.type || 'join'
         });
@@ -7570,7 +7570,7 @@ service cloud.firestore {
                     await sendWelcomeEmail(env, { email, companyName, tempPassword:tempPw, planType, loginUrl,
                       planLabel: planType+' 플랜 (계좌이체 완료)' });
                     // 관리자 알림
-                    await notifyAdmins(env, token, { title:'💳 계좌이체 완료!', body:`${companyName} · ${planType}`, type:'pay' });
+                    await notifyAdmins(env, token, { title:'계좌이체 완료!', body:`${companyName} · ${planType}`, type:'pay' });
                   }
                 } catch(authErr) { /* 실패해도 계속 */ }
               }
@@ -9564,7 +9564,7 @@ async function popbillIssueReverseDonway(env, params) {
       }
     );
     if (driverFcmToken) {
-      await sendFCMPush(driverFcmToken, '🧾 전자세금계산서 역발행 요청',
+      await sendFCMPush(driverFcmToken, '전자세금계산서 역발행 요청',
         `${receiverName || '대리점'}에서 ${total.toLocaleString('ko-KR')}원 세금계산서 역발행을 요청했습니다. 앱에서 확인해주세요.`,
         { type: 'tax_invoice_request', settleId }
       );
