@@ -8232,6 +8232,11 @@ var REGION_COORDS={
 };
 var MKT={'CJ대한통운':880,'한진택배':855,'롯데택배':860,'우체국':900,'쿠팡로지스틱스':960,'로젠택배':840};
 
+var _ldTimer=setTimeout(function(){
+  document.getElementById('ld').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+},3000);
+
 firebase.initializeApp({
   apiKey:API_KEY,authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'40761160761',
@@ -8247,11 +8252,6 @@ fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(cfg
   s.onload=function(){kakao.maps.load(function(){_kakaoReady=true;if(_curPage==='posts')_initMap();});};
   document.head.appendChild(s);
 }).catch(function(){});
-
-var _ldTimer=setTimeout(function(){
-  document.getElementById('ld').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-},3000);
 
 _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
