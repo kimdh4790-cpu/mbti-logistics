@@ -65,6 +65,40 @@ var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
 var _lastOrderItems=[], _lastOrderTotal=0, _lastPayType='';
 
+/* ── 매장 업종 테마 적용 ──────────────────────────────────────────────────── */
+function _applyStoreTheme(co){
+ var THEMES={
+  cafe:{primary:'#c8a96e',bg:'#1a1209'},korean:{primary:'#e05555',bg:'#0f0a0a'},
+  japanese:{primary:'#3b82f6',bg:'#0a0f1e'},chinese:{primary:'#f59e0b',bg:'#1a0a0a'},
+  fastfood:{primary:'#f97316',bg:'#f8f9fa'},izakaya:{primary:'#d4af37',bg:'#0a0a0a'},
+  other:{primary:'#7c3aed',bg:'#07071a'}
+ };
+ var base=THEMES[co.theme||'']||THEMES.other;
+ var primary=co.primaryColor||base.primary;
+ var bg=co.bgColor||base.bg;
+ if(!co.theme&&!co.primaryColor&&!co.bgColor)return;
+ function _hx(hex){var h=String(hex||'').replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var n=parseInt(h,16);return isFinite(n)&&h.length===6?{r:(n>>16)&255,g:(n>>8)&255,b:n&255}:null;}
+ function _sh(hex,a){var c=_hx(hex);if(!c)return hex;function f(v){return Math.max(0,Math.min(255,Math.round(v+(a>0?(255-v):v)*a)));}function hh(v){var s=v.toString(16);return s.length<2?'0'+s:s;}return '#'+hh(f(c.r))+hh(f(c.g))+hh(f(c.b));}
+ function _il(hex){var c=_hx(hex);return c?(0.299*c.r+0.587*c.g+0.114*c.b)>160:false;}
+ function _rgb(hex){var c=_hx(hex);return c?c.r+','+c.g+','+c.b:'124,58,237';}
+ var light=_il(bg);
+ var S=function(k,v){document.documentElement.style.setProperty(k,v);};
+ S('--brand',primary);
+ S('--brand2',_sh(primary,-0.15));
+ S('--brand-light','rgba('+_rgb(primary)+',.12)');
+ S('--bg',bg);
+ S('--surface',light?_sh(bg,-0.04):_sh(bg,0.06));
+ S('--border',light?'rgba(0,0,0,.08)':'rgba(255,255,255,.08)');
+ S('--text1',light?'#14141f':'#f0f0ff');
+ S('--text2',light?'#4b5563':'#9898c0');
+ S('--text3',light?'#6b7280':'#565678');
+ S('--shadow','0 1px 8px rgba('+_rgb(primary)+',.18)');
+ var ld=document.getElementById('ld');
+ if(ld)ld.style.background='linear-gradient(135deg,'+primary+' 0%,'+_sh(primary,-0.2)+' 100%)';
+ if(!light)document.body.classList.add('dark');
+ else document.body.classList.remove('dark');
+}
+
 // ── 주문 영수증 표시 ──────────────────────────────────────────────────────────
 function _showOrderReceipt(items, total, payType, method){
  var rc=items||_lastOrderItems, rt=total||_lastOrderTotal, rp=payType||_lastPayType;
@@ -132,13 +166,14 @@ window.onload=function(){
   document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:24px">✕</div><div style="margin-top:12px">잘못된 주소입니다</div></div>';
   return;
  }
- // 매장명 로드
+ // 매장명 + 테마 로드
  _db.collection('companies').doc(_did).get().then(function(doc){
   if(doc.exists){
    var d=doc.data();
    var nm=document.getElementById('store-name');
    if(nm)nm.textContent=d.name||'매장';
    document.title=(d.name||'매장')+' - 주문하기';
+   _applyStoreTheme(d);
   }
  }).catch(function(){});
  var tn=document.getElementById('table-name');if(tn)tn.textContent=_tName;

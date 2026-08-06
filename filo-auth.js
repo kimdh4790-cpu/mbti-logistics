@@ -227,6 +227,10 @@ function _svgIcon(n){
   'layout-dashboard':'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
   activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
   wallet:'<path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 000 4h14a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7"/><circle cx="17" cy="12" r="1"/>',
+  mic:'<path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
+  eye:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  'eye-off':'<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>',
+  construction:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M17 12h.01"/><path d="M7 12h.01"/>',
  };
  return s+(p[n]||p['sliders'])+'</svg>';
 }
@@ -559,7 +563,7 @@ function _filoGoPage(p){
  /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */
  if(!_routed&&el){
   el.innerHTML='<div class="card" style="text-align:center;padding:60px;color:var(--t3)">'+
-   '<div style="font-size:40px;margin-bottom:12px">🚧</div>'+
+   '<div style="margin-bottom:12px">'+_svgIcon('construction')+'</div>'+
    '<div style="font-weight:700;margin-bottom:6px">'+esc(titles[p]||p)+'</div>'+
    '<div style="font-size:12px">준비 중입니다</div></div>';
  }
@@ -857,7 +861,7 @@ function _filoSyncVoiceFab(p){
  fab.className='ai-fab';
  fab.title='음성 주문';
  fab.setAttribute('aria-label','음성 주문');
- fab.textContent='🎙';
+ fab.innerHTML=_svgIcon('mic');
  fab.onclick=function(){_filoVoiceOrderOpen();};
  document.body.appendChild(fab);
 }
@@ -884,7 +888,7 @@ function _filoTogglePw(id,btn){
  var el=document.getElementById(id);
  if(!el)return;
  el.type=el.type==='password'?'text':'password';
- btn.textContent=el.type==='password'?'👁':'🙈';
+ btn.innerHTML=el.type==='password'?_svgIcon('eye'):_svgIcon('eye-off');
 }
 
 function _filoLogin(){
@@ -919,8 +923,8 @@ function _filoBizCheck(){
  var msg=document.getElementById('fr-biznum-msg');
  if(biz.length!==10){msg.textContent='사업자번호 10자리를 입력하세요';msg.style.color='var(--red)';msg.style.display='block';return;}
  _db.collection('companies').where('bizNum','==',biz).limit(1).get().then(function(snap){
- if(snap.empty){msg.textContent='✅ 사용 가능';msg.style.color='var(--gn)';}
- else{msg.textContent='❌ 이미 등록된 사업자번호';msg.style.color='var(--red)';}
+ if(snap.empty){msg.textContent='사용 가능';msg.style.color='var(--gn)';}
+ else{msg.textContent='이미 등록된 사업자번호';msg.style.color='var(--red)';}
  msg.style.display='block';
  });
 }
@@ -981,7 +985,7 @@ function _filoRegister(){
  }).then(function(){
  /* 선택한 업종 테마 즉시 적용 */
  if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:industry});
- _filoToast('✅ 등록 완료! 1개월 무료 체험을 시작합니다');
+ _filoToast('등록 완료! 1개월 무료 체험을 시작합니다');
  /* 업종별 기본 메뉴 자동 세팅 — 명세대로 확인 팝업 후 진행 */
  var tpl=(typeof _FILO_MENU_TEMPLATES!=='undefined')?_FILO_MENU_TEMPLATES[industry]:null;
  if(tpl&&tpl.length&&typeof _filoSeedDefaultMenus==='function'){
@@ -989,8 +993,8 @@ function _filoRegister(){
    var label=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[industry])?_FILO_THEMES[industry].label:industry;
    if(confirm(label+' 업종에 맞는 기본 메뉴 '+tpl.length+'개를 자동으로 추가할까요?\n\n등록 후 자유롭게 수정·추가·삭제할 수 있습니다.')){
     _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
-     if(n>0)_filoToast('🍽 기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');
-    }).catch(function(e){_filoToast('❌ 기본 메뉴 등록 실패: '+e.message);});
+     if(n>0)_filoToast('기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');
+    }).catch(function(e){_filoToast('기본 메뉴 등록 실패: '+e.message);});
    }
   },600);
  }
@@ -1010,7 +1014,7 @@ function _filoJoin(){
  if(pw.length<4){errEl.textContent='비밀번호는 4자 이상';errEl.style.display='block';return;}
  errEl.style.display='none';
  _db.collection('companies').where('companyCode','==',code).limit(1).get().then(function(snap){
- if(snap.empty){errEl.textContent='❌ 존재하지 않는 회사 코드';errEl.style.display='block';return;}
+ if(snap.empty){errEl.textContent='존재하지 않는 회사 코드';errEl.style.display='block';return;}
  var company=snap.docs[0].data();
  var did=company.dealerId||snap.docs[0].id;
  var email=phone+'_'+code.toLowerCase()+'@filo.member';
@@ -1040,7 +1044,7 @@ function _filoJoin(){
  companyName:window._filoJoinCo||'',
  platform:'filo'
  })}).catch(function(){});
- _filoToast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됩니다.');
+ _filoToast('가입 완료! 관리자 직원 목록에 자동 등록됩니다.');
  }).catch(function(e){
  if(e&&e.code==='auth/email-already-in-use'){errEl.textContent='이미 가입된 전화번호·코드 조합';}
  else if(e){errEl.textContent=e.message||String(e);}
@@ -1052,8 +1056,8 @@ function _filoFindPw(){
  var id=prompt('가입 이메일을 입력하세요');
  if(!id)return;
  _auth.sendPasswordResetEmail(id).then(function(){
- _filoToast('✅ 비밀번호 재설정 이메일을 발송했습니다');
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ _filoToast('비밀번호 재설정 이메일을 발송했습니다');
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoGoDine(){
@@ -1083,7 +1087,7 @@ function _filoWatchDineReservations(){
     snap.docChanges().forEach(function(change){
      if(change.type==='added'){
       var r=change.doc.data();
-      _filoToast('📅 DINE 새 예약: '+r.customerName+'님 '+r.seats+'인');
+      _filoToast('DINE 새 예약: '+r.customerName+'님 '+r.seats+'인');
      }
     });
    }
