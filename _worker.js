@@ -8237,6 +8237,11 @@ var _ldTimer=setTimeout(function(){
   document.getElementById('login-screen').style.display='flex';
 },3000);
 
+var _ldTimer=setTimeout(function(){
+  document.getElementById('ld').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+},3000);
+
 firebase.initializeApp({
   apiKey:API_KEY,authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',
   storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'40761160761',
