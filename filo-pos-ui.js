@@ -30,7 +30,7 @@ function _filoReceiptSelected(input){
  var file=input.files&&input.files[0];
  if(!file)return;
  var label=document.getElementById('si-receipt-label');
- if(label)label.textContent='📎 '+file.name.slice(0,20)+(file.name.length>20?'...':'');
+ if(label)label.textContent=file.name.slice(0,20)+(file.name.length>20?'...':'');
  var preview=document.getElementById('si-receipt-preview');
  var img=document.getElementById('si-receipt-img');
  if(file.type.startsWith('image/')&&preview&&img){
@@ -65,11 +65,11 @@ function _filoPageKiosk(el){
  // 모드 전환 버튼
  var modeBtn = '<button onclick="_filoPosSetMode(\''+( mode==='simple'?'pro':'simple' )+'\');_filoPageKiosk(document.getElementById(\'page-content\'))" '+
    'style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;font-size:11px;cursor:pointer;background:'+(mode==='simple'?'#0066ff':'#f1f5f9')+';color:'+(mode==='simple'?'#fff':'#333')+'">'+
-   (mode==='simple'?'⚡ 심플 모드':'🔧 프로 모드')+'</button>';
+   (mode==='simple'?'심플 모드':'프로 모드')+'</button>';
 
  el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
    modeBtn +
- '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px">📊 메뉴 엑셀 업로드</button>'+
+ '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px;display:inline-flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 메뉴 엑셀 업로드</button>'+
  '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
@@ -80,14 +80,14 @@ function _filoPageKiosk(el){
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3);display:flex;align-items:center;justify-content:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>메뉴 로딩 중...</div>'+
  '</div></div>'+
  '<div class="cart-panel">'+
- '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">🛒 주문 내역</div>'+
+ '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">주문 내역</div>'+
  '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
  '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
  '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
  '<span style="font-size:13px;font-weight:700">합계</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
- '<button class="pay-btn" onclick="_filoPay()">💳 결제하기</button>'+
- '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">🗑 초기화</button>'+
+ '<button class="pay-btn" onclick="_filoPay()">결제하기</button>'+
+ '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">초기화</button>'+
  '</div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)
@@ -168,11 +168,11 @@ function _filoPageKiosk(el){
       if(hasOrder){
        if(ord.orders&&ord.orders.some(function(o){return o.movedFrom;})){
         var from=ord.orders.find(function(o){return o.movedFrom;});
-        dispHtml+='<div style="font-size:9px;color:#f59e0b">↔️ '+from.movedFrom+'번에서 이동</div>';
+        dispHtml+='<div style="font-size:9px;color:#f59e0b">↔ '+from.movedFrom+'번에서 이동</div>';
        }
-       if(dispPaid>0)dispHtml+='<div style="font-size:10px;color:#818cf8">✅₩'+dispPaid.toLocaleString()+'</div>';
-       if(dispPending>0)dispHtml+='<div style="font-size:10px;color:#fbbf24">⏳₩'+dispPending.toLocaleString()+'</div>';
-       if(isPaid)dispHtml+='<div style="font-size:10px;color:#818cf8">✅ 전액결제</div>';
+       if(dispPaid>0)dispHtml+='<div style="font-size:10px;color:#818cf8">₩'+dispPaid.toLocaleString()+'</div>';
+       if(dispPending>0)dispHtml+='<div style="font-size:10px;color:#fbbf24">₩'+dispPending.toLocaleString()+'</div>';
+       if(isPaid)dispHtml+='<div style="font-size:10px;color:#818cf8">전액결제</div>';
       } else {
        dispHtml+='<div style="font-size:10px;color:var(--t3)">비어있음</div>';
       }
@@ -190,8 +190,8 @@ function _filoPageKiosk(el){
        btn.style.outline='2px solid #0891b2';
        // 주문 내역 헤더 업데이트
        var cartTitle=document.querySelector('.cart-panel div:first-child');
-       if(cartTitle)cartTitle.textContent='🛒 '+table.name+' 주문';
-       _filoToast('🪑 '+table.name+' 선택됨');
+       if(cartTitle)cartTitle.textContent=table.name+' 주문';
+       _filoToast(table.name+' 선택됨');
        // 주문 있으면 주문 내역 모달 표시
        if(order&&order.orders&&order.orders.length){
         _filoTableOrderModal(did,table,order);
@@ -219,7 +219,7 @@ function _filoPageKiosk(el){
    // 메뉴 없으면 안내
    var menuEl=document.getElementById('kiosk-menu');
    if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'+
-    '<div style="font-size:40px;margin-bottom:12px">🍽</div>'+
+    ''+
     '<div style="font-size:14px;font-weight:700;margin-bottom:8px">등록된 메뉴가 없습니다</div>'+
     '<div style="font-size:12px">메뉴 관리에서 메뉴를 추가하거나<br>엑셀 업로드로 일괄 등록하세요</div></div>';
    var catEl=document.getElementById('kiosk-cats');
@@ -357,7 +357,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
                 url:'https://filo.ai.kr/order?d='+did+'&t='+tableNum+'#done'
               })
             }).then(function(r){return r.json();}).then(function(d){
-              if(d.sent>0)_filoToast('📱 손님 영수증 발송 완료');
+              if(d.sent>0)_filoToast('손님 영수증 발송 완료');
             }).catch(function(){});
           }).catch(function(){});
         }).catch(function(){});
@@ -368,7 +368,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
   // 결제완료 알림 + 영수증 발송 버튼
   _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
- }).catch(function(e){_filoToast('❌ 결제 실패: '+e.message);});
+ }).catch(function(e){_filoToast('결제 실패: '+e.message);});
 }
 
 // ── 테이블 각자 계산 ─────────────────────────────────────────────────────────
@@ -442,7 +442,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  var hdr=document.createElement('div');
  hdr.style.cssText='background:linear-gradient(135deg,#1a0e3a,#0a1628);padding:20px 24px 16px;text-align:center;position:relative';
  hdr.innerHTML='<div style="font-size:11px;color:rgba(167,139,250,.7);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">RECEIPT</div>'+
-  '<div style="font-size:20px;font-weight:900;color:#fff">🧾 영수증</div>'+
+  '<div style="font-size:20px;font-weight:900;color:#fff">영수증</div>'+
   '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">'+companyName+'</div>'+
   '<div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:2px">'+timeStr+'</div>';
  box.appendChild(hdr);
@@ -497,7 +497,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  btnRow.style.cssText='display:flex;gap:8px';
  var printBtn=document.createElement('button');
  printBtn.style.cssText='flex:1;padding:11px;background:var(--br);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer';
- printBtn.textContent='🖨 인쇄';
+ printBtn.textContent='인쇄';
  printBtn.onclick=function(){window.print();};
  var closeBtn=document.createElement('button');
  closeBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer';
@@ -631,7 +631,7 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
    function render(){
     var selTotal=getSelTotal();
     box.innerHTML=
-     '<div style="font-size:15px;font-weight:900;margin-bottom:6px">👥 각자 계산 - '+tableName+'</div>'+
+     '<div style="font-size:15px;font-weight:900;margin-bottom:6px">각자 계산 - '+tableName+'</div>'+
      '<div style="font-size:11px;color:var(--t2);margin-bottom:10px">계산할 메뉴 선택</div>'+
      allItems.map(function(it,i){
       var on=checkedMap[i];
