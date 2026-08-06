@@ -30,7 +30,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 .kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 14px;position:relative;overflow:hidden;transition:.2s;cursor:pointer}
 .kpi:hover{border-color:rgba(0,212,255,.3);transform:translateY(-1px)}
 .kpi::before{content:'';position:absolute;inset:0;opacity:.04;pointer-events:none}
-.kpi-icon{font-size:22px;margin-bottom:8px}
+.kpi-icon{width:28px;height:28px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;border-radius:8px;padding:4px}
 .kpi-num{font-size:28px;font-weight:900;line-height:1;font-family:monospace}
 .kpi-lbl{font-size:10px;color:var(--gray);margin-top:5px;font-weight:700;letter-spacing:.5px}
 .kpi-sub{font-size:10px;margin-top:3px;font-family:monospace}
@@ -54,7 +54,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 .quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 20px}
 .quick-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 6px;text-align:center;cursor:pointer;transition:.2s;text-decoration:none;display:block}
 .quick-btn:hover{border-color:rgba(0,212,255,.3);background:var(--bg3)}
-.quick-icon{font-size:24px;display:block;margin-bottom:5px}
+.quick-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto 5px;border-radius:8px;padding:4px}
 .quick-lbl{font-size:10px;color:var(--gray);font-weight:700;letter-spacing:.3px}
 
 /* 최근 출퇴근 목록 */
@@ -77,7 +77,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 .bottombar{position:fixed;bottom:0;left:0;right:0;max-width:600px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
 .bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
 .bot-btn.on{color:var(--cyan)}
-.bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
+.bot-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
 
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -93,38 +93,38 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
   <div class="topbar-right">
     <span class="live-dot"></span>
     <span class="clock" id="clock">--:--:--</span>
-    <button onclick="loadAll()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer">🔄</button>
+    <button onclick="loadAll()" style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>새로고침</button>
   </div>
 </div>
 
 <div class="wrap">
 
   <!-- KPI 4분할 -->
-  <div class="sec-label">📊 이번달 현황</div>
+  <div class="sec-label">이번달 현황</div>
   <div class="kpi-grid">
     <div class="kpi" onclick="location.href='/settle'" style="border-color:rgba(0,212,255,.2)">
-      <div class="kpi-icon">💰</div>
+      <div class="kpi-icon" style="background:rgba(0,212,255,.1);color:var(--cyan)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div class="kpi-num" style="color:var(--cyan)" id="kpi-pay">-</div>
       <div class="kpi-lbl">총 정산액</div>
       <div class="kpi-sub" style="color:var(--gray)" id="kpi-pay-sub">로딩 중...</div>
       <span class="kpi-badge" style="background:rgba(0,212,255,.1);color:var(--cyan)">정산</span>
     </div>
     <div class="kpi" onclick="location.href='/attendance-admin'" style="border-color:rgba(0,255,136,.2)">
-      <div class="kpi-icon">👥</div>
+      <div class="kpi-icon" style="background:rgba(0,255,136,.1);color:var(--green)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
       <div class="kpi-num" style="color:var(--green)" id="kpi-drv">-</div>
       <div class="kpi-lbl">총 직원수</div>
       <div class="kpi-sub" style="color:var(--gray)" id="kpi-drv-sub">로딩 중...</div>
       <span class="kpi-badge" style="background:rgba(0,255,136,.1);color:var(--green)">인원</span>
     </div>
     <div class="kpi" onclick="location.href='/portal'" style="border-color:rgba(139,92,246,.2)">
-      <div class="kpi-icon">📄</div>
+      <div class="kpi-icon" style="background:rgba(139,92,246,.1);color:var(--purple)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
       <div class="kpi-num" style="color:var(--purple)" id="kpi-doc">-</div>
       <div class="kpi-lbl">발행 문서</div>
       <div class="kpi-sub" style="color:var(--gray)" id="kpi-doc-sub">로딩 중...</div>
       <span class="kpi-badge" style="background:rgba(139,92,246,.1);color:var(--purple)">문서</span>
     </div>
     <div class="kpi" onclick="location.href='/attendance-admin'" style="border-color:rgba(245,158,11,.2)">
-      <div class="kpi-icon">⏱</div>
+      <div class="kpi-icon" style="background:rgba(245,158,11,.1);color:var(--yellow)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="kpi-num" style="color:var(--yellow)" id="kpi-working">-</div>
       <div class="kpi-lbl">현재 근무중</div>
       <div class="kpi-sub" style="color:var(--gray)" id="kpi-working-sub">로딩 중...</div>
@@ -133,7 +133,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
   </div>
 
   <!-- 오늘 출퇴근 요약 -->
-  <div class="sec-label" style="margin-top:8px">📋 오늘 출퇴근</div>
+  <div class="sec-label" style="margin-top:8px">오늘 출퇴근</div>
   <div class="att-bar">
     <div class="att-chip"><div class="att-chip-num" style="color:var(--green)" id="att-in">0</div><div class="att-chip-lbl">출근</div></div>
     <div class="att-chip"><div class="att-chip-num" style="color:var(--red)" id="att-out">0</div><div class="att-chip-lbl">퇴근</div></div>
@@ -142,7 +142,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
   </div>
 
   <!-- 월별 정산 추이 차트 -->
-  <div class="sec-label" style="margin-top:8px">📈 월별 정산 추이</div>
+  <div class="sec-label" style="margin-top:8px">월별 정산 추이</div>
   <div class="chart-wrap">
     <div class="chart-bars" id="chart-bars">
       <div style="text-align:center;width:100%;color:var(--gray);font-size:12px"><span class="spin"></span></div>
@@ -152,26 +152,26 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 
   <!-- 문서 만료 알림 -->
   <div class="alert-box" id="alert-box">
-    <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px">⚠️ 보존기간 만료 임박 문서</div>
+    <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>보존기간 만료 임박 문서</div>
     <div id="alert-rows"></div>
     <button onclick="location.href='/portal'" style="width:100%;margin-top:8px;padding:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer">법정문서 보관함에서 확인 →</button>
   </div>
 
   <!-- 빠른 실행 -->
-  <div class="sec-label" style="margin-top:8px">⚡ 빠른 실행</div>
+  <div class="sec-label" style="margin-top:8px">빠른 실행</div>
   <div class="quick-grid">
-    <a href="/settle" class="quick-btn"><span class="quick-icon">💰</span><span class="quick-lbl">정산하기</span></a>
-    <a href="/attendance-admin" class="quick-btn"><span class="quick-icon">📊</span><span class="quick-lbl">출퇴근현황</span></a>
-    <a href="/attendance-display" class="quick-btn"><span class="quick-icon">🖥</span><span class="quick-lbl">QR디스플레이</span></a>
-    <a href="/portal" class="quick-btn"><span class="quick-icon">🗂</span><span class="quick-lbl">문서보관함</span></a>
-    <a href="/join" class="quick-btn"><span class="quick-icon">👤</span><span class="quick-lbl">직원가입</span></a>
-    <a href="/company-register" class="quick-btn"><span class="quick-icon">🏢</span><span class="quick-lbl">회사등록</span></a>
-    <a href="/my" class="quick-btn"><span class="quick-icon">📱</span><span class="quick-lbl">마이페이지</span></a>
-    <a href="/donway" class="quick-btn"><span class="quick-icon">🌐</span><span class="quick-lbl">랜딩페이지</span></a>
+    <a href="/settle" class="quick-btn"><span class="quick-icon" style="color:var(--cyan)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="quick-lbl">정산하기</span></a>
+    <a href="/attendance-admin" class="quick-btn"><span class="quick-icon" style="color:var(--green)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="quick-lbl">출퇴근현황</span></a>
+    <a href="/attendance-display" class="quick-btn"><span class="quick-icon" style="color:var(--blue)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span><span class="quick-lbl">QR디스플레이</span></a>
+    <a href="/portal" class="quick-btn"><span class="quick-icon" style="color:var(--purple)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="quick-lbl">문서보관함</span></a>
+    <a href="/join" class="quick-btn"><span class="quick-icon" style="color:var(--yellow)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="quick-lbl">직원가입</span></a>
+    <a href="/company-register" class="quick-btn"><span class="quick-icon" style="color:var(--cyan)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 0-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg></span><span class="quick-lbl">회사등록</span></a>
+    <a href="/my" class="quick-btn"><span class="quick-icon" style="color:var(--green)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="quick-lbl">마이페이지</span></a>
+    <a href="/donway" class="quick-btn"><span class="quick-icon" style="color:var(--gray)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span><span class="quick-lbl">랜딩페이지</span></a>
   </div>
 
   <!-- 실시간 출퇴근 피드 -->
-  <div class="sec-label" style="margin-top:8px">🔴 실시간 출퇴근 <span style="font-size:9px;color:var(--gray)">오늘</span></div>
+  <div class="sec-label" style="margin-top:8px">실시간 출퇴근 <span style="font-size:9px;color:var(--gray);margin-left:4px">오늘</span></div>
   <div class="feed" id="feed">
     <div style="text-align:center;padding:20px;color:var(--gray);font-size:12px"><span class="spin"></span></div>
   </div>
@@ -179,10 +179,10 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 </div>
 
 <div class="bottombar">
-  <button class="bot-btn on"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></button>
-  <a href="/settle" class="bot-btn"><span class="bot-icon">💰</span><span class="bot-lbl">정산</span></a>
-  <a href="/attendance-admin" class="bot-btn"><span class="bot-icon">📋</span><span class="bot-lbl">출퇴근</span></a>
-  <a href="/portal" class="bot-btn"><span class="bot-icon">🗂</span><span class="bot-lbl">문서</span></a>
+  <button class="bot-btn on"><span class="bot-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="bot-lbl">대시보드</span></button>
+  <a href="/settle" class="bot-btn"><span class="bot-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="bot-lbl">정산</span></a>
+  <a href="/attendance-admin" class="bot-btn"><span class="bot-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span><span class="bot-lbl">출퇴근</span></a>
+  <a href="/portal" class="bot-btn"><span class="bot-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="bot-lbl">문서</span></a>
 </div>
 
 <script>
