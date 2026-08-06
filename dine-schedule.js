@@ -26,7 +26,7 @@ function _monthStr(){return new Date().toISOString().slice(0,7);}
 
 function _dineScheduleAdd(did){
  _db.collection('staff').where('dealerId','==',did).get().then(function(snap){
-  if(snap.empty){_dineToast('⚠️ 등록된 직원이 없습니다');return;}
+  if(snap.empty){_dineToast('등록된 직원이 없습니다');return;}
   var opts=snap.docs.map(function(d){return '<option value="'+d.id+'">'+d.data().name+'</option>';}).join('');
   var mo=document.createElement('div');mo.className='mo';
   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
@@ -81,7 +81,7 @@ function _dineScheduleSave(did){
  var endTime=document.getElementById('sch-end').value;
  var note=document.getElementById('sch-note').value.trim();
  var pushOn=document.getElementById('sch-push').checked;
- if(!date){_dineToast('⚠️ 날짜를 선택해주세요');return;}
+ if(!date){_dineToast('날짜를 선택해주세요');return;}
  _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,pushOn);
 }
 
@@ -99,7 +99,7 @@ function _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,p
   date:date,startTime:startTime,endTime:endTime,
   note:note,createdAt:_nowISO()
  }).then(function(){
-  _dineToast('✅ 스케줄 등록됐습니다');
+  _dineToast('스케줄 등록됐습니다');
   document.querySelector('.mo')?.remove();
   if(pushOn){
    _db.collection('staff').doc(staffId).get().then(function(snap){
@@ -110,9 +110,9 @@ function _dineScheduleSaveDo(staffId,staffName,date,startTime,endTime,note,did,p
     if(tokens.length){
      fetch('https://donway.ai.kr/fcm/notify-drivers',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tokens:tokens,title:'📅 근무 스케줄',body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')})
+      body:JSON.stringify({tokens:tokens,title:'근무 스케줄',body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')})
      }).catch(function(){});
-     _dineToast('📱 '+staffName+'님 푸시 발송');
+     _dineToast(staffName+'님 푸시 발송');
     }
    });
   }
@@ -155,7 +155,7 @@ function _dineScheduleUpdate(docId,staffId,staffName,date,did){
  var pushOn=document.getElementById('sch-edit-push').checked;
  _db.collection('dine_schedules').doc(docId).update({startTime:startTime,endTime:endTime,note:note,updatedAt:_nowISO()})
  .then(function(){
-  _dineToast('✅ 수정됐습니다');document.querySelector('.mo')?.remove();
+  _dineToast('수정됐습니다');document.querySelector('.mo')?.remove();
   if(pushOn){
    _db.collection('staff').doc(staffId).get().then(function(snap){
     var d=snap.data()||{};
@@ -164,7 +164,7 @@ function _dineScheduleUpdate(docId,staffId,staffName,date,did){
     tokens=[...new Set(tokens)].filter(function(t){return t&&t.length>20;});
     if(tokens.length) fetch('https://donway.ai.kr/fcm/notify-drivers',{method:'POST',
      headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({tokens:tokens,title:'📅 스케줄 변경',body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')})
+     body:JSON.stringify({tokens:tokens,title:'스케줄 변경',body:date+' '+startTime+'~'+endTime+(note?' ('+note+')':'')})
     }).catch(function(){});
    });
   }
@@ -175,7 +175,7 @@ function _dineScheduleUpdate(docId,staffId,staffName,date,did){
 function _dineScheduleDelete(docId,did){
  if(!confirm('스케줄을 삭제하시겠습니까?'))return;
  _db.collection('dine_schedules').doc(docId).delete().then(function(){
-  _dineToast('🗑 삭제됐습니다');document.querySelector('.mo')?.remove();
+  _dineToast('삭제됐습니다');document.querySelector('.mo')?.remove();
   _dineSchedule(document.getElementById('content'));
  });
 }
@@ -195,7 +195,7 @@ function _dineAutoPayroll(did){
   dateFrom=dateTo=_today();
  } else { dateFrom=ym+'-01';dateTo=ym+'-31'; }
  if(window._payrollUnsub) window._payrollUnsub();
- _dineToast('🔄 실시간 급여 계산 중...');
+ _dineToast('실시간 급여 계산 중...');
  _db.collection('staff').where('dealerId','==',did).get().then(function(staffSnap){
   var staffMap={};
   staffSnap.forEach(function(doc){
@@ -283,7 +283,7 @@ function _dinePayslip(el){
  var ym=_monthStr();
  wrap.innerHTML=
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">📋 급여명세서</div><div class="page-sub">직원별 월별 명세서</div></div>'+
+  '<div><div class="page-title">급여명세서</div><div class="page-sub">직원별 월별 명세서</div></div>'+
   '<div style="display:flex;gap:6px;align-items:center">'+
   '<input type="month" id="ps-ym" value="'+ym+'" class="inp" style="width:auto;padding:5px 10px;font-size:12px">'+
   '<button class="btn btn-primary btn-sm" data-did="'+did+'" onclick="_dinePayslipList(this.dataset.did)">조회</button>'+
@@ -297,7 +297,7 @@ function _dinePayslipList(did){
  var from=ym+'-01',to=ym+'-31';
  var list=document.getElementById('ps-list');
  if(!list)return;
- list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">⏳ 로딩중...</div>';
+ list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">로딩중...</div>';
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
   _db.collection('members').where('dealerId','==',did).get()
@@ -353,11 +353,11 @@ function _dinePayslipList(did){
 }
 
 function _dinePayrollLock(ym){
- _dineToast('📌 '+ym+' 급여 확정됨 (준비중)');
+ _dineToast(ym+' 급여 확정됨 (준비중)');
 }
 
 function _dinePayslipBulkSend(did,ym){
- _dineToast('📤 일괄 알림톡 발송 (준비중)');
+ _dineToast('일괄 알림톡 발송 (준비중)');
 }
 
 function _dineAlimtalk(el){el.innerHTML='<div class="slide-up"><div class="page-title">💬 알림톡 설정</div><div class="card" style="margin-top:16px"><div style="font-size:13px;color:var(--t2)">카카오 알림톡 발송을 위해 솔라피 API 키를 등록하세요.<br><br>솔라피 API Key: <input class="inp" placeholder="API Key 입력" style="margin-top:8px"><br><button class="btn btn-primary" style="margin-top:8px">저장</button></div></div></div>';}

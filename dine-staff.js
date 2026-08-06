@@ -20,7 +20,7 @@ function _dineStaff(el){
 
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px';
- hdr.innerHTML='<div><div class="page-title">👥 직원 현황</div><div class="page-sub">파트별 직원 관리</div></div>';
+ hdr.innerHTML='<div><div class="page-title">직원 현황</div><div class="page-sub">파트별 직원 관리</div></div>';
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary';addBtn.textContent='+ 직원 등록';
  addBtn.onclick=function(){_dineAddStaff(did);};
@@ -86,7 +86,7 @@ function _dineStaff(el){
     card.innerHTML=
      '<div class="staff-top">'+
      '<div class="staff-avatar" style="background:'+(m.part==='kitchen'?'rgba(239,68,68,.15)':'rgba(8,145,178,.15)')+'">'+
-     (m.part==='kitchen'?'👨‍🍳':'🧑‍💼')+'</div>'+
+     ''+'
      '<div style="flex:1;min-width:0">'+
      '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
      '<span class="staff-name">'+m.name+'</span>'+
@@ -259,7 +259,7 @@ function _dineStaffDetail(id){
   var from=ym+'-01',to=ym+'-31';
   box.innerHTML=
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'+
-   '<div style="font-size:16px;font-weight:900">👤 '+m.name+' 상세</div>'+
+   '<div style="font-size:16px;font-weight:900">'+m.name+' 상세</div>'+
    '<button onclick="this.closest(&apos;.mo&apos;).remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3)">✕</button>'+
    '</div>'+
    /* 프로필 */
@@ -278,12 +278,12 @@ function _dineStaffDetail(id){
    '</div>'+
    '</div>'+
    /* 이번달 근무 */
-   '<div style="font-size:12px;font-weight:800;margin-bottom:8px">📅 이번달 근무 현황</div>'+
+   '<div style="font-size:12px;font-weight:800;margin-bottom:8px">이번달 근무 현황</div>'+
    '<div id="sd-att-wrap" style="background:var(--bg3);border-radius:10px;padding:12px;font-size:12px;color:var(--t3);text-align:center">로딩중...</div>'+
    /* 버튼 */
    '<div style="display:flex;gap:8px;margin-top:14px">'+
-   '<button class="btn btn-primary btn-sm" data-id="'+id+'" onclick="_dineEditStaff(this.dataset.id);this.closest(\'[class=mo]\').remove()">✏️ 수정</button>'+
-   '<button class="btn btn-ghost btn-sm" data-mid="'+id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">📋 명세서</button>'+
+   '<button class="btn btn-primary btn-sm" data-id="'+id+'" onclick="_dineEditStaff(this.dataset.id);this.closest(\'[class=mo]\').remove()">수정</button>'+
+   '<button class="btn btn-ghost btn-sm" data-mid="'+id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)">명세서</button>'+
    '</div>';
 
   /* 이번달 출퇴근 비동기 로드 */
@@ -334,7 +334,7 @@ function _dineAttend(el){
  var ym=today.slice(0,7);
 
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">⏱ 출퇴근 현황</div><div class="page-sub attend-live"><span class="live-dot"></span>FILO QR출퇴근 실시간 연동</div></div>'+
+  '<div><div class="page-title">출퇴근 현황</div><div class="page-sub attend-live"><span class="live-dot"></span>FILO QR출퇴근 실시간 연동</div></div>'+
   '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
   '<div style="display:flex;background:var(--bg3);border-radius:8px;overflow:hidden;border:1px solid var(--bd)">'+
   '<button id="att-tab-day" onclick="_dineAttendTab(this.id.slice(-3))" style="padding:5px 12px;font-size:11px;font-weight:700;border:none;cursor:pointer;background:var(--br);color:#fff">일별</button>'+
@@ -396,10 +396,10 @@ function _dineLoadAttend(did){
      totalPay+=Math.round(h*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
     });
     if(kpi)kpi.innerHTML=
-     '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">🟢 근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
      '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">출근</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
      '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">💰 예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
+     '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
     var tbl=document.getElementById('att-table');if(!tbl)return;
     var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
     if(!allIds.length){tbl.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 직원 없음</div>';return;}
@@ -525,7 +525,7 @@ function _dineAttendEdit(memberId,date){
   var inTime=ins?new Date(ins.time).toTimeString().slice(0,5):'';
   var outTime=outs?new Date(outs.time).toTimeString().slice(0,5):'';
   box.innerHTML=
-   '<div style="font-size:15px;font-weight:900;margin-bottom:14px">⏱ 출퇴근 수정<span style="font-size:11px;color:var(--t3);font-weight:400;margin-left:8px">'+date+'</span></div>'+
+   '<div style="font-size:15px;font-weight:900;margin-bottom:14px">출퇴근 수정<span style="font-size:11px;color:var(--t3);font-weight:400;margin-left:8px">'+date+'</span></div>'+
    '<div class="input-group"><label>출근 시간</label><input id="ae-in" class="inp" type="time" value="'+inTime+'"></div>'+
    '<div class="input-group"><label>퇴근 시간</label><input id="ae-out" class="inp" type="time" value="'+outTime+'"></div>'+
    '<div style="font-size:10px;color:var(--t3);margin-bottom:12px">수동 수정은 기록에 남습니다</div>'+
