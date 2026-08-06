@@ -401,6 +401,13 @@ function _filoRenderDeliveryCards(did,orders,wrap){
    readyBtn.innerHTML='픽업 대기';
    (function(id,c){readyBtn.onclick=function(){_db.collection(c).doc(id).update({deliveryStatus:'ready',status:'ready',updatedAt:new Date().toISOString()}).then(function(){_filoToast('픽업 대기');});};})(o._id,col);
    btnArea.appendChild(readyBtn);
+   if(o.type==='delivery'){
+    var dispBtn1=document.createElement('button');
+    dispBtn1.style.cssText='padding:7px 12px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
+    dispBtn1.textContent='배달 배차';
+    (function(ord){dispBtn1.onclick=function(){_filoDispatchRequest(did,ord);};})(o);
+    btnArea.appendChild(dispBtn1);
+   }
   }
 
   // 픽업대기 → 배달완료
@@ -417,6 +424,13 @@ function _filoRenderDeliveryCards(did,orders,wrap){
     };
    })(o._id,col,o.phone,o.customer||o.customerName);
    btnArea.appendChild(doneBtn);
+   if(o.type==='delivery'){
+    var dispBtn2=document.createElement('button');
+    dispBtn2.style.cssText='padding:7px 12px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
+    dispBtn2.textContent='배달 배차';
+    (function(ord){dispBtn2.onclick=function(){_filoDispatchRequest(did,ord);};})(o);
+    btnArea.appendChild(dispBtn2);
+   }
   }
 
   // 취소 버튼 (완료/거절/취소 제외)
@@ -556,6 +570,71 @@ function _filoDeliveryAdd(did){
  btnRow.appendChild(cancelBtn);btnRow.appendChild(saveBtn);
  box.appendChild(btnRow);
 
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+}
+
+function _filoDispatchRequest(did,order){
+ var mo=document.createElement('div');mo.className='mo';
+ var box=document.createElement('div');
+ box.style.cssText='padding:22px;width:100%;max-width:400px;background:var(--surface);border-radius:16px';
+ var title=document.createElement('div');
+ title.style.cssText='font-size:15px;font-weight:900;margin-bottom:4px;color:var(--tx)';
+ title.textContent='배달대행 배차 요청';
+ var sub=document.createElement('div');
+ sub.style.cssText='font-size:12px;color:var(--t3);margin-bottom:18px';
+ sub.textContent='배달대행 서비스를 선택하세요';
+ box.appendChild(title);box.appendChild(sub);
+ var agencies=[{k:'barogo',l:'바로고'},{k:'sgt',l:'생각대로'},{k:'vroong',l:'부릉'}];
+ var selAgency='barogo';
+ var agencyRow=document.createElement('div');
+ agencyRow.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px';
+ agencies.forEach(function(ag,i){
+  var btn=document.createElement('button');
+  btn.style.cssText='padding:10px 4px;border:2px solid '+(i===0?'#7c3aed':'var(--bd2)')+';border-radius:10px;background:'+(i===0?'rgba(124,58,237,.1)':'var(--surface2)')+';color:'+(i===0?'#a78bfa':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer;transition:.15s';
+  btn.textContent=ag.l;
+  (function(k){btn.onclick=function(){
+   selAgency=k;
+   agencyRow.querySelectorAll('button').forEach(function(b){b.style.borderColor='var(--bd2)';b.style.background='var(--surface2)';b.style.color='var(--t2)';});
+   this.style.borderColor='#7c3aed';this.style.background='rgba(124,58,237,.1)';this.style.color='#a78bfa';
+  };})(ag.k);
+  agencyRow.appendChild(btn);
+ });
+ box.appendChild(agencyRow);
+ var info=document.createElement('div');
+ info.style.cssText='background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--t2);line-height:1.8';
+ info.innerHTML='<div style="font-weight:700;color:var(--tx);margin-bottom:4px">주문 정보</div>'+
+  '주소: '+(order.address||'(주소 없음)')+'<br>연락처: '+(order.phone||'(연락처 없음)')+'<br>금액: '+((order.total||0).toLocaleString())+'원';
+ box.appendChild(info);
+ var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px';
+ var cancelBtn=document.createElement('button');
+ cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:10px;color:var(--t2);cursor:pointer;font-weight:700';
+ cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
+ var confirmBtn=document.createElement('button');
+ confirmBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer';
+ confirmBtn.textContent='배차 요청';
+ confirmBtn.onclick=function(){
+  confirmBtn.disabled=true;confirmBtn.textContent='요청 중...';
+  fetch('/api/delivery-dispatch',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({orderId:order._id||'',did:did,address:order.address||'',customerName:order.customerName||order.customer||'',phone:order.phone||'',items:order.items||[],total:order.total||0,agency:selAgency})
+  }).then(function(r){return r.json();}).then(function(res){
+   if(res.ok){
+    _filoToast('배차 요청 완료! ('+({barogo:'바로고',sgt:'생각대로',vroong:'부릉'}[selAgency]||selAgency)+')');
+    mo.remove();
+   } else {
+    confirmBtn.disabled=false;confirmBtn.textContent='배차 요청';
+    _filoToast('배차 요청 실패: '+(res.error||''));
+   }
+  }).catch(function(e){
+   confirmBtn.disabled=false;confirmBtn.textContent='배차 요청';
+   _filoToast('오류: '+e.message);
+  });
+ };
+ btnRow.appendChild(cancelBtn);btnRow.appendChild(confirmBtn);
+ box.appendChild(btnRow);
  mo.appendChild(box);
  mo.onclick=function(e){if(e.target===mo)mo.remove();};
  document.body.appendChild(mo);
