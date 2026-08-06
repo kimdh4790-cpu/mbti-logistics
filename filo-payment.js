@@ -50,7 +50,7 @@ function _filoConfirmPay(method, methodLabel){
  var total=Math.max(0,rawTotal-discount);
  window._posDiscount=0;
  // 금액 0이면 저장 안 함
- if(total<=0){_filoToast('❌ 결제 금액이 없습니다');_cartClear();return;}
+ if(total<=0){_filoToast('결제 금액이 없습니다');_cartClear();return;}
  var now=new Date();
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  var tableId=window._selectedTableId||null;
@@ -75,11 +75,11 @@ function _filoConfirmPay(method, methodLabel){
    })).catch(function(){});
   }
   window._selectedTableId=null;window._selectedTableName=null;
-  var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='🛒 주문 내역';
+  var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='주문 내역';
   if(payType==='postpay'){
    // 후불: 주문 접수 토스트만
    var tMsg=tableName&&tableName!=='카운터'?tableName+' ':'';
-   _filoToast('✅ '+tMsg+'주문 접수됐습니다!');
+   _filoToast(tMsg+'주문 접수됐습니다!');
    // FCM 주문 접수 알림 (fcmToken 있을 때)
    if(saveData.fcmToken) {
      _filoSendReceiptPush(saveData.fcmToken, {
@@ -109,10 +109,10 @@ function _filoQRSave(num,name){
  var img=el.querySelector('img');
  var canvas=el.querySelector('canvas');
  var src=img?img.src:(canvas?canvas.toDataURL('image/png'):'');
- if(!src){_filoToast('❌ QR 없음');return;}
+ if(!src){_filoToast('QR 없음');return;}
  var a=document.createElement('a');
  a.download=name+'_QR.png';a.href=src;a.click();
- _filoToast('💾 '+name+' QR 저장됐습니다');
+ _filoToast(name+' QR 저장됐습니다');
 }
 
 function _filoEnsureQR(cb){
@@ -126,16 +126,16 @@ function _filoEnsureQR(cb){
 
 function _filoQRDownload(num,name){
  var wrap=document.getElementById('qr-c-'+num);
- if(!wrap){_filoToast('❌ QR 없음');return;}
+ if(!wrap){_filoToast('QR 없음');return;}
  var canvas=wrap.querySelector('canvas');
  var img=wrap.querySelector('img');
  var a=document.createElement('a');
  a.download=name+'_QR.png';
  if(canvas)a.href=canvas.toDataURL('image/png');
  else if(img)a.href=img.src;
- else{_filoToast('❌ QR 없음');return;}
+ else{_filoToast('QR 없음');return;}
  a.click();
- _filoToast('💾 '+name+' QR 저장됐습니다');
+ _filoToast(name+' QR 저장됐습니다');
 }
 
 function _filoShowModal(html){

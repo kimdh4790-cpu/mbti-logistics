@@ -17,8 +17,8 @@ window._filoExpSave=function(did){
  var date=document.getElementById('exp-date').value;
  if(!itemId||!date){_filoToast('품목과 유통기한을 선택해주세요');return;}
  firebase.firestore().collection('inventory').doc(itemId).update({expiryDate:date,updatedAt:_nowISO()})
- .then(function(){_filoToast('✅ 저장됨');_filoPageExpiry(document.getElementById('content'));})
- .catch(function(e){_filoToast('❌ '+e.message);});
+ .then(function(){_filoToast('저장됨');_filoPageExpiry(document.getElementById('content'));})
+ .catch(function(e){_filoToast(e.message);});
 };
 
 function _filoPageMembers(el){
@@ -26,9 +26,9 @@ function _filoPageMembers(el){
  var isSA=_CU.role==='superadmin'||SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
- '<div style="font-size:17px;font-weight:900">👤 직원 관리</div>'+
+ '<div style="font-size:17px;font-weight:900">직원 관리</div>'+
  '<button onclick="_filoShowAddMember()" class="btn btn-brand btn-sm">+ 직원 추가</button></div>'+
- '<div id="member-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳</div></div></div>';
+ '<div id="member-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div></div></div>';
  _filoLoadMembers(did);
 }
 
@@ -86,9 +86,9 @@ function _filoAddMember(){
  createdAt:_nowISO(),is_active:true
  }).then(function(){
  document.querySelector('.mo')&&document.querySelector('.mo').remove();
- _filoToast('✅ '+name+' 추가 완료');
+ _filoToast(name+' 추가 완료');
  _filoLoadMembers(did);
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoShowMemberDetail(docId){
@@ -120,9 +120,9 @@ function _filoDeleteMember(docId,name){
  var did=_CU.dealerId||_CU.uid;
  _db.collection('members').doc(docId).delete().then(function(){
  document.querySelector('.mo')&&document.querySelector('.mo').remove();
- _filoToast('✅ 삭제 완료');
+ _filoToast('삭제 완료');
  _filoLoadMembers(did);
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 var _attendUnsub=null;
@@ -146,9 +146,9 @@ function _filoDoManualCheckin(){
  type:type,time:dt.toISOString(),date:dt.toISOString().slice(0,10),
  createdBy:_CU.name||_CU.userId||'',manual:true
  }).then(function(){
- _filoToast('✅ '+(type==='in'?'출근':'퇴근')+' 체크 완료');
+ _filoToast((type==='in'?'출근':'퇴근')+' 체크 완료');
  document.getElementById('manual-checkin').style.display='none';
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoStartLiveTicker(){
@@ -185,7 +185,7 @@ function _filoRenderLive(){
   if(!liveEl)return;
   if(!active.length){liveEl.innerHTML='';return;}
   liveEl.innerHTML='<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px 14px;margin-bottom:4px">'+
-  '<div style="font-size:12px;font-weight:800;color:#22c55e;margin-bottom:8px">🟢 현재 출근 중 ('+active.length+'명)</div>'+
+  '<div style="font-size:12px;font-weight:800;color:#22c55e;margin-bottom:8px">● 현재 출근 중 ('+active.length+'명)</div>'+
   active.map(function(a){
    var h=Math.floor(a.elapsedMin/60),m=a.elapsedMin%60;
    var wLabel=a.wageType==='daily'?'일급':'시급';
