@@ -189,7 +189,7 @@ function _filoPay(){
  /* 헤더 */
  var hdrDiv=document.createElement('div');
  hdrDiv.style.cssText='margin-bottom:14px';
- hdrDiv.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:10px">💳 결제하기</div>'+
+ hdrDiv.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:10px">결제하기</div>'+
   '<div style="background:var(--surface2);border-radius:var(--r);padding:12px 14px">'+
   '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--t3);margin-bottom:4px">'+
   '<span>소계 ('+_cartItems.length+'종)</span><span>₩'+rawTotal.toLocaleString()+'</span></div>'+

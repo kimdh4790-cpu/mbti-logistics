@@ -175,7 +175,7 @@ function _dineShowDeliveryResult(r){
     '<span>'+e[0]+'</span><span style="font-weight:700">₩'+e[1].toLocaleString()+'</span></div>';
   }).join('')+'</div>'+
   '<button style="margin-top:10px;width:100%;padding:8px;background:'+color+'22;border:1px solid '+color+'44;border-radius:8px;color:'+color+';font-size:12px;font-weight:700;cursor:pointer" '+
-  'data-r="'+btoa(unescape(encodeURIComponent(JSON.stringify(r))))+'" onclick="_dineSaveDeliveryData(JSON.parse(decodeURIComponent(escape(atob(this.dataset.r)))))">💾 매출분석에 저장</button>';
+  'data-r="'+btoa(unescape(encodeURIComponent(JSON.stringify(r))))+'" onclick="_dineSaveDeliveryData(JSON.parse(decodeURIComponent(escape(atob(this.dataset.r)))))">매출분석에 저장</button>';
  el.innerHTML='';
  el.appendChild(box);
 }
@@ -246,7 +246,7 @@ function _dineCalcSettle(did){
   res.innerHTML='<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">'+
    '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">총 매출</div><div class="kpi-val" style="color:#38bdf8">₩'+totalSales.toLocaleString()+'</div><div class="kpi-sub">POS 매출</div></div>'+
    '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">인건비</div><div class="kpi-val" style="color:#ef4444">₩'+totalLabor.toLocaleString()+'</div><div class="kpi-sub">'+memSnap.size+'명 기준</div></div>'+
-   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">인건비율</div><div class="kpi-val" style="color:#f59e0b">'+laborRate+'%</div><div class="kpi-sub">'+(laborRate<30?'✅ 양호':laborRate<35?'⚠️ 주의':'❌ 과다')+'</div></div>'+
+   '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">인건비율</div><div class="kpi-val" style="color:#f59e0b">'+laborRate+'%</div><div class="kpi-sub">'+(laborRate<30?'양호':laborRate<35?'주의':'과다')+'</div></div>'+
    '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">인건비 차감</div><div class="kpi-val" style="color:#22c55e">₩'+profit.toLocaleString()+'</div><div class="kpi-sub">매출-인건비</div></div>'+
    '</div>'+
    '<div class="card"><div style="font-size:12px;color:var(--t2)">'+

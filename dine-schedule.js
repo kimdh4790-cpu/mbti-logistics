@@ -30,7 +30,7 @@ function _dineScheduleAdd(did){
   var opts=snap.docs.map(function(d){return '<option value="'+d.id+'">'+d.data().name+'</option>';}).join('');
   var mo=document.createElement('div');mo.className='mo';
   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
-  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 근무 스케줄 등록</div>'+
+  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">근무 스케줄 등록</div>'+
    '<div class="input-group"><label>직원 *</label><select id="sch-staff" class="inp">'+opts+'</select></div>'+
    '<div class="input-group"><label>날짜 *</label><input id="sch-date" class="inp" type="date" value="'+_today()+'"></div>'+
    '<div style="display:flex;gap:8px">'+
@@ -54,7 +54,7 @@ function _dineScheduleAdd(did){
 function _dineScheduleAddDay(staffId,staffName,date,did){
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
- box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 '+staffName+' ('+date+')</div>'+
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">'+staffName+' ('+date+')</div>'+
   '<div style="display:flex;gap:8px">'+
   '<div class="input-group" style="flex:1"><label>출근</label><input id="sch-start2" class="inp" type="time" value="09:00"></div>'+
   '<div class="input-group" style="flex:1"><label>퇴근</label><input id="sch-end2" class="inp" type="time" value="18:00"></div>'+
@@ -127,7 +127,7 @@ function _dineScheduleEdit(staffId,date,did){
   var doc=snap.docs[0];var d=doc.data();
   var mo=document.createElement('div');mo.className='mo';
   var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
-  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">📅 스케줄 수정 ('+d.staffName+' '+date+')</div>'+
+  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">스케줄 수정 ('+d.staffName+' '+date+')</div>'+
    '<div style="display:flex;gap:8px">'+
    '<div class="input-group" style="flex:1"><label>출근</label><input id="sch-edit-start" class="inp" type="time" value="'+d.startTime+'"></div>'+
    '<div class="input-group" style="flex:1"><label>퇴근</label><input id="sch-edit-end" class="inp" type="time" value="'+d.endTime+'"></div>'+
@@ -360,5 +360,5 @@ function _dinePayslipBulkSend(did,ym){
  _dineToast('일괄 알림톡 발송 (준비중)');
 }
 
-function _dineAlimtalk(el){el.innerHTML='<div class="slide-up"><div class="page-title">💬 알림톡 설정</div><div class="card" style="margin-top:16px"><div style="font-size:13px;color:var(--t2)">카카오 알림톡 발송을 위해 솔라피 API 키를 등록하세요.<br><br>솔라피 API Key: <input class="inp" placeholder="API Key 입력" style="margin-top:8px"><br><button class="btn btn-primary" style="margin-top:8px">저장</button></div></div></div>';}
+function _dineAlimtalk(el){el.innerHTML='<div class="slide-up"><div class="page-title">알림톡 설정</div><div class="card" style="margin-top:16px"><div style="font-size:13px;color:var(--t2)">카카오 알림톡 발송을 위해 솔라피 API 키를 등록하세요.<br><br>솔라피 API Key: <input class="inp" placeholder="API Key 입력" style="margin-top:8px"><br><button class="btn btn-primary" style="margin-top:8px">저장</button></div></div></div>';}
 

@@ -408,7 +408,7 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
     });
    }
 
-   if(!allItems.length){_filoToast('모든 항목이 이미 결제됐어요! ✅');return;}
+   if(!allItems.length){_filoToast('모든 항목이 이미 결제됐어요!');return;}
 
    // 각자계산 모달 UI
    var mo=document.createElement('div');mo.className='mo';
@@ -488,7 +488,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  /* 카카오 알림톡 */
  var talkBtn=document.createElement('button');
  talkBtn.style.cssText='width:100%;padding:12px;background:linear-gradient(135deg,#ffe812,#f9d900);border:none;border-radius:10px;color:#000;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px';
- talkBtn.textContent='📱 카카오로 영수증 받기';
+ talkBtn.textContent='카카오로 영수증 받기';
  talkBtn.onclick=function(){mo.remove();_filoReceiptTalk();};
  body.appendChild(talkBtn);
 
@@ -676,7 +676,7 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
     if(xb)xb.onclick=function(){mo.remove();};
    }
    render();
-  }).catch(function(e){_filoToast('❌ '+e.message);});
+  }).catch(function(e){_filoToast(e.message);});
 }
 
 

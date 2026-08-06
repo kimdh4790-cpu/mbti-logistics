@@ -127,7 +127,7 @@ function _filoPageStockIn(el){
  '</div>'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">최근 입고 이력</div>'+
  '<div id="si-history">'+
- '<div style="text-align:center;padding:30px;color:var(--t3)"><div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">⏳</div></div>'+
+ '<div style="text-align:center;padding:30px;color:var(--t3)"><div style="animation:spin 1s linear infinite;display:inline-block"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div></div>'+
  '</div></div>';
  _filoLoadInventoryItems(did, 'si-item');
  _filoLoadStockHistory(did, 'si-history', 'in');
@@ -216,7 +216,7 @@ function _filoPageStockOut(el){
  '<option value="sale">판매</option><option value="use">사용</option><option value="waste">폐기</option><option value="return">반품</option><option value="etc">기타</option>'+
  '</select></div></div>'+
  '<div class="fg"><label>메모 (선택)</label><input id="so-memo" type="text" placeholder="메모" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--tx);font-size:13px"></div>'+
- '<button onclick="_filoDoStockOut()" class="btn" style="width:100%;background:var(--red);color:#fff">📤 출고 등록</button>'+
+ '<button onclick="_filoDoStockOut()" class="btn" style="width:100%;background:var(--red);color:#fff">출고 등록</button>'+
  '</div>'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">최근 출고 이력</div>'+
  '<div id="so-history">'+
@@ -355,7 +355,7 @@ function _filoPageInventoryDash(el) {
     '<div style="font-size:13px;font-weight:800;color:var(--t3)">발주 필요 <span id="inv-low-badge" style="background:#f59e0b;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:4px">0</span></div>' +
     '<button onclick="_filoInvAutoOrder('+did+')" style="padding:5px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ 발주 생성하기</button>' +
     '</div>' +
-    '<div id="inv-low-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">재고 부족 없음 ✅</div></div>';
+    '<div id="inv-low-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">재고 부족 없음</div></div>';
   rightPanel.appendChild(lowCard);
 
   var incomingCard = document.createElement('div');
@@ -434,7 +434,7 @@ function _filoInvDashLoad(did) {
     if(lowBadge) lowBadge.textContent=low.length;
     if(lowList){
       if(!low.length){
-        lowList.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">재고 부족 없음 ✅</div>';
+        lowList.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">재고 부족 없음</div>';
       } else {
         lowList.innerHTML=low.map(function(it){
           var est=Math.round((it.stock||0)*((it.unitPrice||0)+2000));

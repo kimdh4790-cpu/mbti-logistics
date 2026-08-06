@@ -124,7 +124,7 @@ function _dineAddStaff(did,staffId,existing){
  box.style.cssText='padding:24px;max-height:85vh;overflow-y:auto';
  var e=existing||{};
 
- box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">'+(staffId?'✏️ 직원 수정':'👤 직원 등록')+'</div>'+
+ box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">'+(staffId?'직원 수정':'직원 등록')+'</div>'+
   /* 기본정보 */
   '<div style="font-size:11px;font-weight:800;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">기본 정보</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+

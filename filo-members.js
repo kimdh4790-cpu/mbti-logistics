@@ -36,7 +36,7 @@ function _filoLoadMembers(did){
  _db.collection('members').where('dealerId','==',did).orderBy('name').get()
  .then(function(snap){
  var el=document.getElementById('member-list');if(!el)return;
- if(snap.empty){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:32px;margin-bottom:8px">👥</div><div>직원이 없습니다</div><button onclick="_filoShowAddMember()" class="btn btn-brand" style="margin-top:12px;padding:10px 24px;width:auto">첫 직원 추가</button></div>';return;}
+ if(snap.empty){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)"><div style="margin-bottom:8px"></div><div>직원이 없습니다</div><button onclick="_filoShowAddMember()" class="btn btn-brand" style="margin-top:12px;padding:10px 24px;width:auto">첫 직원 추가</button></div>';return;}
  el.innerHTML=snap.docs.map(function(doc,idx){
  var d=doc.data();
  var roleLabel={'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원';

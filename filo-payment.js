@@ -100,7 +100,7 @@ function _filoConfirmPay(method, methodLabel){
    }
    _cartClear();
   }
- }).catch(function(e){_filoToast('❌ '+e.message);});
+ }).catch(function(e){_filoToast(e.message);});
 }
 
 function _filoQRSave(num,name){
