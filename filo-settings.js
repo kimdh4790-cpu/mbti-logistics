@@ -16,7 +16,7 @@ function _filoPageSettings(el){
  var did=_CU.dealerId||_CU.uid;
  var d=_cachedCompanyDoc||{};
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:16px">⚙️ 설정</div>'+
+ '<div style="font-size:17px;font-weight:900;margin-bottom:16px">설정</div>'+
  '<div class="card">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">회사 정보</div>'+
  '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">'+
@@ -43,7 +43,7 @@ function _filoPageSettings(el){
  '</div>'+
  /* 🎨 업종별 테마 — 매장별 독립 적용 */
  '<div class="card" style="margin-top:12px">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:12px">🎨 매장 테마</div>'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:12px">매장 테마</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">업종을 고르면 색상이 자동 적용됩니다. 원하시면 색을 직접 지정할 수도 있습니다.</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">업종</div>'+
  '<select id="set-theme" class="inp" style="width:100%;font-size:12px;margin-bottom:10px" onchange="_filoThemePreview()">'+
@@ -117,8 +117,8 @@ function _filoSaveTheme(){
  .then(function(){
   if(_cachedCompanyDoc){_cachedCompanyDoc.theme=key;_cachedCompanyDoc.primaryColor=primary;_cachedCompanyDoc.bgColor=bg;}
   if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:key,primaryColor:primary,bgColor:bg});
-  _filoToast('✅ 테마가 적용됐습니다');
- }).catch(function(e){_filoToast('❌ '+e.message);});
+  _filoToast('테마가 적용됐습니다');
+ }).catch(function(e){_filoToast(e.message);});
 }
 function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;
@@ -127,21 +127,21 @@ function _filoSaveReviewUrls(){
  _db.collection('companies').doc(did).update({reviewUrlNaver:naver,reviewUrlKakao:kakao,updatedAt:_nowISO()})
  .then(function(){
   if(_cachedCompanyDoc){_cachedCompanyDoc.reviewUrlNaver=naver;_cachedCompanyDoc.reviewUrlKakao=kakao;}
-  _filoToast('✅ 리뷰 링크 저장됨');
- }).catch(function(e){_filoToast('❌ '+e.message);});
+  _filoToast('리뷰 링크 저장됨');
+ }).catch(function(e){_filoToast(e.message);});
 }
 function _filoPageSubscription(el){
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:16px">🚀 구독 관리</div>'+
+ '<div style="font-size:17px;font-weight:900;margin-bottom:16px">구독 관리</div>'+
  '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;margin-bottom:20px">'+
- '<div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px">💳 계좌이체 결제 안내</div>'+
+ '<div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px">계좌이체 결제 안내</div>'+
  '<div style="font-size:18px;font-weight:900;color:#111;letter-spacing:1px">270-910019-24204</div>'+
  '<div style="font-size:13px;color:#555;margin-top:4px">하나은행 · (유)엠비티아이</div>'+
- '<div style="font-size:11px;color:#e67e00;margin-top:8px">⚠️ 입금자명에 업체명 기재 필수 · 입금 후 051-711-3103 확인 요청</div>'+
+ '<div style="font-size:11px;color:#e67e00;margin-top:8px">입금자명에 업체명 기재 필수 · 입금 후 051-711-3103 확인 요청</div>'+
  '</div>'+
  '<div class="card">'+
  '<div style="text-align:center;padding:20px">'+
- '<div style="font-size:40px;margin-bottom:12px">💎</div>'+
+ ''+
  '<div style="font-size:16px;font-weight:800;margin-bottom:6px">FILO 플랜</div>'+
  '<div style="font-size:12px;color:var(--t3);margin-bottom:16px">재고관리 · QR출퇴근 · 키오스크POS 통합 솔루션</div>'+
  '<a href="https://filo.ai.kr" target="_blank" class="btn btn-brand" style="display:inline-block;text-decoration:none">요금제 보기</a>'+
@@ -158,7 +158,7 @@ function _filoPageTaxShare(el){
  /* 헤더 */
  var hdr=document.createElement('div');
  hdr.style.cssText='margin-bottom:20px';
- hdr.innerHTML='<div class="page-title">🧾 세무사 연동</div>'+
+ hdr.innerHTML='<div class="page-title">세무사 연동</div>'+
   '<div class="page-sub">매출 데이터를 세무사에게 자동 공유합니다</div>';
  wrap.appendChild(hdr);
 
@@ -171,7 +171,7 @@ function _filoPageTaxShare(el){
   '<div style="font-size:20px;font-weight:900" id="tax-status-txt">설정 안됨</div>'+
   '<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px" id="tax-status-sub">세무사 이메일을 등록하면 매월 매출 리포트를 자동 발송합니다</div>'+
   '</div>'+
-  '<div style="font-size:36px;opacity:.6">📊</div></div>';
+  '</div>';
  wrap.appendChild(statusCard);
 
  /* 세무사 이메일 등록 */
@@ -182,7 +182,7 @@ function _filoPageTaxShare(el){
   '<input id="tax-email-inp" type="email" placeholder="세무사 이메일 주소" style="flex:1;padding:11px 14px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">'+
   '<button onclick="_filoTaxSaveEmail()" style="padding:11px 16px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">저장</button>'+
   '</div>'+
-  '<div style="font-size:11px;color:var(--t3)">💡 매월 1일 전월 매출 리포트가 자동 발송됩니다</div>';
+  '<div style="font-size:11px;color:var(--t3)">매월 1일 전월 매출 리포트가 자동 발송됩니다</div>';
  wrap.appendChild(card1);
 
  /* 매출 데이터 공유 설정 */
@@ -220,7 +220,7 @@ function _filoPageTaxShare(el){
  /* 세금계산서 안내 */
  var card4=document.createElement('div');
  card4.className='card-brand';
- card4.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:8px">💡 세금계산서 발행 안내</div>'+
+ card4.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:8px">세금계산서 발행 안내</div>'+
   '<div style="font-size:12px;color:var(--t2);line-height:1.7">'+
   '• POS 결제 내역이 자동으로 세무사에게 공유됩니다<br>'+
   '• 카드 매출은 카드사 자동 집계와 대조 가능합니다<br>'+
@@ -237,7 +237,7 @@ function _filoPageTaxShare(el){
    var data=snap.data();
    if(data.taxEmail){
     document.getElementById('tax-email-inp').value=data.taxEmail;
-    document.getElementById('tax-status-txt').textContent='✅ 연동 중';
+    document.getElementById('tax-status-txt').textContent='연동 중';
     document.getElementById('tax-status-sub').textContent=data.taxEmail+' · 매월 자동 발송';
    }
   }
@@ -251,8 +251,8 @@ function _filoTaxSaveEmail(){
  _db.collection('settings').doc(did+'_tax').set({
   dealerId:did,taxEmail:email,updatedAt:_nowISO()
  },{merge:true}).then(function(){
-  _filoToast('✅ 세무사 이메일이 등록됐습니다');
-  document.getElementById('tax-status-txt').textContent='✅ 연동 중';
+  _filoToast('세무사 이메일이 등록됐습니다');
+  document.getElementById('tax-status-txt').textContent='연동 중';
   document.getElementById('tax-status-sub').textContent=email+' · 매월 자동 발송';
  });
 }
@@ -260,8 +260,8 @@ function _filoTaxSaveEmail(){
 function _filoPageNotices(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up" style="max-width:700px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:16px">📢 공지사항</div>'+
- '<div id="notices-list"><div style="text-align:center;padding:30px;color:var(--t3)">⏳</div></div></div>';
+ '<div style="font-size:17px;font-weight:900;margin-bottom:16px">공지사항</div>'+
+ '<div id="notices-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div></div></div>';
  _db.collection('notices').where('dealerId','==',did).orderBy('createdAt','desc').limit(20).get()
  .then(function(snap){
  var el2=document.getElementById('notices-list');if(!el2)return;
@@ -290,7 +290,7 @@ var _tableMgmtUnsub=null;
 
 
 /* ══════════════════════════════════════
-   🛵 배달 주문 관리 페이지
+   배달 주문 관리 페이지
    배민/쿠팡이츠/요기요 주문 수동 접수
    ══════════════════════════════════════ */
 
@@ -300,20 +300,20 @@ var _toTable=null,_toCart={};
 function _filoPageReviewReply(el){
  var did=_CU&&(_CU.dealerId||_CU.uid)||'';
  el.innerHTML='<div style="max-width:600px;margin:0 auto">'+
-  '<div style="font-size:20px;font-weight:900;margin-bottom:4px">💬 AI 리뷰 답글</div>'+
+  '<div style="font-size:20px;font-weight:900;margin-bottom:4px">AI 리뷰 답글</div>'+
   '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">고객 리뷰를 붙여넣으면 AI가 답글을 자동 생성합니다</div>'+
   '<div style="background:var(--surface2);border:1px solid var(--bd2);border-radius:14px;padding:16px;margin-bottom:12px">'+
-  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">📋 고객 리뷰</div>'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">고객 리뷰</div>'+
   '<textarea id="review-input" placeholder="리뷰 내용을 붙여넣으세요..." style="width:100%;min-height:100px;background:var(--surface3);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>'+
   '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
-  '<button onclick="_filoGenReviewReply(1)" style="flex:1;padding:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:10px;color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer">⭐ 긍정 답글</button>'+
-  '<button onclick="_filoGenReviewReply(0)" style="flex:1;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#f87171;font-weight:700;font-size:12px;cursor:pointer">😔 부정/개선 답글</button>'+
-  '<button onclick="_filoGenReviewReply(2)" style="flex:1;padding:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer">🎯 일반 답글</button>'+
+  '<button onclick="_filoGenReviewReply(1)" style="flex:1;padding:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:10px;color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer">긍정 답글</button>'+
+  '<button onclick="_filoGenReviewReply(0)" style="flex:1;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#f87171;font-weight:700;font-size:12px;cursor:pointer">부정/개선 답글</button>'+
+  '<button onclick="_filoGenReviewReply(2)" style="flex:1;padding:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer">일반 답글</button>'+
   '</div></div>'+
   '<div id="review-result" style="display:none;background:var(--surface2);border:1px solid var(--bd2);border-radius:14px;padding:16px">'+
-  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">✍️ AI 생성 답글</div>'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">AI 생성 답글</div>'+
   '<textarea id="review-output" style="width:100%;min-height:120px;background:var(--surface3);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>'+
-  '<button onclick="navigator.clipboard.writeText(document.getElementById(\'review-output\').value).then(function(){_filoToast(\'📋 복사됐습니다!\')})" style="width:100%;margin-top:8px;padding:10px;background:var(--br);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer">📋 복사하기</button>'+
+  '<button onclick="navigator.clipboard.writeText(document.getElementById(\'review-output\').value).then(function(){_filoToast(\'복사됐습니다!\')})" style="width:100%;margin-top:8px;padding:10px;background:var(--br);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:13px;cursor:pointer">복사하기</button>'+
   '</div>'+
   '</div>';
 }
