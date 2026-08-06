@@ -6432,7 +6432,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               var _dateFreshMap = {}; // ?� ?�짜별 ?�?�?��?(?�?�디지?� ?�전??
               if(fd.dateRoutes){
                 Object.keys(fd.dateRoutes).forEach(function(dt){
-                  if(!_dateOk(dt)) return;
+                  var ndt = _nd(dt)||dt;
+                  if(!_dateOk(ndt)) return;
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length && tR.indexOf(rt) < 0) return;
                     var rd = fd.dateRoutes[dt][rt] || {};
@@ -6473,7 +6474,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 if(fs.routeDetails && fs.routeDetails.length){
                   if(fd.dateRoutes){
                     Object.keys(fd.dateRoutes).forEach(function(dt){
-                      if(!_dateOk(dt)) return;
+                      var ndt = _nd(dt)||dt;
+                      if(!_dateOk(ndt)) return;
                       Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                         if(tR.length && tR.indexOf(rt) < 0) return;
                         var rd = fd.dateRoutes[dt][rt] || {};
@@ -6513,11 +6515,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 });
                 var _newDateRoutes={};
                 Object.keys(fd.dateRoutes||{}).forEach(function(dt){
-                  if(!_dateOk(dt)) return;
-                  _newDateRoutes[dt]={};
+                  var ndt = _nd(dt)||dt;
+                  if(!_dateOk(ndt)) return;
+                  _newDateRoutes[ndt]={};
                   Object.keys(fd.dateRoutes[dt]).forEach(function(rt){
                     if(tR.length&&tR.indexOf(rt)<0) return;
-                    _newDateRoutes[dt][rt]=fd.dateRoutes[dt][rt];
+                    _newDateRoutes[ndt][rt]=fd.dateRoutes[dt][rt];
                   });
                 });
                 var _newDateFresh={};
