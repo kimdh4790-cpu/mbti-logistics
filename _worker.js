@@ -2267,6 +2267,92 @@ async function acceptExchange(){
         } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
       }
 
+      // ── /api/waiting — 웨이팅 등록 (POST) / 목록 (GET) ──
+      if (path === '/api/waiting') {
+        const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        if (method === 'OPTIONS') return new Response('',{headers:{...cors,'Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE','Access-Control-Allow-Headers':'Content-Type'}});
+        try {
+          const token=await getAccessToken(env);
+          if (method === 'POST') {
+            const body=await request.json();
+            const {did,name,seats,phone,memo}=body;
+            if(!did||!name) return new Response(JSON.stringify({error:'did,name 필수'}),{status:400,headers:cors});
+            const today=new Date().toISOString().slice(0,10);
+            const now=new Date().toISOString();
+            // 오늘 대기 번호 계산 (오늘 등록된 waiting 전체 카운트 + 1)
+            const listRes=await fetch(`${FS_BASE}:runQuery`,{
+              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({structuredQuery:{from:[{collectionId:'dine_waiting'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:today}}}]}}}})
+            });
+            const listData=await listRes.json();
+            const totalToday=(listData||[]).filter(r=>r.document).length;
+            const waitNum=totalToday+1;
+            const wRes=await fetch(`${FS_BASE}/dine_waiting`,{
+              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({fields:{dealerId:{stringValue:did},name:{stringValue:name},seats:{integerValue:seats||1},phone:{stringValue:phone||''},memo:{stringValue:memo||''},status:{stringValue:'waiting'},waitNum:{integerValue:waitNum},date:{stringValue:today},createdAt:{stringValue:now},calledAt:{stringValue:''},guestFcmToken:{stringValue:''}}})
+            });
+            const wDoc=await wRes.json();
+            if(wDoc.error) return new Response(JSON.stringify({error:wDoc.error.message}),{status:400,headers:cors});
+            const wid=wDoc.name?wDoc.name.split('/').pop():'';
+            return new Response(JSON.stringify({wid,waitNum,status:'waiting'}),{headers:cors});
+          }
+          if (method === 'GET') {
+            const did=new URL(request.url).searchParams.get('did');
+            const dateQ=new URL(request.url).searchParams.get('date')||new Date().toISOString().slice(0,10);
+            if(!did) return new Response(JSON.stringify({error:'did required'}),{status:400,headers:cors});
+            const lRes=await fetch(`${FS_BASE}:runQuery`,{
+              method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({structuredQuery:{from:[{collectionId:'dine_waiting'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:dateQ}}}]}},orderBy:[{field:{fieldPath:'createdAt'},direction:'ASCENDING'}]}})
+            });
+            const lData=await lRes.json();
+            const list=(lData||[]).filter(r=>r.document).map(r=>{
+              const f=r.document.fields||{};
+              const gf=k=>{const x=f[k];if(!x)return null;return x.stringValue!==undefined?x.stringValue:x.integerValue!==undefined?parseInt(x.integerValue):x.booleanValue||null;};
+              return {wid:r.document.name.split('/').pop(),name:gf('name')||'손님',seats:gf('seats')||1,phone:gf('phone')||'',memo:gf('memo')||'',status:gf('status')||'waiting',waitNum:gf('waitNum')||0,date:gf('date')||'',createdAt:gf('createdAt')||'',calledAt:gf('calledAt')||''};
+            });
+            const waitingCnt=list.filter(w=>w.status==='waiting').length;
+            const calledCnt=list.filter(w=>w.status==='called').length;
+            const seatedCnt=list.filter(w=>w.status==='seated').length;
+            return new Response(JSON.stringify({list,waitingCnt,calledCnt,seatedCnt}),{headers:cors});
+          }
+          return new Response(JSON.stringify({error:'method not allowed'}),{status:405,headers:cors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+      }
+
+      // ── /api/waiting-update — 웨이팅 상태 변경 (PATCH) ──
+      if (path === '/api/waiting-update' && method === 'POST') {
+        const cors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        try {
+          const body=await request.json();
+          const {wid,status,did}=body;
+          if(!wid||!status) return new Response(JSON.stringify({error:'wid,status 필수'}),{status:400,headers:cors});
+          const token=await getAccessToken(env);
+          const now=new Date().toISOString();
+          const fields={status:{stringValue:status}};
+          if(status==='called') fields.calledAt={stringValue:now};
+          if(status==='seated') fields.seatedAt={stringValue:now};
+          const mask=Object.keys(fields).map(k=>'updateMask.fieldPaths='+k).join('&');
+          await fetch(`${FS_BASE}/dine_waiting/${wid}?${mask}`,{
+            method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({fields})
+          });
+          // 호출 시 FCM 발송
+          if(status==='called' && did) {
+            // 토큰 조회
+            const docRes=await fetch(`${FS_BASE}/dine_waiting/${wid}`,{headers:{'Authorization':'Bearer '+token}});
+            const docData=await docRes.json();
+            const fcmToken=(docData.fields&&docData.fields.guestFcmToken&&docData.fields.guestFcmToken.stringValue)||'';
+            if(fcmToken) {
+              await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{
+                method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+                body:JSON.stringify({message:{token:fcmToken,notification:{title:'순서가 됐어요!',body:'직원의 안내를 받아 입장해 주세요'},data:{type:'waiting_call',wid}}})
+              }).catch(()=>{});
+            }
+          }
+          return new Response(JSON.stringify({ok:true}),{headers:cors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:cors});}
+      }
+
       if (path === '/firebase-messaging-sw.js') return serveKVFile(env, 'firebase-messaging-sw.js', 'application/javascript');
       if (path === '/fcm/notify-drivers' && method === 'POST') {
         const body2 = await request.json();
