@@ -408,121 +408,94 @@ function _filoTableOrderModal(did,table,order){
     '<div id="modal-btn-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"></div>';
 
    var btnRow=inner.querySelector('#modal-btn-row');
+   /* ── 버튼 레이아웃: 최대 4개 ──
+      Row1: 결제하기 (full-width, primary, 미결제 시)
+      Row2: 준비완료 | 비움/착석 | 닫기 */
 
    if(hasOrder&&pendingTotal>0){
+    // 결제하기 — 풀 모달 열기 (분할/각자 포함)
     var payBtn=document.createElement('button');
-    payBtn.style.cssText='flex:2;padding:12px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer';
-    payBtn.textContent='후불 결제 (₩'+pendingTotal.toLocaleString()+')';
-    (function(d,n,dc){payBtn.onclick=function(){_filoMarkPaid(d,n,dc,payBtn,mo);};})(did,table.num,table.docId);
-    btnRow.appendChild(payBtn);
-
-    var splitBtn2=document.createElement('button');
-    splitBtn2.style.cssText='flex:1;padding:12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:12px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer';
-    splitBtn2.textContent='분할';
-    (function(tot,ord){splitBtn2.onclick=function(){mo.remove();
-     // orders 배열에서 items 펼치기
+    payBtn.style.cssText='width:100%;padding:14px;background:linear-gradient(135deg,#6366f1,#818cf8);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(99,102,241,.35)';
+    payBtn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>결제하기 ₩'+pendingTotal.toLocaleString();
+    (function(ord,tNum,tName,tot){payBtn.onclick=function(){
+     // 주문 아이템을 _cartItems에 로드 후 결제 모달 열기
      var flatItems=[];
      if(ord.orders&&ord.orders.length){
       ord.orders.forEach(function(o){
        (o.items||[]).forEach(function(it){
         var ex=flatItems.find(function(f){return f.name===it.name;});
-        if(ex){ex.qty+=(it.qty||1);}
-        else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
+        if(ex){ex.qty+=(it.qty||1);}else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
        });
       });
-     } else {
-      flatItems=(ord.items||[]).slice();
-     }
-     _cartItems=flatItems.map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty||1,emoji:it.emoji||'🍽'};});
-     window._selectedTableId=table.num;window._selectedTableName=table.name;
-     _filoSplitPay(tot);
-    };})(pendingTotal,order);
-    btnRow.appendChild(splitBtn2);
-
-    var selfBtn2=document.createElement('button');
-    selfBtn2.style.cssText='flex:1;padding:12px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer';
-    selfBtn2.textContent='각자';
-    (function(ord,tNum,tName){selfBtn2.onclick=function(){mo.remove();
-     _filoTableSelfPay(did,ord,tNum,tName);
-    };})(order,table.num,table.name);
-    btnRow.appendChild(selfBtn2);
+     } else { flatItems=(ord.items||[]).slice(); }
+     _cartItems=flatItems.map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty||1,emoji:it.emoji||''};});
+     window._selectedTableId=tNum;window._selectedTableName=tName;
+     window._posDiscount=0;
+     mo.remove();
+     if(typeof _filoPay==='function')_filoPay();
+     else if(typeof _filoMarkPaid==='function'){_filoMarkPaid(did,tNum,table.docId,payBtn,{remove:function(){}});}
+    };})(order,table.num,table.name,pendingTotal);
+    btnRow.appendChild(payBtn);
    }
 
- if(s!=='empty'){
-  var clearBtn=document.createElement('button');
-  clearBtn.style.cssText='flex:1;padding:12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#22c55e;font-size:13px;font-weight:700;cursor:pointer';
-  clearBtn.textContent='테이블 비움';
-  (function(dc,d,n){clearBtn.onclick=function(){_filoTableClear(dc,d,n);mo.remove();};})(table.docId,did,table.num);
-  btnRow.appendChild(clearBtn);
- } else {
-  var seatBtn=document.createElement('button');
-  seatBtn.style.cssText='flex:1;padding:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;font-size:13px;font-weight:700;cursor:pointer';
-  seatBtn.textContent='착석 처리';
-  (function(dc,d,n){seatBtn.onclick=function(){_filoTableSeat(dc,d,n);mo.remove();};})(table.docId,did,table.num);
-  btnRow.appendChild(seatBtn);
- }
+   // 2행: 준비완료 + 비움/착석 + 닫기
+   var row2=document.createElement('div');
+   row2.style.cssText='display:flex;gap:8px;width:100%';
 
- // 준비완료 버튼 (주문 있을 때)
- if(hasOrder&&order.pendingTotal>0){
-  var readyBtn=document.createElement('button');
-  readyBtn.style.cssText='flex:1;padding:12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#22c55e;font-size:12px;font-weight:700;cursor:pointer';
-  readyBtn.textContent='준비완료';
-  (function(d,tNum,tName){readyBtn.onclick=function(){
-   var db=firebase.firestore();
-   // 숫자/문자 모두 조회
-   Promise.all([
-    db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','==','pending').get(),
-    db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','==','pending').get()
-   ]).then(function(results){
-    var batch=db.batch();var tokens=[];var seen={};
-    results.forEach(function(snap){
-     snap.forEach(function(doc){
-      if(seen[doc.id])return;seen[doc.id]=true;
-      batch.update(doc.ref,{status:'ready',readyAt:_nowISO()});
-      var tk=doc.data().fcmToken;
-      if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
-     });
-    });
-    return batch.commit().then(function(){return tokens;});
-   }).then(function(tokens){
-    if(tokens.length>0){
-     fetch('/fcm/notify-drivers',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-       tokens:tokens,
-       title:'픽업 알림',
-       body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요',
-       data:{type:'pickup',tableNum:String(tNum),url:'https://filo.ai.kr/order?d='+d+'&t='+tNum}
-      })
-     }).catch(function(){});
-     _filoToast('테이블 '+tNum+' 픽업 알림 전송!');
-    } else {
-     _filoToast('FCM 토큰 없음 — 알림 미전송 (Firestore 상태는 ready로 변경)');
-    }
-    mo.remove();
-   }).catch(function(e){_filoToast(e.message);});
-  };})(did,table.num,table.name);
-  btnRow.appendChild(readyBtn);
- }
+   if(hasOrder&&(order.pendingTotal>0||pendingTotal>0)){
+    var readyBtn=document.createElement('button');
+    readyBtn.style.cssText='flex:1;padding:11px 8px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);border-radius:10px;color:#10b981;font-size:12px;font-weight:700;cursor:pointer';
+    readyBtn.textContent='준비완료';
+    (function(d,tNum){readyBtn.onclick=function(){
+     var db=firebase.firestore();
+     Promise.all([
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','==','pending').get(),
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','==','pending').get()
+     ]).then(function(results){
+      var batch=db.batch();var tokens=[];var seen={};
+      results.forEach(function(snap){
+       snap.forEach(function(doc){
+        if(seen[doc.id])return;seen[doc.id]=true;
+        batch.update(doc.ref,{status:'ready',readyAt:_nowISO()});
+        var tk=doc.data().fcmToken;
+        if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
+       });
+      });
+      return batch.commit().then(function(){return tokens;});
+     }).then(function(tokens){
+      if(tokens.length>0){
+       fetch('/fcm/notify-drivers',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tokens:tokens,title:'픽업 알림',body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요',
+         data:{type:'pickup',tableNum:String(tNum),url:'https://filo.ai.kr/order?d='+d+'&t='+tNum}})
+       }).catch(function(){});
+       _filoToast('테이블 '+tNum+' 픽업 알림 전송!');
+      } else { _filoToast('Firestore 상태 ready 변경 완료'); }
+      mo.remove();
+     }).catch(function(e){_filoToast(e.message);});
+    };})(did,table.num);
+    row2.appendChild(readyBtn);
+   }
 
- // 테이블 이동 버튼
- if(hasOrder){
-  var moveBtn=document.createElement('button');
-  moveBtn.style.cssText='flex:1;padding:12px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:12px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer';
-  moveBtn.textContent='이동';
-  (function(d,fromNum,fromName,ord){moveBtn.onclick=function(){
-   mo.remove();
-   _filoTableMoveModal(d,fromNum,fromName,ord);
-  };})(did,table.num,table.name,order);
-  btnRow.appendChild(moveBtn);
- }
+   if(s!=='empty'){
+    var clearBtn=document.createElement('button');
+    clearBtn.style.cssText='flex:1;padding:11px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer';
+    clearBtn.textContent='테이블 비움';
+    (function(dc,d,n){clearBtn.onclick=function(){_filoTableClear(dc,d,n);mo.remove();};})(table.docId,did,table.num);
+    row2.appendChild(clearBtn);
+   } else {
+    var seatBtn=document.createElement('button');
+    seatBtn.style.cssText='flex:1;padding:11px 8px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:10px;color:#3b82f6;font-size:12px;font-weight:700;cursor:pointer';
+    seatBtn.textContent='착석 처리';
+    (function(dc,d,n){seatBtn.onclick=function(){_filoTableSeat(dc,d,n);mo.remove();};})(table.docId,did,table.num);
+    row2.appendChild(seatBtn);
+   }
 
    var closeBtn=document.createElement('button');
-   closeBtn.style.cssText='padding:12px 16px;background:var(--b3);border:1px solid var(--bd);border-radius:12px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer';
+   closeBtn.style.cssText='flex:1;padding:11px 8px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer';
    closeBtn.textContent='닫기';
    closeBtn.onclick=function(){mo.remove();};
-   btnRow.appendChild(closeBtn);
+   row2.appendChild(closeBtn);
+   btnRow.appendChild(row2);
   }).catch(function(e){
    console.error('[TableModal]',e);
    if(typeof _filoToast==='function')_filoToast(e&&e.message||'오류');
