@@ -2722,7 +2722,7 @@ fetch('/qr/members?did='+DID)
           const now = new Date();
           const kst = new Date(now.getTime() + 9*3600*1000);
           const date = kst.toISOString().slice(0,10);
-          const type = action === 'out' ? 'out' : 'in';
+          const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
 
@@ -4143,7 +4143,7 @@ fetch('/qr/members?did='+DID)
           const now = new Date();
           const kst = new Date(now.getTime() + 9*3600*1000);
           const date = kst.toISOString().slice(0,10);
-          const type = action === 'out' ? 'out' : 'in';
+          const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
 

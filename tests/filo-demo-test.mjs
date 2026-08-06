@@ -195,7 +195,12 @@ async function testWaiting(browser) {
 // ── 메인 ──
 (async () => {
   mkdirSync('test-screenshots', { recursive: true });
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-setuid-sandbox'] });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox','--disable-setuid-sandbox'],
+    executablePath: '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell',
+    proxy: { server: process.env.HTTPS_PROXY || 'http://127.0.0.1:36973' }
+  });
 
   console.log(`\n══ FILO·DINE 박람회 데모 브라우저 테스트 ══`);
   console.log(`매장: ${DEALER_ID} | ${BASE}\n`);

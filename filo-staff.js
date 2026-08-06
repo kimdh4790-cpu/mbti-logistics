@@ -72,7 +72,7 @@ function _filoPageStaffQR(el){
 
 var _dynamicQRTimer=null;
 function _filoRenderStaffQRs(did){
- _db.collection('filo_customers').where('dealerId','==',did).get().then(function(snap){
+ _db.collection('members').where('dealerId','==',did).orderBy('name').get().then(function(snap){
   var list=document.getElementById('staff-qr-list');
   if(!list)return;
   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px">직원 목록이 없습니다</div>';return;}
@@ -484,7 +484,7 @@ function _filoRegisterStaff(){
  _db.collection('members').add({
   dealerId:did,name:name,phone:phone,
   role:empType,wage:wage,wageType:wageType,empType:empType,
-  createdAt:_nowISO(),is_active:true
+  createdAt:_nowISO(),is_active:true,status:'active'
  }).then(function(docRef){
   _filoToast(name+' 등록 완료');
   document.getElementById('staff-reg').style.display='none';
