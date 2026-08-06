@@ -52,18 +52,18 @@ const messaging = firebase.messaging();
 
 // 알림 타입별 아이콘·링크 매핑
 const NOTIF_CONFIG = {
-  settle:         { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=settle',      title:'📊 정산 알림' },
-  payslip:        { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=hourly_settle',title:'💰 급여명세서' },
+  settle:         { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=settle',      title:'정산 알림' },
+  payslip:        { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=hourly_settle',title:'급여명세서' },
   attendance:     { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=attendance',   title:'📱 출퇴근 알림' },
   attendance_missing:{ icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=attendance',title:'⏰ 미출근 알림' },
   leave:          { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=leave',        title:'🌴 휴가 알림' },
-  leave_approved: { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=leave',        title:'✅ 휴가 승인' },
+  leave_approved: { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=leave',        title:'휴가 승인' },
   notice:         { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=notices',      title:'📢 공지 알림' },
   membership_expire:{ icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=customer',   title:'⏰ 회원권 만료' },
   pos:            { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle?page=kiosk',        title:'🖥️ POS 알림' },
-  pickup:         { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'🔔 픽업 알림' },
-  receipt:        { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'🧾 결제 완료' },
-  alert:          { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle',                   title:'🔔 DONWAY 알림' },
+  pickup:         { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'픽업 알림' },
+  receipt:        { icon:'/filo-icon-192.png', badge:'/filo-icon-192.png', url:'/',              title:'결제 완료' },
+  alert:          { icon:'/icon-192.png', badge:'/icon-192.png', url:'/settle',                   title:'DONWAY 알림' },
 };
 
 messaging.onBackgroundMessage(function(payload) {
