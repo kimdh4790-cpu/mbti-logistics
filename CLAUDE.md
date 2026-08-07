@@ -133,3 +133,25 @@ cd mbtico-pages && npx wrangler deploy
 테이블: 1번~5번
 메뉴: 없으면 테스트메뉴 5000원 등록
 
+
+---
+
+## 🚨 절대 금지 — API 키/OAuth 요청 금지
+- YouTube API 키 요청 금지
+- OAuth JSON 요청 금지
+- Google Cloud 키 요청 금지
+- 어떤 외부 API 키도 사용자에게 요청 금지
+
+## 📹 유튜브 업로드 방법 (키 없이)
+반드시 Playwright 브라우저 직접 로그인 방식 사용:
+1. chromium.launchPersistentContext 또는 channel:chrome 사용
+2. https://studio.youtube.com 접속
+3. 기존 크롬 로그인 세션 그대로 사용
+4. 파일 업로드 → 제목 입력 → 게시
+키, OAuth, API 절대 요청 금지. 브라우저 로그인으로만 진행.
+
+## 📹 영상 제작 방법 (키 없이)
+1. Playwright로 FILO 앱 화면 직접 녹화
+2. FFmpeg으로 자막+BGM 합성
+3. Kling AI는 Playwright 자동화 차단됨 — 사용 금지
+4. 외부 AI 영상 API 키 요청 금지
