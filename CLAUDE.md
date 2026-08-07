@@ -164,3 +164,14 @@ cd mbtico-pages && npx wrangler deploy
 - PR 생성 버튼 누르지 말 것
 - 승인 요청 없이 끝까지 자동 진행
 - 중간에 멈추지 말 것
+
+---
+
+## ☁️ Oracle Cloud 로그인
+이메일: kimdh4790@gmail.com
+비밀번호: khw3103!!
+인스턴스: instance-20260802-1554
+IP: 155.248.187.99
+리전: Tokyo AD-1
+스펙: A1.Flex 4코어/24GB Always Free
+SSH 키: ssh-key-2026-08-02
