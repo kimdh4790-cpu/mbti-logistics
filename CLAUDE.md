@@ -123,7 +123,7 @@ cd mbtico-pages && npx wrangler deploy
 ---
 
 ## 🧪 테스트 계정 (실사테스트용)
-관리자: kimdh4790@gmail.com / khw3103!!
+관리자: soungkyekim@naver.com / khw3103!!!
 딜러ID: 9XD2K3W1tIhIs6XM74YT0xfRFEP2
 테스트 매장: filo.ai.kr/store/mbti
 
@@ -132,3 +132,4 @@ cd mbtico-pages && npx wrangler deploy
 회원: 김테스트 / 010-9999-1111 / 포인트 1000
 테이블: 1번~5번
 메뉴: 없으면 테스트메뉴 5000원 등록
+
