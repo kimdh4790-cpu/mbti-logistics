@@ -7,7 +7,8 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const USER_DATA_DIR = path.join(__dirname, '.youtube-session');
+// 실제 Chrome 프로필 사용 (Google 로그인 세션 재사용)
+const CHROME_PROFILE = path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'User Data');
 const VIDEO_FILE = path.join(__dirname, 'videos', 'filo_dine_promo.mp4');
 
 const VIDEO_TITLE = 'FILO·DINE — 외식업 통합 운영 플랫폼 | QR주문·POS·키친디스플레이·출퇴근 올인원';
@@ -41,13 +42,12 @@ async function main() {
   console.log('파일:', VIDEO_FILE);
   console.log('세션 디렉토리:', USER_DATA_DIR);
 
-  if (!fs.existsSync(USER_DATA_DIR)) fs.mkdirSync(USER_DATA_DIR, { recursive: true });
-
-  const browser = await chromium.launchPersistentContext(USER_DATA_DIR, {
+  const browser = await chromium.launchPersistentContext(CHROME_PROFILE, {
     headless: false,
-    args: ['--start-maximized', '--no-sandbox'],
+    args: ['--start-maximized', '--no-sandbox', '--disable-blink-features=AutomationControlled'],
     viewport: null,
-    channel: 'chrome' // 실제 크롬 사용 (로그인 세션 공유)
+    channel: 'chrome', // 실제 Chrome 사용 — Google 로그인 세션 공유
+    ignoreDefaultArgs: ['--enable-automation']
   });
 
   const page = await browser.newPage();
