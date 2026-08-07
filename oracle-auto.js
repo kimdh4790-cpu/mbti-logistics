@@ -77,6 +77,82 @@ function readSSHPubKey() {
   return null;
 }
 
+// ── 스크린샷 헬퍼 ─────────────────────────────────────────────────────────────
+
+async function snap(page, name) {
+  const p = path.join(__dirname, `oracle-${name}.png`);
+  try { await page.screenshot({ path: p, fullPage: false }); } catch {}
+  return p;
+}
+
+// ── Oracle SSO 자동 로그인 ────────────────────────────────────────────────────
+
+async function autoLogin(page) {
+  const user   = (process.env.OCI_USER   || '').trim();
+  const pass   = (process.env.OCI_PASS   || '').trim();
+  const tenant = (process.env.OCI_TENANT || '').trim();
+  if (!user || !pass) return false;
+
+  log('자동 로그인 시도...');
+
+  // Cloud Account Name (tenant)
+  if (tenant) {
+    const tenantInput = page.locator('input[id*="cloudAccountName"], input[name*="cloudAccountName"]').first();
+    if (await tenantInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      log(`  테넌트 입력: ${tenant}`);
+      await tenantInput.fill(tenant);
+      const nextBtn = page.locator('button[type="submit"], button:has-text("Next")').first();
+      await nextBtn.click().catch(() => {});
+      await page.waitForTimeout(3000);
+    }
+  }
+
+  // Email / Username
+  const emailSel = 'input[type="email"], input[name="username"], input[id*="userid"], input[id*="username"], input[id*="email"]';
+  const emailInput = page.locator(emailSel).first();
+  if (await emailInput.isVisible({ timeout: 10000 }).catch(() => false)) {
+    log(`  이메일 입력: ${user}`);
+    await emailInput.fill(user);
+    const nextBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    await nextBtn.click().catch(() => {});
+    await page.waitForTimeout(3000);
+  }
+
+  // Password
+  const passInput = page.locator('input[type="password"]').first();
+  if (await passInput.isVisible({ timeout: 10000 }).catch(() => false)) {
+    log('  비밀번호 입력 중...');
+    await passInput.fill(pass);
+    const signBtn = page.locator('button[type="submit"], input[type="submit"]').first();
+    await signBtn.click().catch(() => {});
+    await page.waitForTimeout(5000);
+  }
+
+  // MFA / OTP
+  const mfaSel = 'input[id*="mfa"], input[id*="otp"], input[id*="passcode"], input[placeholder*="code" i], input[autocomplete="one-time-code"]';
+  const mfaInput = page.locator(mfaSel).first();
+  if (await mfaInput.isVisible({ timeout: 6000 }).catch(() => false)) {
+    await snap(page, 'mfa-needed');
+    log('  MFA 화면 감지 — oracle-mfa-needed.png 저장');
+    const otp = (process.env.OCI_OTP || '').trim();
+    if (otp) {
+      log(`  OTP 입력: ${otp}`);
+      await mfaInput.fill(otp);
+      await page.locator('button[type="submit"]').first().click().catch(() => {});
+      await page.waitForTimeout(4000);
+    } else {
+      log('  OTP 필요 — OCI_OTP 환경변수 없음. stdin 대기...');
+      process.stdout.write('  OTP 코드 입력 후 Enter: ');
+      const otp2 = await new Promise(r => process.stdin.once('data', d => r(d.toString().trim())));
+      await mfaInput.fill(otp2);
+      await page.locator('button[type="submit"]').first().click().catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+  }
+
+  return true;
+}
+
 // ── 로그인 감지 ───────────────────────────────────────────────────────────────
 
 async function ensureLoggedIn(page) {
@@ -95,27 +171,39 @@ async function ensureLoggedIn(page) {
     return;
   }
 
-  if (HEADLESS) {
-    // 헤드리스 서버 모드에서 세션 없으면 종료 안내
-    log('오류: 저장된 세션이 없습니다.');
-    log(`해결법: HEADLESS=0 node oracle-auto.js 로 먼저 실행 → 로그인 후 Enter`);
+  await snap(page, 'login-page');
+  log('로그인 필요 (oracle-login-page.png 저장)');
+
+  // 환경변수 자동 로그인 시도
+  const didAuto = await autoLogin(page);
+
+  if (!didAuto && HEADLESS) {
+    log('오류: 저장된 세션도 없고 OCI_USER/OCI_PASS 환경변수도 없습니다.');
+    log('해결법1: HEADLESS=0 OCI_USER=xxx OCI_PASS=xxx node oracle-auto.js');
+    log('해결법2: 세션 저장 후 헤드리스 재실행');
     process.exit(1);
   }
 
-  // 헤드풀 모드: 사용자가 직접 로그인
-  log('로그인 필요 — 브라우저에서 로그인 완료 후 Enter를 누르세요...');
-  await new Promise(resolve => process.stdin.once('data', resolve));
+  if (!didAuto) {
+    // 헤드풀 수동 로그인
+    log('브라우저에서 로그인 완료 후 Enter를 누르세요...');
+    await new Promise(resolve => process.stdin.once('data', resolve));
+  }
 
-  // 로그인 후 세션 확인
+  // 로그인 결과 확인
+  await page.waitForTimeout(3000);
   const loggedIn = await page
     .locator('[aria-label="User menu"], .oci-header-user')
     .first()
     .isVisible()
     .catch(() => false);
+
   if (!loggedIn) {
-    log('경고: 로그인 확인 불가 — 계속 진행합니다');
+    await snap(page, 'login-after');
+    log('경고: 로그인 확인 불가 (oracle-login-after.png) — 계속 진행합니다');
   } else {
-    log('로그인 확인 완료');
+    await snap(page, 'login-success');
+    log('로그인 성공! (oracle-login-success.png)');
   }
 }
 
