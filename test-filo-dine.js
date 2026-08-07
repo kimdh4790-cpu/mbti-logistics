@@ -55,17 +55,34 @@ async function test(label, fn) {
     await ctx.close();
   });
 
-  // ── 2. QR 주문 — 장바구니 추가 ──
+  // ── 2. QR 주문 — 메뉴 클릭 → 모달 → 담기 ──
   await test('QR 주문 장바구니 추가', async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ko-KR' });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/order?d=${DEALER_ID}&t=1&name=1번테이블`, { timeout: 20000 });
-    await wait(3000);
-    const menu = page.locator('.mi, .menu-item, [class*="menu-item"]').first();
+    await wait(4000);
+    const menu = page.locator('.mi').first();
     await menu.waitFor({ timeout: 10000 });
-    await menu.click();
-    await wait(1000);
-    await ss(page, '03_qr_order_cart');
+    await menu.scrollIntoViewIfNeeded();
+    await wait(500);
+    await menu.click({ force: true });
+    await wait(1500);
+    await ss(page, '03_qr_order_after_click');
+    // 모달에서 담기 버튼 확인
+    const addBtn = page.locator('#mdl-add').first();
+    const hasAdd = await addBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasAdd) {
+      await addBtn.click();
+      await wait(1000);
+      await ss(page, '03b_qr_order_added');
+      console.log('  담기 완료');
+    } else {
+      // 모달 없으면 직접 장바구니 fab 확인
+      const fab = page.locator('#cart-fab').first();
+      const hasFab = await fab.isVisible({ timeout: 3000 }).catch(() => false);
+      if (!hasFab) throw new Error('장바구니 FAB 없음 — 클릭 미작동');
+      console.log('  FAB 확인 (모달 없이 바로 담김)');
+    }
     await ctx.close();
   });
 
@@ -74,16 +91,21 @@ async function test(label, fn) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ko-KR' });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/order?d=${DEALER_ID}&t=1&name=1번테이블`, { timeout: 20000 });
-    await wait(3000);
-    const enBtn = page.locator('button:has-text("EN"), [data-lang="en"], text=EN').first();
-    if (await enBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    await wait(4000);
+    // 실제 버튼 ID: #lb-en
+    const enBtn = page.locator('#lb-en').first();
+    const visible = await enBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    if (visible) {
       await enBtn.click();
-      await wait(2000);
+      await wait(3000);
       await ss(page, '04_translate_en');
-      console.log('  EN 번역 버튼 클릭 성공');
+      // 번역된 텍스트 확인 (.mi-tr-img 에 번역 결과)
+      const translated = page.locator('.mi-tr-img, .mi-tr').first();
+      const txt = await translated.textContent({ timeout: 3000 }).catch(() => '');
+      console.log('  번역 결과 샘플:', txt.slice(0, 30));
     } else {
       await ss(page, '04_translate_no_btn');
-      throw new Error('번역 버튼 없음');
+      throw new Error('#lb-en 번역 버튼 없음');
     }
     await ctx.close();
   });
@@ -93,29 +115,34 @@ async function test(label, fn) {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ko-KR' });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/table-order?d=${DEALER_ID}&t=2&name=2번테이블`, { timeout: 20000 });
-    await wait(3000);
+    await wait(4000);
     await ss(page, '05_table_order_load');
 
-    const menu = page.locator('.mi, .menu-item, [class*="menu"]').first();
-    await menu.waitFor({ timeout: 10000 });
-    await menu.click();
-    await wait(1000);
+    // table-order.html 메뉴 클래스는 .menu-card (order.html의 .mi 와 다름)
+    const menu = page.locator('.menu-card, .mi').first();
+    await menu.waitFor({ timeout: 12000 });
+    await menu.scrollIntoViewIfNeeded();
+    await wait(500);
+    await menu.click({ force: true });
+    await wait(1500);
+    await ss(page, '05b_table_order_clicked');
 
-    const orderBtn = page.locator('#order-btn, [class*="order-btn"], button:has-text("주문")').first();
-    if (await orderBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+    // 주문하기 버튼
+    const orderBtn = page.locator('#order-btn').first();
+    const hasOrderBtn = await orderBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    if (hasOrderBtn) {
       await orderBtn.click();
       await wait(1500);
       await ss(page, '06_table_order_modal');
-      // 선결제/후불 버튼 확인
-      const prepay = page.locator('button:has-text("선결제"), #btn-prepay').first();
-      const postpay = page.locator('button:has-text("후불"), #btn-postpay').first();
+      const prepay = page.locator('#btn-prepay, button:has-text("선결제")').first();
+      const postpay = page.locator('#btn-postpay, button:has-text("후불")').first();
       const hasPrepay = await prepay.isVisible({ timeout: 3000 }).catch(() => false);
       const hasPostpay = await postpay.isVisible({ timeout: 3000 }).catch(() => false);
-      if (!hasPrepay || !hasPostpay) throw new Error('선결제/후불 버튼 없음');
+      if (!hasPrepay || !hasPostpay) throw new Error('선결제/후불 버튼 없음 — KV 미반영 가능성');
       console.log('  선결제/후불 모달 확인');
     } else {
-      await ss(page, '06_table_order_no_btn');
-      throw new Error('주문 버튼 없음');
+      await ss(page, '06_table_order_no_orderbtn');
+      throw new Error('#order-btn 없음');
     }
     await ctx.close();
   });
