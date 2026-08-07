@@ -138,6 +138,26 @@ function _filoQRDownload(num,name){
  _filoToast(name+' QR 저장됐습니다');
 }
 
+function _filoSendReceiptPush(token, data){
+ if(!token) return;
+ fetch('/fcm/notify-drivers',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+   tokens:[token],
+   title:'영수증',
+   body:(data.tableName||'')+(data.methodLabel?' · '+data.methodLabel:'')+(data.total?' · '+data.total.toLocaleString()+'원':''),
+   data:{
+    type:'receipt',
+    total:String(data.total||0),
+    method:data.methodLabel||'',
+    tableName:data.tableName||'',
+    items:JSON.stringify(data.items||[])
+   }
+  })
+ }).catch(function(){});
+}
+
 function _filoShowModal(html){
  var mo=document.createElement('div');
  mo.className='mo';
