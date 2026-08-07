@@ -8474,14 +8474,28 @@ function _yLogin(){
       err.textContent=c.includes('WRONG_PASSWORD')||c.includes('INVALID_LOGIN')?'비밀번호가 틀렸어요':c.includes('EMAIL_NOT_FOUND')?'없는 계정이에요':c.includes('TOO_MANY')?'잠시 후 다시 시도하세요':'오류: '+c;
       err.style.display='block';return;
     }
-    var uid=data.localId,email=data.email||'';
-    _db.collection('yongcha_users').doc(uid).get().then(function(snap){
-      if(snap.exists){_CU=Object.assign({uid:uid},snap.data());_showApp();}
-      else if(ADMINS.indexOf(email)>=0){
-        var doc={uid:uid,type:'admin',name:'관리자',email:email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-        _db.collection('yongcha_users').doc(uid).set(doc).then(function(){_CU=Object.assign({uid:uid},doc);_showApp();});
-      } else{btn.textContent='로그인';btn.disabled=false;err.textContent='용차 계정이 없어요. 회원가입 해주세요';err.style.display='block';}
-    });
+    var uid=data.localId,email=data.email||'',idToken=data.idToken||'';
+    // Firebase SDK에 토큰 주입 후 Firestore 접근 (타이밍 문제 해결)
+    firebase.auth().signInWithCustomToken && idToken
+      ? firebase.auth().signInWithEmailAndPassword(e,p).catch(function(){})
+      : null;
+    setTimeout(function(){
+      _db.collection('yongcha_users').doc(uid).get().then(function(snap){
+        if(snap.exists){_CU=Object.assign({uid:uid},snap.data());_showApp();}
+        else if(ADMINS.indexOf(email)>=0){
+          var doc={uid:uid,type:'admin',name:'관리자',email:email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+          _db.collection('yongcha_users').doc(uid).set(doc).then(function(){_CU=Object.assign({uid:uid},doc);_showApp();});
+        } else{btn.textContent='로그인';btn.disabled=false;err.textContent='용차 계정이 없어요. 회원가입 해주세요';err.style.display='block';}
+      }).catch(function(err2){
+        // 재시도
+        setTimeout(function(){
+          _db.collection('yongcha_users').doc(uid).get().then(function(snap){
+            if(snap.exists){_CU=Object.assign({uid:uid},snap.data());_showApp();}
+            else{btn.textContent='로그인';btn.disabled=false;err.textContent='잠시 후 다시 시도해주세요';err.style.display='block';}
+          }).catch(function(){btn.textContent='로그인';btn.disabled=false;err.textContent='로그인 오류. 다시 시도해주세요';err.style.display='block';});
+        },1500);
+      });
+    },800);
   }).catch(function(){btn.textContent='로그인';btn.disabled=false;err.textContent='네트워크 오류';err.style.display='block';});
 }
 function _yRegister(){
