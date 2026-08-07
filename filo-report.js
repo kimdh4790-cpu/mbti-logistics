@@ -75,6 +75,37 @@ function _filoPageSales(el){
  });
  wrap.appendChild(kpiGrid);
 
+ /* ── 업종 평균 대비 ── */
+ var bizType=(_cachedCompanyDoc||{}).bizType||'cafe';
+ var avgRevMap={cafe:900000,korean:600000,japanese:1200000,snack:700000,western:1500000,bakery:1100000,izakaya:800000};
+ var bizLabelMap={cafe:'카페/베이커리',korean:'한식당',japanese:'일식/횟집',snack:'분식',western:'양식',bakery:'베이커리',izakaya:'이자카야'};
+ var avgRev=avgRevMap[bizType]||800000;
+ var bizLabel=bizLabelMap[bizType]||'업종';
+ var cmpCard=document.createElement('div');
+ cmpCard.className='card';
+ cmpCard.style.marginBottom='14px';
+ cmpCard.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+  '<div class="sec-title">📊 업종 평균 대비</div>'+
+  '<div style="font-size:11px;color:var(--t3)">'+bizLabel+' 일 평균 ₩'+avgRev.toLocaleString()+'</div>'+
+  '</div>'+
+  '<div id="biz-cmp-bar-wrap" style="display:flex;flex-direction:column;gap:8px">'+
+  '<div style="display:flex;align-items:center;gap:8px">'+
+  '<div style="font-size:11px;color:var(--t2);white-space:nowrap;width:60px;text-align:right">오늘</div>'+
+  '<div style="flex:1;height:10px;background:var(--surface2);border-radius:20px;overflow:hidden">'+
+  '<div id="biz-bar-today" style="height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:20px;width:0%;transition:width .8s cubic-bezier(.34,1.3,.64,1)"></div></div>'+
+  '<div id="biz-pct-today" style="font-size:11px;font-weight:800;color:#a78bfa;width:40px">—</div>'+
+  '</div>'+
+  '<div style="display:flex;align-items:center;gap:8px">'+
+  '<div style="font-size:11px;color:var(--t2);white-space:nowrap;width:60px;text-align:right">업종 평균</div>'+
+  '<div style="flex:1;height:10px;background:var(--surface2);border-radius:20px;overflow:hidden">'+
+  '<div style="height:100%;background:rgba(255,255,255,.15);border-radius:20px;width:100%"></div></div>'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t3);width:40px">100%</div>'+
+  '</div>'+
+  '</div>';
+ wrap.appendChild(cmpCard);
+ /* 업종 비교 바는 _filoLoadSalesCharts 이후 KPI 데이터로 갱신 */
+ window._filoBizAvgRev=avgRev;
+
  /* ── 차트 2열 레이아웃 ── */
  var chartGrid=document.createElement('div');
  chartGrid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px';
@@ -215,6 +246,18 @@ function _filoRenderSalesCharts(did,from,to){
   if(peakEl&&peakH)peakEl.textContent=peakH[0]+'시';
   var subMap={'kpi-rev-sub':from+(from!==to?' ~ '+to:''),'kpi-cnt-sub':'평균 '+((cnt/(new Date(to)-new Date(from)+86400000)*86400000)||0).toFixed(1)+'건/일','kpi-avg-sub':'가장 높은 단가','kpi-peak-sub':'가장 바쁜 시간'};
   Object.keys(subMap).forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=subMap[id];});
+
+  /* 업종 평균 대비 바 업데이트 */
+  var avgRev2=window._filoBizAvgRev||800000;
+  var todayTotal=total;
+  var bizBar=document.getElementById('biz-bar-today');
+  var bizPct=document.getElementById('biz-pct-today');
+  if(bizBar&&bizPct&&from===to){
+   var pct=Math.min(150,Math.round(todayTotal/avgRev2*100));
+   setTimeout(function(){bizBar.style.width=Math.min(100,pct)+'%';},300);
+   bizPct.textContent=pct+'%';
+   bizPct.style.color=pct>=100?'#22c55e':pct>=70?'#a78bfa':'#f59e0b';
+  }
 
   /* 히어로 서브 */
   var hs=document.getElementById('sales-hero-sub');
