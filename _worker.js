@@ -1922,8 +1922,9 @@ async function acceptExchange(){
             }
           } catch(e){}
         }
-        // 번역 성공 시만 KV 캐시 저장 (한글 포함이면 저장 안함)
-        if(translated && translated.trim() !== name && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated)) {
+        // 번역 성공 시만 KV 캐시 저장 (한글/한자 포함이면 저장 안함 — 단 zh 타깃은 한자 허용)
+        const hasCJK = lang !== 'zh' && /[一-鿿]/.test(translated);
+        if(translated && translated.trim() !== name && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated) && !hasCJK) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
         return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
