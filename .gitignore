@@ -8,4 +8,6 @@ test-results/
 !.env.example
 
 .oracle-profile/
+.oracle-session/
+oracle-*.png
 test-screenshots/
