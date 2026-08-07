@@ -8427,13 +8427,20 @@ _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
   document.getElementById('ld').style.display='none';
   if(u){
-    _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
-      if(snap.exists){_CU=Object.assign({uid:u.uid},snap.data());_showApp();}
-      else if(ADMINS.indexOf(u.email||'')>=0){
-        var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-        _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){_CU=Object.assign({uid:u.uid},doc);_showApp();});
-      } else{_showLogin();}
-    }).catch(function(){_showLogin();});
+    var _retryCount=0;
+    function _loadUser(){
+      _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
+        if(snap.exists){_CU=Object.assign({uid:u.uid},snap.data());_showApp();}
+        else if(ADMINS.indexOf(u.email||'')>=0){
+          var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+          _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){_CU=Object.assign({uid:u.uid},doc);_showApp();});
+        } else{_showLogin();}
+      }).catch(function(e){
+        if(_retryCount<3){_retryCount++;setTimeout(_loadUser,1000);}
+        else{_showLogin();}
+      });
+    }
+    _loadUser();
   } else{_showLogin();}
 });
 
