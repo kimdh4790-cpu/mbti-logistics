@@ -177,7 +177,12 @@ function _renderMenuGrid(menus, gridId){
     '</div></div>'+
     '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   } else {
-   item.innerHTML='<div class="mi-emoji-wrap"><div class="mi-emoji">'+(m.emoji||_svgIcon('utensils'))+'</div></div>'+
+   var _mClrs=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _mClr=_mClrs[(m.name||'M').charCodeAt(0)%_mClrs.length];
+   var _mInit=(m.name||'M')[0];
+   item.innerHTML='<div class="mi-emoji-wrap" style="background:linear-gradient(135deg,'+_mClr+'22,'+_mClr+'44)">'+
+    '<div style="font-size:34px;font-weight:900;color:'+_mClr+';line-height:1;font-family:Pretendard,sans-serif">'+_mInit+'</div>'+
+    '</div>'+
     '<div class="mi-body">'+
     '<div class="mi-name" data-orig="'+nameEsc+'">'+m.name+'</div>'+
     '<div class="mi-tr" id="'+trId+'"></div>'+
@@ -578,10 +583,18 @@ function _renderRecommendBanner(menus){
    img.src=m.imageUrl;
    img.style.cssText='width:100%;height:100%;object-fit:cover';
    img.loading='lazy';
-   img.onerror=function(){imgWrap.innerHTML=m.emoji||_svgIcon('utensils');};
+   img.onerror=function(){
+    var _ec=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+    var _ec2=_ec[(m.name||'M').charCodeAt(0)%_ec.length];
+    imgWrap.style.background='linear-gradient(135deg,'+_ec2+'22,'+_ec2+'44)';
+    imgWrap.innerHTML='<div style="font-size:22px;font-weight:900;color:'+_ec2+'">'+( m.name||'M')[0]+'</div>';
+   };
    imgWrap.appendChild(img);
   } else {
-   imgWrap.innerHTML=m.emoji||_svgIcon('utensils');
+   var _nc=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _nc2=_nc[(m.name||'M').charCodeAt(0)%_nc.length];
+   imgWrap.style.background='linear-gradient(135deg,'+_nc2+'22,'+_nc2+'44)';
+   imgWrap.innerHTML='<div style="font-size:22px;font-weight:900;color:'+_nc2+'">'+( m.name||'M')[0]+'</div>';
   }
   card.appendChild(imgWrap);
   // 이름
