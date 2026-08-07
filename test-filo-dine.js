@@ -36,7 +36,7 @@ async function test(label, fn) {
 (async () => {
   const browser = await chromium.launch({
     headless: true,
-    executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+    executablePath: undefined, // Playwright 설치된 Chromium 자동 사용
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
