@@ -167,14 +167,14 @@ function _showApp(){
   prof.innerHTML=
   '<div style="padding:16px 14px 14px">'+
    '<div style="display:flex;align-items:center;gap:11px">'+
-    '<div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--br),var(--br2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 0 1px rgba(124,58,237,.3),0 4px 14px rgba(124,58,237,.3)">'+esc(company.slice(0,1))+'</div>'+
+    '<div style="width:38px;height:38px;border-radius:11px;background:#08101f;border:1px solid rgba(201,168,76,.4);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#c9a84c;flex-shrink:0">'+esc(company.slice(0,1))+'</div>'+
     '<div style="min-width:0;flex:1">'+
      '<div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px">'+esc(company)+'</div>'+
-     '<span style="display:inline-flex;align-items:center;margin-top:4px;padding:1px 7px;border-radius:99px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.22);font-size:9px;font-weight:800;color:var(--br-ll);letter-spacing:.6px">'+role+'</span>'+
+     '<span style="display:inline-flex;align-items:center;margin-top:4px;padding:1px 7px;border-radius:99px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);font-size:9px;font-weight:800;color:#c9a84c;letter-spacing:.6px">'+role+'</span>'+
     '</div>'+
     '<div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.5px;font-variant-numeric:tabular-nums;flex-shrink:0">'+hh+':'+mi2+'</div>'+
    '</div>'+
-   '<div style="margin-top:14px;height:1px;background:linear-gradient(90deg,rgba(124,58,237,.25),rgba(8,145,178,.12),transparent)"></div>'+
+   '<div style="margin-top:14px;height:1px;background:linear-gradient(90deg,rgba(201,168,76,.3),rgba(201,168,76,.1),transparent)"></div>'+
   '</div>';
  }
  _buildFiloNav();
@@ -628,18 +628,18 @@ function _filoPageHome(el){
  '</div></div>'+
 
  '<div class="kpi-grid" id="home-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">'+
- [{t:'오늘 매출',c:'kpi-revenue',vc:'#a78bfa',ic:'wallet',id:'hs-0'},
+ [{t:'오늘 매출',c:'kpi-revenue',vc:'#c9a84c',ic:'wallet',id:'hs-0'},
   {t:'오늘 순이익',c:'kpi-profit',vc:'#22c55e',ic:'trending-up',id:'hs-profit'},
-  {t:'마진율',c:'kpi-margin',vc:'#f59e0b',ic:'pie-chart',id:'hs-margin'},
-  {t:'이번 달 매출',c:'kpi-month',vc:'#38bdf8',ic:'calendar',id:'hs-month'},
+  {t:'마진율',c:'kpi-margin',vc:'#c9a84c',ic:'pie-chart',id:'hs-margin'},
+  {t:'이번 달 매출',c:'kpi-month',vc:'#c9a84c',ic:'calendar',id:'hs-month'},
   {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'bell',id:'hs-1'},
-  {t:'재고 부족',c:'kpi-warn',vc:'#f59e0b',ic:'package',id:'hs-2'},
-  {t:'출근 인원',c:'kpi-staff',vc:'#38bdf8',ic:'users',id:'hs-3'}
+  {t:'재고 부족',c:'kpi-warn',vc:'#ef4444',ic:'package',id:'hs-2'},
+  {t:'출근 인원',c:'kpi-staff',vc:'#c9a84c',ic:'users',id:'hs-3'}
  ].map(function(s){
- return '<div class="kpi-card '+s.c+' card-hover">'+
+ return '<div class="kpi-card '+s.c+' card-hover" style="background:#fff;border:1px solid rgba(201,168,76,.2)">'+
  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
- '<div class="kpi-label">'+s.t+'</div>'+
- '<div style="opacity:.75;color:'+s.vc+'">'+_svgIcon(s.ic)+'</div>'+
+ '<div class="kpi-label" style="color:#08101f">'+s.t+'</div>'+
+ '<div style="color:'+s.vc+'">'+_svgIcon(s.ic)+'</div>'+
  '</div>'+
  '<div class="kpi-val count-anim" id="'+s.id+'" style="color:'+s.vc+'">—</div>'+
  '</div>';
@@ -667,7 +667,7 @@ function _filoPageHome(el){
  [{ic:'monitor',l:'POS',p:'kiosk'},{ic:'bell',l:'주문대기',p:'orders'},{ic:'truck',l:'배달',p:'delivery'},
  {ic:'package',l:'재고',p:'inventory'},{ic:'flask',l:'레시피',p:'recipe'},{ic:'trending-up',l:'매출',p:'sales_report'},
  {ic:'briefcase',l:'급여',p:'payroll'},{ic:'calendar',l:'예약',p:'schedule'}].map(function(m){
- return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:var(--surface2);border:1px solid var(--bd);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'rgba(124,58,237,.5)\';this.style.background=\'rgba(124,58,237,.08)\'" onmouseout="this.style.borderColor=\'var(--bd)\';this.style.background=\'var(--bg3)\'">'+
+ return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:#fff;border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'#c9a84c\';this.style.background=\'rgba(201,168,76,.08)\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,.2)\';this.style.background=\'#fff\'">'+
  '<div style="display:flex;justify-content:center;margin-bottom:4px">'+_svgIcon(m.ic)+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
  }).join('')+'</div></div>'+

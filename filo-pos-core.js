@@ -1,4 +1,4 @@
-/*
+﻿/*
  * filo-pos-core.js — FILO POS 카트·결제 핵심 로직
  * Copyright (c) 2024-2026 유한회사 엠비티아이
  *
@@ -29,10 +29,10 @@ function _cartAdd(id,name,price){
  var btn=event&&event.target?event.target.closest('.menu-item'):null;
  if(btn){
   btn.style.transform='scale(.94)';
-  btn.style.borderColor='rgba(124,58,237,.6)';
+  btn.style.borderColor='rgba(201,168,76,.6)';
   /* Ripple */
   var ripple=document.createElement('div');
-  ripple.style.cssText='position:absolute;border-radius:50%;background:rgba(124,58,237,.3);width:10px;height:10px;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease both;pointer-events:none;z-index:10';
+  ripple.style.cssText='position:absolute;border-radius:50%;background:rgba(201,168,76,.3);width:10px;height:10px;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease both;pointer-events:none;z-index:10';
   btn.appendChild(ripple);
   setTimeout(function(){
    btn.style.transform='';

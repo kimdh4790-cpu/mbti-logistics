@@ -56,7 +56,7 @@ function _filoPageStaffQR(el){
  '<div style="font-size:9px;color:var(--t3)">위와 동일 갱신</div>'+
  '</div>'+
  '</div>'+
- '<div style="margin-top:10px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px;font-size:10px;color:var(--t3)">'+
+ '<div style="margin-top:10px;padding:8px 12px;background:rgba(201,168,76,.06);border-radius:8px;font-size:10px;color:var(--t3)">'+
  '직원이 본인 스마트폰으로 스캔 → 이름 확인 후 출퇴근 자동 기록<br>30초마다 코드 변경으로 대리 출퇴근 방지</div>'+
  '</div>'+
 
@@ -113,7 +113,7 @@ function _filoPageAttendance(el){
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">'+today+'</div>'+
  '<div style="display:flex;gap:6px;margin-top:10px">'+
  '<button onclick="_filoManualCheckin()" class="btn btn-brand btn-sm" style="flex:1">수동 출근 체크</button>'+
- '<button onclick="_filoShowStaffReg()" class="btn btn-sm" style="flex:1;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);color:#a78bfa">+ 신규 직원 등록</button>'+
+ '<button onclick="_filoShowStaffReg()" class="btn btn-sm" style="flex:1;background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.4);color:#a78bfa">+ 신규 직원 등록</button>'+
  '</div>'+
  '</div>'+
  '<div class="qr-card" style="text-align:left">'+

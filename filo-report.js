@@ -224,7 +224,7 @@ function _filoRenderSalesCharts(did,from,to){
   _filoDrawBarChart('chart-hour',
    Array.from({length:14},function(_,i){return (8+i)+'시';}),
    Array.from({length:14},function(_,i){return hours[8+i]||0;}),
-   '#7c3aed','rgba(124,58,237,.15)'
+   '#c9a84c','rgba(201,168,76,.15)'
   );
 
   /* 요일 바차트 */
@@ -308,7 +308,7 @@ function _filoDrawBarChart(id,labels,data,color,bgColor){
    plugins:{legend:{display:false},
     tooltip:{callbacks:{label:function(ctx){return '₩'+ctx.raw.toLocaleString();}},
      backgroundColor:'rgba(14,14,30,.95)',titleColor:'#a78bfa',bodyColor:'#f0f0ff',
-     borderColor:'rgba(124,58,237,.3)',borderWidth:1,padding:10,cornerRadius:10}},
+     borderColor:'rgba(201,168,76,.3)',borderWidth:1,padding:10,cornerRadius:10}},
    scales:{
     x:{grid:{display:false},ticks:{color:'#9898c0',font:{size:10},maxRotation:0}},
     y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#9898c0',font:{size:10},
@@ -354,7 +354,7 @@ function _filoRenderHeroChart(did){
    var pct=Math.round(v/maxV*100);
    var isToday=i===6;
    return '<div class="chart-bar" data-tip="'+days[i].slice(5)+' ₩'+(v/10000).toFixed(0)+'만" '+
-   'style="height:'+Math.max(pct,4)+'%;background:'+(isToday?'linear-gradient(180deg,#a78bfa,#7c3aed)':'rgba(255,255,255,.12)')+';border-radius:4px 4px 0 0;flex:1;transition:height .8s cubic-bezier(.34,1.56,.64,1) '+(i*.05)+'s"></div>';
+   'style="height:'+Math.max(pct,4)+'%;background:'+(isToday?'linear-gradient(180deg,#a78bfa,#c9a84c)':'rgba(255,255,255,.12)')+';border-radius:4px 4px 0 0;flex:1;transition:height .8s cubic-bezier(.34,1.56,.64,1) '+(i*.05)+'s"></div>';
   }).join('');
  }).catch(function(){});
 }
@@ -398,7 +398,7 @@ function _filoSalesFilter(type){
  ['today','week','month','custom'].forEach(function(t){
   var btn=document.getElementById('sf-'+t);
   if(!btn)return;
-  if(t===type){btn.style.background='rgba(124,58,237,.4)';btn.style.color='#a78bfa';btn.style.border='1px solid rgba(124,58,237,.4)';}
+  if(t===type){btn.style.background='rgba(201,168,76,.4)';btn.style.color='#a78bfa';btn.style.border='1px solid rgba(201,168,76,.4)';}
   else{btn.style.background='transparent';btn.style.color='rgba(255,255,255,.6)';btn.style.border='1px solid rgba(255,255,255,.12)';}
  });
  var cw=document.getElementById('sf-custom-wrap');
@@ -513,7 +513,7 @@ function _filoMarginLoadRange(from,to){
        '<span style="font-size:12px;font-weight:900;color:#22c55e">'+kv[1]+'개</span>'+
        '</div>'+
        '<div style="height:3px;background:var(--surface3);border-radius:2px;margin-top:4px">'+
-       '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
+       '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#c9a84c,#22c55e);border-radius:2px"></div>'+
        '</div></div></div>';
      }).join('')+'</div>';
    }
@@ -529,8 +529,8 @@ function _filoMarginLoadRange(from,to){
      hc._chart=new Chart(hc,{type:'bar',
       data:{labels:hourEntries2.map(function(h){return h[0]+'시';}),
        datasets:[{label:'매출',data:hourEntries2.map(function(h){return h[1];}),
-        backgroundColor:hourEntries2.map(function(h){return h[1]===maxVal?'rgba(167,139,250,.9)':'rgba(124,58,237,.5)';}),
-        borderColor:'rgba(124,58,237,.8)',borderWidth:1,borderRadius:6}]},
+        backgroundColor:hourEntries2.map(function(h){return h[1]===maxVal?'rgba(167,139,250,.9)':'rgba(201,168,76,.5)';}),
+        borderColor:'rgba(201,168,76,.8)',borderWidth:1,borderRadius:6}]},
       options:{responsive:true,maintainAspectRatio:false,
        animation:{duration:800,easing:'easeOutQuart'},
        plugins:{legend:{display:false},
@@ -621,7 +621,7 @@ function _filoPageSalesReport(el) {
     {id:'sr-card',   ic:'CARD', lbl:'카드 매출',  c:'#0891b2'},
     {id:'sr-cash',   ic:'CASH', lbl:'현금 매출',  c:'#059669'},
     {id:'sr-fee',    ic:'FEE', lbl:'수수료',     c:'#ef4444'},
-    {id:'sr-net',    ic:'NET', lbl:'순수익',     c:'#7c3aed'},
+    {id:'sr-net',    ic:'NET', lbl:'순수익',     c:'#c9a84c'},
   ].map(function(k){
     return '<div class="card" style="padding:16px;border-radius:16px">' +
       '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
@@ -642,7 +642,7 @@ function _filoPageSalesReport(el) {
     '<div style="font-size:13px;font-weight:800;color:var(--t3);margin-bottom:16px">일별 정산 추이</div>' +
     '<canvas id="sr-chart" height="160"></canvas>' +
     '<div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">' +
-    ['카드 매출:#0891b2','현금 매출:#059669','순수익:#7c3aed'].map(function(item){
+    ['카드 매출:#0891b2','현금 매출:#059669','순수익:#c9a84c'].map(function(item){
       var parts = item.split(':');
       return '<div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:'+parts[1]+'"></div><span style="font-size:11px;color:var(--t3)">'+parts[0]+'</span></div>';
     }).join('') +
@@ -752,7 +752,7 @@ function _filoSalesReportLoad(did, dateFrom, dateTo) {
               '<td style="padding:8px 6px;font-weight:600">'+fmt(d.card)+'</td>' +
               '<td style="padding:8px 6px;font-weight:600">'+fmt(d.cash)+'</td>' +
               '<td style="padding:8px 6px;color:#ef4444">'+fmt(d.fee)+'</td>' +
-              '<td style="padding:8px 6px;font-weight:800;color:#7c3aed">'+fmt(d.net)+'</td>' +
+              '<td style="padding:8px 6px;font-weight:800;color:#c9a84c">'+fmt(d.net)+'</td>' +
               '</tr>';
           }).join('');
         }
@@ -766,7 +766,7 @@ function _filoSalesReportLoad(did, dateFrom, dateTo) {
           {l:'카드 매출', v:fmt(totalCard),            c:'#0891b2'},
           {l:'현금 매출', v:fmt(totalCash),            c:'#059669'},
           {l:'총 수수료', v:fmt(totalFee),             c:'#ef4444'},
-          {l:'총 순수익', v:fmt(totalNet),             c:'#7c3aed'},
+          {l:'총 순수익', v:fmt(totalNet),             c:'#c9a84c'},
         ].map(function(row){
           return '<div style="display:flex;justify-content:space-between;align-items:center">' +
             '<span style="font-size:13px;color:var(--t3)">'+row.l+'</span>' +
@@ -788,7 +788,7 @@ function _filoSalesReportLoad(did, dateFrom, dateTo) {
             datasets: [
               {label:'카드 매출', data:sortedDates.map(function(d){return byDate[d].card;}), borderColor:'#0891b2', backgroundColor:'rgba(8,145,178,.1)', tension:.4, fill:true, borderWidth:2, pointRadius:4},
               {label:'현금 매출', data:sortedDates.map(function(d){return byDate[d].cash;}), borderColor:'#059669', backgroundColor:'rgba(5,150,105,.08)', tension:.4, fill:true, borderWidth:2, pointRadius:4},
-              {label:'순수익',   data:sortedDates.map(function(d){return byDate[d].net;}),  borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.08)', tension:.4, fill:false, borderWidth:2, borderDash:[4,4], pointRadius:4},
+              {label:'순수익',   data:sortedDates.map(function(d){return byDate[d].net;}),  borderColor:'#c9a84c', backgroundColor:'rgba(201,168,76,.08)', tension:.4, fill:false, borderWidth:2, borderDash:[4,4], pointRadius:4},
             ]
           },
           options: {

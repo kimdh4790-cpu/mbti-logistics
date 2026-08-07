@@ -97,7 +97,7 @@ function _dineStaff(el){
      '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">'+
      '<span class="staff-badge '+partBadge+'">'+partLabel+'</span>'+
      '<span class="staff-badge '+typeBadge+'">'+typeLabel+'</span>'+
-     '<span class="staff-badge" style="background:rgba(124,58,237,.1);color:#a78bfa;border:1px solid rgba(124,58,237,.2)">'+cycleLabel+'</span>'+
+     '<span class="staff-badge" style="background:rgba(201,168,76,.1);color:#a78bfa;border:1px solid rgba(201,168,76,.2)">'+cycleLabel+'</span>'+
      (months>0?'<span class="staff-badge" style="background:rgba(34,197,94,.08);color:#22c55e;border:1px solid rgba(34,197,94,.2)">'+tenure+'</span>':'')+
      '</div>'+
      '</div>'+

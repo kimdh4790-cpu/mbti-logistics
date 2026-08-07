@@ -1,4 +1,4 @@
-/*
+﻿/*
  * order.js — FILO 테이블 QR 고객 주문 모듈
    *
    * 2026-07-21 추가:
@@ -71,7 +71,7 @@ function _applyStoreTheme(co){
   cafe:{primary:'#c8a96e',bg:'#1a1209'},korean:{primary:'#e05555',bg:'#0f0a0a'},
   japanese:{primary:'#3b82f6',bg:'#0a0f1e'},chinese:{primary:'#f59e0b',bg:'#1a0a0a'},
   fastfood:{primary:'#f97316',bg:'#f8f9fa'},izakaya:{primary:'#d4af37',bg:'#0a0a0a'},
-  other:{primary:'#7c3aed',bg:'#07071a'}
+  other:{primary:'#c9a84c',bg:'#07071a'}
  };
  var base=THEMES[co.theme||'']||THEMES.other;
  var primary=co.primaryColor||base.primary;

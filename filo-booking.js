@@ -159,11 +159,11 @@ function _filoRenderCalendar(did){
     var dow=new Date(year,month,day).getDay();
     html+='<div onclick="_filoCalDayClick(\''+did+'\',\''+dateStr+'\')" style="'+
      'min-height:60px;padding:4px;border-radius:8px;cursor:pointer;border:1px solid '+(isToday?'var(--br)':'var(--bd)')+';'+
-     'background:'+(isToday?'rgba(124,58,237,.1)':'var(--surface2)')+';transition:.15s" '+
-     'onmouseover="this.style.borderColor=\'rgba(124,58,237,.4)\'" onmouseout="this.style.borderColor=\''+(isToday?'var(--br)':'var(--bd)')+'\'">'+
+     'background:'+(isToday?'rgba(201,168,76,.1)':'var(--surface2)')+';transition:.15s" '+
+     'onmouseover="this.style.borderColor=\'rgba(201,168,76,.4)\'" onmouseout="this.style.borderColor=\''+(isToday?'var(--br)':'var(--bd)')+'\'">'+
      '<div style="font-size:12px;font-weight:700;color:'+(isToday?'#a78bfa':dow===0?'#ef4444':dow===6?'#60a5fa':'var(--tx)')+'">'+day+'</div>'+
      bookings.slice(0,2).map(function(b){
-      return '<div style="font-size:9px;background:rgba(124,58,237,.15);border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a78bfa">'+
+      return '<div style="font-size:9px;background:rgba(201,168,76,.15);border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a78bfa">'+
        (b.time?b.time+' ':'')+esc(b.customerName||b.title||'예약')+'</div>';
      }).join('')+
      (bookings.length>2?'<div style="font-size:9px;color:var(--t3);margin-top:1px">+'+(bookings.length-2)+'건</div>':'')+
@@ -215,7 +215,7 @@ function _filoRenderTodayReservations(did,dateStr,bookings,label){
   card.className='list-item';
   var sc=statusColor[b.status||'confirmed']||'#22c55e';
   var sl=statusLabel[b.status||'confirmed']||'확정';
-  card.innerHTML='<div class="list-item-icon" style="background:rgba(124,58,237,.1)">'+
+  card.innerHTML='<div class="list-item-icon" style="background:rgba(201,168,76,.1)">'+
    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>'+
    '</div>'+
    '<div style="flex:1;min-width:0">'+
@@ -415,7 +415,7 @@ function _filoPageWaiting(el){
 
  // 다음 팀 호출
  var callNextBtn=document.createElement('button');
- callNextBtn.style.cssText='width:100%;padding:14px;background:#7c3aed;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px';
+ callNextBtn.style.cssText='width:100%;padding:14px;background:#c9a84c;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:16px';
  callNextBtn.textContent='다음 팀 호출';
  callNextBtn.onclick=function(){_filoWaitingCallNext(did);};
  wrap.appendChild(callNextBtn);
@@ -484,7 +484,7 @@ function _filoWaitCard(w,did,isCalled,num){
  var waitMin=w.createdAt?Math.floor((Date.now()-(w.createdAt.seconds||0)*1000)/60000):0;
  var card=document.createElement('div');
  card.className='card';
- card.style.cssText='padding:14px 16px;margin-bottom:8px;border-radius:14px;display:flex;align-items:center;gap:12px;border-left:3px solid '+(isCalled?'#f59e0b':'#7c3aed');
+ card.style.cssText='padding:14px 16px;margin-bottom:8px;border-radius:14px;display:flex;align-items:center;gap:12px;border-left:3px solid '+(isCalled?'#f59e0b':'#c9a84c');
  var badge=document.createElement('div');
  badge.style.cssText='width:32px;height:32px;border-radius:50%;background:'+(isCalled?'#f59e0b':'var(--br)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:'+(isCalled?'10':'14')+'px;font-weight:900;flex-shrink:0';
  badge.textContent=isCalled?'호출':num;
@@ -498,7 +498,7 @@ function _filoWaitCard(w,did,isCalled,num){
  var wid=w.id;var wname=w.name||'손님';
  if(!isCalled){
   var callB=document.createElement('button');
-  callB.style.cssText='padding:6px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+  callB.style.cssText='padding:6px 12px;background:#c9a84c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
   callB.textContent='호출';callB.onclick=function(){_filoWaitingCall(wid,did,wname);};
   btns.appendChild(callB);
  }
@@ -640,7 +640,7 @@ function _filoPageTableBooking(el){
    var dt=selYear+'-'+String(selMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
    var isPast=dt<todayStr;var isToday=dt===todayStr;var isSel=dt===selDate;
    var cell=document.createElement('div');
-   cell.style.cssText='text-align:center;padding:8px 4px;border-radius:10px;cursor:'+(isPast?'not-allowed':'pointer')+';font-size:13px;font-weight:'+(isSel||isToday?'800':'500')+';background:'+(isSel?'#7c3aed':isToday?'rgba(124,58,237,.12)':'transparent')+';color:'+(isSel?'#fff':isPast?'var(--t3)':isToday?'#7c3aed':'var(--tx)')+';opacity:'+(isPast?.4:1);
+   cell.style.cssText='text-align:center;padding:8px 4px;border-radius:10px;cursor:'+(isPast?'not-allowed':'pointer')+';font-size:13px;font-weight:'+(isSel||isToday?'800':'500')+';background:'+(isSel?'#c9a84c':isToday?'rgba(201,168,76,.12)':'transparent')+';color:'+(isSel?'#fff':isPast?'var(--t3)':isToday?'#c9a84c':'var(--tx)')+';opacity:'+(isPast?.4:1);
    cell.textContent=d;
    if(!isPast){(function(ds){cell.onclick=function(){selDate=ds;renderCal();renderTime();};})(dt);}
    grid.appendChild(cell);
@@ -655,7 +655,7 @@ function _filoPageTableBooking(el){
   var g=document.createElement('div');g.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px';
   slots.forEach(function(t){
    var b=document.createElement('button');b.style.cssText='padding:12px;border:2px solid var(--bd);border-radius:12px;background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;color:var(--tx);transition:.2s';b.textContent=t;
-   b.onclick=function(){g.querySelectorAll('button').forEach(function(x){x.style.background='var(--surface)';x.style.borderColor='var(--bd)';x.style.color='var(--tx)';});b.style.background='rgba(124,58,237,.15)';b.style.borderColor='#7c3aed';b.style.color='#7c3aed';selTime=t;updateBtn();};
+   b.onclick=function(){g.querySelectorAll('button').forEach(function(x){x.style.background='var(--surface)';x.style.borderColor='var(--bd)';x.style.color='var(--tx)';});b.style.background='rgba(201,168,76,.15)';b.style.borderColor='#c9a84c';b.style.color='#c9a84c';selTime=t;updateBtn();};
    g.appendChild(b);
   });
   timeCard.appendChild(g);
@@ -671,7 +671,7 @@ function _filoPageTableBooking(el){
  wrap.appendChild(seatsCard);
  el.appendChild(wrap);
  window._tbS=function(d){seats=Math.max(1,Math.min(8,seats+d));var e=document.getElementById('tb-seats');if(e)e.textContent=seats+'명';};
- function updateBtn(){var b=document.getElementById('tb-btn');if(!b)return;var ok=!!selDate&&!!selTime;b.disabled=!ok;b.style.background=ok?'linear-gradient(135deg,#7c3aed,#6d28d9)':'#ccc';b.style.cursor=ok?'pointer':'not-allowed';b.onclick=ok?function(){_tbBook(did,selDate,selTime,seats);}:null;}
+ function updateBtn(){var b=document.getElementById('tb-btn');if(!b)return;var ok=!!selDate&&!!selTime;b.disabled=!ok;b.style.background=ok?'linear-gradient(135deg,#c9a84c,#6d28d9)':'#ccc';b.style.cursor=ok?'pointer':'not-allowed';b.onclick=ok?function(){_tbBook(did,selDate,selTime,seats);}:null;}
  renderCal();renderTime();
 }
 

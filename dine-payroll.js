@@ -35,7 +35,7 @@ function _dinePayroll(el){
   '<option value="month">월급기준</option><option value="week">주급기준</option><option value="day">일급기준</option>'+
   '</select>'+
   '<button class="btn btn-primary btn-sm" onclick="_dineCalcPayroll(\''+did+'\')">계산</button>'+
-  '<button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="_dineAutoPayroll(\''+did+'\')">실시간</button>'+
+  '<button class="btn btn-sm" style="background:#c9a84c;color:#fff" onclick="_dineAutoPayroll(\''+did+'\')">실시간</button>'+
   '</div>';
 
  wrap.appendChild(hdr);
@@ -279,7 +279,7 @@ function _calcPayFull(m,att,empCnt,ym){
   }
  }
  if(weeklyHoliday>0)lawAlerts.push({text:'주휴수당 포함',bg:'rgba(245,158,11,.1)',color:'#f59e0b',border:'rgba(245,158,11,.2)'});
- if(nightPay>0)lawAlerts.push({text:'야간수당 포함',bg:'rgba(124,58,237,.1)',color:'#a78bfa',border:'rgba(124,58,237,.2)'});
+ if(nightPay>0)lawAlerts.push({text:'야간수당 포함',bg:'rgba(201,168,76,.1)',color:'#a78bfa',border:'rgba(201,168,76,.2)'});
  if(empCnt<5)lawAlerts.push({text:'5인미만(가산제외)',bg:'rgba(150,150,150,.1)',color:'var(--t3)',border:'rgba(150,150,150,.2)'});
 
  return{basePay,weeklyHoliday,nightPay,nightHour,overPay,overHour,grossSalary,insTotal,insItems,taxTotal,netSalary,monthlyHours,lawAlerts};

@@ -107,7 +107,7 @@ function _filoGenQRs(did){
     '<div id="qr-'+t.num+'" style="background:#fff;padding:6px;border-radius:8px;display:inline-block;margin-bottom:10px"></div>'+
     '<div style="display:flex;gap:4px;justify-content:center">'+
     '<button data-dl="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer">저장</button>'+
-    '<button data-pr="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer">인쇄</button>'+
+    '<button data-pr="'+t.num+'" data-name="'+t.name+'" style="padding:4px 8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer">인쇄</button>'+
     '<button onclick="window.open(\''+url+'\',\'_blank\')" style="padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer">미리보기</button>'+
     '</div>';
    grid.appendChild(div);
@@ -292,7 +292,7 @@ function _filoShowTableQRModal(did){
 
     var prBtn=document.createElement('button');
     prBtn.textContent='인쇄';
-    prBtn.style.cssText='padding:4px 10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer';
+    prBtn.style.cssText='padding:4px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer';
     (function(tNum,tName){prBtn.onclick=function(){_filoQRPrint1(tNum,tName);};})(t.num,t.name);
 
     btnWrap.appendChild(dlBtn);btnWrap.appendChild(prBtn);

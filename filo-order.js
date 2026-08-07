@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @title       FILO · DINE — 외식업 통합 운영 플랫폼
  * @copyright   Copyright (c) 2024-2025 유한회사 엠비티아이 (MBTI Co., Ltd.)
  * @author      김형우 (kimdh4790@gmail.com)
@@ -74,7 +74,7 @@ function _filoPageOrders(el){
  el.innerHTML='<div class="slide-up">'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
   '<div style="font-size:17px;font-weight:900">주문 대기</div>'+
-  '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+(_CU.dealerId||_CU.uid),\'_blank\')" style="padding:6px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">주방화면 열기</button>'+
+  '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+(_CU.dealerId||_CU.uid),\'_blank\')" style="padding:6px 12px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">주방화면 열기</button>'+
   '<div class="live-dot"></div></div>'+
   '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">로딩 중...</div></div>'+
   '</div>';
@@ -403,7 +403,7 @@ function _filoRenderDeliveryCards(did,orders,wrap){
    btnArea.appendChild(readyBtn);
    if(o.type==='delivery'){
     var dispBtn1=document.createElement('button');
-    dispBtn1.style.cssText='padding:7px 12px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
+    dispBtn1.style.cssText='padding:7px 12px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
     dispBtn1.textContent='배달 배차';
     (function(ord){dispBtn1.onclick=function(){_filoDispatchRequest(did,ord);};})(o);
     btnArea.appendChild(dispBtn1);
@@ -426,7 +426,7 @@ function _filoRenderDeliveryCards(did,orders,wrap){
    btnArea.appendChild(doneBtn);
    if(o.type==='delivery'){
     var dispBtn2=document.createElement('button');
-    dispBtn2.style.cssText='padding:7px 12px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
+    dispBtn2.style.cssText='padding:7px 12px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
     dispBtn2.textContent='배달 배차';
     (function(ord){dispBtn2.onclick=function(){_filoDispatchRequest(did,ord);};})(o);
     btnArea.appendChild(dispBtn2);
@@ -501,7 +501,7 @@ function _filoDeliveryAdd(did){
    document.querySelectorAll('.delivery-app-btn').forEach(function(b){
     b.style.borderColor='var(--bd2)';b.style.background='var(--surface2)';b.style.color='var(--t2)';
    });
-   this.style.borderColor='#7c3aed';this.style.background='rgba(124,58,237,.1)';this.style.color='#a78bfa';
+   this.style.borderColor='#c9a84c';this.style.background='rgba(201,168,76,.1)';this.style.color='#a78bfa';
    window._selectedDeliveryApp=this.dataset.app;
   };
   appGrid.appendChild(btn);
@@ -530,7 +530,7 @@ function _filoDeliveryAdd(did){
 
  /* 메뉴 빠른 추가 */
  var menuNote=document.createElement('div');
- menuNote.style.cssText='font-size:11px;color:var(--t3);margin-bottom:14px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px';
+ menuNote.style.cssText='font-size:11px;color:var(--t3);margin-bottom:14px;padding:8px 12px;background:rgba(201,168,76,.06);border-radius:8px';
  menuNote.textContent='주문금액만 입력해도 매출 집계됩니다. 상세 메뉴는 생략 가능합니다.';
  box.appendChild(menuNote);
 
@@ -539,7 +539,7 @@ function _filoDeliveryAdd(did){
  cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:var(--r);color:var(--t2);cursor:pointer';
  cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();window._selectedDeliveryApp=null;};
  var saveBtn=document.createElement('button');
- saveBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-weight:800;cursor:pointer';
+ saveBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#c9a84c,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-weight:800;cursor:pointer';
  saveBtn.textContent='접수';
  saveBtn.onclick=function(){
   var total=parseInt(document.getElementById('dv-total').value)||0;
@@ -592,12 +592,12 @@ function _filoDispatchRequest(did,order){
  agencyRow.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px';
  agencies.forEach(function(ag,i){
   var btn=document.createElement('button');
-  btn.style.cssText='padding:10px 4px;border:2px solid '+(i===0?'#7c3aed':'var(--bd2)')+';border-radius:10px;background:'+(i===0?'rgba(124,58,237,.1)':'var(--surface2)')+';color:'+(i===0?'#a78bfa':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer;transition:.15s';
+  btn.style.cssText='padding:10px 4px;border:2px solid '+(i===0?'#c9a84c':'var(--bd2)')+';border-radius:10px;background:'+(i===0?'rgba(201,168,76,.1)':'var(--surface2)')+';color:'+(i===0?'#a78bfa':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer;transition:.15s';
   btn.textContent=ag.l;
   (function(k){btn.onclick=function(){
    selAgency=k;
    agencyRow.querySelectorAll('button').forEach(function(b){b.style.borderColor='var(--bd2)';b.style.background='var(--surface2)';b.style.color='var(--t2)';});
-   this.style.borderColor='#7c3aed';this.style.background='rgba(124,58,237,.1)';this.style.color='#a78bfa';
+   this.style.borderColor='#c9a84c';this.style.background='rgba(201,168,76,.1)';this.style.color='#a78bfa';
   };})(ag.k);
   agencyRow.appendChild(btn);
  });
@@ -612,7 +612,7 @@ function _filoDispatchRequest(did,order){
  cancelBtn.style.cssText='flex:1;padding:11px;background:var(--surface2);border:none;border-radius:10px;color:var(--t2);cursor:pointer;font-weight:700';
  cancelBtn.textContent='취소';cancelBtn.onclick=function(){mo.remove();};
  var confirmBtn=document.createElement('button');
- confirmBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer';
+ confirmBtn.style.cssText='flex:2;padding:11px;background:linear-gradient(135deg,#c9a84c,#9f5ef8);border:none;border-radius:10px;color:#fff;font-weight:800;cursor:pointer';
  confirmBtn.textContent='배차 요청';
  confirmBtn.onclick=function(){
   confirmBtn.disabled=true;confirmBtn.textContent='요청 중...';

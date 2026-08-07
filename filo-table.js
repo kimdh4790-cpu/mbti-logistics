@@ -614,7 +614,7 @@ function _filoPageTableOrder(el){
  hdr.innerHTML='<div><div class="page-title">테이블 오더</div>'+
   '<div class="page-sub">직원 태블릿으로 테이블 주문 접수</div></div>';
  var kitBtn=document.createElement('button');
- kitBtn.style.cssText='padding:6px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
+ kitBtn.style.cssText='padding:6px 12px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer';
  kitBtn.textContent='주방화면';
  kitBtn.onclick=function(){window.open('https://filo.ai.kr/kitchen?did='+did,'_blank');};
  hdr.appendChild(kitBtn);
@@ -641,7 +641,7 @@ function _filoPageTableOrder(el){
 
  var cartCard=document.createElement('div');cartCard.className='card';cartCard.id='to-cart-card';
  var submitBtn=document.createElement('button');
- submitBtn.style.cssText='width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.35);margin-top:10px';
+ submitBtn.style.cssText='width:100%;padding:14px;background:linear-gradient(135deg,#c9a84c,#9f5ef8);border:none;border-radius:var(--r);color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(201,168,76,.35);margin-top:10px';
  submitBtn.textContent='주문 전송';
  submitBtn.onclick=function(){_toSubmitOrder(did);};
  cartCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">주문 내역</div>'+
@@ -1045,7 +1045,7 @@ function _toSelectTable(t){
   b.style.background='var(--surface2)';b.style.borderColor='var(--bd2)';
  });
  var sel=document.getElementById('to-tbtn-'+t.tableId);
- if(sel){sel.style.background='rgba(124,58,237,.2)';sel.style.borderColor='var(--br)';}
+ if(sel){sel.style.background='rgba(201,168,76,.2)';sel.style.borderColor='var(--br)';}
  _filoToast(t.tableId+'번 테이블 선택됨'+(t.seats?' ('+t.seats+'인석)':''));
 }
 function _toAddItem(id,name,price){

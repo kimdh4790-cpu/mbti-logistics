@@ -246,7 +246,7 @@ function _filoPay(){
   var btn=document.createElement('button');
   btn.style.cssText='padding:14px 6px;border:1.5px solid var(--bd2);border-radius:var(--r);background:var(--surface2);color:var(--tx);cursor:pointer;transition:.15s;text-align:center';
   btn.innerHTML='<div style="font-size:22px;margin-bottom:4px">'+m.ic+'</div><div style="font-size:11px;font-weight:700">'+m.l+'</div>';
-  btn.onmouseover=function(){this.style.borderColor='#7c3aed';this.style.background='var(--surface3)';};
+  btn.onmouseover=function(){this.style.borderColor='#c9a84c';this.style.background='var(--surface3)';};
   btn.onmouseout=function(){this.style.borderColor='var(--bd2)';this.style.background='var(--surface2)';};
   (function(mk,ml){btn.onclick=function(){
    document.querySelectorAll('.mo').forEach(function(e){e.remove();});
@@ -321,7 +321,7 @@ function _filoPagePayslip(el) {
   kpi.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px';
   kpi.innerHTML = [
     {id:'ps-total-staff',   ic:'', lbl:'총 직원수',       c:'#0891b2'},
-    {id:'ps-total-pay',     ic:'₩', lbl:'이번달 총 지급액', c:'#7c3aed'},
+    {id:'ps-total-pay',     ic:'₩', lbl:'이번달 총 지급액', c:'#c9a84c'},
     {id:'ps-avg-hours',     ic:'h',  lbl:'평균 근무시간',    c:'#f59e0b'},
     {id:'ps-pending',       ic:'!',  lbl:'미지급 건수',     c:'#ef4444'},
   ].map(function(k){
@@ -444,7 +444,7 @@ function _filoPayslipLoad(did, ym) {
       if(!isPaid) pending++;
 
       var avatar = (m.name||'?').slice(0,1);
-      var colors = ['#7c3aed','#0891b2','#059669','#f59e0b','#ef4444'];
+      var colors = ['#c9a84c','#0891b2','#059669','#f59e0b','#ef4444'];
       var color  = colors[Math.abs(m.id.charCodeAt(0))%5];
 
       return '<tr style="border-bottom:1px solid var(--bd)">' +
@@ -457,7 +457,7 @@ function _filoPayslipLoad(did, ym) {
         '<td style="padding:12px 8px">₩'+base.toLocaleString()+'</td>' +
         '<td style="padding:12px 8px">₩'+overtime.toLocaleString()+'</td>' +
         '<td style="padding:12px 8px;color:#ef4444">₩'+deduct.toLocaleString()+'</td>' +
-        '<td style="padding:12px 8px;font-weight:800;color:#7c3aed">₩'+net.toLocaleString()+'</td>' +
+        '<td style="padding:12px 8px;font-weight:800;color:#c9a84c">₩'+net.toLocaleString()+'</td>' +
         '<td style="padding:12px 8px;color:var(--t3);font-size:11px">'+(payDate||'—')+'</td>' +
         '<td style="padding:12px 8px">' +
         '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+

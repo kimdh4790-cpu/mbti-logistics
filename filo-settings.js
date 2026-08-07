@@ -51,7 +51,7 @@ function _filoPageSettings(el){
  '</select>'+
  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
  '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">포인트 색</div>'+
- '<input id="set-primary" type="color" value="'+(d.primaryColor||'#7c3aed')+'" oninput="_filoThemePreview(1)" style="width:100%;height:38px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;cursor:pointer"></div>'+
+ '<input id="set-primary" type="color" value="'+(d.primaryColor||'#c9a84c')+'" oninput="_filoThemePreview(1)" style="width:100%;height:38px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;cursor:pointer"></div>'+
  '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">배경 색</div>'+
  '<input id="set-bg" type="color" value="'+(d.bgColor||'#07071a')+'" oninput="_filoThemePreview(1)" style="width:100%;height:38px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;cursor:pointer"></div>'+
  '</div>'+
@@ -92,7 +92,7 @@ function _filoThemePreview(custom){
  var bi=document.getElementById('set-bg');
  if(!sel||!pi||!bi)return;
  var key=sel.value||'other';
- var base=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[key])?_FILO_THEMES[key]:{primary:'#7c3aed',bg:'#07071a'};
+ var base=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[key])?_FILO_THEMES[key]:{primary:'#c9a84c',bg:'#07071a'};
  if(!custom){ pi.value=base.primary; bi.value=base.bg; }
  var primary=pi.value, bg=bi.value;
  var accent=(typeof _filoShade==='function')?_filoShade(primary,0.25):primary;
@@ -201,7 +201,7 @@ function _filoPageTaxShare(el){
     '</div>'+
     '<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">'+
     '<input type="checkbox" id="'+item.id+'" checked style="opacity:0;width:0;height:0">'+
-    '<span style="position:absolute;inset:0;background:#7c3aed;border-radius:24px;transition:.3s" onclick="this.style.background=this.previousElementSibling.checked?\'#7c3aed\':\'var(--surface3)\'"></span>'+
+    '<span style="position:absolute;inset:0;background:#c9a84c;border-radius:24px;transition:.3s" onclick="this.style.background=this.previousElementSibling.checked?\'#c9a84c\':\'var(--surface3)\'"></span>'+
     '<span style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>'+
     '</label></div>';
   }).join('');
@@ -213,7 +213,7 @@ function _filoPageTaxShare(el){
  card3.innerHTML='<div class="sec-title" style="margin-bottom:12px">즉시 리포트 발송</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
   ['이번달 리포트','지난달 리포트','분기 리포트','연간 리포트'].map(function(t,i){
-   return '<button onclick="_filoTaxSendReport(\''+['thisMonth','lastMonth','quarter','year'][i]+'\')" style="padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor=\'rgba(124,58,237,.4)\'" onmouseout="this.style.borderColor=\'var(--bd2)\'">'+t+'</button>';
+   return '<button onclick="_filoTaxSendReport(\''+['thisMonth','lastMonth','quarter','year'][i]+'\')" style="padding:12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor=\'rgba(201,168,76,.4)\'" onmouseout="this.style.borderColor=\'var(--bd2)\'">'+t+'</button>';
   }).join('')+'</div>';
  wrap.appendChild(card3);
 
@@ -306,7 +306,7 @@ function _filoPageReviewReply(el){
   '<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px">고객 리뷰</div>'+
   '<textarea id="review-input" placeholder="리뷰 내용을 붙여넣으세요..." style="width:100%;min-height:100px;background:var(--surface3);border:1px solid var(--bd);border-radius:10px;padding:12px;color:var(--tx);font-size:13px;resize:vertical;box-sizing:border-box"></textarea>'+
   '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">'+
-  '<button onclick="_filoGenReviewReply(1)" style="flex:1;padding:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:10px;color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer">긍정 답글</button>'+
+  '<button onclick="_filoGenReviewReply(1)" style="flex:1;padding:10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:10px;color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer">긍정 답글</button>'+
   '<button onclick="_filoGenReviewReply(0)" style="flex:1;padding:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#f87171;font-weight:700;font-size:12px;cursor:pointer">부정/개선 답글</button>'+
   '<button onclick="_filoGenReviewReply(2)" style="flex:1;padding:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;color:#22c55e;font-weight:700;font-size:12px;cursor:pointer">일반 답글</button>'+
   '</div></div>'+

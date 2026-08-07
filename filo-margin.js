@@ -41,7 +41,7 @@ function _filoGenerateAIInsight(did){
   ].filter(Boolean);
   el.innerHTML='<div style="display:flex;flex-direction:column;gap:10px">'+
    insights.map(function(ins){
-    return '<div style="padding:12px 14px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.15);border-radius:12px;font-size:13px;line-height:1.7;color:var(--t2)">'+ins+'</div>';
+    return '<div style="padding:12px 14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.15);border-radius:12px;font-size:13px;line-height:1.7;color:var(--t2)">'+ins+'</div>';
    }).join('')+
    '<div style="font-size:10px;color:var(--t3);margin-top:4px">* AI 분석은 이번달 데이터 기준입니다</div>'+
    '</div>';
@@ -205,7 +205,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
     '<span style="font-size:13px;font-weight:900;color:#22c55e">₩'+m[1].toLocaleString()+'</span>'+
     '</div>'+
     '<div style="height:4px;background:var(--surface3);border-radius:2px">'+
-    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
+    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#c9a84c,#22c55e);border-radius:2px"></div>'+
     '</div>'+
     '<span style="font-size:10px;color:var(--t3)">'+pct+'% 비중</span>'+
     '</div></div>';
@@ -227,7 +227,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
     '<span style="font-size:12px;font-weight:900;color:#22c55e">'+kv[1].qty+'개</span>'+
     '</div>'+
     '<div style="height:3px;background:var(--surface3);border-radius:2px;margin-top:4px">'+
-    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#7c3aed,#22c55e);border-radius:2px"></div>'+
+    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#c9a84c,#22c55e);border-radius:2px"></div>'+
     '</div></div></div>';
   }).join('')+
   '</div>'+
@@ -269,7 +269,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
     hCanvas._chart=new Chart(hCanvas,{
      type:'bar',
      data:{labels:hLabels,datasets:[{label:'매출',data:hData,
-      backgroundColor:'rgba(124,58,237,.6)',borderColor:'rgba(124,58,237,1)',
+      backgroundColor:'rgba(201,168,76,.6)',borderColor:'rgba(201,168,76,1)',
       borderWidth:1,borderRadius:4}]},
      options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
@@ -281,7 +281,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
    /* 결제수단 도넛차트 */
    var pCanvas=document.getElementById('pay-donut-canvas');
    if(pCanvas&&window.Chart&&paySorted&&paySorted.length){
-    var pColors=['#7c3aed','#22c55e','#f59e0b','#38bdf8','#ef4444','#a855f7'];
+    var pColors=['#c9a84c','#22c55e','#f59e0b','#38bdf8','#ef4444','#a855f7'];
     if(pCanvas._chart)pCanvas._chart.destroy();
     pCanvas._chart=new Chart(pCanvas,{
      type:'doughnut',
@@ -460,7 +460,7 @@ function _filoRenderInsights(did,ym){
   if(margin<40)insights.push({icon:'[!]',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
   else if(margin>=60)insights.push({icon:'↑',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
   if(posRev>0&&rev===0)insights.push({icon:'[i]',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
-  if(Object.keys(costMap).length===0)insights.push({icon:'[설정]',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(124,58,237,.08)',border:'rgba(124,58,237,.25)'});
+  if(Object.keys(costMap).length===0)insights.push({icon:'[설정]',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(201,168,76,.08)',border:'rgba(201,168,76,.25)'});
   if(!insights.length)insights.push({icon:'[목표]',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
   content.innerHTML='<div style="max-width:700px">'+
   insights.map(function(ins){

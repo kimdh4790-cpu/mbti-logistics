@@ -40,7 +40,7 @@ function _filoLoadMembers(did){
  el.innerHTML=snap.docs.map(function(doc,idx){
  var d=doc.data();
  var roleLabel={'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원';
- var roleColor={'admin':'#7c3aed','staff':'#0891b2','part':'#f59e0b'}[d.role]||'#94a3b8';
+ var roleColor={'admin':'#c9a84c','staff':'#0891b2','part':'#f59e0b'}[d.role]||'#94a3b8';
  var initials=(d.name||'?').slice(0,1);
  return '<div class="member-card slide-up stagger-'+Math.min(idx+1,4)+'" data-id="'+doc.id+'" style="cursor:pointer">'+
  '<div class="avatar">'+initials+'</div>'+

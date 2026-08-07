@@ -578,7 +578,7 @@ function _filoLoadMenuMgmt(did){
   var catList=document.getElementById('cat-list');
   if(catList){
    catList.innerHTML=cats.map(function(c){
-    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);border-radius:20px;font-size:12px;font-weight:700;color:#a78bfa">'+
+    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);border-radius:20px;font-size:12px;font-weight:700;color:#a78bfa">'+
      c+
      '<button onclick="_filoDeleteCategory(\''+did+'\',\''+c+'\')" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px;opacity:.6">×</button>'+
      '</div>';
@@ -614,7 +614,7 @@ function _filoLoadMenuMgmt(did){
    grouped[cat].forEach(function(m){
     var card=document.createElement('div');
     card.style.cssText='background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px;position:relative;transition:.2s';
-    card.onmouseover=function(){this.style.borderColor='rgba(124,58,237,.3)';};
+    card.onmouseover=function(){this.style.borderColor='rgba(201,168,76,.3)';};
     card.onmouseout=function(){this.style.borderColor='var(--bd2)';};
 
     /* 이미지 or 이모지 */
@@ -678,7 +678,7 @@ function _filoMenuAddModal(did, menu, cat){
  var isEdit=!!menu;
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');
- box.style.cssText='padding:22px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--surface);border:1px solid rgba(124,58,237,.15);border-radius:var(--r-xl)';
+ box.style.cssText='padding:22px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;background:var(--surface);border:1px solid rgba(201,168,76,.15);border-radius:var(--r-xl)';
 
  /* 이미지 미리보기 */
  var imgPreview=document.createElement('div');
@@ -936,7 +936,7 @@ function _toShowMenuGrid(menus){
  menus.forEach(function(m){
   var qty=_toCart[m._id]?_toCart[m._id].qty:0;
   var card=document.createElement('div');
-  card.style.cssText='background:var(--surface2);border:2px solid '+(qty>0?'rgba(124,58,237,.4)':'var(--bd2)')+';border-radius:var(--r);padding:10px;cursor:pointer;text-align:center;transition:.2s;position:relative';
+  card.style.cssText='background:var(--surface2);border:2px solid '+(qty>0?'rgba(201,168,76,.4)':'var(--bd2)')+';border-radius:var(--r);padding:10px;cursor:pointer;text-align:center;transition:.2s;position:relative';
   var badge=qty>0?'<div style="position:absolute;top:-6px;right:-6px;background:var(--br);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">'+qty+'</div>':'';
   card.innerHTML=badge+
    '<div style="font-size:22px;margin-bottom:4px;opacity:.8">'+(m.emoji||_svgIcon('utensils'))+'</div>'+

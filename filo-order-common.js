@@ -1,4 +1,4 @@
-/**
+﻿/**
  * filo-order-common.js — FILO 고객 주문 공통 모듈
  * 최종수정: 2026-07-16 | 담당: 엠비티아이 김형우
  *
@@ -177,7 +177,7 @@ function _renderMenuGrid(menus, gridId){
     '</div></div>'+
     '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   } else {
-   var _mClrs=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _mClrs=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
    var _mClr=_mClrs[(m.name||'M').charCodeAt(0)%_mClrs.length];
    var _mInit=(m.name||'M')[0];
    item.innerHTML='<div class="mi-emoji-wrap" style="background:linear-gradient(135deg,'+_mClr+'22,'+_mClr+'44)">'+
@@ -311,7 +311,7 @@ function _openMdlCommon(m){
  } else {
   var emojiEl=document.createElement('div');
   emojiEl.className='mdl-emoji';
-  var _mClrs2=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+  var _mClrs2=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
   var _mClr2=_mClrs2[(m.name||'').charCodeAt(0)%_mClrs2.length];
   emojiEl.style.cssText='display:flex;align-items:center;justify-content:center;padding:24px 0';
   emojiEl.innerHTML='<div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,'+_mClr2+'22,'+_mClr2+'44);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;color:'+_mClr2+';font-family:Pretendard,sans-serif">'+(m.name||'M')[0]+'</div>';
@@ -435,7 +435,7 @@ function _openCart(){
    img.className='ci-img';img.src=menuData.imageUrl;img.alt=item.name;
    mediaEl.appendChild(img);
   } else {
-   var _cClrs=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _cClrs=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
    var _cClr=_cClrs[(item.name||'').charCodeAt(0)%_cClrs.length];
    mediaEl.className='ci-emoji';
    mediaEl.style.cssText='width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,'+_cClr+'22,'+_cClr+'44);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:'+_cClr+';flex-shrink:0';
@@ -572,7 +572,7 @@ function _renderRecommendBanner(menus){
 
  var banner=document.createElement('div');
  banner.id=bannerId;
- banner.style.cssText='margin:0 0 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(59,130,246,.08));border:1px solid rgba(124,58,237,.2);border-radius:14px;';
+ banner.style.cssText='margin:0 0 12px;padding:12px 14px;background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(59,130,246,.08));border:1px solid rgba(201,168,76,.2);border-radius:14px;';
 
  var inner=document.createElement('div');
  inner.innerHTML='<div style="font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:8px;letter-spacing:.5px">'+timeLabel+'</div>';
@@ -585,21 +585,21 @@ function _renderRecommendBanner(menus){
   card.style.cssText='min-width:64px;text-align:center;cursor:pointer;flex-shrink:0';
   // 이미지
   var imgWrap=document.createElement('div');
-  imgWrap.style.cssText='width:64px;height:64px;border-radius:10px;overflow:hidden;background:rgba(124,58,237,.15);display:flex;align-items:center;justify-content:center;font-size:26px';
+  imgWrap.style.cssText='width:64px;height:64px;border-radius:10px;overflow:hidden;background:rgba(201,168,76,.15);display:flex;align-items:center;justify-content:center;font-size:26px';
   if(m.imageUrl){
    var img=document.createElement('img');
    img.src=m.imageUrl;
    img.style.cssText='width:100%;height:100%;object-fit:cover';
    img.loading='lazy';
    img.onerror=function(){
-    var _ec=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+    var _ec=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
     var _ec2=_ec[(m.name||'M').charCodeAt(0)%_ec.length];
     imgWrap.style.background='linear-gradient(135deg,'+_ec2+'22,'+_ec2+'44)';
     imgWrap.innerHTML='<div style="font-size:22px;font-weight:900;color:'+_ec2+'">'+( m.name||'M')[0]+'</div>';
    };
    imgWrap.appendChild(img);
   } else {
-   var _nc=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _nc=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
    var _nc2=_nc[(m.name||'M').charCodeAt(0)%_nc.length];
    imgWrap.style.background='linear-gradient(135deg,'+_nc2+'22,'+_nc2+'44)';
    imgWrap.innerHTML='<div style="font-size:22px;font-weight:900;color:'+_nc2+'">'+( m.name||'M')[0]+'</div>';
