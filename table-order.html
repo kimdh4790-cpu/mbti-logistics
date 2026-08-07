@@ -217,35 +217,22 @@ function translateMenus(lang){
 
   var langName={en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
 
-  fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens:1000,
-      messages:[{role:'user',content:
-        'You are a restaurant menu translator. Translate the following Korean food/menu texts to '+langName[lang]+'.\n'+
-        'Return ONLY a JSON object mapping Korean text to translated text. No explanation, no markdown.\n'+
-        'Example: {"김치찌개":"Kimchi Stew","한식":"Korean Food"}\n\n'+
-        'Texts to translate:\n'+JSON.stringify(texts)
-      }]
-    })
-  })
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var raw=data.content&&data.content[0]&&data.content[0].text||'{}';
-    var clean=raw.replace(/```json|```/g,'').trim();
-    try{
-      _transCache[lang]=JSON.parse(clean);
-    }catch(e){_transCache[lang]={};}
-    _applyTranslation(lang);
-    if(banner)banner.style.display='none';
-  })
-  .catch(function(){
-    if(banner)banner.style.display='none';
-    _transMenus=_menus.slice();
-    renderMenus();
-  });
+  var translateNext=function(idx,result){
+    if(idx>=texts.length){
+      _transCache[lang]=result;
+      _applyTranslation(lang);
+      if(banner)banner.style.display='none';
+      return;
+    }
+    fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:texts[idx],lang:lang})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.translated)result[texts[idx]]=d.translated;
+      translateNext(idx+1,result);
+    }).catch(function(){translateNext(idx+1,result);});
+  };
+  translateNext(0,{});
 }
 
 function _applyTranslation(lang){
@@ -420,31 +407,76 @@ window.doOrder=function(){
   var items=Object.entries(_cart);
   if(!items.length)return;
   var total=items.reduce(function(s,e){return s+e[1].price*e[1].qty;},0);
-  var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
   var orderName=items[0][1].name+(items.length>1?' 외 '+(items.length-1)+'건':'');
 
+  // 선결제/후불 선택 모달
+  var mo=document.createElement('div');
+  mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  mo.innerHTML='<div style="background:#0d1b2a;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 20px 32px">'
+    +'<div style="text-align:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">결제 방식 선택</div>'
+    +'<div style="text-align:center;color:#c9a84c;font-size:15px;margin-bottom:24px">합계 <b>'+total.toLocaleString()+'원</b></div>'
+    +'<div style="display:flex;gap:12px">'
+    +'<button id="btn-prepay" style="flex:1;padding:16px;background:#c9a84c;color:#08101f;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer">선결제<br><small style="font-size:12px;font-weight:400">카드/간편결제</small></button>'
+    +'<button id="btn-postpay" style="flex:1;padding:16px;background:#1e3a5f;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer">후불<br><small style="font-size:12px;font-weight:400">식사 후 계산</small></button>'
+    +'</div>'
+    +'<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;margin-top:12px;padding:12px;background:transparent;border:1px solid #2a4060;border-radius:14px;color:#8899aa;font-size:14px;cursor:pointer">취소</button>'
+    +'</div>';
+  document.body.appendChild(mo);
+
+  mo.querySelector('#btn-prepay').onclick=function(){
+    mo.remove();
+    _doTablePrepay(items,total,orderName);
+  };
+  mo.querySelector('#btn-postpay').onclick=function(){
+    mo.remove();
+    _doTablePostpay(items,total);
+  };
+};
+
+function _doTablePrepay(items,total,orderName){
+  var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
   var orderData={
     dealerId:DID,tableId:TID,orderId:orderId,
     items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
-    total:total,status:'pending_payment',
+    total:total,status:'pending_payment',payType:'prepay',
     source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
   };
-  var _tok = _myFcmToken || _fcmToken;
-  if(_tok) orderData.fcmToken = _tok;
+  var tok=_myFcmToken||null;
+  if(tok)orderData.fcmToken=tok;
   _db.collection('toss_orders').doc(orderId).set(orderData).then(function(){
     var toss=TossPayments(_tossKey);
     toss.requestPayment('카드',{
-      amount:total,
-      orderId:orderId,
-      orderName:orderName,
+      amount:total,orderId:orderId,orderName:orderName,
       customerName:'Table '+TID,
       successUrl:location.origin+'/order-done?oid='+orderId+'&did='+DID+'&tid='+TID,
       failUrl:location.origin+'/order-fail?oid='+orderId+'&did='+DID+'&tid='+TID,
-    }).catch(function(e){
-      if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);
-    });
+    }).catch(function(e){if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);});
   });
-};
+}
+
+function _doTablePostpay(items,total){
+  var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
+  var orderData={
+    dealerId:DID,tableId:TID,orderId:orderId,
+    items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
+    total:total,status:'pending',payType:'postpay',
+    source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
+  };
+  var tok=_myFcmToken||null;
+  if(tok)orderData.fcmToken=tok;
+  // filo_orders에 저장해야 POS/키친과 연동됨
+  _db.collection('filo_orders').add(orderData).then(function(){
+    _cart={};
+    renderCart();
+    var done=document.getElementById('done-screen')||document.createElement('div');
+    done.style.cssText='position:fixed;inset:0;background:#08101f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff';
+    done.innerHTML='<div style="font-size:48px;margin-bottom:16px">✓</div>'
+      +'<div style="font-size:22px;font-weight:700;margin-bottom:8px">주문 완료!</div>'
+      +'<div style="color:#c9a84c;font-size:15px">식사 후 카운터에서 계산해주세요</div>'
+      +'<button onclick="this.parentElement.remove()" style="margin-top:32px;padding:12px 32px;background:#c9a84c;color:#08101f;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">확인</button>';
+    document.body.appendChild(done);
+  }).catch(function(e){alert('주문 오류: '+e.message);});
+}
 
 init();
 
