@@ -3627,6 +3627,7 @@ ${JSON.stringify(postSummary)}
       }
       if (path === '/order-done') return serveKVFile(env, 'order-done.html', 'text/html');
       if (path === '/order-fail') return serveKVFile(env, 'order-done.html', 'text/html');
+      if (path === '/table-order' || path === '/table-order.html') return serveKVFile(env, 'table-order.html', 'text/html');
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       // FIX: wait.html은 KV에 있는데 라우트가 없어 웨이팅 QR이 filo.html로 빠지고 있었다
       if (path === '/wait' || path === '/wait.html') return serveKVFile(env, 'wait.html', 'text/html');
