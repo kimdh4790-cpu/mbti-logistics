@@ -155,3 +155,12 @@ cd mbtico-pages && npx wrangler deploy
 2. FFmpeg으로 자막+BGM 합성
 3. Kling AI는 Playwright 자동화 차단됨 — 사용 금지
 4. 외부 AI 영상 API 키 요청 금지
+
+---
+
+## 🚨 PR 생성 절대 금지
+- 작업 완료 후 PR 생성하지 말 것
+- 바로 git push → 머지까지 자동으로
+- PR 생성 버튼 누르지 말 것
+- 승인 요청 없이 끝까지 자동 진행
+- 중간에 멈추지 말 것
