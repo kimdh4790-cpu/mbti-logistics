@@ -96,10 +96,10 @@ async function test(label, fn) {
     const enBtn = page.locator('#lb-en').first();
     const visible = await enBtn.isVisible({ timeout: 5000 }).catch(() => false);
     if (visible) {
-      await enBtn.click();
+      await enBtn.scrollIntoViewIfNeeded().catch(() => {});
+      await enBtn.click({ force: true }); // 오버레이 무시하고 강제 클릭
       await wait(3000);
       await ss(page, '04_translate_en');
-      // 번역된 텍스트 확인 (.mi-tr-img 에 번역 결과)
       const translated = page.locator('.mi-tr-img, .mi-tr').first();
       const txt = await translated.textContent({ timeout: 3000 }).catch(() => '');
       console.log('  번역 결과 샘플:', txt.slice(0, 30));
@@ -114,20 +114,43 @@ async function test(label, fn) {
   await test('테이블 주문 선결제/후불 모달', async () => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ko-KR' });
     const page = await ctx.newPage();
+
+    // 콘솔 에러 수집
+    const consoleErrors = [];
+    page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+    page.on('pageerror', e => consoleErrors.push(e.message));
+
     await page.goto(`${BASE}/table-order?d=${DEALER_ID}&t=2&name=2번테이블`, { timeout: 20000 });
-    await wait(4000);
+    await wait(6000); // API 응답 충분히 대기
     await ss(page, '05_table_order_load');
 
-    // table-order.html 메뉴 클래스는 .menu-card (order.html의 .mi 와 다름)
+    // 페이지에 실제로 뭐가 있는지 확인
+    const pageText = await page.locator('body').textContent({ timeout: 3000 }).catch(() => '');
+    console.log('  페이지 텍스트(100자):', pageText.replace(/\s+/g,' ').slice(0, 100));
+    if (consoleErrors.length) console.log('  콘솔 에러:', consoleErrors.slice(0,3).join(' | '));
+
+    // API 직접 호출로 메뉴 데이터 확인
+    const apiCheck = await page.evaluate(async (did) => {
+      try {
+        const r = await fetch('/api/menus?did=' + did);
+        const d = await r.json();
+        return { status: r.status, count: Array.isArray(d) ? d.length : JSON.stringify(d).slice(0,80) };
+      } catch(e) { return { error: e.message }; }
+    }, DEALER_ID);
+    console.log('  /api/menus 결과:', JSON.stringify(apiCheck));
+
     const menu = page.locator('.menu-card, .mi').first();
-    await menu.waitFor({ timeout: 12000 });
+    const hasMenu = await menu.isVisible({ timeout: 5000 }).catch(() => false);
+    if (!hasMenu) {
+      await ss(page, '05_table_order_no_menu');
+      throw new Error('메뉴 없음 — API 결과: ' + JSON.stringify(apiCheck));
+    }
+
     await menu.scrollIntoViewIfNeeded();
-    await wait(500);
     await menu.click({ force: true });
     await wait(1500);
     await ss(page, '05b_table_order_clicked');
 
-    // 주문하기 버튼
     const orderBtn = page.locator('#order-btn').first();
     const hasOrderBtn = await orderBtn.isVisible({ timeout: 5000 }).catch(() => false);
     if (hasOrderBtn) {
