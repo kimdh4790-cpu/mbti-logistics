@@ -884,6 +884,168 @@ body::after{
   transition:transform var(--dur) var(--ease-spring)}
 .ai-fab:hover{transform:scale(1.09)}
 @media(max-width:640px){.ai-fab{right:12px;bottom:76px;width:46px;height:46px;font-size:19px}}
+
+/* ══════════════════════════════════════════════════════════════
+   FILO BRASS GOLD v4 — 전 섹션 브랜드 통일
+   purple/indigo/violet → #C8A356 Brass Gold
+   ══════════════════════════════════════════════════════════════ */
+
+/* AI 그라데이션 토큰 — gold metallic */
+:root{
+  --ai-grad:linear-gradient(135deg,#A8823A 0%,#E2CA96 100%)!important;
+  --shadow-brand:0 4px 20px rgba(200,163,86,.28)!important;
+}
+
+/* 앱 배경 — linen gold (기존 #F7F8FA 오버라이드) */
+body,#app,#content,#content-wrap,.main,.pos-wrap{
+  background:#F5F1EB!important;color:#0F172A!important}
+
+/* 포커스 링 */
+:focus-visible{outline:2px solid #C8A356!important;outline-offset:2px;border-radius:6px}
+input:focus,select:focus,textarea:focus{
+  border-color:#C8A356!important;
+  box-shadow:0 0 0 3px rgba(200,163,86,.18),0 1px 4px rgba(0,0,0,.06)!important}
+
+/* 버튼 hover glow */
+.btn-primary:hover,.btn-brand:hover{
+  box-shadow:0 8px 32px rgba(200,163,86,.45),0 2px 8px rgba(200,163,86,.3)!important}
+.btn-primary{background:linear-gradient(135deg,#C8A356,#D4B46E)!important;color:#0F172A!important}
+
+/* POS 메뉴 카드 hover */
+.menu-item:hover{
+  border-color:rgba(200,163,86,.55)!important;
+  box-shadow:0 6px 24px rgba(200,163,86,.22),0 2px 6px rgba(0,0,0,.06)!important;
+  transform:translateY(-4px) scale(1.02)!important}
+
+/* 카테고리 칩 active */
+.cat-scroll button.active,.cat-scroll button.on,.cat-btn.active{
+  background:linear-gradient(135deg,#C8A356,#D4B46E)!important;
+  color:#0F172A!important;
+  box-shadow:0 4px 14px rgba(200,163,86,.40)!important}
+
+/* 로그인 카드 테두리 */
+.login-card{
+  box-shadow:0 0 0 1px rgba(200,163,86,.08),0 2px 4px rgba(0,0,0,.04),
+             0 8px 24px rgba(0,0,0,.08),0 24px 64px rgba(0,0,0,.06)!important;
+  border-color:rgba(200,163,86,.12)!important}
+
+/* 데모 어드민 바 */
+#demo-admin-bar{
+  background:rgba(200,163,86,.07)!important;
+  border-bottom-color:rgba(200,163,86,.18)!important}
+
+/* KPI 수익 카드 top bar */
+.kpi-card.kpi-revenue{border-color:rgba(200,163,86,.2)!important}
+.kpi-card.kpi-revenue::before{background:linear-gradient(90deg,#C8A356,#E2CA96)!important}
+.kpi-card:hover{box-shadow:0 2px 6px rgba(0,0,0,.05),0 8px 28px rgba(0,0,0,.09),
+  0 0 0 1px rgba(200,163,86,.14)!important}
+
+/* 카드 hover gold accent */
+.card-hover:hover{
+  border-color:rgba(200,163,86,.30)!important;
+  box-shadow:0 12px 40px rgba(200,163,86,.10),0 4px 16px rgba(0,0,0,.08)!important}
+
+/* ── 벤또 그리드 ── */
+.bento-item::before{
+  background:linear-gradient(90deg,transparent,rgba(200,163,86,.50),rgba(212,180,110,.32),transparent)!important}
+.bento-item:hover{
+  border-color:rgba(200,163,86,.32)!important;
+  box-shadow:0 12px 40px rgba(200,163,86,.12),0 4px 16px rgba(0,0,0,.06)!important;
+  transform:translateY(-2px)!important}
+
+/* ── AI 히어로 ── */
+.ai-hero{
+  background:linear-gradient(135deg,#1A1408 0%,#2A1E08 45%,#1A1A0A 100%)!important;
+  border-color:rgba(200,163,86,.26)!important}
+.ai-hero-glow{
+  background:radial-gradient(circle,rgba(200,163,86,.28) 0%,rgba(212,180,110,.10) 45%,transparent 70%)!important}
+
+/* ── AI 노트 ── */
+.ai-note{
+  background:rgba(200,163,86,.06)!important;
+  border-color:rgba(200,163,86,.18)!important}
+.ai-note-tag{background:linear-gradient(135deg,#A8823A,#E2CA96)!important;color:#0F172A!important}
+
+/* ── AI 메뉴 추천 ── */
+.ai-rec:hover{border-color:rgba(200,163,86,.38)!important}
+.ai-rec-top{
+  background:linear-gradient(135deg,rgba(200,163,86,.11),rgba(212,180,110,.05))!important;
+  border-color:rgba(200,163,86,.28)!important}
+.ai-rec-top .ai-rec-rank{color:#C8A356!important}
+
+/* ── AI 칩 ── */
+.ai-chip:hover{
+  border-color:rgba(200,163,86,.50)!important;
+  color:var(--tx)!important;
+  background:rgba(200,163,86,.10)!important}
+
+/* ── AI 히트맵 — warm gold tone ── */
+.ai-heat-cell.lv1{background:rgba(200,163,86,.22)!important}
+.ai-heat-cell.lv2{background:rgba(200,163,86,.46)!important}
+.ai-heat-cell.lv3{background:rgba(200,163,86,.70)!important}
+.ai-heat-cell.lv4{background:linear-gradient(135deg,#C8A356,#E2CA96)!important}
+
+/* ── AI 사이드바 메뉴 강조 ── */
+.ni.ni-ai{
+  background:linear-gradient(135deg,rgba(200,163,86,.13),rgba(212,180,110,.04))!important;
+  border-color:rgba(200,163,86,.22)!important}
+.ni.ni-ai:hover{border-color:rgba(200,163,86,.46)!important}
+.ni-new{background:linear-gradient(135deg,#A8823A,#E2CA96)!important;color:#0F172A!important}
+
+/* ── 채팅 UI ── */
+.ai-chat-head{background:linear-gradient(135deg,#A8823A,#E2CA96)!important;color:#0F172A!important}
+.ai-chat-input input:focus{border-color:#C8A356!important}
+.ai-msg.me{background:linear-gradient(135deg,#A8823A,#E2CA96)!important;color:#0F172A!important}
+.ai-chat-input button{background:linear-gradient(135deg,#C8A356,#E2CA96)!important;color:#0F172A!important}
+
+/* ── 마이크 / FAB ── */
+.ai-mic,.ai-fab{
+  background:linear-gradient(135deg,#C8A356,#E2CA96)!important;color:#0F172A!important;
+  box-shadow:0 6px 22px rgba(200,163,86,.42)!important}
+.ai-mic-ring{border-color:rgba(200,163,86,.50)!important}
+
+/* ── AI 버튼 primary ── */
+.ai-btn-primary{
+  background:linear-gradient(135deg,#C8A356,#D4B46E)!important;
+  color:#0F172A!important;
+  box-shadow:0 4px 18px rgba(200,163,86,.34)!important}
+.ai-btn-primary:hover{box-shadow:0 8px 26px rgba(200,163,86,.50)!important}
+
+/* ── 스크롤바 — gold ── */
+::-webkit-scrollbar-thumb{background:rgba(200,163,86,.35)!important;border-radius:4px}
+
+/* ── 선택 효과 ── */
+::selection{background:rgba(200,163,86,.22)!important}
+
+/* ── 인사이트 카드 ── */
+.insight-card{
+  background:linear-gradient(135deg,rgba(200,163,86,.07),rgba(212,180,110,.03))!important;
+  border-color:rgba(200,163,86,.16)!important}
+
+/* ── hero-card ── */
+.hero-card{
+  background:linear-gradient(135deg,#1A1206 0%,#2A1C08 50%,#1E1608 100%)!important;
+  border-color:rgba(200,163,86,.22)!important}
+.hero-card::before{background:radial-gradient(circle,rgba(200,163,86,.25),transparent 70%)!important}
+.hero-card::after{background:radial-gradient(circle,rgba(212,180,110,.14),transparent 70%)!important}
+
+/* ── 대시보드 히어로 ── */
+.dash-hero{
+  background:linear-gradient(135deg,#1A1206 0%,#2A1C08 40%,#1A1408 100%)!important;
+  border-color:rgba(200,163,86,.16)!important}
+.dash-hero::before{background:radial-gradient(circle,rgba(200,163,86,.20) 0%,transparent 70%)!important}
+.dash-hero::after{background:radial-gradient(circle,rgba(212,180,110,.10) 0%,transparent 70%)!important}
+
+/* ── topbar badge ── */
+.topbar-badge{background:linear-gradient(135deg,#C8A356,#D4B46E)!important;color:#0F172A!important}
+
+/* ── 카드 브랜드 ── */
+.card-brand{
+  background:linear-gradient(135deg,rgba(200,163,86,.10),rgba(212,180,110,.05))!important;
+  border-color:rgba(200,163,86,.20)!important}
+
+/* 탑바 */
+.topbar{background:rgba(245,241,235,.95)!important;border-bottom-color:rgba(200,163,86,.12)!important}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
