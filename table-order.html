@@ -149,7 +149,7 @@ var DID=params.get('did')||params.get('d')||'';
 var TID=params.get('tid')||params.get('t')||'';
 var _menus=[];
 var _cart={};
-var _curCat='전체';
+var _curCat='all';
 var _tossKey='test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
 var _lang=localStorage.getItem('filo_lang')||'ko';
 var _transCache={}; /* {lang: {ko텍스트: 번역텍스트}} */
@@ -186,6 +186,7 @@ function applyUIText(){
 /* ── 언어 전환 ── */
 window.setLang=function(lang){
   _lang=lang;
+  _curCat='all'; /* 언어 전환 시 카테고리 초기화 */
   localStorage.setItem('filo_lang',lang);
   applyUIText();
   if(lang==='ko'){
@@ -196,43 +197,34 @@ window.setLang=function(lang){
   }
 };
 
-/* ── Claude API로 메뉴 번역 ── */
+/* ── 메뉴 번역 (병렬) ── */
 function translateMenus(lang){
-  /* 캐시 확인 */
-  if(_transCache[lang]){
-    _applyTranslation(lang);
-    return;
-  }
+  if(_transCache[lang]){_applyTranslation(lang);return;}
   var banner=document.getElementById('trans-banner');
   if(banner)banner.style.display='block';
 
-  /* 번역할 텍스트 수집 (메뉴명 + 카테고리) */
-  var texts=[];
-  var seen={};
+  var texts=[],seen={};
   _menus.forEach(function(m){
-    if(m.name&&!seen[m.name]){texts.push(m.name);seen[m.name]=true;}
-    if(m.category&&!seen[m.category]){texts.push(m.category);seen[m.category]=true;}
-    if(m.description&&!seen[m.description]){texts.push(m.description);seen[m.description]=true;}
+    [m.name,m.category,m.description].forEach(function(v){
+      if(v&&!seen[v]){texts.push(v);seen[v]=true;}
+    });
   });
+  if(!texts.length){if(banner)banner.style.display='none';return;}
 
-  var langName={en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-
-  var translateNext=function(idx,result){
-    if(idx>=texts.length){
-      _transCache[lang]=result;
-      _applyTranslation(lang);
-      if(banner)banner.style.display='none';
-      return;
-    }
-    fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:texts[idx],lang:lang})})
+  /* 병렬 번역 */
+  Promise.all(texts.map(function(txt){
+    return fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:txt,lang:lang})})
     .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.translated)result[texts[idx]]=d.translated;
-      translateNext(idx+1,result);
-    }).catch(function(){translateNext(idx+1,result);});
-  };
-  translateNext(0,{});
+    .then(function(d){return {src:txt,dst:d.translated||txt};})
+    .catch(function(){return {src:txt,dst:txt};});
+  })).then(function(pairs){
+    var result={};
+    pairs.forEach(function(p){if(p.dst&&p.dst!==p.src)result[p.src]=p.dst;});
+    _transCache[lang]=result;
+    _applyTranslation(lang);
+    if(banner)banner.style.display='none';
+  });
 }
 
 function _applyTranslation(lang){
@@ -305,6 +297,7 @@ function init(){
       return;
     }
     _menus=menus;
+    _curCat='all';
     if(_lang==='ko'){
       _transMenus=_menus.slice();
       renderMenus();
@@ -318,19 +311,23 @@ function init(){
 
 function renderMenus(){
   var menus=_transMenus.length?_transMenus:_menus;
-  var cats=[t('all')].concat([...new Set(menus.map(function(m){return m.category;}).filter(Boolean))]);
+  /* 카테고리 목록: 원본 메뉴의 category 값으로 관리, 표시만 번역 */
+  var rawCats=[...new Set(_menus.map(function(m){return m.category;}).filter(Boolean))];
+  var cache=_transCache[_lang]||{};
   var catWrap=document.getElementById('cat-wrap');
-  catWrap.innerHTML=cats.map(function(c){
-    return '<button class="cat-btn'+(c===_curCat?' on':'')+(c===t('all')&&_curCat==='전체'?' on':'')+'" onclick="filterCat(\''+c+'\')">'+c+'</button>';
-  }).join('');
+  catWrap.innerHTML=['<button class="cat-btn'+(_curCat==='all'?' on':'')+'" onclick="filterCat(\'all\')">'+t('all')+'</button>']
+    .concat(rawCats.map(function(rc){
+      var disp=cache[rc]||rc;
+      return '<button class="cat-btn'+(_curCat===rc?' on':'')+'" onclick="filterCat(\''+rc.replace(/'/g,"\\'")+'\')" data-raw="'+rc+'">'+disp+'</button>';
+    })).join('');
 
-  var filtered=(_curCat==='전체'||_curCat===t('all'))?menus:menus.filter(function(m){return m.category===_curCat;});
+  var filtered=(_curCat==='all')?menus:menus.filter(function(m,i){return _menus[i]&&_menus[i].category===_curCat;});
   var area=document.getElementById('menu-area');
   if(!filtered.length){area.innerHTML='<div class="loading" style="padding:40px">'+t('noMenu')+'</div>';return;}
 
   area.innerHTML='<div class="menu-grid">'+filtered.map(function(m){
     var qty=_cart[m.id]?_cart[m.id].qty:0;
-    var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'"><div class="menu-img" style="display:none">'+(m.emoji||'')+'</div>':'<div class="menu-img">'+(m.emoji||'')+'</div>';
+    var img=m.imgUrl?'<img src="'+m.imgUrl+'" style="width:100%;aspect-ratio:1;object-fit:cover" onerror="this.style.display=\'none\';(this.nextElementSibling||this.nextSibling).style.display=\'flex\'"><div class="menu-img" style="display:none">'+(m.emoji||'🍽️')+'</div>':'<div class="menu-img">'+(m.emoji||'🍽️')+'</div>';
     return '<div class="menu-card'+(m.soldOut?' sold-out':'')+'\" id="mc-'+m.id+'">'+
       img+
       '<div class="menu-info">'+
@@ -347,7 +344,7 @@ function renderMenus(){
 }
 
 window.filterCat=function(c){
-  _curCat=c;
+  _curCat=c; /* 'all' 또는 원본 Korean category값 */
   renderMenus();
 };
 
@@ -450,7 +447,14 @@ function _doTablePrepay(items,total,orderName){
       customerName:'Table '+TID,
       successUrl:location.origin+'/order-done?oid='+orderId+'&did='+DID+'&tid='+TID,
       failUrl:location.origin+'/order-fail?oid='+orderId+'&did='+DID+'&tid='+TID,
-    }).catch(function(e){if(e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);});
+    }).catch(function(e){
+      if(e.code==='USER_CANCEL')return;
+      var msg=document.createElement('div');
+      msg.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999';
+      msg.textContent='결제 오류: '+e.message;
+      document.body.appendChild(msg);
+      setTimeout(function(){msg.remove();},3000);
+    });
   });
 }
 
@@ -465,17 +469,26 @@ function _doTablePostpay(items,total){
   var tok=_myFcmToken||null;
   if(tok)orderData.fcmToken=tok;
   // filo_orders에 저장해야 POS/키친과 연동됨
-  _db.collection('filo_orders').add(orderData).then(function(){
+  _db.collection('filo_orders').add(orderData).then(function(ref){
+    window._currentOrderId=ref.id;
     _cart={};
-    renderCart();
-    var done=document.getElementById('done-screen')||document.createElement('div');
-    done.style.cssText='position:fixed;inset:0;background:#08101f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff';
-    done.innerHTML='<div style="font-size:48px;margin-bottom:16px">✓</div>'
+    closeCart();
+    renderMenus();
+    var done=document.createElement('div');
+    done.id='done-screen';
+    done.style.cssText='position:fixed;inset:0;background:#08101f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:24px';
+    done.innerHTML='<div style="font-size:56px;margin-bottom:16px">✓</div>'
       +'<div style="font-size:22px;font-weight:700;margin-bottom:8px">주문 완료!</div>'
-      +'<div style="color:#c9a84c;font-size:15px">식사 후 카운터에서 계산해주세요</div>'
-      +'<button onclick="this.parentElement.remove()" style="margin-top:32px;padding:12px 32px;background:#c9a84c;color:#08101f;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">확인</button>';
+      +'<div style="color:#c9a84c;font-size:15px;margin-bottom:32px">식사 후 카운터에서 계산해주세요</div>'
+      +'<button onclick="document.getElementById(\'done-screen\').remove()" style="padding:14px 36px;background:#c9a84c;color:#08101f;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">추가 주문</button>';
     document.body.appendChild(done);
-  }).catch(function(e){alert('주문 오류: '+e.message);});
+  }).catch(function(e){
+    var msg=document.createElement('div');
+    msg.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999';
+    msg.textContent='주문 오류: '+e.message;
+    document.body.appendChild(msg);
+    setTimeout(function(){msg.remove();},3000);
+  });
 }
 
 init();
