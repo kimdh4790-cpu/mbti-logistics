@@ -1,78 +1,121 @@
+﻿# MBTICO - CLAUDE.md
+> 유한회사 엠비티아이 SaaS 모노레포. 세션 시작 시 반드시 이 파일 전체를 읽고 시작할 것.
 
+---
 
-## ⚠️ 절대 수정 금지 항목
+## 🏢 회사 기본 정보
+- 대표: 김형우 / 유한회사 엠비티아이 (사업자번호 373-86-02536)
+- 로컬 경로: C:\Users\82104\Desktop\mbti-logistics
+- GitHub: kimdh4790-cpu/mbti-logistics (main 브랜치만 사용)
 
-### wrangler.toml
-- `wrangler.toml` 파일은 절대 수정하지 말 것
-- 특히 `[vars]` 섹션 추가/수정 금지
-- Cloudflare Secrets(환경변수)는 대시보드에서만 관리
-- `wrangler deploy` 시 `[vars]` 변경으로 기존 Secrets가 삭제될 수 있음
+---
 
-### Cloudflare 환경변수 (Secrets)
-다음 변수들은 Cloudflare 대시보드에 등록된 Secrets임. 코드에서 참조만 할 것:
-- FIREBASE_SA_KEY, FIREBASE_API_KEY, FIREBASE_WEB_API_KEY
-- ANTHROPIC_API_KEY, CLAUDE_API_KEY
-- KAKAO_REST_KEY, KAKAO_JS_KEY
-- SOLAPI_KEY, SOLAPI_SECRET
-- RESEND_API_KEY, TOSS_SECRET_KEY
-- MODUSIGN_API_KEY, BIZ_API_KEY
-- GOOGLE_TRANSLATE_KEY, CRON_SECRET, SYNC_KV_SECRET
+## 🔑 인프라 핵심 상수 (절대 변경 금지)
+Firebase 프로젝트:   mbti-logistics
+Cloudflare Account:  02709cbec18d848913b4246015b9148f
+KV NS_ID:            7f0e90efaea64f3ab08ff00f8970b28b
+슈퍼어드민:          kimdh4790@gmail.com / soungkyekim@naver.com
+테스트 dealerId:     3lqP7HNSgVP18eZbMn6DnQxRXCA2
+매장 dealerId:       9XD2K3W1tIhIs6XM74YT0xfRFEP2
+Oracle Cloud IP:     155.248.187.99 (4코어/24GB, opc 계정)
 
-## UI 원칙
-- 모든 목록/리스트는 5개씩 표시. 더보기 버튼 또는 페이지네이션
-- 한꺼번에 길게 스크롤되는 UI 절대 금지
-- 초딩 디자인 금지 — 대기업급 럭셔리 디자인
-- 이모지 UI 전면 금지 → Lucide SVG 아이콘
-- Pretendard 폰트 기본
-- 카드 간격/여백/색상 대비 균일하게
-- 모바일 우선 반응형
+---
 
-## 배포 원칙
-- 파일 하나 수정 완료할 때마다 즉시: git commit + git push origin main + KV 배포
-- 전체 완료 기다리지 말고 파일 하나 끝나면 바로 배포
-- git remote: https://kimdh4790-cpu:${GITHUB_TOKEN}@github.com/kimdh4790-cpu/mbti-logistics.git
-- wrangler.toml 절대 수정 금지
-- filo-common.js 절대 수정 금지
-- 새 파일 생성 시 deploy.yml KV 목록 반드시 추가
-- 세션 하나 = 파일 하나 원칙
-- Playwright 실사 테스트 후 통과/실패 표 보고
+## 🚫 절대 수정 금지
+- wrangler.toml
+- wrangler.toml [vars] 섹션
+- _worker.js 내 }{status:400 치환 패턴
+- Cloudflare KV NS_ID
+- Firebase mbti-logistics 프로젝트 설정
+- GitHub Actions secrets (CF_GLOBAL_KEY)
+- 슈퍼어드민 UIDdealerId
+- settle.html / drivers.html 리팩토링 금지
+- filo-common.js 직접 수정 금지
+- DONWAY preFreshback/dateFresh 로직 수정 금지
 
-## yongcha.app 배포 원칙
-- yongcha.app은 KV가 아닌 _worker.js 안의 handleYongcha 함수로 서빙됨
-- yongcha.html KV 업로드 금지 (반영 안 됨)
-- yongcha-worker.js 수정 시 반드시 _worker.js handleYongcha에도 동기화
-- 배포 명령: git pull origin main && npx wrangler deploy
-- KV put yongcha.html 명령어는 효과 없음 — 절대 사용 금지
+---
 
-## 셸 실행 원칙
-- 백그라운드 셸(&, parallel, 동시실행) 절대 금지
-- 모든 명령어 순차 실행만 (하나 완료 후 다음)
-- git stash pop 후 git push 시 충돌나면 git stash drop 후 재시도
-- git push 실패 시 git pull --rebase 후 재시도
+## 📦 배포 규칙
 
-## Git 브랜치 원칙
-- 브랜치는 main 하나만 사용
-- master 브랜치 금지 (삭제 완료)
-- push 전 항상: git pull origin main --rebase
-- push 실패 시: git pull origin main --rebase 후 재시도
-- git stash 사용 금지 — 충돌 원인
+### KV 업로드
+npx wrangler kv key put --remote --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b [파일명] --path [파일경로]
+settle.html 예외: --path donway-pages/index.html
 
-## 작업 순서 원칙
-- 모든 파일 작업 전 반드시: 현재 기능 전체 파악 → 버그/미완성 확인 → 고도화 진행
-- 기존 기능 절대 삭제/변경 금지 (추가만 허용)
-- Playwright 실사 테스트로 기존 기능 정상 작동 확인 후 고도화
+### Worker 배포
+(Get-Content _worker.js -Raw) -replace '}` + '{' + `status:400', '}' | Set-Content _worker.js
+npx wrangler deploy
 
-## 프레시백 회수금액 원칙 (DONWAY 핵심)
-- 아이디지원 시 fid(지원받는기사)의 dateFresh에서 날짜별 프레시백 회수금액 → tid(대신배송기사)에게 이전
-- dateFresh 키 날짜 포맷 반드시 정규화 (YYYY-MM-DD)
-- dateFresh 없으면 freshAmt 전체를 fallback으로 이전
-- 날짜 불일치로 누락되는 인원 없게 할 것
-- 절대 수정 금지 — 급여 계산 핵심 로직
+### GitHub push
+git add -A && git commit -m "feat: [작업내용]" && git push origin main
 
-## DONWAY 아이디지원 핵심 로직
-- 아이디지원 시 fid(지원받는기사)가 배송한 날짜의 프레시백(PJ) 금액만 tid(대신배송기사)에게 이전
-- fid.dateFresh[날짜] → 해당 날짜에 fid가 배송한 경우만 tid로 이전
-- 날짜 포맷 정규화 필수 (YYYY-MM-DD)
-- fallback: dateFresh 없으면 fid.freshAmt 전체 이전
-- 누락 인원 없게: dateFresh 키 순회 시 모든 날짜 처리
-- 관련 코드: settle.html 5128~5135번 라인
+### yongcha.app (KV 업로드 효과 없음)
+git pull origin main && npx wrangler deploy
+
+### mbtico.kr
+cd mbtico-pages && npx wrangler deploy
+
+---
+
+## ✅ 작업 규칙
+- 명령어 순차 실행 (병렬 금지)
+- git stash 사용 금지
+- 백그라운드 셸 실행 금지
+- 파일 하나 수정  즉시 KV 업로드  확인  다음 파일
+- 5개 초과 목록  페이지네이션
+- 이모지 금지  Lucide SVG 사용
+- 폰트: Pretendard 전용
+- alert() 금지  _filoToast()/_dineToast() 사용
+- 클라우드 원격 환경 금지  로컬 PC에서만 실행
+- Playwright 테스트  반드시 로컬에서 실행
+
+---
+
+## 🎨 디자인 기준
+- 색상: 네이비(#08101f) + 골드(#c9a84c) + 화이트 고정
+- 그라데이션 남용 금지
+- 모바일 퍼스트 (375px 기준)
+- 터치 타겟 최소 44px
+- 로딩/빈상태/에러 상태 항상 처리
+- 여백: 16px/24px/32px 배수
+- 폰트 계층: 24px/16px/14px/12px
+
+---
+
+## 🔴 미완료 작업 (박람회 D-13, 2026-08-20)
+
+### 최우선
+1. 선결제/후불 모달 - table-order.html 미작업
+2. FCM 영수증 푸시 - order.js reqReceiptFCM undefined (KV캐시 문제)
+3. 솔라피  알리고 교체 - _worker.js 알림톡 발송부
+
+### 중간
+4. FILO 메뉴 이미지 Pollinations  Pexels 일괄 업데이트
+5. 관제센터 채팅/공지/결제 탭 실사용 테스트
+6. 용차앱 라우팅 버그 (접속 시 DONWAY 랜딩)
+7. 직원 근태 QR 이름+연락처 등록 화면 수정
+8. 매출분석 7월 테스트 데이터 시딩
+
+### 박람회 이후
+9. filo-menu.js 분리 (55KB)
+10. filo-pos.js 분리 (39KB)
+11. mbtico-pages/_worker.js 경량화 (515KB)
+12. emergency.html 재작성 (461KB)
+13. 용차앱 저작권 등록
+14. 벤처 인증 (기보 부산지점)
+
+---
+
+## 💳 알림톡 템플릿 ID
+정산명세서: KA01TP260618101225825DuJHXpoC4kY
+재고발주:   KA01TP260623201607025LtxVxj2AoHI
+급여명세서: KA01TP260623201919874SBFmHTNdNft
+채널ID:     KA01PF260618094439788FzuY2GxDiSW
+
+---
+
+## 📋 세션 시작 체크리스트
+1. CLAUDE.md 전체 읽기 완료
+2. git pull origin main
+3. 미완료 작업 목록 확인
+4. 로컬 환경 확인 (클라우드 원격 금지)
+5. 작업 전 대상 파일 백업 확인
