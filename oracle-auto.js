@@ -23,7 +23,7 @@ const fs   = require('fs');
 
 const REGION        = process.env.OCI_REGION    || 'ap-tokyo-1';
 const HEADLESS      = process.env.HEADLESS      !== '0';   // 기본 true (서버 모드)
-const RETRY_MIN     = parseInt(process.env.RETRY_MIN) || 5;
+const RETRY_MIN     = parseInt(process.env.RETRY_MIN) || 1;
 const RETRY_MS      = RETRY_MIN * 60 * 1000;
 const NOTIFY_PHONE  = (process.env.NOTIFY_PHONE || '').replace(/[^0-9]/g, '');
 const SOLAPI_KEY    = process.env.SOLAPI_KEY    || '';
