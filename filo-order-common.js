@@ -310,7 +310,11 @@ function _openMdlCommon(m){
   scrollEl.insertBefore(img,mdlContent);
  } else {
   var emojiEl=document.createElement('div');
-  emojiEl.className='mdl-emoji';emojiEl.innerHTML=m.emoji||_svgIcon('utensils');
+  emojiEl.className='mdl-emoji';
+  var _mClrs2=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+  var _mClr2=_mClrs2[(m.name||'').charCodeAt(0)%_mClrs2.length];
+  emojiEl.style.cssText='display:flex;align-items:center;justify-content:center;padding:24px 0';
+  emojiEl.innerHTML='<div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,'+_mClr2+'22,'+_mClr2+'44);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;color:'+_mClr2+';font-family:Pretendard,sans-serif">'+(m.name||'M')[0]+'</div>';
   scrollEl.insertBefore(emojiEl,mdlContent);
  }
  var nameEl=document.getElementById(nameId);if(nameEl)nameEl.textContent=m.name;
@@ -431,7 +435,11 @@ function _openCart(){
    img.className='ci-img';img.src=menuData.imageUrl;img.alt=item.name;
    mediaEl.appendChild(img);
   } else {
-   mediaEl.className='ci-emoji';mediaEl.innerHTML=item.emoji||_svgIcon('utensils');
+   var _cClrs=['#7c3aed','#2563eb','#059669','#dc2626','#d97706','#db2777'];
+   var _cClr=_cClrs[(item.name||'').charCodeAt(0)%_cClrs.length];
+   mediaEl.className='ci-emoji';
+   mediaEl.style.cssText='width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,'+_cClr+'22,'+_cClr+'44);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:'+_cClr+';flex-shrink:0';
+   mediaEl.textContent=(item.name||'M')[0];
   }
   var nameEl=document.createElement('div');nameEl.className='ci-name';nameEl.textContent=item.name;
   var ctrl=document.createElement('div');ctrl.className='ci-ctrl';
