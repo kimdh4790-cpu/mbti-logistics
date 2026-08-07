@@ -22,6 +22,8 @@ const path = require('path');
 const fs   = require('fs');
 
 const REGION        = process.env.OCI_REGION    || 'ap-tokyo-1';
+const OCI_USER      = process.env.OCI_USER      || 'kimdh4790@gmail.com';
+const OCI_PASS      = process.env.OCI_PASS      || 'khw3103!!';
 const HEADLESS      = process.env.HEADLESS      !== '0';   // 기본 true (서버 모드)
 const RETRY_MIN     = parseInt(process.env.RETRY_MIN) || 1;
 const RETRY_MS      = RETRY_MIN * 60 * 1000;
@@ -75,6 +77,29 @@ function readSSHPubKey() {
     if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
   }
   return null;
+}
+
+// ── 자동 로그인 ──────────────────────────────────────────────────────────────
+async function autoLogin(page) {
+  try {
+    // 이메일 입력
+    const emailField = page.locator('input[type=email], input[name=email], #login-email, #idcs-signin-basic-signin-form-username').first();
+    await emailField.waitFor({ timeout: 8000 });
+    await emailField.fill(OCI_USER);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1500);
+    // 비밀번호 입력
+    const pwField = page.locator('input[type=password], input[name=password], #idcs-signin-basic-signin-form-password').first();
+    await pwField.waitFor({ timeout: 8000 });
+    await pwField.fill(OCI_PASS);
+    await page.keyboard.press('Enter');
+    log('자동 로그인 시도 완료');
+    await page.waitForTimeout(3000);
+    return true;
+  } catch(e) {
+    log('자동 로그인 실패 — 수동 로그인 필요: ' + e.message);
+    return false;
+  }
 }
 
 // ── 로그인 감지 ───────────────────────────────────────────────────────────────
