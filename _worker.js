@@ -8376,8 +8376,8 @@ textarea.inp{resize:vertical;min-height:80px}
 .urgent-post{background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(249,115,22,.07));border:1.5px solid rgba(239,68,68,.35);border-radius:18px;padding:18px;margin-bottom:10px;cursor:pointer;position:relative;overflow:hidden}
 .urgent-post::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--rd),var(--or));border-radius:18px 18px 0 0}
 .urgent-tag{display:inline-flex;align-items:center;gap:4px;background:var(--rd);color:#fff;font-size:11px;font-weight:800;padding:3px 12px;border-radius:20px;animation:pulseOr 1.2s infinite}
-.fare-num{font-size:40px;font-weight:900;letter-spacing:-2px;color:var(--tx);line-height:1.05}
-.fare-num.lg{font-size:52px}
+.fare-num{font-size:46px;font-weight:900;letter-spacing:-2.5px;color:var(--or);line-height:1;text-shadow:0 0 40px rgba(249,115,22,.35)}
+.fare-num.lg{font-size:76px;letter-spacing:-4px;color:var(--or);text-shadow:0 0 60px rgba(249,115,22,.4)}
 .fare-est{font-size:12px;color:var(--gn);font-weight:700;background:var(--gnl);padding:3px 10px;border-radius:20px;display:inline-block;margin-top:7px}
 .pinfo-row{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
 .pinfo-chip{font-size:11px;color:var(--t2);background:var(--bg3);border-radius:8px;padding:4px 10px;font-weight:600}
@@ -8408,9 +8408,27 @@ textarea.inp{resize:vertical;min-height:80px}
 
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-mark"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="22" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H4a2 2 0 00-2 2v8"/></svg></div>
-    <div class="login-name">용차</div>
-    <div class="login-sub">택배 노선 매칭 플랫폼</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:6px">
+      <div class="login-mark" style="margin:0"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="22" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H4a2 2 0 00-2 2v8"/></svg></div>
+      <div style="text-align:left">
+        <div class="login-name" style="text-align:left;margin:0;font-size:28px">용차</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.35);font-weight:600;letter-spacing:.3px">택배 노선 매칭 플랫폼</div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(249,115,22,.12),rgba(245,158,11,.08));border:1px solid rgba(249,115,22,.25);border-radius:14px;padding:14px 16px;margin:20px 0 14px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-20px;right:-10px;width:80px;height:80px;background:radial-gradient(circle,rgba(249,115,22,.18) 0%,transparent 70%);border-radius:50%"></div>
+      <div style="font-size:9px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:1px;margin-bottom:5px">시장 평균 단가</div>
+      <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--or);font-weight:700">₩</span>
+        <span style="font-size:42px;font-weight:900;color:var(--or);letter-spacing:-2px;line-height:1;text-shadow:0 0 30px rgba(249,115,22,.4)">840</span>
+        <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,.5)">~ 960 / 건</span>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <span style="font-size:10px;background:rgba(16,185,129,.15);color:#10b981;border-radius:6px;padding:3px 8px;font-weight:700">원클릭 지원</span>
+        <span style="font-size:10px;background:rgba(79,120,245,.15);color:#a5b4fc;border-radius:6px;padding:3px 8px;font-weight:700">AI 노선 코치</span>
+        <span style="font-size:10px;background:rgba(245,158,11,.15);color:var(--yw);border-radius:6px;padding:3px 8px;font-weight:700">대리점 직통전화</span>
+      </div>
+    </div>
     <div class="tabs">
       <button class="tab on" id="tab-login" onclick="_yTab('login')">로그인</button>
       <button class="tab" id="tab-reg" onclick="_yTab('reg')">회원가입</button>
@@ -8724,7 +8742,7 @@ function _makePostCard(d){
       '</div>'+
       '<span class="pc-status '+stCls+'" style="margin-left:10px;flex-shrink:0">'+stTxt+'</span>'+
     '</div>'+
-    '<div class="fare-num">'+_fmt(d.unitPrice||0)+'<span style="font-size:15px;font-weight:500;color:var(--t2);margin-left:4px">원/건</span></div>'+
+    '<div class="fare-num"><span style="font-size:24px;font-weight:700;opacity:.8;margin-right:1px">₩</span>'+_fmt(d.unitPrice||0)+'<span style="font-size:14px;font-weight:600;color:var(--t2);margin-left:5px;letter-spacing:0">/건</span></div>'+
     (monthEst?'<div class="fare-est">월 ~'+monthEst+'만원</div>':'')+
     (chips?'<div class="pinfo-row">'+chips+'</div>':'')+
     '<div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bd);margin-top:10px">'+
@@ -8788,7 +8806,7 @@ function _showPostDetail(d){
     '</div>'+
     '<div class="modal-title" style="margin-bottom:4px">'+(d.region||'')+' '+(d.area||'')+'</div>'+
     '<div class="rating-row" style="margin-bottom:14px"><span class="star">★</span> '+(d.agencyRating?(+d.agencyRating).toFixed(1):'4.5')+'<span style="color:var(--t3);margin:0 5px">·</span>'+(d.agencyName||'대리점')+'</div>'+
-    '<div class="fare-num lg">'+_fmt(d.unitPrice||0)+'<span style="font-size:18px;font-weight:500;color:var(--t2);margin-left:5px">원/건</span></div>'+
+    '<div class="fare-num lg"><span style="font-size:36px;font-weight:700;opacity:.8">₩</span>'+_fmt(d.unitPrice||0)+'<span style="font-size:18px;font-weight:600;color:var(--t2);margin-left:6px">/건</span></div>'+
     (monthEst?'<div class="fare-est" style="margin-bottom:16px">월 ~'+monthEst+'만원 예상</div>':'')+
     '<div class="stat-grid" style="margin-top:12px">'+
       '<div class="stat-card"><div class="stat-val">'+_fmt(minG)+'</div><div class="stat-lbl">최소보장</div></div>'+
@@ -8883,8 +8901,9 @@ function _pgHomeDriver(el){
         '<div class="ai-body" id="ai-body">내 지역·차종 기준 최적 노선을 분석해드려요.</div>'+
         '<button class="ai-btn" id="ai-btn" onclick="_callAICoach()">'+_SVG.bolt+' AI 분석 시작</button>'+
       '</div>'+
+      '<div id="top-fare-card"></div>'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-        '<div class="page-title">내 주변 공고</div>'+
+        '<div class="page-title">전체 공고</div>'+
         '<button class="map-toggle" id="home-map-toggle" onclick="_toggleHomeMap()">'+_SVG.map+' 지도</button>'+
       '</div>'+
       '<div id="home-map" style="height:280px;display:none;border-radius:12px;overflow:hidden;border:1px solid var(--bd);margin-bottom:12px"></div>'+
@@ -8913,14 +8932,45 @@ function _toggleHomeMap(){
 }
 
 function _loadHomePosts(){
-  _db.collection('yongcha_posts').where('status','==','open').orderBy('createdAt','desc').limit(10).get()
+  _db.collection('yongcha_posts').where('status','==','open').orderBy('unitPrice','desc').limit(20).get()
   .then(function(snap){
     var list=[];snap.forEach(function(d){list.push(Object.assign({id:d.id},d.data()));});
     _allPosts=list;
     var el2=document.getElementById('home-posts');if(!el2)return;
+    var hero=document.getElementById('top-fare-card');
+    if(hero&&list.length){
+      var best=list[0];
+      var dayEst=best.unitPrice&&best.volume?Math.round(best.unitPrice*best.volume/10000):0;
+      var monthEst=dayEst?Math.round(dayEst*26):0;
+      var clr=_courierColor(best.courier||'');
+      hero.innerHTML=
+        '<div style="background:linear-gradient(135deg,rgba(249,115,22,.15),rgba(245,158,11,.1));border:1.5px solid rgba(249,115,22,.3);border-radius:18px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden;cursor:pointer" id="best-post-hero">'+
+          '<div style="position:absolute;top:-30px;right:-20px;width:110px;height:110px;background:radial-gradient(circle,rgba(249,115,22,.22) 0%,transparent 70%);border-radius:50%"></div>'+
+          '<div style="position:relative;z-index:1">'+
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+              '<span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;background:rgba(249,115,22,.22);color:var(--or);letter-spacing:.5px">TODAY 최고 단가</span>'+
+              (best.urgent?'<span style="font-size:9px;font-weight:800;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,.2);color:var(--rd)">긴급</span>':'')+
+              '<span style="font-size:10px;padding:2px 8px;border-radius:6px;background:'+clr+'22;color:'+clr+';font-weight:700">'+(best.courier||'')+'</span>'+
+            '</div>'+
+            '<div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:6px;letter-spacing:-.3px">'+(best.region||'')+' '+(best.area||'')+'</div>'+
+            '<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:8px">'+
+              '<span style="font-size:16px;font-weight:700;color:var(--or)">₩</span>'+
+              '<span style="font-size:52px;font-weight:900;color:var(--or);letter-spacing:-3px;line-height:1;text-shadow:0 0 40px rgba(249,115,22,.5)">'+_fmt(best.unitPrice||0)+'</span>'+
+              '<span style="font-size:13px;color:rgba(255,255,255,.5);font-weight:600">/건</span>'+
+            '</div>'+
+            '<div style="display:flex;gap:8px;align-items:center">'+
+              (monthEst?'<span style="font-size:12px;font-weight:800;color:#34d399;background:rgba(16,185,129,.15);border-radius:8px;padding:4px 10px">월 ~'+monthEst+'만원</span>':'')+
+              (best.volume?'<span style="font-size:11px;color:rgba(255,255,255,.45)">'+best.volume+'건</span>':'')+
+              (best.workShift?'<span style="font-size:11px;color:rgba(255,255,255,.45)">'+best.workShift+'</span>':'')+
+            '</div>'+
+          '</div>'+
+        '</div>';
+      var bh=document.getElementById('best-post-hero');
+      if(bh)bh.onclick=function(){_showPostDetail(best);};
+    }
     if(!list.length){el2.innerHTML='<div class="empty">'+_SVG.truck+'<div class="empty-title">공고 없음</div><div class="empty-sub">아직 등록된 공고가 없어요</div></div>';return;}
     el2.innerHTML='';
-    list.slice(0,5).forEach(function(d){el2.appendChild(_makePostCard(d));});
+    list.slice(0,8).forEach(function(d){el2.appendChild(_makePostCard(d));});
   }).catch(function(){});
 }
 
