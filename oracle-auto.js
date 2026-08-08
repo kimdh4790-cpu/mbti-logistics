@@ -24,7 +24,7 @@ const fs   = require('fs');
 const REGION        = process.env.OCI_REGION    || 'ap-tokyo-1';
 const OCI_USER      = process.env.OCI_USER      || 'kimdh4790@gmail.com';
 const OCI_PASS      = process.env.OCI_PASS      || 'khw3103!!';
-const HEADLESS      = process.env.HEADLESS      !== '0';   // 기본 true (서버 모드)
+const HEADLESS      = process.env.HEADLESS === '1';   // 기본 false (브라우저 표시)
 const RETRY_MIN     = parseInt(process.env.RETRY_MIN) || 1;
 const RETRY_MS      = RETRY_MIN * 60 * 1000;
 const NOTIFY_PHONE  = (process.env.NOTIFY_PHONE || '').replace(/[^0-9]/g, '');
@@ -124,14 +124,27 @@ async function ensureLoggedIn(page) {
     return;
   }
 
+  // 자동 로그인 먼저 시도 (헤드리스/헤드풀 공통)
+  log('자동 로그인 시도 중...');
+  const autoOk = await autoLogin(page);
+  await page.waitForTimeout(3000);
+
+  const isLoggedIn2 = await page
+    .locator('[aria-label="User menu"], .oci-header-user, [data-testid="user-menu"]')
+    .first().isVisible().catch(() => false);
+
+  if (isLoggedIn2 || autoOk) {
+    log('자동 로그인 성공');
+    return;
+  }
+
   if (HEADLESS) {
-    // 헤드리스 서버 모드에서 세션 없으면 종료 안내
-    log('오류: 저장된 세션이 없습니다.');
-    log(`해결법: HEADLESS=0 node oracle-auto.js 로 먼저 실행 → 로그인 후 Enter`);
+    log('자동 로그인 실패 — 헤드리스 모드에서 수동 로그인 불가');
+    log('해결: node oracle-auto.js (브라우저 창 뜸 → 로그인 → Enter)');
     process.exit(1);
   }
 
-  // 헤드풀 모드: 사용자가 직접 로그인
+  // 헤드풀 모드: 수동 로그인 대기
   log('로그인 필요 — 브라우저에서 로그인 완료 후 Enter를 누르세요...');
   await new Promise(resolve => process.stdin.once('data', resolve));
 
