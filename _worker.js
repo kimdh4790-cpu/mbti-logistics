@@ -8701,7 +8701,7 @@ function _makePostCard(d){
     '<div class="pc-foot">'+
       '<span class="pc-agency">'+(d.agencyName||'대리점')+'</span>'+
       (!isClosed&&_CU&&_CU.type==='driver'?
-        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">'+
+        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\')">'+
         _SVG.bolt+'지원</button>':'')+
     '</div>';
   if(!isClosed||(_CU&&_CU.type==='agency'&&d.agencyId===_CU.uid))div.onclick=function(){_showPostDetail(d);};
@@ -8742,11 +8742,11 @@ function _showPostDetail(d){
     '</div>'+
     (d.description?'<div class="card" style="font-size:13px;line-height:1.7;color:var(--t2)">'+(d.description||'')+'</div>':'')+
     (_CU&&_CU.type==='driver'&&d.status==='open'?
-      '<button class="btn-main" onclick="_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\');_closeModal()">바로 지원하기</button>':
+      '<button class="btn-main" onclick="_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\');_closeModal()">바로 지원하기</button>':
       _CU&&_CU.type==='agency'&&d.agencyId===_CU.uid?
         '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'+
-          '<button class="btn-main" onclick="_showApplicants(\''+d.id+'\')">지원자 확인</button>'+
-          (d.status==='open'?'<button class="btn-rd" style="margin-top:0" onclick="_closePost(\''+d.id+'\')">공고 마감</button>':
+          '<button class="btn-main" onclick="_showApplicants(\\''+d.id+'\\')">지원자 확인</button>'+
+          (d.status==='open'?'<button class="btn-rd" style="margin-top:0" onclick="_closePost(\\''+d.id+'\\')">공고 마감</button>':
           '<div style="text-align:center;font-size:12px;color:var(--t3);padding:8px">마감된 공고</div>')+
         '</div>':
       '<div style="text-align:center;font-size:13px;color:var(--t2);padding:16px">'+(d.status==='closed'?'마감된 공고예요':'')+'</div>');
@@ -8848,7 +8848,7 @@ function _pgHomeAgency(el){
       tmplHTML='<div class="section-lbl">빠른 공고 재등록</div>'+
         '<div class="tmpl-grid">'+
         templates.map(function(t){
-          return '<button class="tmpl-btn" onclick="_tmplPost(\''+t.id+'\')">'+
+          return '<button class="tmpl-btn" onclick="_tmplPost(\\''+t.id+'\\')">'+
             '<div class="tmpl-area">'+(t.region||'')+' '+(t.area||'')+'</div>'+
             '<div class="tmpl-price">'+_fmt(t.unitPrice||0)+'원</div>'+
           '</button>';
@@ -8864,7 +8864,7 @@ function _pgHomeAgency(el){
         '<div class="stat-card"><div class="stat-val">'+(_CU.region||'—')+'</div><div class="stat-lbl">담당 지역</div></div>'+
       '</div>'+
       tmplHTML+
-      '<button class="btn-main" onclick="_goPage(\'add_post\')">새 공고 등록</button>';
+      '<button class="btn-main" onclick="_goPage(\\'add_post\\')">새 공고 등록</button>';
   });
 }
 
@@ -8918,13 +8918,13 @@ function _pgPosts(el){
 function _buildPlatChips(){
   var el=document.getElementById('plat-row');if(!el)return;
   el.innerHTML=PLATFORMS.map(function(p){
-    return '<button class="chip'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\''+p+'\')">'+p+'</button>';
+    return '<button class="chip'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\\''+p+'\\')">'+p+'</button>';
   }).join('');
 }
 function _buildRgnChips(){
   var el=document.getElementById('rgn-row');if(!el)return;
   el.innerHTML=REGIONS.map(function(r){
-    return '<button class="chip'+(r===_rgnFilter?' on':'')+'" onclick="_setRgnFilter(\''+r+'\')">'+r+'</button>';
+    return '<button class="chip'+(r===_rgnFilter?' on':'')+'" onclick="_setRgnFilter(\\''+r+'\\')">'+r+'</button>';
   }).join('');
 }
 function _setPlatFilter(p){_platFilter=p;_pgIdx=0;_buildPlatChips();_applyFilters();}
@@ -9039,9 +9039,9 @@ function _renderWorkActive(el,w){
       '<div class="slide-label">밀어서 출발 확인</div>'+
     '</div>';
   } else if(step===1){
-    actionHTML='<button class="btn-main" style="margin-top:16px" onclick="_workArrived(\''+w.wid+'\')">현장 도착 확인</button>';
+    actionHTML='<button class="btn-main" style="margin-top:16px" onclick="_workArrived(\\''+w.wid+'\\')">현장 도착 확인</button>';
   } else if(step===2){
-    actionHTML='<button class="btn-gn" onclick="_workDone(\''+w.wid+'\')">배차 완료 처리</button>';
+    actionHTML='<button class="btn-gn" onclick="_workDone(\\''+w.wid+'\\')">배차 완료 처리</button>';
   }
 
   el.innerHTML=
@@ -9175,7 +9175,7 @@ function _pgSettleMgmt(el){
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">'+
             '<span class="ss-badge '+(w.settleStatus==='paid'?'ss-paid':w.settleStatus==='confirmed'?'ss-confirmed':'ss-pending')+'">'+
               (w.settleStatus==='paid'?'지급완료':w.settleStatus==='confirmed'?'확인완료':'대기')+'</span>'+
-            (isPending?'<button style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:8px;background:var(--gnl);color:var(--gn);border:1px solid rgba(16,185,129,.2);cursor:pointer" onclick="_confirmSettle(\''+w.wid+'\')">확인</button>':'')+
+            (isPending?'<button style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:8px;background:var(--gnl);color:var(--gn);border:1px solid rgba(16,185,129,.2);cursor:pointer" onclick="_confirmSettle(\\''+w.wid+'\\')">확인</button>':'')+
           '</div>'+
         '</div>';
       el2.appendChild(d2);
@@ -9215,7 +9215,7 @@ function _renderRevSim(el){
     (_revSimPosts.length?_revSimPosts.slice(0,10).map(function(d){
       var isSel=sel.indexOf(d.id)>=0;
       var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
-      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\''+d.id+'\')">'+
+      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\\''+d.id+'\\')">'+
         '<div class="sim-check">'+(isSel?_SVG.check:'')+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:700">'+(d.region||'')+' '+(d.area||'')+'</div>'+
@@ -9480,9 +9480,9 @@ function _showApplicants(postId){
         (isPending?
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
             '<button class="btn-gn" style="margin-top:0;font-size:13px;padding:10px" '+
-              'onclick="_acceptApply(\''+a.aid+'\',\''+a.driverName+'\',\''+a.driverPhone+'\',\''+a.driverId+'\',\''+postId+'\')">수락</button>'+
+              'onclick="_acceptApply(\\''+a.aid+'\\',\\''+a.driverName+'\\',\\''+a.driverPhone+'\\',\\''+a.driverId+'\\',\\''+postId+'\\')">수락</button>'+
             '<button class="btn-rd" style="margin-top:0;font-size:13px;padding:10px" '+
-              'onclick="_rejectApply(\''+a.aid+'\',\''+postId+'\')">거절</button>'+
+              'onclick="_rejectApply(\\''+a.aid+'\\',\\''+postId+'\\')">거절</button>'+
           '</div>':'');
       el2.appendChild(d2);
     });
