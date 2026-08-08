@@ -9270,7 +9270,7 @@ function _requestTaxInvoice(wid){
     _db.collection('yongcha_users').doc(w.agencyId).get().then(function(aSnap){
       var au=aSnap.exists?aSnap.data():{};
       var agencyCorpNum=(au.corpNum||'').replace(/[^0-9]/g,'');
-      if(!agencyCorpNum){_yToast('대리점 사업자번호 미등록\n대리점에 문의하세요');return;}
+      if(!agencyCorpNum){_yToast('대리점 사업자번호 미등록. 대리점에 문의하세요');return;}
       var driverCorpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
       var supply=Math.round((w.fare||0)/1.1);
       var tax=(w.fare||0)-supply;
