@@ -8745,8 +8745,21 @@ function _pgHome(el){
 }
 
 var _homeMapInst=null;
+function _donwayNudge(){
+  if(_CU.donwayId)return '';
+  return '<div onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="background:linear-gradient(135deg,rgba(0,200,248,.09),rgba(0,168,255,.05));border:1px solid rgba(0,200,248,.28);border-radius:12px;padding:13px 14px;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;gap:12px">'+
+    '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00c8f8" stroke-width="1.5" flex-shrink="0"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 13a1 1 0 100-2 1 1 0 000 2z" fill="#00c8f8"/><path d="M2 9h20"/></svg>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:13px;font-weight:800;color:#00c8f8">DONWAY로 정산받기</div>'+
+      '<div style="font-size:11px;color:var(--t2);margin-top:2px">배차 완료 → 당일 자동 입금 · 명세서 자동 발송</div>'+
+    '</div>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'+
+  '</div>';
+}
+
 function _pgHomeDriver(el){
   el.innerHTML=
+    _donwayNudge()+
     '<div class="ai-card" id="ai-card">'+
       '<div class="ai-hdr">'+
         '<div class="ai-icon">'+_SVG.brain+'</div>'+
@@ -8841,6 +8854,7 @@ function _pgHomeAgency(el){
     }
     el.innerHTML=
       '<div class="page-title">'+_CU.name+'</div><div class="page-sub">대리점 대시보드</div>'+
+      _donwayNudge()+
       '<div class="stat-grid">'+
         '<div class="stat-card"><div class="stat-val" style="color:var(--gn)">'+open+'</div><div class="stat-lbl">모집중</div></div>'+
         '<div class="stat-card"><div class="stat-val" style="color:var(--ac)">'+matched+'</div><div class="stat-lbl">매칭완료</div></div>'+
@@ -9104,7 +9118,22 @@ function _workDone(wid){
 
 /* ── 정산내역 (기사) ─────────────────────────────────────── */
 function _pgMySettle(el){
+  var donwayLinked=_CU.donwayId||'';
+  var donwayBanner=donwayLinked
+    ?'<div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">'+
+       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00c8f8" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'+
+       '<div><div style="font-size:12px;font-weight:700;color:#00c8f8">DONWAY 연동 완료</div><div style="font-size:11px;color:var(--t2)">정산 내역이 자동으로 동기화됩니다</div></div>'+
+     '</div>'
+    :'<div style="background:rgba(0,200,248,.06);border:1.5px solid rgba(0,200,248,.3);border-radius:12px;padding:14px;margin-bottom:14px">'+
+       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+         '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00c8f8" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 13a1 1 0 100-2 1 1 0 000 2z" fill="#00c8f8"/><path d="M2 9h20"/></svg>'+
+         '<span style="font-size:13px;font-weight:800;color:#00c8f8">DONWAY 정산 연동</span>'+
+       '</div>'+
+       '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">배차 완료 후 DONWAY에서 즉시 정산 신청하세요.<br>대리점이 DONWAY를 쓰면 당일 자동 입금까지 가능합니다.</div>'+
+       '<button onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="width:100%;padding:10px;background:#00c8f8;color:#08101f;font-weight:800;font-size:13px;border:none;border-radius:8px;cursor:pointer">DONWAY 무료 가입하기</button>'+
+     '</div>';
   el.innerHTML='<div class="page-title">정산내역</div><div class="page-sub">내 배차 정산 현황</div>'+
+    donwayBanner+
     '<div id="settle-list"><div class="card"><div style="color:var(--t2);font-size:13px">로딩 중...</div></div></div>';
   _db.collection('yongcha_work').where('driverId','==',_CU.uid).where('status','==','done').orderBy('completedAt','desc').limit(20).get()
   .then(function(snap){
@@ -9117,6 +9146,7 @@ function _pgMySettle(el){
     var stCls={pending:'ss-pending',confirmed:'ss-confirmed',paid:'ss-paid'};
     total.forEach(function(w){
       var d2=document.createElement('div');d2.className='settle-item';
+      var isPend=!w.settleStatus||w.settleStatus==='pending';
       d2.innerHTML=
         '<div class="settle-top">'+
           '<div>'+
@@ -9124,7 +9154,10 @@ function _pgMySettle(el){
             '<div style="font-size:12px;color:var(--t2);margin-top:3px">'+(w.area||w.region||'')+(w.courier?' · '+w.courier:'')+'</div>'+
             '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+_timeAgo(w.completedAt)+'</div>'+
           '</div>'+
-          '<span class="ss-badge '+(stCls[w.settleStatus||'pending'])+'">'+(stMap[w.settleStatus||'pending'])+'</span>'+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
+            '<span class="ss-badge '+(stCls[w.settleStatus||'pending'])+'">'+(stMap[w.settleStatus||'pending'])+'</span>'+
+            (isPend?'<button onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.3);cursor:pointer;white-space:nowrap">DONWAY 정산</button>':'')+
+          '</div>'+
         '</div>';
       el2.appendChild(d2);
     });
@@ -9139,6 +9172,17 @@ function _pgMySettle(el){
 /* ── 정산관리 (대리점) ───────────────────────────────────── */
 function _pgSettleMgmt(el){
   el.innerHTML='<div class="page-title">정산관리</div><div class="page-sub">배차 정산 확인 및 지급</div>'+
+    '<div style="background:linear-gradient(135deg,rgba(0,200,248,.1),rgba(0,200,248,.04));border:1.5px solid rgba(0,200,248,.35);border-radius:14px;padding:16px;margin-bottom:16px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+        '<div>'+
+          '<div style="font-size:14px;font-weight:800;color:#00c8f8">DONWAY 자동 정산</div>'+
+          '<div style="font-size:11px;color:var(--t2);margin-top:2px">기사님 운임 일괄 자동 입금 · 명세서 자동 발송</div>'+
+        '</div>'+
+        '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00c8f8" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 13a1 1 0 100-2 1 1 0 000 2z" fill="#00c8f8"/><path d="M2 9h20"/></svg>'+
+      '</div>'+
+      '<button onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="width:100%;padding:11px;background:#00c8f8;color:#08101f;font-weight:800;font-size:13px;border:none;border-radius:9px;cursor:pointer;letter-spacing:-.3px">DONWAY로 일괄 정산하기</button>'+
+      '<div style="font-size:10px;color:var(--t3);text-align:center;margin-top:6px">무료 체험 7일 · 가입 즉시 사용 가능</div>'+
+    '</div>'+
     '<div id="settle-mgmt"><div class="card"><div style="color:var(--t2);font-size:13px">로딩 중...</div></div></div>';
   _db.collection('yongcha_work').where('agencyId','==',_CU.uid).where('status','==','done').orderBy('completedAt','desc').limit(20).get()
   .then(function(snap){
