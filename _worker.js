@@ -1781,6 +1781,7 @@ async function acceptExchange(){
       if (path === '/dine-analytics.js') return serveKVFile(env, 'dine-analytics.js', 'application/javascript');
       if (path === '/dine-tax.js') return serveKVFile(env, 'dine-tax.js', 'application/javascript');
       if (path === '/dine-member.js') return serveKVFile(env, 'dine-member.js', 'application/javascript');
+      if (path === '/dine-schedule.js') return serveKVFile(env, 'dine-schedule.js', 'application/javascript');
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
       // ★ /슬러그/status → 회원용 테이블/대기 현황 페이지
