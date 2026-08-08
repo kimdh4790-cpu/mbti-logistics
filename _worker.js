@@ -9041,19 +9041,117 @@ function _tmplPost(postId){
 }
 
 function _pgHomeAdmin(el){
-  Promise.all([_db.collection('yongcha_posts').get(),_db.collection('yongcha_users').get()])
-  .then(function(res){
-    var posts=[],users=[];
-    res[0].forEach(function(d){posts.push(d.data());});
-    res[1].forEach(function(d){users.push(d.data());});
-    el.innerHTML=
-      '<div class="page-title">관리자 대시보드</div><div class="page-sub">용차 플랫폼 현황</div>'+
-      '<div class="stat-grid">'+
-        '<div class="stat-card"><div class="stat-val">'+posts.length+'</div><div class="stat-lbl">전체 공고</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+users.filter(function(u){return u.type==='driver';}).length+'</div><div class="stat-lbl">등록 기사</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+users.filter(function(u){return u.type==='agency';}).length+'</div><div class="stat-lbl">대리점</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+posts.filter(function(p){return p.status==='open';}).length+'</div><div class="stat-lbl">모집중</div></div>'+
+  el.innerHTML='<div style="color:var(--t2);font-size:13px;text-align:center;padding:40px">플랫폼 데이터 로딩 중...</div>';
+  Promise.all([
+    _db.collection('yongcha_posts').orderBy('createdAt','desc').limit(60).get(),
+    _db.collection('yongcha_users').orderBy('createdAt','desc').limit(60).get(),
+    _db.collection('yongcha_applies').where('status','==','pending').limit(30).get()
+  ]).then(function(res){
+    var posts=[],users=[],applies=[];
+    res[0].forEach(function(d){posts.push(Object.assign({id:d.id},d.data()));});
+    res[1].forEach(function(d){users.push(Object.assign({id:d.id},d.data()));});
+    res[2].forEach(function(d){applies.push(Object.assign({id:d.id},d.data()));});
+    var drivers=users.filter(function(u){return u.type==='driver';});
+    var agencies=users.filter(function(u){return u.type==='agency';});
+    var openPosts=posts.filter(function(p){return p.status==='open';});
+    var urgentPosts=posts.filter(function(p){return p.urgent&&p.status==='open';});
+    var matchedPosts=posts.filter(function(p){return p.status==='matched';});
+    var matchRate=posts.length?Math.round(matchedPosts.length/posts.length*100):0;
+    var recentPosts=posts.slice(0,6);
+    var recentUsers=users.slice(0,5);
+    var recentPostsHTML=recentPosts.map(function(p){
+      var stCls=p.status==='closed'?'st-closed':p.status==='matched'?'st-matched':'st-open';
+      var stTxt=p.status==='closed'?'마감':p.status==='matched'?'매칭완료':'모집중';
+      var clr=_courierColor(p.courier||'');
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bd)">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'+
+            (p.urgent?'<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;background:rgba(239,68,68,.18);color:var(--rd)">긴급</span>':'')+
+            '<span style="font-size:10px;padding:1px 7px;border-radius:6px;background:'+clr+'20;color:'+clr+';font-weight:700">'+(p.courier||'')+'</span>'+
+          '</div>'+
+          '<div style="font-size:13px;font-weight:700;color:var(--tx)">'+(p.region||'')+' '+(p.area||'')+'</div>'+
+          '<div style="font-size:11px;color:var(--t3);margin-top:1px">'+_fmt(p.unitPrice||0)+'원/건'+(p.volume?' · '+p.volume+'건':'')+'</div>'+
+        '</div>'+
+        '<span class="pc-status '+stCls+'" style="margin-left:10px;flex-shrink:0">'+stTxt+'</span>'+
       '</div>';
+    }).join('');
+    var recentUsersHTML=recentUsers.map(function(u){
+      var tc=u.type==='driver'?'var(--gn)':u.type==='agency'?'var(--ac)':'var(--t2)';
+      var tt=u.type==='driver'?'기사':u.type==='agency'?'대리점':'관리자';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:'+tc+'18;border:1.5px solid '+tc+'40;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:'+tc+';flex-shrink:0">'+(u.name||'?').charAt(0)+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(u.name||'이름없음')+'</div>'+
+          '<div style="font-size:11px;color:var(--t3)">'+(u.region||'지역미설정')+(u.carType?' · '+u.carType:'')+'</div>'+
+        '</div>'+
+        '<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:8px;background:'+tc+'18;color:'+tc+'">'+tt+'</span>'+
+      '</div>';
+    }).join('');
+    el.innerHTML=
+      '<div style="background:linear-gradient(135deg,rgba(79,120,245,.13),rgba(139,92,246,.09));border:1px solid rgba(79,120,245,.22);border-radius:20px;padding:20px;margin-bottom:14px">'+
+        '<div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:2px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">Admin Dashboard</div>'+
+        '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:14px;letter-spacing:-.4px">플랫폼 현황</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+          '<div style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.22);border-radius:12px;padding:13px">'+
+            '<div style="font-size:30px;font-weight:900;color:var(--gn);letter-spacing:-1.5px;line-height:1">'+openPosts.length+'</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;font-weight:600">모집중 공고</div>'+
+          '</div>'+
+          '<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.22);border-radius:12px;padding:13px">'+
+            '<div style="font-size:30px;font-weight:900;color:var(--rd);letter-spacing:-1.5px;line-height:1">'+urgentPosts.length+'</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;font-weight:600">긴급 공고</div>'+
+          '</div>'+
+          '<div style="background:rgba(79,120,245,.12);border:1px solid rgba(79,120,245,.22);border-radius:12px;padding:13px">'+
+            '<div style="font-size:30px;font-weight:900;color:var(--ac);letter-spacing:-1.5px;line-height:1">'+applies.length+'</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;font-weight:600">대기 지원서</div>'+
+          '</div>'+
+          '<div style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.22);border-radius:12px;padding:13px">'+
+            '<div style="font-size:30px;font-weight:900;color:#f8d06b;letter-spacing:-1.5px;line-height:1">'+matchRate+'%</div>'+
+            '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;font-weight:600">매칭률</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'+
+            '<div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-.5px">'+drivers.length+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;font-weight:600">등록 기사</div>'+
+          '</div>'+
+          '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'+
+            '<div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-.5px">'+agencies.length+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;font-weight:600">대리점</div>'+
+          '</div>'+
+          '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:10px;padding:10px;text-align:center">'+
+            '<div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-.5px">'+posts.length+'</div>'+
+            '<div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px;font-weight:600">전체 공고</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+        '<button onclick="_goPage(\\'admin_posts\\')" style="flex:1;padding:13px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">'+
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="15" x2="12" y2="15"/></svg>'+
+          '공고 관리'+
+        '</button>'+
+        '<button onclick="_goPage(\\'admin_users\\')" style="flex:1;padding:13px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px">'+
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>'+
+          '사용자 관리'+
+        '</button>'+
+      '</div>'+
+      (recentPosts.length?
+        '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:12px">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">'+
+            '<div style="font-size:13px;font-weight:800;color:var(--tx)">최근 공고</div>'+
+            '<button onclick="_goPage(\\'admin_posts\\')" style="font-size:11px;color:var(--ac);font-weight:700;background:none;border:none;cursor:pointer;padding:0;font-family:inherit">전체보기</button>'+
+          '</div>'+
+          recentPostsHTML+
+        '</div>':'')+
+      (recentUsers.length?
+        '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:12px">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">'+
+            '<div style="font-size:13px;font-weight:800;color:var(--tx)">최근 가입</div>'+
+            '<button onclick="_goPage(\\'admin_users\\')" style="font-size:11px;color:var(--ac);font-weight:700;background:none;border:none;cursor:pointer;padding:0;font-family:inherit">전체보기</button>'+
+          '</div>'+
+          recentUsersHTML+
+        '</div>':'');
+  }).catch(function(e){
+    el.innerHTML='<div style="color:var(--t2);text-align:center;padding:32px;font-size:13px">로드 오류: '+e.message+'</div>';
   });
 }
 
@@ -9061,7 +9159,18 @@ function _pgHomeAdmin(el){
 var _postsMapInst=null;
 function _pgPosts(el){
   _pgIdx=0;_postsMapInst=null;_sortOrder='recent';
+  var identityBanner=(!_CU||_CU.type==='driver')?
+    '<div style="background:linear-gradient(135deg,rgba(79,120,245,.1),rgba(139,92,246,.07));border:1px solid rgba(79,120,245,.18);border-radius:16px;padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px">'+
+      '<div style="width:44px;height:44px;border-radius:12px;background:rgba(79,120,245,.2);border:1px solid rgba(79,120,245,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'+
+      '</div>'+
+      '<div>'+
+        '<div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:-.3px">전국 택배 배달 구인공고</div>'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:3px">단가 비교 · 대리점 직통전화 · 원클릭 지원</div>'+
+      '</div>'+
+    '</div>':'';
   el.innerHTML=
+    identityBanner+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
       '<div class="page-title">공고</div>'+
       '<div style="display:flex;gap:6px;align-items:center">'+
