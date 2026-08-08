@@ -698,10 +698,12 @@ function _filoPageQrMgmt(el) {
       }
       var tables = [];
       snap.forEach(function(d){ tables.push(Object.assign({id:d.id}, d.data())); });
-      tables.sort(function(a,b){ return (a.num||0)-(b.num||0); });
+      tables.sort(function(a,b){ return ((a.tableNum||a.tableId||a.num)||0)-((b.tableNum||b.tableId||b.num)||0); });
       tables.forEach(function(t) {
-        var url = base + '/c/' + slug + '?t=' + t.num;
-        var card = makeQrCard('qrt-'+t.num, '테이블 '+t.num, t.name||'', url, '#0066ff');
+        var num = t.tableNum || t.tableId || t.num;
+        var label = t.tableName || ('테이블 ' + num);
+        var url = base + '/c/' + slug + '?t=' + num;
+        var card = makeQrCard('qrt-'+num, label, '', url, '#0066ff');
         tableGrid.appendChild(card);
       });
     }).catch(function(e) {
