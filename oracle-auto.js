@@ -167,13 +167,24 @@ async function tryCreate(page, attempt) {
   log(`시도 #${attempt} — ${CREATE_URL}`);
   await page.goto(CREATE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-  // 폼 로딩 대기 (최대 60초)
+  // 폼 로딩 대기 (최대 90초) — Oracle UI 변경 대응 다중 셀렉터
   let formLoaded = false;
-  for (let elapsed = 5; elapsed <= 60; elapsed += 5) {
+  for (let elapsed = 5; elapsed <= 90; elapsed += 5) {
     await page.waitForTimeout(5000);
-    const basicInfo = await page.locator('text=Basic information').first().isVisible().catch(() => false);
-    if (basicInfo) { formLoaded = true; log('  폼 로딩 확인'); break; }
+    const checks = await Promise.all([
+      page.locator('text=Basic information').first().isVisible().catch(() => false),
+      page.locator('text=Image and shape').first().isVisible().catch(() => false),
+      page.locator('text=Create compute instance').first().isVisible().catch(() => false),
+      page.locator('button:has-text("Change shape")').first().isVisible().catch(() => false),
+      page.locator('text=VM.Standard').first().isVisible().catch(() => false),
+      page.locator('[aria-label="Name"], input[placeholder*="instance"]').first().isVisible().catch(() => false),
+    ]);
+    if (checks.some(Boolean)) { formLoaded = true; log('  폼 로딩 확인'); break; }
     log(`  폼 대기 중 (${elapsed}s) | ${page.url()}`);
+    // 5초마다 스크린샷 저장 (디버그용)
+    if (elapsed % 15 === 0) {
+      await page.screenshot({ path: path.join(__dirname, `oracle-debug-${elapsed}s.png`) }).catch(() => {});
+    }
   }
 
   if (!formLoaded) {
@@ -185,25 +196,42 @@ async function tryCreate(page, attempt) {
   // ── Shape 변경: AMD → Ampere A1.Flex ──────────────────────────────────────
   log('Shape 변경: Ampere A1.Flex 선택');
   try {
-    const changeBtn = page.locator('button', { hasText: /Change shape/i }).first();
-    await changeBtn.waitFor({ timeout: 10000 });
+    // Change shape 버튼 (구/신 UI 대응)
+    const changeBtn = page.locator('button:has-text("Change shape"), a:has-text("Change shape"), [data-test-id*="change-shape"]').first();
+    await changeBtn.waitFor({ timeout: 15000 });
     await changeBtn.click();
+    await page.waitForTimeout(2000);
 
-    await page.locator('text=Ampere').first().waitFor({ timeout: 10000 });
-    await page.locator('text=Ampere').first().click();
+    // Ampere 탭/라디오 선택
+    const ampere = page.locator('text=Ampere, [data-value*="Ampere"], label:has-text("Ampere")').first();
+    await ampere.waitFor({ timeout: 10000 });
+    await ampere.click();
+    await page.waitForTimeout(1000);
 
-    await page.locator('text=VM.Standard.A1.Flex').first().waitFor({ timeout: 10000 });
-    await page.locator('text=VM.Standard.A1.Flex').first().click();
+    // A1.Flex 선택
+    const a1 = page.locator('text=VM.Standard.A1.Flex').first();
+    await a1.waitFor({ timeout: 10000 });
+    await a1.click();
+    await page.waitForTimeout(1000);
 
     // OCPU 4
-    const ocpuInput = page.locator('input[aria-label*="OCPU"], input[id*="ocpu"]').first();
-    await ocpuInput.fill('4');
+    const ocpuInput = page.locator('input[aria-label*="OCPU"], input[aria-label*="ocpu"], input[id*="ocpu"], input[placeholder*="OCPU"]').first();
+    if (await ocpuInput.isVisible().catch(() => false)) {
+      await ocpuInput.triple_click().catch(() => ocpuInput.click());
+      await ocpuInput.fill('4');
+    }
 
     // Memory 24 GB
-    const memInput = page.locator('input[aria-label*="memory"], input[id*="memory"]').first();
-    await memInput.fill('24');
+    const memInput = page.locator('input[aria-label*="emory"], input[id*="memory"], input[placeholder*="emory"]').first();
+    if (await memInput.isVisible().catch(() => false)) {
+      await memInput.click();
+      await memInput.fill('24');
+    }
 
-    await page.locator('button', { hasText: /Select shape/i }).first().click();
+    // Select shape 확인 버튼
+    const selectBtn = page.locator('button:has-text("Select shape"), button:has-text("Save changes"), button:has-text("Confirm")').first();
+    if (await selectBtn.isVisible({ timeout: 5000 }).catch(() => false)) await selectBtn.click();
+    await page.waitForTimeout(2000);
     log('  Shape: VM.Standard.A1.Flex / OCPU 4 / 24GB 설정 완료');
   } catch (e) {
     await page.screenshot({ path: path.join(__dirname, 'oracle-fail-shape.png') });
