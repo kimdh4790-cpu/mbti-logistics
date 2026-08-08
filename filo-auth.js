@@ -636,9 +636,9 @@ function _filoPageHome(el){
   {t:'재고 부족',c:'kpi-warn',vc:'#ef4444',ic:'package',id:'hs-2'},
   {t:'출근 인원',c:'kpi-staff',vc:'#c9a84c',ic:'users',id:'hs-3'}
  ].map(function(s){
- return '<div class="kpi-card '+s.c+' card-hover" style="background:#fff;border:1px solid rgba(201,168,76,.2)">'+
+ return '<div class="kpi-card '+s.c+' card-hover" style="background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2)">'+
  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
- '<div class="kpi-label" style="color:#08101f">'+s.t+'</div>'+
+ '<div class="kpi-label" style="color:var(--t2)">'+s.t+'</div>'+
  '<div style="color:'+s.vc+'">'+_svgIcon(s.ic)+'</div>'+
  '</div>'+
  '<div class="kpi-val count-anim" id="'+s.id+'" style="color:'+s.vc+'">—</div>'+
@@ -654,10 +654,10 @@ function _filoPageHome(el){
  [{k:'inventory',l:'재고',ic:'package',c:'#7c3aed'},{k:'qr',l:'QR급여',ic:'qr-code',c:'#0891b2'},
   {k:'kiosk',l:'POS',ic:'monitor',c:'#059669'},{k:'combo',l:'통합',ic:'sparkles',c:'#f59e0b'}].map(function(p){
   var on=hasSub(p.k);
-  return '<div style="padding:10px 8px;border-radius:10px;border:1px solid '+(on?p.c+'60':'var(--bd)')+';background:'+(on?p.c+'12':'var(--surface2)')+';text-align:center">'+
-  '<div style="display:flex;justify-content:center;margin-bottom:4px;color:'+(on?p.c:'var(--t3)')+'">'+_svgIcon(p.ic)+'</div>'+
-  '<div style="font-size:10px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+p.l+'</div>'+
-  '<div style="font-size:9px;margin-top:2px;font-weight:700;color:'+(on?p.c:'var(--t4)')+'">'+(on?'ON':'OFF')+'</div>'+
+  return '<div style="padding:10px 8px;border-radius:10px;border:1px solid '+(on?p.c+'60':'rgba(255,255,255,.12)')+';background:'+(on?p.c+'18':'rgba(255,255,255,.06)')+';text-align:center">'+
+  '<div style="display:flex;justify-content:center;margin-bottom:4px;color:'+(on?p.c:'var(--t2)')+'">'+_svgIcon(p.ic)+'</div>'+
+  '<div style="font-size:10px;font-weight:700;color:'+(on?p.c:'var(--t2)')+'">'+p.l+'</div>'+
+  '<div style="font-size:9px;margin-top:2px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+(on?'ON':'OFF')+'</div>'+
   '</div>';
  }).join('')+'</div></div>'+
 
@@ -667,7 +667,7 @@ function _filoPageHome(el){
  [{ic:'monitor',l:'POS',p:'kiosk'},{ic:'bell',l:'주문대기',p:'orders'},{ic:'truck',l:'배달',p:'delivery'},
  {ic:'package',l:'재고',p:'inventory'},{ic:'flask',l:'레시피',p:'recipe'},{ic:'trending-up',l:'매출',p:'sales_report'},
  {ic:'briefcase',l:'급여',p:'payroll'},{ic:'calendar',l:'예약',p:'schedule'}].map(function(m){
- return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:#fff;border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'#c9a84c\';this.style.background=\'rgba(201,168,76,.08)\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,.2)\';this.style.background=\'#fff\'">'+
+ return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'#c9a84c\';this.style.background=\'rgba(201,168,76,.12)\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,.2)\';this.style.background=\'rgba(255,255,255,.06)\'">'+
  '<div style="display:flex;justify-content:center;margin-bottom:4px">'+_svgIcon(m.ic)+'</div>'+
  '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
  }).join('')+'</div></div>'+
