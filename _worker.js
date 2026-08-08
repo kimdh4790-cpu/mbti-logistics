@@ -8340,6 +8340,7 @@ textarea.inp{resize:vertical;min-height:80px}
 .ss-pending{background:var(--ywl);color:var(--yw)}
 .ss-confirmed{background:var(--gnl);color:var(--gn)}
 .ss-paid{background:var(--acl);color:var(--ac)}
+.ss-rd{background:rgba(239,68,68,.12);color:#ef4444}
 
 /* Template grid */
 .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
@@ -8407,6 +8408,7 @@ textarea.inp{resize:vertical;min-height:80px}
           <option>충남</option><option>충북</option><option>강원</option><option>제주</option>
         </select>
       </div>
+      <div class="inp-wrap"><label class="inp-lbl">사업자번호 <span style="color:var(--t3);font-weight:400">(세금계산서 발행 시 필요)</span></label><input class="inp" id="r-corpnum" type="text" placeholder="000-00-00000" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3')"></div>
       <div class="inp-wrap"><label class="inp-lbl">비밀번호 (6자 이상)</label><input class="inp" id="r-pw" type="password" placeholder="비밀번호"></div>
       <div class="err" id="r-err"></div>
       <button class="btn-main" id="r-btn" onclick="_yRegister()">가입하기</button>
@@ -8523,15 +8525,17 @@ function _yRegister(){
   var ph=(document.getElementById('r-phone').value||'').trim();
   var rg=(document.getElementById('r-region').value||'').trim();
   var p=(document.getElementById('r-pw').value||'').trim();
+  var cn=(document.getElementById('r-corpnum').value||'').replace(/[^0-9]/g,'');
   var err=document.getElementById('r-err'),btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  if(cn&&cn.length!==10){err.textContent='사업자번호는 10자리입니다';err.style.display='block';return;}
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
-    return _db.collection('yongcha_users').doc(c.user.uid).set({
-      uid:c.user.uid,type:_regType,name:n,email:e,phone:ph,region:rg,
-      rating:0,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    var doc={uid:c.user.uid,type:_regType,name:n,email:e,phone:ph,region:rg,
+      rating:0,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(cn)doc.corpNum=cn;
+    return _db.collection('yongcha_users').doc(c.user.uid).set(doc);
   }).catch(function(ex){
     btn.textContent='가입하기';btn.disabled=false;
     err.textContent=ex.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':'오류: '+ex.message;
@@ -8699,6 +8703,7 @@ function _quickApply(postId,agencyId,agencyName){
     if(!snap.empty){_yToast('이미 지원한 공고예요');return;}
     return _db.collection('yongcha_applies').add({
       postId:postId,driverId:_CU.uid,driverName:_CU.name,driverPhone:_CU.phone||'',
+      driverRating:_CU.rating||0,driverReviewCount:_CU.reviewCount||0,
       agencyId:agencyId,agencyName:agencyName,status:'pending',
       appliedAt:firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -9144,9 +9149,17 @@ function _pgMySettle(el){
     el2.innerHTML='';
     var stMap={pending:'정산대기',confirmed:'확인완료',paid:'지급완료'};
     var stCls={pending:'ss-pending',confirmed:'ss-confirmed',paid:'ss-paid'};
+    var tiMap={'역발행요청':'발행대기','역발행승인':'발행완료','역발행거부':'발행거부'};
+    var tiCls={'역발행요청':'ss-pending','역발행승인':'ss-paid','역발행거부':'ss-rd'};
     total.forEach(function(w){
       var d2=document.createElement('div');d2.className='settle-item';
       var isPend=!w.settleStatus||w.settleStatus==='pending';
+      var tiState=w.taxInvoiceState||'';
+      var tiBadge=tiState&&tiMap[tiState]
+        ?'<span class="ss-badge '+(tiCls[tiState]||'ss-pending')+'" style="font-size:10px">'+tiMap[tiState]+'</span>'
+        :(w.settleStatus==='confirmed'&&_CU.corpNum
+          ?'<button onclick="_requestTaxInvoice(\\''+w.wid+'\\')" style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(201,168,76,.12);color:var(--ac);border:1px solid rgba(201,168,76,.3);cursor:pointer;white-space:nowrap">세금계산서</button>'
+          :'');
       d2.innerHTML=
         '<div class="settle-top">'+
           '<div>'+
@@ -9156,7 +9169,8 @@ function _pgMySettle(el){
           '</div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
             '<span class="ss-badge '+(stCls[w.settleStatus||'pending'])+'">'+(stMap[w.settleStatus||'pending'])+'</span>'+
-            (isPend?'<button onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.3);cursor:pointer;white-space:nowrap">DONWAY 정산</button>':'')+
+            tiBadge+
+            (isPend?'<button onclick="window.open(\\'https://donway.ai.kr/join\\',\\'_blank\\')" style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(0,200,248,.12);color:#00c8f8;border:1px solid rgba(0,200,248,.3);cursor:pointer;white-space:nowrap">DONWAY 정산</button>':'')+
           '</div>'+
         '</div>';
       el2.appendChild(d2);
@@ -9211,9 +9225,73 @@ function _pgSettleMgmt(el){
   }).catch(function(){});
 }
 function _confirmSettle(wid){
-  _db.collection('yongcha_work').doc(wid).update({settleStatus:'confirmed',confirmedAt:firebase.firestore.FieldValue.serverTimestamp()})
-  .then(function(){_yToast('정산 확인 완료');_pgSettleMgmt(document.getElementById('content'));})
-  .catch(function(e){_yToast('오류: '+e.message);});
+  _db.collection('yongcha_work').doc(wid).get().then(function(snap){
+    if(!snap.exists){_yToast('데이터 없음');return;}
+    var w=snap.data();
+    return _db.collection('yongcha_work').doc(wid).update({
+      settleStatus:'confirmed',confirmedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      _yToast('정산 확인 완료');
+      var agencyCorpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+      if(agencyCorpNum&&w.driverId){
+        _db.collection('yongcha_users').doc(w.driverId).get().then(function(dSnap){
+          var du=dSnap.exists?dSnap.data():{};
+          var driverCorpNum=(du.corpNum||'').replace(/[^0-9]/g,'');
+          if(!driverCorpNum){_pgSettleMgmt(document.getElementById('content'));return;}
+          var supply=Math.round((w.fare||0)/1.1);
+          var tax=(w.fare||0)-supply;
+          fetch('/api/yongcha/popbill-issue',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              settleId:wid,
+              senderCorpNum:driverCorpNum,senderName:w.driverName||du.name||'기사',senderEmail:du.email||'',
+              receiverCorpNum:agencyCorpNum,receiverName:_CU.name||'대리점',receiverEmail:_CU.email||'',
+              supplyAmt:supply,taxAmt:tax,totalAmt:w.fare||0,
+              itemName:(w.area||w.region||'용차')+' 운송비'
+            })
+          }).then(function(r){return r.json();}).then(function(res){
+            if(res.ok){
+              _yToast('세금계산서 역발행 요청 완료');
+              _db.collection('yongcha_work').doc(wid).update({taxInvoiceState:'역발행요청'}).catch(function(){});
+            }else{_yToast('세금계산서 요청 실패');}
+            _pgSettleMgmt(document.getElementById('content'));
+          }).catch(function(){_pgSettleMgmt(document.getElementById('content'));});
+        }).catch(function(){_pgSettleMgmt(document.getElementById('content'));});
+      }else{_pgSettleMgmt(document.getElementById('content'));}
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+function _requestTaxInvoice(wid){
+  if(!_CU.corpNum){_yToast('사업자번호를 먼저 등록해주세요');_goPage('profile');return;}
+  _db.collection('yongcha_work').doc(wid).get().then(function(snap){
+    if(!snap.exists){_yToast('데이터 없음');return;}
+    var w=snap.data();
+    if(!w.agencyId){_yToast('대리점 정보 없음');return;}
+    _db.collection('yongcha_users').doc(w.agencyId).get().then(function(aSnap){
+      var au=aSnap.exists?aSnap.data():{};
+      var agencyCorpNum=(au.corpNum||'').replace(/[^0-9]/g,'');
+      if(!agencyCorpNum){_yToast('대리점 사업자번호 미등록\n대리점에 문의하세요');return;}
+      var driverCorpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+      var supply=Math.round((w.fare||0)/1.1);
+      var tax=(w.fare||0)-supply;
+      fetch('/api/yongcha/popbill-issue',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          settleId:wid,
+          senderCorpNum:driverCorpNum,senderName:_CU.name||'기사',senderEmail:_CU.email||'',
+          receiverCorpNum:agencyCorpNum,receiverName:au.name||'대리점',receiverEmail:au.email||'',
+          supplyAmt:supply,taxAmt:tax,totalAmt:w.fare||0,
+          itemName:(w.area||w.region||'용차')+' 운송비'
+        })
+      }).then(function(r){return r.json();}).then(function(res){
+        if(res.ok){
+          _yToast('세금계산서 역발행 요청 완료');
+          _db.collection('yongcha_work').doc(wid).update({taxInvoiceState:'역발행요청'}).catch(function(){});
+          _pgMySettle(document.getElementById('content'));
+        }else{_yToast('요청 실패: '+(res.error||'오류'));}
+      }).catch(function(){_yToast('네트워크 오류');});
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 /* ── 수익 시뮬레이터 ─────────────────────────────────────── */
@@ -9319,6 +9397,22 @@ function _pgProfile(el){
         _pRow('연락처',_CU.phone||'미설정')+
         (_CU.type==='driver'?_pRow('차종',_CU.carType||'미설정'):'')+
       '</div>'+
+      '<div style="border-top:1px solid var(--bd);margin-top:4px;padding-top:14px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div>'+
+            '<div style="font-size:11px;color:var(--t3)">사업자번호 (세금계산서)</div>'+
+            '<div style="font-size:14px;font-weight:700;margin-top:3px" id="pf-cn-val">'+(_CU.corpNum||'미등록')+'</div>'+
+          '</div>'+
+          '<button onclick="_editCorpNum()" style="font-size:11px;font-weight:700;padding:6px 13px;border-radius:7px;background:var(--acl);color:var(--ac);border:1px solid var(--bd);cursor:pointer">'+(_CU.corpNum?'수정':'등록')+'</button>'+
+        '</div>'+
+        '<div id="pf-cn-edit" style="display:none;margin-top:10px">'+
+          '<input class="inp" id="pf-cn-inp" type="text" placeholder="000-00-00000" maxlength="12" value="'+(_CU.corpNum||'')+'" oninput="this.value=this.value.replace(/[^0-9]/g,\\'\\').replace(/([0-9]{3})([0-9]{2})([0-9]{5})/,\\'$1-$2-$3\\')">'+
+          '<div style="display:flex;gap:8px;margin-top:8px">'+
+            '<button id="pf-cn-save" onclick="_saveCorpNum()" style="flex:1;padding:9px;background:var(--ac);color:var(--bg);font-weight:700;font-size:13px;border:none;border-radius:8px;cursor:pointer">저장</button>'+
+            '<button onclick="_cancelCorpNum()" style="padding:9px 14px;background:var(--acl);color:var(--t1);border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:13px">취소</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
     '</div>'+
     '<button class="btn-rd" onclick="_yLogout()">로그아웃</button>';
 }
@@ -9326,6 +9420,21 @@ function _pRow(lbl,val){
   return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">'+
     '<span style="font-size:13px;color:var(--t2)">'+lbl+'</span>'+
     '<span style="font-size:13px;font-weight:600">'+val+'</span></div>';
+}
+function _editCorpNum(){document.getElementById('pf-cn-edit').style.display='block';document.getElementById('pf-cn-inp').focus();}
+function _cancelCorpNum(){document.getElementById('pf-cn-edit').style.display='none';}
+function _saveCorpNum(){
+  var v=(document.getElementById('pf-cn-inp').value||'').replace(/[^0-9]/g,'');
+  if(v&&v.length!==10){_yToast('사업자번호는 10자리입니다');return;}
+  var btn=document.getElementById('pf-cn-save');btn.textContent='저장 중...';btn.disabled=true;
+  var upd={};if(v)upd.corpNum=v;else upd.corpNum=firebase.firestore.FieldValue.delete();
+  _db.collection('yongcha_users').doc(_CU.uid).update(upd)
+  .then(function(){
+    if(v)_CU.corpNum=v;else delete _CU.corpNum;
+    document.getElementById('pf-cn-val').textContent=v||'미등록';
+    document.getElementById('pf-cn-edit').style.display='none';
+    _yToast('사업자번호 저장 완료');
+  }).catch(function(e){_yToast('저장 실패: '+e.message);btn.textContent='저장';btn.disabled=false;});
 }
 
 /* ── 공고목록 (대리점) ───────────────────────────────────── */
@@ -9499,8 +9608,11 @@ function _showApplicants(postId){
       d2.innerHTML=
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:'+(isPending?'10':'0')+'px">'+
           '<div>'+
-            '<div style="font-size:15px;font-weight:700;margin-bottom:2px">'+(a.driverName||'기사')+'</div>'+
-            '<div style="font-size:12px;color:var(--t2)">'+(a.driverPhone||'')+'</div>'+
+            '<div style="font-size:15px;font-weight:700;margin-bottom:2px">'+
+              (a.driverName||'기사')+
+              (a.driverRating>=4.5?'<span style="margin-left:6px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:rgba(201,168,76,.15);color:var(--ac);border:1px solid rgba(201,168,76,.3)">A급</span>':'')+
+            '</div>'+
+            '<div style="font-size:12px;color:var(--t2)">'+(a.driverPhone||'')+(a.driverRating?'<span style="margin-left:6px;color:var(--ac);font-weight:600">'+a.driverRating.toFixed(1)+'점</span>':'')+'</div>'+
             '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+_timeAgo(a.appliedAt)+'</div>'+
           '</div>'+
           '<span class="riq-badge '+stCl+'">'+(stMap[a.status]||a.status)+'</span>'+
