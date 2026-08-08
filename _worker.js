@@ -8220,15 +8220,17 @@ textarea.inp{resize:vertical;min-height:80px}
 .chip{flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.15s}
 .chip.on{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 2px 8px rgba(79,120,245,.3)}
 
-.pcard{background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:.2s;box-shadow:var(--sh);position:relative;overflow:hidden}
-.pcard:active{transform:scale(.99)}
-.pcard.closed{opacity:.4;cursor:default}
-.pcard--cj{border-left-color:var(--cj)}
-.pcard--hj{border-left-color:var(--hj)}
-.pcard--lt{border-left-color:var(--lt)}
-.pcard--up{border-left-color:var(--up)}
-.pcard--cp{border-left-color:var(--cp)}
-.pcard--rz{border-left-color:var(--rz)}
+.pcard{background:var(--bg2);border:1px solid var(--bd);border-radius:18px;padding:16px;margin-bottom:10px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:var(--sh);position:relative;overflow:hidden}
+.pcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:18px 18px 0 0;background:var(--ac)}
+.pcard:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.pcard:active{transform:scale(.98)}
+.pcard.closed{opacity:.35;cursor:default}
+.pcard--cj::before{background:var(--cj)}
+.pcard--hj::before{background:var(--hj)}
+.pcard--lt::before{background:var(--lt)}
+.pcard--up::before{background:var(--up)}
+.pcard--cp::before{background:var(--cp)}
+.pcard--rz::before{background:var(--rz)}
 .pc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
 .pc-courier{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:5px}
 .pc-area{font-size:18px;font-weight:900;letter-spacing:-.4px;margin-bottom:5px;color:var(--tx)}
@@ -8253,7 +8255,10 @@ textarea.inp{resize:vertical;min-height:80px}
 .quick-apply:active{filter:brightness(.88)}
 
 .urgency-badge{position:absolute;top:0;right:0;background:var(--or);color:#fff;font-size:10px;font-weight:800;padding:4px 12px;border-radius:0 var(--r) 0 12px;animation:pulseOr 1.5s infinite;box-shadow:0 2px 8px rgba(249,115,22,.4)}
+.urgency-badge-inline{display:inline-block;font-size:10px;font-weight:800;padding:2px 9px;border-radius:20px;background:var(--or);color:#fff;animation:pulseOr 1.5s infinite;vertical-align:middle}
 @keyframes pulseOr{0%,100%{opacity:1}50%{opacity:.78}}
+.hero-card{background:linear-gradient(135deg,#0d1a3a 0%,#1a2d5a 60%,#1e3464 100%);border:1px solid rgba(79,120,245,.15);border-radius:20px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.hero-card::before{content:'';position:absolute;top:-40px;right:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(79,120,245,.18) 0%,transparent 70%);border-radius:50%}
 
 .pg-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:4px 0}
 .pg-btn{padding:7px 18px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.2s}
@@ -8345,7 +8350,8 @@ textarea.inp{resize:vertical;min-height:80px}
 
 /* Template grid */
 .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.tmpl-btn{padding:14px 12px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);text-align:left;cursor:pointer;font-family:inherit;transition:.2s;width:100%}
+.tmpl-btn{padding:14px 12px;background:linear-gradient(135deg,var(--bg3),var(--bg4));border:1px solid var(--bd);border-radius:14px;text-align:left;cursor:pointer;font-family:inherit;transition:.2s;width:100%}
+.tmpl-btn:hover{border-color:var(--ac);box-shadow:0 2px 12px rgba(79,120,245,.15)}
 .tmpl-btn:active{background:var(--acl);border-color:var(--ac)}
 .tmpl-area{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:3px}
 .tmpl-price{font-size:16px;font-weight:900;color:var(--ac)}
@@ -8445,7 +8451,7 @@ textarea.inp{resize:vertical;min-height:80px}
 <script>
 var _db,_auth,_CU=null,_regType='agency';
 var _postsUnsub=null,_allPosts=[],_filteredPosts=[];
-var _rgnFilter='전체',_platFilter='전체',_pgIdx=0,_pgSize=5;
+var _rgnFilter='전체',_platFilter='전체',_pgIdx=0,_pgSize=5,_sortOrder='recent';
 var _revSimSel=[],_revSimPosts=[],_kakaoReady=false;
 var _sliderActive=false;
 var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com'];
@@ -8660,38 +8666,42 @@ function _makePostCard(d){
   var rp=_rateVsMarket(d.unitPrice||0,d.courier);
   var rpCls=rp>3?'riq-up':rp<-3?'riq-down':'riq-flat';
   var rpTxt=(rp>0?'+':'')+rp+'%';
-  var minG=Math.round((d.unitPrice||0)*0.85);
   var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
+  var monthEst=dayEst?Math.round(dayEst*26):0;
   var stCls=isClosed?'st-closed':isMatched?'st-matched':'st-open';
   var stTxt=isClosed?'마감':isMatched?'매칭완료':'모집중';
   var clr=_courierColor(d.courier||'');
+  var metaParts=[];
+  if(d.workShift)metaParts.push(d.workShift);
+  if(d.volume)metaParts.push(d.volume+'건/일');
+  if(d.settleDay)metaParts.push(d.settleDay+'일 정산');
+  var metaStr=metaParts.join(' · ');
   var div=document.createElement('div');
   div.className='pcard'+(cls?' pcard'+cls:'')+(isClosed?' closed':'');
   div.innerHTML=
-    (d.urgent?'<div class="urgency-badge">긴급</div>':'')+
     '<div class="pc-top">'+
       '<div style="flex:1;min-width:0">'+
-        '<div class="pc-courier" style="background:'+clr+'25;color:'+clr+'">'+(d.courier||'택배사')+'</div>'+
-        '<div class="pc-area">'+(d.region||'')+' '+(d.area||'')+'</div>'+
-        '<div class="pc-tags">'+
-          (d.workShift?'<span class="tag">'+d.workShift+'</span>':'')+
-          (d.vehicleType?'<span class="tag">'+d.vehicleType+'</span>':'')+
-          (d.platform?'<span class="tag">'+d.platform+'</span>':'')+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'+
+          '<span class="pc-courier" style="background:'+clr+'25;color:'+clr+'">'+(d.courier||'택배사')+'</span>'+
+          (d.urgent?'<span class="urgency-badge-inline">긴급</span>':'')+
         '</div>'+
+        '<div class="pc-area">'+(d.region||'')+' '+(d.area||'')+'</div>'+
+        (metaStr?'<div style="font-size:11px;color:var(--t3);margin-top:3px">'+metaStr+'</div>':'')+
       '</div>'+
-      '<span class="pc-status '+stCls+'">'+stTxt+'</span>'+
+      '<div style="text-align:right;flex-shrink:0;margin-left:10px">'+
+        '<span class="pc-status '+stCls+'">'+stTxt+'</span>'+
+        (monthEst?'<div style="font-size:12px;color:var(--gn);font-weight:700;margin-top:7px;white-space:nowrap">월 ~'+monthEst+'만원</div>':'')+
+      '</div>'+
     '</div>'+
-    '<div class="pc-earn">'+
+    '<div class="pc-earn" style="margin-top:12px">'+
       '<span class="pc-price">'+_fmt(d.unitPrice||0)+'<small class="pc-unit">원/건</small></span>'+
       '<span class="riq-badge '+rpCls+'">시세'+rpTxt+'</span>'+
-      (dayEst?'<span style="font-size:11px;color:var(--t2)">일~'+dayEst+'만원</span>':'')+
     '</div>'+
-    '<div class="pc-minguar">최소보장 '+_fmt(minG)+'원/건 (시세×85%)</div>'+
-    '<div class="pc-foot">'+
+    '<div class="pc-foot" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bd)">'+
       '<span class="pc-agency">'+(d.agencyName||'대리점')+'</span>'+
       (!isClosed&&_CU&&_CU.type==='driver'?
         '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\')">'+
-        _SVG.bolt+'지원</button>':'')+
+        _SVG.bolt+'원클릭 지원</button>':'')+
     '</div>';
   if(!isClosed||(_CU&&_CU.type==='agency'&&d.agencyId===_CU.uid))div.onclick=function(){_showPostDetail(d);};
   return div;
@@ -8765,6 +8775,18 @@ function _donwayNudge(){
 
 function _pgHomeDriver(el){
   el.innerHTML=
+    '<div class="hero-card">'+
+      '<div style="position:relative;z-index:1">'+
+        '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:3px">안녕하세요</div>'+
+        '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px">'+(_CU.name||'기사')+'님</div>'+
+        '<div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:5px">'+
+          (_CU.region?_CU.region+(_CU.carType?' · '+_CU.carType:''):'지역·차종을 프로필에서 설정해보세요')+
+        '</div>'+
+        '<button onclick="_goPage(\\'rev_sim\\')" style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(79,120,245,.18);border:1px solid rgba(79,120,245,.3);border-radius:12px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+
+          _SVG.bolt+'수익 시뮬레이터'+
+        '</button>'+
+      '</div>'+
+    '</div>'+
     _donwayNudge()+
     '<div class="ai-card" id="ai-card">'+
       '<div class="ai-hdr">'+
@@ -8859,14 +8881,27 @@ function _pgHomeAgency(el){
         '</div>';
     }
     el.innerHTML=
-      '<div class="page-title">'+_CU.name+'</div><div class="page-sub">대리점 대시보드</div>'+
-      _donwayNudge()+
-      '<div class="stat-grid">'+
-        '<div class="stat-card"><div class="stat-val" style="color:var(--gn)">'+open+'</div><div class="stat-lbl">모집중</div></div>'+
-        '<div class="stat-card"><div class="stat-val" style="color:var(--ac)">'+matched+'</div><div class="stat-lbl">매칭완료</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+posts.length+'</div><div class="stat-lbl">전체 공고</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+(_CU.region||'—')+'</div><div class="stat-lbl">담당 지역</div></div>'+
+      '<div class="hero-card">'+
+        '<div style="position:relative;z-index:1">'+
+          '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:3px">대리점 대시보드</div>'+
+          '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.4px">'+(_CU.name||'대리점')+'</div>'+
+          '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">'+
+            '<div style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:8px 16px;text-align:center;min-width:64px">'+
+              '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+open+'</div>'+
+              '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">모집중</div>'+
+            '</div>'+
+            '<div style="background:rgba(79,120,245,.15);border:1px solid rgba(79,120,245,.25);border-radius:12px;padding:8px 16px;text-align:center;min-width:64px">'+
+              '<div style="font-size:22px;font-weight:900;color:var(--ac)">'+matched+'</div>'+
+              '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">매칭완료</div>'+
+            '</div>'+
+            '<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 16px;text-align:center;min-width:64px">'+
+              '<div style="font-size:22px;font-weight:900;color:#fff">'+posts.length+'</div>'+
+              '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">전체 공고</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
       '</div>'+
+      _donwayNudge()+
       tmplHTML+
       '<button class="btn-main" onclick="_goPage(\\'add_post\\')">새 공고 등록</button>';
   });
@@ -8907,17 +8942,26 @@ function _pgHomeAdmin(el){
 /* ── 공고 ─────────────────────────────────────────────────── */
 var _postsMapInst=null;
 function _pgPosts(el){
-  _pgIdx=0;_postsMapInst=null;
+  _pgIdx=0;_postsMapInst=null;_sortOrder='recent';
   el.innerHTML=
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
       '<div class="page-title">공고</div>'+
-      '<button class="map-toggle" id="view-toggle" onclick="_togglePostsMap()">'+_SVG.map+' 지도</button>'+
+      '<div style="display:flex;gap:6px;align-items:center">'+
+        '<button id="sort-btn" class="map-toggle" onclick="_toggleSort()" style="background:var(--acl);color:var(--ac);border-color:var(--ac)">최신순</button>'+
+        '<button class="map-toggle" id="view-toggle" onclick="_togglePostsMap()">'+_SVG.map+' 지도</button>'+
+      '</div>'+
     '</div>'+
     '<div class="filter-row" id="plat-row"></div>'+
     '<div class="filter-row" id="rgn-row"></div>'+
     '<div id="posts-map" style="height:300px;display:none;border-radius:12px;overflow:hidden;border:1px solid var(--bd);margin-bottom:12px"></div>'+
     '<div id="plist"></div>';
   _buildPlatChips();_buildRgnChips();_startPostsListener();
+}
+function _toggleSort(){
+  _sortOrder=_sortOrder==='recent'?'price':'recent';
+  var btn=document.getElementById('sort-btn');
+  if(btn){btn.textContent=_sortOrder==='recent'?'최신순':'단가순';}
+  _pgIdx=0;_applyFilters();
 }
 function _buildPlatChips(){
   var el=document.getElementById('plat-row');if(!el)return;
@@ -8948,6 +8992,9 @@ function _applyFilters(){
     if(_platFilter!=='전체'&&d.platform!==_platFilter)return false;
     return true;
   });
+  if(_sortOrder==='price'){
+    _filteredPosts.sort(function(a,b){return (b.unitPrice||0)-(a.unitPrice||0);});
+  }
   _renderPostList();
 }
 function _renderPostList(){
