@@ -8484,12 +8484,12 @@ _auth.onAuthStateChanged(function(u){
       else if(ADMINS.indexOf(u.email||'')>=0){
         var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
         _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){_CU=Object.assign({uid:u.uid},doc);_showApp();});
-      } else {_showLogin();}
+      } else {_auth.signOut();_showLogin();var _le=document.getElementById('l-err');if(_le){_le.textContent='용차 계정이 없어요. 회원가입 해주세요';_le.style.display='block';}}
     }).catch(function(){_showLogin();});
   } else {_showLogin();}
 });
 
-function _showLogin(){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';}
+function _showLogin(){document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';var _lb=document.getElementById('l-btn');if(_lb){_lb.textContent='로그인';_lb.disabled=false;}}
 
 function _yTab(t){
   document.getElementById('tab-login').classList.toggle('on',t==='login');
@@ -8510,28 +8510,12 @@ function _yLogin(){
   var err=document.getElementById('l-err'),btn=document.getElementById('l-btn');
   if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   err.style.display='none';btn.textContent='로그인 중...';btn.disabled=true;
-  fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+API_KEY,{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:e,password:p,returnSecureToken:true})
-  }).then(function(r){return r.json();}).then(function(data){
-    if(data.error){
-      btn.textContent='로그인';btn.disabled=false;
-      var c=data.error.message||'';
-      err.textContent=c.includes('WRONG_PASSWORD')||c.includes('INVALID_LOGIN')?'비밀번호가 틀렸어요':c.includes('EMAIL_NOT_FOUND')?'없는 계정이에요':c.includes('TOO_MANY')?'잠시 후 다시 시도하세요':'오류: '+c;
-      err.style.display='block';return;
-    }
-    var uid=data.localId,email=data.email||'';
-    _db.collection('yongcha_users').doc(uid).get().then(function(snap){
-      if(snap.exists){_CU=Object.assign({uid:uid},snap.data());_showApp();}
-      else if(ADMINS.indexOf(email)>=0){
-        var doc={uid:uid,type:'admin',name:'관리자',email:email,phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-        _db.collection('yongcha_users').doc(uid).set(doc).then(function(){_CU=Object.assign({uid:uid},doc);_showApp();});
-      } else {
-        btn.textContent='로그인';btn.disabled=false;
-        err.textContent='용차 계정이 없어요. 회원가입 해주세요';err.style.display='block';
-      }
-    });
-  }).catch(function(){btn.textContent='로그인';btn.disabled=false;err.textContent='네트워크 오류';err.style.display='block';});
+  _auth.signInWithEmailAndPassword(e,p).catch(function(ex){
+    btn.textContent='로그인';btn.disabled=false;
+    var c=ex.code||'';
+    err.textContent=c.indexOf('wrong-password')>=0||c.indexOf('invalid-credential')>=0?'비밀번호가 틀렸어요':c.indexOf('user-not-found')>=0?'없는 계정이에요':c.indexOf('too-many')>=0?'잠시 후 다시 시도하세요':'오류: '+ex.message;
+    err.style.display='block';
+  });
 }
 function _yRegister(){
   var n=(document.getElementById('r-name').value||'').trim();
