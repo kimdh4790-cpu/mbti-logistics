@@ -6,7 +6,7 @@ on:
       - 'claude/**'
 
 jobs:
-  auto-merge:
+  auto-merge-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,3 +23,42 @@ jobs:
           git checkout main
           git merge origin/${{ github.ref_name }} --no-edit
           git push origin main
+
+      - name: Upload HTML/JS assets to KV
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          ACCOUNT="02709cbec18d848913b4246015b9148f"
+          NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
+          for FILE in filo.html filo-smart-pos.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-menu-mgmt.js filo-menu-recipe.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-pos-core.js filo-pos-ui.js filo-menu.js filo-qr.js filo-inventory.js filo-report.js filo-table.js filo-staff.js filo-order.js filo-order-common.js filo-landing.js filo-landing.html dine.html dine.js dine-schedule.js dine-analytics.js dine-staff.js dine-payroll.js dine-sales.js dine-tax.js dine-member.js dine-landing.html donway_landing.js order.html order.js order-done.html table-order.html store.html kitchen.html yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html; do
+            [ -f "$FILE" ] || continue
+            RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY_CLEAN" \
+              -H "Content-Type: text/plain; charset=utf-8" \
+              --data-binary @"$FILE")
+            if echo "$RESULT" | grep -q '"success":true'; then
+              echo "✅ $FILE"
+            else
+              echo "❌ $FILE: $RESULT"
+            fi
+          done
+
+      - name: Purge Cloudflare Cache
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+        run: |
+          CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          for ZONE in filo.ai.kr donway.ai.kr dine.ne.kr mbtico.kr yongcha.app; do
+            ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=$ZONE" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY_CLEAN" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')" 2>/dev/null)
+            [ -z "$ZONE_ID" ] && continue
+            RES=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY_CLEAN" \
+              -H "Content-Type: application/json" \
+              -d '{"purge_everything":true}')
+            echo "$RES" | grep -q '"success":true' && echo "✅ 캐시 퍼지: $ZONE" || echo "❌ $ZONE: $RES"
+          done
