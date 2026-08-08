@@ -8395,6 +8395,18 @@ textarea.inp{resize:vertical;min-height:80px}
 .dstat-lbl{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px;font-weight:600}
 .active-work-hero{background:linear-gradient(135deg,#061a0a 0%,#0c2e10 60%,#103614 100%);border:1.5px solid rgba(16,185,129,.28);border-radius:20px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
 .active-work-hero::before{content:'';position:absolute;top:-30px;right:-20px;width:120px;height:120px;background:radial-gradient(circle,rgba(16,185,129,.2) 0%,transparent 70%);border-radius:50%}
+.today-earn-hdr{background:linear-gradient(135deg,#0b1e0e 0%,#0d2414 60%,#102e18 100%);border:1.5px solid rgba(16,185,129,.28);border-radius:20px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden}
+.today-earn-hdr::before{content:'';position:absolute;top:-40px;right:-20px;width:140px;height:140px;background:radial-gradient(circle,rgba(16,185,129,.22) 0%,transparent 70%);border-radius:50%}
+.earn-big{font-size:56px;font-weight:900;letter-spacing:-3px;color:#34d399;line-height:1;text-shadow:0 0 40px rgba(16,185,129,.4)}
+.sched-item{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--bd);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.sched-item:active{transform:scale(.98)}
+.sched-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.zone-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px;background:linear-gradient(135deg,rgba(249,115,22,.16),rgba(245,158,11,.1));color:var(--or);border:1.5px solid rgba(249,115,22,.35);border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;width:100%;margin-bottom:10px;transition:.15s}
+.zone-btn:active{filter:brightness(.88)}
+.zone-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.action-pair{display:flex;gap:8px;margin-bottom:14px}
+.photo-btn{width:100%;padding:14px;background:rgba(79,120,245,.15);color:var(--ac);border:1.5px solid rgba(79,120,245,.3);border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.photo-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 </style>
 </head>
 <body>
@@ -8682,6 +8694,24 @@ function _closeModal(){
   document.getElementById('modal-sheet').style.display='none';
 }
 function _callAgency(phone){window.location.href='tel:'+phone;}
+function _showZone(region,area){
+  var q=(region||'')+(area?' '+area:'');
+  var url='https://map.kakao.com/?q='+encodeURIComponent(q);
+  window.open(url,'_blank');
+}
+function _previewDonePhoto(wid){
+  var inp=document.getElementById('done-photo-inp');
+  if(!inp||!inp.files||!inp.files[0])return;
+  var file=inp.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=document.getElementById('done-photo-preview');
+    if(img){img.src=e.target.result;img.style.display='block';}
+    var btn=document.getElementById('done-confirm-btn');
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
+  };
+  reader.readAsDataURL(file);
+}
 function _fmt(n){return(n||0).toLocaleString();}
 function _timeAgo(ts){
   if(!ts)return '';
@@ -8781,13 +8811,15 @@ function _showPostDetail(d){
   var actionHTML='';
   if(isDriver&&d.status==='open'){
     actionHTML=
-      '<div style="display:flex;gap:8px;margin-top:16px">'+
-        (d.agencyPhone?'<button class="btn-call" style="flex:1;justify-content:center;padding:14px" onclick="_callAgency(\\''+d.agencyPhone+'\\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.82 19.79 19.79 0 01.73 2.18 2 2 0 012.72 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L7.09 7.5A16 16 0 0013.5 16.9l.88-.88a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 18.28z"/></svg> 직통 전화</button>':'')+
-      '</div>'+
-      '<div class="slide-wrap" id="detail-slider" style="margin-top:12px">'+
+      '<button class="zone-btn" onclick="_showZone(\\''+( d.region||'')+'\\',\\''+( d.area||'')+'\\')">'+
+        '<svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 13-8 13S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>'+
+        '지도 구역 보기'+
+      '</button>'+
+      (d.agencyPhone?'<button class="btn-call" style="width:100%;justify-content:center;padding:14px;margin-bottom:10px" onclick="_callAgency(\\''+d.agencyPhone+'\\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.82 19.79 19.79 0 01.73 2.18 2 2 0 012.72 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L7.09 7.5A16 16 0 0013.5 16.9l.88-.88a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 18.28z"/></svg> 소장 직통 통화</button>':'')+
+      '<div class="slide-wrap" id="detail-slider" style="margin-top:4px">'+
         '<div class="slide-fill" id="detail-fill"></div>'+
         '<div class="slide-handle" id="detail-handle"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>'+
-        '<div class="slide-label">밀어서 원클릭 지원</div>'+
+        '<div class="slide-label">밀어서 수탁하기</div>'+
       '</div>';
   } else if(isMyAgency){
     actionHTML=
@@ -8798,31 +8830,57 @@ function _showPostDetail(d){
   } else if(d.status==='closed'){
     actionHTML='<div style="text-align:center;font-size:13px;color:var(--t3);padding:16px">마감된 공고예요</div>';
   }
+  var infoRows='';
+  if(d.volume)infoRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2);font-weight:600">물량</span><span style="font-size:14px;font-weight:800;color:var(--tx)">'+d.volume+'건'+(d.vehicleType?' / '+d.vehicleType:'')+'</span></div>';
+  if(d.workShift)infoRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2);font-weight:600">근무</span><span style="font-size:14px;font-weight:800;color:var(--tx)">'+d.workShift+'</span></div>';
+  infoRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2);font-weight:600">정산</span><span style="font-size:14px;font-weight:800;color:var(--tx)">'+(d.settleDay===0?'당일 즉시':d.settleDay===1?'익일':(d.settleDay||15)+'일')+'</span></div>';
+  infoRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2);font-weight:600">최소보장</span><span style="font-size:14px;font-weight:800;color:var(--gn)">₩'+_fmt(minG)+'/건</span></div>';
+  infoRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0"><span style="font-size:13px;color:var(--t2);font-weight:600">대리점</span><span style="font-size:13px;font-weight:700;color:var(--tx)"><span style="color:var(--yw);margin-right:3px">★</span>'+(d.agencyRating?(+d.agencyRating).toFixed(1):'4.5')+' '+(d.agencyName||'대리점')+'</span></div>';
   var html=
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:'+clr+'25;color:'+clr+'">'+(d.courier||'')+'</span>'+
-      '<span class="riq-badge '+rpCls+'">시세'+(rp>0?'+':'')+rp+'%</span>'+
-      (d.urgent?'<span class="urgent-tag" style="position:static"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> 긴급</span>':'')+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">'+
+      (d.urgent?'<span style="font-size:11px;font-weight:900;padding:4px 10px;border-radius:8px;background:rgba(239,68,68,.18);color:var(--rd);letter-spacing:.3px">[긴급]</span>':'')+
+      '<span style="font-size:11px;padding:3px 10px;border-radius:8px;background:'+clr+'22;color:'+clr+';font-weight:700">'+(d.courier||'')+'</span>'+
+      '<span class="riq-badge '+rpCls+'" style="margin-left:auto">시세'+(rp>0?'+':'')+rp+'%</span>'+
     '</div>'+
-    '<div class="modal-title" style="margin-bottom:4px">'+(d.region||'')+' '+(d.area||'')+'</div>'+
-    '<div class="rating-row" style="margin-bottom:14px"><span class="star">★</span> '+(d.agencyRating?(+d.agencyRating).toFixed(1):'4.5')+'<span style="color:var(--t3);margin:0 5px">·</span>'+(d.agencyName||'대리점')+'</div>'+
-    '<div class="fare-num lg"><span style="font-size:36px;font-weight:700;opacity:.8">₩</span>'+_fmt(d.unitPrice||0)+'<span style="font-size:18px;font-weight:600;color:var(--t2);margin-left:6px">/건</span></div>'+
-    (monthEst?'<div class="fare-est" style="margin-bottom:16px">월 ~'+monthEst+'만원 예상</div>':'')+
-    '<div class="stat-grid" style="margin-top:12px">'+
-      '<div class="stat-card"><div class="stat-val">'+_fmt(minG)+'</div><div class="stat-lbl">최소보장</div></div>'+
-      '<div class="stat-card"><div class="stat-val">'+(d.volume||0)+'건</div><div class="stat-lbl">일 물량</div></div>'+
-      '<div class="stat-card"><div class="stat-val">'+(d.settleDay||15)+'일</div><div class="stat-lbl">정산</div></div>'+
-      '<div class="stat-card"><div class="stat-val">'+(d.workShift||'주간')+'</div><div class="stat-lbl">근무</div></div>'+
+    '<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px">'+
+      '<span style="font-size:28px;font-weight:900;color:var(--or)">₩</span>'+
+      '<span style="font-size:76px;font-weight:900;color:var(--or);letter-spacing:-4px;line-height:1;text-shadow:0 0 60px rgba(249,115,22,.45)">'+_fmt(d.unitPrice||0)+'</span>'+
+      '<span style="font-size:18px;font-weight:600;color:rgba(255,255,255,.35);margin-left:5px">/건</span>'+
     '</div>'+
-    (d.description?'<div class="card" style="font-size:13px;line-height:1.7;color:var(--t2);margin-top:8px">'+(d.description||'')+'</div>':'')+
+    (monthEst?'<div class="fare-est" style="margin-bottom:14px">월 ~'+monthEst+'만원 예상</div>':'')+
+    '<div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-.4px;margin-bottom:16px">'+(d.region||'')+' '+(d.area||'')+'</div>'+
+    '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:14px;padding:4px 16px;margin-bottom:12px">'+infoRows+'</div>'+
+    (d.description?'<div style="font-size:13px;line-height:1.7;color:var(--t2);padding:10px 0;margin-bottom:8px;border-top:1px solid var(--bd)">'+(d.description)+'</div>':'')+
     actionHTML;
   _showModal(html);
   if(isDriver&&d.status==='open'){
-    var handle=document.getElementById('detail-handle');
-    var fill=document.getElementById('detail-fill');
-    var wrap=document.getElementById('detail-slider');
-    if(handle&&wrap)_initSlider(handle,fill,wrap,function(){_quickApply(d.id,d.agencyId,d.agencyName);_closeModal();});
+    var pid=d.id,aid=d.agencyId,anm=d.agencyName;
+    setTimeout(function(){
+      var handle=document.getElementById('detail-handle');
+      var fill=document.getElementById('detail-fill');
+      var wrap=document.getElementById('detail-slider');
+      if(handle&&fill&&wrap)_initSlider(handle,fill,wrap,function(){_quickApply(pid,aid,anm);_closeModal();});
+    },120);
   }
+}
+function _startCountdown(postId,agencyId,agencyName){
+  var btn=document.getElementById('accept-cd-btn');
+  if(!btn||btn.dataset.running)return;
+  btn.dataset.running='1';
+  var count=5;
+  function tick(){
+    var b=document.getElementById('accept-cd-btn');
+    if(!b){return;}
+    count--;
+    if(count<=0){_quickApply(postId,agencyId,agencyName);_closeModal();return;}
+    var pct=((5-count)/5*100);
+    b.style.background='linear-gradient(90deg,#f97316 '+pct+'%,rgba(249,115,22,.25) '+pct+'%)';
+    b.textContent='수락하기 ('+count+'초)';
+    setTimeout(tick,1000);
+  }
+  btn.style.background='linear-gradient(90deg,#f97316 0%,rgba(249,115,22,.25) 0%)';
+  btn.textContent='수락하기 (5초)';
+  setTimeout(tick,1000);
 }
 
 /* ── 홈 ───────────────────────────────────────────────────── */
@@ -8846,52 +8904,73 @@ function _donwayNudge(){
 }
 
 function _pgHomeDriver(el){
-  el.innerHTML='<div class="card" style="color:var(--t2);font-size:13px;text-align:center;padding:24px">로딩 중...</div>';
-  _db.collection('yongcha_work').where('driverId','==',_CU.uid).where('status','in',['accepted','arrived']).limit(1).get()
-  .then(function(snap){
-    var activeWork=snap.empty?null:Object.assign({id:snap.docs[0].id},snap.docs[0].data());
-    var topCard='';
+  el.innerHTML='<div style="color:var(--t2);font-size:13px;text-align:center;padding:40px">로딩 중...</div>';
+  Promise.all([
+    _db.collection('yongcha_work').where('driverId','==',_CU.uid).where('status','in',['accepted','arrived']).limit(3).get(),
+    _db.collection('yongcha_work').where('driverId','==',_CU.uid).where('status','==','done').orderBy('completedAt','desc').limit(5).get()
+  ]).then(function(res){
+    var active=[],done2=[];
+    res[0].forEach(function(d){active.push(Object.assign({wid:d.id},d.data()));});
+    res[1].forEach(function(d){done2.push(Object.assign({wid:d.id},d.data()));});
+    var activeWork=active.length?active[0]:null;
+    var todayEarned=done2.reduce(function(s,w){return s+(w.fare||0);},0);
+    var activeEarned=active.reduce(function(s,w){return s+(w.fare||0);},0);
+    var totalExp=todayEarned+activeEarned;
+    var allWork=active.concat(done2).slice(0,4);
+    var schedItems='';
+    allWork.forEach(function(w){
+      var isDone=w.status==='done';
+      var isArr=w.status==='arrived';
+      var clr=isDone?'#10b981':isArr?'#f97316':'#4f78f5';
+      var lbl=isDone?'완료':isArr?'현장도착':'진행중';
+      schedItems+='<div class="sched-item">'+
+        '<div class="sched-dot" style="background:'+clr+'"></div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(w.area||w.region||'배차')+'</div>'+
+          '<div style="font-size:11px;color:var(--t2);margin-top:2px">'+(w.courier||'')+(w.agencyName?' · '+w.agencyName:'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div style="font-size:12px;font-weight:800;color:'+clr+'">'+lbl+'</div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-top:1px">'+_fmt(w.fare||0)+'원</div>'+
+        '</div>'+
+      '</div>';
+    });
+    if(!allWork.length)schedItems='<div style="color:var(--t3);font-size:12px;padding:14px;text-align:center;background:var(--bg3);border-radius:12px;margin-bottom:10px">오늘 배차가 없어요</div>';
+    var actionBtns='';
     if(activeWork){
-      var aw=activeWork;
-      var stepLbl=aw.status==='arrived'?'현장 도착':'배차 수락';
-      topCard=
-        '<div class="active-work-hero" onclick="_goPage(\\'work_status\\')">'+
-          '<div style="position:relative;z-index:1">'+
-            '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:4px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">진행중인 배차</div>'+
-            '<div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:-.4px">'+(aw.area||aw.region||'배차 정보')+'</div>'+
-            '<div style="font-size:13px;color:rgba(255,255,255,.6);margin-top:4px">'+(aw.courier||'')+(aw.agencyName?' · '+aw.agencyName:'')+'</div>'+
-            '<div style="display:flex;align-items:center;gap:10px;margin-top:14px">'+
-              '<div style="background:rgba(16,185,129,.25);border:1px solid rgba(16,185,129,.4);border-radius:10px;padding:8px 16px">'+
-                '<div style="font-size:22px;font-weight:900;color:#34d399">'+_fmt(aw.fare||0)+'</div>'+
-                '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:1px">원</div>'+
-              '</div>'+
-              '<div style="background:rgba(255,255,255,.1);border-radius:10px;padding:8px 14px">'+
-                '<div style="font-size:12px;font-weight:800;color:#fff">'+stepLbl+'</div>'+
-                '<div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">탭하여 상세보기</div>'+
-              '</div>'+
-            '</div>'+
-          '</div>'+
-        '</div>';
-    } else {
-      topCard=
-        '<div class="hero-card">'+
-          '<div style="position:relative;z-index:1">'+
-            '<div style="font-size:11px;color:rgba(255,255,255,.45);margin-bottom:3px">안녕하세요</div>'+
-            '<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px">'+(_CU.name||'기사')+'님</div>'+
-            '<div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:5px">'+
-              (_CU.region?_CU.region+(_CU.carType?' · '+_CU.carType:''):'지역·차종을 프로필에서 설정해보세요')+
-            '</div>'+
-            '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">'+
-              '<button onclick="_goPage(\\'rev_sim\\')" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:rgba(79,120,245,.18);border:1px solid rgba(79,120,245,.3);border-radius:12px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+
-                _SVG.bolt+'수익 시뮬레이터'+
-              '</button>'+
-              (_CU.rating?'<div style="display:inline-flex;align-items:center;gap:5px;padding:9px 14px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.25);border-radius:12px"><span style="color:#f8d06b;font-size:14px">★</span><span style="color:#f8d06b;font-size:13px;font-weight:800">'+_CU.rating.toFixed(1)+'</span></div>':'')+
-            '</div>'+
-          '</div>'+
-        '</div>';
+      var isAccepted=activeWork.status==='accepted';
+      actionBtns='<div class="action-pair">'+
+        (isAccepted
+          ?'<button class="btn-accept" onclick="_goPage(\\'my_work\\')" style="flex:2;padding:14px;font-size:14px;border:none">현장 도착 확인</button>'
+          :'<button onclick="_goPage(\\'my_work\\')" style="flex:2;padding:14px;font-size:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:800;cursor:pointer;font-family:inherit">배차 완료 처리</button>')+
+        '<button onclick="window.open(\\'https://map.naver.com\\',\\'_blank\\')" style="flex:1;padding:14px;background:rgba(255,255,255,.07);color:var(--tx);border:1.5px solid var(--bd2);border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M20 10c0 6-8 13-8 13S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>내비게이션</button>'+
+      '</div>';
     }
     el.innerHTML=
-      topCard+
+      '<div class="today-earn-hdr">'+
+        '<div style="position:relative;z-index:1">'+
+          '<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px">'+(_CU.name||'기사')+'님 · 오늘 예상 운임</div>'+
+          '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:8px">'+
+            '<span style="font-size:18px;font-weight:700;color:rgba(52,211,153,.7)">₩</span>'+
+            '<span class="earn-big">'+_fmt(totalExp||0)+'</span>'+
+            '<span style="font-size:14px;color:rgba(255,255,255,.3);font-weight:500">원</span>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+            '<span style="font-size:12px;color:rgba(255,255,255,.4)">완료 '+_fmt(todayEarned)+'원</span>'+
+            (activeWork?'<span style="font-size:11px;background:rgba(79,120,245,.22);color:#a5b4fc;border-radius:6px;padding:2px 8px;font-weight:700">진행중 +'+_fmt(activeEarned)+'원</span>':'')+
+            (allWork.length?'<span style="font-size:11px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.4);border-radius:6px;padding:2px 8px;font-weight:600">총 '+allWork.length+'건</span>':'')+
+          '</div>'+
+          (_CU.rating?'<div style="display:flex;align-items:center;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)">'+
+            '<span style="color:#f8d06b;font-size:15px">★</span>'+
+            '<span style="font-size:13px;font-weight:900;color:#f8d06b">'+_CU.rating.toFixed(1)+'</span>'+
+            '<span style="font-size:11px;color:rgba(255,255,255,.35)">내 평점</span>'+
+            '<button onclick="_goPage(\\'rev_sim\\')" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:rgba(79,120,245,.18);border:1px solid rgba(79,120,245,.3);border-radius:10px;color:#a5b4fc;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+_SVG.bolt+'수익 계산</button>'+
+          '</div>':'')+
+        '</div>'+
+      '</div>'+
+      actionBtns+
+      '<div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:4px 0 10px">오늘 배차 일정</div>'+
+      schedItems+
       _donwayNudge()+
       '<div class="ai-card" id="ai-card">'+
         '<div class="ai-hdr">'+
@@ -9369,7 +9448,19 @@ function _renderWorkActive(el,w){
   } else if(step===1){
     actionHTML='<button class="btn-main" style="margin-top:16px" onclick="_workArrived(\\''+w.wid+'\\')">현장 도착 확인</button>';
   } else if(step===2){
-    actionHTML='<button class="btn-gn" onclick="_workDone(\\''+w.wid+'\\')">배차 완료 처리</button>';
+    actionHTML=
+      '<div style="background:var(--bg3);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-top:16px;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:12px;letter-spacing:.5px">완료 사진 첨부 (선택)</div>'+
+        '<label style="display:block;cursor:pointer">'+
+          '<input type="file" id="done-photo-inp" accept="image/*" capture="environment" style="display:none" onchange="_previewDonePhoto(\\''+w.wid+'\\')">'+
+          '<div class="photo-btn">'+
+            '<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>'+
+            '사진 촬영 / 선택'+
+          '</div>'+
+        '</label>'+
+        '<img id="done-photo-preview" style="display:none;width:100%;border-radius:10px;margin-top:10px;max-height:180px;object-fit:cover">'+
+      '</div>'+
+      '<button id="done-confirm-btn" class="btn-gn" onclick="_workDone(\\''+w.wid+'\\')">배차 완료 처리</button>';
   }
 
   el.innerHTML=
