@@ -8384,7 +8384,7 @@ textarea.inp{resize:vertical;min-height:80px}
 .rating-row{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--t2);font-weight:600}
 .star{color:#f59e0b}
 .btn-call{display:flex;align-items:center;justify-content:center;gap:5px;padding:12px;background:rgba(16,185,129,.13);color:var(--gn);border:1.5px solid rgba(16,185,129,.28);border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex:1}
-.btn-call svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.btn-call svg{width:14px;height:14px;fill:currentColor;stroke:none}
 .btn-accept{display:flex;align-items:center;justify-content:center;gap:5px;padding:12px;background:linear-gradient(135deg,#f97316,#f59e0b);color:#fff;border:none;border-radius:14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;flex:2;box-shadow:0 3px 14px rgba(249,115,22,.38)}
 .btn-accept svg{width:14px;height:14px;fill:#fff}
 .btn-accept:active,.btn-call:active{filter:brightness(.88)}
