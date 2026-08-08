@@ -8599,7 +8599,7 @@ function _buildNav(){
           {ico:'users',lbl:'사용자',p:'admin_users'},{ico:'user',lbl:'내정보',p:'profile'}];
   }
   document.getElementById('bnav').innerHTML=tabs.map(function(tb){
-    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\''+tb.p+'\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
+    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\\''+tb.p+'\\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
   }).join('');
 }
 
