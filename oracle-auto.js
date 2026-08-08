@@ -106,8 +106,12 @@ async function autoLogin(page) {
 
 async function ensureLoggedIn(page) {
   log('오라클 콘솔 접속 중...');
-  await page.goto('https://cloud.oracle.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForTimeout(3000);
+  await page.goto('https://cloud.oracle.com', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(function(e){
+    if(e.message && (e.message.includes('ERR_ABORTED') || e.message.includes('net::ERR'))) {
+      log('리다이렉트 감지 — 계속 진행');
+    } else { throw e; }
+  });
+  await page.waitForTimeout(4000);
 
   const isLoggedIn = await page
     .locator('[aria-label="User menu"], .oci-header-user, [data-testid="user-menu"]')
