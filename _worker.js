@@ -1782,6 +1782,10 @@ async function acceptExchange(){
       if (path === '/dine-tax.js') return serveKVFile(env, 'dine-tax.js', 'application/javascript');
       if (path === '/dine-member.js') return serveKVFile(env, 'dine-member.js', 'application/javascript');
       if (path === '/dine-schedule.js') return serveKVFile(env, 'dine-schedule.js', 'application/javascript');
+      if (path === '/dine-sw.js') {
+        const swTxt = await env.DONWAY_ASSETS.get('dine-sw.js', 'text');
+        return new Response(swTxt || '/* dine-sw */', { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } });
+      }
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
       // ★ /슬러그/status → 회원용 테이블/대기 현황 페이지
