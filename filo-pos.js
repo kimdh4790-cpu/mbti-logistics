@@ -152,7 +152,7 @@ function _filoPageKiosk(el){
        if(dispPending>0)dispHtml+='<div style="font-size:10px;color:#fbbf24">₩'+dispPending.toLocaleString()+' 미결</div>';
        if(isPaid)dispHtml+='<div style="font-size:10px;color:#818cf8;font-weight:700">전액결제</div>';
       } else {
-       dispHtml+='<div style="font-size:10px;color:var(--t3)">비어있음</div>';
+       dispHtml+='<div style="font-size:10px;color:#cbd5e1">비어있음</div>';
       }
       btn.innerHTML=dispHtml;
       (function(table,order){btn.onclick=function(){
