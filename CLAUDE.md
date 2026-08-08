@@ -37,7 +37,14 @@ Oracle Cloud IP:     155.248.187.99 (4코어/24GB, opc 계정)
 
 ## 📦 배포 규칙
 
-### KV 업로드
+### 클라우드 코드(원격) 자동 배포 흐름
+1. 클라우드 코드에서 코드 수정 후 `claude/*` 브랜치 push
+2. `.github/workflows/auto-merge.yml` 자동 실행 → main 머지
+3. `.github/workflows/deploy.yml` 자동 실행 → KV 업로드 + 캐시 퍼지
+- 로컬 작업 불필요. 클라우드 코드 push만 하면 끝.
+- donway-settle-app CI 빨간 표시는 무관 (미사용 프로젝트)
+
+### KV 업로드 (로컬 수동)
 npx wrangler kv key put --remote --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b [파일명] --path [파일경로]
 settle.html 예외: --path donway-pages/index.html
 
@@ -65,7 +72,7 @@ cd mbtico-pages && npx wrangler deploy
 - 이모지 금지  Lucide SVG 사용
 - 폰트: Pretendard 전용
 - alert() 금지  _filoToast()/_dineToast() 사용
-- 클라우드 원격 환경 금지  로컬 PC에서만 실행
+- 클라우드 원격 환경: 코드 수정+배포 가능. Playwright 테스트/wrangler login은 로컬에서만
 - Playwright 테스트  반드시 로컬에서 실행
 
 ---
