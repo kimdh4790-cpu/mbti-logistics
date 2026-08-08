@@ -518,6 +518,18 @@ var _DINE_IC={
  check:'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
 };
 
+/* 대시보드 스켈레톤 로딩 플레이스홀더 */
+function _dineSkelAttend(){
+ var rows='';
+ for(var i=0;i<3;i++) rows+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f3f4f6"><div style="width:32px;height:32px;border-radius:50%;background:#f3f4f6"></div><div style="flex:1"><div style="height:10px;background:#f3f4f6;border-radius:4px;margin-bottom:4px"></div><div style="height:8px;background:#f3f4f6;border-radius:4px;width:60%"></div></div></div>';
+ return rows;
+}
+function _dineSkelLaw(){
+ var rows='';
+ for(var i=0;i<3;i++) rows+='<div style="padding:8px 0;border-bottom:1px solid #f3f4f6"><div style="height:10px;background:#f3f4f6;border-radius:4px;margin-bottom:4px"></div><div style="height:8px;background:#f3f4f6;border-radius:4px;width:75%"></div></div>';
+ return rows;
+}
+
 /* 실시간 출퇴근 카운트 (REST 폴링) */
 var _attendInterval=null;
 function _dineDashboard(el){
