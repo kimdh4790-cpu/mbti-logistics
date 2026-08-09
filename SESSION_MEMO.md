@@ -38,7 +38,7 @@ dine.html, dine.js, dine-schedule.js, dine-analytics.js, dine-staff.js,
 dine-payroll.js, dine-sales.js, dine-tax.js, dine-member.js, dine-landing.html,
 donway_landing.js, order.html, order.js, order-done.html, table-order.html,
 store.html, kitchen.html, yongcha.html, yongcha-landing.html,
-mbtico-ctrl.js, wait.html, wait-join.html, join.html
+mbtico-ctrl.js, wait.html, wait-join.html, join.html, member-portal.html
 ```
 **목록에 없는 파일**은 push해도 KV에 안 올라감 → 로컬에서 수동 업로드 필요.
 
@@ -57,6 +57,7 @@ npx wrangler kv key put --remote \
 npx wrangler deploy
 ```
 - **클라우드 코드에서는 _worker.js 수정 후 push만** → 로컬에서 별도 배포 필요
+- ⚠️ **현재 미배포 상태**: QR 출퇴근 페이지 Firebase/FCM 초기화 코드 + 직원 본인 출퇴근 확인 FCM이 push됐지만 `wrangler deploy` 안 됨 → 로컬에서 반드시 실행할 것
 
 ### PR 생성 절대 금지
 - push 후 PR 만들지 말 것. auto-merge가 자동으로 main에 머지함.
@@ -105,7 +106,18 @@ cd mbtico-pages && npx wrangler deploy
 - AD, 서브넷, 이미지 모두 `--region $REGION`으로 동적 조회 (하드코딩 없음)
 - 기존 인스턴스 확인도 4개 리전 합산으로 변경
 
-### 5. filo-table.js — 테이블 주문 모달 버그 수정 ✅ (최신 커밋)
+### 5. _worker.js + dine-member.js — DINE 직원·회원 FCM 푸시 ⚠️ (wrangler deploy 필요)
+- QR 출퇴근 시 직원 본인 폰에 "출근/퇴근 완료" FCM 알림
+- 포인트 적립 시 회원 폰에 "N포인트 적립" FCM 알림
+- `dine-member.js`는 KV 자동업로드 → 배포됨. `_worker.js`는 로컬 `wrangler deploy` 필요
+
+### 6. member-portal.html — 가입 없이 전화번호만으로 포인트 조회 ✅ (배포됨)
+- 버튼: "로그인" → "포인트 확인"
+- 회원 없으면 자동 신규 등록 (point:0, source:'member_portal')
+- FCM 토큰 자동 등록 → 포인트 적립 시 알림 수신
+- `member-portal.html` KV 자동업로드 목록에 추가 완료
+
+### 7. filo-table.js — 테이블 주문 모달 버그 수정 ✅ (최신 커밋)
 - **텍스트 색상**: 미결제 항목 `color:var(--tx)` 명시 (어두운 배경에서 글자 안 보이던 문제)
 - **금액 중복**: `pendingTotal` 계산 시 `paidTotal` 차감
 - **결제하기 flatItems**: 이미 결제된 주문(`o.paid`)은 제외
