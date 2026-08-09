@@ -7,7 +7,24 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "record:filo": "node scripts/capture/record-filo.js",
+    "record:donway": "node scripts/capture/record-donway.js",
+    "record:yongcha": "node scripts/capture/record-yongcha.js",
+    "record:mbtico": "node scripts/capture/record-mbtico.js",
+    "compose:filo": "bash scripts/compose/compose-video.sh filo",
+    "compose:donway": "bash scripts/compose/compose-video.sh donway",
+    "compose:yongcha": "bash scripts/compose/compose-video.sh yongcha",
+    "compose:mbtico": "bash scripts/compose/compose-video.sh mbtico",
+    "upload:youtube": "node scripts/upload/upload-youtube.js",
+    "upload:instagram": "node scripts/upload/upload-instagram.js",
+    "upload:blog": "node scripts/upload/post-naver-blog.js",
+    "login:youtube": "HEADLESS=false node scripts/upload/upload-youtube.js --login-only",
+    "login:instagram": "HEADLESS=false node scripts/upload/upload-instagram.js --login-only",
+    "login:naver": "HEADLESS=false node scripts/upload/post-naver-blog.js --login-only",
+    "pipeline": "node scripts/run-pipeline.js",
+    "pipeline:filo": "node scripts/run-pipeline.js --product filo --steps record,compose",
+    "pipeline:all": "node scripts/run-pipeline.js --product all --steps record,compose"
   },
   "repository": {
     "type": "git",
