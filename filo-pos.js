@@ -47,12 +47,13 @@ function _filoReceiptSelected(input){
 function _filoPageKiosk(el){
  var did=_CU.dealerId||_CU.uid;
  _cartItems=[];
- el.innerHTML='<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+ el.innerHTML='<div style="display:flex;flex-direction:column;height:calc(100dvh - var(--topbar-h) - 32px)">'+
+ '<div style="flex-shrink:0;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
  '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px;display:inline-flex;align-items:center;gap:5px">'+_svgIcon('bar-chart')+' 메뉴 엑셀 업로드</button>'+
  '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
- '<div class="pos-wrap">'+
+ '<div class="pos-wrap" style="flex:1;min-height:0;height:auto">'+
  '<div style="display:flex;flex-direction:column">'+
  '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
  '<div class="menu-grid" id="kiosk-menu">'+
@@ -67,7 +68,7 @@ function _filoPageKiosk(el){
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="_filoPay()">'+_svgIcon('credit-card')+' 결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
- '</div></div></div>';
+ '</div></div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)
  var _kioskTableUnsub=null;

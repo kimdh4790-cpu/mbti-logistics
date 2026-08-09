@@ -501,7 +501,15 @@ function _filoGoPage(p){
  /* CSS는 .ni.active 로 활성 스타일을 정의한다 — 'on' 만 붙이면 하이라이트가 안 뜬다 */
  document.querySelectorAll('.ni').forEach(function(el){el.classList.remove('on');el.classList.remove('active');});
  var nav=document.getElementById('nav-'+p);
- if(nav){nav.classList.add('on');nav.classList.add('active');}
+ if(nav){
+  nav.classList.add('on');nav.classList.add('active');
+  /* 현재 페이지가 속한 그룹 자동 열기 */
+  var grp=nav.parentElement;
+  if(grp&&grp.classList.contains('ns-group')&&(grp.style.maxHeight==='0px'||grp.style.maxHeight==='0'||grp.style.overflow==='hidden')){
+   var lbl=grp.previousElementSibling;
+   if(lbl&&lbl.dataset.gi!==undefined){_toggleNavGroup(parseInt(lbl.dataset.gi),lbl);}
+  }
+ }
  document.getElementById('sidebar').classList.remove('open');
 
  var el=document.getElementById('content');
