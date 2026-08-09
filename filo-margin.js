@@ -825,167 +825,190 @@ function _filoAiSchedule() {
 /* ═════════════════════════════════════════════════════════════
    5. 음성 주문 인식 (Web Speech API + 서버 파싱)
    ═════════════════════════════════════════════════════════════ */
+/* ── 핸즈프리 음성 POS (상시 청취 · 자동 실행) ────────────────────────────── */
 var _aiRecog = null, _aiRecogActive = false;
+var _aiHFActive = false;
 
-function _filoVoiceOrderOpen() {
+function _filoVoiceOrderOpen() { _aiHFToggle(); }
+function _filoVoiceOrderClose() { _aiHFStop(); }
+
+function _aiHFToggle() {
+  if (_aiHFActive) { _aiHFStop(); return; }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    _aiToast('이 브라우저는 음성 인식을 지원하지 않습니다. Chrome을 사용해 주세요.');
-    return;
-  }
-  if (document.getElementById('ai-voice-modal')) { _aiVoiceStart(); return; }
+  if (!SR) { _aiToast('Chrome 브라우저가 필요합니다'); return; }
+  _aiHFStart();
+}
 
-  var m = document.createElement('div');
-  m.id = 'ai-voice-modal';
-  m.className = 'ai-modal';
-  m.innerHTML =
-    '<div class="ai-modal-inner">' +
-      '<div class="ai-modal-head"><h3>음성 주문</h3>' +
-        '<button class="ai-x" onclick="_filoVoiceOrderClose()" aria-label="닫기">×</button></div>' +
-      '<div class="ai-voice-stage">' +
-        '<button class="ai-mic ai-mic-lg" id="ai-voice-btn" onclick="_aiVoiceToggle()">' +
-          '<span class="ai-mic-ring"></span></button>' +
-        '<div class="ai-voice-status" id="ai-voice-status">버튼을 누르고 주문을 말씀해 주세요</div>' +
-        '<div class="ai-voice-heard" id="ai-voice-heard"></div>' +
-      '</div>' +
-      '<div id="ai-voice-result"></div>' +
-      '<div class="ai-voice-hint">예시 · "아메리카노 두 잔이랑 크로와상 하나요"</div>' +
+function _aiHFStart() {
+  _aiHFActive = true;
+  /* FAB 초록으로 */
+  var fab = document.getElementById('filo-voice-fab');
+  if (fab) { fab.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)'; fab.title = '음성 POS 켜짐 (클릭=종료)'; }
+  _aiHFShowUI();
+  _aiHFRecogLoop();
+}
+
+function _aiHFStop() {
+  _aiHFActive = false;
+  if (_aiRecog) { try { _aiRecog.stop(); } catch(e){} _aiRecog = null; }
+  var ui = document.getElementById('ai-hf-ui'); if (ui) ui.remove();
+  var fab = document.getElementById('filo-voice-fab');
+  if (fab) { fab.style.background = ''; fab.title = '음성 주문'; }
+}
+
+function _aiHFShowUI() {
+  var old = document.getElementById('ai-hf-ui'); if (old) old.remove();
+  var d = document.createElement('div');
+  d.id = 'ai-hf-ui';
+  d.style.cssText = 'position:fixed;bottom:150px;right:18px;background:rgba(8,16,31,.93);backdrop-filter:blur(14px);border:1px solid rgba(201,168,76,.35);border-radius:16px;padding:13px 16px;z-index:4500;width:240px;font-family:Pretendard,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.45)';
+  d.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+      '<div id="ai-hf-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:aiBreathe 1.5s ease infinite;flex-shrink:0"></div>' +
+      '<span style="font-size:11px;font-weight:800;color:#c9a84c;letter-spacing:.5px;flex:1">음성 POS 작동중</span>' +
+      '<button onclick="_aiHFStop()" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:18px;cursor:pointer;line-height:1;padding:0">×</button>' +
+    '</div>' +
+    '<div id="ai-hf-heard" style="font-size:12px;color:rgba(255,255,255,.45);min-height:15px;margin-bottom:4px;font-style:italic"></div>' +
+    '<div id="ai-hf-result" style="font-size:13px;color:#fff;font-weight:700;min-height:18px;word-break:keep-all"></div>' +
+    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.3);line-height:1.6">' +
+      '"3번 테이블 해물밥상 둘"<br>"3번 테이블 카드 결제"<br>"3번 테이블 비움"' +
     '</div>';
-  document.body.appendChild(m);
-  requestAnimationFrame(function () { m.classList.add('on'); });
-  setTimeout(_aiVoiceStart, 350);
+  document.body.appendChild(d);
 }
 
-function _filoVoiceOrderClose() {
-  _aiVoiceStop();
-  var m = document.getElementById('ai-voice-modal');
-  if (!m) return;
-  m.classList.remove('on');
-  setTimeout(function () { if (m.parentNode) m.parentNode.removeChild(m); }, 250);
-}
-
-function _aiVoiceToggle() { if (_aiRecogActive) _aiVoiceStop(); else _aiVoiceStart(); }
-
-function _aiVoiceStart() {
+function _aiHFRecogLoop() {
+  if (!_aiHFActive) return;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return;
-  _aiVoiceStop();
+  var r = new SR();
+  r.lang = 'ko-KR';
+  r.continuous = false;
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+  _aiRecog = r;
 
-  var btn = document.getElementById('ai-voice-btn');
-  var st  = document.getElementById('ai-voice-status');
-  var hd  = document.getElementById('ai-voice-heard');
-
-  _aiRecog = new SR();
-  _aiRecog.lang = 'ko-KR';
-  _aiRecog.continuous = false;
-  _aiRecog.interimResults = true;
-  _aiRecog.maxAlternatives = 1;
-
-  _aiRecog.onstart = function () {
-    _aiRecogActive = true;
-    if (btn) btn.classList.add('listening');
-    if (st) st.textContent = '듣고 있습니다…';
-    if (hd) hd.textContent = '';
-  };
-  _aiRecog.onresult = function (ev) {
+  r.onstart = function() { _aiRecogActive = true; _aiHFSet('heard', '듣는 중…'); };
+  r.onresult = function(ev) {
     var interim = '', fin = '';
     for (var i = ev.resultIndex; i < ev.results.length; i++) {
       if (ev.results[i].isFinal) fin += ev.results[i][0].transcript;
       else interim += ev.results[i][0].transcript;
     }
-    if (hd) hd.textContent = fin || interim;
-    if (fin) _aiVoiceParse(fin.trim());
+    _aiHFSet('heard', fin || interim);
+    if (fin) _aiHFProcess(fin.trim());
   };
-  _aiRecog.onerror = function (ev) {
+  r.onerror = function(ev) {
     _aiRecogActive = false;
-    if (btn) btn.classList.remove('listening');
-    var msg = ev.error === 'not-allowed'
-      ? '마이크 권한이 필요합니다. 브라우저 주소창의 자물쇠 아이콘에서 허용해 주세요.'
-      : ev.error === 'no-speech' ? '소리가 들리지 않았습니다. 다시 시도해 주세요.'
-      : '음성 인식 오류: ' + ev.error;
-    if (st) st.textContent = msg;
+    if (ev.error === 'not-allowed') { _aiHFSet('result', '마이크 권한 필요'); _aiHFStop(); return; }
+    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 800);
   };
-  _aiRecog.onend = function () {
+  r.onend = function() {
     _aiRecogActive = false;
-    if (btn) btn.classList.remove('listening');
-    if (st && st.textContent === '듣고 있습니다…') st.textContent = '버튼을 눌러 다시 말씀해 주세요';
+    _aiHFSet('heard', '');
+    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 300);
   };
-
-  try { _aiRecog.start(); } catch (e) { if (st) st.textContent = '음성 인식을 시작하지 못했습니다: ' + e.message; }
+  try { r.start(); } catch(e) { if (_aiHFActive) setTimeout(_aiHFRecogLoop, 1000); }
 }
 
-function _aiVoiceStop() {
-  if (_aiRecog) { try { _aiRecog.stop(); } catch (e) {} }
-  _aiRecogActive = false;
-  var btn = document.getElementById('ai-voice-btn');
-  if (btn) btn.classList.remove('listening');
+function _aiHFSet(id, txt) {
+  var el = document.getElementById('ai-hf-' + id); if (el) el.textContent = txt;
 }
 
-function _aiVoiceParse(text) {
-  var res = document.getElementById('ai-voice-result');
-  var st  = document.getElementById('ai-voice-status');
-  if (st) st.textContent = '주문 내용을 분석 중…';
-  if (res) res.innerHTML = '<div style="padding:12px 0">' + _aiSkeleton(2) + '</div>';
+function _aiHFProcess(text) {
+  _aiHFSet('result', '분석 중…');
+  /* 테이블 번호 추출 */
+  var tM = text.match(/(\d+)\s*번?\s*테이블/);
+  var tableNum = tM ? parseInt(tM[1]) : null;
+  var tableName = tableNum ? (tableNum + '번 테이블') : null;
 
-  _aiPost('/api/ai-voice-order', { did: _aiDid(), text: text }).then(function (r) {
-    if (!res) return;
-    if (!r.ok) { _aiErr(res, r.error || '주문을 인식하지 못했습니다.'); if (st) st.textContent = '다시 시도해 주세요'; return; }
-    if (!r.items.length) {
-      res.innerHTML = '<div class="ai-empty" style="padding:20px 0">' +
-        '<div style="font-size:12px;color:var(--t2)">메뉴판에서 일치하는 항목을 찾지 못했습니다.<br>메뉴명을 또렷하게 말씀해 주세요.</div></div>';
-      if (st) st.textContent = '다시 시도해 주세요';
-      return;
-    }
-    window._aiVoiceItems = r.items;
-    if (st) st.textContent = r.items.length + '개 메뉴를 인식했습니다';
-    res.innerHTML =
-      '<div class="ai-voice-items">' +
-        r.items.map(function (it) {
-          return '<div class="ai-voice-item">' +
-            '<span class="ai-rec-emoji">' + _aiEsc(it.emoji) + '</span>' +
-            '<span class="ai-voice-item-name">' + _aiEsc(it.name) + '</span>' +
-            '<span class="ai-voice-item-qty">× ' + it.qty + '</span>' +
-            '<span class="ai-voice-item-price">' + _aiWon(it.price * it.qty) + '</span>' +
-          '</div>';
-        }).join('') +
-      '</div>' +
-      '<div class="ai-voice-total"><span>합계</span><strong>' + _aiWon(r.total) + '</strong></div>' +
-      '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="ai-chip" style="flex:1" onclick="_aiVoiceStart()">다시 말하기</button>' +
-        '<button class="ai-btn-primary" style="flex:2" onclick="_aiVoiceToCart()">장바구니에 담기</button>' +
-      '</div>';
-  });
-}
-
-/* 인식 결과를 POS 카트로 */
-function _aiVoiceToCart() {
-  var items = window._aiVoiceItems || [];
-  if (!items.length) return;
-  if (typeof _cartAdd !== 'function' || typeof window._cartItems === 'undefined') {
-    window._aiPendingCart = items;
-    _aiToast('POS 화면으로 이동합니다');
-    _filoVoiceOrderClose();
-    if (typeof _filoGoPage === 'function') _filoGoPage('kiosk');
-    setTimeout(_aiFlushPendingCart, 900);
-    return;
+  /* 비움 / 정리 */
+  if (text.match(/비움|비워|정리|퇴장|클리어|비어|나갔/)) {
+    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
+    _aiHFClear(tableNum, tableName); return;
   }
-  items.forEach(function (it) {
-    for (var i = 0; i < it.qty; i++) _cartAdd(it.name, it.name, it.price);
+
+  /* 결제 */
+  var pM = text.match(/(카드|현금|카카오)\s*결제/);
+  if (pM || (tableNum && text.match(/결제/))) {
+    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
+    var method = pM ? (pM[1] === '카드' ? 'card' : pM[1] === '현금' ? 'cash' : 'kakao') : 'card';
+    var mLabel = method === 'card' ? '카드' : method === 'cash' ? '현금' : '카카오페이';
+    _aiHFPay(tableNum, tableName, method, mLabel); return;
+  }
+
+  /* 주문 → AI 파싱 */
+  _aiPost('/api/ai-voice-order', { did: _aiDid(), text: text }).then(function(r) {
+    if (!r.ok || !r.items || !r.items.length) { _aiHFDone('메뉴를 인식하지 못했습니다'); return; }
+    if (tableNum) {
+      _aiHFRegister(tableNum, tableName, r.items, r.total);
+    } else {
+      /* 테이블 미지정 → POS 카트에 담기 */
+      if (typeof _cartAdd === 'function') {
+        r.items.forEach(function(it){ for(var i=0;i<it.qty;i++) _cartAdd(it.id||it.name,it.name,it.price); });
+        _aiHFDone(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담음');
+        _aiSpeak(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담았습니다');
+      } else { _aiHFDone('POS 화면에서 말씀해 주세요'); }
+    }
   });
-  _aiToast(items.length + '개 메뉴를 담았습니다');
-  _filoVoiceOrderClose();
 }
 
-function _aiFlushPendingCart() {
-  var items = window._aiPendingCart;
-  if (!items || !items.length) return;
-  if (typeof _cartAdd !== 'function') { setTimeout(_aiFlushPendingCart, 600); return; }
-  items.forEach(function (it) {
-    for (var i = 0; i < it.qty; i++) _cartAdd(it.name, it.name, it.price);
-  });
-  window._aiPendingCart = null;
-  _aiToast('음성 주문 ' + items.length + '건을 담았습니다');
+function _aiHFRegister(tableNum, tableName, items, total) {
+  var did = _aiDid(), now = new Date(), today = now.toISOString().slice(0,10);
+  _db.collection('filo_orders').add({
+    dealerId: did, tableNum: String(tableNum), tableName: tableName,
+    items: items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
+    total: total, type: 'table', source: 'voice', status: 'pending',
+    date: today, createdAt: now.toISOString()
+  }).then(function() {
+    var msg = tableName+' '+items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 등록';
+    _aiHFDone(msg); _aiSpeak(msg+'했습니다');
+  }).catch(function(e){ _aiHFDone('오류: '+e.message); });
 }
+
+function _aiHFClear(tableNum, tableName) {
+  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
+  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).where('date','==',today)
+    .get().then(function(snap) {
+      if (snap.empty) { _aiHFDone(tableName+' 주문 없음'); return; }
+      var batch = _db.batch();
+      snap.forEach(function(doc){ batch.update(doc.ref,{status:'cleared',clearedAt:new Date().toISOString()}); });
+      return batch.commit().then(function(){
+        _aiHFDone(tableName+' 비움 완료'); _aiSpeak(tableName+' 비웠습니다');
+      });
+    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
+}
+
+function _aiHFPay(tableNum, tableName, method, mLabel) {
+  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
+  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum))
+    .where('date','==',today).where('status','==','pending')
+    .get().then(function(snap) {
+      if (snap.empty) { _aiHFDone(tableName+' 결제할 주문 없음'); return; }
+      var items=[], total=0, orderIds=[];
+      snap.forEach(function(doc){ var d=doc.data(); orderIds.push(doc.id); (d.items||[]).forEach(function(it){items.push(it);}); total+=d.total||0; });
+      if (typeof _filoTablePay==='function') {
+        _filoTablePay(did,items,total,tableNum,tableName,method,orderIds);
+        var msg = tableName+' '+mLabel+' '+total.toLocaleString()+'원 결제 완료';
+        _aiHFDone(msg); _aiSpeak(msg);
+      }
+    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
+}
+
+function _aiHFDone(msg) { _aiHFSet('heard',''); _aiHFSet('result', msg); }
+
+function _aiSpeak(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ko-KR'; u.rate = 1.05;
+  window.speechSynthesis.speak(u);
+}
+
+/* 구버전 호환 */
+function _aiVoiceToggle(){}
+function _aiVoiceStart(){}
+function _aiVoiceStop(){ _aiHFStop(); }
+function _aiVoiceToCart(){}
+function _aiFlushPendingCart(){}
 
 /* ═════════════════════════════════════════════════════════════
    6. AI CS봇 — 플로팅 위젯 (대화 맥락 유지)
@@ -1086,6 +1109,9 @@ window._filoAiMenuRec      = _filoAiMenuRec;
 window._filoAiSchedule     = _filoAiSchedule;
 window._filoVoiceOrderOpen = _filoVoiceOrderOpen;
 window._filoVoiceOrderClose= _filoVoiceOrderClose;
+window._aiHFToggle         = _aiHFToggle;
+window._aiHFStop           = _aiHFStop;
+window._aiSpeak            = _aiSpeak;
 window._filoAiChatToggle   = _filoAiChatToggle;
 window._filoAiChatTest     = _filoAiChatTest;
 window._filoAiBriefing     = _filoAiBriefing;
