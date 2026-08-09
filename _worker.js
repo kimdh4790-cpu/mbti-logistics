@@ -3687,6 +3687,57 @@ ${JSON.stringify(postSummary)}
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
+
+      // 회원 포털 — 전화번호로 회원 조회 (Firestore 보안 규칙 우회용 SA API)
+      if (path === '/member/lookup' && method === 'POST') {
+        try {
+          const { did, phone } = await request.json();
+          if (!did || !phone) return new Response(JSON.stringify({error:'필수 파라미터 누락'}), {status:400, headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const FS = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
+          const qRes = await fetch(`${FS}:runQuery`, {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'filo_customers'}],
+              where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                {fieldFilter:{field:{fieldPath:'phone'},op:'EQUAL',value:{stringValue:phone}}}
+              ]}},
+              limit:{value:1}
+            }})
+          });
+          const rows = await qRes.json();
+          const hit = Array.isArray(rows) && rows[0]?.document;
+          if (hit) {
+            const f = hit.fields || {};
+            const id = hit.name.split('/').pop();
+            return new Response(JSON.stringify({
+              id, found:true,
+              name: f.name?.stringValue||'회원',
+              point: parseInt(f.point?.integerValue||f.point?.doubleValue||0),
+              stamp: parseInt(f.stamp?.integerValue||f.stamp?.doubleValue||0),
+              grade: f.grade?.stringValue||'일반',
+              visitCount: parseInt(f.visitCount?.integerValue||0)
+            }), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+          // 미등록 → 신규 생성
+          const now = new Date().toISOString();
+          const newDoc = {fields:{dealerId:{stringValue:did},phone:{stringValue:phone},name:{stringValue:'회원'},point:{integerValue:'0'},stamp:{integerValue:'0'},grade:{stringValue:'일반'},visitCount:{integerValue:'0'},joinedAt:{stringValue:now},createdAt:{stringValue:now},source:{stringValue:'member_portal'}}};
+          const cRes = await fetch(`${FS}/filo_customers`, {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify(newDoc)
+          });
+          const cData = await cRes.json();
+          const newId = (cData.name||'').split('/').pop();
+          return new Response(JSON.stringify({id:newId,found:false,name:'회원',point:0,stamp:0,grade:'일반',visitCount:0}),
+            {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({error:e.message}), {status:500, headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+      if (path === '/member/lookup' && method === 'OPTIONS') {
+        return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'}});
+      }
       // filo JS 모듈 서빙 (slug 라우팅보다 먼저!)
       const cleanPath = path.split('?')[0];
       if (cleanPath.match(/^\/filo-[a-z0-9_-]+\.js$/)) {
