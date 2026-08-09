@@ -409,7 +409,7 @@ async function sendFCMPush(fcmToken, title, body, data = {}) {
 }
 
 // ── 관리자 FCM 푸시 발송 ──
-async function sendAdminFCM(env, token, { title, body, type }) {
+async function sendAdminFCM(env, token, { title, body, type, url }) {
   try {
     const accessToken = await getAccessToken(env);
     const resp = await fetch(
@@ -424,7 +424,7 @@ async function sendAdminFCM(env, token, { title, body, type }) {
           message: {
             token: token,
             notification: { title, body },
-            data: { type: type || 'alert' },
+            data: { type: type || 'alert', ...(url ? { url } : {}) },
             android: { priority: 'high', notification: { sound: 'default', channelId: 'donway_admin' } },
             apns: { payload: { aps: { sound: 'default', badge: 1 } } },
             webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png', requireInteraction: true } }
@@ -3308,7 +3308,7 @@ ${JSON.stringify(postSummary)}
           const allTokens = [...new Set([...fcmArr, fcmSingle].filter(Boolean))];
           let sent = 0;
           for(const ft of allTokens) {
-            try { await sendAdminFCM(env, ft, { title, body: msgBody||'' }); sent++; } catch(e){}
+            try { await sendAdminFCM(env, ft, { title, body: msgBody||'', url: `https://filo.ai.kr/store/${did}` }); sent++; } catch(e){}
           }
           return new Response(JSON.stringify({ok:true,sent}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e) {
