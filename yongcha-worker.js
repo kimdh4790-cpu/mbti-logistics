@@ -655,37 +655,67 @@ select.inp option{background:#24243d;color:#f0f1f8}
    v2 새 컴포넌트 — 목업 기반 리디자인
    ══════════════════════════════════════════════════════════ */
 /* ── v2 기사 홈 히어로 ── */
-.hero-v2{background:linear-gradient(145deg,#0d1e3a,#131929 70%);
-  border:1px solid var(--acln);border-radius:var(--r2);padding:22px;margin-bottom:14px;
-  position:relative;overflow:hidden}
-.hero-v2::before{content:'';position:absolute;top:-60px;right:-50px;width:200px;height:200px;
-  border-radius:50%;background:radial-gradient(circle,rgba(59,126,248,.18),transparent 70%);pointer-events:none}
-.hero-v2-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
-.hero-v2-name{font-size:15px;font-weight:800;color:var(--t2)}
+/* ── AI / 애니메이션 키프레임 ── */
+@keyframes heroGlow{0%,100%{box-shadow:0 16px 48px -8px rgba(37,99,235,.6),0 0 0 0 rgba(59,126,248,.25)}
+  50%{box-shadow:0 20px 60px -6px rgba(37,99,235,.85),0 0 0 10px rgba(59,126,248,0)}}
+@keyframes urgentPulse{0%,100%{box-shadow:0 8px 24px -6px rgba(245,158,11,.55),0 0 0 0 rgba(245,158,11,.4)}
+  60%{box-shadow:0 10px 28px -4px rgba(245,158,11,.8),0 0 0 10px rgba(245,158,11,0)}}
+@keyframes scanLine{0%{transform:translateY(-100%);opacity:0}5%{opacity:.7}95%{opacity:.7}100%{transform:translateY(700%);opacity:0}}
+@keyframes countSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideInBottom{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes badgePop{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes aiDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* ── 기사용 v2 히어로 카드 ── */
+.hero-v2{background:linear-gradient(145deg,#1d4ed8 0%,#2563eb 45%,#1e40af 100%);
+  border:none;border-radius:var(--r2);padding:22px 22px 20px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+  animation:heroGlow 3s ease-in-out infinite}
+.hero-v2::before{content:'';position:absolute;top:-80px;right:-60px;width:260px;height:260px;
+  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.15),transparent 65%);pointer-events:none}
+.hero-v2::after{content:'';position:absolute;left:0;right:0;height:2px;top:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);
+  animation:scanLine 4s linear infinite;pointer-events:none}
+.hero-v2-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px}
+.hero-v2-name{font-size:15px;font-weight:800;color:rgba(255,255,255,.9)}
 .hero-v2-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:900;
-  padding:4px 10px;border-radius:var(--r-full);background:rgba(59,126,248,.18);
-  color:var(--ac);border:1px solid var(--acln)}
-.hero-v2-earn-lbl{font-size:12.5px;font-weight:700;color:var(--t2);margin:16px 0 4px;letter-spacing:.3px}
-.hero-v2-earn-amt{font-size:52px;font-weight:900;color:var(--br);letter-spacing:-2px;
-  line-height:1;font-variant-numeric:tabular-nums}
-.hero-v2-earn-sub{font-size:12.5px;color:var(--t2);margin-top:6px;font-weight:600}
+  padding:4px 10px;border-radius:var(--r-full);background:rgba(34,224,138,.25);
+  color:#4ade80;border:1px solid rgba(34,224,138,.4);
+  animation:badgePop .5s var(--ease) .3s both}
+.hero-v2-earn-lbl{font-size:12px;font-weight:700;color:rgba(255,255,255,.65);margin:14px 0 2px;letter-spacing:.5px;text-transform:uppercase}
+.hero-v2-earn-amt{font-size:56px;font-weight:900;color:#fff;letter-spacing:-2.5px;
+  line-height:1;font-variant-numeric:tabular-nums;
+  animation:countSlide .5s var(--ease) .1s both}
+.hero-v2-earn-sub{font-size:12.5px;color:rgba(255,255,255,.65);margin-top:8px;font-weight:600}
+.hero-v2-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.hero-v2-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);
+  border-radius:var(--r-full);font-size:11.5px;font-weight:700;color:rgba(255,255,255,.9)}
 
 /* ── v2 소장 홈 ── */
-.agency-v2-hdr{background:linear-gradient(145deg,#0d1e3a,#131929 70%);
-  border:1px solid var(--acln);border-radius:var(--r2);padding:20px;margin-bottom:14px}
-.agency-v2-name{font-size:19px;font-weight:900;letter-spacing:-.5px;color:var(--tx)}
-.agency-v2-sub{font-size:13px;color:var(--t2);margin-top:3px}
+.agency-v2-hdr{background:linear-gradient(145deg,#1d4ed8,#1e40af 80%);
+  border:none;border-radius:var(--r2);padding:20px;margin-bottom:14px;
+  position:relative;overflow:hidden;
+  box-shadow:0 12px 36px -8px rgba(37,99,235,.5)}
+.agency-v2-hdr::before{content:'';position:absolute;top:-50px;right:-40px;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 65%);pointer-events:none}
+.agency-v2-name{font-size:19px;font-weight:900;letter-spacing:-.5px;color:#fff}
+.agency-v2-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:3px}
 .stat-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .stat3-item{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
-  padding:14px 6px;text-align:center}
-.stat3-val{font-size:24px;font-weight:900;color:var(--tx);font-variant-numeric:tabular-nums;
-  letter-spacing:-1px;line-height:1}
+  padding:14px 6px;text-align:center;
+  animation:slideInBottom .4s var(--ease) both}
+.stat3-item:nth-child(1){animation-delay:.05s}
+.stat3-item:nth-child(2){animation-delay:.1s}
+.stat3-item:nth-child(3){animation-delay:.15s}
+.stat3-val{font-size:26px;font-weight:900;color:var(--tx);font-variant-numeric:tabular-nums;
+  letter-spacing:-1px;line-height:1;transition:all .4s var(--ease)}
 .stat3-lbl{font-size:10.5px;font-weight:700;color:var(--t2);margin-top:5px}
 .btn-urgent-flash{width:100%;min-height:58px;padding:14px 18px;border:none;border-radius:var(--r-lg);
   background:linear-gradient(135deg,#f59e0b,#d97706);color:#1a0a00;
   font-size:16px;font-weight:900;letter-spacing:-.3px;cursor:pointer;font-family:inherit;
-  box-shadow:0 8px 24px -6px rgba(245,158,11,.5);margin-bottom:14px;
-  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s}
+  margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s;
+  animation:urgentPulse 2.2s ease-in-out infinite}
 .btn-urgent-flash:active{transform:scale(.97)}
 
 /* ── v2 공고 상세 액션 버튼 ── */
@@ -740,14 +770,21 @@ select.inp option{background:#24243d;color:#f0f1f8}
 
 /* ── 홈 액션 2버튼 ── */
 .home-act-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.btn-act-blue{min-height:52px;border:none;border-radius:var(--r-lg);
+.btn-act-gold{min-height:56px;border:none;border-radius:var(--r-lg);
+  background:linear-gradient(135deg,#f59e0b,#d97706);color:#1a0a00;
+  font-size:14px;font-weight:900;letter-spacing:-.2px;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  box-shadow:0 8px 20px -6px rgba(245,158,11,.6);transition:transform .15s}
+.btn-act-gold:active{transform:scale(.97)}
+.btn-act-blue{min-height:56px;border:none;border-radius:var(--r-lg);
   background:linear-gradient(135deg,var(--ac),var(--ac2));color:var(--ac-ink);
-  font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;
+  font-size:14px;font-weight:900;letter-spacing:-.2px;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:6px;
   box-shadow:0 6px 18px -6px rgba(59,126,248,.5);transition:transform .15s}
 .btn-act-blue:active{transform:scale(.97)}
-.btn-act-outline{min-height:52px;border:1.5px solid var(--ac);border-radius:var(--r-lg);
+.btn-act-outline{min-height:56px;border:1.5px solid var(--ac);border-radius:var(--r-lg);
   background:var(--acl);color:var(--ac);
-  font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;transition:transform .15s}
+  font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;transition:transform .15s}
 .btn-act-outline:active{transform:scale(.97)}
 
 /* ── 소장 지역별 배차 현황 ── */
@@ -1034,6 +1071,22 @@ function _ago(ts){
   return new Date(ts.seconds*1000).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'});
 }
 function _won(n){return Number(n||0).toLocaleString('ko-KR');}
+
+/* ── 카운트업 애니메이션 ── */
+function _yCountUp(el,from,to,ms,suffix){
+  if(!el)return;
+  var start=null,range=to-from;
+  if(range===0){el.textContent=_won(to)+(suffix||'');return;}
+  function step(ts){
+    if(!start)start=ts;
+    var p=Math.min((ts-start)/ms,1);
+    var ease=1-Math.pow(1-p,4); // ease-out-quart
+    var cur=Math.round(from+range*ease);
+    el.textContent=_won(cur)+(suffix||'');
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
 
 /* ── 스켈레톤 로딩 ── */
 function _sk(w,h,r,mb){
@@ -1370,39 +1423,48 @@ function _pgHome(el){
 /* ── 기사 홈 ── */
 function _pgHomeDriver(el){
   el.innerHTML=
-  // 히어로 카드 — 골드 수익 강조
+  // 히어로 카드 — 파란 배경 + 대형 수익 (모형 일치)
   '<div class="hero-v2">'+
     '<div class="hero-v2-top">'+
       '<span class="hero-v2-name">'+_esc(_CU.name)+'님 안녕하세요!</span>'+
-      '<span class="hero-v2-badge" id="drv-active-badge">진행중 배차 확인 중</span>'+
+      '<span class="hero-v2-badge" id="drv-active-badge">배차 확인 중...</span>'+
     '</div>'+
     '<div class="hero-v2-earn-lbl">오늘 예상 운임</div>'+
     '<div class="hero-v2-earn-amt" id="earn-today">—</div>'+
     '<div class="hero-v2-earn-sub" id="earn-sub-lbl">'+_esc(_CU.region||'지역')+'  운행 기록 집계 중...</div>'+
+    '<div class="hero-v2-chips" id="earn-chips"></div>'+
   '</div>'+
 
-  // 홈 지도 (카카오 API 로드된 경우만 표시)
-  '<div class="home-map-card" id="home-drv-map-wrap">'+
+  // 홈 지도
+  '<div class="home-map-card" style="position:relative" id="home-drv-map-wrap">'+
     '<div id="home-drv-map"></div>'+
     '<div style="position:absolute;top:10px;left:10px;background:rgba(9,14,29,.85);border:1px solid var(--bd);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:800;color:var(--t2);pointer-events:none">'+
       _esc(_CU.region||'내 지역')+' 배송 구역'+
     '</div>'+
   '</div>'+
 
-  // 홈 액션 버튼 2개
+  // 홈 액션 버튼 2개 (모형: 노란색 + 파란색)
   '<div class="home-act-grid">'+
-    '<button type="button" class="btn-act-blue" onclick="_goPage(\\'posts\\')">긴급 배차 수락</button>'+
-    '<button type="button" class="btn-act-outline" onclick="_yOpenNaviModal()">내비게이션 시작</button>'+
+    '<button type="button" class="btn-act-gold" onclick="_goPage(\\'posts\\')">'+
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>긴급 배차 수락</button>'+
+    '<button type="button" class="btn-act-blue" onclick="_yOpenNaviModal()">'+
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>내비게이션 시작</button>'+
   '</div>'+
 
-  // 퀵 액션 그리드
+  // 퀵 액션 그리드 (아이콘 + 텍스트)
   '<div class="quick-grid">'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'dashboard\\')">월 대시보드</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'bookmarks\\')">찜한 공고</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_yOpenCalc()">실수령액</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">지원 현황</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'dashboard\\')">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>월 대시보드</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'bookmarks\\')">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>찜한 공고</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_yOpenCalc()">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></span>실수령액</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>지원 현황</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -1413,7 +1475,7 @@ function _pgHomeDriver(el){
   '<div class="sec-head" style="margin-top:6px"><span class="sec-title">내 지역 최신 공고</span><button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button></div>'+
   '<div id="home-recent">'+_skeletonCards(2)+'</div>';
 
-  // 오늘 수익 집계
+  // 오늘 수익 집계 (카운트업 애니메이션)
   _db.collection('yongcha_daily_records')
     .where('driverId','==',_CU.uid).where('date','==',_yToday()).get()
   .then(function(s){
@@ -1421,8 +1483,21 @@ function _pgHomeDriver(el){
     s.forEach(function(d){var r=d.data();total+=r.amount||0;cnt+=r.count||0;});
     var earn=document.getElementById('earn-today');
     var sub=document.getElementById('earn-sub-lbl');
-    if(earn)earn.textContent=total>0?_won(total)+'원':'—';
+    var chips=document.getElementById('earn-chips');
+    if(earn){
+      if(total>0){
+        _yCountUp(earn,0,total,900,'원');
+      } else {
+        earn.textContent='—';
+      }
+    }
     if(sub)sub.textContent=total>0?'오늘 '+cnt+'건 완료 · '+_esc(_CU.region||'')+'':'아직 오늘 운행 기록 없어요';
+    if(chips&&total>0){
+      chips.innerHTML=
+        '<span class="hero-v2-chip">'+cnt+'건 완료</span>'+
+        (_CU.region?'<span class="hero-v2-chip">'+_esc(_CU.region)+'</span>':'')+
+        '<span class="hero-v2-chip">당일 정산</span>';
+    }
   }).catch(function(){});
 
   // 진행중 배차 카운트
@@ -1510,7 +1585,7 @@ function _pgHomeAgency(el){
   '<div class="sec-head" style="margin-top:6px"><span class="sec-title">최근 지원자</span><button type="button" class="sec-count" onclick="_goPage(\\'my_routes\\')">전체보기 ›</button></div>'+
   '<div id="home-recent">'+_skRows(2)+'</div>';
 
-  // KPI 로딩
+  // KPI 로딩 (카운트업 애니메이션)
   _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched']).get().then(function(s){
     var reg=0,done=0,prog=0;
     s.forEach(function(d){
@@ -1518,9 +1593,9 @@ function _pgHomeAgency(el){
       if(st==='open')reg++;
       else if(st==='matched'){done++;prog++;}
     });
-    var e1=document.getElementById('kpi-reg');if(e1)e1.textContent=reg+'건';
-    var e2=document.getElementById('kpi-done');if(e2)e2.textContent=done+'건';
-    var e3=document.getElementById('kpi-prog');if(e3)e3.textContent=prog+'건';
+    var e1=document.getElementById('kpi-reg');if(e1)_yCountUp(e1,0,reg,700,'건');
+    var e2=document.getElementById('kpi-done');if(e2)_yCountUp(e2,0,done,800,'건');
+    var e3=document.getElementById('kpi-prog');if(e3)_yCountUp(e3,0,prog,900,'건');
   }).catch(function(){});
 
   // 지역별 배차 현황
@@ -3044,8 +3119,23 @@ function _showContract(contractId){
 function _pgPostWrite(el){
   window._zones=[];
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">공고 등록</div>'+
-  '<div class="page-sub">정확히 입력할수록 좋은 기사를 만나요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
+  '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
+
+  // 템플릿 선택 (모형에서 가장 위)
+  '<div class="form-section" style="padding:14px;background:linear-gradient(135deg,rgba(59,126,248,.12),rgba(59,126,248,.06));border:1px solid var(--acln);border-radius:var(--r-lg);margin-bottom:12px">'+
+  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>'+
+    '<span style="font-size:13.5px;font-weight:900;color:var(--ac)">저장된 템플릿 빠른 선택</span>'+
+  '</div>'+
+  '<select class="inp" id="pw-tmpl" onchange="_applyPostTemplate(this.value)" style="border-color:var(--acln);margin-bottom:0">'+
+    '<option value="">직접 입력</option>'+
+    '<option value="tmpl_dawn">새벽 백업 / 1톤</option>'+
+    '<option value="tmpl_day">주간 하이탑 / 1.4톤</option>'+
+    '<option value="tmpl_night">야간 택배 / 1톤</option>'+
+    '<option value="tmpl_coupon">당일 쿠팡 / 0.5톤</option>'+
+  '</select>'+
+  '</div>'+
 
   // 택배사
   '<div class="form-section">'+
@@ -3131,8 +3221,16 @@ function _pgPostWrite(el){
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-pricetype">'+
-  '<div class="inp-wrap"><label class="inp-lbl">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-price" type="number" placeholder="예: 880" oninput="_calcEst();_loadRegionStats()"></div>'+
+  '<div class="inp-wrap">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+    '<label class="inp-lbl" style="margin-bottom:0">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
+    '<div style="display:flex;gap:6px;align-items:center">'+
+      '<button type="button" id="settle-badge" onclick="_toggleSettleBadge()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid var(--acln);background:var(--acl);color:var(--ac);font-size:11px;font-weight:900;cursor:pointer" title="클릭하면 당일즉시정산 활성화">당일즉시정산</button>'+
+      '<input type="hidden" id="pw-instant-settle" value="0">'+
+    '</div>'+
+  '</div>'+
+  '<input class="inp" id="pw-price" type="number" placeholder="예: 880" oninput="_calcEst();_loadRegionStats()">'+
+  '</div>'+
   '<div id="pw-region-stats" style="display:none;margin:6px 0;padding:10px 12px;background:var(--bg3);border-radius:10px;font-size:11px"></div>'+
   '<div class="inp-wrap" id="pw-houseprice-wrap" style="display:none">'+
   '<label class="inp-lbl">가구당 단가 (원)</label>'+
@@ -3221,13 +3319,81 @@ function _pgPostWrite(el){
   '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
   '</div>'+
 
-  '<button class="btn-main" id="submit-btn" onclick="_submitPost()"> 공고 등록하기</button>';
+  // 기사 신뢰도 필터
+  '<div class="form-section">'+
+  '<div class="toggle-row">'+
+    '<div><div class="toggle-lbl">기사 신뢰도 필터</div>'+
+    '<div class="toggle-desc">평점 4.5 이상 기사만 지원 가능</div></div>'+
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">'+
+      '<input type="checkbox" id="pw-trust-filter" style="width:20px;height:20px;cursor:pointer;accent-color:var(--ac)">'+
+      '<span style="font-size:12px;font-weight:800;color:var(--br)">★ 4.5+</span>'+
+    '</label>'+
+  '</div></div>'+
+
+  // 발송 버튼 — 주황 그라데이션 (모형 일치)
+  '<button id="submit-btn" onclick="_submitPost()" style="width:100%;min-height:62px;border:none;border-radius:var(--r-lg);'+
+    'background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;'+
+    'font-size:17px;font-weight:900;letter-spacing:-.3px;cursor:pointer;font-family:inherit;'+
+    'display:flex;align-items:center;justify-content:center;gap:10px;'+
+    'box-shadow:0 10px 28px -6px rgba(249,115,22,.6);margin-top:8px">'+
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
+    '초고속 용차 공고 발송</button>';
 
   // 하이탑 기본 선택 처리
   setTimeout(function(){
     var v1=document.querySelector('#pw-vehicle-group button');
     if(v1) _selType(v1,'하이탑','pw-vehicle');
   },100);
+}
+
+function _toggleSettleBadge(){
+  var h=document.getElementById('pw-instant-settle');
+  var btn=document.getElementById('settle-badge');
+  if(!h||!btn)return;
+  var on=h.value==='1';
+  h.value=on?'0':'1';
+  btn.style.background=on?'var(--acl)':'rgba(249,115,22,.18)';
+  btn.style.color=on?'var(--ac)':'var(--urgent)';
+  btn.style.borderColor=on?'var(--acln)':'var(--urgentln)';
+  btn.textContent=on?'당일즉시정산':'당일즉시정산 ON';
+}
+
+var _POST_TEMPLATES={
+  tmpl_dawn:{courier:'한진택배',type:'하루 대타',workShift:'주간',vehicleType:'1톤 냉동',settleDay:'당일',desc:'새벽 백업 물량입니다.'},
+  tmpl_day:{courier:'CJ대한통운',type:'주단위',workShift:'주간',vehicleType:'하이탑',settleDay:'주1회 목요일',desc:'주간 정규 라인입니다.'},
+  tmpl_night:{courier:'롯데택배',type:'주단위',workShift:'야간',vehicleType:'1톤',settleDay:'주1회 금요일',desc:'야간 택배 라인입니다.'},
+  tmpl_coupon:{courier:'쿠팡로지스틱스',type:'하루 대타',workShift:'주간',vehicleType:'다마스/라보',settleDay:'당일',desc:'쿠팡 당일 배송입니다.'}
+};
+function _applyPostTemplate(key){
+  var t=_POST_TEMPLATES[key];
+  if(!t)return;
+  var courier=document.getElementById('pw-courier');
+  if(courier)courier.value=t.courier||'';
+  var type=document.getElementById('pw-type');
+  if(type){type.value=t.type||'';
+    document.querySelectorAll('#pw-type-group button').forEach(function(b){
+      var on=b.textContent.trim()===t.type;
+      b.style.background=on?'var(--acl)':'transparent';
+      b.style.color=on?'var(--ac)':'var(--t2)';
+      b.style.borderColor=on?'var(--ac)':'var(--bd)';
+    });
+  }
+  var shift=document.getElementById('pw-shift');
+  if(shift){shift.value=t.workShift||'';
+    document.querySelectorAll('#pw-shift-group button').forEach(function(b){
+      var on=b.textContent.trim()===t.workShift;
+      b.style.background=on?'var(--acl)':'transparent';
+      b.style.color=on?'var(--ac)':'var(--t2)';
+      b.style.borderColor=on?'var(--ac)':'var(--bd)';
+    });
+  }
+  var vehicle=document.getElementById('pw-vehicle');
+  if(vehicle)vehicle.value=t.vehicleType||'';
+  var settleDay=document.getElementById('pw-settleDay');
+  if(settleDay)settleDay.value=t.settleDay||'';
+  var desc=document.getElementById('pw-desc');
+  if(desc)desc.value=t.desc||'';
+  _yToast('템플릿 적용 완료. 단가·지역을 입력하세요.');
 }
 
 function _selType(btn, val, hiddenId){
