@@ -9303,8 +9303,8 @@ function _esc(s){
 // (이걸 안 하면 이름에 ' 가 있는 사용자는 버튼이 통째로 깨짐)
 function _jsq(s){
   if(s===null||s===undefined)return '';
-  return String(s).replace(/\\/g,'\\\\\').replace(/'/g,"\\\'").replace(/"/g,'&quot;')
-    .replace(/\r?\n/g,' ').replace(/</g,'\\u003c');
+  return String(s).replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'").replace(/"/g,'&quot;')
+    .replace(/\\r?\\n/g,' ').replace(/</g,'\\\\u003c');
 }
 function _ago(ts){
   if(!ts||!ts.seconds)return '';
@@ -9924,7 +9924,7 @@ function _yDistLabel(km){
    같은 대리점이 사실상 동일한 내용을 여러 번 올린 경우를 하나로 접는다.
    지문에 노선번호·단가·시작일까지 넣는다 — 예전처럼 (구역+대리점)만
       비교하면 같은 구역의 서로 다른 노선이 같은 공고로 취급된다. */
-function _yNorm(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
+function _yNorm(v){return String(v==null?'':v).trim().toLowerCase().replace(/\\s+/g,' ');}
 
 /* 지문은 두 종류다.
    ① strict (agencyId 포함) — 등록 차단 / 내 문서 삭제용.
@@ -9981,7 +9981,7 @@ function _yPurgeMyDup(coll,keyFn,label,reloadFn){
     var seen={},kill=[];
     docs.forEach(function(d){var k=keyFn(d);if(seen[k])kill.push(d.id);else seen[k]=true;});
     if(!kill.length){_yToast('삭제할 중복이 없어요');return;}
-    if(!confirm('중복 '+label+' '+kill.length+'건을 영구 삭제할까요?\n각 그룹의 최신 1건은 남습니다.'))return;
+    if(!confirm('중복 '+label+' '+kill.length+'건을 영구 삭제할까요?\\n각 그룹의 최신 1건은 남습니다.'))return;
     var batch=_db.batch();
     kill.slice(0,450).forEach(function(id){batch.delete(_db.collection(coll).doc(id));});
     return batch.commit().then(function(){
@@ -10845,7 +10845,7 @@ function _judgeApply(applyId,status,name,driverId){
           var startDate=a.startDate||'미정';
           // FCM 상세 알림
           _yNotify(driverId,' 배차 확정되었습니다!',
-            _CU.name+'\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate);
+            _CU.name+'\\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate);
           // 채팅방 자동 생성 + 첫 메시지
           _yAutoChat(driverId,name,a,postTitle,unitPrice,startDate);
           // 계약서 초안 생성
@@ -10880,7 +10880,7 @@ function _yAutoChat(driverId,driverName,applyData,postTitle,unitPrice,startDate)
   var types={};types[_CU.uid]='agency';types[driverId]='driver';
   var unread={};unread[_CU.uid]=0;unread[driverId]=1;
   var phones={};phones[driverId]=applyData.driverPhone||'';phones[_CU.uid]=_CU.phone||'';
-  var firstMsg=' 배차 확정되었습니다! 출근 일정을 조율해주세요 😊\n📍 노선: '+postTitle+'\n💰 단가: '+unitPrice+'원/건\n📅 시작일: '+startDate;
+  var firstMsg=' 배차 확정되었습니다! 출근 일정을 조율해주세요 😊\\n📍 노선: '+postTitle+'\\n💰 단가: '+unitPrice+'원/건\\n📅 시작일: '+startDate;
   chatRef.set({
     participants:[_CU.uid,driverId],
     participantNames:names,participantTypes:types,participantPhones:phones,
@@ -12230,7 +12230,7 @@ function _yTestOwnerIds(){
 function _yIsTestDoc(v,ownerIds){
   if(ownerIds[v.agencyId]||ownerIds[v.driverId])return true;
   var hay=[v.area,v.routeNo,v.jobTitle,v.agencyName,v.desc].filter(Boolean).join(' ');
-  return /playwright|테스트|-PW\d|PW\d{2}/i.test(hay);
+  return /playwright|테스트|-PW\\d|PW\\d{2}/i.test(hay);
 }
 function _yScanTestDocs(){
   return _yTestOwnerIds().then(function(ids){
@@ -12298,7 +12298,7 @@ function _yCleanDupPosts(){
   .then(function(r){
     var posts=r[0],jobs=r[1];
     if(!posts.length&&!jobs.length){_yToast('중복 항목이 없어요');return;}
-    if(!confirm('중복 공고 '+posts.length+'건, 중복 채용공고 '+jobs.length+'건을 삭제할까요?\n각 그룹의 최신 1건은 남습니다.'))return;
+    if(!confirm('중복 공고 '+posts.length+'건, 중복 채용공고 '+jobs.length+'건을 삭제할까요?\\n각 그룹의 최신 1건은 남습니다.'))return;
     var batch=_db.batch(),n=0;
     posts.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_posts').doc(id));n++;});
     jobs.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_jobs').doc(id));n++;});
@@ -12428,7 +12428,7 @@ function _scoutDriver(driverId, driverName, driverPhone){
   '<div style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.6">기사님께 스카웃 제안 메시지를 보낼 수 있어요. 메시지는 앱 알림으로 전달됩니다.</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">스카웃 메시지</label>'+
   '<textarea class="inp" id="scout-msg" rows="3" placeholder="안녕하세요! [대리점명]입니다. 함께 일하고 싶어 연락드립니다..." style="resize:none">'+
-  '안녕하세요! '+_CU.name+'입니다.\n저희 대리점에서 기사님을 모시고 싶어 연락드립니다.\n관심 있으시면 연락 부탁드립니다!</textarea></div>'+
+  '안녕하세요! '+_CU.name+'입니다.\\n저희 대리점에서 기사님을 모시고 싶어 연락드립니다.\\n관심 있으시면 연락 부탁드립니다!</textarea></div>'+
   '<button onclick="_sendScout(\\''+driverId+'\\',\\''+_jsq(driverName)+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">📨 스카웃 보내기</button>';
   _openModal();
 }
@@ -12919,7 +12919,7 @@ function _pgChats(el){
           '<div style="font-size:11px;color:var(--t3);flex-shrink:0;font-weight:600">'+lastAt+'</div>'+
           '</div>'+
           '<div style="font-size:12.5px;color:'+(unread>0?'var(--tx)':'var(--t2)')+';font-weight:'+(unread>0?'700':'500')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
-          _esc((d.lastMessage||'메시지를 보내보세요').replace(/\n/g,' '))+'</div>'+
+          _esc((d.lastMessage||'메시지를 보내보세요').replace(/\\n/g,' '))+'</div>'+
           '</div>'+
           (unread>0?'<div class="chat-unread">'+(unread>99?'99+':unread)+'</div>':'');
         frag.appendChild(row);
