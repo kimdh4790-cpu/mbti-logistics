@@ -8208,23 +8208,24 @@ const YONGCHA_HTML_YONGCHA = `﻿<!DOCTYPE html>
    용차 디자인 시스템 v3 — 모바일 퍼스트 / 최소 터치 48px
    ═══════════════════════════════════════════════════════════ */
 :root{
-  /* ── 표면 (elevation) — 메인 #1a1a2e 다크 네이비 계열 ── */
-  --bg:#12121f;           /* app base */
-  --bg2:#1a1a2e;          /* surface ← 메인컬러 */
-  --bg3:#24243d;          /* raised */
-  --sheet:#1a1a2e;
-  --bd:#2b2b47;           /* line */
-  --bd2:#3c3c60;          /* line-strong */
+  /* ── 표면 (elevation) — 딥 다크 네이비 ── */
+  --bg:#090e1d;           /* app base */
+  --bg2:#131929;          /* surface */
+  --bg3:#1e2840;          /* raised */
+  --sheet:#131929;
+  --bd:#232d45;           /* line */
+  --bd2:#2e3b5a;          /* line-strong */
 
   /* ── 텍스트 ── */
   --tx:#f0f1f8;
   --t2:#9aa0c0;
   --t3:#666d92;
 
-  /* ── 브랜드: 민트 #00d4aa (액션) + 앰버(금액) ── */
-  --ac:#00d4aa;--ac2:#00ac89;--ac-ink:#00201a;
-  --acl:rgba(0,212,170,.14);--acln:rgba(0,212,170,.36);
-  --br:#ffb02e;--br2:#e08700;--brl:rgba(255,176,46,.14);--brln:rgba(255,176,46,.34);
+  /* ── 브랜드: 파란색 #3b7ef8 (액션) + 골드(금액) ── */
+  --ac:#3b7ef8;--ac2:#1a5fe0;--ac-ink:#ffffff;
+  --acl:rgba(59,126,248,.14);--acln:rgba(59,126,248,.36);
+  --br:#f5a623;--br2:#d4881a;--brl:rgba(245,166,35,.14);--brln:rgba(245,166,35,.34);
+  --urgent:#f97316;--urgentl:rgba(249,115,22,.14);--urgentln:rgba(249,115,22,.38);
 
   /* ── 상태 ── */
   --gn:#22e08a;--gnl:rgba(34,224,138,.13);--gnln:rgba(34,224,138,.32);
@@ -8255,7 +8256,7 @@ body{
   font-size:15px;line-height:1.45;letter-spacing:-.01em;overscroll-behavior:none;
 }
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(940px 460px at 50% -16%,rgba(0,212,170,.10),transparent 66%)}
+  background:radial-gradient(940px 460px at 50% -16%,rgba(59,126,248,.12),transparent 66%)}
 button,input,select,textarea{font-family:inherit;letter-spacing:inherit;color:inherit}
 button{cursor:pointer}
 ::selection{background:var(--ac);color:var(--ac-ink)}
@@ -8267,7 +8268,7 @@ button{cursor:pointer}
 
 /* ── 스플래시 ── */
 #ld{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  background:radial-gradient(720px 420px at 50% 20%,#20203a,#12121f 72%)}
+  background:radial-gradient(720px 420px at 50% 20%,#142040,#090e1d 72%)}
 .ld-logo,.ld-mark{width:82px;height:82px;border-radius:26px;display:grid;place-items:center;font-size:40px;
   background:linear-gradient(145deg,var(--ac),var(--ac2));box-shadow:0 20px 50px -14px rgba(0,212,170,.5);
   animation:float 1.7s var(--ease) infinite alternate}
@@ -8284,7 +8285,7 @@ button{cursor:pointer}
 /* ── 로그인 / 가입 ── */
 #login-screen{position:fixed;inset:0;z-index:1;display:none;flex-direction:column;align-items:center;justify-content:flex-start;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  background:radial-gradient(760px 440px at 50% 8%,#20203a,#12121f 68%);
+  background:radial-gradient(760px 440px at 50% 8%,#142040,#090e1d 68%);
   padding:calc(env(safe-area-inset-top) + 34px) var(--gut) calc(env(safe-area-inset-bottom) + 40px)}
 .login-card{width:100%;max-width:420px;margin:auto}
 .login-logo{text-align:center;margin-bottom:26px}
@@ -8629,9 +8630,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .hero-card{border-radius:var(--r2);padding:22px;margin-bottom:16px;position:relative;overflow:hidden;border:1px solid var(--bd)}
 .hero-card::before{content:'';position:absolute;top:-54px;right:-44px;width:186px;height:186px;border-radius:50%;
   background:radial-gradient(circle,rgba(255,255,255,.09),transparent 68%)}
-.hero-card-agency{background:linear-gradient(140deg,#10312a,#1a1a2e 62%);border-color:var(--acln)}
-.hero-card-driver{background:linear-gradient(140deg,#0d3325,#1a1a2e 62%);border-color:var(--gnln)}
-.hero-card-admin{background:linear-gradient(140deg,#241a4a,#1a1a2e 62%);border-color:var(--puln)}
+.hero-card-agency{background:linear-gradient(140deg,#0d1e3a,#131929 62%);border-color:var(--acln)}
+.hero-card-driver{background:linear-gradient(140deg,#0a1c3a,#131929 62%);border-color:var(--acln)}
+.hero-card-admin{background:linear-gradient(140deg,#1a1040,#131929 62%);border-color:var(--puln)}
 .hero-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.4px;
   margin-bottom:12px;padding:5px 11px;border-radius:var(--r-full);background:rgba(255,255,255,.08)}
 .hero-name{font-size:23px;font-weight:900;letter-spacing:-.9px;margin-bottom:7px;position:relative}
@@ -8847,6 +8848,115 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .zone-x{width:32px;height:32px;display:grid;place-items:center;background:none;border:none;
   color:inherit;font-size:17px;line-height:1;border-radius:50%}
 .zone-x:active{background:var(--rdl);color:var(--rd)}
+
+/* ══════════════════════════════════════════════════════════
+   v2 새 컴포넌트 — 목업 기반 리디자인
+   ══════════════════════════════════════════════════════════ */
+/* ── v2 기사 홈 히어로 ── */
+.hero-v2{background:linear-gradient(145deg,#0d1e3a,#131929 70%);
+  border:1px solid var(--acln);border-radius:var(--r2);padding:22px;margin-bottom:14px;
+  position:relative;overflow:hidden}
+.hero-v2::before{content:'';position:absolute;top:-60px;right:-50px;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,rgba(59,126,248,.18),transparent 70%);pointer-events:none}
+.hero-v2-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+.hero-v2-name{font-size:15px;font-weight:800;color:var(--t2)}
+.hero-v2-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:900;
+  padding:4px 10px;border-radius:var(--r-full);background:rgba(59,126,248,.18);
+  color:var(--ac);border:1px solid var(--acln)}
+.hero-v2-earn-lbl{font-size:12.5px;font-weight:700;color:var(--t2);margin:16px 0 4px;letter-spacing:.3px}
+.hero-v2-earn-amt{font-size:52px;font-weight:900;color:var(--br);letter-spacing:-2px;
+  line-height:1;font-variant-numeric:tabular-nums}
+.hero-v2-earn-sub{font-size:12.5px;color:var(--t2);margin-top:6px;font-weight:600}
+
+/* ── v2 소장 홈 ── */
+.agency-v2-hdr{background:linear-gradient(145deg,#0d1e3a,#131929 70%);
+  border:1px solid var(--acln);border-radius:var(--r2);padding:20px;margin-bottom:14px}
+.agency-v2-name{font-size:19px;font-weight:900;letter-spacing:-.5px;color:var(--tx)}
+.agency-v2-sub{font-size:13px;color:var(--t2);margin-top:3px}
+.stat-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stat3-item{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
+  padding:14px 6px;text-align:center}
+.stat3-val{font-size:24px;font-weight:900;color:var(--tx);font-variant-numeric:tabular-nums;
+  letter-spacing:-1px;line-height:1}
+.stat3-lbl{font-size:10.5px;font-weight:700;color:var(--t2);margin-top:5px}
+.btn-urgent-flash{width:100%;min-height:58px;padding:14px 18px;border:none;border-radius:var(--r-lg);
+  background:linear-gradient(135deg,#f59e0b,#d97706);color:#1a0a00;
+  font-size:16px;font-weight:900;letter-spacing:-.3px;cursor:pointer;font-family:inherit;
+  box-shadow:0 8px 24px -6px rgba(245,158,11,.5);margin-bottom:14px;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s}
+.btn-urgent-flash:active{transform:scale(.97)}
+
+/* ── v2 공고 상세 액션 버튼 ── */
+.btn-map-zone{width:100%;min-height:54px;border:none;border-radius:var(--r-lg);margin-bottom:10px;
+  background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;
+  font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 6px 20px -6px rgba(249,115,22,.5)}
+.btn-map-zone:active{transform:scale(.97)}
+.btn-direct-call{width:100%;min-height:54px;border:none;border-radius:var(--r-lg);margin-bottom:10px;
+  background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+  font-size:15px;font-weight:900;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 6px 20px -6px rgba(16,185,129,.5)}
+.btn-direct-call:active{transform:scale(.97)}
+
+/* ── 긴급 공고 뱃지 (빨간 pill) ── */
+.urgent-pill{display:inline-flex;align-items:center;font-size:12px;font-weight:900;
+  padding:5px 12px;border-radius:var(--r-full);background:rgba(239,68,68,.18);
+  color:#ef4444;border:1px solid rgba(239,68,68,.36);white-space:nowrap;letter-spacing:.2px}
+
+/* ── 공고 카드 v2 큰 가격 ── */
+.pc-price-v2{font-size:32px;font-weight:900;color:var(--br);letter-spacing:-1.5px;
+  line-height:1;font-variant-numeric:tabular-nums;margin:10px 0 6px}
+
+/* ── 공고 상세 v2 가격 헤더 ── */
+.detail-price-v2{font-size:42px;font-weight:900;color:var(--br);letter-spacing:-2px;
+  line-height:1;font-variant-numeric:tabular-nums;margin:4px 0 8px}
+.detail-info-grid{display:flex;flex-direction:column;gap:0;margin-bottom:14px;
+  background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden}
+.detail-info-row{display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border-bottom:1px solid var(--bd)}
+.detail-info-row:last-child{border:none}
+.detail-info-lbl{font-size:12.5px;color:var(--t2);font-weight:700;min-width:70px;flex-shrink:0}
+.detail-info-val{font-size:13.5px;font-weight:800;color:var(--tx);flex:1}
+.detail-rating-row{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:900;color:var(--br)}
+
+/* ── 오늘 일정 ── */
+.sched-list{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
+  overflow:hidden;margin-bottom:14px}
+.sched-item{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;
+  border-bottom:1px solid var(--bd)}
+.sched-item:last-child{border:none}
+.sched-num{width:24px;height:24px;border-radius:50%;background:var(--ac);color:var(--ac-ink);
+  display:grid;place-items:center;font-size:11px;font-weight:900;flex-shrink:0;margin-top:1px}
+.sched-title{font-size:14px;font-weight:800;color:var(--tx);margin-bottom:3px}
+.sched-sub{font-size:12px;color:var(--t2);font-weight:600}
+
+/* ── 홈 지도 ── */
+.home-map-card{border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px;border:1px solid var(--bd)}
+#home-drv-map{width:100%;height:200px;background:var(--bg3)}
+
+/* ── 홈 액션 2버튼 ── */
+.home-act-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.btn-act-blue{min-height:52px;border:none;border-radius:var(--r-lg);
+  background:linear-gradient(135deg,var(--ac),var(--ac2));color:var(--ac-ink);
+  font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;
+  box-shadow:0 6px 18px -6px rgba(59,126,248,.5);transition:transform .15s}
+.btn-act-blue:active{transform:scale(.97)}
+.btn-act-outline{min-height:52px;border:1.5px solid var(--ac);border-radius:var(--r-lg);
+  background:var(--acl);color:var(--ac);
+  font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit;transition:transform .15s}
+.btn-act-outline:active{transform:scale(.97)}
+
+/* ── 소장 지역별 배차 현황 ── */
+.region-dispatch-list{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
+  overflow:hidden;margin-bottom:14px}
+.rdl-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--bd)}
+.rdl-row:last-child{border:none}
+.rdl-region{font-size:13.5px;font-weight:800;color:var(--tx);flex:1}
+.rdl-bar-wrap{width:80px;height:6px;background:var(--bg3);border-radius:999px;overflow:hidden}
+.rdl-bar{height:100%;border-radius:999px;background:var(--ac)}
+.rdl-count{font-size:12.5px;font-weight:900;color:var(--br);min-width:40px;text-align:right}
 
 /* ── 실수령액 계산기 ── */
 .calc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -9278,16 +9388,29 @@ function _showApp(){
 // 역할별 항상 정확히 5탭 (레이아웃 안정성 + 근육기억)
 // 요구 사양: 홈 / 공고 / 채팅 / 내노선 / 프로필 — 5탭 고정, 역할별로 대상만 다르게 매핑.
 // 나머지(구인구직·휴식원장·월대시보드·관리)는 홈 퀵액션에서 1탭 → 총 2단계로 접근.
+/* ── Lucide 스타일 SVG 아이콘 ── */
+var _ico={
+  home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  truck:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  pkg:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  wallet:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>',
+  user:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  list:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+  users:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  more:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+  chat:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  dash:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+};
 var NAV_TABS={
-  admin:[{ico:'🏠',lbl:'홈',p:'home'},{ico:'',lbl:'공고',p:'posts'},
-         {ico:'💬',lbl:'채팅',p:'chat'},{ico:'👥',lbl:'회원관리',p:'members'},
-         {ico:'👤',lbl:'프로필',p:'profile'}],
-  agency:[{ico:'🏠',lbl:'홈',p:'home'},{ico:'',lbl:'공고',p:'my_posts'},
-          {ico:'💬',lbl:'채팅',p:'chat'},{ico:'',lbl:'배차현황',p:'my_routes'},
-          {ico:'👤',lbl:'프로필',p:'profile'}],
-  driver:[{ico:'🏠',lbl:'홈',p:'home'},{ico:'',lbl:'공고',p:'posts'},
-          {ico:'💬',lbl:'채팅',p:'chat'},{ico:'',lbl:'내노선',p:'my_routes'},
-          {ico:'👤',lbl:'프로필',p:'profile'}]
+  admin:[{ico:_ico.home,lbl:'홈',p:'home'},{ico:_ico.list,lbl:'공고',p:'posts'},
+         {ico:_ico.chat,lbl:'채팅',p:'chat'},{ico:_ico.users,lbl:'회원관리',p:'members'},
+         {ico:_ico.user,lbl:'프로필',p:'profile'}],
+  agency:[{ico:_ico.dash,lbl:'대시보드',p:'home'},{ico:_ico.list,lbl:'공고관리',p:'my_posts'},
+          {ico:_ico.users,lbl:'기사관리',p:'members'},{ico:_ico.wallet,lbl:'정산관리',p:'dashboard'},
+          {ico:_ico.more,lbl:'더보기',p:'profile'}],
+  driver:[{ico:_ico.home,lbl:'홈',p:'home'},{ico:_ico.truck,lbl:'배차',p:'posts'},
+          {ico:_ico.pkg,lbl:'배송',p:'my_routes'},{ico:_ico.wallet,lbl:'정산',p:'dashboard'},
+          {ico:_ico.user,lbl:'내정보',p:'profile'}]
 };
 var _curPage='home';
 
@@ -9407,177 +9530,240 @@ function _pgNotifications(el){
 // ── 홈 ───────────────────────────────────────────────────────
 function _pgHome(el){
   var type=_CU.type;
-  var heroClass=type==='admin'?'hero-card-admin':type==='agency'?'hero-card-agency':'hero-card-driver';
-  var heroColor=type==='admin'?'var(--pu)':type==='agency'?'var(--ac)':'var(--gn)';
-
+  if(type==='driver') return _pgHomeDriver(el);
+  if(type==='agency') return _pgHomeAgency(el);
+  // 관리자
   el.innerHTML=
-  '<div class="hero-card '+heroClass+'">'+
-  '<div class="hero-tag" style="color:'+heroColor+'">'+
-    (type==='admin'?'🛡 관리자':type==='agency'?'🏢 대리점':'🚗 기사')+
-  '</div>'+
+  '<div class="hero-card hero-card-admin">'+
+  '<div class="hero-tag" style="color:var(--pu)">관리자</div>'+
   '<div class="hero-name">'+_esc(_CU.name)+'님 안녕하세요!</div>'+
-  '<div class="hero-region">📍 '+_esc(_CU.region||'지역 미설정')+'</div>'+
-  (type==='driver'?
-    '<div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(34,224,138,.22)">'+
-    '<div class="earn-label">오늘 예상 운임</div>'+
-    '<div class="earn-amount" id="earn-today">—</div>'+
-    '<div class="earn-sub" id="earn-sub-lbl">운행 기록 집계 중...</div>'+
-    '</div>'
-  :'')+
+  '<div class="hero-region">'+_esc(_CU.region||'—')+'</div>'+
+  '</div>'+
+  '<div class="kpi-grid col2" id="home-kpi">'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="kpi1">'+_skVal+'</div><div class="kpi-lbl">전체 공고</div></div>'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="kpi2">'+_skVal+'</div><div class="kpi-lbl">전체 회원</div></div>'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--pu)" id="kpi3">'+_skVal+'</div><div class="kpi-lbl">프리미엄</div></div>'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--rd)" id="kpi4">'+_skVal+'</div><div class="kpi-lbl">정지 회원</div></div>'+
+  '</div>'+
+  '<div class="sec-head"><span class="sec-title">최신 공고</span></div>'+
+  '<div id="home-recent">'+_skeletonCards(2)+'</div>';
+  _homeUnsubs.push(_db.collection('yongcha_posts').where('status','==','open').onSnapshot(function(s){
+    var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
+  },function(){}));
+  _homeUnsubs.push(_db.collection('yongcha_users').onSnapshot(function(s){
+    var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'명';
+    var suspended=0;s.forEach(function(d){if(d.data().suspended)suspended++;});
+    var e4=document.getElementById('kpi4');if(e4)e4.textContent=suspended+'명';
+  },function(){}));
+  _homeUnsubs.push(_db.collection('yongcha_posts').where('premium','==',true).onSnapshot(function(s){
+    var e=document.getElementById('kpi3');if(e)e.textContent=s.size+'건';
+  },function(){}));
+  _db.collection('yongcha_posts').where('status','==','open').limit(5).get().then(function(snap){
+    var recent=document.getElementById('home-recent');if(!recent)return;
+    recent.innerHTML='';
+    snap.docs.forEach(function(doc){recent.appendChild(_makePostCard(Object.assign({id:doc.id},doc.data()),true));});
+  }).catch(function(){});
+}
+
+/* ── 기사 홈 ── */
+function _pgHomeDriver(el){
+  el.innerHTML=
+  // 히어로 카드 — 골드 수익 강조
+  '<div class="hero-v2">'+
+    '<div class="hero-v2-top">'+
+      '<span class="hero-v2-name">'+_esc(_CU.name)+'님 안녕하세요!</span>'+
+      '<span class="hero-v2-badge" id="drv-active-badge">진행중 배차 확인 중</span>'+
+    '</div>'+
+    '<div class="hero-v2-earn-lbl">오늘 예상 운임</div>'+
+    '<div class="hero-v2-earn-amt" id="earn-today">—</div>'+
+    '<div class="hero-v2-earn-sub" id="earn-sub-lbl">'+_esc(_CU.region||'지역')+'  운행 기록 집계 중...</div>'+
   '</div>'+
 
-  (type==='agency'?
-    '<button type="button" class="urgent-dispatch" onclick="_yUrgentDispatch()">긴급 배차 원클릭 발송</button>'
-  :'')+
+  // 홈 지도 (카카오 API 로드된 경우만 표시)
+  '<div class="home-map-card" id="home-drv-map-wrap">'+
+    '<div id="home-drv-map"></div>'+
+    '<div style="position:absolute;top:10px;left:10px;background:rgba(9,14,29,.85);border:1px solid var(--bd);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:800;color:var(--t2);pointer-events:none">'+
+      _esc(_CU.region||'내 지역')+' 배송 구역'+
+    '</div>'+
+  '</div>'+
 
-  // 퀵액션 — 하단 5탭에서 뺀 기능을 홈에서 1탭으로 (모든 기능 3단계 이내 접근)
+  // 홈 액션 버튼 2개
+  '<div class="home-act-grid">'+
+    '<button type="button" class="btn-act-blue" onclick="_goPage(\\'posts\\')">긴급 배차 수락</button>'+
+    '<button type="button" class="btn-act-outline" onclick="_yOpenNaviModal()">내비게이션 시작</button>'+
+  '</div>'+
+
+  // 퀵 액션 그리드
   '<div class="quick-grid">'+
-  (type==='driver'?
     '<button type="button" class="quick-btn" onclick="_goPage(\\'dashboard\\')">월 대시보드</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'bookmarks\\')">찜한 공고</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 원장</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
     '<button type="button" class="quick-btn" onclick="_yOpenCalc()">실수령액</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">지원 현황</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
-  :type==='agency'?
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'+
+  '</div>'+
+
+  // 오늘 일정
+  '<div class="sec-head"><span class="sec-title">오늘 일정</span><button type="button" class="sec-count" onclick="_goPage(\\'my_routes\\')">전체보기 ›</button></div>'+
+  '<div class="sched-list" id="home-sched">'+_skRows(2)+'</div>'+
+
+  // 내 지역 최신 공고
+  '<div class="sec-head" style="margin-top:6px"><span class="sec-title">내 지역 최신 공고</span><button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button></div>'+
+  '<div id="home-recent">'+_skeletonCards(2)+'</div>';
+
+  // 오늘 수익 집계
+  _db.collection('yongcha_daily_records')
+    .where('driverId','==',_CU.uid).where('date','==',_yToday()).get()
+  .then(function(s){
+    var total=0,cnt=0;
+    s.forEach(function(d){var r=d.data();total+=r.amount||0;cnt+=r.count||0;});
+    var earn=document.getElementById('earn-today');
+    var sub=document.getElementById('earn-sub-lbl');
+    if(earn)earn.textContent=total>0?_won(total)+'원':'—';
+    if(sub)sub.textContent=total>0?'오늘 '+cnt+'건 완료 · '+_esc(_CU.region||'')+'':'아직 오늘 운행 기록 없어요';
+  }).catch(function(){});
+
+  // 진행중 배차 카운트
+  _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').get()
+  .then(function(s){
+    var badge=document.getElementById('drv-active-badge');
+    if(badge)badge.textContent='진행중 배차 '+s.size+'건';
+  }).catch(function(){});
+
+  // 오늘 일정 (승인된 배차 목록)
+  _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').limit(5).get()
+  .then(function(snap){
+    var sched=document.getElementById('home-sched');if(!sched)return;
+    if(snap.empty){sched.innerHTML='<div style="padding:20px 14px;font-size:13px;color:var(--t3);text-align:center">오늘 예정된 배차가 없어요</div>';return;}
+    sched.innerHTML='';
+    snap.docs.slice(0,3).forEach(function(doc,i){
+      var a=doc.data();
+      var row=document.createElement('div');row.className='sched-item';
+      row.innerHTML='<div class="sched-num">'+(i+1)+'</div>'+
+        '<div><div class="sched-title">'+_esc(a.postArea||a.postRegion||'—')+'</div>'+
+        '<div class="sched-sub">'+_esc(a.agencyName||'—')+' · '+_esc(a.postCourier||'—')+'</div></div>';
+      sched.appendChild(row);
+    });
+  }).catch(function(){});
+
+  // 홈 지도 (카카오 API)
+  setTimeout(function(){
+    var mapEl=document.getElementById('home-drv-map');
+    if(!mapEl||typeof kakao==='undefined'||!kakao.maps)return;
+    var center=new kakao.maps.LatLng(35.1796,129.0756);
+    if(_CU.lat&&_CU.lng)center=new kakao.maps.LatLng(_CU.lat,_CU.lng);
+    var m=new kakao.maps.Map(mapEl,{center:center,level:7});
+    new kakao.maps.Marker({position:center,map:m});
+  },600);
+
+  // 내 지역 최신 공고
+  var q=_CU.region
+    ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(5)
+    :_db.collection('yongcha_posts').where('status','==','open').limit(5);
+  q.get().then(function(snap){
+    var recent=document.getElementById('home-recent');if(!recent)return;
+    if(snap.empty){recent.innerHTML=_emptyHtml('','아직 내 지역 공고가 없어요','조건을 넓혀 검색해보세요');return;}
+    recent.innerHTML='';
+    snap.docs.forEach(function(doc){recent.appendChild(_makePostCard(Object.assign({id:doc.id},doc.data()),true));});
+  }).catch(function(){});
+}
+
+/* ── 소장 홈 ── */
+function _pgHomeAgency(el){
+  var skStat='<div class="stat3-val">'+_skVal+'</div>';
+  el.innerHTML=
+  // 소장 헤더
+  '<div class="agency-v2-hdr">'+
+    '<div class="agency-v2-name">'+_esc(_CU.name)+'</div>'+
+    '<div class="agency-v2-sub">안녕하세요, 소장님! · '+_esc(_CU.region||'지역 미설정')+'</div>'+
+  '</div>'+
+
+  // 오늘 배차 현황 — 3컬럼 통계
+  '<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:10px">오늘 배차 현황</div>'+
+  '<div class="stat-3col">'+
+    '<div class="stat3-item"><div class="stat3-val" style="color:var(--ac)" id="kpi-reg">'+_skVal+'</div><div class="stat3-lbl">등록 공고</div></div>'+
+    '<div class="stat3-item"><div class="stat3-val" style="color:var(--gn)" id="kpi-done">'+_skVal+'</div><div class="stat3-lbl">배차 완료</div></div>'+
+    '<div class="stat3-item"><div class="stat3-val" style="color:var(--br)" id="kpi-prog">'+_skVal+'</div><div class="stat3-lbl">진행 중</div></div>'+
+  '</div>'+
+
+  // 긴급 배차 원클릭 버튼 (노란색)
+  '<button type="button" class="btn-urgent-flash" onclick="_yUrgentDispatch()">'+
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
+    '긴급 배차 (원클릭 공고)'+
+  '</button>'+
+
+  // 퀵 액션 그리드
+  '<div class="quick-grid">'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">공고 등록</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_posts\\')">공고 관리</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 승인</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
-  :
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 원장</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_posts\\')">공고 관리</button>')+
   '</div>'+
 
-  // ── AI 매칭 현황 칩 — 실시간 공고·매칭 신호 ──
-  '<div id="home-ai-signal" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:14px;overflow:hidden">'+
-    '<span style="width:7px;height:7px;border-radius:50%;background:var(--ac);flex-shrink:0;animation:pulse-loc 1.4s ease infinite"></span>'+
-    '<span id="ai-signal-lbl" style="font-size:12px;font-weight:700;color:var(--t2);flex:1">'+
-      (type==='driver'?'내 지역 공개 공고 집계 중…':type==='agency'?'대기 지원자 집계 중…':'플랫폼 현황 집계 중…')+
-    '</span>'+
-    (type==='driver'?'<button type="button" onclick="_goPage(\\'routeiq\\')" style="font-size:10.5px;font-weight:900;padding:4px 10px;border-radius:999px;background:rgba(0,212,170,.14);color:var(--ac);border:1px solid var(--acln);cursor:pointer;font-family:inherit;white-space:nowrap">ROUTEIQ</button>':'')+
-  '</div>'+
+  // 지역별 배차 현황
+  '<div class="sec-head"><span class="sec-title">지역별 배차 현황</span></div>'+
+  '<div class="region-dispatch-list" id="region-dispatch">'+_skRows(3)+'</div>'+
 
-  (type==='driver'?'<div id="home-fatigue"></div>':'')+
+  // 최근 지원자
+  '<div class="sec-head" style="margin-top:6px"><span class="sec-title">최근 지원자</span><button type="button" class="sec-count" onclick="_goPage(\\'my_routes\\')">전체보기 ›</button></div>'+
+  '<div id="home-recent">'+_skRows(2)+'</div>';
 
-  // KPI — 값은 스켈레톤으로 시작
-  '<div class="kpi-grid col2" id="home-kpi">'+
-  '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="kpi1">'+_skVal+'</div>'+
-  '<div class="kpi-lbl">'+(type==='admin'?'전체 공고':type==='agency'?'등록 공고':'지원 현황')+'</div></div>'+
-  '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="kpi2">'+_skVal+'</div>'+
-  '<div class="kpi-lbl">'+(type==='admin'?'전체 회원':type==='agency'?'대기 지원자':'승인 완료')+'</div></div>'+
-  (type==='admin'
-    ?'<div class="kpi-card"><div class="kpi-val" style="color:var(--pu)" id="kpi3">'+_skVal+'</div><div class="kpi-lbl">프리미엄</div></div>'+
-      '<div class="kpi-card"><div class="kpi-val" style="color:var(--rd)" id="kpi4">'+_skVal+'</div><div class="kpi-lbl">정지 회원</div></div>'
-    :'')+
-  '</div>'+
-
-  // 최근 활동
-  '<div class="sec-head"><span class="sec-title">'+
-  (type==='driver'?'내 지역 최신 공고':'최근 활동')+'</span>'+
-  (type==='driver'?'<button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button>':'')+
-  '</div>'+
-  '<div id="home-recent">'+((type==='driver'||type==='admin')?_skeletonCards(2):_skRows(2))+'</div>';
-
-  // 과로 상태 배너 (기사 홈)
-  if(type==='driver')_yRenderFatigue(document.getElementById('home-fatigue'));
-
-  // KPI 로딩 (관리자는 onSnapshot 실시간 — unsub 보관해서 페이지 이탈 시 해제)
-  if(type==='admin'){
-    _homeUnsubs.push(_db.collection('yongcha_posts').where('status','==','open').onSnapshot(function(s){
-      var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
-    },function(){}));
-    _homeUnsubs.push(_db.collection('yongcha_users').onSnapshot(function(s){
-      var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'명';
-      var suspended=0;s.forEach(function(d){if(d.data().suspended)suspended++;});
-      var e4=document.getElementById('kpi4');if(e4)e4.textContent=suspended+'명';
-    },function(){}));
-    _homeUnsubs.push(_db.collection('yongcha_posts').where('premium','==',true).onSnapshot(function(s){
-      var e=document.getElementById('kpi3');if(e)e.textContent=s.size+'건';
-    },function(){}));
-  } else if(type==='agency'){
-    _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get().then(function(s){
-      var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
+  // KPI 로딩
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched']).get().then(function(s){
+    var reg=0,done=0,prog=0;
+    s.forEach(function(d){
+      var st=d.data().status;
+      if(st==='open')reg++;
+      else if(st==='matched'){done++;prog++;}
     });
-    _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').get().then(function(s){
-      var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'건';
-      var sig=document.getElementById('ai-signal-lbl');
-      if(sig)sig.textContent='대기 지원자 '+s.size+'명 · AI 배차 추천 대기';
-    });
-  } else if(type==='driver'){
-    _db.collection('yongcha_applies').where('driverId','==',_CU.uid).get().then(function(s){
-      var e=document.getElementById('kpi1');if(e)e.textContent=s.size+'건';
-    });
-    _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').get().then(function(s){
-      var e=document.getElementById('kpi2');if(e)e.textContent=s.size+'건';
-    });
-    // ── 오늘 수익 카드 집계 ──
-    _db.collection('yongcha_daily_records')
-      .where('driverId','==',_CU.uid).where('date','==',_yToday()).get()
-    .then(function(s){
-      var total=0,cnt=0;
-      s.forEach(function(d){var r=d.data();total+=r.amount||0;cnt+=r.count||0;});
-      var earn=document.getElementById('earn-today');
-      var sub=document.getElementById('earn-sub-lbl');
-      if(earn)earn.textContent=total>0?_won(total)+'원':'—';
-      if(sub)sub.textContent=total>0?'오늘 '+cnt+'건 완료':'아직 오늘 운행 기록 없어요';
-    }).catch(function(){});
-    // ── AI 신호 칩: 내 지역 공개 공고 실시간 카운트 ──
-    (function(){
-      var q=_CU.region
-        ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region)
-        :_db.collection('yongcha_posts').where('status','==','open');
-      q.get().then(function(s){
-        var sig=document.getElementById('ai-signal-lbl');if(!sig)return;
-        if(s.size>0){
-          sig.textContent='내 지역 공개 공고 '+s.size+'건 — 매칭 가능';
-          sig.style.color='var(--ac)';
-        } else {
-          sig.textContent='내 지역 공고 없음 — 조건 넓혀보세요';
-          sig.style.color='var(--t3)';
-        }
-      }).catch(function(){});
-    })();
-  }
+    var e1=document.getElementById('kpi-reg');if(e1)e1.textContent=reg+'건';
+    var e2=document.getElementById('kpi-done');if(e2)e2.textContent=done+'건';
+    var e3=document.getElementById('kpi-prog');if(e3)e3.textContent=prog+'건';
+  }).catch(function(){});
 
-  // 최근 공고 (기사용) or 최근 지원자 (대리점용)
-  var recent=document.getElementById('home-recent');
-  if(type==='driver'||type==='admin'){
-    var q=_db.collection('yongcha_posts').where('status','==','open').limit(10);
-    if(type==='driver'&&_CU.region) q=_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(10);
-    q.get().then(function(snap){
-      if(!recent)return;
-      if(snap.empty){recent.innerHTML=_emptyHtml('📭','아직 공고가 없어요','새 노선이 올라오면 여기에 표시돼요');return;}
-      recent.innerHTML='';
-      var _rDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,3);
-      _rDocs.forEach(function(doc){
-        var d=Object.assign({id:doc.id},doc.data());
-        recent.appendChild(_makePostCard(d,true));
-      });
-    }).catch(function(e){if(recent)recent.innerHTML=_errHtml(e);});
-  } else {
-    _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').limit(20).get().then(function(snap){
-      if(!recent)return;
-      if(snap.empty){recent.innerHTML=_emptyHtml('📬','새 지원자가 없어요','공고를 등록하면 지원자를 받을 수 있어요');return;}
-      recent.innerHTML='';
-      var _aDocs=snap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,5);
-      _aDocs.forEach(function(doc){
-        var a=Object.assign({id:doc.id},doc.data());
-        var card=document.createElement('div');card.className='applicant-card';
-        card.innerHTML=
-          '<div class="applicant-top"><span class="applicant-name">🚗 '+_esc(a.driverName)+'</span>'+
-          '<span class="st st-open">검토 대기</span></div>'+
-          '<div class="applicant-meta">📍 '+_esc(a.driverRegion||'—')+' · 📞 '+_esc(a.driverPhone||'—')+'</div>'+
-          '<div class="judge-row">'+
-          '<button type="button" class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
-          '<button type="button" class="judge-btn judge-reject" onclick="_judgeApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">거절</button>'+
-          '</div>';
-        recent.appendChild(card);
-      });
-    }).catch(function(e){if(recent)recent.innerHTML=_errHtml(e);});
-  }
+  // 지역별 배차 현황
+  _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','approved').limit(50).get()
+  .then(function(snap){
+    var rdl=document.getElementById('region-dispatch');if(!rdl)return;
+    var regionMap={};
+    snap.forEach(function(doc){
+      var r=doc.data().driverRegion||'미지정';
+      regionMap[r]=(regionMap[r]||0)+1;
+    });
+    var regions=Object.keys(regionMap).sort(function(a,b){return regionMap[b]-regionMap[a];}).slice(0,5);
+    if(!regions.length){rdl.innerHTML='<div style="padding:16px 14px;font-size:13px;color:var(--t3);text-align:center">배차 데이터가 없어요</div>';return;}
+    var maxVal=regionMap[regions[0]]||1;
+    rdl.innerHTML='';
+    regions.forEach(function(r){
+      var cnt=regionMap[r];
+      var row=document.createElement('div');row.className='rdl-row';
+      row.innerHTML='<span class="rdl-region">'+_esc(r)+'</span>'+
+        '<div class="rdl-bar-wrap"><div class="rdl-bar" style="width:'+Math.round(cnt/maxVal*100)+'%"></div></div>'+
+        '<span class="rdl-count">'+cnt+'건</span>';
+      rdl.appendChild(row);
+    });
+  }).catch(function(){});
+
+  // 최근 지원자
+  _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').limit(10).get()
+  .then(function(snap){
+    var recent=document.getElementById('home-recent');if(!recent)return;
+    if(snap.empty){recent.innerHTML=_emptyHtml('','새 지원자가 없어요','공고를 등록하면 지원자를 받을 수 있어요');return;}
+    recent.innerHTML='';
+    snap.docs.slice(0,5).forEach(function(doc){
+      var a=Object.assign({id:doc.id},doc.data());
+      var card=document.createElement('div');card.className='applicant-card';
+      card.innerHTML=
+        '<div class="applicant-top"><span class="applicant-name">'+_esc(a.driverName)+'</span>'+
+        '<span class="st st-open">검토 대기</span></div>'+
+        '<div class="applicant-meta">'+_esc(a.driverRegion||'—')+' · '+_esc(a.driverPhone||'—')+'</div>'+
+        '<div class="judge-row">'+
+        '<button type="button" class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
+        '<button type="button" class="judge-btn judge-reject" onclick="_judgeApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">거절</button>'+
+        '</div>';
+      recent.appendChild(card);
+    });
+  }).catch(function(){});
 }
 
 // ── 노선 공고 목록 ───────────────────────────────────────────
@@ -10134,12 +10320,13 @@ function _makePostCard(d,mini){
         distChip+
         matchBadge+
       '</div>':'')+
+      (d.urgent?'<span class="urgent-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>긴급</span>':'')+
       '<h3 class="pc-title">'+_esc(d.area||'구역 미지정')+'</h3>'+
       (subBits.length?'<div class="pc-sub">'+subBits.map(function(b){return '<span>'+b+'</span>';}).join('')+'</div>':'')+
       routeHtml+
       '<div class="pc-price">'+
-        '<span class="pc-price-num">'+_won(d.unitPrice)+'</span>'+
-        '<span class="pc-price-unit">원 / '+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
+        '<span class="pc-price-v2">'+_won(d.unitPrice)+'</span>'+
+        '<span class="pc-price-unit" style="font-size:13px;font-weight:700;color:var(--t2);margin-left:2px">원 / '+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
         (d.vatIncluded?'<span class="pc-vat">VAT'+_esc(d.vatIncluded)+'</span>':'')+
       '</div>'+
       gauge+
@@ -10283,13 +10470,13 @@ function _showPostDetail(d){
     '<span class="st '+_stC+'">'+_stL+'</span>'+
     _yDayBadge(d.startDate)+
     '</div>'+
-    '<div style="font-size:24px;font-weight:900;letter-spacing:-1px;margin-bottom:6px;line-height:1.28">'+_esc(d.area||'')+'</div>'+
-    '<div style="font-size:13px;color:var(--t3);font-weight:600;margin-bottom:16px">📍 '+_esc(d.region||'—')+
-      (d.routeNo?' ·  '+_esc(d.routeNo):'')+'</div>'+
+    '<div style="font-size:26px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;line-height:1.25">'+_esc(d.area||'')+'</div>'+
+    '<div style="font-size:13px;color:var(--t3);font-weight:600;margin-bottom:12px">'+_esc(d.region||'—')+
+      (d.routeNo?' · '+_esc(d.routeNo):'')+'</div>'+
     // 단가 앵커 + 실수령액 계산 진입점
-    '<div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:14px">'+
-      '<span style="font-size:36px;font-weight:900;letter-spacing:-2px;line-height:.95;color:var(--br);font-variant-numeric:tabular-nums">'+_won(d.unitPrice)+'</span>'+
-      '<span style="font-size:14px;font-weight:700;color:var(--t2);padding-bottom:3px">원 / '+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
+    '<div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
+      '<span class="detail-price-v2">'+_won(d.unitPrice)+'</span>'+
+      '<span style="font-size:15px;font-weight:700;color:var(--t2);padding-bottom:4px">원 / '+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
       (d.vatIncluded?'<span class="pc-vat">VAT'+_esc(d.vatIncluded)+'</span>':'')+
     '</div>'+
     (isDriver?'<button type="button" onclick="_yOpenCalc({price:'+(d.unitPrice||0)+',vol:'+(d.volume||0)+'})" '+
@@ -10316,16 +10503,16 @@ function _showPostDetail(d){
     '</div>'+
     '<div class="detail-grid">'+
     [
-      ['📦 일 물량',d.volume+'건'],
-      ['💰 단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
-      ['🚗 차량',d.vehicleType||'무관'],
-      ['🔑 번호판',d.plateType||'무관'],
+      ['일 물량',d.volume+'건'],
+      ['단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
+      ['차량',d.vehicleType||'무관'],
+      ['번호판',d.plateType||'무관'],
       ['시간',d.workHours||'협의'],
-      ['📅 시작일',d.startDate||'협의'],
-      ['🏢 구역',d.areaType||'혼합'],
-      ['🏢 아파트',(d.areaAptRatio||'-')+'%'],
-      ['📆 근무요일',d.workDays||'협의'],
-      ['💳 정산',d.settleDay||'협의']
+      ['시작일',d.startDate||'협의'],
+      ['구역형태',d.areaType||'혼합'],
+      ['아파트비율',(d.areaAptRatio||'-')+'%'],
+      ['근무요일',d.workDays||'협의'],
+      ['정산',d.settleDay||'협의']
     ].map(function(r){
       return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
     }).join('')+'</div>'+
@@ -10341,10 +10528,10 @@ function _showPostDetail(d){
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'+
       '<div style="min-width:0">'+
       '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px">'+
-      '<span style="font-weight:800;font-size:15px">🏢 '+_esc(d.agencyName||'—')+'</span>'+
+      '<span style="font-weight:800;font-size:15px">'+_esc(d.agencyName||'—')+'</span>'+
       '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:'+g.bg+';color:'+g.color+'">'+g.label+'</span>'+
       '</div>'+
-      '<div style="font-size:12.5px;color:var(--t2)">📍 '+_esc(d.region||'—')+
+      '<div style="font-size:12.5px;color:var(--t2)">'+_esc(d.region||'—')+
         (d.agencyReviewCount?' · 후기 '+d.agencyReviewCount+'건':'')+'</div></div>'+
       '<div style="font-size:17px;font-weight:900;color:var(--br);flex-shrink:0">'+
         (d.agencyRating?Number(d.agencyRating).toFixed(1)+'점':'신규')+'</div>'+
@@ -10353,6 +10540,23 @@ function _showPostDetail(d){
 
     (isDriver&&d.status==='open'?
     '<div id="apply-area">'+
+    // 지도·전화 버튼 (기사용 오픈 공고에만 표시)
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+    (d.zones&&d.zones.length&&d.zones[0].lat?
+      '<button type="button" class="btn-map-zone" onclick="event.stopPropagation();var z=window._detailPost&&window._detailPost.zones&&window._detailPost.zones[0];if(z)window.open(\\'https://map.kakao.com/link/map/\\'+encodeURIComponent(z.name||\\'\\')+\\',\\'+z.lat+\\',\\'+z.lng,\\'_blank\\')" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
+      '지도 구역 보기</button>'
+    :'<button type="button" class="btn-map-zone" onclick="event.stopPropagation();_yToast(\\'구역 위치 정보 없음\\')" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:.5">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
+      '지도 구역 보기</button>')+
+    (d.agencyPhone?
+      '<button type="button" class="btn-direct-call" onclick="event.stopPropagation();window.location.href=\\'tel:\\'+\\''+_esc(d.agencyPhone||'')+'\\'" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
+      '소장 직통 통화</button>'
+    :'<button type="button" class="btn-direct-call" onclick="event.stopPropagation();_yToast(\\'연락처 정보 없음\\')" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:.5">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
+      '소장 직통 통화</button>')+
+    '</div>'+
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
     '<div style="flex:1">'+
     '<div style="font-size:11.5px;color:var(--t2);font-weight:700;margin-bottom:2px">지원 제한 시간</div>'+
@@ -10370,14 +10574,14 @@ function _showPostDetail(d){
     '<div class="slide-accept-thumb" id="slide-thumb">→</div>'+
     '</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">🔗 공유하기</button>'+
+    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">공유하기</button>'+
     '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
     '</div>'+
     '</div>'
     :isDriver?
-    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')">🙋 지원하기</button>'+
+    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')">지원하기</button>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">🔗 공유하기</button>'+
+    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">공유하기</button>'+
     '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
     '</div>'
     :'');
