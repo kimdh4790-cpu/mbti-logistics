@@ -3,6 +3,22 @@
 
 ---
 
+## 세션 분류 (4개 전담)
+
+| 세션 | 담당 도메인 | 담당 파일 |
+|------|------------|----------|
+| **FILO·DINE** (이 세션) | filo.ai.kr, dine.ne.kr | filo-*.js, filo.html, dine*.js, dine*.html, order*.*, member-portal.html, _worker.js (FILO/DINE 관련) |
+| **DONWAY** | donway.ai.kr, mbtico.kr | donway_landing.js, settle.html, drivers.html, mbtico-ctrl.js, mbtico-pages/ |
+| **용차** | yongcha.app | yongcha.html, yongcha-worker.js, yongcha-landing.html |
+| **미디어** | SNS/영상 | scripts/ 전체 (capture, compose, upload, content) |
+
+### 핵심 규칙
+- **본인 담당 파일만 수정** — 다른 세션 파일 절대 건드리지 말 것
+- `_worker.js`는 FILO·DINE 세션 전담 — 다른 세션은 수정 금지
+- `auto-merge.yml`, `wrangler.toml` — 어느 세션도 수정 금지 (FILO·DINE 세션만 예외적으로 관리)
+
+---
+
 ## 다른 세션용 — 배포 절차 핵심 요약
 
 ### 코드 수정 후 push 방법 (클라우드 코드에서)
