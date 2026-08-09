@@ -44,7 +44,7 @@ jobs:
             echo "인스턴스 없음 — 생성 시도"
           fi
 
-      - name: 리소스 정보 조회 (AD / Subnet / Image)
+      - name: 리소스 정보 조회 (AD / Image)
         id: res
         if: steps.check.outputs.running == '0'
         env:
@@ -54,88 +54,20 @@ jobs:
           AD=$(oci iam availability-domain list \
             --compartment-id "$TENANCY" \
             --query 'data[0].name' --raw-output 2>&1)
-          echo "AD 조회 결과: $AD"
+          echo "Availability Domain: $AD"
           echo "ad=$AD" >> "$GITHUB_OUTPUT"
 
-          # VCN - 하위 컴파트먼트 포함 검색
-          echo "--- VCN 목록 조회 ---"
-          VCN_RAW=$(oci network vcn list \
-            --compartment-id "$TENANCY" \
-            --compartment-id-in-subtree true \
-            2>&1)
-          echo "$VCN_RAW"
-
-          VCN=$(echo "$VCN_RAW" | python3 -c "
-          import sys, json
-          try:
-            d = json.load(sys.stdin)
-            items = d.get('data', [])
-            if items:
-              print(items[0]['id'])
-            else:
-              print('')
-          except Exception as e:
-            print('')
-          " 2>/dev/null)
-
-          if [ -z "$VCN" ] || [ "$VCN" = "None" ]; then
-            echo "❌ VCN 없음 — 기본 VCN 생성"
-            VCN=$(oci network vcn create \
-              --compartment-id "$TENANCY" \
-              --cidr-block "10.0.0.0/16" \
-              --display-name "filo-vcn" \
-              --query 'data.id' --raw-output 2>&1)
-            echo "생성된 VCN: $VCN"
-
-            IGW=$(oci network internet-gateway create \
-              --compartment-id "$TENANCY" \
-              --vcn-id "$VCN" \
-              --is-enabled true \
-              --display-name "filo-igw" \
-              --query 'data.id' --raw-output 2>/dev/null)
-
-            RT_ID=$(oci network route-table list \
-              --compartment-id "$TENANCY" \
-              --vcn-id "$VCN" \
-              --query 'data[0].id' --raw-output 2>/dev/null)
-
-            oci network route-table update \
-              --rt-id "$RT_ID" \
-              --route-rules "[{\"destination\":\"0.0.0.0/0\",\"destinationType\":\"CIDR_BLOCK\",\"networkEntityId\":\"$IGW\"}]" \
-              --force 2>/dev/null || true
-          fi
-
-          echo "VCN ID: $VCN"
-
-          # Subnet
-          echo "--- Subnet 조회 ---"
-          SUBNET=$(oci network subnet list \
-            --compartment-id "$TENANCY" \
-            --vcn-id "$VCN" \
-            --query 'data[0].id' --raw-output 2>&1)
-          echo "Subnet 결과: $SUBNET"
-
-          if [ -z "$SUBNET" ] || [ "$SUBNET" = "None" ]; then
-            echo "Subnet 없음 — 생성"
-            SUBNET=$(oci network subnet create \
-              --compartment-id "$TENANCY" \
-              --vcn-id "$VCN" \
-              --cidr-block "10.0.0.0/24" \
-              --display-name "filo-subnet" \
-              --query 'data.id' --raw-output 2>&1)
-            echo "생성된 Subnet: $SUBNET"
-          fi
-
-          echo "subnet=$SUBNET" >> "$GITHUB_OUTPUT"
+          # Subnet — 콘솔에서 직접 가져온 OCID 사용
+          echo "subnet=${{ secrets.OCI_SUBNET_ID }}" >> "$GITHUB_OUTPUT"
+          echo "Subnet: ${{ secrets.OCI_SUBNET_ID }}"
 
           # Image (Oracle Linux ARM)
-          echo "--- Image 조회 ---"
           IMAGE=$(oci compute image list \
             --compartment-id "$TENANCY" \
             --shape "VM.Standard.A1.Flex" \
             --operating-system "Oracle Linux" \
             --query 'sort_by(data, &"time-created")[-1].id' \
-            --raw-output 2>&1)
+            --raw-output 2>/dev/null)
           echo "Image: $IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
