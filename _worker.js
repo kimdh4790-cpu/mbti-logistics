@@ -3729,6 +3729,7 @@ ${JSON.stringify(postSummary)}
       // FIX: wait.html은 KV에 있는데 라우트가 없어 웨이팅 QR이 filo.html로 빠지고 있었다
       if (path === '/wait' || path === '/wait.html') return serveKVFile(env, 'wait.html', 'text/html');
       if (path === '/wait-join' || path === '/wait-join.html') return serveKVFile(env, 'wait-join.html', 'text/html');
+      if (path === '/add' || path === '/add.html') return serveKVFile(env, 'add.html', 'text/html');
       if (path === '/member-join') return serveKVFile(env, 'member-join.html', 'text/html');
       if (path === '/staff' || path === '/staff-portal') return serveKVFile(env, 'staff-portal.html', 'text/html');
       if (path === '/member' || path === '/member-portal') return serveKVFile(env, 'member-portal.html', 'text/html');
