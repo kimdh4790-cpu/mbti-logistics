@@ -830,6 +830,8 @@ body.dark .ap-box{background:var(--bg2)}
     </div>
     <div id="order-receipt-pay"></div>
     <div id="cash-receipt-notice">현금영수증이 필요하신 경우 카운터 직원에게 문의해 주세요</div>
+    <button id="receipt-fcm-btn" onclick="reqReceiptFCM()" style="margin-top:14px;width:100%;padding:12px;background:var(--brand);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:-.3px">영수증 알림 받기</button>
+    <div id="receipt-fcm-status" style="display:none;font-size:12px;color:var(--text2);text-align:center;margin-top:6px"></div>
   </div>
 
   <div id="postpay-notice" style="display:none">
