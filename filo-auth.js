@@ -184,6 +184,31 @@ function _showApp(){
   if(typeof _filoWatchDineReservations==='function')_filoWatchDineReservations();
   if(typeof _filoWatchDineSales==='function')_filoWatchDineSales();
  },1500);
+ // FCM 토큰 등록 (filo.ai.kr 도메인으로 알림 발신)
+ setTimeout(_initFiloFCM, 2000);
+}
+
+function _initFiloFCM(){
+ if(!('Notification' in window) || !_CU || !_CU.dealerId) return;
+ var did = _CU.dealerId;
+ var companyName = _CU.companyName || (_cachedCompanyDoc && (_cachedCompanyDoc.companyName||_cachedCompanyDoc.name)) || 'FILO';
+ if(Notification.permission === 'denied') return;
+ navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
+  .then(function(reg){ return reg.update().then(function(){ return reg; }); })
+  .then(function(reg){
+   return firebase.messaging().getToken({
+    vapidKey:'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c',
+    serviceWorkerRegistration: reg
+   });
+  }).then(function(tok){
+   if(!tok) return;
+   try{ localStorage.setItem('filo_fcm_'+did, tok); }catch(e){}
+   return _db.collection('companies').doc(did).update({
+    fcmTokens: firebase.firestore.FieldValue.arrayUnion(tok),
+    fcmToken: tok,
+    fcmCompanyName: companyName
+   });
+  }).catch(function(e){ console.log('[FILO FCM]', e.message); });
 }
 
 /* ── 라인 아이콘 헬퍼 (Lucide 24px 기준) ── */

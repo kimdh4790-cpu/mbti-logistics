@@ -2875,8 +2875,10 @@ fetch('/qr/members?did='+DID)
             const allFcmTokens = [...new Set([...fcmArr2, fcmSingle2].filter(Boolean))];
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
+            const cName2 = compData2.fields?.companyName?.stringValue || compData2.fields?.name?.stringValue || '';
+            const notiTitle2 = cName2 ? `${cName2} ${actionLabel} 알림` : `${actionLabel} 알림`;
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, { title: `${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
+              await sendAdminFCM(env, ft, { title: notiTitle2, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`, url: `https://filo.ai.kr/store/${did}` });
             }
           } catch(e){}
 
@@ -4334,8 +4336,10 @@ fetch('/qr/members?did='+DID)
             const allFcmTokens = [...new Set([...fcmArr2, fcmSingle2].filter(Boolean))];
             const actionLabel = type==='in'?'출근':'퇴근';
             const kstStr = kst.toISOString().slice(11,16);
+            const cName2 = compData2.fields?.companyName?.stringValue || compData2.fields?.name?.stringValue || '';
+            const notiTitle2 = cName2 ? `${cName2} ${actionLabel} 알림` : `${actionLabel} 알림`;
             for(const ft of allFcmTokens) {
-              await sendAdminFCM(env, ft, { title: `${actionLabel} 알림`, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.` });
+              await sendAdminFCM(env, ft, { title: notiTitle2, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`, url: `https://filo.ai.kr/store/${did}` });
             }
           } catch(e){}
 
