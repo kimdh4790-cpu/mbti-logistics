@@ -673,6 +673,9 @@ function _filoPageQrMgmt(el) {
   }
 
   // 프리미엄 다크 QR 카드 DOM 생성
+  var storeName = (_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||
+    (window._cachedCompanyDoc&&(window._cachedCompanyDoc.companyName||window._cachedCompanyDoc.name))||'';
+
   function makeQrCard(id, label, badgeText, url, isBakery) {
     var outer = document.createElement('div');
     outer.style.cssText = 'position:relative;border-radius:16px;overflow:hidden;background:#0A0E2A;text-align:center;padding-bottom:4px';
@@ -687,14 +690,15 @@ function _filoPageQrMgmt(el) {
     deco.style.cssText = 'position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(201,168,76,.1);pointer-events:none';
     outer.appendChild(deco);
 
-    // 헤더 (브랜드)
+    // 헤더 (매장명 + 브랜드)
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'padding:10px 0 6px;position:relative;z-index:1';
+    hdr.style.cssText = 'padding:10px 8px 6px;position:relative;z-index:1';
     hdr.innerHTML =
+      (storeName ? '<div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:3px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+storeName+'</div>' : '')+
       '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:1px">'+
-      '<span style="font-size:10px;font-weight:800;color:#00CFFF;letter-spacing:2px">FILO</span>'+
-      '<span style="color:rgba(201,168,76,.7);font-size:8px">✦</span>'+
-      '<span style="font-size:10px;font-weight:800;color:#00E890;letter-spacing:2px">DINE</span>'+
+      '<span style="font-size:9px;font-weight:800;color:#00CFFF;letter-spacing:2px">FILO</span>'+
+      '<span style="color:rgba(201,168,76,.7);font-size:7px">✦</span>'+
+      '<span style="font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px">DINE</span>'+
       '</div>'+
       '<div style="font-size:7px;color:rgba(255,255,255,.3);letter-spacing:1.5px">Scan to Order</div>';
     outer.appendChild(hdr);
@@ -716,13 +720,24 @@ function _filoPageQrMgmt(el) {
     qrWrap.appendChild(qrBox);
     outer.appendChild(qrWrap);
 
-    // 배지 (테이블번호 또는 이름)
+    // 이름 배지
     var badge = document.createElement('div');
-    badge.style.cssText = 'padding:0 8px 8px;position:relative;z-index:1';
-    badge.innerHTML =
-      '<div style="display:inline-flex;align-items:center;border:1.5px solid rgba(201,168,76,.5);border-radius:50px;padding:4px 14px;background:rgba(201,168,76,.07)">'+
-      '<span style="font-size:13px;font-weight:900;color:#C9A84C">'+badgeText+'</span>'+
-      '</div>';
+    badge.style.cssText = 'padding:4px 10px 8px;position:relative;z-index:1';
+    if(isBakery) {
+      // 빵/디저트: 이름 크게 + 가격 작게
+      var parts = badgeText.split('₩');
+      var itemName = parts[0].trim();
+      var itemPrice = parts[1] ? '₩'+parts[1].trim() : '';
+      badge.innerHTML =
+        '<div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:2px;line-height:1.2">'+itemName+'</div>'+
+        (itemPrice ? '<div style="font-size:12px;font-weight:700;color:#C9A84C">'+itemPrice+'</div>' : '');
+    } else {
+      // 테이블: 기존 pill 배지
+      badge.innerHTML =
+        '<div style="display:inline-flex;align-items:center;border:1.5px solid rgba(201,168,76,.5);border-radius:50px;padding:4px 14px;background:rgba(201,168,76,.07)">'+
+        '<span style="font-size:13px;font-weight:900;color:#C9A84C">'+badgeText+'</span>'+
+        '</div>';
+    }
     outer.appendChild(badge);
 
     // 푸터
