@@ -1703,6 +1703,50 @@ async function acceptExchange(){
         });
         return new Response(JSON.stringify({ok:true,members:docs}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      if (path === '/api/admin/dedup-members' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const did = body.dealerId;
+          if (!did) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const CORS = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+          // 전체 members 조회
+          const qRes = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}}}})
+          });
+          const rows = await qRes.json();
+          const docs = (rows||[]).filter(r=>r.document).map(r=>({
+            id:r.document.name.split('/').pop(),
+            name:(r.document.fields.name||{}).stringValue||'',
+            phone:(r.document.fields.phone||{}).stringValue||'',
+            createdAt:(r.document.fields.createdAt||{}).stringValue||''
+          }));
+          // 이름+전화 기준 그룹화, 중복 찾기
+          const groups = {};
+          docs.forEach(d=>{
+            const key = d.name+'|'+(d.phone||'');
+            if(!groups[key]) groups[key]=[];
+            groups[key].push(d);
+          });
+          const deleted = [];
+          for(const key of Object.keys(groups)){
+            const grp = groups[key];
+            if(grp.length<=1) continue;
+            // 가장 오래된 것 유지, 나머지 삭제
+            grp.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+            for(let i=1;i<grp.length;i++){
+              await fetch(`${FS_BASE}/members/${encodeURIComponent(grp[i].id)}`,{
+                method:'DELETE',headers:{'Authorization':'Bearer '+token}
+              });
+              deleted.push(grp[i].id+' ('+grp[i].name+')');
+            }
+          }
+          return new Response(JSON.stringify({ok:true,deleted,total:docs.length,removed:deleted.length}),{headers:CORS});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
       if (path === '/api/save-member' && method === 'POST') {
         // 사장님이 직원 등록/수정 — SA 토큰으로 Firestore 저장
         try {
