@@ -49,15 +49,13 @@ npx wrangler kv key put --remote \
   파일명 --path ./파일경로
 ```
 
-### _worker.js 수정 시 주의
-- `_worker.js`는 KV 자동 업로드 목록에 없음 → Worker 배포는 로컬에서만
-- 로컬 배포 명령 (Windows PowerShell):
+### _worker.js 배포 — 자동화 완료 ✅
+- `push (claude/* 브랜치)` → `auto-merge.yml` → `wrangler deploy` 자동 실행
+- **로컬에서 별도 배포 불필요** — push만 하면 Worker까지 자동 배포됨
+- 긴급 수동 배포가 필요한 경우만 로컬에서:
 ```powershell
-(Get-Content _worker.js -Raw) -replace '}` + '{' + `status:400', '}' | Set-Content _worker.js
 npx wrangler deploy
 ```
-- **클라우드 코드에서는 _worker.js 수정 후 push만** → 로컬에서 별도 배포 필요
-- ⚠️ **현재 미배포 상태**: QR 출퇴근 페이지 Firebase/FCM 초기화 코드 + 직원 본인 출퇴근 확인 FCM이 push됐지만 `wrangler deploy` 안 됨 → 로컬에서 반드시 실행할 것
 
 ### PR 생성 절대 금지
 - push 후 PR 만들지 말 것. auto-merge가 자동으로 main에 머지함.
