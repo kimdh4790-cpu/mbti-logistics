@@ -288,6 +288,13 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    match /yongcha_work/{docId} {
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
