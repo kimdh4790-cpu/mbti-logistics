@@ -1,5 +1,4 @@
-const YONGCHA_HTML = `
-<!DOCTYPE html>
+const YONGCHA_HTML = `<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -2225,7 +2224,6 @@ function _pgNotifications(el){
 </body>
 </html>
 `;
-
 export default {
   async fetch(request, env, ctx) {
     const url    = new URL(request.url);
