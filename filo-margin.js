@@ -869,8 +869,10 @@ function _aiHFShowUI() {
     '</div>' +
     '<div id="ai-hf-heard" style="font-size:12px;color:rgba(255,255,255,.45);min-height:15px;margin-bottom:4px;font-style:italic"></div>' +
     '<div id="ai-hf-result" style="font-size:13px;color:#fff;font-weight:700;min-height:18px;word-break:keep-all"></div>' +
-    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.3);line-height:1.6">' +
-      '"3번 테이블 해물밥상 둘"<br>"3번 테이블 카드 결제"<br>"3번 테이블 비움"' +
+    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.3);line-height:1.8">' +
+      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 해물밥상 둘<br>' +
+      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 카드 결제<br>' +
+      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 비움' +
     '</div>';
   document.body.appendChild(d);
 }
@@ -888,13 +890,23 @@ function _aiHFRecogLoop() {
 
   r.onstart = function() { _aiRecogActive = true; _aiHFSet('heard', '듣는 중…'); };
   r.onresult = function(ev) {
-    var interim = '', fin = '';
+    var interim = '', fin = '', confidence = 0;
     for (var i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) fin += ev.results[i][0].transcript;
-      else interim += ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) {
+        fin += ev.results[i][0].transcript;
+        confidence = ev.results[i][0].confidence || 0;
+      } else { interim += ev.results[i][0].transcript; }
     }
     _aiHFSet('heard', fin || interim);
-    if (fin) _aiHFProcess(fin.trim());
+    if (!fin) return;
+    /* 신뢰도 0.85 미만 무시 */
+    if (confidence > 0 && confidence < 0.85) { _aiHFSet('heard', ''); return; }
+    /* 웨이크워드 "필로야" 필수 */
+    var clean = fin.trim().replace(/\s+/g,' ');
+    if (!clean.match(/필로야|피로야|필로 야/)) { _aiHFSet('heard', ''); return; }
+    var cmd = clean.replace(/^.*?(필로야|피로야|필로 야)\s*/,'').trim();
+    if (!cmd) return;
+    _aiHFProcess(cmd);
   };
   r.onerror = function(ev) {
     _aiRecogActive = false;
