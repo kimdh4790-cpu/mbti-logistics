@@ -59,7 +59,7 @@
  *
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
-var _did='', _tNum='', _tName='';
+var _did='', _tNum='', _tName='', _storeName='매장';
 var _cart={}; // _menus/_lang/_tlCache/_curMdlMenu/_tlQtyVal 는 filo-order-common.js 공유
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
@@ -170,9 +170,10 @@ window.onload=function(){
  _db.collection('companies').doc(_did).get().then(function(doc){
   if(doc.exists){
    var d=doc.data();
+   _storeName=d.name||'매장';
    var nm=document.getElementById('store-name');
-   if(nm)nm.textContent=d.name||'매장';
-   document.title=(d.name||'매장')+' - 주문하기';
+   if(nm)nm.textContent=_storeName;
+   document.title=_storeName+' - 주문하기';
    _applyStoreTheme(d);
   }
  }).catch(function(){});
@@ -366,7 +367,7 @@ function _doOrder(payType){
    fetch('/api/filo-push',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:_did,title:'신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
+    body:JSON.stringify({did:_did,title:_storeName+' 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
  }).catch(function(e){
@@ -633,7 +634,7 @@ function reqReceiptFCM(){
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
             tokens:[tok],
-            title:'영수증',
+            title:_storeName+' 영수증',
             body:document.getElementById('done-num')
               ?document.getElementById('done-num').textContent+' 주문 완료'
               :'주문 완료',
