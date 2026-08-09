@@ -861,7 +861,7 @@ function _esc(s){
 // (이걸 안 하면 이름에 ' 가 있는 사용자는 버튼이 통째로 깨짐)
 function _jsq(s){
   if(s===null||s===undefined)return '';
-  return String(s).replace(/\\/g,'\\\\\').replace(/'/g,"\\\'").replace(/"/g,'&quot;')
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')
     .replace(/\r?\n/g,' ').replace(/</g,'\\u003c');
 }
 function _ago(ts){
@@ -1047,7 +1047,7 @@ var _curPage='home';
 function _buildNav(){
   var tabs=NAV_TABS[_CU.type]||NAV_TABS.driver;
   document.getElementById('bnav').innerHTML=tabs.map(function(t){
-    return '<button type="button" class="bnav-btn" id="bnav-'+t.p+'" aria-label="'+t.lbl+'" onclick="_goPage(\\''+t.p+'\\')">'+
+    return '<button type="button" class="bnav-btn" id="bnav-'+t.p+'" aria-label="'+t.lbl+'" onclick="_goPage(\''+t.p+'\')">'+
       '<span class="bnav-ico">'+t.ico+'</span>'+
       '<span class="bnav-lbl">'+t.lbl+'</span>'+
       (t.p==='chat'?'<span class="nav-badge" id="nav-badge-chat" style="display:none">0</span>':'')+
@@ -1175,22 +1175,22 @@ function _pgHome(el){
   // 퀵액션 — 하단 5탭에서 뺀 기능을 홈에서 1탭으로 (모든 기능 3단계 이내 접근)
   '<div class="quick-grid">'+
   (type==='driver'?
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'dashboard\\')">월 대시보드</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'bookmarks\\')">찜한 공고</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 원장</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'dashboard\')">월 대시보드</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'bookmarks\')">찜한 공고</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'rest\')">휴식 원장</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'jobs\')">구인구직</button>'+
     '<button type="button" class="quick-btn" onclick="_yOpenCalc()">실수령액</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">지원 현황</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
+    '<button type="button" class="quick-btn" onclick="_goPage(\'my_applies\')">지원 현황</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'routeiq\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
   :type==='agency'?
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">공고 등록</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 승인</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
+    '<button type="button" class="quick-btn" onclick="_goPage(\'post_write\')">공고 등록</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'jobs\')">구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'rest\')">휴식 승인</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'routeiq\')" style="border-color:var(--acln);color:var(--ac)">ROUTEIQ</button>'
   :
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 원장</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_posts\\')">공고 관리</button>')+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'jobs\')">구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'rest\')">휴식 원장</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\'my_posts\')">공고 관리</button>')+
   '</div>'+
 
   // ── AI 매칭 현황 칩 — 실시간 공고·매칭 신호 ──
@@ -1199,7 +1199,7 @@ function _pgHome(el){
     '<span id="ai-signal-lbl" style="font-size:12px;font-weight:700;color:var(--t2);flex:1">'+
       (type==='driver'?'내 지역 공개 공고 집계 중…':type==='agency'?'대기 지원자 집계 중…':'플랫폼 현황 집계 중…')+
     '</span>'+
-    (type==='driver'?'<button type="button" onclick="_goPage(\\'routeiq\\')" style="font-size:10.5px;font-weight:900;padding:4px 10px;border-radius:999px;background:rgba(0,212,170,.14);color:var(--ac);border:1px solid var(--acln);cursor:pointer;font-family:inherit;white-space:nowrap">ROUTEIQ</button>':'')+
+    (type==='driver'?'<button type="button" onclick="_goPage(\'routeiq\')" style="font-size:10.5px;font-weight:900;padding:4px 10px;border-radius:999px;background:rgba(0,212,170,.14);color:var(--ac);border:1px solid var(--acln);cursor:pointer;font-family:inherit;white-space:nowrap">ROUTEIQ</button>':'')+
   '</div>'+
 
   (type==='driver'?'<div id="home-fatigue"></div>':'')+
@@ -1219,7 +1219,7 @@ function _pgHome(el){
   // 최근 활동
   '<div class="sec-head"><span class="sec-title">'+
   (type==='driver'?'내 지역 최신 공고':'최근 활동')+'</span>'+
-  (type==='driver'?'<button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button>':'')+
+  (type==='driver'?'<button type="button" class="sec-count" onclick="_goPage(\'posts\')">전체보기 ›</button>':'')+
   '</div>'+
   '<div id="home-recent">'+((type==='driver'||type==='admin')?_skeletonCards(2):_skRows(2))+'</div>';
 
@@ -1302,8 +1302,8 @@ function _pgHome(el){
           '<span class="st st-open">검토 대기</span></div>'+
           '<div class="applicant-meta">📍 '+_esc(a.driverRegion||'—')+' · 📞 '+_esc(a.driverPhone||'—')+'</div>'+
           '<div class="judge-row">'+
-          '<button type="button" class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
-          '<button type="button" class="judge-btn judge-reject" onclick="_judgeApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">거절</button>'+
+          '<button type="button" class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">승인</button>'+
+          '<button type="button" class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">거절</button>'+
           '</div>';
         recent.appendChild(card);
       });
@@ -1329,8 +1329,8 @@ function _pgPosts(el){
 
   // 맞춤/전체 세그먼트 탭 — fsticky 바깥, 검색창 위
   '<div id="posts-match-tabs" class="seg-tabs">'+
-    '<button type="button" class="seg-tab'+(_pf.matchTab==='all'?' on':'')+'" onclick="_pfSetMatchTab(\\'all\\')">전체공고</button>'+
-    '<button type="button" class="seg-tab'+(_pf.matchTab==='matched'?' on':'')+'" onclick="_pfSetMatchTab(\\'matched\\')">맞춤공고</button>'+
+    '<button type="button" class="seg-tab'+(_pf.matchTab==='all'?' on':'')+'" onclick="_pfSetMatchTab(\'all\')">전체공고</button>'+
+    '<button type="button" class="seg-tab'+(_pf.matchTab==='matched'?' on':'')+'" onclick="_pfSetMatchTab(\'matched\')">맞춤공고</button>'+
   '</div>'+
 
   // 키워드 검색
@@ -1343,19 +1343,19 @@ function _pgPosts(el){
   // 상태 탭
   '<div class="fbar" id="posts-status-tabs">'+
   [['all','전체'],['open','모집중'],['matched','운행중'],['closed','완료']].map(function(s){
-    return '<button type="button" class="filter-btn'+(_pf.statusFilter===s[0]?' on':'')+'" data-status="'+s[0]+'" onclick="_pfSetStatus(\\''+s[0]+'\\')">'+s[1]+'</button>';
+    return '<button type="button" class="filter-btn'+(_pf.statusFilter===s[0]?' on':'')+'" data-status="'+s[0]+'" onclick="_pfSetStatus(\''+s[0]+'\')">'+s[1]+'</button>';
   }).join('')+
   '</div>'+
   // 택배사
   '<div class="fbar" id="pf-courier">'+
   COURIERS.map(function(c){
-    return '<button type="button" onclick="_pfSet(\\'courier\\',\\''+c+'\\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
+    return '<button type="button" onclick="_pfSet(\'courier\',\''+c+'\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
   }).join('')+
   '</div>'+
   // 지역
   '<div class="fbar" id="pf-region">'+
   REGIONS.map(function(r){
-    return '<button type="button" onclick="_pfSet(\\'region\\',\\''+r+'\\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
+    return '<button type="button" onclick="_pfSet(\'region\',\''+r+'\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
   }).join('')+
   '</div>'+
   // 세부 조건
@@ -1887,11 +1887,11 @@ function _makePostCard(d,mini){
         (d.applicantCount?'<span style="color:var(--t3);font-weight:700;flex-shrink:0">· 지원 '+d.applicantCount+'</span>':'')+
       '</span>'+
       '<span class="pc-acts">'+
-        (isDriver?'<button type="button" class="bm-btn'+(marked?' on':'')+'" id="bm-'+d.id+'" aria-label="찜" onclick="event.stopPropagation();_toggleBookmark(\\''+d.id+'\\')">'+(marked?'★':'☆')+'</button>':'')+
-        '<button type="button" class="pc-act txt" aria-label="공유" onclick="event.stopPropagation();_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')">공유</button>'+
+        (isDriver?'<button type="button" class="bm-btn'+(marked?' on':'')+'" id="bm-'+d.id+'" aria-label="찜" onclick="event.stopPropagation();_toggleBookmark(\''+d.id+'\')">'+(marked?'★':'☆')+'</button>':'')+
+        '<button type="button" class="pc-act txt" aria-label="공유" onclick="event.stopPropagation();_sharePost(\''+d.id+'\',\''+_jsq(d.area)+'\')">공유</button>'+
         (mapHref?'<a class="pc-act txt" href="'+_esc(mapHref)+'" target="_blank" rel="noopener" aria-label="지도" onclick="event.stopPropagation()">지도</a>':'')+
         (!isClosed&&isDriver?
-          '<button type="button" class="pc-apply" onclick="event.stopPropagation();_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\',this)">지원</button>':'')+
+          '<button type="button" class="pc-apply" onclick="event.stopPropagation();_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\',this)">지원</button>':'')+
       '</span>'+
     '</div>'+
     // ── 등록일시 (우측 하단)
@@ -2083,10 +2083,10 @@ function _showPostDetail(d){
     })()+
 
     (isDriver?
-    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')">🙋 지원하기</button>'+
+    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\')">🙋 지원하기</button>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">🔗 공유하기</button>'+
-    '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
+    '<button type="button" onclick="_sharePost(\''+d.id+'\',\''+_jsq(d.area)+'\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">🔗 공유하기</button>'+
+    '<button type="button" onclick="_reportFakePost(\''+d.id+'\',\''+d.agencyId+'\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
     '</div>'
     :'');
 
@@ -2216,7 +2216,7 @@ function _pgMyPosts(el){
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">내 공고 관리</div>'+
   '<div class="page-sub">등록한 공고와 지원자를 관리해요</div></div>'+
-  '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 새 공고 등록하기</button>'+
+  '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 새 공고 등록하기</button>'+
   '<div id="my-posts-list">'+_skRows(3)+'</div>';
 
   _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get()
@@ -2241,13 +2241,13 @@ function _pgMyPosts(el){
           '</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
           (d.status==='matched'?
-          '<button onclick="_yShowMatchedDrivers(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="padding:10px;background:var(--gnl);border:none;border-radius:10px;color:var(--gn);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2"> 기사 현황 + 정산</button>'+
-          '<button onclick="_showApplicants(\\''+d.id+'\\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자</button>':
-          '<button onclick="_showApplicants(\\''+d.id+'\\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>')+
-          '<button onclick="_togglePost(\\''+d.id+'\\',\\''+d.status+'\\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감처리':d.status==='matched'?'완료처리':'재오픈')+'</button>'+
+          '<button onclick="_yShowMatchedDrivers(\''+d.id+'\',\''+d.agencyId+'\')" style="padding:10px;background:var(--gnl);border:none;border-radius:10px;color:var(--gn);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2"> 기사 현황 + 정산</button>'+
+          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자</button>':
+          '<button onclick="_showApplicants(\''+d.id+'\')" style="padding:10px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>')+
+          '<button onclick="_togglePost(\''+d.id+'\',\''+d.status+'\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감처리':d.status==='matched'?'완료처리':'재오픈')+'</button>'+
           // 🤖 AI 배차 추천 — 모집중인 공고에서만 노출
           (d.status==='open'?
-          '<button onclick="_yAiRecommend(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
+          '<button onclick="_yAiRecommend(\''+d.id+'\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
           '</div>';
         list.appendChild(card);
       });
@@ -2273,7 +2273,7 @@ function _yShowMatchedDrivers(postId,agencyId){
         '<div style="font-weight:800">🚗 '+_esc(a.driverName)+'</div>'+
         '<span style="font-size:11px;color:var(--t2)">📞 '+(a.driverPhone||'—')+'</span></div>'+
         (a.confirmedStartDate?'<div style="font-size:11px;color:var(--gn);margin-bottom:6px">▶ 시작: '+a.confirmedStartDate+'</div>':'')+
-        '<button onclick="_openChatRoom(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\')" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:8px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>';
+        '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+_jsq(a.driverName)+'\',\'driver\')" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:8px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>';
       list.appendChild(card);
     });
     // 주간 정산 섹션
@@ -2330,7 +2330,7 @@ function _showApplicants(postId){
     body.innerHTML='<div style="font-size:20px;font-weight:900;letter-spacing:-.6px;margin-bottom:16px">👥 지원자 목록 ('+snap.size+'명)</div>';
     if(snap.empty){
       body.innerHTML+=_emptyHtml('📭','아직 지원자가 없어요','공고가 노출되면 지원이 들어와요')+
-        '<button onclick="_yAiRecommend(\\''+_esc(postId)+'\\')" style="width:100%;min-height:var(--tap);margin-top:10px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:var(--r);color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI로 적합한 기사 찾아보기</button>';
+        '<button onclick="_yAiRecommend(\''+_esc(postId)+'\')" style="width:100%;min-height:var(--tap);margin-top:10px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:var(--r);color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI로 적합한 기사 찾아보기</button>';
       return;
     }
     var statusMap={pending:'검토중',approved:'승인',rejected:'거절'};
@@ -2369,14 +2369,14 @@ function _showApplicants(postId){
           (p.company?'<span style="color:var(--t2)">🏢 '+p.company+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
-          '<button class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
-          '<button class="judge-btn judge-reject" onclick="_judgeApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">거절</button>'+
+          '<button class="judge-btn judge-approve" onclick="_judgeApply(\''+a.id+'\',\'approved\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">승인</button>'+
+          '<button class="judge-btn judge-reject" onclick="_judgeApply(\''+a.id+'\',\'rejected\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">거절</button>'+
           '</div>':
           a.status==='approved'?
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
-          '<button onclick="_openChatRoom(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
-          '<button onclick="_showReviewModal(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\',\\''+a.id+'\\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--ac)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'평가완료':'평가하기')+'</button>'+
-          (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
+          '<button onclick="_openChatRoom(\''+a.driverId+'\',\''+_jsq(a.driverName)+'\',\'driver\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
+          '<button onclick="_showReviewModal(\''+a.driverId+'\',\''+_jsq(a.driverName)+'\',\'driver\',\''+a.id+'\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--ac)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'평가완료':'평가하기')+'</button>'+
+          (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
         body.appendChild(card);
@@ -2460,7 +2460,7 @@ function _yConfirmStart(applyId,postId){
     '<div style="font-size:12px;color:var(--t2);margin-bottom:20px">노선 시작일을 선택해주세요</div>'+
     '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
     '<input class="inp" id="confirm-start-date" type="date" value="'+today+'"></div>'+
-    '<button class="btn-main" onclick="_doConfirmStart(\\''+applyId+'\\',\\''+postId+'\\')">출근 확정</button>';
+    '<button class="btn-main" onclick="_doConfirmStart(\''+applyId+'\',\''+postId+'\')">출근 확정</button>';
   _openModal();
 }
 function _doConfirmStart(applyId,postId){
@@ -2495,7 +2495,7 @@ function _yInputDaily(applyId, unitPrice){
   '<div style="font-size:24px;font-weight:900;color:var(--gn)" id="daily-est-val">0원</div></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">메모 (선택)</label>'+
   '<input class="inp" id="daily-memo" placeholder="특이사항 입력..."></div>'+
-  '<button onclick="_ySaveDailyRecord(\\''+applyId+'\\',\\''+today+'\\','+unitPrice+')" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">저장</button>';
+  '<button onclick="_ySaveDailyRecord(\''+applyId+'\',\''+today+'\','+unitPrice+')" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">저장</button>';
   _openModal();
 }
 
@@ -2593,7 +2593,7 @@ function _yShowWeeklyAgency(el, agencyId){
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">'+
         '<div style="font-weight:800">🚗 '+_esc(d.name)+'</div>'+
         '<div style="font-size:13.5px;font-weight:800;color:var(--gn);font-variant-numeric:tabular-nums">'+_won(d.amt)+'원 / '+d.cnt+'건</div></div>'+
-        '<button type="button" onclick="_yRequestSettle(\\''+uid+'\\',\\''+_jsq(d.name)+'\\','+d.cnt+','+d.amt+',\\''+weekStart+'\\')" '+
+        '<button type="button" onclick="_yRequestSettle(\''+uid+'\',\''+_jsq(d.name)+'\','+d.cnt+','+d.amt+',\''+weekStart+'\')" '+
         'style="width:100%;min-height:var(--tap);background:var(--brl);color:var(--br);border:1px solid var(--brln);border-radius:var(--r);font-size:13.5px;font-weight:800">'+
         '정산 확인 요청</button>'+
         '</div>';
@@ -2677,7 +2677,7 @@ function _showContract(contractId){
       '</div>'+
 
       (!mySigned&&c.status!=='signed'?
-      '<button onclick="_signContract(\\''+contractId+'\\',\\''+myRole+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">서명하기</button>':
+      '<button onclick="_signContract(\''+contractId+'\',\''+myRole+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">서명하기</button>':
       '<div style="text-align:center;padding:12px;color:var(--gn);font-weight:700">서명 완료</div>');
     _openModal();
   });
@@ -2706,7 +2706,7 @@ function _pgPostWrite(el){
   '<div class="form-section-title">공고 유형</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-type-group">'+
   ['하루 대타','주단위','월단위','상시모집'].map(function(t,i){
-    return '<button onclick="_selType(this,\\''+t+'\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
+    return '<button onclick="_selType(this,\''+t+'\',\'pw-type\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-type">'+
@@ -2716,7 +2716,7 @@ function _pgPostWrite(el){
   '<div class="form-section-title">근무 시간대</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pw-shift-group">'+
   ['주간','야간','협의'].map(function(s){
-    return '<button onclick="_selType(this,\\''+s+'\\',\\'pw-shift\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
+    return '<button onclick="_selType(this,\''+s+'\',\'pw-shift\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
   }).join('')+
   '</div>'+
   '<input type="hidden" id="pw-shift">'+
@@ -2729,7 +2729,7 @@ function _pgPostWrite(el){
   '<div class="form-section-title">근무 요일</div>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap" id="pw-days-group">'+
   ['월','화','수','목','금','토','일'].map(function(d){
-    return '<button onclick="_toggleDay(this,\\''+d+'\\')" type="button" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
+    return '<button onclick="_toggleDay(this,\''+d+'\')" type="button" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
   }).join('')+
   '</div>'+
   '<div id="pw-days-val" style="display:none"></div>'+
@@ -2751,14 +2751,14 @@ function _pgPostWrite(el){
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-vehicle-group">'+
   CAR_TYPES.concat(['무관']).map(function(v){
     var on=(v==='하이탑');
-    return '<button onclick="_selType(this,\\''+v+'\\',\\'pw-vehicle\\')" style="min-height:var(--tap);border-radius:10px;border:1.5px solid '+(on?'var(--ac)':'var(--bd)')+';background:'+(on?'var(--acl)':'transparent')+';color:'+(on?'var(--ac)':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+v+'</button>';
+    return '<button onclick="_selType(this,\''+v+'\',\'pw-vehicle\')" style="min-height:var(--tap);border-radius:10px;border:1.5px solid '+(on?'var(--ac)':'var(--bd)')+';background:'+(on?'var(--acl)':'transparent')+';color:'+(on?'var(--ac)':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+v+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-vehicle" value="하이탑">'+
   '<div class="inp-wrap"><label class="inp-lbl">영업용 번호판</label>'+
   '<div style="display:flex;gap:8px" id="pw-plate-group">'+
   ['아바사자 필수','배넘버 필수','무관'].map(function(p){
-    return '<button onclick="_selType(this,\\''+p+'\\',\\'pw-plate\\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+p+'</button>';
+    return '<button onclick="_selType(this,\''+p+'\',\'pw-plate\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+p+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-plate">'+
@@ -2770,7 +2770,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">단가 방식</label>'+
   '<div style="display:flex;gap:8px" id="pw-pricetype-group">'+
   ['건당','가구당','건당+가구당'].map(function(p){
-    return '<button onclick="_selType(this,\\''+p+'\\',\\'pw-pricetype\\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+p+'</button>';
+    return '<button onclick="_selType(this,\''+p+'\',\'pw-pricetype\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+p+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-pricetype">'+
@@ -2783,7 +2783,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">VAT</label>'+
   '<div style="display:flex;gap:8px" id="pw-vat-group">'+
   ['별도','포함'].map(function(v){
-    return '<button onclick="_selType(this,\\''+v+'\\',\\'pw-vat\\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">VAT '+v+'</button>';
+    return '<button onclick="_selType(this,\''+v+'\',\'pw-vat\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">VAT '+v+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-vat">'+
@@ -2811,7 +2811,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">정산 주기</label>'+
   '<div style="display:flex;gap:8px" id="pw-settle-group">'+
   ['주1회','격주','월1회'].map(function(s){
-    return '<button onclick="_selType(this,\\''+s+'\\',\\'pw-settle\\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+s+'</button>';
+    return '<button onclick="_selType(this,\''+s+'\',\'pw-settle\')" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+s+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-settle">'+
@@ -3133,8 +3133,8 @@ function _pgMyApplies(el){
           '<div class="n-desc" style="margin-bottom:10px">'+_esc(s.message)+'</div>'+
           (s.status==='pending'?
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-          '<button onclick="_replyScout(\\''+s.id+'\\',true)" style="padding:8px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">수락</button>'+
-          '<button onclick="_replyScout(\\''+s.id+'\\',false)" style="padding:8px;background:var(--bg3);color:var(--t2);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">거절</button>'+
+          '<button onclick="_replyScout(\''+s.id+'\',true)" style="padding:8px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">수락</button>'+
+          '<button onclick="_replyScout(\''+s.id+'\',false)" style="padding:8px;background:var(--bg3);color:var(--t2);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">거절</button>'+
           '</div>':
           '<div style="font-size:12px;font-weight:700;color:'+(s.status==='accepted'?'var(--gn)':'var(--t3)')+'">'+statusMap[s.status]+'</div>'
           );
@@ -3173,15 +3173,15 @@ function _pgMyApplies(el){
           '</div>':'')+
           '<div style="font-size:12.5px;color:var(--t3);font-weight:600">지원 '+_ago(a.appliedAt)+'</div>'+
           (a.status==='pending'?
-          '<button type="button" onclick="_yCancelApply(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="'+btnS+'width:100%;margin-top:12px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">지원 취소</button>':'')+
+          '<button type="button" onclick="_yCancelApply(\''+a.id+'\',\''+(a.postId||'')+'\')" style="'+btnS+'width:100%;margin-top:12px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">지원 취소</button>':'')+
           (a.status==='approved'?
           '<div class="pc-guard" style="margin-top:12px"><span>🎉 배차 확정'+(a.startConfirmed?' · 시작 '+_esc(a.confirmedStartDate):'')+'</span></div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-          '<button type="button" onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="'+btnS+'background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">💬 채팅</button>'+
-          '<button type="button" onclick="_showReviewModal(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\',\\''+a.id+'\\')" style="'+btnS+'background:'+(a.driverReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--ac)')+'">'+(a.driverReviewed?'평가완료':'평가하기')+'</button>'+
-          (!a.startConfirmed?'<button type="button" onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="'+btnS+'background:var(--brl);color:var(--br);border:1px solid var(--brln);grid-column:span 2">📅 출근 확정</button>':
-          '<button type="button" onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="'+btnS+'background:var(--gnl);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📦 오늘 건수 입력</button>')+
-          (a.contractId?'<button type="button" onclick="_showContract(\\''+a.contractId+'\\')" style="'+btnS+'background:var(--bg3);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📝 계약서 보기</button>':'')+
+          '<button type="button" onclick="_openChatRoom(\''+a.agencyId+'\',\''+_jsq(a.agencyName)+'\',\'agency\')" style="'+btnS+'background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">💬 채팅</button>'+
+          '<button type="button" onclick="_showReviewModal(\''+a.agencyId+'\',\''+_jsq(a.agencyName)+'\',\'agency\',\''+a.id+'\')" style="'+btnS+'background:'+(a.driverReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--ac)')+'">'+(a.driverReviewed?'평가완료':'평가하기')+'</button>'+
+          (!a.startConfirmed?'<button type="button" onclick="_yConfirmStart(\''+a.id+'\',\''+(a.postId||'')+'\')" style="'+btnS+'background:var(--brl);color:var(--br);border:1px solid var(--brln);grid-column:span 2">📅 출근 확정</button>':
+          '<button type="button" onclick="_yInputDaily(\''+a.id+'\','+(a.unitPrice||0)+')" style="'+btnS+'background:var(--gnl);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📦 오늘 건수 입력</button>')+
+          (a.contractId?'<button type="button" onclick="_showContract(\''+a.contractId+'\')" style="'+btnS+'background:var(--bg3);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📝 계약서 보기</button>':'')+
           '</div>'
           :'');
         apDiv.appendChild(card);
@@ -3227,10 +3227,10 @@ function _pgMyRoutes(el){
         (a.unitPrice?'💰 '+a.unitPrice+'원/건':'')+
         (a.confirmedStartDate?' · 시작 '+a.confirmedStartDate:'')+'</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-        '<button onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅</button>'+
-        '<button onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="padding:10px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📦 건수 입력</button>'+
-        (!a.startConfirmed?'<button onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📅 출근 확정</button>':'')+
-        (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서</button>':'')+
+        '<button onclick="_openChatRoom(\''+a.agencyId+'\',\''+_jsq(a.agencyName)+'\',\'agency\')" style="padding:10px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅</button>'+
+        '<button onclick="_yInputDaily(\''+a.id+'\','+(a.unitPrice||0)+')" style="padding:10px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📦 건수 입력</button>'+
+        (!a.startConfirmed?'<button onclick="_yConfirmStart(\''+a.id+'\',\''+(a.postId||'')+'\')" style="padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📅 출근 확정</button>':'')+
+        (a.contractId?'<button onclick="_showContract(\''+a.contractId+'\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서</button>':'')+
         '</div>';
       list.appendChild(card);
     });
@@ -3278,7 +3278,7 @@ function _renderRouteCalendar(el){
           var r=byDay[d];
           var cls='cal-day'+(d===today?' today':'')+(r?' has-route':'');
           var t=r?(' title="'+r.count+'건 · '+_won(r.amount)+'원"'):'';
-          cells+='<div class="'+cls+'"'+t+(r?' onclick="_yToast(\\''+d+'일 · '+r.count+'건 · '+_won(r.amount)+'원\\')"':'')+'>'+d+'</div>';
+          cells+='<div class="'+cls+'"'+t+(r?' onclick="_yToast(\''+d+'일 · '+r.count+'건 · '+_won(r.amount)+'원\')"':'')+'>'+d+'</div>';
         }
         return cells;
       })()+
@@ -3358,7 +3358,7 @@ function _yOpenCalc(prefill){
     '<div class="toggle-row" style="margin-top:6px">'+
       '<div><div class="toggle-lbl">부가세 3.3% 원천징수</div>'+
       '<div class="toggle-desc">사업소득 공제분을 차감해요</div></div>'+
-      '<button type="button" class="toggle'+(v('tax',true)?' on':'')+'" id="cal-tax" onclick="this.classList.toggle(\\'on\\');_yCalcRun()"></button>'+
+      '<button type="button" class="toggle'+(v('tax',true)?' on':'')+'" id="cal-tax" onclick="this.classList.toggle(\'on\');_yCalcRun()"></button>'+
     '</div>'+
     '</div>'+
 
@@ -3447,18 +3447,18 @@ function _pgProfile(el){
     '<div style="font-size:13.5px;font-weight:800;color:var(--br)">휴식 중이에요</div>'+
     '<div style="font-size:11.5px;color:var(--t2)">'+(_CU.restUntil?_esc(_CU.restUntil)+'까지 지원이 잠깁니다':'복귀일 미지정')+'</div>'+
   '</div>'+
-  '<button type="button" onclick="_goPage(\\'rest\\')" style="flex-shrink:0;min-height:38px;padding:0 14px;background:var(--bg2);color:var(--br);border:1px solid var(--brln);border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">관리</button>'+
+  '<button type="button" onclick="_goPage(\'rest\')" style="flex-shrink:0;min-height:38px;padding:0 14px;background:var(--bg2);color:var(--br);border:1px solid var(--brln);border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">관리</button>'+
   '</div>':'')+
 
   // 기사 빠른 액션
   (type==='driver'?
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
-  '<button type="button" onclick="_goPage(\\'bookmarks\\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:1px solid var(--brln);border-radius:var(--r);font-size:13.5px;font-weight:800">찜한 공고</button>'+
+  '<button type="button" onclick="_goPage(\'bookmarks\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:1px solid var(--brln);border-radius:var(--r);font-size:13.5px;font-weight:800">찜한 공고</button>'+
   '<button type="button" onclick="_yOpenCalc()" style="min-height:var(--tap);background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:var(--r);font-size:13.5px;font-weight:800"> 실수령액 계산</button>'+
   '</div>':'')+
 
   // 휴식 원장 (전 역할)
-  '<button type="button" onclick="_goPage(\\'rest\\')" style="width:100%;min-height:var(--tap);background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">'+
+  '<button type="button" onclick="_goPage(\'rest\')" style="width:100%;min-height:var(--tap);background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">'+
   '<span>휴식 원장</span>'+
   '<span style="font-size:11px;color:var(--t3);font-weight:600">'+(type==='driver'?'신청·이력':'승인·현황')+'</span></button>'+
 
@@ -3496,11 +3496,11 @@ function _pgProfile(el){
 
   // 구인구직 바로가기 (대리점)
   (type==='agency'?
-  '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px"> 구인구직 바로가기</button>':'')+
+  '<button onclick="_goPage(\'jobs\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px"> 구인구직 바로가기</button>':'')+
 
   // 공고 등록 (대리점)
   (type==='agency'?
-  '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
+  '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
   '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
 
@@ -3577,9 +3577,9 @@ function _pgMembers(el){
   '<div class="page-hdr"><div class="page-title">🛡 관리자 대시보드</div>'+
   '<div class="page-sub">회원 및 공고를 통합 관리해요</div></div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab on" onclick="_admSwitch(\\'members\\')">👥 회원 관리</button>'+
-  '<button class="sub-tab" onclick="_admSwitch(\\'posts\\')"> 공고 관리</button>'+
-  '<button class="sub-tab" onclick="_admSwitch(\\'cleanup\\')">🗑 데이터 정리</button>'+
+  '<button class="sub-tab on" onclick="_admSwitch(\'members\')">👥 회원 관리</button>'+
+  '<button class="sub-tab" onclick="_admSwitch(\'posts\')"> 공고 관리</button>'+
+  '<button class="sub-tab" onclick="_admSwitch(\'cleanup\')">🗑 데이터 정리</button>'+
   '</div>'+
   '<div id="adm-content"></div>';
 
@@ -3646,7 +3646,7 @@ function _admLoadMembers(){
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
         '<span class="status-badge '+(u.type==='agency'?'badge-agency':'badge-driver')+'" style="font-size:11px">'+
           (u.type==='agency'?'대리점':'기사')+'</span>'+
-        '<button onclick="_toggleSuspend(\\''+u.id+'\\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+        '<button onclick="_toggleSuspend(\''+u.id+'\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
           (isSus?'정지 해제':'정지')+'</button>'+
         '</div>'+
         '</div>';
@@ -3685,9 +3685,9 @@ function _admLoadPosts(){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
         '<span class="status-badge '+(isOpen?'badge-open':'badge-closed')+'">'+(isOpen?'모집중':'마감')+'</span>'+
-        '<button onclick="_togglePremium(\\''+d.id+'\\','+isPremium+')" style="padding:5px 10px;background:rgba(109,40,217,.12);color:var(--pu);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+        '<button onclick="_togglePremium(\''+d.id+'\','+isPremium+')" style="padding:5px 10px;background:rgba(109,40,217,.12);color:var(--pu);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
           (isPremium?'프리미엄 해제':'프리미엄')+'</button>'+
-        (isOpen?'<button onclick="_forceClosePost(\\''+d.id+'\\')" style="padding:5px 10px;background:var(--rdl);color:var(--rd);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">강제 마감</button>':'')+
+        (isOpen?'<button onclick="_forceClosePost(\''+d.id+'\')" style="padding:5px 10px;background:var(--rdl);color:var(--rd);border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">강제 마감</button>':'')+
         '</div>'+
         '</div>';
       el.appendChild(card);
@@ -3882,8 +3882,8 @@ function _pgJobsAgency(el){
   '<div class="page-hdr"><div class="page-title"> 구인구직</div>'+
   '<div class="page-sub">정규직 기사 채용 공고를 관리해요</div></div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')"> 내 채용공고</button>'+
-  '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\\'resumes\\')">📄 이력서 찾기</button>'+
+  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\'myjobs\')"> 내 채용공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\'resumes\')">📄 이력서 찾기</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
 
@@ -3933,8 +3933,8 @@ function _loadMyJobs(el){
         '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">📍 '+(d.region||'')+(d.area?' · '+d.area:'')+
           ' · 💰 월 '+Number(d.salary||0).toLocaleString()+'원</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-        '<button onclick="event.stopPropagation();_toggleJobStatus(\\''+d.id+'\\',\\''+d.status+'\\')" style="padding:9px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감 처리':'재오픈')+'</button>'+
-        '<button onclick="event.stopPropagation();_loadJobApplicants(\\''+d.id+'\\')" style="padding:9px;background:var(--pul);border:none;border-radius:10px;color:var(--pu);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>'+
+        '<button onclick="event.stopPropagation();_toggleJobStatus(\''+d.id+'\',\''+d.status+'\')" style="padding:9px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감 처리':'재오픈')+'</button>'+
+        '<button onclick="event.stopPropagation();_loadJobApplicants(\''+d.id+'\')" style="padding:9px;background:var(--pul);border:none;border-radius:10px;color:var(--pu);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 확인</button>'+
         '</div>';
       list.appendChild(card);
     });
@@ -3966,7 +3966,7 @@ function _loadResumes(el){
         (r.preferPay?' · 희망 월 '+Number(r.preferPay).toLocaleString()+'원':'')+
         '</div>'+
         (r.selfIntro?'<div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">'+_esc(r.selfIntro.substring(0,80))+(r.selfIntro.length>80?'…':'')+'</div>':'')+
-        '<button onclick="_scoutDriver(\\''+r.driverId+'\\',\\''+_jsq(r.driverName)+'\\',\\''+_jsq(r.driverPhone)+'\\')" style="width:100%;padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📞 스카웃 연락하기</button>';
+        '<button onclick="_scoutDriver(\''+r.driverId+'\',\''+_jsq(r.driverName)+'\',\''+_jsq(r.driverPhone)+'\')" style="width:100%;padding:10px;background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📞 스카웃 연락하기</button>';
       list.appendChild(card);
     });
   }).catch(function(e){
@@ -3987,7 +3987,7 @@ function _scoutDriver(driverId, driverName, driverPhone){
   '<div class="inp-wrap"><label class="inp-lbl">스카웃 메시지</label>'+
   '<textarea class="inp" id="scout-msg" rows="3" placeholder="안녕하세요! [대리점명]입니다. 함께 일하고 싶어 연락드립니다..." style="resize:none">'+
   '안녕하세요! '+_CU.name+'입니다.\n저희 대리점에서 기사님을 모시고 싶어 연락드립니다.\n관심 있으시면 연락 부탁드립니다!</textarea></div>'+
-  '<button onclick="_sendScout(\\''+driverId+'\\',\\''+_jsq(driverName)+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">📨 스카웃 보내기</button>';
+  '<button onclick="_sendScout(\''+driverId+'\',\''+_jsq(driverName)+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">📨 스카웃 보내기</button>';
   _openModal();
 }
 
@@ -4042,8 +4042,8 @@ function _loadJobApplicants(jobId){
         '<div class="applicant-meta">📍 '+(a.driverRegion||'')+'</div>'+
         (a.status==='pending'?
         '<div class="judge-row">'+
-        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
-        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">미선발</button>'+
+        '<button class="judge-btn judge-approve" onclick="_judgeJobApply(\''+a.id+'\',\'approved\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">승인</button>'+
+        '<button class="judge-btn judge-reject" onclick="_judgeJobApply(\''+a.id+'\',\'rejected\',\''+_jsq(a.driverName)+'\',\''+a.driverId+'\')">미선발</button>'+
         '</div>':'');
       body.appendChild(card);
     });
@@ -4071,8 +4071,8 @@ function _pgJobsDriver(el){
   '<div class="page-hdr"><div class="page-title"> 구인구직</div>'+
   '<div class="page-sub">채용 공고를 찾고 이력서를 등록해요</div></div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')"> 채용 공고</button>'+
-  '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\\'resume\\')">📄 내 이력서</button>'+
+  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\'list\')"> 채용 공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\'resume\')">📄 내 이력서</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
 
@@ -4130,7 +4130,7 @@ function _loadJobList(el){
         (d.vehicleType?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">🚗 '+d.vehicleType+'</span>':'')+
         (d.workDays?'<span style="font-size:10px;background:var(--bg3);padding:3px 8px;border-radius:8px;color:var(--t2)">📅 '+d.workDays+'</span>':'')+
         '</div>'+
-        '<button onclick="event.stopPropagation();_applyJob(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')" style="width:100%;padding:10px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">지원하기 →</button>';
+        '<button onclick="event.stopPropagation();_applyJob(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\')" style="width:100%;padding:10px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">지원하기 →</button>';
       list.appendChild(card);
     });
   }).catch(function(e){
@@ -4169,7 +4169,7 @@ function _showJobDetail(d){
   d.extras.split(',').filter(Boolean).map(function(e){
     return '<span style="font-size:11px;background:var(--bg3);padding:3px 9px;border-radius:8px;color:var(--t2)">'+_esc(e)+'</span>';
   }).join('')+'</div>':'')+
-  '<button id="job-apply-btn" onclick="_applyJob(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">🙋 지원하기</button>';
+  '<button id="job-apply-btn" onclick="_applyJob(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\')" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">🙋 지원하기</button>';
   _openModal();
 
   // 이미 지원 여부
@@ -4226,7 +4226,7 @@ function _renderResumeForm(el, docId, data){
   '<div class="form-section-title">경력</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px" id="rc-career-group">'+
   ['신입','1년 미만','1~3년','3~5년','5년 이상'].map(function(c){
-    return '<button onclick="_selType(this,\\''+c+'\\',\\'rc-career\\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.career===c?'var(--ac)':'var(--border)')+';background:'+(d.career===c?'var(--acl)':'transparent')+';color:'+(d.career===c?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+    return '<button onclick="_selType(this,\''+c+'\',\'rc-career\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.career===c?'var(--ac)':'var(--border)')+';background:'+(d.career===c?'var(--acl)':'transparent')+';color:'+(d.career===c?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
   }).join('')+
   '</div><input type="hidden" id="rc-career" value="'+(d.career||'')+'">'+
   '<div class="inp-wrap"><label class="inp-lbl">경력 상세 (선택)</label>'+
@@ -4237,7 +4237,7 @@ function _renderResumeForm(el, docId, data){
   '<div class="form-section-title">차량 정보</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="rc-vehicle-group">'+
   CAR_TYPES.concat(['무관']).map(function(v){
-    return '<button onclick="_selType(this,\\''+v+'\\',\\'rc-vehicle\\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.vehicleType===v?'var(--ac)':'var(--border)')+';background:'+(d.vehicleType===v?'var(--acl)':'transparent')+';color:'+(d.vehicleType===v?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
+    return '<button onclick="_selType(this,\''+v+'\',\'rc-vehicle\')" style="padding:9px;border-radius:10px;border:1.5px solid '+(d.vehicleType===v?'var(--ac)':'var(--border)')+';background:'+(d.vehicleType===v?'var(--acl)':'transparent')+';color:'+(d.vehicleType===v?'var(--ac)':'var(--t2)')+';font-size:12px;font-weight:700;cursor:pointer">'+v+'</button>';
   }).join('')+
   '</div><input type="hidden" id="rc-vehicle" value="'+(d.vehicleType||'')+'">'+
   '</div>'+
@@ -4263,10 +4263,10 @@ function _renderResumeForm(el, docId, data){
   '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--bg3);border-radius:var(--r);margin-bottom:16px">'+
   '<div><div style="font-size:14px;font-weight:700">이력서 공개</div>'+
   '<div style="font-size:11px;color:var(--t2);margin-top:2px">대리점이 내 이력서를 볼 수 있어요</div></div>'+
-  '<button class="toggle '+(d.isPublic?'on':'')+'" id="rc-public-toggle" onclick="this.classList.toggle(\\'on\\')"></button>'+
+  '<button class="toggle '+(d.isPublic?'on':'')+'" id="rc-public-toggle" onclick="this.classList.toggle(\'on\')"></button>'+
   '</div>'+
 
-  '<button class="btn-main" id="rc-submit-btn" onclick="_submitResume(\\''+docId+'\\')">'+
+  '<button class="btn-main" id="rc-submit-btn" onclick="_submitResume(\''+docId+'\')">'+
   (docId?'💾 이력서 수정하기':'📄 이력서 등록하기')+'</button>';
 }
 
@@ -4318,7 +4318,7 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">고용형태 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="jw-type-group">'+
   ['정규직','계약직','프리랜서'].map(function(t){
-    return '<button onclick="_selType(this,\\''+t+'\\',\\'jw-type\\')" style="padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+t+'</button>';
+    return '<button onclick="_selType(this,\''+t+'\',\'jw-type\')" style="padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+t+'</button>';
   }).join('')+
   '</div><input type="hidden" id="jw-type"></div>'+
 
@@ -4333,14 +4333,14 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">차량 요건</label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="jw-vehicle-group">'+
   CAR_TYPES.concat(['무관']).map(function(v){
-    return '<button onclick="_selType(this,\\''+v+'\\',\\'jw-vehicle\\')" style="padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+v+'</button>';
+    return '<button onclick="_selType(this,\''+v+'\',\'jw-vehicle\')" style="padding:8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:11px;font-weight:700;cursor:pointer">'+v+'</button>';
   }).join('')+
   '</div><input type="hidden" id="jw-vehicle"></div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">경력 요건</label>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap" id="jw-career-group">'+
   ['신입','1년 이상','3년 이상','무관'].map(function(c){
-    return '<button onclick="_selType(this,\\''+c+'\\',\\'jw-career\\')" style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
+    return '<button onclick="_selType(this,\''+c+'\',\'jw-career\')" style="padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+c+'</button>';
   }).join('')+
   '</div><input type="hidden" id="jw-career"></div>'+
 
@@ -4359,7 +4359,7 @@ function _showJobWriteModal(){
   '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:12px">'+
   '<div><div style="font-size:13px;font-weight:700">상시 채용</div>'+
   '<div style="font-size:11px;color:var(--t2)">종료일 없이 계속 모집</div></div>'+
-  '<button class="toggle" id="jw-openended-toggle" onclick="this.classList.toggle(\\'on\\')"></button>'+
+  '<button class="toggle" id="jw-openended-toggle" onclick="this.classList.toggle(\'on\')"></button>'+
   '</div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">공고 상세</label>'+
@@ -4522,7 +4522,7 @@ function _pgChatRoom(chatId,otherUid,otherName){
   el.style.flexDirection='column';
   el.innerHTML=
     '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0">'+
-    '<button type="button" class="icon-btn" aria-label="뒤로" onclick="_goPage(\\'chat\\')" style="font-size:26px">‹</button>'+
+    '<button type="button" class="icon-btn" aria-label="뒤로" onclick="_goPage(\'chat\')" style="font-size:26px">‹</button>'+
     '<div style="min-width:0"><div style="font-size:15.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(otherName)+'</div>'+
     '<div id="chat-phone" style="font-size:11.5px;color:var(--t2);display:none;font-weight:600"></div></div>'+
     '<a id="chat-call" href="#" style="margin-left:auto;display:none;width:var(--tap);height:var(--tap);place-items:center;color:var(--ac);font-size:19px;border-radius:var(--r);text-decoration:none" aria-label="전화">📞</a>'+
@@ -4530,8 +4530,8 @@ function _pgChatRoom(chatId,otherUid,otherName){
     '<div id="chat-msgs" style="flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain"></div>'+
     '<div style="display:flex;gap:8px;padding:10px 12px;background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0;padding-bottom:max(10px,env(safe-area-inset-bottom))">'+
     '<input class="inp" id="chat-inp" placeholder="메시지 입력..." autocomplete="off" style="flex:1;margin:0" '+
-    'onkeydown="if(event.key===\\'Enter\\'&&!event.shiftKey){event.preventDefault();_sendMsg(\\''+chatId+'\\',\\''+otherUid+'\\');}">'+
-    '<button type="button" onclick="_sendMsg(\\''+chatId+'\\',\\''+otherUid+'\\')" style="min-width:64px;min-height:var(--tap);background:linear-gradient(135deg,var(--ac),var(--ac2));color:var(--ac-ink);border:none;border-radius:var(--r);font-size:14.5px;font-weight:800;white-space:nowrap">전송</button>'+
+    'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_sendMsg(\''+chatId+'\',\''+otherUid+'\');}">'+
+    '<button type="button" onclick="_sendMsg(\''+chatId+'\',\''+otherUid+'\')" style="min-width:64px;min-height:var(--tap);background:linear-gradient(135deg,var(--ac),var(--ac2));color:var(--ac-ink);border:none;border-radius:var(--r);font-size:14.5px;font-weight:800;white-space:nowrap">전송</button>'+
     '</div>';
 
   // Reset unread + load phone
@@ -4662,7 +4662,7 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
     '<label class="inp-lbl">한줄 평 (선택)</label>'+
     '<textarea class="inp" id="rv-comment" rows="2" placeholder="간단한 후기를 남겨주세요" style="resize:none"></textarea></div>'+
 
-    '<button onclick="_submitReview(\\''+targetId+'\\',\\''+_jsq(targetName)+'\\',\\''+targetType+'\\',\\''+applyId+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" id="rv-submit">평가 제출하기</button>';
+    '<button onclick="_submitReview(\''+targetId+'\',\''+_jsq(targetName)+'\',\''+targetType+'\',\''+applyId+'\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" id="rv-submit">평가 제출하기</button>';
   _openModal();
 }
 
@@ -4774,7 +4774,7 @@ function _reportFakePost(postId,agencyId){
     '<div class="inp-wrap">'+
     '<label class="inp-lbl">신고 사유 <span style="color:var(--rd)">*</span></label>'+
     '<textarea class="inp" id="fake-reason" rows="3" placeholder="허위 내용을 구체적으로 알려주세요 (예: 실제 단가 다름, 존재하지 않는 공고)" style="resize:none"></textarea></div>'+
-    '<button onclick="_doReportFake(\\''+postId+'\\',\\''+agencyId+'\\')" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:1.5px solid var(--rd);border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px" id="fake-submit">신고 제출</button>'+
+    '<button onclick="_doReportFake(\''+postId+'\',\''+agencyId+'\')" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:1.5px solid var(--rd);border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px" id="fake-submit">신고 제출</button>'+
     '<button onclick="_closeModal()" style="width:100%;padding:12px;background:var(--bg3);color:var(--t2);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">취소</button>';
   _openModal();
 }
@@ -5182,8 +5182,8 @@ function _pgDispatchBoard(el){
           '<div style="font-size:12.5px;color:var(--t2);margin-bottom:10px">'+
             '💰 '+_won(a.unitPrice||0)+'원/'+_esc(a.priceType||'건')+(a.driverPhone?' · 📞 '+_esc(a.driverPhone):'')+'</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-            '<button onclick="_openChatRoom(\\''+_esc(a.driverId)+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\')" style="min-height:42px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">💬 채팅</button>'+
-            '<button onclick="_showReviewModal(\\''+_esc(a.driverId)+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\',\\''+a.id+'\\')" style="min-height:42px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--acl)')+';border:1px solid '+(a.agencyReviewed?'var(--gnln)':'var(--acln)')+';border-radius:10px;color:'+(a.agencyReviewed?'var(--gn)':'var(--ac)')+';font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'평가완료':'기사 평가')+'</button>'+
+            '<button onclick="_openChatRoom(\''+_esc(a.driverId)+'\',\''+_jsq(a.driverName)+'\',\'driver\')" style="min-height:42px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">💬 채팅</button>'+
+            '<button onclick="_showReviewModal(\''+_esc(a.driverId)+'\',\''+_jsq(a.driverName)+'\',\'driver\',\''+a.id+'\')" style="min-height:42px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--acl)')+';border:1px solid '+(a.agencyReviewed?'var(--gnln)':'var(--acln)')+';border-radius:10px;color:'+(a.agencyReviewed?'var(--gn)':'var(--ac)')+';font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'평가완료':'기사 평가')+'</button>'+
           '</div>'+
         '</div>';
       }).join('');
@@ -5310,7 +5310,7 @@ function _yRestManagerPage(el){
     '<p class="page-sub">기사 휴식 신청을 승인하고 현황을 관리해요</p></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">'+
       [['pending','대기'],['approved','휴식중'],['all','전체']].map(function(t){
-        return '<button type="button" id="rtab-'+t[0]+'" onclick="_yRestSwitch(\\''+t[0]+'\\')" '+
+        return '<button type="button" id="rtab-'+t[0]+'" onclick="_yRestSwitch(\''+t[0]+'\')" '+
           'style="min-height:var(--tap);border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid '+
           (_restTab===t[0]?'var(--acln);background:var(--acl);color:var(--ac)':'var(--bd);background:var(--bg2);color:var(--t2)')+'">'+t[1]+'</button>';
       }).join('')+
@@ -5360,8 +5360,8 @@ function _yRestCard(r,canJudge){
     (r.rejectMemo?'<div style="font-size:12px;color:var(--rd);margin-bottom:6px">반려 사유: '+_esc(r.rejectMemo)+'</div>':'')+
     (canJudge&&r.status==='pending'?
       '<div class="judge-row" style="margin-top:10px">'+
-      '<button class="judge-btn judge-approve" onclick="_yJudgeRest(\\''+r.id+'\\',\\'approved\\',\\''+_jsq(r.driverName)+'\\',\\''+_esc(r.driverId)+'\\')">승인</button>'+
-      '<button class="judge-btn judge-reject" onclick="_yJudgeRest(\\''+r.id+'\\',\\'rejected\\',\\''+_jsq(r.driverName)+'\\',\\''+_esc(r.driverId)+'\\')">반려</button>'+
+      '<button class="judge-btn judge-approve" onclick="_yJudgeRest(\''+r.id+'\',\'approved\',\''+_jsq(r.driverName)+'\',\''+_esc(r.driverId)+'\')">승인</button>'+
+      '<button class="judge-btn judge-reject" onclick="_yJudgeRest(\''+r.id+'\',\'rejected\',\''+_jsq(r.driverName)+'\',\''+_esc(r.driverId)+'\')">반려</button>'+
       '</div>':'')+
   '</div>';
 }
@@ -5489,9 +5489,9 @@ function _pgRouteIQ(el){
     '<h1 class="page-title" style="margin:0">AI 노선 인텔리전스</h1></div>'+
     '<p class="page-sub">실시간 시세·실적 기반 맞춤 매칭</p></div>'+
     '<div class="sub-tab-row" id="riq-tabs">'+
-    '<button class="sub-tab on" onclick="_riqSwitch(\\'heatmap\\')">시세 히트맵</button>'+
-    '<button class="sub-tab" onclick="_riqSwitch(\\'record\\')">실적 카드</button>'+
-    (isDriver?'<button class="sub-tab" onclick="_riqSwitch(\\'match\\')">AI 매칭</button>':'')+
+    '<button class="sub-tab on" onclick="_riqSwitch(\'heatmap\')">시세 히트맵</button>'+
+    '<button class="sub-tab" onclick="_riqSwitch(\'record\')">실적 카드</button>'+
+    (isDriver?'<button class="sub-tab" onclick="_riqSwitch(\'match\')">AI 매칭</button>':'')+
     '</div>'+
     '<div id="riq-body"></div>';
   _riqSwitch('heatmap');
@@ -5780,7 +5780,7 @@ function _riqMatch(el){
         var m=matchMap[post.id]||{};
         var score=m.score||0;
         var scoreColor=score>=80?'var(--gn)':score>=60?'var(--br)':'var(--t2)';
-        html+='<div class="pcard is-open" onclick="_yOpenPost(\\''+post.id+'\\')" style="margin-bottom:12px">'+
+        html+='<div class="pcard is-open" onclick="_yOpenPost(\''+post.id+'\')" style="margin-bottom:12px">'+
           '<div class="pc-ribbon">'+
           '<span class="riq-badge" style="background:transparent;color:#fff;border:none;padding:0;letter-spacing:1px">ROUTEIQ 추천 #'+(idx+1)+'</span>'+
           (score?'<span style="font-size:10.5px;font-weight:800;color:#fff;margin-left:auto">매칭 '+score+'점</span>':'')+
@@ -5985,13 +5985,13 @@ function _yAiRenderPicks(data,post,postId){
         (caution?'<div style="font-size:11.5px;color:var(--br);line-height:1.5;margin-bottom:8px">'+_esc(caution)+'</div>':'')+
         // 액션 버튼
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-          '<button onclick="_openChatRoom(\\''+_esc(d.driverId)+'\\',\\''+_jsq(d.driverName)+'\\',\\'driver\\')" style="min-height:42px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">채팅</button>'+
-          '<button onclick="_sendScout(\\''+_esc(d.driverId)+'\\',\\''+_jsq(d.driverName)+'\\')" style="min-height:42px;background:rgba(0,212,170,.14);border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">스카우트</button>'+
+          '<button onclick="_openChatRoom(\''+_esc(d.driverId)+'\',\''+_jsq(d.driverName)+'\',\'driver\')" style="min-height:42px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">채팅</button>'+
+          '<button onclick="_sendScout(\''+_esc(d.driverId)+'\',\''+_jsq(d.driverName)+'\')" style="min-height:42px;background:rgba(0,212,170,.14);border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">스카우트</button>'+
         '</div>'+
       '</div>';
   });
 
-  html+='<button onclick="_showApplicants(\\''+_esc(postId)+'\\')" style="width:100%;min-height:var(--tap);margin-top:6px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">지원자 전체 목록</button>';
+  html+='<button onclick="_showApplicants(\''+_esc(postId)+'\')" style="width:100%;min-height:var(--tap);margin-top:6px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">지원자 전체 목록</button>';
   body.innerHTML=html;
 }
 
