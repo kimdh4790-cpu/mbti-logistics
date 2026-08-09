@@ -338,9 +338,9 @@ function _filoTableOrderModal(did,table,order){
      var isOrdPaid=ord.paid;
      (ord.items||[]).forEach(function(it){
       rowsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
-       '<span style="'+(isOrdPaid?'color:#818cf8':'')+'">'+
+       '<span style="color:'+(isOrdPaid?'#818cf8':'var(--tx)')+'">'+
        (it.emoji?it.emoji+' ':'')+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
-       '<span style="font-weight:700;'+(isOrdPaid?'color:#818cf8':'')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+       '<span style="font-weight:700;color:'+(isOrdPaid?'#818cf8':'var(--tx)')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
      });
     });
     itemsHtml=rowsHtml||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
@@ -354,8 +354,8 @@ function _filoTableOrderModal(did,table,order){
     itemsHtml='<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
    }
 
-   // orderMap에서 이미 계산된 pendingTotal/paidTotal 우선 사용
-   var pendingTotal=order.pendingTotal!=null?order.pendingTotal:Math.max(0,(order.total||0)-paidTotal);
+   // orderMap pendingTotal에서 이미 결제된 금액 차감
+   var pendingTotal=Math.max(0,(order.pendingTotal!=null?order.pendingTotal:(order.total||0))-paidTotal);
    var resolvedPaidTotal=order.paidTotal!=null?order.paidTotal:paidTotal;
    var isAllPaid=pendingTotal<=0&&resolvedPaidTotal>0;
 
@@ -422,6 +422,7 @@ function _filoTableOrderModal(did,table,order){
      var flatItems=[];
      if(ord.orders&&ord.orders.length){
       ord.orders.forEach(function(o){
+       if(o.paid)return; // 이미 결제된 주문 제외
        (o.items||[]).forEach(function(it){
         var ex=flatItems.find(function(f){return f.name===it.name;});
         if(ex){ex.qty+=(it.qty||1);}else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
