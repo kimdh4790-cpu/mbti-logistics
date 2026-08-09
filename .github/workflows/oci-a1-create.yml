@@ -1,0 +1,131 @@
+name: OCI A1.Flex 인스턴스 생성
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  create-a1-flex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: OCI CLI 설치
+        run: pip install oci-cli -q
+
+      - name: OCI 인증 설정
+        env:
+          OCI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_FP: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+          printf '%s' "$OCI_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=ap-tokyo-1\nkey_file=/root/.oci/oci_api_key.pem\n' \
+            "$OCI_USER" "$OCI_FP" "$OCI_TENANCY" > ~/.oci/config
+
+      - name: 기존 인스턴스 확인
+        id: check
+        env:
+          TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+        run: |
+          COUNT=$(oci compute instance list \
+            --compartment-id "$TENANCY" \
+            --lifecycle-state RUNNING \
+            --query 'length(data)' \
+            --raw-output 2>/dev/null || echo "0")
+          echo "running=$COUNT" >> "$GITHUB_OUTPUT"
+          if [ "$COUNT" -gt "0" ]; then
+            echo "이미 실행중인 인스턴스 ${COUNT}개 — 생성 건너뜀"
+          else
+            echo "인스턴스 없음 — 생성 시도"
+          fi
+
+      - name: 리소스 조회 (AD / Image)
+        id: res
+        if: steps.check.outputs.running == '0'
+        env:
+          TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+        run: |
+          AD=$(oci iam availability-domain list \
+            --compartment-id "$TENANCY" \
+            --query 'data[0].name' --raw-output 2>&1 || true)
+          echo "AD: $AD"
+          if [ -z "$AD" ] || echo "$AD" | grep -qi "error\|ServiceError"; then
+            echo "AD 조회 실패: $AD"; exit 1
+          fi
+          echo "ad=$AD" >> "$GITHUB_OUTPUT"
+          echo "subnet=${{ secrets.OCI_SUBNET_ID }}" >> "$GITHUB_OUTPUT"
+
+          oci compute image list \
+            --compartment-id "$TENANCY" \
+            --shape "VM.Standard.A1.Flex" \
+            --operating-system "Oracle Linux" \
+            --raw-output 2>/dev/null > /tmp/images.json || echo '{"data":[]}' > /tmp/images.json
+
+          IMAGE=$(python3 << 'PYEOF'
+import json
+with open('/tmp/images.json') as f:
+    d = json.load(f)
+items = sorted(d.get('data', []), key=lambda x: x.get('time-created', ''))
+print(items[-1]['id'] if items else '')
+PYEOF
+)
+
+          if [ -z "$IMAGE" ]; then
+            oci compute image list \
+              --compartment-id "$TENANCY" \
+              --shape "VM.Standard.A1.Flex" \
+              --operating-system "Oracle Linux 8" \
+              --raw-output 2>/dev/null > /tmp/images.json || echo '{"data":[]}' > /tmp/images.json
+            IMAGE=$(python3 << 'PYEOF'
+import json
+with open('/tmp/images.json') as f:
+    d = json.load(f)
+items = sorted(d.get('data', []), key=lambda x: x.get('time-created', ''))
+print(items[-1]['id'] if items else '')
+PYEOF
+)
+          fi
+
+          echo "Image: $IMAGE"
+          if [ -z "$IMAGE" ]; then echo "이미지 없음"; exit 1; fi
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: A1.Flex 인스턴스 생성
+        id: launch
+        if: steps.check.outputs.running == '0'
+        env:
+          TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          SSH_PUB: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          AD: ${{ steps.res.outputs.ad }}
+          SUBNET: ${{ steps.res.outputs.subnet }}
+          IMAGE: ${{ steps.res.outputs.image }}
+        run: |
+          printf '%s' "$SSH_PUB" > /tmp/ssh_pub.key
+          RESULT=$(oci compute instance launch \
+            --compartment-id "$TENANCY" \
+            --availability-domain "$AD" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+            --image-id "$IMAGE" \
+            --subnet-id "$SUBNET" \
+            --display-name "filo-a1-flex" \
+            --boot-volume-size-in-gbs 200 \
+            --assign-public-ip true \
+            --ssh-authorized-keys-file /tmp/ssh_pub.key \
+            2>&1)
+          echo "$RESULT"
+          if echo "$RESULT" | grep -q '"lifecycle-state"'; then
+            echo "인스턴스 생성 성공!"
+            PUBLIC_IP=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('public-ip','할당중'))" 2>/dev/null || echo "IP 확인 필요")
+            echo "Public IP: $PUBLIC_IP"
+          elif echo "$RESULT" | grep -qi "InternalError\|TooManyRequests\|capacity"; then
+            echo "용량 부족 — 10분 후 재시도"
+            exit 0
+          else
+            echo "오류:"; echo "$RESULT"; exit 1
+          fi
