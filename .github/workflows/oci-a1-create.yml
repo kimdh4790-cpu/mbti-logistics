@@ -36,14 +36,13 @@ jobs:
         env:
           TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
         run: |
-          COUNT=$(oci compute instance list \
+          if ! RESULT=$(oci compute instance list \
             --compartment-id "$TENANCY" \
-            --lifecycle-state RUNNING \
-            --query 'length(data)' \
-            --raw-output 2>&1)
-          if ! echo "$COUNT" | grep -qE '^[0-9]+$'; then
-            echo "OCI 오류: $COUNT"; exit 1
+            --lifecycle-state RUNNING 2>&1); then
+            echo "OCI API 오류: $RESULT"
+            exit 1
           fi
+          COUNT=$(echo "$RESULT" | jq -r '.data | length' 2>/dev/null || echo "0")
           echo "running=$COUNT" >> "$GITHUB_OUTPUT"
           if [ "$COUNT" -gt "0" ]; then
             echo "이미 실행중인 인스턴스 ${COUNT}개 -- 생성 건너뜀"
@@ -57,12 +56,14 @@ jobs:
         env:
           TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
         run: |
-          AD=$(oci iam availability-domain list \
+          if ! AD=$(oci iam availability-domain list \
             --compartment-id "$TENANCY" \
-            --query 'data[0].name' --raw-output 2>&1 || true)
-          echo "AD: $AD"
-          if [ -z "$AD" ] || echo "$AD" | grep -qi "error\|ServiceError\|Traceback"; then
+            --query 'data[0].name' --raw-output 2>&1); then
             echo "AD 조회 실패: $AD"; exit 1
+          fi
+          echo "AD: $AD"
+          if [ -z "$AD" ]; then
+            echo "AD 없음"; exit 1
           fi
           echo "ad=$AD" >> "$GITHUB_OUTPUT"
           echo "subnet=${{ secrets.OCI_SUBNET_ID }}" >> "$GITHUB_OUTPUT"
