@@ -1,9 +1,15 @@
 name: OCI A1.Flex 자동 생성 (10분 재시도)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/oci-a1-retry.yml'
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [oci-retry]
 
 jobs:
   create-a1-flex:
