@@ -498,31 +498,18 @@ function _dineWatchReservations(){
 }
 
 function _dineUpdateSidebarStaff(){
- // 직원 허용 페이지
- var allowed = ['내 급여','급여명세서','근무 스케줄','출퇴근 현황'];
- // 비허용 nav-item DOM 자체 삭제
- document.querySelectorAll('.nav-item').forEach(function(item){
-  var txt = item.textContent.trim();
-  var ok = allowed.some(function(a){return txt.includes(a);});
-  if(!ok) item.parentNode && item.parentNode.removeChild(item);
- });
- // 빈 nav-group 삭제
- document.querySelectorAll('.nav-group').forEach(function(g){
-  if(!g.querySelector('.nav-item')) g.parentNode && g.parentNode.removeChild(g);
- });
- // 하단 탭바 — 비허용 버튼 삭제
- document.querySelectorAll('.mt-item').forEach(function(btn){
-  var txt = btn.textContent.trim();
-  if(!txt.includes('출퇴근')&&!txt.includes('급여')&&!txt.includes('더보기')){
-   btn.parentNode && btn.parentNode.removeChild(btn);
-  }
- });
- // 더보기 메뉴 — 비허용 항목 삭제
- document.querySelectorAll('.mm-item').forEach(function(item){
-  var txt = item.textContent.trim();
-  var ok = txt.includes('근무 스케줄')||txt.includes('급여명세서');
-  if(!ok) item.parentNode && item.parentNode.removeChild(item);
- });
+ // 사장 전용 그룹·항목 숨기기
+ document.querySelectorAll('[data-role="owner"]').forEach(function(el){ el.style.display='none'; });
+ // 직원 전용 그룹·항목 표시
+ document.querySelectorAll('[data-role="staff"]').forEach(function(el){ el.style.display=''; });
+ // 모바일 탭바: 사장 탭 숨기고 직원 탭 표시
+ var ownerBar = document.getElementById('mt-bar-owner');
+ var staffBar = document.getElementById('mt-bar-staff');
+ if(ownerBar) ownerBar.style.display='none';
+ if(staffBar) staffBar.style.display='flex';
+ // FILO 바로가기 버튼 숨기기 (직원은 불필요)
+ var filoBtn = document.querySelector('#sidebar button[onclick="_dineGoFilo()"]');
+ if(filoBtn && filoBtn.parentElement) filoBtn.parentElement.style.display='none';
 }
 function _dineMyPayroll(el){
  if(!_CU.staffId){el.innerHTML='<div class="empty">직원 정보 없음</div>';return;}
@@ -622,6 +609,15 @@ function _dineUpdateSidebar(){
  var s=document.getElementById('sb-store-sub');
  if(n)n.textContent=_CU.company?.storeName||_CU.company?.name||_CU.name||'내 매장';
  if(s)s.textContent=(_CU.company?.address||'외식업 관리 플랫폼');
+ // 직원 전용 그룹 숨기기 (사장은 직원 전용 메뉴 불필요)
+ document.querySelectorAll('[data-role="staff"]').forEach(function(el){ el.style.display='none'; });
+ // 사장 전용 그룹 표시
+ document.querySelectorAll('[data-role="owner"]').forEach(function(el){ el.style.display=''; });
+ // 모바일 탭바: 사장 탭 표시, 직원 탭 숨기기
+ var ownerBar = document.getElementById('mt-bar-owner');
+ var staffBar = document.getElementById('mt-bar-staff');
+ if(ownerBar) ownerBar.style.display='flex';
+ if(staffBar) staffBar.style.display='none';
 }
 
 function _dineSchedule(el){
