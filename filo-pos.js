@@ -142,7 +142,7 @@ function _filoPageKiosk(el){
       var borderC=t.status==='empty'?'#94a3b8':isPaid?'#6366f1':hasOrder?'#f59e0b':'#22c55e';
       var btn=document.createElement('button');
       btn.style.cssText='padding:6px 12px;background:'+bg+';border:1.5px solid '+borderC+';border-radius:10px;color:'+color+';font-size:11px;font-weight:800;cursor:pointer;line-height:1.5;text-align:center;min-width:72px';
-      var dispHtml='<div style="color:var(--tx)">'+t.name+'</div>';
+      var dispHtml='<div style="color:#0f172a;font-size:12px;font-weight:800">'+t.name+'</div>';
       if(hasOrder){
        if(ord.orders&&ord.orders.some(function(o){return o.movedFrom;})){
         var from=ord.orders.find(function(o){return o.movedFrom;});
