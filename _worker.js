@@ -5222,33 +5222,28 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }
         }
 
-        // 5) 카카오 알림톡 발송 (승인 완료)
+        // 5) 카카오 알림톡 발송 (승인 완료) — Aligo
         const custPhone = f.phone?.stringValue || f.settlementPhone?.stringValue || '';
-        if (custPhone && env.SOLAPI_KEY && env.SOLAPI_SECRET) {
-          const pfId      = env.KAKAO_PF_ID || 'KA01PF260618094439788FzuY2GxDiSW';
-          const date2     = new Date().toISOString();
-          const salt2     = Math.random().toString(36).slice(2);
-          const enc2      = new TextEncoder();
-          const ck2       = await crypto.subtle.importKey('raw', enc2.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-          const sg2       = await crypto.subtle.sign('HMAC', ck2, enc2.encode(date2+salt2));
-          const sig2      = Array.from(new Uint8Array(sg2)).map(b=>b.toString(16).padStart(2,'0')).join('');
-          const authHdr2  = `HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${date2}, salt=${salt2}, signature=${sig2}`;
-          const fallback  = `[DONWAY] ${custName}님, 가입이 승인되었습니다. 로그인: ${loginUrl}`;
-          await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+        if (custPhone && env.ALIGO_KEY && env.ALIGO_USER_ID && env.ALIGO_SENDER_KEY) {
+          const fallback = `[DONWAY] ${custName}님, 가입이 승인되었습니다. 로그인: ${loginUrl}`;
+          const aligoParams = new URLSearchParams({
+            apikey: env.ALIGO_KEY,
+            userid: env.ALIGO_USER_ID,
+            senderkey: env.ALIGO_SENDER_KEY,
+            tpl_code: 'KA01TP260627140546788gz4m68aBSRn',
+            sender: env.ALIGO_SENDER || '05171133103',
+            receiver_1: custPhone.replace(/[^0-9]/g, ''),
+            message_1: fallback,
+            cnt: '1',
+            failover: 'Y',
+            fmessage_1: fallback,
+            fsender_1: env.ALIGO_SENDER || '05171133103',
+            freceiver_1: custPhone.replace(/[^0-9]/g, '')
+          });
+          await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
             method: 'POST',
-            headers: {'Content-Type':'application/json', 'Authorization': authHdr2},
-            body: JSON.stringify({messages:[{
-              to: custPhone.replace(/[^0-9]/g,''),
-              from: '05171133103',
-              type: 'ATA',
-              text: fallback,
-              kakaoOptions: {
-                pfId,
-                templateId: 'KA01TP260627140546788gz4m68aBSRn',
-                variables: { '#{회사명}': custName, '#{로그인URL}': loginUrl },
-                disableSms: false
-              }
-            }]})
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: aligoParams.toString()
           }).catch(()=>{});
         }
 
@@ -7047,53 +7042,48 @@ service cloud.firestore {
       }
     }
 
-    // ── 카카오 알림톡 (/api/send-alimtalk) ──
+    // ── 카카오 알림톡 (/api/send-alimtalk) — Aligo ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
-        const apiKey    = env.SOLAPI_KEY;
-        const apiSecret = env.SOLAPI_SECRET;
-        const pfId      = env.KAKAO_PF_ID || 'KA01PF260618094439788FzuY2GxDiSW';
-        if (!apiKey || !apiSecret) {
-          return new Response(JSON.stringify({ error: 'SOLAPI 키 없음' }), {
+        const apiKey   = env.ALIGO_KEY;
+        const userId   = env.ALIGO_USER_ID;
+        const senderKey = env.ALIGO_SENDER_KEY;
+        const sender   = env.ALIGO_SENDER || '05171133103';
+        if (!apiKey || !userId || !senderKey) {
+          return new Response(JSON.stringify({ error: 'Aligo 키 없음' }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
-        // HMAC 인증
-        const date = new Date().toISOString();
-        const salt = Math.random().toString(36).slice(2);
-        const encoder = new TextEncoder();
-        const keyData = encoder.encode(apiSecret);
-        const msgData = encoder.encode(date + salt);
-        const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-        const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
-        const signature = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-        const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${signature}`;
-
-        // 톡 실패 시 SMS 자동 대체 (fallbackText 있으면 ATA, 없으면 SMS fallback)
-        const payload = {
-          messages: [{
-            to: to.replace(/[^0-9]/g,''),
-            from: '05171133103',
-            type: 'ATA',           // 카카오 알림톡 우선
-            text: fallbackText || '', // 톡 실패 시 SMS로 대체 발송
-            kakaoOptions: {
-              pfId: pfId || 'KA01PF260618094439788FzuY2GxDiSW',
-              templateId: templateCode || 'KA01TP260618101225825DuJHXpoC4kY',
-              variables: variables || {},
-              disableSms: false
-            }
-          }]
-        };
-
-        const solapiRes = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
-          body: JSON.stringify(payload)
+        // 변수 치환으로 메시지 렌더링
+        let msg = fallbackText || '';
+        if (variables) {
+          Object.entries(variables).forEach(([k, v]) => { msg = msg.split(k).join(String(v)); });
+        }
+        const params = new URLSearchParams({
+          apikey: apiKey,
+          userid: userId,
+          senderkey: senderKey,
+          tpl_code: templateCode || '',
+          sender: sender,
+          receiver_1: to.replace(/[^0-9]/g, ''),
+          message_1: msg,
+          cnt: '1'
         });
-        const result = await solapiRes.json();
-        const ok = (result.results||[]).some(r=>r.statusCode==='2000');
+        if (fallbackText) {
+          params.set('failover', 'Y');
+          params.set('fmessage_1', fallbackText);
+          params.set('fsender_1', sender);
+          params.set('freceiver_1', to.replace(/[^0-9]/g, ''));
+        }
+        const aligoRes = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+        const result = await aligoRes.json();
+        const ok = result.result_code == 1;
         return new Response(JSON.stringify({ ok, result }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
@@ -7104,7 +7094,7 @@ service cloud.firestore {
       }
     }
 
-    // ══ Solapi SMS/알림톡 자동발송 ══
+    // ══ Aligo SMS 자동발송 ══
     if (path === '/api/send-sms' && method === 'POST') {
       const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -7116,50 +7106,34 @@ service cloud.firestore {
         if (!messages || !messages.length) {
           return new Response(JSON.stringify({error:'messages 없음'}),{status:400,headers});
         }
-        const apiKey = env.SOLAPI_KEY;
-        const apiSecret = env.SOLAPI_SECRET;
-        const from = '05171133103'; // 발신번호 (하이픈 제거)
-        if (!apiKey || !apiSecret) {
-          return new Response(JSON.stringify({error:'API Key 미설정'}),{status:500,headers});
+        const apiKey = env.ALIGO_KEY;
+        const userId = env.ALIGO_USER_ID;
+        const sender = env.ALIGO_SENDER || '05171133103';
+        if (!apiKey || !userId) {
+          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers});
         }
-        // HMAC-SHA256 인증 생성
-        const date = new Date().toISOString();
-        const salt = Math.random().toString(36).substring(2,14);
-        const msg = date + salt;
-        const encoder = new TextEncoder();
-        const key = await crypto.subtle.importKey(
-          'raw', encoder.encode(apiSecret),
-          {name:'HMAC',hash:'SHA-256'}, false, ['sign']
-        );
-        const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(msg));
-        const sigHex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-        const authHeader = `HMAC-SHA256 apiKey=${apiKey}, date=${date}, salt=${salt}, signature=${sigHex}`;
-        // 발송 요청
-        const payload = {
-          messages: messages.map(function(m){
-            return {
-              to: m.to.replace(/[^0-9]/g,''),
-              from: from,
-              text: m.text,
-              type: 'SMS'
-            };
-          })
-        };
-        const solapiRes = await fetch('https://api.solapi.com/messages/v4/send-many/detail',{
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader
-          },
-          body: JSON.stringify(payload)
+        const receivers = messages.map(m => m.to.replace(/[^0-9]/g, '')).join(',');
+        const msgText = messages[0].text;
+        const params = new URLSearchParams({
+          key: apiKey,
+          user_id: userId,
+          sender: sender,
+          receiver: receivers,
+          msg: msgText,
+          msg_type: msgText.length > 90 ? 'LMS' : 'SMS'
         });
-        const solapiData = await solapiRes.json();
-        const successCount = (solapiData.results||[]).filter(r=>r.statusCode==='2000').length;
+        const res = await fetch('https://apis.aligo.in/send/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+        const data = await res.json();
+        const successCount = data.result_code == 1 ? messages.length : 0;
         return new Response(JSON.stringify({
-          success: solapiRes.ok,
+          success: data.result_code == 1,
           successCount,
           total: messages.length,
-          data: solapiData
+          data
         }),{status:200,headers});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers});
