@@ -161,7 +161,9 @@ window.onload=function(){
  _db=firebase.firestore();
  _did=_p('d')||'';
  _tNum=_p('t')||'';
- _tName=_p('name')||('테이블 '+_tNum);
+ var _takeout=_p('takeout')==='1';
+ if(_takeout){_tNum='0';_tName='포장';}
+ else{_tName=_p('name')||('테이블 '+_tNum);}
  if(!_did){
   document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:24px">✕</div><div style="margin-top:12px">잘못된 주소입니다</div></div>';
   return;
@@ -329,7 +331,7 @@ function _doOrder(payType){
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');if(btn){btn.disabled=true;btn.textContent='주문 중...';}
  var orderData={
-  dealerId:_did,type:'table',status:'pending',
+  dealerId:_did,type:_takeout?'takeout':'table',status:'pending',
   payType:payType,tableNum:_tNum,tableName:_tName,
   items:items,total:total,
   createdAt:_nowISO(),
@@ -341,7 +343,7 @@ function _doOrder(payType){
   // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+_tNum+'번 · 주문번호 #'+ref.id.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+ref.id.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
