@@ -53,22 +53,78 @@ jobs:
           # Availability Domain
           AD=$(oci iam availability-domain list \
             --compartment-id "$TENANCY" \
-            --query 'data[0].name' --raw-output 2>&1)
+            --query 'data[0].name' --raw-output 2>&1 || echo "")
           echo "Availability Domain: $AD"
+
+          if [ -z "$AD" ] || echo "$AD" | grep -qi "error\|ServiceError\|Traceback"; then
+            echo "❌ AD 조회 실패: $AD"
+            exit 1
+          fi
           echo "ad=$AD" >> "$GITHUB_OUTPUT"
 
           # Subnet — 콘솔에서 직접 가져온 OCID 사용
           echo "subnet=${{ secrets.OCI_SUBNET_ID }}" >> "$GITHUB_OUTPUT"
           echo "Subnet: ${{ secrets.OCI_SUBNET_ID }}"
 
-          # Image (Oracle Linux ARM)
-          IMAGE=$(oci compute image list \
+          # Image (Oracle Linux ARM) — Python으로 안전하게 파싱
+          IMAGE_RAW=$(oci compute image list \
             --compartment-id "$TENANCY" \
             --shape "VM.Standard.A1.Flex" \
             --operating-system "Oracle Linux" \
-            --query 'sort_by(data, &"time-created")[-1].id' \
-            --raw-output 2>/dev/null)
+            2>/dev/null || echo "")
+
+          IMAGE=$(echo "$IMAGE_RAW" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    items = sorted(d.get('data', []), key=lambda x: x.get('time-created', ''))
+    print(items[-1]['id'] if items else '')
+except:
+    print('')
+" 2>/dev/null || echo "")
+
+          # 폴백: Oracle Linux 8 시도
+          if [ -z "$IMAGE" ]; then
+            echo "Oracle Linux 폴백 → Oracle Linux 8 시도..."
+            IMAGE_RAW2=$(oci compute image list \
+              --compartment-id "$TENANCY" \
+              --shape "VM.Standard.A1.Flex" \
+              --operating-system "Oracle Linux 8" \
+              2>/dev/null || echo "")
+            IMAGE=$(echo "$IMAGE_RAW2" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    items = sorted(d.get('data', []), key=lambda x: x.get('time-created', ''))
+    print(items[-1]['id'] if items else '')
+except:
+    print('')
+" 2>/dev/null || echo "")
+          fi
+
+          # 폴백2: OS 필터 없이 ARM 이미지 조회
+          if [ -z "$IMAGE" ]; then
+            echo "OS 필터 없이 ARM 이미지 조회..."
+            IMAGE_RAW3=$(oci compute image list \
+              --compartment-id "$TENANCY" \
+              --shape "VM.Standard.A1.Flex" \
+              2>/dev/null || echo "")
+            IMAGE=$(echo "$IMAGE_RAW3" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    items = sorted(d.get('data', []), key=lambda x: x.get('time-created', ''))
+    print(items[-1]['id'] if items else '')
+except:
+    print('')
+" 2>/dev/null || echo "")
+          fi
+
           echo "Image: $IMAGE"
+          if [ -z "$IMAGE" ]; then
+            echo "❌ 이미지를 찾을 수 없음"
+            exit 1
+          fi
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - name: A1.Flex 인스턴스 생성 시도
