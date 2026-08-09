@@ -8540,25 +8540,25 @@ textarea.inp{resize:vertical;min-height:80px}
 .chip{flex-shrink:0;padding:7px 16px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.15s}
 .chip.on{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 2px 8px rgba(79,120,245,.3)}
 
-.pcard{background:var(--bg2);border:1px solid var(--bd);border-left:4px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:8px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:var(--sh);position:relative;overflow:hidden;animation:fadeIn .3s ease-out}
+.pcard{background:var(--bg2);border:1px solid var(--bd);border-left:6px solid var(--bd);border-radius:var(--r);padding:16px 16px 14px;margin-bottom:10px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;box-shadow:var(--sh);position:relative;overflow:hidden;animation:fadeIn .3s ease-out}
 .pcard:active{transform:scale(.985);box-shadow:var(--sh2)}
 .pcard.closed{opacity:.4;cursor:default}
-.pcard--cj{border-left-color:var(--cj)}
-.pcard--hj{border-left-color:var(--hj)}
-.pcard--lt{border-left-color:var(--lt)}
-.pcard--up{border-left-color:var(--up)}
-.pcard--cp{border-left-color:var(--cp)}
-.pcard--rz{border-left-color:var(--rz)}
-.pc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
-.pc-courier{display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:5px;letter-spacing:.3px}
-.pc-area{font-size:20px;font-weight:900;letter-spacing:-.5px;margin-bottom:5px;color:var(--tx)}
+.pcard--cj{border-left-color:var(--cj);background:linear-gradient(135deg,rgba(255,77,94,.04) 0%,var(--bg2) 60%)}
+.pcard--hj{border-left-color:var(--hj);background:linear-gradient(135deg,rgba(72,151,200,.04) 0%,var(--bg2) 60%)}
+.pcard--lt{border-left-color:var(--lt);background:linear-gradient(135deg,rgba(255,140,78,.04) 0%,var(--bg2) 60%)}
+.pcard--up{border-left-color:var(--up);background:linear-gradient(135deg,rgba(45,186,159,.04) 0%,var(--bg2) 60%)}
+.pcard--cp{border-left-color:var(--cp);background:linear-gradient(135deg,rgba(255,112,67,.04) 0%,var(--bg2) 60%)}
+.pcard--rz{border-left-color:var(--rz);background:linear-gradient(135deg,rgba(167,139,250,.04) 0%,var(--bg2) 60%)}
+.pc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.pc-courier{display:inline-flex;align-items:center;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:6px;letter-spacing:.3px}
+.pc-area{font-size:24px;font-weight:900;letter-spacing:-.8px;margin-bottom:6px;color:var(--tx);line-height:1.2}
 .pc-status{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0}
 .st-open{background:var(--gnl);color:var(--gn)}
 .st-closed{background:var(--rdl);color:var(--rd)}
 .st-matched{background:var(--acl);color:var(--ac)}
-.pc-earn{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap}
-.pc-price{font-size:34px;font-weight:900;letter-spacing:-1.5px;color:var(--tx);line-height:1}
-.pc-unit{font-size:12px;font-weight:500;color:var(--t2)}
+.pc-earn{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.pc-price{font-size:48px;font-weight:900;letter-spacing:-2px;color:var(--tx);line-height:1}
+.pc-unit{font-size:13px;font-weight:600;color:var(--t2)}
 .riq-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px}
 .riq-up{background:var(--gnl);color:var(--gn)}
 .riq-down{background:var(--rdl);color:var(--rd)}
@@ -9627,30 +9627,97 @@ function _tmplPost(postId){
 }
 
 function _pgHomeAdmin(el){
+  el.innerHTML=
+    '<div style="margin-bottom:18px">'+
+      '<div style="font-size:22px;font-weight:900;letter-spacing:-.5px">관제 대시보드</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-top:3px;display:flex;align-items:center;gap:6px">'+
+        '<span style="width:7px;height:7px;border-radius:50%;background:var(--gn);display:inline-block;box-shadow:0 0 6px var(--gn);animation:pulseOr 2s infinite"></span>'+
+        '실시간 플랫폼 현황'+
+      '</div>'+
+    '</div>'+
+    '<div class="stat-grid" id="admin-kpi">'+
+      '<div class="stat-card kpi-gn"><div class="stat-val" style="color:var(--gn)" id="ak-open">—</div><div class="stat-lbl">모집중 공고</div><div class="kpi-bar"></div></div>'+
+      '<div class="stat-card kpi-ac"><div class="stat-val" style="color:var(--ac)" id="ak-driver">—</div><div class="stat-lbl">등록 기사</div><div class="kpi-bar"></div></div>'+
+      '<div class="stat-card kpi-yw"><div class="stat-val" style="color:var(--yw)" id="ak-agency">—</div><div class="stat-lbl">대리점</div><div class="kpi-bar"></div></div>'+
+      '<div class="stat-card kpi-rd"><div class="stat-val" style="color:var(--rd)" id="ak-total">—</div><div class="stat-lbl">전체 공고</div><div class="kpi-bar"></div></div>'+
+    '</div>'+
+    '<div class="insight-box" style="margin-bottom:14px">'+
+      '<div class="insight-row">'+
+        '<div class="insight-ico">'+_SVG.brain+'</div>'+
+        '<div id="admin-insight-msg" class="insight-msg">플랫폼 현황 분석 중...</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="section-lbl">택배사별 공고 현황</div>'+
+    '<div id="admin-courier-stats" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>'+
+    '<div class="section-lbl">공고 구역 지도</div>'+
+    '<div id="admin-map" style="height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--bd2);margin-bottom:12px;box-shadow:var(--sh)"></div>';
   Promise.all([_db.collection('yongcha_posts').get(),_db.collection('yongcha_users').get()])
   .then(function(res){
     var posts=[],users=[];
-    res[0].forEach(function(d){posts.push(d.data());});
+    res[0].forEach(function(d){posts.push(Object.assign({id:d.id},d.data()));});
     res[1].forEach(function(d){users.push(d.data());});
-    el.innerHTML=
-      '<div class="page-title">관리자 대시보드</div><div class="page-sub">용차 플랫폼 현황</div>'+
-      '<div class="stat-grid">'+
-        '<div class="stat-card"><div class="stat-val">'+posts.length+'</div><div class="stat-lbl">전체 공고</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+users.filter(function(u){return u.type==='driver';}).length+'</div><div class="stat-lbl">등록 기사</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+users.filter(function(u){return u.type==='agency';}).length+'</div><div class="stat-lbl">대리점</div></div>'+
-        '<div class="stat-card"><div class="stat-val">'+posts.filter(function(p){return p.status==='open';}).length+'</div><div class="stat-lbl">모집중</div></div>'+
-      '</div>';
-  });
+    var openPosts=posts.filter(function(p){return p.status==='open';});
+    var drivers=users.filter(function(u){return u.type==='driver';});
+    var agencies=users.filter(function(u){return u.type==='agency';});
+    var e1=document.getElementById('ak-open'),e2=document.getElementById('ak-driver'),e3=document.getElementById('ak-agency'),e4=document.getElementById('ak-total');
+    if(e1)e1.textContent=openPosts.length;if(e2)e2.textContent=drivers.length;if(e3)e3.textContent=agencies.length;if(e4)e4.textContent=posts.length;
+    var msg=document.getElementById('admin-insight-msg');
+    if(msg){
+      var ratio=posts.length?Math.round(openPosts.length/posts.length*100):0;
+      msg.textContent='현재 공고 매칭률 '+(100-ratio)+'% · 활성 기사 '+drivers.length+'명 · 대리점 '+agencies.length+'곳 운영 중';
+    }
+    var cStats=document.getElementById('admin-courier-stats');
+    if(cStats){
+      var byCourier={};
+      posts.forEach(function(p){if(p.courier)byCourier[p.courier]=(byCourier[p.courier]||0)+1;});
+      var sorted=Object.entries(byCourier).sort(function(a,b){return b[1]-a[1];});
+      var maxCnt=sorted.length?sorted[0][1]:1;
+      cStats.innerHTML=sorted.map(function(kv){
+        var clr=_courierColor(kv[0]);var pct=Math.round(kv[1]/maxCnt*100);
+        return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:12px 14px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'+
+            '<span style="font-size:13px;font-weight:700;color:var(--tx)">'+kv[0]+'</span>'+
+            '<span style="font-size:12px;font-weight:700;color:'+clr+'">'+kv[1]+'건</span>'+
+          '</div>'+
+          '<div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">'+
+            '<div style="height:100%;width:'+pct+'%;background:'+clr+';border-radius:3px;transition:.4s"></div>'+
+          '</div></div>';
+      }).join('');
+    }
+    if(_kakaoReady){
+      var mapEl=document.getElementById('admin-map');
+      if(mapEl){
+        var ll=new kakao.maps.LatLng(35.9,127.8);
+        var adminMap=new kakao.maps.Map(mapEl,{center:ll,level:12});
+        openPosts.forEach(function(d){
+          var latLng=null;
+          if(d.lat&&d.lng){latLng=new kakao.maps.LatLng(d.lat,d.lng);}
+          else if(d.region&&_RGN_LL[d.region]){var r=_RGN_LL[d.region];latLng=new kakao.maps.LatLng(r[0]+(Math.random()*.04-.02),r[1]+(Math.random()*.04-.02));}
+          if(!latLng)return;
+          var clr=_courierColor(d.courier||'');
+          new kakao.maps.Circle({center:latLng,radius:2000,strokeWeight:2,strokeColor:clr,strokeOpacity:.9,fillColor:clr,fillOpacity:.18,map:adminMap});
+          var mk=new kakao.maps.Marker({position:latLng,map:adminMap});
+          kakao.maps.event.addListener(mk,'click',function(){_showPostDetail(d);});
+        });
+      }
+    }
+  }).catch(function(){});
 }
 
 /* ── 공고 ─────────────────────────────────────────────────── */
-var _postsMapInst=null;
+var _postsMapInst=null,_postsMapCircles=[];
+var _RGN_LL={
+  '부산':[35.1795543,129.0756416],'인천':[37.4562557,126.7052062],'서울':[37.5665350,126.9779692],
+  '대구':[35.8714354,128.6014249],'광주':[35.1595454,126.8526012],'대전':[36.3504119,127.3845475],
+  '울산':[35.5383773,129.3113596],'경기':[37.4138,127.5183],'수원':[37.2636,127.0286],
+  '성남':[37.4200,127.1265],'고양':[37.6585,126.8320],'용인':[37.2411,127.1776]
+};
 function _pgPosts(el){
-  _pgIdx=0;_postsMapInst=null;_aiTabOn=false;
+  _pgIdx=0;_postsMapInst=null;_postsMapCircles=[];_aiTabOn=false;
   el.innerHTML=
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
       '<div class="page-title">공고</div>'+
-      '<button class="map-toggle" id="view-toggle" onclick="_togglePostsMap()">'+_SVG.map+' 지도</button>'+
+      '<button class="map-toggle on" id="view-toggle" onclick="_togglePostsMap()" style="background:var(--acl);color:var(--ac);border-color:var(--ac)">'+_SVG.map+' 지도</button>'+
     '</div>'+
     (_CU&&_CU.type==='driver'?
       '<div class="filter-row" style="margin-bottom:6px">'+
@@ -9659,12 +9726,39 @@ function _pgPosts(el){
       '</div>':'')+
     '<div class="filter-row" id="plat-row"></div>'+
     '<div class="filter-row" id="rgn-row"></div>'+
-    '<div id="posts-map" style="height:300px;display:none;border-radius:12px;overflow:hidden;border:1px solid var(--bd);margin-bottom:12px"></div>'+
+    '<div id="posts-map" style="height:280px;border-radius:12px;overflow:hidden;border:1px solid var(--bd2);margin-bottom:12px;box-shadow:var(--sh)"></div>'+
     '<div id="plist"></div>';
   _buildPlatChips();_buildRgnChips();_startPostsListener();
   if(_CU&&_CU.type==='driver'){
     var ca=document.getElementById('chip-all');if(ca)ca.classList.add('on');
   }
+  setTimeout(_initPostsMapNow,200);
+}
+function _initPostsMapNow(){
+  if(!_kakaoReady||_postsMapInst)return;
+  var m=document.getElementById('posts-map');if(!m)return;
+  var ll=new kakao.maps.LatLng(35.9,127.8);
+  _postsMapInst=new kakao.maps.Map(m,{center:ll,level:12});
+  _updatePostsMapCircles();
+}
+function _updatePostsMapCircles(){
+  if(!_postsMapInst)return;
+  _postsMapCircles.forEach(function(c){c.setMap(null);});
+  _postsMapCircles=[];
+  var seen={};
+  _filteredPosts.slice(0,30).forEach(function(d){
+    var latLng=null;
+    if(d.lat&&d.lng){latLng=new kakao.maps.LatLng(d.lat,d.lng);}
+    else if(d.region&&_RGN_LL[d.region]){var r=_RGN_LL[d.region];latLng=new kakao.maps.LatLng(r[0]+(Math.random()*.04-.02),r[1]+(Math.random()*.04-.02));}
+    if(!latLng)return;
+    var clr=_courierColor(d.courier||'');
+    var circle=new kakao.maps.Circle({center:latLng,radius:1800,strokeWeight:2,strokeColor:clr,strokeOpacity:.8,fillColor:clr,fillOpacity:.15,map:_postsMapInst});
+    var mk=new kakao.maps.Marker({position:latLng,map:_postsMapInst});
+    kakao.maps.event.addListener(mk,'click',function(){_showPostDetail(d);});
+    _postsMapCircles.push(circle);
+    if(!seen[d.region]&&d.region&&_RGN_LL[d.region])seen[d.region]=latLng;
+  });
+  var pts=Object.values(seen);if(pts.length>0&&_postsMapInst){var b=new kakao.maps.LatLngBounds();pts.forEach(function(p){b.extend(p);});if(pts.length>1)_postsMapInst.setBounds(b);}
 }
 
 function _setAITab(on){
@@ -9715,9 +9809,10 @@ function _applyFilters(){
 function _renderPostList(){
   var el=document.getElementById('plist');if(!el)return;
   var total=_filteredPosts.length,start=_pgIdx*_pgSize;
-  if(!total){el.innerHTML='<div class="empty">'+_SVG.truck+'<div class="empty-title">공고 없음</div><div class="empty-sub">조건을 바꿔보세요</div></div>';return;}
+  if(!total){el.innerHTML='<div class="empty">'+_SVG.truck+'<div class="empty-title">공고 없음</div><div class="empty-sub">조건을 바꿔보세요</div></div>';_updatePostsMapCircles();return;}
   el.innerHTML='';
   _filteredPosts.slice(start,start+_pgSize).forEach(function(d){el.appendChild(_makePostCard(d));});
+  _updatePostsMapCircles();
   var totalPages=Math.ceil(total/_pgSize);
   if(totalPages>1){
     var pg=document.createElement('div');pg.className='pg-row';
@@ -9734,18 +9829,11 @@ function _pgNav(d){
 }
 function _togglePostsMap(){
   var m=document.getElementById('posts-map'),btn=document.getElementById('view-toggle');if(!m)return;
-  if(m.style.display==='none'){
-    m.style.display='block';btn.style.background='var(--acl)';btn.style.color='var(--ac)';
-    if(_kakaoReady&&!_postsMapInst){
-      var ll=new kakao.maps.LatLng(35.1795543,129.0756416);
-      _postsMapInst=new kakao.maps.Map(m,{center:ll,level:8});
-      _filteredPosts.forEach(function(d){
-        if(!d.lat||!d.lng)return;
-        var mk=new kakao.maps.Marker({position:new kakao.maps.LatLng(d.lat,d.lng),map:_postsMapInst});
-        kakao.maps.event.addListener(mk,'click',function(){_showPostDetail(d);});
-      });
-    }
-  } else {m.style.display='none';btn.style.background='';btn.style.color='';}
+  var hidden=m.style.display==='none';
+  if(hidden){
+    m.style.display='block';btn.style.background='var(--acl)';btn.style.color='var(--ac)';btn.style.borderColor='var(--ac)';
+    setTimeout(_initPostsMapNow,100);
+  } else {m.style.display='none';btn.style.background='';btn.style.color='';btn.style.borderColor='';}
 }
 
 /* ── 내작업 (기사 3-step 배차) ──────────────────────────── */
