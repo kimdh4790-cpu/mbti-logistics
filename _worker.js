@@ -2571,6 +2571,8 @@ async function acceptExchange(){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>${label}</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -2603,6 +2605,34 @@ var SHOP_LAT=${shopLat};
 var SHOP_LNG=${shopLng};
 var MEMBERS=${membersJson};
 var GPS_RADIUS=300; // 매장 반경 300m
+var _qrFcmToken='';
+var QR_VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
+try{
+  firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'filo.ai.kr',projectId:'mbti-logistics',messagingSenderId:'862900137209',appId:'1:862900137209:web:filoapp'});
+  if('serviceWorker' in navigator&&'Notification' in navigator&&Notification.permission!=='denied'){
+    var _fcmAsked=false;
+    function _askFcmPerm(){
+      if(_fcmAsked)return;_fcmAsked=true;
+      document.removeEventListener('touchstart',_askFcmPerm,true);
+      document.removeEventListener('click',_askFcmPerm,true);
+      Notification.requestPermission().then(function(p){
+        if(p!=='granted')return;
+        navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+          .then(function(reg){return reg.update().then(function(){return reg;});})
+          .then(function(reg){return firebase.messaging().getToken({vapidKey:QR_VAPID,serviceWorkerRegistration:reg});})
+          .then(function(tok){if(tok)_qrFcmToken=tok;}).catch(function(){});
+      });
+    }
+    if(Notification.permission==='granted'){
+      navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+        .then(function(reg){return firebase.messaging().getToken({vapidKey:QR_VAPID,serviceWorkerRegistration:reg});})
+        .then(function(tok){if(tok)_qrFcmToken=tok;}).catch(function(){});
+    } else {
+      document.addEventListener('touchstart',_askFcmPerm,{capture:true,passive:true,once:true});
+      document.addEventListener('click',_askFcmPerm,{capture:true,once:true});
+    }
+  }
+}catch(e){}
 
 function getKST(){var n=new Date();return new Date(n.getTime()+9*3600000);}
 function getToday(){return getKST().toISOString().slice(0,10);}
@@ -2722,7 +2752,7 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   fetch('/qr/confirm',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng})
+    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng,fcmToken:_qrFcmToken})
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok){
       localStorage.setItem(dupKey,'1');
@@ -2816,7 +2846,7 @@ fetch('/qr/members?did='+DID)
       if (path === '/qr/confirm' && request.method === 'POST') {
         try {
           const body = await request.json();
-          const {did, uid, name, action, deviceId, lat, lng} = body;
+          const {did, uid, name, action, deviceId, lat, lng, fcmToken} = body;
           if (!did || !uid || !action) return Response.json({ok:false,error:'파라미터 오류'});
 
           const now = new Date();
@@ -2879,6 +2909,21 @@ fetch('/qr/members?did='+DID)
             const notiTitle2 = cName2 ? `${cName2} ${actionLabel} 알림` : `${actionLabel} 알림`;
             for(const ft of allFcmTokens) {
               await sendAdminFCM(env, ft, { title: notiTitle2, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`, url: `https://filo.ai.kr/store/${did}` });
+            }
+          } catch(e){}
+
+          // 직원 본인 FCM 출퇴근 확인 알림
+          try {
+            const staffFcmToken = fcmToken && fcmToken.length > 20 ? fcmToken : null;
+            if (staffFcmToken) {
+              await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/${uid}?updateMask.fieldPaths=fcmToken`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                body: JSON.stringify({fields:{fcmToken:{stringValue:staffFcmToken}}})
+              });
+              const actionLabel2 = type==='in'?'출근':'퇴근';
+              const kstStr2 = kst.toISOString().slice(11,16);
+              await sendAdminFCM(env, staffFcmToken, { title: actionLabel2+' 완료', body: memberName+'님 '+kstStr2+' '+actionLabel2+' 처리됐습니다.', url: 'https://filo.ai.kr' });
             }
           } catch(e){}
 
@@ -4032,6 +4077,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>${label}</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
@@ -4064,6 +4111,34 @@ var SHOP_LAT=${shopLat};
 var SHOP_LNG=${shopLng};
 var MEMBERS=${membersJson};
 var GPS_RADIUS=300; // 매장 반경 300m
+var _qrFcmToken='';
+var QR_VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
+try{
+  firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'filo.ai.kr',projectId:'mbti-logistics',messagingSenderId:'862900137209',appId:'1:862900137209:web:filoapp'});
+  if('serviceWorker' in navigator&&'Notification' in navigator&&Notification.permission!=='denied'){
+    var _fcmAsked=false;
+    function _askFcmPerm(){
+      if(_fcmAsked)return;_fcmAsked=true;
+      document.removeEventListener('touchstart',_askFcmPerm,true);
+      document.removeEventListener('click',_askFcmPerm,true);
+      Notification.requestPermission().then(function(p){
+        if(p!=='granted')return;
+        navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+          .then(function(reg){return reg.update().then(function(){return reg;});})
+          .then(function(reg){return firebase.messaging().getToken({vapidKey:QR_VAPID,serviceWorkerRegistration:reg});})
+          .then(function(tok){if(tok)_qrFcmToken=tok;}).catch(function(){});
+      });
+    }
+    if(Notification.permission==='granted'){
+      navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+        .then(function(reg){return firebase.messaging().getToken({vapidKey:QR_VAPID,serviceWorkerRegistration:reg});})
+        .then(function(tok){if(tok)_qrFcmToken=tok;}).catch(function(){});
+    } else {
+      document.addEventListener('touchstart',_askFcmPerm,{capture:true,passive:true,once:true});
+      document.addEventListener('click',_askFcmPerm,{capture:true,once:true});
+    }
+  }
+}catch(e){}
 
 function getKST(){var n=new Date();return new Date(n.getTime()+9*3600000);}
 function getToday(){return getKST().toISOString().slice(0,10);}
@@ -4183,7 +4258,7 @@ function doSave(uid,name,deviceId,dupKey,lat,lng){
   fetch('/qr/confirm',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng})
+    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng,fcmToken:_qrFcmToken})
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok){
       localStorage.setItem(dupKey,'1');
@@ -4277,7 +4352,7 @@ fetch('/qr/members?did='+DID)
       if (path === '/qr/confirm' && request.method === 'POST') {
         try {
           const body = await request.json();
-          const {did, uid, name, action, deviceId, lat, lng} = body;
+          const {did, uid, name, action, deviceId, lat, lng, fcmToken} = body;
           if (!did || !uid || !action) return Response.json({ok:false,error:'파라미터 오류'});
 
           const now = new Date();
@@ -4340,6 +4415,21 @@ fetch('/qr/members?did='+DID)
             const notiTitle2 = cName2 ? `${cName2} ${actionLabel} 알림` : `${actionLabel} 알림`;
             for(const ft of allFcmTokens) {
               await sendAdminFCM(env, ft, { title: notiTitle2, body: `${memberName||name||uid}님이 ${kstStr}에 ${actionLabel}했습니다.`, url: `https://filo.ai.kr/store/${did}` });
+            }
+          } catch(e){}
+
+          // 직원 본인 FCM 출퇴근 확인 알림
+          try {
+            const staffFcmToken = fcmToken && fcmToken.length > 20 ? fcmToken : null;
+            if (staffFcmToken) {
+              await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/${uid}?updateMask.fieldPaths=fcmToken`, {
+                method:'PATCH',
+                headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                body: JSON.stringify({fields:{fcmToken:{stringValue:staffFcmToken}}})
+              });
+              const actionLabel2 = type==='in'?'출근':'퇴근';
+              const kstStr2 = kst.toISOString().slice(11,16);
+              await sendAdminFCM(env, staffFcmToken, { title: actionLabel2+' 완료', body: memberName+'님 '+kstStr2+' '+actionLabel2+' 처리됐습니다.', url: 'https://filo.ai.kr' });
             }
           } catch(e){}
 
