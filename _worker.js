@@ -8844,7 +8844,7 @@ function _buildNav(){
           {ico:'users',lbl:'사용자',p:'admin_users'},{ico:'user',lbl:'내정보',p:'profile'}];
   }
   document.getElementById('bnav').innerHTML=tabs.map(function(tb){
-    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\''+tb.p+'\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
+    return '<button class="nb" id="bnav-'+tb.p+'" onclick="_goPage(\\''+tb.p+'\\')">'+_SVG[tb.ico]+'<span>'+tb.lbl+'</span></button>';
   }).join('');
 }
 
@@ -8950,7 +8950,7 @@ function _makePostCard(d){
     '<div class="pc-foot">'+
       '<span class="pc-agency">'+(d.agencyName||'대리점')+'</span>'+
       (!isClosed&&_CU&&_CU.type==='driver'?
-        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\')">'+
+        '<button class="quick-apply" onclick="event.stopPropagation();_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\')">'+
         _SVG.bolt+'지원</button>':'')+
     '</div>';
   if(!isClosed||(_CU&&_CU.type==='agency'&&d.agencyId===_CU.uid))div.onclick=function(){_showPostDetail(d);};
@@ -8991,11 +8991,11 @@ function _showPostDetail(d){
     '</div>'+
     (d.description?'<div class="card" style="font-size:13px;line-height:1.7;color:var(--t2)">'+(d.description||'')+'</div>':'')+
     (_CU&&_CU.type==='driver'&&d.status==='open'?
-      '<button class="btn-main" onclick="_quickApply(\''+d.id+'\',\''+d.agencyId+'\',\''+d.agencyName+'\');_closeModal()">바로 지원하기</button>':
+      '<button class="btn-main" onclick="_quickApply(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+d.agencyName+'\\');_closeModal()">바로 지원하기</button>':
       _CU&&_CU.type==='agency'&&d.agencyId===_CU.uid?
         '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'+
-          '<button class="btn-main" onclick="_showApplicants(\''+d.id+'\')">지원자 확인</button>'+
-          (d.status==='open'?'<button class="btn-rd" style="margin-top:0" onclick="_closePost(\''+d.id+'\')">공고 마감</button>':
+          '<button class="btn-main" onclick="_showApplicants(\\''+d.id+'\\')">지원자 확인</button>'+
+          (d.status==='open'?'<button class="btn-rd" style="margin-top:0" onclick="_closePost(\\''+d.id+'\\')">공고 마감</button>':
           '<div style="text-align:center;font-size:12px;color:var(--t3);padding:8px">마감된 공고</div>')+
         '</div>':
       '<div style="text-align:center;font-size:13px;color:var(--t2);padding:16px">'+(d.status==='closed'?'마감된 공고예요':'')+'</div>');
@@ -9030,7 +9030,7 @@ function _pgHomeDriver(el){
     '<div class="ai-strip-wrap">'+
       '<div class="ai-strip-hdr">'+
         '<span class="ai-strip-title"><svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:var(--ac);stroke:none;display:inline-block;vertical-align:-1px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>AI 추천 공고</span>'+
-        '<button class="ai-strip-more" onclick="_goPage(\'posts\')">전체보기</button>'+
+        '<button class="ai-strip-more" onclick="_goPage(\\'posts\\')">전체보기</button>'+
       '</div>'+
       '<div class="ai-strip" id="ai-strip"><div style="color:var(--t3);font-size:12px;padding:20px 0">AI 분석 중...</div></div>'+
     '</div>'+
@@ -9118,7 +9118,7 @@ function _renderGasWidget(stations){
       '</div>'+
       '<div style="display:flex;align-items:center;gap:8px">'+
         '<div><span class="gas-price">'+_fmt(s.price)+'</span><span class="gas-price-unit">원/L</span></div>'+
-        (s.lat&&s.lng?'<button class="gas-nav-btn" onclick="_openNavTo('+s.lat+','+s.lng+',\''+s.name.replace(/'/g,'')+'\')" >내비</button>':'')+
+        (s.lat&&s.lng?'<button class="gas-nav-btn" onclick="_openNavTo('+s.lat+','+s.lng+',\\''+s.name.replace(/'/g,'')+'\\')" >내비</button>':'')+
       '</div>'+
     '</div>';
   }).join('');
@@ -9276,9 +9276,9 @@ function _pgHomeAgency(el){
       '</div>'+
     '</div>'+
     '<div class="quick-bar">'+
-      '<button class="quick-bar-btn qb-primary" onclick="_goPage(\'add_post\')">'+_SVG.plus+'<span>공고등록</span></button>'+
+      '<button class="quick-bar-btn qb-primary" onclick="_goPage(\\'add_post\\')">'+_SVG.plus+'<span>공고등록</span></button>'+
       '<button class="quick-bar-btn qb-urgent" onclick="_addUrgentPost()">'+_SVG.bolt+'<span>긴급공고</span></button>'+
-      '<button class="quick-bar-btn qb-job" onclick="_goPage(\'jobs\')">'+_SVG.briefcase+'<span>기사채용</span></button>'+
+      '<button class="quick-bar-btn qb-job" onclick="_goPage(\\'jobs\\')">'+_SVG.briefcase+'<span>기사채용</span></button>'+
     '</div>'+
     '<div class="section-lbl">DONWAY 정산 현황 (이달)</div>'+
     '<div class="donway-row">'+
@@ -9305,7 +9305,7 @@ function _loadAgencyKPI(){
       if(!templates.length){ta.innerHTML='<div style="color:var(--t3);font-size:12px">등록된 공고가 없어요</div>';}
       else{
         ta.innerHTML='<div class="tmpl-grid">'+templates.map(function(t){
-          return '<button class="tmpl-btn" onclick="_tmplPost(\''+t.id+'\')">'+
+          return '<button class="tmpl-btn" onclick="_tmplPost(\\''+t.id+'\\')">'+
             '<div class="tmpl-area">'+(t.region||'')+' '+(t.area||'')+'</div>'+
             '<div class="tmpl-price">'+_fmt(t.unitPrice||0)+'원</div></button>';
         }).join('')+'</div>';
@@ -9434,13 +9434,13 @@ function _setAITab(on){
 function _buildPlatChips(){
   var el=document.getElementById('plat-row');if(!el)return;
   el.innerHTML=PLATFORMS.map(function(p){
-    return '<button class="chip'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\''+p+'\')">'+p+'</button>';
+    return '<button class="chip'+(p===_platFilter?' on':'')+'" onclick="_setPlatFilter(\\''+p+'\\')">'+p+'</button>';
   }).join('');
 }
 function _buildRgnChips(){
   var el=document.getElementById('rgn-row');if(!el)return;
   el.innerHTML=REGIONS.map(function(r){
-    return '<button class="chip'+(r===_rgnFilter?' on':'')+'" onclick="_setRgnFilter(\''+r+'\')">'+r+'</button>';
+    return '<button class="chip'+(r===_rgnFilter?' on':'')+'" onclick="_setRgnFilter(\\''+r+'\\')">'+r+'</button>';
   }).join('');
 }
 function _setPlatFilter(p){_platFilter=p;_pgIdx=0;_buildPlatChips();_applyFilters();}
@@ -9562,10 +9562,10 @@ function _renderWorkActive(el,w){
       '<div class="slide-label">밀어서 출발 확인</div>'+
     '</div>';
   } else if(step===1){
-    actionHTML='<button class="btn-main" style="margin-top:16px" onclick="_workArrived(\''+w.wid+'\')">현장 도착 확인</button>';
-    if(w.lat&&w.lng)actionHTML+='<button class="map-toggle" style="width:100%;margin-top:8px;justify-content:center" onclick="_openNavTo('+w.lat+','+w.lng+',\''+( w.area||'배차지').replace(/'/g,'')+'\')" >'+_SVG.map+' 내비 안내</button>';
+    actionHTML='<button class="btn-main" style="margin-top:16px" onclick="_workArrived(\\''+w.wid+'\\')">현장 도착 확인</button>';
+    if(w.lat&&w.lng)actionHTML+='<button class="map-toggle" style="width:100%;margin-top:8px;justify-content:center" onclick="_openNavTo('+w.lat+','+w.lng+',\\''+( w.area||'배차지').replace(/'/g,'')+'\\')" >'+_SVG.map+' 내비 안내</button>';
   } else if(step===2){
-    actionHTML='<button class="btn-gn" onclick="_workDone(\''+w.wid+'\')">배차 완료 처리</button>';
+    actionHTML='<button class="btn-gn" onclick="_workDone(\\''+w.wid+'\\')">배차 완료 처리</button>';
   } else if(step>=3){
     var taxState=w.taxInvoiceState||'none';
     actionHTML='<div style="padding:14px;background:var(--gnl);border-radius:var(--r);text-align:center;margin-top:4px">'+
@@ -9574,7 +9574,7 @@ function _renderWorkActive(el,w){
     '</div>'+
     (taxState==='issued'?
       '<div class="popbill-issued" style="margin-top:8px;width:100%;justify-content:center">'+_SVG.check+' 세금계산서 발행완료</div>':
-      '<button class="popbill-btn" style="width:100%;justify-content:center;margin-top:8px" onclick="_issuePopbill(\''+w.wid+'\')">'+_SVG.wallet+' 세금계산서 발행 (팝빌)</button>');
+      '<button class="popbill-btn" style="width:100%;justify-content:center;margin-top:8px" onclick="_issuePopbill(\\''+w.wid+'\\')">'+_SVG.wallet+' 세금계산서 발행 (팝빌)</button>');
   }
 
   el.innerHTML=
@@ -9708,11 +9708,11 @@ function _pgSettleMgmt(el){
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
             (w.taxInvoiceState==='issued'?'<div class="popbill-issued">'+_SVG.check+' 계산서발행</div>':
               (w.settleStatus==='confirmed'||w.settleStatus==='paid'?
-                '<button class="popbill-btn" style="margin-top:0" onclick="_issuePopbill(\''+w.wid+'\')">'+_SVG.wallet+' 세금계산서</button>':
+                '<button class="popbill-btn" style="margin-top:0" onclick="_issuePopbill(\\''+w.wid+'\\')">'+_SVG.wallet+' 세금계산서</button>':
                 ''))+
             '<span class="ss-badge '+(w.settleStatus==='paid'?'ss-paid':w.settleStatus==='confirmed'?'ss-confirmed':'ss-pending')+'">'+
               (w.settleStatus==='paid'?'지급완료':w.settleStatus==='confirmed'?'확인완료':'대기')+'</span>'+
-            (isPending?'<button style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:8px;background:var(--gnl);color:var(--gn);border:1px solid rgba(16,185,129,.2);cursor:pointer" onclick="_confirmSettle(\''+w.wid+'\')">확인</button>':'')+
+            (isPending?'<button style="font-size:12px;font-weight:700;padding:5px 14px;border-radius:8px;background:var(--gnl);color:var(--gn);border:1px solid rgba(16,185,129,.2);cursor:pointer" onclick="_confirmSettle(\\''+w.wid+'\\')">확인</button>':'')+
           '</div>'+
         '</div>';
       el2.appendChild(d2);
@@ -9752,7 +9752,7 @@ function _renderRevSim(el){
     (_revSimPosts.length?_revSimPosts.slice(0,10).map(function(d){
       var isSel=sel.indexOf(d.id)>=0;
       var dayEst=d.unitPrice&&d.volume?Math.round(d.unitPrice*d.volume/10000):0;
-      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\''+d.id+'\')">'+
+      return '<div class="sim-item'+(isSel?' sel':'')+'" onclick="_toggleSimSel(\\''+d.id+'\\')">'+
         '<div class="sim-check">'+(isSel?_SVG.check:'')+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:700">'+(d.region||'')+' '+(d.area||'')+'</div>'+
@@ -10031,9 +10031,9 @@ function _showApplicants(postId){
         (isPending?
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
             '<button class="btn-gn" style="margin-top:0;font-size:13px;padding:10px" '+
-              'onclick="_acceptApply(\''+a.aid+'\',\''+a.driverName+'\',\''+a.driverPhone+'\',\''+a.driverId+'\',\''+postId+'\')">수락</button>'+
+              'onclick="_acceptApply(\\''+a.aid+'\\',\\''+a.driverName+'\\',\\''+a.driverPhone+'\\',\\''+a.driverId+'\\',\\''+postId+'\\')">수락</button>'+
             '<button class="btn-rd" style="margin-top:0;font-size:13px;padding:10px" '+
-              'onclick="_rejectApply(\''+a.aid+'\',\''+postId+'\')">거절</button>'+
+              'onclick="_rejectApply(\\''+a.aid+'\\',\\''+postId+'\\')">거절</button>'+
           '</div>':'');
       el2.appendChild(d2);
     });
@@ -10126,7 +10126,7 @@ function _runPriceSuggest(){
       '<div class="price-box-row"><span class="price-box-lbl">AI 추천 단가</span><span class="price-box-rec">'+_fmt(d.recommended)+'원</span></div>'+
       (d.analysis?'<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'+d.analysis+'</div>':'')+
       (d.tip?'<div class="price-box-tip">'+d.tip+'</div>':'')+
-      '<button class="price-fill-btn" onclick="document.getElementById(\'ap-price\').value=\''+d.recommended+'\';_showRIQ()">이 단가 적용</button>';
+      '<button class="price-fill-btn" onclick="document.getElementById(\\'ap-price\\').value=\\''+d.recommended+'\\';_showRIQ()">이 단가 적용</button>';
   }).catch(function(){box.innerHTML='<div style="color:var(--t3);font-size:12px">조회 실패</div>';});
 }
 
@@ -10162,8 +10162,8 @@ function _pgJobs(el){
     '<div class="page-title">구인구직</div>'+
     '<div class="page-sub">기사↔대리점 매칭 게시판</div>'+
     '<div class="tabs" style="margin-bottom:16px">'+
-      '<button class="tab on" id="tab-jobs" onclick="_switchJobTab(\'jobs\')">채용공고</button>'+
-      '<button class="tab" id="tab-resumes" onclick="_switchJobTab(\'resumes\')">기사 이력서</button>'+
+      '<button class="tab on" id="tab-jobs" onclick="_switchJobTab(\\'jobs\\')">채용공고</button>'+
+      '<button class="tab" id="tab-resumes" onclick="_switchJobTab(\\'resumes\\')">기사 이력서</button>'+
     '</div>'+
     '<div id="jobs-content"><div class="card"><div style="color:var(--t2);font-size:13px">로딩 중...</div></div></div>'+
     (isDriver?
@@ -10206,7 +10206,7 @@ function _loadJobsTab(t){
           '</div>'+
           '<div class="job-foot">'+
             '<span class="job-dday">'+(j.deadline?'~'+j.deadline:'상시모집')+'</span>'+
-            (_CU&&_CU.type==='driver'?'<button class="quick-apply" onclick="event.stopPropagation();_applyJob(\''+j.id+'\',\''+j.agencyId+'\',\''+j.agencyName+'\')">'+_SVG.bolt+'지원</button>':'')+
+            (_CU&&_CU.type==='driver'?'<button class="quick-apply" onclick="event.stopPropagation();_applyJob(\\''+j.id+'\\',\\''+j.agencyId+'\\',\\''+j.agencyName+'\\')">'+_SVG.bolt+'지원</button>':'')+
           '</div>';
         el.appendChild(d2);
       });
@@ -10229,7 +10229,7 @@ function _loadJobsTab(t){
               '</div>'+
             '</div>'+
             (_CU&&_CU.type==='agency'?
-              '<button class="quick-apply" onclick="event.stopPropagation();_scoutDriver(\''+r.uid+'\',\''+r.name+'\')">'+_SVG.bolt+'스카우트</button>':
+              '<button class="quick-apply" onclick="event.stopPropagation();_scoutDriver(\\''+r.uid+'\\',\\''+r.name+'\\')">'+_SVG.bolt+'스카우트</button>':
               '<span style="font-size:11px;color:var(--t3)">'+_timeAgo(r.updatedAt)+'</span>')+
           '</div>';
         el.appendChild(d2);
@@ -10330,7 +10330,7 @@ function _pgMore(el){
     '<div class="page-sub">'+(new Date().getMonth()+1)+'월 관리 메뉴</div>'+
     '<div class="more-grid">'+
     items.map(function(it){
-      return '<div class="more-item" onclick="_goPage(\''+it.p+'\')">'+
+      return '<div class="more-item" onclick="_goPage(\\''+it.p+'\\')">'+
         '<div class="more-item-ico" style="background:'+it.bg+';color:'+it.clr+'">'+_SVG[it.ico]+'</div>'+
         '<div class="more-item-lbl">'+it.lbl+'</div>'+
         '<div class="more-item-sub">'+it.sub+'</div>'+
@@ -10382,7 +10382,7 @@ function _renderFullGasStations(stations){
       '</div>'+
       '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
         '<div><span class="gas-price">'+_fmt(s.price)+'</span><span class="gas-price-unit">원/L</span></div>'+
-        (s.lat&&s.lng?'<button class="gas-nav-btn" onclick="_openNavTo('+s.lat+','+s.lng+',\''+s.name.replace(/'/g,'')+'\')" >내비</button>':'')+
+        (s.lat&&s.lng?'<button class="gas-nav-btn" onclick="_openNavTo('+s.lat+','+s.lng+',\\''+s.name.replace(/'/g,'')+'\\')" >내비</button>':'')+
       '</div>'+
     '</div>';
   }).join('');
