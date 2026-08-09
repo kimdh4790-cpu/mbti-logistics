@@ -10292,8 +10292,9 @@ function _showPostDetail(d){
 
   // 지도 표시
   window._detailZones = d.zones||[];
-  if(d.zones&&d.zones.length){
-    setTimeout(function(){_showDetailMap(d.zones[0].lat,d.zones[0].lng,d.zones[0].name);},400);
+  var _firstZone=d.zones&&d.zones.length&&d.zones[0];
+  if(_firstZone&&typeof _firstZone.lat==='number'&&typeof _firstZone.lng==='number'){
+    setTimeout(function(){_showDetailMap(_firstZone.lat,_firstZone.lng,_firstZone.name);},400);
   } else if(d.lat&&d.lng){
     setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
   }
@@ -14428,6 +14429,7 @@ function _selectAddr(idx){
 
 // 공고 상세 지도
 function _showDetailMap(lat,lng,name){
+  if(typeof lat!=='number'||typeof lng!=='number'||isNaN(lat)||isNaN(lng))return;
   _loadKakaoMap(function(){
     var container=document.getElementById('detail-map');
     if(!container)return;
