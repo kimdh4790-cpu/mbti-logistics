@@ -1709,7 +1709,8 @@ async function acceptExchange(){
           const body = await request.json();
           if (!body.dealerId || !body.name) return new Response(JSON.stringify({error:'dealerId and name required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token = await getAccessToken(env);
-          const docId = body.staffId || body.phone || (body.dealerId+'_'+Date.now());
+          const safeName = (body.name||'').replace(/\s+/g,'').toLowerCase();
+          const docId = body.staffId || (body.phone ? body.dealerId+'_'+body.phone : body.dealerId+'_'+safeName);
           const fields = {};
           Object.keys(body).forEach(k => {
             const v = body[k];
