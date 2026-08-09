@@ -60,15 +60,15 @@ function _filoPageKiosk(el){
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">메뉴 로딩 중...</div>'+
  '</div></div>'+
  '<div class="cart-panel">'+
- '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px">'+_svgIcon('list')+' 주문 내역</div>'+
- '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
- '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
- '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
- '<span style="font-size:13px;font-weight:700">합계</span>'+
+ '<div style="padding:12px 16px;border-bottom:1px solid var(--bd)">'+
+ '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+ '<span style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">'+_svgIcon('list')+' 주문 내역</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="_filoPay()">'+_svgIcon('credit-card')+' 결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
- '</div></div></div></div>';
+ '</div>'+
+ '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
+ '</div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)
  var _kioskTableUnsub=null;
