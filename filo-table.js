@@ -332,16 +332,23 @@ function _filoTableOrderModal(did,table,order){
 
    var itemsHtml='';
    if(hasOrder&&order.orders&&order.orders.length){
-    // 주문 단위로 렌더 → 각 주문의 paid 여부로 정확히 표시
-    var rowsHtml='';
+    // 같은 메뉴 병합 후 렌더
+    var mergedMap={};var mergedOrder=[];
     order.orders.forEach(function(ord){
-     var isOrdPaid=ord.paid;
+     var isPaid=ord.paid||ord.status==='cleared'||ord.status==='paid';
      (ord.items||[]).forEach(function(it){
-      rowsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
-       '<span style="color:'+(isOrdPaid?'#818cf8':'var(--tx)')+'">'+
-       (it.emoji?it.emoji+' ':'')+(it.name||'')+(it.qty?' ×'+it.qty:'')+'</span>'+
-       '<span style="font-weight:700;color:'+(isOrdPaid?'#818cf8':'var(--tx)')+'">₩'+((it.price||0)*(it.qty||1)).toLocaleString()+'</span></div>';
+      var k=it.name||'';
+      if(mergedMap[k]){mergedMap[k].qty+=(it.qty||1);}
+      else{mergedMap[k]=Object.assign({},it,{qty:it.qty||1,_paid:isPaid});mergedOrder.push(k);}
      });
+    });
+    var rowsHtml='';
+    mergedOrder.forEach(function(k){
+     var it=mergedMap[k];
+     rowsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px">'+
+      '<span style="color:'+(it._paid?'#818cf8':'var(--tx)')+'">'+
+      (it.emoji?it.emoji+' ':'')+(it.name||'')+' ×'+it.qty+'</span>'+
+      '<span style="font-weight:700;color:'+(it._paid?'#818cf8':'var(--tx)')+'">₩'+((it.price||0)*it.qty).toLocaleString()+'</span></div>';
     });
     itemsHtml=rowsHtml||'<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px">주문 내역 없음</div>';
    } else if(allItemsList.length){
@@ -420,9 +427,12 @@ function _filoTableOrderModal(did,table,order){
     (function(ord,tNum,tName,tot){payBtn.onclick=function(){
      // 주문 아이템을 _cartItems에 로드 후 결제 모달 열기
      var flatItems=[];
+     var orderIds=[];
      if(ord.orders&&ord.orders.length){
       ord.orders.forEach(function(o){
-       if(o.paid)return; // 이미 결제된 주문 제외
+       if(o.paid)return;
+       var oid=o._id||o.id;
+       if(oid&&orderIds.indexOf(oid)<0)orderIds.push(oid);
        (o.items||[]).forEach(function(it){
         var ex=flatItems.find(function(f){return f.name===it.name;});
         if(ex){ex.qty+=(it.qty||1);}else{flatItems.push(Object.assign({},it,{qty:it.qty||1}));}
@@ -431,6 +441,7 @@ function _filoTableOrderModal(did,table,order){
      } else { flatItems=(ord.items||[]).slice(); }
      _cartItems=flatItems.map(function(it){return {id:it.id||'',name:it.name,price:it.price,qty:it.qty||1,emoji:it.emoji||''};});
      window._selectedTableId=tNum;window._selectedTableName=tName;
+     window._selectedOrderIds=orderIds; // 기존 QR 주문 IDs — 결제 시 cleared 처리용
      window._posDiscount=0;
      mo.remove();
      if(typeof _filoPay==='function')_filoPay();
