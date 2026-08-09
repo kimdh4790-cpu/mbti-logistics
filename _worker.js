@@ -8394,8 +8394,7 @@ service cloud.firestore {
 
 
 // ── yongcha.app 핸들러 ────────────────────────────────────────────
-const YONGCHA_HTML_YONGCHA = `
-<!DOCTYPE html>
+const YONGCHA_HTML_YONGCHA = `<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
