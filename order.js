@@ -485,42 +485,37 @@ function _changeTable(){
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
 function _showFCMGate(){
- // 아이폰 크롬 감지
- var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
- var isChrome=/CriOS/.test(navigator.userAgent);
- if(isIOS&&isChrome){
-  // 아이폰 크롬 → FCM 불가, 안내만 표시
-  var notice=document.getElementById('ios-chrome-notice');
-  if(notice)notice.style.display='block';
-  return;
- }
  var gate=document.getElementById('fcm-gate');
- if(!gate)return;
- // 이미 토큰 있으면 스킵
+ if(gate)gate.style.display='none'; // 커스텀 모달 제거
+ // iOS 크롬 → FCM 미지원
+ if(/CriOS/.test(navigator.userAgent)) return;
+ if(!('Notification' in window)||!('serviceWorker' in navigator)) return;
+ // 이미 토큰 있으면 조용히 등록
  try{
   var saved=localStorage.getItem('filo_fcm_'+_did);
-  if(saved){_fcmToken=saved;return;}
+  if(saved){_fcmToken=saved;_initFCM();return;}
  }catch(e){}
- // 브라우저 지원 여부
- if(!('Notification' in window)||!('serviceWorker' in navigator)){return;}
- // 이미 허용된 경우 바로 토큰 발급
- if(Notification.permission==='granted'){
-  _initFCM();return;
+ // 이미 허용 → 즉시 등록
+ if(Notification.permission==='granted'){_initFCM();return;}
+ // 거부됨 → 스킵
+ if(Notification.permission==='denied') return;
+ // 미결정 → 첫 터치/클릭 시 브라우저 네이티브 권한 요청
+ var _fcmAsked=false;
+ function _askPerm(){
+  if(_fcmAsked)return; _fcmAsked=true;
+  document.removeEventListener('touchstart',_askPerm,true);
+  document.removeEventListener('click',_askPerm,true);
+  Notification.requestPermission().then(function(perm){
+   if(perm==='granted') _initFCM();
+  });
  }
- gate.style.display='flex';
+ document.addEventListener('touchstart',_askPerm,{capture:true,passive:true,once:true});
+ document.addEventListener('click',_askPerm,{capture:true,once:true});
 }
 
 function _requestFCM(){
- var btn=document.getElementById('fcm-allow-btn');
- var deniedMsg=document.getElementById('fcm-denied-msg');
- if(btn)btn.textContent='처리 중...';
  Notification.requestPermission().then(function(perm){
-  if(perm==='granted'){
-   _initFCM();
-  } else {
-   if(btn)btn.textContent='알림 허용하기';
-   if(deniedMsg)deniedMsg.style.display='block';
-  }
+  if(perm==='granted') _initFCM();
  });
 }
 
@@ -539,11 +534,16 @@ function _initFCM(){
     if(token){
      _fcmToken=token;
      try{localStorage.setItem('filo_fcm_'+_did,token);}catch(e){}
-     // [FCM] 토큰 발급 성공
+     // Firestore 주문 문서에 고객 FCM 토큰 저장
+     if(_db&&_did&&_tNum){
+      var orderId=localStorage.getItem('filo_order_'+_did)||'';
+      if(orderId){
+       _db.collection('filo_orders').doc(orderId).update({guestFcmToken:token}).catch(function(){});
+      }
+     }
     }
     if(gate)gate.style.display='none';
    }).catch(function(e){
-    // [FCM] 토큰 발급 실패 (무시)
     if(gate)gate.style.display='none';
    });
   }catch(e){
