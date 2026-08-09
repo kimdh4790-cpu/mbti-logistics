@@ -342,36 +342,23 @@ function _memberLogin(){
   if(!_did){_showErr('URL에 매장 정보가 없습니다');return;}
   document.querySelector('.btn-primary').textContent='확인 중...';
 
-  _db.collection('filo_customers')
-    .where('dealerId','==',_did)
-    .where('phone','==',phone)
-    .get().then(function(snap){
-      if(snap.empty){
-        /* 미등록 → 자동으로 간단히 생성 (이름 없이 전화번호만) */
-        return _db.collection('filo_customers').add({
-          dealerId:_did, phone:phone, name:'회원',
-          point:0, stamp:0, grade:'일반', visitCount:0,
-          joinedAt:new Date().toISOString(), createdAt:new Date().toISOString(),
-          source:'member_portal'
-        }).then(function(ref){
-          _memberId=ref.id;
-          _memberData={dealerId:_did,phone:phone,name:'회원',point:0,stamp:0,grade:'일반',visitCount:0};
-          sessionStorage.setItem('filo_member',JSON.stringify({did:_did,id:_memberId,data:_memberData}));
-          _showApp(true);
-        });
-      }
-      _memberId=snap.docs[0].id;
-      _memberData=snap.docs[0].data();
-      sessionStorage.setItem('filo_member',JSON.stringify({did:_did,id:_memberId,data:_memberData}));
-      /* FCM 토큰 저장 */
-      if(_memberFcmToken){
-        _db.collection('filo_customers').doc(_memberId).update({fcmToken:_memberFcmToken,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
-      }
-      _showApp(false);
-    }).catch(function(e){
-      document.querySelector('.btn-primary').textContent='로그인';
-      _showErr(e.message);
-    });
+  fetch('/member/lookup',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,phone:phone})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){throw new Error(d.error);}
+    _memberId=d.id;
+    _memberData={dealerId:_did,phone:phone,name:d.name,point:d.point,stamp:d.stamp,grade:d.grade,visitCount:d.visitCount};
+    sessionStorage.setItem('filo_member',JSON.stringify({did:_did,id:_memberId,data:_memberData}));
+    if(_memberFcmToken){
+      _db.collection('filo_customers').doc(_memberId).update({fcmToken:_memberFcmToken,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+    }
+    _showApp(!d.found);
+  }).catch(function(e){
+    document.querySelector('.btn-primary').textContent='포인트 확인';
+    _showErr(e.message);
+  });
 }
 
 function _showErr(msg){
