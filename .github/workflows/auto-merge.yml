@@ -24,14 +24,6 @@ jobs:
           git merge origin/${{ github.ref_name }} --no-edit
           git push origin main
 
-      - name: Deploy Worker
-        env:
-          CLOUDFLARE_API_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-          CLOUDFLARE_EMAIL: kimdh4790@gmail.com
-        run: |
-          npm install -g wrangler@4 --silent
-          npx wrangler deploy --compatibility-date 2024-01-01 || echo "⚠️ wrangler deploy 실패 (계속 진행)"
-
       - name: Upload HTML/JS assets to KV
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
