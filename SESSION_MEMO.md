@@ -1,4 +1,79 @@
 # 세션 인계 메모 — 2026-08-09
+> FILO·DINE 관련 작업은 현재 세션(필로다인 전담)이 담당. 다른 세션은 아래 배포 절차만 따를 것.
+
+---
+
+## 다른 세션용 — 배포 절차 핵심 요약
+
+### 코드 수정 후 push 방법 (클라우드 코드에서)
+```bash
+# 1. 브랜치 확인 (claude/* 형식이어야 자동 머지됨)
+git branch
+
+# 2. 커밋 & 푸시
+git add 수정한파일.js
+git commit -m "feat: 작업내용"
+git push -u origin claude/현재브랜치명
+```
+
+### push 이후 자동 흐름 (건드릴 필요 없음)
+```
+push (claude/* 브랜치)
+  → auto-merge.yml 자동 실행
+    → main 브랜치로 자동 머지
+    → KV 업로드 (아래 파일 목록만 자동 업로드됨)
+    → Cloudflare 캐시 전체 퍼지 (filo.ai.kr, donway.ai.kr, dine.ne.kr, mbtico.kr, yongcha.app)
+```
+
+### KV 자동 업로드 대상 파일 목록
+아래 파일들만 push 시 자동으로 KV에 올라감:
+```
+filo.html, filo-smart-pos.html, filo-common.js, filo-auth.js, filo-margin.js,
+filo-booking.js, filo-members.js, filo-menu-mgmt.js, filo-menu-recipe.js,
+filo-payroll2.js, filo-payment.js, filo-schedule.js, filo-settings.js,
+filo-pos.js, filo-pos-core.js, filo-pos-ui.js, filo-menu.js, filo-qr.js,
+filo-inventory.js, filo-report.js, filo-table.js, filo-staff.js, filo-order.js,
+filo-order-common.js, filo-landing.js, filo-landing.html,
+dine.html, dine.js, dine-schedule.js, dine-analytics.js, dine-staff.js,
+dine-payroll.js, dine-sales.js, dine-tax.js, dine-member.js, dine-landing.html,
+donway_landing.js, order.html, order.js, order-done.html, table-order.html,
+store.html, kitchen.html, yongcha.html, yongcha-landing.html,
+mbtico-ctrl.js, wait.html, wait-join.html, join.html
+```
+**목록에 없는 파일**은 push해도 KV에 안 올라감 → 로컬에서 수동 업로드 필요.
+
+### 목록에 없는 파일 수동 KV 업로드 (로컬에서만 가능)
+```bash
+npx wrangler kv key put --remote \
+  --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b \
+  파일명 --path ./파일경로
+```
+
+### _worker.js 수정 시 주의
+- `_worker.js`는 KV 자동 업로드 목록에 없음 → Worker 배포는 로컬에서만
+- 로컬 배포 명령 (Windows PowerShell):
+```powershell
+(Get-Content _worker.js -Raw) -replace '}` + '{' + `status:400', '}' | Set-Content _worker.js
+npx wrangler deploy
+```
+- **클라우드 코드에서는 _worker.js 수정 후 push만** → 로컬에서 별도 배포 필요
+
+### PR 생성 절대 금지
+- push 후 PR 만들지 말 것. auto-merge가 자동으로 main에 머지함.
+- `donway-settle-app CI 빨간 표시` → 무시해도 됨 (미사용 프로젝트)
+
+### yongcha.app 배포 (별도)
+KV 업로드로는 반영 안 됨. 로컬에서:
+```bash
+git pull origin main && npx wrangler deploy
+```
+
+### mbtico.kr 배포 (별도)
+```bash
+cd mbtico-pages && npx wrangler deploy
+```
+
+---
 
 ## 브랜치 상태
 - **작업 브랜치**: `claude/n8n-docker-oracle-cloud-shxrod`
