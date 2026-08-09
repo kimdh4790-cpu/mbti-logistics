@@ -370,6 +370,8 @@ function _doOrder(payType){
     body:JSON.stringify({did:_did,title:_storeName+' 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
+  // 고객 영수증 FCM 자동 발송 (이미 토큰 있으면 즉시, 없으면 토큰 발급 후)
+  _autoReceiptFCM(ref.id, total, items);
  }).catch(function(e){
   _filoToast('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
@@ -606,6 +608,40 @@ function _sendCsQuestion(){
 }
 
 // ── 영수증 알림 받기 ─────────────────────────────────────────────
+function _autoReceiptFCM(orderId, total, items){
+ if(!('Notification' in window)||!('serviceWorker' in navigator)) return;
+ if(Notification.permission==='denied') return;
+ var orderLabel='테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 완료';
+ function _doSend(tok){
+  if(!tok) return;
+  try{localStorage.setItem('filo_fcm_'+_did,tok);}catch(e){}
+  // Firestore 주문에 토큰 저장
+  if(_db&&orderId) _db.collection('filo_orders').doc(orderId).update({guestFcmToken:tok}).catch(function(){});
+  fetch('/fcm/notify-drivers',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+    tokens:[tok],
+    title:_storeName+' 영수증',
+    body:orderLabel,
+    type:'receipt',
+    url:location.href
+   })
+  }).catch(function(){});
+ }
+ // 이미 토큰 있으면 바로 발송
+ if(_fcmToken){_doSend(_fcmToken);return;}
+ // 토큰 없으면 권한 요청 후 발급
+ Notification.requestPermission().then(function(perm){
+  if(perm!=='granted') return;
+  navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+   .then(function(reg){return reg.update().then(function(){return reg;});})
+   .then(function(reg){return firebase.messaging().getToken({vapidKey:_VAPID_KEY,serviceWorkerRegistration:reg});})
+   .then(function(tok){_fcmToken=tok;_doSend(tok);})
+   .catch(function(){});
+ });
+}
+
 function reqReceiptFCM(){
   var btn=document.getElementById('receipt-fcm-btn');
   var st=document.getElementById('receipt-fcm-status');
