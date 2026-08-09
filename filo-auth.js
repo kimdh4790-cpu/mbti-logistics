@@ -156,7 +156,7 @@ function _showApp(){
    var el=document.getElementById('sidebar-clock');
    if(el)el.textContent=hh+':'+mm+':'+ss;
    var topClock=document.getElementById('topbar-clock');
-   if(topClock)topClock.textContent=hh+':'+mm;
+   if(topClock)topClock.textContent=hh+':'+mm+':'+ss;
   },1000);
  }
  var prof=document.getElementById('sidebar-profile');
@@ -379,9 +379,9 @@ function _buildFiloNav(){
  menus.push({s:'설정',items:_settings});
 
  var html='';
- var _storedNav=localStorage.getItem('filo_nav_closed');
+ var _storedNav=localStorage.getItem('filo_nav_closed2');
  var _closedG=_storedNav!==null?JSON.parse(_storedNav):[0,1,2,3,4,5,6,7,8,9];
- try{if(_storedNav===null)localStorage.setItem('filo_nav_closed',JSON.stringify([0,1,2,3,4,5,6,7,8,9]));}catch(e){}
+ try{if(_storedNav===null)localStorage.setItem('filo_nav_closed2',JSON.stringify([0,1,2,3,4,5,6,7,8,9]));}catch(e){}
 
  menus.forEach(function(g,gi){
   var isClosed=_closedG.indexOf(gi)>=0;
@@ -449,13 +449,13 @@ function _toggleNavGroup(gi,el){
 
  }
 
- var saved=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');
+ var saved=JSON.parse(localStorage.getItem('filo_nav_closed2')||'[]');
 
  if(closing&&saved.indexOf(gi)<0)saved.push(gi);
 
  else saved=saved.filter(function(x){return x!==gi;});
 
- localStorage.setItem('filo_nav_closed',JSON.stringify(saved));
+ localStorage.setItem('filo_nav_closed2',JSON.stringify(saved));
 
 }
 
