@@ -5,6 +5,9 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
+env:
+  OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING: "True"
+
 jobs:
   create-a1-flex:
     runs-on: ubuntu-latest
@@ -26,6 +29,7 @@ jobs:
           chmod 600 ~/.oci/oci_api_key.pem
           printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=ap-tokyo-1\nkey_file=%s\n' \
             "$OCI_USER" "$OCI_FP" "$OCI_TENANCY" "$HOME/.oci/oci_api_key.pem" > ~/.oci/config
+          chmod 600 ~/.oci/config
 
       - name: 기존 인스턴스 확인
         id: check
@@ -36,10 +40,9 @@ jobs:
             --compartment-id "$TENANCY" \
             --lifecycle-state RUNNING \
             --query 'length(data)' \
-            --raw-output 2>&1 || echo "0")
+            --raw-output 2>&1)
           if ! echo "$COUNT" | grep -qE '^[0-9]+$'; then
-            echo "OCI 오류: $COUNT"
-            exit 1
+            echo "OCI 오류: $COUNT"; exit 1
           fi
           echo "running=$COUNT" >> "$GITHUB_OUTPUT"
           if [ "$COUNT" -gt "0" ]; then
