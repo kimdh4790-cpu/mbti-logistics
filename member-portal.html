@@ -55,14 +55,14 @@ label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;le
   <div style="text-align:center;margin-bottom:20px">
     <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#0891b2,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px">🎁</div>
     <div style="font-size:19px;font-weight:900;margin-bottom:4px" id="login-store">회원 포털</div>
-    <div style="font-size:12px;color:var(--t3)">등록된 연락처로 로그인하세요</div>
+    <div style="font-size:12px;color:var(--t3)">휴대폰 번호만 입력하면 바로 확인됩니다</div>
   </div>
   <div class="fg"><label>휴대폰 번호</label>
     <input id="l-phone" type="tel" placeholder="010-0000-0000" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3').substring(0,13)" onkeydown="if(event.key==='Enter')_memberLogin()">
   </div>
   <div id="l-err" style="font-size:11px;color:#ef4444;margin-bottom:10px;display:none"></div>
-  <button class="btn-primary" onclick="_memberLogin()">로그인</button>
-  <button class="btn-secondary" onclick="location.href='/member-join?did='+_did">처음 방문이신가요? 회원가입</button>
+  <button class="btn-primary" onclick="_memberLogin()">포인트 확인</button>
+  <div style="font-size:11px;color:var(--t3);text-align:center;margin-top:8px;line-height:1.6">별도 회원가입 없이 바로 이용 가능합니다<br>포인트 적립 시 알림을 받으려면 알림 허용을 눌러주세요</div>
 </div>
 </div>
 
@@ -272,8 +272,11 @@ label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;le
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
 var _db=null,_did='',_memberData={},_memberId='';
+var _MEMBER_VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
+var _memberFcmToken='';
 
 function _init(){
   var cfg={apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'862900137263',appId:'1:862900137263:web:a1b2c3d4e5f6a7b8'};
@@ -297,26 +300,78 @@ function _init(){
     var s=JSON.parse(saved);
     if(s.did===_did){_did=s.did;_memberId=s.id;_memberData=s.data;_showApp();}
   }
+
+  /* FCM 권한 요청 — 첫 터치 시 */
+  _initMemberFCM();
+}
+
+function _initMemberFCM(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator)) return;
+  function _doFcmReg(){
+    Notification.requestPermission().then(function(p){
+      if(p!=='granted') return;
+      navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+        .then(function(reg){return reg.update().then(function(){return reg;});})
+        .then(function(reg){return firebase.messaging().getToken({vapidKey:_MEMBER_VAPID,serviceWorkerRegistration:reg});})
+        .then(function(tok){
+          if(!tok) return;
+          _memberFcmToken=tok;
+          if(_memberId) _db.collection('filo_customers').doc(_memberId).update({fcmToken:tok,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+        }).catch(function(){});
+    });
+  }
+  if(Notification.permission==='granted'){
+    navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
+      .then(function(reg){return firebase.messaging().getToken({vapidKey:_MEMBER_VAPID,serviceWorkerRegistration:reg});})
+      .then(function(tok){
+        if(!tok) return;
+        _memberFcmToken=tok;
+        if(_memberId) _db.collection('filo_customers').doc(_memberId).update({fcmToken:tok,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+      }).catch(function(){});
+  } else if(Notification.permission!=='denied'){
+    var _asked=false;
+    function _ask(){if(_asked)return;_asked=true;document.removeEventListener('touchstart',_ask,true);document.removeEventListener('click',_ask,true);_doFcmReg();}
+    document.addEventListener('touchstart',_ask,{capture:true,passive:true,once:true});
+    document.addEventListener('click',_ask,{capture:true,once:true});
+  }
 }
 
 function _memberLogin(){
   var phone=(document.getElementById('l-phone').value||'').replace(/-/g,'');
   if(phone.length<10){_showErr('올바른 연락처를 입력하세요');return;}
   if(!_did){_showErr('URL에 매장 정보가 없습니다');return;}
+  document.querySelector('.btn-primary').textContent='확인 중...';
 
   _db.collection('filo_customers')
     .where('dealerId','==',_did)
     .where('phone','==',phone)
     .get().then(function(snap){
       if(snap.empty){
-        _showErr('등록된 회원이 아닙니다.\n회원가입을 먼저 해주세요');
-        return;
+        /* 미등록 → 자동으로 간단히 생성 (이름 없이 전화번호만) */
+        return _db.collection('filo_customers').add({
+          dealerId:_did, phone:phone, name:'회원',
+          point:0, stamp:0, grade:'일반', visitCount:0,
+          joinedAt:new Date().toISOString(), createdAt:new Date().toISOString(),
+          source:'member_portal'
+        }).then(function(ref){
+          _memberId=ref.id;
+          _memberData={dealerId:_did,phone:phone,name:'회원',point:0,stamp:0,grade:'일반',visitCount:0};
+          sessionStorage.setItem('filo_member',JSON.stringify({did:_did,id:_memberId,data:_memberData}));
+          _showApp(true);
+        });
       }
       _memberId=snap.docs[0].id;
       _memberData=snap.docs[0].data();
       sessionStorage.setItem('filo_member',JSON.stringify({did:_did,id:_memberId,data:_memberData}));
-      _showApp();
-    }).catch(function(e){_showErr(e.message);});
+      /* FCM 토큰 저장 */
+      if(_memberFcmToken){
+        _db.collection('filo_customers').doc(_memberId).update({fcmToken:_memberFcmToken,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+      }
+      _showApp(false);
+    }).catch(function(e){
+      document.querySelector('.btn-primary').textContent='로그인';
+      _showErr(e.message);
+    });
 }
 
 function _showErr(msg){
@@ -324,14 +379,22 @@ function _showErr(msg){
   el.textContent=msg;el.style.display='block';
 }
 
-function _showApp(){
+function _showApp(isNew){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
 
-  var name=_memberData.name||'회원';
+  /* 신규 등록 시 안내 토스트 */
+  if(isNew) setTimeout(function(){_toast('포인트 적립 시 알림을 받게됩니다');},600);
+
+  /* FCM 토큰 저장 (로그인 후 등록된 경우) */
+  if(_memberFcmToken&&_memberId){
+    _db.collection('filo_customers').doc(_memberId).update({fcmToken:_memberFcmToken,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
+  }
+
+  var name=_memberData.name&&_memberData.name!=='회원'?_memberData.name:(_memberData.phone||'').slice(-4)?'*'+(_memberData.phone||'').slice(-4)+'님':'회원';
   document.getElementById('mem-avatar').textContent=name.slice(0,1);
   document.getElementById('mem-name').textContent=name;
-  document.getElementById('topbar-name').textContent=name+'님 환영합니다 👋';
+  document.getElementById('topbar-name').textContent='환영합니다 '+name;
   document.getElementById('mem-visit').textContent='방문 '+(_memberData.visitCount||0)+'회';
   document.getElementById('mem-joined').textContent=(_memberData.joinedAt||'').slice(0,10);
 
