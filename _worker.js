@@ -8424,12 +8424,14 @@ const YONGCHA_HTML_YONGCHA = `
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
 
-#ld{position:fixed;inset:0;background:linear-gradient(135deg,#060b1a 0%,#0d1a3a 60%,#1a2d5a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
-.ld-mark{width:72px;height:72px;border-radius:22px;background:rgba(79,120,245,.18);display:flex;align-items:center;justify-content:center;border:1px solid rgba(79,120,245,.35);box-shadow:0 8px 32px rgba(79,120,245,.3)}
-.ld-mark svg{width:38px;height:38px;stroke:#4f78f5;fill:none;stroke-width:2}
-.ld-title{font-size:32px;font-weight:900;color:#fff;letter-spacing:-.5px}
-.ld-sub{font-size:13px;color:rgba(255,255,255,.45)}
-.spinner{width:24px;height:24px;border:2.5px solid rgba(255,255,255,.12);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes ldPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,120,245,.5),0 8px 32px rgba(79,120,245,.3)}70%{box-shadow:0 0 0 14px rgba(79,120,245,0),0 8px 32px rgba(79,120,245,.3)}}
+@keyframes ldSlide{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+#ld{position:fixed;inset:0;background:linear-gradient(160deg,#030710 0%,#091022 50%,#111c3d 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px}
+.ld-mark{width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg,rgba(79,120,245,.25),rgba(99,102,241,.15));display:flex;align-items:center;justify-content:center;border:1px solid rgba(79,120,245,.4);animation:ldPulse 2.2s ease-out infinite}
+.ld-mark svg{width:42px;height:42px;stroke:#6d9cff;fill:none;stroke-width:1.8}
+.ld-title{font-size:36px;font-weight:900;color:#fff;letter-spacing:-.8px;animation:ldSlide .5s ease-out .1s both}
+.ld-sub{font-size:13px;color:rgba(255,255,255,.38);animation:ldSlide .5s ease-out .2s both;letter-spacing:.3px}
+.spinner{width:28px;height:28px;border:2.5px solid rgba(255,255,255,.08);border-top-color:#6d9cff;border-right-color:rgba(109,156,255,.4);border-radius:50%;animation:spin .8s linear infinite;animation-delay:.3s}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 #login-screen{position:fixed;inset:0;background:linear-gradient(160deg,#060b1a 0%,#0a1535 100%);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
@@ -8800,15 +8802,15 @@ textarea.inp{resize:vertical;min-height:80px}
 <body>
 
 <div id="ld">
-  <div class="ld-mark"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="22" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H4a2 2 0 00-2 2v8"/></svg></div>
-  <div class="ld-title">용<span style="color:#6366f1">차</span></div>
+  <div class="ld-mark"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="14" height="12" rx="1.5"/><path d="M15 8h3.5l2.5 3v4h-6V8z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg></div>
+  <div class="ld-title">용<span style="color:#6d9cff">차</span></div>
   <div class="ld-sub">택배 노선 매칭 플랫폼</div>
   <div class="spinner"></div>
 </div>
 
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-mark"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="22" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H4a2 2 0 00-2 2v8"/></svg></div>
+    <div class="login-mark"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="14" height="12" rx="1.5"/><path d="M15 8h3.5l2.5 3v4h-6V8z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg></div>
     <div class="login-name">용차</div>
     <div class="login-sub">택배 노선 매칭 플랫폼</div>
     <div class="tabs">
