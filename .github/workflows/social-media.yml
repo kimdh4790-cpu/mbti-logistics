@@ -1,0 +1,94 @@
+name: 소셜미디어 홍보 영상 제작
+
+on:
+  workflow_dispatch:
+    inputs:
+      product:
+        description: '제품 선택'
+        required: true
+        type: choice
+        default: filo
+        options:
+          - filo
+          - donway
+          - yongcha
+          - mbtico
+          - all
+      steps:
+        description: '실행 단계 (콤마 구분)'
+        required: true
+        default: 'record,compose'
+        type: choice
+        options:
+          - 'record,compose'
+          - 'record'
+          - 'compose'
+          - 'record,compose,youtube'
+          - 'record,compose,instagram'
+          - 'record,compose,youtube,instagram,blog'
+      dry_run:
+        description: '업로드 없이 테스트만'
+        type: boolean
+        default: false
+
+jobs:
+  produce-video:
+    name: 영상 제작 (${{ inputs.product }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: FFmpeg 설치
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+
+      - name: Playwright Chromium 설치
+        run: npx playwright install chromium
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 0
+
+      - name: output 디렉토리 생성
+        run: mkdir -p output assets/bgm
+
+      - name: 파이프라인 실행
+        run: |
+          node scripts/run-pipeline.js \
+            --product ${{ inputs.product }} \
+            --steps "${{ inputs.steps }}" \
+            ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
+        env:
+          CHROMIUM_PATH: ''
+          HEADLESS: 'true'
+
+      - name: 결과물 업로드 (Artifacts)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mbtico-videos-${{ inputs.product }}-${{ github.run_number }}
+          path: |
+            output/*.mp4
+            output/*.webm
+            output/*.jpg
+            output/*.png
+          retention-days: 7
+
+      - name: Oracle Cloud로 전송 (선택)
+        if: ${{ contains(inputs.steps, 'youtube') || contains(inputs.steps, 'instagram') }}
+        run: |
+          echo "Oracle Cloud 업로드는 로컬 서버에서 실행됩니다."
+          echo "output/ 디렉토리를 Oracle Cloud(155.248.187.99)로 rsync:"
+          echo "  rsync -avz output/ opc@155.248.187.99:/home/opc/mbtico-output/"
+          echo "  ssh opc@155.248.187.99 'cd /home/opc && node mbti-logistics/scripts/upload/upload-youtube.js --product ${{ inputs.product }}'"
