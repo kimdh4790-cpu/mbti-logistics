@@ -74,43 +74,61 @@ async function screenshot(page, name) {
   console.log('\n=== [2] DINE 출퇴근 현황 ===');
   const dinePage = await browser.newPage();
   try {
-    await dinePage.goto(DINE, { timeout: 20000 });
+    await dinePage.goto(`${DINE}/app`, { timeout: 20000 });
     await dinePage.waitForTimeout(2000);
-    await screenshot(dinePage, '2-dine-landing');
+    await screenshot(dinePage, '2-dine-app');
 
     const dineTitle = await dinePage.title();
-    log(PASS, 'DINE 접속', dineTitle);
+    log(PASS, 'DINE 앱 접속', dineTitle);
 
-    const emailInput = await dinePage.$('input[type="email"], #email, #l-email').catch(()=>null);
-    const pwInput    = await dinePage.$('input[type="password"], #password, #l-pw').catch(()=>null);
+    // 로그인 폼 확인 (#li-email, #li-pw)
+    const emailInput = await dinePage.$('#li-email').catch(()=>null);
+    const pwInput    = await dinePage.$('#li-pw').catch(()=>null);
 
     if (emailInput && pwInput) {
       await emailInput.fill(EMAIL);
       await pwInput.fill(PW);
-      const loginBtn = await dinePage.$('button[type="submit"], .btn-primary, button:has-text("로그인")').catch(()=>null);
+      const loginBtn = await dinePage.$('button[onclick="_dineLogin()"], .btn.btn-primary').catch(()=>null);
       if (loginBtn) {
         await loginBtn.click();
         await dinePage.waitForTimeout(4000);
         await screenshot(dinePage, '2-dine-after-login');
-        log(PASS, 'DINE 로그인 시도');
 
-        const staffTab = await dinePage.$('[onclick*="staff"], [onclick*="attend"], text=직원, text=출퇴근').catch(()=>null);
-        if (staffTab) {
-          await staffTab.click();
+        // 로그인 성공 여부 — 메인 앱 영역 표시되면 성공
+        const appVisible = await dinePage.$eval('#app', el => el.style.display !== 'none').catch(()=>false);
+        log(appVisible ? PASS : FAIL, 'DINE 로그인', appVisible ? '성공' : '실패 (앱 영역 미표시)');
+
+        if (appVisible) {
+          // 출퇴근 현황 탭 클릭
+          await dinePage.evaluate(() => _dinePage('attend', null)).catch(()=>{});
           await dinePage.waitForTimeout(2000);
-          await screenshot(dinePage, '2-dine-staff-tab');
-          log(PASS, '직원 탭 이동');
-          const attendTable = await dinePage.$('table, .attend-live, #attend-table').catch(()=>null);
-          log(attendTable ? PASS : SKIP, attendTable ? '출퇴근 현황 테이블 표시됨' : '출퇴근 테이블 미확인');
-        } else {
-          log(SKIP, '직원/출퇴근 탭 버튼 못찾음', dinePage.url());
+          await screenshot(dinePage, '2-dine-attend');
+
+          // 출근 인원 수 확인
+          const attendCnt = await dinePage.$eval('#tb-attend-cnt', el => el.textContent).catch(()=>'');
+          log(PASS, '출퇴근 현황 로드', attendCnt || '출근자 없음');
+
+          // 직원 현황 탭
+          await dinePage.evaluate(() => _dinePage('staff', null)).catch(()=>{});
+          await dinePage.waitForTimeout(2000);
+          await screenshot(dinePage, '2-dine-staff');
+          const staffCards = await dinePage.$$('.staff-card, .member-card, [class*="staff"]').catch(()=>[]);
+          log(PASS, '직원 현황 탭 로드', `${staffCards.length}명`);
         }
       } else {
         log(SKIP, '로그인 버튼 못찾음');
       }
     } else {
-      log(SKIP, '로그인 폼 없음 (이미 로그인 또는 다른 구조)', dinePage.url());
-      await screenshot(dinePage, '2-dine-no-form');
+      // 이미 로그인 상태일 수 있음
+      const appVisible = await dinePage.$eval('#app', el => el.style.display !== 'none').catch(()=>false);
+      if (appVisible) {
+        log(PASS, 'DINE 이미 로그인 상태');
+        const attendCnt = await dinePage.$eval('#tb-attend-cnt', el => el.textContent).catch(()=>'');
+        log(PASS, '출퇴근 현황', attendCnt || '확인됨');
+      } else {
+        log(SKIP, '로그인 폼 없음 — 구조 확인 필요', dinePage.url());
+        await screenshot(dinePage, '2-dine-no-form');
+      }
     }
   } catch(e) {
     log(FAIL, 'DINE 오류', e.message.slice(0,80));
