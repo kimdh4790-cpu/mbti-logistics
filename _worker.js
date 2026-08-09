@@ -1313,6 +1313,10 @@ async function acceptExchange(){
           const bizAddr       = gs('bizAddr');
           const bizType       = gs('bizType');
           const bizItem       = gs('bizItem');
+          const driverBizNum  = gs('driverBizNum');
+          const settleDocId   = gs('settleDocId');
+          const taxState      = gs('taxInvoiceState');
+          const taxReqAt      = gs('taxInvoiceRequestAt');
           const monthLabel = month.replace('-', '년 ') + '월';
 
           // 라우트별 실적
@@ -1552,6 +1556,52 @@ async function acceptExchange(){
               ${taxSec}
               <div class="net-row"><span style="font-weight:700;font-size:13px">실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
               <div class="ft">${coName} · ${contactPhone} · 사업자번호 ${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
+              <!-- 세금계산서 신청 섹션 -->
+              ${(()=>{
+                if(taxState==='역발행승인'){
+                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #d1fae5;border-radius:12px;overflow:hidden">
+                    <div style="background:#ecfdf5;padding:12px 14px;border-bottom:1px solid #d1fae5">
+                      <div style="font-size:12px;font-weight:800;color:#065f46">전자세금계산서</div>
+                    </div>
+                    <div style="padding:16px;text-align:center">
+                      <div style="font-size:20px;margin-bottom:6px">✅</div>
+                      <div style="font-size:13px;font-weight:700;color:#059669">발행 완료</div>
+                      <div style="font-size:11px;color:#64748b;margin-top:4px">전자세금계산서가 발행되었습니다</div>
+                    </div>
+                  </div>`;
+                } else if(taxState==='역발행요청'){
+                  const reqDate=taxReqAt?taxReqAt.slice(0,10):'';
+                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #fef9c3;border-radius:12px;overflow:hidden">
+                    <div style="background:#fefce8;padding:12px 14px;border-bottom:1px solid #fef9c3">
+                      <div style="font-size:12px;font-weight:800;color:#92400e">전자세금계산서</div>
+                    </div>
+                    <div style="padding:16px;text-align:center">
+                      <div style="font-size:20px;margin-bottom:6px">⏳</div>
+                      <div style="font-size:13px;font-weight:700;color:#b45309">승인 대기 중</div>
+                      <div style="font-size:11px;color:#64748b;margin-top:4px">팝빌 앱 또는 문자에서 승인해 주세요${reqDate?' ('+reqDate+' 신청)':''}</div>
+                    </div>
+                  </div>`;
+                } else {
+                  const hasBiz=!!driverBizNum;
+                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+                    <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
+                      <div style="font-size:12px;font-weight:800;color:#1e3a8a">전자세금계산서 신청</div>
+                      <div style="font-size:10px;color:#64748b;margin-top:2px">역발행 방식으로 발급됩니다</div>
+                    </div>
+                    <div id="tax-form" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+                      ${hasBiz?`<div style="font-size:11px;color:#475569;padding:8px 10px;background:#f1f5f9;border-radius:6px">사업자번호 <strong>${driverBizNum}</strong>로 신청합니다</div>`
+                               :`<input id="drv-biznum" type="tel" placeholder="사업자번호 (숫자 10자리)" maxlength="12" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">`}
+                      <button onclick="${hasBiz?'requestTax()':'submitBizAndTax()'}" style="padding:12px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">세금계산서 신청하기</button>
+                      <div id="tax-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
+                    </div>
+                    <div id="tax-done" style="display:none;padding:16px;text-align:center">
+                      <div style="font-size:20px;margin-bottom:6px">⏳</div>
+                      <div style="font-size:13px;font-weight:700;color:#b45309">역발행 요청 완료</div>
+                      <div style="font-size:11px;color:#64748b;margin-top:4px">팝빌 앱 또는 문자에서 승인해 주세요</div>
+                    </div>
+                  </div>`;
+                }
+              })()}
               <!-- 계좌 등록 폼 -->
               <div id="bank-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
                 <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
@@ -1581,6 +1631,32 @@ async function acceptExchange(){
             </div>
             <script>
             var _stmtToken="${token}", _stmtDealer="${gs('dealerId')}", _stmtName="${name}";
+            async function requestTax(bizNum){
+              var msg=document.getElementById("tax-msg");
+              if(msg)msg.textContent="처리 중...";
+              try{
+                var res=await fetch("/api/stmt-tax-issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:_stmtToken,driverBizNum:bizNum||""})});
+                var d=await res.json();
+                if(d.ok){
+                  var tf=document.getElementById("tax-form");
+                  var td=document.getElementById("tax-done");
+                  if(tf)tf.style.display="none";
+                  if(td)td.style.display="block";
+                } else if(d.alreadyRequested){
+                  if(msg){msg.style.color="#b45309";msg.textContent="이미 신청된 세금계산서가 있습니다";}
+                } else {
+                  if(msg){msg.style.color="#dc2626";msg.textContent=d.error||"오류가 발생했습니다. 관리자에게 문의하세요.";}
+                }
+              }catch(e){if(msg){msg.style.color="#dc2626";msg.textContent="네트워크 오류가 발생했습니다";}}
+            }
+            async function submitBizAndTax(){
+              var inp=document.getElementById("drv-biznum");
+              var msg=document.getElementById("tax-msg");
+              if(!inp)return;
+              var biz=inp.value.replace(/[^0-9]/g,"");
+              if(biz.length!==10){if(msg){msg.style.color="#dc2626";msg.textContent="사업자번호 10자리를 입력해주세요";}return;}
+              await requestTax(biz);
+            }
             async function submitBank(){
               var bn=document.getElementById("bank-name").value;
               var bnum=document.getElementById("bank-num").value.replace(/[^0-9]/g,"");
@@ -6955,6 +7031,77 @@ service cloud.firestore {
         return new Response(JSON.stringify({ ok: false, error: e.message }), {
           status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
+      }
+    }
+
+    // ── 기사 /stmt 페이지에서 세금계산서 역발행 신청 (/api/stmt-tax-issue) ──
+    if (path === '/api/stmt-tax-issue' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { token: stmtToken, driverBizNum: bodyBizNum } = body;
+        if (!stmtToken) return new Response(JSON.stringify({ok:false,error:'token 필수'}), {status:400, headers:{'Content-Type':'application/json'}});
+
+        const fsToken = await getAccessToken(env);
+        // statement_share 문서 조회
+        const docRes = await fetch(`${FS_BASE}/statement_share/${stmtToken}`, {
+          headers: { 'Authorization': `Bearer ${fsToken}` }
+        });
+        if (!docRes.ok) return new Response(JSON.stringify({ok:false,error:'명세서를 찾을 수 없습니다'}), {status:404, headers:{'Content-Type':'application/json'}});
+        const docData = await docRes.json();
+        const f = docData.fields || {};
+        const gs2 = k => f[k]?.stringValue || '';
+        const gn2 = k => parseFloat(f[k]?.integerValue || f[k]?.doubleValue || 0);
+
+        // 중복 신청 방지
+        const existingState = gs2('taxInvoiceState');
+        if (existingState === '역발행요청' || existingState === '역발행승인') {
+          return new Response(JSON.stringify({ok:false,alreadyRequested:true}), {headers:{'Content-Type':'application/json'}});
+        }
+
+        const senderCorpNum = bodyBizNum || gs2('driverBizNum');
+        if (!senderCorpNum) {
+          return new Response(JSON.stringify({ok:false,needBizNum:true}), {headers:{'Content-Type':'application/json'}});
+        }
+
+        const receiverCorpNum = gs2('bizNum') || '373-86-02536';
+        const settleDocId     = gs2('settleDocId');
+        const vatInc = gn2('vatIncome') || gn2('net');
+        const supplyAmt = Math.round(vatInc / 1.1);
+        const taxAmt    = vatInc - supplyAmt;
+        const senderName   = gs2('driverName');
+        const receiverName = gs2('_coName') || gs2('companyName');
+        const month        = gs2('month');
+        const writeDate    = month ? month.replace('-','') + '01' : '';
+
+        const issueResult = await popbillIssueReverseDonway(env, {
+          settleId:       settleDocId || stmtToken,
+          senderCorpNum,
+          senderName,
+          receiverCorpNum,
+          receiverName,
+          supplyAmt,
+          taxAmt,
+          totalAmt: vatInc,
+          writeDate,
+          itemName: '쿠팡 배송 정산비'
+        });
+
+        // statement_share 업데이트
+        const now = new Date().toISOString();
+        const patchFields = {
+          taxInvoiceState:     { stringValue: '역발행요청' },
+          taxInvoiceRequestAt: { stringValue: now },
+          ...(bodyBizNum ? { driverBizNum: { stringValue: bodyBizNum } } : {})
+        };
+        await fetch(`${FS_BASE}/statement_share/${stmtToken}?${Object.keys(patchFields).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: patchFields })
+        });
+
+        return new Response(JSON.stringify({ok:true, ...issueResult}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}});
       }
     }
 

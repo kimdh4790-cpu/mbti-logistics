@@ -28977,7 +28977,9 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
       bizAddr:(_cachedCompanyDoc&&_cachedCompanyDoc.bizAddr)||'',
       bizType:(_cachedCompanyDoc&&_cachedCompanyDoc.bizType)||'',
       bizItem:(_cachedCompanyDoc&&_cachedCompanyDoc.bizItem)||'',
-      ceoName:(_cachedCompanyDoc&&(_cachedCompanyDoc.ceoName||_cachedCompanyDoc.repName))||''
+      ceoName:(_cachedCompanyDoc&&(_cachedCompanyDoc.ceoName||_cachedCompanyDoc.repName))||'',
+      settleDocId:x.id||x.fbId||x.settleId||'',
+      driverBizNum:(function(){var n=x.bizNum||x.bizNumber||'';n=String(n).replace(/[^0-9]/g,'');if(n.length===10)return n.slice(0,3)+'-'+n.slice(3,5)+'-'+n.slice(5);return n;})()
     };
     if(_db)_db.collection('statement_share').doc(token).set(stmtData).catch(function(){});
     var variables={'#{고객?�?��?}':coName||'','#{?��?}':name||'','#{?�}':month||'',
