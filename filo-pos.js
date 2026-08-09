@@ -220,8 +220,8 @@ function _filoRenderKiosk(menus){
  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
  var catEl=document.getElementById('kiosk-cats');
  if(catEl){
- catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-brand btn-sm" style="border-radius:100px">전체</button>'+
- cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:var(--b3)">'+c+'</button>';}).join('');
+ catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-sm" style="border-radius:100px;background:#c9a84c;color:#0f172a;font-weight:800;border:none">전체</button>'+
+ cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:#F1F5F9;color:#475569;font-weight:700;border:1.5px solid rgba(0,0,0,.08)">'+c+'</button>';}).join('');
  }
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
@@ -244,8 +244,10 @@ function _filoRenderKiosk(menus){
 
 function _filoFilterKiosk(cat,btn){
  document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
- b.style.background=b===btn?'var(--br)':'var(--bg3)';
- b.style.color=b===btn?'#fff':'var(--text)';
+ b.style.background=b===btn?'#c9a84c':'#F1F5F9';
+ b.style.color=b===btn?'#0f172a':'#475569';
+ b.style.border=b===btn?'none':'1.5px solid rgba(0,0,0,.08)';
+ b.style.fontWeight=b===btn?'800':'700';
  });
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
  el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
