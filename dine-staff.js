@@ -197,13 +197,17 @@ function _dineAddStaff(did,staffId,existing){
  });
 
  box.querySelector('#sf-save-btn').onclick=function(){
+  var btn=this;
+  if(btn.disabled)return;
   var name=document.getElementById('sf-name').value.trim();
   if(!name){_dineToast('이름을 입력하세요');return;}
+  btn.disabled=true;btn.textContent='저장 중...';
   var payType=document.getElementById('sf-paytype').value;
   var wage=parseInt(document.getElementById('sf-wage').value)||0;
+  var phone=document.getElementById('sf-phone').value.trim();
   var data={
    dealerId:did,name:name,
-   phone:document.getElementById('sf-phone').value.trim(),
+   phone:phone,
    hireDate:document.getElementById('sf-hire').value,
    status:document.getElementById('sf-status').value,
    part:document.getElementById('sf-part').value,
@@ -228,8 +232,8 @@ function _dineAddStaff(did,staffId,existing){
   fetch('/api/save-member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
   .then(function(r){return r.json();}).then(function(res){
    if(res.ok){_dineToast('저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}
-   else{_dineToast('' + ( res.error||'저장 실패'));}
-  }).catch(function(err){_dineToast(err.message);});
+   else{btn.disabled=false;btn.textContent='저장';_dineToast('' + (res.error||'저장 실패'));}
+  }).catch(function(err){btn.disabled=false;btn.textContent='저장';_dineToast(err.message);});
  };
  mo.appendChild(box);
  mo.onclick=function(ev){if(ev.target===mo)mo.remove();};
