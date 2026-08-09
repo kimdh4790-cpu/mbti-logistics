@@ -24,8 +24,8 @@ jobs:
           mkdir -p ~/.oci
           printf '%s' "$OCI_KEY" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
-          printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=ap-tokyo-1\nkey_file=/root/.oci/oci_api_key.pem\n' \
-            "$OCI_USER" "$OCI_FP" "$OCI_TENANCY" > ~/.oci/config
+          printf '[DEFAULT]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=ap-tokyo-1\nkey_file=%s\n' \
+            "$OCI_USER" "$OCI_FP" "$OCI_TENANCY" "$HOME/.oci/oci_api_key.pem" > ~/.oci/config
 
       - name: 기존 인스턴스 확인
         id: check
@@ -36,7 +36,11 @@ jobs:
             --compartment-id "$TENANCY" \
             --lifecycle-state RUNNING \
             --query 'length(data)' \
-            --raw-output 2>/dev/null || echo "0")
+            --raw-output 2>&1 || echo "0")
+          if ! echo "$COUNT" | grep -qE '^[0-9]+$'; then
+            echo "OCI 오류: $COUNT"
+            exit 1
+          fi
           echo "running=$COUNT" >> "$GITHUB_OUTPUT"
           if [ "$COUNT" -gt "0" ]; then
             echo "이미 실행중인 인스턴스 ${COUNT}개 -- 생성 건너뜀"
@@ -54,7 +58,7 @@ jobs:
             --compartment-id "$TENANCY" \
             --query 'data[0].name' --raw-output 2>&1 || true)
           echo "AD: $AD"
-          if [ -z "$AD" ] || echo "$AD" | grep -qi "error\|ServiceError"; then
+          if [ -z "$AD" ] || echo "$AD" | grep -qi "error\|ServiceError\|Traceback"; then
             echo "AD 조회 실패: $AD"; exit 1
           fi
           echo "ad=$AD" >> "$GITHUB_OUTPUT"
