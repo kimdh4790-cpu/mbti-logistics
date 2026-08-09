@@ -2448,9 +2448,219 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
     }
 
+    // ── 팝빌 세금계산서 역발행 ────────────────────────────────────────
+    if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const body = await request.json();
+        const { workId, agencyId, driverId, driverName, fare } = body;
+        if (!workId) throw new Error('workId 필수');
+
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+
+        const getDoc = async (col, id) => {
+          if (!id) return { fields: {} };
+          const r = await fetch(`${FS}/${col}/${id}`, { headers: { 'Authorization': `Bearer ${fsToken}` } });
+          return r.json();
+        };
+
+        const workDoc  = await getDoc('yongcha_work',  workId);
+        const wf       = workDoc.fields || {};
+        const actualFare = fare || Number(wf.fare?.integerValue || wf.fare?.doubleValue || 0);
+        const courier  = wf.courier?.stringValue || '용차 운송';
+        const region   = wf.region?.stringValue  || '';
+
+        const dId      = driverId || wf.driverId?.stringValue || '';
+        const df       = (await getDoc('yongcha_users', dId)).fields || {};
+
+        const aId      = agencyId || wf.agencyId?.stringValue || '';
+        const af       = (await getDoc('yongcha_users', aId)).fields || {};
+
+        const supply   = Math.round(Number(actualFare) / 1.1);
+        const tax      = Number(actualFare) - supply;
+
+        const params = {
+          settleId:        workId,
+          senderCorpNum:   df.corpNum?.stringValue || '',
+          senderName:      df.displayName?.stringValue || driverName || '',
+          senderCEO:       df.displayName?.stringValue || driverName || '',
+          senderEmail:     df.email?.stringValue || '',
+          receiverCorpNum: af.corpNum?.stringValue || '',
+          receiverName:    af.displayName?.stringValue || af.companyName?.stringValue || '',
+          receiverEmail:   af.email?.stringValue || '',
+          supplyAmt:       supply, taxAmt: tax, totalAmt: Number(actualFare),
+          writeDate:       new Date().toISOString().slice(0,10).replace(/-/g,''),
+          itemName:        `${courier} ${region} 운송비`.trim(),
+          driverFcmToken:  df.fcmToken?.stringValue,
+          agencyFcmToken:  af.fcmToken?.stringValue
+        };
+
+        const result = await ycPopbillIssueReverse(env, params, FS, fsToken);
+        return new Response(JSON.stringify(result), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 팝빌 웹훅 ─────────────────────────────────────────────────────
+    if (path === '/api/yongcha/popbill-webhook' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { MgtKey, State, StateDate } = body;
+        if (MgtKey) {
+          const settleId = MgtKey.replace(/^YC/, '');
+          const fsToken  = await ycGetFsToken(env);
+          const FS       = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+          const pf       = { taxInvoiceState: { stringValue: State || '' }, taxInvoiceUpdatedAt: { stringValue: StateDate || new Date().toISOString() }, taxInvoiceMgtKey: { stringValue: MgtKey } };
+          await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: pf })
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // ── 팝빌 상태 조회 ────────────────────────────────────────────────
+    if (path === '/api/yongcha/popbill-status' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const mgtKey  = url.searchParams.get('mgtKey');
+        const corpNum = url.searchParams.get('corpNum');
+        if (!mgtKey || !corpNum) return new Response(JSON.stringify({ ok: false, error: '필수 파라미터 누락' }), { status: 400, headers: corsH });
+        const pbToken = await ycPopbillGetToken(env, corpNum);
+        const BASE    = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+        const resp    = await fetch(`${BASE}/Taxinvoice/${corpNum}/${mgtKey}`, { headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json' } });
+        const data    = await resp.json();
+        return new Response(JSON.stringify({ ok: true, data }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
     // Serve app
     return new Response(YONGCHA_HTML, {
       headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-cache' }
     });
   }
 };
+
+// ── Firestore 서비스 계정 토큰 ─────────────────────────────────────────────
+async function ycGetFsToken(env) {
+  if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not set');
+  const sa  = JSON.parse(env.FIREBASE_SA_KEY);
+  const now = Math.floor(Date.now() / 1000);
+  const b64 = s => btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const b64buf = buf => { const b = new Uint8Array(buf); let s=''; for(const x of b) s+=String.fromCharCode(x); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); };
+  const hdr = b64(JSON.stringify({ alg:'RS256', typ:'JWT' }));
+  const pay = b64(JSON.stringify({ iss:sa.client_email, scope:'https://www.googleapis.com/auth/datastore', aud:'https://oauth2.googleapis.com/token', iat:now, exp:now+3600 }));
+  const pem = sa.private_key.replace('-----BEGIN PRIVATE KEY-----','').replace('-----END PRIVATE KEY-----','').replace(/\s/g,'');
+  const der = Uint8Array.from(atob(pem), c=>c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', der.buffer, { name:'RSASSA-PKCS1-v1_5', hash:'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${hdr}.${pay}`));
+  const jwt = `${hdr}.${pay}.${b64buf(sig)}`;
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+  const data = await res.json();
+  if (!data.access_token) throw new Error('FS 토큰 실패: ' + JSON.stringify(data));
+  return data.access_token;
+}
+
+// ── 팝빌 HMAC-SHA256 서명 ─────────────────────────────────────────────────
+async function ycPopbillHmacSign(message, base64Key) {
+  const keyBytes = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(message));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)));
+}
+
+// ── 팝빌 세션 토큰 ────────────────────────────────────────────────────────
+async function ycPopbillGetToken(env, corpNum) {
+  const linkId = env.POPBILL_LINK_ID, secretKey = env.POPBILL_SECRET_KEY;
+  if (!linkId || !secretKey) throw new Error('POPBILL 인증키 미설정');
+  const timestamp = new Date().toISOString().replace(/-/g,'').replace(/:/g,'').replace(/\.\d+Z$/,'Z');
+  const sig = await ycPopbillHmacSign(`${timestamp}\n${linkId}\n${corpNum}`, secretKey);
+  const resp = await fetch('https://auth.popbill.com/Token', {
+    method: 'POST',
+    headers: { 'x-lh-date': timestamp, 'Authorization': `LINKAUTHKEY ${linkId}:${sig}`, 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({ CorpNum: corpNum, ID: linkId })
+  });
+  if (!resp.ok) throw new Error(`팝빌 토큰 실패 (${resp.status}): ${await resp.text()}`);
+  const data = await resp.json();
+  if (!data.session_token) throw new Error('팝빌 session_token 없음');
+  return data.session_token;
+}
+
+// ── 팝빌 역발행 요청 ─────────────────────────────────────────────────────
+async function ycPopbillIssueReverse(env, params, FS, fsToken) {
+  const { settleId, senderCorpNum, senderName, senderCEO, senderEmail,
+    receiverCorpNum, receiverName, receiverEmail,
+    supplyAmt, taxAmt, totalAmt, writeDate, itemName,
+    driverFcmToken, agencyFcmToken } = params;
+  if (!senderCorpNum || !receiverCorpNum) throw new Error('공급자/공급받는자 사업자번호 필수');
+  if (!settleId) throw new Error('settleId 필수');
+
+  const mgtKey = `YC${settleId}`.replace(/[^a-zA-Z0-9_-]/g,'').slice(0,24);
+  const isTest = env.POPBILL_TEST_MODE !== 'false';
+  const BASE   = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const pbToken = await ycPopbillGetToken(env, receiverCorpNum);
+
+  const wDate  = writeDate || new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const supply = Number(supplyAmt) || 0;
+  const tax    = Number(taxAmt)    || Math.round(supply * 0.1);
+  const total  = Number(totalAmt)  || supply + tax;
+
+  const invoiceBody = {
+    MgtKey: mgtKey, WriteDate: wDate, IssueType:'역발행', TaxType:'과세', InvoiceType:'일반', PurposeType:'영수',
+    SupplyCostTotal: String(supply), TaxTotal: String(tax), TotalAmount: String(total),
+    SenderCorpNum: senderCorpNum, SenderCorpName: senderName||'', SenderCEOName: senderCEO||senderName||'',
+    SenderEmail: senderEmail||'', SenderBizType:'개인', SenderBizClass:'운수업',
+    ReceiverCorpNum: receiverCorpNum, ReceiverCorpName: receiverName||'', ReceiverEmail: receiverEmail||'',
+    DetailList: [{ SerialNum:1, PurchaseDT:wDate, ItemName:itemName||'용차 운송비', Qty:'1', UnitCost:String(supply), SupplyCost:String(supply), Tax:String(tax), TotalAmount:String(total) }],
+    Memo: `용차앱 정산 #${settleId}`
+  };
+
+  const resp = await fetch(`${BASE}/Taxinvoice/역발행요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify(invoiceBody)
+  });
+  let resultData;
+  try { resultData = await resp.json(); } catch { resultData = { raw: await resp.text() }; }
+
+  // Firestore에 역발행 요청 기록
+  try {
+    const pf = {
+      taxInvoiceState:    { stringValue: '역발행요청' },
+      taxInvoiceMgtKey:   { stringValue: mgtKey },
+      taxInvoiceIsTest:   { booleanValue: isTest },
+      taxInvoiceRequestAt:{ stringValue: new Date().toISOString() },
+      ...(driverFcmToken ? { driverFcmToken: { stringValue: driverFcmToken } } : {}),
+      ...(agencyFcmToken ? { agencyFcmToken: { stringValue: agencyFcmToken } } : {}),
+      ...(senderName     ? { driverName:     { stringValue: senderName } }     : {}),
+      ...(receiverName   ? { agencyName:     { stringValue: receiverName } }   : {}),
+      totalAmount:        { integerValue: total }
+    };
+    await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: pf })
+    });
+    // 기사에게 역발행 요청 FCM 알림
+    if (driverFcmToken && env.FCM_SERVER_KEY) {
+      await fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: { 'Authorization': 'key=' + env.FCM_SERVER_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: driverFcmToken, notification: { title: '전자세금계산서 역발행 요청', body: `${receiverName||'대리점'}에서 ${total.toLocaleString('ko-KR')}원 세금계산서 역발행 요청이 왔습니다.` }, data: { type: 'tax_invoice_request', settleId, mgtKey } })
+      });
+    }
+  } catch(fsErr) { /* non-critical */ }
+
+  return { ok: resp.ok, mgtKey, isTest, result: resultData };
+}

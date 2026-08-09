@@ -10461,15 +10461,57 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 전자세금계산서 역발행 요청 ──────────────────────────────────
   if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
       const body = await request.json();
-      const result = await popbillIssueReverse(env, body);
-      return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      const { workId, agencyId, driverId, driverName, fare } = body;
+      if (!workId) throw new Error('workId 필수');
+
+      const fsToken = await getAccessToken(env);
+
+      // yongcha_work 조회
+      const workDoc = await fsGet(fsToken, 'yongcha_work', workId);
+      const wf = workDoc.fields || {};
+      const actualFare = fare || Number(wf.fare?.integerValue || wf.fare?.doubleValue || 0);
+      const courier = wf.courier?.stringValue || '용차 운송';
+      const region  = wf.region?.stringValue  || '';
+
+      // 기사(공급자) 조회
+      const dId = driverId || wf.driverId?.stringValue || '';
+      const driverDoc = dId ? await fsGet(fsToken, 'yongcha_users', dId) : { fields: {} };
+      const df = driverDoc.fields || {};
+
+      // 소장(공급받는자) 조회
+      const aId = agencyId || wf.agencyId?.stringValue || '';
+      const agencyDoc = aId ? await fsGet(fsToken, 'yongcha_users', aId) : { fields: {} };
+      const af = agencyDoc.fields || {};
+
+      const supply = Math.round(Number(actualFare) / 1.1);
+      const tax    = Number(actualFare) - supply;
+
+      const params = {
+        settleId:        workId,
+        senderCorpNum:   df.corpNum?.stringValue || '',
+        senderName:      df.displayName?.stringValue || driverName || '',
+        senderCEO:       df.displayName?.stringValue || driverName || '',
+        senderEmail:     df.email?.stringValue || '',
+        receiverCorpNum: af.corpNum?.stringValue || '',
+        receiverName:    af.displayName?.stringValue || af.companyName?.stringValue || '',
+        receiverEmail:   af.email?.stringValue || '',
+        supplyAmt:       supply,
+        taxAmt:          tax,
+        totalAmt:        Number(actualFare),
+        writeDate:       new Date().toISOString().slice(0,10).replace(/-/g,''),
+        itemName:        `${courier} ${region} 운송비`.trim(),
+        driverFcmToken:  df.fcmToken?.stringValue,
+        agencyFcmToken:  af.fcmToken?.stringValue
+      };
+
+      const result = await popbillIssueReverse(env, params);
+      return new Response(JSON.stringify(result), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), {
-        status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        status: 500, headers: corsH
       });
     }
   }
