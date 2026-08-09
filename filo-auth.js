@@ -379,8 +379,9 @@ function _buildFiloNav(){
  menus.push({s:'설정',items:_settings});
 
  var html='';
- var _closedG=[];
- try{_closedG=JSON.parse(localStorage.getItem('filo_nav_closed')||'[]');}catch(e){}
+ var _storedNav=localStorage.getItem('filo_nav_closed');
+ var _closedG=_storedNav!==null?JSON.parse(_storedNav):[0,1,2,3,4,5,6,7,8,9];
+ try{if(_storedNav===null)localStorage.setItem('filo_nav_closed',JSON.stringify([0,1,2,3,4,5,6,7,8,9]));}catch(e){}
 
  menus.forEach(function(g,gi){
   var isClosed=_closedG.indexOf(gi)>=0;
