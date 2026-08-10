@@ -8412,6 +8412,19 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .filter-btn.on{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 2px 10px rgba(59,126,248,.4)}
 /* 카테고리 구분선 */
 .fbar-sep{flex-shrink:0;width:1px;background:var(--bd2);align-self:stretch;margin:4px 2px}
+/* 드롭다운 트리거 버튼 */
+.fctrl-btn{min-height:34px;padding:0 12px;border-radius:var(--r-full);border:1.5px solid var(--bd2);
+  background:var(--bg2);color:var(--tx);font-size:12.5px;font-weight:700;flex-shrink:0;transition:.18s;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px}
+.fctrl-btn:active{transform:scale(.96)}
+.fctrl-btn.on{border-color:var(--ac);color:var(--ac);background:var(--acl)}
+.fctrl-btn .fctrl-val{color:var(--ac);font-weight:800}
+.fctrl-btn .fctrl-val.empty{color:var(--t3);font-weight:700}
+.fctrl-arrow{font-size:10px;color:var(--t3);transition:transform .2s}
+.fctrl-btn.on .fctrl-arrow{transform:rotate(180deg);color:var(--ac)}
+/* 펼쳐지는 필터 패널 */
+.fpanel{overflow:hidden;max-height:0;transition:max-height .28s cubic-bezier(.32,.72,0,1)}
+.fpanel.open{max-height:60px}
 /* 필터바 — 가로 스크롤 영역 */
 .fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
   margin:0 calc(var(--gut)*-1);padding:2px var(--gut) 8px;align-items:center}
@@ -10049,24 +10062,38 @@ function _pgPosts(el){
     return '<button type="button" class="filter-btn'+(_pf.statusFilter===s[0]?' on':'')+'" data-status="'+s[0]+'" onclick="_pfSetStatus(\\''+s[0]+'\\')">'+s[1]+'</button>';
   }).join('')+
   '</div>'+
-  // 줄 2: 택배사 스크롤
-  '<div class="fbar" id="pf-courier">'+
-  COURIERS.map(function(c){
-    return '<button type="button" onclick="_pfSet(\\'courier\\',\\''+c+'\\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
-  }).join('')+
-  '</div>'+
-  // 줄 3: 지역 + 세부 조건 스크롤
-  '<div class="fbar" id="pf-region">'+
-  REGIONS.map(function(r){
-    return '<button type="button" onclick="_pfSet(\\'region\\',\\''+r+'\\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
-  }).join('')+
-  '<div class="fbar-sep"></div>'+
+  // 줄 2: 컨트롤 버튼 행 (택배사▾ / 지역▾ / 긴급만 / 인증 / 단가)
+  '<div class="fbar" style="margin-bottom:0">'+
+    '<button type="button" onclick="_pfToggleCourierPanel()" id="pf-courier-ctrl" class="fctrl-btn'+(_pf.courier!=='전체'?' on':'')+'">'+
+      '택배사 <span class="fctrl-val'+(_pf.courier==='전체'?' empty':'')+'" id="pf-courier-val">'+_esc(_pf.courier)+'</span>'+
+      '<span class="fctrl-arrow">▾</span>'+
+    '</button>'+
+    '<button type="button" onclick="_pfToggleRegionPanel()" id="pf-region-ctrl" class="fctrl-btn'+(_pf.region!=='전체'?' on':'')+'">'+
+      '지역 <span class="fctrl-val'+(_pf.region==='전체'?' empty':'')+'" id="pf-region-val">'+_esc(_pf.region)+'</span>'+
+      '<span class="fctrl-arrow">▾</span>'+
+    '</button>'+
     '<button type="button" onclick="_pfToggleUrgent()" id="pf-urgent-btn" class="filter-btn'+(_pf.urgentOnly?' on':'')+'">긴급만</button>'+
     '<button type="button" onclick="_pfToggleVerified()" id="pf-verified-btn" class="filter-btn'+(_pf.verifiedOnly?' on':'')+'">인증</button>'+
     '<select onchange="_pfSetPrice(this.value)" class="filter-btn" style="padding-right:12px">'+
     '<option value="">단가 전체</option>'+
     ['~700원','700~900원','900~1100원','1100원~'].map(function(r,i){return '<option value="'+i+'"'+(String(_pf.priceRange)===String(i)?' selected':'')+'>'+r+'</option>';}).join('')+
     '</select>'+
+  '</div>'+
+  // 펼쳐지는 택배사 패널
+  '<div class="fpanel" id="pf-courier-panel">'+
+    '<div class="fbar" id="pf-courier">'+
+    COURIERS.map(function(c){
+      return '<button type="button" onclick="_pfSet(\\'courier\\',\\''+c+'\\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
+    }).join('')+
+    '</div>'+
+  '</div>'+
+  // 펼쳐지는 지역 패널
+  '<div class="fpanel" id="pf-region-panel">'+
+    '<div class="fbar" id="pf-region">'+
+    REGIONS.map(function(r){
+      return '<button type="button" onclick="_pfSet(\\'region\\',\\''+r+'\\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
+    }).join('')+
+    '</div>'+
   '</div>'+
   '</div>'+
 
@@ -10164,6 +10191,30 @@ function _pfSetMatchTab(val){
   _renderPostList();
 }
 
+function _pfToggleCourierPanel(){
+  var panel=document.getElementById('pf-courier-panel');
+  var ctrl=document.getElementById('pf-courier-ctrl');
+  var rPanel=document.getElementById('pf-region-panel');
+  var rCtrl=document.getElementById('pf-region-ctrl');
+  if(!panel)return;
+  var isOpen=panel.classList.toggle('open');
+  if(ctrl)ctrl.classList.toggle('on',isOpen||_pf.courier!=='전체');
+  // 지역 닫기
+  if(rPanel)rPanel.classList.remove('open');
+  if(rCtrl)rCtrl.classList.toggle('on',_pf.region!=='전체');
+}
+function _pfToggleRegionPanel(){
+  var panel=document.getElementById('pf-region-panel');
+  var ctrl=document.getElementById('pf-region-ctrl');
+  var cPanel=document.getElementById('pf-courier-panel');
+  var cCtrl=document.getElementById('pf-courier-ctrl');
+  if(!panel)return;
+  var isOpen=panel.classList.toggle('open');
+  if(ctrl)ctrl.classList.toggle('on',isOpen||_pf.region!=='전체');
+  // 택배사 닫기
+  if(cPanel)cPanel.classList.remove('open');
+  if(cCtrl)cCtrl.classList.toggle('on',_pf.courier!=='전체');
+}
 function _pfSet(key, val){
   _pf[key]=val;
   // 필터 버튼 스타일 갱신
@@ -10173,6 +10224,22 @@ function _pfSet(key, val){
       var match=(b.textContent===val);
       b.classList.toggle('on',match);
     });
+  }
+  // 드롭다운 컨트롤 버튼 라벨·상태 갱신 후 패널 닫기
+  if(key==='courier'){
+    var lbl=document.getElementById('pf-courier-val');
+    var ctrl=document.getElementById('pf-courier-ctrl');
+    var panel=document.getElementById('pf-courier-panel');
+    if(lbl){lbl.textContent=val;lbl.className='fctrl-val'+(val==='전체'?' empty':'');}
+    if(ctrl)ctrl.classList.toggle('on',val!=='전체');
+    if(panel)panel.classList.remove('open');
+  } else if(key==='region'){
+    var lbl=document.getElementById('pf-region-val');
+    var ctrl=document.getElementById('pf-region-ctrl');
+    var panel=document.getElementById('pf-region-panel');
+    if(lbl){lbl.textContent=val;lbl.className='fctrl-val'+(val==='전체'?' empty':'');}
+    if(ctrl)ctrl.classList.toggle('on',val!=='전체');
+    if(panel)panel.classList.remove('open');
   }
   _renderPostList();
 }
