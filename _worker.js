@@ -9505,6 +9505,7 @@ function _goPage(p){
   else if(p==='bookmarks')_pgBookmarks(el);
   else if(p==='rest')_pgRest(el);
   else if(p==='dashboard')_pgDashboard(el);
+  else if(p==='driver_offer')_pgDriverOffer(el);
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -9663,6 +9664,8 @@ function _pgHomeDriver(el){
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>지원 현황</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>차량 올리기</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -9984,20 +9987,34 @@ function _loadAgencyControlMap(){
 // ── 노선 공고 목록 ───────────────────────────────────────────
 var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,priceRange:'',statusFilter:'open',q:'',matchTab:'all'};
 var _allPosts=[];
+var _postsMainTab='route'; // 'route' | 'yongcha'
 var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
 
 function _pgPosts(el){
   el.innerHTML=
-  '<div class="page-hdr" style="margin-bottom:12px">'+
+  '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title">노선 공고</h1>'+
-      '<p class="page-sub">조건에 맞는 노선을 찾아보세요</p></div>'+
-      '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_loadFilteredPosts()">↻</button>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 공고':'노선 공고')+'</h1>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'기사가 직접 올린 차량 공고예요':'대리점이 올린 배차 노선을 찾아보세요')+'</p></div>'+
+      '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\\'yongcha\\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
 
-  // 맞춤/전체 세그먼트 탭 — fsticky 바깥, 검색창 위
+  // 노선 / 용차 전환 탭
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">'+
+    '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'route\\')" '+
+      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      '배차 공고 (구인)</button>'+
+    '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'yongcha\\')" '+
+      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      '용차 공고 (구직)</button>'+
+  '</div>'+
+
+  '<div id="posts-route-section">'+
+  // 맞춤/전체 세그먼트 탭
   '<div id="posts-match-tabs" class="seg-tabs">'+
     '<button type="button" class="seg-tab'+(_pf.matchTab==='all'?' on':'')+'" onclick="_pfSetMatchTab(\\'all\\')">전체공고</button>'+
     '<button type="button" class="seg-tab'+(_pf.matchTab==='matched'?' on':'')+'" onclick="_pfSetMatchTab(\\'matched\\')">맞춤공고</button>'+
@@ -10044,9 +10061,58 @@ function _pgPosts(el){
     '<button type="button" onclick="_pfReset()" style="background:none;border:none;color:var(--t3);font-size:12px;font-weight:700;min-height:36px">필터 초기화</button>'+
   '</div>'+
 
-  '<div id="posts-list">'+_skeletonCards(3)+'</div>';
+  '<div id="posts-list">'+_skeletonCards(3)+'</div>'+
+  '</div>'+ // end posts-route-section
 
-  _loadFilteredPosts();
+  '<div id="posts-yongcha-section" style="display:none">'+
+    '<div id="yongcha-offer-filter" style="margin-bottom:10px">'+
+      '<div class="fbar">'+
+      REGIONS.map(function(r){
+        return '<button type="button" class="filter-btn" onclick="_yofFilterRegion(\\''+r+'\\')" id="yof-r-'+r+'">'+r+'</button>';
+      }).join('')+
+      '</div>'+
+      '<div class="fbar">'+
+      COURIERS.map(function(c){
+        return '<button type="button" class="filter-btn" onclick="_yofFilterCourier(\\''+c+'\\')" id="yof-c-'+_esc(c)+'">'+c+'</button>';
+      }).join('')+
+      '</div>'+
+    '</div>'+
+    '<div id="yongcha-offer-list">'+_skeletonCards(3)+'</div>'+
+  '</div>';
+
+  if(_postsMainTab==='yongcha'){
+    document.getElementById('posts-route-section').style.display='none';
+    document.getElementById('posts-yongcha-section').style.display='block';
+    _loadDriverOfferList();
+  } else {
+    _loadFilteredPosts();
+  }
+}
+
+function _pfSwitchMainTab(tab){
+  _postsMainTab=tab;
+  var routeSec=document.getElementById('posts-route-section');
+  var yongchaSec=document.getElementById('posts-yongcha-section');
+  var title=document.getElementById('posts-main-title');
+  var sub=document.getElementById('posts-main-sub');
+  var btnR=document.getElementById('pmtab-route');
+  var btnY=document.getElementById('pmtab-yongcha');
+  if(!routeSec||!yongchaSec)return;
+  if(tab==='yongcha'){
+    routeSec.style.display='none';yongchaSec.style.display='block';
+    if(title)title.textContent='용차 공고';
+    if(sub)sub.textContent='기사가 직접 올린 차량 공고예요';
+    if(btnR){btnR.style.background='var(--bg2)';btnR.style.color='var(--t2)';btnR.style.borderColor='var(--bd)';}
+    if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
+    _loadDriverOfferList();
+  } else {
+    yongchaSec.style.display='none';routeSec.style.display='block';
+    if(title)title.textContent='배차 공고';
+    if(sub)sub.textContent='대리점이 올린 배차 노선을 찾아보세요';
+    if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
+    if(btnY){btnY.style.background='var(--bg2)';btnY.style.color='var(--t2)';btnY.style.borderColor='var(--bd)';}
+    _loadFilteredPosts();
+  }
 }
 
 var _pfQTimer=null;
@@ -13168,6 +13234,216 @@ function _judgeJobApply(applyId, status, name, driverId){
       else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요');
     }
     _closeModal();
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   용차 공고 — 기사가 차량/조건을 올리는 양방향 마켓플레이스
+   Firestore: yongcha_driver_posts
+   ══════════════════════════════════════════════════════════ */
+
+var _yofRegion='전체', _yofCourier='전체';
+
+function _yofFilterRegion(r){
+  _yofRegion=r;
+  document.querySelectorAll('#yongcha-offer-filter .filter-btn').forEach(function(b){
+    if(b.id&&b.id.startsWith('yof-r-')) b.classList.toggle('on', b.id==='yof-r-'+r);
+  });
+  _loadDriverOfferList();
+}
+function _yofFilterCourier(c){
+  _yofCourier=c;
+  document.querySelectorAll('#yongcha-offer-filter .filter-btn').forEach(function(b){
+    if(b.id&&b.id.startsWith('yof-c-')) b.classList.toggle('on', b.id==='yof-c-'+c);
+  });
+  _loadDriverOfferList();
+}
+
+function _loadDriverOfferList(){
+  var el=document.getElementById('yongcha-offer-list');
+  if(!el)return;
+  el.innerHTML=_skeletonCards(3);
+  var q=_db.collection('yongcha_driver_posts').where('status','==','active').orderBy('createdAt','desc').limit(60);
+  q.get().then(function(snap){
+    var items=[];
+    snap.forEach(function(doc){items.push(Object.assign({id:doc.id},doc.data()));});
+    // 필터
+    if(_yofRegion&&_yofRegion!=='전체') items=items.filter(function(d){return d.region===_yofRegion;});
+    if(_yofCourier&&_yofCourier!=='전체') items=items.filter(function(d){return !d.preferredCourier||d.preferredCourier==='전체'||d.preferredCourier===_yofCourier;});
+    if(!items.length){el.innerHTML=_emptyHtml('','등록된 용차 공고가 없어요','기사가 차량 공고를 등록하면 여기 표시됩니다');return;}
+    el.innerHTML='';
+    items.forEach(function(d){
+      var card=document.createElement('div');card.className='card';card.style.cssText='margin-bottom:12px;cursor:pointer';
+      var isMe=_CU&&d.driverId===_CU.uid;
+      var trust=d.trustGrade||'';
+      var trustCol=trust==='S'?'#f59e0b':trust==='A'?'var(--gn)':trust==='B'?'var(--ac)':'var(--t3)';
+      var dayEst=(d.desiredUnitPrice&&d.desiredVolume)?Math.round(d.desiredUnitPrice*d.desiredVolume/10000):0;
+      card.innerHTML=
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">'+
+              (d.carType?'<span style="background:var(--acl);color:var(--ac);border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:800">'+_esc(d.carType)+'</span>':'')+
+              (d.region&&d.region!=='전체'?'<span style="background:var(--bg3);color:var(--t2);border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:700">'+_esc(d.region)+'</span>':'')+
+              (trust?'<span style="background:'+trustCol+';color:#fff;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:900">'+trust+'등급</span>':'')+
+            '</div>'+
+            '<div style="font-size:22px;font-weight:900;letter-spacing:-.5px;color:var(--tx)">'+
+              (d.desiredUnitPrice?_won(d.desiredUnitPrice)+'<span style="font-size:13px;font-weight:700;color:var(--t2)">원/건</span>':'단가 협의')+
+            '</div>'+
+            (dayEst?'<div style="font-size:12px;color:var(--t2);margin-top:1px">예상 일 수입 약 '+dayEst+'만원</div>':'')+
+          '</div>'+
+          (isMe?'<span style="font-size:11px;background:var(--gnl);color:var(--gn);border-radius:20px;padding:3px 10px;font-weight:800;flex-shrink:0">내 공고</span>':'')+
+        '</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--t2);margin-bottom:12px">'+
+          (d.desiredVolume?'<span>일 희망 물량 <b style="color:var(--tx)">'+_won(d.desiredVolume)+'건</b></span>':'')+
+          (d.preferredCourier&&d.preferredCourier!=='전체'?'<span>희망 택배사 <b style="color:var(--tx)">'+_esc(d.preferredCourier)+'</b></span>':'')+
+          (d.availDate?'<span>가능 일정 <b style="color:var(--tx)">'+_esc(d.availDate)+'</b></span>':'')+
+        '</div>'+
+        (d.memo?'<div style="font-size:13px;color:var(--t2);background:var(--bg3);border-radius:10px;padding:8px 12px;margin-bottom:12px;line-height:1.55">'+_esc(d.memo)+'</div>':'')+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+          (!isMe&&_CU&&_CU.type!=='driver'?
+            '<button type="button" onclick="event.stopPropagation();_openChatWith(\\''+d.driverId+'\\',\\''+_jsq(d.driverName||'기사')+'\\')" '+
+            'style="min-height:44px;background:var(--acl);color:var(--ac);border:1.5px solid var(--acln);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">채팅 연락</button>':
+            '<div></div>')+
+          (isMe?
+            '<button type="button" onclick="event.stopPropagation();_deleteDriverOffer(\\''+d.id+'\\')" '+
+            'style="min-height:44px;background:var(--rdl)||#fee2e2;color:var(--rd);border:1px solid #fca5a5;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">공고 내리기</button>':'<div></div>')+
+        '</div>';
+      el.appendChild(card);
+    });
+  }).catch(function(e){if(el)el.innerHTML='<div style="color:var(--rd);padding:16px;font-size:13px">'+_esc(e.message)+'</div>';});
+}
+
+function _deleteDriverOffer(offerId){
+  if(!confirm('이 공고를 내릴까요?'))return; // 예외적 confirm: 삭제는 되돌릴 수 없음
+  _db.collection('yongcha_driver_posts').doc(offerId).update({status:'closed'}).then(function(){
+    _yToast('공고를 내렸어요');
+    _loadDriverOfferList();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+// ── 기사 용차 공고 등록/관리 페이지 ─────────────────────────────
+function _pgDriverOffer(el){
+  if(_CU.type!=='driver'){
+    el.innerHTML='<div class="page-hdr"><div class="page-title">접근 불가</div>'+
+      '<div class="page-sub">기사 전용 기능이에요</div></div>';
+    return;
+  }
+  el.innerHTML=
+  '<div class="page-hdr"><div class="page-title">내 용차 공고</div>'+
+  '<div class="page-sub">소장이 직접 연락할 수 있어요</div></div>'+
+
+  // 내 활성 공고 목록
+  '<div class="sec-head"><span class="sec-title">내 등록 공고</span></div>'+
+  '<div id="my-offer-list">'+_skRows(2)+'</div>'+
+
+  // 새 공고 폼
+  '<div class="sec-head" style="margin-top:6px"><span class="sec-title">새 공고 등록</span></div>'+
+  '<div class="card">'+
+    '<div class="inp-wrap">'+
+      '<label class="inp-lbl">보유 차종</label>'+
+      '<select class="inp" id="of-cartype">'+_yCarOptions(_CU.carType||'',false)+'</select>'+
+    '</div>'+
+    '<div class="inp-wrap">'+
+      '<label class="inp-lbl">활동 지역</label>'+
+      '<select class="inp" id="of-region"><option value="전체">지역 무관</option>'+
+      REGIONS.filter(function(r){return r!=='전체';}).map(function(r){
+        return '<option value="'+r+'"'+(_CU.region===r?' selected':'')+'>'+r+'</option>';
+      }).join('')+'</select>'+
+    '</div>'+
+    '<div class="inp-wrap">'+
+      '<label class="inp-lbl">선호 택배사</label>'+
+      '<select class="inp" id="of-courier"><option value="전체">무관</option>'+
+      COURIERS.filter(function(c){return c!=='전체';}).map(function(c){
+        return '<option value="'+c+'">'+c+'</option>';
+      }).join('')+'</select>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+      '<div class="inp-wrap">'+
+        '<label class="inp-lbl">희망 단가 (원/건)</label>'+
+        '<input class="inp" id="of-price" type="number" placeholder="예: 850">'+
+      '</div>'+
+      '<div class="inp-wrap">'+
+        '<label class="inp-lbl">희망 물량 (건/일)</label>'+
+        '<input class="inp" id="of-volume" type="number" placeholder="예: 150">'+
+      '</div>'+
+    '</div>'+
+    '<div class="inp-wrap">'+
+      '<label class="inp-lbl">가능 일정</label>'+
+      '<input class="inp" id="of-date" placeholder="예: 오늘부터, 8월 15일~, 상시 가능">'+
+    '</div>'+
+    '<div class="inp-wrap">'+
+      '<label class="inp-lbl">한마디 (선택)</label>'+
+      '<textarea class="inp" id="of-memo" rows="2" placeholder="경력·특기사항·희망조건 등 자유롭게" style="resize:vertical"></textarea>'+
+    '</div>'+
+    '<button type="button" id="of-submit-btn" onclick="_submitDriverOffer()" '+
+    'style="width:100%;min-height:52px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;'+
+    'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">공고 올리기</button>'+
+  '</div>';
+
+  _loadMyDriverOffers();
+}
+
+function _loadMyDriverOffers(){
+  var el=document.getElementById('my-offer-list');if(!el)return;
+  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(10).get()
+  .then(function(snap){
+    if(snap.empty){el.innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--t3);text-align:center">아직 등록한 공고가 없어요</div>';return;}
+    el.innerHTML='';
+    snap.docs.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var isActive=d.status==='active';
+      var row=document.createElement('div');row.className='card';row.style.cssText='margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;';
+      row.innerHTML=
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13.5px;font-weight:800">'+
+            (d.region||'전체')+' · '+(d.carType||'차종 미설정')+
+            (d.desiredUnitPrice?' · '+_won(d.desiredUnitPrice)+'원/건':'')+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+_esc(d.availDate||'일정 미설정')+'</div>'+
+        '</div>'+
+        (isActive?
+          '<span style="font-size:11px;background:var(--gnl);color:var(--gn);border-radius:20px;padding:2px 10px;font-weight:800;flex-shrink:0">활성</span>':
+          '<span style="font-size:11px;background:var(--bg3);color:var(--t3);border-radius:20px;padding:2px 10px;font-weight:800;flex-shrink:0">마감</span>')+
+        (isActive?'<button type="button" onclick="_deleteDriverOffer(\\''+d.id+'\\')" '+
+          'style="min-height:34px;padding:0 12px;background:none;border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--t2);cursor:pointer;font-family:inherit;flex-shrink:0">내리기</button>':'');
+      el.appendChild(row);
+    });
+  }).catch(function(){});
+}
+
+function _submitDriverOffer(){
+  var carType=(document.getElementById('of-cartype')||{}).value||'';
+  var region=(document.getElementById('of-region')||{}).value||'전체';
+  var courier=(document.getElementById('of-courier')||{}).value||'전체';
+  var price=parseInt((document.getElementById('of-price')||{}).value||0,10)||0;
+  var volume=parseInt((document.getElementById('of-volume')||{}).value||0,10)||0;
+  var availDate=((document.getElementById('of-date')||{}).value||'').trim();
+  var memo=((document.getElementById('of-memo')||{}).value||'').trim();
+  var btn=document.getElementById('of-submit-btn');
+
+  if(!carType){_yToast('차종을 선택하세요');return;}
+  if(!price){_yToast('희망 단가를 입력하세요');return;}
+
+  if(btn){btn.textContent='등록 중...';btn.disabled=true;}
+  _db.collection('yongcha_driver_posts').add({
+    driverId:_CU.uid, driverName:_CU.name||'', driverPhone:_CU.phone||'',
+    region:region, carType:carType,
+    preferredCourier:courier, desiredUnitPrice:price, desiredVolume:volume,
+    availDate:availDate, memo:memo,
+    trustScore:_CU.trustScore||0, trustGrade:_CU.trustGrade||'',
+    status:'active',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    if(btn){btn.textContent='공고 올리기';btn.disabled=false;}
+    _yToast('공고가 등록됐어요! 소장들이 연락할 거예요');
+    // 폼 초기화
+    ['of-price','of-volume','of-date','of-memo'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    _loadMyDriverOffers();
+  }).catch(function(e){
+    if(btn){btn.textContent='공고 올리기';btn.disabled=false;}
+    _yToast('오류: '+e.message);
   });
 }
 
