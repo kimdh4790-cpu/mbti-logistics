@@ -10,24 +10,22 @@ body{font-family:'Pretendard',sans-serif;background:#08101f;color:#e2e8f0;paddin
 h2{color:#c9a84c;font-size:18px;margin-bottom:20px;font-weight:800}
 .card{background:#0d1a2e;border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:16px;margin-bottom:12px}
 .card h3{font-size:13px;font-weight:700;color:#c9a84c;margin-bottom:8px}
-.row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
-.row:last-child{border:none}
 .badge{padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700}
 .ok{background:#1a3a1a;color:#4caf50}
 .exist{background:#1a2a3a;color:#90caf9}
 .err{background:#3a1a1a;color:#ef5350}
 .pending{background:#2a2a2a;color:#888}
-.progress{font-size:11px;color:#888;margin-left:auto;white-space:nowrap}
+.row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+.row:last-child{border:none}
 #run-btn{background:linear-gradient(135deg,#c9a84c,#e8c56a);color:#08101f;border:none;border-radius:10px;padding:14px 28px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:20px;width:100%}
 #run-btn:disabled{opacity:.4;cursor:not-allowed}
 #summary{font-size:13px;color:#c9a84c;margin-top:16px;font-weight:700;text-align:center;min-height:20px}
-.theme-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 </style>
 </head>
 <body>
 <h2>FILO 데모 딜러 초기화</h2>
-<p style="font-size:12px;color:#94a3b8;margin-bottom:20px">어드민(soungkyekim@naver.com)으로 로그인된 상태에서 실행하세요.<br>각 업종별 딜러 Firestore 문서 + 기본 메뉴를 한 번만 세팅합니다.</p>
-<button id="run-btn" onclick="runInit()">데모 딜러 + 메뉴 초기화 시작</button>
+<p style="font-size:12px;color:#94a3b8;margin-bottom:20px">어드민(soungkyekim@naver.com)으로 로그인된 상태에서 실행하세요.<br>업종별 딜러 Firestore 문서 + 시장조사 기반 실제 메뉴를 자동 세팅합니다.</p>
+<button id="run-btn" onclick="runInit()">데모 딜러 + 메뉴 전체 초기화 시작</button>
 <div id="cards"></div>
 <div id="summary"></div>
 
@@ -44,86 +42,263 @@ var db=firebase.firestore();
 var auth=firebase.auth();
 
 var DEMOS=[
- {id:'demo_cafe',    label:'카페',   theme:'cafe',     primary:'#c8a96e',bg:'#1a1209',
+ /* ─────────── 카페 ─────────── */
+ {id:'demo_cafe',label:'카페',theme:'cafe',primary:'#c8a96e',bg:'#1a1209',
   services:['kiosk','table_order','bakery_qr','inventory'],
-  features:['POS 결제','메뉴 관리','테이블 QR','빵·디저트 QR','재고 현황'],
+  features:['POS 결제','메뉴관리','테이블QR','빵·디저트QR','재고'],
   menus:[
-   {name:'아메리카노(ICE)',price:4000,category:'커피',emoji:'☕'},
-   {name:'아메리카노(HOT)',price:4000,category:'커피',emoji:'☕'},
-   {name:'카페라떼',price:4500,category:'커피',emoji:'🥛'},
-   {name:'카푸치노',price:4500,category:'커피',emoji:'☕'},
-   {name:'크로와상',price:3500,category:'베이커리',emoji:'🥐'},
-   {name:'스콘',price:3000,category:'베이커리',emoji:'🍞'},
-   {name:'머핀',price:2800,category:'베이커리',emoji:'🧁'},
-   {name:'치즈케이크',price:5000,category:'디저트',emoji:'🍰'},
-   {name:'에이드(자몽/레몬)',price:5000,category:'음료',emoji:'🍹'},
-   {name:'스무디',price:5500,category:'음료',emoji:'🥤'}
+   /* 커피 */
+   {name:'에스프레소',          price:3500, category:'커피',    emoji:'☕'},
+   {name:'아메리카노(ICE)',      price:4500, category:'커피',    emoji:'🧊'},
+   {name:'아메리카노(HOT)',      price:4000, category:'커피',    emoji:'☕'},
+   {name:'카페라떼(ICE)',        price:5500, category:'커피',    emoji:'🥛'},
+   {name:'카페라떼(HOT)',        price:5000, category:'커피',    emoji:'🥛'},
+   {name:'바닐라라떼',           price:5500, category:'커피',    emoji:'🍦'},
+   {name:'카라멜마키아또',        price:6000, category:'커피',    emoji:'🍮'},
+   {name:'콜드브루',             price:5500, category:'커피',    emoji:'🧊'},
+   {name:'달고나라떼',           price:6000, category:'커피',    emoji:'☕'},
+   {name:'연유라떼',             price:5500, category:'커피',    emoji:'🥛'},
+   /* 논커피 */
+   {name:'말차라떼(ICE)',        price:5500, category:'논커피',  emoji:'🍵'},
+   {name:'말차라떼(HOT)',        price:5000, category:'논커피',  emoji:'🍵'},
+   {name:'초코라떼',             price:5500, category:'논커피',  emoji:'🍫'},
+   {name:'고구마라떼',           price:5500, category:'논커피',  emoji:'🍠'},
+   {name:'얼그레이티',           price:4500, category:'논커피',  emoji:'🫖'},
+   {name:'캐모마일티',           price:4500, category:'논커피',  emoji:'🌼'},
+   /* 에이드 */
+   {name:'자몽에이드',           price:6000, category:'에이드',  emoji:'🍊'},
+   {name:'레몬에이드',           price:5500, category:'에이드',  emoji:'🍋'},
+   {name:'복숭아에이드',         price:6000, category:'에이드',  emoji:'🍑'},
+   {name:'청포도에이드',         price:6000, category:'에이드',  emoji:'🍇'},
+   {name:'딸기스무디',           price:7000, category:'스무디',  emoji:'🍓'},
+   {name:'망고스무디',           price:7000, category:'스무디',  emoji:'🥭'},
+   /* 베이커리 */
+   {name:'버터크로와상',         price:4000, category:'베이커리',emoji:'🥐'},
+   {name:'햄치즈크로와상',       price:5000, category:'베이커리',emoji:'🥐'},
+   {name:'플레인스콘',           price:3500, category:'베이커리',emoji:'🍞'},
+   {name:'블루베리머핀',         price:3500, category:'베이커리',emoji:'🧁'},
+   {name:'초코머핀',             price:3500, category:'베이커리',emoji:'🧁'},
+   {name:'바나나파운드',         price:4500, category:'베이커리',emoji:'🍌'},
+   {name:'와플(생크림)',         price:8000, category:'베이커리',emoji:'🧇'},
+   /* 디저트 */
+   {name:'치즈케이크',           price:7000, category:'디저트',  emoji:'🍰'},
+   {name:'티라미수',             price:7000, category:'디저트',  emoji:'🍰'},
+   {name:'마카롱(2개)',          price:4000, category:'디저트',  emoji:'🍬'},
+   {name:'쿠키(2개)',            price:3000, category:'디저트',  emoji:'🍪'}
   ]},
- {id:'demo_korean',  label:'한식당', theme:'korean',   primary:'#e05555',bg:'#0f0a0a',
+
+ /* ─────────── 한식당 ─────────── */
+ {id:'demo_korean',label:'한식당',theme:'korean',primary:'#e05555',bg:'#0f0a0a',
   services:['kiosk','table_order','booking','inventory','payroll'],
-  features:['POS 결제','테이블 주문','예약 관리','재고 현황','급여 관리'],
+  features:['POS 결제','테이블주문','예약관리','재고','급여'],
   menus:[
-   {name:'된장찌개',price:8000,category:'찌개',emoji:'🥘'},
-   {name:'김치찌개',price:8000,category:'찌개',emoji:'🍲'},
-   {name:'순두부찌개',price:8000,category:'찌개',emoji:'🍜'},
-   {name:'비빔밥',price:9000,category:'식사',emoji:'🍚'},
-   {name:'불고기',price:12000,category:'식사',emoji:'🥩'},
-   {name:'제육볶음',price:10000,category:'식사',emoji:'🥓'},
-   {name:'공기밥',price:1000,category:'추가',emoji:'🍚'},
-   {name:'냉면',price:10000,category:'면류',emoji:'🍜'},
-   {name:'삼겹살(1인분)',price:13000,category:'구이',emoji:'🥓'}
+   /* 찌개/국 */
+   {name:'김치찌개',             price:9000,  category:'찌개/국', emoji:'🍲'},
+   {name:'된장찌개',             price:9000,  category:'찌개/국', emoji:'🥘'},
+   {name:'순두부찌개',           price:9000,  category:'찌개/국', emoji:'🍜'},
+   {name:'부대찌개(2인)',        price:22000, category:'찌개/국', emoji:'🍲'},
+   {name:'갈비탕',              price:13000, category:'찌개/국', emoji:'🦴'},
+   {name:'설렁탕',              price:12000, category:'찌개/국', emoji:'🥣'},
+   {name:'해장국',              price:11000, category:'찌개/국', emoji:'🍲'},
+   /* 밥/볶음 */
+   {name:'비빔밥',              price:10000, category:'밥/볶음', emoji:'🍚'},
+   {name:'돌솥비빔밥',          price:11000, category:'밥/볶음', emoji:'🍚'},
+   {name:'불고기덮밥',          price:11000, category:'밥/볶음', emoji:'🍚'},
+   {name:'제육볶음',            price:11000, category:'밥/볶음', emoji:'🥓'},
+   {name:'오삼불고기',          price:13000, category:'밥/볶음', emoji:'🥓'},
+   {name:'낙지볶음',            price:13000, category:'밥/볶음', emoji:'🐙'},
+   {name:'참치김치볶음밥',      price:9000,  category:'밥/볶음', emoji:'🍚'},
+   /* 면/분식 */
+   {name:'냉면',                price:12000, category:'면류',    emoji:'🍜'},
+   {name:'비빔냉면',            price:12000, category:'면류',    emoji:'🍜'},
+   {name:'칼국수',              price:10000, category:'면류',    emoji:'🍜'},
+   {name:'수제비',              price:10000, category:'면류',    emoji:'🥣'},
+   /* 구이 */
+   {name:'삼겹살(200g)',        price:16000, category:'구이',    emoji:'🥓'},
+   {name:'목살(200g)',          price:15000, category:'구이',    emoji:'🥓'},
+   {name:'항정살(200g)',        price:17000, category:'구이',    emoji:'🥓'},
+   {name:'불고기(1인분)',       price:13000, category:'구이',    emoji:'🥩'},
+   {name:'LA갈비(2대)',         price:20000, category:'구이',    emoji:'🦴'},
+   /* 사이드 */
+   {name:'계란찜',              price:4000,  category:'사이드',  emoji:'🥚'},
+   {name:'파김치',              price:3000,  category:'사이드',  emoji:'🌿'},
+   {name:'공기밥',              price:1500,  category:'추가',    emoji:'🍚'},
+   {name:'냉모밀',              price:3000,  category:'추가',    emoji:'🍜'}
   ]},
- {id:'demo_japanese',label:'일식당', theme:'japanese', primary:'#3b82f6',bg:'#0a0f1e',
+
+ /* ─────────── 일식당 ─────────── */
+ {id:'demo_japanese',label:'일식당',theme:'japanese',primary:'#3b82f6',bg:'#0a0f1e',
   services:['kiosk','table_order','booking','inventory'],
-  features:['POS 결제','테이블 주문','예약 관리','재고 현황'],
+  features:['POS 결제','테이블주문','예약관리','재고'],
   menus:[
-   {name:'연어초밥(2pc)',price:4000,category:'초밥',emoji:'🍣'},
-   {name:'참치초밥(2pc)',price:4000,category:'초밥',emoji:'🍣'},
-   {name:'광어회(소)',price:35000,category:'회',emoji:'🐟'},
-   {name:'모둠회(소)',price:45000,category:'회',emoji:'🍥'},
-   {name:'우동',price:9000,category:'면류',emoji:'🍲'},
-   {name:'라멘',price:10000,category:'면류',emoji:'🍜'},
-   {name:'사케(1홉)',price:8000,category:'주류',emoji:'🍶'},
-   {name:'하이볼',price:7000,category:'주류',emoji:'🥃'}
+   /* 초밥 */
+   {name:'연어초밥(2pc)',        price:5000,  category:'초밥',   emoji:'🍣'},
+   {name:'참치초밥(2pc)',        price:5000,  category:'초밥',   emoji:'🍣'},
+   {name:'광어초밥(2pc)',        price:5000,  category:'초밥',   emoji:'🍣'},
+   {name:'새우초밥(2pc)',        price:4500,  category:'초밥',   emoji:'🦐'},
+   {name:'문어초밥(2pc)',        price:4500,  category:'초밥',   emoji:'🐙'},
+   {name:'계란초밥(2pc)',        price:3500,  category:'초밥',   emoji:'🥚'},
+   {name:'모둠초밥(10pc)',       price:28000, category:'초밥',   emoji:'🍣'},
+   {name:'연어아보카도롤',       price:13000, category:'롤',     emoji:'🌀'},
+   {name:'스파이시참치롤',       price:13000, category:'롤',     emoji:'🌶'},
+   {name:'크런치롤',             price:14000, category:'롤',     emoji:'🍙'},
+   /* 회 */
+   {name:'연어회(소)',           price:35000, category:'회',     emoji:'🐟'},
+   {name:'광어회(소)',           price:40000, category:'회',     emoji:'🐟'},
+   {name:'광어회(중)',           price:70000, category:'회',     emoji:'🐟'},
+   {name:'모둠회(소)',           price:50000, category:'회',     emoji:'🍥'},
+   {name:'모둠회(중)',           price:90000, category:'회',     emoji:'🍥'},
+   /* 면류 */
+   {name:'우동(기본)',           price:10000, category:'면류',   emoji:'🍲'},
+   {name:'튀김우동',             price:14000, category:'면류',   emoji:'🍲'},
+   {name:'라멘(쇼유)',           price:12000, category:'면류',   emoji:'🍜'},
+   {name:'라멘(돈코츠)',         price:13000, category:'면류',   emoji:'🍜'},
+   {name:'냉소바',              price:11000, category:'면류',   emoji:'🥢'},
+   {name:'온소바',              price:11000, category:'면류',   emoji:'🥢'},
+   /* 튀김/메인 */
+   {name:'새우튀김(4pc)',        price:16000, category:'튀김',   emoji:'🍤'},
+   {name:'모둠튀김',             price:18000, category:'튀김',   emoji:'🍤'},
+   {name:'가라아게(닭튀김)',     price:14000, category:'메인',   emoji:'🍗'},
+   {name:'일본식카레',           price:12000, category:'메인',   emoji:'🍛'},
+   {name:'규동(소고기덮밥)',     price:13000, category:'메인',   emoji:'🍚'},
+   /* 주류/음료 */
+   {name:'생맥주(500ml)',        price:6000,  category:'주류',   emoji:'🍺'},
+   {name:'사케(1홉)',            price:9000,  category:'주류',   emoji:'🍶'},
+   {name:'하이볼',              price:8000,  category:'주류',   emoji:'🥃'},
+   {name:'매실주(글라스)',       price:7000,  category:'주류',   emoji:'🍵'},
+   {name:'미소된장국',          price:2000,  category:'사이드',  emoji:'🥣'},
+   {name:'샐러드',              price:5000,  category:'사이드',  emoji:'🥗'}
   ]},
- {id:'demo_snack',   label:'분식',   theme:'fastfood', primary:'#f97316',bg:'#1a0e00',
+
+ /* ─────────── 분식 ─────────── */
+ {id:'demo_snack',label:'분식',theme:'fastfood',primary:'#f97316',bg:'#1a0e00',
   services:['kiosk','table_order','inventory'],
-  features:['POS 결제','카운터 주문','재고 현황'],
+  features:['POS 결제','카운터주문','재고'],
   menus:[
-   {name:'떡볶이',price:5000,category:'분식',emoji:'🌶'},
-   {name:'순대',price:4000,category:'분식',emoji:'🍢'},
-   {name:'튀김(5개)',price:3000,category:'분식',emoji:'🍤'},
-   {name:'라볶이',price:6000,category:'분식',emoji:'🍜'},
-   {name:'김밥(1줄)',price:3500,category:'김밥',emoji:'🍙'},
-   {name:'치즈김밥',price:4000,category:'김밥',emoji:'🧀'},
-   {name:'오뎅국물',price:1000,category:'사이드',emoji:'🍢'}
+   /* 떡볶이 */
+   {name:'기본떡볶이',          price:5000,  category:'떡볶이', emoji:'🌶'},
+   {name:'치즈떡볶이',          price:6000,  category:'떡볶이', emoji:'🧀'},
+   {name:'로제떡볶이',          price:7000,  category:'떡볶이', emoji:'🍝'},
+   {name:'짜장떡볶이',          price:7000,  category:'떡볶이', emoji:'🍜'},
+   {name:'크림떡볶이',          price:7000,  category:'떡볶이', emoji:'🍮'},
+   {name:'엽기떡볶이(2인)',     price:16000, category:'떡볶이', emoji:'🔥'},
+   /* 순대/튀김 */
+   {name:'순대(1인분)',         price:5000,  category:'순대/튀김',emoji:'🍢'},
+   {name:'순대볶음',            price:10000, category:'순대/튀김',emoji:'🍢'},
+   {name:'튀김(5개)',           price:3500,  category:'순대/튀김',emoji:'🍤'},
+   {name:'새우튀김(3개)',       price:4500,  category:'순대/튀김',emoji:'🦐'},
+   {name:'오징어튀김',          price:4500,  category:'순대/튀김',emoji:'🦑'},
+   {name:'고구마튀김',          price:3500,  category:'순대/튀김',emoji:'🍠'},
+   {name:'야채튀김',            price:3000,  category:'순대/튀김',emoji:'🥦'},
+   /* 김밥 */
+   {name:'기본김밥',            price:3500,  category:'김밥',   emoji:'🍙'},
+   {name:'참치김밥',            price:4500,  category:'김밥',   emoji:'🐟'},
+   {name:'치즈김밥',            price:4500,  category:'김밥',   emoji:'🧀'},
+   {name:'야채김밥',            price:4000,  category:'김밥',   emoji:'🥦'},
+   {name:'불고기김밥',          price:5000,  category:'김밥',   emoji:'🥩'},
+   {name:'계란김밥',            price:4000,  category:'김밥',   emoji:'🥚'},
+   {name:'누드김밥',            price:4500,  category:'김밥',   emoji:'🍙'},
+   /* 면/라면 */
+   {name:'라볶이',             price:7000,  category:'라면/면류',emoji:'🍜'},
+   {name:'짜파구리',           price:6000,  category:'라면/면류',emoji:'🍜'},
+   {name:'컵라면',             price:2000,  category:'라면/면류',emoji:'🍜'},
+   {name:'비빔면',             price:5500,  category:'라면/면류',emoji:'🥢'},
+   {name:'잔치국수',           price:6000,  category:'라면/면류',emoji:'🍜'},
+   /* 사이드 */
+   {name:'오뎅국물',           price:1000,  category:'사이드',  emoji:'🍢'},
+   {name:'삶은계란(1개)',      price:500,   category:'사이드',  emoji:'🥚'},
+   {name:'단무지',             price:500,   category:'사이드',  emoji:'🟡'}
   ]},
- {id:'demo_western', label:'양식당', theme:'other',    primary:'#7c3aed',bg:'#07071a',
+
+ /* ─────────── 양식당 ─────────── */
+ {id:'demo_western',label:'양식당',theme:'other',primary:'#7c3aed',bg:'#07071a',
   services:['kiosk','table_order','booking','inventory'],
-  features:['POS 결제','테이블 주문','예약 관리','재고 현황'],
+  features:['POS 결제','테이블주문','예약관리','재고'],
   menus:[
-   {name:'파스타(토마토)',price:13000,category:'파스타',emoji:'🍝'},
-   {name:'파스타(크림)',price:14000,category:'파스타',emoji:'🍝'},
-   {name:'피자 마르게리타',price:18000,category:'피자',emoji:'🍕'},
-   {name:'스테이크(200g)',price:32000,category:'메인',emoji:'🥩'},
-   {name:'그라탱',price:12000,category:'메인',emoji:'🍲'},
-   {name:'시저샐러드',price:9000,category:'샐러드',emoji:'🥗'},
-   {name:'와인(글라스)',price:12000,category:'음료',emoji:'🍷'},
-   {name:'에스프레소',price:4000,category:'음료',emoji:'☕'}
+   /* 파스타 */
+   {name:'봉골레파스타',        price:14000, category:'파스타',  emoji:'🍝'},
+   {name:'까르보나라',          price:15000, category:'파스타',  emoji:'🍝'},
+   {name:'아라비아따',          price:13000, category:'파스타',  emoji:'🍝'},
+   {name:'로제파스타',          price:15000, category:'파스타',  emoji:'🍝'},
+   {name:'해산물파스타',        price:17000, category:'파스타',  emoji:'🦐'},
+   {name:'트러플파스타',        price:19000, category:'파스타',  emoji:'🍄'},
+   {name:'오일파스타',          price:13000, category:'파스타',  emoji:'🍝'},
+   /* 피자 */
+   {name:'마르게리따(M)',       price:19000, category:'피자',    emoji:'🍕'},
+   {name:'페퍼로니(M)',         price:21000, category:'피자',    emoji:'🍕'},
+   {name:'콰트로치즈(M)',       price:23000, category:'피자',    emoji:'🧀'},
+   {name:'BBQ치킨(M)',         price:22000, category:'피자',    emoji:'🍗'},
+   /* 메인 */
+   {name:'안심스테이크(200g)', price:39000, category:'메인',    emoji:'🥩'},
+   {name:'채끝스테이크(200g)', price:36000, category:'메인',    emoji:'🥩'},
+   {name:'치킨스테이크',        price:23000, category:'메인',    emoji:'🍗'},
+   {name:'연어스테이크',        price:29000, category:'메인',    emoji:'🐟'},
+   {name:'새우그라탱',          price:22000, category:'메인',    emoji:'🍲'},
+   {name:'함박스테이크',        price:18000, category:'메인',    emoji:'🥩'},
+   /* 샐러드/수프 */
+   {name:'시저샐러드',          price:12000, category:'샐러드',  emoji:'🥗'},
+   {name:'니수아즈샐러드',      price:14000, category:'샐러드',  emoji:'🥗'},
+   {name:'그릭샐러드',          price:13000, category:'샐러드',  emoji:'🥗'},
+   {name:'크림스프',            price:9000,  category:'수프',    emoji:'🥣'},
+   {name:'토마토수프',          price:9000,  category:'수프',    emoji:'🍅'},
+   {name:'양파수프',            price:8000,  category:'수프',    emoji:'🧅'},
+   /* 디저트 */
+   {name:'티라미수',            price:8000,  category:'디저트',  emoji:'🍰'},
+   {name:'판나코타',            price:8000,  category:'디저트',  emoji:'🍮'},
+   {name:'아이스크림(2스쿱)',  price:7000,  category:'디저트',  emoji:'🍨'},
+   /* 음료 */
+   {name:'레드와인(글라스)',    price:14000, category:'음료',    emoji:'🍷'},
+   {name:'화이트와인(글라스)',  price:13000, category:'음료',    emoji:'🥂'},
+   {name:'생맥주(파인트)',      price:9000,  category:'음료',    emoji:'🍺'},
+   {name:'에스프레소',          price:5000,  category:'음료',    emoji:'☕'},
+   {name:'탄산수',              price:4000,  category:'음료',    emoji:'💧'}
   ]},
- {id:'demo_bakery',  label:'베이커리',theme:'cafe',    primary:'#c8a96e',bg:'#1a1209',
+
+ /* ─────────── 베이커리 ─────────── */
+ {id:'demo_bakery',label:'베이커리',theme:'cafe',primary:'#c8a96e',bg:'#1a1209',
   services:['kiosk','bakery_qr','inventory'],
-  features:['POS 결제','빵·디저트 QR','재고 현황'],
+  features:['POS 결제','빵·디저트QR','재고'],
   menus:[
-   {name:'식빵',price:4500,category:'빵',emoji:'🍞'},
-   {name:'크로와상',price:3500,category:'빵',emoji:'🥐'},
-   {name:'바게트',price:4000,category:'빵',emoji:'🥖'},
-   {name:'머핀',price:2800,category:'케이크',emoji:'🧁'},
-   {name:'치즈케이크',price:5000,category:'케이크',emoji:'🍰'},
-   {name:'딸기케이크',price:6500,category:'케이크',emoji:'🍓'},
-   {name:'마카롱(2개)',price:3000,category:'디저트',emoji:'🍬'},
-   {name:'아메리카노',price:4000,category:'음료',emoji:'☕'},
-   {name:'카페라떼',price:4500,category:'음료',emoji:'🥛'}
+   /* 식빵/브레드 */
+   {name:'우유식빵(1덩이)',     price:5500,  category:'식빵',   emoji:'🍞'},
+   {name:'통밀식빵(1덩이)',     price:6000,  category:'식빵',   emoji:'🍞'},
+   {name:'바게트',             price:4500,  category:'식빵',   emoji:'🥖'},
+   {name:'치아바타',           price:4500,  category:'식빵',   emoji:'🥖'},
+   {name:'호밀빵(1덩이)',      price:6500,  category:'식빵',   emoji:'🍞'},
+   /* 크로와상/페이스트리 */
+   {name:'버터크로와상',        price:4000,  category:'페이스트리',emoji:'🥐'},
+   {name:'햄치즈크로와상',      price:5500,  category:'페이스트리',emoji:'🥐'},
+   {name:'초코크로와상',        price:4500,  category:'페이스트리',emoji:'🥐'},
+   {name:'크루아상(아몬드)',    price:5000,  category:'페이스트리',emoji:'🥐'},
+   {name:'베이글(플레인)',      price:3500,  category:'페이스트리',emoji:'🥯'},
+   {name:'베이글(크림치즈)',    price:5500,  category:'페이스트리',emoji:'🥯'},
+   {name:'에클레어',           price:5000,  category:'페이스트리',emoji:'🍩'},
+   {name:'데니쉬(사과)',       price:4500,  category:'페이스트리',emoji:'🍎'},
+   /* 케이크/디저트 */
+   {name:'치즈케이크(1조각)',  price:7500,  category:'케이크',  emoji:'🍰'},
+   {name:'딸기케이크(1조각)',  price:8000,  category:'케이크',  emoji:'🍓'},
+   {name:'초코케이크(1조각)',  price:7500,  category:'케이크',  emoji:'🍫'},
+   {name:'당근케이크(1조각)',  price:7000,  category:'케이크',  emoji:'🥕'},
+   {name:'얼그레이케이크',     price:7500,  category:'케이크',  emoji:'🫖'},
+   {name:'파운드케이크(1조각)',price:5500,  category:'케이크',  emoji:'🍰'},
+   /* 쿠키/머핀 */
+   {name:'버터쿠키(2개)',      price:3500,  category:'쿠키/머핀',emoji:'🍪'},
+   {name:'초코칩쿠키(2개)',    price:4000,  category:'쿠키/머핀',emoji:'🍪'},
+   {name:'블루베리머핀',       price:4000,  category:'쿠키/머핀',emoji:'🧁'},
+   {name:'초코머핀',           price:4000,  category:'쿠키/머핀',emoji:'🧁'},
+   {name:'마카롱(2개)',        price:4500,  category:'쿠키/머핀',emoji:'🍬'},
+   {name:'스콘(플레인)',       price:3500,  category:'쿠키/머핀',emoji:'🍞'},
+   {name:'스콘(건과일)',       price:4000,  category:'쿠키/머핀',emoji:'🍞'},
+   {name:'와플',              price:8000,  category:'쿠키/머핀',emoji:'🧇'},
+   /* 음료 */
+   {name:'아메리카노(ICE)',    price:5000,  category:'음료',    emoji:'🧊'},
+   {name:'아메리카노(HOT)',    price:4500,  category:'음료',    emoji:'☕'},
+   {name:'카페라떼(ICE)',      price:6000,  category:'음료',    emoji:'🥛'},
+   {name:'카페라떼(HOT)',      price:5500,  category:'음료',    emoji:'🥛'},
+   {name:'말차라떼',           price:6500,  category:'음료',    emoji:'🍵'},
+   {name:'얼그레이티',         price:5000,  category:'음료',    emoji:'🫖'},
+   {name:'레몬에이드',         price:6000,  category:'음료',    emoji:'🍋'},
+   {name:'딸기스무디',         price:7500,  category:'음료',    emoji:'🍓'}
   ]}
 ];
 
@@ -131,13 +306,13 @@ function makeCard(d){
  var card=document.createElement('div');
  card.className='card';
  card.id='card-'+d.id;
- var feats=d.features.map(function(f){return '<span style="font-size:10px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:1px 6px;color:#c9a84c">'+f+'</span>';}).join(' ');
- card.innerHTML='<h3>'+d.label+' <span style="font-size:10px;color:#94a3b8;font-weight:400">('+d.id+')</span></h3>'+
+ var feats=d.features.map(function(f){
+  return '<span style="font-size:10px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:1px 6px;color:#c9a84c">'+f+'</span>';
+ }).join(' ');
+ card.innerHTML='<h3>'+d.label+' <span style="font-size:10px;color:#94a3b8;font-weight:400">('+d.id+' · 메뉴 '+d.menus.length+'개)</span></h3>'+
   '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">'+feats+'</div>'+
-  '<div id="rows-'+d.id+'">'+
-   '<div class="row"><span>딜러 문서</span><span class="badge pending" id="doc-'+d.id+'">대기</span></div>'+
-   '<div class="row"><span>기본 메뉴 ('+d.menus.length+'개)</span><span class="badge pending" id="menu-'+d.id+'">대기</span></div>'+
-  '</div>';
+  '<div class="row"><span>딜러 문서</span><span class="badge pending" id="doc-'+d.id+'">대기</span></div>'+
+  '<div class="row"><span>메뉴 세팅</span><span class="badge pending" id="menu-'+d.id+'">대기</span></div>';
  document.getElementById('cards').appendChild(card);
 }
 
@@ -145,7 +320,7 @@ async function initDealer(d){
  var docEl=document.getElementById('doc-'+d.id);
  var menuEl=document.getElementById('menu-'+d.id);
 
- // 1. Company 문서 생성/덮어쓰기
+ docEl.className='badge pending';docEl.textContent='저장 중...';
  try{
   await db.collection('companies').doc(d.id).set({
    companyName:'데모 '+d.label,
@@ -155,22 +330,28 @@ async function initDealer(d){
    services:d.services,
    subscriptions:{combo:{active:true}},
    isDemo:true,
-   createdAt:firebase.firestore.FieldValue.serverTimestamp()
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   },{merge:true});
   docEl.className='badge ok';docEl.textContent='완료';
  }catch(e){
   docEl.className='badge err';docEl.textContent='오류: '+e.code;return;
  }
 
- // 2. 기존 메뉴 확인 후 없으면 세팅
- menuEl.className='badge pending';menuEl.textContent='확인 중...';
+ menuEl.className='badge pending';menuEl.textContent='삭제 후 재등록...';
  try{
-  var snap=await db.collection('filo_menus').where('dealerId','==',d.id).limit(1).get();
-  if(!snap.empty){
-   menuEl.className='badge exist';menuEl.textContent='이미 존재';
-  } else {
+  /* 기존 메뉴 전체 삭제 */
+  var old=await db.collection('filo_menus').where('dealerId','==',d.id).get();
+  if(!old.empty){
+   var del=db.batch();
+   old.docs.forEach(function(doc){ del.delete(doc.ref); });
+   await del.commit();
+  }
+  /* 배치 50개 제한 처리 */
+  var chunks=[];
+  for(var i=0;i<d.menus.length;i+=500) chunks.push(d.menus.slice(i,i+500));
+  for(var ci=0;ci<chunks.length;ci++){
    var batch=db.batch();
-   d.menus.forEach(function(m){
+   chunks[ci].forEach(function(m){
     var ref=db.collection('filo_menus').doc();
     batch.set(ref,{
      dealerId:d.id,name:m.name,price:m.price,
@@ -179,8 +360,8 @@ async function initDealer(d){
     });
    });
    await batch.commit();
-   menuEl.className='badge ok';menuEl.textContent=d.menus.length+'개 등록';
   }
+  menuEl.className='badge ok';menuEl.textContent=d.menus.length+'개 등록';
  }catch(e){
   menuEl.className='badge err';menuEl.textContent='오류: '+e.code;
  }
@@ -195,7 +376,7 @@ async function runInit(){
 
  var user=auth.currentUser;
  if(!user){
-  sum.textContent='로그인이 필요합니다. filo.ai.kr에서 먼저 로그인 후 이 페이지로 돌아오세요.';
+  sum.textContent='로그인이 필요합니다. filo.ai.kr에서 로그인 후 이 페이지를 다시 여세요.';
   btn.disabled=false;return;
  }
 
@@ -203,7 +384,7 @@ async function runInit(){
  for(var i=0;i<DEMOS.length;i++){
   await initDealer(DEMOS[i]);
  }
- sum.textContent='완료! filo.ai.kr에서 업종별 데모 버튼을 눌러 테스트하세요.';
+ sum.textContent='완료! filo.ai.kr에서 업종별 데모 버튼을 눌러 확인하세요.';
  btn.disabled=false;
 }
 </script>
