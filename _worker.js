@@ -9830,6 +9830,14 @@ function _pgHomeAgency(el){
     '<div class="stat3-item"><div class="stat3-val" style="color:var(--br)" id="kpi-prog">'+_skVal+'</div><div class="stat3-lbl">진행 중</div></div>'+
   '</div>'+
 
+  // 실시간 관제 지도
+  '<div class="sec-head" style="margin-top:4px"><span class="sec-title">실시간 관제</span>'+
+    '<button type="button" class="sec-count" onclick="_loadAgencyControlMap()">새로고침</button></div>'+
+  '<div id="agency-ctrl-map" style="width:100%;height:200px;border-radius:var(--r-lg);background:var(--bg3);'+
+    'overflow:hidden;margin-bottom:12px;display:flex;align-items:center;justify-content:center">'+
+    '<div style="font-size:13px;color:var(--t3)">지도 로딩 중...</div>'+
+  '</div>'+
+
   // 긴급 배차 원클릭 버튼 (노란색)
   '<button type="button" class="btn-urgent-flash" onclick="_yUrgentDispatch()">'+
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
@@ -9908,6 +9916,69 @@ function _pgHomeAgency(el){
       recent.appendChild(card);
     });
   }).catch(function(){});
+
+  // 실시간 관제 지도 로드
+  setTimeout(_loadAgencyControlMap, 300);
+}
+
+// ── 소장 실시간 관제 지도 ─────────────────────────────────────
+function _loadAgencyControlMap(){
+  var mapEl=document.getElementById('agency-ctrl-map');
+  if(!mapEl)return;
+  mapEl.innerHTML='<div style="font-size:13px;color:var(--t3)">불러오는 중...</div>';
+  _db.collection('yongcha_applies').where('agencyId','==',_CU.uid)
+    .where('status','==','approved').limit(20).get()
+  .then(function(snap){
+    if(snap.empty){
+      mapEl.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--t2)">현재 운행 중인 기사가 없어요</div>';
+      return;
+    }
+    var seen={},driverIds=[];
+    snap.docs.forEach(function(doc){
+      var d=doc.data();
+      if(d.driverId&&!seen[d.driverId]){seen[d.driverId]=true;driverIds.push(d.driverId);}
+    });
+    var promises=driverIds.slice(0,15).map(function(uid){
+      return _db.collection('yongcha_users').doc(uid).get();
+    });
+    return Promise.all(promises).then(function(docs){
+      var drivers=docs.map(function(d){return d.exists?Object.assign({id:d.id},d.data()):null;})
+        .filter(function(d){return d&&typeof d.lat==='number'&&typeof d.lng==='number';});
+      if(!drivers.length){
+        mapEl.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--t2)">GPS 위치가 수집된 기사가 없어요<br><span style="font-size:11.5px;color:var(--t3)">기사가 앱 사용 시 자동 수집됩니다</span></div>';
+        return;
+      }
+      _loadKakaoMap(function(){
+        mapEl.innerHTML='';
+        var center=new kakao.maps.LatLng(drivers[0].lat,drivers[0].lng);
+        var map=new kakao.maps.Map(mapEl,{center:center,level:9});
+        var bounds=new kakao.maps.LatLngBounds();
+        drivers.forEach(function(d,i){
+          var pos=new kakao.maps.LatLng(d.lat,d.lng);
+          bounds.extend(pos);
+          var grade=d.trustGrade||'';
+          var badgeColor=grade==='S'?'#f59e0b':grade==='A'?'var(--gn)':grade==='B'?'var(--ac)':'var(--t3)';
+          var ov=new kakao.maps.CustomOverlay({
+            position:pos,
+            content:'<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'+
+              '<div style="width:32px;height:32px;border-radius:50%;background:'+badgeColor+';color:#fff;'+
+                'font-size:11px;font-weight:900;display:grid;place-items:center;'+
+                'border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer" '+
+                'title="'+_esc(d.name||'기사 '+(i+1))+'">'+(i+1)+'</div>'+
+              '<div style="font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);'+
+                'white-space:nowrap;background:rgba(0,0,0,.5);border-radius:4px;padding:1px 4px">'+
+                _esc((d.name||'기사').slice(0,4))+'</div>'+
+            '</div>',
+            zIndex:10
+          });
+          ov.setMap(map);
+        });
+        if(drivers.length>1)map.setBounds(bounds,50,50,50,50);
+      });
+    });
+  }).catch(function(e){
+    if(mapEl)mapEl.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--rd)">'+_esc(e.message)+'</div>';
+  });
 }
 
 // ── 노선 공고 목록 ───────────────────────────────────────────
@@ -12091,11 +12162,21 @@ function _pgMyRoutes(el){
       var card=document.createElement('div');card.className='card';
       card.style.cssText='margin-bottom:12px;border-color:'+(step===1?'var(--acln)':step===2?'var(--gnln)':'var(--bd)');
       card.innerHTML=
-        // 진행 바
-        '<div style="height:4px;border-radius:4px;background:var(--bd2);margin-bottom:14px;overflow:hidden">'+
+        // 진행 바 + step=1일 때 경과 시간 타이머
+        '<div style="height:4px;border-radius:4px;background:var(--bd2);margin-bottom:'+(step===1?'8':'14')+'px;overflow:hidden">'+
           '<div style="height:100%;width:'+progPct+'%;border-radius:4px;background:'+
             (step>=3?'var(--gn)':'var(--ac)')+';transition:width .5s var(--ease)"></div>'+
         '</div>'+
+        (step===1&&a.judgedAt?
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;'+
+            'padding:8px 12px;background:rgba(37,99,235,.12);border:1px solid var(--acln);border-radius:10px">'+
+            '<div style="font-size:11px;color:var(--t2);font-weight:700">수락 후 경과</div>'+
+            '<div class="route-timer" data-ts="'+(a.judgedAt.seconds||0)+'" style="font-size:20px;font-weight:900;color:var(--ac);font-variant-numeric:tabular-nums;letter-spacing:-1px">00:00:00</div>'+
+          '</div>'
+        :'')+
+        (step===2?
+          '<div id="route-map-'+a.id+'" style="width:100%;height:160px;border-radius:12px;background:var(--bg3);margin-bottom:10px;overflow:hidden"></div>'
+        :'')+
         '<div class="wstep-row">'+
         stepLabel.map(function(lbl,i){
           var cls='wstep '+(stSt[i]||'');
@@ -12135,6 +12216,50 @@ function _pgMyRoutes(el){
         (step>=3?'<button onclick="_showWorkCert(\\''+a.id+'\\')" style="min-height:var(--tap);background:var(--pul);border:1px solid var(--puln);border-radius:10px;color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2">전자 확인서 보기</button>':'')+
         '</div>';
       list.appendChild(card);
+      // step=2: 배송 중 미니맵 (카카오 지도 + 구역 핀)
+      if(step===2&&zones.length>0){
+        setTimeout(function(){
+          var mapEl=document.getElementById('route-map-'+a.id);
+          if(!mapEl)return;
+          _loadKakaoMap(function(){
+            var coords=zCoord.length>0?zCoord:null;
+            var center=coords?new kakao.maps.LatLng(coords[0].lat,coords[0].lng):new kakao.maps.LatLng(35.1796,129.0756);
+            if(_myGeo)center=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
+            var rm=new kakao.maps.Map(mapEl,{center:center,level:6});
+            // 현재 위치 마커
+            if(_myGeo){
+              new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng),
+                content:'<div style="width:14px;height:14px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(37,99,235,.7)"></div>',
+                yAnchor:0.5,xAnchor:0.5,map:rm});
+            }
+            // 구역 핀 연결
+            var path=[];
+            coords&&coords.forEach(function(z,i){
+              var pos=new kakao.maps.LatLng(z.lat,z.lng);
+              path.push(pos);
+              new kakao.maps.CustomOverlay({position:pos,
+                content:'<div style="background:#f59e0b;color:#000;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;font-size:10px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.4)">'+(i+1)+'</div>',
+                yAnchor:0.5,xAnchor:0.5,map:rm});
+            });
+            if(path.length>1){
+              new kakao.maps.Polyline({path:path,strokeWeight:2.5,strokeColor:'#f59e0b',strokeOpacity:.8,strokeStyle:'dashed',map:rm});
+            }
+          });
+        },200);
+      }
+    });
+    // 수락 후 경과 타이머 — 모든 카드 렌더 후 일괄 시작
+    var _timerEl=list.querySelectorAll('.route-timer');
+    _timerEl.forEach(function(el){
+      var ts=parseInt(el.getAttribute('data-ts'),10)*1000;
+      function tick(){
+        var elapsed=Math.floor((Date.now()-ts)/1000);
+        if(elapsed<0)elapsed=0;
+        var h=Math.floor(elapsed/3600),m=Math.floor((elapsed%3600)/60),s=elapsed%60;
+        el.textContent=(h?String(h).padStart(2,'0')+':':'')+(String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'));
+      }
+      tick();
+      var _t=setInterval(function(){if(!document.contains(el)){clearInterval(_t);return;}tick();},1000);
     });
   }).catch(function(e){
     var list=document.getElementById('myroutes-list');
@@ -15278,22 +15403,19 @@ function _ySubmitComplete(applyId){
   var file=fileInput&&fileInput.files&&fileInput.files[0];
 
   var doComplete=function(photoUrl){
-    _db.collection('yongcha_applies').doc(applyId).update({
-      step:3,status:'done',completedAt:firebase.firestore.FieldValue.serverTimestamp(),
-      photoUrl:photoUrl||''
-    }).then(function(){
-      _yToast('완료! 정산이 요청됐습니다');
-      _closeModal();
-      // 당일 즉시 정산 알림 — 소장에게
-      _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
-        if(!s.exists)return;
-        var a=s.data();
+    _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
+      if(!s.exists){_yToast('배차 정보 없음');_closeModal();return;}
+      var a=s.data();
+      return _db.collection('yongcha_applies').doc(applyId).update({
+        step:3,status:'done',completedAt:firebase.firestore.FieldValue.serverTimestamp(),
+        photoUrl:photoUrl||''
+      }).then(function(){
         if(a.agencyId){
-          _yNotify(a.agencyId,' 정산 요청',
+          _yNotify(a.agencyId,'정산 요청',
             _CU.name+'님이 배송을 완료했어요. 정산을 확인해주세요. ('+_won(a.unitPrice||0)+'원/건)');
         }
-      }).catch(function(){});
-      _goPage('my_routes');
+        _yShowSettlementDone(a);
+      });
     }).catch(function(e){
       if(btn){btn.textContent='완료 확정 + 정산 요청';btn.disabled=false;}
       _yToast('오류: '+e.message);
@@ -15308,6 +15430,48 @@ function _ySubmitComplete(applyId){
   } else {
     doComplete('');
   }
+}
+
+// ── 정산 완료 내역 모달 ───────────────────────────────────────
+function _yShowSettlementDone(a){
+  var unitPrice=a.unitPrice||0;
+  var volume=a.volume||0;
+  var gross=unitPrice*volume;
+  var fee=Math.round(gross*0.03);
+  var net=gross-fee;
+  var settleDt=new Date();settleDt.setDate(settleDt.getDate()+2);
+  var sdStr=settleDt.getFullYear()+'년 '+(settleDt.getMonth()+1)+'월 '+settleDt.getDate()+'일';
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="text-align:center;margin-bottom:20px">'+
+      '<div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--gn),#059669);'+
+        'display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">'+
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+      '</div>'+
+      '<div style="font-size:22px;font-weight:900;letter-spacing:-.7px">배송 완료!</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-top:4px">정산 내역을 확인하세요</div>'+
+    '</div>'+
+    '<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">'+
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;color:var(--t2);font-weight:600">운임 ('+_won(unitPrice)+'원 × '+volume+'건)</span>'+
+        '<span style="font-size:14.5px;font-weight:800">'+_won(gross)+'원</span>'+
+      '</div>'+
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:13px;color:var(--t2);font-weight:600">플랫폼 수수료 (3%)</span>'+
+        '<span style="font-size:14.5px;font-weight:800;color:var(--rd)">- '+_won(fee)+'원</span>'+
+      '</div>'+
+      '<div style="padding:16px;background:var(--acl);display:flex;justify-content:space-between;align-items:center">'+
+        '<span style="font-size:15px;font-weight:900;color:var(--ac)">입금 예정액</span>'+
+        '<span style="font-size:24px;font-weight:900;color:var(--ac);letter-spacing:-.8px">'+_won(net)+'원</span>'+
+      '</div>'+
+    '</div>'+
+    '<div style="text-align:center;font-size:12.5px;color:var(--t3);margin-bottom:20px">'+
+      '정산 예정일: '+sdStr+
+    '</div>'+
+    '<button type="button" onclick="_closeModal();_goPage(\\'my_routes\\')" '+
+      'style="width:100%;min-height:52px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;'+
+      'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>';
+  _openModal();
 }
 
 // ── 멀티스톱 내비게이션 모달 (기사 홈 "내비게이션 시작" 버튼) ─────
