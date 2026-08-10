@@ -55,6 +55,17 @@ function _filoConfirmPay(method, methodLabel){
  var items=_cartItems.map(function(c){return {id:c.id,name:c.name,price:c.price,qty:c.qty};});
  var tableId=window._selectedTableId||null;
  var tableName=window._selectedTableName||(tableId?'테이블 '+tableId:'카운터');
+ var orderIds=window._selectedOrderIds||[];
+ window._selectedOrderIds=null;
+
+ // 기존 QR 테이블 주문 결제 → _filoTablePay로 라우팅 (새 주문 생성 안 함)
+ if(tableId&&orderIds.length&&typeof _filoTablePay==='function'){
+  window._selectedTableId=null;window._selectedTableName=null;
+  _filoTablePay(did,items,total,parseInt(tableId)||tableId,tableName,method,orderIds);
+  _cartClear();
+  return;
+ }
+
  var payType=window._posPayType||'postpay';
  window._posPayType='postpay';
  var saveData={

@@ -603,53 +603,179 @@ function _filoRmAddRow(invOpts){
  var wrap=document.getElementById('rm-ings');
  _filoRmAddRowDOM(wrap,_rmInvItems,'','','g');
 }
+// ── QR 카드 인쇄 (프리미엄 다크 디자인) ─────────────────────
+function _qrPrintCard(id, name, url, badgeLabel) {
+  var wrap = document.getElementById(id);
+  if(!wrap) return;
+  var canvas = wrap.querySelector('canvas');
+  var imgEl = wrap.querySelector('img');
+  var src = canvas ? canvas.toDataURL('image/png') : (imgEl ? imgEl.src : '');
+  if(!src) { _filoToast('QR 이미지 없음'); return; }
+  var storeName = (_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
+  var badge = badgeLabel || name;
+  var w = window.open('','_blank','width=440,height=560');
+  if(!w||!w.document){_filoToast('팝업을 허용해주세요');return;}
+  w.document.write('<html><head><meta charset="UTF-8"><title>'+name+'</title>'+
+   '<style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:400px;height:500px;overflow:hidden}'+
+   'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#fff}'+
+   '.card{width:400px;height:500px;position:relative;overflow:hidden;background:#0A0E2A}'+
+   '.gold-top{height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+   '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+   '.deco1{position:absolute;top:-50px;right:-50px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(201,168,76,.12);z-index:0}'+
+   '.deco2{position:absolute;bottom:-30px;left:-30px;width:130px;height:130px;border-radius:50%;border:1px solid rgba(201,168,76,.08);z-index:0}'+
+   '.header{padding:22px 28px 14px;text-align:center;position:relative;z-index:1}'+
+   '.rest-label{font-size:11px;color:rgba(201,168,76,.65);letter-spacing:4px;font-weight:500;margin-bottom:6px}'+
+   '.store-name{font-size:28px;font-weight:900;color:#fff;letter-spacing:5px;line-height:1;margin-bottom:10px}'+
+   '.divider{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}'+
+   '.divider-line{height:1px;width:36px;background:rgba(201,168,76,.5)}'+
+   '.brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:3px}'+
+   '.brand-filo{font-size:14px;font-weight:800;color:#00CFFF;letter-spacing:3px}'+
+   '.brand-dine{font-size:14px;font-weight:800;color:#00E890;letter-spacing:3px}'+
+   '.brand-dot{color:rgba(201,168,76,.7);font-size:10px}'+
+   '.sub{font-size:9px;color:rgba(255,255,255,.3);letter-spacing:2px}'+
+   '.sep{margin:0 28px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}'+
+   '.qr-wrap{padding:14px 0 10px;text-align:center;position:relative;z-index:1}'+
+   '.qr-box{background:#fff;border-radius:14px;padding:10px;display:inline-block}'+
+   '.badge{text-align:center;padding:2px 0 10px;position:relative;z-index:1}'+
+   '.badge-inner{display:inline-flex;align-items:center;gap:8px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:7px 24px;background:rgba(201,168,76,.07)}'+
+   '.badge-label{font-size:11px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
+   '.badge-name{font-size:20px;font-weight:900;color:#C9A84C;line-height:1}'+
+   '.footer{text-align:center;padding:4px 0 8px;position:relative;z-index:1}'+
+   '.footer p{font-size:8px;color:rgba(255,255,255,.22);letter-spacing:1.5px}'+
+   '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'+
+   '</style></head><body onload="window.print()">'+
+   '<div class="card"><div class="gold-top"></div><div class="deco1"></div><div class="deco2"></div>'+
+   '<div class="header">'+
+   (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
+   '<div class="divider"><div class="divider-line"></div><span style="color:#C9A84C;font-size:9px">✦</span><div class="divider-line"></div></div>'+
+   '<div class="brand"><span class="brand-filo">FILO</span><span class="brand-dot">✦</span><span class="brand-dine">DINE</span></div>'+
+   '<div class="sub">Scan to Order · Menu &amp; Pay</div></div>'+
+   '<div class="sep"></div>'+
+   '<div class="qr-wrap"><div class="qr-box"><img src="'+src+'" style="width:170px;height:170px;display:block"></div></div>'+
+   '<div class="badge"><div class="badge-inner"><span class="badge-name">'+badge+'</span></div></div>'+
+   '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+   '<div class="gold-bot"></div></div>'+
+   '</body></html>');
+  w.document.close();
+}
+
 // ── QR 관리 페이지 ────────────────────────────────────────────
 function _filoPageQrMgmt(el) {
   var did = _CU.dealerId||_CU.uid;
-  var slug = window._companySlug || did;
   var base = 'https://filo.ai.kr';
 
-  // QRCode 라이브러리 동적 로드
   function ensureQR(cb) {
     if(typeof QRCode !== 'undefined') { cb(); return; }
     var s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    s.onload = cb;
+    s.onload = function(){ setTimeout(cb,100); };
     document.head.appendChild(s);
   }
 
-  // QR 카드 DOM 생성
-  function makeQrCard(id, label, sublabel, url, color) {
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;text-align:center';
+  // 프리미엄 다크 QR 카드 DOM 생성
+  var storeName = (_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||
+    (window._cachedCompanyDoc&&(window._cachedCompanyDoc.companyName||window._cachedCompanyDoc.name))||'';
 
+  function makeQrCard(id, label, badgeText, url, isBakery) {
+    var outer = document.createElement('div');
+    outer.style.cssText = 'position:relative;border-radius:16px;overflow:hidden;background:#0A0E2A;text-align:center;padding-bottom:4px';
+
+    // 골드 상단 라인
+    var topLine = document.createElement('div');
+    topLine.style.cssText = 'height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)';
+    outer.appendChild(topLine);
+
+    // 장식 원
+    var deco = document.createElement('div');
+    deco.style.cssText = 'position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(201,168,76,.1);pointer-events:none';
+    outer.appendChild(deco);
+
+    // 헤더 (매장명 + 브랜드)
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:10px 8px 6px;position:relative;z-index:1';
+    hdr.innerHTML =
+      (storeName ? '<div style="font-size:13px;font-weight:900;color:#fff;letter-spacing:3px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+storeName+'</div>' : '')+
+      '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:1px">'+
+      '<span style="font-size:9px;font-weight:800;color:#00CFFF;letter-spacing:2px">FILO</span>'+
+      '<span style="color:rgba(201,168,76,.7);font-size:7px">✦</span>'+
+      '<span style="font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px">DINE</span>'+
+      '</div>'+
+      '<div style="font-size:7px;color:rgba(255,255,255,.3);letter-spacing:1.5px">Scan to Order</div>';
+    outer.appendChild(hdr);
+
+    // 구분선
+    var sep = document.createElement('div');
+    sep.style.cssText = 'margin:0 16px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.25),transparent)';
+    outer.appendChild(sep);
+
+    // QR 코드
+    var qrWrap = document.createElement('div');
+    qrWrap.style.cssText = 'padding:10px 0 6px;position:relative;z-index:1';
+    var qrBox = document.createElement('div');
+    qrBox.style.cssText = 'background:#fff;border-radius:10px;padding:7px;display:inline-block';
     var qrDiv = document.createElement('div');
     qrDiv.id = id;
-    qrDiv.style.cssText = 'width:100px;height:100px;margin:0 auto 8px';
-    wrap.appendChild(qrDiv);
+    qrDiv.style.cssText = 'width:100px;height:100px';
+    qrBox.appendChild(qrDiv);
+    qrWrap.appendChild(qrBox);
+    outer.appendChild(qrWrap);
 
-    var labelEl = document.createElement('div');
-    labelEl.style.cssText = 'font-size:12px;font-weight:700;margin-bottom:2px';
-    labelEl.textContent = label;
-    wrap.appendChild(labelEl);
-
-    if(sublabel) {
-      var sub = document.createElement('div');
-      sub.style.cssText = 'font-size:11px;color:'+(color||'#0066ff')+';margin-bottom:6px';
-      sub.textContent = sublabel;
-      wrap.appendChild(sub);
+    // 이름 배지
+    var badge = document.createElement('div');
+    badge.style.cssText = 'padding:4px 10px 8px;position:relative;z-index:1';
+    if(isBakery) {
+      // 빵/디저트: 이름 크게 + 가격 작게
+      var parts = badgeText.split('₩');
+      var itemName = parts[0].trim();
+      var itemPrice = parts[1] ? '₩'+parts[1].trim() : '';
+      badge.innerHTML =
+        '<div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:2px;line-height:1.2">'+itemName+'</div>'+
+        (itemPrice ? '<div style="font-size:12px;font-weight:700;color:#C9A84C">'+itemPrice+'</div>' : '');
+    } else {
+      // 테이블: 기존 pill 배지
+      badge.innerHTML =
+        '<div style="display:inline-flex;align-items:center;border:1.5px solid rgba(201,168,76,.5);border-radius:50px;padding:4px 14px;background:rgba(201,168,76,.07)">'+
+        '<span style="font-size:13px;font-weight:900;color:#C9A84C">'+badgeText+'</span>'+
+        '</div>';
     }
+    outer.appendChild(badge);
 
-    var btn = document.createElement('button');
-    btn.textContent = '저장';
-    btn.style.cssText = 'width:100%;padding:5px;background:#0066ff;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;margin-top:4px';
-    btn.onclick = function() { _qrDownload(id, label); };
-    wrap.appendChild(btn);
+    // 푸터
+    var ftr = document.createElement('div');
+    ftr.style.cssText = 'font-size:7px;color:rgba(255,255,255,.2);letter-spacing:1px;padding-bottom:8px;position:relative;z-index:1';
+    ftr.textContent = 'powered by FILO · dine.ne.kr';
+    outer.appendChild(ftr);
 
-    // QR 생성
-    ensureQR(function() {
-      try { new QRCode(qrDiv, {text:url, width:100, height:100, correctLevel:QRCode.CorrectLevel.M}); }
-      catch(e) { qrDiv.innerHTML = '<div style="font-size:10px;color:red">QR 오류</div>'; }
+    // 골드 하단 라인
+    var botLine = document.createElement('div');
+    botLine.style.cssText = 'height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)';
+    outer.appendChild(botLine);
+
+    // 버튼 행
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:4px;justify-content:center;padding:8px 8px 0';
+    var dlBtn = document.createElement('button');
+    dlBtn.textContent = '저장';
+    dlBtn.style.cssText = 'padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer';
+    dlBtn.onclick = function(){ _qrDownload(id, label); };
+    var prBtn = document.createElement('button');
+    prBtn.textContent = '인쇄';
+    prBtn.style.cssText = 'padding:4px 8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer';
+    (function(divId,name,qrUrl,badge){prBtn.onclick=function(){_qrPrintCard(divId,name,qrUrl,badge);};})(id,label,url,badgeText);
+    var pvBtn = document.createElement('button');
+    pvBtn.textContent = '미리보기';
+    pvBtn.style.cssText = 'padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer';
+    pvBtn.onclick = function(){ window.open(url,'_blank'); };
+    btnRow.appendChild(dlBtn); btnRow.appendChild(prBtn); btnRow.appendChild(pvBtn);
+
+    // 래퍼 (카드 + 버튼)
+    var wrap = document.createElement('div');
+    wrap.appendChild(outer);
+    wrap.appendChild(btnRow);
+
+    ensureQR(function(){
+      try{ new QRCode(qrDiv,{text:url,width:100,height:100,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }
+      catch(e){ qrDiv.innerHTML='<div style="font-size:9px;color:red">QR 오류</div>'; }
     });
 
     return wrap;
@@ -658,56 +784,63 @@ function _filoPageQrMgmt(el) {
   // 레이아웃
   el.innerHTML = '';
   var wrap = document.createElement('div');
-  wrap.style.cssText = 'max-width:600px;margin:0 auto';
-
-  var title = document.createElement('div');
-  title.innerHTML = '<div style="font-size:17px;font-weight:900;margin-bottom:4px">QR 관리</div>' +
+  wrap.style.cssText = 'max-width:640px;margin:0 auto';
+  wrap.innerHTML =
+    '<div style="font-size:17px;font-weight:900;margin-bottom:4px">QR 관리</div>'+
     '<div style="font-size:12px;color:var(--t3);margin-bottom:20px">테이블 QR과 빵·디저트 명판 QR을 한곳에서 관리해요</div>';
-  wrap.appendChild(title);
 
   // 테이블 QR 섹션
   var tableSection = document.createElement('div');
-  tableSection.style.cssText = 'background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:16px';
-  tableSection.innerHTML = '<div style="font-size:14px;font-weight:800;margin-bottom:12px">테이블 QR</div>';
+  tableSection.style.cssText = 'background:var(--b2);border-radius:12px;padding:16px;margin-bottom:16px';
+  tableSection.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+    '<div style="font-size:14px;font-weight:800">테이블 QR</div>'+
+    '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">전체 인쇄</button>'+
+    '</div>';
   var tableGrid = document.createElement('div');
-  tableGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px';
-  tableGrid.innerHTML = '<div style="color:var(--t3);font-size:12px">로딩 중...</div>';
+  tableGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px';
+  tableGrid.innerHTML = '<div style="color:var(--t3);font-size:12px;padding:10px">로딩 중...</div>';
   tableSection.appendChild(tableGrid);
   wrap.appendChild(tableSection);
 
   // 빵 QR 섹션
   var bakerySection = document.createElement('div');
-  bakerySection.style.cssText = 'background:var(--bg2);border-radius:12px;padding:16px';
-  bakerySection.innerHTML = '<div style="font-size:14px;font-weight:800;margin-bottom:4px">빵·디저트 명판 QR</div>' +
+  bakerySection.style.cssText = 'background:var(--b2);border-radius:12px;padding:16px';
+  bakerySection.innerHTML =
+    '<div style="font-size:14px;font-weight:800;margin-bottom:4px">빵·디저트 명판 QR</div>'+
     '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">인쇄해서 진열대 명판에 붙여주세요!</div>';
   var bakeryGrid = document.createElement('div');
-  bakeryGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px';
-  bakeryGrid.innerHTML = '<div style="color:var(--t3);font-size:12px">로딩 중...</div>';
+  bakeryGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px';
+  bakeryGrid.innerHTML = '<div style="color:var(--t3);font-size:12px;padding:10px">로딩 중...</div>';
   bakerySection.appendChild(bakeryGrid);
   wrap.appendChild(bakerySection);
-
   el.appendChild(wrap);
 
-  // 테이블 QR 로드
+  // 테이블 QR 로드 (올바른 URL: /order?d=did&t=num)
   _db.collection('filo_tables').where('dealerId','==',did).get()
     .then(function(snap) {
       tableGrid.innerHTML = '';
-      if(snap.empty) {
-        tableGrid.innerHTML = '<div style="color:var(--t3);font-size:12px">등록된 테이블이 없어요</div>';
-        return;
-      }
       var tables = [];
-      snap.forEach(function(d){ tables.push(Object.assign({id:d.id}, d.data())); });
-      tables.sort(function(a,b){ return ((a.tableNum||a.tableId||a.num)||0)-((b.tableNum||b.tableId||b.num)||0); });
+      if(snap.empty) {
+        for(var i=1;i<=10;i++) tables.push({num:i,name:'테이블 '+i});
+      } else {
+        var seen={};
+        snap.forEach(function(d){
+          var dt=d.data();
+          var num=dt.tableNum||dt.tableId||1;
+          var name=dt.tableName||('테이블 '+num);
+          if(!seen[num]) seen[num]={num:num,name:name};
+        });
+        tables=Object.values(seen);
+      }
+      tables.sort(function(a,b){ return a.num-b.num; });
       tables.forEach(function(t) {
-        var num = t.tableNum || t.tableId || t.num;
-        var label = t.tableName || ('테이블 ' + num);
-        var url = base + '/c/' + slug + '?t=' + num;
-        var card = makeQrCard('qrt-'+num, label, '', url, '#0066ff');
+        var url = base + '/order?d=' + did + '&t=' + t.num + '&name=' + encodeURIComponent(t.name);
+        var card = makeQrCard('qrt-'+t.num, t.name, t.name, url, false);
         tableGrid.appendChild(card);
       });
     }).catch(function(e) {
-      tableGrid.innerHTML = '<div style="color:red;font-size:12px">로딩 실패: '+e.message+'</div>';
+      tableGrid.innerHTML = '<div style="color:var(--red,red);font-size:12px">로딩 실패: '+e.message+'</div>';
     });
 
   // 빵·디저트 QR 로드
@@ -719,35 +852,186 @@ function _filoPageQrMgmt(el) {
       snap.forEach(function(d){ menus.push(Object.assign({id:d.id}, d.data())); });
       menus = menus.filter(function(m) {
         var cat = (m.category||'').toLowerCase();
-        var name = (m.name||'').toLowerCase();
-        return bakeryKw.some(function(k){ return cat.includes(k)||name.includes(k); }) || m.isBakery;
+        var nm = (m.name||'').toLowerCase();
+        return bakeryKw.some(function(k){ return cat.includes(k)||nm.includes(k); }) || m.isBakery;
       });
-
       if(!menus.length) {
-        bakeryGrid.innerHTML = '<div style="color:var(--t3);font-size:12px">빵/디저트 카테고리 메뉴가 없어요.<br>메뉴 등록 시 카테고리를 "빵" 또는 "디저트"로 설정해주세요</div>';
+        bakeryGrid.innerHTML = '<div style="color:var(--t3);font-size:12px;padding:10px">빵/디저트 카테고리 메뉴가 없어요.<br>메뉴 등록 시 카테고리를 "빵" 또는 "디저트"로 설정해주세요</div>';
         return;
       }
-
       menus.forEach(function(m) {
         var url = base + '/add?d=' + did +
           '&n=' + encodeURIComponent(m.name||'') +
           '&p=' + (m.price||0) +
           '&e=' + encodeURIComponent(m.emoji||'🥐');
-        var card = makeQrCard(
-          'qrb-'+m.id,
-          (m.emoji||'🥐')+' '+(m.name||''),
-          '₩'+(m.price||0).toLocaleString(),
-          url, '#0066ff'
-        );
+        var displayName = (m.emoji||'🥐')+' '+(m.name||'');
+        var card = makeQrCard('qrb-'+m.id, displayName, (m.name||'')+(m.price?' ₩'+(m.price).toLocaleString():''), url, true);
         bakeryGrid.appendChild(card);
       });
     }).catch(function(e) {
-      bakeryGrid.innerHTML = '<div style="color:red;font-size:12px">로딩 실패: '+e.message+'</div>';
+      bakeryGrid.innerHTML = '<div style="color:var(--red,red);font-size:12px">로딩 실패: '+e.message+'</div>';
     });
 }
 
-// 빵QR 페이지 (bakery_qr_mgmt) = qr_mgmt와 동일
-function _filoBakeryQrMgmt(el){ _filoPageQrMgmt(el); }
+// 빵·디저트 QR 전용 페이지 (테이블 QR 없이 상품 QR만 표시)
+function _filoBakeryQrMgmt(el) {
+  var did = _CU.dealerId||_CU.uid;
+  var base = 'https://filo.ai.kr';
+
+  function ensureQR2(cb) {
+    if(typeof QRCode !== 'undefined') { cb(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = function(){ setTimeout(cb,100); };
+    document.head.appendChild(s);
+  }
+
+  var storeName2 = (_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||
+    (window._cachedCompanyDoc&&(window._cachedCompanyDoc.companyName||window._cachedCompanyDoc.name))||'';
+
+  function makeItemCard(id, label, badgeText, url) {
+    var outer = document.createElement('div');
+    outer.style.cssText = 'position:relative;border-radius:16px;overflow:hidden;background:#0A0E2A;text-align:center;padding-bottom:4px';
+
+    var topLine = document.createElement('div');
+    topLine.style.cssText = 'height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)';
+    outer.appendChild(topLine);
+
+    var deco = document.createElement('div');
+    deco.style.cssText = 'position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(201,168,76,.1);pointer-events:none';
+    outer.appendChild(deco);
+
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:10px 8px 6px;position:relative;z-index:1';
+    hdr.innerHTML =
+      (storeName2 ? '<div style="font-size:12px;font-weight:900;color:#fff;letter-spacing:2px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+storeName2+'</div>' : '')+
+      '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:1px">'+
+      '<span style="font-size:9px;font-weight:800;color:#00CFFF;letter-spacing:2px">FILO</span>'+
+      '<span style="color:rgba(201,168,76,.7);font-size:7px">✦</span>'+
+      '<span style="font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px">DINE</span>'+
+      '</div>'+
+      '<div style="font-size:7px;color:rgba(255,255,255,.3);letter-spacing:1.5px">Scan to Order</div>';
+    outer.appendChild(hdr);
+
+    var sep = document.createElement('div');
+    sep.style.cssText = 'margin:0 16px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.25),transparent)';
+    outer.appendChild(sep);
+
+    var qrWrap = document.createElement('div');
+    qrWrap.style.cssText = 'padding:10px 0 6px;position:relative;z-index:1';
+    var qrBox = document.createElement('div');
+    qrBox.style.cssText = 'background:#fff;border-radius:10px;padding:7px;display:inline-block';
+    var qrDiv = document.createElement('div');
+    qrDiv.id = id;
+    qrDiv.style.cssText = 'width:100px;height:100px';
+    qrBox.appendChild(qrDiv);
+    qrWrap.appendChild(qrBox);
+    outer.appendChild(qrWrap);
+
+    // 상품명 + 가격 배지
+    var badge = document.createElement('div');
+    badge.style.cssText = 'padding:4px 10px 8px;position:relative;z-index:1';
+    var parts = badgeText.split('₩');
+    var itemName = parts[0].trim();
+    var itemPrice = parts[1] ? '₩'+parts[1].trim() : '';
+    badge.innerHTML =
+      '<div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:2px;line-height:1.3">'+itemName+'</div>'+
+      (itemPrice ? '<div style="font-size:12px;font-weight:700;color:#C9A84C">'+itemPrice+'</div>' : '');
+    outer.appendChild(badge);
+
+    var ftr = document.createElement('div');
+    ftr.style.cssText = 'font-size:7px;color:rgba(255,255,255,.2);letter-spacing:1px;padding-bottom:8px;position:relative;z-index:1';
+    ftr.textContent = 'powered by FILO · dine.ne.kr';
+    outer.appendChild(ftr);
+
+    var botLine = document.createElement('div');
+    botLine.style.cssText = 'height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)';
+    outer.appendChild(botLine);
+
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:4px;justify-content:center;padding:8px 8px 0';
+    var dlBtn = document.createElement('button');
+    dlBtn.textContent = '저장';
+    dlBtn.style.cssText = 'padding:4px 8px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:6px;color:#38bdf8;font-size:10px;font-weight:700;cursor:pointer';
+    dlBtn.onclick = function(){ _qrDownload(id, label); };
+    var prBtn = document.createElement('button');
+    prBtn.textContent = '인쇄';
+    prBtn.style.cssText = 'padding:4px 8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#a78bfa;font-size:10px;font-weight:700;cursor:pointer';
+    (function(divId,nm,qrUrl,bt){prBtn.onclick=function(){_qrPrintCard(divId,nm,qrUrl,bt);};})(id,label,url,badgeText);
+    var pvBtn = document.createElement('button');
+    pvBtn.textContent = '미리보기';
+    pvBtn.style.cssText = 'padding:4px 8px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:10px;font-weight:700;cursor:pointer';
+    pvBtn.onclick = function(){ window.open(url,'_blank'); };
+    btnRow.appendChild(dlBtn); btnRow.appendChild(prBtn); btnRow.appendChild(pvBtn);
+
+    var wrap = document.createElement('div');
+    wrap.appendChild(outer);
+    wrap.appendChild(btnRow);
+
+    ensureQR2(function(){
+      try{ new QRCode(qrDiv,{text:url,width:100,height:100,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }
+      catch(e){ qrDiv.innerHTML='<div style="font-size:9px;color:red">QR 오류</div>'; }
+    });
+
+    return wrap;
+  }
+
+  el.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'max-width:640px;margin:0 auto';
+  wrap.innerHTML =
+    '<div style="font-size:17px;font-weight:900;margin-bottom:4px">빵·디저트 QR</div>'+
+    '<div style="font-size:12px;color:var(--t3);margin-bottom:6px">진열대에 붙여주세요. 손님이 스캔하면 상품이 장바구니에 담겨요.</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-bottom:20px;padding:8px 10px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.15);border-radius:8px">'+
+    '포장 → 스캔 후 결제 버튼 → 결제완료 시 직원에게 픽업 알림<br>테이블 → 스캔 후 테이블 QR 추가 스캔 → 자동으로 주문 전송</div>';
+
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px';
+  grid.innerHTML = '<div style="color:var(--t3);font-size:12px;padding:10px">메뉴 로딩 중...</div>';
+  wrap.appendChild(grid);
+  el.appendChild(wrap);
+
+  var bakeryKw = ['빵','베이커리','디저트','케이크','쿠키','마카롱','타르트','스콘','머핀','도넛','크루아상','소금빵','파이','롤','번'];
+  _db.collection('filo_menus').where('dealerId','==',did).get()
+    .then(function(snap) {
+      grid.innerHTML = '';
+      var all = [];
+      snap.forEach(function(d){ all.push(Object.assign({id:d.id}, d.data())); });
+
+      var filtered = all.filter(function(m) {
+        var cat = (m.category||'').toLowerCase();
+        var nm = (m.name||'').toLowerCase();
+        return bakeryKw.some(function(k){ return cat.includes(k)||nm.includes(k); }) || m.isBakery;
+      });
+
+      // 카테고리 매칭 없으면 전체 메뉴 표시 (매장이 베이커리 전체인 경우)
+      var list = filtered.length ? filtered : all;
+
+      if(!list.length) {
+        grid.innerHTML = '<div style="color:var(--t3);font-size:12px;padding:10px">등록된 메뉴가 없어요. 먼저 메뉴를 등록해주세요.</div>';
+        return;
+      }
+      if(!filtered.length && all.length) {
+        var notice = document.createElement('div');
+        notice.style.cssText = 'font-size:11px;color:var(--t3);margin-bottom:12px;padding:8px;background:rgba(255,255,255,.04);border-radius:8px';
+        notice.textContent = '빵/디저트 카테고리가 없어 전체 메뉴를 표시합니다. 카테고리를 "디저트"로 설정하면 해당 상품만 나타나요.';
+        wrap.insertBefore(notice, grid);
+      }
+      list.forEach(function(m) {
+        var url = base + '/add?d=' + did +
+          '&n=' + encodeURIComponent(m.name||'') +
+          '&p=' + (m.price||0) +
+          '&e=' + encodeURIComponent(m.emoji||'🥐') +
+          '&m=' + (m.id||'');
+        var displayName = (m.emoji||'🥐')+' '+(m.name||'');
+        var badgeText = (m.name||'')+(m.price?' ₩'+(m.price).toLocaleString():'');
+        var card = makeItemCard('qrb-'+m.id, displayName, badgeText, url);
+        grid.appendChild(card);
+      });
+    }).catch(function(e) {
+      grid.innerHTML = '<div style="color:var(--red,red);font-size:12px">로딩 실패: '+e.message+'</div>';
+    });
+}
 
 // QR 이미지 저장
 function _qrDownload(divId, name) {

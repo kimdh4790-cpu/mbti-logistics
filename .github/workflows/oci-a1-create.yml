@@ -31,94 +31,96 @@ jobs:
             "$OCI_USER" "$OCI_FP" "$OCI_TENANCY" "$HOME/.oci/oci_api_key.pem" > ~/.oci/config
           chmod 600 ~/.oci/config
 
-      - name: 기존 인스턴스 확인
+      - name: 현재 OCPU 사용량 확인
         id: check
         env:
           TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
         run: |
-          TOTAL=0
-          for REGION in ap-tokyo-1 ap-osaka-1 ap-seoul-1 ap-singapore-1; do
-            COUNT=$(oci compute instance list \
-              --compartment-id "$TENANCY" \
-              --lifecycle-state RUNNING \
-              --region "$REGION" \
-              2>/dev/null | jq -r '(.data // []) | length' 2>/dev/null || echo "0")
-            COUNT="${COUNT:-0}"
-            [[ "$COUNT" =~ ^[0-9]+$ ]] || COUNT=0
-            if [ "$COUNT" -gt "0" ]; then
-              echo "[$REGION] 실행중인 인스턴스 ${COUNT}개 -- 생성 건너뜀"
-              TOTAL=$((TOTAL+COUNT))
-            fi
-          done
-          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
-          if [ "$TOTAL" -gt "0" ]; then
-            echo "전체 실행중 ${TOTAL}개 -- 종료"
-          else
-            echo "인스턴스 없음 -- 리전 순서대로 생성 시도"
-          fi
+          # Always Free A1.Flex 총 허용: 4 OCPU + 24GB (홈리전 도쿄만)
+          INSTANCES=$(oci compute instance list \
+            --compartment-id "$TENANCY" \
+            --lifecycle-state RUNNING \
+            --region ap-tokyo-1 \
+            2>/dev/null | jq -r '.data // []' 2>/dev/null || echo "[]")
+          COUNT=$(echo "$INSTANCES" | jq 'length' 2>/dev/null || echo "0")
+          TOTAL_OCPU=$(echo "$INSTANCES" | jq '[.[].["shape-config"].ocpus // 0] | add // 0' 2>/dev/null || echo "0")
+          REMAIN=$((4 - TOTAL_OCPU))
+          echo "도쿄 실행중: ${COUNT}개, 사용 OCPU: ${TOTAL_OCPU}/4, 남은 할당: ${REMAIN}"
+          echo "total_ocpu=$TOTAL_OCPU" >> "$GITHUB_OUTPUT"
+          echo "remain=$REMAIN" >> "$GITHUB_OUTPUT"
 
-      - name: 다중 리전 순차 시도
-        if: steps.check.outputs.total == '0'
+      - name: A1.Flex 생성 시도 (남은 할당량으로)
+        if: steps.check.outputs.remain != '0'
         env:
           TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
           SSH_PUB: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          REMAIN: ${{ steps.check.outputs.remain }}
         run: |
           printf '%s' "$SSH_PUB" > /tmp/ssh_pub.key
+          REGION="ap-tokyo-1"
 
-          for REGION in ap-tokyo-1 ap-osaka-1 ap-seoul-1 ap-singapore-1; do
-            echo "===== [$REGION] 시도 ====="
+          # AD 조회
+          AD=$(oci iam availability-domain list \
+            --compartment-id "$TENANCY" \
+            --region "$REGION" \
+            --query 'data[0].name' --raw-output 2>/dev/null || echo "")
+          if [ -z "$AD" ]; then
+            echo "AD 조회 실패"
+            exit 0
+          fi
+          echo "AD: $AD"
 
-            # AD 조회
-            AD=$(oci iam availability-domain list \
-              --compartment-id "$TENANCY" \
-              --region "$REGION" \
-              --query 'data[0].name' --raw-output 2>/dev/null || echo "")
-            if [ -z "$AD" ]; then
-              echo "[$REGION] AD 조회 실패 -- 다음 리전"
-              continue
-            fi
-            echo "AD: $AD"
-
-            # 서브넷 동적 조회 (첫 번째 퍼블릭 서브넷)
+          # 서브넷 조회
+          SUBNET=$(oci network subnet list \
+            --compartment-id "$TENANCY" \
+            --region "$REGION" \
+            2>/dev/null | jq -r '.data // [] | map(select(."prohibit-public-ip-on-vnic" == false)) | .[0].id // ""' 2>/dev/null || echo "")
+          if [ -z "$SUBNET" ]; then
             SUBNET=$(oci network subnet list \
               --compartment-id "$TENANCY" \
               --region "$REGION" \
-              2>/dev/null | jq -r '.data // [] | map(select(."prohibit-public-ip-on-vnic" == false)) | .[0].id // ""' 2>/dev/null || echo "")
-            if [ -z "$SUBNET" ]; then
-              # 퍼블릭 서브넷 없으면 첫 번째 서브넷
-              SUBNET=$(oci network subnet list \
-                --compartment-id "$TENANCY" \
-                --region "$REGION" \
-                2>/dev/null | jq -r '.data // [] | .[0].id // ""' 2>/dev/null || echo "")
-            fi
-            if [ -z "$SUBNET" ]; then
-              echo "[$REGION] 서브넷 없음 -- 다음 리전"
-              continue
-            fi
-            echo "Subnet: $SUBNET"
+              2>/dev/null | jq -r '.data // [] | .[0].id // ""' 2>/dev/null || echo "")
+          fi
+          if [ -z "$SUBNET" ]; then
+            echo "서브넷 없음 -- 종료"
+            exit 0
+          fi
+          echo "Subnet: $SUBNET"
 
-            # 이미지 조회
-            IMAGE=$(oci compute image list \
-              --compartment-id "$TENANCY" \
-              --shape "VM.Standard.A1.Flex" \
-              --region "$REGION" \
-              2>/dev/null | jq -r '.data // [] | sort_by(."time-created") | reverse | .[0].id // ""' 2>/dev/null || echo "")
-            if [ -z "$IMAGE" ]; then
-              echo "[$REGION] 이미지 없음 -- 다음 리전"
-              continue
-            fi
-            echo "Image: $IMAGE"
+          # 이미지 조회
+          IMAGE=$(oci compute image list \
+            --compartment-id "$TENANCY" \
+            --shape "VM.Standard.A1.Flex" \
+            --region "$REGION" \
+            2>/dev/null | jq -r '.data // [] | sort_by(."time-created") | reverse | .[0].id // ""' 2>/dev/null || echo "")
+          if [ -z "$IMAGE" ]; then
+            echo "이미지 없음 -- 종료"
+            exit 0
+          fi
+          echo "Image: $IMAGE"
 
-            # 인스턴스 생성 시도
+          # 남은 할당량 기준으로 스펙 결정 (큰 것부터 시도, 최소 1 OCPU)
+          # REMAIN=4 → 4/2/1 시도, REMAIN=3 → 3/2/1, REMAIN=2 → 2/1, REMAIN=1 → 1
+          SPECS=""
+          if [ "$REMAIN" -ge 4 ]; then SPECS="4 2 1"; fi
+          if [ "$REMAIN" -eq 3 ]; then SPECS="3 2 1"; fi
+          if [ "$REMAIN" -eq 2 ]; then SPECS="2 1"; fi
+          if [ "$REMAIN" -eq 1 ]; then SPECS="1"; fi
+
+          for OCPU in $SPECS; do
+            MEM=$((OCPU * 6))
+            BOOT=$((OCPU * 50))
+            echo "===== 시도: ${OCPU} OCPU / ${MEM}GB / 부트${BOOT}GB ====="
+
             oci compute instance launch \
               --compartment-id "$TENANCY" \
               --availability-domain "$AD" \
               --shape "VM.Standard.A1.Flex" \
-              --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+              --shape-config "{\"ocpus\":${OCPU},\"memoryInGBs\":${MEM}}" \
               --image-id "$IMAGE" \
               --subnet-id "$SUBNET" \
-              --display-name "filo-a1-flex" \
-              --boot-volume-size-in-gbs 200 \
+              --display-name "filo-a1-${OCPU}c${MEM}g" \
+              --boot-volume-size-in-gbs "$BOOT" \
               --assign-public-ip true \
               --ssh-authorized-keys-file /tmp/ssh_pub.key \
               --region "$REGION" \
@@ -128,18 +130,23 @@ jobs:
             echo "$RESULT"
 
             if echo "$RESULT" | grep -q '"lifecycle-state"'; then
-              echo "[$REGION] 인스턴스 생성 성공!"
+              echo "인스턴스 생성 성공! (${OCPU} OCPU / ${MEM}GB)"
               PUBLIC_IP=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('public-ip','할당중'))" 2>/dev/null || echo "IP 확인 필요")
               echo "Public IP: $PUBLIC_IP"
               exit 0
             elif echo "$RESULT" | grep -qi "capacity\|InternalError\|TooManyRequests"; then
-              echo "[$REGION] 용량 부족 -- 다음 리전 시도"
+              echo "용량 부족 -- 더 작은 스펙으로 시도"
               continue
             else
-              echo "[$REGION] 오류 -- 다음 리전 시도"
+              echo "오류 -- 다음 스펙 시도"
               continue
             fi
           done
 
-          echo "모든 리전 용량 부족 -- 10분 후 재시도"
+          echo "모든 스펙 용량 부족 -- 10분 후 재시도"
           exit 0
+
+      - name: 할당량 소진
+        if: steps.check.outputs.remain == '0'
+        run: |
+          echo "Always Free 4 OCPU 전부 사용 중 -- 종료"

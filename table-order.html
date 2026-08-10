@@ -117,7 +117,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:'App
 
 <!-- 완료 -->
 <div class="done" id="done-view">
- <div class="done-icon">🎉</div>
+ <div class="done-icon"><svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
  <div id="done-num" class="done-num"></div>
  <div class="done-sub" id="done-sub"></div>
  <!-- 영수증 버튼 -->
@@ -474,14 +474,25 @@ function _doTablePostpay(items,total){
     _cart={};
     closeCart();
     renderMenus();
-    var done=document.createElement('div');
-    done.id='done-screen';
-    done.style.cssText='position:fixed;inset:0;background:#08101f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:24px';
-    done.innerHTML='<div style="font-size:56px;margin-bottom:16px">✓</div>'
-      +'<div style="font-size:22px;font-weight:700;margin-bottom:8px">주문 완료!</div>'
-      +'<div style="color:#c9a84c;font-size:15px;margin-bottom:32px">식사 후 카운터에서 계산해주세요</div>'
-      +'<button onclick="document.getElementById(\'done-screen\').remove()" style="padding:14px 36px;background:#c9a84c;color:#08101f;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">추가 주문</button>';
-    document.body.appendChild(done);
+    // 완료 화면 표시
+    var doneView=document.getElementById('done-view');
+    var doneNum=document.getElementById('done-num');
+    var doneSub=document.getElementById('done-sub');
+    var receiptWrap=document.getElementById('receipt-btn-wrap');
+    if(doneNum)doneNum.textContent='주문 #'+ref.id.slice(-6).toUpperCase();
+    if(doneSub)doneSub.innerHTML='<b style="color:#c9a84c">합계 ₩'+total.toLocaleString()+'</b><br>식사 후 카운터에서 계산해주세요';
+    if(receiptWrap)receiptWrap.style.display='block';
+    if(doneView)doneView.classList.add('show');
+    // FCM 영수증 자동 발송 (토큰 있을 때)
+    var fcmTok=_myFcmToken||null;
+    if(fcmTok){
+      var names=items.slice(0,3).map(function(e){return e[1].name;}).join(' · ');
+      fetch('/fcm/notify-drivers',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({tokens:[fcmTok],title:'주문 완료 · ₩'+total.toLocaleString(),body:names+(items.length>3?' 외 '+(items.length-3)+'건':''),type:'receipt',url:location.href})
+      }).catch(function(){});
+    }
   }).catch(function(e){
     var msg=document.createElement('div');
     msg.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999';

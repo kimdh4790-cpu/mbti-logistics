@@ -77,6 +77,7 @@ function _dineAddMember(did,memberId,existing){
   var name=document.getElementById('mb-name').value.trim();
   var phone=document.getElementById('mb-phone').value.trim();
   if(!name||!phone){_dineToast('이름과 연락처를 입력하세요');return;}
+  var prevPoint=existing&&existing.point!=null?existing.point:null;
   var data={dealerId:did,name:name,phone:phone,
    birth:document.getElementById('mb-birth').value,
    point:parseInt(document.getElementById('mb-point').value)||0,
@@ -85,7 +86,22 @@ function _dineAddMember(did,memberId,existing){
    memo:document.getElementById('mb-memo').value.trim(),
    updatedAt:_nowISO()};
   var pr=memberId?_db.collection('filo_customers').doc(memberId).set(data,{merge:true}):_db.collection('filo_customers').add(Object.assign(data,{createdAt:_nowISO()}));
-  pr.then(function(){_dineToast('저장됐습니다');mo.remove();_dinePage('member',null);}).catch(function(e){alert(e.message);});
+  pr.then(function(docRef){
+   _dineToast('저장됐습니다');mo.remove();_dinePage('member',null);
+   var docId=memberId||(docRef&&docRef.id);
+   var pointDiff=prevPoint!=null?data.point-prevPoint:0;
+   if(pointDiff>0&&docId){
+    _db.collection('filo_customers').doc(docId).get().then(function(snap){
+     var d=snap.data()||{};
+     var tok=d.fcmToken;
+     if(!tok)return;
+     var compName=_CU&&_CU.companyName||'매장';
+     fetch('/fcm/notify-drivers',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tokens:[tok],title:compName+' 포인트 적립',body:pointDiff+'P 적립됐습니다 (보유 '+data.point+'P)',type:'point',url:location.href})
+     }).catch(function(){});
+    }).catch(function(){});
+   }
+  }).catch(function(e){_dineToast('저장 오류: '+e.message);});
  };
  mo.appendChild(box);
  mo.onclick=function(e){if(e.target===mo)mo.remove();};

@@ -17,11 +17,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Auto Merge Claude Branch"]
+    types: [completed]
 
 jobs:
   deploy-worker-and-kv:
     runs-on: ubuntu-latest
     name: "Worker + KV + Firebase Rules 배포"
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 

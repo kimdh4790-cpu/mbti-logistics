@@ -161,7 +161,9 @@ window.onload=function(){
  _db=firebase.firestore();
  _did=_p('d')||'';
  _tNum=_p('t')||'';
- _tName=_p('name')||('테이블 '+_tNum);
+ var _takeout=_p('takeout')==='1';
+ if(_takeout){_tNum='0';_tName='포장';}
+ else{_tName=_p('name')||('테이블 '+_tNum);}
  if(!_did){
   document.getElementById('ld').innerHTML='<div style="text-align:center;padding:40px;color:#fff"><div style="font-size:24px">✕</div><div style="margin-top:12px">잘못된 주소입니다</div></div>';
   return;
@@ -329,7 +331,7 @@ function _doOrder(payType){
  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
  var btn=document.getElementById('order-btn');if(btn){btn.disabled=true;btn.textContent='주문 중...';}
  var orderData={
-  dealerId:_did,type:'table',status:'pending',
+  dealerId:_did,type:_takeout?'takeout':'table',status:'pending',
   payType:payType,tableNum:_tNum,tableName:_tName,
   items:items,total:total,
   createdAt:_nowISO(),
@@ -341,7 +343,7 @@ function _doOrder(payType){
   // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+_tNum+'번 · 주문번호 #'+ref.id.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+ref.id.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
@@ -605,6 +607,165 @@ function _sendCsQuestion(){
   var typing=document.getElementById(typingId);
   if(typing)typing.outerHTML='<div class="cs-msg cs-bot">연결에 실패했습니다. 잠시 후 다시 시도해 주세요.</div>';
  });
+}
+
+// ── CS봇 마이크 음성 입력 (STT) ──────────────────────────────────
+var _csRecognition = null;
+var _csMicOn = false;
+
+function _csMicToggle(){
+  var btn = document.getElementById('cs-mic-btn');
+  var inp = document.getElementById('cs-input');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    inp.placeholder = '이 브라우저는 음성 입력을 지원하지 않아요';
+    setTimeout(function(){ inp.placeholder = '궁금한 점을 입력하세요...'; }, 2500);
+    return;
+  }
+  if(_csMicOn){
+    _csMicOn = false;
+    if(_csRecognition) _csRecognition.stop();
+    if(btn) btn.classList.remove('listening');
+    return;
+  }
+  _csMicOn = true;
+  if(btn) btn.classList.add('listening');
+  inp.placeholder = '말씀해 주세요...';
+  inp.value = '';
+
+  _csRecognition = new SR();
+  _csRecognition.lang = (window._lang === 'en') ? 'en-US' : (window._lang === 'zh') ? 'zh-CN' : (window._lang === 'ja') ? 'ja-JP' : 'ko-KR';
+  _csRecognition.interimResults = true;
+  _csRecognition.maxAlternatives = 1;
+  _csRecognition.continuous = false;
+
+  _csRecognition.onresult = function(e){
+    var transcript = '';
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      transcript += e.results[i][0].transcript;
+    }
+    inp.value = transcript;
+  };
+  _csRecognition.onend = function(){
+    _csMicOn = false;
+    if(btn) btn.classList.remove('listening');
+    inp.placeholder = '궁금한 점을 입력하세요...';
+    if(inp.value.trim()) _sendCsQuestion();
+  };
+  _csRecognition.onerror = function(e){
+    _csMicOn = false;
+    if(btn) btn.classList.remove('listening');
+    inp.placeholder = e.error === 'not-allowed' ? '마이크 권한을 허용해 주세요' : '음성 인식 오류: '+e.error;
+    setTimeout(function(){ inp.placeholder = '궁금한 점을 입력하세요...'; }, 2500);
+  };
+  _csRecognition.start();
+}
+
+// ── 음성 주문 (Voice Order) ───────────────────────────────────────
+var _voiceRecognition = null;
+var _voiceOn = false;
+
+function _voiceOrderToggle(){
+  var btn = document.getElementById('voice-order-btn');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    _showVoiceToast('이 브라우저는 음성 주문을 지원하지 않아요', 2500);
+    return;
+  }
+  if(_voiceOn){
+    _voiceOn = false;
+    if(_voiceRecognition) _voiceRecognition.stop();
+    if(btn) btn.classList.remove('listening');
+    return;
+  }
+  _voiceOn = true;
+  if(btn) btn.classList.add('listening');
+  _showVoiceToast('말씀해 주세요... (예: 아메리카노 두 개)', 0);
+
+  _voiceRecognition = new SR();
+  _voiceRecognition.lang = (window._lang === 'en') ? 'en-US' : (window._lang === 'zh') ? 'zh-CN' : (window._lang === 'ja') ? 'ja-JP' : 'ko-KR';
+  _voiceRecognition.interimResults = false;
+  _voiceRecognition.maxAlternatives = 3;
+  _voiceRecognition.continuous = false;
+
+  _voiceRecognition.onresult = function(e){
+    var transcript = e.results[0][0].transcript;
+    _parseVoiceOrder(transcript);
+  };
+  _voiceRecognition.onend = function(){
+    _voiceOn = false;
+    if(btn) btn.classList.remove('listening');
+  };
+  _voiceRecognition.onerror = function(ev){
+    _voiceOn = false;
+    if(btn) btn.classList.remove('listening');
+    var msg = ev.error === 'not-allowed' ? '마이크 권한을 허용해 주세요' : ev.error === 'no-speech' ? '음성이 감지되지 않았어요' : '음성 인식 오류: '+ev.error;
+    _showVoiceToast(msg, 2500);
+  };
+  _voiceRecognition.start();
+}
+
+function _parseVoiceOrder(text){
+  var numWords = {
+    '하나':1,'한':1,'한개':1,'일개':1,'일':1,
+    '둘':2,'두':2,'두개':2,'이개':2,'이':2,
+    '셋':3,'세':3,'세개':3,'삼개':3,'삼':3,
+    '넷':4,'네':4,'네개':4,'사개':4,'사':4,
+    '다섯':5,'오개':5,'오':5,
+    '여섯':6,'육개':6,'육':6,
+    '일곱':7,'칠개':7,'칠':7,
+    '여덟':8,'팔개':8,'팔':8,
+    '아홉':9,'구개':9,'구':9,
+    '열':10,'십':10
+  };
+  var src = text.replace(/\s+/g,' ').trim();
+  var menus = (typeof _menus !== 'undefined') ? _menus : [];
+  if(!menus.length){ _showVoiceToast('메뉴를 불러오는 중이에요', 2000); return; }
+
+  // 수량 추출: 숫자 또는 한글 수사
+  function extractQty(str){
+    var m = str.match(/(\d+)\s*(개|인분|잔|병|판|세트)?/);
+    if(m) return parseInt(m[1], 10);
+    for(var k in numWords){
+      if(str.indexOf(k) >= 0) return numWords[k];
+    }
+    return 1;
+  }
+
+  var added = [];
+  var remaining = src;
+
+  // 메뉴 길이 내림차순 정렬 (긴 이름 우선 매칭)
+  var sorted = menus.slice().sort(function(a,b){ return b.name.length - a.name.length; });
+
+  sorted.forEach(function(m){
+    if(remaining.indexOf(m.name) < 0) return;
+    var idx = remaining.indexOf(m.name);
+    var after = remaining.slice(idx + m.name.length, idx + m.name.length + 8);
+    var qty = extractQty(after);
+    for(var i = 0; i < qty; i++) _addToCart(m);
+    added.push(m.name + ' ' + qty + '개');
+    remaining = remaining.replace(m.name, '');
+  });
+
+  if(added.length){
+    _showVoiceToast(added.join(', ') + ' 담겼어요!', 2500);
+    _updFab();
+  } else {
+    _showVoiceToast('"' + text + '" — 일치하는 메뉴가 없어요', 2500);
+  }
+}
+
+var _voiceToastTimer = null;
+function _showVoiceToast(msg, duration){
+  var el = document.getElementById('voice-toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  if(_voiceToastTimer) clearTimeout(_voiceToastTimer);
+  if(duration > 0){
+    _voiceToastTimer = setTimeout(function(){ el.classList.remove('show'); }, duration);
+  }
 }
 
 // ── 영수증 알림 받기 ─────────────────────────────────────────────

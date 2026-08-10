@@ -74,6 +74,8 @@ cd mbtico-pages && npx wrangler deploy
 - alert() 금지  _filoToast()/_dineToast() 사용
 - 클라우드 원격 환경: 코드 수정+배포 가능. Playwright 테스트/wrangler login은 로컬에서만
 - Playwright 테스트  반드시 로컬에서 실행
+- 배포 확인 필수: push 후 GitHub Actions 워크플로우 완료(success) 확인 → KV 업로드 + Worker 배포 + 캐시 퍼지 3단계 모두 success 여야 배포 완료
+- deploy.yml 수정 금지: GitHub App이 워크플로우 파일 수정 권한 없어서 auto-merge 실패 발생함
 
 ---
 
@@ -93,12 +95,11 @@ cd mbtico-pages && npx wrangler deploy
 ### 최우선
 1. 선결제/후불 모달 - table-order.html 미작업
 2. FCM 영수증 푸시 - order.js reqReceiptFCM undefined (KV캐시 문제)
-3. 솔라피  알리고 교체 - _worker.js 알림톡 발송부
+3. 솔라피  알리고 교체 - _worker.js 알림톡 발송부 (완료)
 
 ### 중간
 4. FILO 메뉴 이미지 Pollinations  Pexels 일괄 업데이트
 5. 관제센터 채팅/공지/결제 탭 실사용 테스트
-6. 용차앱 라우팅 버그 (접속 시 DONWAY 랜딩)
 7. 직원 근태 QR 이름+연락처 등록 화면 수정
 8. 매출분석 7월 테스트 데이터 시딩
 
