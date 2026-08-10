@@ -609,6 +609,58 @@ function _sendCsQuestion(){
  });
 }
 
+// ── CS봇 마이크 음성 입력 (STT) ──────────────────────────────────
+var _csRecognition = null;
+var _csMicOn = false;
+
+function _csMicToggle(){
+  var btn = document.getElementById('cs-mic-btn');
+  var inp = document.getElementById('cs-input');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    inp.placeholder = '이 브라우저는 음성 입력을 지원하지 않아요';
+    setTimeout(function(){ inp.placeholder = '궁금한 점을 입력하세요...'; }, 2500);
+    return;
+  }
+  if(_csMicOn){
+    _csMicOn = false;
+    if(_csRecognition) _csRecognition.stop();
+    if(btn) btn.classList.remove('listening');
+    return;
+  }
+  _csMicOn = true;
+  if(btn) btn.classList.add('listening');
+  inp.placeholder = '말씀해 주세요...';
+  inp.value = '';
+
+  _csRecognition = new SR();
+  _csRecognition.lang = (window._lang === 'en') ? 'en-US' : (window._lang === 'zh') ? 'zh-CN' : (window._lang === 'ja') ? 'ja-JP' : 'ko-KR';
+  _csRecognition.interimResults = true;
+  _csRecognition.maxAlternatives = 1;
+  _csRecognition.continuous = false;
+
+  _csRecognition.onresult = function(e){
+    var transcript = '';
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      transcript += e.results[i][0].transcript;
+    }
+    inp.value = transcript;
+  };
+  _csRecognition.onend = function(){
+    _csMicOn = false;
+    if(btn) btn.classList.remove('listening');
+    inp.placeholder = '궁금한 점을 입력하세요...';
+    if(inp.value.trim()) _sendCsQuestion();
+  };
+  _csRecognition.onerror = function(e){
+    _csMicOn = false;
+    if(btn) btn.classList.remove('listening');
+    inp.placeholder = e.error === 'not-allowed' ? '마이크 권한을 허용해 주세요' : '음성 인식 오류: '+e.error;
+    setTimeout(function(){ inp.placeholder = '궁금한 점을 입력하세요...'; }, 2500);
+  };
+  _csRecognition.start();
+}
+
 // ── 영수증 알림 받기 ─────────────────────────────────────────────
 function _autoReceiptFCM(orderId, total, items){
  if(!('Notification' in window)||!('serviceWorker' in navigator)) return;
