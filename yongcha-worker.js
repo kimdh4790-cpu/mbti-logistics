@@ -1359,6 +1359,8 @@ function _goPage(p){
   else if(p==='rest')_pgRest(el);
   else if(p==='dashboard')_pgDashboard(el);
   else if(p==='driver_offer')_pgDriverOffer(el);
+  else if(p==='entrance_codes')_pgEntranceCodes(el);
+  else if(p==='settle_reconcile')_pgSettlementReconcile(el);
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -1562,6 +1564,19 @@ function _pgHomeDriver(el){
     '<div class="hero-v2-chips" id="earn-chips"></div>'+
   '</div>'+
 
+  // 날씨 위젯
+  '<div id="home-weather-bar" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;margin-bottom:10px">'+
+    '<div id="home-weather-icon" style="font-size:22px;flex-shrink:0">—</div>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div id="home-weather-main" style="font-size:13.5px;font-weight:800;color:var(--tx)">날씨 불러오는 중...</div>'+
+      '<div id="home-weather-sub" style="font-size:11.5px;color:var(--t3);margin-top:1px"></div>'+
+    '</div>'+
+    '<div id="home-weather-diff" style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;flex-shrink:0"></div>'+
+  '</div>'+
+
+  // 차량 검사 만료 배너 (조건부 — JS에서 채움)
+  '<div id="home-inspect-banner"></div>'+
+
   // 홈 지도
   '<div class="home-map-card" style="position:relative" id="home-drv-map-wrap">'+
     '<div id="home-drv-map"></div>'+
@@ -1588,6 +1603,8 @@ function _pgHomeDriver(el){
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></span>실수령액</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>지원 현황</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'entrance_codes\\')" style="border-color:rgba(245,158,11,.3);color:var(--br)">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>공동현관 DB</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
@@ -1760,6 +1777,55 @@ function _pgHomeDriver(el){
       if(el)el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">위치 허용 시 주유소를 추천해드려요</div>';
     }
   });
+
+  // 날씨 위젯
+  _yLoadGeo().then(function(g){
+    var lat=g?g.lat:35.18, lng=g?g.lng:129.07;
+    fetch('/api/yongcha/weather?lat='+lat+'&lng='+lng).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok)return;
+      var w=d.weather;
+      var iconMap={맑음:'☀',구름많음:'⛅',흐림:'☁',비:'🌧',눈:'🌨','비/눈':'🌦'};
+      var diffColor={low:'var(--gn)',medium:'var(--br)',high:'var(--rd)'};
+      var diffLbl={low:'배달 쾌적',medium:'주의',high:'난이도 높음'};
+      var wIcon=document.getElementById('home-weather-icon');
+      var wMain=document.getElementById('home-weather-main');
+      var wSub=document.getElementById('home-weather-sub');
+      var wDiff=document.getElementById('home-weather-diff');
+      if(wIcon)wIcon.textContent=iconMap[w.sky]||'—';
+      if(wMain)wMain.textContent=w.sky+' '+w.temp+'°C · 강수확률 '+w.rainProb+'%';
+      if(wSub)wSub.textContent=w.msg;
+      if(wDiff){
+        wDiff.textContent=diffLbl[w.difficulty]||'';
+        wDiff.style.background=diffColor[w.difficulty]+'22';
+        wDiff.style.color=diffColor[w.difficulty];
+        wDiff.style.border='1px solid '+diffColor[w.difficulty]+'44';
+      }
+      // 우천 시 홈 배너 표시
+      if(w.difficulty==='high'){
+        var bar=document.getElementById('home-weather-bar');
+        if(bar){bar.style.borderColor='var(--rdln)';bar.style.background='var(--rdl)';}
+      }
+    }).catch(function(){});
+  });
+
+  // 차량 검사 만료 배너
+  if(_CU.carNumber){
+    var carNum=_CU.carNumber;
+    var stored=null;
+    try{stored=JSON.parse(localStorage.getItem('yc_inspect_'+carNum)||'null');}catch(e){}
+    var fetchInspect=function(){
+      fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
+        if(!d.ok||!d.inspectDue)return;
+        try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:d.inspectDue,ts:Date.now()}));}catch(e){}
+        _renderInspectBanner(d.inspectDue);
+      }).catch(function(){});
+    };
+    if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
+      _renderInspectBanner(stored.due);
+    } else {
+      fetchInspect();
+    }
+  }
 }
 
 /* ── 소장 홈 ── */
@@ -1794,12 +1860,21 @@ function _pgHomeAgency(el){
     '긴급 배차 (원클릭 공고)'+
   '</button>'+
 
+  // 현금흐름 예측 위젯
+  '<div class="sec-head" style="margin-top:6px">'+
+    '<span class="sec-title">현금흐름 예측</span>'+
+    '<span class="badge-ai">AI</span>'+
+  '</div>'+
+  '<div id="agency-cashflow" class="card" style="padding:14px 16px;margin-bottom:10px">'+
+    _skRows(2)+
+  '</div>'+
+
   // 퀵 액션 그리드
   '<div class="quick-grid">'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">배차 공고</button>'+
     '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 승인</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'settle_reconcile\\')" style="border-color:var(--brln);color:var(--br)">정산 대사</button>'+
   '</div>'+
 
   // 지역별 배차 현황
@@ -1868,6 +1943,34 @@ function _pgHomeAgency(el){
     });
   }).catch(function(e){var el=document.getElementById('home-recent');if(el)el.innerHTML=_emptyHtml('','지원자 불러오기 실패','');console.error('recent applicants',e);});
 
+  // 현금흐름 예측 로딩
+  firebase.auth().currentUser.getIdToken().then(function(tok){
+    fetch('/api/yongcha/cashflow',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.json();}).then(function(d){
+      var el=document.getElementById('agency-cashflow');if(!el)return;
+      if(!d.ok){el.innerHTML='<div class="err-block">현금흐름 계산 실패</div>';return;}
+      var w=d.thisWeek;
+      var gapColor=w.driverPay>w.totalFare*0.5?'var(--rd)':'var(--gn)';
+      el.innerHTML=
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+          '<div style="background:var(--gnl);border:1px solid var(--gnln);border-radius:var(--r);padding:10px;text-align:center">'+
+            '<div style="font-size:17px;font-weight:900;color:var(--gn)">'+_won(w.totalFare)+'원</div>'+
+            '<div style="font-size:11px;color:var(--t2);margin-top:3px">이번주 수령 예정</div>'+
+            '<div style="font-size:10.5px;color:var(--t3);margin-top:2px">약 '+w.receiveDate+' 입금</div>'+
+          '</div>'+
+          '<div style="background:var(--rdl);border:1px solid var(--rdln);border-radius:var(--r);padding:10px;text-align:center">'+
+            '<div style="font-size:17px;font-weight:900;color:var(--rd)">'+_won(w.driverPay)+'원</div>'+
+            '<div style="font-size:11px;color:var(--t2);margin-top:3px">기사 주급 지급</div>'+
+            '<div style="font-size:10.5px;color:var(--t3);margin-top:2px">이번주 금요일</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg3);border-radius:var(--r);font-size:12.5px">'+
+          '<span style="color:var(--t2)">현금흐름 갭 (지급 선행 '+w.gapDays+'일)</span>'+
+          '<b style="color:'+gapColor+'">'+_won(w.driverPay-0)+'원</b>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--t3);margin-top:8px">이번주 완료 '+w.completedCount+'건 · 대리점 수익 '+_won(w.agencyRevenue)+'원</div>';
+    }).catch(function(){var el=document.getElementById('agency-cashflow');if(el)el.innerHTML='<div class="err-block">데이터 없음</div>';});
+  }).catch(function(){});
+
   // 실시간 관제 지도 로드
   setTimeout(_loadAgencyControlMap, 300);
 }
@@ -1930,6 +2033,184 @@ function _loadAgencyControlMap(){
   }).catch(function(e){
     if(mapEl)mapEl.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--rd)">'+_esc(e.message)+'</div>';
   });
+}
+
+// ── 차량 검사 배너 렌더 ──────────────────────────────────────────────────────
+function _renderInspectBanner(dueStr){
+  var el=document.getElementById('home-inspect-banner');if(!el)return;
+  if(!dueStr){el.innerHTML='';return;}
+  var due=new Date(dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1-$2-$3'));
+  var daysLeft=Math.ceil((due-Date.now())/(86400000));
+  if(daysLeft>30){el.innerHTML='';return;}
+  var danger=daysLeft<=7;
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+(danger?'var(--rdl)':'var(--brl)')+';border:1px solid '+(danger?'var(--rdln)':'var(--brln)')+';margin-bottom:10px">'+
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+(danger?'var(--rd)':'var(--br)')+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'+
+    '<div style="flex:1">'+
+      '<div style="font-size:13px;font-weight:800;color:'+(danger?'var(--rd)':'var(--br)')+'">차량 정기검사 D-'+daysLeft+'</div>'+
+      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">'+dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3')+'까지 수검 필요</div>'+
+    '</div>'+
+  '</div>';
+}
+
+// ── 공동현관 비밀번호 DB ─────────────────────────────────────────────────────
+function _pgEntranceCodes(el){
+  el.innerHTML=
+  '<div class="page-hdr">'+
+    '<h1 class="page-title">공동현관 DB</h1>'+
+    '<p class="page-sub">기사들이 직접 등록·검증한 아파트 공동현관 비밀번호</p>'+
+  '</div>'+
+  '<div style="display:flex;gap:8px;margin-bottom:12px">'+
+    '<input class="inp" id="ec-search" type="text" placeholder="아파트명 / 주소 검색" style="flex:1" oninput="_ecSearch()" autocomplete="off">'+
+    '<button type="button" class="btn" style="flex-shrink:0;min-height:44px;padding:0 16px;font-size:13.5px" onclick="_ecOpenAdd()">+ 등록</button>'+
+  '</div>'+
+  '<div id="ec-list">'+_skRows(3)+'</div>';
+
+  _ecLoad('');
+}
+
+var _ecItems=[];
+function _ecLoad(q){
+  var el=document.getElementById('ec-list');if(!el)return;
+  el.innerHTML=_skRows(3);
+  _yLoadGeo().then(function(g){
+    var url='/api/yongcha/entrance-codes?q='+encodeURIComponent(q||'');
+    if(g)url+='&lat='+g.lat+'&lng='+g.lng;
+    fetch(url).then(function(r){return r.json();}).then(function(d){
+      var el2=document.getElementById('ec-list');if(!el2)return;
+      if(!d.ok||!d.items.length){el2.innerHTML=_emptyHtml('','등록된 비밀번호가 없어요','아래 + 등록 버튼으로 첫 등록자가 되어보세요');return;}
+      _ecItems=d.items;
+      el2.innerHTML='';
+      d.items.forEach(function(item){
+        var card=document.createElement('div');card.className='card';card.style.cssText='padding:12px 14px;margin-bottom:8px';
+        card.innerHTML=
+          '<div style="display:flex;align-items:flex-start;gap:10px">'+
+            '<div style="flex:1;min-width:0">'+
+              '<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:2px">'+_esc(item.address)+'</div>'+
+              (item.addressDetail?'<div style="font-size:12px;color:var(--t2);margin-bottom:6px">'+_esc(item.addressDetail)+'</div>':'')+
+              '<div style="display:flex;align-items:center;gap:8px">'+
+                '<span style="font-size:15px;font-weight:900;color:var(--ac);font-variant-numeric:tabular-nums;letter-spacing:1px">'+_esc(item.code)+'</span>'+
+                '<span style="font-size:10.5px;color:var(--t3)">검증 '+item.verifiedCount+'회</span>'+
+              '</div>'+
+            '</div>'+
+            '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">'+
+              '<button type="button" onclick="_ecVote(\\''+item.id+'\\',\\'verify\\')" style="font-size:11px;padding:4px 10px;border-radius:8px;background:var(--gnl);color:var(--gn);border:1px solid var(--gnln);cursor:pointer;font-family:inherit;font-weight:800">맞아요</button>'+
+              '<button type="button" onclick="_ecVote(\\''+item.id+'\\',\\'report\\')" style="font-size:11px;padding:4px 10px;border-radius:8px;background:var(--rdl);color:var(--rd);border:1px solid var(--rdln);cursor:pointer;font-family:inherit;font-weight:800">틀려요</button>'+
+            '</div>'+
+          '</div>'+
+          '<div style="font-size:10.5px;color:var(--t3);margin-top:8px">최근 업데이트: '+_ago(item.updatedAt)+'</div>';
+        el2.appendChild(card);
+      });
+    }).catch(function(){var el2=document.getElementById('ec-list');if(el2)el2.innerHTML=_emptyHtml('','불러오기 실패','');});
+  });
+}
+
+function _ecSearch(){
+  var q=(document.getElementById('ec-search')||{}).value||'';
+  clearTimeout(window._ecT);window._ecT=setTimeout(function(){_ecLoad(q);},400);
+}
+
+function _ecVote(id,action){
+  firebase.auth().currentUser.getIdToken().then(function(tok){
+    fetch('/api/yongcha/entrance-codes/'+id,{method:'PATCH',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({action:action})}).then(function(r){return r.json();}).then(function(d){
+      if(d.ok)_yToast(action==='verify'?'검증 감사해요!':'신고 접수됐어요');
+    }).catch(function(){_yToast('처리 실패');});
+  });
+}
+
+function _ecOpenAdd(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="font-size:18px;font-weight:900;margin-bottom:16px">공동현관 비밀번호 등록</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">아파트명 / 주소 *</label><input class="inp" id="ec-addr" type="text" placeholder="예) 해운대 두산위브더제니스"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">상세 위치 (동, 호수 등)</label><input class="inp" id="ec-detail" type="text" placeholder="예) A동 출입문, 지하주차장"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">비밀번호 *</label><input class="inp" id="ec-code" type="text" placeholder="예) 1234#" inputmode="numeric"></div>'+
+    '<button type="button" class="btn" style="width:100%;margin-top:8px" onclick="_ecSubmit()">등록하기</button>';
+  _openModal();
+}
+
+function _ecSubmit(){
+  var addr=(document.getElementById('ec-addr')||{}).value||'';
+  var detail=(document.getElementById('ec-detail')||{}).value||'';
+  var code=(document.getElementById('ec-code')||{}).value||'';
+  if(!addr||!code){_yToast('필수 항목을 입력해주세요');return;}
+  var btn=document.querySelector('#modal-body .btn');if(btn)btn.disabled=true;
+  firebase.auth().currentUser.getIdToken().then(function(tok){
+    return fetch('/api/yongcha/entrance-codes',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({address:addr,addressDetail:detail,code:code})});
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){_closeModal();_yToast('등록됐어요!');_ecLoad('');}
+    else{_yToast(d.error||'등록 실패');if(btn)btn.disabled=false;}
+  }).catch(function(){_yToast('등록 실패');if(btn)btn.disabled=false;});
+}
+
+// ── 정산 대사 (소장용) ───────────────────────────────────────────────────────
+function _pgSettlementReconcile(el){
+  el.innerHTML=
+  '<div class="page-hdr">'+
+    '<h1 class="page-title">정산 대사</h1>'+
+    '<p class="page-sub">택배사 CSV와 용차앱 기록을 자동으로 교차 검증해요</p>'+
+  '</div>'+
+
+  '<div class="card" style="padding:16px;margin-bottom:14px">'+
+    '<div style="font-size:13.5px;font-weight:800;margin-bottom:10px">CSV 업로드</div>'+
+    '<div style="font-size:12.5px;color:var(--t2);margin-bottom:8px;line-height:1.6">쿠팡로지스틱스·CJ파트너스 정산 CSV를 붙여넣거나 업로드하세요.<br>형식: 날짜, 구역, 건수, 금액 (탭 또는 콤마 구분)</div>'+
+    '<textarea id="sr-csv" class="inp" rows="5" style="font-size:12px;font-family:monospace;resize:vertical" placeholder="2026-08-01&#9;금정구&#9;120&#9;1800000&#10;2026-08-02&#9;금정구&#9;115&#9;1725000"></textarea>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">택배사</label>'+
+        '<select class="inp" id="sr-courier" style="cursor:pointer">'+COURIERS.slice(1).map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
+      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">기간 (시작)</label>'+
+        '<input class="inp" type="date" id="sr-start"></div>'+
+    '</div>'+
+    '<button type="button" class="btn" style="width:100%;margin-top:10px" onclick="_srSubmit()">교차 검증 실행</button>'+
+  '</div>'+
+
+  '<div id="sr-result"></div>';
+}
+
+function _srSubmit(){
+  var csvRaw=(document.getElementById('sr-csv')||{}).value||'';
+  var courier=(document.getElementById('sr-courier')||{}).value||'전체';
+  var start=(document.getElementById('sr-start')||{}).value||'';
+  if(!csvRaw.trim()){_yToast('CSV 내용을 입력해주세요');return;}
+
+  var rows=csvRaw.trim().split('\\n').map(function(line){
+    var parts=line.split(/[\\t,]/);
+    return {date:parts[0]||'',region:parts[1]||'',count:Number(parts[2])||0,amount:Number((parts[3]||'').replace(/[,원]/g,''))||0};
+  }).filter(function(r){return r.amount>0;});
+
+  if(!rows.length){_yToast('파싱할 수 있는 행이 없어요');return;}
+
+  var btn=document.querySelector('.page-hdr~.card .btn');if(btn)btn.disabled=true;
+  var res=document.getElementById('sr-result');if(res)res.innerHTML=_skRows(2);
+
+  firebase.auth().currentUser.getIdToken().then(function(tok){
+    return fetch('/api/yongcha/settlement-reconcile',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({csvRows:rows,courier:courier,periodStart:start})});
+  }).then(function(r){return r.json();}).then(function(d){
+    if(btn)btn.disabled=false;
+    var el=document.getElementById('sr-result');if(!el)return;
+    if(!d.ok){el.innerHTML='<div class="err-block">'+_esc(d.error||'처리 실패')+'</div>';return;}
+    var statusColor={match:'var(--gn)',warning:'var(--br)',mismatch:'var(--rd)'}[d.status]||'var(--t2)';
+    var statusLabel={match:'일치',warning:'소폭 차이',mismatch:'불일치'}[d.status]||'-';
+    el.innerHTML=
+      '<div class="card" style="padding:16px">'+
+        '<div style="font-size:15px;font-weight:900;color:'+statusColor+';margin-bottom:14px">'+statusLabel+' — '+_esc(d.msg)+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+
+          '<div style="background:var(--bg3);border-radius:var(--r);padding:12px">'+
+            '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">택배사 CSV</div>'+
+            '<div style="font-size:17px;font-weight:900">'+_won(d.csvTotal)+'원</div>'+
+            '<div style="font-size:11.5px;color:var(--t2)">('+d.csvCount+'건)</div>'+
+          '</div>'+
+          '<div style="background:var(--bg3);border-radius:var(--r);padding:12px">'+
+            '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">용차앱 기록</div>'+
+            '<div style="font-size:17px;font-weight:900">'+_won(d.fsTotal)+'원</div>'+
+            '<div style="font-size:11.5px;color:var(--t2)">('+d.fsCount+'건)</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="padding:10px 12px;background:'+(d.status==='match'?'var(--gnl)':d.status==='warning'?'var(--brl)':'var(--rdl)')+';border-radius:var(--r);font-size:13px;font-weight:800;color:'+statusColor+'">'+
+          '차액: '+(d.diff>0?'+':'')+_won(d.diff)+'원 ('+d.diffPct+'%)'+
+        '</div>'+
+        (d.status!=='match'?'<div style="font-size:11.5px;color:var(--t3);margin-top:8px;line-height:1.6">차액이 5% 초과 시 택배사 정산서를 상세 검토하거나 미반영 완료건을 확인하세요.</div>':'')+
+      '</div>';
+  }).catch(function(){if(btn)btn.disabled=false;var el=document.getElementById('sr-result');if(el)el.innerHTML='<div class="err-block">연결 실패</div>';});
 }
 
 // ── 노선 공고 목록 ───────────────────────────────────────────
@@ -8723,6 +9004,246 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       } catch(e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
       }
+    }
+
+    // ── 날씨 정보 (기상청 proxy) ─────────────────────────────────────────────
+    if (path === '/api/yongcha/weather' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const lat = Number(url.searchParams.get('lat')) || 35.18;
+        const lng = Number(url.searchParams.get('lng')) || 129.07;
+        const apiKey = env.WEATHER_API_KEY;
+        if (!apiKey) {
+          const hour = new Date().getHours();
+          const isDay = hour >= 6 && hour < 20;
+          return new Response(JSON.stringify({ ok: true, weather: { sky: '맑음', temp: isDay ? 25 : 19, rainProb: 5, windSpd: 2.1, difficulty: 'low', msg: '배달 최적 날씨예요 (기본값)' } }), { headers: corsH });
+        }
+        // 기상청 격자 변환 (Lambert 투영)
+        const RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136;
+        const DEGRAD = Math.PI / 180;
+        const re = RE / GRID, slat1 = SLAT1 * DEGRAD, slat2 = SLAT2 * DEGRAD, olon = OLON * DEGRAD, olat = OLAT * DEGRAD;
+        let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+        sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
+        let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5); sf = (Math.pow(sf, sn) * Math.cos(slat1)) / sn;
+        let ro = Math.tan(Math.PI * 0.25 + olat * 0.5); ro = re * sf / Math.pow(ro, sn);
+        let ra = Math.tan(Math.PI * 0.25 + lat * DEGRAD * 0.5); ra = re * sf / Math.pow(ra, sn);
+        let theta = lng * DEGRAD - olon; if (theta > Math.PI) theta -= 2 * Math.PI; if (theta < -Math.PI) theta += 2 * Math.PI;
+        theta *= sn;
+        const nx = Math.floor(ra * Math.sin(theta) + XO + 0.5);
+        const ny = Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+        const now = new Date(); const base_date = now.toISOString().slice(0,10).replace(/-/g,'');
+        const h = now.getHours(); const base_time = String(h<2?23:h<5?2:h<8?5:h<11?8:h<14?11:h<17?14:h<20?17:20).padStart(2,'0')+'00';
+        const resp = await fetch(`https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${encodeURIComponent(apiKey)}&numOfRows=20&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`);
+        if (!resp.ok) throw new Error('기상청 오류');
+        const data = await resp.json();
+        const items = data.response?.body?.items?.item || [];
+        const get = c => (items.find(i=>i.category===c)||{}).fcstValue;
+        const sky = get('SKY'), pty = get('PTY'), tmp = get('TMP'), wsd = get('WSD'), pop = get('POP');
+        const skyTxt = pty==='1'?'비':pty==='2'?'비/눈':pty==='3'?'눈':sky==='4'?'흐림':sky==='3'?'구름많음':'맑음';
+        const diff = (pty==='1'||pty==='2')?'high':pty==='3'?'high':sky==='4'?'medium':'low';
+        return new Response(JSON.stringify({ ok: true, weather: { sky: skyTxt, temp: Number(tmp)||0, rainProb: Number(pop)||0, windSpd: Number(wsd)||0, difficulty: diff, msg: diff==='high'?'우천 — 배달 난이도 높아요':diff==='medium'?'흐림 — 출발 전 날씨 확인 권장':'배달 최적 날씨예요' } }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: true, weather: { sky: '맑음', temp: 24, rainProb: 5, windSpd: 1.8, difficulty: 'low', msg: '배달 최적 날씨예요' } }), { headers: corsH });
+      }
+    }
+
+    // ── 차량 검사 만료 조회 ──────────────────────────────────────────────────
+    if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const carNum = url.searchParams.get('carNum');
+        if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
+        const apiKey = env.KOTSA_API_KEY;
+        if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
+        const resp = await fetch(`https://openapi.kotsa.or.kr/api/publicdata/vehicleInspect/v1?serviceKey=${encodeURIComponent(apiKey)}&carNum=${encodeURIComponent(carNum)}&type=JSON`);
+        const data = await resp.json();
+        const dueDate = data?.resultList?.[0]?.inspectValidDate || null;
+        return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 실수익 계산기 (건별 실운임) ────────────────────────────────────────
+    if (path === '/api/yongcha/net-income' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const { fare, distKm, fuelType, mpg } = await request.json();
+        if (!fare) return new Response(JSON.stringify({ ok: false, error: '운임 필수' }), { status: 400, headers: corsH });
+        let fuelPrice = 1650;
+        try {
+          const fuelCode = fuelType === 'LPG' ? 'B034' : fuelType === '경유' ? 'B027' : 'B034';
+          const opKey = env.OPINET_API_KEY || 'F186390162';
+          const opResp = await fetch(`https://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${opKey}`);
+          if (opResp.ok) { const opData = await opResp.json(); const item = (opData.RESULT?.OIL||[]).find(o=>o.PRODCD===fuelCode); if (item) fuelPrice = Number(item.PRICE) || fuelPrice; }
+        } catch {}
+        const efficiency = Number(mpg) || (fuelType==='경유'?12:fuelType==='LPG'?10:11);
+        const dist = Number(distKm) || 0;
+        const fuelCost = dist > 0 ? Math.round((dist / efficiency) * fuelPrice) : 0;
+        const tollEstimate = dist > 30 ? Math.round(dist * 55) : 0;
+        const netIncome = Number(fare) - fuelCost - tollEstimate;
+        return new Response(JSON.stringify({ ok: true, fare: Number(fare), fuelCost, tollEstimate, netIncome, fuelPrice, distKm: dist }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 공동현관 비밀번호 DB — 조회 ─────────────────────────────────────────
+    if (path === '/api/yongcha/entrance-codes' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const q = url.searchParams.get('q') || '';
+        const lat = Number(url.searchParams.get('lat')) || 0;
+        const lng = Number(url.searchParams.get('lng')) || 0;
+        const queryBody = { structuredQuery: {
+          from: [{ collectionId: 'yongcha_entrance_codes' }],
+          where: { fieldFilter: { field: { fieldPath: 'reportCount' }, op: 'LESS_THAN', value: { integerValue: 5 } } },
+          limit: 50, orderBy: [{ field: { fieldPath: 'verifiedCount' }, direction: 'DESCENDING' }]
+        }};
+        const resp = await fetch(`${FS}:runQuery`, { method: 'POST', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(queryBody) });
+        const docs = await resp.json();
+        let items = docs.filter(d=>d.document).map(d=>{
+          const f = d.document.fields||{}, id = d.document.name.split('/').pop();
+          return { id, address: f.address?.stringValue||'', addressDetail: f.addressDetail?.stringValue||'', code: f.code?.stringValue||'', lat: Number(f.lat?.doubleValue||f.lat?.integerValue||0), lng: Number(f.lng?.doubleValue||f.lng?.integerValue||0), verifiedCount: Number(f.verifiedCount?.integerValue||0), reportCount: Number(f.reportCount?.integerValue||0), updatedAt: f.updatedAt?.timestampValue||'' };
+        });
+        if (q) items = items.filter(i=>i.address.includes(q));
+        if (lat && lng) items.sort((a,b)=>{ const da=Math.sqrt((a.lat-lat)**2+(a.lng-lng)**2), db=Math.sqrt((b.lat-lat)**2+(b.lng-lng)**2); return da-db; });
+        return new Response(JSON.stringify({ ok: true, items: items.slice(0,30) }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 공동현관 비밀번호 DB — 등록 ─────────────────────────────────────────
+    if (path === '/api/yongcha/entrance-codes' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const authHeader = request.headers.get('Authorization')||'';
+        if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), { status: 401, headers: corsH });
+        const verData = await (await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken: authHeader.slice(7) }) })).json();
+        const uid = verData.users?.[0]?.localId;
+        if (!uid) return new Response(JSON.stringify({ ok: false, error: '인증 실패' }), { status: 401, headers: corsH });
+        const { address, addressDetail, code, lat, lng } = await request.json();
+        if (!address || !code) return new Response(JSON.stringify({ ok: false, error: 'address, code 필수' }), { status: 400, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const docId = `${Date.now()}_${uid.slice(0,6)}`;
+        await fetch(`${FS}/yongcha_entrance_codes/${docId}`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields: { address:{stringValue:address}, addressDetail:{stringValue:addressDetail||''}, code:{stringValue:code}, lat:{doubleValue:Number(lat)||0}, lng:{doubleValue:Number(lng)||0}, createdBy:{stringValue:uid}, verifiedCount:{integerValue:0}, reportCount:{integerValue:0}, updatedAt:{timestampValue:new Date().toISOString()} } }) });
+        return new Response(JSON.stringify({ ok: true, id: docId }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 공동현관 비밀번호 DB — 검증/신고 ────────────────────────────────────
+    if (path.startsWith('/api/yongcha/entrance-codes/') && method === 'PATCH') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const docId = path.replace('/api/yongcha/entrance-codes/','');
+        const { action } = await request.json();
+        if (!docId || !action) return new Response(JSON.stringify({ ok: false, error: '필수값 누락' }), { status: 400, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const getDoc = await (await fetch(`${FS}/yongcha_entrance_codes/${docId}`, { headers:{'Authorization':`Bearer ${fsToken}`} })).json();
+        const f = getDoc.fields||{};
+        const pf = action==='verify' ? { verifiedCount:{integerValue:Number(f.verifiedCount?.integerValue||0)+1}, updatedAt:{timestampValue:new Date().toISOString()} } : { reportCount:{integerValue:Number(f.reportCount?.integerValue||0)+1}, updatedAt:{timestampValue:new Date().toISOString()} };
+        await fetch(`${FS}/yongcha_entrance_codes/${docId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields: pf }) });
+        return new Response(JSON.stringify({ ok: true }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 기사 위험도 점수 집계 ────────────────────────────────────────────────
+    if (path === '/api/yongcha/risk-score' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const { driverId } = await request.json();
+        if (!driverId) return new Response(JSON.stringify({ ok: false, error: 'driverId 필수' }), { status: 400, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const since = new Date(Date.now() - 90*24*60*60*1000).toISOString();
+        const applyQ = { structuredQuery: { from:[{collectionId:'yongcha_applies'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:driverId}}}, {fieldFilter:{field:{fieldPath:'createdAt'},op:'GREATER_THAN',value:{stringValue:since}}} ] } }, limit:200 } };
+        const docs = await (await fetch(`${FS}:runQuery`, { method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify(applyQ) })).json();
+        let total=0, completed=0, noshow=0;
+        (docs||[]).filter(d=>d.document).forEach(d=>{ const st=d.document.fields?.status?.stringValue||''; total++; if(st==='completed'||st==='approved')completed++; else if(st==='noshow')noshow++; });
+        const completeRate = total > 0 ? completed/total : 0;
+        const noshowRate = total > 0 ? noshow/total : 0;
+        const score = Math.max(0, Math.min(100, Math.round(completeRate*40 + (1-noshowRate)*30 + 30)));
+        const grade = score>=90?'S':score>=75?'A':score>=55?'B':'C';
+        const pf = { trustScore:{integerValue:score}, trustGrade:{stringValue:grade}, noShowCount:{integerValue:noshow}, completeCount:{integerValue:completed}, totalApplies:{integerValue:total}, acceptRate:{doubleValue:completeRate}, trustUpdatedAt:{timestampValue:new Date().toISOString()} };
+        await fetch(`${FS}/yongcha_users/${driverId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields: pf }) });
+        return new Response(JSON.stringify({ ok: true, driverId, score, grade, total, completed, noshow }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 노쇼 자동 에스컬레이션 ───────────────────────────────────────────────
+    if (path === '/api/yongcha/noshow-escalate' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const { applyId, postId, agencyId, driverId, driverName } = await request.json();
+        if (!applyId || !postId) return new Response(JSON.stringify({ ok: false, error: '필수값 누락' }), { status: 400, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        await fetch(`${FS}/yongcha_applies/${applyId}?updateMask.fieldPaths=status&updateMask.fieldPaths=noshowAt`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields:{ status:{stringValue:'noshow'}, noshowAt:{timestampValue:new Date().toISOString()} } }) });
+        await fetch(`${FS}/yongcha_posts/${postId}?updateMask.fieldPaths=status&updateMask.fieldPaths=escalatedAt`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields:{ status:{stringValue:'open'}, escalatedAt:{timestampValue:new Date().toISOString()} } }) });
+        if (driverId) { fetch(new URL('/api/yongcha/risk-score',request.url).toString(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({driverId}) }).catch(()=>{}); }
+        if (agencyId && env.FCM_SERVER_KEY) {
+          const agData = await (await fetch(`${FS}/yongcha_users/${agencyId}`, { headers:{'Authorization':`Bearer ${fsToken}`} })).json();
+          const agFcm = agData.fields?.fcmToken?.stringValue;
+          if (agFcm) { await fetch('https://fcm.googleapis.com/fcm/send', { method:'POST', headers:{'Authorization':'key='+env.FCM_SERVER_KEY,'Content-Type':'application/json'}, body: JSON.stringify({ to:agFcm, notification:{title:'노쇼 발생 — 자동 재모집', body:`${driverName||'기사'}님이 미출근했습니다. 공고가 자동 재오픈되었어요.`}, data:{type:'noshow_escalate',postId,applyId} }) }); }
+        }
+        return new Response(JSON.stringify({ ok: true, postId, applyId, action:'noshow_escalated' }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 소장 현금흐름 예측 ───────────────────────────────────────────────────
+    if (path === '/api/yongcha/cashflow' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const authHeader = request.headers.get('Authorization')||'';
+        if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), { status: 401, headers: corsH });
+        const verData = await (await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken: authHeader.slice(7) }) })).json();
+        const uid = verData.users?.[0]?.localId;
+        if (!uid) return new Response(JSON.stringify({ ok: false, error: '인증 실패' }), { status: 401, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); weekStart.setHours(0,0,0,0);
+        const q = { structuredQuery: { from:[{collectionId:'yongcha_work'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'agencyId'},op:'EQUAL',value:{stringValue:uid}}}, {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'done'}}}, {fieldFilter:{field:{fieldPath:'completedAt'},op:'GREATER_THAN',value:{stringValue:weekStart.toISOString()}}} ] } }, limit: 300 } };
+        const docs = await (await fetch(`${FS}:runQuery`, { method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify(q) })).json();
+        let totalFare=0, cnt=0;
+        (docs||[]).filter(d=>d.document).forEach(d=>{ const f=d.document.fields||{}; totalFare+=Number(f.fare?.integerValue||f.fare?.doubleValue||0); cnt++; });
+        const driverPay = Math.round(totalFare * 0.85);
+        const receiveDate = new Date(Date.now() + 10*24*60*60*1000).toISOString().slice(0,10);
+        return new Response(JSON.stringify({ ok:true, thisWeek:{ completedCount:cnt, totalFare, driverPay, agencyRevenue:totalFare-driverPay, expectedReceive:totalFare, receiveDate, gapDays:10 } }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
+    }
+
+    // ── 정산 대사 CSV ────────────────────────────────────────────────────────
+    if (path === '/api/yongcha/settlement-reconcile' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const authHeader = request.headers.get('Authorization')||'';
+        if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), { status: 401, headers: corsH });
+        const verData = await (await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ idToken: authHeader.slice(7) }) })).json();
+        const uid = verData.users?.[0]?.localId;
+        if (!uid) return new Response(JSON.stringify({ ok: false, error: '인증 실패' }), { status: 401, headers: corsH });
+        const { csvRows, courier, periodStart, periodEnd } = await request.json();
+        if (!csvRows || !Array.isArray(csvRows)) return new Response(JSON.stringify({ ok: false, error: 'csvRows 배열 필수' }), { status: 400, headers: corsH });
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
+        const filters = [
+          {fieldFilter:{field:{fieldPath:'agencyId'},op:'EQUAL',value:{stringValue:uid}}},
+          {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'done'}}}
+        ];
+        if (periodStart) filters.push({fieldFilter:{field:{fieldPath:'completedAt'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:new Date(periodStart).toISOString()}}});
+        if (periodEnd) filters.push({fieldFilter:{field:{fieldPath:'completedAt'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:new Date(periodEnd+'T23:59:59').toISOString()}}});
+        if (courier && courier !== '전체') filters.push({fieldFilter:{field:{fieldPath:'courier'},op:'EQUAL',value:{stringValue:courier}}});
+        const docs = await (await fetch(`${FS}:runQuery`, { method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ structuredQuery:{ from:[{collectionId:'yongcha_work'}], where:{compositeFilter:{op:'AND',filters}}, limit:500 } }) })).json();
+        let fsTotal=0, fsCnt=0;
+        (docs||[]).filter(d=>d.document).forEach(d=>{ const f=d.document.fields||{}; fsTotal+=Number(f.fare?.integerValue||f.fare?.doubleValue||0); fsCnt++; });
+        const csvTotal = csvRows.reduce((s,r)=>s+Number(r.amount||0),0);
+        const csvCnt = csvRows.reduce((s,r)=>s+Number(r.count||1),0);
+        const diff = csvTotal - fsTotal;
+        const diffPct = fsTotal>0 ? Math.round(diff/fsTotal*100*10)/10 : 0;
+        return new Response(JSON.stringify({ ok:true, csvTotal, csvCount:csvCnt, fsTotal, fsCount:fsCnt, diff, diffPct, status:Math.abs(diffPct)<=1?'match':Math.abs(diffPct)<=5?'warning':'mismatch', msg:Math.abs(diffPct)<=1?'정산 일치':`차이 ${diff>0?'+':''}${diff.toLocaleString()}원 (${diffPct}%)` }), { headers: corsH });
+      } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
     }
 
     // Serve app

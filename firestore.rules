@@ -301,6 +301,13 @@ service cloud.firestore {
       allow delete: if isAuth() && resource.data.driverId == request.auth.uid || isSuperAdmin();
     }
 
+    match /yongcha_entrance_codes/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isSuperAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
