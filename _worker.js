@@ -10807,8 +10807,7 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px">'+
           starBtn+
-          '<div class="gas-price">'+Number(s.price||0).toLocaleString()+'</div>'+
-          '<div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>'+
+          (s.price?'<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':'<div style="font-size:10px;font-weight:700;color:var(--t3);margin:2px 0 4px;text-align:right;line-height:1.3">가격<br>정보없음</div>')+
           '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
         '</div>'+
       '</div>';
@@ -17743,8 +17742,16 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const res = await fetch(kakaUrl, { headers: { 'Authorization': 'KakaoAK ' + kakaoKey } });
       if (!res.ok) throw new Error('카카오 API 오류 ' + res.status);
       const data = await res.json();
-      const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소'];
-      const getBrand = name => BRANDS.find(b => name.includes(b)) || '';
+      const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','HD현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소','E1에너지','세왕에너지','오일뱅크'];
+      const getBrand = name => {
+        const b = BRANDS.find(b => name.includes(b));
+        if (b) return b;
+        const parts = name.trim().split(/\s+/);
+        if (parts.length >= 2 && /주유소|충전소/.test(parts[parts.length-1])) return parts[0];
+        const stripped = name.replace(/(주유소|충전소)$/, '').trim();
+        if (stripped && stripped !== name && stripped.length <= 10) return stripped;
+        return '';
+      };
       const stations = (data.documents || []).slice(0, 10).map(d => ({
         id: d.id, name: d.place_name,
         address: d.road_address_name || d.address_name,
