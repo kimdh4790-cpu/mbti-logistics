@@ -179,6 +179,12 @@ function _showApp(){
  }
  _buildFiloNav();
  _filoGoPage('home');
+ // 업종 데모 로그인 시 해당 딜러로 자동 전환
+ var _demoPending=localStorage.getItem('_demoType');
+ if(_demoPending){
+  localStorage.removeItem('_demoType');
+  setTimeout(function(){ _switchDemoDealer('demo_'+_demoPending); },600);
+ }
  // FILO ↔ DINE 실시간 연동 시작
  setTimeout(function(){
   if(typeof _filoWatchDineReservations==='function')_filoWatchDineReservations();
@@ -1130,13 +1136,16 @@ function _filoWatchDineReservations(){
 
 // _filoWatchDineSales 제거 — 홈 리스너⑥ filo_sales onSnapshot이 동일 기능 수행
 
-// ── 데모 로그인 — 어드민 계정으로 통합 ─────────────────────────────
+// ── 데모 로그인 — 업종별 딜러 자동 전환 ────────────────────────────
+var _DEMO_TYPE_MAP={cafe:'cafe',korean:'korean',japanese:'japanese',snack:'fastfood',western:'other',bakery:'cafe'};
 function _filoDemoLogin(type){
  var msgEl=document.getElementById('demo-login-msg');
  var errEl=document.getElementById('fl-err');
  if(msgEl) msgEl.textContent='로그인 중...';
+ if(type) localStorage.setItem('_demoType',type);
  _auth.signInWithEmailAndPassword('soungkyekim@naver.com','khw3103!!!')
  .catch(function(e){
+  localStorage.removeItem('_demoType');
   if(msgEl) msgEl.textContent='클릭 한 번으로 샘플 데이터 체험';
   if(errEl){errEl.textContent='데모 로그인 실패: '+e.message;errEl.style.display='block';}
  });
