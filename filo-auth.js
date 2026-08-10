@@ -127,7 +127,6 @@ function _showApp(){
     theme이 없는 기존 매장은 other(기존 퍼플)로 떨어져 화면이 그대로 유지된다. */
  try{ if(typeof _filoApplyTheme==='function') _filoApplyTheme(_cachedCompanyDoc||{}); }catch(e){}
  document.getElementById('login-screen').style.display='none';
- document.getElementById('login-screen').style.display='none';
  var _appEl=document.getElementById('app');_appEl.style.display='flex';_appEl.classList.add('logged-in');
  if(window.innerWidth<=768){
   var sb=document.getElementById('sidebar');
@@ -298,30 +297,38 @@ function _buildFiloNav(){
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
  var hasAll=isSA||hasSub('combo');
 
- // ── 슈퍼어드민 데모 매장 전환 바 ──────────────────────────────
+ // ── 슈퍼어드민 관리 바 ──────────────────────────────────────
  if(isSA){
   var _bar=document.getElementById('demo-admin-bar');
   if(!_bar){
    _bar=document.createElement('div');
    _bar.id='demo-admin-bar';
-   _bar.innerHTML='<span style="color:var(--t3)">현재 매장:</span>'+
-    '<strong id="demo-dealer-disp" style="color:var(--acc)">'+esc(_CU.dealerId||'')+'</strong>'+
-    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="margin-left:auto;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer">'+
-    '<option value="">-- 데모 매장 전환 --</option>'+
-    '<option value="demo_cafe">데모 카페</option>'+
-    '<option value="demo_korean">데모 한식당</option>'+
-    '<option value="demo_japanese">데모 일식당</option>'+
-    '<option value="demo_snack">데모 분식집</option>'+
-    '<option value="demo_western">데모 양식당</option>'+
-    '<option value="demo_bakery">데모 베이커리</option>'+
-    '</select>';
+   _bar.innerHTML=
+    '<span style="color:var(--t3);flex-shrink:0">매장:</span>'+
+    '<strong id="demo-dealer-disp" style="color:var(--acc);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">'+esc(_CU.dealerId||'')+'</strong>'+
+    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer;flex-shrink:0">'+
+     '<option value="">데모 선택</option>'+
+     '<option value="demo_cafe">카페</option>'+
+     '<option value="demo_korean">한식당</option>'+
+     '<option value="demo_japanese">일식당</option>'+
+     '<option value="demo_snack">분식</option>'+
+     '<option value="demo_western">양식당</option>'+
+     '<option value="demo_bakery">베이커리</option>'+
+    '</select>'+
+    '<input id="sa-did-input" placeholder="딜러ID 직접입력" '+
+     'onkeydown="if(event.key===\'Enter\')_switchDemoDealer(this.value.trim())" '+
+     'style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;outline:none">'+
+    '<button onclick="_switchDemoDealer(document.getElementById(\'sa-did-input\').value.trim())" '+
+     'style="background:var(--acc);border:none;border-radius:6px;color:#08101f;font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer;flex-shrink:0">이동</button>'+
+    '<button onclick="_filoDemoInit()" '+
+     'style="background:transparent;border:1px solid var(--bd2);border-radius:6px;color:var(--t3);font-size:11px;padding:3px 10px;cursor:pointer;flex-shrink:0">초기화</button>';
    var _appEl3=document.getElementById('app');
    if(_appEl3) _appEl3.insertBefore(_bar,_appEl3.firstChild);
   } else {
    var _disp=document.getElementById('demo-dealer-disp');
    if(_disp) _disp.textContent=_CU.dealerId||'';
    var _dsel=document.getElementById('demo-dealer-sel');
-   if(_dsel) _dsel.value=_CU.dealerId||'';
+   if(_dsel) _dsel.value=(_CU.dealerId||'').startsWith('demo_')?_CU.dealerId:'';
   }
  }
 
@@ -1026,17 +1033,12 @@ function _filoRegister(){
  /* 선택한 업종 테마 즉시 적용 */
  if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:industry});
  _filoToast('등록 완료! 1개월 무료 체험을 시작합니다');
- /* 업종별 기본 메뉴 자동 세팅 — 명세대로 확인 팝업 후 진행 */
- var tpl=(typeof _FILO_MENU_TEMPLATES!=='undefined')?_FILO_MENU_TEMPLATES[industry]:null;
- if(tpl&&tpl.length&&typeof _filoSeedDefaultMenus==='function'){
+ if(typeof _filoSeedDefaultMenus==='function'){
   setTimeout(function(){
-   var label=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[industry])?_FILO_THEMES[industry].label:industry;
-   if(confirm(label+' 업종에 맞는 기본 메뉴 '+tpl.length+'개를 자동으로 추가할까요?\n\n등록 후 자유롭게 수정·추가·삭제할 수 있습니다.')){
-    _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
-     if(n>0)_filoToast('기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');
-    }).catch(function(e){_filoToast('기본 메뉴 등록 실패: '+e.message);});
-   }
-  },600);
+   _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
+    if(n>0)_filoToast('기본 메뉴 '+n+'개가 자동 등록되었습니다');
+   }).catch(function(){});
+  },800);
  }
  }).catch(function(e){
  errEl.textContent=e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message;
@@ -1155,20 +1157,85 @@ function _filoDemoLogin(type){
 function _switchDemoDealer(did){
  if(!did||!_CU||!_CU.uid) return;
  var sel=document.getElementById('demo-dealer-sel');
+ var inp=document.getElementById('sa-did-input');
  if(sel) sel.disabled=true;
  _db.collection('companies').doc(did).get().then(function(snap){
-  var data=snap.exists?snap.data():{};
+  var data=snap.exists?snap.data():{companyName:did};
   _cachedCompanyDoc=data;
   _CU.dealerId=did;
   _CU.role='dealer';
   _CU.companyName=data.companyName||data.name||did;
   try{if(typeof _filoApplyTheme==='function')_filoApplyTheme(data);}catch(e){}
   var disp=document.getElementById('demo-dealer-disp');
-  if(disp) disp.textContent=did;
+  if(disp) disp.textContent=_CU.companyName||did;
   var nc=document.getElementById('nav-company');
   if(nc) nc.textContent=_CU.companyName;
-  if(sel){sel.value=did;sel.disabled=false;}
+  if(sel){sel.value=did.startsWith('demo_')?did:'';sel.disabled=false;}
+  if(inp) inp.value='';
   _buildFiloNav();
   _filoGoPage('home');
- }).catch(function(e){if(sel)sel.disabled=false;console.error('_switchDemoDealer:',e);});
+ }).catch(function(e){if(sel)sel.disabled=false;_filoToast('매장 전환 실패: '+did);console.error(e);});
+}
+
+// ── 데모 딜러 초기화 (SA 전용) ────────────────────────────────────
+function _filoDemoInit(){
+ var DEMOS=[
+  {id:'demo_cafe',    label:'카페',    theme:'cafe',    tpl:'cafe',    primary:'#c8a96e',bg:'#1a1209',
+   services:['kiosk','bakery_qr','inventory']},
+  {id:'demo_korean',  label:'한식당',  theme:'korean',  tpl:'korean',  primary:'#e05555',bg:'#0f0a0a',
+   services:['kiosk','table_order','booking','inventory','payroll']},
+  {id:'demo_japanese',label:'일식당',  theme:'japanese',tpl:'japanese',primary:'#3b82f6',bg:'#0a0f1e',
+   services:['kiosk','table_order','booking','inventory']},
+  {id:'demo_snack',   label:'분식',    theme:'fastfood',tpl:'fastfood',primary:'#f97316',bg:'#1a0e00',
+   services:['kiosk','table_order','inventory']},
+  {id:'demo_western', label:'양식당',  theme:'other',   tpl:'western', primary:'#7c3aed',bg:'#07071a',
+   services:['kiosk','table_order','booking','inventory']},
+  {id:'demo_bakery',  label:'베이커리',theme:'cafe',    tpl:'bakery',  primary:'#c8a96e',bg:'#1a1209',
+   services:['kiosk','bakery_qr','inventory']}
+ ];
+ _filoToast('데모 딜러 초기화 시작...');
+ var total=0;
+ function next(i){
+  if(i>=DEMOS.length){_filoToast('데모 초기화 완료 — 총 '+total+'개 메뉴');return;}
+  var d=DEMOS[i];
+  _db.collection('companies').doc(d.id).set({
+   companyName:'데모 '+d.label,theme:d.theme,
+   primaryColor:d.primary,bgColor:d.bg,
+   services:d.services,
+   subscriptions:{combo:{active:true}},
+   isDemo:true,dealerId:d.id,role:'dealer',
+   createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+   return _db.collection('filo_menus').where('dealerId','==',d.id).get();
+  }).then(function(snap){
+   if(snap.empty) return;
+   var b=_db.batch();
+   snap.docs.forEach(function(doc){b.delete(doc.ref);});
+   return b.commit();
+  }).then(function(){
+   var items=(typeof _FILO_MENU_TEMPLATES!=='undefined')
+    ?(_FILO_MENU_TEMPLATES[d.tpl]||[]):[];
+   if(!items.length){next(i+1);return;}
+   var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+   var b2=_db.batch();
+   var refs=[];
+   items.forEach(function(it){
+    var ref=_db.collection('filo_menus').doc();
+    refs.push({ref:ref,q:it.q||it.name});
+    b2.set(ref,{
+     dealerId:d.id,name:it.name,price:it.price,
+     category:it.category,emoji:it.emoji||'',forSale:true,
+     imageUrl:'',stock:null,minStock:null,description:'',
+     nameTranslations:it.tr||{},isTemplate:true,
+     createdAt:now,updatedAt:now
+    });
+   });
+   total+=items.length;
+   return b2.commit().then(function(){
+    if(typeof _filoFillTemplateImages==='function') _filoFillTemplateImages(refs);
+   });
+  }).then(function(){next(i+1);})
+  .catch(function(e){console.error(d.id,e);next(i+1);});
+ }
+ next(0);
 }
