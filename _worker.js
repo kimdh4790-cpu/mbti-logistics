@@ -9665,7 +9665,7 @@ function _pgHomeDriver(el){
     '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
-      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>차량 올리기</button>'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>용차 등록</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -9849,8 +9849,8 @@ function _pgHomeAgency(el){
 
   // 퀵 액션 그리드
   '<div class="quick-grid">'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">공고 등록</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_posts\\')">공고 관리</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">배차 공고</button>'+
+    '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')">휴식 승인</button>'+
   '</div>'+
@@ -9995,8 +9995,8 @@ function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 공고':'노선 공고')+'</h1>'+
-      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'기사가 직접 올린 차량 공고예요':'대리점이 올린 배차 노선을 찾아보세요')+'</p></div>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'배차 공고')+'</h1>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'임시 차용 가능 기사 목록 · 며칠~몇주 단위':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
       '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\\'yongcha\\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
@@ -10006,11 +10006,11 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'route\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '배차 공고 (구인)</button>'+
+      '배차 공고</button>'+
     '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'yongcha\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '용차 공고 (구직)</button>'+
+      '용차 모집</button>'+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -10065,6 +10065,17 @@ function _pgPosts(el){
   '</div>'+ // end posts-route-section
 
   '<div id="posts-yongcha-section" style="display:none">'+
+    // 용차 개념 안내 (배차·구인구직과 구별)
+    '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--gn)">'+
+      '<div style="font-size:12.5px;font-weight:800;color:var(--gn);margin-bottom:4px">용차란?</div>'+
+      '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+
+        '결원 발생·물량 급증 시 대리점이 외부 기사를 <b style="color:var(--tx)">며칠~몇주 단위</b>로 임시 차용하는 것이에요. '+
+        '단건 배차나 정직원 채용과 구별되는 별도 계약이에요.'+
+      '</div>'+
+    '</div>'+
+    (_CU&&_CU.type==='driver'?
+      '<button type="button" onclick="_goPage(\\'driver_offer\\')" style="width:100%;min-height:44px;margin-bottom:12px;background:var(--gnl);color:var(--gn);border:1.5px dashed var(--gnln);border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">+ 내 용차 공고 등록/관리</button>':
+      '')+
     '<div id="yongcha-offer-filter" style="margin-bottom:10px">'+
       '<div class="fbar">'+
       REGIONS.map(function(r){
@@ -10089,6 +10100,11 @@ function _pgPosts(el){
   }
 }
 
+function _pfSwitchToYongchaTab(){
+  _postsMainTab='yongcha';
+  _goPage('posts');
+}
+
 function _pfSwitchMainTab(tab){
   _postsMainTab=tab;
   var routeSec=document.getElementById('posts-route-section');
@@ -10100,15 +10116,15 @@ function _pfSwitchMainTab(tab){
   if(!routeSec||!yongchaSec)return;
   if(tab==='yongcha'){
     routeSec.style.display='none';yongchaSec.style.display='block';
-    if(title)title.textContent='용차 공고';
-    if(sub)sub.textContent='기사가 직접 올린 차량 공고예요';
+    if(title)title.textContent='용차 모집';
+    if(sub)sub.textContent='임시 차용 가능 기사 목록 · 며칠~몇주 단위';
     if(btnR){btnR.style.background='var(--bg2)';btnR.style.color='var(--t2)';btnR.style.borderColor='var(--bd)';}
     if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
     _loadDriverOfferList();
   } else {
     yongchaSec.style.display='none';routeSec.style.display='block';
     if(title)title.textContent='배차 공고';
-    if(sub)sub.textContent='대리점이 올린 배차 노선을 찾아보세요';
+    if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
     if(btnY){btnY.style.background='var(--bg2)';btnY.style.color='var(--t2)';btnY.style.borderColor='var(--bd)';}
     _loadFilteredPosts();
@@ -12600,7 +12616,7 @@ function _pgProfile(el){
 
   // 구인구직 바로가기 (대리점)
   (type==='agency'?
-  '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px"> 구인구직 바로가기</button>':'')+
+  '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">소속 기사 채용 공고 (구인구직)</button>':'')+
 
   // 공고 등록 (대리점)
   (type==='agency'?
@@ -13052,11 +13068,13 @@ function _pgJobs(el){
 function _pgJobsAgency(el){
   var activeTab=_jSubTab==='resumes'?'resumes':'myjobs';
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title"> 구인구직</div>'+
-  '<div class="page-sub">정규직 기사 채용 공고를 관리해요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">구인구직</div>'+
+  '<div class="page-sub">소속 기사 장기 채용 · 정직원/계약직 모집</div></div>'+
+  '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
+  '단건 배차·임시 용차와 달리, <b style="color:var(--tx)">정직원·계약직 소속 기사</b>를 모집하는 채용 공고예요.</div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')"> 내 채용공고</button>'+
-  '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\\'resumes\\')">📄 이력서 찾기</button>'+
+  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')">내 채용공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\\'resumes\\')">이력서 찾기</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
 
@@ -13329,8 +13347,10 @@ function _pgDriverOffer(el){
     return;
   }
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">내 용차 공고</div>'+
-  '<div class="page-sub">소장이 직접 연락할 수 있어요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">용차 등록</div>'+
+  '<div class="page-sub">임시 차용 · 대리점 소장이 직접 연락해요</div></div>'+
+  '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;border-left:3px solid var(--gn);font-size:12px;color:var(--t2);line-height:1.6">'+
+  '단건 배차 지원과 별개로, <b style="color:var(--tx)">며칠~몇주 단위 임시 용차</b> 가능 여부와 조건을 올려두면 소장님이 연락해요.</div>'+
 
   // 내 활성 공고 목록
   '<div class="sec-head"><span class="sec-title">내 등록 공고</span></div>'+
@@ -13451,11 +13471,13 @@ function _submitDriverOffer(){
 function _pgJobsDriver(el){
   var activeTab=(_jSubTab==='resume'?'resume':'list');
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title"> 구인구직</div>'+
-  '<div class="page-sub">채용 공고를 찾고 이력서를 등록해요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">구인구직</div>'+
+  '<div class="page-sub">대리점 소속 기사 채용 · 정직원/계약직 지원</div></div>'+
+  '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
+  '용차(임시) · 배차(단건)와 다른 <b style="color:var(--tx)">정직원·계약직 장기 채용</b>이에요. 이력서를 등록하면 소장님이 직접 연락해요.</div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')"> 채용 공고</button>'+
-  '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\\'resume\\')">📄 내 이력서</button>'+
+  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')">채용 공고</button>'+
+  '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\\'resume\\')">내 이력서</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
 
