@@ -9225,7 +9225,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const ny = Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
         const now = new Date(); const base_date = now.toISOString().slice(0,10).replace(/-/g,'');
         const h = now.getHours(); const base_time = String(h<2?23:h<5?2:h<8?5:h<11?8:h<14?11:h<17?14:h<20?17:20).padStart(2,'0')+'00';
-        const resp = await fetch(`https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${encodeURIComponent(apiKey)}&numOfRows=20&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`);
+        const resp = await fetch(`https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${apiKey}&numOfRows=20&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`);
         if (!resp.ok) throw new Error('기상청 오류');
         const data = await resp.json();
         const items = data.response?.body?.items?.item || [];
