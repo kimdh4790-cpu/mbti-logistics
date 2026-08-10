@@ -10533,13 +10533,21 @@ function _renderInspectBanner(dueStr){
   if(!dueStr){el.innerHTML='';return;}
   var due=new Date(dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1-$2-$3'));
   var daysLeft=Math.ceil((due-Date.now())/(86400000));
-  if(daysLeft>30){el.innerHTML='';return;}
-  var danger=daysLeft<=7;
-  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+(danger?'var(--rdl)':'var(--brl)')+';border:1px solid '+(danger?'var(--rdln)':'var(--brln)')+';margin-bottom:10px">'+
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+(danger?'var(--rd)':'var(--br)')+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'+
-    '<div style="flex:1">'+
-      '<div style="font-size:13px;font-weight:800;color:'+(danger?'var(--rd)':'var(--br)')+'">차량 정기검사 D-'+daysLeft+'</div>'+
-      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">'+dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3')+'까지 수검 필요</div>'+
+  var dateLabel=dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3');
+  var danger=daysLeft<=7, warn=daysLeft<=30&&daysLeft>7, safe=daysLeft>30;
+  var bg=danger?'var(--rdl)':warn?'var(--brl)':'var(--gnl)';
+  var bd=danger?'var(--rdln)':warn?'var(--brln)':'rgba(16,163,74,.2)';
+  var clr=danger?'var(--rd)':warn?'var(--br)':'var(--gn)';
+  var lbl=daysLeft<0?'검사 만료 '+Math.abs(daysLeft)+'일 경과':daysLeft===0?'오늘 만료!':'D-'+daysLeft;
+  var statusTxt=daysLeft<0?'즉시 수검 필요!':safe?'검사 유효':warn?'수검 준비 필요':'긴급 수검 필요!';
+  var icon=danger||daysLeft<0?
+    '<svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"'+clr+'\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><line x1=\\"12\\" y1=\\"8\\" x2=\\"12\\" y2=\\"12\\"/><line x1=\\"12\\" y1=\\"16\\" x2=\\"12.01\\" y2=\\"16\\"/></svg>':
+    '<svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"'+clr+'\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><rect x=\\"3\\" y=\\"4\\" width=\\"18\\" height=\\"18\\" rx=\\"2\\" ry=\\"2\\"/><line x1=\\"16\\" y1=\\"2\\" x2=\\"16\\" y2=\\"6\\"/><line x1=\\"8\\" y1=\\"2\\" x2=\\"8\\" y2=\\"6\\"/><line x1=\\"3\\" y1=\\"10\\" x2=\\"21\\" y2=\\"10\\"/></svg>';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+bg+';border:1px solid '+bd+';margin-bottom:10px">'+
+    icon+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:13px;font-weight:800;color:'+clr+'">차량 정기검사 '+lbl+'</div>'+
+      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">만료: '+dateLabel+' · '+statusTxt+'</div>'+
     '</div>'+
   '</div>';
 }
