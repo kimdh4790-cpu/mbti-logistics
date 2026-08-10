@@ -307,6 +307,12 @@ service cloud.firestore {
       allow update: if isAuth();
       allow delete: if isSuperAdmin();
     }
+    match /yongcha_records/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
 
     match /{document=**} {
       allow read, write: if isSuperAdmin();

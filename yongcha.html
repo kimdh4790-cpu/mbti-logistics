@@ -1808,10 +1808,19 @@ function _pgHomeDriver(el){
     try{stored=JSON.parse(localStorage.getItem('yc_inspect_'+carNum)||'null');}catch(e){}
     var fetchInspect=function(){
       fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
-        if(!d.ok||!d.inspectDue)return;
+        if(!d.ok){
+          if(inspBanner)inspBanner.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div style="font-size:12.5px;font-weight:800;color:var(--t2)">차량 검사 이력 조회 실패</div><div style="font-size:11px;color:var(--t3)">'+_esc(carNum)+' · KOTSA API 오류</div></div></div>';
+          return;
+        }
+        if(!d.inspectDue){
+          if(inspBanner)inspBanner.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div style="font-size:12.5px;font-weight:800;color:var(--t2)">차량 검사 이력 없음</div><div style="font-size:11px;color:var(--t3)">'+_esc(carNum)+' · 차량번호를 확인해 주세요</div></div></div>';
+          return;
+        }
         try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:d.inspectDue,ts:Date.now()}));}catch(e){}
         _renderInspectBanner(d.inspectDue);
-      }).catch(function(){});
+      }).catch(function(e){
+        if(inspBanner)inspBanner.innerHTML='<div style="padding:10px 14px;font-size:11.5px;color:var(--t3)">검사 이력 불러오기 실패</div>';
+      });
     };
     if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
       _renderInspectBanner(stored.due);
