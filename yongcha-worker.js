@@ -9028,6 +9028,163 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
     }
 
+    // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
+    if (path === '/api/yongcha/settle-notify' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const body = await request.json();
+        const { settleId, driverPhone, driverName, agencyId, agencyName,
+                totalAmount, weekStart, totalCount, driverId } = body;
+        if (!settleId || !driverPhone) throw new Error('settleId, driverPhone 필수');
+
+        const amt = Number(totalAmount || 0);
+        const cnt = Number(totalCount  || 0);
+        const weekLabel = (weekStart || '').slice(0, 10);
+        const approveUrl = `https://yongcha.app/?tax=${settleId}`;
+
+        // 알림톡 발송
+        let alimtalkOk = false;
+        const aligoKey    = env.ALIGO_KEY;
+        const aligoUser   = env.ALIGO_USER_ID;
+        const aligoSender = env.ALIGO_SENDER_KEY;
+        if (aligoKey && aligoUser && aligoSender) {
+          const msg = `[용차앱] 정산 명세서 안내\n\n안녕하세요 ${driverName}님,\n${agencyName}에서 정산 명세서를 발송했어요.\n\n기간: ${weekLabel}\n건수: ${cnt}건\n금액: ${amt.toLocaleString('ko-KR')}원\n\n아래 링크에서 세금계산서 등록을 승인하시면 국세청(홈택스)에 자동 등록됩니다.\n\n▶ 세금계산서 승인\n${approveUrl}`;
+          const params = new URLSearchParams({
+            apikey: aligoKey, userid: aligoUser, senderkey: aligoSender,
+            tpl_code: 'KA01TP260618101225825DuJHXpoC4kY',
+            sender: env.ALIGO_SENDER || '05171133103',
+            receiver_1: driverPhone.replace(/[^0-9]/g, ''),
+            message_1: msg, cnt: '1',
+            failover: 'Y',
+            fmessage_1: msg,
+            fsender_1: env.ALIGO_SENDER || '05171133103',
+            freceiver_1: driverPhone.replace(/[^0-9]/g, '')
+          });
+          const ar = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+          });
+          const ad = await ar.json();
+          alimtalkOk = ad.result_code == 1;
+        }
+
+        // Firestore 상태 기록
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const pf = {
+          taxInvoiceState: { stringValue: '명세서발송' },
+          notifiedAt:      { stringValue: new Date().toISOString() },
+          notifyPhone:     { stringValue: driverPhone },
+          approveUrl:      { stringValue: approveUrl },
+          ...(driverId   ? { driverId:   { stringValue: driverId   } } : {}),
+          ...(agencyId   ? { agencyId:   { stringValue: agencyId   } } : {}),
+          ...(agencyName ? { agencyName: { stringValue: agencyName } } : {})
+        };
+        await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: pf })
+        });
+
+        return new Response(JSON.stringify({ ok: true, alimtalkOk, approveUrl }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
+    if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const body = await request.json();
+        const { settleId, senderCorpNum, mgtKey } = body;
+        if (!senderCorpNum) throw new Error('기사 사업자번호(senderCorpNum) 필수');
+        if (!settleId && !mgtKey) throw new Error('settleId 또는 mgtKey 필수');
+
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+
+        let actualMgtKey = mgtKey;
+        if (!actualMgtKey && settleId) {
+          const r = await fetch(`${FS}/yongcha_settlements/${settleId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } });
+          const sd = await r.json();
+          actualMgtKey = sd.fields?.taxInvoiceMgtKey?.stringValue;
+        }
+        if (!actualMgtKey) throw new Error('세금계산서 관리번호 없음. 소장에게 역발행 요청을 먼저 받으세요.');
+
+        const isTest = env.POPBILL_TEST_MODE !== 'false';
+        const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+        const pbToken = await ycPopbillGetToken(env, senderCorpNum);
+
+        const resp = await fetch(`${BASE}/Taxinvoice/역발행승인?SenderCorpNum=${senderCorpNum}&MgtKey=${actualMgtKey}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ Memo: '기사 앱 승인' })
+        });
+        const rt = await resp.text();
+        let rd; try { rd = JSON.parse(rt); } catch { rd = { raw: rt }; }
+
+        if (settleId) {
+          const pf = { taxInvoiceState: { stringValue: '역발행승인' }, taxInvoiceApprovedAt: { stringValue: new Date().toISOString() } };
+          await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: pf })
+          });
+        }
+        return new Response(JSON.stringify({ ok: true, result: rd }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
+    if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const body = await request.json();
+        const { settleId, senderCorpNum, mgtKey, rejectReason } = body;
+        if (!senderCorpNum) throw new Error('기사 사업자번호(senderCorpNum) 필수');
+        if (!settleId && !mgtKey) throw new Error('settleId 또는 mgtKey 필수');
+
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+
+        let actualMgtKey = mgtKey;
+        if (!actualMgtKey && settleId) {
+          const r = await fetch(`${FS}/yongcha_settlements/${settleId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } });
+          const sd = await r.json();
+          actualMgtKey = sd.fields?.taxInvoiceMgtKey?.stringValue;
+        }
+        if (!actualMgtKey) throw new Error('세금계산서 관리번호 없음');
+
+        const isTest = env.POPBILL_TEST_MODE !== 'false';
+        const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+        const pbToken = await ycPopbillGetToken(env, senderCorpNum);
+
+        const resp = await fetch(`${BASE}/Taxinvoice/역발행거부?SenderCorpNum=${senderCorpNum}&MgtKey=${actualMgtKey}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({ Memo: rejectReason || '기사 거부' })
+        });
+        const rt = await resp.text();
+        let rd; try { rd = JSON.parse(rt); } catch { rd = { raw: rt }; }
+
+        if (settleId) {
+          const pf = { taxInvoiceState: { stringValue: '역발행거부' }, taxInvoiceRejectedAt: { stringValue: new Date().toISOString() }, taxInvoiceRejectReason: { stringValue: rejectReason || '' } };
+          await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: pf })
+          });
+        }
+        return new Response(JSON.stringify({ ok: true, result: rd }), { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
     // ── 날씨 정보 (기상청 proxy) ─────────────────────────────────────────────
     if (path === '/api/yongcha/weather' && method === 'GET') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
