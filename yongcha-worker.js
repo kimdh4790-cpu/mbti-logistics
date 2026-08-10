@@ -931,6 +931,15 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option>로우탑</option>
       </select>
     </div>
+    <div class="inp-wrap" id="r-carfuel-wrap" style="display:none">
+      <label class="inp-lbl">연료 종류</label>
+      <select class="inp" id="r-carfuel">
+        <option value="휘발유">휘발유</option>
+        <option value="경유">경유 (디젤)</option>
+        <option value="LPG">LPG (가스)</option>
+        <option value="전기">전기</option>
+      </select>
+    </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
@@ -1182,7 +1191,9 @@ function _setType(t){
   document.getElementById('r-name-lbl').textContent=t==='agency'?'대리점명':'이름';
   document.getElementById('r-name').placeholder=t==='agency'?'상호명 입력':'이름 입력';
   var cw=document.getElementById('r-cartype-wrap');
-  if(cw)cw.style.display=(t==='driver')?'block':'none';   // 차종은 기사만
+  if(cw)cw.style.display=(t==='driver')?'block':'none';
+  var fw=document.getElementById('r-carfuel-wrap');
+  if(fw)fw.style.display=(t==='driver')?'block':'none';
 }
 
 /* ══ 차종 — 하이탑 / 로우탑 두 가지로 통일 ══════════════════════
@@ -1239,6 +1250,7 @@ function _yRegister(){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
     var _doc={
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
+      carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -1510,12 +1522,16 @@ function _pgHomeDriver(el){
   '<div class="sec-head"><span class="sec-title">오늘 일정</span><button type="button" class="sec-count" onclick="_goPage(\\'my_routes\\')">전체보기 ›</button></div>'+
   '<div class="sched-list" id="home-sched">'+_skRows(2)+'</div>'+
 
-  // 근처 주유소
-  '<div class="sec-head" style="margin-top:6px">'+
-    '<span class="sec-title">근처 주유소</span>'+
-    '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
-  '</div>'+
-  '<div class="card" id="home-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>'+
+  // 근처 주유소/충전소
+  (function(){
+    var _ft=_CU.carFuelType||'휘발유';
+    var _stl=_ft==='전기'?'근처 전기차 충전소':_ft==='LPG'?'근처 LPG 충전소':'근처 주유소';
+    return '<div class="sec-head" style="margin-top:6px">'+
+      '<span class="sec-title">'+_stl+'</span>'+
+      '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
+    '</div>'+
+    '<div class="card" id="home-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>';
+  })()+
 
   // 내 주변 공고
   '<div class="sec-head" style="margin-top:6px">'+
@@ -1659,10 +1675,10 @@ function _pgHomeDriver(el){
   }
   _loadNearbyPosts();
 
-  // 근처 주유소
+  // 근처 주유소/충전소
   _yLoadGeo().then(function(g){
     if(g){
-      _yLoadGasStations(g.lat,g.lng,'home-gas-stations');
+      _yLoadGasStations(g.lat,g.lng,'home-gas-stations',_CU.carFuelType);
     } else {
       var el=document.getElementById('home-gas-stations');
       if(el)el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">위치 허용 시 주유소를 추천해드려요</div>';
@@ -2126,14 +2142,32 @@ function _yLoadGeo(){
     },function(){finish(null);},{enableHighAccuracy:false,timeout:5500,maximumAge:600000});
   });
 }
-/* 주유소 목록 조회 + 렌더링 */
-function _yLoadGasStations(lat,lng,containerId){
+/* 주유소/충전소 목록 조회 + 렌더링
+   fuelType: '휘발유'|'경유'|'LPG'|'전기' (없으면 휘발유) */
+function _yLoadGasStations(lat,lng,containerId,fuelType){
   var el=document.getElementById(containerId);
   if(!el)return;
+  var fuel=fuelType||_CU.carFuelType||'휘발유';
+  // 전기차: OPINET 대신 안내 UI
+  if(fuel==='전기'){
+    var evLat=lat,evLng=lng;
+    el.innerHTML=
+      '<div style="padding:14px 0;text-align:center">'+
+      '<div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:8px">전기차 충전소 안내</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">OPINET은 주유소만 지원합니다.<br>아래 앱에서 충전소를 확인하세요.</div>'+
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
+        '<a href="https://map.kakao.com/?q=전기차+충전소" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:8px 14px;border-radius:99px;border:1px solid var(--acln)">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 충전소</a>'+
+        '<a href="https://www.ev.or.kr" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--gn);text-decoration:none;background:var(--gnl);padding:8px 14px;border-radius:99px;border:1px solid rgba(16,163,74,.2)">'+
+          'EV충전소 찾기</a>'+
+      '</div>'+
+      '</div>';
+    return;
+  }
   fetch('/api/yongcha/gas-stations',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({lat:lat,lng:lng,radius:2000})
+    body:JSON.stringify({lat:lat,lng:lng,radius:2000,fuelType:fuel})
   }).then(function(r){return r.json();}).then(function(res){
     if(!el)return;
     if(!res.ok||!res.stations||!res.stations.length){
@@ -2840,15 +2874,19 @@ function _showPostDetail(d){
   '</div>'+
   '</div>'+
 
-  // ── 상차지 근처 주유소 (기사용) ──
+  // ── 상차지 근처 주유소/충전소 (기사용) ──
   (isDriver&&(typeof d.loadingLat==='number'||(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'))?
-  '<div style="margin-bottom:14px">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-    '<span style="font-size:14px;font-weight:800;color:var(--tx)">상차지 근처 주유소</span>'+
-    '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
-  '</div>'+
-  '<div class="card" id="detail-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>'+
-  '</div>':'')+
+  (function(){
+    var _ft2=_CU.carFuelType||'휘발유';
+    var _stl2=_ft2==='전기'?'상차지 근처 충전소':_ft2==='LPG'?'상차지 근처 LPG 충전소':'상차지 근처 주유소';
+    return '<div style="margin-bottom:14px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<span style="font-size:14px;font-weight:800;color:var(--tx)">'+_stl2+'</span>'+
+        '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
+      '</div>'+
+      '<div class="card" id="detail-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>'+
+    '</div>';
+  })():'')+
 
   // ── 플랫폼 최소보장 ──
   '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
@@ -2968,7 +3006,7 @@ function _showPostDetail(d){
     var _gLat=null,_gLng=null;
     if(typeof d.loadingLat==='number'){_gLat=d.loadingLat;_gLng=d.loadingLng;}
     else if(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'){_gLat=d.zones[0].lat;_gLng=d.zones[0].lng;}
-    if(_gLat!=null){setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations');},300);}
+    if(_gLat!=null){setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations',_CU.carFuelType);},300);}
   }
 
   // 지도 표시
@@ -4672,6 +4710,10 @@ function _pgProfile(el){
       '<div class="inp-wrap"><label class="inp-lbl">보유 차량</label>'+
         '<select id="pref-carType" class="inp">'+
           _yCarOptions(p.carType,false)+
+        '</select></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">연료 종류</label>'+
+        '<select id="pref-fuelType" class="inp">'+
+          ['휘발유','경유','LPG','전기'].map(function(v){return '<option value="'+v+'"'+(_CU.carFuelType===v?' selected':'')+'>'+v+(v==='경유'?' (디젤)':v==='LPG'?' (가스)':'')+'</option>';}).join('')+
         '</select></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">담당 택배사</label>'+
         '<select id="pref-courier" class="inp">'+
@@ -6416,11 +6458,14 @@ function _ySavePrefs(){
   };
   // carType/region 은 문서 루트에도 미러링한다 — AI 배차 추천이 preferences 를
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
+  var fuelType=(document.getElementById('pref-fuelType')||{}).value||'휘발유';
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
+  patch.carFuelType=fuelType;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
+    _CU.carFuelType=fuelType;
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
@@ -8442,17 +8487,18 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── Gas Stations: OPINET 주유소 정보 프록시 ──────────────────
     if (path === '/api/yongcha/gas-stations' && method === 'POST') {
       try {
-        const { lat, lng, radius } = await request.json();
+        const { lat, lng, radius, fuelType } = await request.json();
+        const prodMap = { '경유': 'D047', 'LPG': 'K015' };
+        const prodcd = prodMap[fuelType] || 'B027';
+        const fuelLabel = fuelType === '경유' ? '경유' : fuelType === 'LPG' ? 'LPG' : '휘발유';
         const apiKey = env.OPINET_API_KEY;
         if (!apiKey) {
-          // 더미 데이터 반환 (API 키 없을 때)
           return new Response(JSON.stringify({ ok: true, stations: [
-            { name: '근처 주유소', address: '위치 정보 로드 중', price: 1720, dist: 0.3 },
-            { name: '알뜰 주유소', address: '가까운 알뜰 주유소', price: 1680, dist: 1.1 }
+            { name: '근처 '+fuelLabel+' 주유소', address: '위치 정보 로드 중', price: fuelType==='경유'?1580:fuelType==='LPG'?980:1720, dist: 0.3, aiScore: 85 },
+            { name: '알뜰 '+fuelLabel+' 주유소', address: '가까운 알뜰 주유소', price: fuelType==='경유'?1550:fuelType==='LPG'?950:1680, dist: 1.1, aiScore: 78 }
           ]}), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
-        // OPINET 주변 주유소 조회 API (aroundAll)
-        const apiUrl = `https://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${lng}&y=${lat}&radius=${radius||2000}&prodcd=B027&sort=1&out=json`;
+        const apiUrl = `https://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${lng}&y=${lat}&radius=${radius||2000}&prodcd=${prodcd}&sort=1&out=json`;
         const res = await fetch(apiUrl);
         const data = await res.json();
         const stations = (data.RESULT?.OIL || []).slice(0, 8).map(s => ({
