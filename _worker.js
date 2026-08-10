@@ -11110,8 +11110,11 @@ function _showPostDetail(d){
                   _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery);
                 } else {
                   var ph=document.getElementById('detail-map-placeholder');
-                  if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 정보 없음</div>'+
-                    '<a href="https://map.kakao.com/?q='+encodeURIComponent(_geoQuery)+'" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:inline-block;margin-top:6px">카카오맵에서 검색</a>';
+                  if(ph)ph.innerHTML=
+                    '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_geoQuery)+'</div>'+
+                    '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
+                    '<a href="https://map.kakao.com/?q='+encodeURIComponent(_geoQuery)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:9px 18px;border-radius:var(--r-full);border:1px solid var(--acln)">'+
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 열기</a>';
                 }
               },{useMapBounds:false});
             }
@@ -11120,7 +11123,13 @@ function _showPostDetail(d){
       },400);
     } else {
       var ph=document.getElementById('detail-map-placeholder');
-      if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 위치 정보 없음</div>';
+      if(ph){var _qa=(_detailPost&&(_detailPost.area||_detailPost.region))||'배송구역';
+        ph.innerHTML=
+          '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_qa)+'</div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
+          '<a href="https://map.kakao.com/?q='+encodeURIComponent(_qa)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:9px 18px;border-radius:var(--r-full);border:1px solid var(--acln)">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 열기</a>';
+      }
     }
   }
 
@@ -16803,6 +16812,68 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       return new Response(JSON.stringify({ ok: true, stations }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+  }
+
+  // AI 기사 배차 추천
+  if (path === '/api/yongcha/recommend' && method === 'POST') {
+    try {
+      const { topN = 5, post = {}, drivers = [] } = await request.json();
+      const postRegion = (post.region || '').trim();
+      const postCar = (post.carType || '').trim();
+      const restingExcluded = drivers.filter(d => d.resting).length;
+      const active = drivers.filter(d => !d.resting);
+
+      const scored = active.map(d => {
+        let score = 0;
+        const reasons = [];
+        const cautions = [];
+        // 지역 일치
+        const regionMatch = postRegion && d.region && d.region === postRegion ? 1 : postRegion && d.region && d.region.startsWith(postRegion.slice(0, 2)) ? 0.5 : 0;
+        if (regionMatch === 1) { score += 35; reasons.push('지역 일치'); }
+        else if (regionMatch === 0.5) { score += 15; reasons.push('인접 지역'); }
+        // 차량 일치
+        const carMatch = postCar && d.carType && (d.carType === postCar || d.carType.includes(postCar) || postCar.includes(d.carType)) ? 1 : 0.5;
+        if (postCar && carMatch === 1) { score += 25; reasons.push('차량 일치'); }
+        else { score += 10; }
+        // 평점 (0~5 → 0~20)
+        const ratingScore = Math.round((Number(d.rating) || 0) / 5 * 20);
+        score += ratingScore;
+        if (d.rating >= 4.5) reasons.push('고평점 ' + Number(d.rating).toFixed(1));
+        // 완수 실적 (0~50건 → 0~10)
+        const routeScore = Math.min(Math.round((Number(d.completedRoutes) || 0) / 50 * 10), 10);
+        score += routeScore;
+        if (d.completedRoutes >= 30) reasons.push('완수 ' + d.completedRoutes + '건');
+        // 신뢰 점수 (0~100 → 0~10)
+        score += Math.round((Number(d.trustScore) || 0) / 100 * 10);
+        // 최근 활동 패널티
+        if (d.daysSinceActive != null && d.daysSinceActive > 14) cautions.push('2주 이상 비활성');
+        if (!reasons.length) reasons.push('기본 조건 충족');
+        return {
+          ...d,
+          aiScore: Math.min(score, 99),
+          score: Math.min(score, 99),
+          reasons,
+          aiReason: reasons.join(' · '),
+          aiCaution: cautions.join(', ') || null,
+          regionMatch,
+          carMatch
+        };
+      });
+
+      scored.sort((a, b) => b.aiScore - a.aiScore);
+      const results = scored.slice(0, topN);
+      const summary = results.length
+        ? `상위 추천 기사 ${results.length}명 선정 완료. 지역·차량·실적 기반 규칙 엔진 분석.`
+        : '조건에 맞는 기사를 찾지 못했어요.';
+
+      return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
   }
 

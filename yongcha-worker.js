@@ -2912,8 +2912,11 @@ function _showPostDetail(d){
                   _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery);
                 } else {
                   var ph=document.getElementById('detail-map-placeholder');
-                  if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 정보 없음</div>'+
-                    '<a href="https://map.kakao.com/?q='+encodeURIComponent(_geoQuery)+'" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:inline-block;margin-top:6px">카카오맵에서 검색</a>';
+                  if(ph)ph.innerHTML=
+                    '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_geoQuery)+'</div>'+
+                    '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
+                    '<a href="https://map.kakao.com/?q='+encodeURIComponent(_geoQuery)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:9px 18px;border-radius:var(--r-full);border:1px solid var(--acln)">'+
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 열기</a>';
                 }
               },{useMapBounds:false});
             }
@@ -2922,7 +2925,13 @@ function _showPostDetail(d){
       },400);
     } else {
       var ph=document.getElementById('detail-map-placeholder');
-      if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 위치 정보 없음</div>';
+      if(ph){var _qa=(_detailPost&&(_detailPost.area||_detailPost.region))||'배송구역';
+        ph.innerHTML=
+          '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_qa)+'</div>'+
+          '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
+          '<a href="https://map.kakao.com/?q='+encodeURIComponent(_qa)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:9px 18px;border-radius:var(--r-full);border:1px solid var(--acln)">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 열기</a>';
+      }
     }
   }
 
