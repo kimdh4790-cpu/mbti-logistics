@@ -163,6 +163,31 @@ body.dark #hdr{box-shadow:0 1px 0 var(--border),0 4px 16px rgba(0,0,0,.3)}
   box-shadow:0 4px 14px var(--brand-glow)
 }
 
+/* ── 음성 주문 버튼 ────────────────────────────────── */
+#voice-order-btn{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:38px;height:38px;border-radius:50%;border:none;
+  background:var(--brand);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 12px var(--brand-glow);
+  transition:.2s;z-index:2;flex-shrink:0
+}
+#voice-order-btn svg{width:18px;height:18px;stroke:#fff;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#voice-order-btn.listening{background:#e53e3e;box-shadow:0 3px 16px rgba(229,62,62,.45);animation:mic-pulse .9s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{transform:translateY(-50%) scale(1)}50%{transform:translateY(-50%) scale(1.12)}}
+#cat-bar{padding-right:54px}
+#voice-toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:90px;z-index:800;
+  background:rgba(15,18,35,.92);color:#fff;
+  padding:10px 20px;border-radius:24px;
+  font-size:14px;font-weight:600;letter-spacing:-.2px;
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .25s;backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.1)
+}
+#voice-toast.show{opacity:1}
+
 /* ── 뷰 토글 ─────────────────────────────────────── */
 .view-toggle{display:flex;gap:6px;padding:10px 14px 0}
 .vt-btn{
@@ -683,8 +708,15 @@ body.dark .ap-box{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- 카테고리 탭 -->
-  <div id="cat-wrap"><div id="cat-bar"></div></div>
+  <!-- 카테고리 탭 + 음성 주문 버튼 -->
+  <div id="cat-wrap" style="position:relative">
+    <div id="cat-bar"></div>
+    <button id="voice-order-btn" onclick="_voiceOrderToggle()" title="음성으로 주문">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/><line x1="8" x2="16" y1="22" y2="22"/></svg>
+    </button>
+  </div>
+  <!-- 음성 주문 피드백 토스트 -->
+  <div id="voice-toast"></div>
 
   <!-- 뷰 토글 -->
   <div class="view-toggle">
