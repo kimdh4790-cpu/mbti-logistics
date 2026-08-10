@@ -2541,13 +2541,13 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
   var el=document.getElementById(containerId);
   if(!el)return;
   var fuel=fuelType||_CU.carFuelType||'휘발유';
-  // 전기차: OPINET 대신 안내 UI
+  // 전기차: 카카오 로컬 API는 EV 충전소를 별도 지원 안 함 → 외부 링크 안내
   if(fuel==='전기'){
     var evLat=lat,evLng=lng;
     el.innerHTML=
       '<div style="padding:14px 0;text-align:center">'+
       '<div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:8px">전기차 충전소 안내</div>'+
-      '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">OPINET은 주유소만 지원합니다.<br>아래 앱에서 충전소를 확인하세요.</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">아래 앱에서 가까운 충전소를 확인하세요.</div>'+
       '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
         '<a href="https://map.kakao.com/?q=전기차+충전소" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:8px 14px;border-radius:99px;border:1px solid var(--acln)">'+
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 충전소</a>'+

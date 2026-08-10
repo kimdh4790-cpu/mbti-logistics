@@ -10749,13 +10749,13 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
   var el=document.getElementById(containerId);
   if(!el)return;
   var fuel=fuelType||_CU.carFuelType||'휘발유';
-  // 전기차: OPINET 대신 안내 UI
+  // 전기차: 카카오 로컬 API는 EV 충전소를 별도 지원 안 함 → 외부 링크 안내
   if(fuel==='전기'){
     var evLat=lat,evLng=lng;
     el.innerHTML=
       '<div style="padding:14px 0;text-align:center">'+
       '<div style="font-size:13px;font-weight:800;color:var(--ac);margin-bottom:8px">전기차 충전소 안내</div>'+
-      '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">OPINET은 주유소만 지원합니다.<br>아래 앱에서 충전소를 확인하세요.</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">아래 앱에서 가까운 충전소를 확인하세요.</div>'+
       '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
         '<a href="https://map.kakao.com/?q=전기차+충전소" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:var(--ac);text-decoration:none;background:var(--acl);padding:8px 14px;border-radius:99px;border:1px solid var(--acln)">'+
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>카카오맵 충전소</a>'+
@@ -17684,43 +17684,37 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── Gas Stations: OPINET 주유소 정보 프록시 ──────────────────
+  // ── Gas Stations: 카카오 로컬 API 주유소 검색 ──────────────────
   if (path === '/api/yongcha/gas-stations' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
       const { lat, lng, radius, fuelType } = await request.json();
-      // OPINET prodcd: 휘발유=B027, 경유=D047, LPG=K015
-      const prodMap = { '경유': 'D047', 'LPG': 'K015' };
-      const prodcd = prodMap[fuelType] || 'B027';
-      const fuelLabel = fuelType === '경유' ? '경유' : fuelType === 'LPG' ? 'LPG' : '휘발유';
-      const apiKey = env.OPINET_API_KEY || 'F186390162';
-      const apiUrl = `https://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${lng}&y=${lat}&radius=${radius||2000}&prodcd=${prodcd}&sort=1&out=json`;
-      const res = await fetch(apiUrl);
+      const kakaoKey = env.KAKAO_REST_KEY;
+      if (!kakaoKey) return new Response(JSON.stringify({ ok: false, error: 'KAKAO_REST_KEY 미설정' }), { status: 500, headers: corsH });
+      const isLPG = fuelType === 'LPG';
+      const query = isLPG ? 'LPG충전소' : '주유소';
+      const r = Number(radius) || 2000;
+      const kakaUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${r}&size=15&sort=distance&category_group_code=OL7`;
+      const res = await fetch(kakaUrl, { headers: { 'Authorization': 'KakaoAK ' + kakaoKey } });
+      if (!res.ok) throw new Error('카카오 API 오류 ' + res.status);
       const data = await res.json();
-      const stations = (data.RESULT?.OIL || []).slice(0, 8).map(s => ({
-        id: s.UNI_ID,
-        name: s.OS_NM,
-        address: s.NEW_ADR || s.VAN_ADR,
-        price: parseInt(s.PRICE) || 0,
-        dist: parseFloat((s.DISTANCE / 1000).toFixed(1)),
-        brand: s.POLL_DIV_NM,
-        lat: parseFloat(s.GIS_Y_COG),
-        lng: parseFloat(s.GIS_X_COG)
+      const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소'];
+      const getBrand = name => BRANDS.find(b => name.includes(b)) || '';
+      const stations = (data.documents || []).slice(0, 10).map(d => ({
+        id: d.id, name: d.place_name,
+        address: d.road_address_name || d.address_name,
+        price: 0, dist: parseFloat((parseInt(d.distance)/1000).toFixed(2)),
+        brand: getBrand(d.place_name),
+        lat: parseFloat(d.y), lng: parseFloat(d.x),
+        phone: d.phone || '', url: d.place_url || ''
       }));
       if (stations.length > 0) {
-        const minP = Math.min(...stations.map(s => s.price));
-        const maxP = Math.max(...stations.map(s => s.price));
-        const minD = Math.min(...stations.map(s => s.dist));
-        const maxD = Math.max(...stations.map(s => s.dist));
-        stations.forEach(s => {
-          const pScore = maxP === minP ? 1 : (maxP - s.price) / (maxP - minP);
-          const dScore = maxD === minD ? 1 : (maxD - s.dist) / (maxD - minD);
-          s.aiScore = Math.round((pScore * 0.6 + dScore * 0.4) * 100);
-        });
-        stations.sort((a, b) => b.aiScore - a.aiScore);
+        const maxD = Math.max(...stations.map(s => s.dist), 0.001);
+        stations.forEach(s => { s.aiScore = Math.round((1 - s.dist/maxD) * 100); });
       }
-      return new Response(JSON.stringify({ ok: true, stations }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, stations, source: 'kakao' }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
