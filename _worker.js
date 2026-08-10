@@ -8718,19 +8718,19 @@ select.inp option{background:#24243d;color:#f0f1f8}
 
 /* ── 3-Touch 워크플로우 ── */
 .wstep-row{display:flex;align-items:flex-start;gap:0;margin-bottom:14px}
-.wstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
-.wstep+.wstep::before{content:'';position:absolute;left:-50%;top:13px;width:100%;height:2px;
-  background:var(--bd2)}
+.wstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.wstep+.wstep::before{content:'';position:absolute;left:-50%;top:16px;width:100%;height:3px;
+  background:var(--bd2);transition:background .4s var(--ease)}
 .wstep.done+.wstep::before,.wstep.done+.wstep.done::before{background:var(--ac)}
-.wstep-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--bd2);
-  display:grid;place-items:center;font-size:12px;background:var(--bg3);z-index:1;position:relative;
-  transition:all .28s var(--ease)}
-.wstep.done .wstep-dot{background:var(--ac);border-color:var(--ac);color:var(--ac-ink)}
+.wstep-dot{width:34px;height:34px;border-radius:50%;border:2.5px solid var(--bd2);
+  display:grid;place-items:center;font-size:13px;font-weight:900;background:var(--bg3);z-index:1;position:relative;
+  transition:all .3s var(--ease)}
+.wstep.done .wstep-dot{background:var(--ac);border-color:var(--ac);color:#fff;box-shadow:0 4px 12px -4px rgba(59,126,248,.6)}
 .wstep.active .wstep-dot{background:var(--acl);border-color:var(--ac);color:var(--ac);
-  box-shadow:0 0 0 4px var(--acl);animation:pulse-loc 1.5s ease infinite}
-.wstep-lbl{font-size:10px;font-weight:700;color:var(--t3);text-align:center}
+  box-shadow:0 0 0 5px rgba(59,126,248,.2);animation:pulse-loc 1.5s ease infinite}
+.wstep-lbl{font-size:10.5px;font-weight:700;color:var(--t3);text-align:center}
 .wstep.done .wstep-lbl{color:var(--ac)}
-.wstep.active .wstep-lbl{color:var(--tx)}
+.wstep.active .wstep-lbl{color:var(--tx);font-weight:900}
 
 /* ── 긴급 배차 ── */
 .urgent-dispatch{width:100%;min-height:52px;padding:14px;border:none;border-radius:var(--r);
@@ -12059,47 +12059,80 @@ function _pgMyRoutes(el){
     _docs.forEach(function(doc){
       var a=Object.assign({id:doc.id},doc.data());
       var step=typeof a.step==='number'?a.step:1;
-      var navQ=encodeURIComponent(a.area||a.region||'');
-      var tmapUrl=navQ?'tmap://search?name='+navQ:'';
-      var kakaoNavUrl=navQ?'kakaomap://search?q='+navQ:'';
+      // 멀티스톱 내비 URL 조립
+      var zones=a.zones||[];
+      var zCoord=zones.filter(function(z){return typeof z.lat==='number'&&typeof z.lng==='number';});
+      var tmapUrl='',kakaoNavUrl='';
+      if(zCoord.length>0){
+        var goal=zCoord[zCoord.length-1];
+        var vias=zCoord.slice(0,-1);
+        var tp=_myGeo?'startX='+_myGeo.lng+'&startY='+_myGeo.lat+'&startName='+encodeURIComponent('현재위치')+'&':'';
+        tp+='goalX='+goal.lng+'&goalY='+goal.lat+'&goalName='+encodeURIComponent(goal.name||a.area||'목적지');
+        vias.forEach(function(z,i){tp+='&via'+(i+1)+'X='+z.lng+'&via'+(i+1)+'Y='+z.lat+'&via'+(i+1)+'Name='+encodeURIComponent(z.name||'');});
+        tmapUrl='tmap://route?'+tp;
+        var kSp=_myGeo?(_myGeo.lat+','+_myGeo.lng):(zCoord[0].lat+','+zCoord[0].lng);
+        kakaoNavUrl='kakaomap://route?sp='+kSp+'&ep='+goal.lat+','+goal.lng;
+      } else if(a.area||a.region){
+        var navQ=encodeURIComponent(a.area||a.region||'');
+        tmapUrl='tmap://search?name='+navQ;
+        kakaoNavUrl='kakaomap://search?q='+navQ;
+      }
+      // 노쇼 타이머 — step=1인 경우, 픽업지 좌표 있으면 12분 후 체크
+      if(step===1&&zCoord.length>0&&!a.noShowWarned){
+        _yStartNoShowTimer(a.id,zCoord[0].lat,zCoord[0].lng,12);
+      }
       var stepLabel=['수락','현장도착','완료'];
       var stSt=['done','done','done'];
       if(step<3)stSt[2]='';if(step<2)stSt[1]='';
       var activeIdx=step<3?step:'';
       if(activeIdx!=='')stSt[activeIdx]='active';
+      // step 진행도 %
+      var progPct=[0,33,66,100][Math.min(step,3)];
       var card=document.createElement('div');card.className='card';
-      card.style.marginBottom='10px';
+      card.style.cssText='margin-bottom:12px;border-color:'+(step===1?'var(--acln)':step===2?'var(--gnln)':'var(--bd)');
       card.innerHTML=
+        // 진행 바
+        '<div style="height:4px;border-radius:4px;background:var(--bd2);margin-bottom:14px;overflow:hidden">'+
+          '<div style="height:100%;width:'+progPct+'%;border-radius:4px;background:'+
+            (step>=3?'var(--gn)':'var(--ac)')+';transition:width .5s var(--ease)"></div>'+
+        '</div>'+
         '<div class="wstep-row">'+
         stepLabel.map(function(lbl,i){
           var cls='wstep '+(stSt[i]||'');
-          var dot=stSt[i]==='done'?'✓':(i+1);
+          var dot=stSt[i]==='done'?
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':
+            (i+1);
           return '<div class="'+cls+'"><div class="wstep-dot">'+dot+'</div><div class="wstep-lbl">'+lbl+'</div></div>';
         }).join('')+
         '</div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-        '<div style="font-weight:800;font-size:15px">🏢 '+_esc(a.agencyName)+'</div>'+
+        '<div style="font-weight:800;font-size:15px">'+_esc(a.agencyName||'—')+'</div>'+
         '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:'+(step>=3?'var(--acl)':'var(--gnl)')+';color:'+(step>=3?'var(--ac)':'var(--gn)')+'">'+
         (step>=3?'완료':'운행중')+'</span></div>'+
-        '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+
-        (a.courier?'📦 '+_esc(a.courier)+' ':'')+
-        (a.area?'📍 '+_esc(a.area)+' ':'')+
-        (a.unitPrice?'💰 '+a.unitPrice+'원/건':'')+
-        (a.confirmedStartDate?' · 시작 '+a.confirmedStartDate:'')+'</div>'+
-        (navQ?
+        '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">'+
+        (a.courier?'<span style="font-size:11.5px;color:var(--t2);background:var(--bg3);padding:3px 8px;border-radius:6px">'+_esc(a.courier)+'</span>':'')+
+        (a.area?'<span style="font-size:11.5px;color:var(--t2);background:var(--bg3);padding:3px 8px;border-radius:6px">'+_esc(a.area)+'</span>':'')+
+        (a.unitPrice?'<span style="font-size:11.5px;color:var(--br);background:var(--brl);padding:3px 8px;border-radius:6px;font-weight:800">'+_won(a.unitPrice)+'원/건</span>':'')+
+        (a.confirmedStartDate?'<span style="font-size:11.5px;color:var(--t3);padding:3px 0">시작 '+_esc(a.confirmedStartDate)+'</span>':'')+
+        (zCoord.length>1?'<span style="font-size:10.5px;color:var(--gn);background:var(--gnl);padding:3px 8px;border-radius:6px">'+zCoord.length+'개 구역 멀티경유</span>':'')+
+        '</div>'+
+        // 내비 버튼
+        (tmapUrl||kakaoNavUrl?
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
-        '<a href="'+_esc(tmapUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:40px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--ac);font-size:12px;font-weight:800;text-decoration:none">Tmap 내비</a>'+
-        '<a href="'+_esc(kakaoNavUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:40px;background:var(--brl);border:1px solid var(--brln);border-radius:10px;color:var(--br);font-size:12px;font-weight:800;text-decoration:none">카카오내비</a>'+
+        (tmapUrl?'<a href="'+_esc(tmapUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;background:var(--acl);border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:12px;font-weight:800;text-decoration:none">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Tmap 내비</a>':'<span></span>')+
+        (kakaoNavUrl?'<a href="'+_esc(kakaoNavUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;background:var(--brl);border:1px solid var(--brln);border-radius:10px;color:var(--br);font-size:12px;font-weight:800;text-decoration:none">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>카카오내비</a>':'<span></span>')+
         '</div>'
         :'')+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
-        '<button onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="min-height:var(--tap);background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅</button>'+
-        '<button onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="min-height:var(--tap);background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📦 건수 입력</button>'+
-        (!a.startConfirmed?'<button onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📅 출근 확정</button>':'')+
-        (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="min-height:var(--tap);background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서</button>':'')+
-        (step===1?'<button onclick="_yArriveWork(\\''+a.id+'\\')" style="min-height:var(--tap);background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2"> 현장 도착 확인</button>':'')+
-        (step===2?'<button onclick="_yCompleteWork(\\''+a.id+'\\')" style="min-height:var(--tap);background:linear-gradient(135deg,var(--ac),var(--ac2));color:var(--ac-ink);border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2">📷 완료 + 사진 업로드</button>':'')+
-        (step>=3?'<button onclick="_showWorkCert(\\''+a.id+'\\')" style="min-height:var(--tap);background:var(--pul);border:1px solid var(--puln);border-radius:10px;color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2"> 전자 확인서 보기</button>':'')+
+        '<button onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="min-height:var(--tap);background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">채팅</button>'+
+        '<button onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="min-height:var(--tap);background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">건수 입력</button>'+
+        (!a.startConfirmed?'<button onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">출근 확정</button>':'')+
+        (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="min-height:var(--tap);background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">계약서 보기</button>':'')+
+        (step===1?'<button onclick="_yCancelNoShowTimer(\\''+a.id+'\\');_yArriveWork(\\''+a.id+'\\')" style="min-height:54px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;grid-column:span 2;box-shadow:0 8px 24px -8px rgba(37,99,235,.6)">현장 도착 확인</button>':'')+
+        (step===2?'<button onclick="_yCompleteWork(\\''+a.id+'\\')" style="min-height:54px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;grid-column:span 2;box-shadow:0 8px 24px -8px rgba(16,185,129,.6)">완료 사진 업로드 + 정산 요청</button>':'')+
+        (step>=3?'<button onclick="_showWorkCert(\\''+a.id+'\\')" style="min-height:var(--tap);background:var(--pul);border:1px solid var(--puln);border-radius:10px;color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2">전자 확인서 보기</button>':'')+
         '</div>';
       list.appendChild(card);
     });
@@ -15211,7 +15244,10 @@ function _yCompleteWork(applyId){
     '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">완료 사진을 업로드하고 정산을 요청하세요</div>'+
     '<label style="display:block;border:2px dashed var(--acln);border-radius:var(--r-lg);'+
     'padding:28px 16px;text-align:center;cursor:pointer;background:var(--acl);margin-bottom:12px">'+
-    '<div style="font-size:36px;margin-bottom:8px">📷</div>'+
+    '<div style="margin-bottom:8px;display:flex;justify-content:center">'+
+      '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
+        '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>'+
+        '<circle cx="12" cy="13" r="4"/></svg></div>'+
     '<div style="font-size:14px;font-weight:800;color:var(--ac)">완료 사진 선택</div>'+
     '<div style="font-size:12px;color:var(--t2);margin-top:4px">배송 완료 인증 사진 (선택)</div>'+
     '<input type="file" accept="image/*" id="work-photo" style="display:none" onchange="_previewWorkPhoto(this)">'+
@@ -15272,6 +15308,94 @@ function _ySubmitComplete(applyId){
   } else {
     doComplete('');
   }
+}
+
+// ── 멀티스톱 내비게이션 모달 (기사 홈 "내비게이션 시작" 버튼) ─────
+function _yOpenNaviModal(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML='<div style="font-size:19px;font-weight:900;margin-bottom:4px">내비게이션 시작</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:14px">운행중인 노선을 불러오는 중...</div>'+
+    '<div id="navi-modal-body">'+_skRows(2)+'</div>';
+  _openModal();
+  _db.collection('yongcha_applies').where('driverId','==',_CU.uid)
+    .where('status','==','approved').limit(5).get()
+  .then(function(snap){
+    var nb=document.getElementById('navi-modal-body');if(!nb)return;
+    if(snap.empty){nb.innerHTML='<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">진행 중인 배차가 없어요</div>';return;}
+    nb.innerHTML='';
+    snap.docs.forEach(function(doc){
+      var a=Object.assign({id:doc.id},doc.data());
+      var zones=a.zones||[];
+      // Tmap 멀티스톱 URL 조립
+      // 형식: tmap://route?startX=lng&startY=lat&goalX=lng&goalY=lat&via1X=lng&via1Y=lat...
+      var tmapUrl='',kakaoUrl='',hasCoord=false;
+      var zWithCoord=zones.filter(function(z){return typeof z.lat==='number'&&typeof z.lng==='number';});
+      if(zWithCoord.length>0){
+        hasCoord=true;
+        var goal=zWithCoord[zWithCoord.length-1];
+        var vias=zWithCoord.slice(0,-1);
+        var p='';
+        if(_myGeo){p+='startX='+_myGeo.lng+'&startY='+_myGeo.lat+'&startName='+encodeURIComponent('현재 위치')+'&';}
+        p+='goalX='+goal.lng+'&goalY='+goal.lat+'&goalName='+encodeURIComponent(goal.name||a.area||'목적지');
+        vias.forEach(function(z,i){p+='&via'+(i+1)+'X='+z.lng+'&via'+(i+1)+'Y='+z.lat+'&via'+(i+1)+'Name='+encodeURIComponent(z.name||'');});
+        tmapUrl='tmap://route?'+p;
+        // Kakao는 2점(출발+도착)만 지원 — 첫 존과 마지막 존
+        var kStart=_myGeo?(_myGeo.lat+','+_myGeo.lng):(zWithCoord[0].lat+','+zWithCoord[0].lng);
+        kakaoUrl='kakaomap://route?sp='+kStart+'&ep='+goal.lat+','+goal.lng;
+      } else {
+        // 좌표 없음 — 지역명 검색
+        var q=encodeURIComponent(a.area||a.region||'');
+        tmapUrl=q?'tmap://search?name='+q:'';
+        kakaoUrl=q?'kakaomap://search?q='+q:'';
+      }
+      var zoneLabels=zones.length
+        ?zones.map(function(z,i){return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd)">'+
+          '<span style="width:20px;height:20px;border-radius:50%;background:var(--ac);color:#fff;font-size:10px;font-weight:900;display:grid;place-items:center;flex-shrink:0">'+(i+1)+'</span>'+
+          '<span style="font-size:12.5px;font-weight:700">'+(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</span>'+
+          (typeof z.lat==='number'?'<span style="font-size:10px;color:var(--gn);margin-left:auto">GPS</span>':'')+'</div>';}).join('')
+        :'<div style="font-size:12.5px;color:var(--t2);padding:8px 0">'+_esc(a.area||a.region||'구역 미지정')+'</div>';
+      var sec=document.createElement('div');sec.className='card';sec.style.marginBottom='10px';
+      sec.innerHTML=
+        '<div style="font-weight:800;font-size:14px;margin-bottom:10px">'+_esc(a.agencyName||'—')+'</div>'+
+        zoneLabels+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
+        (tmapUrl?'<a href="'+_esc(tmapUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:48px;background:var(--acl);border:1.5px solid var(--acln);border-radius:var(--r);color:var(--ac);font-size:13px;font-weight:900;text-decoration:none">'+
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Tmap</a>':'<span></span>')+
+        (kakaoUrl?'<a href="'+_esc(kakaoUrl)+'" style="display:flex;align-items:center;justify-content:center;gap:5px;min-height:48px;background:var(--brl);border:1.5px solid var(--brln);border-radius:var(--r);color:var(--br);font-size:13px;font-weight:900;text-decoration:none">'+
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>카카오내비</a>':'<span></span>')+
+        '</div>'+
+        (zones.length>1&&hasCoord?'<div style="font-size:10.5px;color:var(--gn);text-align:center;margin-top:6px">'+zones.length+'개 구역 자동 경유지 세팅</div>':'');
+      nb.appendChild(sec);
+    });
+  }).catch(function(e){
+    var nb=document.getElementById('navi-modal-body');
+    if(nb)nb.innerHTML='<div style="color:var(--rd);font-size:13px">'+e.message+'</div>';
+  });
+}
+
+// ── 노쇼 경보 타이머 ─────────────────────────────────────────
+// 배차 수락(step=1) 후 N분 내 GPS가 픽업 방향으로 이동하지 않으면 경고
+var _noShowTimers={};
+function _yStartNoShowTimer(applyId,pickupLat,pickupLng,waitMin){
+  if(_noShowTimers[applyId])return;
+  var ms=(waitMin||12)*60*1000;
+  _noShowTimers[applyId]=setTimeout(function(){
+    _yLoadGeo().then(function(g){
+      if(!g)return;
+      var d=_yHaversine(g.lat,g.lng,pickupLat,pickupLng);
+      if(d>5){
+        // 아직 픽업지 5km 밖 → 경고
+        _yToast('현장까지 아직 멀어요! 지금 바로 출발하세요 ('+Math.round(d)+'km)','warn');
+        _db.collection('yongcha_applies').doc(applyId).update({
+          noShowWarned:true,noShowWarnedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(){});
+      }
+      delete _noShowTimers[applyId];
+    });
+  },ms);
+}
+function _yCancelNoShowTimer(applyId){
+  if(_noShowTimers[applyId]){clearTimeout(_noShowTimers[applyId]);delete _noShowTimers[applyId];}
 }
 
 // ── 전자 배송 확인서 ─────────────────────────────────────────
