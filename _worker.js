@@ -9773,9 +9773,7 @@ function _pgHomeDriver(el){
   // 홈 지도
   '<div class="home-map-card" style="position:relative" id="home-drv-map-wrap">'+
     '<div id="home-drv-map"></div>'+
-    '<div style="position:absolute;top:10px;left:10px;background:rgba(9,14,29,.85);border:1px solid var(--bd);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:800;color:var(--t2);pointer-events:none">'+
-      _esc(_CU.region||'내 지역')+' 배송 구역'+
-    '</div>'+
+    '<div class="map-overlay-label">'+_esc(_CU.region||'내 지역')+' 배송 구역</div>'+
   '</div>'+
 
   // 홈 액션 버튼 2개 (모형: 노란색 + 파란색)
@@ -9850,14 +9848,14 @@ function _pgHomeDriver(el){
         (_CU.region?'<span class="hero-v2-chip">'+_esc(_CU.region)+'</span>':'')+
         '<span class="hero-v2-chip">당일 정산</span>';
     }
-  }).catch(function(){});
+  }).catch(function(e){console.error('today earnings',e);});
 
   // 진행중 배차 카운트
   _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').get()
   .then(function(s){
     var badge=document.getElementById('drv-active-badge');
     if(badge)badge.textContent='진행중 배차 '+s.size+'건';
-  }).catch(function(){});
+  }).catch(function(e){console.error('active badge',e);});
 
   // 오늘 일정 (승인된 배차 목록)
   _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').limit(5).get()
@@ -9873,7 +9871,7 @@ function _pgHomeDriver(el){
         '<div class="sched-sub">'+_esc(a.agencyName||'—')+' · '+_esc(a.postCourier||'—')+'</div></div>';
       sched.appendChild(row);
     });
-  }).catch(function(){});
+  }).catch(function(e){var s=document.getElementById('home-sched');if(s)s.innerHTML=_emptyHtml('','일정 불러오기 실패','잠시 후 다시 시도해주세요');console.error('schedule',e);});
 
   // 홈 지도 (카카오 API) — 현위치 + 주변 공고 존 마커
   setTimeout(function(){
@@ -10055,7 +10053,7 @@ function _pgHomeAgency(el){
         '<span class="rdl-count">'+cnt+'건</span>';
       rdl.appendChild(row);
     });
-  }).catch(function(){});
+  }).catch(function(e){console.error('region dispatch',e);});
 
   // 최근 지원자
   _db.collection('yongcha_applies').where('agencyId','==',_CU.uid).where('status','==','pending').limit(10).get()
@@ -10076,7 +10074,7 @@ function _pgHomeAgency(el){
         '</div>';
       recent.appendChild(card);
     });
-  }).catch(function(){});
+  }).catch(function(e){var el=document.getElementById('home-recent');if(el)el.innerHTML=_emptyHtml('','지원자 불러오기 실패','');console.error('recent applicants',e);});
 
   // 실시간 관제 지도 로드
   setTimeout(_loadAgencyControlMap, 300);
