@@ -435,6 +435,13 @@ select.inp option{background:#24243d;color:#f0f1f8}
 @keyframes barGrow{from{height:0!important}}
 .bar-lbl{font-size:10.5px;font-weight:700;color:var(--t3);white-space:nowrap}
 
+/* ── 주유소 위젯 ── */
+.gas-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)}
+.gas-item:last-child{border:none;padding-bottom:0}
+.gas-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gas-price{font-size:18px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.gas-badge{font-size:9px;font-weight:900;padding:2px 7px;border-radius:99px;letter-spacing:.3px}
+
 /* ── KPI ── */
 .kpi-grid{display:grid;gap:10px;margin-bottom:16px}
 .kpi-grid.col2{grid-template-columns:1fr 1fr}
@@ -1503,6 +1510,13 @@ function _pgHomeDriver(el){
   '<div class="sec-head"><span class="sec-title">오늘 일정</span><button type="button" class="sec-count" onclick="_goPage(\'my_routes\')">전체보기 ›</button></div>'+
   '<div class="sched-list" id="home-sched">'+_skRows(2)+'</div>'+
 
+  // 근처 주유소
+  '<div class="sec-head" style="margin-top:6px">'+
+    '<span class="sec-title">근처 주유소</span>'+
+    '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
+  '</div>'+
+  '<div class="card" id="home-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>'+
+
   // 내 주변 공고
   '<div class="sec-head" style="margin-top:6px">'+
     '<span class="sec-title">내 주변 공고</span>'+
@@ -1644,6 +1658,16 @@ function _pgHomeDriver(el){
     });
   }
   _loadNearbyPosts();
+
+  // 근처 주유소
+  _yLoadGeo().then(function(g){
+    if(g){
+      _yLoadGasStations(g.lat,g.lng,'home-gas-stations');
+    } else {
+      var el=document.getElementById('home-gas-stations');
+      if(el)el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">위치 허용 시 주유소를 추천해드려요</div>';
+    }
+  });
 }
 
 /* ── 소장 홈 ── */
@@ -2102,6 +2126,48 @@ function _yLoadGeo(){
     },function(){finish(null);},{enableHighAccuracy:false,timeout:5500,maximumAge:600000});
   });
 }
+/* 주유소 목록 조회 + 렌더링 */
+function _yLoadGasStations(lat,lng,containerId){
+  var el=document.getElementById(containerId);
+  if(!el)return;
+  fetch('/api/yongcha/gas-stations',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({lat:lat,lng:lng,radius:2000})
+  }).then(function(r){return r.json();}).then(function(res){
+    if(!el)return;
+    if(!res.ok||!res.stations||!res.stations.length){
+      el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">주변 주유소 정보 없음</div>';
+      return;
+    }
+    var top=res.stations.slice(0,3);
+    el.innerHTML=top.map(function(s,i){
+      var badge=i===0?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
+      var distStr=s.dist<1?(Math.round(s.dist*1000)+'m'):(Math.round(s.dist*10)/10+'km');
+      var mapLink='https://map.kakao.com/?q='+encodeURIComponent(s.name||'주유소');
+      return '<div class="gas-item">'+
+        '<div class="gas-ico" style="background:rgba(217,119,6,.12)">'+
+          '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14"/><path d="M3 15h12"/><path d="M17 5l1.5 1.5"/><path d="M19 9.5V4a1 1 0 0 0-1-1h-1"/><line x1="3" y1="22" x2="21" y2="22"/></svg>'+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:1px">'+
+            '<span style="font-size:13.5px;font-weight:800;color:var(--tx)">'+_esc(s.name||'주유소')+'</span>'+
+            badge+
+          '</div>'+
+          '<div style="font-size:11.5px;color:var(--t3)">'+distStr+' · '+_esc(s.address||'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div class="gas-price">'+Number(s.price||0).toLocaleString()+'</div>'+
+          '<div style="font-size:10px;color:var(--t3);margin-bottom:4px">원/L</div>'+
+          '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }).catch(function(){
+    if(el)el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">주유소 정보를 불러올 수 없어요</div>';
+  });
+}
+
 /* 공고까지 거리(km). 좌표 없으면 null
    우선순위: loadingLat/Lng → zones[*].lat/lng (첫 번째 유효 좌표) */
 function _yPostDist(p){
@@ -2774,6 +2840,16 @@ function _showPostDetail(d){
   '</div>'+
   '</div>'+
 
+  // ── 상차지 근처 주유소 (기사용) ──
+  (isDriver&&(typeof d.loadingLat==='number'||(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'))?
+  '<div style="margin-bottom:14px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+    '<span style="font-size:14px;font-weight:800;color:var(--tx)">상차지 근처 주유소</span>'+
+    '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:var(--acl);color:var(--ac);border:1px solid var(--acln)">AI 추천</span>'+
+  '</div>'+
+  '<div class="card" id="detail-gas-stations" style="padding:4px 14px">'+_skRows(2)+'</div>'+
+  '</div>':'')+
+
   // ── 플랫폼 최소보장 ──
   '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
     'border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
@@ -2886,6 +2962,14 @@ function _showPostDetail(d){
 
   _openModal();
   window._detailMapRadius=_mapR;
+
+  // 상차지 근처 주유소 로드
+  if(isDriver){
+    var _gLat=null,_gLng=null;
+    if(typeof d.loadingLat==='number'){_gLat=d.loadingLat;_gLng=d.loadingLng;}
+    else if(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'){_gLat=d.zones[0].lat;_gLng=d.zones[0].lng;}
+    if(_gLat!=null){setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations');},300);}
+  }
 
   // 지도 표시
   window._detailZones = d.zones||[];
