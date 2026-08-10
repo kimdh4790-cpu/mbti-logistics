@@ -8675,7 +8675,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 }
 
 /* ── 공통 카드 · 페이지 헤더 ── */
-.card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:16px;margin-bottom:10px}
+.card{background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .page-hdr{margin-bottom:18px}
 .page-title{font-size:24px;font-weight:900;color:var(--tx);letter-spacing:-.8px;line-height:1.2}
 .page-sub{font-size:13px;color:var(--t2);margin-top:5px}
@@ -8688,27 +8688,30 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .filter-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:14px}
 .filter-scroll::-webkit-scrollbar{display:none}
 .filter-row{display:flex;gap:8px;padding-bottom:2px;white-space:nowrap}
-.filter-btn{min-height:42px;padding:0 15px;border-radius:var(--r-full);border:1.5px solid var(--bd);
-  background:var(--bg2);color:var(--t2);font-size:13px;font-weight:700;flex-shrink:0;transition:.2s;white-space:nowrap}
+/* 상태 탭 — 더 작은 컴팩트 칩 */
+.filter-btn{min-height:34px;padding:0 13px;border-radius:var(--r-full);border:1.5px solid var(--bd2);
+  background:var(--bg3);color:var(--t2);font-size:12.5px;font-weight:700;flex-shrink:0;transition:.2s;white-space:nowrap}
 .filter-btn:active{transform:scale(.96)}
-.filter-btn.on{background:var(--ac);color:var(--ac-ink);border-color:var(--ac)}
+.filter-btn.on{background:var(--ac);color:#fff;border-color:var(--ac);box-shadow:0 2px 10px rgba(59,126,248,.4)}
+/* 카테고리 구분선 */
+.fbar-sep{flex-shrink:0;width:1px;background:var(--bd2);align-self:stretch;margin:4px 2px}
 /* 필터바 — 가로 스크롤 영역 */
-.fbar{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  margin:0 calc(var(--gut)*-1);padding:2px var(--gut) 8px}
+.fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  margin:0 calc(var(--gut)*-1);padding:2px var(--gut) 8px;align-items:center}
 .fbar::-webkit-scrollbar{display:none}
-/* 스티키 필터 헤더 */
-.fsticky{position:sticky;top:0;z-index:30;margin:0 calc(var(--gut)*-1) 6px;padding:8px var(--gut) 4px;
-  background:linear-gradient(var(--bg) 82%,rgba(18,18,31,0))}
+/* 스티키 필터 헤더 — 2줄로 축소 */
+.fsticky{position:sticky;top:0;z-index:30;margin:0 calc(var(--gut)*-1) 6px;padding:6px var(--gut) 2px;
+  background:var(--bg);border-bottom:1px solid var(--bd)}
 
 /* ══════════════════════════════════════════════
    공고 카드 — 풀폭 세로 / 3존 구조
    [헤드: 택배사·상태] [본문: 구역→단가→게이지→태그→보장] [푸터: 대리점·액션]
    ══════════════════════════════════════════════ */
 .pcard{position:relative;display:block;width:100%;text-align:left;overflow:hidden;
-  background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
-  margin-bottom:12px;cursor:pointer;box-shadow:var(--e1);
+  background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r-lg);
+  margin-bottom:12px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.5);
   transition:transform .16s var(--ease),border-color .2s,box-shadow .2s}
-.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rail,var(--bd2))}
+.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rail,var(--bd2))}
 .pcard:active{transform:scale(.985);border-color:var(--bd2);box-shadow:none}
 .pcard.is-open{--rail:var(--ac)}
 .pcard.is-urgent{--rail:var(--rd)}
@@ -8904,8 +8907,8 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .kpi-grid{display:grid;gap:10px;margin-bottom:16px}
 .kpi-grid.col2{grid-template-columns:1fr 1fr}
 .kpi-grid.col4{grid-template-columns:repeat(4,1fr)}
-.kpi-card{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:16px 14px;
-  display:flex;flex-direction:column;gap:5px}
+.kpi-card{background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:16px 14px;
+  display:flex;flex-direction:column;gap:5px;box-shadow:0 2px 10px rgba(0,0,0,.45)}
 .kpi-val{font-size:26px;font-weight:900;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums}
 .kpi-lbl{font-size:12px;color:var(--t2);font-weight:700}
 
@@ -9236,10 +9239,10 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .ai-predict-u{font-size:10px;color:var(--t2);margin-top:2px}
 .ai-predict-t{font-size:10px;color:var(--t3);font-weight:700;margin-bottom:4px}
 .detail-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.detail-item{background:var(--bg3);border-radius:12px;padding:12px 14px;min-height:64px;
+.detail-item{background:var(--bg3);border:1px solid var(--bd2);border-radius:12px;padding:12px 14px;min-height:64px;
   display:flex;flex-direction:column;justify-content:center}
-.detail-lbl{font-size:11px;color:var(--t3);font-weight:700;margin-bottom:3px}
-.detail-val{font-size:14px;font-weight:800;color:var(--tx)}
+.detail-lbl{font-size:11px;color:var(--t2);font-weight:700;margin-bottom:3px}
+.detail-val{font-size:14.5px;font-weight:800;color:var(--tx)}
 .detail-rating-row{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:900;color:var(--br)}
 .zone-map-wrap{position:relative;border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px}
 .zone-map-label{position:absolute;top:10px;right:10px;background:rgba(8,13,28,.82);
@@ -10323,28 +10326,24 @@ function _pgPosts(el){
   '</div>'+
 
   '<div class="fsticky">'+
-  // 상태 탭
-  '<div class="fbar" id="posts-status-tabs">'+
+  // 줄 1: 상태 탭
+  '<div class="fbar" id="posts-status-tabs" style="margin-bottom:0">'+
   [['all','전체'],['open','모집중'],['matched','운행중'],['closed','완료']].map(function(s){
     return '<button type="button" class="filter-btn'+(_pf.statusFilter===s[0]?' on':'')+'" data-status="'+s[0]+'" onclick="_pfSetStatus(\\''+s[0]+'\\')">'+s[1]+'</button>';
   }).join('')+
   '</div>'+
-  // 택배사
-  '<div class="fbar" id="pf-courier">'+
+  // 줄 2: 택배사 + 지역 + 세부 — 한 줄 스크롤
+  '<div class="fbar" id="pf-all-filters">'+
   COURIERS.map(function(c){
     return '<button type="button" onclick="_pfSet(\\'courier\\',\\''+c+'\\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
   }).join('')+
-  '</div>'+
-  // 지역
-  '<div class="fbar" id="pf-region">'+
+  '<div class="fbar-sep"></div>'+
   REGIONS.map(function(r){
     return '<button type="button" onclick="_pfSet(\\'region\\',\\''+r+'\\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
   }).join('')+
-  '</div>'+
-  // 세부 조건
-  '<div class="fbar">'+
+  '<div class="fbar-sep"></div>'+
     '<button type="button" onclick="_pfToggleUrgent()" id="pf-urgent-btn" class="filter-btn'+(_pf.urgentOnly?' on':'')+'">긴급만</button>'+
-    '<button type="button" onclick="_pfToggleVerified()" id="pf-verified-btn" class="filter-btn'+(_pf.verifiedOnly?' on':'')+'">인증 대리점</button>'+
+    '<button type="button" onclick="_pfToggleVerified()" id="pf-verified-btn" class="filter-btn'+(_pf.verifiedOnly?' on':'')+'">인증</button>'+
     '<select onchange="_pfSetPrice(this.value)" class="filter-btn" style="padding-right:12px">'+
     '<option value="">단가 전체</option>'+
     ['~700원','700~900원','900~1100원','1100원~'].map(function(r,i){return '<option value="'+i+'"'+(String(_pf.priceRange)===String(i)?' selected':'')+'>'+r+'</option>';}).join('')+
