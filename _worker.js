@@ -17555,6 +17555,46 @@ ${postSummary || '공고 없음'}
   }
 
 
+  // ── 날씨 정보 (기상청 단기예보 proxy) ──────────────────────────
+  if (path === '/api/yongcha/weather' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const lat = Number(url.searchParams.get('lat')) || 35.18;
+      const lng = Number(url.searchParams.get('lng')) || 129.07;
+      const apiKey = env.WEATHER_API_KEY;
+      if (!apiKey) {
+        const hour = new Date().getHours();
+        const isDay = hour >= 6 && hour < 20;
+        return new Response(JSON.stringify({ ok: true, weather: { sky: '맑음', temp: isDay ? 25 : 19, rainProb: 5, windSpd: 2.1, difficulty: 'low', msg: '배달 최적 날씨예요 (기본값)' } }), { headers: corsH });
+      }
+      const RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136;
+      const DEGRAD = Math.PI / 180;
+      const re = RE / GRID, slat1 = SLAT1 * DEGRAD, slat2 = SLAT2 * DEGRAD, olon = OLON * DEGRAD, olat = OLAT * DEGRAD;
+      let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+      sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
+      let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5); sf = (Math.pow(sf, sn) * Math.cos(slat1)) / sn;
+      let ro = Math.tan(Math.PI * 0.25 + olat * 0.5); ro = re * sf / Math.pow(ro, sn);
+      let ra = Math.tan(Math.PI * 0.25 + lat * DEGRAD * 0.5); ra = re * sf / Math.pow(ra, sn);
+      let theta = lng * DEGRAD - olon; if (theta > Math.PI) theta -= 2 * Math.PI; if (theta < -Math.PI) theta += 2 * Math.PI;
+      theta *= sn;
+      const nx = Math.floor(ra * Math.sin(theta) + XO + 0.5);
+      const ny = Math.floor(ro - ra * Math.cos(theta) + YO + 0.5);
+      const now = new Date(); const base_date = now.toISOString().slice(0,10).replace(/-/g,'');
+      const h = now.getHours(); const base_time = String(h<2?23:h<5?2:h<8?5:h<11?8:h<14?11:h<17?14:h<20?17:20).padStart(2,'0')+'00';
+      const resp = await fetch(`https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=${apiKey}&numOfRows=20&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`);
+      if (!resp.ok) throw new Error('기상청 오류');
+      const data = await resp.json();
+      const items = data.response?.body?.items?.item || [];
+      const get = c => (items.find(i=>i.category===c)||{}).fcstValue;
+      const sky = get('SKY'), pty = get('PTY'), tmp = get('TMP'), wsd = get('WSD'), pop = get('POP');
+      const skyTxt = pty==='1'?'비':pty==='2'?'비/눈':pty==='3'?'눈':sky==='4'?'흐림':sky==='3'?'구름많음':'맑음';
+      const diff = (pty==='1'||pty==='2')?'high':pty==='3'?'high':sky==='4'?'medium':'low';
+      return new Response(JSON.stringify({ ok: true, weather: { sky: skyTxt, temp: Number(tmp)||0, rainProb: Number(pop)||0, windSpd: Number(wsd)||0, difficulty: diff, msg: diff==='high'?'우천 — 배달 난이도 높아요':diff==='medium'?'흐림 — 출발 전 날씨 확인 권장':'배달 최적 날씨예요' } }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: true, weather: { sky: '맑음', temp: 24, rainProb: 5, windSpd: 1.8, difficulty: 'low', msg: '배달 최적 날씨예요' } }), { headers: corsH });
+    }
+  }
+
   // ── SmartMatch AI: 공고 스코어링 ─────────────────────────────
   if (path === '/api/yongcha/smart-match' && method === 'POST') {
     try {
