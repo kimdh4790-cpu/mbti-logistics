@@ -2566,25 +2566,40 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
       el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">주변 주유소 정보 없음</div>';
       return;
     }
-    var top=res.stations.slice(0,3);
+    // 즐겨찾기 주유소 우선 정렬
+    var favKey='yc_gas_fav_'+(_CU.uid||'');
+    var favId=null;try{favId=localStorage.getItem(favKey);}catch(e){}
+    var stations=res.stations.slice(0,6);
+    if(favId){
+      stations.sort(function(a,b){return (b.id===favId?1:0)-(a.id===favId?1:0);});
+    }
+    var top=stations.slice(0,3);
     el.innerHTML=top.map(function(s,i){
-      var badge=i===0?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
+      var isFav=s.id&&s.id===favId;
+      var aiBadge=i===0&&!isFav?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
+      var favBadge=isFav?'<span class="gas-badge" style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3)">즐겨찾기</span>':'';
       var distStr=s.dist<1?(Math.round(s.dist*1000)+'m'):(Math.round(s.dist*10)/10+'km');
-      var mapLink='https://map.kakao.com/?q='+encodeURIComponent(s.name||'주유소');
+      var mapLink='https://map.kakao.com/?q='+encodeURIComponent((s.name||'주유소')+' '+encodeURIComponent(s.address||''));
+      var brandLabel=s.brand?'<span style="font-size:10px;color:var(--t3);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:1px 6px;font-weight:700">'+_esc(s.brand)+'</span>':'';
+      var starBtn='<button type="button" onclick="_yGasFav(\\''+_esc(containerId)+'\\',\\''+_esc(s.id||'')+'\\',\\''+_esc((lat||0).toString())+'\\',\\''+_esc((lng||0).toString())+'\\',\\''+_esc(fuel)+'\\')" '+
+        'style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px;color:'+(isFav?'var(--br)':'var(--t3)')+';" '+
+        'title="'+(isFav?'즐겨찾기 해제':'즐겨찾기 등록')+'">'+(isFav?'★':'☆')+'</button>';
       return '<div class="gas-item">'+
         '<div class="gas-ico" style="background:rgba(217,119,6,.12)">'+
           '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14"/><path d="M3 15h12"/><path d="M17 5l1.5 1.5"/><path d="M19 9.5V4a1 1 0 0 0-1-1h-1"/><line x1="3" y1="22" x2="21" y2="22"/></svg>'+
         '</div>'+
         '<div style="flex:1;min-width:0">'+
-          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:1px">'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">'+
             '<span style="font-size:13.5px;font-weight:800;color:var(--tx)">'+_esc(s.name||'주유소')+'</span>'+
-            badge+
+            brandLabel+
+            aiBadge+favBadge+
           '</div>'+
           '<div style="font-size:11.5px;color:var(--t3)">'+distStr+' · '+_esc(s.address||'')+'</div>'+
         '</div>'+
-        '<div style="text-align:right;flex-shrink:0">'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px">'+
+          starBtn+
           '<div class="gas-price">'+Number(s.price||0).toLocaleString()+'</div>'+
-          '<div style="font-size:10px;color:var(--t3);margin-bottom:4px">원/L</div>'+
+          '<div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>'+
           '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
         '</div>'+
       '</div>';
@@ -2592,6 +2607,19 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
   }).catch(function(){
     if(el)el.innerHTML='<div style="padding:18px 14px;font-size:13px;color:var(--t3);text-align:center">주유소 정보를 불러올 수 없어요</div>';
   });
+}
+
+function _yGasFav(containerId,stationId,lat,lng,fuelType){
+  var favKey='yc_gas_fav_'+(_CU.uid||'');
+  var cur=null;try{cur=localStorage.getItem(favKey);}catch(e){}
+  if(cur===stationId){
+    try{localStorage.removeItem(favKey);}catch(e){}
+    _yToast('즐겨찾기 해제됐어요');
+  } else {
+    try{localStorage.setItem(favKey,stationId);}catch(e){}
+    _yToast('즐겨찾기 주유소로 저장됐어요. 다음부터 첫 번째로 표시돼요');
+  }
+  _yLoadGasStations(Number(lat),Number(lng),containerId,fuelType);
 }
 
 /* 공고까지 거리(km). 좌표 없으면 null
