@@ -613,13 +613,13 @@ function _filoLoadMenuMgmt(did){
 
    grouped[cat].forEach(function(m){
     var card=document.createElement('div');
-    card.style.cssText='background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px;position:relative;transition:.2s';
+    card.style.cssText='background:#fff;border:1px solid rgba(15,23,42,.1);border-radius:var(--r);padding:12px;position:relative;transition:.2s;box-shadow:0 1px 4px rgba(15,23,42,.06)';
     card.onmouseover=function(){this.style.borderColor='rgba(201,168,76,.3)';};
     card.onmouseout=function(){this.style.borderColor='var(--bd2)';};
 
     /* 이미지 or 이모지 */
     var imgDiv=document.createElement('div');
-    imgDiv.style.cssText='width:100%;height:80px;border-radius:8px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:32px';
+    imgDiv.style.cssText='width:100%;height:80px;border-radius:8px;overflow:hidden;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:32px';
     if(m.imageUrl){
      var img=document.createElement('img');
      img.src=m.imageUrl;
@@ -638,7 +638,7 @@ function _filoLoadMenuMgmt(did){
     var _mc=_mg!=null?(_mg>=60?'#22c55e':_mg>=40?'#eab308':'#ef4444'):'';
     var _mb=_mg!=null?(_mg>=60?'rgba(34,197,94,.15)':_mg>=40?'rgba(234,179,8,.15)':'rgba(239,68,68,.15)'):'';
     var _mH=_mg!=null?'<div style="margin-top:3px;display:flex;gap:4px;align-items:center"><span style="font-size:10px;color:var(--t3)">원가 ₩'+Number(_c).toLocaleString()+'</span><span style="padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px;background:'+_mb+';color:'+_mc+'">'+_mg+'%</span></div>':'';
-    info.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
+    info.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f172a">'+esc(m.name)+'</div>'+
      '<div style="font-size:13px;font-weight:900;color:#22c55e">₩'+Number(m.price||0).toLocaleString()+'</div>'+
      _mH+
      (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:2px">재고: '+m.stock+'개</div>':'');

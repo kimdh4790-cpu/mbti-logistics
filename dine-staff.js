@@ -36,6 +36,14 @@ function _dineStaff(el){
 
  fetch('/api/get-members?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();}).then(function(res){
   var snap={docs:(res.members||[]),empty:!(res.members&&res.members.length)};
+  /* 전화번호+이름 기준 중복 제거 */
+  var _seenKey={};
+  snap.docs=snap.docs.filter(function(m){
+   var k=(m.phone||'')+'|'+(m.name||'');
+   if(_seenKey[k])return false;
+   _seenKey[k]=true;return true;
+  });
+  snap.empty=!snap.docs.length;
   snap.forEach=function(cb){snap.docs.forEach(function(m){cb({id:m.id,data:function(){return m;}});});};
   if(snap.empty){
     grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);grid-column:1/-1">직원이 없습니다. + 직원 등록을 눌러주세요</div>';
