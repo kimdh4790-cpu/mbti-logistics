@@ -8901,13 +8901,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const prodMap = { '경유': 'D047', 'LPG': 'K015' };
         const prodcd = prodMap[fuelType] || 'B027';
         const fuelLabel = fuelType === '경유' ? '경유' : fuelType === 'LPG' ? 'LPG' : '휘발유';
-        const apiKey = env.OPINET_API_KEY;
-        if (!apiKey) {
-          return new Response(JSON.stringify({ ok: true, stations: [
-            { name: '근처 '+fuelLabel+' 주유소', address: '위치 정보 로드 중', price: fuelType==='경유'?1580:fuelType==='LPG'?980:1720, dist: 0.3, aiScore: 85 },
-            { name: '알뜰 '+fuelLabel+' 주유소', address: '가까운 알뜰 주유소', price: fuelType==='경유'?1550:fuelType==='LPG'?950:1680, dist: 1.1, aiScore: 78 }
-          ]}), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
-        }
+        const apiKey = env.OPINET_API_KEY || 'F186390162';
         const apiUrl = `https://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${lng}&y=${lat}&radius=${radius||2000}&prodcd=${prodcd}&sort=1&out=json`;
         const res = await fetch(apiUrl);
         const data = await res.json();
