@@ -1131,16 +1131,21 @@ function _filoWatchDineReservations(){
 // _filoWatchDineSales 제거 — 홈 리스너⑥ filo_sales onSnapshot이 동일 기능 수행
 
 // ── 업종별 데모 로그인 ──────────────────────────────────────────────
+var _DEMO_ACCOUNTS={
+ cafe:    {email:'demo.cafe@filo.ai.kr',    pw:'Filo2026!'},
+ korean:  {email:'demo.korean@filo.ai.kr',  pw:'Filo2026!'},
+ japanese:{email:'demo.japanese@filo.ai.kr',pw:'Filo2026!'},
+ snack:   {email:'demo.snack@filo.ai.kr',   pw:'Filo2026!'},
+ western: {email:'demo.western@filo.ai.kr', pw:'Filo2026!'},
+ bakery:  {email:'demo.bakery@filo.ai.kr',  pw:'Filo2026!'}
+};
 function _filoDemoLogin(type){
  var msgEl=document.getElementById('demo-login-msg');
  var errEl=document.getElementById('fl-err');
  if(msgEl) msgEl.textContent='로그인 중...';
- fetch('/api/demo-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type})})
- .then(function(r){return r.json();})
- .then(function(data){
-  if(!data.ok||!data.token) throw new Error(data.error||'토큰 발급 실패');
-  return _auth.signInWithCustomToken(data.token);
- })
+ var acc=_DEMO_ACCOUNTS[type];
+ if(!acc){if(errEl){errEl.textContent='지원하지 않는 업종입니다';errEl.style.display='block';}return;}
+ _auth.signInWithEmailAndPassword(acc.email,acc.pw)
  .catch(function(e){
   if(msgEl) msgEl.textContent='클릭 한 번으로 샘플 데이터 체험';
   if(errEl){errEl.textContent='데모 로그인 실패: '+e.message;errEl.style.display='block';}
