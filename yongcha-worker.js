@@ -741,17 +741,30 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .pc-price-v2{font-size:32px;font-weight:900;color:var(--br);letter-spacing:-1.5px;
   line-height:1;font-variant-numeric:tabular-nums;margin:10px 0 6px}
 
-/* ── 공고 상세 v2 가격 헤더 ── */
-.detail-price-v2{font-size:42px;font-weight:900;color:var(--br);letter-spacing:-2px;
-  line-height:1;font-variant-numeric:tabular-nums;margin:4px 0 8px}
-.detail-info-grid{display:flex;flex-direction:column;gap:0;margin-bottom:14px;
-  background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden}
-.detail-info-row{display:flex;align-items:center;gap:10px;padding:12px 14px;
-  border-bottom:1px solid var(--bd)}
-.detail-info-row:last-child{border:none}
-.detail-info-lbl{font-size:12.5px;color:var(--t2);font-weight:700;min-width:70px;flex-shrink:0}
-.detail-info-val{font-size:13.5px;font-weight:800;color:var(--tx);flex:1}
+/* ── 공고 상세 v3 AI 디자인 ── */
+.detail-price-v2{font-size:48px;font-weight:900;color:var(--br);letter-spacing:-2px;
+  line-height:1;font-variant-numeric:tabular-nums}
+.ai-predict-strip{background:linear-gradient(135deg,rgba(79,120,245,.12),rgba(0,212,170,.08));
+  border:1px solid rgba(79,120,245,.22);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px}
+.ai-predict-label{font-size:10.5px;font-weight:900;color:var(--ac);letter-spacing:.8px;
+  margin-bottom:10px;text-transform:uppercase}
+.ai-predict-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;text-align:center}
+.ai-predict-col{padding:0 4px}
+.ai-predict-col+.ai-predict-col{border-left:1px solid rgba(79,120,245,.2)}
+.ai-predict-n{font-size:22px;font-weight:900;line-height:1.1}
+.ai-predict-u{font-size:10px;color:var(--t2);margin-top:2px}
+.ai-predict-t{font-size:10px;color:var(--t3);font-weight:700;margin-bottom:4px}
+.detail-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.detail-item{background:var(--bg3);border-radius:12px;padding:12px 14px;min-height:64px;
+  display:flex;flex-direction:column;justify-content:center}
+.detail-lbl{font-size:11px;color:var(--t3);font-weight:700;margin-bottom:3px}
+.detail-val{font-size:14px;font-weight:800;color:var(--tx)}
 .detail-rating-row{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:900;color:var(--br)}
+.zone-map-wrap{position:relative;border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px}
+.zone-map-label{position:absolute;top:10px;right:10px;background:rgba(8,13,28,.82);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  color:#fff;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.12);pointer-events:none}
 
 /* ── 오늘 일정 ── */
 .sched-list{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
@@ -2568,146 +2581,243 @@ function _yHandleDeepLink(){
   }).catch(function(){});
 }
 
-// ── 공고 상세 ────────────────────────────────────────────────
+// ── 공고 상세 v3 (AI 디자인) ────────────────────────────────────────
 function _showPostDetail(d){
   var isDriver=_CU.type==='driver';
   var _stC=d.status==='closed'?'st-closed':d.status==='matched'?'st-matched':d.urgent?'st-urgent':'st-open';
   var _stL=d.status==='closed'?'마감':d.status==='matched'?'배차완료':d.urgent?'긴급':'모집중';
   window._detailPost=d;
+
+  // ── AI 수익 예측 ──
+  var gross=Math.round((d.unitPrice||0)*(d.volume||0));
+  var netDay=Math.round(gross*0.97);
+  var netMon=netDay*22;
+  var fee=gross-netDay;
+
+  // ── AI 매칭 점수 ──
+  var _aiScore=0;
+  var _pr={}; try{_pr=JSON.parse(localStorage.getItem('yPref')||'{}');}catch(e){}
+  if(_pr.region&&_pr.region===d.region)_aiScore+=35;
+  else if(!_pr.region||_pr.region==='전체')_aiScore+=20;
+  if(_pr.courier&&d.courier&&d.courier.indexOf(_pr.courier)>=0)_aiScore+=25;
+  else if(!_pr.courier)_aiScore+=15;
+  if(_pr.carType&&(d.vehicleType||'무관').indexOf(_pr.carType)>=0)_aiScore+=20;
+  else _aiScore+=10;
+  if((d.unitPrice||0)>=(parseFloat(_pr.minPrice)||600))_aiScore+=20;else _aiScore+=5;
+  _aiScore=Math.min(98,Math.max(12,_aiScore));
+  var _scoreC=_aiScore>=80?'#10b981':_aiScore>=60?'#4f78f5':_aiScore>=40?'#f59e0b':'#6b7280';
+  var _circum=175.9;
+  var _dash=Math.round(_circum*(1-_aiScore/100));
+
+  // ── 배송구역 반경 (물량·구역형태 기반) ──
+  var _mapR=(d.areaType||'').indexOf('아파트')>=0?350:(d.volume||0)>300?450:(d.volume||0)<80?900:600;
+
+  // ── 액션 버튼 헬퍼 (카카오지도 딥링크) ──
+  var _z0=d.zones&&d.zones.length&&d.zones[0];
+  var _mapUrl;
+  if(_z0&&typeof _z0.lat==='number'){
+    _mapUrl='https://map.kakao.com/link/map/'+encodeURIComponent(_z0.name||d.area||'')+','+_z0.lat+','+_z0.lng;
+  } else {
+    _mapUrl='https://map.kakao.com/?q='+encodeURIComponent((_z0&&(_z0.name||_z0.zipcode))||d.area||d.region||'');
+  }
+
   document.getElementById('modal-body').innerHTML=
-    '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:14px;padding-right:48px">'+
+
+  // ── 배지 줄 ──
+  '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding-right:48px">'+
     '<span class="courier-badge">'+_courierIcon(d.courier)+' '+_esc(d.courier||'')+'</span>'+
     '<span class="st '+_stC+'">'+_stL+'</span>'+
     _yDayBadge(d.startDate)+
-    '</div>'+
-    '<div style="font-size:26px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;line-height:1.25">'+_esc(d.area||'')+'</div>'+
-    '<div style="font-size:13px;color:var(--t3);font-weight:600;margin-bottom:12px">'+_esc(d.region||'—')+
-      (d.routeNo?' · '+_esc(d.routeNo):'')+'</div>'+
-    // 단가 앵커 + 실수령액 계산 진입점
-    '<div style="display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
-      '<span class="detail-price-v2">'+_won(d.unitPrice)+'</span>'+
-      '<span style="font-size:15px;font-weight:700;color:var(--t2);padding-bottom:4px">원 / '+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
-      (d.vatIncluded?'<span class="pc-vat">VAT'+_esc(d.vatIncluded)+'</span>':'')+
-    '</div>'+
-    (isDriver?'<button type="button" onclick="_yOpenCalc({price:'+(d.unitPrice||0)+',vol:'+(d.volume||0)+'})" '+
-      'style="width:100%;min-height:var(--tap);margin-bottom:16px;background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:var(--r);font-size:14px;font-weight:800">'+
-      ' 이 조건으로 실수령액 계산하기</button>':'')+
+  '</div>'+
 
-    // 배송구역 — 항상 표시 (좌표 없으면 geocode 시도 → 폴백: 카카오 검색 링크)
-    '<div style="margin-bottom:14px">'+
-    (d.zones&&d.zones.length?
-      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="zone-tab-wrap">'+
-      d.zones.map(function(z,i){
-        return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 14px;border-radius:20px;border:2px solid var(--ac);background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#fff':'var(--ac)')+';font-size:12px;font-weight:700;cursor:pointer">'+
-          _esc(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</button>';
-      }).join('')+
-      '</div>'
-    :'')+
-    '<div class="map-wrap" style="margin-bottom:0;position:relative">'+
-      '<div id="detail-map" style="width:100%;height:200px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center">'+
-        '<div id="detail-map-placeholder" style="text-align:center;padding:20px">'+
-          '<div style="font-size:13px;color:var(--t2);margin-bottom:10px">지도 로딩 중...</div>'+
+  // ── 타이틀 + AI 매칭 링 ──
+  '<div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:4px">'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:28px;font-weight:900;letter-spacing:-1.2px;line-height:1.2;margin-bottom:3px">'+_esc(d.area||'')+'</div>'+
+      '<div style="font-size:13px;color:var(--t3);font-weight:600;margin-bottom:10px">'+
+        _esc(d.region||'—')+(d.routeNo?' · <span style="color:var(--ac)">'+_esc(d.routeNo)+'</span>':'')+'</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:6px">'+
+        '<span class="detail-price-v2">'+_won(d.unitPrice)+'</span>'+
+        '<span style="font-size:15px;font-weight:700;color:var(--t2);padding-bottom:8px">원/'+_esc(d.priceType==='가구당'?'가구':'건')+'</span>'+
+        (d.vatIncluded?'<span class="pc-vat" style="margin-bottom:8px">VAT'+_esc(d.vatIncluded)+'</span>':'')+
+      '</div>'+
+    '</div>'+
+    (isDriver?
+    '<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px">'+
+      '<svg width="72" height="72" viewBox="0 0 72 72">'+
+        '<circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"/>'+
+        '<circle cx="36" cy="36" r="28" fill="none" stroke="'+_scoreC+'" stroke-width="5" stroke-linecap="round"'+
+          ' stroke-dasharray="'+_circum+'" stroke-dashoffset="'+_dash+'"'+
+          ' style="transform:rotate(-90deg);transform-origin:36px 36px;transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)"/>'+
+        '<text x="36" y="32" text-anchor="middle" font-size="17" font-weight="900" fill="'+_scoreC+'" font-family="Pretendard,sans-serif">'+_aiScore+'</text>'+
+        '<text x="36" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="var(--t3)" font-family="Pretendard,sans-serif">MATCH</text>'+
+      '</svg>'+
+      '<div style="font-size:10px;color:var(--t3);font-weight:700">AI 매칭</div>'+
+    '</div>':'')+
+  '</div>'+
+
+  // ── AI 수익 예측 스트립 ──
+  (netDay>0?
+  '<div class="ai-predict-strip">'+
+    '<div class="ai-predict-label">AI 수익 예측 (수수료 3% 기준)</div>'+
+    '<div class="ai-predict-cols">'+
+      '<div class="ai-predict-col">'+
+        '<div class="ai-predict-t">예상 일수입</div>'+
+        '<div class="ai-predict-n" style="color:var(--tx)">'+Math.round(netDay/10000)+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-u">'+Number(netDay).toLocaleString()+'원</div>'+
+      '</div>'+
+      '<div class="ai-predict-col">'+
+        '<div class="ai-predict-t">예상 월수입</div>'+
+        '<div class="ai-predict-n" style="color:var(--gn)">'+Math.round(netMon/10000)+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-u">22일 기준</div>'+
+      '</div>'+
+      '<div class="ai-predict-col">'+
+        '<div class="ai-predict-t">플랫폼 수수료</div>'+
+        '<div class="ai-predict-n" style="color:var(--t2)">'+Math.round(fee/10000*10)/10+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-u">일 기준 3%</div>'+
+      '</div>'+
+    '</div>'+
+    (isDriver?
+    '<button type="button" onclick="_yOpenCalc({price:'+(d.unitPrice||0)+',vol:'+(d.volume||0)+'})" '+
+      'style="width:100%;min-height:38px;margin-top:12px;background:rgba(79,120,245,.18);color:var(--ac);'+
+      'border:1px solid rgba(79,120,245,.3);border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      '정확한 실수령액 계산기</button>':'')+
+  '</div>':'')+
+
+  // ── 배송구역 지도 ──
+  '<div style="margin-bottom:14px">'+
+  (d.zones&&d.zones.length?
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="zone-tab-wrap">'+
+    d.zones.map(function(z,i){
+      return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 14px;border-radius:20px;border:2px solid var(--ac);'+
+        'background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#fff':'var(--ac)')+';'+
+        'font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+
+        _esc(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</button>';
+    }).join('')+
+    '</div>':'')+
+  '<div class="zone-map-wrap">'+
+    '<div id="detail-map" style="width:100%;height:230px;background:var(--bg3);display:flex;align-items:center;justify-content:center">'+
+      '<div id="detail-map-placeholder" style="text-align:center;padding:20px">'+
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="1.5" style="margin-bottom:8px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>'+
+        '<div style="font-size:12px;color:var(--t3)">배송구역 지도 로딩 중...</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="zone-map-label" id="zone-map-badge">'+_esc(d.area||d.region||'배송구역')+'</div>'+
+  '</div>'+
+  '</div>'+
+
+  // ── 플랫폼 최소보장 ──
+  '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
+    'border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
+    '<div>'+
+      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">플랫폼 최소보장</div>'+
+      '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시에도 보장액 지급 의무</div>'+
+    '</div>'+
+    '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(16,185,129,.4)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'+
+  '</div>'+
+
+  // ── 정보 그리드 v3 ──
+  '<div class="detail-info-grid">'+
+  [
+    ['일 물량',(d.volume||0)+'건','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>','var(--ac)'],
+    ['단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건'),'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>','var(--br)'],
+    ['차량',d.vehicleType||'무관','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>','var(--ac)'],
+    ['번호판',d.plateType||'무관','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>','var(--t2)'],
+    ['근무시간',d.workHours||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>','var(--br)'],
+    ['시작일',d.startDate||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>','var(--gn)'],
+    ['구역형태',d.areaType||'혼합','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>','var(--ac)'],
+    ['아파트 비율',(d.areaAptRatio||'-')+'%','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="18"/><line x1="9" y1="3" x2="9" y2="21"/><path d="M13 8h2"/><path d="M13 12h2"/><path d="M13 16h2"/></svg>','var(--t2)'],
+    ['근무요일',d.workDays||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>','var(--br)'],
+    ['정산일',d.settleDay||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>','var(--gn)']
+  ].map(function(r){
+    return '<div class="detail-item">'+
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'+
+        '<span style="color:'+r[3]+'">'+r[2]+'</span>'+
+        '<span class="detail-lbl" style="margin:0">'+r[0]+'</span>'+
+      '</div>'+
+      '<div class="detail-val">'+r[1]+'</div>'+
+    '</div>';
+  }).join('')+
+  '</div>'+
+
+  (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">'+d.extras.split(',').filter(Boolean).map(function(e){return '<span class="tag">'+_esc(e)+'</span>';}).join('')+'</div>':'')+
+
+  (d.desc?
+  '<div style="background:var(--bg3);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
+    '<div style="font-size:11px;color:var(--ac);font-weight:800;letter-spacing:.5px;margin-bottom:8px">공고 상세</div>'+
+    '<div style="font-size:13.5px;line-height:1.8;color:var(--t2);white-space:pre-wrap">'+_esc(d.desc)+'</div>'+
+  '</div>':'')+
+
+  // ── 대리점 신뢰 카드 ──
+  (function(){
+    var g=_trustGrade(d.agencyRating,d.agencyReviewCount,d.agencyFakeCount);
+    return '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px">'+
+      '<div style="font-size:10px;color:var(--t3);font-weight:700;margin-bottom:8px">대리점 정보</div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'+
+        '<div style="min-width:0;flex:1">'+
+          '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px">'+
+            '<span style="font-weight:900;font-size:15px">'+_esc(d.agencyName||'—')+'</span>'+
+            '<span style="font-size:11px;font-weight:900;padding:3px 10px;border-radius:999px;background:'+g.bg+';color:'+g.color+'">'+g.label+'</span>'+
+          '</div>'+
+          '<div style="font-size:12px;color:var(--t2)">'+_esc(d.region||'—')+(d.agencyReviewCount?' · 후기 '+d.agencyReviewCount+'건':'')+'</div>'+
+        '</div>'+
+        '<div style="text-align:center;flex-shrink:0">'+
+          '<div style="font-size:24px;font-weight:900;color:var(--br)">'+
+            (d.agencyRating?Number(d.agencyRating).toFixed(1):'신규')+
+          '</div>'+
+          (d.agencyRating?'<div style="font-size:10px;color:var(--t3)">점</div>':'')+
         '</div>'+
       '</div>'+
-    '</div>'+
-    '</div>'+
-    '<div style="margin:10px 0;padding:12px;background:var(--gnl);border-radius:10px">'+
-    '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">플랫폼 최소보장</div>'+
-    '<div style="font-size:18px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
-    '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시에도 보장액 지급 의무</div>'+
-    '</div>'+
-    '<div class="detail-grid">'+
-    [
-      ['일 물량',d.volume+'건'],
-      ['단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건')+(d.vatIncluded?' (VAT'+d.vatIncluded+')':'')],
-      ['차량',d.vehicleType||'무관'],
-      ['번호판',d.plateType||'무관'],
-      ['시간',d.workHours||'협의'],
-      ['시작일',d.startDate||'협의'],
-      ['구역형태',d.areaType||'혼합'],
-      ['아파트비율',(d.areaAptRatio||'-')+'%'],
-      ['근무요일',d.workDays||'협의'],
-      ['정산',d.settleDay||'협의']
-    ].map(function(r){
-      return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
-    }).join('')+'</div>'+
-    (d.extras?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0">'+d.extras.split(',').filter(Boolean).map(function(e){return '<span class="tag">'+_esc(e)+'</span>';}).join('')+'</div>':'')+
+    '</div>';
+  })()+
 
-    (d.desc?'<div class="card" style="margin-bottom:14px">'+
-    '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-bottom:8px">공고 상세</div>'+
-    '<div style="font-size:13.5px;line-height:1.75;color:var(--t2);white-space:pre-wrap">'+_esc(d.desc)+'</div></div>':'')+
-
-    (function(){
-      var g=_trustGrade(d.agencyRating,d.agencyReviewCount,d.agencyFakeCount);
-      return '<div class="card" style="margin-bottom:16px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'+
-      '<div style="min-width:0">'+
-      '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px">'+
-      '<span style="font-weight:800;font-size:15px">'+_esc(d.agencyName||'—')+'</span>'+
-      '<span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:'+g.bg+';color:'+g.color+'">'+g.label+'</span>'+
-      '</div>'+
-      '<div style="font-size:12.5px;color:var(--t2)">'+_esc(d.region||'—')+
-        (d.agencyReviewCount?' · 후기 '+d.agencyReviewCount+'건':'')+'</div></div>'+
-      '<div style="font-size:17px;font-weight:900;color:var(--br);flex-shrink:0">'+
-        (d.agencyRating?Number(d.agencyRating).toFixed(1)+'점':'신규')+'</div>'+
-      '</div></div>';
-    })()+
-
-    (isDriver&&d.status==='open'?
-    '<div id="apply-area">'+
-    // 지도·전화 버튼 (기사용 오픈 공고에만 표시)
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
-    (function(){
-      var _z0=d.zones&&d.zones.length&&d.zones[0];
-      var _mapOnclick;
-      if(_z0&&typeof _z0.lat==='number'){
-        _mapOnclick="event.stopPropagation();window.open('https://map.kakao.com/link/map/"+encodeURIComponent(_z0.name||d.area||'')+",'"+_z0.lat+",'"+_z0.lng+"','_blank')";
-      } else {
-        var _q=(_z0&&(_z0.zipcode||_z0.name))||d.area||d.region||'';
-        _mapOnclick="event.stopPropagation();window.open('https://map.kakao.com/?q="+encodeURIComponent(_q)+"','_blank')";
-      }
-      return '<button type="button" class="btn-map-zone" onclick="'+_mapOnclick+'" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
-        '지도 구역 보기</button>';
-    })()+
+  // ── 기사용 액션 영역 ──
+  (isDriver&&d.status==='open'?
+  '<div id="apply-area">'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
+    '<button type="button" class="btn-map-zone" onclick="window.open(\\''+_mapUrl+'\\',\\'_blank\\')" style="display:flex;align-items:center;justify-content:center;gap:7px">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
+      '카카오 내비</button>'+
     (d.agencyPhone?
-      '<button type="button" class="btn-direct-call" onclick="event.stopPropagation();window.location.href=\\'tel:\\'+\\''+_esc(d.agencyPhone||'')+'\\'" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
-      '소장 직통 통화</button>'
-    :'<button type="button" class="btn-direct-call" onclick="event.stopPropagation();_yToast(\\'연락처 정보 없음\\')" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:.5">'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
-      '소장 직통 통화</button>')+
-    '</div>'+
-    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+      '<button type="button" class="btn-direct-call" onclick="window.location.href=\\'tel:'+_esc(d.agencyPhone)+'\\'" style="display:flex;align-items:center;justify-content:center;gap:7px">'+
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.05 12.05 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45 12.05 12.05 0 0 0 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
+        '소장 직통</button>':
+      '<button type="button" class="btn-direct-call" onclick="_yToast(\\'연락처 정보 없음\\')" style="display:flex;align-items:center;justify-content:center;gap:7px;opacity:.5">'+
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.05 12.05 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45 12.05 12.05 0 0 0 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
+        '소장 직통</button>')+
+  '</div>'+
+  '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
     '<div style="flex:1">'+
-    '<div style="font-size:11.5px;color:var(--t2);font-weight:700;margin-bottom:2px">지원 제한 시간</div>'+
-    '<div style="font-size:26px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums" id="cd-num">5</div>'+
+      '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-bottom:2px">지원 제한 시간</div>'+
+      '<div style="font-size:28px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums" id="cd-num">5</div>'+
     '</div>'+
     '<svg width="54" height="54" viewBox="0 0 54 54" style="flex-shrink:0">'+
-    '<circle cx="27" cy="27" r="23" fill="none" stroke="var(--bg3)" stroke-width="4"/>'+
-    '<circle id="cd-ring" cx="27" cy="27" r="23" fill="none" stroke="var(--br)" stroke-width="4"'+
-    ' stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="0"'+
-    ' style="transform:rotate(-90deg);transform-origin:27px 27px;transition:stroke-dashoffset .9s linear"/>'+
+      '<circle cx="27" cy="27" r="23" fill="none" stroke="var(--bg3)" stroke-width="4"/>'+
+      '<circle id="cd-ring" cx="27" cy="27" r="23" fill="none" stroke="var(--br)" stroke-width="4"'+
+        ' stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="0"'+
+        ' style="transform:rotate(-90deg);transform-origin:27px 27px;transition:stroke-dashoffset .9s linear"/>'+
     '</svg>'+
-    '</div>'+
-    '<div class="slide-accept" id="slide-wrap" style="margin-bottom:12px">'+
+  '</div>'+
+  '<div class="slide-accept" id="slide-wrap" style="margin-bottom:12px">'+
     '<div class="slide-accept-track" id="slide-track">밀어서 지원하기 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→</div>'+
     '<div class="slide-accept-thumb" id="slide-thumb">→</div>'+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">공유하기</button>'+
-    '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
-    '</div>'+
-    '</div>'
-    :isDriver?
-    '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')">지원하기</button>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
-    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">공유하기</button>'+
-    '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700">허위공고 신고</button>'+
-    '</div>'
-    :'');
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">공유하기</button>'+
+    '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">허위공고 신고</button>'+
+  '</div>'+
+  '</div>'
+  :isDriver?
+  '<button type="button" class="apply-btn" id="apply-btn" onclick="_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\')">지원하기</button>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+    '<button type="button" onclick="_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')" style="min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">공유하기</button>'+
+    '<button type="button" onclick="_reportFakePost(\\''+d.id+'\\',\\''+d.agencyId+'\\')" style="min-height:var(--tap);background:transparent;color:var(--t3);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">허위공고 신고</button>'+
+  '</div>'
+  :'');
 
   _openModal();
+  window._detailMapRadius=_mapR;
 
   // 지도 표시
   window._detailZones = d.zones||[];
@@ -7544,7 +7654,7 @@ function _selectAddr(idx){
   window._lastLng=lng;
 }
 
-// 공고 상세 지도
+// 공고 상세 지도 v3 — 배송구역 원 + 스타일 핀
 function _showDetailMap(lat,lng,name){
   if(typeof lat!=='number'||typeof lng!=='number'||isNaN(lat)||isNaN(lng))return;
   _loadKakaoMap(function(){
@@ -7554,18 +7664,32 @@ function _showDetailMap(lat,lng,name){
     if(ph)ph.style.display='none';
     container.style.display='block';
     var pos=new kakao.maps.LatLng(lat,lng);
-    window._detailMap=new kakao.maps.Map(container,{center:pos,level:5});
-    window._detailMarker=new kakao.maps.Marker({position:pos,map:window._detailMap});
+    var radius=window._detailMapRadius||600;
+    // 반경에 맞는 줌 레벨 자동 조정
+    var lvl=radius<=350?4:radius<=600?5:6;
+    window._detailMap=new kakao.maps.Map(container,{center:pos,level:lvl});
+    // 배송구역 원 (투명 청색)
     window._detailCircle=new kakao.maps.Circle({
-      center:pos,radius:600,
-      strokeWeight:2,strokeColor:'#00d4aa',strokeOpacity:.8,
-      fillColor:'#00d4aa',fillOpacity:.12,
+      center:pos,radius:radius,
+      strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.9,
+      fillColor:'#4f78f5',fillOpacity:.1,
       map:window._detailMap
     });
-    var iw=new kakao.maps.InfoWindow({
-      content:'<div style="padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap;color:#000">'+_esc(name||'배송구역')+'</div>'
+    // 커스텀 핀 (글로우)
+    var pinHtml='<div style="position:relative;display:flex;flex-direction:column;align-items:center">'+
+      '<div style="width:36px;height:36px;background:linear-gradient(135deg,#4f78f5,#00d4aa);border-radius:50% 50% 50% 0;'+
+        'transform:rotate(-45deg);box-shadow:0 4px 16px rgba(79,120,245,.6);border:2.5px solid rgba(255,255,255,.9)">'+
+      '</div>'+
+      '<div style="position:absolute;top:9px;left:9px;width:18px;height:18px;background:#fff;border-radius:50%;"></div>'+
+    '</div>';
+    var customOverlay=new kakao.maps.CustomOverlay({
+      position:pos,content:pinHtml,yAnchor:1
     });
-    iw.open(window._detailMap,window._detailMarker);
+    customOverlay.setMap(window._detailMap);
+    // 구역 이름 오버레이 (지도 위 좌상단 배지는 HTML 레이어로 처리)
+    var badge=document.getElementById('zone-map-badge');
+    if(badge&&name)badge.textContent=name;
+    window._detailMarker=null;
   });
 }
 
