@@ -4468,14 +4468,24 @@ fetch('/qr/members?did='+DID)
     }
 
 
-    // ── firebase-messaging-sw.js KV에서 서빙 ──
+    // ── firebase-messaging-sw.js — yongcha.app 전용 인라인 (DONWAY KV 미사용) ──
     if (path === '/firebase-messaging-sw.js') {
-      const swContent = await env.DONWAY_ASSETS.get('firebase-messaging-sw.js', 'text');
-      if (swContent) {
-        return new Response(swContent, {
-          headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
+      const yongchaSwContent = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');`
+        + `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');`
+        + `firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.appspot.com',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});`
+        + `const messaging=firebase.messaging();`
+        + `messaging.onBackgroundMessage(function(payload){`
+        + `  const data=payload.data||{};`
+        + `  const title=(payload.notification&&payload.notification.title)||'용차';`
+        + `  const body=(payload.notification&&payload.notification.body)||'';`
+        + `  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'yongcha-push',renotify:true,vibrate:[200,100,200]});`
+        + `});`
+        + `self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if('focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow('/');return;}));});`
+        + `self.addEventListener('install',function(){self.skipWaiting();});`
+        + `self.addEventListener('activate',function(e){e.waitUntil(clients.claim());});`;
+      return new Response(yongchaSwContent, {
+        headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
     // ★ 루트 접속 → 랜딩페이지 리라이트 (URL 유지, workers.dev 제외)
@@ -10145,16 +10155,20 @@ function _pgPosts(el){
     '</div>'+
   '</div>'+
 
-  // 노선 / 용차 전환 탭
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">'+
+  // 배차 / 용차 / 구직(기사)|구인(소장) 전환 탭
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">'+
     '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'route\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
-      'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
       '배차 공고</button>'+
     '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'yongcha\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
-      'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
       '용차 모집</button>'+
+    '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\\'jobs\\')" '+
+      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      (_CU&&_CU.type==='driver'?'구직':'구인')+'</button>'+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -10245,12 +10259,22 @@ function _pgPosts(el){
       '</div>'+
     '</div>'+
     '<div id="yongcha-offer-list">'+_skeletonCards(3)+'</div>'+
+  '</div>'+
+
+  '<div id="posts-jobs-section" style="display:none">'+
+    '<div id="posts-jobs-inner">'+_skeletonCards(3)+'</div>'+
   '</div>';
 
   if(_postsMainTab==='yongcha'){
     document.getElementById('posts-route-section').style.display='none';
     document.getElementById('posts-yongcha-section').style.display='block';
+    document.getElementById('posts-jobs-section').style.display='none';
     _loadDriverOfferList();
+  } else if(_postsMainTab==='jobs'){
+    document.getElementById('posts-route-section').style.display='none';
+    document.getElementById('posts-yongcha-section').style.display='none';
+    document.getElementById('posts-jobs-section').style.display='block';
+    _loadJobsSection(document.getElementById('posts-jobs-inner'));
   } else {
     _loadFilteredPosts();
   }
@@ -10265,26 +10289,46 @@ function _pfSwitchMainTab(tab){
   _postsMainTab=tab;
   var routeSec=document.getElementById('posts-route-section');
   var yongchaSec=document.getElementById('posts-yongcha-section');
+  var jobsSec=document.getElementById('posts-jobs-section');
   var title=document.getElementById('posts-main-title');
   var sub=document.getElementById('posts-main-sub');
   var btnR=document.getElementById('pmtab-route');
   var btnY=document.getElementById('pmtab-yongcha');
+  var btnJ=document.getElementById('pmtab-jobs');
   if(!routeSec||!yongchaSec)return;
+  // 모두 숨김
+  routeSec.style.display='none';yongchaSec.style.display='none';if(jobsSec)jobsSec.style.display='none';
+  // 버튼 초기화
+  if(btnR){btnR.style.background='var(--bg2)';btnR.style.color='var(--t2)';btnR.style.borderColor='var(--bd)';}
+  if(btnY){btnY.style.background='var(--bg2)';btnY.style.color='var(--t2)';btnY.style.borderColor='var(--bd)';}
+  if(btnJ){btnJ.style.background='var(--bg2)';btnJ.style.color='var(--t2)';btnJ.style.borderColor='var(--bd)';}
   if(tab==='yongcha'){
-    routeSec.style.display='none';yongchaSec.style.display='block';
+    yongchaSec.style.display='block';
     if(title)title.textContent='용차 모집';
     if(sub)sub.textContent='임시 차용 가능 기사 목록 · 며칠~몇주 단위';
-    if(btnR){btnR.style.background='var(--bg2)';btnR.style.color='var(--t2)';btnR.style.borderColor='var(--bd)';}
     if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
     _loadDriverOfferList();
+  } else if(tab==='jobs'){
+    if(jobsSec)jobsSec.style.display='block';
+    var isDriver=_CU&&_CU.type==='driver';
+    if(title)title.textContent=isDriver?'구직 게시판':'구인 게시판';
+    if(sub)sub.textContent=isDriver?'대리점 소속 채용 공고 · 이력서 등록':'기사 채용공고 등록 · 이력서 검색';
+    if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
+    var inner=document.getElementById('posts-jobs-inner');
+    if(inner)_loadJobsSection(inner);
   } else {
-    yongchaSec.style.display='none';routeSec.style.display='block';
+    routeSec.style.display='block';
     if(title)title.textContent='배차 공고';
     if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
-    if(btnY){btnY.style.background='var(--bg2)';btnY.style.color='var(--t2)';btnY.style.borderColor='var(--bd)';}
     _loadFilteredPosts();
   }
+}
+
+function _loadJobsSection(el){
+  if(!el)return;
+  if(_CU&&_CU.type==='driver') _pgJobsDriver(el);
+  else _pgJobsAgency(el);
 }
 
 var _pfQTimer=null;
