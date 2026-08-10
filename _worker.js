@@ -10301,17 +10301,24 @@ function _pgHomeDriver(el){
     var fetchInspect=function(){
       fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){
-          if(inspBanner)inspBanner.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div style="font-size:12.5px;font-weight:800;color:var(--t2)">차량 검사 이력 조회 실패</div><div style="font-size:11px;color:var(--t3)">'+_esc(carNum)+' · KOTSA API 오류</div></div></div>';
+          if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
+          else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\'profile\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
           return;
         }
         if(!d.inspectDue){
-          if(inspBanner)inspBanner.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div style="font-size:12.5px;font-weight:800;color:var(--t2)">차량 검사 이력 없음</div><div style="font-size:11px;color:var(--t3)">'+_esc(carNum)+' · 차량번호를 확인해 주세요</div></div></div>';
+          if(_CU.inspectDue){
+            try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:_CU.inspectDue,ts:Date.now()}));}catch(e){}
+            _renderInspectBanner(_CU.inspectDue);
+          } else {
+            if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\'profile\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+          }
           return;
         }
         try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:d.inspectDue,ts:Date.now()}));}catch(e){}
         _renderInspectBanner(d.inspectDue);
       }).catch(function(e){
-        if(inspBanner)inspBanner.innerHTML='<div style="padding:10px 14px;font-size:11.5px;color:var(--t3)">검사 이력 불러오기 실패</div>';
+        if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
+        else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\'profile\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
       });
     };
     if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
@@ -13772,6 +13779,8 @@ function _pgProfile(el){
         '</select></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
         '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">정기검사 만료일</label>'+
+        '<input id="pref-inspectDue" type="date" class="inp" value="'+(_CU.inspectDue?_CU.inspectDue.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'')+'"></div>'+
       '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">맞춤 조건 저장</button>'+
     '</div>';
   })():'')+
@@ -15507,15 +15516,19 @@ function _ySavePrefs(){
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
   var fuelType=(document.getElementById('pref-fuelType')||{}).value||'휘발유';
   var carNum=((document.getElementById('pref-carNum')||{}).value||'').trim();
+  var inspectDueRaw=((document.getElementById('pref-inspectDue')||{}).value||'').trim();
+  var inspectDue=inspectDueRaw.replace(/-/g,'');
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
   patch.carFuelType=fuelType;
   if(carNum)patch.carNumber=carNum;
+  if(inspectDue)patch.inspectDue=inspectDue;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
     _CU.carFuelType=fuelType;
     if(carNum)_CU.carNumber=carNum;
+    if(inspectDue){_CU.inspectDue=inspectDue;try{localStorage.removeItem('yc_inspect_'+carNum);}catch(e){};}
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
