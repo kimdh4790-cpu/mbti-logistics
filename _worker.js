@@ -18011,6 +18011,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
+  // ── 차량 검사 만료 조회 (KOTSA) ────────────────────────────────
+  if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const carNum = url.searchParams.get('carNum');
+      if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
+      const apiKey = env.KOTSA_API_KEY;
+      if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
+      const resp = await fetch(`https://openapi.kotsa.or.kr/api/publicdata/vehicleInspect/v1?serviceKey=${apiKey}&carNum=${encodeURIComponent(carNum)}&type=JSON`);
+      const data = await resp.json();
+      const dueDate = data?.resultList?.[0]?.inspectValidDate || null;
+      return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+    }
+  }
+
   // ── Gas Stations: 카카오 로컬 API 주유소 검색 ──────────────────
   if (path === '/api/yongcha/gas-stations' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
