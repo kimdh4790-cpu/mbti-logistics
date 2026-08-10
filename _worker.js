@@ -8208,41 +8208,41 @@ const YONGCHA_HTML_YONGCHA = `﻿<!DOCTYPE html>
    용차 디자인 시스템 v3 — 모바일 퍼스트 / 최소 터치 48px
    ═══════════════════════════════════════════════════════════ */
 :root{
-  /* ── 표면 (elevation) — 딥 다크 네이비 ── */
-  --bg:#06111e;           /* app base */
-  --bg2:#0e1d35;          /* surface — bg보다 훨씬 밝게 */
-  --bg3:#172a47;          /* raised */
-  --sheet:#0e1d35;
-  --bd:#1f3358;           /* line — 더 선명하게 */
-  --bd2:#2d4a7a;          /* line-strong */
+  /* ── 라이트 테마 ── */
+  --bg:#f0f4fc;           /* 앱 배경 — 연한 블루그레이 */
+  --bg2:#ffffff;          /* 카드 표면 — 흰색 */
+  --bg3:#e8edf9;          /* 내부 요소 — 연한 회색 */
+  --sheet:#ffffff;
+  --bd:#d2d9ee;           /* 테두리 */
+  --bd2:#b4bedd;          /* 강조 테두리 */
 
   /* ── 텍스트 ── */
-  --tx:#f2f3fa;
-  --t2:#b0b9d8;           /* 보조 텍스트 밝게 */
-  --t3:#7580a8;           /* 3차 텍스트 밝게 */
+  --tx:#0d1833;
+  --t2:#4a5a80;
+  --t3:#8898b8;
 
-  /* ── 브랜드: 파란색 #3b7ef8 (액션) + 골드(금액) ── */
-  --ac:#3b7ef8;--ac2:#1a5fe0;--ac-ink:#ffffff;
-  --acl:rgba(59,126,248,.14);--acln:rgba(59,126,248,.36);
-  --br:#f5a623;--br2:#d4881a;--brl:rgba(245,166,35,.14);--brln:rgba(245,166,35,.34);
-  --urgent:#f97316;--urgentl:rgba(249,115,22,.14);--urgentln:rgba(249,115,22,.38);
+  /* ── 브랜드 ── */
+  --ac:#2b6ef0;--ac2:#1a55cc;--ac-ink:#ffffff;
+  --acl:rgba(43,110,240,.1);--acln:rgba(43,110,240,.28);
+  --br:#d97706;--br2:#b45309;--brl:rgba(217,119,6,.1);--brln:rgba(217,119,6,.28);
+  --urgent:#ea6700;--urgentl:rgba(234,103,0,.1);--urgentln:rgba(234,103,0,.3);
 
   /* ── 상태 ── */
-  --gn:#22e08a;--gnl:rgba(34,224,138,.13);--gnln:rgba(34,224,138,.32);
-  --rd:#ff5f7a;--rdl:rgba(255,95,122,.13);--rdln:rgba(255,95,122,.34);
-  --pu:#a78bfa;--pul:rgba(167,139,250,.14);--puln:rgba(167,139,250,.34);
-  --sky:#4cc9ff;--skyl:rgba(76,201,255,.13);
+  --gn:#16a34a;--gnl:rgba(22,163,74,.1);--gnln:rgba(22,163,74,.28);
+  --rd:#dc2626;--rdl:rgba(220,38,38,.1);--rdln:rgba(220,38,38,.28);
+  --pu:#7c3aed;--pul:rgba(124,58,237,.1);--puln:rgba(124,58,237,.28);
+  --sky:#0284c7;--skyl:rgba(2,132,199,.1);
 
   /* ── 형태 · 리듬 ── */
   --r-sm:8px;--r:12px;--r-lg:16px;--r2:22px;--r-full:999px;
-  --tap:48px;              /* 최소 터치 타깃 */
+  --tap:48px;
   --gut:16px;
   --hdr-h:calc(56px + env(safe-area-inset-top));
   --nav-h:calc(66px + env(safe-area-inset-bottom));
   --ease:cubic-bezier(.32,.72,0,1);
-  --e1:0 1px 2px rgba(0,0,0,.5);
-  --e2:0 10px 30px -10px rgba(0,0,0,.7);
-  --e3:0 -18px 50px -16px rgba(0,0,0,.85);
+  --e1:0 1px 3px rgba(0,0,0,.1);
+  --e2:0 4px 16px rgba(0,0,0,.12);
+  --e3:0 -8px 24px rgba(0,0,0,.08);
   --shadow:var(--e2);
   --border:var(--bd);
 }
@@ -8256,7 +8256,7 @@ body{
   font-size:15px;line-height:1.45;letter-spacing:-.01em;overscroll-behavior:none;
 }
 body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(940px 460px at 50% -16%,rgba(59,126,248,.12),transparent 66%)}
+  background:radial-gradient(900px 400px at 50% -10%,rgba(43,110,240,.06),transparent 70%)}
 button,input,select,textarea{font-family:inherit;letter-spacing:inherit;color:inherit}
 button{cursor:pointer}
 ::selection{background:var(--ac);color:var(--ac-ink)}
@@ -8340,7 +8340,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 /* ── 상단 헤더 ── */
 .app-hdr{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:60;position:relative;
   padding:calc(env(safe-area-inset-top) + 8px) var(--gut) 8px;
-  background:rgba(26,26,46,.90);-webkit-backdrop-filter:saturate(170%) blur(16px);backdrop-filter:saturate(170%) blur(16px);
+  background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px);
   border-bottom:1px solid var(--bd)}
 .hdr-left{display:flex;align-items:center;gap:9px;min-width:0}
 .hdr-mark{width:34px;height:34px;flex-shrink:0;border-radius:11px;display:grid;place-items:center;font-size:17px;font-weight:900;
@@ -8367,8 +8367,8 @@ select.inp option{background:#24243d;color:#f0f1f8}
 /* ── 하단 5탭 고정 내비 ── */
 .bnav{position:fixed;left:0;right:0;bottom:0;z-index:120;
   display:grid;grid-template-columns:repeat(5,1fr);
-  background:rgba(20,20,36,.95);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
-  border-top:1px solid var(--bd);box-shadow:var(--e3);
+  background:rgba(255,255,255,.95);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);
+  border-top:1px solid var(--bd);box-shadow:0 -2px 16px rgba(0,0,0,.1);
   padding-bottom:env(safe-area-inset-bottom)}
 .bnav-btn{position:relative;min-height:66px;padding:9px 2px 8px;border:none;background:none;color:var(--t3);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;
@@ -8416,7 +8416,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
   margin:0 calc(var(--gut)*-1);padding:2px var(--gut) 8px;align-items:center}
 .fbar::-webkit-scrollbar{display:none}
-/* 스티키 필터 헤더 — 2줄로 축소 */
+/* 스티키 필터 헤더 */
 .fsticky{position:sticky;top:0;z-index:30;margin:0 calc(var(--gut)*-1) 6px;padding:6px var(--gut) 2px;
   background:var(--bg);border-bottom:1px solid var(--bd)}
 
@@ -8652,8 +8652,8 @@ select.inp option{background:#24243d;color:#f0f1f8}
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;transition:opacity .28s}
 #modal-overlay.show{display:block;opacity:1}
 #modal-sheet{position:fixed;bottom:0;left:0;right:0;z-index:201;max-height:92vh;overflow-y:auto;
-  background:var(--sheet);border-top:1px solid var(--bd2);border-radius:26px 26px 0 0;
-  transform:translateY(100%);transition:transform .38s var(--ease);box-shadow:var(--e3);
+  background:var(--sheet);border-top:1px solid var(--bd);border-radius:26px 26px 0 0;
+  transform:translateY(100%);transition:transform .38s var(--ease);box-shadow:0 -8px 40px rgba(0,0,0,.18);
   padding:0 0 calc(32px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #modal-sheet.open{transform:translateY(0)}
 .modal-handle{width:42px;height:4px;border-radius:99px;background:var(--bd2);margin:12px auto 0}
@@ -10049,12 +10049,14 @@ function _pgPosts(el){
     return '<button type="button" class="filter-btn'+(_pf.statusFilter===s[0]?' on':'')+'" data-status="'+s[0]+'" onclick="_pfSetStatus(\\''+s[0]+'\\')">'+s[1]+'</button>';
   }).join('')+
   '</div>'+
-  // 줄 2: 택배사 + 지역 + 세부 — 한 줄 스크롤
-  '<div class="fbar" id="pf-all-filters">'+
+  // 줄 2: 택배사 스크롤
+  '<div class="fbar" id="pf-courier">'+
   COURIERS.map(function(c){
     return '<button type="button" onclick="_pfSet(\\'courier\\',\\''+c+'\\')" class="filter-btn'+(c===_pf.courier?' on':'')+'">'+c+'</button>';
   }).join('')+
-  '<div class="fbar-sep"></div>'+
+  '</div>'+
+  // 줄 3: 지역 + 세부 조건 스크롤
+  '<div class="fbar" id="pf-region">'+
   REGIONS.map(function(r){
     return '<button type="button" onclick="_pfSet(\\'region\\',\\''+r+'\\')" class="filter-btn'+(r===_pf.region?' on':'')+'">'+r+'</button>';
   }).join('')+
