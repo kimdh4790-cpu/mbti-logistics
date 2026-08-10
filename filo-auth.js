@@ -297,17 +297,18 @@ function _buildFiloNav(){
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
  var hasAll=isSA||hasSub('combo');
 
- // ── 슈퍼어드민 관리 바 ──────────────────────────────────────
+ // ── 슈퍼어드민 topbar 컨트롤 ──────────────────────────────────
  if(isSA){
-  var _bar=document.getElementById('demo-admin-bar');
-  if(!_bar){
-   _bar=document.createElement('div');
-   _bar.id='demo-admin-bar';
-   _bar.innerHTML=
-    '<span style="color:var(--t3);flex-shrink:0">매장:</span>'+
-    '<strong id="demo-dealer-disp" style="color:var(--acc);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">'+esc(_CU.dealerId||'')+'</strong>'+
-    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer;flex-shrink:0">'+
-     '<option value="">데모 선택</option>'+
+  var _saBar=document.getElementById('sa-topbar');
+  if(!_saBar){
+   _saBar=document.createElement('div');
+   _saBar.id='sa-topbar';
+   _saBar.style.cssText='display:flex;align-items:center;gap:5px;border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:3px 8px;background:rgba(201,168,76,.08)';
+   _saBar.innerHTML=
+    '<span style="color:#c9a84c;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.5px">SA</span>'+
+    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" '+
+     'style="background:transparent;border:none;color:var(--tx);font-size:11px;cursor:pointer;outline:none;max-width:72px">'+
+     '<option value="">데모</option>'+
      '<option value="demo_cafe">카페</option>'+
      '<option value="demo_korean">한식당</option>'+
      '<option value="demo_japanese">일식당</option>'+
@@ -315,18 +316,16 @@ function _buildFiloNav(){
      '<option value="demo_western">양식당</option>'+
      '<option value="demo_bakery">베이커리</option>'+
     '</select>'+
-    '<input id="sa-did-input" placeholder="딜러ID 직접입력" '+
+    '<input id="sa-did-input" placeholder="딜러ID" '+
      'onkeydown="if(event.key===\'Enter\')_switchDemoDealer(this.value.trim())" '+
-     'style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;outline:none">'+
+     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.4);color:var(--tx);font-size:11px;padding:1px 4px;outline:none">'+
     '<button onclick="_switchDemoDealer(document.getElementById(\'sa-did-input\').value.trim())" '+
-     'style="background:var(--acc);border:none;border-radius:6px;color:#08101f;font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer;flex-shrink:0">이동</button>'+
+     'style="background:rgba(201,168,76,.2);border:none;border-radius:4px;color:#c9a84c;font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;flex-shrink:0">이동</button>'+
     '<button onclick="_filoDemoInit()" '+
-     'style="background:transparent;border:1px solid var(--bd2);border-radius:6px;color:var(--t3);font-size:11px;padding:3px 10px;cursor:pointer;flex-shrink:0">초기화</button>';
-   var _appEl3=document.getElementById('app');
-   if(_appEl3) _appEl3.insertBefore(_bar,_appEl3.firstChild);
+     'style="background:transparent;border:1px solid rgba(201,168,76,.3);border-radius:4px;color:#c9a84c;font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0">초기화</button>';
+   var _trEl=document.getElementById('topbar-right');
+   if(_trEl) _trEl.appendChild(_saBar);
   } else {
-   var _disp=document.getElementById('demo-dealer-disp');
-   if(_disp) _disp.textContent=_CU.dealerId||'';
    var _dsel=document.getElementById('demo-dealer-sel');
    if(_dsel) _dsel.value=(_CU.dealerId||'').startsWith('demo_')?_CU.dealerId:'';
   }
