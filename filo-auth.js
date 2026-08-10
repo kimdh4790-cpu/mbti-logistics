@@ -196,6 +196,7 @@ function _showApp(){
 function _initFiloFCM(){
  if(!('Notification' in window) || !_CU || !_CU.dealerId) return;
  var did = _CU.dealerId;
+ if(did.startsWith('demo_')) return; // 데모 딜러는 FCM 불필요
  var companyName = _CU.companyName || (_cachedCompanyDoc && (_cachedCompanyDoc.companyName||_cachedCompanyDoc.name)) || 'FILO';
  if(Notification.permission === 'denied') return;
  navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
@@ -295,7 +296,9 @@ function _buildFiloNav(){
  }
  var isAdmin=(_CU.role!=='member');
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
- var hasAll=isSA||hasSub('combo');
+ // demo_* 딜러 전환 시엔 해당 딜러의 services 배열만 사용 (SA 전체허용 미적용)
+ var _isDemo=(_CU.dealerId||'').startsWith('demo_');
+ var hasAll=(isSA&&!_isDemo)||hasSub('combo');
 
  // ── 슈퍼어드민 topbar 컨트롤 ──────────────────────────────────
  if(isSA){
@@ -307,7 +310,7 @@ function _buildFiloNav(){
    _saBar.innerHTML=
     '<span style="color:#c9a84c;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.5px">SA</span>'+
     '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" '+
-     'style="background:transparent;border:none;color:var(--tx);font-size:11px;cursor:pointer;outline:none;max-width:72px">'+
+     'style="background:transparent;border:none;color:#0f172a;font-size:11px;cursor:pointer;outline:none;max-width:72px">'+
      '<option value="">데모</option>'+
      '<option value="demo_cafe">카페</option>'+
      '<option value="demo_korean">한식당</option>'+
@@ -318,7 +321,7 @@ function _buildFiloNav(){
     '</select>'+
     '<input id="sa-did-input" placeholder="딜러ID" '+
      'onkeydown="if(event.key===\'Enter\')_switchDemoDealer(this.value.trim())" '+
-     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.4);color:var(--tx);font-size:11px;padding:1px 4px;outline:none">'+
+     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.4);color:#0f172a;font-size:11px;padding:1px 4px;outline:none">'+
     '<button onclick="_switchDemoDealer(document.getElementById(\'sa-did-input\').value.trim())" '+
      'style="background:rgba(201,168,76,.2);border:none;border-radius:4px;color:#c9a84c;font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;flex-shrink:0">이동</button>'+
     '<button onclick="_filoDemoInit()" '+
@@ -327,14 +330,14 @@ function _buildFiloNav(){
    if(_trEl) _trEl.appendChild(_saBar);
   } else {
    var _dsel=document.getElementById('demo-dealer-sel');
-   if(_dsel) _dsel.value=(_CU.dealerId||'').startsWith('demo_')?_CU.dealerId:'';
+   if(_dsel) _dsel.value=_isDemo?_CU.dealerId:'';
   }
  }
 
  // ── 관제센터 services 배열 기반 기능 on/off ──────────────────
  var _services = d.services || [];
  function hasFeature(key) {
-  if(hasAll) return true;           // 슈퍼어드민·콤보 구독은 전부 허용
+  if(hasAll) return true;           // 슈퍼어드민(비데모)·콤보 구독은 전부 허용
   if(_services.includes(key)) return true;  // 관제센터에서 켠 기능
   return false;
  }
