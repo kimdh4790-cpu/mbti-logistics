@@ -8914,8 +8914,16 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const data = await res.json();
 
         // 브랜드 추출 (place_name 앞에 보통 브랜드명 포함)
-        const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소'];
-        const getBrand = name => BRANDS.find(b => name.includes(b)) || '';
+        const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','HD현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소','E1에너지','세왕에너지','오일뱅크'];
+        const getBrand = name => {
+          const b = BRANDS.find(b => name.includes(b));
+          if (b) return b;
+          const parts = name.trim().split(/\s+/);
+          if (parts.length >= 2 && /주유소|충전소/.test(parts[parts.length-1])) return parts[0];
+          const stripped = name.replace(/(주유소|충전소)$/, '').trim();
+          if (stripped && stripped !== name && stripped.length <= 10) return stripped;
+          return '';
+        };
 
         const stations = (data.documents || []).slice(0, 10).map((d, i) => {
           const distM = parseInt(d.distance) || 0;

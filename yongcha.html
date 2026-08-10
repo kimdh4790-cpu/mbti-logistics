@@ -2598,8 +2598,7 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px">'+
           starBtn+
-          '<div class="gas-price">'+Number(s.price||0).toLocaleString()+'</div>'+
-          '<div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>'+
+          (s.price?'<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':'<div style="font-size:10px;font-weight:700;color:var(--t3);margin:2px 0 4px;text-align:right;line-height:1.3">가격<br>정보없음</div>')+
           '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
         '</div>'+
       '</div>';
