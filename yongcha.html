@@ -5289,6 +5289,8 @@ function _pgProfile(el){
         '<select id="pref-time" class="inp">'+
           ['','오전','오후','야간'].map(function(v){return '<option value="'+v+'"'+(p.timeSlot===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
         '</select></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
+        '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
       '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">맞춤 조건 저장</button>'+
     '</div>';
   })():'')+
@@ -7023,13 +7025,16 @@ function _ySavePrefs(){
   // carType/region 은 문서 루트에도 미러링한다 — AI 배차 추천이 preferences 를
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
   var fuelType=(document.getElementById('pref-fuelType')||{}).value||'휘발유';
+  var carNum=((document.getElementById('pref-carNum')||{}).value||'').trim();
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
   patch.carFuelType=fuelType;
+  if(carNum)patch.carNumber=carNum;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
     _CU.carFuelType=fuelType;
+    if(carNum)_CU.carNumber=carNum;
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
