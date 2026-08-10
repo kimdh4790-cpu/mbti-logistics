@@ -2579,7 +2579,7 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
       var aiBadge=i===0&&!isFav?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
       var favBadge=isFav?'<span class="gas-badge" style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3)">즐겨찾기</span>':'';
       var distStr=s.dist<1?(Math.round(s.dist*1000)+'m'):(Math.round(s.dist*10)/10+'km');
-      var mapLink='https://map.kakao.com/?q='+encodeURIComponent((s.name||'주유소')+' '+encodeURIComponent(s.address||''));
+      var mapLink='https://map.kakao.com/?q='+encodeURIComponent((s.name||'주유소')+' '+(s.address||''));
       var brandLabel=s.brand?'<span style="font-size:10px;color:var(--t3);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:1px 6px;font-weight:700">'+_esc(s.brand)+'</span>':'';
       var starBtn='<button type="button" onclick="_yGasFav(\\''+_esc(containerId)+'\\',\\''+_esc(s.id||'')+'\\',\\''+_esc((lat||0).toString())+'\\',\\''+_esc((lng||0).toString())+'\\',\\''+_esc(fuel)+'\\')" '+
         'style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px;color:'+(isFav?'var(--br)':'var(--t3)')+';" '+
