@@ -9852,6 +9852,7 @@ function _goPage(p){
   else if(p==='driver_offer')_pgDriverOffer(el);
   else if(p==='entrance_codes')_pgEntranceCodes(el);
   else if(p==='settle_reconcile')_pgSettlementReconcile(el);
+  else if(p==='tax_approve')_pgTaxApprove(el,'');
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -11641,11 +11642,138 @@ function _sharePost(postId,area){
 }
 
 /* ── 딥링크: /?post=<id> 로 들어오면 해당 공고 상세를 자동 오픈 ── */
+// ── 소장: 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ───────────────────────────
+function _ySendSettleNotify(settleId,driverPhone,driverName,agencyName,driverId,totalAmount,totalCount,weekStart){
+  if(!driverPhone){_yToast('기사 전화번호가 없어요. 프로필을 확인하세요.');return;}
+  var btn=event&&event.currentTarget;
+  if(btn){btn.disabled=true;btn.textContent='발송중...';}
+  fetch('/api/yongcha/popbill-issue',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({workId:settleId,agencyId:_CU.uid,driverId:driverId,driverName:driverName,fare:totalAmount})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false&&d.error&&d.error.indexOf('사업자번호')>=0){
+      _yToast('사업자번호 미등록: 프로필에서 사업자번호를 먼저 입력하세요.');
+      if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
+      return;
+    }
+    return fetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({settleId:settleId,driverPhone:driverPhone,driverName:driverName,
+        agencyId:_CU.uid,agencyName:agencyName,driverId:driverId,
+        totalAmount:totalAmount,totalCount:totalCount,weekStart:weekStart})
+    }).then(function(r2){return r2.json();});
+  }).then(function(d2){
+    if(!d2)return;
+    _yToast(d2.alimtalkOk?'명세서 알림톡 발송 완료! 기사 승인을 기다리세요.':'명세서 발송됨 (SMS fallback). 기사 승인 대기중.');
+    _goPage('dashboard');
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
+  });
+}
+
+// ── 기사: 세금계산서 역발행 승인 화면 ─────────────────────────────────────────
+function _pgTaxApprove(el,settleId){
+  _curPage='tax_approve';
+  el=el||document.getElementById('content');
+  el.innerHTML=
+    '<div class="page-hdr"><h1 class="page-title">세금계산서 승인</h1>'+
+    '<p class="page-sub">정산 명세서를 확인하고 세금계산서 등록을 승인하세요</p></div>'+
+    '<div id="tax-approve-body">'+_skRows(3)+'</div>';
+  if(!settleId){el.innerHTML+='<p style="color:var(--rd);text-align:center;padding:32px">잘못된 접근이에요.</p>';return;}
+  _db.collection('yongcha_settlements').doc(settleId).get().then(function(snap){
+    var body=document.getElementById('tax-approve-body');if(!body)return;
+    if(!snap.exists){body.innerHTML='<p style="color:var(--rd);text-align:center;padding:32px">정산 내역을 찾을 수 없어요.</p>';return;}
+    var s=snap.data();
+    var state=s.taxInvoiceState||'';
+    var stateColor=state==='역발행승인'?'var(--gn)':state==='역발행거부'?'var(--rd)':'var(--br)';
+    var stateLabel=state==='역발행승인'?'홈택스 등록 완료':state==='역발행거부'?'거부됨':state==='명세서발송'?'승인 대기중':'처리 대기';
+    var isDone=(state==='역발행승인');
+    var isRejected=(state==='역발행거부');
+    var amt=Number(s.totalAmount||0);
+    var supply=Math.round(amt/1.1);
+    var tax=amt-supply;
+    body.innerHTML=
+      '<div class="card">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+          '<div style="font-size:16px;font-weight:900">정산 명세서</div>'+
+          '<span style="padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;background:rgba(245,158,11,.12);color:'+stateColor+';border:1px solid rgba(245,158,11,.2)">'+stateLabel+'</span>'+
+        '</div>'+
+        '<div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:14px">'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">소장(공급받는자)</span><span style="font-size:13px;font-weight:800">'+_esc(s.agencyName||'대리점')+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">기사(공급자)</span><span style="font-size:13px;font-weight:800">'+_esc(s.driverName||'기사')+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">기간</span><span style="font-size:13px;font-weight:800">'+_esc((s.weekStart||'').slice(0,10))+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">건수</span><span style="font-size:13px;font-weight:800">'+_won(Number(s.totalCount||0))+'건</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">공급가액</span><span style="font-size:13px;font-weight:800">'+_won(supply)+'원</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">부가세(10%)</span><span style="font-size:13px;font-weight:800">'+_won(tax)+'원</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:10px 0 4px"><span style="font-size:14px;font-weight:900">합계</span><span style="font-size:18px;font-weight:900;color:var(--ac)">'+_won(amt)+'원</span></div>'+
+        '</div>'+
+        (isDone?
+          '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;text-align:center;color:var(--gn);font-weight:800">국세청(홈택스)에 자동 등록이 완료됐어요</div>':
+        isRejected?
+          '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;text-align:center;color:var(--rd);font-weight:800">거부된 세금계산서입니다. 소장에게 문의하세요.</div>':
+          '<div style="display:flex;gap:10px;margin-top:4px">'+
+            '<button type="button" id="tax-reject-btn" onclick="_yTaxReject(\\'' +settleId+ '\\')" style="flex:1;min-height:var(--tap);background:none;color:var(--rd);border:1.5px solid rgba(239,68,68,.35);border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer">거부</button>'+
+            '<button type="button" id="tax-approve-btn" onclick="_yTaxApprove(\\'' +settleId+ '\\')" style="flex:2;min-height:var(--tap);background:var(--ac);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:900;cursor:pointer">세금계산서 등록 승인</button>'+
+          '</div>'
+        )+
+      '</div>'+
+      '<p style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0;line-height:1.6">승인 시 공급자(기사) 명의로 전자세금계산서가 발행되어<br>국세청(홈택스)에 자동 등록됩니다.</p>';
+  }).catch(function(e){
+    var body=document.getElementById('tax-approve-body');
+    if(body)body.innerHTML=_errHtml(e);
+  });
+}
+
+function _yTaxApprove(settleId){
+  var btn=document.getElementById('tax-approve-btn');
+  if(btn){btn.disabled=true;btn.textContent='처리중...';}
+  var corpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+  if(!corpNum){
+    _yToast('사업자번호가 없어요. 프로필에서 사업자번호를 먼저 입력하세요.');
+    if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
+    return;
+  }
+  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false)throw new Error(d.error||'승인 실패');
+    _yToast('세금계산서가 홈택스에 자동 등록됐어요!');
+    _pgTaxApprove(document.getElementById('content'),settleId);
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
+  });
+}
+
+function _yTaxReject(settleId){
+  var corpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+  if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
+  var btn=document.getElementById('tax-reject-btn');
+  if(btn){btn.disabled=true;btn.textContent='처리중...';}
+  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
+    _yToast('거부했어요. 소장에게 사유를 전달하세요.');
+    _pgTaxApprove(document.getElementById('content'),settleId);
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='거부';}
+  });
+}
+
 function _yHandleDeepLink(){
-  var m=(location.search||'').match(/[?&]post=([^&]+)/);
+  var qs=location.search||'';
+  var mt=qs.match(/[?&]tax=([^&]+)/);
+  if(mt){
+    var sid=decodeURIComponent(mt[1]);
+    history.replaceState(null,'',location.pathname);
+    _pgTaxApprove(document.getElementById('content'),sid);
+    return;
+  }
+  var m=qs.match(/[?&]post=([^&]+)/);
   if(!m)return;
   var postId=decodeURIComponent(m[1]);
-  history.replaceState(null,'',location.pathname); // 새로고침 시 재오픈 방지
+  history.replaceState(null,'',location.pathname);
   _db.collection('yongcha_posts').doc(postId).get().then(function(snap){
     if(!snap.exists){_yToast('공고를 찾을 수 없어요');return;}
     _showPostDetail(Object.assign({id:snap.id},snap.data()));
@@ -15539,6 +15667,26 @@ function _pgDashboard(el){
     var body=document.getElementById('dash-body');
     if(body)body.innerHTML=_errHtml(e);
   });
+
+  // 세금계산서 역발행 대기 배너 (기사 전용)
+  _db.collection('yongcha_settlements').where('driverId','==',_CU.uid)
+    .where('taxInvoiceState','==','명세서발송').limit(5).get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var items=[];
+    snap.forEach(function(doc){
+      var s=doc.data();
+      items.push('<button type="button" onclick="_pgTaxApprove(document.getElementById(\\'content\\'),\\''+doc.id+'\\')" '+
+        'style="width:100%;min-height:var(--tap);margin-bottom:8px;background:rgba(79,120,245,.08);border:1.5px solid rgba(79,120,245,.3);border-radius:var(--r);'+
+        'color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;text-align:left;padding:10px 14px">'+
+        _esc(s.agencyName||'소장')+'에서 정산명세서 도착 — '+_won(Number(s.totalAmount||0))+'원 → 세금계산서 승인</button>');
+    });
+    var banner=document.createElement('div');
+    banner.style.cssText='padding:0 0 4px';
+    banner.innerHTML=items.join('');
+    var db=document.getElementById('dash-body');
+    if(db)db.insertAdjacentElement('beforebegin',banner);
+  }).catch(function(){});
 }
 
 // ── 소장 정산 관리 대시보드 ────────────────────────────────────
@@ -15622,7 +15770,52 @@ function _pgDashboardAgency(el){
           '<div style="font-size:12px;color:var(--t2)">'+_won(totalCnt)+'건</div>'+
           '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(Math.round(totalNet/10000))+'만</div>'+
         '</div>'+
+      '</div>'+
+      '<div class="card" style="margin-top:10px">'+
+        '<div style="font-size:15px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
+          '<span>세금계산서 역발행</span>'+
+          '<span style="font-size:11px;color:var(--t3);font-weight:500">명세서 발송 → 기사 승인 → 홈택스 자동등록</span>'+
+        '</div>'+
+        '<div id="tax-inv-list">'+_skRows(3)+'</div>'+
       '</div>';
+
+    _db.collection('yongcha_settlements').where('agencyId','==',_CU.uid)
+      .orderBy('createdAt','desc').limit(30).get()
+    .then(function(snap){
+      var el=document.getElementById('tax-inv-list');if(!el)return;
+      if(snap.empty){el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:center;padding:16px 0">정산 내역이 없어요</p>';return;}
+      var html='';
+      snap.forEach(function(doc){
+        var s=doc.data(),id=doc.id;
+        var state=s.taxInvoiceState||'';
+        var badge='';
+        if(state==='역발행승인')badge='<span style="background:rgba(16,185,129,.12);color:var(--gn);border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">홈택스 등록완료</span>';
+        else if(state==='명세서발송')badge='<span style="background:rgba(79,120,245,.12);color:var(--ac);border:1px solid rgba(79,120,245,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">명세서 발송됨</span>';
+        else if(state==='역발행요청')badge='<span style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 승인 대기</span>';
+        else if(state==='역발행거부')badge='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 거부</span>';
+        else badge='<span style="background:var(--bg3);color:var(--t3);border:1px solid var(--bd);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">미발송</span>';
+        var canSend=(state===''||state==='미발송'||state==='역발행거부');
+        var dPhone=_esc(s.driverPhone||s.notifyPhone||'');
+        var dName=_jsq(s.driverName||'기사');
+        var aName=_jsq(s.agencyName||_CU.name||'');
+        var dId=_esc(s.driverId||'');
+        var amt=Number(s.totalAmount||0);
+        var cnt=Number(s.totalCount||0);
+        var wk=(s.weekStart||'').slice(0,10);
+        var btn=canSend?
+          '<button type="button" onclick="_ySendSettleNotify(\\''+id+'\\',\\''+dPhone+'\\',\\''+dName+'\\',\\''+aName+'\\',\\''+dId+'\\','+amt+','+cnt+',\\''+_esc(wk)+'\\')" '+
+          'style="min-height:40px;padding:0 12px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">명세서 발송</button>':'';
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13.5px;font-weight:800">'+_esc(s.driverName||'기사')+'</div>'+
+            '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+_esc(wk)+' · '+_won(cnt)+'건 · '+_won(amt)+'원</div>'+
+          '</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+badge+btn+'</div>'+
+        '</div>';
+      });
+      el.innerHTML=html||'<p style="color:var(--t3);font-size:13px;text-align:center;padding:16px 0">정산 내역이 없어요</p>';
+    }).catch(function(){});
+
   }).catch(function(e){
     var body=document.getElementById('adash-body');
     if(body)body.innerHTML=_errHtml(e);
@@ -17406,6 +17599,175 @@ async function handleYongcha(request, env) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), {
         status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
+    }
+  }
+
+  // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
+  if (path === '/api/yongcha/settle-notify' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const body = await request.json();
+      const { settleId, driverPhone, driverName, agencyId, agencyName,
+              totalAmount, weekStart, totalCount, driverId } = body;
+      if (!settleId || !driverPhone) throw new Error('settleId, driverPhone 필수');
+
+      const amt = Number(totalAmount || 0);
+      const cnt = Number(totalCount  || 0);
+      const weekLabel = (weekStart || '').slice(0, 10);
+      const approveUrl = `https://yongcha.app/?tax=${settleId}`;
+
+      // 1) 알림톡 발송
+      let alimtalkOk = false;
+      const aligoKey    = env.ALIGO_KEY;
+      const aligoUser   = env.ALIGO_USER_ID;
+      const aligoSender = env.ALIGO_SENDER_KEY;
+      if (aligoKey && aligoUser && aligoSender) {
+        const msg = `[용차앱] 정산 명세서 안내\n\n안녕하세요 ${driverName}님,\n${agencyName}에서 정산 명세서를 발송했어요.\n\n기간: ${weekLabel}\n건수: ${cnt}건\n금액: ${amt.toLocaleString('ko-KR')}원\n\n아래 링크에서 세금계산서 등록을 승인하시면 국세청(홈택스)에 자동 등록됩니다.\n\n▶ 세금계산서 승인\n${approveUrl}`;
+        const params = new URLSearchParams({
+          apikey: aligoKey, userid: aligoUser, senderkey: aligoSender,
+          tpl_code: 'KA01TP260618101225825DuJHXpoC4kY',
+          sender: env.ALIGO_SENDER || '05171133103',
+          receiver_1: driverPhone.replace(/[^0-9]/g, ''),
+          message_1: msg, cnt: '1',
+          failover: 'Y',
+          fmessage_1: msg,
+          fsender_1: env.ALIGO_SENDER || '05171133103',
+          freceiver_1: driverPhone.replace(/[^0-9]/g, '')
+        });
+        const ar = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
+        const ad = await ar.json();
+        alimtalkOk = ad.result_code == 1;
+      }
+
+      // 2) Firestore yongcha_settlements 상태 기록
+      const fsToken = await getAccessToken(env);
+      const pf = {
+        taxInvoiceState:  { stringValue: '명세서발송' },
+        notifiedAt:       { stringValue: new Date().toISOString() },
+        notifyPhone:      { stringValue: driverPhone },
+        approveUrl:       { stringValue: approveUrl },
+        ...(driverId  ? { driverId:   { stringValue: driverId   } } : {}),
+        ...(agencyId  ? { agencyId:   { stringValue: agencyId   } } : {}),
+        ...(agencyName? { agencyName: { stringValue: agencyName } } : {})
+      };
+      await fetch(`${FS_BASE}/yongcha_settlements/${settleId}?${
+        Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')
+      }`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: pf })
+      });
+
+      return new Response(JSON.stringify({ ok: true, alimtalkOk, approveUrl }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+    }
+  }
+
+  // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
+  if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const body = await request.json();
+      const { settleId, senderCorpNum, mgtKey } = body;
+      if (!senderCorpNum) throw new Error('기사 사업자번호(senderCorpNum) 필수');
+      if (!settleId && !mgtKey) throw new Error('settleId 또는 mgtKey 필수');
+
+      const fsToken = await getAccessToken(env);
+
+      // mgtKey 없으면 Firestore 조회
+      let actualMgtKey = mgtKey;
+      if (!actualMgtKey && settleId) {
+        const sd = await fsGet(fsToken, 'yongcha_settlements', settleId);
+        actualMgtKey = sd.fields?.taxInvoiceMgtKey?.stringValue;
+      }
+      if (!actualMgtKey) throw new Error('세금계산서 관리번호 없음. 소장에게 역발행 요청을 먼저 받으세요.');
+
+      const isTest = env.POPBILL_TEST_MODE !== 'false';
+      const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+      const pbToken = await popbillGetToken(env, senderCorpNum);
+
+      const resp = await fetch(`${BASE}/Taxinvoice/역발행승인?SenderCorpNum=${senderCorpNum}&MgtKey=${actualMgtKey}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ Memo: '기사 앱 승인' })
+      });
+      const resultText = await resp.text();
+      let resultData; try { resultData = JSON.parse(resultText); } catch { resultData = { raw: resultText }; }
+
+      // Firestore 상태 업데이트
+      if (settleId) {
+        const pf = {
+          taxInvoiceState:      { stringValue: '역발행승인' },
+          taxInvoiceApprovedAt: { stringValue: new Date().toISOString() }
+        };
+        await fetch(`${FS_BASE}/yongcha_settlements/${settleId}?${
+          Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')
+        }`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: pf })
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, result: resultData }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+    }
+  }
+
+  // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
+  if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const body = await request.json();
+      const { settleId, senderCorpNum, mgtKey, rejectReason } = body;
+      if (!senderCorpNum) throw new Error('기사 사업자번호(senderCorpNum) 필수');
+      if (!settleId && !mgtKey) throw new Error('settleId 또는 mgtKey 필수');
+
+      const fsToken = await getAccessToken(env);
+
+      let actualMgtKey = mgtKey;
+      if (!actualMgtKey && settleId) {
+        const sd = await fsGet(fsToken, 'yongcha_settlements', settleId);
+        actualMgtKey = sd.fields?.taxInvoiceMgtKey?.stringValue;
+      }
+      if (!actualMgtKey) throw new Error('세금계산서 관리번호 없음');
+
+      const isTest = env.POPBILL_TEST_MODE !== 'false';
+      const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+      const pbToken = await popbillGetToken(env, senderCorpNum);
+
+      const resp = await fetch(`${BASE}/Taxinvoice/역발행거부?SenderCorpNum=${senderCorpNum}&MgtKey=${actualMgtKey}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ Memo: rejectReason || '기사 거부' })
+      });
+      const resultText = await resp.text();
+      let resultData; try { resultData = JSON.parse(resultText); } catch { resultData = { raw: resultText }; }
+
+      if (settleId) {
+        const pf = {
+          taxInvoiceState:        { stringValue: '역발행거부' },
+          taxInvoiceRejectedAt:   { stringValue: new Date().toISOString() },
+          taxInvoiceRejectReason: { stringValue: rejectReason || '' }
+        };
+        await fetch(`${FS_BASE}/yongcha_settlements/${settleId}?${
+          Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')
+        }`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: pf })
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, result: resultData }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
     }
   }
 
