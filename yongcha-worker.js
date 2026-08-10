@@ -1379,56 +1379,131 @@ function _yStopHomeWatch(){
   _homeUnsubs=[];
 }
 
+/* 알림 타입 메타 — SVG 아이콘 + 색상 */
+var _NOTIF_TYPES={
+  dispatch:{lbl:'배차',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+    bg:'var(--gnl)',col:'var(--gn)'},
+  apply:{lbl:'지원',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    bg:'var(--acl)',col:'var(--ac)'},
+  settle:{lbl:'정산',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    bg:'var(--brl)',col:'var(--br)'},
+  scout:{lbl:'스카웃',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+    bg:'rgba(139,92,246,.12)',col:'#8b5cf6'},
+  hire:{lbl:'채용',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    bg:'rgba(16,185,129,.1)',col:'var(--gn)'},
+  contract:{lbl:'계약',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+    bg:'rgba(14,165,233,.1)',col:'#0ea5e9'},
+  chat:{lbl:'채팅',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    bg:'var(--bg3)',col:'var(--t2)'},
+  work:{lbl:'운행',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    bg:'rgba(16,185,129,.1)',col:'var(--gn)'},
+  rest:{lbl:'휴식',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    bg:'var(--bg3)',col:'var(--t2)'},
+  system:{lbl:'시스템',
+    ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    bg:'var(--bg3)',col:'var(--t3)'}
+};
+
+var _notifFilter='all';
+var _notifAllData=[];
+
 function _pgNotifications(el){
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
-  el.innerHTML='<div class="page-hdr"><h1 class="page-title">알림</h1>'+
-  '<p class="page-sub">지원·승인·정산 소식을 모아뒀어요</p></div>'+
+  var filterTabs=[
+    {key:'all',lbl:'전체'},
+    {key:'dispatch',lbl:'배차'},
+    {key:'apply',lbl:'지원'},
+    {key:'settle',lbl:'정산'},
+    {key:'scout',lbl:'스카웃'},
+    {key:'hire',lbl:'채용'},
+    {key:'contract',lbl:'계약'},
+    {key:'chat',lbl:'채팅'},
+    {key:'work',lbl:'운행'},
+    {key:'rest',lbl:'휴식'}
+  ];
+  el.innerHTML=
+  '<div class="page-hdr"><h1 class="page-title">알림</h1></div>'+
+  '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:4px" id="notif-filter-bar">'+
+  filterTabs.map(function(t){
+    return '<button type="button" onclick="_notifSetFilter(\\''+t.key+'\\')" id="nf-'+t.key+'" '+
+      'style="flex-shrink:0;min-height:32px;padding:0 13px;border-radius:99px;border:1px solid var(--bd);'+
+      'background:'+(t.key==='all'?'var(--ac)':'var(--bg2)')+';color:'+(t.key==='all'?'#fff':'var(--t2)')+';'+
+      'font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+t.lbl+'</button>';
+  }).join('')+
+  '</div>'+
   '<div id="notif-list">'+_skRows(4)+'</div>';
+
   // 읽음 처리
   _db.collection('yongcha_notifications').where('userId','==',_CU.uid).where('read','==',false).get()
   .then(function(snap){
     if(snap.empty)return;
     var batch=_db.batch();
     snap.docs.forEach(function(d){batch.update(d.ref,{read:true});});
-    return batch.commit();
-  }).catch(function(){});
-  // 목록 표시
-  _db.collection('yongcha_notifications').where('userId','==',_CU.uid)
-  .orderBy('createdAt','desc').limit(50).get().then(function(snap){
-    var list=document.getElementById('notif-list');if(!list)return;
-    if(snap.empty){list.innerHTML=_emptyHtml('🔕','새 알림이 없어요','활동이 생기면 여기에 모아둘게요');return;}
-    var ico=function(t){
-      t=t||'';
-      if(t.indexOf('배차')>=0||t.indexOf('확정')>=0)return {i:'',c:'var(--gnl)'};
-      if(t.indexOf('정산')>=0)return {i:'💰',c:'var(--brl)'};
-      if(t.indexOf('지원')>=0)return {i:'🙋',c:'var(--acl)'};
-      if(t.indexOf('스카웃')>=0)return {i:'💌',c:'var(--pul)'};
-      if(t.indexOf('계약')>=0)return {i:'📝',c:'var(--skyl)'};
-      if(t.indexOf('완료')>=0)return {i:'🏁',c:'var(--gnl)'};
-      if(t.indexOf('💬')>=0)return {i:'💬',c:'var(--bg3)'};
-      return {i:'',c:'var(--bg3)'};
-    };
-    var frag=document.createDocumentFragment();
-    snap.forEach(function(doc){
-      var n=doc.data();
-      var meta=ico(n.title);
-      var card=document.createElement('div');
-      card.className='ncard'+(n.read?'':' unread');
-      card.innerHTML=
-        '<div class="n-ico" style="background:'+meta.c+'">'+meta.i+'</div>'+
-        '<div class="n-body">'+
-        '<div class="n-title">'+_esc(n.title)+'</div>'+
-        (n.body?'<div class="n-desc">'+_esc(n.body)+'</div>':'')+
-        '</div>'+
-        '<div class="n-time">'+_ago(n.createdAt)+'</div>';
-      frag.appendChild(card);
+    return batch.commit().then(function(){
+      var dot=document.getElementById('notif-dot');
+      if(dot)dot.style.display='none';
     });
-    list.innerHTML='';
-    list.appendChild(frag);
+  }).catch(function(){});
+
+  // 전체 로드 후 캐시 → 필터 렌더
+  _notifFilter='all';
+  _notifAllData=[];
+  _db.collection('yongcha_notifications').where('userId','==',_CU.uid)
+  .orderBy('createdAt','desc').limit(80).get().then(function(snap){
+    snap.forEach(function(doc){_notifAllData.push(doc.data());});
+    _notifRender();
   }).catch(function(e){
     var list=document.getElementById('notif-list');
     if(list)list.innerHTML=_errHtml(e);
   });
+}
+
+function _notifSetFilter(key){
+  _notifFilter=key;
+  document.querySelectorAll('#notif-filter-bar button').forEach(function(b){
+    var isOn=b.id==='nf-'+key;
+    b.style.background=isOn?'var(--ac)':'var(--bg2)';
+    b.style.color=isOn?'#fff':'var(--t2)';
+    b.style.borderColor=isOn?'var(--ac)':'var(--bd)';
+  });
+  _notifRender();
+}
+
+function _notifRender(){
+  var list=document.getElementById('notif-list');if(!list)return;
+  var data=_notifFilter==='all'?_notifAllData:_notifAllData.filter(function(n){return (n.type||'system')===_notifFilter;});
+  if(!data.length){
+    list.innerHTML=_emptyHtml('','알림 없음',_notifFilter==='all'?'활동이 생기면 여기에 모아둘게요':'이 유형의 알림이 없어요');
+    return;
+  }
+  var frag=document.createDocumentFragment();
+  data.forEach(function(n){
+    var meta=_NOTIF_TYPES[n.type||'system']||_NOTIF_TYPES.system;
+    var card=document.createElement('div');
+    card.className='ncard'+(n.read?'':' unread');
+    card.innerHTML=
+      '<div class="n-ico" style="background:'+meta.bg+';color:'+meta.col+'">'+meta.ico+'</div>'+
+      '<div class="n-body">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+
+          '<span class="n-title">'+_esc(n.title)+'</span>'+
+          '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:'+meta.bg+';color:'+meta.col+';flex-shrink:0">'+meta.lbl+'</span>'+
+        '</div>'+
+        (n.body?'<div class="n-desc">'+_esc(n.body)+'</div>':'')+
+      '</div>'+
+      '<div class="n-time">'+_ago(n.createdAt)+'</div>';
+    frag.appendChild(card);
+  });
+  list.innerHTML='';
+  list.appendChild(frag);
 }
 
 // ── 홈 ───────────────────────────────────────────────────────
@@ -3207,7 +3282,7 @@ function _applyPost(postId,agencyId,agencyName,btnEl){
     }).catch(function(){});
     if(btn){btn.textContent='지원함';btn.disabled=true;}
     _yToast('지원 완료! 대리점 승인을 기다려주세요');
-    _yNotify(agencyId,'새 지원자 도착! 🚗',_CU.name+'님이 노선공고에 지원했어요');
+    _yNotify(agencyId,'새 지원자 도착! 🚗',_CU.name+'님이 노선공고에 지원했어요','apply');
     _closeModal();
   }).catch(function(e){ fail('오류: '+e.message); });
 }
@@ -3328,7 +3403,7 @@ function _yCompleteRoutes(postId){
         completedRoutes:firebase.firestore.FieldValue.increment(1)
       }).then(function(){
         _calcTrustScore(a.driverId);
-        _yNotify(a.driverId,'노선 운행 완료 🏁','완료 노선 1건이 기록됐어요. 대리점을 평가해주세요!');
+        _yNotify(a.driverId,'노선 운행 완료 🏁','완료 노선 1건이 기록됐어요. 대리점을 평가해주세요!','work');
       }).catch(function(){});
     });
   }).catch(function(){});
@@ -3419,7 +3494,7 @@ function _judgeApply(applyId,status,name,driverId){
           var startDate=a.startDate||'미정';
           // FCM 상세 알림
           _yNotify(driverId,' 배차 확정되었습니다!',
-            _CU.name+'\\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate);
+            _CU.name+'\\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate,'dispatch');
           // 채팅방 자동 생성 + 첫 메시지
           _yAutoChat(driverId,name,a,postTitle,unitPrice,startDate);
           // 계약서 초안 생성
@@ -3438,7 +3513,7 @@ function _judgeApply(applyId,status,name,driverId){
           }).catch(function(){});
         }).catch(function(){});
       } else {
-        _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요');
+        _yNotify(driverId,'지원 결과 안내',_CU.name+'에서 지원 검토가 완료됐어요','apply');
       }
     }
     _closeModal();
@@ -3542,7 +3617,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(){
       _yToast('건수 저장됐어요! '+cnt+'건 / '+Number(cnt*unitPrice).toLocaleString()+'원');
-      _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록');
+      _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
       _closeModal();
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -3626,7 +3701,7 @@ function _yRequestSettle(driverId,driverName,cnt,amt,weekStart){
     status:'pending_driver',
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
-    _yNotify(driverId,'💰 정산 확인 요청',_CU.name+'에서 '+weekStart+' 주간 정산 확인을 요청했어요 ('+cnt+'건/'+Number(amt).toLocaleString()+'원)');
+    _yNotify(driverId,'💰 정산 확인 요청',_CU.name+'에서 '+weekStart+' 주간 정산 확인을 요청했어요 ('+cnt+'건/'+Number(amt).toLocaleString()+'원)','settle');
     _yToast('정산 확인 요청을 보냈어요!');
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -3647,12 +3722,12 @@ function _signContract(contractId, role){
           // 상대방에게 알림
           var otherId=role==='agency'?c.driverId:c.agencyId;
           var otherName=role==='agency'?c.driverName:c.agencyName;
-          _yNotify(otherId,'계약 완료 🤝',_CU.name+'과 계약이 완료됐어요!');
+          _yNotify(otherId,'계약 완료 🤝',_CU.name+'과 계약이 완료됐어요!','contract');
         });
       } else {
         _yToast('서명했어요. 상대방의 서명을 기다리는 중이에요.');
         var otherId=role==='agency'?c.driverId:c.agencyId;
-        _yNotify(otherId,'계약 서명 요청 📝',_CU.name+'이 계약서에 서명했어요. 서명해주세요!');
+        _yNotify(otherId,'계약 서명 요청 📝',_CU.name+'이 계약서에 서명했어요. 서명해주세요!','contract');
       }
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -5307,7 +5382,7 @@ function _sendScout(driverId, driverName){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('스카웃 제안을 보냈어요!');
-    _yNotify(driverId,'스카웃 제안 💌',_CU.name+'에서 스카웃 제안이 왔어요! 확인해보세요');
+    _yNotify(driverId,'스카웃 제안 💌',_CU.name+'에서 스카웃 제안이 왔어요! 확인해보세요','scout');
     _closeModal();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -5363,8 +5438,8 @@ function _judgeJobApply(applyId, status, name, driverId){
   }).then(function(){
     _yToast(status==='approved'?name+'님 승인 처리했어요!':'미선발 처리했어요');
     if(driverId){
-      if(status==='approved') _yNotify(driverId,'채용 승인 🎉','축하해요! '+_CU.name+'에서 승인 통보가 왔어요!');
-      else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요');
+      if(status==='approved') _yNotify(driverId,'채용 승인 🎉','축하해요! '+_CU.name+'에서 승인 통보가 왔어요!','hire');
+      else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요','hire');
     }
     _closeModal();
   });
@@ -5711,7 +5786,7 @@ function _applyJob(jobId, agencyId, agencyName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('지원 완료! 대리점 연락을 기다려주세요');
-    _yNotify(agencyId,'배차 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요');
+    _yNotify(agencyId,'배차 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요','apply');
     _closeModal();
   }).catch(function(e){
     if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
@@ -6136,7 +6211,7 @@ function _sendMsg(chatId,otherUid){
     upd['unread.'+otherUid]=firebase.firestore.FieldValue.increment(1);
     return _db.collection('yongcha_chats').doc(chatId).update(upd);
   }).then(function(){
-    _yNotify(otherUid,'💬 '+_CU.name,text.substring(0,60));
+    _yNotify(otherUid,'💬 '+_CU.name,text.substring(0,60),'chat');
   }).catch(function(e){_yToast('전송 실패: '+e.message);});
 }
 
@@ -6382,11 +6457,11 @@ function _yInitFCM(){
   });
 }
 
-function _yNotify(recipientId,title,body){
+function _yNotify(recipientId,title,body,type){
   if(!recipientId||!title)return;
-  // 알림 컬렉션에 저장 (벨 실시간 업데이트용)
   _db.collection('yongcha_notifications').add({
     userId:recipientId,title:title,body:body||'',
+    type:type||'system',
     read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // FCM push
@@ -6858,13 +6933,13 @@ function _yDoEndRest(restId,auto){
   return Promise.all([upd,closeDoc]).then(function(){
     _CU.resting=false;_CU.restUntil='';_CU.restId='';
     _yNotify(_CU.uid,'🔆 복귀 처리되었습니다',
-      (auto?'휴식 기간이 끝나 자동으로 복귀 처리했어요. ':'')+'이제 공고에 지원할 수 있어요');
+      (auto?'휴식 기간이 끝나 자동으로 복귀 처리했어요. ':'')+'이제 공고에 지원할 수 있어요','rest');
     // 승인해 준 대리점에도 복귀 통보
     if(restId){
       _db.collection('yongcha_rest').doc(restId).get().then(function(s){
         var r=s.exists?s.data():null;
         if(r&&r.judgedBy&&r.judgedBy!==_CU.uid){
-          _yNotify(r.judgedBy,'🔆 기사 복귀',_CU.name+'님이 휴식을 마치고 복귀했어요');
+          _yNotify(r.judgedBy,'🔆 기사 복귀',_CU.name+'님이 휴식을 마치고 복귀했어요','rest');
         }
       }).catch(function(){});
     }
@@ -7062,7 +7137,7 @@ function _yJudgeRest(restId,status,driverName,driverId){
       status==='approved'?'휴식 승인':'휴식 반려',
       status==='approved'
         ? (r.startDate||'')+' ~ '+(r.endDate||'')+' 휴식이 승인되었어요. 기간 중에는 지원이 잠깁니다'
-        : '휴식 신청이 반려되었어요'+(memo?' — '+memo:''));
+        : '휴식 신청이 반려되었어요'+(memo?' — '+memo:''),'rest');
     _yRestLoadManager();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -7952,7 +8027,7 @@ function _yArriveWork(applyId){
     _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
       if(!s.exists)return;
       var a=s.data();
-      if(a.agencyId)_yNotify(a.agencyId,'기사 도착',_CU.name+'님이 현장에 도착했어요');
+      if(a.agencyId)_yNotify(a.agencyId,'기사 도착',_CU.name+'님이 현장에 도착했어요','work');
     }).catch(function(){});
     _goPage('my_routes');
   }).catch(function(e){
@@ -8011,7 +8086,7 @@ function _ySubmitComplete(applyId){
       }).then(function(){
         if(a.agencyId){
           _yNotify(a.agencyId,'정산 요청',
-            _CU.name+'님이 배송을 완료했어요. 정산을 확인해주세요. ('+_won(a.unitPrice||0)+'원/건)');
+            _CU.name+'님이 배송을 완료했어요. 정산을 확인해주세요. ('+_won(a.unitPrice||0)+'원/건)','settle');
         }
         _yShowSettlementDone(a);
       });
