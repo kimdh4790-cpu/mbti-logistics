@@ -10028,7 +10028,7 @@ function _pgHomeDriver(el){
       fetchInspect();
     }
   } else if(inspBanner){
-    inspBanner.innerHTML='<div onclick="_goPage(\'profile\')" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;margin-bottom:10px;cursor:pointer">'+
+    inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;margin-bottom:10px;cursor:pointer">'+
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'+
       '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:var(--tx)">차량번호 미등록</div>'+
       '<div style="font-size:11.5px;color:var(--t3)">내정보에서 차량번호 입력 시 검사 만료일을 알려드려요</div></div>'+
