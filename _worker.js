@@ -10558,19 +10558,24 @@ function _showPostDetail(d){
       'style="width:100%;min-height:var(--tap);margin-bottom:16px;background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:var(--r);font-size:14px;font-weight:800">'+
       ' 이 조건으로 실수령액 계산하기</button>':'')+
 
-    ((d.zones&&d.zones.length||d.lat)?
-      '<div style="margin-bottom:14px">'+
-      (d.zones&&d.zones.length?
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="zone-tab-wrap">'+
-        d.zones.map(function(z,i){
-          return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 12px;border-radius:20px;border:2px solid var(--ac);background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#000':'var(--ac)')+';font-size:12px;font-weight:700;cursor:pointer">'+
-            ' '+z.zipcode+'<br><span style="font-weight:400;font-size:10px">'+z.name+'</span></button>';
-        }).join('')+
-        '</div>'
-      :'')+
-      '<div class="map-wrap" style="margin-bottom:0"><div id="detail-map" style="width:100%;height:200px;background:var(--bg3)"></div></div>'+
+    // 배송구역 — 항상 표시 (좌표 없으면 geocode 시도 → 폴백: 카카오 검색 링크)
+    '<div style="margin-bottom:14px">'+
+    (d.zones&&d.zones.length?
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px" id="zone-tab-wrap">'+
+      d.zones.map(function(z,i){
+        return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 14px;border-radius:20px;border:2px solid var(--ac);background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#fff':'var(--ac)')+';font-size:12px;font-weight:700;cursor:pointer">'+
+          _esc(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</button>';
+      }).join('')+
       '</div>'
     :'')+
+    '<div class="map-wrap" style="margin-bottom:0;position:relative">'+
+      '<div id="detail-map" style="width:100%;height:200px;background:var(--bg3);border-radius:12px;display:flex;align-items:center;justify-content:center">'+
+        '<div id="detail-map-placeholder" style="text-align:center;padding:20px">'+
+          '<div style="font-size:13px;color:var(--t2);margin-bottom:10px">지도 로딩 중...</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '</div>'+
     '<div style="margin:10px 0;padding:12px;background:var(--gnl);border-radius:10px">'+
     '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">플랫폼 최소보장</div>'+
     '<div style="font-size:18px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
@@ -10668,8 +10673,38 @@ function _showPostDetail(d){
   var _firstZone=d.zones&&d.zones.length&&d.zones[0];
   if(_firstZone&&typeof _firstZone.lat==='number'&&typeof _firstZone.lng==='number'){
     setTimeout(function(){_showDetailMap(_firstZone.lat,_firstZone.lng,_firstZone.name);},400);
-  } else if(d.lat&&d.lng){
+  } else if(typeof d.lat==='number'&&typeof d.lng==='number'){
     setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
+  } else {
+    // 좌표 없음 → 지역명으로 geocode 시도
+    var _geoQuery=(_firstZone&&_firstZone.name)||d.area||d.region||'';
+    if(_geoQuery){
+      setTimeout(function(){
+        _loadKakaoMap(function(){
+          var gc=new kakao.maps.services.Geocoder();
+          gc.addressSearch(_geoQuery,function(res,status){
+            if(status===kakao.maps.services.Status.OK&&res[0]){
+              _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),_geoQuery);
+            } else {
+              // 주소 검색 실패 → 지역명 키워드 검색
+              var ps=new kakao.maps.services.Places();
+              ps.keywordSearch(_geoQuery,function(data,s2){
+                if(s2===kakao.maps.services.Status.OK&&data[0]){
+                  _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery);
+                } else {
+                  var ph=document.getElementById('detail-map-placeholder');
+                  if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 정보 없음</div>'+
+                    '<a href="https://map.kakao.com/?q='+encodeURIComponent(_geoQuery)+'" target="_blank" style="font-size:12px;color:var(--ac);text-decoration:none;display:inline-block;margin-top:6px">카카오맵에서 검색</a>';
+                }
+              },{useMapBounds:false});
+            }
+          });
+        });
+      },400);
+    } else {
+      var ph=document.getElementById('detail-map-placeholder');
+      if(ph)ph.innerHTML='<div style="font-size:13px;color:var(--t2)">구역 위치 정보 없음</div>';
+    }
   }
 
   // 이미 지원 여부 확인 + 슬라이드 수락 + 카운트다운 초기화
@@ -15002,6 +15037,9 @@ function _showDetailMap(lat,lng,name){
   _loadKakaoMap(function(){
     var container=document.getElementById('detail-map');
     if(!container)return;
+    var ph=document.getElementById('detail-map-placeholder');
+    if(ph)ph.style.display='none';
+    container.style.display='block';
     var pos=new kakao.maps.LatLng(lat,lng);
     window._detailMap=new kakao.maps.Map(container,{center:pos,level:5});
     window._detailMarker=new kakao.maps.Marker({position:pos,map:window._detailMap});
@@ -15012,7 +15050,7 @@ function _showDetailMap(lat,lng,name){
       map:window._detailMap
     });
     var iw=new kakao.maps.InfoWindow({
-      content:'<div style="padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap;color:#000">📍 '+name+'</div>'
+      content:'<div style="padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap;color:#000">'+_esc(name||'배송구역')+'</div>'
     });
     iw.open(window._detailMap,window._detailMarker);
   });
@@ -15198,22 +15236,43 @@ function _showZoneOnMap(i){
   var zones = window._detailZones||[];
   var z = zones[i];
   if(!z) return;
-  // 탭 스타일 업데이트
   zones.forEach(function(_,j){
     var t = document.getElementById('ztab-'+j);
     if(!t) return;
     t.style.background = j===i ? 'var(--ac)' : 'transparent';
-    t.style.color = j===i ? '#000' : 'var(--ac)';
+    t.style.color = j===i ? '#fff' : 'var(--ac)';
   });
-  _loadKakaoMap(function(){
-    var pos = new kakao.maps.LatLng(z.lat, z.lng);
-    if(window._detailMap){
-      window._detailMap.setCenter(pos);
-      window._detailMap.setLevel(5);
-      if(window._detailMarker) window._detailMarker.setPosition(pos);
-      if(window._detailCircle) window._detailCircle.setCenter(pos);
-    }
-  });
+  if(typeof z.lat==='number'&&typeof z.lng==='number'){
+    _loadKakaoMap(function(){
+      var pos = new kakao.maps.LatLng(z.lat, z.lng);
+      if(window._detailMap){
+        window._detailMap.setCenter(pos);
+        window._detailMap.setLevel(5);
+        if(window._detailMarker) window._detailMarker.setPosition(pos);
+        if(window._detailCircle) window._detailCircle.setCenter(pos);
+      } else {
+        _showDetailMap(z.lat,z.lng,z.name||'');
+      }
+    });
+  } else if(z.name||z.zipcode){
+    var q=(z.zipcode||'')+' '+(z.name||'');
+    _loadKakaoMap(function(){
+      var gc=new kakao.maps.services.Geocoder();
+      gc.addressSearch(q.trim(),function(res,status){
+        if(status===kakao.maps.services.Status.OK&&res[0]){
+          var lat2=parseFloat(res[0].y),lng2=parseFloat(res[0].x);
+          if(window._detailMap){
+            var pos=new kakao.maps.LatLng(lat2,lng2);
+            window._detailMap.setCenter(pos);window._detailMap.setLevel(5);
+            if(window._detailMarker)window._detailMarker.setPosition(pos);
+            if(window._detailCircle)window._detailCircle.setCenter(pos);
+          } else {
+            _showDetailMap(lat2,lng2,z.name||q.trim());
+          }
+        }
+      });
+    });
+  }
 }
 </script>
 </body>
