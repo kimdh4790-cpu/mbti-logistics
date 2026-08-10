@@ -1471,8 +1471,12 @@ function _pgHomeDriver(el){
   '<div class="sec-head"><span class="sec-title">오늘 일정</span><button type="button" class="sec-count" onclick="_goPage(\\'my_routes\\')">전체보기 ›</button></div>'+
   '<div class="sched-list" id="home-sched">'+_skRows(2)+'</div>'+
 
-  // 내 지역 최신 공고
-  '<div class="sec-head" style="margin-top:6px"><span class="sec-title">내 지역 최신 공고</span><button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button></div>'+
+  // 내 주변 공고
+  '<div class="sec-head" style="margin-top:6px">'+
+    '<span class="sec-title">내 주변 공고</span>'+
+    '<span id="home-nearby-dist" style="font-size:11px;color:var(--t3);margin-left:6px"></span>'+
+    '<button type="button" class="sec-count" onclick="_goPage(\\'posts\\')">전체보기 ›</button>'+
+  '</div>'+
   '<div id="home-recent">'+_skeletonCards(2)+'</div>';
 
   // 오늘 수익 집계 (카운트업 애니메이션)
@@ -1523,26 +1527,91 @@ function _pgHomeDriver(el){
     });
   }).catch(function(){});
 
-  // 홈 지도 (카카오 API)
+  // 홈 지도 (카카오 API) — 현위치 + 주변 공고 존 마커
   setTimeout(function(){
     var mapEl=document.getElementById('home-drv-map');
-    if(!mapEl||typeof kakao==='undefined'||!kakao.maps)return;
-    var center=new kakao.maps.LatLng(35.1796,129.0756);
-    if(_CU.lat&&_CU.lng)center=new kakao.maps.LatLng(_CU.lat,_CU.lng);
-    var m=new kakao.maps.Map(mapEl,{center:center,level:7});
-    new kakao.maps.Marker({position:center,map:m});
+    if(!mapEl)return;
+    _loadKakaoMap(function(){
+      var center=new kakao.maps.LatLng(35.1796,129.0756);
+      if(typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
+        center=new kakao.maps.LatLng(_CU.lat,_CU.lng);
+      } else if(_myGeo){
+        center=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
+      }
+      var m=new kakao.maps.Map(mapEl,{center:center,level:7});
+      // 내 위치 마커 (파란 원)
+      new kakao.maps.CustomOverlay({
+        position:center,
+        content:'<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.6)"></div>',
+        yAnchor:0.5,xAnchor:0.5,
+        map:m
+      });
+      // 공고 존 마커 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
+      function _drawZoneMarkers(posts){
+        posts.forEach(function(p){
+          var lat=null,lng=null,lbl=p.area||p.region||'';
+          if(typeof p.loadingLat==='number'){lat=p.loadingLat;lng=p.loadingLng;}
+          else if(p.zones&&p.zones.length&&typeof p.zones[0].lat==='number'){lat=p.zones[0].lat;lng=p.zones[0].lng;lbl=p.zones[0].name||lbl;}
+          if(lat==null)return;
+          var pos=new kakao.maps.LatLng(lat,lng);
+          var ov=new kakao.maps.CustomOverlay({
+            position:pos,
+            content:'<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer" onclick="_showPostDetail(\\''+p.id+'\\')">'+_esc(lbl)+'</div>',
+            yAnchor:1.5,
+            map:m
+          });
+        });
+      }
+      if(_allPosts&&_allPosts.length){
+        var near=_allPosts.filter(function(p){var d=_yPostDist(p);return d!=null&&d<=50;}).slice(0,12);
+        _drawZoneMarkers(near);
+      } else {
+        var qr=_CU.region
+          ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(10)
+          :_db.collection('yongcha_posts').where('status','==','open').limit(10);
+        qr.get().then(function(sn){
+          var ps=[];sn.forEach(function(doc){ps.push(Object.assign({id:doc.id},doc.data()));});
+          _drawZoneMarkers(ps);
+        }).catch(function(){});
+      }
+    });
   },600);
 
-  // 내 지역 최신 공고
-  var q=_CU.region
-    ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(5)
-    :_db.collection('yongcha_posts').where('status','==','open').limit(5);
-  q.get().then(function(snap){
+  // 내 주변 공고 — GPS 우선, 없으면 지역명 매칭
+  function _loadNearbyPosts(){
     var recent=document.getElementById('home-recent');if(!recent)return;
-    if(snap.empty){recent.innerHTML=_emptyHtml('','아직 내 지역 공고가 없어요','조건을 넓혀 검색해보세요');return;}
-    recent.innerHTML='';
-    snap.docs.forEach(function(doc){recent.appendChild(_makePostCard(Object.assign({id:doc.id},doc.data()),true));});
-  }).catch(function(){});
+    // GPS 확보 시도 (3초 타임아웃)
+    var geoPromise=_yLoadGeo();
+    var timer=new Promise(function(r){setTimeout(r,3000);});
+    Promise.race([geoPromise,timer]).then(function(){
+      var distLbl=document.getElementById('home-nearby-dist');
+      if(distLbl)distLbl.textContent=_myGeo?'GPS 기준':'지역 기준';
+      var baseQ=_CU.region
+        ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(20)
+        :_db.collection('yongcha_posts').where('status','==','open').limit(20);
+      baseQ.get().then(function(snap){
+        if(!recent)return;
+        if(snap.empty){recent.innerHTML=_emptyHtml('','아직 내 지역 공고가 없어요','조건을 넓혀 검색해보세요');return;}
+        var posts=[];
+        snap.forEach(function(doc){posts.push(Object.assign({id:doc.id},doc.data()));});
+        // GPS 좌표 있으면 거리순 정렬, 없으면 createdAt 역순
+        if(_myGeo){
+          posts.sort(function(a,b){
+            var da=_yPostDist(a),db2=_yPostDist(b);
+            if(da!=null&&db2!=null)return da-db2;
+            if(da!=null)return -1;
+            if(db2!=null)return 1;
+            return 0;
+          });
+        }
+        recent.innerHTML='';
+        posts.slice(0,5).forEach(function(d){recent.appendChild(_makePostCard(d,true));});
+      }).catch(function(){
+        if(recent)recent.innerHTML=_emptyHtml('','불러오기 실패','잠시 후 다시 시도해주세요');
+      });
+    });
+  }
+  _loadNearbyPosts();
 }
 
 /* ── 소장 홈 ── */
@@ -1799,11 +1868,22 @@ function _yLoadGeo(){
     },function(){finish(null);},{enableHighAccuracy:false,timeout:5500,maximumAge:600000});
   });
 }
-/* 공고까지 거리(km). 좌표 없으면 null */
+/* 공고까지 거리(km). 좌표 없으면 null
+   우선순위: loadingLat/Lng → zones[*].lat/lng (첫 번째 유효 좌표) */
 function _yPostDist(p){
   if(!_myGeo)return null;
-  if(typeof p.loadingLat!=='number'||typeof p.loadingLng!=='number')return null;
-  return _yHaversine(_myGeo.lat,_myGeo.lng,p.loadingLat,p.loadingLng);
+  if(typeof p.loadingLat==='number'&&typeof p.loadingLng==='number'){
+    return _yHaversine(_myGeo.lat,_myGeo.lng,p.loadingLat,p.loadingLng);
+  }
+  if(p.zones&&p.zones.length){
+    for(var _zi=0;_zi<p.zones.length;_zi++){
+      var _z=p.zones[_zi];
+      if(typeof _z.lat==='number'&&typeof _z.lng==='number'){
+        return _yHaversine(_myGeo.lat,_myGeo.lng,_z.lat,_z.lng);
+      }
+    }
+  }
+  return null;
 }
 function _yDistLabel(km){
   if(km==null)return '';
@@ -2424,13 +2504,19 @@ function _showPostDetail(d){
     '<div id="apply-area">'+
     // 지도·전화 버튼 (기사용 오픈 공고에만 표시)
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'+
-    (d.zones&&d.zones.length&&d.zones[0].lat?
-      '<button type="button" class="btn-map-zone" onclick="event.stopPropagation();var z=window._detailPost&&window._detailPost.zones&&window._detailPost.zones[0];if(z)window.open(\\'https://map.kakao.com/link/map/\\'+encodeURIComponent(z.name||\\'\\')+\\',\\'+z.lat+\\',\\'+z.lng,\\'_blank\\')" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
-      '지도 구역 보기</button>'
-    :'<button type="button" class="btn-map-zone" onclick="event.stopPropagation();_yToast(\\'구역 위치 정보 없음\\')" style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:.5">'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
-      '지도 구역 보기</button>')+
+    (function(){
+      var _z0=d.zones&&d.zones.length&&d.zones[0];
+      var _mapOnclick;
+      if(_z0&&typeof _z0.lat==='number'){
+        _mapOnclick="event.stopPropagation();window.open('https://map.kakao.com/link/map/"+encodeURIComponent(_z0.name||d.area||'')+",'"+_z0.lat+",'"+_z0.lng+"','_blank')";
+      } else {
+        var _q=(_z0&&(_z0.zipcode||_z0.name))||d.area||d.region||'';
+        _mapOnclick="event.stopPropagation();window.open('https://map.kakao.com/?q="+encodeURIComponent(_q)+"','_blank')";
+      }
+      return '<button type="button" class="btn-map-zone" onclick="'+_mapOnclick+'" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>'+
+        '지도 구역 보기</button>';
+    })()+
     (d.agencyPhone?
       '<button type="button" class="btn-direct-call" onclick="event.stopPropagation();window.location.href=\\'tel:\\'+\\''+_esc(d.agencyPhone||'')+'\\'" style="display:flex;align-items:center;justify-content:center;gap:6px">'+
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6 6l.86-.86a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.72 16.92z"/></svg>'+
