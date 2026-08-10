@@ -3601,6 +3601,45 @@ ${JSON.stringify(postSummary)}
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
       }
 
+      // ── /api/demo-delete-all — 데모 매장 데이터 일괄 삭제
+      if (path === '/api/demo-delete-all' && method === 'POST') {
+        if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token=await getAccessToken(env);
+          const FB_DOC=`projects/mbti-logistics/databases/(default)/documents`;
+          const DEMO_IDS=['demo_cafe','demo_korean','demo_japanese','demo_snack','demo_western','demo_bakery'];
+          const deletes=[];
+          DEMO_IDS.forEach(did=>{
+            deletes.push({delete:`${FB_DOC}/companies/${did}`});
+            [1,2,3].forEach(i=>deletes.push({delete:`${FB_DOC}/members/${did}_m${i}`}));
+            ['01','02','03','04','05','06','07','08','09','10'].forEach(i=>deletes.push({delete:`${FB_DOC}/filo_menus/${did}_m${i}`}));
+            [1,2,3,4,5,6,7,8,9,10].forEach(i=>deletes.push({delete:`${FB_DOC}/inventory/${did}_inv_${i}`}));
+          });
+          const varCols=['filo_orders','filo_sales','attendance'];
+          for(const col of varCols){
+            for(const did of DEMO_IDS){
+              const qRes=await fetch(`https://firestore.googleapis.com/v1/${FB_DOC}:runQuery`,{
+                method:'POST',
+                headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+                body:JSON.stringify({structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},select:{fields:[]}}})
+              });
+              const rows=await qRes.json();
+              rows.forEach(r=>{if(r.document?.name)deletes.push({delete:r.document.name});});
+            }
+          }
+          const batchUrl=`https://firestore.googleapis.com/v1/${FB_DOC}:batchWrite`;
+          const hdrs={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+          let deleted=0;
+          for(let i=0;i<deletes.length;i+=500){
+            await fetch(batchUrl,{method:'POST',headers:hdrs,body:JSON.stringify({writes:deletes.slice(i,i+500)})});
+            deleted+=Math.min(500,deletes.length-i);
+          }
+          return new Response(JSON.stringify({ok:true,deleted}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+      }
+
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         let body;try{body=await request.json();}catch(e){body={};}
