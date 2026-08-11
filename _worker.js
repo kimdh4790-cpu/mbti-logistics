@@ -18175,35 +18175,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         brand: getBrand(d.place_name), lat: parseFloat(d.y), lng: parseFloat(d.x),
         phone: d.phone || '', url: d.place_url || ''
       }));
-        // 카카오 장소 상세 API로 개별 주유소 실시간 가격 병렬 조회
-      const fuelCdMap = { 'LPG': 'K015', '경유': 'D047', '전기': null };
-      const targetCd = fuelCdMap[fuelType] || 'B027'; // 기본: 휘발유
-      const stations = await Promise.all(rawStations.map(async s => {
-        const pid = s.url ? s.url.replace(/.*\//, '') : s.id;
-        const tryUrls = [
-          `https://place.map.kakao.com/api/place/v1/info?cid=${pid}&service=place`,
-          `https://place.map.kakao.com/m/${pid}`,
-          `https://place.map.kakao.com/api/place/v2/detail?pid=${pid}`,
-        ];
-        for (const url of tryUrls) {
-          try {
-            const r = await fetch(url, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 12)', 'Referer': 'https://map.kakao.com/' }
-            });
-            if (!r.ok) continue;
-            const ct = r.headers.get('content-type') || '';
-            if (!ct.includes('json')) continue;
-            const d = await r.json().catch(() => null);
-            if (!d) continue;
-            const oils = d?.basicInfo?.oilInfo || d?.oilInfo || d?.info?.oilInfo || [];
-            if (oils.length > 0) {
-              const match = oils.find(o => (o.oilCd||o.code) === targetCd) || oils.find(o => o.oilCdNm === fuelType) || oils[0];
-              if (match?.price || match?.sellPrice) { s.price = Number(match.price || match.sellPrice); break; }
-            }
-          } catch(e) { continue; }
-        }
-        return s;
-      }));
+        const stations = rawStations;
       const maxD = Math.max(...stations.map(s=>s.dist), 0.001);
       stations.forEach(s => { s.aiScore = Math.round((1-s.dist/maxD)*100); });
       return new Response(JSON.stringify({ ok: true, stations, source: 'kakao', avgPrice }), { headers: corsH });
