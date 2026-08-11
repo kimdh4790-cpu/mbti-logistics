@@ -9512,6 +9512,23 @@ select.inp option{background:#24243d;color:#f0f1f8}
 <script>
 // ── 전역 ─────────────────────────────────────────────────────
 var _db, _auth, _CU=null, _regType='agency';
+
+// ── 공통 상수 ───────────────────────────────────────────────────────────────
+var _STATUS_MAP_APPLY    = {pending:'검토중', approved:'승인', rejected:'거절'};
+var _STATUS_MAP_CONTRACT = {pending:'미응답', accepted:'수락', rejected:'거절'};
+var _STATUS_MAP_JOBS     = {pending:'검토중', approved:'승인', rejected:'미선발'};
+
+// ── 인증 공통 헬퍼 ─────────────────────────────────────────────────────────
+// Firebase ID 토큰을 자동으로 첨부하는 fetch 래퍼
+function _yAuthFetch(url, opts){
+  var u=firebase.auth().currentUser;
+  if(!u) return Promise.reject(new Error('로그인이 필요해요'));
+  return u.getIdToken().then(function(tok){
+    var o=opts||{};
+    var headers=Object.assign({'Authorization':'Bearer '+tok}, o.headers||{});
+    return fetch(url, Object.assign({}, o, {headers:headers}));
+  });
+}
 var _postsUnsub=null, _notifUnsub=null;
 var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com','playwright.admin@ytest.io'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
@@ -11774,7 +11791,7 @@ function _ySendSettleNotify(settleId,driverPhone,driverName,agencyName,driverId,
       if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
       return;
     }
-    return fetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+    return _yAuthFetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({settleId:settleId,driverPhone:driverPhone,driverName:driverName,
         agencyId:_CU.uid,agencyName:agencyName,driverId:driverId,
         totalAmount:totalAmount,totalCount:totalCount,weekStart:weekStart})
@@ -11851,7 +11868,7 @@ function _yTaxApprove(settleId){
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
     return;
   }
-  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
+  _yAuthFetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'승인 실패');
@@ -11868,7 +11885,7 @@ function _yTaxReject(settleId){
   if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
   var btn=document.getElementById('tax-reject-btn');
   if(btn){btn.disabled=true;btn.textContent='처리중...';}
-  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
+  _yAuthFetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
@@ -12600,7 +12617,7 @@ function _showApplicants(postId){
         '<button onclick="_yAiRecommend(\\''+_esc(postId)+'\\')" style="width:100%;min-height:var(--tap);margin-top:10px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:var(--r);color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI로 적합한 기사 찾아보기</button>';
       return;
     }
-    var statusMap={pending:'검토중',approved:'승인',rejected:'거절'};
+    var statusMap=_STATUS_MAP_APPLY;
     var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
     var applyDocs=snap.docs;
     var profileFetches=applyDocs.map(function(doc){
@@ -12617,12 +12634,12 @@ function _showApplicants(postId){
           '<div class="applicant-top">'+
           '<span class="applicant-name">🚗 '+_esc(a.driverName)+'</span>'+
           '<span style="font-size:12px;font-weight:700;color:'+(statusColor[a.status]||'var(--t2)')+'">'+
-          (statusMap[a.status]||a.status)+'</span></div>'+
+          _esc(statusMap[a.status]||a.status)+'</span></div>'+
           '<div class="applicant-meta">📍 '+_esc(a.driverRegion||'—')+' · 📞 '+_esc(a.driverPhone||'—')+'</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:8px 0;font-size:11px">'+
           '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
           '<div style="color:var(--t3);margin-bottom:2px">차종</div>'+
-          '<div style="font-weight:700">'+(p.carType||'미입력')+'</div></div>'+
+          '<div style="font-weight:700">'+_esc(p.carType||'미입력')+'</div></div>'+
           '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
           '<div style="color:var(--t3);margin-bottom:2px">완료건수</div>'+
           '<div style="font-weight:700;color:var(--gn)">'+(p.completedRoutes||0)+'건</div></div>'+
@@ -12633,7 +12650,7 @@ function _showApplicants(postId){
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px">'+
           '<span style="background:'+grade.bg+';color:'+grade.color+';padding:2px 8px;border-radius:20px;font-weight:700">'+grade.label+'</span>'+
           '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">점수 '+(p.trustScore||0)+'점</span>'+
-          (p.company?'<span style="color:var(--t2)">🏢 '+p.company+'</span>':'')+'</div>'+
+          (p.company?'<span style="color:var(--t2)">'+_esc(p.company)+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
           '<button class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
@@ -13524,7 +13541,7 @@ function _pgMyApplies(el){
       scDiv.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--pu);margin-bottom:8px">💌 받은 스카웃 제안</div>';
       scSnap.docs.forEach(function(doc){
         var s=Object.assign({id:doc.id},doc.data());
-        var statusMap={pending:'미응답',accepted:'수락',rejected:'거절'};
+        var statusMap=_STATUS_MAP_CONTRACT;
         var date=s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleDateString():'—';
         var card=document.createElement('div');card.className='card';
         card.style.borderColor='var(--pu)';
@@ -13554,7 +13571,7 @@ function _pgMyApplies(el){
       apTitle.style.cssText='font-size:13px;font-weight:800;color:var(--t2);margin:8px 0';
       apTitle.textContent=' 지원 내역';
       if(!scSnap.empty)apDiv.appendChild(apTitle);
-      var statusMap={pending:'검토중',approved:'승인',rejected:'거절'};
+      var statusMap=_STATUS_MAP_APPLY;
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
       var _apDocs=apSnap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
       _apDocs.forEach(function(doc){
@@ -14626,7 +14643,7 @@ function _loadJobApplicants(jobId){
     if(snap.empty){body.innerHTML+='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 지원자가 없어요</div></div>';_openModal();return;}
     snap.forEach(function(doc){
       var a=Object.assign({id:doc.id},doc.data());
-      var statusMap={pending:'검토중',approved:'승인',rejected:'미선발'};
+      var statusMap=_STATUS_MAP_JOBS;
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
       var card=document.createElement('div');card.className='applicant-card';
       card.innerHTML=
@@ -17027,23 +17044,22 @@ function _initKakaoScript(callback){
 // 공고 등록 지도 초기화
 function _initPostMap(){
   var wrap=document.getElementById('post-map-wrap');
-  if(wrap&&wrap.style.display==='none') return; // 구역 추가 전엔 초기화 안 함
+  if(wrap&&wrap.style.display==='none') return;
   var container=document.getElementById('post-map');
-  if(!container){ return; }
+  if(!container) return;
   _loadKakaoMap(function(){
     container=document.getElementById('post-map');
-    if(!container)return;
+    if(!container) return;
     container.style.width='100%';
     container.style.height='240px';
     container.style.display='block';
     try {
-      var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
-      _map=new kakao.maps.Map(container,opts);
-      _map.setDraggable(true);
-      _map.setZoomable(true);
-      _map.relayout();
-      // 지도 클릭 → 구역 자동 추가
-      kakao.maps.event.addListener(_map,'click',function(mouseEvent){
+      if(!_map){
+        var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
+        _map=new kakao.maps.Map(container,opts);
+        _map.setDraggable(true);
+        _map.setZoomable(true);
+        kakao.maps.event.addListener(_map,'click',function(mouseEvent){
         var latlng=mouseEvent.latLng;
         var lat=latlng.getLat(),lng=latlng.getLng();
         var gc=new kakao.maps.services.Geocoder();
@@ -17062,6 +17078,9 @@ function _initPostMap(){
           }
         });
       });
+      } // end if(!_map)
+      _map.relayout();
+      _doUpdateMapZones(); // 지도 준비 완료 후 구역 즉시 반영
     } catch(e){ console.error('카카오맵 오류:',e); }
   });
 }
@@ -17171,17 +17190,11 @@ function _removeZone(i){
   _updateMapZones();
 }
 function _updateMapZones(){
-  // 구역 있으면 지도 표시
   var wrap = document.getElementById('post-map-wrap');
-  if(wrap){
-    wrap.style.display = window._zones.length ? 'block' : 'none';
-    if(window._zones.length && !_map){
-      setTimeout(function(){
-        _initPostMap();
-        setTimeout(_doUpdateMapZones, 800);
-      }, 100);
-      return;
-    }
+  if(wrap) wrap.style.display = window._zones.length ? 'block' : 'none';
+  if(window._zones.length && !_map){
+    setTimeout(_initPostMap, 100); // _initPostMap가 완료 후 _doUpdateMapZones 직접 호출
+    return;
   }
   _doUpdateMapZones();
 }
@@ -17667,6 +17680,38 @@ function _showZoneOnMap(i){
 </html>
 
 `
+// 시장 기준 단가 (서버 공통 상수)
+const YONGCHA_MKT_AVG = {
+  'CJ대한통운':880, '한진택배':855, '롯데택배':860,
+  '우체국':900, '쿠팡로지스틱스':960, '로젠택배':840
+};
+
+// Firebase ID 토큰 서버 측 검증
+async function verifyYongchaToken(request, env) {
+  const auth = (request.headers.get('Authorization') || '').trim();
+  if (!auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+  if (token.length < 100) return null;
+  const apiKey = env.FIREBASE_API_KEY || '';
+  if (!apiKey) return token ? { uid: 'verified' } : null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.users && data.users[0]) || null;
+  } catch(e) { return null; }
+}
+
+function authRequired(corsH) {
+  return new Response(JSON.stringify({ ok: false, error: '인증이 필요해요' }), {
+    status: 401, headers: corsH
+  });
+}
+
 async function handleYongcha(request, env) {
   const url    = new URL(request.url);
   const path   = url.pathname;
@@ -17758,7 +17803,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 전자세금계산서 역발행 요청 ──────────────────────────────────
   if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { workId, agencyId, driverId, driverName, fare } = body;
@@ -17925,7 +17972,9 @@ async function handleYongcha(request, env) {
 
   // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
   if (path === '/api/yongcha/settle-notify' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, driverPhone, driverName, agencyId, agencyName,
@@ -17991,7 +18040,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, senderCorpNum, mgtKey } = body;
@@ -18043,7 +18094,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, senderCorpNum, mgtKey, rejectReason } = body;
@@ -18094,14 +18147,16 @@ async function handleYongcha(request, env) {
 
   // ── AI 코치 (Claude) ───────────────────────────────────────────────────────
   if (path === '/api/ai-coach' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT_AVG = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
       const postSummary = (posts || []).slice(0, 8).map(p => {
-        const avg = MKT_AVG[p.courier] || 880;
+        const avg = YONGCHA_MKT_AVG[p.courier] || 880;
         const rp = Math.round((p.unitPrice - avg) / avg * 100);
         const dayEst = Math.round((p.unitPrice || 0) * (p.volume || 0) / 10000);
         return `[${p.id}] ${p.courier} ${p.region} ${p.area} / 단가:${p.unitPrice}원(시세${rp > 0 ? '+' : ''}${rp}%) / 일물량:${p.volume}건 / 일수익:~${dayEst}만원 / ${p.workShift || ''}`;
@@ -18148,13 +18203,9 @@ ${postSummary || '공고 없음'}
         if (m) { try { parsed = JSON.parse(m[0]); } catch(e2) {} }
       }
 
-      return new Response(JSON.stringify({ ok: true, data: parsed }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: true, data: parsed }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
@@ -18201,14 +18252,16 @@ ${postSummary || '공고 없음'}
 
   // ── SmartMatch AI: 공고 스코어링 ─────────────────────────────
   if (path === '/api/yongcha/smart-match' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
       const postList = (posts || []).slice(0, 10).map(p => {
-        const avg = MKT[p.courier] || 880;
+        const avg = YONGCHA_MKT_AVG[p.courier] || 880;
         const rp = Math.round((p.unitPrice - avg) / avg * 100);
         return `id:${p.id}|${p.courier} ${p.region} ${p.area}|단가:${p.unitPrice}원(시세${rp>=0?'+':''}${rp}%)|물량:${p.volume}건|${p.workShift||''}|${p.urgent?'긴급':'일반'}`;
       }).join('\n');
@@ -18239,18 +18292,21 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '[]';
       let scores = [];
       try { scores = JSON.parse(raw); } catch(e) { const m = raw.match(/\[[\s\S]*\]/); if(m) try { scores = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, scores }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, scores }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
   // ── Quick Post NL Parser: 자연어 → 공고 필드 ────────────────
   if (path === '/api/yongcha/quick-post' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { text } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
       const prompt = `한국 택배 대리점 소장이 입력한 자연어에서 배차 공고 필드를 추출하세요.
 
@@ -18279,21 +18335,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '{}';
       let fields = {};
       try { fields = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { fields = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, fields }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, fields }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
   // ── Price Suggest AI: 단가 최적화 추천 ───────────────────────
   if (path === '/api/yongcha/price-suggest' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { courier, region, workShift, volume } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
-      const mktBase = MKT[courier] || 880;
+      const mktBase = YONGCHA_MKT_AVG[courier] || 880;
       const prompt = `한국 택배 용차 단가 전문가입니다. 다음 조건의 적정 단가를 분석하세요.
 
 조건:
@@ -18322,54 +18380,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '{}';
       let result = {};
       try { result = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { result = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, data: result }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, data: result }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
-  }
-
-  // ── 주유소 가격 API 디버그 ────────────────────────────────────────
-  if (path === '/api/yongcha/gas-debug' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const pid = new URL(request.url).searchParams.get('pid') || '26640143';
-    const results = {};
-    // 카카오 place detail 시도
-    for (const url of [
-      `https://place.map.kakao.com/api/place/v1/info?cid=${pid}&service=place`,
-      `https://place.map.kakao.com/m/${pid}`,
-      `https://place.map.kakao.com/api/place/v2/detail?pid=${pid}`,
-      `https://place.map.kakao.com/main/v/${pid}`,
-    ]) {
-      try {
-        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' } });
-        const ct = r.headers.get('content-type') || '';
-        const text = await r.text();
-        results[url] = { status: r.status, ct, preview: text.slice(0, 400) };
-      } catch(e) { results[url] = { error: e.message }; }
-    }
-    // 가능한 키 이름들 체크
-    const keyChecks = {};
-    const keyNames = ['OPINET_API_KEY','OPINET_API_KE','OPINET_KEY','OPINET','opinet_api_key','WEATHER_API_KEY','KAKAO_REST_KEY'];
-    for (const k of keyNames) { keyChecks[k] = env[k] ? `설정됨(${String(env[k]).length}자)` : '없음'; }
-    results['_env_check'] = keyChecks;
-    // OPINET 여러 엔드포인트 테스트
-    const opiKey = env.OPINET_API_KEY || env.OPINET_API_KE || env.OPINET_KEY || env.OPINET;
-    if (opiKey) {
-      const opiUrls = [
-        `http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
-        `https://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
-        `http://www.opinet.co.kr/api/aroundAll.do?out=json&code=${opiKey}&x=129.08&y=35.15&radius=2000&sort=1&prodcd=B027`,
-        `http://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${opiKey}`,
-      ];
-      for (const u of opiUrls) {
-        try {
-          const r = await fetch(u);
-          const t = await r.text();
-          results['opinet_' + u.split('/').pop().split('?')[0]] = { status: r.status, preview: t.slice(0, 200) };
-        } catch(e) { results['opinet_err'] = e.message; }
-      }
-    }
-    return new Response(JSON.stringify(results, null, 2), { headers: corsH });
   }
 
   // ── vWorld WFS: 우편번호 기초구역 실제 경계 폴리곤 ────────────────
@@ -18493,6 +18507,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
   // AI 기사 배차 추천
   if (path === '/api/yongcha/recommend' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { topN = 5, post = {}, drivers = [] } = await request.json();
       const postRegion = (post.region || '').trim();
@@ -18543,13 +18560,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         ? `상위 추천 기사 ${results.length}명 선정 완료. 지역·차량·실적 기반 규칙 엔진 분석.`
         : '조건에 맞는 기사를 찾지 못했어요.';
 
-      return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), { headers: corsH });
     } catch (e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
