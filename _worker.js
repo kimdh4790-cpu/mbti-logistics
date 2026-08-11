@@ -1760,6 +1760,8 @@ async function acceptExchange(){
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/api/get-members') {
+        const _gmUser = await verifyFirebaseToken(request);
+        if (!_gmUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const dealerId = new URL(request.url).searchParams.get('dealerId');
         if (!dealerId) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
@@ -1780,6 +1782,9 @@ async function acceptExchange(){
         return new Response(JSON.stringify({ok:true,members:docs}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/admin/dedup-members' && method === 'POST') {
+        const _ddUser = await verifyFirebaseToken(request);
+        const _ddAdmins = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+        if (!_ddUser || !_ddAdmins.includes(_ddUser.email)) return new Response(JSON.stringify({error:'슈퍼관리자 전용'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const did = body.dealerId;
@@ -3515,7 +3520,7 @@ ${JSON.stringify(postSummary)}
         try {
           let body; try{body=await request.json();}catch(e){body={};}
           const did = body.did || 'haemul_gwangan_2026';
-          if (body.secret !== 'filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if (body.secret !== (env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token = await getAccessToken(env);
           function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
           function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
@@ -3605,7 +3610,7 @@ ${JSON.stringify(postSummary)}
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         try {
           let body; try{body=await request.json();}catch(e){body={};}
-          if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if(body.secret!==(env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           function fsv2(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv2)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv2(x)]))}};return{nullValue:null};}
           function fsd2(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv2(v)]))}}}
