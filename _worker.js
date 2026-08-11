@@ -17151,8 +17151,28 @@ function _geocodeLoadingAddr(){
 // vWorld는 한국 IP에서만 접근 가능. 브라우저(한국 사용자)에서 직접 호출.
 var _vwKey=null;
 function _fetchZoneBoundary(zip,cb){
+  // vWorld 실패 시 Kakao Places/Geocoder 폴백
+  function _kakaoPsSearch(){
+    _loadKakaoMap(function(){
+      var ps=new kakao.maps.services.Places();
+      ps.keywordSearch(zip,function(data,status){
+        if(status===kakao.maps.services.Status.OK&&data.length){
+          var lat=parseFloat(data[0].y),lng=parseFloat(data[0].x);
+          cb({ok:true,coords:[],zipName:data[0].address_name||zip,lat:lat,lng:lng});
+        } else {
+          var gc=new kakao.maps.services.Geocoder();
+          gc.addressSearch(zip,function(res,st2){
+            if(st2===kakao.maps.services.Status.OK&&res.length){
+              var a=res[0].address||{};
+              cb({ok:true,coords:[],zipName:a.region_3depth_name||a.region_2depth_name||zip,lat:parseFloat(res[0].y),lng:parseFloat(res[0].x)});
+            } else { cb({ok:false}); }
+          });
+        }
+      },{size:1});
+    });
+  }
   function _call(key){
-    if(!key){cb({ok:false});return;}
+    if(!key){_kakaoPsSearch();return;}
     var url='https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature'
       +'&typeName=lt_c_basidco&key='+encodeURIComponent(key)
       +"&CQL_FILTER=bas_id='"+zip+"'&outputFormat=application/json&srsName=EPSG:4326";
@@ -17160,7 +17180,7 @@ function _fetchZoneBoundary(zip,cb){
       .then(function(r){return r.json();})
       .then(function(d){
         var features=d.features||[];
-        if(!features.length){cb({ok:false});return;}
+        if(!features.length){_kakaoPsSearch();return;}
         var geom=features[0].geometry;
         var rings=geom.type==='MultiPolygon'?geom.coordinates[0][0]:
                   geom.type==='Polygon'?geom.coordinates[0]:[];
@@ -17169,16 +17189,15 @@ function _fetchZoneBoundary(zip,cb){
         var zipName=props.sig_nm||props.emd_nm||props.dong_nm||zip;
         cb({ok:true,coords:coords,zipName:zipName});
       })
-      .catch(function(){cb({ok:false});});
+      .catch(function(){_kakaoPsSearch();});
   }
   if(_vwKey!==null){_call(_vwKey);return;}
-  // Firebase ID 토큰으로 인증된 요청만 키 반환
   var u=firebase.auth().currentUser;
   var _getKey=function(tok){
     fetch('/api/yongcha/vworld-key',{headers:tok?{'Authorization':'Bearer '+tok}:{}})
       .then(function(r){return r.json();})
       .then(function(d){_vwKey=d.key||'';_call(_vwKey);})
-      .catch(function(){_vwKey='';cb({ok:false});});
+      .catch(function(){_vwKey='';_call('');});
   };
   if(u){u.getIdToken().then(_getKey).catch(function(){_getKey('');});}
   else{_getKey('');}
@@ -17214,18 +17233,25 @@ function _addZoneByZip(){
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
   if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
   _fetchZoneBoundary(zip,function(bd){
-    if(bd.ok&&bd.coords&&bd.coords.length){
-      var sumLat=0,sumLng=0,n=bd.coords.length;
-      bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
-      var lat=sumLat/n,lng=sumLng/n;
-      var zoneName=bd.zipName||zip;
-      window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords});
-      _renderZoneTags();
-      _updateMapZones();
-      if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 지도에 표시됐어요';}
-      document.getElementById('pw-zip-input').value='';
+    if(bd.ok){
+      var lat,lng;
+      if(bd.coords&&bd.coords.length){
+        var sumLat=0,sumLng=0,n=bd.coords.length;
+        bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+        lat=sumLat/n;lng=sumLng/n;
+      } else {lat=bd.lat;lng=bd.lng;}
+      if(typeof lat==='number'&&typeof lng==='number'){
+        var zoneName=bd.zipName||zip;
+        window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords||[]});
+        _renderZoneTags();
+        _updateMapZones();
+        if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 추가됐어요';}
+        document.getElementById('pw-zip-input').value='';
+      } else {
+        if(st){st.style.color='var(--rd)';st.textContent='구역 위치를 확인할 수 없어요. 주소 검색을 이용해주세요.';}
+      }
     } else {
-      if(st){st.style.color='var(--rd)';st.textContent='우편번호 구역을 찾을 수 없어요. 도로명 주소 검색을 이용해주세요.';}
+      if(st){st.style.color='var(--rd)';st.textContent='구역을 찾을 수 없어요. 도로명 주소 검색을 이용해주세요.';}
     }
   });
 }
