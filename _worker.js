@@ -8731,16 +8731,27 @@ select.inp option{background:#24243d;color:#f0f1f8}
    [헤드: 택배사·상태] [본문: 구역→단가→게이지→태그→보장] [푸터: 대리점·액션]
    ══════════════════════════════════════════════ */
 .pcard{position:relative;display:block;width:100%;text-align:left;overflow:hidden;
-  background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r-lg);
-  margin-bottom:12px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.5);
+  background:var(--bg2);border:1.5px solid var(--bd2);border-radius:var(--r-lg);
+  margin-bottom:12px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),border-color .2s,box-shadow .2s}
-.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rail,var(--bd2))}
-.pcard:active{transform:scale(.985);border-color:var(--bd2);box-shadow:none}
-.pcard.is-open{--rail:var(--ac)}
-.pcard.is-urgent{--rail:var(--rd)}
-.pcard.is-matched{--rail:var(--gn)}
-.pcard.is-closed{--rail:var(--bd2);opacity:.46}
-.pcard.is-premium{--rail:var(--pu);border-color:var(--puln)}
+.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rail,var(--bd2));border-radius:2px 0 0 2px}
+.pcard:active{transform:scale(.983);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.pcard.is-open{--rail:var(--ac);border-color:rgba(79,120,245,.35);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(79,120,245,.06)}
+.pcard.is-urgent{--rail:var(--rd);border-color:rgba(239,68,68,.4);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(239,68,68,.07)}
+.pcard.is-matched{--rail:var(--gn);border-color:rgba(16,185,129,.35);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(16,185,129,.06)}
+.pcard.is-closed{--rail:var(--bd2);opacity:.44}
+.pcard.is-premium{--rail:var(--pu);border-color:rgba(139,92,246,.4);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(139,92,246,.07)}
+/* 수평 페이지네이션 */
+.posts-viewport{overflow:hidden}
+.posts-rail{display:flex;will-change:transform}
+.posts-page{min-width:100%;flex-shrink:0}
+.posts-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:0 2px}
+.posts-nav-btn{min-height:44px;padding:0 18px;border:1.5px solid var(--bd);border-radius:var(--r-full);background:var(--bg2);color:var(--t2);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+.posts-nav-btn:not(:disabled):active{background:var(--ac);color:#000;border-color:var(--ac)}
+.posts-nav-btn:disabled{opacity:.28;cursor:default}
+.posts-dots{display:flex;justify-content:center;gap:5px;margin:10px 0 4px}
+.posts-dot{width:6px;height:6px;border-radius:50%;background:var(--bd2);transition:all .25s}
+.posts-dot.on{width:22px;border-radius:3px;background:var(--ac)}
 
 .pc-ribbon{display:flex;align-items:center;justify-content:center;gap:5px;
   background:linear-gradient(90deg,var(--pu),#7c5cf5);color:#fff;font-size:10.5px;font-weight:800;
@@ -11355,13 +11366,87 @@ function _renderPostList(){
     return;
   }
 
-  // 큰 목록은 DocumentFragment 로 한 번에 삽입 (리플로우 최소화)
-  var frag=document.createDocumentFragment();
-  filtered.forEach(function(d){ frag.appendChild(_makePostCard(d)); });
-  list.innerHTML=_yDupNotice(dd.hidden,'공고');
-  list.appendChild(frag);
+  var PER=5;
+  _postsTotalPages=Math.ceil(filtered.length/PER);
+  _postsPage=0;
+
+  var dupNotice=_yDupNotice(dd.hidden,'공고');
+
+  // 5건 이하 — 페이지네이션 없이 단순 렌더
+  if(_postsTotalPages<=1){
+    var f2=document.createDocumentFragment();
+    filtered.forEach(function(d){f2.appendChild(_makePostCard(d));});
+    list.innerHTML=dupNotice;
+    list.appendChild(f2);
+    return;
+  }
+
+  // 5건 초과 — 수평 페이지 슬라이더
+  list.innerHTML=dupNotice;
+
+  // 상단 네비
+  var nav=document.createElement('div');
+  nav.className='posts-nav';
+  nav.innerHTML=
+    '<button class="posts-nav-btn" id="posts-prev" onclick="_postsGoPrev()" disabled>◀ 이전</button>'+
+    '<span id="posts-ind" style="font-size:13px;font-weight:800;color:var(--t2)">1 / '+_postsTotalPages+'</span>'+
+    '<button class="posts-nav-btn" id="posts-next" onclick="_postsGoNext()">다음 ▶</button>';
+  list.appendChild(nav);
+
+  // 뷰포트
+  var vp=document.createElement('div');
+  vp.className='posts-viewport';
+  var rail=document.createElement('div');
+  rail.className='posts-rail';
+  rail.id='posts-rail';
+  for(var pi=0;pi<filtered.length;pi+=PER){
+    var pg=document.createElement('div');
+    pg.className='posts-page';
+    filtered.slice(pi,pi+PER).forEach(function(d){pg.appendChild(_makePostCard(d));});
+    rail.appendChild(pg);
+  }
+  vp.appendChild(rail);
+  list.appendChild(vp);
+
+  // 하단 점 인디케이터
+  var dots=document.createElement('div');
+  dots.className='posts-dots';
+  dots.innerHTML=Array.from({length:_postsTotalPages}).map(function(_,i){
+    return '<span class="posts-dot'+(i===0?' on':'')+'"></span>';
+  }).join('');
+  list.appendChild(dots);
+
+  // 터치 스와이프 초기화
+  setTimeout(function(){_postsInitSwipe(vp);},50);
 }
 
+
+var _postsPage=0,_postsTotalPages=0;
+function _postsSetPage(p,animate){
+  _postsPage=Math.max(0,Math.min(p,_postsTotalPages-1));
+  var rail=document.getElementById('posts-rail');
+  if(rail){
+    rail.style.transition=animate===false?'none':'transform .28s ease';
+    rail.style.transform='translateX(-'+(_postsPage*100)+'%)';
+  }
+  var prev=document.getElementById('posts-prev'),next=document.getElementById('posts-next');
+  if(prev)prev.disabled=_postsPage<=0;
+  if(next)next.disabled=_postsPage>=_postsTotalPages-1;
+  var ind=document.getElementById('posts-ind');
+  if(ind)ind.textContent=(_postsPage+1)+' / '+_postsTotalPages;
+  document.querySelectorAll('.posts-dot').forEach(function(d,i){d.classList.toggle('on',i===_postsPage);});
+}
+function _postsGoPrev(){_postsSetPage(_postsPage-1,true);}
+function _postsGoNext(){_postsSetPage(_postsPage+1,true);}
+function _postsInitSwipe(vp){
+  if(!vp)return;
+  var sx=0;
+  vp.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+  vp.addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>50){if(dx<0)_postsGoNext();else _postsGoPrev();}
+  },{passive:true});
+}
 
 var _prefs=null; // driver 맞춤 추천 조건 (_CU.preferences에서 로딩)
 
@@ -11515,12 +11600,14 @@ function _makePostCard(d,mini){
     ? '<span class="dist-chip'+(myKm<=15?' near':'')+'">내 위치에서 '+_yDistLabel(myKm)+'</span>'
     : '';
 
-  // 카카오맵 링크
+  // 카카오맵 링크 — 대리점·기사 모두 항상 노출
   var mapHref='';
   if(d.zones&&d.zones.length&&d.zones[0].lat){
     mapHref='https://map.kakao.com/link/map/'+encodeURIComponent(d.zones[0].name||d.area||'')+','+d.zones[0].lat+','+d.zones[0].lng;
   } else if(d.lat&&d.lng){
     mapHref='https://map.kakao.com/link/map/'+encodeURIComponent(d.area||'')+','+d.lat+','+d.lng;
+  } else {
+    mapHref='https://map.kakao.com/?q='+encodeURIComponent((d.region||'')+(d.area?' '+d.area:''));
   }
 
   var isDriver=_CU&&_CU.type==='driver';
