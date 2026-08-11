@@ -13163,8 +13163,8 @@ function _pgPostWrite(el){
   '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
     '<input id="pw-zip-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리" '+
       'style="flex:1.2;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
-      'oninput="this.value=this.value.replace(/[^0-9]/g,\'\').slice(0,5)" '+
-      'onkeydown="if(event.key===\'Enter\')_addZoneByZip()">'+
+      'oninput="_fzipInput(this)" '+
+      'onkeydown="_fzipKey(event)">'+
     '<input id="pw-zip-name" type="text" placeholder="구역명 (예: A구역)" '+
       'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none">'+
     '<button onclick="_addZoneByZip()" style="padding:12px 16px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
@@ -17154,6 +17154,8 @@ function _geocodeLoadingAddr(){
 
 // 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
+function _fzipInput(el){el.value=el.value.replace(/[^0-9]/g,'').slice(0,5);}
+function _fzipKey(ev){if(ev.key==='Enter')_addZoneByZip();}
 function _addZoneByZip(){
   var zip=(document.getElementById('pw-zip-input').value||'').trim();
   var name=(document.getElementById('pw-zip-name').value||'').trim();
