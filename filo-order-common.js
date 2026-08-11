@@ -368,9 +368,10 @@ function _openMdlCommon(m){
     body:JSON.stringify({name:m.name,lang:_lang})})
    .then(function(r){return r.json();})
    .then(function(d){
-    var t=d.translated||m.name;
-    _tlCache[ck]=t;
-    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=t;
+    var t=d.translated;
+    var valid=t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t);
+    _tlCache[ck]=valid?t:'';
+    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=valid?t:'';
    }).catch(function(){if(trEl)trEl.textContent='';});
   }
   // 설명 번역

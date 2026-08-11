@@ -530,11 +530,20 @@ function _filoPageMenuMgmt(el){
  var hdr=document.createElement('div');
  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px';
  hdr.innerHTML='<div><div class="page-title">메뉴 관리</div><div class="page-sub">카테고리·메뉴 추가/수정/삭제 및 이미지 등록</div></div>';
+ var btnGroup=document.createElement('div');
+ btnGroup.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+ var trBtn=document.createElement('button');
+ trBtn.className='btn btn-sm';
+ trBtn.style.cssText='background:rgba(8,145,178,.12);color:#0891b2;border:1px solid rgba(8,145,178,.3);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer';
+ trBtn.textContent='번역 일괄생성';
+ trBtn.onclick=function(){_filoBatchTranslate(did,trBtn);};
+ btnGroup.appendChild(trBtn);
  var addBtn=document.createElement('button');
  addBtn.className='btn btn-primary btn-sm';
  addBtn.textContent='+ 메뉴 추가';
  addBtn.onclick=function(){_filoMenuAddModal(did,null,null);};
- hdr.appendChild(addBtn);
+ btnGroup.appendChild(addBtn);
+ hdr.appendChild(btnGroup);
  wrap.appendChild(hdr);
 
  /* 카테고리 관리 */
@@ -1453,4 +1462,60 @@ function _filoSeedDefaultMenusManual(){
   if(n>0) _filoToast('기본 메뉴 '+n+'개 등록 완료');
   else _filoToast('이미 메뉴가 있어 건너뛰었습니다');
  }).catch(function(e){_filoToast(e.message);});
+}
+
+/* ── 번역 일괄 생성 ── */
+function _filoBatchTranslate(did, btn){
+ if(btn){btn.disabled=true;btn.textContent='번역 중...';}
+ var langs=['en','zh','ja'];
+ _db.collection('filo_menus').where('dealerId','==',did).get()
+ .then(function(snap){
+  var menus=snap.docs.map(function(d){return Object.assign({_id:d.id},d.data());});
+  var needTr=menus.filter(function(m){
+   var nt=m.nameTranslations||{};
+   return !nt.en||!nt.zh||!nt.ja;
+  });
+  if(!needTr.length){
+   if(btn){btn.disabled=false;btn.textContent='번역 일괄생성';}
+   _filoToast('모든 메뉴에 번역이 이미 있습니다');
+   return;
+  }
+  _filoToast(needTr.length+'개 메뉴 번역 시작...');
+  var idx=0;
+  function next(){
+   if(idx>=needTr.length){
+    if(btn){btn.disabled=false;btn.textContent='번역 완료';}
+    _filoToast('번역 완료!');
+    return;
+   }
+   var m=needTr[idx++];
+   var nt=Object.assign({},m.nameTranslations||{});
+   var missing=langs.filter(function(l){return !nt[l];});
+   var p=Promise.resolve();
+   missing.forEach(function(lang){
+    p=p.then(function(){
+     return fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:m.name,lang:lang})})
+     .then(function(r){return r.json();})
+     .then(function(d){
+      var t=d.translated;
+      if(t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t))nt[lang]=t;
+     }).catch(function(){});
+    }).then(function(){return new Promise(function(res){setTimeout(res,200);});});
+   });
+   p.then(function(){
+    return _db.collection('filo_menus').doc(m._id).update({nameTranslations:nt});
+   }).then(function(){
+    if(btn)btn.textContent='번역 중... ('+idx+'/'+needTr.length+')';
+    setTimeout(next,100);
+   }).catch(function(e){
+    console.error(e);
+    setTimeout(next,100);
+   });
+  }
+  next();
+ }).catch(function(e){
+  _filoToast('오류: '+e.message);
+  if(btn){btn.disabled=false;btn.textContent='번역 일괄생성';}
+ });
 }
