@@ -10,7 +10,7 @@ const SCRATCH = '/tmp/claude-0/-home-user-mbti-logistics/183edbc6-7b8c-505e-80e9
 const VIDEOS = [
   {
     name: 'filo',
-    html: path.join(SCRATCH, 'filo-video3.html'),
+    html: path.join(SCRATCH, 'filo-video4.html'),
     out: path.join(SCRATCH, 'filo-bexco2026.mp4'),
     videoDir: path.join(SCRATCH, 'vid_filo'),
     slides: 7,
