@@ -16967,20 +16967,40 @@ function _updateMapZones(){
 function _doUpdateMapZones(){
   if(!_map) return;
   (_markers||[]).forEach(function(m){m.setMap(null);});
-  _markers = [];
+  _markers=[];
   (window._circles||[]).forEach(function(c){c.setMap(null);});
-  window._circles = [];
-  window._zones.forEach(function(z){
-    var pos = new kakao.maps.LatLng(z.lat, z.lng);
-    var m = new kakao.maps.Marker({position:pos, map:_map});
-    _markers.push(m);
-    var c = new kakao.maps.Circle({center:pos,radius:600,strokeWeight:2,strokeColor:'#00d4aa',strokeOpacity:.8,fillColor:'#00d4aa',fillOpacity:.12,map:_map});
-    window._circles.push(c);
+  window._circles=[];
+  (window._zonePolygons||[]).forEach(function(p){p.setMap(null);});
+  window._zonePolygons=[];
+  (window._zoneLabels||[]).forEach(function(l){l.setMap(null);});
+  window._zoneLabels=[];
+  var COLORS=['#4f78f5','#10b981','#f59e0b','#f97316','#8b5cf6'];
+  window._zones.forEach(function(z,i){
+    var color=COLORS[i%COLORS.length];
+    // 우편번호 기초구역 근사 직사각형 (약 500×550m)
+    var dlat=0.0025,dlng=0.003;
+    var poly=new kakao.maps.Polygon({
+      path:[
+        new kakao.maps.LatLng(z.lat-dlat,z.lng-dlng),
+        new kakao.maps.LatLng(z.lat+dlat,z.lng-dlng),
+        new kakao.maps.LatLng(z.lat+dlat,z.lng+dlng),
+        new kakao.maps.LatLng(z.lat-dlat,z.lng+dlng)
+      ],
+      strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
+      fillColor:color,fillOpacity:.13,map:_map
+    });
+    window._zonePolygons.push(poly);
+    var label=new kakao.maps.CustomOverlay({
+      position:new kakao.maps.LatLng(z.lat,z.lng),
+      content:'<div style="background:'+color+';color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+(z.zipcode&&!/^MAP/.test(z.zipcode)?z.zipcode+' ':'')+(z.name||'')+'</div>',
+      map:_map,yAnchor:1.6
+    });
+    window._zoneLabels.push(label);
   });
   if(window._zones.length){
-    var last = window._zones[window._zones.length-1];
-    _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
-    _map.setLevel(5);
+    var last=window._zones[window._zones.length-1];
+    _map.setCenter(new kakao.maps.LatLng(last.lat,last.lng));
+    _map.setLevel(4);
     _map.relayout();
   }
 }
@@ -17027,8 +17047,8 @@ function _selectAddr(idx){
   window._lastLng=lng;
 }
 
-// 공고 상세 지도 v3 — 배송구역 원 + 스타일 핀
-function _showDetailMap(lat,lng,name){
+// 공고 상세 지도 v3 — 우편번호 구역 직사각형 표시
+function _showDetailMap(lat,lng,name,zipcode){
   if(typeof lat!=='number'||typeof lng!=='number'||isNaN(lat)||isNaN(lng))return;
   _loadKakaoMap(function(){
     var container=document.getElementById('detail-map');
@@ -17037,32 +17057,42 @@ function _showDetailMap(lat,lng,name){
     if(ph)ph.style.display='none';
     container.style.display='block';
     var pos=new kakao.maps.LatLng(lat,lng);
-    var radius=window._detailMapRadius||600;
-    // 반경에 맞는 줌 레벨 자동 조정
-    var lvl=radius<=350?4:radius<=600?5:6;
-    window._detailMap=new kakao.maps.Map(container,{center:pos,level:lvl});
-    // 배송구역 원 (투명 청색)
-    window._detailCircle=new kakao.maps.Circle({
-      center:pos,radius:radius,
-      strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.9,
-      fillColor:'#4f78f5',fillOpacity:.1,
+    if(!window._detailMap){
+      window._detailMap=new kakao.maps.Map(container,{center:pos,level:4});
+    } else {
+      window._detailMap.setCenter(pos);
+      window._detailMap.setLevel(4);
+    }
+    // 기존 오버레이 제거
+    if(window._detailPoly){window._detailPoly.setMap(null);window._detailPoly=null;}
+    if(window._detailLabel){window._detailLabel.setMap(null);window._detailLabel=null;}
+    // 우편번호 기초구역 직사각형 (약 500×550m)
+    var dlat=0.0025,dlng=0.003;
+    window._detailPoly=new kakao.maps.Polygon({
+      path:[
+        new kakao.maps.LatLng(lat-dlat,lng-dlng),
+        new kakao.maps.LatLng(lat+dlat,lng-dlng),
+        new kakao.maps.LatLng(lat+dlat,lng+dlng),
+        new kakao.maps.LatLng(lat-dlat,lng+dlng)
+      ],
+      strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.95,
+      fillColor:'#4f78f5',fillOpacity:.12,
       map:window._detailMap
     });
-    // 커스텀 핀 (글로우)
-    var pinHtml='<div style="position:relative;display:flex;flex-direction:column;align-items:center">'+
-      '<div style="width:36px;height:36px;background:linear-gradient(135deg,#4f78f5,#00d4aa);border-radius:50% 50% 50% 0;'+
-        'transform:rotate(-45deg);box-shadow:0 4px 16px rgba(79,120,245,.6);border:2.5px solid rgba(255,255,255,.9)">'+
-      '</div>'+
-      '<div style="position:absolute;top:9px;left:9px;width:18px;height:18px;background:#fff;border-radius:50%;"></div>'+
-    '</div>';
-    var customOverlay=new kakao.maps.CustomOverlay({
-      position:pos,content:pinHtml,yAnchor:1
-    });
-    customOverlay.setMap(window._detailMap);
-    // 구역 이름 오버레이 (지도 위 좌상단 배지는 HTML 레이어로 처리)
+    // 우편번호 라벨
+    var lbl=(zipcode&&!/^MAP/.test(zipcode)?zipcode+' ':'')+(name||'');
+    if(lbl){
+      window._detailLabel=new kakao.maps.CustomOverlay({
+        position:pos,
+        content:'<div style="background:#4f78f5;color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+_esc(lbl)+'</div>',
+        map:window._detailMap,yAnchor:1.6
+      });
+    }
     var badge=document.getElementById('zone-map-badge');
     if(badge&&name)badge.textContent=name;
     window._detailMarker=null;
+    window._detailCircle=null;
+    window._detailMap.relayout();
   });
 }
 
@@ -17383,32 +17413,14 @@ function _showZoneOnMap(i){
     t.style.color = j===i ? '#fff' : 'var(--ac)';
   });
   if(typeof z.lat==='number'&&typeof z.lng==='number'){
-    _loadKakaoMap(function(){
-      var pos = new kakao.maps.LatLng(z.lat, z.lng);
-      if(window._detailMap){
-        window._detailMap.setCenter(pos);
-        window._detailMap.setLevel(5);
-        if(window._detailMarker) window._detailMarker.setPosition(pos);
-        if(window._detailCircle) window._detailCircle.setCenter(pos);
-      } else {
-        _showDetailMap(z.lat,z.lng,z.name||'');
-      }
-    });
+    _showDetailMap(z.lat,z.lng,z.name||'',z.zipcode||'');
   } else if(z.name||z.zipcode){
     var q=(z.zipcode||'')+' '+(z.name||'');
     _loadKakaoMap(function(){
       var gc=new kakao.maps.services.Geocoder();
       gc.addressSearch(q.trim(),function(res,status){
         if(status===kakao.maps.services.Status.OK&&res[0]){
-          var lat2=parseFloat(res[0].y),lng2=parseFloat(res[0].x);
-          if(window._detailMap){
-            var pos=new kakao.maps.LatLng(lat2,lng2);
-            window._detailMap.setCenter(pos);window._detailMap.setLevel(5);
-            if(window._detailMarker)window._detailMarker.setPosition(pos);
-            if(window._detailCircle)window._detailCircle.setCenter(pos);
-          } else {
-            _showDetailMap(lat2,lng2,z.name||q.trim());
-          }
+          _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),z.name||q.trim(),z.zipcode||'');
         }
       });
     });
