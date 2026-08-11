@@ -18585,6 +18585,37 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
+  // ── vWorld 진단 엔드포인트 (일시적 디버그용) ─────────────────────
+  if (path === '/api/yongcha/vworld-debug' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = new URL(request.url).searchParams.get('zip') || '48267';
+    const vKey = env.VWORLD_API_KEY || '';
+    const results = [];
+    // 시도 1: Data API attrFilter
+    try {
+      const u = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`;
+      const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
+      const txt = await r.text();
+      results.push({ method: 'data-api-attrFilter', status: r.status, bodySnippet: txt.slice(0, 500) });
+    } catch(e) { results.push({ method: 'data-api-attrFilter', error: e.message }); }
+    // 시도 2: WFS CQL_FILTER
+    try {
+      const cql = encodeURIComponent(`bas_id='${zip}'`);
+      const u = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
+      const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
+      const txt = await r.text();
+      results.push({ method: 'wfs-cql', status: r.status, bodySnippet: txt.slice(0, 500) });
+    } catch(e) { results.push({ method: 'wfs-cql', error: e.message }); }
+    // 시도 3: Nominatim
+    try {
+      const u = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&polygon_geojson=1&format=json&limit=1`;
+      const r = await fetch(u, { headers: { 'User-Agent': 'yongcha-app/1.0' }, signal: AbortSignal.timeout(8000) });
+      const txt = await r.text();
+      results.push({ method: 'nominatim', status: r.status, bodySnippet: txt.slice(0, 500) });
+    } catch(e) { results.push({ method: 'nominatim', error: e.message }); }
+    return new Response(JSON.stringify({ zip, vKeyLen: vKey.length, results }, null, 2), { headers: corsH });
+  }
+
   // ── 우편번호 기초구역 경계 + 중심좌표 ────────────────────────────
   if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
