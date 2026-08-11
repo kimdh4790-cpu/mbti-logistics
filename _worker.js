@@ -18598,40 +18598,139 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
 
       let centLat = null, centLng = null, zipName = '', coords = [];
+
+      // 헬퍼: GeoJSON geometry → coords 배열
+      function _geomCoords(geom) {
+        if (!geom) return [];
+        if (geom.type === 'Polygon') return geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
+        if (geom.type === 'MultiPolygon') return geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+        return [];
+      }
+      // 헬퍼: vWorld feature에서 bas_id 추출 (Data API: field[] 배열 또는 WFS: 플랫 객체)
+      function _basId(feat) {
+        const p = feat?.properties || {};
+        if (p.bas_id) return String(p.bas_id).trim();
+        if (Array.isArray(p.field)) { const f = p.field.find(x => x.key === 'bas_id'); if (f) return String(f.value).trim(); }
+        return '';
+      }
+      function _basNm(feat) {
+        const p = feat?.properties || {};
+        if (p.bas_nm) return p.bas_nm;
+        if (p.emd_nm) return p.emd_nm;
+        if (Array.isArray(p.field)) { const f = p.field.find(x => x.key === 'bas_nm' || x.key === 'emd_nm'); if (f) return f.value; }
+        return '';
+      }
+
       const vKey = env.VWORLD_API_KEY;
 
-      // ① 좌표 제공 시: INTERSECTS 공간쿼리 → 해당 점이 포함된 기초구역 폴리곤 (가장 정확)
-      // Daum 위젯 oncomplete 주소를 Kakao Geocoder로 변환한 좌표 → 반드시 올바른 구역 내 점
-      if (!isNaN(qLat) && !isNaN(qLng) && vKey) {
+      // ① vWorld INTERSECTS 공간쿼리 (좌표 제공 시 — 가장 정확)
+      if (!coords.length && !isNaN(qLat) && !isNaN(qLng) && vKey) {
         try {
           const sCql = encodeURIComponent(`INTERSECTS(geometry,POINT(${qLng} ${qLat}))`);
           const sUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${sCql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
-          const sRes = await fetch(sUrl, { signal: AbortSignal.timeout(8000) });
-          const sData = await sRes.json();
-          const sFs = sData?.features || [];
-          if (sFs.length) {
-            const geom = sFs[0]?.geometry;
-            if (geom) {
-              if (geom.type === 'Polygon') coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
-              else if (geom.type === 'MultiPolygon') coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
-            }
-            if (coords.length) {
-              const p = sFs[0]?.properties || {};
-              const retBasId = (p.bas_id || p.BAS_ID || '').toString().trim();
-              if (retBasId && retBasId !== zip) {
-                // INTERSECTS가 인접 구역 반환 → 폐기하고 bas_id 필터로 재시도
-                coords = [];
-              } else {
-                centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
-                centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
-                zipName = p.bas_nm || p.emd_nm || '';
+          const sRes = await fetch(sUrl, { signal: AbortSignal.timeout(6000) });
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            const sFs = sData?.features || [];
+            if (sFs.length) {
+              const c = _geomCoords(sFs[0]?.geometry);
+              const rid = _basId(sFs[0]);
+              if (c.length && (!rid || rid === zip)) {
+                coords = c;
+                centLat = c.reduce((s,x) => s+x.lat,0)/c.length;
+                centLng = c.reduce((s,x) => s+x.lng,0)/c.length;
+                zipName = _basNm(sFs[0]);
               }
             }
           }
         } catch(_) {}
       }
 
-      // ② INTERSECTS 실패(또는 좌표 없음) 시: Kakao REST API — zone_no 정확 매칭
+      // ② vWorld Data API — bbox로 후보 조회 후 bas_id 매칭 (IP 차단 우회 가능성)
+      if (!coords.length && !isNaN(qLat) && !isNaN(qLng) && vKey) {
+        try {
+          const d = 0.006;
+          const bbox = `${qLng-d},${qLat-d},${qLng+d},${qLat+d}`;
+          const bUrl = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&bbox=${bbox}&size=20`;
+          const bRes = await fetch(bUrl, { signal: AbortSignal.timeout(8000) });
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            const bFs = bData?.response?.result?.featureCollection?.features || bData?.features || [];
+            const match = bFs.find(f => _basId(f) === zip) || bFs[0];
+            if (match) {
+              const c = _geomCoords(match?.geometry);
+              if (c.length) {
+                coords = c;
+                centLat = c.reduce((s,x) => s+x.lat,0)/c.length;
+                centLng = c.reduce((s,x) => s+x.lng,0)/c.length;
+                zipName = _basNm(match);
+              }
+            }
+          }
+        } catch(_) {}
+      }
+
+      // ③ vWorld Data API attrFilter (bas_id 직접 필터)
+      if (!coords.length && vKey) {
+        try {
+          const aUrl = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`;
+          const aRes = await fetch(aUrl, { signal: AbortSignal.timeout(8000) });
+          if (aRes.ok) {
+            const aData = await aRes.json();
+            const aFs = aData?.response?.result?.featureCollection?.features || aData?.features || [];
+            if (aFs.length) {
+              const c = _geomCoords(aFs[0]?.geometry);
+              if (c.length) {
+                coords = c;
+                if (!centLat) { centLat = c.reduce((s,x) => s+x.lat,0)/c.length; centLng = c.reduce((s,x) => s+x.lng,0)/c.length; }
+                zipName = zipName || _basNm(aFs[0]);
+              }
+            }
+          }
+        } catch(_) {}
+      }
+
+      // ④ vWorld WFS CQL_FILTER bas_id
+      if (!coords.length && vKey) {
+        try {
+          const cql = encodeURIComponent(`bas_id='${zip}'`);
+          const wUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
+          const wRes = await fetch(wUrl, { signal: AbortSignal.timeout(8000) });
+          if (wRes.ok) {
+            const wData = await wRes.json();
+            const wFs = wData?.features || [];
+            if (wFs.length) {
+              const c = _geomCoords(wFs[0]?.geometry);
+              if (c.length) {
+                coords = c;
+                if (!centLat) { centLat = c.reduce((s,x) => s+x.lat,0)/c.length; centLng = c.reduce((s,x) => s+x.lng,0)/c.length; }
+                zipName = zipName || _basNm(wFs[0]);
+              }
+            }
+          }
+        } catch(_) {}
+      }
+
+      // ⑤ Nominatim (OpenStreetMap) — 글로벌 접근 가능, API 키 불필요
+      if (!coords.length) {
+        try {
+          const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&polygon_geojson=1&format=json&limit=1`;
+          const nRes = await fetch(nUrl, { headers: { 'User-Agent': 'yongcha-delivery-app/1.0 (contact@yongcha.app)' }, signal: AbortSignal.timeout(8000) });
+          if (nRes.ok) {
+            const nData = await nRes.json();
+            if (nData.length && nData[0].geojson) {
+              const c = _geomCoords(nData[0].geojson);
+              if (c.length) {
+                coords = c;
+                if (!centLat) { centLat = parseFloat(nData[0].lat); centLng = parseFloat(nData[0].lon); }
+                zipName = zipName || (nData[0].display_name || '').split(',')[0].trim();
+              }
+            }
+          }
+        } catch(_) {}
+      }
+
+      // ⑥ Kakao REST zone_no 매칭 (중심좌표만 — 폴리곤 없음)
       if (!centLat) {
         const kakaoKey = env.KAKAO_REST_KEY;
         if (kakaoKey) {
@@ -18639,12 +18738,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
             const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
             const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(5000) });
             const kData = await kRes.json();
-            const docs = (kData.documents || []).filter(d =>
-              (d.address?.zone_no || d.road_address?.zone_no || '') === zip
-            );
-            if (docs.length > 0) {
-              centLat = docs.reduce((s,d) => s + parseFloat(d.y), 0) / docs.length;
-              centLng = docs.reduce((s,d) => s + parseFloat(d.x), 0) / docs.length;
+            const docs = (kData.documents || []).filter(d => (d.address?.zone_no || d.road_address?.zone_no || '') === zip);
+            if (docs.length) {
+              centLat = docs.reduce((s,d) => s+parseFloat(d.y),0)/docs.length;
+              centLng = docs.reduce((s,d) => s+parseFloat(d.x),0)/docs.length;
               const ra = docs[0].road_address || {};
               zipName = zipName || [ra.region_1depth_name, ra.region_2depth_name, ra.region_3depth_name].filter(Boolean).join(' ');
             }
@@ -18652,33 +18749,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         }
       }
 
-      // ③ 마지막 폴백: vWorld bas_id 필터 (경계 폴리곤 + 중심좌표)
-      if (!coords.length && vKey) {
-        const cql = encodeURIComponent(`bas_id='${zip}'`);
-        const vAttempts = [
-          `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
-          `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`,
-        ];
-        for (const vUrl of vAttempts) {
-          try {
-            const vRes = await fetch(vUrl, { signal: AbortSignal.timeout(8000) });
-            const vData = await vRes.json();
-            const fs = vData?.features || vData?.response?.result?.featureCollection?.features || [];
-            if (!fs.length) continue;
-            const geom = fs[0]?.geometry;
-            if (!geom) continue;
-            if (geom.type === 'Polygon') coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
-            else if (geom.type === 'MultiPolygon') coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
-            if (coords.length && !centLat) {
-              centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
-              centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
-              const p = fs[0]?.properties || {};
-              zipName = zipName || p.bas_nm || p.emd_nm || '';
-            }
-            break;
-          } catch(_) {}
-        }
-      }
+      // ⑦ 최후 폴백: 클라이언트가 보낸 좌표를 중심으로 사용
+      if (!centLat && !isNaN(qLat) && !isNaN(qLng)) { centLat = qLat; centLng = qLng; }
 
       if (!centLat) return new Response(JSON.stringify({ ok: false, error: '좌표 없음' }), { headers: corsH });
       return new Response(JSON.stringify({ ok: true, coords, zipName, lat: centLat, lng: centLng }), { headers: corsH });
