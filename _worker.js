@@ -13160,9 +13160,9 @@ function _pgPostWrite(el){
   '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
     '<input id="pw-zip-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
       'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
-      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" '+
+      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" onblur="_fzipInput(this)" '+
       'onkeydown="_fzipKey(event)">'+
-    '<button onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
+    '<button type="button" ontouchstart="_zipCapture()" onmousedown="_zipCapture()" onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
   '</div>'+
   '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin-bottom:6px;min-height:16px"></div>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
@@ -17186,12 +17186,28 @@ function _fetchZoneBoundary(zip,cb){
 
 // 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
-function _fzipNorm(s){return(s||'').replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}).replace(/[^0-9]/g,'').slice(0,5);}
-function _fzipInput(el){var v=_fzipNorm(el.value);if(el.value!==v)el.value=v;}
+var _zipVal=''; // 버튼 탭 직전 포착된 우편번호 (IME 우회용)
+function _fzipNorm(s){
+  var r='';
+  for(var i=0;i<(s||'').length;i++){
+    var cc=(s||'').charCodeAt(i);
+    if(cc>=0xFF10&&cc<=0xFF19)r+=String.fromCharCode(cc-0xFEE0); // 전각→반각
+    else if(cc>=48&&cc<=57)r+=s[i]; // 반각 숫자
+  }
+  return r.slice(0,5);
+}
+function _fzipInput(el){var v=_fzipNorm(el.value);_zipVal=v;if(el.value!==v)el.value=v;}
 function _fzipKey(ev){if(ev.key==='Enter')_addZoneByZip();}
+function _zipCapture(){
+  // ontouchstart/onmousedown — 포커스 이동 전 값 포착
+  var el=document.getElementById('pw-zip-input');
+  if(el){var v=_fzipNorm(el.value);if(v.length)_zipVal=v;}
+}
 function _addZoneByZip(){
   var el=document.getElementById('pw-zip-input');
-  var zip=_fzipNorm(el?el.value:'');
+  var fromEl=_fzipNorm(el?el.value:'');
+  var zip=fromEl.length===5?fromEl:(_zipVal.length===5?_zipVal:fromEl||_zipVal);
+  _zipVal='';
   var st=document.getElementById('zip-lookup-st');
   if(!/^\d{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
