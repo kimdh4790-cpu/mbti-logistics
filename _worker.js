@@ -15433,7 +15433,25 @@ function _yInitFCM(){
   })
   .then(function(){ if(_yFcmReg)console.info('[FCM] 준비 완료'); })
   .catch(function(e){
-    // 등록 실패해도 앱 기능은 그대로 — 조용히 실패하지 말고 원인은 남긴다
+    var code=e&&(e.code||e.name);
+    // SecurityError(18): 브라우저에 VAPID키 다른 기존 구독 잔존 → 언서브 후 재시도
+    if((code===18||code==='SecurityError')&&_yFcmReg){
+      _yFcmReg.pushManager.getSubscription().then(function(sub){
+        return sub?sub.unsubscribe():Promise.resolve();
+      }).then(function(){
+        var msg2;try{msg2=firebase.messaging();}catch(ex){return;}
+        return msg2.getToken({vapidKey:_Y_VAPID,serviceWorkerRegistration:_yFcmReg});
+      }).then(function(token){
+        if(!token)return;
+        return _db.collection('yongcha_fcm_tokens').doc(_CU.uid).set({
+          token:token,userId:_CU.uid,
+          type:_CU.type,region:_CU.region||'',
+          updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }).then(function(){console.info('[FCM] 재구독 완료');})
+      .catch(function(e2){console.warn('[FCM] 재시도 실패:',(e2&&(e2.code||e2.message))||e2);});
+      return;
+    }
     console.warn('[FCM] 등록/토큰 실패:',(e&&(e.code||e.message))||e);
   });
 }
