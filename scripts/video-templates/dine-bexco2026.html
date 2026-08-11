@@ -169,23 +169,41 @@ canvas{position:absolute;inset:0;pointer-events:none}
 .mem-promo{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:8px;padding:7px 10px;font-size:9px;color:#6d28d9;font-weight:600;display:flex;align-items:center;gap:6px;flex-shrink:0;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
 .mem-promo.show{opacity:1;transform:translateY(0)}
 
-/* S4 Integration */
+/* S4 Attendance */
 .int-hd{height:42px;flex-shrink:0;background:var(--n);display:flex;align-items:flex-end;padding:0 14px 9px;justify-content:space-between}
 .int-hd-t{font-size:12px;font-weight:800;color:#fff}
 .int-body{flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
-.int-section{font-size:8.5px;font-weight:800;letter-spacing:2px;color:#94a3b8;margin-bottom:2px;opacity:0;transition:opacity .5s}
-.int-section.vis{opacity:1}
-.icard{background:#f8fafc;border-radius:8px;padding:8px 10px;border:1px solid #e8edf3;display:flex;align-items:center;justify-content:space-between;opacity:0}
-.icard.vis{animation:slideUp .4s both}
-.icard.flash{animation:kflash .7s both}
-.icard-l{display:flex;align-items:center;gap:8px}
-.icard-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.icard-nm{font-size:10px;font-weight:700;color:var(--n)}
-.icard-desc{font-size:8px;color:#94a3b8;margin-top:1px}
-.icard-status{display:flex;align-items:center;gap:4px;font-size:8.5px;font-weight:700;opacity:0;transition:opacity .4s}
-.icard-status.vis{opacity:1}
+/* attendance summary */
+.att-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex-shrink:0}
+.att-chip{border-radius:7px;padding:5px 6px;text-align:center;opacity:0}
+.att-chip.vis{animation:slideUp .35s both}
+.att-chip-num{font-size:16px;font-weight:900}
+.att-chip-lbl{font-size:7px;color:#64748b;margin-top:1px}
+.att-chip.ok{background:#f0fdf4}.att-chip.ok .att-chip-num{color:#15803d}
+.att-chip.warn{background:#fffbeb}.att-chip.warn .att-chip-num{color:#b45309}
+.att-chip.danger{background:#fef2f2}.att-chip.danger .att-chip-num{color:#b91c1c}
+.att-chip.done{background:#f8fafc}.att-chip.done .att-chip-num{color:#64748b}
+/* employee rows */
+.emp-list{flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.emp-row{background:#f8fafc;border-radius:8px;padding:6px 8px;border:1px solid #e8edf3;display:flex;align-items:center;gap:6px;opacity:0}
+.emp-row.vis{animation:slideUp .4s both}
+.emp-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+.emp-name{font-size:10px;font-weight:700;color:var(--n)}
+.emp-store{font-size:8px;color:#94a3b8}
+.emp-time{margin-left:auto;text-align:right}
+.emp-time-v{font-size:10px;font-weight:800;color:var(--n)}
+.emp-pay{font-size:8px;color:#6d28d9;font-weight:700}
+.emp-badge{font-size:7.5px;font-weight:700;padding:2px 6px;border-radius:5px;flex-shrink:0}
+.emp-badge.on{background:#dcfce7;color:#15803d}
+.emp-badge.late{background:#fef9c3;color:#a16207}
+.emp-badge.out{background:#f1f5f9;color:#64748b}
+/* payroll total */
+.pay-bar{background:linear-gradient(135deg,#ede9fe,#f5f3ff);border-radius:8px;padding:8px 10px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;opacity:0;transition:opacity .5s}
+.pay-bar.vis{opacity:1}
+.pay-bar-label{font-size:8.5px;color:#6d28d9;font-weight:700}
+.pay-bar-num{font-size:14px;font-weight:900;color:#4c1d95}
+.pay-bar-sub{font-size:7.5px;color:#94a3b8;margin-top:1px}
 .icard-status.on{color:#10b981}
-.icard-status.rdy{color:#3b82f6}
 .icard-dot{width:6px;height:6px;border-radius:50%;animation:blink 1.2s infinite}
 
 /* BG panels */
@@ -420,26 +438,26 @@ canvas{position:absolute;inset:0;pointer-events:none}
 </div>
 </div>
 
-<!-- S4 연동 & 확장 -->
+<!-- S4 FILO 근태·급여 연동 -->
 <div class="slide" id="s4">
 <div class="fs">
   <div class="fl">
     <div class="fn">FEATURE 04</div>
-    <div class="fh">FILO와 함께<br><em>완벽하게 연동</em></div>
-    <div class="fb">FILO QR 주문 · POS · 재고 · 급여와 DINE 본사 관리가 하나로 연결됩니다.</div>
+    <div class="fh">FILO 근태 연동<br><em>급여 자동 계산</em></div>
+    <div class="fb">직원이 FILO QR로 출퇴근하면 DINE 본사에서 전 매장 근태가 실시간 집계되고, 급여가 자동 계산됩니다.</div>
     <ul class="fps">
-      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>FILO QR 주문</b> → DINE 매출 자동 집계</span></li>
-      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>POS 결제</b> → 포인트 적립 자동 처리</span></li>
-      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>재고 알림</b> → 본사 발주 승인 시스템 연동</span></li>
-      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>급여 데이터</b> → 인건비 분석에 자동 반영</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>FILO QR 출퇴근</b> → 근태 데이터 자동 수집</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">시급 × 근무시간 → <b>급여 자동 계산</b></span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">전 매장 <b>인건비 vs 매출 비율</b> 리포트</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">카카오 <b>급여명세서</b> 클릭 한 번으로 전체 발송</span></li>
     </ul>
   </div>
   <div class="fr bg-g">
     <div class="gc" style="width:280px;height:280px;top:-50px;right:-50px;background:rgba(201,168,76,.2)"></div>
-    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(249,115,22,.12)"></div>
+    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(109,40,217,.12)"></div>
     <div class="ai-badge" id="s4-ai">
       <div class="ai-pulse"></div>
-      <span class="ai-txt">연동 상태 확인 중</span>
+      <span class="ai-txt">근태 집계 중</span>
       <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
     </div>
     <div class="mw">
@@ -447,17 +465,49 @@ canvas{position:absolute;inset:0;pointer-events:none}
         <div class="pisland"></div>
         <div class="pscr">
           <div class="int-hd">
-            <div class="int-hd-t">연동 서비스</div>
-            <div style="font-size:8.5px;color:rgba(255,255,255,.4)">실시간 동기화</div>
+            <div class="int-hd-t">전 매장 근태 현황</div>
+            <div style="font-size:8.5px;color:rgba(255,255,255,.4)">오늘 08.11</div>
           </div>
           <div class="int-body">
-            <div class="int-section" id="s4-sec1">FILO 연동</div>
-            <div class="icard" id="s4-ic1"><div class="icard-l"><div class="icard-icon" style="background:#dbeafe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div><div class="icard-nm">QR 테이블 주문</div><div class="icard-desc">284건 오늘 처리</div></div></div><div class="icard-status on" id="s4-st1"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
-            <div class="icard" id="s4-ic2"><div class="icard-l"><div class="icard-icon" style="background:#ffedd5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><div class="icard-nm">태블릿 POS</div><div class="icard-desc">결제 데이터 실시간</div></div></div><div class="icard-status on" id="s4-st2"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
-            <div class="icard" id="s4-ic3"><div class="icard-l"><div class="icard-icon" style="background:#ede9fe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg></div><div><div class="icard-nm">재고 관리</div><div class="icard-desc">발주 승인 대기 2건</div></div></div><div class="icard-status on" id="s4-st3"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
-            <div class="int-section" id="s4-sec2" style="margin-top:4px">외부 연동</div>
-            <div class="icard" id="s4-ic4"><div class="icard-l"><div class="icard-icon" style="background:#fef9c3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="icard-nm">카카오 알림톡</div><div class="icard-desc">영수증·쿠폰 발송</div></div></div><div class="icard-status on" id="s4-st4"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
-            <div class="icard" id="s4-ic5"><div class="icard-l"><div class="icard-icon" style="background:#ecfdf5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="icard-nm">세금계산서</div><div class="icard-desc">홈택스 자동 발행 준비</div></div></div><div class="icard-status rdy" id="s4-st5"><div class="icard-dot" style="background:#3b82f6"></div>준비중</div></div>
+            <div class="att-summary">
+              <div class="att-chip ok" id="s4-ac0"><div class="att-chip-num">18</div><div class="att-chip-lbl">출근 중</div></div>
+              <div class="att-chip warn" id="s4-ac1"><div class="att-chip-num">2</div><div class="att-chip-lbl">지각</div></div>
+              <div class="att-chip danger" id="s4-ac2"><div class="att-chip-num">1</div><div class="att-chip-lbl">결근</div></div>
+              <div class="att-chip done" id="s4-ac3"><div class="att-chip-num">7</div><div class="att-chip-lbl">퇴근</div></div>
+            </div>
+            <div class="emp-list">
+              <div class="emp-row" id="s4-er0">
+                <div class="emp-av" style="background:linear-gradient(135deg,#6d28d9,#a78bfa)">김</div>
+                <div><div class="emp-name">김민준</div><div class="emp-store">광안점</div></div>
+                <div class="emp-time"><div class="emp-time-v">5h 30m</div><div class="emp-pay">오늘 ₩61,600</div></div>
+                <div class="emp-badge on">출근</div>
+              </div>
+              <div class="emp-row" id="s4-er1">
+                <div class="emp-av" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">이</div>
+                <div><div class="emp-name">이수진</div><div class="emp-store">서면점</div></div>
+                <div class="emp-time"><div class="emp-time-v">4h 10m</div><div class="emp-pay">오늘 ₩46,700</div></div>
+                <div class="emp-badge on">출근</div>
+              </div>
+              <div class="emp-row" id="s4-er2">
+                <div class="emp-av" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">박</div>
+                <div><div class="emp-name">박태양</div><div class="emp-store">해운대점</div></div>
+                <div class="emp-time"><div class="emp-time-v">3h 45m</div><div class="emp-pay">오늘 ₩41,900</div></div>
+                <div class="emp-badge late">지각</div>
+              </div>
+              <div class="emp-row" id="s4-er3">
+                <div class="emp-av" style="background:linear-gradient(135deg,#10b981,#34d399)">최</div>
+                <div><div class="emp-name">최유리</div><div class="emp-store">남포점</div></div>
+                <div class="emp-time"><div class="emp-time-v">8h 00m</div><div class="emp-pay">오늘 ₩89,600</div></div>
+                <div class="emp-badge out">퇴근</div>
+              </div>
+            </div>
+            <div class="pay-bar" id="s4-pay">
+              <div>
+                <div class="pay-bar-label">이번 달 전 매장 인건비</div>
+                <div class="pay-bar-sub">매출 대비 28.3%</div>
+              </div>
+              <div class="pay-bar-num">₩12.4M</div>
+            </div>
           </div>
         </div>
         <div class="pbar"></div>
@@ -477,7 +527,7 @@ canvas{position:absolute;inset:0;pointer-events:none}
     <div class="of" id="of0"><div class="of-ic" style="background:rgba(20,184,166,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="of-lbl">다점포 관리</div></div>
     <div class="of" id="of1"><div class="of-ic" style="background:rgba(59,130,246,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="of-lbl">매출 분석</div></div>
     <div class="of" id="of2"><div class="of-ic" style="background:rgba(109,40,217,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="of-lbl">회원 CRM</div></div>
-    <div class="of" id="of3"><div class="of-ic" style="background:rgba(201,168,76,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0d080" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><div class="of-lbl">FILO 연동</div></div>
+    <div class="of" id="of3"><div class="of-ic" style="background:rgba(201,168,76,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0d080" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="of-lbl">근태·급여 연동</div></div>
   </div>
   <div class="outro-cta" id="outro-cta"><div class="cta-btn">filo.ai.kr 에서 무료 체험</div></div>
   <div class="outro-dm" id="outro-dm">BEXCO 2026 &nbsp;·&nbsp; 8월 20–22일 &nbsp;·&nbsp; 부산 외식 혁신관</div>
@@ -584,19 +634,14 @@ var slideCallbacks = {
     aiBadge('s3-ai', '쿠폰 발송 완료 — 23명', 700, 3000);
   },
   s4: function() {
-    T(function() {
-      document.getElementById('s4-sec1').classList.add('vis');
-      document.getElementById('s4-sec2').classList.add('vis');
-    }, 300);
-    var ids = ['s4-ic1','s4-ic2','s4-ic3','s4-ic4','s4-ic5'];
-    ids.forEach(function(id, i) { appear(document.getElementById(id), 500 + i * 140); });
-    var stIds = ['s4-st1','s4-st2','s4-st3','s4-st4','s4-st5'];
-    stIds.forEach(function(id, i) { appear(document.getElementById(id), 1400 + i * 150); });
-    T(function() {
-      var ic1 = document.getElementById('s4-ic1');
-      if (ic1) ic1.classList.add('flash');
-    }, 3300);
-    aiBadge('s4-ai', '5개 서비스 연동 정상', 700, 2800);
+    ['s4-ac0','s4-ac1','s4-ac2','s4-ac3'].forEach(function(id, i) {
+      appear(document.getElementById(id), 300 + i * 120);
+    });
+    ['s4-er0','s4-er1','s4-er2','s4-er3'].forEach(function(id, i) {
+      appear(document.getElementById(id), 800 + i * 180);
+    });
+    T(function(){ document.getElementById('s4-pay').classList.add('vis'); }, 2400);
+    aiBadge('s4-ai', '근태 집계 완료 — 28명', 600, 2800);
   },
   s5: function() {
     appear(document.getElementById('outro-h'), 200);

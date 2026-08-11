@@ -196,6 +196,12 @@ body{width:1280px;height:720px;overflow:hidden;background:#fff;font-family:'Appl
 #s4 .pc-notify.vis{opacity:1;}
 /* Confetti */
 #s4 canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+#s4 .pickup-notif{position:absolute;top:32px;left:12px;right:12px;background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:20;opacity:0;transform:translateY(-12px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
+#s4 .pickup-notif.vis{opacity:1;transform:translateY(0);}
+#s4 .pn-bell{width:28px;height:28px;background:#c9a84c;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#s4 .pn-bell svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;}
+#s4 .pn-app{font-size:8px;color:#999;font-weight:700;letter-spacing:.5px;}
+#s4 .pn-msg{font-size:11px;color:#08101f;font-weight:700;margin-top:1px;}
 
 /* ======================== S5 KITCHEN KDS ======================== */
 #s5{background:#f0f0f0;}
@@ -284,15 +290,15 @@ body{width:1280px;height:720px;overflow:hidden;background:#fff;font-family:'Appl
       <div class="stats-row" id="s0stats">
         <div class="stat-box">
           <div class="stat-num" id="sn0">0</div>
-          <div class="stat-unit">도입 매장 수</div>
+          <div class="stat-unit">QR 스캔 → 주문 완료 (초)</div>
         </div>
         <div class="stat-box">
-          <div class="stat-num" id="sn1">0</div>
-          <div class="stat-unit">일 평균 주문 건</div>
+          <div class="stat-num" id="sn1">₩0</div>
+          <div class="stat-unit">초기 설치비</div>
         </div>
         <div class="stat-box">
           <div class="stat-num" id="sn2">0</div>
-          <div class="stat-unit">앱 가입 직원 수</div>
+          <div class="stat-unit">급여 정산 소요 (분)</div>
         </div>
       </div>
       <div class="chip-row" id="s0chips">
@@ -492,9 +498,9 @@ body{width:1280px;height:720px;overflow:hidden;background:#fff;font-family:'Appl
             <div class="feat-num">무제한</div>
           </div>
           <div class="feat-card" id="s3fc3">
-            <div class="feat-cname">다국어 지원</div>
-            <div class="feat-cdesc">한/영/중/일 4개 언어 메뉴 자동 번역</div>
-            <div class="feat-num">4개 언어</div>
+            <div class="feat-cname">픽업 알림</div>
+            <div class="feat-cdesc">음식 준비 완료 시 고객 폰에 즉시 Push 알림 자동 발송</div>
+            <div class="feat-num">자동 발송</div>
           </div>
         </div>
       </div>
@@ -537,7 +543,11 @@ body{width:1280px;height:720px;overflow:hidden;background:#fff;font-family:'Appl
         </div>
       </div>
       <div class="phone-confirm" id="s4pc">
-        <div class="pc-screen">
+        <div class="pc-screen" style="position:relative;">
+          <div class="pickup-notif" id="s4pn">
+            <div class="pn-bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+            <div><div class="pn-app">FILO 픽업 알림</div><div class="pn-msg">주문 #247 준비 완료! 받으러 오세요</div></div>
+          </div>
           <div class="pc-success">
             <div class="pc-check" id="s4ck">
               <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -743,9 +753,9 @@ var cbs={
     show('s0logo',50);show('s0sub',200);show('s0line',400);show('s0tag',600);
     T(function(){
       document.getElementById('s0stats').classList.add('vis');
-      countUp(document.getElementById('sn0'),320,1200,'개');
-      countUp(document.getElementById('sn1'),1840,1400,'건');
-      countUp(document.getElementById('sn2'),2600,1600,'명');
+      countUp(document.getElementById('sn0'),47,1000,'초');
+      // sn1 is ₩0 (fixed text, no countUp)
+      countUp(document.getElementById('sn2'),5,1000,'분');
     },900);
     show('s0chips',1200);show('s0bx',1500);
   },
@@ -783,6 +793,7 @@ var cbs={
     },1000);
     show('s4pc',200);
     show('s4ck',1200);show('s4ot',1500);show('s4on',1700);show('s4no',1900);
+    show('s4pn',2800);
     // confetti
     T(function(){runConfetti();},1200);
   },
