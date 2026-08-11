@@ -17247,7 +17247,20 @@ function _addZoneByZip(){
         if(st){st.style.color='var(--rd)';st.textContent='구역 위치를 확인할 수 없어요. 주소 검색을 이용해주세요.';}
       }
     } else {
-      if(st){st.style.color='var(--rd)';st.textContent='구역을 찾을 수 없어요. 도로명 주소 검색을 이용해주세요.';}
+      var fbLat=parseFloat(document.getElementById('pw-loadingLat')?document.getElementById('pw-loadingLat').value:'');
+      var fbLng=parseFloat(document.getElementById('pw-loadingLng')?document.getElementById('pw-loadingLng').value:'');
+      if(!isNaN(fbLat)&&!isNaN(fbLng)){
+        window._zones.push({zipcode:zip,name:zip,lat:fbLat,lng:fbLng,boundary:[]});
+        _renderZoneTags();
+        _updateMapZones();
+        if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역이 추가됐어요';}
+        document.getElementById('pw-zip-input').value='';
+      } else {
+        window._zones.push({zipcode:zip,name:zip,lat:null,lng:null,boundary:[]});
+        _renderZoneTags();
+        if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역 태그가 추가됐어요';}
+        document.getElementById('pw-zip-input').value='';
+      }
     }
   });
 }
