@@ -18070,18 +18070,18 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const apiUrl = `https://apis.data.go.kr/1613000/VhclInspecdInsrnInfo/getVhclInspecdInsrnInfo?serviceKey=${encodeURIComponent(apiKey)}&carNo=${encodeURIComponent(carNum)}&_type=json`;
       const resp = await fetch(apiUrl);
       const text = await resp.text();
-      let dueDate = null, debugInfo = null;
+      let dueDate = null, debugInfo = { _raw: text.slice(0, 800) };
       try {
         const data = JSON.parse(text);
         const item = data?.response?.body?.items?.item;
         const items = Array.isArray(item) ? item : (item ? [item] : []);
         const first = items[0] || null;
-        debugInfo = first;
+        debugInfo = { _parsed: first, _body: data?.response?.body };
         dueDate = first?.inspcExprde || first?.inspcValidde || first?.inspValidDate || first?.exprde || null;
       } catch(jsonErr) {
         const m = text.match(/<inspcExprde>(\d+)<\/inspcExprde>/) || text.match(/<inspcValidde>(\d+)<\/inspcValidde>/) || text.match(/<exprde>(\d+)<\/exprde>/);
         if (m) dueDate = m[1];
-        debugInfo = { _xml: text.slice(0, 500) };
+        debugInfo = { _xml: text.slice(0, 800) };
       }
       return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate, _debug: debugInfo }), { headers: corsH });
     } catch(e) {
