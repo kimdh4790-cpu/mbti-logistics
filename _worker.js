@@ -17214,7 +17214,7 @@ function _addZoneByZip(){
   var zip=fromEl.length===5?fromEl:(_zipVal.length===5?_zipVal:fromEl||_zipVal);
   _zipVal='';
   var st=document.getElementById('zip-lookup-st');
-  if(!/^\d{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
+  if(!/^\d{5}$/.test(zip)){_yToast('el:'+(el?'O':'X')+' raw=['+(el?el.value:'')+'] norm=['+fromEl+'] sv=['+_zipVal.slice(0,6)+']');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
   if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
