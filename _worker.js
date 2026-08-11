@@ -12170,20 +12170,22 @@ function _showPostDetail(d){
 
   // 배송지역 주유소 로드
   if(isDriver){
-    var _gLat=null,_gLng=null;
-    if(typeof d.loadingLat==='number'){_gLat=d.loadingLat;_gLng=d.loadingLng;}
-    else if(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'){_gLat=d.zones[0].lat;_gLng=d.zones[0].lng;}
-    if(_gLat!=null){
-      setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations',_CU.carFuelType);},300);
+    // loadingLat은 픽업 거점 좌표 (신뢰 가능). zone.lat/lng는 잘못 저장될 수 있어 사용 안 함
+    if(typeof d.loadingLat==='number'){
+      setTimeout(function(){_yLoadGasStations(d.loadingLat,d.loadingLng,'detail-gas-stations',_CU.carFuelType);},300);
     } else {
       var _gAddr=(d.area||d.region||'').replace(/\s*\d+노선.*$/,'').trim();
-      if(_gAddr&&window.kakao&&kakao.maps&&kakao.maps.services){
-        var _gc2=new kakao.maps.services.Geocoder();
-        _gc2.addressSearch(_gAddr,function(res,status){
-          if(status===kakao.maps.services.Status.OK&&res[0]){
-            _yLoadGasStations(parseFloat(res[0].y),parseFloat(res[0].x),'detail-gas-stations',_CU.carFuelType);
-          }
-        });
+      if(_gAddr){
+        setTimeout(function(){
+          _loadKakaoMap(function(){
+            var _gc2=new kakao.maps.services.Geocoder();
+            _gc2.addressSearch(_gAddr,function(res,status){
+              if(status===kakao.maps.services.Status.OK&&res[0]){
+                _yLoadGasStations(parseFloat(res[0].y),parseFloat(res[0].x),'detail-gas-stations',_CU.carFuelType);
+              }
+            });
+          });
+        },300);
       }
     }
   }
@@ -17352,36 +17354,17 @@ function _showDetailMap(lat,lng,name,zipcode){
         });
       } else { _useStored(); }
     }
-    // 카카오 지오코더로 우편번호 직접 검색 (vWorld zip_no 필드 없는 문제 우회)
-    function _geocodeZip(cb){
-      var gc2=new kakao.maps.services.Geocoder();
-      gc2.addressSearch(zipcode,function(res,status){
-        if(status===kakao.maps.services.Status.OK&&res[0]){
-          cb(new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x)));
-        } else { cb(null); }
-      });
-    }
     if(hasZip){
-      // 1차: vWorld 폴리곤 (centroid 계산)
+      // 1차: vWorld 폴리곤 centroid, 실패 시 바로 region 지오코딩(_fallback)
+      // ※ addressSearch(zipcode)는 동명 장소 오검색 위험 → 사용 안 함
       fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
           var sumLat=0,sumLng=0,n=bd.coords.length;
           bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
           _initAt(new kakao.maps.LatLng(sumLat/n,sumLng/n));
           _drawPoly(bd.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);}));
-        } else {
-          // 2차: 카카오 지오코더로 우편번호 검색
-          _geocodeZip(function(p){
-            if(p){_initAt(p);_approxRect(p);}
-            else{_fallback();}
-          });
-        }
-      }).catch(function(){
-        _geocodeZip(function(p){
-          if(p){_initAt(p);_approxRect(p);}
-          else{_fallback();}
-        });
-      });
+        } else { _fallback(); }
+      }).catch(function(){_fallback();});
     } else {
       var pos=new kakao.maps.LatLng(lat,lng);
       _initAt(pos);_approxRect(pos);
@@ -17705,19 +17688,11 @@ function _showZoneOnMap(i){
     t.style.background = j===i ? 'var(--ac)' : 'transparent';
     t.style.color = j===i ? '#fff' : 'var(--ac)';
   });
-  if(typeof z.lat==='number'&&typeof z.lng==='number'){
-    _showDetailMap(z.lat,z.lng,z.name||'',z.zipcode||'');
-  } else if(z.name||z.zipcode){
-    var q=(z.zipcode||'')+' '+(z.name||'');
-    _loadKakaoMap(function(){
-      var gc=new kakao.maps.services.Geocoder();
-      gc.addressSearch(q.trim(),function(res,status){
-        if(status===kakao.maps.services.Status.OK&&res[0]){
-          _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),z.name||q.trim(),z.zipcode||'');
-        }
-      });
-    });
-  }
+  // 항상 _showDetailMap으로 위임 — zipcode 있으면 vWorld centroid → region fallback
+  // addressSearch(zipcode+name) 직접 호출 금지 (동명 장소 오검색 위험)
+  var zLat=typeof z.lat==='number'?z.lat:NaN;
+  var zLng=typeof z.lng==='number'?z.lng:NaN;
+  _showDetailMap(zLat,zLng,z.name||'',z.zipcode||'');
 }
 </script>
 </body>
