@@ -17216,43 +17216,40 @@ function _addZoneByZip(){
       var zipcode=data.zonecode||zip;
       var dongName=(data.bname2||data.bname||data.bname1||'');
       var zoneName=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
-      if(st){st.style.color='var(--t3)';st.textContent='구역 경계 조회중...';}
-      function _applyZone(lat,lng,boundary){
-        var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
-        if(dup2){_yToast('이미 추가된 우편번호예요');return;}
-        var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:boundary||[]};
-        window._zones.push(newZone);
-        _renderZoneTags();
-        _updateMapZones();
-        if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
-        document.getElementById('pw-zip-input').value='';
-        var areaInp=document.getElementById('pw-area');
-        if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-      }
-      // 1) vWorld WFS → 정확한 우편번호 구역 경계 + 폴리곤 중심좌표
-      _fetchZoneBoundary(zipcode,function(bd){
-        if(bd.ok&&typeof bd.lat==='number'&&typeof bd.lng==='number'){
-          _applyZone(bd.lat,bd.lng,bd.coords||[]);
-        } else {
-          // 2) vWorld 실패 → Kakao Geocoder (동 이름 → 특정 주소 순)
-          _loadKakaoMap(function(){
-            var gc=new kakao.maps.services.Geocoder();
-            var dongQuery=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
-            gc.addressSearch(dongQuery,function(res,status){
-              if(status===kakao.maps.services.Status.OK){
-                _applyZone(parseFloat(res[0].y),parseFloat(res[0].x),[]);
-              } else {
-                gc.addressSearch(addr,function(res2,st2){
-                  if(st2===kakao.maps.services.Status.OK){
-                    _applyZone(parseFloat(res2[0].y),parseFloat(res2[0].x),[]);
-                  } else {
-                    if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
-                  }
-                });
+      if(st){st.style.color='var(--t3)';st.textContent='좌표 변환 중...';}
+      // 다음 위젯이 선택한 주소 → Kakao Geocoder (반드시 기초구역 내 좌표)
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status!==kakao.maps.services.Status.OK){
+            if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
+            return;
+          }
+          var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+          var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
+          if(dup2){_yToast('이미 추가된 우편번호예요');return;}
+          var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:[]};
+          window._zones.push(newZone);
+          _renderZoneTags();
+          _updateMapZones();
+          if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
+          document.getElementById('pw-zip-input').value='';
+          var areaInp=document.getElementById('pw-area');
+          if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+          // 폴리곤 경계 비동기 로드: 좌표 기반 INTERSECTS 공간쿼리 → 정확한 기초구역 폴리곤
+          fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng)
+            .then(function(r){return r.json();})
+            .then(function(bd){
+              if(bd.ok&&bd.coords&&bd.coords.length){
+                newZone.boundary=bd.coords;
+                if(typeof bd.lat==='number'&&typeof bd.lng==='number'){
+                  newZone.lat=bd.lat;newZone.lng=bd.lng;
+                }
+                _doUpdateMapZones();
               }
-            });
-          });
-        }
+            })
+            .catch(function(){});
+        });
       });
     }
   }).open({q:zip});
@@ -18588,40 +18585,68 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   }
 
   // ── 우편번호 기초구역 경계 + 중심좌표 ────────────────────────────
-  // 중심좌표: Kakao REST(zone_no 정확매칭) → vWorld 폴리곤 무게중심 순
-  // 폴리곤: vWorld WFS(경계선 시각화용)
   if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
-      const zip = new URL(request.url).searchParams.get('zip') || '';
+      const _u = new URL(request.url);
+      const zip = _u.searchParams.get('zip') || '';
+      const qLat = parseFloat(_u.searchParams.get('lat') || '');
+      const qLng = parseFloat(_u.searchParams.get('lng') || '');
       if (!zip || !/^\d{5}$/.test(zip)) {
         return new Response(JSON.stringify({ ok: false, error: '유효하지 않은 우편번호' }), { headers: corsH });
       }
 
       let centLat = null, centLng = null, zipName = '', coords = [];
+      const vKey = env.VWORLD_API_KEY;
 
-      // ① Kakao REST API — zone_no 필드 정확 매칭 → 실제 구역 내 주소 좌표 평균
-      const kakaoKey = env.KAKAO_REST_KEY;
-      if (kakaoKey) {
+      // ① 좌표 제공 시: INTERSECTS 공간쿼리 → 해당 점이 포함된 기초구역 폴리곤 (가장 정확)
+      // Daum 위젯 oncomplete 주소를 Kakao Geocoder로 변환한 좌표 → 반드시 올바른 구역 내 점
+      if (!isNaN(qLat) && !isNaN(qLng) && vKey) {
         try {
-          const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
-          const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(5000) });
-          const kData = await kRes.json();
-          const docs = (kData.documents || []).filter(d =>
-            (d.address?.zone_no || d.road_address?.zone_no || '') === zip
-          );
-          if (docs.length > 0) {
-            centLat = docs.reduce((s,d) => s + parseFloat(d.y), 0) / docs.length;
-            centLng = docs.reduce((s,d) => s + parseFloat(d.x), 0) / docs.length;
-            const ra = docs[0].road_address || {};
-            zipName = [ra.region_1depth_name, ra.region_2depth_name, ra.region_3depth_name].filter(Boolean).join(' ');
+          const sCql = encodeURIComponent(`INTERSECTS(geometry,POINT(${qLng} ${qLat}))`);
+          const sUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${sCql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
+          const sRes = await fetch(sUrl, { signal: AbortSignal.timeout(8000) });
+          const sData = await sRes.json();
+          const sFs = sData?.features || [];
+          if (sFs.length) {
+            const geom = sFs[0]?.geometry;
+            if (geom) {
+              if (geom.type === 'Polygon') coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
+              else if (geom.type === 'MultiPolygon') coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+            }
+            if (coords.length) {
+              centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
+              centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
+              const p = sFs[0]?.properties || {};
+              zipName = p.bas_nm || p.emd_nm || '';
+            }
           }
         } catch(_) {}
       }
 
-      // ② vWorld — 폴리곤 경계선 (시각화용). 중심좌표는 Kakao 실패 시에만 사용
-      const vKey = env.VWORLD_API_KEY;
-      if (vKey) {
+      // ② INTERSECTS 실패(또는 좌표 없음) 시: Kakao REST API — zone_no 정확 매칭
+      if (!centLat) {
+        const kakaoKey = env.KAKAO_REST_KEY;
+        if (kakaoKey) {
+          try {
+            const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
+            const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(5000) });
+            const kData = await kRes.json();
+            const docs = (kData.documents || []).filter(d =>
+              (d.address?.zone_no || d.road_address?.zone_no || '') === zip
+            );
+            if (docs.length > 0) {
+              centLat = docs.reduce((s,d) => s + parseFloat(d.y), 0) / docs.length;
+              centLng = docs.reduce((s,d) => s + parseFloat(d.x), 0) / docs.length;
+              const ra = docs[0].road_address || {};
+              zipName = zipName || [ra.region_1depth_name, ra.region_2depth_name, ra.region_3depth_name].filter(Boolean).join(' ');
+            }
+          } catch(_) {}
+        }
+      }
+
+      // ③ 마지막 폴백: vWorld bas_id 필터 (경계 폴리곤 + 중심좌표)
+      if (!coords.length && vKey) {
         const cql = encodeURIComponent(`bas_id='${zip}'`);
         const vAttempts = [
           `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
