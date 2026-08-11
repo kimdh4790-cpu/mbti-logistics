@@ -11090,7 +11090,12 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
       stations.sort(function(a,b){return (b.id===favId?1:0)-(a.id===favId?1:0);});
     }
     var top=stations.slice(0,3);
-    el.innerHTML=top.map(function(s,i){
+    var avgPrice=res.avgPrice||0;
+    var avgBanner=avgPrice?'<div style="font-size:11px;color:var(--t3);padding:6px 14px 2px;display:flex;align-items:center;gap:4px">'+
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'+
+      '전국 평균 <strong style="color:var(--br);font-weight:800">'+Number(avgPrice).toLocaleString()+'원/L</strong> (OPINET 기준)'+
+    '</div>':'';
+    el.innerHTML=avgBanner+top.map(function(s,i){
       var isFav=s.id&&s.id===favId;
       var aiBadge=i===0&&!isFav?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
       var favBadge=isFav?'<span class="gas-badge" style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3)">즐겨찾기</span>':'';
@@ -11100,6 +11105,9 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
       var starBtn='<button type="button" onclick="_yGasFav(\\''+_esc(containerId)+'\\',\\''+_esc(s.id||'')+'\\',\\''+_esc((lat||0).toString())+'\\',\\''+_esc((lng||0).toString())+'\\',\\''+_esc(fuel)+'\\')" '+
         'style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px;color:'+(isFav?'var(--br)':'var(--t3)')+';" '+
         'title="'+(isFav?'즐겨찾기 해제':'즐겨찾기 등록')+'">'+(isFav?'★':'☆')+'</button>';
+      var priceArea=s.price?
+        '<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':
+        '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:700;color:var(--ac);text-decoration:none;margin:2px 0 4px;text-align:right;line-height:1.4;display:block">카카오맵<br>가격확인 ›</a>';
       return '<div class="gas-item">'+
         '<div class="gas-ico" style="background:rgba(217,119,6,.12)">'+
           '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14"/><path d="M3 15h12"/><path d="M17 5l1.5 1.5"/><path d="M19 9.5V4a1 1 0 0 0-1-1h-1"/><line x1="3" y1="22" x2="21" y2="22"/></svg>'+
@@ -11114,8 +11122,8 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px">'+
           starBtn+
-          (s.price?'<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':'<div style="font-size:10px;font-weight:700;color:var(--t3);margin:2px 0 4px;text-align:right;line-height:1.3">가격<br>정보없음</div>')+
-          '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
+          priceArea+
+          (s.price?'<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>':'')+
         '</div>'+
       '</div>';
     }).join('');
@@ -18078,9 +18086,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (opiKey) {
         const isLPG = fuelType === 'LPG';
         const prodcd = isLPG ? 'K015' : 'D047';
-        const opiUrl = `https://www.opinet.co.kr/api/aroundAll.do?out=json&code=${opiKey}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
+        const opiUrl = `http://www.opinet.co.kr/api/aroundAll.do?out=json&code=${encodeURIComponent(opiKey)}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
         try {
-          const opiRes = await fetch(opiUrl, { cf: { cacheTtl: 300 } });
+          const opiRes = await fetch(opiUrl);
           const opiText = await opiRes.text();
           let opiData; try { opiData = JSON.parse(opiText); } catch(e) { opiData = null; }
           const list = (opiData?.RESULT?.OIL) || [];
@@ -18109,11 +18117,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         } catch(e) { /* OPINET 실패 시 카카오 폴백 */ }
       }
 
-      // OPINET 키 없거나 결과 없으면 카카오 폴백 (가격 없음)
+      // 카카오 폴백 + OPINET 전국평균가 병렬 조회
       if (!kakaoKey) return new Response(JSON.stringify({ ok: false, error: 'KAKAO_REST_KEY 미설정' }), { status: 500, headers: corsH });
       const isLPG = fuelType === 'LPG';
       const query = isLPG ? 'LPG충전소' : fuelType === '전기' ? '전기차충전소' : '주유소';
       const kakaUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${r}&size=15&sort=distance&category_group_code=OL7`;
+      // OPINET 전국평균가: 개별 주유소 가격 조회가 안 될 때 참고용 평균 표시
+      let avgPrice = 0;
+      if (opiKey) {
+        try {
+          const prodcd = isLPG ? 'K015' : fuelType === '경유' ? 'D047' : 'B027';
+          const avgUrl = `http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${encodeURIComponent(opiKey)}&prodcd=${prodcd}`;
+          const avgRes = await fetch(avgUrl);
+          const avgData = await avgRes.json().catch(() => null);
+          const avgOil = avgData?.RESULT?.OIL?.[0];
+          if (avgOil?.PRICE) avgPrice = Math.round(Number(avgOil.PRICE));
+        } catch(e) { /* 무시 */ }
+      }
       const res = await fetch(kakaUrl, { headers: { 'Authorization': 'KakaoAK ' + kakaoKey } });
       if (!res.ok) throw new Error('카카오 API 오류 ' + res.status);
       const data = await res.json();
@@ -18127,7 +18147,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }));
       const maxD = Math.max(...stations.map(s=>s.dist), 0.001);
       stations.forEach(s => { s.aiScore = Math.round((1-s.dist/maxD)*100); });
-      return new Response(JSON.stringify({ ok: true, stations, source: 'kakao' }), { headers: corsH });
+      return new Response(JSON.stringify({ ok: true, stations, source: 'kakao', avgPrice }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
