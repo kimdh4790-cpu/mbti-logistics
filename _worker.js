@@ -18582,7 +18582,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── vWorld: 우편번호 기초구역 경계 폴리곤 ────────────────────────
+  // ── 우편번호 기초구역 경계 + 중심좌표 ────────────────────────────
+  // 중심좌표: Kakao REST(zone_no 정확매칭) → vWorld 폴리곤 무게중심 순
+  // 폴리곤: vWorld WFS(경계선 시각화용)
   if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
@@ -18590,51 +18592,59 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (!zip || !/^\d{5}$/.test(zip)) {
         return new Response(JSON.stringify({ ok: false, error: '유효하지 않은 우편번호' }), { headers: corsH });
       }
-      const vKey = env.VWORLD_API_KEY;
-      if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
 
-      // 시도 순서: Data API(attrFilter) → WFS CQL_FILTER(URL인코딩) → WFS bas_cd 필드
-      const cqlId = encodeURIComponent(`bas_id='${zip}'`);
-      const cqlCd = encodeURIComponent(`bas_cd='${zip}'`);
-      const wfsBase = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&outputFormat=application/json&srsName=EPSG:4326&count=1&key=${encodeURIComponent(vKey)}`;
-      const attempts = [
-        // 1) Data API — attrFilter 형식, vWorld 자체 포맷, 정확한 일치
-        `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
-        // 2) WFS lt_c_basidco CQL_FILTER (URL인코딩)
-        `${wfsBase}&typeName=lt_c_basidco&CQL_FILTER=${cqlId}`,
-        // 3) WFS lt_c_basidco bas_cd 필드 시도
-        `${wfsBase}&typeName=lt_c_basidco&CQL_FILTER=${cqlCd}`,
-        // 4) WFS lt_c_basicado
-        `${wfsBase}&typeName=lt_c_basicado&CQL_FILTER=${cqlId}`,
-      ];
+      let centLat = null, centLng = null, zipName = '', coords = [];
 
-      let features = [];
-      let usedAttempt = -1;
-      for (let i = 0; i < attempts.length; i++) {
+      // ① Kakao REST API — zone_no 필드 정확 매칭 → 실제 구역 내 주소 좌표 평균
+      const kakaoKey = env.KAKAO_REST_KEY;
+      if (kakaoKey) {
         try {
-          const r = await fetch(attempts[i], { signal: AbortSignal.timeout(8000) });
-          const d = await r.json();
-          const fs = d?.features || d?.response?.result?.featureCollection?.features || [];
-          if (fs.length) { features = fs; usedAttempt = i; break; }
+          const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
+          const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(5000) });
+          const kData = await kRes.json();
+          const docs = (kData.documents || []).filter(d =>
+            (d.address?.zone_no || d.road_address?.zone_no || '') === zip
+          );
+          if (docs.length > 0) {
+            centLat = docs.reduce((s,d) => s + parseFloat(d.y), 0) / docs.length;
+            centLng = docs.reduce((s,d) => s + parseFloat(d.x), 0) / docs.length;
+            const ra = docs[0].road_address || {};
+            zipName = [ra.region_1depth_name, ra.region_2depth_name, ra.region_3depth_name].filter(Boolean).join(' ');
+          }
         } catch(_) {}
       }
 
-      if (!features.length) return new Response(JSON.stringify({ ok: false, error: '구역 없음' }), { headers: corsH });
-      const geom = features[0]?.geometry;
-      if (!geom) return new Response(JSON.stringify({ ok: false, error: '경계 없음' }), { headers: corsH });
-      let coords = [];
-      if (geom.type === 'Polygon') {
-        coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
-      } else if (geom.type === 'MultiPolygon') {
-        coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+      // ② vWorld — 폴리곤 경계선 (시각화용). 중심좌표는 Kakao 실패 시에만 사용
+      const vKey = env.VWORLD_API_KEY;
+      if (vKey) {
+        const cql = encodeURIComponent(`bas_id='${zip}'`);
+        const vAttempts = [
+          `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
+          `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`,
+        ];
+        for (const vUrl of vAttempts) {
+          try {
+            const vRes = await fetch(vUrl, { signal: AbortSignal.timeout(8000) });
+            const vData = await vRes.json();
+            const fs = vData?.features || vData?.response?.result?.featureCollection?.features || [];
+            if (!fs.length) continue;
+            const geom = fs[0]?.geometry;
+            if (!geom) continue;
+            if (geom.type === 'Polygon') coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
+            else if (geom.type === 'MultiPolygon') coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+            if (coords.length && !centLat) {
+              centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
+              centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
+              const p = fs[0]?.properties || {};
+              zipName = zipName || p.bas_nm || p.emd_nm || '';
+            }
+            break;
+          } catch(_) {}
+        }
       }
-      const props = features[0]?.properties || {};
-      const sumLat = coords.reduce((s,c)=>s+c.lat,0);
-      const sumLng = coords.reduce((s,c)=>s+c.lng,0);
-      const centLat = coords.length ? sumLat/coords.length : null;
-      const centLng = coords.length ? sumLng/coords.length : null;
-      const zipName = props.zip_nm || props.bas_nm || props.emd_nm || props.bas_cd || props.bas_id || '';
-      return new Response(JSON.stringify({ ok: true, coords, zipName, lat: centLat, lng: centLng, _debug: { attempt: usedAttempt, bas_id: props.bas_id, bas_cd: props.bas_cd, bas_nm: props.bas_nm, emd_nm: props.emd_nm } }), { headers: corsH });
+
+      if (!centLat) return new Response(JSON.stringify({ ok: false, error: '좌표 없음' }), { headers: corsH });
+      return new Response(JSON.stringify({ ok: true, coords, zipName, lat: centLat, lng: centLng }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
