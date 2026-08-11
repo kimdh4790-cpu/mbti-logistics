@@ -17257,7 +17257,7 @@ function _addZoneByZip(){
             if(vk&&vk!=='__VWORLD_KEY__'){
               // ① 브라우저 → vWorld 직접 (한국 IP → 502 없음)
               var sCql=encodeURIComponent('INTERSECTS(geometry,POINT('+lng+' '+lat+'))');
-              fetch('https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(vk)+'&CQL_FILTER='+sCql+'&outputFormat=application/json&srsName=EPSG:4326&count=1')
+              fetch('https://api.vworld.kr/req/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(vk)+'&CQL_FILTER='+sCql+'&outputFormat=application/json&srsName=EPSG:4326&maxFeatures=1')
                 .then(function(r){return r.json();})
                 .then(function(d){
                   var fs=d.features||[];
