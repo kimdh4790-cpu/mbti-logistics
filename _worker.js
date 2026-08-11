@@ -12871,6 +12871,7 @@ function _pgPostWrite(el){
   }
   window._zones=[];
   window._editPostId=null;
+  _map=null; _markers=[]; window._zonePolygons=[]; window._zoneLabels=[];
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
   '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
