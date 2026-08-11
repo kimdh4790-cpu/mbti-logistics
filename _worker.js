@@ -13158,9 +13158,9 @@ function _pgPostWrite(el){
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
   '</div>'+
   '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
-    '<input id="pw-zip-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
+    '<input id="pw-zip-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
       'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
-      'oninput="_fzipInput(this)" '+
+      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" '+
       'onkeydown="_fzipKey(event)">'+
     '<button onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
   '</div>'+
@@ -17186,10 +17186,12 @@ function _fetchZoneBoundary(zip,cb){
 
 // 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
-function _fzipInput(el){el.value=el.value.replace(/[^0-9]/g,'').slice(0,5);}
+function _fzipNorm(s){return(s||'').replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}).replace(/[^0-9]/g,'').slice(0,5);}
+function _fzipInput(el){var v=_fzipNorm(el.value);if(el.value!==v)el.value=v;}
 function _fzipKey(ev){if(ev.key==='Enter')_addZoneByZip();}
 function _addZoneByZip(){
-  var zip=(document.getElementById('pw-zip-input').value||'').trim();
+  var el=document.getElementById('pw-zip-input');
+  var zip=_fzipNorm(el?el.value:'');
   var st=document.getElementById('zip-lookup-st');
   if(!/^\d{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
