@@ -17015,6 +17015,8 @@ function _yAiRenderPicks(data,post,postId){
 
 // ── 카카오맵 ────────────────────────────────────────────────
 var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
+// vWorld API 키 (서버가 주입 — 브라우저 직접 호출용)
+window._vwKey='__VWORLD_KEY__';
 
 function _loadKakaoMap(callback){
   // 이미 로드됨
@@ -17236,19 +17238,54 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 폴리곤 경계 비동기 로드: 좌표 기반 INTERSECTS 공간쿼리 → 정확한 기초구역 폴리곤
-          fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng)
-            .then(function(r){return r.json();})
-            .then(function(bd){
-              if(bd.ok&&bd.coords&&bd.coords.length){
+          // 폴리곤 경계 비동기 로드: 브라우저 직접 vWorld → 서버 프록시 순
+          (function(){
+            function _applyBoundary(bd){
+              if(bd&&bd.coords&&bd.coords.length){
                 newZone.boundary=bd.coords;
-                if(typeof bd.lat==='number'&&typeof bd.lng==='number'){
-                  newZone.lat=bd.lat;newZone.lng=bd.lng;
-                }
+                if(typeof bd.lat==='number'&&typeof bd.lng==='number'){newZone.lat=bd.lat;newZone.lng=bd.lng;}
                 _doUpdateMapZones();
               }
-            })
-            .catch(function(){});
+            }
+            function _geomToCoords(geom){
+              if(!geom)return[];
+              if(geom.type==='Polygon')return geom.coordinates[0].map(function(c){return{lat:c[1],lng:c[0]};});
+              if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
+              return[];
+            }
+            var vk=window._vwKey||'';
+            if(vk&&vk!=='__VWORLD_KEY__'){
+              // ① 브라우저 → vWorld 직접 (한국 IP → 502 없음)
+              var sCql=encodeURIComponent('INTERSECTS(geometry,POINT('+lng+' '+lat+'))');
+              fetch('https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(vk)+'&CQL_FILTER='+sCql+'&outputFormat=application/json&srsName=EPSG:4326&count=1')
+                .then(function(r){return r.json();})
+                .then(function(d){
+                  var fs=d.features||[];
+                  if(!fs.length)throw new Error('empty');
+                  var c=_geomToCoords(fs[0].geometry);
+                  if(!c.length)throw new Error('no geom');
+                  var p=fs[0].properties||{};
+                  var rid=(p.bas_id||'').toString().trim();
+                  if(rid&&rid!==zipcode)throw new Error('wrong zone');
+                  var cLat=c.reduce(function(s,x){return s+x.lat;},0)/c.length;
+                  var cLng=c.reduce(function(s,x){return s+x.lng;},0)/c.length;
+                  _applyBoundary({coords:c,lat:cLat,lng:cLng});
+                })
+                .catch(function(){
+                  // ② vWorld CORS 실패 → 서버 프록시
+                  fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng)
+                    .then(function(r){return r.json();})
+                    .then(function(bd){_applyBoundary(bd);})
+                    .catch(function(){});
+                });
+            } else {
+              // vWorld 키 없으면 바로 서버 프록시
+              fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng)
+                .then(function(r){return r.json();})
+                .then(function(bd){_applyBoundary(bd);})
+                .catch(function(){});
+            }
+          })();
         });
       });
     }
@@ -18956,8 +18993,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     return serveKVFile(env, 'yongcha-landing.html', 'text/html');
   }
 
-  // 모든 경로 → 인라인 HTML 서빙
-  return new Response(YONGCHA_HTML_YONGCHA, {
+  // 모든 경로 → 인라인 HTML 서빙 (vWorld 키 주입)
+  const _yHtml = YONGCHA_HTML_YONGCHA.replace('__VWORLD_KEY__', env.VWORLD_API_KEY || '');
+  return new Response(_yHtml, {
     headers: {
       'Content-Type': 'text/html;charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate',
