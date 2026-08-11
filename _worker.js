@@ -18077,36 +18077,36 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       // OPINET aroundAll: 위치 기반 주유소 + 실시간 가격
       if (opiKey) {
         const isLPG = fuelType === 'LPG';
-        const isElec = fuelType === '전기';
-        const prodcd = isLPG ? 'K015' : 'D047'; // 경유 기본(용차), LPG 선택
-        const opiUrl = `https://www.opinet.co.kr/api/aroundAll.do?out=json&code=${encodeURIComponent(opiKey)}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
-        const opiRes = await fetch(opiUrl);
-        const opiText = await opiRes.text();
-        let opiData; try { opiData = JSON.parse(opiText); } catch(e) { return new Response(JSON.stringify({ ok: false, _debug: opiText.slice(0,500) }), { headers: corsH }); }
-        if (!opiData?.RESULT) return new Response(JSON.stringify({ ok: false, _debug: opiData }), { headers: corsH });
-        const list = opiData?.RESULT?.OIL || [];
-        if (list.length > 0) {
-          const stations = list.slice(0, 10).map((s, i) => ({
-            id: s.UNI_ID || String(i),
-            name: s.OS_NM || '',
-            address: s.NEW_ADR || s.VAN_ADR || '',
-            price: Number(s.PRICE) || 0,
-            dist: parseFloat((Number(s.DISTANCE)/1000).toFixed(2)),
-            brand: s.POLL_DIV_NM || '',
-            lat: parseFloat(s.GIS_Y_COOR) || lat,
-            lng: parseFloat(s.GIS_X_COOR) || lng,
-            phone: '', url: ''
-          }));
-          const maxD = Math.max(...stations.map(s => s.dist), 0.001);
-          const minP = Math.min(...stations.filter(s=>s.price>0).map(s=>s.price), 99999);
-          stations.forEach(s => {
-            const dScore = (1 - s.dist/maxD) * 50;
-            const pScore = s.price > 0 ? (1 - (s.price - minP)/500) * 50 : 0;
-            s.aiScore = Math.round(Math.max(0, dScore + pScore));
-          });
-          stations.sort((a,b) => b.aiScore - a.aiScore);
-          return new Response(JSON.stringify({ ok: true, stations, source: 'opinet' }), { headers: corsH });
-        }
+        const prodcd = isLPG ? 'K015' : 'D047';
+        const opiUrl = `https://www.opinet.co.kr/api/aroundAll.do?out=json&code=${opiKey}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
+        try {
+          const opiRes = await fetch(opiUrl, { cf: { cacheTtl: 300 } });
+          const opiText = await opiRes.text();
+          let opiData; try { opiData = JSON.parse(opiText); } catch(e) { opiData = null; }
+          const list = (opiData?.RESULT?.OIL) || [];
+          if (list.length > 0) {
+            const stations = list.slice(0, 10).map((s, i) => ({
+              id: s.UNI_ID || String(i),
+              name: s.OS_NM || '',
+              address: s.NEW_ADR || s.VAN_ADR || '',
+              price: Number(s.PRICE) || 0,
+              dist: parseFloat((Number(s.DISTANCE)/1000).toFixed(2)),
+              brand: s.POLL_DIV_NM || '',
+              lat: parseFloat(s.GIS_Y_COOR) || lat,
+              lng: parseFloat(s.GIS_X_COOR) || lng,
+              phone: '', url: ''
+            }));
+            const maxD = Math.max(...stations.map(s => s.dist), 0.001);
+            const minP = Math.min(...stations.filter(s=>s.price>0).map(s=>s.price), 99999);
+            stations.forEach(s => {
+              const dScore = (1 - s.dist/maxD) * 50;
+              const pScore = s.price > 0 ? (1 - (s.price - minP)/500) * 50 : 0;
+              s.aiScore = Math.round(Math.max(0, dScore + pScore));
+            });
+            stations.sort((a,b) => b.aiScore - a.aiScore);
+            return new Response(JSON.stringify({ ok: true, stations, source: 'opinet' }), { headers: corsH });
+          }
+        } catch(e) { /* OPINET 실패 시 카카오 폴백 */ }
       }
 
       // OPINET 키 없거나 결과 없으면 카카오 폴백 (가격 없음)
