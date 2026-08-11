@@ -12338,10 +12338,91 @@ function _pgMyPosts(el){
           // 🤖 AI 배차 추천 — 모집중인 공고에서만 노출
           (d.status==='open'?
           '<button onclick="_yAiRecommend(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
+          '<button onclick="_editPost(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">공고 수정</button>'+
           '</div>';
         list.appendChild(card);
       });
     });
+}
+
+function _editPost(postId){
+  _db.collection('yongcha_posts').doc(postId).get().then(function(doc){
+    if(!doc.exists){_yToast('공고를 찾을 수 없어요');return;}
+    var d=Object.assign({id:doc.id},doc.data());
+    window._editPostId=postId;
+    var el=document.getElementById('content');
+    _pgPostWrite(el);
+    setTimeout(function(){_fillPostForm(d);},200);
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _fillPostForm(d){
+  function sv(id,v){var el=document.getElementById(id);if(el&&v!=null)el.value=v;}
+  function selBtn(groupId,val,hiddenId){
+    document.querySelectorAll('#'+groupId+' button').forEach(function(b){
+      if(b.textContent.trim()===val)_selType(b,val,hiddenId);
+    });
+  }
+  sv('pw-courier',d.courier||'');
+  sv('pw-routeNo',d.routeNo||'');
+  sv('pw-area',d.area||'');
+  sv('pw-apt',d.areaAptRatio!=null?d.areaAptRatio:'');
+  sv('pw-areaType',d.areaType||'');
+  sv('pw-date',d.startDate||'');
+  sv('pw-enddate',d.endDate||'');
+  sv('pw-hours',d.workHours||'');
+  sv('pw-price',d.unitPrice||'');
+  sv('pw-houseprice',d.housePricePerUnit||'');
+  sv('pw-volume',d.volume||'');
+  sv('pw-settleDay',d.settleDay||'');
+  sv('pw-desc',d.desc||'');
+  sv('pw-loadingAddr',d.loadingAddr||'');
+  sv('pw-loadingLat',d.loadingLat||'');
+  sv('pw-loadingLng',d.loadingLng||'');
+  if(d.postType)selBtn('pw-type-group',d.postType,'pw-type');
+  if(d.workShift)selBtn('pw-shift-group',d.workShift,'pw-shift');
+  if(d.vehicleType)selBtn('pw-vehicle-group',d.vehicleType,'pw-vehicle');
+  if(d.plateType)selBtn('pw-plate-group',d.plateType,'pw-plate');
+  if(d.priceType)selBtn('pw-pricetype-group',d.priceType,'pw-pricetype');
+  if(d.vatIncluded)selBtn('pw-vat-group','VAT '+d.vatIncluded,'pw-vat');
+  if(d.settleFreq)selBtn('pw-settle-group',d.settleFreq,'pw-settle');
+  _selectedDays=[];
+  if(d.workDays&&d.workDays.length){
+    var days=d.workDays.split(',');
+    document.querySelectorAll('#pw-days-group button').forEach(function(b){
+      if(days.indexOf(b.textContent.trim())>=0){
+        _selectedDays.push(b.textContent.trim());
+        b.style.background='var(--acl)';b.style.color='var(--ac)';b.style.borderColor='var(--ac)';
+      }
+    });
+  }
+  _selectedExtras=[];
+  if(d.extras&&d.extras.length){
+    var extras=d.extras.split(',');
+    document.querySelectorAll('#pw-extras button').forEach(function(b){
+      if(extras.indexOf(b.textContent.trim())>=0){
+        _selectedExtras.push(b.textContent.trim());
+        b.style.background='var(--acl)';b.style.color='var(--ac)';b.style.borderColor='var(--ac)';
+      }
+    });
+  }
+  _isUrgent=d.urgent||false;
+  var urgentBtn=document.getElementById('toggle-urgent');
+  if(urgentBtn)urgentBtn.classList.toggle('on',_isUrgent);
+  window._zones=Array.isArray(d.zones)?d.zones:[];
+  _renderZoneTags();
+  if(window._zones.length)_updateMapZones();
+  var trustFilter=document.getElementById('pw-trust-filter');
+  if(trustFilter)trustFilter.checked=d.trustFilter||false;
+  _calcEst();
+  var titleEl=document.querySelector('.page-title');
+  if(titleEl)titleEl.textContent='공고 수정';
+  var subEl=document.querySelector('.page-sub');
+  if(subEl)subEl.textContent='공고 내용을 수정하고 저장하세요';
+  var btn=document.getElementById('submit-btn');
+  if(btn){
+    btn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg> 공고 수정하기';
+  }
 }
 
 function _yShowMatchedDrivers(postId,agencyId){
@@ -12780,6 +12861,7 @@ function _pgPostWrite(el){
     return;
   }
   window._zones=[];
+  window._editPostId=null;
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
   '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
@@ -13208,6 +13290,39 @@ function _submitPost(){
   var _unlock=function(){window._ySubmitLock=false;};
 
   btn.textContent='확인 중...';btn.disabled=true;
+
+  // 수정 모드: 기존 공고 업데이트
+  if(window._editPostId){
+    var _editId=window._editPostId;
+    btn.textContent='수정 중...';
+    _db.collection('yongcha_posts').doc(_editId).update({
+      courier:courier, area:area, routeNo:routeNo,
+      loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
+      zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
+      postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
+      contractType:contractType||null, contractDuration:contractDuration||null,
+      workHours:hours, startDate:date, endDate:endDate,
+      vehicleType:vehicle, plateType:plate,
+      priceType:priceType||'건당', unitPrice:parseInt(price),
+      housePricePerUnit:housePrice?parseInt(housePrice):null,
+      vatIncluded:vatIncluded, volume:parseInt(volume),
+      minGuarantee:minGuarantee, areaType:areaType,
+      settleFreq:settle, settleDay:settleDay,
+      extras:_selectedExtras.join(','), desc:desc,
+      urgent:_isUrgent,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      _yToast('공고가 수정됐어요!');
+      window._editPostId=null;
+      _isUrgent=false;_selectedDays=[];_selectedExtras=[];window._zones=[];
+      _unlock();
+      _goPage('my_posts');
+    }).catch(function(e){
+      btn.textContent='공고 수정하기';btn.disabled=false;_unlock();
+      _yToast('오류: '+e.message);
+    });
+    return;
+  }
 
   // 중복 공고 방지: 24시간 내 동일 지문(대리점+택배사+구역+노선번호+단가+시작일)
   var cutoff=new Date(Date.now()-24*60*60*1000);
