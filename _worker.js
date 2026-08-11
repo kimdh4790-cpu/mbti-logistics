@@ -11937,11 +11937,11 @@ function _showPostDetail(d){
   '</div>'+
   '</div>'+
 
-  // ── 상차지 근처 주유소/충전소 (기사용) ──
-  (isDriver&&(typeof d.loadingLat==='number'||(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'))?
+  // ── 배송지역 주유소/충전소 (기사용) ──
+  (isDriver?
   (function(){
     var _ft2=_CU.carFuelType||'휘발유';
-    var _stl2=_ft2==='전기'?'상차지 근처 충전소':_ft2==='LPG'?'상차지 근처 LPG 충전소':'상차지 근처 주유소';
+    var _stl2=_ft2==='전기'?'배송지역 충전소':_ft2==='LPG'?'배송지역 LPG 충전소':'배송지역 주유소';
     return '<div style="margin-bottom:14px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
         '<span style="font-size:14px;font-weight:800;color:var(--tx)">'+_stl2+'</span>'+
@@ -12064,12 +12064,24 @@ function _showPostDetail(d){
   _openModal();
   window._detailMapRadius=_mapR;
 
-  // 상차지 근처 주유소 로드
+  // 배송지역 주유소 로드
   if(isDriver){
     var _gLat=null,_gLng=null;
     if(typeof d.loadingLat==='number'){_gLat=d.loadingLat;_gLng=d.loadingLng;}
     else if(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'){_gLat=d.zones[0].lat;_gLng=d.zones[0].lng;}
-    if(_gLat!=null){setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations',_CU.carFuelType);},300);}
+    if(_gLat!=null){
+      setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations',_CU.carFuelType);},300);
+    } else {
+      var _gAddr=(d.area||d.region||'').replace(/\s*\d+노선.*$/,'').trim();
+      if(_gAddr&&window.kakao&&kakao.maps&&kakao.maps.services){
+        var _gc2=new kakao.maps.services.Geocoder();
+        _gc2.addressSearch(_gAddr,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res[0]){
+            _yLoadGasStations(parseFloat(res[0].y),parseFloat(res[0].x),'detail-gas-stations',_CU.carFuelType);
+          }
+        });
+      }
+    }
   }
 
   // 지도 표시
