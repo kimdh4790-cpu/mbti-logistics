@@ -18086,8 +18086,13 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         results[url] = { status: r.status, ct, preview: text.slice(0, 400) };
       } catch(e) { results[url] = { error: e.message }; }
     }
+    // 가능한 키 이름들 체크
+    const keyChecks = {};
+    const keyNames = ['OPINET_API_KEY','OPINET_KEY','OPINET','opinet_api_key','WEATHER_API_KEY','KAKAO_REST_KEY'];
+    for (const k of keyNames) { keyChecks[k] = env[k] ? `설정됨(${String(env[k]).length}자)` : '없음'; }
+    results['_env_check'] = keyChecks;
     // OPINET 전국평균 시도
-    const opiKey = env.OPINET_API_KEY;
+    const opiKey = env.OPINET_API_KEY || env.OPINET_KEY || env.OPINET;
     if (opiKey) {
       try {
         const opiRes = await fetch(`http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${encodeURIComponent(opiKey)}&prodcd=B027`);
