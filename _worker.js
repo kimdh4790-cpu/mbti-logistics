@@ -18067,22 +18067,18 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
       const apiKey = env.KOTSA_API_KEY;
       if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
-      const apiUrl = `https://apis.data.go.kr/B553881/insptlnfoService_01/getInsptlnfoService01?serviceKey=${encodeURIComponent(apiKey)}&vhrno=${encodeURIComponent(carNum)}&_type=json`;
-      const resp = await fetch(apiUrl);
-      const text = await resp.text();
-      let dueDate = null, debugInfo = { _raw: text.slice(0, 1200) };
-      try {
-        const data = JSON.parse(text);
-        const item = data?.response?.body?.items?.item;
-        const items = Array.isArray(item) ? item : (item ? [item] : []);
-        const first = items[0] || null;
-        debugInfo = { _raw: text.slice(0, 1200), _data: data };
-        dueDate = first?.inspcExprde || first?.inspcValidde || first?.inspValidDate || first?.exprde || null;
-      } catch(jsonErr) {
-        const m = text.match(/<inspcExprde>(\d+)<\/inspcExprde>/) || text.match(/<inspcValidde>(\d+)<\/inspcValidde>/) || text.match(/<exprde>(\d+)<\/exprde>/);
-        if (m) dueDate = m[1];
-        debugInfo = { _xml: text.slice(0, 1200) };
+      // XML 응답 → 오퍼레이션명 패턴 시도
+      const ops = ['getInsptlnfo', 'getVhclInsptInfo', 'getInsptInfo', 'getInspInfo'];
+      let text = '', dueDate = null, debugInfo = {};
+      for (const op of ops) {
+        const u = `https://apis.data.go.kr/B553881/insptlnfoService_01/${op}?serviceKey=${encodeURIComponent(apiKey)}&vhrno=${encodeURIComponent(carNum)}`;
+        const r = await fetch(u);
+        text = await r.text();
+        if (!text.includes('폐기') && !text.includes('NO_OPENAPI_SERVICE_ERROR')) { debugInfo = { _op: op, _raw: text.slice(0, 1200) }; break; }
+        debugInfo = { _lastOp: op, _raw: text.slice(0, 400) };
       }
+      const m = text.match(/<inspcExprde>(\d+)<\/inspcExprde>/) || text.match(/<inspcValidde>(\d+)<\/inspcValidde>/) || text.match(/<exprde>(\d+)<\/exprde>/) || text.match(/<inspectDue>([^<]+)<\/inspectDue>/);
+      if (m) dueDate = m[1];
       return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate, _debug: debugInfo }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
