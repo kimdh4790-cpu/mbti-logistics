@@ -17333,31 +17333,32 @@ function _doUpdateMapZones(){
   window._circles=[];
   (window._zonePolygons||[]).forEach(function(p){p.setMap(null);});
   window._zonePolygons=[];
+  (window._zoneFbCircles||[]).forEach(function(c){c.setMap(null);});
+  window._zoneFbCircles=[];
   (window._zoneLabels||[]).forEach(function(l){l.setMap(null);});
   window._zoneLabels=[];
   var COLORS=['#4f78f5','#10b981','#f59e0b','#f97316','#8b5cf6'];
   window._zones.forEach(function(z,i){
     if(typeof z.lat!=='number'||typeof z.lng!=='number')return;
     var color=COLORS[i%COLORS.length];
-    var path;
     if(z.boundary&&z.boundary.length){
-      // vWorld 실제 경계선
-      path=z.boundary.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
+      // vWorld 실제 경계선 폴리곤
+      var path=z.boundary.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
+      var poly=new kakao.maps.Polygon({
+        path:path,strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
+        fillColor:color,fillOpacity:.13,map:_map
+      });
+      window._zonePolygons.push(poly);
     } else {
-      // 근사 직사각형 (약 500×550m)
-      var dlat=0.0025,dlng=0.003;
-      path=[
-        new kakao.maps.LatLng(z.lat-dlat,z.lng-dlng),
-        new kakao.maps.LatLng(z.lat+dlat,z.lng-dlng),
-        new kakao.maps.LatLng(z.lat+dlat,z.lng+dlng),
-        new kakao.maps.LatLng(z.lat-dlat,z.lng+dlng)
-      ];
+      // 경계선 로드 전 fallback: 400m 원형 (직사각형보다 실제 구역에 근접)
+      var fbCircle=new kakao.maps.Circle({
+        center:new kakao.maps.LatLng(z.lat,z.lng),
+        radius:400,
+        strokeWeight:2,strokeColor:color,strokeOpacity:.8,strokeStyle:'dashed',
+        fillColor:color,fillOpacity:.10,map:_map
+      });
+      window._zoneFbCircles.push(fbCircle);
     }
-    var poly=new kakao.maps.Polygon({
-      path:path,strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
-      fillColor:color,fillOpacity:.13,map:_map
-    });
-    window._zonePolygons.push(poly);
     var label=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(z.lat,z.lng),
       content:'<div style="background:'+color+';color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+(z.zipcode&&!/^MAP/.test(z.zipcode)?z.zipcode+' ':'')+(z.name||'')+'</div>',
@@ -18615,10 +18616,16 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
               else if (geom.type === 'MultiPolygon') coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
             }
             if (coords.length) {
-              centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
-              centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
               const p = sFs[0]?.properties || {};
-              zipName = p.bas_nm || p.emd_nm || '';
+              const retBasId = (p.bas_id || p.BAS_ID || '').toString().trim();
+              if (retBasId && retBasId !== zip) {
+                // INTERSECTS가 인접 구역 반환 → 폐기하고 bas_id 필터로 재시도
+                coords = [];
+              } else {
+                centLat = coords.reduce((s,c) => s + c.lat, 0) / coords.length;
+                centLng = coords.reduce((s,c) => s + c.lng, 0) / coords.length;
+                zipName = p.bas_nm || p.emd_nm || '';
+              }
             }
           }
         } catch(_) {}
