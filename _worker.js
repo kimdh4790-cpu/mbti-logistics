@@ -17248,21 +17248,32 @@ function _addZoneByZip(){
       var zoneName=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
       _loadKakaoMap(function(){
         var gc=new kakao.maps.services.Geocoder();
-        gc.addressSearch(addr,function(res,status){
+        // 동(洞) 이름으로 중심 좌표 검색 — 특정 건물 주소보다 구역 중심에 가까움
+        var dongQuery=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
+        function _applyZone(lat,lng){
+          var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
+          if(dup2){_yToast('이미 추가된 우편번호예요');return;}
+          var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:[]};
+          window._zones.push(newZone);
+          _renderZoneTags();
+          _updateMapZones();
+          if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
+          document.getElementById('pw-zip-input').value='';
+          var areaInp=document.getElementById('pw-area');
+          if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+        }
+        gc.addressSearch(dongQuery,function(res,status){
           if(status===kakao.maps.services.Status.OK){
-            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
-            var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
-            if(dup2){_yToast('이미 추가된 우편번호예요');return;}
-            var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:[]};
-            window._zones.push(newZone);
-            _renderZoneTags();
-            _updateMapZones();
-            if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
-            document.getElementById('pw-zip-input').value='';
-            var areaInp=document.getElementById('pw-area');
-            if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+            _applyZone(parseFloat(res[0].y),parseFloat(res[0].x));
           } else {
-            if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
+            // 동 검색 실패 시 원래 주소로 폴백
+            gc.addressSearch(addr,function(res2,st2){
+              if(st2===kakao.maps.services.Status.OK){
+                _applyZone(parseFloat(res2[0].y),parseFloat(res2[0].x));
+              } else {
+                if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
+              }
+            });
           }
         });
       });
