@@ -17238,42 +17238,36 @@ function _addZoneByZip(){
   if(!/^[0-9]{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
-  if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
-  _fetchZoneBoundary(zip,function(bd){
-    if(bd.ok){
-      var lat,lng;
-      if(bd.coords&&bd.coords.length){
-        var sumLat=0,sumLng=0,n=bd.coords.length;
-        bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
-        lat=sumLat/n;lng=sumLng/n;
-      } else {lat=bd.lat;lng=bd.lng;}
-      if(typeof lat==='number'&&typeof lng==='number'){
-        var zoneName=bd.zipName||zip;
-        window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords||[]});
-        _renderZoneTags();
-        _updateMapZones();
-        if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 추가됐어요';}
-        document.getElementById('pw-zip-input').value='';
-      } else {
-        if(st){st.style.color='var(--rd)';st.textContent='구역 위치를 확인할 수 없어요. 주소 검색을 이용해주세요.';}
-      }
-    } else {
-      var fbLat=parseFloat(document.getElementById('pw-loadingLat')?document.getElementById('pw-loadingLat').value:'');
-      var fbLng=parseFloat(document.getElementById('pw-loadingLng')?document.getElementById('pw-loadingLng').value:'');
-      if(!isNaN(fbLat)&&!isNaN(fbLng)){
-        window._zones.push({zipcode:zip,name:'',lat:fbLat,lng:fbLng,boundary:[]});
-        _renderZoneTags();
-        _updateMapZones();
-        if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역이 추가됐어요';}
-        document.getElementById('pw-zip-input').value='';
-      } else {
-        window._zones.push({zipcode:zip,name:'',lat:null,lng:null,boundary:[]});
-        _renderZoneTags();
-        if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역 태그가 추가됐어요';}
-        document.getElementById('pw-zip-input').value='';
-      }
+  if(st){st.style.color='var(--t3)';st.textContent='주소를 선택해주세요';}
+  // 다음 우편번호 위젯을 해당 우편번호로 프리필 오픈 → Kakao Geocoder로 정확한 좌표
+  new daum.Postcode({
+    oncomplete:function(data){
+      var addr=data.roadAddress||data.jibunAddress;
+      var zipcode=data.zonecode||zip;
+      var dongName=(data.bname2||data.bname||data.bname1||'');
+      var zoneName=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status===kakao.maps.services.Status.OK){
+            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+            var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
+            if(dup2){_yToast('이미 추가된 우편번호예요');return;}
+            var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:[]};
+            window._zones.push(newZone);
+            _renderZoneTags();
+            _updateMapZones();
+            if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
+            document.getElementById('pw-zip-input').value='';
+            var areaInp=document.getElementById('pw-area');
+            if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+          } else {
+            if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
+          }
+        });
+      });
     }
-  });
+  }).open({q:zip});
 }
 // 주소 검색 fallback
 function _openDaumPost(){
