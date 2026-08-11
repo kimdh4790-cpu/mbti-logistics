@@ -17352,16 +17352,17 @@ function _showDetailMap(lat,lng,name,zipcode){
       _drawPoly([new kakao.maps.LatLng(flat-dlat,flng-dlng),new kakao.maps.LatLng(flat+dlat,flng-dlng),
                  new kakao.maps.LatLng(flat+dlat,flng+dlng),new kakao.maps.LatLng(flat-dlat,flng+dlng)]);
     }
-    // 저장 좌표 fallback — zipcode+region 재지오코딩 포함
     function _fallback(){
-      // 저장 좌표(hasPos)보다 region 텍스트 지오코딩을 우선 — 좌표가 잘못 저장됐을 수 있음
-      var region=(window._detailPost&&window._detailPost.region)||'';
+      // '부산 · 48267' → '부산' 추출 (· 이하 제거). 도시명만 지오코딩해야 정확함
+      var rawRegion=(window._detailPost&&window._detailPost.region)||'';
+      var city=rawRegion.replace(/\s*[···⋅]\s*\d.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
       var gc=new kakao.maps.services.Geocoder();
       function _useStored(){
-        if(hasPos){_initAt(new kakao.maps.LatLng(lat,lng));_approxRect(new kakao.maps.LatLng(lat,lng));}
+        // zipcode가 있으면 저장 좌표를 신뢰하지 않음 (잘못 저장됐을 수 있음)
+        if(hasPos&&!hasZip){_initAt(new kakao.maps.LatLng(lat,lng));_approxRect(new kakao.maps.LatLng(lat,lng));}
       }
-      if(region){
-        gc.addressSearch(region,function(res,status){
+      if(city){
+        gc.addressSearch(city,function(res,status){
           if(status===kakao.maps.services.Status.OK&&res[0]){
             var p=new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x));
             _initAt(p);_approxRect(p);
