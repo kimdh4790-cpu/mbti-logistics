@@ -17248,48 +17248,29 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            var vk=window._vwKey||'';
-            function _proxyFallback(){
-              fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng)
-                .then(function(r){return r.json();})
-                .then(function(bd){_applyBoundary(bd);})
-                .catch(function(){});
-            }
-            if(vk&&vk!=='__VWORLD_KEY__'){
-              // ① JSONP — CORS 우회, script 태그로 vWorld 직접 호출
-              var _cbName='_vwCb'+Date.now();
-              var _cbTimer=setTimeout(function(){
-                delete window[_cbName];
-                if(_cbScript&&_cbScript.parentNode)_cbScript.parentNode.removeChild(_cbScript);
-                _proxyFallback();
-              },8000);
-              window[_cbName]=function(d){
-                clearTimeout(_cbTimer);
-                delete window[_cbName];
-                if(_cbScript&&_cbScript.parentNode)_cbScript.parentNode.removeChild(_cbScript);
-                var fs=d.features||[];
-                if(!fs.length){_proxyFallback();return;}
-                var c=_geomToCoords(fs[0].geometry);
-                if(!c.length){_proxyFallback();return;}
-                var p=fs[0].properties||{};
-                var rid=(p.bas_id||'').toString().trim();
-                if(rid&&rid!==zipcode){_proxyFallback();return;}
-                var cLat=c.reduce(function(s,x){return s+x.lat;},0)/c.length;
-                var cLng=c.reduce(function(s,x){return s+x.lng;},0)/c.length;
-                _applyBoundary({coords:c,lat:cLat,lng:cLng});
-              };
-              var sCql=encodeURIComponent('INTERSECTS(geometry,POINT('+lng+' '+lat+'))');
-              var _cbScript=document.createElement('script');
-              _cbScript.onerror=function(){
-                clearTimeout(_cbTimer);
-                delete window[_cbName];
-                _proxyFallback();
-              };
-              _cbScript.src='https://api.vworld.kr/req/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(vk)+'&CQL_FILTER='+sCql+'&outputFormat=text/javascript&format_options=callback:'+_cbName+'&srsName=EPSG:4326&maxFeatures=1';
-              document.head.appendChild(_cbScript);
-            } else {
-              _proxyFallback();
-            }
+            // Oracle Cloud 프록시 경유 → vWorld WFS (CORS 해결)
+            var sCql=encodeURIComponent('INTERSECTS(geometry,POINT('+lng+' '+lat+'))');
+            var _proxyBase=window._vwProxy||'/api/yongcha/zone-boundary';
+            var _useProxy=(_proxyBase.indexOf('155.248')!==-1);
+            var _url=_useProxy
+              ?(_proxyBase+'/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(window._vwKey||'')+'&CQL_FILTER='+sCql+'&outputFormat=application/json&srsName=EPSG:4326&maxFeatures=1')
+              :('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng);
+            fetch(_url)
+              .then(function(r){return r.json();})
+              .then(function(d){
+                if(_useProxy){
+                  var fs=d.features||[];
+                  if(!fs.length)return;
+                  var c=_geomToCoords(fs[0].geometry);
+                  if(!c.length)return;
+                  var cLat=c.reduce(function(s,x){return s+x.lat;},0)/c.length;
+                  var cLng=c.reduce(function(s,x){return s+x.lng;},0)/c.length;
+                  _applyBoundary({coords:c,lat:cLat,lng:cLng});
+                } else {
+                  _applyBoundary(d);
+                }
+              })
+              .catch(function(){});
           })();
         });
       });
