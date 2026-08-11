@@ -17089,8 +17089,10 @@ function _updateMapZones(){
   if(wrap){
     wrap.style.display = window._zones.length ? 'block' : 'none';
     if(window._zones.length && !_map){
-      _initPostMap();
-      setTimeout(_doUpdateMapZones, 800);
+      setTimeout(function(){
+        _initPostMap();
+        setTimeout(_doUpdateMapZones, 800);
+      }, 100);
       return;
     }
   }
