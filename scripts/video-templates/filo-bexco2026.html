@@ -9,869 +9,907 @@
 body{width:1280px;height:720px;overflow:hidden;background:#fff;font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;}
 #wrap{position:relative;width:1280px;height:720px;overflow:hidden;background:#fff;}
 
-/* Progress bar */
-#prog{position:absolute;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,#c9a84c,#f0d080,#c9a84c);background-size:200% 100%;animation:shimProg 2s linear infinite;transition:width .6s cubic-bezier(.4,0,.2,1);z-index:100;}
 @keyframes shimProg{0%{background-position:0%}100%{background-position:200%}}
+@keyframes glowRing{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(1);}50%{opacity:.65;transform:translate(-50%,-50%) scale(1.04);}}
+@keyframes shimSweep{0%{transform:translateX(-100%) skewX(-15deg);}100%{transform:translateX(500%) skewX(-15deg);}}
+@keyframes scanPulse{0%{transform:translateX(-50%) scale(.7);opacity:1;}100%{transform:translateX(-50%) scale(2.8);opacity:0;}}
+@keyframes scanPulse2{0%{transform:translateX(-50%) scale(.85);opacity:.6;}100%{transform:translateX(-50%) scale(3.5);opacity:0;}}
+@keyframes beamMove{0%,100%{top:0;}50%{top:calc(100% - 4px);}}
+@keyframes countFlash{0%{color:#08101f;text-shadow:none;}40%{color:#c9a84c;text-shadow:0 0 24px rgba(201,168,76,.9),0 0 48px rgba(201,168,76,.5);}100%{color:#08101f;text-shadow:none;}}
+@keyframes ctaBorder{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+@keyframes badgePop{0%{transform:scale(0) rotate(10deg);}65%{transform:scale(1.12) rotate(-3deg);}82%{transform:scale(.95);}100%{transform:scale(1) rotate(0);}}
+@keyframes notifBounce{0%{transform:translateY(-24px);opacity:0;}65%{transform:translateY(5px);opacity:1;}82%{transform:translateY(-3px);}100%{transform:translateY(0);opacity:1;}}
+@keyframes kdsSlide{from{transform:translateX(50px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes pulseScale{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
+@keyframes barGrow{from{width:0;}to{}}
+@keyframes stockBlink{0%,100%{color:#08101f;}50%{color:#ef4444;}}
+@keyframes payBarFill{from{width:0;}to{}}
+@keyframes rotateIn{from{transform:rotate(-8deg) scale(.7);opacity:0;}to{transform:rotate(0) scale(1);opacity:1;}}
 
-/* Slides */
-.slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .5s ease;}
+#prog{position:absolute;top:0;left:0;height:5px;width:0;background:linear-gradient(90deg,#c9a84c,#f0d080,#c9a84c);background-size:200%;animation:shimProg 2s linear infinite;transition:width .65s cubic-bezier(.4,0,.2,1);z-index:100;}
+
+.slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .55s ease;}
 .slide.on{opacity:1;pointer-events:auto;}
 
-/* ======================== S0 HERO ======================== */
+/* ====== S0 HERO ====== */
 #s0{background:#fff;}
-#s0 canvas{position:absolute;inset:0;width:100%;height:100%;}
+#s0 canvas{position:absolute;inset:0;}
+#s0 .gr1{position:absolute;top:50%;left:50%;width:360px;height:360px;border-radius:50%;border:2px solid rgba(201,168,76,.22);animation:glowRing 3.2s ease-in-out infinite;opacity:0;transition:opacity .8s;}
+#s0 .gr2{position:absolute;top:50%;left:50%;width:520px;height:520px;border-radius:50%;border:1px solid rgba(201,168,76,.1);animation:glowRing 3.2s 1s ease-in-out infinite;opacity:0;transition:opacity .8s .2s;}
+#s0 .gr1.vis{opacity:1;}#s0 .gr2.vis{opacity:1;}
 #s0 .hero{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;}
-#s0 .logo-wrap{text-align:center;margin-bottom:20px;}
-#s0 .logo-big{font-size:108px;font-weight:900;letter-spacing:-4px;color:#08101f;line-height:1;opacity:0;transform:scale(.6);transition:opacity .7s,transform .7s cubic-bezier(.34,1.56,.64,1);}
-#s0 .logo-big.vis{opacity:1;transform:scale(1);}
-#s0 .logo-sub{font-size:22px;font-weight:600;color:#c9a84c;letter-spacing:8px;text-transform:uppercase;opacity:0;transform:translateY(20px);transition:opacity .6s .3s,transform .6s .3s;}
+#s0 .logo-big{font-size:124px;font-weight:900;letter-spacing:-5px;color:#08101f;line-height:1;display:inline-flex;}
+#s0 .ll{display:inline-block;opacity:0;transform:translateY(-100px) rotate(-22deg) scale(.4);transition:opacity .55s calc(var(--i)*.1s + .06s),transform .7s calc(var(--i)*.1s + .06s) cubic-bezier(.34,2,.64,1);}
+#s0 .ll.vis{opacity:1;transform:translateY(0) rotate(0) scale(1);}
+#s0 .ll.gold{color:#c9a84c;}
+#s0 .logo-shim{position:absolute;top:0;left:0;width:32px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:shimSweep 3s 1.5s ease-in-out infinite;pointer-events:none;}
+#s0 .logo-wrap{position:relative;margin-bottom:14px;}
+#s0 .logo-sub{font-size:20px;font-weight:600;color:#c9a84c;letter-spacing:10px;text-transform:uppercase;opacity:0;transform:translateY(20px);transition:opacity .6s .6s,transform .6s .6s;}
 #s0 .logo-sub.vis{opacity:1;transform:translateY(0);}
-#s0 .gold-line{width:0;height:4px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);margin:18px auto;transition:width 1s .5s cubic-bezier(.4,0,.2,1);}
-#s0 .gold-line.vis{width:400px;}
-#s0 .tagline{font-size:28px;font-weight:700;color:#08101f;text-align:center;opacity:0;transform:translateY(16px);transition:opacity .6s .7s,transform .6s .7s;}
-#s0 .tagline.vis{opacity:1;transform:translateY(0);}
+#s0 .gold-line{width:0;height:4px;background:linear-gradient(90deg,transparent,#c9a84c,#f0d080,#c9a84c,transparent);margin:18px auto;transition:width 1.1s .8s cubic-bezier(.4,0,.2,1);box-shadow:0 0 14px rgba(201,168,76,.35);}
+#s0 .gold-line.vis{width:460px;}
+#s0 .tagline{font-size:27px;font-weight:700;color:#08101f;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s 1s,clip-path .75s 1s cubic-bezier(.4,0,.2,1);}
+#s0 .tagline.vis{opacity:1;clip-path:inset(0 0 0 0);}
 #s0 .tagline span{color:#c9a84c;}
-#s0 .stats-row{display:flex;gap:48px;margin-top:32px;opacity:0;transform:translateY(20px);transition:opacity .6s 1s,transform .6s 1s;}
+#s0 .stats-row{display:flex;gap:56px;margin-top:34px;opacity:0;transform:translateY(22px);transition:opacity .6s 1.2s,transform .6s 1.2s cubic-bezier(.34,1.3,.64,1);}
 #s0 .stats-row.vis{opacity:1;transform:translateY(0);}
 #s0 .stat-box{text-align:center;}
-#s0 .stat-num{font-size:44px;font-weight:900;color:#08101f;line-height:1;}
-#s0 .stat-unit{font-size:13px;color:#666;margin-top:4px;letter-spacing:1px;}
-#s0 .chip-row{display:flex;gap:12px;margin-top:28px;opacity:0;transform:translateY(16px);transition:opacity .6s 1.3s,transform .6s 1.3s;}
+#s0 .stat-num{font-size:54px;font-weight:900;color:#08101f;line-height:1;}
+#s0 .stat-unit{font-size:13px;color:#888;margin-top:6px;font-weight:600;letter-spacing:.5px;}
+#s0 .stat-div{width:1px;height:64px;background:linear-gradient(180deg,transparent,#ddd,transparent);align-self:center;}
+#s0 .chip-row{display:flex;gap:12px;margin-top:30px;opacity:0;transform:translateY(20px);transition:opacity .6s 1.5s,transform .6s 1.5s cubic-bezier(.34,1.5,.64,1);}
 #s0 .chip-row.vis{opacity:1;transform:translateY(0);}
-#s0 .chip{padding:8px 20px;border-radius:100px;font-size:14px;font-weight:700;border:2px solid #08101f;color:#08101f;background:#fff;}
-#s0 .chip.gold{background:#c9a84c;border-color:#c9a84c;color:#fff;}
-#s0 .bexco-badge{position:absolute;bottom:28px;right:36px;background:#08101f;color:#c9a84c;font-size:14px;font-weight:800;padding:10px 22px;border-radius:50px;letter-spacing:2px;opacity:0;transition:opacity .6s 1.6s;}
+#s0 .chip{padding:9px 22px;border-radius:100px;font-size:14px;font-weight:700;border:2px solid #08101f;color:#08101f;}
+#s0 .chip.g{background:#c9a84c;border-color:#c9a84c;color:#fff;box-shadow:0 4px 18px rgba(201,168,76,.38);}
+#s0 .bexco-badge{position:absolute;bottom:28px;right:36px;background:#08101f;color:#c9a84c;font-size:14px;font-weight:800;padding:10px 24px;border-radius:50px;letter-spacing:2px;opacity:0;transition:opacity .6s 1.8s;}
 #s0 .bexco-badge.vis{opacity:1;}
 
-/* ======================== S1 TABLE QR ======================== */
+/* ====== S1 QR TABLE ====== */
 #s1{background:#f8f9fc;}
-#s1 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
-#s1 .left-text{width:440px;padding:60px 0 60px 80px;z-index:10;}
-#s1 .eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;transform:translateX(-30px);transition:opacity .5s,transform .5s;}
-#s1 .eyebrow.vis{opacity:1;transform:translateX(0);}
-#s1 .h1{font-size:52px;font-weight:900;color:#08101f;line-height:1.15;margin:12px 0;opacity:0;transform:translateX(-30px);transition:opacity .6s .15s,transform .6s .15s;}
-#s1 .h1.vis{opacity:1;transform:translateX(0);}
+#s1 .scene{position:absolute;inset:0;display:flex;align-items:center;}
+#s1 .lt{width:460px;padding:60px 0 60px 72px;flex-shrink:0;}
+#s1 .ey{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(-28px);transition:opacity .45s,transform .45s;}
+#s1 .ey.vis{opacity:1;transform:translateX(0);}
+#s1 .h1{font-size:52px;font-weight:900;color:#08101f;line-height:1.15;margin:12px 0 16px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .12s,clip-path .7s .12s cubic-bezier(.4,0,.2,1);}
+#s1 .h1.vis{opacity:1;clip-path:inset(0 0 0 0);}
 #s1 .h1 em{color:#c9a84c;font-style:normal;}
-#s1 .desc{font-size:17px;color:#444;line-height:1.7;margin-bottom:24px;opacity:0;transform:translateX(-30px);transition:opacity .6s .3s,transform .6s .3s;}
-#s1 .desc.vis{opacity:1;transform:translateX(0);}
-#s1 .feat-list{list-style:none;opacity:0;transition:opacity .6s .45s;}
-#s1 .feat-list.vis{opacity:1;}
-#s1 .feat-list li{display:flex;align-items:center;gap:10px;font-size:15px;color:#333;font-weight:600;margin-bottom:12px;}
-#s1 .feat-list li::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:#c9a84c;flex-shrink:0;}
-#s1 .right-scene{flex:1;position:relative;height:720px;display:flex;align-items:center;justify-content:center;}
-/* 3D perspective table */
-#s1 .table-wrap{position:relative;width:420px;height:260px;opacity:0;transform:translateY(40px) scale(.9);transition:opacity .7s .2s,transform .7s .2s cubic-bezier(.34,1.4,.64,1);}
-#s1 .table-wrap.vis{opacity:1;transform:translateY(0) scale(1);}
-#s1 .table-top{width:100%;height:100%;background:linear-gradient(135deg,#e8d5b0 0%,#d4b896 40%,#c9a880 60%,#b89060 100%);border-radius:16px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.2),0 8px 20px rgba(0,0,0,.15);transform:perspective(600px) rotateX(20deg);}
-#s1 .table-top::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0,transparent 48px,rgba(255,255,255,.06) 48px,rgba(255,255,255,.06) 50px);border-radius:16px;}
-#s1 .qr-card{position:absolute;top:-70px;left:50%;transform:translateX(-50%);width:130px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.18);overflow:hidden;opacity:0;transition:opacity .6s .8s;}
-#s1 .qr-card.vis{opacity:1;}
-#s1 .qr-header{background:#08101f;color:#c9a84c;font-size:10px;font-weight:800;letter-spacing:2px;text-align:center;padding:7px 0;}
-#s1 .qr-body{padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;}
-#s1 .qr-svg{width:80px;height:80px;}
-#s1 .qr-label{font-size:9px;color:#666;font-weight:700;letter-spacing:1px;text-align:center;}
-/* floating phone approaching from top */
-#s1 .phone-approach{position:absolute;top:-120px;left:50%;transform:translateX(-20px);width:80px;opacity:0;transition:opacity .5s 1.3s,top 1.2s 1.3s cubic-bezier(.4,0,.2,1);}
-#s1 .phone-approach.vis{opacity:1;top:40px;}
-#s1 .ph-small{width:80px;height:138px;background:#08101f;border-radius:14px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,.3);}
-#s1 .ph-small::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:20px;height:4px;background:#333;border-radius:2px;}
-#s1 .scan-ring{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);width:60px;height:60px;border:3px solid #c9a84c;border-radius:50%;animation:scanPulse 1s .5s ease-out infinite;opacity:0;}
-#s1 .scan-ring.vis{opacity:1;}
-@keyframes scanPulse{0%{transform:translateX(-50%) scale(.8);opacity:1;}100%{transform:translateX(-50%) scale(2);opacity:0;}}
-/* Glow number badge */
-#s1 .order-badge{position:absolute;top:50px;right:60px;background:#c9a84c;color:#fff;font-size:28px;font-weight:900;padding:14px 24px;border-radius:20px;opacity:0;transform:scale(0);transition:opacity .5s 1.8s,transform .5s 1.8s cubic-bezier(.34,1.8,.64,1);}
-#s1 .order-badge.vis{opacity:1;transform:scale(1);}
+#s1 .de{font-size:16px;color:#444;line-height:1.75;margin-bottom:22px;opacity:0;transform:translateX(-24px);transition:opacity .5s .3s,transform .5s .3s;}
+#s1 .de.vis{opacity:1;transform:translateX(0);}
+#s1 .fl{list-style:none;opacity:0;transform:translateX(-18px);transition:opacity .5s .46s,transform .5s .46s;}
+#s1 .fl.vis{opacity:1;transform:translateX(0);}
+#s1 .fl li{display:flex;align-items:flex-start;gap:10px;font-size:15px;color:#333;font-weight:600;margin-bottom:14px;line-height:1.4;}
+#s1 .fl li::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:#c9a84c;flex-shrink:0;margin-top:6px;box-shadow:0 0 6px rgba(201,168,76,.5);}
+#s1 .step-tag{display:inline-block;background:#08101f;color:#c9a84c;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px;margin-top:16px;letter-spacing:1px;opacity:0;transform:translateY(10px);transition:opacity .5s .6s,transform .5s .6s;}
+#s1 .step-tag.vis{opacity:1;transform:translateY(0);}
+#s1 .rt{flex:1;position:relative;height:720px;display:flex;align-items:center;justify-content:center;}
+#s1 .tw{position:relative;width:460px;height:288px;opacity:0;transform:translateY(50px) scale(.87);transition:opacity .7s .12s,transform .78s .12s cubic-bezier(.34,1.6,.64,1);}
+#s1 .tw.vis{opacity:1;transform:translateY(0) scale(1);}
+#s1 .tt{width:100%;height:100%;background:linear-gradient(135deg,#ead8b4 0%,#d4b896 40%,#c9a880 60%,#b89060 100%);border-radius:20px;box-shadow:0 28px 72px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.13);transform:perspective(650px) rotateX(20deg);overflow:hidden;}
+#s1 .ts{position:absolute;top:-50%;left:-60%;width:35%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);animation:shimSweep 4s 1.2s ease-in-out infinite;pointer-events:none;}
+#s1 .qc{position:absolute;top:-84px;left:50%;transform:translateX(-50%);width:140px;background:#fff;border-radius:18px;box-shadow:0 18px 56px rgba(0,0,0,.18);overflow:hidden;opacity:0;transition:opacity .55s .85s;}
+#s1 .qc.vis{opacity:1;}
+#s1 .qh{background:#08101f;color:#c9a84c;font-size:10px;font-weight:800;letter-spacing:2px;text-align:center;padding:8px 0;}
+#s1 .qb{padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+#s1 .qs{width:86px;height:86px;}
+#s1 .ql{font-size:9px;color:#666;font-weight:700;letter-spacing:1px;text-align:center;}
+#s1 .pa{position:absolute;top:-140px;left:50%;width:84px;opacity:0;transition:opacity .5s 1.3s,top 1.3s 1.3s cubic-bezier(.3,0,.2,1);}
+#s1 .pa.vis{opacity:1;top:28px;}
+#s1 .ps{width:84px;height:148px;background:#08101f;border-radius:16px;position:relative;box-shadow:0 12px 36px rgba(0,0,0,.38);}
+#s1 .ps::before{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:24px;height:4px;background:#2a2a2a;border-radius:2px;}
+#s1 .sr{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:68px;height:68px;border:3px solid #c9a84c;border-radius:50%;animation:scanPulse 1.1s ease-out infinite;opacity:0;}
+#s1 .sr.vis{opacity:1;}
+#s1 .sr2{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:68px;height:68px;border:2px solid rgba(201,168,76,.4);border-radius:50%;animation:scanPulse2 1.1s .6s ease-out infinite;opacity:0;}
+#s1 .sr2.vis{opacity:1;}
+#s1 .ob{position:absolute;top:42px;right:48px;background:#c9a84c;color:#fff;border-radius:22px;padding:14px 22px;opacity:0;box-shadow:0 8px 28px rgba(201,168,76,.5);}
+#s1 .ob.vis{animation:badgePop .55s cubic-bezier(.34,1.6,.64,1) both;opacity:1;}
+#s1 .ob-main{font-size:22px;font-weight:900;}
+#s1 .ob-sub{font-size:11px;font-weight:700;opacity:.85;letter-spacing:.5px;margin-top:2px;}
 
-/* ======================== S2 SCAN ======================== */
+/* ====== S2 SCAN ====== */
 #s2{background:#fff;}
-#s2 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:80px;}
-#s2 .phone-big{width:300px;height:540px;background:#08101f;border-radius:40px;position:relative;box-shadow:0 30px 80px rgba(8,16,31,.25),0 4px 20px rgba(8,16,31,.15);opacity:0;transform:translateY(-60px);transition:opacity .6s,transform .7s cubic-bezier(.34,1.4,.64,1);}
-#s2 .phone-big.vis{opacity:1;transform:translateY(0);}
-#s2 .phone-big::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:60px;height:6px;background:#222;border-radius:3px;}
-#s2 .phone-screen{position:absolute;inset:20px 12px 20px 12px;background:#111;border-radius:28px;overflow:hidden;}
-#s2 .cam-live{width:100%;height:100%;background:linear-gradient(160deg,#1a2a1a 0%,#0d1a0d 100%);position:relative;}
-#s2 .cam-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:30px 30px;}
-/* QR code rendered on screen */
-#s2 .qr-target{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;}
-#s2 .qr-t-corner{position:absolute;width:22px;height:22px;border-color:#00e676;border-style:solid;}
-#s2 .qr-t-corner.tl{top:0;left:0;border-width:3px 0 0 3px;}
-#s2 .qr-t-corner.tr{top:0;right:0;border-width:3px 3px 0 0;}
-#s2 .qr-t-corner.bl{bottom:0;left:0;border-width:0 0 3px 3px;}
-#s2 .qr-t-corner.br{bottom:0;right:0;border-width:0 3px 3px 0;}
-#s2 .scan-beam{position:absolute;left:10%;right:10%;height:3px;background:linear-gradient(90deg,transparent,#00e676,transparent);box-shadow:0 0 12px #00e676;top:20%;animation:beamMove 1.5s .3s ease-in-out infinite;}
-@keyframes beamMove{0%{top:20%}50%{top:75%}100%{top:20%}}
-#s2 .flash-overlay{position:absolute;inset:0;background:#fff;opacity:0;border-radius:28px;pointer-events:none;}
-#s2 .flash-overlay.flash{animation:flashAnim .25s ease-out;}
-@keyframes flashAnim{0%{opacity:.9}100%{opacity:0}}
-#s2 .done-badge{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) scale(0);background:#00c853;color:#fff;font-size:13px;font-weight:800;padding:8px 18px;border-radius:100px;white-space:nowrap;transition:transform .4s cubic-bezier(.34,1.8,.64,1);}
-#s2 .done-badge.vis{transform:translateX(-50%) scale(1);}
-/* Right info panel */
-#s2 .info-panel{width:440px;}
-#s2 .info-eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;transform:translateX(30px);transition:opacity .5s .2s,transform .5s .2s;}
-#s2 .info-eyebrow.vis{opacity:1;transform:translateX(0);}
-#s2 .info-h1{font-size:52px;font-weight:900;color:#08101f;line-height:1.15;margin:12px 0 16px;opacity:0;transform:translateX(30px);transition:opacity .6s .35s,transform .6s .35s;}
-#s2 .info-h1.vis{opacity:1;transform:translateX(0);}
-#s2 .info-h1 em{color:#c9a84c;font-style:normal;}
-#s2 .steps{opacity:0;transform:translateX(30px);transition:opacity .6s .5s,transform .6s .5s;}
-#s2 .steps.vis{opacity:1;transform:translateX(0);}
-#s2 .step{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;}
-#s2 .step-num{width:36px;height:36px;background:#08101f;color:#c9a84c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;}
-#s2 .step-body h3{font-size:17px;font-weight:800;color:#08101f;margin-bottom:3px;}
-#s2 .step-body p{font-size:14px;color:#666;line-height:1.5;}
-#s2 .speed-pill{display:inline-flex;align-items:center;gap:8px;background:#08101f;color:#c9a84c;font-size:15px;font-weight:800;padding:10px 24px;border-radius:100px;margin-top:20px;opacity:0;transition:opacity .6s .9s;}
-#s2 .speed-pill.vis{opacity:1;}
+#s2 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:64px;}
+#s2 .pbig{width:300px;height:540px;background:#08101f;border-radius:42px;position:relative;box-shadow:0 32px 90px rgba(8,16,31,.3);opacity:0;transform:translateY(-60px);transition:opacity .55s,transform .72s cubic-bezier(.34,1.5,.64,1);}
+#s2 .pbig.vis{opacity:1;transform:translateY(0);}
+#s2 .pbig::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:62px;height:6px;background:#1e1e1e;border-radius:3px;}
+#s2 .pscr{position:absolute;inset:22px 14px 22px 14px;background:#111;border-radius:28px;overflow:hidden;}
+#s2 .cam{width:100%;height:100%;background:linear-gradient(160deg,#1a2a1a,#0d1a0d);position:relative;}
+#s2 .cgrid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;}
+#s2 .qt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;}
+#s2 .qtc{position:absolute;width:22px;height:22px;border-color:#00e676;border-style:solid;}
+#s2 .qtc.tl{top:0;left:0;border-width:3px 0 0 3px;}
+#s2 .qtc.tr{top:0;right:0;border-width:3px 3px 0 0;}
+#s2 .qtc.bl{bottom:0;left:0;border-width:0 0 3px 3px;}
+#s2 .qtc.br{bottom:0;right:0;border-width:0 3px 3px 0;}
+#s2 .beam{position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,transparent,#00e676,rgba(0,230,118,.3),transparent);box-shadow:0 0 14px #00e676;animation:beamMove 1.4s ease-in-out infinite;}
+#s2 .fl{position:absolute;inset:0;background:#00e676;opacity:0;border-radius:28px;transition:opacity .12s;}
+#s2 .fl.flash{opacity:.5;}
+#s2 .dp{position:absolute;inset:0;background:rgba(0,0,0,.62);border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0;transform:scale(.88);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
+#s2 .dp.vis{opacity:1;transform:scale(1);}
+#s2 .di{width:52px;height:52px;background:#00e676;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+#s2 .di svg{width:28px;height:28px;stroke:#000;stroke-width:2.8;fill:none;}
+#s2 .dt{font-size:14px;font-weight:800;color:#00e676;letter-spacing:2px;}
+#s2 .ds{font-size:10px;color:rgba(255,255,255,.7);font-weight:600;}
+#s2 .info{width:420px;}
+#s2 .iey{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(24px);transition:opacity .45s .2s,transform .45s .2s;}
+#s2 .iey.vis{opacity:1;transform:translateX(0);}
+#s2 .ih1{font-size:48px;font-weight:900;color:#08101f;line-height:1.2;margin:12px 0 20px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .35s,clip-path .7s .35s cubic-bezier(.4,0,.2,1);}
+#s2 .ih1.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s2 .ih1 em{color:#c9a84c;font-style:normal;}
+#s2 .istep{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;opacity:0;transform:translateX(18px);transition:opacity .4s,transform .4s;}
+#s2 .istep.vis{opacity:1;transform:translateX(0);}
+#s2 .isn{width:34px;height:34px;border-radius:50%;background:#08101f;color:#c9a84c;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#s2 .ib{flex:1;}
+#s2 .it{font-size:16px;font-weight:800;color:#08101f;margin-bottom:3px;}
+#s2 .id{font-size:13px;color:#666;line-height:1.55;}
+#s2 .tpill{display:inline-flex;align-items:center;gap:10px;background:#08101f;color:#c9a84c;font-size:15px;font-weight:800;padding:12px 26px;border-radius:50px;margin-top:22px;opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s cubic-bezier(.34,1.4,.64,1);}
+#s2 .tpill.vis{opacity:1;transform:translateY(0);}
+#s2 .tpill .tn{font-size:26px;font-weight:900;}
 
-/* ======================== S3 MENU ======================== */
-#s3{background:#fff;}
-#s3 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:60px;}
-#s3 .phone-menu{width:280px;height:500px;background:#08101f;border-radius:36px;position:relative;box-shadow:0 30px 80px rgba(8,16,31,.2);opacity:0;transform:translateX(-60px);transition:opacity .6s,transform .7s cubic-bezier(.34,1.4,.64,1);}
-#s3 .phone-menu.vis{opacity:1;transform:translateX(0);}
-#s3 .phone-menu::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:50px;height:5px;background:#222;border-radius:2px;}
-#s3 .pm-screen{position:absolute;inset:18px 10px 18px 10px;background:#f8f9fc;border-radius:24px;overflow:hidden;}
-#s3 .pm-header{background:#08101f;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
-#s3 .pm-h-title{color:#fff;font-size:12px;font-weight:800;}
-#s3 .pm-h-table{color:#c9a84c;font-size:11px;font-weight:700;}
-#s3 .pm-cats{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid #eee;overflow:hidden;}
-#s3 .pm-cat{padding:4px 10px;border-radius:100px;font-size:10px;font-weight:700;background:#f0f0f0;color:#666;}
-#s3 .pm-cat.active{background:#08101f;color:#fff;}
-#s3 .pm-items{padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-#s3 .pm-item{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:0;transform:scale(.85);transition:opacity .35s,transform .35s cubic-bezier(.34,1.4,.64,1);}
-#s3 .pm-item.vis{opacity:1;transform:scale(1);}
-#s3 .pm-img{height:52px;display:flex;align-items:center;justify-content:center;font-size:24px;}
-#s3 .pm-img.a{background:linear-gradient(135deg,#ffe0b2,#ffcc80);}
-#s3 .pm-img.b{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);}
-#s3 .pm-img.c{background:linear-gradient(135deg,#fce4ec,#f8bbd0);}
-#s3 .pm-img.d{background:linear-gradient(135deg,#e3f2fd,#bbdefb);}
-#s3 .pm-info{padding:6px 8px;}
-#s3 .pm-name{font-size:10px;font-weight:700;color:#08101f;}
-#s3 .pm-price{font-size:10px;color:#c9a84c;font-weight:800;}
-/* Right feature panel */
-#s3 .feat-panel{width:500px;}
-#s3 .feat-eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;transform:translateX(30px);transition:opacity .5s,transform .5s;}
-#s3 .feat-eyebrow.vis{opacity:1;transform:translateX(0);}
-#s3 .feat-h1{font-size:50px;font-weight:900;color:#08101f;line-height:1.15;margin:12px 0 24px;opacity:0;transform:translateX(30px);transition:opacity .6s .15s,transform .6s .15s;}
-#s3 .feat-h1.vis{opacity:1;transform:translateX(0);}
-#s3 .feat-h1 em{color:#c9a84c;font-style:normal;}
-#s3 .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-#s3 .feat-card{background:#f8f9fc;border-radius:16px;padding:20px;border:2px solid transparent;opacity:0;transform:translateY(20px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
-#s3 .feat-card.vis{opacity:1;transform:translateY(0);border-color:#e8eaf0;}
-#s3 .feat-icon{font-size:28px;margin-bottom:10px;}
-#s3 .feat-cname{font-size:15px;font-weight:800;color:#08101f;margin-bottom:4px;}
-#s3 .feat-cdesc{font-size:13px;color:#666;line-height:1.5;}
-#s3 .feat-num{font-size:28px;font-weight:900;color:#c9a84c;margin-top:8px;}
+/* ====== S3 MENU ====== */
+#s3{background:#f8f9fc;}
+#s3 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:52px;}
+#s3 .pcol{flex-shrink:0;}
+#s3 .pb2{width:280px;height:500px;background:#08101f;border-radius:38px;position:relative;box-shadow:0 28px 72px rgba(8,16,31,.28);opacity:0;transform:translateX(-48px) scale(.9);transition:opacity .6s,transform .72s cubic-bezier(.34,1.5,.64,1);}
+#s3 .pb2.vis{opacity:1;transform:translateX(0) scale(1);}
+#s3 .pb2::before{content:'';position:absolute;top:11px;left:50%;transform:translateX(-50%);width:55px;height:5px;background:#1e1e1e;border-radius:3px;}
+#s3 .p2s{position:absolute;inset:20px 12px 20px 12px;background:#fff;border-radius:26px;overflow:hidden;}
+#s3 .p2h{background:#08101f;height:36px;display:flex;align-items:center;padding:0 12px;gap:8px;}
+#s3 .p2hl{font-size:14px;font-weight:900;color:#c9a84c;letter-spacing:1px;}
+#s3 .p2ht{font-size:10px;color:rgba(255,255,255,.6);flex:1;}
+#s3 .ml{padding:8px;}
+#s3 .mi{display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;margin-bottom:4px;opacity:0;transform:translateX(-18px);transition:opacity .38s,transform .42s cubic-bezier(.34,1.5,.64,1);}
+#s3 .mi.vis{opacity:1;transform:translateX(0);}
+#s3 .mimg{width:46px;height:46px;border-radius:8px;flex-shrink:0;}
+#s3 .mimg.f0{background:linear-gradient(135deg,#e8c87a,#c89a40);}
+#s3 .mimg.f1{background:linear-gradient(135deg,#90c060,#508030);}
+#s3 .mimg.f2{background:linear-gradient(135deg,#e08060,#c04030);}
+#s3 .mimg.f3{background:linear-gradient(135deg,#70b8e0,#3880b0);}
+#s3 .mb{flex:1;}
+#s3 .mn{font-size:12px;font-weight:800;color:#08101f;}
+#s3 .mp{font-size:10px;color:#c9a84c;font-weight:700;margin-top:2px;}
+#s3 .ma{width:24px;height:24px;border-radius:50%;background:#c9a84c;color:#fff;font-size:17px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+#s3 .fcol{width:520px;}
+#s3 .fey{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(26px);transition:opacity .45s,transform .45s;}
+#s3 .fey.vis{opacity:1;transform:translateX(0);}
+#s3 .fh1{font-size:44px;font-weight:900;color:#08101f;line-height:1.22;margin:12px 0 22px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .14s,clip-path .7s .14s cubic-bezier(.4,0,.2,1);}
+#s3 .fh1.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s3 .fh1 em{color:#c9a84c;font-style:normal;}
+#s3 .fg{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+#s3 .fc{background:#fff;border-radius:18px;padding:22px;border:2px solid #f0f0f0;opacity:0;transform:translateY(32px) scale(.82);transition:opacity .44s,transform .5s cubic-bezier(.34,1.7,.64,1);}
+#s3 .fc.vis{opacity:1;transform:translateY(0) scale(1);}
+#s3 .fci{width:44px;height:44px;border-radius:14px;background:#08101f;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+#s3 .fci svg{width:22px;height:22px;stroke:#c9a84c;stroke-width:1.8;fill:none;}
+#s3 .fct{font-size:16px;font-weight:800;color:#08101f;margin-bottom:6px;}
+#s3 .fcd{font-size:13px;color:#666;line-height:1.5;}
+#s3 .fc.hl{border-color:#c9a84c;box-shadow:0 0 0 1px rgba(201,168,76,.18),0 8px 26px rgba(201,168,76,.14);}
+#s3 .fc.hl .fci{background:linear-gradient(135deg,#c9a84c,#f0d080);}
+#s3 .fc.hl .fci svg{stroke:#08101f;}
 
-/* ======================== S4 ORDER ======================== */
+/* ====== S4 ORDER ====== */
 #s4{background:#fff;}
-#s4 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:80px;}
-#s4 .order-left{width:420px;}
-#s4 .o-eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;transition:opacity .5s;}
-#s4 .o-eyebrow.vis{opacity:1;}
-#s4 .o-h1{font-size:52px;font-weight:900;color:#08101f;line-height:1.15;margin:12px 0 24px;opacity:0;transform:translateY(20px);transition:opacity .6s .15s,transform .6s .15s;}
-#s4 .o-h1.vis{opacity:1;transform:translateY(0);}
-#s4 .o-h1 em{color:#c9a84c;font-style:normal;}
-#s4 .cart-items{margin-bottom:24px;}
-#s4 .cart-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #eee;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s;}
-#s4 .cart-item.vis{opacity:1;transform:translateX(0);}
-#s4 .ci-name{font-size:16px;font-weight:700;color:#08101f;}
-#s4 .ci-qty{font-size:14px;color:#999;}
-#s4 .ci-price{font-size:16px;font-weight:800;color:#08101f;}
-#s4 .total-bar{background:#08101f;border-radius:16px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;opacity:0;transform:scale(.9);transition:opacity .5s .8s,transform .5s .8s cubic-bezier(.34,1.4,.64,1);}
-#s4 .total-bar.vis{opacity:1;transform:scale(1);}
-#s4 .total-label{color:#c9a84c;font-size:16px;font-weight:700;letter-spacing:2px;}
-#s4 .total-num{color:#fff;font-size:36px;font-weight:900;}
-/* Right phone with confirm */
-#s4 .phone-confirm{width:280px;height:500px;background:#08101f;border-radius:36px;position:relative;box-shadow:0 30px 80px rgba(8,16,31,.2);opacity:0;transform:translateY(60px);transition:opacity .6s .2s,transform .7s .2s cubic-bezier(.34,1.4,.64,1);}
-#s4 .phone-confirm.vis{opacity:1;transform:translateY(0);}
-#s4 .phone-confirm::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:50px;height:5px;background:#222;border-radius:2px;}
-#s4 .pc-screen{position:absolute;inset:18px 10px 18px 10px;background:#f8f9fc;border-radius:24px;overflow:hidden;}
-#s4 .pc-success{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;}
-#s4 .pc-check{width:70px;height:70px;background:#00c853;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0);transition:opacity .4s 1.2s,transform .5s 1.2s cubic-bezier(.34,1.8,.64,1);}
-#s4 .pc-check.vis{opacity:1;transform:scale(1);}
-#s4 .pc-check svg{width:36px;height:36px;stroke:#fff;stroke-width:3;fill:none;}
-#s4 .pc-ok-text{font-size:16px;font-weight:800;color:#08101f;opacity:0;transition:opacity .5s 1.5s;}
-#s4 .pc-ok-text.vis{opacity:1;}
-#s4 .pc-order-num{font-size:36px;font-weight:900;color:#c9a84c;opacity:0;transition:opacity .5s 1.7s;}
-#s4 .pc-order-num.vis{opacity:1;}
-#s4 .pc-notify{font-size:11px;color:#999;text-align:center;padding:0 16px;opacity:0;transition:opacity .5s 1.9s;}
-#s4 .pc-notify.vis{opacity:1;}
-/* Confetti */
-#s4 canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:10;}
-#s4 .pickup-notif{position:absolute;top:32px;left:12px;right:12px;background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:20;opacity:0;transform:translateY(-12px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
-#s4 .pickup-notif.vis{opacity:1;transform:translateY(0);}
-#s4 .pn-bell{width:28px;height:28px;background:#c9a84c;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-#s4 .pn-bell svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;}
-#s4 .pn-app{font-size:8px;color:#999;font-weight:700;letter-spacing:.5px;}
-#s4 .pn-msg{font-size:11px;color:#08101f;font-weight:700;margin-top:1px;}
+#s4 #c4{position:absolute;inset:0;pointer-events:none;z-index:50;}
+#s4 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:48px;z-index:1;}
+#s4 .left{width:430px;}
+#s4 .s4e{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(-22px);transition:opacity .45s,transform .45s;}
+#s4 .s4e.vis{opacity:1;transform:translateX(0);}
+#s4 .s4h{font-size:46px;font-weight:900;color:#08101f;line-height:1.2;margin:12px 0 22px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .14s,clip-path .7s .14s cubic-bezier(.4,0,.2,1);}
+#s4 .s4h.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s4 .s4h em{color:#c9a84c;font-style:normal;}
+#s4 .ci{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:14px;background:#f8f9fc;margin-bottom:10px;opacity:0;transform:translateX(-18px);transition:opacity .4s,transform .44s cubic-bezier(.34,1.4,.64,1);}
+#s4 .ci.vis{opacity:1;transform:translateX(0);}
+#s4 .cin{font-size:15px;font-weight:700;color:#08101f;}
+#s4 .ciq{font-size:12px;color:#999;margin-top:2px;}
+#s4 .cip{font-size:16px;font-weight:900;color:#08101f;}
+#s4 .totbar{background:#08101f;border-radius:18px;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s cubic-bezier(.34,1.4,.64,1);box-shadow:0 10px 36px rgba(8,16,31,.24);}
+#s4 .totbar.vis{opacity:1;transform:translateY(0);}
+#s4 .totl{font-size:14px;font-weight:700;color:rgba(255,255,255,.65);}
+#s4 .totn{font-size:38px;font-weight:900;color:#c9a84c;line-height:1;}
+#s4 .right{position:relative;flex-shrink:0;}
+#s4 .pconf{width:262px;height:462px;background:#08101f;border-radius:36px;position:relative;box-shadow:0 28px 72px rgba(8,16,31,.28);opacity:0;transform:translateY(-40px) scale(.9);transition:opacity .55s .14s,transform .72s .14s cubic-bezier(.34,1.5,.64,1);}
+#s4 .pconf.vis{opacity:1;transform:translateY(0) scale(1);}
+#s4 .pconf::before{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:54px;height:5px;background:#1e1e1e;border-radius:3px;}
+#s4 .pcs{position:absolute;inset:18px 11px 18px 11px;background:#fff;border-radius:24px;overflow:hidden;}
+#s4 .pch{background:#08101f;height:32px;display:flex;align-items:center;justify-content:center;}
+#s4 .pcht{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:1px;}
+#s4 .oconf{padding:14px;display:flex;flex-direction:column;align-items:center;gap:7px;}
+#s4 .ocheck{width:52px;height:52px;background:#00c853;border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(0);transition:opacity .5s,transform .55s cubic-bezier(.34,1.9,.64,1);}
+#s4 .ocheck.vis{opacity:1;transform:scale(1);}
+#s4 .ocheck svg{width:28px;height:28px;stroke:#fff;stroke-width:3;fill:none;}
+#s4 .ot{font-size:14px;font-weight:900;color:#08101f;opacity:0;transition:opacity .4s;}
+#s4 .ot.vis{opacity:1;}
+#s4 .oti{font-size:11px;color:#888;opacity:0;transition:opacity .4s .1s;}
+#s4 .oti.vis{opacity:1;}
+#s4 .onote{font-size:10px;font-weight:700;color:#c9a84c;background:#fff8e6;border:1.5px solid #f0d080;border-radius:8px;padding:6px 10px;opacity:0;transition:opacity .4s .2s;}
+#s4 .onote.vis{opacity:1;}
+#s4 .pnotif{position:absolute;top:-14px;left:-70px;right:-70px;background:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 36px rgba(0,0,0,.22);z-index:20;opacity:0;}
+#s4 .pnotif.vis{animation:notifBounce .6s cubic-bezier(.34,1.5,.64,1) both;opacity:1;}
+#s4 .pnb{width:40px;height:40px;background:linear-gradient(135deg,#c9a84c,#f0d080);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 14px rgba(201,168,76,.4);}
+#s4 .pnb svg{width:22px;height:22px;stroke:#08101f;stroke-width:2;fill:none;}
+#s4 .pnt{font-size:14px;font-weight:800;color:#08101f;}
+#s4 .pns{font-size:12px;color:#666;margin-top:2px;}
 
-/* ======================== S5 KITCHEN KDS ======================== */
-#s5{background:#f0f0f0;}
-#s5 .scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:60px;}
-#s5 .kds-wrap{position:relative;opacity:0;transform:translateY(40px);transition:opacity .6s,transform .7s cubic-bezier(.34,1.4,.64,1);}
-#s5 .kds-wrap.vis{opacity:1;transform:translateY(0);}
-#s5 .kds-screen{width:700px;height:420px;background:#141414;border-radius:16px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.35);}
-#s5 .kds-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-#s5 .kds-logo{color:#c9a84c;font-size:13px;font-weight:900;letter-spacing:3px;}
-#s5 .kds-time{color:#666;font-size:12px;}
-#s5 .kds-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-#s5 .kds-ticket{background:#1e1e1e;border-radius:10px;padding:12px;border:2px solid #333;position:relative;opacity:0;transform:scale(.9);transition:opacity .3s,transform .3s cubic-bezier(.34,1.4,.64,1);}
-#s5 .kds-ticket.vis{opacity:1;transform:scale(1);}
-#s5 .kds-ticket.urgent{border-color:#ff6b35;}
-#s5 .kds-ticket.done{border-color:#00c853;opacity:.5;}
-#s5 .kt-table{font-size:10px;color:#888;font-weight:700;letter-spacing:1px;}
-#s5 .kt-num{font-size:24px;font-weight:900;color:#fff;line-height:1;}
-#s5 .kt-items{margin-top:8px;font-size:11px;color:#aaa;}
-#s5 .kt-items li{margin-bottom:3px;list-style:none;}
-#s5 .kt-timer{font-size:10px;color:#666;margin-top:8px;}
-#s5 .kt-timer.hot{color:#ff6b35;}
-#s5 .kt-status{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;background:#00c853;}
-#s5 .kt-status.hot{background:#ff6b35;animation:hotPulse .6s infinite alternate;}
-@keyframes hotPulse{0%{opacity:.5}100%{opacity:1;box-shadow:0 0 8px #ff6b35}}
-/* New order popup */
-#s5 .new-order-pop{position:absolute;top:-30px;left:50%;transform:translateX(-50%) translateY(-30px);background:#ff6b35;color:#fff;font-size:15px;font-weight:900;padding:12px 28px;border-radius:100px;letter-spacing:2px;opacity:0;transition:opacity .4s,transform .4s cubic-bezier(.34,1.8,.64,1);white-space:nowrap;}
-#s5 .new-order-pop.vis{opacity:1;transform:translateX(-50%) translateY(0);}
-/* Right info */
-#s5 .kds-info{width:300px;}
-#s5 .ki-eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;transition:opacity .5s .4s;}
-#s5 .ki-eyebrow.vis{opacity:1;}
-#s5 .ki-h1{font-size:44px;font-weight:900;color:#08101f;line-height:1.2;margin:12px 0 16px;opacity:0;transition:opacity .6s .55s;}
-#s5 .ki-h1.vis{opacity:1;}
-#s5 .ki-h1 em{color:#c9a84c;font-style:normal;}
-#s5 .ki-stats{display:flex;flex-direction:column;gap:14px;}
-#s5 .ki-stat{background:#fff;border-radius:12px;padding:16px 20px;opacity:0;transform:translateX(20px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
-#s5 .ki-stat.vis{opacity:1;transform:translateX(0);}
-#s5 .ki-stat-num{font-size:36px;font-weight:900;color:#08101f;}
-#s5 .ki-stat-label{font-size:13px;color:#666;margin-top:2px;}
+/* ====== S5 KDS ====== */
+#s5{background:#0d1117;}
+#s5 .scene{position:absolute;inset:0;display:flex;align-items:stretch;}
+#s5 .kpanel{flex:1;padding:32px 24px;display:flex;flex-direction:column;justify-content:center;}
+#s5 .khd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;opacity:0;transform:translateY(-10px);transition:opacity .4s,transform .4s;}
+#s5 .khd.vis{opacity:1;transform:translateY(0);}
+#s5 .kt{font-size:16px;font-weight:900;color:#c9a84c;letter-spacing:2px;}
+#s5 .kl{font-size:11px;color:#00e676;font-weight:700;display:flex;align-items:center;gap:6px;}
+#s5 .kldot{width:7px;height:7px;border-radius:50%;background:#00e676;animation:pulseScale 1.2s ease-in-out infinite;}
+#s5 .kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+#s5 .ktic{background:#1a1f2e;border-radius:14px;padding:14px;border:1px solid rgba(255,255,255,.07);opacity:0;animation-fill-mode:both;}
+#s5 .ktic.vis{animation:kdsSlide .45s cubic-bezier(.4,0,.2,1) both;}
+#s5 .ktic.done{border-color:rgba(0,230,118,.22);background:#0d1f14;}
+#s5 .ktic.urg{border-color:rgba(239,68,68,.3);background:#1f0d0d;}
+#s5 .ktbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:2px;text-transform:uppercase;}
+#s5 .ktn{font-size:38px;font-weight:900;color:#fff;line-height:1;margin:2px 0 6px;}
+#s5 .ktic.done .ktn{color:#00e676;}
+#s5 .ktic.urg .ktn{color:#ef4444;}
+#s5 .klist{list-style:none;margin-bottom:7px;}
+#s5 .klist li{font-size:11px;color:rgba(255,255,255,.7);margin-bottom:3px;}
+#s5 .ktimer{font-size:11px;font-weight:700;color:rgba(255,255,255,.42);}
+#s5 .ktic.urg .ktimer{color:#ef4444;}
+#s5 .kpop{position:absolute;top:24px;right:24px;background:#c9a84c;color:#08101f;border-radius:14px;padding:12px 22px;font-size:13px;font-weight:800;box-shadow:0 8px 32px rgba(201,168,76,.5);opacity:0;transform:translateY(-20px) scale(.82);transition:opacity .45s,transform .48s cubic-bezier(.34,1.6,.64,1);}
+#s5 .kpop.vis{opacity:1;transform:translateY(0) scale(1);}
+#s5 .kpc{font-size:30px;font-weight:900;line-height:1;margin-top:2px;}
+#s5 .kinfo{width:316px;flex-shrink:0;padding:60px 36px 60px 18px;}
+#s5 .kIey{font-size:11px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(22px);transition:opacity .45s .18s,transform .45s .18s;}
+#s5 .kIey.vis{opacity:1;transform:translateX(0);}
+#s5 .kIh1{font-size:36px;font-weight:900;color:#fff;line-height:1.28;margin:12px 0 28px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .33s,clip-path .7s .33s cubic-bezier(.4,0,.2,1);}
+#s5 .kIh1.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s5 .kIh1 em{color:#c9a84c;font-style:normal;}
+#s5 .kIstat{margin-bottom:22px;opacity:0;transform:translateX(18px);transition:opacity .45s,transform .45s;}
+#s5 .kIstat.vis{opacity:1;transform:translateX(0);}
+#s5 .kIsn{font-size:52px;font-weight:900;color:#c9a84c;line-height:1;}
+#s5 .kIsl{font-size:12px;color:rgba(255,255,255,.48);margin-top:4px;font-weight:600;}
 
-/* ======================== S6 ALL FEATURES ======================== */
-#s6{background:#fff;}
-#s6 .scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 60px;}
-#s6 .s6-top{text-align:center;margin-bottom:32px;}
-#s6 .s6-eyebrow{font-size:13px;font-weight:800;color:#c9a84c;letter-spacing:6px;text-transform:uppercase;opacity:0;transition:opacity .5s;}
-#s6 .s6-eyebrow.vis{opacity:1;}
-#s6 .s6-h1{font-size:56px;font-weight:900;color:#08101f;margin:8px 0 0;opacity:0;transform:translateY(20px);transition:opacity .6s .2s,transform .6s .2s;}
-#s6 .s6-h1.vis{opacity:1;transform:translateY(0);}
-#s6 .s6-h1 em{color:#c9a84c;font-style:normal;}
-#s6 .s6-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;width:100%;margin-bottom:32px;}
-#s6 .s6-card{background:#f8f9fc;border-radius:20px;padding:28px 24px;text-align:center;opacity:0;transform:translateY(30px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.4,.64,1);}
-#s6 .s6-card.vis{opacity:1;transform:translateY(0);}
-#s6 .s6-card-icon{width:56px;height:56px;background:#08101f;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
-#s6 .s6-card-icon svg{width:28px;height:28px;stroke:#c9a84c;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-#s6 .s6-card-title{font-size:17px;font-weight:800;color:#08101f;margin-bottom:6px;}
-#s6 .s6-card-desc{font-size:13px;color:#666;line-height:1.5;}
-#s6 .s6-card-num{font-size:28px;font-weight:900;color:#c9a84c;margin-top:10px;}
-#s6 .s6-bottom{display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 20px;}
-#s6 .s6-logo{font-size:42px;font-weight:900;color:#08101f;letter-spacing:-2px;opacity:0;transition:opacity .5s .9s;}
-#s6 .s6-logo.vis{opacity:1;}
-#s6 .s6-logo span{color:#c9a84c;}
-#s6 .s6-cta{opacity:0;transition:opacity .5s 1s;}
-#s6 .s6-cta.vis{opacity:1;}
-#s6 .cta-btn{display:inline-block;background:#c9a84c;color:#fff;font-size:18px;font-weight:900;padding:14px 36px;border-radius:100px;letter-spacing:2px;box-shadow:0 8px 24px rgba(201,168,76,.35);}
-#s6 .s6-bexco{background:#08101f;color:#c9a84c;font-size:13px;font-weight:800;padding:12px 24px;border-radius:100px;letter-spacing:2px;opacity:0;transition:opacity .5s 1.1s;}
-#s6 .s6-bexco.vis{opacity:1;}
+/* ====== S6 POS + 재고 ====== */
+#s6{background:#f8f9fc;}
+#s6 .scene{position:absolute;inset:0;display:flex;align-items:stretch;}
+#s6 .slt{width:440px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:60px 0 60px 64px;}
+#s6 .s6e{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(-22px);transition:opacity .45s,transform .45s;}
+#s6 .s6e.vis{opacity:1;transform:translateX(0);}
+#s6 .s6h{font-size:48px;font-weight:900;color:#08101f;line-height:1.18;margin:12px 0 16px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .14s,clip-path .7s .14s cubic-bezier(.4,0,.2,1);}
+#s6 .s6h.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s6 .s6h em{color:#c9a84c;font-style:normal;}
+#s6 .s6d{font-size:15px;color:#555;line-height:1.75;margin-bottom:24px;opacity:0;transform:translateX(-20px);transition:opacity .5s .3s,transform .5s .3s;}
+#s6 .s6d.vis{opacity:1;transform:translateX(0);}
+#s6 .s6bl{list-style:none;opacity:0;transform:translateX(-16px);transition:opacity .5s .46s,transform .5s .46s;}
+#s6 .s6bl.vis{opacity:1;transform:translateX(0);}
+#s6 .s6bl li{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:#333;font-weight:600;margin-bottom:14px;line-height:1.45;}
+#s6 .s6bl li::before{content:'';display:block;width:8px;height:8px;border-radius:50%;background:#c9a84c;flex-shrink:0;margin-top:5px;box-shadow:0 0 6px rgba(201,168,76,.5);}
+/* POS screen */
+#s6 .srt{flex:1;background:#f0f1f8;display:flex;align-items:center;justify-content:center;padding:40px;}
+#s6 .pos-wrap{width:100%;max-width:580px;opacity:0;transform:translateY(28px) scale(.93);transition:opacity .6s .18s,transform .72s .18s cubic-bezier(.34,1.4,.64,1);}
+#s6 .pos-wrap.vis{opacity:1;transform:translateY(0) scale(1);}
+#s6 .pos-screen{background:#fff;border-radius:18px;box-shadow:0 16px 60px rgba(0,0,0,.14);overflow:hidden;}
+#s6 .pos-hd{background:#08101f;height:44px;display:flex;align-items:center;padding:0 18px;justify-content:space-between;}
+#s6 .pos-hdt{font-size:14px;font-weight:800;color:#fff;}
+#s6 .pos-hds{font-size:11px;color:rgba(255,255,255,.45);}
+#s6 .pos-body{display:flex;gap:0;}
+#s6 .pos-cart{flex:1;padding:14px;border-right:1px solid #f0f0f0;}
+#s6 .pos-cart-title{font-size:11px;font-weight:800;color:#999;letter-spacing:2px;margin-bottom:10px;}
+#s6 .pos-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;margin-bottom:6px;background:#f8f9fc;opacity:0;transform:translateX(-14px);transition:opacity .35s,transform .38s;}
+#s6 .pos-item.vis{opacity:1;transform:translateX(0);}
+#s6 .pi-name{font-size:13px;font-weight:700;color:#08101f;}
+#s6 .pi-qty{font-size:11px;color:#999;margin-top:1px;}
+#s6 .pi-price{font-size:14px;font-weight:900;color:#08101f;}
+#s6 .pos-total{background:#08101f;margin:10px;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s cubic-bezier(.34,1.3,.64,1);}
+#s6 .pos-total.vis{opacity:1;transform:translateY(0);}
+#s6 .pt-label{font-size:12px;font-weight:700;color:rgba(255,255,255,.6);}
+#s6 .pt-num{font-size:26px;font-weight:900;color:#c9a84c;}
+/* Inventory panel */
+#s6 .pos-inv{width:200px;flex-shrink:0;padding:14px;background:#fcfcfe;}
+#s6 .inv-title{font-size:11px;font-weight:800;color:#999;letter-spacing:2px;margin-bottom:10px;}
+#s6 .inv-item{margin-bottom:12px;opacity:0;transform:translateX(14px);transition:opacity .35s,transform .38s;}
+#s6 .inv-item.vis{opacity:1;transform:translateX(0);}
+#s6 .ii-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+#s6 .ii-name{font-size:12px;font-weight:700;color:#333;}
+#s6 .ii-stock{font-size:12px;font-weight:900;}
+#s6 .ii-stock.ok{color:#10b981;}
+#s6 .ii-stock.low{color:#ef4444;animation:stockBlink 1s .5s ease-in-out 3;}
+#s6 .ii-bar{height:5px;background:#e8e0f0;border-radius:3px;overflow:hidden;}
+#s6 .ii-fill{height:100%;border-radius:3px;width:0;transition:width 1.2s cubic-bezier(.22,.61,.36,1);}
+#s6 .ii-fill.ok{background:#10b981;}
+#s6 .ii-fill.low{background:#ef4444;}
 
-/* slide-in utils */
-.vis{}
+/* ====== S7 PAYROLL ====== */
+#s7{background:#fff;}
+#s7 .scene{position:absolute;inset:0;display:flex;align-items:stretch;}
+#s7 .slt{width:440px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:60px 0 60px 64px;}
+#s7 .s7e{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:5px;text-transform:uppercase;opacity:0;transform:translateX(-22px);transition:opacity .45s,transform .45s;}
+#s7 .s7e.vis{opacity:1;transform:translateX(0);}
+#s7 .s7h{font-size:46px;font-weight:900;color:#08101f;line-height:1.2;margin:12px 0 16px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .14s,clip-path .7s .14s cubic-bezier(.4,0,.2,1);}
+#s7 .s7h.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s7 .s7h em{color:#c9a84c;font-style:normal;}
+#s7 .s7d{font-size:15px;color:#555;line-height:1.75;margin-bottom:20px;opacity:0;transform:translateX(-20px);transition:opacity .5s .3s,transform .5s .3s;}
+#s7 .s7d.vis{opacity:1;transform:translateX(0);}
+#s7 .flow{display:flex;flex-direction:column;gap:0;opacity:0;transform:translateX(-16px);transition:opacity .5s .46s,transform .5s .46s;}
+#s7 .flow.vis{opacity:1;transform:translateX(0);}
+#s7 .fstep{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:#f8f9fc;margin-bottom:8px;}
+#s7 .fsicon{width:40px;height:40px;border-radius:12px;background:#08101f;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#s7 .fsicon svg{width:20px;height:20px;stroke:#c9a84c;stroke-width:1.8;fill:none;}
+#s7 .fsb{flex:1;}
+#s7 .fst{font-size:14px;font-weight:800;color:#08101f;}
+#s7 .fsd{font-size:12px;color:#888;margin-top:2px;}
+#s7 .fsarr{font-size:18px;color:#c9a84c;font-weight:900;text-align:center;margin:2px 0;}
+#s7 .srt{flex:1;background:#f5f6fb;display:flex;align-items:center;justify-content:center;padding:36px;}
+#s7 .pboard{width:100%;max-width:500px;}
+/* QR clock in */
+#s7 .qr-att{background:#fff;border-radius:18px;box-shadow:0 12px 48px rgba(0,0,0,.12);padding:18px;margin-bottom:14px;opacity:0;transform:translateY(20px);transition:opacity .5s .2s,transform .55s .2s cubic-bezier(.34,1.4,.64,1);}
+#s7 .qr-att.vis{opacity:1;transform:translateY(0);}
+#s7 .qat{font-size:11px;font-weight:800;color:#999;letter-spacing:2px;margin-bottom:10px;}
+#s7 .emp-rows{display:flex;flex-direction:column;gap:8px;}
+#s7 .er{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:#f8f9fc;opacity:0;transform:translateX(18px);transition:opacity .35s,transform .38s cubic-bezier(.34,1.3,.64,1);}
+#s7 .er.vis{opacity:1;transform:translateX(0);}
+#s7 .ea{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;}
+#s7 .ea.c0{background:#6d28d9;}#s7 .ea.c1{background:#0891b2;}#s7 .ea.c2{background:#059669;}
+#s7 .en{font-size:13px;font-weight:800;color:#08101f;flex:1;}
+#s7 .et{font-size:11px;color:#888;}
+#s7 .eb{font-size:13px;font-weight:900;color:#08101f;}
+#s7 .eb.pay{color:#10b981;}
+/* Pay total */
+#s7 .pay-total{background:#08101f;border-radius:16px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s cubic-bezier(.34,1.4,.64,1);}
+#s7 .pay-total.vis{opacity:1;transform:translateY(0);}
+#s7 .ptl{font-size:13px;font-weight:700;color:rgba(255,255,255,.6);}
+#s7 .ptn{font-size:30px;font-weight:900;color:#c9a84c;line-height:1;}
+/* Kakao notification */
+#s7 .kakao-notif{margin-top:12px;background:#fff;border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);overflow:hidden;opacity:0;animation-fill-mode:both;}
+#s7 .kakao-notif.vis{animation:notifBounce .6s cubic-bezier(.34,1.5,.64,1) both;}
+#s7 .kn-hd{background:#fee500;padding:10px 14px;display:flex;align-items:center;gap:10px;}
+#s7 .kn-logo{width:28px;height:28px;background:#3a1a00;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fee500;flex-shrink:0;}
+#s7 .kn-app{font-size:13px;font-weight:800;color:#3a1a00;flex:1;}
+#s7 .kn-time{font-size:11px;color:rgba(58,26,0,.5);}
+#s7 .kn-body{padding:12px 14px;}
+#s7 .kn-title{font-size:14px;font-weight:900;color:#08101f;margin-bottom:6px;}
+#s7 .kn-msg{font-size:13px;color:#444;line-height:1.5;}
+#s7 .kn-msg b{color:#08101f;font-weight:800;}
+#s7 .kn-btn{margin:0 14px 12px;background:#08101f;color:#c9a84c;font-size:13px;font-weight:800;padding:10px;border-radius:10px;text-align:center;}
+
+/* ====== S8 CTA ====== */
+#s8{background:#fff;}
+#s8 .scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 48px;}
+#s8 .s8top{text-align:center;margin-bottom:28px;}
+#s8 .s8ey{font-size:12px;font-weight:800;color:#c9a84c;letter-spacing:6px;text-transform:uppercase;opacity:0;transform:translateY(-14px);transition:opacity .45s,transform .45s;}
+#s8 .s8ey.vis{opacity:1;transform:translateY(0);}
+#s8 .s8h{font-size:48px;font-weight:900;color:#08101f;margin-top:10px;opacity:0;clip-path:inset(0 100% 0 0);transition:opacity .3s .14s,clip-path .72s .14s cubic-bezier(.4,0,.2,1);}
+#s8 .s8h.vis{opacity:1;clip-path:inset(0 0 0 0);}
+#s8 .s8h em{color:#c9a84c;font-style:normal;}
+#s8 .s8grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;width:100%;}
+#s8 .s8card{background:#f8f9fc;border-radius:22px;padding:26px 20px;text-align:center;opacity:0;transform:translateY(42px) scale(.8);transition:opacity .44s,transform .52s cubic-bezier(.34,1.7,.64,1);}
+#s8 .s8card.vis{opacity:1;transform:translateY(0) scale(1);}
+#s8 .s8ci{width:56px;height:56px;background:#08101f;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+#s8 .s8ci svg{width:28px;height:28px;stroke:#c9a84c;stroke-width:1.8;fill:none;}
+#s8 .s8ct{font-size:17px;font-weight:800;color:#08101f;margin-bottom:7px;}
+#s8 .s8cd{font-size:13px;color:#666;line-height:1.5;margin-bottom:12px;}
+#s8 .s8cn{font-size:14px;font-weight:800;color:#c9a84c;}
+#s8 .s8bot{display:flex;align-items:center;justify-content:center;gap:48px;margin-top:28px;}
+#s8 .s8logo{font-size:44px;font-weight:900;letter-spacing:-2px;color:#08101f;opacity:0;transform:scale(.7);transition:opacity .5s,transform .55s cubic-bezier(.34,1.6,.64,1);}
+#s8 .s8logo.vis{opacity:1;transform:scale(1);}
+#s8 .s8logo span{color:#c9a84c;}
+#s8 .s8cta{position:relative;opacity:0;transform:translateY(12px);transition:opacity .5s .1s,transform .5s .1s cubic-bezier(.34,1.4,.64,1);}
+#s8 .s8cta.vis{opacity:1;transform:translateY(0);}
+#s8 .ctabdr{position:absolute;inset:-3px;border-radius:56px;background:conic-gradient(from 0deg,#c9a84c,#f0d080,#fff,#c9a84c);animation:ctaBorder 2.5s linear infinite;z-index:-1;}
+#s8 .ctabtn{background:#08101f;color:#c9a84c;font-size:18px;font-weight:900;padding:16px 42px;border-radius:52px;letter-spacing:1px;box-shadow:0 8px 30px rgba(8,16,31,.28);}
+#s8 .s8bx{font-size:14px;font-weight:800;color:#08101f;background:linear-gradient(135deg,#f8f6f0,#fff);border:2px solid #e8e0cc;padding:10px 26px;border-radius:50px;opacity:0;transform:scale(.82);transition:opacity .5s .2s,transform .5s .2s cubic-bezier(.34,1.5,.64,1);}
+#s8 .s8bx.vis{opacity:1;transform:scale(1);}
 </style>
 </head>
 <body>
 <div id="wrap">
   <div id="prog"></div>
 
-  <!-- ========== S0: HERO ========== -->
+  <!-- ===== S0: HERO ===== -->
   <div class="slide on" id="s0">
-    <canvas id="c0"></canvas>
+    <canvas id="c0" width="1280" height="720"></canvas>
+    <div class="gr1" id="s0gr1"></div>
+    <div class="gr2" id="s0gr2"></div>
     <div class="hero">
       <div class="logo-wrap">
-        <div class="logo-big" id="s0logo">FILO</div>
-        <div class="logo-sub" id="s0sub">Restaurant OS</div>
+        <div class="logo-big" id="s0logo">
+          <span class="ll" style="--i:0">F</span><span class="ll" style="--i:1">I</span><span class="ll gold" style="--i:2">L</span><span class="ll" style="--i:3">O</span>
+        </div>
+        <div class="logo-shim"></div>
       </div>
+      <div class="logo-sub" id="s0sub">Restaurant OS · All-in-One</div>
       <div class="gold-line" id="s0line"></div>
-      <div class="tagline" id="s0tag">테이블 주문부터 <span>직원 급여</span>까지 — 하나로</div>
+      <div class="tagline" id="s0tag">매장 운영의 <span>모든 것</span>을 하나로</div>
       <div class="stats-row" id="s0stats">
         <div class="stat-box">
-          <div class="stat-num" id="sn0">0</div>
-          <div class="stat-unit">QR 스캔 → 주문 완료 (초)</div>
+          <div class="stat-num" id="sn0">0초</div>
+          <div class="stat-unit">QR 주문 평균 소요 시간</div>
         </div>
+        <div class="stat-div"></div>
         <div class="stat-box">
-          <div class="stat-num" id="sn1">₩0</div>
-          <div class="stat-unit">초기 설치비</div>
+          <div class="stat-num">₩0</div>
+          <div class="stat-unit">초기 도입 비용</div>
         </div>
+        <div class="stat-div"></div>
         <div class="stat-box">
-          <div class="stat-num" id="sn2">0</div>
-          <div class="stat-unit">급여 정산 소요 (분)</div>
+          <div class="stat-num" id="sn2">0분</div>
+          <div class="stat-unit">월 급여 정산 완료</div>
         </div>
       </div>
       <div class="chip-row" id="s0chips">
-        <div class="chip gold">QR 테이블 주문</div>
+        <div class="chip g">QR 주문</div>
         <div class="chip">주방 KDS</div>
         <div class="chip">POS · 재고</div>
-        <div class="chip">직원 급여</div>
+        <div class="chip g">급여 자동화</div>
+        <div class="chip">픽업 알림</div>
       </div>
     </div>
-    <div class="bexco-badge" id="s0bx">BEXCO 2026 · 8/20–22</div>
+    <div class="bexco-badge" id="s0bx">BEXCO · 2026. 8. 20-22</div>
   </div>
 
-  <!-- ========== S1: TABLE QR ========== -->
+  <!-- ===== S1: QR TABLE ===== -->
   <div class="slide" id="s1">
     <div class="scene">
-      <div class="left-text">
-        <div class="eyebrow" id="s1ey">Step 01</div>
-        <div class="h1" id="s1h1">QR 하나로<br><em>테이블 주문</em><br>자동화</div>
-        <div class="desc" id="s1de">테이블에 QR 카드 한 장.<br>손님이 스캔하면 주문이 시작됩니다.</div>
-        <ul class="feat-list" id="s1fl">
-          <li>메뉴판 없이 스마트폰으로 즉시 주문</li>
-          <li>테이블별 주문 현황 실시간 확인</li>
-          <li>선결제 · 후불 모두 지원</li>
-          <li>주방에 자동 전달 — 직원 동선 최소화</li>
+      <div class="lt">
+        <div class="ey" id="s1ey">Table QR Order</div>
+        <div class="h1" id="s1h1">QR 하나로<br><em>테이블 주문</em> 끝</div>
+        <div class="de" id="s1de">손님이 직접 스캔·주문·결제.<br>직원 동선 최소화, 실수 제로.</div>
+        <ul class="fl" id="s1fl">
+          <li>앱 설치 없이 기본 카메라로 바로 스캔</li>
+          <li>메뉴 선택부터 결제까지 평균 <strong>47초</strong></li>
+          <li>실시간 주방 연동 — 벨 호출 불필요</li>
+          <li>픽업 완료 시 손님에게 자동 알림 발송</li>
+        </ul>
+        <div class="step-tag" id="s1st">Step 1 · QR 스캔</div>
+      </div>
+      <div class="rt">
+        <div class="tw" id="s1tw">
+          <div class="tt"><div class="ts"></div></div>
+          <div class="qc" id="s1qc">
+            <div class="qh">TABLE 3</div>
+            <div class="qb">
+              <svg class="qs" viewBox="0 0 86 86" fill="none">
+                <rect x="4" y="4" width="30" height="30" rx="3" stroke="#08101f" stroke-width="2.5"/>
+                <rect x="10" y="10" width="18" height="18" rx="2" fill="#08101f"/>
+                <rect x="52" y="4" width="30" height="30" rx="3" stroke="#08101f" stroke-width="2.5"/>
+                <rect x="58" y="10" width="18" height="18" rx="2" fill="#08101f"/>
+                <rect x="4" y="52" width="30" height="30" rx="3" stroke="#08101f" stroke-width="2.5"/>
+                <rect x="10" y="58" width="18" height="18" rx="2" fill="#08101f"/>
+                <rect x="52" y="52" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="64" y="52" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="76" y="52" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="52" y="64" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="64" y="76" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="76" y="64" width="8" height="8" rx="1" fill="#08101f"/>
+                <rect x="76" y="76" width="8" height="8" rx="1" fill="#08101f"/>
+              </svg>
+              <div class="ql">FILO QR · 3번 테이블</div>
+            </div>
+          </div>
+          <div class="pa" id="s1pa">
+            <div class="ps">
+              <div class="sr" id="s1sr"></div>
+              <div class="sr2" id="s1sr2"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ob" id="s1ob">
+          <div class="ob-main">주문 접수!</div>
+          <div class="ob-sub">TABLE 3 · 즉시 처리</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== S2: SCAN ===== -->
+  <div class="slide" id="s2">
+    <div class="scene">
+      <div class="pbig" id="s2ph">
+        <div class="pscr">
+          <div class="cam">
+            <div class="cgrid"></div>
+            <div class="qt">
+              <div class="qtc tl"></div><div class="qtc tr"></div>
+              <div class="qtc bl"></div><div class="qtc br"></div>
+              <div class="beam"></div>
+            </div>
+            <div class="fl" id="s2fl"></div>
+            <div class="dp" id="s2dp">
+              <div class="di"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="dt">인식 완료</div>
+              <div class="ds">메뉴 페이지로 이동 중...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="iey" id="s2ey">QR Scan System</div>
+        <div class="ih1" id="s2h1">스캔 한 번으로<br><em>즉시 주문</em></div>
+        <div class="istep" id="s2s0">
+          <div class="isn">1</div>
+          <div class="ib"><div class="it">카메라 켜기</div><div class="id">앱 설치 없음 — 기본 카메라 앱으로 바로 스캔 가능</div></div>
+        </div>
+        <div class="istep" id="s2s1">
+          <div class="isn">2</div>
+          <div class="ib"><div class="it">QR 코드 자동 인식</div><div class="id">테이블 QR에 가져다 대면 0.5초 안에 자동 인식</div></div>
+        </div>
+        <div class="istep" id="s2s2">
+          <div class="isn">3</div>
+          <div class="ib"><div class="it">메뉴 선택 · 결제</div><div class="id">메뉴 담고 카드·간편결제 완료까지 평균 47초</div></div>
+        </div>
+        <div class="tpill" id="s2pill">평균 <span class="tn">&nbsp;47&nbsp;</span> 초 완료</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== S3: MENU + FEATURES ===== -->
+  <div class="slide" id="s3">
+    <div class="scene">
+      <div class="pcol">
+        <div class="pb2" id="s3ph">
+          <div class="p2s">
+            <div class="p2h">
+              <div class="p2hl">FILO</div>
+              <div class="p2ht">테이블 3번</div>
+            </div>
+            <div class="ml">
+              <div class="mi" id="s3m0"><div class="mimg f0"></div><div class="mb"><div class="mn">해물 파전</div><div class="mp">₩12,000</div></div><div class="ma">+</div></div>
+              <div class="mi" id="s3m1"><div class="mimg f1"></div><div class="mb"><div class="mn">삼겹살 2인분</div><div class="mp">₩24,000</div></div><div class="ma">+</div></div>
+              <div class="mi" id="s3m2"><div class="mimg f2"></div><div class="mb"><div class="mn">낙지볶음</div><div class="mp">₩14,000</div></div><div class="ma">+</div></div>
+              <div class="mi" id="s3m3"><div class="mimg f3"></div><div class="mb"><div class="mn">생막걸리</div><div class="mp">₩4,000</div></div><div class="ma">+</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fcol">
+        <div class="fey" id="s3ey">Smart Menu System</div>
+        <div class="fh1" id="s3h1">주문부터 픽업까지<br><em>완전 자동화</em></div>
+        <div class="fg">
+          <div class="fc" id="s3fc0"><div class="fci"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div><div class="fct">QR 테이블 주문</div><div class="fcd">앱 없이 바로 스캔, 즉시 주문 접수</div></div>
+          <div class="fc" id="s3fc1"><div class="fci"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div><div class="fct">품절 실시간 반영</div><div class="fcd">재고 소진 시 메뉴 자동 비활성화</div></div>
+          <div class="fc hl" id="s3fc2"><div class="fci"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div class="fct">픽업 완료 알림</div><div class="fcd">음식 준비 완료 시 손님 자동 알림 발송</div></div>
+          <div class="fc" id="s3fc3"><div class="fci"><svg viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><path d="M7 7h.01"/></svg></div><div class="fct">옵션 · 추가 주문</div><div class="fcd">토핑 선택, 추가 주문 간편 처리</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== S4: ORDER + CONFETTI ===== -->
+  <div class="slide" id="s4">
+    <canvas id="c4"></canvas>
+    <div class="scene">
+      <div class="left">
+        <div class="s4e" id="s4ey">Order Complete</div>
+        <div class="s4h" id="s4h1">결제 완료,<br><em>주방으로 전송</em></div>
+        <div class="ci" id="s4c0"><div><div class="cin">해물 파전</div><div class="ciq">×1</div></div><div class="cip">₩12,000</div></div>
+        <div class="ci" id="s4c1"><div><div class="cin">삼겹살 2인분</div><div class="ciq">×1</div></div><div class="cip">₩24,000</div></div>
+        <div class="ci" id="s4c2"><div><div class="cin">생막걸리</div><div class="ciq">×3</div></div><div class="cip">₩12,000</div></div>
+        <div class="totbar" id="s4tot">
+          <div class="totl">최종 결제금액</div>
+          <div class="totn" id="s4tnum">₩0</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="pconf" id="s4pc">
+          <div class="pcs">
+            <div class="pch"><div class="pcht">FILO ORDER</div></div>
+            <div class="oconf">
+              <div class="ocheck" id="s4ck"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ot" id="s4ot">주문 완료!</div>
+              <div class="oti" id="s4oi">오후 7:23 · 테이블 3번</div>
+              <div class="onote" id="s4on">주방 전송 완료 ✓</div>
+            </div>
+          </div>
+        </div>
+        <div class="pnotif" id="s4pn">
+          <div class="pnb"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+          <div><div class="pnt">음식이 준비됐어요!</div><div class="pns">테이블 3번 · 지금 픽업해주세요</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== S5: KDS ===== -->
+  <div class="slide" id="s5">
+    <div class="scene">
+      <div class="kpanel" id="s5kp">
+        <div class="khd" id="s5kh">
+          <div class="kt">FILO Kitchen Display</div>
+          <div class="kl"><div class="kldot"></div> LIVE</div>
+        </div>
+        <div class="kgrid">
+          <div class="ktic urg" id="s5t0"><div class="ktbl">테이블</div><div class="ktn">2</div><ul class="klist"><li>해물 파전 ×1</li><li>낙지볶음 ×1</li></ul><div class="ktimer">8분 경과 !</div></div>
+          <div class="ktic" id="s5t1"><div class="ktbl">테이블</div><div class="ktn">3</div><ul class="klist"><li>삼겹살 2인분</li><li>생막걸리 ×3</li></ul><div class="ktimer">방금 접수</div></div>
+          <div class="ktic" id="s5t2"><div class="ktbl">테이블</div><div class="ktn">5</div><ul class="klist"><li>차돌박이 ×1</li><li>된장찌개</li></ul><div class="ktimer">2분 경과</div></div>
+          <div class="ktic done" id="s5t3"><div class="ktbl">테이블</div><div class="ktn">6</div><ul class="klist"><li>갈비찜</li></ul><div class="ktimer">완료</div></div>
+          <div class="ktic done" id="s5t4"><div class="ktbl">테이블</div><div class="ktn">7</div><ul class="klist"><li>삼겹살 2인분</li></ul><div class="ktimer">완료</div></div>
+          <div class="ktic" id="s5t5"><div class="ktbl">테이블</div><div class="ktn">9</div><ul class="klist"><li>차돌박이 ×1</li><li>소주 ×2</li></ul><div class="ktimer">1분 경과</div></div>
+        </div>
+      </div>
+      <div class="kinfo">
+        <div class="kIey" id="s5ey">주방 관리</div>
+        <div class="kIh1" id="s5h1">주방이<br><em>스마트</em>해지면<br>음식이 빨라진다</div>
+        <div class="kIstat" id="s5s0"><div class="kIsn" id="s5sn0">0%</div><div class="kIsl">평균 조리 시간 단축</div></div>
+        <div class="kIstat" id="s5s1"><div class="kIsn" id="s5sn1">0%</div><div class="kIsl">주문 오류율 감소</div></div>
+      </div>
+      <div class="kpop" id="s5pop">새 주문 도착<div class="kpc">+3</div></div>
+    </div>
+  </div>
+
+  <!-- ===== S6: POS + 재고 ===== -->
+  <div class="slide" id="s6">
+    <div class="scene">
+      <div class="slt">
+        <div class="s6e" id="s6ey">POS · Inventory</div>
+        <div class="s6h" id="s6h1">POS · 재고<br><em>자동 관리</em></div>
+        <div class="s6d" id="s6de">주문 발생 시 재고가 자동으로 차감됩니다.<br>품절 임박 시 즉시 알림, 발주까지 자동 제안.</div>
+        <ul class="s6bl" id="s6bl">
+          <li>카드·현금·간편결제 원터치 처리</li>
+          <li>주문 접수 시 재고 자동 차감</li>
+          <li>재고 부족 시 발주 알림 자동 발송</li>
+          <li>일일/주간/월간 매출 리포트 자동 생성</li>
+          <li>영수증 프린터·카드단말기 연동 지원</li>
         </ul>
       </div>
-      <div class="right-scene">
-        <div class="table-wrap" id="s1tw">
-          <div class="table-top">
-            <div class="qr-card" id="s1qr">
-              <div class="qr-header">FILO TABLE ORDER</div>
-              <div class="qr-body">
-                <svg class="qr-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-                  <!-- QR pattern simulation -->
-                  <rect width="80" height="80" fill="white"/>
-                  <!-- top-left finder -->
-                  <rect x="4" y="4" width="22" height="22" fill="#08101f"/>
-                  <rect x="7" y="7" width="16" height="16" fill="white"/>
-                  <rect x="10" y="10" width="10" height="10" fill="#08101f"/>
-                  <!-- top-right finder -->
-                  <rect x="54" y="4" width="22" height="22" fill="#08101f"/>
-                  <rect x="57" y="7" width="16" height="16" fill="white"/>
-                  <rect x="60" y="10" width="10" height="10" fill="#08101f"/>
-                  <!-- bottom-left finder -->
-                  <rect x="4" y="54" width="22" height="22" fill="#08101f"/>
-                  <rect x="7" y="57" width="16" height="16" fill="white"/>
-                  <rect x="10" y="60" width="10" height="10" fill="#08101f"/>
-                  <!-- data cells -->
-                  <rect x="30" y="4" width="4" height="4" fill="#08101f"/>
-                  <rect x="36" y="4" width="4" height="4" fill="#08101f"/>
-                  <rect x="42" y="4" width="4" height="4" fill="#08101f"/>
-                  <rect x="30" y="10" width="4" height="4" fill="#08101f"/>
-                  <rect x="36" y="16" width="4" height="4" fill="#08101f"/>
-                  <rect x="4" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="10" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="4" y="36" width="4" height="4" fill="#08101f"/>
-                  <rect x="10" y="42" width="4" height="4" fill="#08101f"/>
-                  <rect x="30" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="36" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="42" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="48" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="54" y="30" width="4" height="4" fill="#08101f"/>
-                  <rect x="36" y="36" width="4" height="4" fill="#08101f"/>
-                  <rect x="42" y="42" width="4" height="4" fill="#08101f"/>
-                  <rect x="48" y="36" width="4" height="4" fill="#08101f"/>
-                  <rect x="54" y="42" width="4" height="4" fill="#08101f"/>
-                  <rect x="60" y="36" width="4" height="4" fill="#08101f"/>
-                  <rect x="30" y="54" width="4" height="4" fill="#08101f"/>
-                  <rect x="36" y="60" width="4" height="4" fill="#08101f"/>
-                  <rect x="42" y="54" width="4" height="4" fill="#08101f"/>
-                  <rect x="48" y="60" width="4" height="4" fill="#08101f"/>
-                  <rect x="54" y="66" width="4" height="4" fill="#08101f"/>
-                  <rect x="60" y="54" width="4" height="4" fill="#08101f"/>
-                  <rect x="66" y="60" width="4" height="4" fill="#08101f"/>
-                  <rect x="72" y="54" width="4" height="4" fill="#08101f"/>
-                  <rect x="72" y="60" width="4" height="4" fill="#08101f"/>
-                  <!-- FILO center mark -->
-                  <rect x="34" y="34" width="12" height="12" rx="2" fill="#c9a84c"/>
-                </svg>
-                <div class="qr-label">스캔하여 주문하기</div>
+      <div class="srt">
+        <div class="pos-wrap" id="s6pw">
+          <div class="pos-screen">
+            <div class="pos-hd">
+              <div class="pos-hdt">FILO POS · 3번 테이블</div>
+              <div class="pos-hds">2026-08-20 19:23</div>
+            </div>
+            <div class="pos-body">
+              <div class="pos-cart">
+                <div class="pos-cart-title">주문 내역</div>
+                <div class="pos-item" id="s6pi0"><div><div class="pi-name">해물 파전</div><div class="pi-qty">×1</div></div><div class="pi-price">₩12,000</div></div>
+                <div class="pos-item" id="s6pi1"><div><div class="pi-name">삼겹살 2인분</div><div class="pi-qty">×1</div></div><div class="pi-price">₩24,000</div></div>
+                <div class="pos-item" id="s6pi2"><div><div class="pi-name">생막걸리</div><div class="pi-qty">×3</div></div><div class="pi-price">₩12,000</div></div>
+                <div class="pos-total" id="s6pt">
+                  <div class="pt-label">합계</div>
+                  <div class="pt-num" id="s6ptn">₩0</div>
+                </div>
+              </div>
+              <div class="pos-inv">
+                <div class="inv-title">재고 현황</div>
+                <div class="inv-item" id="s6i0">
+                  <div class="ii-row"><div class="ii-name">해물 파전 재료</div><div class="ii-stock ok">14개</div></div>
+                  <div class="ii-bar"><div class="ii-fill ok" data-w="72%"></div></div>
+                </div>
+                <div class="inv-item" id="s6i1">
+                  <div class="ii-row"><div class="ii-name">삼겹살</div><div class="ii-stock ok">8kg</div></div>
+                  <div class="ii-bar"><div class="ii-fill ok" data-w="55%"></div></div>
+                </div>
+                <div class="inv-item" id="s6i2">
+                  <div class="ii-row"><div class="ii-name">낙지볶음 재료</div><div class="ii-stock low">2개 !</div></div>
+                  <div class="ii-bar"><div class="ii-fill low" data-w="12%"></div></div>
+                </div>
+                <div class="inv-item" id="s6i3">
+                  <div class="ii-row"><div class="ii-name">생막걸리</div><div class="ii-stock ok">18병</div></div>
+                  <div class="ii-bar"><div class="ii-fill ok" data-w="80%"></div></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="phone-approach" id="s1ph">
-          <div class="ph-small">
-            <div class="scan-ring" id="s1sr"></div>
-          </div>
-        </div>
-        <div class="order-badge" id="s1ob">주문 완료!</div>
       </div>
     </div>
   </div>
 
-  <!-- ========== S2: SCAN ========== -->
-  <div class="slide" id="s2">
+  <!-- ===== S7: PAYROLL ===== -->
+  <div class="slide" id="s7">
     <div class="scene">
-      <div class="phone-big" id="s2ph">
-        <div class="phone-screen">
-          <div class="cam-live">
-            <div class="cam-grid"></div>
-            <div class="qr-target">
-              <div class="qr-t-corner tl"></div>
-              <div class="qr-t-corner tr"></div>
-              <div class="qr-t-corner bl"></div>
-              <div class="qr-t-corner br"></div>
-            </div>
-            <div class="scan-beam"></div>
-            <div class="flash-overlay" id="s2fl"></div>
-            <div class="done-badge" id="s2done">인식 완료!</div>
-          </div>
+      <div class="slt">
+        <div class="s7e" id="s7ey">Employee Payroll</div>
+        <div class="s7h" id="s7h1">QR 출퇴근부터<br><em>급여 자동 정산</em>까지</div>
+        <div class="s7d" id="s7de">직원이 QR을 찍으면 출퇴근이 기록됩니다.<br>시급×근무시간이 자동 계산되고,<br>카카오로 명세서가 바로 발송됩니다.</div>
+        <div class="flow" id="s7flow">
+          <div class="fstep"><div class="fsicon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="fsb"><div class="fst">QR 출퇴근 체크</div><div class="fsd">직원이 매장 QR 스캔 → 즉시 근무 기록</div></div></div>
+          <div class="fsarr">↓</div>
+          <div class="fstep"><div class="fsicon"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 7l10-5 10 5M2 17l10 5 10-5"/></svg></div><div class="fsb"><div class="fst">시급 × 근무시간 자동 계산</div><div class="fsd">초과근무·지각 자동 반영, 오계산 제로</div></div></div>
+          <div class="fsarr">↓</div>
+          <div class="fstep"><div class="fsicon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 9.08 2 2 0 0 1 7 6.81h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L11.09 14a16 16 0 0 0 6 6"/></svg></div><div class="fsb"><div class="fst">카카오 급여명세서 자동 발송</div><div class="fsd">5분 만에 전 직원 급여명세서 발송 완료</div></div></div>
         </div>
       </div>
-      <div class="info-panel">
-        <div class="info-eyebrow" id="s2ey">Step 02</div>
-        <div class="info-h1" id="s2h1">스마트폰으로<br><em>스캔 한 번</em>,<br>메뉴 앞에 서다</div>
-        <div class="steps" id="s2st">
-          <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-body">
-              <h3>QR 카메라 스캔</h3>
-              <p>별도 앱 불필요 — 카메라 앱으로 바로</p>
+      <div class="srt">
+        <div class="pboard">
+          <div class="qr-att" id="s7qa">
+            <div class="qat">오늘 근무 현황</div>
+            <div class="emp-rows">
+              <div class="er" id="s7r0"><div class="ea c0">박</div><div class="en">박민준</div><div class="et">09:00 출근</div><div class="eb pay">₩68,000</div></div>
+              <div class="er" id="s7r1"><div class="ea c1">김</div><div class="en">김수진</div><div class="et">10:00 출근</div><div class="eb pay">₩54,000</div></div>
+              <div class="er" id="s7r2"><div class="ea c2">이</div><div class="en">이정호</div><div class="et">17:00 출근</div><div class="eb pay">₩38,400</div></div>
             </div>
           </div>
-          <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-body">
-              <h3>메뉴 자동 오픈</h3>
-              <p>테이블 번호 자동 인식, 메뉴판 즉시 표시</p>
+          <div class="pay-total" id="s7pt">
+            <div class="ptl">이번 달 예상 급여 합계</div>
+            <div class="ptn" id="s7ptn">₩0</div>
+          </div>
+          <div class="kakao-notif" id="s7kn">
+            <div class="kn-hd">
+              <div class="kn-logo">K</div>
+              <div class="kn-app">카카오 알림톡</div>
+              <div class="kn-time">방금</div>
             </div>
-          </div>
-          <div class="step">
-            <div class="step-num">3</div>
-            <div class="step-body">
-              <h3>주문 접수 완료</h3>
-              <p>주방 KDS로 동시 전달, 직원 호출 불필요</p>
+            <div class="kn-body">
+              <div class="kn-title">8월 급여명세서 발송 완료</div>
+              <div class="kn-msg">직원 <b>3명</b>에게 급여명세서가 발송되었습니다.<br>총 지급액 <b>₩4,580,000</b></div>
             </div>
-          </div>
-        </div>
-        <div class="speed-pill" id="s2pill">평균 주문 시간 <strong style="margin-left:8px;font-size:20px;">47초</strong></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== S3: MENU ========== -->
-  <div class="slide" id="s3">
-    <div class="scene">
-      <div class="phone-menu" id="s3ph">
-        <div class="pm-screen">
-          <div class="pm-header">
-            <div class="pm-h-title">FILO 메뉴</div>
-            <div class="pm-h-table">3번 테이블</div>
-          </div>
-          <div class="pm-cats">
-            <div class="pm-cat active">인기</div>
-            <div class="pm-cat">한식</div>
-            <div class="pm-cat">음료</div>
-            <div class="pm-cat">디저트</div>
-          </div>
-          <div class="pm-items">
-            <div class="pm-item" id="s3mi0">
-              <div class="pm-img a">🍳</div>
-              <div class="pm-info"><div class="pm-name">해물파전</div><div class="pm-price">₩12,000</div></div>
-            </div>
-            <div class="pm-item" id="s3mi1">
-              <div class="pm-img b">🥗</div>
-              <div class="pm-info"><div class="pm-name">비빔밥</div><div class="pm-price">₩10,000</div></div>
-            </div>
-            <div class="pm-item" id="s3mi2">
-              <div class="pm-img c">🍖</div>
-              <div class="pm-info"><div class="pm-name">삼겹살</div><div class="pm-price">₩18,000</div></div>
-            </div>
-            <div class="pm-item" id="s3mi3">
-              <div class="pm-img d">🍺</div>
-              <div class="pm-info"><div class="pm-name">맥주</div><div class="pm-price">₩5,000</div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="feat-panel">
-        <div class="feat-eyebrow" id="s3ey">메뉴 관리</div>
-        <div class="feat-h1" id="s3h1">손쉬운 <em>메뉴 설정</em>,<br>실시간 <em>재고 연동</em></div>
-        <div class="feat-grid">
-          <div class="feat-card" id="s3fc0">
-            <div class="feat-cname">이미지 메뉴</div>
-            <div class="feat-cdesc">사진으로 보는 직관적 메뉴판. 외국인도 OK</div>
-            <div class="feat-num">사진 메뉴</div>
-          </div>
-          <div class="feat-card" id="s3fc1">
-            <div class="feat-cname">실시간 품절</div>
-            <div class="feat-cdesc">재고 소진 시 자동 품절 처리. 헛주문 방지</div>
-            <div class="feat-num">자동 처리</div>
-          </div>
-          <div class="feat-card" id="s3fc2">
-            <div class="feat-cname">옵션 · 추가</div>
-            <div class="feat-cdesc">맵기 조절, 추가 토핑 등 옵션 무제한 설정</div>
-            <div class="feat-num">무제한</div>
-          </div>
-          <div class="feat-card" id="s3fc3">
-            <div class="feat-cname">픽업 알림</div>
-            <div class="feat-cdesc">음식 준비 완료 시 고객 폰에 즉시 Push 알림 자동 발송</div>
-            <div class="feat-num">자동 발송</div>
+            <div class="kn-btn">명세서 확인하기</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ========== S4: ORDER COMPLETE ========== -->
-  <div class="slide" id="s4">
-    <canvas id="c4"></canvas>
+  <!-- ===== S8: CTA ===== -->
+  <div class="slide" id="s8">
     <div class="scene">
-      <div class="order-left">
-        <div class="o-eyebrow" id="s4ey">Step 03</div>
-        <div class="o-h1" id="s4h1">담고, 결제하고<br><em>완료</em></div>
-        <div class="cart-items">
-          <div class="cart-item" id="s4ci0">
-            <div>
-              <div class="ci-name">해물파전</div>
-              <div class="ci-qty">x 1</div>
-            </div>
-            <div class="ci-price">₩12,000</div>
-          </div>
-          <div class="cart-item" id="s4ci1">
-            <div>
-              <div class="ci-name">비빔밥</div>
-              <div class="ci-qty">x 2</div>
-            </div>
-            <div class="ci-price">₩20,000</div>
-          </div>
-          <div class="cart-item" id="s4ci2">
-            <div>
-              <div class="ci-name">맥주</div>
-              <div class="ci-qty">x 3</div>
-            </div>
-            <div class="ci-price">₩15,000</div>
-          </div>
-        </div>
-        <div class="total-bar" id="s4tot">
-          <div class="total-label">합계</div>
-          <div class="total-num">₩<span id="s4totnum">0</span></div>
-        </div>
+      <div class="s8top">
+        <div class="s8ey" id="s8ey">FILO All-in-One</div>
+        <div class="s8h" id="s8h1">매장 운영의 <em>모든 것</em></div>
       </div>
-      <div class="phone-confirm" id="s4pc">
-        <div class="pc-screen" style="position:relative;">
-          <div class="pickup-notif" id="s4pn">
-            <div class="pn-bell"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-            <div><div class="pn-app">FILO 픽업 알림</div><div class="pn-msg">주문 #247 준비 완료! 받으러 오세요</div></div>
-          </div>
-          <div class="pc-success">
-            <div class="pc-check" id="s4ck">
-              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div class="pc-ok-text" id="s4ot">주문이 접수되었습니다</div>
-            <div class="pc-order-num" id="s4on">#247</div>
-            <div class="pc-notify" id="s4no">주방으로 전달 완료<br>잠시만 기다려 주세요</div>
-          </div>
-        </div>
+      <div class="s8grid">
+        <div class="s8card" id="s8c0"><div class="s8ci"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg></div><div class="s8ct">QR 테이블 주문</div><div class="s8cd">손님이 직접 주문 — 직원 동선 최소화</div><div class="s8cn">즉시 도입</div></div>
+        <div class="s8card" id="s8c1"><div class="s8ci"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div><div class="s8ct">주방 KDS</div><div class="s8cd">실시간 주문 현황 — 조리 우선순위 자동</div><div class="s8cn">실시간</div></div>
+        <div class="s8card" id="s8c2"><div class="s8ci"><svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M12 12h.01"/></svg></div><div class="s8ct">POS · 재고</div><div class="s8cd">카드 결제, 재고 자동 차감, 매출 리포트</div><div class="s8cn">자동화</div></div>
+        <div class="s8card" id="s8c3"><div class="s8ci"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="s8ct">급여 자동화</div><div class="s8cd">QR 출퇴근 → 시급 계산 → 카카오 발송</div><div class="s8cn">5분 완료</div></div>
       </div>
-    </div>
-  </div>
-
-  <!-- ========== S5: KITCHEN KDS ========== -->
-  <div class="slide" id="s5">
-    <div class="scene">
-      <div class="kds-wrap" id="s5kds">
-        <div class="new-order-pop" id="s5pop">신규 주문 접수 — 3번 테이블</div>
-        <div class="kds-screen">
-          <div class="kds-header">
-            <div class="kds-logo">FILO KDS</div>
-            <div class="kds-time">14:23</div>
-          </div>
-          <div class="kds-grid">
-            <div class="kds-ticket done" id="s5t0">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num">1</div>
-              <ul class="kt-items"><li>갈비탕 x1</li><li>냉면 x2</li></ul>
-              <div class="kt-timer">완료</div>
-              <div class="kt-status"></div>
-            </div>
-            <div class="kds-ticket" id="s5t1">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num">2</div>
-              <ul class="kt-items"><li>순두부찌개 x1</li><li>공기밥 x2</li></ul>
-              <div class="kt-timer hot">12분 경과</div>
-              <div class="kt-status hot"></div>
-            </div>
-            <div class="kds-ticket urgent" id="s5t2">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num" style="color:#ff6b35;">3</div>
-              <ul class="kt-items"><li>해물파전 x1</li><li>비빔밥 x2</li><li>맥주 x3</li></ul>
-              <div class="kt-timer hot">신규</div>
-              <div class="kt-status hot"></div>
-            </div>
-            <div class="kds-ticket" id="s5t3">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num">5</div>
-              <ul class="kt-items"><li>된장찌개 x2</li></ul>
-              <div class="kt-timer">3분 경과</div>
-              <div class="kt-status"></div>
-            </div>
-            <div class="kds-ticket done" id="s5t4">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num">7</div>
-              <ul class="kt-items"><li>삼겹살 2인분</li></ul>
-              <div class="kt-timer">완료</div>
-              <div class="kt-status"></div>
-            </div>
-            <div class="kds-ticket" id="s5t5">
-              <div class="kt-table">테이블</div>
-              <div class="kt-num">9</div>
-              <ul class="kt-items"><li>차돌박이 x1</li><li>소주 x2</li></ul>
-              <div class="kt-timer">1분 경과</div>
-              <div class="kt-status"></div>
-            </div>
-          </div>
+      <div class="s8bot">
+        <div class="s8logo" id="s8lo">FI<span>L</span>O</div>
+        <div class="s8cta" id="s8ct">
+          <div class="ctabdr"></div>
+          <div class="ctabtn">지금 무료 체험</div>
         </div>
-      </div>
-      <div class="kds-info">
-        <div class="ki-eyebrow" id="s5ey">주방 관리</div>
-        <div class="ki-h1" id="s5h1">주방이<br><em>스마트</em>해지면<br>음식이 빨라진다</div>
-        <div class="ki-stats">
-          <div class="ki-stat" id="s5s0">
-            <div class="ki-stat-num" id="s5sn0">0</div>
-            <div class="ki-stat-label">평균 조리 시간 단축</div>
-          </div>
-          <div class="ki-stat" id="s5s1">
-            <div class="ki-stat-num" id="s5sn1">0</div>
-            <div class="ki-stat-label">주문 오류율 감소</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== S6: ALL FEATURES ========== -->
-  <div class="slide" id="s6">
-    <div class="scene">
-      <div class="s6-top">
-        <div class="s6-eyebrow" id="s6ey">FILO All-in-One</div>
-        <div class="s6-h1" id="s6h1">매장 운영의 <em>모든 것</em></div>
-      </div>
-      <div class="s6-grid">
-        <div class="s6-card" id="s6c0">
-          <div class="s6-card-icon">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-          </div>
-          <div class="s6-card-title">QR 테이블 주문</div>
-          <div class="s6-card-desc">손님이 직접 주문 — 직원 동선 최소화, 매출 극대화</div>
-          <div class="s6-card-num">즉시 도입</div>
-        </div>
-        <div class="s6-card" id="s6c1">
-          <div class="s6-card-icon">
-            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          </div>
-          <div class="s6-card-title">주방 KDS</div>
-          <div class="s6-card-desc">실시간 주문 현황 — 조리 우선순위 자동 관리</div>
-          <div class="s6-card-num">실시간</div>
-        </div>
-        <div class="s6-card" id="s6c2">
-          <div class="s6-card-icon">
-            <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M12 12h.01"/></svg>
-          </div>
-          <div class="s6-card-title">POS · 재고</div>
-          <div class="s6-card-desc">카드 결제, 재고 자동 차감, 일일 매출 리포트</div>
-          <div class="s6-card-num">자동화</div>
-        </div>
-        <div class="s6-card" id="s6c3">
-          <div class="s6-card-icon">
-            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div class="s6-card-title">직원 급여</div>
-          <div class="s6-card-desc">QR 출퇴근 → 시급 자동 계산 → 카카오 명세서 발송</div>
-          <div class="s6-card-num">5분 완료</div>
-        </div>
-      </div>
-      <div class="s6-bottom">
-        <div class="s6-logo" id="s6lo">FI<span>L</span>O</div>
-        <div class="s6-cta" id="s6ct">
-          <div class="cta-btn">지금 무료 체험</div>
-        </div>
-        <div class="s6-bexco" id="s6bx">BEXCO 부산 · 2026. 8. 20-22</div>
+        <div class="s8bx" id="s8bx">BEXCO 부산 · 2026. 8. 20-22</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// ---- Canvas S0 particles ----
 (function(){
-  var cv=document.getElementById('c0');
-  cv.width=1280;cv.height=720;
-  var ctx=cv.getContext('2d');
-  var pts=[];
-  for(var i=0;i<70;i++) pts.push({x:Math.random()*1280,y:Math.random()*720,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,r:Math.random()*2+1});
+  var cv=document.getElementById('c0');cv.width=1280;cv.height=720;
+  var ctx=cv.getContext('2d'),pts=[];
+  for(var i=0;i<82;i++)pts.push({x:Math.random()*1280,y:Math.random()*720,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,r:Math.random()*2.5+.8});
   function draw(){
     ctx.clearRect(0,0,1280,720);
-    // draw connections
-    for(var i=0;i<pts.length;i++){
-      for(var j=i+1;j<pts.length;j++){
-        var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
-        if(d<130){
-          ctx.beginPath();
-          ctx.strokeStyle='rgba(201,168,76,'+(1-d/130)*.18+')';
-          ctx.lineWidth=1;
-          ctx.moveTo(pts[i].x,pts[i].y);
-          ctx.lineTo(pts[j].x,pts[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-    // draw nodes
-    for(var i=0;i<pts.length;i++){
-      ctx.beginPath();
-      ctx.arc(pts[i].x,pts[i].y,pts[i].r,0,Math.PI*2);
-      ctx.fillStyle='rgba(8,16,31,.2)';
-      ctx.fill();
-      pts[i].x+=pts[i].vx; pts[i].y+=pts[i].vy;
-      if(pts[i].x<0||pts[i].x>1280) pts[i].vx*=-1;
-      if(pts[i].y<0||pts[i].y>720) pts[i].vy*=-1;
-    }
+    for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++){var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<140){ctx.beginPath();ctx.strokeStyle='rgba(201,168,76,'+(1-d/140)*.2+')';ctx.lineWidth=1;ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}}
+    for(var i=0;i<pts.length;i++){ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,pts[i].r,0,Math.PI*2);ctx.fillStyle='rgba(8,16,31,.17)';ctx.fill();pts[i].x+=pts[i].vx;pts[i].y+=pts[i].vy;if(pts[i].x<0||pts[i].x>1280)pts[i].vx*=-1;if(pts[i].y<0||pts[i].y>720)pts[i].vy*=-1;}
     requestAnimationFrame(draw);
   }
   draw();
 })();
 
-// ---- countUp ----
-function countUp(el,target,dur,suffix){
-  suffix=suffix||'';
+function countUp(el,target,dur,fmt){
+  if(!el)return;
   var start=performance.now();
   (function tick(now){
-    var p=Math.min((now-start)/dur,1);
-    var ease=1-Math.pow(1-p,3);
-    el.textContent=Math.round(target*ease).toLocaleString('ko-KR')+suffix;
+    var p=Math.min((now-start)/dur,1),ease=1-Math.pow(1-p,3),val=Math.round(target*ease);
+    el.textContent=fmt?fmt(val):val.toLocaleString('ko-KR');
     if(p<1)requestAnimationFrame(tick);
+    else{el.style.animation='countFlash 1s ease-out both';}
   })(start);
 }
 
-// ---- Timer management ----
 var timers=[];
 function T(fn,d){timers.push(setTimeout(fn,d));}
 function clearT(){timers.forEach(function(t){clearTimeout(t);});timers=[];}
 function show(id,d){T(function(){var e=document.getElementById(id);if(e)e.classList.add('vis');},d);}
-function showEl(e,d){if(!e)return;T(function(){e.classList.add('vis');},d);}
 
-// ---- Slide system ----
-var slides=['s0','s1','s2','s3','s4','s5','s6'];
+var slides=['s0','s1','s2','s3','s4','s5','s6','s7','s8'];
 var cur=0;
 
 var cbs={
   s0:function(){
-    show('s0logo',50);show('s0sub',200);show('s0line',400);show('s0tag',600);
+    show('s0gr1',0);show('s0gr2',150);
+    show('s0logo',80);show('s0sub',380);show('s0line',580);show('s0tag',820);
     T(function(){
       document.getElementById('s0stats').classList.add('vis');
-      countUp(document.getElementById('sn0'),47,1000,'초');
-      // sn1 is ₩0 (fixed text, no countUp)
-      countUp(document.getElementById('sn2'),5,1000,'분');
-    },900);
-    show('s0chips',1200);show('s0bx',1500);
+      countUp(document.getElementById('sn0'),47,1100,function(v){return v+'초';});
+      countUp(document.getElementById('sn2'),5,1000,function(v){return v+'분';});
+    },1050);
+    show('s0chips',1350);show('s0bx',1650);
   },
   s1:function(){
-    show('s1ey',100);show('s1h1',250);show('s1de',400);show('s1fl',550);
-    show('s1tw',200);show('s1qr',800);
-    T(function(){
-      var ph=document.getElementById('s1ph');
-      ph.classList.add('vis');
-    },1300);
-    show('s1sr',1500);
-    show('s1ob',1900);
+    show('s1ey',100);show('s1h1',220);show('s1de',380);show('s1fl',540);show('s1st',700);
+    show('s1tw',140);show('s1qc',780);
+    T(function(){document.getElementById('s1pa').classList.add('vis');},1280);
+    show('s1sr',1480);show('s1sr2',1580);
+    show('s1ob',1950);
   },
   s2:function(){
     show('s2ph',50);
-    T(function(){
-      var fl=document.getElementById('s2fl');
-      fl.classList.add('flash');
-      T(function(){document.getElementById('s2done').classList.add('vis');},300);
-    },1800);
-    show('s2ey',200);show('s2h1',350);show('s2st',500);show('s2pill',900);
+    T(function(){document.getElementById('s2fl').classList.add('flash');T(function(){document.getElementById('s2dp').classList.add('vis');},360);},2000);
+    show('s2ey',200);show('s2h1',360);
+    show('s2s0',520);show('s2s1',700);show('s2s2',880);
+    show('s2pill',1100);
   },
   s3:function(){
     show('s3ph',50);
-    show('s3mi0',400);show('s3mi1',550);show('s3mi2',700);show('s3mi3',850);
+    show('s3m0',380);show('s3m1',540);show('s3m2',700);show('s3m3',860);
     show('s3ey',100);show('s3h1',250);
-    show('s3fc0',500);show('s3fc1',650);show('s3fc2',800);show('s3fc3',950);
+    show('s3fc0',490);show('s3fc1',650);show('s3fc2',810);show('s3fc3',970);
   },
   s4:function(){
-    show('s4ey',100);show('s4h1',250);
-    show('s4ci0',400);show('s4ci1',600);show('s4ci2',800);
+    show('s4ey',100);show('s4h1',240);
+    show('s4c0',420);show('s4c1',620);show('s4c2',820);
     T(function(){
       document.getElementById('s4tot').classList.add('vis');
-      countUp(document.getElementById('s4totnum'),47000,800);
-    },1000);
-    show('s4pc',200);
-    show('s4ck',1200);show('s4ot',1500);show('s4on',1700);show('s4no',1900);
-    show('s4pn',2800);
-    // confetti
-    T(function(){runConfetti();},1200);
+      countUp(document.getElementById('s4tnum'),48000,900,function(v){return '₩'+v.toLocaleString('ko-KR');});
+    },1080);
+    show('s4pc',180);show('s4ck',1280);show('s4ot',1500);show('s4oi',1700);show('s4on',1900);
+    show('s4pn',3000);
+    T(function(){runConfetti();},1350);
   },
   s5:function(){
-    show('s5kds',50);
-    var tids=['s5t0','s5t1','s5t2','s5t3','s5t4','s5t5'];
-    tids.forEach(function(id,i){show(id,300+i*100);});
-    show('s5pop',1200);
-    show('s5ey',200);show('s5h1',350);
-    T(function(){
-      document.getElementById('s5s0').classList.add('vis');
-      countUp(document.getElementById('s5sn0'),35,900,'%');
-    },700);
-    T(function(){
-      document.getElementById('s5s1').classList.add('vis');
-      countUp(document.getElementById('s5sn1'),92,900,'%');
-    },900);
+    show('s5kh',50);
+    ['s5t0','s5t1','s5t2','s5t3','s5t4','s5t5'].forEach(function(id,i){show(id,280+i*100);});
+    show('s5pop',1400);
+    show('s5ey',200);show('s5h1',370);
+    T(function(){document.getElementById('s5s0').classList.add('vis');countUp(document.getElementById('s5sn0'),35,950,function(v){return v+'%';});},720);
+    T(function(){document.getElementById('s5s1').classList.add('vis');countUp(document.getElementById('s5sn1'),92,950,function(v){return v+'%';});},980);
   },
   s6:function(){
-    show('s6ey',100);show('s6h1',250);
-    show('s6c0',400);show('s6c1',560);show('s6c2',720);show('s6c3',880);
-    show('s6lo',1000);show('s6ct',1100);show('s6bx',1200);
+    show('s6ey',100);show('s6h1',220);show('s6de',380);show('s6bl',540);
+    T(function(){document.getElementById('s6pw').classList.add('vis');},200);
+    ['s6pi0','s6pi1','s6pi2'].forEach(function(id,i){show(id,450+i*150);});
+    T(function(){
+      document.getElementById('s6pt').classList.add('vis');
+      countUp(document.getElementById('s6ptn'),48000,800,function(v){return '₩'+v.toLocaleString('ko-KR');});
+    },1050);
+    ['s6i0','s6i1','s6i2','s6i3'].forEach(function(id,i){show(id,700+i*120);});
+    T(function(){
+      document.querySelectorAll('#s6 .ii-fill').forEach(function(f){var w=f.getAttribute('data-w');if(w)f.style.width=w;});
+    },1800);
+  },
+  s7:function(){
+    show('s7ey',100);show('s7h1',220);show('s7de',380);show('s7flow',540);
+    T(function(){document.getElementById('s7qa').classList.add('vis');},200);
+    ['s7r0','s7r1','s7r2'].forEach(function(id,i){show(id,500+i*160);});
+    T(function(){
+      document.getElementById('s7pt').classList.add('vis');
+      countUp(document.getElementById('s7ptn'),4580000,1000,function(v){return '₩'+v.toLocaleString('ko-KR');});
+    },1150);
+    show('s7kn',2400);
+  },
+  s8:function(){
+    show('s8ey',80);show('s8h1',220);
+    show('s8c0',380);show('s8c1',540);show('s8c2',700);show('s8c3',860);
+    show('s8lo',1000);show('s8ct',1100);show('s8bx',1200);
   }
 };
 
 function switchSlide(i){
   clearT();
-  // remove vis/show from all animated elements
   document.querySelectorAll('.vis').forEach(function(e){e.classList.remove('vis');});
-  // clear confetti canvas
-  var cc=document.getElementById('c4');
-  if(cc){var ctx=cc.getContext('2d');ctx.clearRect(0,0,cc.width,cc.height);}
-  // hide all slides
+  document.querySelectorAll('[style*="animation"]').forEach(function(e){e.style.animation='';});
+  var cc=document.getElementById('c4');if(cc){cc.getContext('2d').clearRect(0,0,cc.width,cc.height);}
   document.querySelectorAll('.slide').forEach(function(e){e.classList.remove('on');});
   document.getElementById(slides[i]).classList.add('on');
   document.getElementById('prog').style.width=((i+1)/slides.length*100)+'%';
   cur=i;
   T(function(){if(cbs[slides[i]])cbs[slides[i]]();},80);
 }
-
 window.goNext=function(){if(cur<slides.length-1)switchSlide(cur+1);};
 
-// ---- Confetti (S4) ----
 function runConfetti(){
-  var cv=document.getElementById('c4');
-  cv.width=1280;cv.height=720;
-  var ctx=cv.getContext('2d');
-  var particles=[];
-  var colors=['#c9a84c','#08101f','#00c853','#ff6b35','#2196f3','#e91e63'];
-  for(var i=0;i<80;i++){
-    particles.push({
-      x:640+Math.random()*200-100,y:360+Math.random()*100-50,
-      vx:(Math.random()-0.5)*8,vy:-(Math.random()*10+4),
-      color:colors[Math.floor(Math.random()*colors.length)],
-      r:Math.random()*6+3,life:1,decay:Math.random()*.02+.012
-    });
+  var cv=document.getElementById('c4');cv.width=1280;cv.height=720;
+  var ctx=cv.getContext('2d'),particles=[];
+  var colors=['#c9a84c','#f0d080','#08101f','#00c853','#ff6b35','#2196f3','#e91e63','#fff176','#ff9800'];
+  for(var i=0;i<180;i++){
+    var isRect=Math.random()>.45;
+    particles.push({x:580+Math.random()*120-60,y:340+Math.random()*80-40,vx:(Math.random()-.5)*13,vy:-(Math.random()*16+5),color:colors[Math.floor(Math.random()*colors.length)],r:Math.random()*8+2,life:1,decay:Math.random()*.016+.009,isRect:isRect,w:Math.random()*12+4,h:Math.random()*5+2,rot:Math.random()*Math.PI*2,rotV:(Math.random()-.5)*.22});
   }
   function frame(){
-    ctx.clearRect(0,0,1280,720);
-    var alive=false;
+    ctx.clearRect(0,0,1280,720);var alive=false;
     particles.forEach(function(p){
-      if(p.life<=0)return;
-      alive=true;
-      ctx.save();
-      ctx.globalAlpha=p.life;
-      ctx.fillStyle=p.color;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fill();
+      if(p.life<=0)return;alive=true;
+      ctx.save();ctx.globalAlpha=Math.min(p.life*1.6,1);ctx.fillStyle=p.color;
+      if(p.isRect){ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);}
+      else{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}
       ctx.restore();
-      p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; p.life-=p.decay;
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.38;p.life-=p.decay;p.rot+=p.rotV;
     });
     if(alive)requestAnimationFrame(frame);
   }
   frame();
 }
 
-// Start S0
 T(function(){cbs.s0();},100);
 </script>
 </body>
