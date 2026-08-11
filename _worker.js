@@ -13155,7 +13155,16 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
   '</div>'+
-  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
+  '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
+    '<input id="pw-zip-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리" '+
+      'style="flex:1.2;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
+      'oninput="this.value=this.value.replace(/[^0-9]/g,\'\').slice(0,5)" '+
+      'onkeydown="if(event.key===\'Enter\')_addZoneByZip()">'+
+    '<input id="pw-zip-name" type="text" placeholder="구역명 (예: A구역)" '+
+      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none">'+
+    '<button onclick="_addZoneByZip()" style="padding:12px 16px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
+  '</div>'+
+  '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin-bottom:6px;min-height:16px"></div>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:none"></div>'+
@@ -17138,8 +17147,38 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
-// Daum 우편번호 팝업 - 다중 구역 추가
+// 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
+function _addZoneByZip(){
+  var zip=(document.getElementById('pw-zip-input').value||'').trim();
+  var name=(document.getElementById('pw-zip-name').value||'').trim();
+  var st=document.getElementById('zip-lookup-st');
+  if(!/^\d{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
+  var dup=window._zones.some(function(z){return z.zipcode===zip;});
+  if(dup){_yToast('이미 추가된 우편번호예요');return;}
+  if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
+  fetch('/api/yongcha/zone-boundary?zip='+zip)
+    .then(function(r){return r.json();})
+    .then(function(bd){
+      if(bd.ok&&bd.coords&&bd.coords.length){
+        var sumLat=0,sumLng=0,n=bd.coords.length;
+        bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+        var lat=sumLat/n,lng=sumLng/n;
+        var zoneName=name||bd.zipName||zip;
+        window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords});
+        _renderZoneTags();
+        _updateMapZones();
+        if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 지도에 표시됐어요';}
+        document.getElementById('pw-zip-input').value='';
+        document.getElementById('pw-zip-name').value='';
+      } else {
+        if(st){st.style.color='var(--rd)';st.textContent='우편번호 구역을 찾을 수 없어요. 아래 주소 검색을 이용해주세요.';}
+      }
+    }).catch(function(){
+      if(st){st.style.color='var(--rd)';st.textContent='조회에 실패했어요. 주소 검색을 이용해주세요.';}
+    });
+}
+// 주소 검색 fallback
 function _openDaumPost(){
   new daum.Postcode({
     oncomplete: function(data){
@@ -18416,7 +18455,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── vWorld WFS: 우편번호 기초구역 실제 경계 폴리곤 ────────────────
+  // ── vWorld: 우편번호 기초구역 경계 폴리곤 ────────────────────────
   if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
@@ -18426,11 +18465,24 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
       const vKey = env.VWORLD_API_KEY;
       if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
-      // lt_c_basicado = 기초구역도 (우편번호 경계). bas_id 필드 = 5자리 우편번호
-      const wfsUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basicado&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
-      const res = await fetch(wfsUrl);
-      const data = await res.json();
-      const features = data?.features || [];
+
+      // 시도 순서: WFS(lt_c_basidco) → WFS(lt_c_basicado) → Data API
+      const attempts = [
+        `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`,
+        `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basicado&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`,
+        `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASICADO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
+      ];
+
+      let features = [];
+      for (const url of attempts) {
+        try {
+          const r = await fetch(url);
+          const d = await r.json();
+          const fs = d?.features || d?.response?.result?.featureCollection?.features || [];
+          if (fs.length) { features = fs; break; }
+        } catch(_) {}
+      }
+
       if (!features.length) return new Response(JSON.stringify({ ok: false, error: '구역 없음' }), { headers: corsH });
       const geom = features[0]?.geometry;
       if (!geom) return new Response(JSON.stringify({ ok: false, error: '경계 없음' }), { headers: corsH });
