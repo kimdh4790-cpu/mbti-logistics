@@ -12349,9 +12349,9 @@ function _editPost(postId){
   _db.collection('yongcha_posts').doc(postId).get().then(function(doc){
     if(!doc.exists){_yToast('공고를 찾을 수 없어요');return;}
     var d=Object.assign({id:doc.id},doc.data());
-    window._editPostId=postId;
     var el=document.getElementById('content');
     _pgPostWrite(el);
+    window._editPostId=postId;  // _pgPostWrite가 null로 초기화한 뒤 재설정
     setTimeout(function(){_fillPostForm(d);},200);
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
