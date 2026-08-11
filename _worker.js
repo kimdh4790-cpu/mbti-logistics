@@ -12338,11 +12338,20 @@ function _pgMyPosts(el){
           // 🤖 AI 배차 추천 — 모집중인 공고에서만 노출
           (d.status==='open'?
           '<button onclick="_yAiRecommend(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
-          '<button onclick="_editPost(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">공고 수정</button>'+
+          '<button onclick="_editPost(\\''+d.id+'\\')" style="padding:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:2px">공고 수정</button>'+
+          '<button onclick="_deletePost(\\''+d.id+'\\')" style="padding:10px;background:var(--rdl);border:1px solid var(--rdln);border-radius:10px;color:var(--rd);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:2px">삭제</button>'+
           '</div>';
         list.appendChild(card);
       });
     });
+}
+
+function _deletePost(postId){
+  if(!confirm('공고를 삭제할까요? 복구할 수 없어요.'))return;
+  _db.collection('yongcha_posts').doc(postId).delete().then(function(){
+    _yToast('공고가 삭제됐어요');
+    _pgMyPosts(document.getElementById('content'));
+  }).catch(function(e){_yToast('삭제 오류: '+e.message);});
 }
 
 function _editPost(postId){
