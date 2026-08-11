@@ -17140,16 +17140,33 @@ function _geocodeLoadingAddr(){
 // vWorld는 한국 IP에서만 접근 가능. 브라우저(한국 사용자)에서 직접 호출.
 var _vwKey=null;
 function _fetchZoneBoundary(zip,cb){
-  // vWorld 실패 시 서버사이드 Nominatim 폴백
+  // Kakao Maps Geocoder로 우편번호 → 좌표 변환 (클라이언트 사이드, 차단 없음)
   function _kakaoPsSearch(){
-    fetch('/api/yongcha/zip2loc?zip='+zip)
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(d.ok&&d.lat&&d.lng){
-          cb({ok:true,coords:[],zipName:d.zipName||zip,lat:d.lat,lng:d.lng});
-        } else { cb({ok:false}); }
-      })
-      .catch(function(){cb({ok:false});});
+    _loadKakaoMap(function(){
+      try{
+        var gc=new kakao.maps.services.Geocoder();
+        // 우편번호를 주소로 검색 — Kakao는 우편번호를 인식하지 못하지만
+        // 주소검색 결과에서 road_address.zone_no가 일치하는 것을 찾는다
+        gc.addressSearch(zip,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res.length){
+            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+            var a=res[0].address||res[0].road_address||{};
+            var zipName=a.region_3depth_name||a.region_2depth_name||zip;
+            cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
+          } else {
+            // Places 키워드 검색으로 2차 시도
+            var ps=new kakao.maps.services.Places();
+            ps.keywordSearch(zip,function(pres,pst){
+              if(pst===kakao.maps.services.Status.OK&&pres.length){
+                var lat2=parseFloat(pres[0].y),lng2=parseFloat(pres[0].x);
+                var zipName2=pres[0].address_name||zip;
+                cb({ok:true,coords:[],zipName:zipName2,lat:lat2,lng:lng2});
+              } else { cb({ok:false}); }
+            },{size:1});
+          }
+        });
+      } catch(e){ cb({ok:false}); }
+    });
   }
   function _call(key){
     if(!key){_kakaoPsSearch();return;}
@@ -17234,13 +17251,13 @@ function _addZoneByZip(){
       var fbLat=parseFloat(document.getElementById('pw-loadingLat')?document.getElementById('pw-loadingLat').value:'');
       var fbLng=parseFloat(document.getElementById('pw-loadingLng')?document.getElementById('pw-loadingLng').value:'');
       if(!isNaN(fbLat)&&!isNaN(fbLng)){
-        window._zones.push({zipcode:zip,name:zip,lat:fbLat,lng:fbLng,boundary:[]});
+        window._zones.push({zipcode:zip,name:'',lat:fbLat,lng:fbLng,boundary:[]});
         _renderZoneTags();
         _updateMapZones();
         if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역이 추가됐어요';}
         document.getElementById('pw-zip-input').value='';
       } else {
-        window._zones.push({zipcode:zip,name:zip,lat:null,lng:null,boundary:[]});
+        window._zones.push({zipcode:zip,name:'',lat:null,lng:null,boundary:[]});
         _renderZoneTags();
         if(st){st.style.color='var(--gn)';st.textContent=zip+' 구역 태그가 추가됐어요';}
         document.getElementById('pw-zip-input').value='';
