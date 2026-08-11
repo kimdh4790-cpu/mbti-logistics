@@ -13156,21 +13156,19 @@ function _pgPostWrite(el){
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
   '</div>'+
   '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
-    '<input id="pw-zip-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리" '+
-      'style="flex:1.2;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
+    '<input id="pw-zip-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
+      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
       'oninput="_fzipInput(this)" '+
       'onkeydown="_fzipKey(event)">'+
-    '<input id="pw-zip-name" type="text" placeholder="구역명 (예: A구역)" '+
-      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none">'+
-    '<button onclick="_addZoneByZip()" style="padding:12px 16px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
+    '<button onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
   '</div>'+
   '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin-bottom:6px;min-height:16px"></div>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:none"></div>'+
   '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 전체 명칭 <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-area" placeholder="구역 추가 시 자동입력 (직접 수정 가능)"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
   '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
@@ -17153,7 +17151,6 @@ function _fzipInput(el){el.value=el.value.replace(/[^0-9]/g,'').slice(0,5);}
 function _fzipKey(ev){if(ev.key==='Enter')_addZoneByZip();}
 function _addZoneByZip(){
   var zip=(document.getElementById('pw-zip-input').value||'').trim();
-  var name=(document.getElementById('pw-zip-name').value||'').trim();
   var st=document.getElementById('zip-lookup-st');
   if(!/^\d{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
@@ -17166,13 +17163,12 @@ function _addZoneByZip(){
         var sumLat=0,sumLng=0,n=bd.coords.length;
         bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
         var lat=sumLat/n,lng=sumLng/n;
-        var zoneName=name||bd.zipName||zip;
+        var zoneName=bd.zipName||zip;
         window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords});
         _renderZoneTags();
         _updateMapZones();
         if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 지도에 표시됐어요';}
         document.getElementById('pw-zip-input').value='';
-        document.getElementById('pw-zip-name').value='';
       } else {
         if(st){st.style.color='var(--rd)';st.textContent='우편번호 구역을 찾을 수 없어요. 아래 주소 검색을 이용해주세요.';}
       }
