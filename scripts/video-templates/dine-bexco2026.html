@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>DINE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#08101f}
+:root{--n:#08101f}
+.slide{position:absolute;inset:0;opacity:0;pointer-events:none}
+.slide.on{opacity:1;pointer-events:auto;transition:opacity .35s ease}
+#prog{position:fixed;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#6d28d9,#a78bfa);z-index:9999;transition:width .4s ease}
+
+@keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+@keyframes sR{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+@keyframes sL{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes scIn{from{opacity:0;transform:scale(.84)}to{opacity:1;transform:none}}
+@keyframes floatY{0%,100%{transform:translateY(0) perspective(1200px) rotateY(-8deg) rotateX(3deg)}50%{transform:translateY(-10px) perspective(1200px) rotateY(-8deg) rotateX(3deg)}}
+@keyframes floatT{0%,100%{transform:perspective(1400px) rotateX(5deg) rotateY(-4deg)}50%{transform:perspective(1400px) rotateX(5deg) rotateY(-4deg) translateY(-10px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popBounce{0%{opacity:0;transform:scale(.72)}60%{transform:scale(1.06)}80%{transform:scale(.97)}100%{opacity:1;transform:scale(1)}}
+@keyframes aiPulse{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
+@keyframes aiBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+@keyframes kflash{0%{background:#ede9fe;border-color:#a78bfa}60%{background:#f0fdf4;border-color:#86efac}100%{background:#f8fafc;border-color:#e8edf3}}
+@keyframes ctaBounce{0%{opacity:0;transform:scale(.85) translateY(16px)}65%{transform:scale(1.03) translateY(0)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes pulseRing{0%{transform:scale(.9);opacity:.8}100%{transform:scale(1.15);opacity:0}}
+
+/* Intro / Outro */
+#s0,#s5{background:linear-gradient(140deg,#0d0d1f 0%,#08101f 50%,#0f0a1f 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+canvas{position:absolute;inset:0;pointer-events:none}
+.intro-ring{position:absolute;border-radius:50%;border:1px solid rgba(109,40,217,.15);animation:pulseRing 2.4s ease-out infinite;z-index:1}
+.intro-badge{border:1px solid rgba(109,40,217,.4);border-radius:100px;padding:6px 20px;font-size:11px;font-weight:700;letter-spacing:3.5px;color:#a78bfa;position:relative;z-index:2}
+.intro-logo{font-size:110px;font-weight:900;letter-spacing:-5px;line-height:1;position:relative;z-index:2;background:linear-gradient(90deg,#fff 10%,#a78bfa 35%,#c4b5fd 50%,#a78bfa 65%,#fff 90%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s linear infinite}
+.intro-tag{font-size:17px;color:rgba(255,255,255,.45);font-weight:400;position:relative;z-index:2}
+.intro-tag strong{color:rgba(255,255,255,.85);font-weight:600}
+.intro-chips{display:flex;gap:8px;position:relative;z-index:2}
+.ic{border:1px solid rgba(255,255,255,.1);border-radius:100px;padding:6px 16px;font-size:11px;font-weight:600;color:rgba(255,255,255,.55);opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease}
+.ic.vis{opacity:1;transform:translateY(0)}
+.ic.t{border-color:rgba(20,184,166,.3);color:#5eead4;background:rgba(20,184,166,.06)}
+.ic.b{border-color:rgba(59,130,246,.3);color:#93c5fd;background:rgba(59,130,246,.06)}
+.ic.p{border-color:rgba(139,92,246,.3);color:#c4b5fd;background:rgba(139,92,246,.06)}
+.ic.g{border-color:rgba(201,168,76,.3);color:#f0d080;background:rgba(201,168,76,.06)}
+
+/* Feature layout */
+.fs{display:flex;height:100%}
+.fl{width:540px;flex-shrink:0;background:var(--n);display:flex;flex-direction:column;justify-content:center;padding:0 60px;position:relative;overflow:hidden}
+.fl::before{content:'';position:absolute;width:380px;height:380px;border-radius:50%;border:1px solid rgba(109,40,217,.06);top:-100px;left:-100px;pointer-events:none}
+.fl::after{content:'';position:absolute;width:280px;height:280px;border-radius:50%;border:1px solid rgba(109,40,217,.04);bottom:-70px;right:-60px;pointer-events:none}
+.fr{flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.fn{font-size:10px;font-weight:800;letter-spacing:4px;color:rgba(167,139,250,.55);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.fn::before{content:'';width:20px;height:1.5px;background:#a78bfa;opacity:.5}
+.fh{font-size:50px;font-weight:900;line-height:1.06;letter-spacing:-2px;color:#fff;margin-bottom:14px}
+.fh em{font-style:normal;color:#a78bfa}
+.fb{font-size:13.5px;line-height:1.8;color:rgba(255,255,255,.45);margin-bottom:22px;max-width:330px}
+.fps{list-style:none;display:flex;flex-direction:column;gap:10px}
+.fp{display:flex;align-items:flex-start;gap:10px}
+.fp-d{width:5px;height:5px;border-radius:50%;background:#a78bfa;flex-shrink:0;margin-top:8px}
+.fp-t{font-size:13px;color:rgba(255,255,255,.72);line-height:1.55;font-weight:500}
+.fp-t b{color:#fff;font-weight:700}
+.slide.on .fn{animation:sR .45s .1s both}
+.slide.on .fh{animation:sR .45s .2s both}
+.slide.on .fb{animation:sR .45s .32s both}
+.slide.on .fps{animation:sR .45s .42s both}
+.slide.on .mw{animation:sL .55s .2s both}
+
+/* AI Badge */
+.ai-badge{position:absolute;top:16px;right:16px;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.25);border-radius:100px;padding:7px 14px;display:flex;align-items:center;gap:7px;z-index:30;opacity:0;transform:translateY(-8px);transition:opacity .4s ease,transform .4s ease}
+.ai-badge.show{opacity:1;transform:translateY(0)}
+.ai-badge.done .ai-pulse{background:#10b981}
+.ai-badge.done .ai-pulse::before{border-color:rgba(16,185,129,.5)}
+.ai-badge.done .ai-txt{color:#10b981}
+.ai-badge.done .ai-dots{display:none}
+.ai-pulse{width:8px;height:8px;border-radius:50%;background:#a78bfa;position:relative;flex-shrink:0}
+.ai-pulse::before{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid rgba(167,139,250,.5);animation:aiPulse 1.5s ease-out infinite}
+.ai-txt{font-size:10px;font-weight:700;color:#a78bfa;letter-spacing:.5px;white-space:nowrap}
+.ai-dots{display:flex;gap:3px;align-items:center}
+.ai-dot{width:4px;height:4px;border-radius:50%;background:#a78bfa;animation:aiBounce 1.2s ease-in-out infinite}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+
+/* Phone mockup */
+.mw{position:relative}
+.phone{width:236px;height:482px;background:linear-gradient(150deg,#2d2d30,#1c1c1e);border-radius:46px;padding:12px;position:relative;box-shadow:0 0 0 1.5px #3a3a3c,0 0 0 3px #1c1c1e,0 70px 130px rgba(0,0,0,.55),0 30px 60px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.08);animation:floatY 5.5s ease-in-out infinite}
+.phone::before{content:'';position:absolute;left:-2.5px;top:82px;width:3px;height:26px;background:#2d2d30;border-radius:0 2px 2px 0;box-shadow:0 38px 0 #2d2d30}
+.phone::after{content:'';position:absolute;right:-2.5px;top:96px;width:3px;height:50px;background:#2d2d30;border-radius:2px 0 0 2px}
+.pscr{width:100%;height:100%;border-radius:36px;overflow:hidden;background:#fff;display:flex;flex-direction:column;position:relative}
+.pisland{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:88px;height:26px;background:#000;border-radius:20px;z-index:20;pointer-events:none}
+.pbar{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:76px;height:4px;background:rgba(255,255,255,.22);border-radius:2px;z-index:20;pointer-events:none}
+
+/* Laptop mockup */
+.laptop{position:relative;animation:floatT 6.5s ease-in-out infinite}
+.laptop-lid{width:420px;height:268px;background:linear-gradient(150deg,#2d2d30,#1c1c1e);border-radius:14px 14px 0 0;padding:12px;box-shadow:0 0 0 1.5px #3a3a3c,0 -30px 80px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.07)}
+.laptop-scr{width:100%;height:100%;border-radius:4px;overflow:hidden;background:#fff}
+.laptop-base{width:440px;height:14px;background:linear-gradient(180deg,#2c2c2e,#1c1c1e);border-radius:0 0 6px 6px;margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.laptop-foot{width:400px;height:4px;background:#111;border-radius:0 0 4px 4px;margin:0 auto}
+
+/* S1 Dashboard */
+.dash-hd{height:32px;background:var(--n);display:flex;align-items:center;padding:0 12px;justify-content:space-between;flex-shrink:0}
+.dash-hd-t{font-size:10px;font-weight:800;color:#fff}
+.dash-date{font-size:8.5px;color:rgba(255,255,255,.35)}
+.dash-body{flex:1;padding:8px;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;flex-shrink:0}
+.kpi{background:#f8fafc;border-radius:8px;padding:7px 9px;border:1px solid #e8edf3;opacity:0}
+.kpi.vis{animation:slideUp .4s both}
+.kpi-v{font-size:16px;font-weight:900}
+.kpi-l{font-size:7.5px;color:#94a3b8;margin-top:1px}
+.kpi-ch{font-size:8px;font-weight:700;margin-top:2px}
+.kpi-ch.up{color:#10b981}
+.kpi-ch.dn{color:#ef4444}
+.store-row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;flex:1;overflow:hidden}
+.scard{background:#f8fafc;border-radius:8px;padding:8px 9px;border:1px solid #e8edf3;display:flex;flex-direction:column;gap:3px;opacity:0}
+.scard.vis{animation:slideUp .45s both}
+.scard-hd{display:flex;justify-content:space-between;align-items:center}
+.scard-nm{font-size:9.5px;font-weight:800;color:var(--n)}
+.scard-st{font-size:7.5px;font-weight:700;padding:1.5px 6px;border-radius:5px}
+.scard-st.op{background:#dcfce7;color:#15803d}
+.scard-st.cl{background:#fee2e2;color:#dc2626}
+.scard-rev{font-size:14px;font-weight:900;color:var(--n);margin-top:2px}
+.scard-sub{font-size:7.5px;color:#94a3b8}
+.scard-bar{height:4px;background:#e2e8f0;border-radius:2px;margin-top:4px;overflow:hidden}
+.scard-fill{height:100%;border-radius:2px;width:0;transition:width 1.4s cubic-bezier(.22,.61,.36,1)}
+.s1-toast{position:absolute;bottom:24px;right:16px;background:#fff;border:1.5px solid #6d28d9;border-radius:12px;padding:9px 14px;display:flex;align-items:center;gap:9px;box-shadow:0 8px 24px rgba(109,40,217,.18);opacity:0;transform:translateY(12px);transition:opacity .4s,transform .4s;z-index:20}
+.s1-toast.show{opacity:1;transform:translateY(0)}
+.s1-toast-dot{width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0}
+
+/* S2 Analytics */
+.chart-hd{height:32px;background:var(--n);display:flex;align-items:center;padding:0 12px;justify-content:space-between;flex-shrink:0}
+.chart-hd-t{font-size:10px;font-weight:800;color:#fff}
+.chart-tabs{display:flex;gap:4px}
+.ctab{font-size:8px;font-weight:700;padding:2px 8px;border-radius:5px;color:rgba(255,255,255,.5)}
+.ctab.a{background:rgba(109,40,217,.4);color:#c4b5fd}
+.chart-body{flex:1;padding:8px;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+.chart-kpis{display:flex;gap:6px;flex-shrink:0}
+.ck{flex:1;background:#f8fafc;border-radius:7px;padding:7px 9px;border:1px solid #e8edf3;opacity:0}
+.ck.vis{animation:slideUp .4s both}
+.ck-v{font-size:18px;font-weight:900}
+.ck-l{font-size:7.5px;color:#94a3b8;margin-top:1px}
+.bar-chart{flex:1;display:flex;align-items:flex-end;gap:4px;padding:4px 0;border-bottom:1px solid #e2e8f0}
+.bc-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bc-bar{width:100%;border-radius:3px 3px 0 0;height:0;transition:height 1.3s cubic-bezier(.22,.61,.36,1)}
+.bc-lbl{font-size:7px;color:#94a3b8;white-space:nowrap}
+.chart-legend{display:flex;gap:10px;flex-shrink:0;opacity:0;transition:opacity .6s}
+.chart-legend.vis{opacity:1}
+.cl-item{display:flex;align-items:center;gap:4px;font-size:8px;color:#64748b}
+.cl-dot{width:8px;height:8px;border-radius:2px}
+.s2-insight{position:absolute;bottom:24px;right:16px;background:#f5f3ff;border:1px solid rgba(109,40,217,.25);border-radius:10px;padding:9px 13px;font-size:9px;color:#6d28d9;font-weight:600;max-width:168px;line-height:1.5;opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;z-index:20}
+.s2-insight.show{opacity:1;transform:translateY(0)}
+
+/* S3 Membership */
+.mem-hd{height:42px;flex-shrink:0;background:var(--n);display:flex;align-items:flex-end;padding:0 14px 9px;justify-content:space-between}
+.mem-hd-t{font-size:12px;font-weight:800;color:#fff}
+.mem-total{font-size:8.5px;color:rgba(255,255,255,.4)}
+.mem-body{flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+.mem-search{background:#f1f5f9;border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:6px;font-size:9.5px;color:#94a3b8;border:1px solid #e2e8f0;flex-shrink:0}
+.mem-cards{display:flex;flex-direction:column;gap:5px;flex:1;overflow:hidden}
+.mc{background:#f8fafc;border-radius:8px;padding:7px 10px;border:1px solid #e8edf3;display:flex;align-items:center;gap:8px;opacity:0}
+.mc.vis{animation:slideUp .45s both}
+.mc-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.mc-nm{font-size:10.5px;font-weight:700;color:var(--n)}
+.mc-info{font-size:8.5px;color:#94a3b8}
+.mc-pts{margin-left:auto;text-align:right}
+.mc-pts-v{font-size:13px;font-weight:900;color:#6d28d9}
+.mc-tier{font-size:7.5px;font-weight:700;padding:2px 7px;border-radius:5px;margin-top:2px;display:inline-block}
+.mc-tier.g{background:#fef9c3;color:#a16207}
+.mc-tier.s{background:#f1f5f9;color:#64748b}
+.mc-tier.vip{background:#f5f3ff;color:#6d28d9}
+.mem-promo{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:8px;padding:7px 10px;font-size:9px;color:#6d28d9;font-weight:600;display:flex;align-items:center;gap:6px;flex-shrink:0;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+.mem-promo.show{opacity:1;transform:translateY(0)}
+
+/* S4 Integration */
+.int-hd{height:42px;flex-shrink:0;background:var(--n);display:flex;align-items:flex-end;padding:0 14px 9px;justify-content:space-between}
+.int-hd-t{font-size:12px;font-weight:800;color:#fff}
+.int-body{flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.int-section{font-size:8.5px;font-weight:800;letter-spacing:2px;color:#94a3b8;margin-bottom:2px;opacity:0;transition:opacity .5s}
+.int-section.vis{opacity:1}
+.icard{background:#f8fafc;border-radius:8px;padding:8px 10px;border:1px solid #e8edf3;display:flex;align-items:center;justify-content:space-between;opacity:0}
+.icard.vis{animation:slideUp .4s both}
+.icard.flash{animation:kflash .7s both}
+.icard-l{display:flex;align-items:center;gap:8px}
+.icard-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icard-nm{font-size:10px;font-weight:700;color:var(--n)}
+.icard-desc{font-size:8px;color:#94a3b8;margin-top:1px}
+.icard-status{display:flex;align-items:center;gap:4px;font-size:8.5px;font-weight:700;opacity:0;transition:opacity .4s}
+.icard-status.vis{opacity:1}
+.icard-status.on{color:#10b981}
+.icard-status.rdy{color:#3b82f6}
+.icard-dot{width:6px;height:6px;border-radius:50%;animation:blink 1.2s infinite}
+
+/* BG panels */
+.bg-t{background:linear-gradient(145deg,#e8fdfb,#ccfbf4)}
+.bg-b{background:linear-gradient(145deg,#eff6ff,#dbeafe)}
+.bg-p{background:linear-gradient(145deg,#f5f3ff,#ede9fe)}
+.bg-g{background:linear-gradient(145deg,#fffbeb,#fef9c3)}
+.gc{position:absolute;border-radius:50%;pointer-events:none;filter:blur(55px)}
+
+/* S5 Outro */
+.outro-z{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+.outro-h{font-size:66px;font-weight:900;color:#fff;line-height:1.05;text-align:center;letter-spacing:-2.5px;opacity:0}
+.outro-h.vis{animation:scIn .7s .1s both}
+.outro-h em{font-style:normal;color:#a78bfa}
+.outro-s{font-size:15px;color:rgba(255,255,255,.45);margin-top:14px;text-align:center;opacity:0;transition:opacity .7s}
+.outro-s.vis{opacity:1}
+.outro-feats{display:flex;gap:10px;margin-top:32px}
+.of{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 18px;text-align:center;min-width:110px;opacity:0}
+.of.vis{animation:popBounce .55s both}
+.of-ic{width:34px;height:34px;border-radius:10px;margin:0 auto 7px;display:flex;align-items:center;justify-content:center}
+.of-lbl{font-size:10px;font-weight:700;color:rgba(255,255,255,.65)}
+.outro-cta{margin-top:26px;opacity:0}
+.outro-cta.vis{animation:ctaBounce .65s both}
+.cta-btn{background:linear-gradient(90deg,#6d28d9,#a78bfa);border-radius:100px;padding:14px 44px;font-size:16px;font-weight:900;color:#fff;display:inline-block;letter-spacing:-.5px}
+.outro-dm{font-size:12.5px;color:rgba(255,255,255,.2);text-align:center;letter-spacing:1.5px;margin-top:14px;opacity:0;transition:opacity .7s .5s}
+.outro-dm.vis{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- S0 인트로 -->
+<div class="slide on" id="s0">
+<canvas id="cvs0" width="1280" height="720"></canvas>
+<div class="intro-ring" style="width:280px;height:280px"></div>
+<div class="intro-ring" style="width:460px;height:460px;animation-delay:.9s;border-color:rgba(109,40,217,.07)"></div>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;height:100%;position:relative;z-index:2">
+  <div class="intro-badge">BEXCO 2026 &nbsp;·&nbsp; 8월 20–22일 &nbsp;·&nbsp; 부산</div>
+  <div class="intro-logo">DINE</div>
+  <div class="intro-tag">다점포 외식 사업의 <strong>통합 관제 플랫폼</strong></div>
+  <div class="intro-chips">
+    <span class="ic t">다점포 통합 관리</span>
+    <span class="ic b">매출 분석 대시보드</span>
+    <span class="ic p">회원 CRM</span>
+    <span class="ic g">FILO · POS 연동</span>
+  </div>
+</div>
+</div>
+
+<!-- S1 다점포 통합 관리 -->
+<div class="slide" id="s1">
+<div class="fs">
+  <div class="fl">
+    <div class="fn">FEATURE 01</div>
+    <div class="fh">모든 매장을<br><em>한 화면에서</em></div>
+    <div class="fb">본사에서 여러 매장 실시간 모니터링. 매장별 매출·주문·재고를 한 번에 파악.</div>
+    <ul class="fps">
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">전 매장 <b>실시간 매출 통합</b> 대시보드</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">매장별 <b>비교 분석</b> — 성과 하위 매장 즉시 파악</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">이상 감지 <b>즉시 알림</b> — 주문 급감·재고 부족</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">메뉴·가격 <b>일괄 변경</b> — 클릭 한 번으로 전 매장</span></li>
+    </ul>
+  </div>
+  <div class="fr bg-t">
+    <div class="gc" style="width:300px;height:300px;top:-60px;right:-60px;background:rgba(20,184,166,.2)"></div>
+    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(59,130,246,.14)"></div>
+    <div class="ai-badge" id="s1-ai">
+      <div class="ai-pulse"></div>
+      <span class="ai-txt">AI 분석 중</span>
+      <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+    </div>
+    <div class="s1-toast" id="s1-toast">
+      <div class="s1-toast-dot"></div>
+      <div>
+        <div style="font-size:9.5px;font-weight:700;color:#08101f">해물 광안점 신규 주문</div>
+        <div style="font-size:8px;color:#94a3b8">테이블 7번 · ₩42,000</div>
+      </div>
+    </div>
+    <div class="mw">
+      <div class="laptop">
+        <div class="laptop-lid">
+          <div class="laptop-scr">
+            <div style="display:flex;flex-direction:column;height:100%">
+              <div class="dash-hd">
+                <div class="dash-hd-t">DINE 통합 관제 — 오늘 현황</div>
+                <div class="dash-date">2026.08.11 오후 7:34</div>
+              </div>
+              <div class="dash-body">
+                <div class="kpi-row">
+                  <div class="kpi"><div class="kpi-v" style="color:#6d28d9">₩2.84M</div><div class="kpi-l">오늘 총 매출</div><div class="kpi-ch up">▲ 12.4%</div></div>
+                  <div class="kpi"><div class="kpi-v" style="color:#3b82f6">284건</div><div class="kpi-l">주문 수</div><div class="kpi-ch up">▲ 8.7%</div></div>
+                  <div class="kpi"><div class="kpi-v" style="color:#10b981">5곳</div><div class="kpi-l">영업 중</div><div class="kpi-ch" style="color:#94a3b8">전체 6곳</div></div>
+                  <div class="kpi"><div class="kpi-v" style="color:#f59e0b">₩9,810</div><div class="kpi-l">객단가</div><div class="kpi-ch dn">▼ 2.1%</div></div>
+                </div>
+                <div class="store-row">
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 광안점</div><div class="scard-st op">영업중</div></div><div class="scard-rev">₩842,000</div><div class="scard-sub">72건 · 객단가 ₩11,694</div><div class="scard-bar"><div class="scard-fill" data-w="85%" style="background:#6d28d9"></div></div></div>
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 서면점</div><div class="scard-st op">영업중</div></div><div class="scard-rev">₩621,000</div><div class="scard-sub">58건 · 객단가 ₩10,707</div><div class="scard-bar"><div class="scard-fill" data-w="63%" style="background:#8b5cf6"></div></div></div>
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 해운대점</div><div class="scard-st op">영업중</div></div><div class="scard-rev">₩534,000</div><div class="scard-sub">47건 · 객단가 ₩11,362</div><div class="scard-bar"><div class="scard-fill" data-w="54%" style="background:#a78bfa"></div></div></div>
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 남포점</div><div class="scard-st op">영업중</div></div><div class="scard-rev">₩389,000</div><div class="scard-sub">41건 · 객단가 ₩9,488</div><div class="scard-bar"><div class="scard-fill" data-w="39%" style="background:#c4b5fd"></div></div></div>
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 동래점</div><div class="scard-st op">영업중</div></div><div class="scard-rev">₩297,000</div><div class="scard-sub">33건 · 객단가 ₩9,000</div><div class="scard-bar"><div class="scard-fill" data-w="30%" style="background:#ddd6fe"></div></div></div>
+                  <div class="scard"><div class="scard-hd"><div class="scard-nm">해물 기장점</div><div class="scard-st cl">준비중</div></div><div class="scard-rev">₩0</div><div class="scard-sub">오픈 준비 중</div><div class="scard-bar"><div class="scard-fill" data-w="0%" style="background:#e2e8f0"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="laptop-base"></div>
+        <div class="laptop-foot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- S2 매출 분석 -->
+<div class="slide" id="s2">
+<div class="fs">
+  <div class="fl">
+    <div class="fn">FEATURE 02</div>
+    <div class="fh">매출 흐름이<br><em>한눈에</em> 보입니다</div>
+    <div class="fb">시간대별·요일별·메뉴별 매출 패턴 분석. 데이터 기반 경영 의사결정.</div>
+    <ul class="fps">
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">시간대별 <b>피크 타임 분석</b> — 인력 배치 최적화</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">메뉴별 <b>판매량·수익률</b> 자동 집계</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">전월 대비·전년 동기 <b>자동 비교</b></span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">Excel·PDF <b>리포트 자동 생성</b> — 회계 연동</span></li>
+    </ul>
+  </div>
+  <div class="fr bg-b">
+    <div class="gc" style="width:300px;height:300px;top:-60px;right:-60px;background:rgba(59,130,246,.2)"></div>
+    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(109,40,217,.14)"></div>
+    <div class="ai-badge" id="s2-ai">
+      <div class="ai-pulse"></div>
+      <span class="ai-txt">패턴 분석 중</span>
+      <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+    </div>
+    <div class="s2-insight" id="s2-insight">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2" style="flex-shrink:0;vertical-align:middle;margin-right:4px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      금요일·토요일 피크<br>인력 1명 추가 권장
+    </div>
+    <div class="mw">
+      <div class="laptop">
+        <div class="laptop-lid">
+          <div class="laptop-scr">
+            <div style="display:flex;flex-direction:column;height:100%">
+              <div class="chart-hd">
+                <div class="chart-hd-t">매출 분석 — 해물 광안점</div>
+                <div class="chart-tabs"><span class="ctab a">주간</span><span class="ctab">월간</span><span class="ctab">연간</span></div>
+              </div>
+              <div class="chart-body">
+                <div class="chart-kpis">
+                  <div class="ck"><div class="ck-v" style="color:#6d28d9">₩18.4M</div><div class="ck-l">이번 주 매출</div></div>
+                  <div class="ck"><div class="ck-v" style="color:#10b981">▲ 23.1%</div><div class="ck-l">전주 대비</div></div>
+                  <div class="ck"><div class="ck-v" style="color:#3b82f6">1,847건</div><div class="ck-l">주문 수</div></div>
+                  <div class="ck"><div class="ck-v" style="color:#f59e0b">₩9,961</div><div class="ck-l">평균 객단가</div></div>
+                </div>
+                <div class="bar-chart">
+                  <div class="bc-item"><div class="bc-bar" data-h="60%" style="background:linear-gradient(180deg,#6d28d9,#a78bfa)"></div><div class="bc-lbl">월</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="75%" style="background:linear-gradient(180deg,#6d28d9,#a78bfa)"></div><div class="bc-lbl">화</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="55%" style="background:linear-gradient(180deg,#6d28d9,#a78bfa)"></div><div class="bc-lbl">수</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="80%" style="background:linear-gradient(180deg,#6d28d9,#a78bfa)"></div><div class="bc-lbl">목</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="95%" style="background:linear-gradient(180deg,#4c1d95,#6d28d9)"></div><div class="bc-lbl">금</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="100%" style="background:linear-gradient(180deg,#4c1d95,#6d28d9)"></div><div class="bc-lbl">토</div></div>
+                  <div class="bc-item"><div class="bc-bar" data-h="85%" style="background:linear-gradient(180deg,#6d28d9,#a78bfa)"></div><div class="bc-lbl">일</div></div>
+                </div>
+                <div class="chart-legend">
+                  <div class="cl-item"><div class="cl-dot" style="background:#6d28d9"></div>이번 주 ₩18.4M</div>
+                  <div class="cl-item"><div class="cl-dot" style="background:#e2e8f0"></div>지난 주 ₩14.9M</div>
+                  <div class="cl-item" style="margin-left:auto"><span style="color:#10b981;font-weight:700">▲ 23.1%</span> 상승</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="laptop-base"></div>
+        <div class="laptop-foot"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- S3 회원 CRM -->
+<div class="slide" id="s3">
+<div class="fs">
+  <div class="fl">
+    <div class="fn">FEATURE 03</div>
+    <div class="fh">단골 손님을<br><em>더 자주</em> 오게</div>
+    <div class="fb">포인트·등급·쿠폰 시스템으로 재방문율 높이기. 전 매장 통합 회원으로 관리.</div>
+    <ul class="fps">
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">전 매장 <b>통합 포인트</b> — 매장 관계없이 적립·사용</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">등급별 혜택 <b>자동 적용</b> — VIP·골드·실버</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">생일·기념일 <b>자동 쿠폰 발송</b></span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t">방문 패턴 분석으로 <b>타겟 마케팅</b></span></li>
+    </ul>
+  </div>
+  <div class="fr bg-p">
+    <div class="gc" style="width:280px;height:280px;top:-50px;right:-50px;background:rgba(109,40,217,.2)"></div>
+    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(167,139,250,.14)"></div>
+    <div class="ai-badge" id="s3-ai">
+      <div class="ai-pulse"></div>
+      <span class="ai-txt">CRM 분석 중</span>
+      <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+    </div>
+    <div class="mw">
+      <div class="phone">
+        <div class="pisland"></div>
+        <div class="pscr">
+          <div class="mem-hd">
+            <div class="mem-hd-t">회원 관리</div>
+            <div class="mem-total">전체 2,847명</div>
+          </div>
+          <div class="mem-body">
+            <div class="mem-search">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              회원 검색...
+            </div>
+            <div class="mem-cards">
+              <div class="mc"><div class="mc-av" style="background:linear-gradient(135deg,#c9a84c,#f0d080)">김</div><div><div class="mc-nm">김민서</div><div class="mc-info">010-1234-5678 · 12회 방문</div></div><div class="mc-pts"><div class="mc-pts-v">8,450P</div><div class="mc-tier vip">VIP</div></div></div>
+              <div class="mc"><div class="mc-av" style="background:linear-gradient(135deg,#6d28d9,#a78bfa)">이</div><div><div class="mc-nm">이준혁</div><div class="mc-info">010-5678-1234 · 8회 방문</div></div><div class="mc-pts"><div class="mc-pts-v">3,200P</div><div class="mc-tier g">골드</div></div></div>
+              <div class="mc"><div class="mc-av" style="background:linear-gradient(135deg,#3b82f6,#6366f1)">박</div><div><div class="mc-nm">박지현</div><div class="mc-info">010-9999-0000 · 3회 방문</div></div><div class="mc-pts"><div class="mc-pts-v">1,100P</div><div class="mc-tier s">실버</div></div></div>
+            </div>
+            <div class="mem-promo" id="s3-promo">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              생일 축하 쿠폰 자동 발송 — 이번 달 23명
+            </div>
+          </div>
+        </div>
+        <div class="pbar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- S4 연동 & 확장 -->
+<div class="slide" id="s4">
+<div class="fs">
+  <div class="fl">
+    <div class="fn">FEATURE 04</div>
+    <div class="fh">FILO와 함께<br><em>완벽하게 연동</em></div>
+    <div class="fb">FILO QR 주문 · POS · 재고 · 급여와 DINE 본사 관리가 하나로 연결됩니다.</div>
+    <ul class="fps">
+      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>FILO QR 주문</b> → DINE 매출 자동 집계</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>POS 결제</b> → 포인트 적립 자동 처리</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>재고 알림</b> → 본사 발주 승인 시스템 연동</span></li>
+      <li class="fp"><span class="fp-d"></span><span class="fp-t"><b>급여 데이터</b> → 인건비 분석에 자동 반영</span></li>
+    </ul>
+  </div>
+  <div class="fr bg-g">
+    <div class="gc" style="width:280px;height:280px;top:-50px;right:-50px;background:rgba(201,168,76,.2)"></div>
+    <div class="gc" style="width:200px;height:200px;bottom:-40px;left:-20px;background:rgba(249,115,22,.12)"></div>
+    <div class="ai-badge" id="s4-ai">
+      <div class="ai-pulse"></div>
+      <span class="ai-txt">연동 상태 확인 중</span>
+      <div class="ai-dots"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div></div>
+    </div>
+    <div class="mw">
+      <div class="phone">
+        <div class="pisland"></div>
+        <div class="pscr">
+          <div class="int-hd">
+            <div class="int-hd-t">연동 서비스</div>
+            <div style="font-size:8.5px;color:rgba(255,255,255,.4)">실시간 동기화</div>
+          </div>
+          <div class="int-body">
+            <div class="int-section" id="s4-sec1">FILO 연동</div>
+            <div class="icard" id="s4-ic1"><div class="icard-l"><div class="icard-icon" style="background:#dbeafe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div><div class="icard-nm">QR 테이블 주문</div><div class="icard-desc">284건 오늘 처리</div></div></div><div class="icard-status on" id="s4-st1"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
+            <div class="icard" id="s4-ic2"><div class="icard-l"><div class="icard-icon" style="background:#ffedd5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><div class="icard-nm">태블릿 POS</div><div class="icard-desc">결제 데이터 실시간</div></div></div><div class="icard-status on" id="s4-st2"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
+            <div class="icard" id="s4-ic3"><div class="icard-l"><div class="icard-icon" style="background:#ede9fe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg></div><div><div class="icard-nm">재고 관리</div><div class="icard-desc">발주 승인 대기 2건</div></div></div><div class="icard-status on" id="s4-st3"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
+            <div class="int-section" id="s4-sec2" style="margin-top:4px">외부 연동</div>
+            <div class="icard" id="s4-ic4"><div class="icard-l"><div class="icard-icon" style="background:#fef9c3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="icard-nm">카카오 알림톡</div><div class="icard-desc">영수증·쿠폰 발송</div></div></div><div class="icard-status on" id="s4-st4"><div class="icard-dot" style="background:#10b981"></div>연동됨</div></div>
+            <div class="icard" id="s4-ic5"><div class="icard-l"><div class="icard-icon" style="background:#ecfdf5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div><div class="icard-nm">세금계산서</div><div class="icard-desc">홈택스 자동 발행 준비</div></div></div><div class="icard-status rdy" id="s4-st5"><div class="icard-dot" style="background:#3b82f6"></div>준비중</div></div>
+          </div>
+        </div>
+        <div class="pbar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- S5 아웃트로 -->
+<div class="slide" id="s5">
+<canvas id="cvs5" width="1280" height="720"></canvas>
+<div class="outro-z">
+  <div class="outro-h" id="outro-h">다점포 외식 사업의<br><em>새로운 기준</em></div>
+  <div class="outro-s" id="outro-s">BEXCO 2026 현장 등록 시 3개월 무료 · 설치비 없음</div>
+  <div class="outro-feats">
+    <div class="of" id="of0"><div class="of-ic" style="background:rgba(20,184,166,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="of-lbl">다점포 관리</div></div>
+    <div class="of" id="of1"><div class="of-ic" style="background:rgba(59,130,246,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="of-lbl">매출 분석</div></div>
+    <div class="of" id="of2"><div class="of-ic" style="background:rgba(109,40,217,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="of-lbl">회원 CRM</div></div>
+    <div class="of" id="of3"><div class="of-ic" style="background:rgba(201,168,76,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f0d080" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><div class="of-lbl">FILO 연동</div></div>
+  </div>
+  <div class="outro-cta" id="outro-cta"><div class="cta-btn">filo.ai.kr 에서 무료 체험</div></div>
+  <div class="outro-dm" id="outro-dm">BEXCO 2026 &nbsp;·&nbsp; 8월 20–22일 &nbsp;·&nbsp; 부산 외식 혁신관</div>
+</div>
+</div>
+
+<div id="prog" style="width:0%"></div>
+
+<script>
+// Canvas
+function initCanvas(id, color) {
+  var c = document.getElementById(id);
+  if (!c) return;
+  var ctx = c.getContext('2d');
+  var W = 1280, H = 720;
+  var pts = [];
+  for (var i = 0; i < 60; i++) {
+    pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,r:Math.random()*2+.5,a:Math.random()*.4+.08});
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    for (var i=0;i<pts.length;i++) {
+      for (var j=i+1;j<pts.length;j++) {
+        var dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<120){ctx.strokeStyle='rgba('+color+','+(1-d/120)*.14+')';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.stroke();}
+      }
+    }
+    pts.forEach(function(p){
+      ctx.fillStyle='rgba(167,139,250,'+p.a+')';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+initCanvas('cvs0','109,40,217');
+initCanvas('cvs5','109,40,217');
+
+// Timer system
+var timers = [];
+function T(fn, delay) { timers.push(setTimeout(fn, delay)); }
+function clearTimers() { timers.forEach(function(t){clearTimeout(t);}); timers=[]; }
+
+// Element helpers
+function appear(el, delay) {
+  if (!el) return;
+  T(function(){ el.classList.add('vis'); }, delay);
+}
+function toast(el, delay) {
+  if (!el) return;
+  T(function(){ el.classList.add('show'); }, delay);
+}
+function aiBadge(id, doneText, showAt, doneAt) {
+  var badge = document.getElementById(id);
+  if (!badge) return;
+  T(function(){ badge.classList.add('show'); }, showAt);
+  T(function(){
+    badge.classList.add('done');
+    badge.querySelector('.ai-txt').textContent = doneText;
+  }, doneAt);
+}
+
+// Slide callbacks
+var slideCallbacks = {
+  s0: function() {
+    var chips = document.querySelectorAll('#s0 .ic');
+    chips.forEach(function(chip, i) { appear(chip, 700 + i * 180); });
+  },
+  s1: function() {
+    var kpis = document.querySelectorAll('#s1 .kpi');
+    kpis.forEach(function(k, i) { appear(k, 300 + i * 130); });
+    var scards = document.querySelectorAll('#s1 .scard');
+    scards.forEach(function(sc, i) { appear(sc, 850 + i * 100); });
+    T(function() {
+      document.querySelectorAll('#s1 .scard-fill').forEach(function(f) {
+        var w = f.getAttribute('data-w');
+        if (w) f.style.width = w;
+      });
+    }, 1600);
+    toast(document.getElementById('s1-toast'), 2600);
+    aiBadge('s1-ai', 'AI 분석 완료', 600, 3000);
+  },
+  s2: function() {
+    var cks = document.querySelectorAll('#s2 .ck');
+    cks.forEach(function(ck, i) { appear(ck, 280 + i * 120); });
+    T(function() {
+      document.querySelectorAll('#s2 .bc-bar').forEach(function(bar) {
+        var h = bar.getAttribute('data-h');
+        if (h) bar.style.height = h;
+      });
+    }, 700);
+    T(function() {
+      var leg = document.querySelector('#s2 .chart-legend');
+      if (leg) leg.classList.add('vis');
+    }, 2000);
+    toast(document.getElementById('s2-insight'), 2700);
+    aiBadge('s2-ai', '매출 패턴 분석 완료', 500, 2400);
+  },
+  s3: function() {
+    var mcs = document.querySelectorAll('#s3 .mc');
+    mcs.forEach(function(mc, i) { appear(mc, 400 + i * 220); });
+    toast(document.getElementById('s3-promo'), 1500);
+    aiBadge('s3-ai', '쿠폰 발송 완료 — 23명', 700, 3000);
+  },
+  s4: function() {
+    T(function() {
+      document.getElementById('s4-sec1').classList.add('vis');
+      document.getElementById('s4-sec2').classList.add('vis');
+    }, 300);
+    var ids = ['s4-ic1','s4-ic2','s4-ic3','s4-ic4','s4-ic5'];
+    ids.forEach(function(id, i) { appear(document.getElementById(id), 500 + i * 140); });
+    var stIds = ['s4-st1','s4-st2','s4-st3','s4-st4','s4-st5'];
+    stIds.forEach(function(id, i) { appear(document.getElementById(id), 1400 + i * 150); });
+    T(function() {
+      var ic1 = document.getElementById('s4-ic1');
+      if (ic1) ic1.classList.add('flash');
+    }, 3300);
+    aiBadge('s4-ai', '5개 서비스 연동 정상', 700, 2800);
+  },
+  s5: function() {
+    appear(document.getElementById('outro-h'), 200);
+    T(function(){ document.getElementById('outro-s').classList.add('vis'); }, 700);
+    ['of0','of1','of2','of3'].forEach(function(id, i) {
+      appear(document.getElementById(id), 1000 + i * 140);
+    });
+    T(function(){ document.getElementById('outro-cta').classList.add('vis'); }, 1700);
+    T(function(){ document.getElementById('outro-dm').classList.add('vis'); }, 2100);
+  }
+};
+
+// Slide system
+var slides = ['s0','s1','s2','s3','s4','s5'];
+var cur = 0;
+function switchSlide(i) {
+  clearTimers();
+  document.querySelectorAll('.slide').forEach(function(el){ el.classList.remove('on'); });
+  document.getElementById(slides[i]).classList.add('on');
+  document.getElementById('prog').style.width = ((i+1)/slides.length*100) + '%';
+  cur = i;
+  if (slideCallbacks[slides[i]]) {
+    T(function(){ slideCallbacks[slides[i]](); }, 80);
+  }
+}
+window.goNext = function(){ if(cur < slides.length-1) switchSlide(cur+1); };
+window.getCur = function(){ return cur; };
+window.totalSlides = slides.length;
+switchSlide(0);
+</script>
+</body>
+</html>
