@@ -18067,7 +18067,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
       const apiKey = env.KOTSA_API_KEY;
       if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
-      const apiUrl = `https://apis.data.go.kr/1613000/VhclInspecdInsrnInfo/getVhclInspecdInsrnInfo?serviceKey=${encodeURIComponent(apiKey)}&carNo=${encodeURIComponent(carNum)}&_type=json`;
+      const apiUrl = `https://apis.data.go.kr/B553881/insptlnfoService_01/getInsptlnfoService01?serviceKey=${encodeURIComponent(apiKey)}&vhrno=${encodeURIComponent(carNum)}&_type=json`;
       const resp = await fetch(apiUrl);
       const text = await resp.text();
       let dueDate = null, debugInfo = { _raw: text.slice(0, 1200) };
