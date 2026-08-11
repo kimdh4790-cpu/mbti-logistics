@@ -17238,7 +17238,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 폴리곤 경계 비동기 로드: 브라우저 직접 vWorld → 서버 프록시 순
+          // 법정동 경계 비동기 로드: Nominatim(OSM) — CORS 허용, 무료
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17253,26 +17253,19 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            // Oracle Cloud 프록시 경유 → vWorld WFS (CORS 해결)
-            var sCql=encodeURIComponent('INTERSECTS(geometry,POINT('+lng+' '+lat+'))');
-            var _proxyBase=window._vwProxy||'/api/yongcha/zone-boundary';
-            var _useProxy=(_proxyBase.indexOf('155.248')!==-1);
-            var _url=_useProxy
-              ?(_proxyBase+'/wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=lt_c_basidco&key='+encodeURIComponent(window._vwKey||'')+'&CQL_FILTER='+sCql+'&outputFormat=application/json&srsName=EPSG:4326&maxFeatures=1')
-              :('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zipcode)+'&lat='+lat+'&lng='+lng);
-            fetch(_url)
+            if(!zoneName)return;
+            fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
+              {headers:{'User-Agent':'yongcha-app/1.0 (yongcha.app)'}})
               .then(function(r){return r.json();})
-              .then(function(d){
-                if(_useProxy){
-                  var fs=d.features||[];
-                  if(!fs.length)return;
-                  var c=_geomToCoords(fs[0].geometry);
-                  if(!c.length)return;
-                  var cLat=c.reduce(function(s,x){return s+x.lat;},0)/c.length;
-                  var cLng=c.reduce(function(s,x){return s+x.lng;},0)/c.length;
-                  _applyBoundary({coords:c,lat:cLat,lng:cLng});
-                } else {
-                  _applyBoundary(d);
+              .then(function(arr){
+                for(var i=0;i<arr.length;i++){
+                  var g=arr[i].geojson;
+                  if(!g)continue;
+                  var c=_geomToCoords(g);
+                  if(c.length>=4){
+                    _applyBoundary({coords:c,lat:parseFloat(arr[i].lat),lng:parseFloat(arr[i].lon)});
+                    break;
+                  }
                 }
               })
               .catch(function(){});
