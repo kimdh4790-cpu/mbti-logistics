@@ -18074,8 +18074,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     const results = {};
     // 카카오 place detail 시도
     for (const url of [
+      `https://place.map.kakao.com/api/place/v1/info?cid=${pid}&service=place`,
+      `https://place.map.kakao.com/m/${pid}`,
+      `https://place.map.kakao.com/api/place/v2/detail?pid=${pid}`,
       `https://place.map.kakao.com/main/v/${pid}`,
-      `https://place.map.kakao.com/api/place/v1/detail?pid=${pid}&service=place`,
     ]) {
       try {
         const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' } });
@@ -18173,22 +18175,33 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         brand: getBrand(d.place_name), lat: parseFloat(d.y), lng: parseFloat(d.x),
         phone: d.phone || '', url: d.place_url || ''
       }));
-      // 카카오 장소 상세 API로 개별 주유소 실시간 가격 병렬 조회
-      const fuelCdMap = { 'LPG': 'C004', '경유': 'D047', '전기': null };
+        // 카카오 장소 상세 API로 개별 주유소 실시간 가격 병렬 조회
+      const fuelCdMap = { 'LPG': 'K015', '경유': 'D047', '전기': null };
       const targetCd = fuelCdMap[fuelType] || 'B027'; // 기본: 휘발유
       const stations = await Promise.all(rawStations.map(async s => {
-        try {
-          const detailRes = await fetch(`https://place.map.kakao.com/main/v/${s.id}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' },
-            signal: AbortSignal.timeout(3000)
-          });
-          const detail = await detailRes.json();
-          const oilList = detail?.basicInfo?.oilInfo || detail?.oilInfo || [];
-          if (oilList.length > 0) {
-            const match = oilList.find(o => o.oilCd === targetCd || o.oilCdNm === fuelType) || oilList[0];
-            if (match?.price) s.price = Number(match.price);
-          }
-        } catch(e) { /* 가격 조회 실패 무시 */ }
+        const pid = s.url ? s.url.replace(/.*\//, '') : s.id;
+        const tryUrls = [
+          `https://place.map.kakao.com/api/place/v1/info?cid=${pid}&service=place`,
+          `https://place.map.kakao.com/m/${pid}`,
+          `https://place.map.kakao.com/api/place/v2/detail?pid=${pid}`,
+        ];
+        for (const url of tryUrls) {
+          try {
+            const r = await fetch(url, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 12)', 'Referer': 'https://map.kakao.com/' }
+            });
+            if (!r.ok) continue;
+            const ct = r.headers.get('content-type') || '';
+            if (!ct.includes('json')) continue;
+            const d = await r.json().catch(() => null);
+            if (!d) continue;
+            const oils = d?.basicInfo?.oilInfo || d?.oilInfo || d?.info?.oilInfo || [];
+            if (oils.length > 0) {
+              const match = oils.find(o => (o.oilCd||o.code) === targetCd) || oils.find(o => o.oilCdNm === fuelType) || oils[0];
+              if (match?.price || match?.sellPrice) { s.price = Number(match.price || match.sellPrice); break; }
+            }
+          } catch(e) { continue; }
+        }
         return s;
       }));
       const maxD = Math.max(...stations.map(s=>s.dist), 0.001);
