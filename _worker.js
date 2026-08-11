@@ -12996,10 +12996,10 @@ function _pgPostWrite(el){
   window._editPostId=null;
   _map=null; _markers=[]; window._zonePolygons=[]; window._zoneLabels=[];
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
-  '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">공고 등록</div>'+
+  '<div class="page-sub">템플릿으로 5초 만에 발송하거나 직접 입력하세요</div></div>'+
 
-  // 템플릿 선택 (모형에서 가장 위)
+  // 템플릿 선택
   '<div class="form-section" style="padding:14px;background:linear-gradient(135deg,rgba(59,126,248,.12),rgba(59,126,248,.06));border:1px solid var(--acln);border-radius:var(--r-lg);margin-bottom:12px">'+
   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>'+
@@ -13014,58 +13014,90 @@ function _pgPostWrite(el){
   '</select>'+
   '</div>'+
 
-  // 택배사
+  // 기본 정보 + 공고유형 + 긴급여부
   '<div class="form-section">'+
   '<div class="form-section-title">기본 정보</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span></label>'+
   '<select class="inp" id="pw-courier"><option value="">선택</option>'+
   ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
   '</select></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
-  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
-  '</div>'+
-
-  // 공고 유형
-  '<div class="form-section">'+
-  '<div class="form-section-title">공고 유형</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">공고 유형 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-type-group">'+
-  ['하루 대타','주단위','월단위','상시모집'].map(function(t,i){
+  ['하루 대타','주단위','월단위','상시모집'].map(function(t){
     return '<button onclick="_selType(this,\\''+t+'\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-type">'+
+  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
+  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
+  '<div class="toggle-row" style="margin-top:6px"><div><div class="toggle-lbl">긴급 공고</div>'+
+  '<div class="toggle-desc">상단에 우선 노출돼요</div></div>'+
+  '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
+  '</div>'+
 
-  // 근무 시간대
+  // 구역 정보 (MOVED UP)
   '<div class="form-section">'+
-  '<div class="form-section-title">근무 시간대</div>'+
+  '<div class="form-section-title">구역 정보</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
+  '</div>'+
+  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
+  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
+  '</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 우편번호 추가</label>'+
+  '<div style="display:flex;gap:8px;align-items:stretch">'+
+    '<input id="pw-zip-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
+      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
+      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" onblur="_fzipInput(this)" '+
+      'onkeydown="_fzipKey(event)">'+
+    '<button type="button" ontouchstart="_zipCapture()" onmousedown="_zipCapture()" onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">추가</button>'+
+  '</div>'+
+  '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin:4px 0;min-height:16px"></div>'+
+  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>'+
+  '</div>'+
+  '<div id="addr-result"></div>'+
+  '<div id="selected-zones" style="display:none"></div>'+
+  '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 전체 명칭 <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-area" placeholder="구역 추가 시 자동입력 (직접 수정 가능)"></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
+  '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
+  '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
+  ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
+  '</select></div>'+
+  '</div>'+
+  '</div>'+
+
+  // 근무 조건 (시간대+요일+기간 통합)
+  '<div class="form-section">'+
+  '<div class="form-section-title">근무 조건</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 시간대</label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pw-shift-group">'+
   ['주간','야간','협의'].map(function(s){
     return '<button onclick="_selType(this,\\''+s+'\\',\\'pw-shift\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
   }).join('')+
   '</div>'+
   '<input type="hidden" id="pw-shift">'+
-  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
-  '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
   '</div>'+
-
-  // 근무 요일
-  '<div class="form-section">'+
-  '<div class="form-section-title">근무 요일</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
+  '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 요일</label>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap" id="pw-days-group">'+
   ['월','화','수','목','금','토','일'].map(function(d){
-    return '<button onclick="_toggleDay(this,\\''+d+'\\')" type="button" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
+    return '<button onclick="_toggleDay(this,\\''+d+'\\')" type="button" style="width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
   }).join('')+
-  '</div>'+
+  '</div></div>'+
   '<div id="pw-days-val" style="display:none"></div>'+
-  '</div>'+
-
-  // 기간
-  '<div class="form-section">'+
-  '<div class="form-section-title">기간</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
   '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
   '<input class="inp" id="pw-date" type="date"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">종료일</label>'+
   '<input class="inp" id="pw-enddate" type="date" placeholder="상시모집이면 비워두세요"></div>'+
+  '</div>'+
   '</div>'+
 
   // 차량 요건
@@ -13088,9 +13120,9 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-plate">'+
   '</div>'+
 
-  // 단가 구조
+  // 단가/물량 통합
   '<div class="form-section">'+
-  '<div class="form-section-title">단가 구조</div>'+
+  '<div class="form-section-title">단가 / 물량</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">단가 방식</label>'+
   '<div style="display:flex;gap:8px" id="pw-pricetype-group">'+
   ['건당','가구당','건당+가구당'].map(function(p){
@@ -13119,21 +13151,16 @@ function _pgPostWrite(el){
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-vat">'+
-  '</div>'+
-
-  // 물량 및 최소보장
-  '<div class="form-section">'+
-  '<div class="form-section-title">물량</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">예상 일 물량 (건) <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="pw-volume" type="number" placeholder="예: 150" oninput="_calcEst()"></div>'+
   '<div id="pw-est-display" style="margin:8px 0;padding:12px;background:var(--gnl);border-radius:10px;display:none">'+
   '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">예상 일 수익</div>'+
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
-  '<div style="padding:12px;background:var(--acl);border-radius:10px;margin-bottom:8px">'+
-  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">플랫폼 최소보장 (고정)</div>'+
+  '<div style="padding:10px 12px;background:var(--acl);border-radius:10px;margin-bottom:4px">'+
+  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:3px">플랫폼 최소보장 (고정)</div>'+
   '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:3px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
   '</div>'+
   '</div>'+
 
@@ -13151,40 +13178,7 @@ function _pgPostWrite(el){
   '<input class="inp" id="pw-settleDay" placeholder="예: 매주 목요일 / 매월 25일"></div>'+
   '</div>'+
 
-  // 구역
-  '<div class="form-section">'+
-  '<div class="form-section-title">구역 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
-  '<div style="display:flex;gap:8px">'+
-  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
-  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
-  '</div>'+
-  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
-  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
-  '</div>'+
-  '<div style="display:flex;gap:8px;margin-bottom:6px;align-items:stretch">'+
-    '<input id="pw-zip-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
-      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
-      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" onblur="_fzipInput(this)" '+
-      'onkeydown="_fzipKey(event)">'+
-    '<button type="button" ontouchstart="_zipCapture()" onmousedown="_zipCapture()" onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">구역 추가</button>'+
-  '</div>'+
-  '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin-bottom:6px;min-height:16px"></div>'+
-  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
-  '<div id="addr-result"></div>'+
-  '<div id="selected-zones" style="display:none"></div>'+
-  '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">배송구역 전체 명칭 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-area" placeholder="구역 추가 시 자동입력 (직접 수정 가능)"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
-  '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
-  '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
-  ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
-  '</select></div>'+
-  '</div>'+
-
-  // 추가 조건
+  // 추가 조건 + 신뢰도 필터 통합
   '<div class="form-section">'+
   '<div class="form-section-title">추가 조건</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-extras">'+
@@ -13194,34 +13188,24 @@ function _pgPostWrite(el){
   '</div>'+
   '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">상세 설명</label>'+
   '<textarea class="inp" id="pw-desc" rows="3" placeholder="구역 특이사항, 요청사항 등" style="resize:none"></textarea></div>'+
-  '</div>'+
-
-  // 긴급
-  '<div class="form-section">'+
-  '<div class="toggle-row"><div><div class="toggle-lbl">긴급 공고</div>'+
-  '<div class="toggle-desc">상단에 우선 노출돼요</div></div>'+
-  '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
-  '</div>'+
-
-  // 기사 신뢰도 필터
-  '<div class="form-section">'+
-  '<div class="toggle-row">'+
+  '<div class="toggle-row" style="margin-top:4px">'+
     '<div><div class="toggle-lbl">기사 신뢰도 필터</div>'+
     '<div class="toggle-desc">평점 4.5 이상 기사만 지원 가능</div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">'+
       '<input type="checkbox" id="pw-trust-filter" style="width:20px;height:20px;cursor:pointer;accent-color:var(--ac)">'+
       '<span style="font-size:12px;font-weight:800;color:var(--br)">★ 4.5+</span>'+
     '</label>'+
-  '</div></div>'+
+  '</div>'+
+  '</div>'+
 
-  // 발송 버튼 — 주황 그라데이션 (모형 일치)
+  // 발송 버튼
   '<button id="submit-btn" onclick="_submitPost()" style="width:100%;min-height:62px;border:none;border-radius:var(--r-lg);'+
     'background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;'+
     'font-size:17px;font-weight:900;letter-spacing:-.3px;cursor:pointer;font-family:inherit;'+
     'display:flex;align-items:center;justify-content:center;gap:10px;'+
     'box-shadow:0 10px 28px -6px rgba(249,115,22,.6);margin-top:8px">'+
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
-    '초고속 용차 공고 발송</button>';
+    '용차 공고 발송</button>';
 
   // 하이탑 기본 선택 처리
   setTimeout(function(){
@@ -17347,6 +17331,7 @@ function _doUpdateMapZones(){
   window._zoneLabels=[];
   var COLORS=['#4f78f5','#10b981','#f59e0b','#f97316','#8b5cf6'];
   window._zones.forEach(function(z,i){
+    if(typeof z.lat!=='number'||typeof z.lng!=='number')return;
     var color=COLORS[i%COLORS.length];
     var path;
     if(z.boundary&&z.boundary.length){
@@ -17374,8 +17359,9 @@ function _doUpdateMapZones(){
     });
     window._zoneLabels.push(label);
   });
-  if(window._zones.length){
-    var last=window._zones[window._zones.length-1];
+  var zonesWithCoords=window._zones.filter(function(z){return typeof z.lat==='number'&&typeof z.lng==='number';});
+  if(zonesWithCoords.length){
+    var last=zonesWithCoords[zonesWithCoords.length-1];
     _map.setCenter(new kakao.maps.LatLng(last.lat,last.lng));
     _map.setLevel(4);
     _map.relayout();
