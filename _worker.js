@@ -12191,26 +12191,26 @@ function _showPostDetail(d){
   // 지도 표시
   window._detailZones = d.zones||[];
   var _firstZone=d.zones&&d.zones.length&&d.zones[0];
-  if(_firstZone&&typeof _firstZone.lat==='number'&&typeof _firstZone.lng==='number'){
-    setTimeout(function(){_showDetailMap(_firstZone.lat,_firstZone.lng,_firstZone.name);},400);
+  if(_firstZone){
+    // _showZoneOnMap: lat/lng 있으면 바로 사용, 없으면 zipcode+name 합쳐 검색
+    // → zone.name만으로 검색하면 같은 이름의 엉뚱한 장소가 걸릴 수 있음
+    setTimeout(function(){_showZoneOnMap(0);},400);
   } else if(typeof d.lat==='number'&&typeof d.lng==='number'){
-    setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
+    setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area||'',d.zipcode||'');},400);
   } else {
-    // 좌표 없음 → 지역명으로 geocode 시도
-    var _geoQuery=(_firstZone&&_firstZone.name)||d.area||d.region||'';
+    var _geoQuery=d.area||d.region||'';
     if(_geoQuery){
       setTimeout(function(){
         _loadKakaoMap(function(){
           var gc=new kakao.maps.services.Geocoder();
           gc.addressSearch(_geoQuery,function(res,status){
             if(status===kakao.maps.services.Status.OK&&res[0]){
-              _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),_geoQuery);
+              _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),_geoQuery,'');
             } else {
-              // 주소 검색 실패 → 지역명 키워드 검색
               var ps=new kakao.maps.services.Places();
               ps.keywordSearch(_geoQuery,function(data,s2){
                 if(s2===kakao.maps.services.Status.OK&&data[0]){
-                  _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery);
+                  _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery,'');
                 } else {
                   var ph=document.getElementById('detail-map-placeholder');
                   if(ph)ph.innerHTML=
@@ -12226,7 +12226,7 @@ function _showPostDetail(d){
       },400);
     } else {
       var ph=document.getElementById('detail-map-placeholder');
-      if(ph){var _qa=(_detailPost&&(_detailPost.area||_detailPost.region))||'배송구역';
+      if(ph){var _qa=(d.area||d.region||'배송구역');
         ph.innerHTML=
           '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_qa)+'</div>'+
           '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
