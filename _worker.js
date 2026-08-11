@@ -18081,7 +18081,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const prodcd = isLPG ? 'K015' : 'D047'; // 경유 기본(용차), LPG 선택
         const opiUrl = `https://www.opinet.co.kr/api/aroundAll.do?out=json&code=${encodeURIComponent(opiKey)}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
         const opiRes = await fetch(opiUrl);
-        const opiData = await opiRes.json();
+        const opiText = await opiRes.text();
+        let opiData; try { opiData = JSON.parse(opiText); } catch(e) { return new Response(JSON.stringify({ ok: false, _debug: opiText.slice(0,500) }), { headers: corsH }); }
+        if (!opiData?.RESULT) return new Response(JSON.stringify({ ok: false, _debug: opiData }), { headers: corsH });
         const list = opiData?.RESULT?.OIL || [];
         if (list.length > 0) {
           const stations = list.slice(0, 10).map((s, i) => ({
