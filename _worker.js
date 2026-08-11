@@ -17141,12 +17141,23 @@ function _geocodeLoadingAddr(){
 var _vwKey=null;
 function _fetchZoneBoundary(zip,cb){
   // Kakao Maps Geocoder로 우편번호 → 좌표 변환 (클라이언트 사이드, 차단 없음)
+  // 브라우저에서 직접 Nominatim 호출 — 서버사이드와 달리 차단 없음, CORS OK
+  function _nominatimSearch(){
+    fetch('https://nominatim.openstreetmap.org/search?postalcode='+zip+'&country=kr&format=json&limit=1&addressdetails=1')
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d||!d.length){cb({ok:false});return;}
+        var lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon);
+        var addr=d[0].address||{};
+        var zipName=addr.suburb||addr.city_district||addr.quarter||addr.neighbourhood||addr.town||addr.city||zip;
+        cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
+      })
+      .catch(function(){cb({ok:false});});
+  }
   function _kakaoPsSearch(){
     _loadKakaoMap(function(){
       try{
         var gc=new kakao.maps.services.Geocoder();
-        // 우편번호를 주소로 검색 — Kakao는 우편번호를 인식하지 못하지만
-        // 주소검색 결과에서 road_address.zone_no가 일치하는 것을 찾는다
         gc.addressSearch(zip,function(res,status){
           if(status===kakao.maps.services.Status.OK&&res.length){
             var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
@@ -17154,18 +17165,17 @@ function _fetchZoneBoundary(zip,cb){
             var zipName=a.region_3depth_name||a.region_2depth_name||zip;
             cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
           } else {
-            // Places 키워드 검색으로 2차 시도
             var ps=new kakao.maps.services.Places();
             ps.keywordSearch(zip,function(pres,pst){
               if(pst===kakao.maps.services.Status.OK&&pres.length){
                 var lat2=parseFloat(pres[0].y),lng2=parseFloat(pres[0].x);
                 var zipName2=pres[0].address_name||zip;
                 cb({ok:true,coords:[],zipName:zipName2,lat:lat2,lng:lng2});
-              } else { cb({ok:false}); }
+              } else { _nominatimSearch(); }
             },{size:1});
           }
         });
-      } catch(e){ cb({ok:false}); }
+      } catch(e){ _nominatimSearch(); }
     });
   }
   function _call(key){
