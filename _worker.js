@@ -17366,8 +17366,8 @@ function _showDetailMap(lat,lng,name,zipcode){
       } else { _useStored(); }
     }
     if(hasZip){
-      // 1차: vWorld 폴리곤 centroid, 실패 시 바로 region 지오코딩(_fallback)
-      // ※ addressSearch(zipcode)는 동명 장소 오검색 위험 → 사용 안 함
+      // 1차: vWorld 폴리곤 centroid (lt_c_basicado, bas_id 필드)
+      // ※ addressSearch(zipcode) 금지 — 동명 장소 오검색
       fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
           var sumLat=0,sumLng=0,n=bd.coords.length;
@@ -17377,8 +17377,8 @@ function _showDetailMap(lat,lng,name,zipcode){
         } else { _fallback(); }
       }).catch(function(){_fallback();});
     } else {
-      var pos=new kakao.maps.LatLng(lat,lng);
-      _initAt(pos);_approxRect(pos);
+      // zipcode 없으면 저장 좌표 신뢰 안 함 — region 지오코딩(최소 올바른 도시)
+      _fallback();
     }
   });
 }
