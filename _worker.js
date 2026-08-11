@@ -18067,6 +18067,34 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
+  // ── 주유소 가격 API 디버그 ────────────────────────────────────────
+  if (path === '/api/yongcha/gas-debug' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const pid = new URL(request.url).searchParams.get('pid') || '26640143';
+    const results = {};
+    // 카카오 place detail 시도
+    for (const url of [
+      `https://place.map.kakao.com/main/v/${pid}`,
+      `https://place.map.kakao.com/api/place/v1/detail?pid=${pid}&service=place`,
+    ]) {
+      try {
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' } });
+        const ct = r.headers.get('content-type') || '';
+        const text = await r.text();
+        results[url] = { status: r.status, ct, preview: text.slice(0, 400) };
+      } catch(e) { results[url] = { error: e.message }; }
+    }
+    // OPINET 전국평균 시도
+    const opiKey = env.OPINET_API_KEY;
+    if (opiKey) {
+      try {
+        const opiRes = await fetch(`http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${encodeURIComponent(opiKey)}&prodcd=B027`);
+        results['opinet_avg'] = { status: opiRes.status, text: (await opiRes.text()).slice(0, 300) };
+      } catch(e) { results['opinet_avg'] = { error: e.message }; }
+    }
+    return new Response(JSON.stringify(results, null, 2), { headers: corsH });
+  }
+
   // ── 차량 검사 만료 조회 (수동 입력 — 내정보에서 직접 설정) ────────
   if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
