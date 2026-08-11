@@ -17342,16 +17342,20 @@ function _showDetailMap(lat,lng,name,zipcode){
     }
     // 저장 좌표 fallback — zipcode+region 재지오코딩 포함
     function _fallback(){
-      if(hasPos){_initAt(new kakao.maps.LatLng(lat,lng));_approxRect(new kakao.maps.LatLng(lat,lng));return;}
-      var q=[(zipcode||''),((window._detailPost&&window._detailPost.region)||'')].filter(Boolean).join(' ').trim();
-      if(!q)return;
+      // 저장 좌표(hasPos)보다 region 텍스트 지오코딩을 우선 — 좌표가 잘못 저장됐을 수 있음
+      var region=(window._detailPost&&window._detailPost.region)||'';
       var gc=new kakao.maps.services.Geocoder();
-      gc.addressSearch(q,function(res,status){
-        if(status===kakao.maps.services.Status.OK&&res[0]){
-          var p=new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x));
-          _initAt(p);_approxRect(p);
-        }
-      });
+      function _useStored(){
+        if(hasPos){_initAt(new kakao.maps.LatLng(lat,lng));_approxRect(new kakao.maps.LatLng(lat,lng));}
+      }
+      if(region){
+        gc.addressSearch(region,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res[0]){
+            var p=new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x));
+            _initAt(p);_approxRect(p);
+          } else { _useStored(); }
+        });
+      } else { _useStored(); }
     }
     if(hasZip){
       // 우편번호 → vWorld centroid 계산 (저장된 lat/lng 신뢰하지 않음)
