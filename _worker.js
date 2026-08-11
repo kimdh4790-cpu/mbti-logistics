@@ -18139,11 +18139,29 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const data = await res.json();
       const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','HD현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소','E1에너지','세왕에너지'];
       const getBrand = n => { const b=BRANDS.find(b=>n.includes(b)); return b||n.replace(/(주유소|충전소)$/,'').trim().split(/\s+/)[0]||''; };
-      const stations = (data.documents || []).slice(0, 10).map(d => ({
+      const rawStations = (data.documents || []).slice(0, 6).map(d => ({
         id: d.id, name: d.place_name, address: d.road_address_name || d.address_name,
         price: 0, dist: parseFloat((parseInt(d.distance)/1000).toFixed(2)),
         brand: getBrand(d.place_name), lat: parseFloat(d.y), lng: parseFloat(d.x),
         phone: d.phone || '', url: d.place_url || ''
+      }));
+      // 카카오 장소 상세 API로 개별 주유소 실시간 가격 병렬 조회
+      const fuelCdMap = { 'LPG': 'C004', '경유': 'D047', '전기': null };
+      const targetCd = fuelCdMap[fuelType] || 'B027'; // 기본: 휘발유
+      const stations = await Promise.all(rawStations.map(async s => {
+        try {
+          const detailRes = await fetch(`https://place.map.kakao.com/main/v/${s.id}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' },
+            signal: AbortSignal.timeout(3000)
+          });
+          const detail = await detailRes.json();
+          const oilList = detail?.basicInfo?.oilInfo || detail?.oilInfo || [];
+          if (oilList.length > 0) {
+            const match = oilList.find(o => o.oilCd === targetCd || o.oilCdNm === fuelType) || oilList[0];
+            if (match?.price) s.price = Number(match.price);
+          }
+        } catch(e) { /* 가격 조회 실패 무시 */ }
+        return s;
       }));
       const maxD = Math.max(...stations.map(s=>s.dist), 0.001);
       stations.forEach(s => { s.aiScore = Math.round((1-s.dist/maxD)*100); });
