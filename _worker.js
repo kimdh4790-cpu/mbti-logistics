@@ -12171,7 +12171,9 @@ function _showPostDetail(d){
   // 배송지역 주유소 — 배송지(zone zipcode) 기준. 캠프(loadingLat) 아님
   if(isDriver){
     var _gZip=(d.zones&&d.zones.length&&d.zones[0].zipcode)||'';
-    var _gRegion=(d.area||d.region||'').replace(/\s*·.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
+    var _gCity=(d.region||'').replace(/\s*·.*$/,'').trim();
+    var _gArea=(d.area||'').replace(/\s*·.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
+    var _gRegion=_gCity&&_gArea?_gCity+' '+_gArea:_gCity||_gArea;
     function _loadGasFromLatLng(gLat,gLng){
       _yLoadGasStations(gLat,gLng,'detail-gas-stations',_CU.carFuelType);
     }
@@ -18448,6 +18450,28 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       let result = {};
       try { result = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { result = JSON.parse(m[0]); } catch(e2) {} }
       return new Response(JSON.stringify({ ok: true, data: result }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
+  }
+
+  // ── vWorld 연결 테스트 ──────────────────────────────────────────
+  if (path === '/api/yongcha/vworld-test' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = new URL(request.url).searchParams.get('zip') || '48267';
+    const vKey = env.VWORLD_API_KEY;
+    if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
+    const testUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
+    try {
+      const r = await fetch(testUrl, { signal: AbortSignal.timeout(10000) });
+      const text = await r.text();
+      let parsed = null;
+      try { parsed = JSON.parse(text); } catch(_) {}
+      return new Response(JSON.stringify({
+        ok: true, httpStatus: r.status,
+        featuresCount: parsed?.features?.length ?? '(파싱실패)',
+        rawSnippet: text.slice(0, 600)
+      }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
