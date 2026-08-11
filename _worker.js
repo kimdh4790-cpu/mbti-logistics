@@ -17352,17 +17352,36 @@ function _showDetailMap(lat,lng,name,zipcode){
         });
       } else { _useStored(); }
     }
+    // 카카오 지오코더로 우편번호 직접 검색 (vWorld zip_no 필드 없는 문제 우회)
+    function _geocodeZip(cb){
+      var gc2=new kakao.maps.services.Geocoder();
+      gc2.addressSearch(zipcode,function(res,status){
+        if(status===kakao.maps.services.Status.OK&&res[0]){
+          cb(new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x)));
+        } else { cb(null); }
+      });
+    }
     if(hasZip){
-      // 우편번호 → vWorld centroid 계산 (저장된 lat/lng 신뢰하지 않음)
+      // 1차: vWorld 폴리곤 (centroid 계산)
       fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
           var sumLat=0,sumLng=0,n=bd.coords.length;
           bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
-          var centroid=new kakao.maps.LatLng(sumLat/n,sumLng/n);
-          _initAt(centroid);
+          _initAt(new kakao.maps.LatLng(sumLat/n,sumLng/n));
           _drawPoly(bd.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);}));
-        } else { _fallback(); }
-      }).catch(function(){ _fallback(); });
+        } else {
+          // 2차: 카카오 지오코더로 우편번호 검색
+          _geocodeZip(function(p){
+            if(p){_initAt(p);_approxRect(p);}
+            else{_fallback();}
+          });
+        }
+      }).catch(function(){
+        _geocodeZip(function(p){
+          if(p){_initAt(p);_approxRect(p);}
+          else{_fallback();}
+        });
+      });
     } else {
       var pos=new kakao.maps.LatLng(lat,lng);
       _initAt(pos);_approxRect(pos);
