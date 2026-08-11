@@ -18593,20 +18593,29 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const vKey = env.VWORLD_API_KEY;
       if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
 
-      // 시도 순서: WFS(lt_c_basidco) → WFS(lt_c_basicado) → Data API
+      // 시도 순서: Data API(attrFilter) → WFS CQL_FILTER(URL인코딩) → WFS bas_cd 필드
+      const cqlId = encodeURIComponent(`bas_id='${zip}'`);
+      const cqlCd = encodeURIComponent(`bas_cd='${zip}'`);
+      const wfsBase = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&outputFormat=application/json&srsName=EPSG:4326&count=1&key=${encodeURIComponent(vKey)}`;
       const attempts = [
-        `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`,
-        `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basicado&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`,
-        `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASICADO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
+        // 1) Data API — attrFilter 형식, vWorld 자체 포맷, 정확한 일치
+        `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`,
+        // 2) WFS lt_c_basidco CQL_FILTER (URL인코딩)
+        `${wfsBase}&typeName=lt_c_basidco&CQL_FILTER=${cqlId}`,
+        // 3) WFS lt_c_basidco bas_cd 필드 시도
+        `${wfsBase}&typeName=lt_c_basidco&CQL_FILTER=${cqlCd}`,
+        // 4) WFS lt_c_basicado
+        `${wfsBase}&typeName=lt_c_basicado&CQL_FILTER=${cqlId}`,
       ];
 
       let features = [];
-      for (const url of attempts) {
+      let usedAttempt = -1;
+      for (let i = 0; i < attempts.length; i++) {
         try {
-          const r = await fetch(url);
+          const r = await fetch(attempts[i], { signal: AbortSignal.timeout(8000) });
           const d = await r.json();
           const fs = d?.features || d?.response?.result?.featureCollection?.features || [];
-          if (fs.length) { features = fs; break; }
+          if (fs.length) { features = fs; usedAttempt = i; break; }
         } catch(_) {}
       }
 
@@ -18624,7 +18633,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const sumLng = coords.reduce((s,c)=>s+c.lng,0);
       const centLat = coords.length ? sumLat/coords.length : null;
       const centLng = coords.length ? sumLng/coords.length : null;
-      return new Response(JSON.stringify({ ok: true, coords, zipName: props.zip_nm || props.emd_nm || props.bas_cd || '', lat: centLat, lng: centLng }), { headers: corsH });
+      const zipName = props.zip_nm || props.bas_nm || props.emd_nm || props.bas_cd || props.bas_id || '';
+      return new Response(JSON.stringify({ ok: true, coords, zipName, lat: centLat, lng: centLng, _debug: { attempt: usedAttempt, bas_id: props.bas_id, bas_cd: props.bas_cd, bas_nm: props.bas_nm, emd_nm: props.emd_nm } }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
