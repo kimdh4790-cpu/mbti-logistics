@@ -12173,25 +12173,35 @@ function _showPostDetail(d){
   _openModal();
   window._detailMapRadius=_mapR;
 
-  // 배송지역 주유소 로드
+  // 배송지역 주유소 — 배송지(zone zipcode) 기준. 캠프(loadingLat) 아님
   if(isDriver){
-    // loadingLat은 픽업 거점 좌표 (신뢰 가능). zone.lat/lng는 잘못 저장될 수 있어 사용 안 함
-    if(typeof d.loadingLat==='number'){
-      setTimeout(function(){_yLoadGasStations(d.loadingLat,d.loadingLng,'detail-gas-stations',_CU.carFuelType);},300);
+    var _gZip=(d.zones&&d.zones.length&&d.zones[0].zipcode)||'';
+    var _gRegion=(d.area||d.region||'').replace(/\s*·.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
+    function _loadGasFromLatLng(gLat,gLng){
+      _yLoadGasStations(gLat,gLng,'detail-gas-stations',_CU.carFuelType);
+    }
+    function _loadGasFromRegion(){
+      if(!_gRegion)return;
+      _loadKakaoMap(function(){
+        var _gc=new kakao.maps.services.Geocoder();
+        _gc.addressSearch(_gRegion,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res[0]){
+            _loadGasFromLatLng(parseFloat(res[0].y),parseFloat(res[0].x));
+          }
+        });
+      });
+    }
+    if(_gZip&&/^\d{5}$/.test(_gZip)){
+      // vWorld zone-boundary centroid → region fallback
+      fetch('/api/yongcha/zone-boundary?zip='+_gZip).then(function(r){return r.json();}).then(function(bd){
+        if(bd.ok&&bd.coords&&bd.coords.length){
+          var sLat=0,sLng=0,n=bd.coords.length;
+          bd.coords.forEach(function(c){sLat+=c.lat;sLng+=c.lng;});
+          _loadGasFromLatLng(sLat/n,sLng/n);
+        } else {_loadGasFromRegion();}
+      }).catch(function(){_loadGasFromRegion();});
     } else {
-      var _gAddr=(d.area||d.region||'').replace(/\s*\d+노선.*$/,'').trim();
-      if(_gAddr){
-        setTimeout(function(){
-          _loadKakaoMap(function(){
-            var _gc2=new kakao.maps.services.Geocoder();
-            _gc2.addressSearch(_gAddr,function(res,status){
-              if(status===kakao.maps.services.Status.OK&&res[0]){
-                _yLoadGasStations(parseFloat(res[0].y),parseFloat(res[0].x),'detail-gas-stations',_CU.carFuelType);
-              }
-            });
-          });
-        },300);
-      }
+      setTimeout(function(){_loadGasFromRegion();},300);
     }
   }
 
@@ -18420,7 +18430,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
       const vKey = env.VWORLD_API_KEY;
       if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
-      const wfsUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_upisumd&key=${encodeURIComponent(vKey)}&CQL_FILTER=zip_no='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
+      // lt_c_basicado = 기초구역도 (우편번호 경계). bas_id 필드 = 5자리 우편번호
+      const wfsUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basicado&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
       const res = await fetch(wfsUrl);
       const data = await res.json();
       const features = data?.features || [];
