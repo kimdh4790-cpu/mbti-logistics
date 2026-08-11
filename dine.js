@@ -450,12 +450,12 @@ function _dineToggleGroup(titleEl){
 }
 function _dinePage(p,el){
  // 직원 접근 제한 — 허용되지 않은 페이지 차단
- var staffAllowed=['schedule','attend','mypay','payslip'];
+ var staffAllowed=['dashboard','schedule','attend','mypay','payslip'];
  if(_CU&&_CU.role==='staff'&&staffAllowed.indexOf(p)<0) return;
  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
  if(el)el.classList.add('active');
  var c=document.getElementById('content');
- if(p==='dashboard') _dineDashboard(c);
+ if(p==='dashboard'){if(_CU&&_CU.role==='staff')_dineStaffDashboard(c);else _dineDashboard(c);}
  else if(p==='staff')    _dineStaff(c);
  else if(p==='attend')   _dineAttend(c);
  else if(p==='mypay')    _dineMyPayroll(c);
