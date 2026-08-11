@@ -12193,7 +12193,7 @@ function _showPostDetail(d){
         });
       });
     }
-    if(_gZip&&/^\d{5}$/.test(_gZip)){
+    if(_gZip&&/^[0-9]{5}$/.test(_gZip)){
       // vWorld zone-boundary centroid (클라이언트 직접 호출)
       _fetchZoneBoundary(_gZip,function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
@@ -17214,7 +17214,7 @@ function _addZoneByZip(){
   var zip=fromEl.length===5?fromEl:(_zipVal.length===5?_zipVal:fromEl||_zipVal);
   _zipVal='';
   var st=document.getElementById('zip-lookup-st');
-  if(!/^\d{5}$/.test(zip)){_yToast('el:'+(el?'O':'X')+' raw=['+(el?el.value:'')+'] norm=['+fromEl+'] sv=['+_zipVal.slice(0,6)+']');return;}
+  if(!/^[0-9]{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
   if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
@@ -17254,7 +17254,7 @@ function _openDaumPost(){
             _renderZoneTags();
             _updateMapZones();
             // vWorld 실제 경계선 비동기 로드
-            if(zipcode&&/^\d{5}$/.test(zipcode)){
+            if(zipcode&&/^[0-9]{5}$/.test(zipcode)){
               _fetchZoneBoundary(zipcode,function(bd){
                 if(bd.ok&&bd.coords&&bd.coords.length){_newZone.boundary=bd.coords;_doUpdateMapZones();}
               });
@@ -17397,7 +17397,7 @@ function _selectAddr(idx){
 // 공고 상세 지도 — 우편번호 centroid 우선, 저장 좌표 fallback
 function _showDetailMap(lat,lng,name,zipcode){
   var hasPos=typeof lat==='number'&&typeof lng==='number'&&!isNaN(lat)&&!isNaN(lng);
-  var hasZip=zipcode&&/^\d{5}$/.test(zipcode);
+  var hasZip=zipcode&&/^[0-9]{5}$/.test(zipcode);
   if(!hasPos&&!hasZip)return;
   _loadKakaoMap(function(){
     var container=document.getElementById('detail-map');
