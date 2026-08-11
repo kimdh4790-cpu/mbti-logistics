@@ -18059,10 +18059,31 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── 차량 검사 만료 조회 (Firestore 수동입력 반환) ─────────────────
+  // ── 차량 검사 만료 조회 (openapi.kotsa.or.kr) ───────────────────
   if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    return new Response(JSON.stringify({ ok: true, inspectDue: null }), { headers: corsH });
+    try {
+      const carNum = url.searchParams.get('carNum');
+      if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
+      const apiKey = env.KOTSA_API_KEY;
+      if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
+      const resp = await fetch(`https://openapi.kotsa.or.kr/api/publicdata/vehicleInspect/v1?serviceKey=${encodeURIComponent(apiKey)}&carNum=${encodeURIComponent(carNum)}&type=JSON`);
+      const text = await resp.text();
+      let dueDate = null, debugInfo = { _raw: text.slice(0, 800) };
+      try {
+        const data = JSON.parse(text);
+        const first = data?.resultList?.[0] || null;
+        debugInfo = { _parsed: first };
+        dueDate = first?.inspValidDate || first?.inspectValidDate || first?.exprde || first?.insp_valid_de || first?.periodDate || null;
+      } catch(e) {
+        const m = text.match(/<inspValidDate>([^<]+)<\/inspValidDate>/) || text.match(/<exprde>([^<]+)<\/exprde>/);
+        if (m) dueDate = m[1];
+        debugInfo = { _xml: text.slice(0, 800) };
+      }
+      return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate, _debug: debugInfo }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+    }
   }
 
   // ── Gas Stations: 카카오 로컬 API 주유소 검색 ──────────────────
