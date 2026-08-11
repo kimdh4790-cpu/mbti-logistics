@@ -12189,14 +12189,14 @@ function _showPostDetail(d){
       });
     }
     if(_gZip&&/^\d{5}$/.test(_gZip)){
-      // vWorld zone-boundary centroid → region fallback
-      fetch('/api/yongcha/zone-boundary?zip='+_gZip).then(function(r){return r.json();}).then(function(bd){
+      // vWorld zone-boundary centroid (클라이언트 직접 호출)
+      _fetchZoneBoundary(_gZip,function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
           var sLat=0,sLng=0,n=bd.coords.length;
           bd.coords.forEach(function(c){sLat+=c.lat;sLng+=c.lng;});
           _loadGasFromLatLng(sLat/n,sLng/n);
         } else {_loadGasFromRegion();}
-      }).catch(function(){_loadGasFromRegion();});
+      });
     } else {
       setTimeout(function(){_loadGasFromRegion();},300);
     }
@@ -17147,6 +17147,43 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
+// ── 클라이언트 vWorld WFS 직접 호출 (Cloudflare → vWorld 502 우회) ──
+// vWorld는 한국 IP에서만 접근 가능. 브라우저(한국 사용자)에서 직접 호출.
+var _vwKey=null;
+function _fetchZoneBoundary(zip,cb){
+  function _call(key){
+    if(!key){cb({ok:false});return;}
+    var url='https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature'
+      +'&typeName=lt_c_basidco&key='+encodeURIComponent(key)
+      +"&CQL_FILTER=bas_id='"+zip+"'&outputFormat=application/json&srsName=EPSG:4326";
+    fetch(url)
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var features=d.features||[];
+        if(!features.length){cb({ok:false});return;}
+        var geom=features[0].geometry;
+        var rings=geom.type==='MultiPolygon'?geom.coordinates[0][0]:
+                  geom.type==='Polygon'?geom.coordinates[0]:[];
+        var coords=rings.map(function(c){return{lat:c[1],lng:c[0]};});
+        var props=features[0].properties||{};
+        var zipName=props.sig_nm||props.emd_nm||props.dong_nm||zip;
+        cb({ok:true,coords:coords,zipName:zipName});
+      })
+      .catch(function(){cb({ok:false});});
+  }
+  if(_vwKey!==null){_call(_vwKey);return;}
+  // Firebase ID 토큰으로 인증된 요청만 키 반환
+  var u=firebase.auth().currentUser;
+  var _getKey=function(tok){
+    fetch('/api/yongcha/vworld-key',{headers:tok?{'Authorization':'Bearer '+tok}:{}})
+      .then(function(r){return r.json();})
+      .then(function(d){_vwKey=d.key||'';_call(_vwKey);})
+      .catch(function(){_vwKey='';cb({ok:false});});
+  };
+  if(u){u.getIdToken().then(_getKey).catch(function(){_getKey('');});}
+  else{_getKey('');}
+}
+
 // 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
 function _fzipInput(el){el.value=el.value.replace(/[^0-9]/g,'').slice(0,5);}
@@ -17158,25 +17195,21 @@ function _addZoneByZip(){
   var dup=window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
   if(st){st.style.color='var(--t3)';st.textContent='경계를 불러오는 중...';}
-  fetch('/api/yongcha/zone-boundary?zip='+zip)
-    .then(function(r){return r.json();})
-    .then(function(bd){
-      if(bd.ok&&bd.coords&&bd.coords.length){
-        var sumLat=0,sumLng=0,n=bd.coords.length;
-        bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
-        var lat=sumLat/n,lng=sumLng/n;
-        var zoneName=bd.zipName||zip;
-        window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords});
-        _renderZoneTags();
-        _updateMapZones();
-        if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 지도에 표시됐어요';}
-        document.getElementById('pw-zip-input').value='';
-      } else {
-        if(st){st.style.color='var(--rd)';st.textContent='우편번호 구역을 찾을 수 없어요. 아래 주소 검색을 이용해주세요.';}
-      }
-    }).catch(function(){
-      if(st){st.style.color='var(--rd)';st.textContent='조회에 실패했어요. 주소 검색을 이용해주세요.';}
-    });
+  _fetchZoneBoundary(zip,function(bd){
+    if(bd.ok&&bd.coords&&bd.coords.length){
+      var sumLat=0,sumLng=0,n=bd.coords.length;
+      bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+      var lat=sumLat/n,lng=sumLng/n;
+      var zoneName=bd.zipName||zip;
+      window._zones.push({zipcode:zip,name:zoneName,lat:lat,lng:lng,boundary:bd.coords});
+      _renderZoneTags();
+      _updateMapZones();
+      if(st){st.style.color='var(--gn)';st.textContent=zoneName+' 구역이 지도에 표시됐어요';}
+      document.getElementById('pw-zip-input').value='';
+    } else {
+      if(st){st.style.color='var(--rd)';st.textContent='우편번호 구역을 찾을 수 없어요. 도로명 주소 검색을 이용해주세요.';}
+    }
+  });
 }
 // 주소 검색 fallback
 function _openDaumPost(){
@@ -17199,9 +17232,9 @@ function _openDaumPost(){
             _updateMapZones();
             // vWorld 실제 경계선 비동기 로드
             if(zipcode&&/^\d{5}$/.test(zipcode)){
-              fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
+              _fetchZoneBoundary(zipcode,function(bd){
                 if(bd.ok&&bd.coords&&bd.coords.length){_newZone.boundary=bd.coords;_doUpdateMapZones();}
-              }).catch(function(){});
+              });
             }
             // 구역명 자동입력
             var areaInp = document.getElementById('pw-area');
@@ -17405,16 +17438,15 @@ function _showDetailMap(lat,lng,name,zipcode){
       } else { _useStored(); }
     }
     if(hasZip){
-      // 1차: vWorld 폴리곤 centroid (lt_c_basicado, bas_id 필드)
-      // ※ addressSearch(zipcode) 금지 — 동명 장소 오검색
-      fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
+      // vWorld 폴리곤 — 클라이언트에서 직접 호출 (Cloudflare 502 우회)
+      _fetchZoneBoundary(zipcode,function(bd){
         if(bd.ok&&bd.coords&&bd.coords.length){
           var sumLat=0,sumLng=0,n=bd.coords.length;
           bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
           _initAt(new kakao.maps.LatLng(sumLat/n,sumLng/n));
           _drawPoly(bd.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);}));
         } else { _fallback(); }
-      }).catch(function(){_fallback();});
+      });
     } else {
       // zipcode 없으면 저장 좌표 신뢰 안 함 — region 지오코딩(최소 올바른 도시)
       _fallback();
@@ -18453,6 +18485,14 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
+  }
+
+  // ── vWorld API 키 반환 (Firebase 로그인 유저 전용) ─────────────
+  if (path === '/api/yongcha/vworld-key' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const user = await verifyFirebaseToken(request);
+    if (!user) return new Response(JSON.stringify({ key: '' }), { headers: corsH });
+    return new Response(JSON.stringify({ key: env.VWORLD_API_KEY || '' }), { headers: corsH });
   }
 
   // ── vWorld 연결 테스트 ──────────────────────────────────────────
