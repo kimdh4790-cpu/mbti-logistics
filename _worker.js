@@ -16911,9 +16911,16 @@ function _openDaumPost(){
             // 중복 체크
             var dup = window._zones.some(function(z){return z.zipcode===zipcode;});
             if(dup){_yToast('이미 추가된 우편번호예요');return;}
-            window._zones.push({zipcode:zipcode, name:sigungu.trim(), lat:lat, lng:lng});
+            var _newZone={zipcode:zipcode, name:sigungu.trim(), lat:lat, lng:lng};
+            window._zones.push(_newZone);
             _renderZoneTags();
             _updateMapZones();
+            // vWorld 실제 경계선 비동기 로드
+            if(zipcode&&/^\d{5}$/.test(zipcode)){
+              fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
+                if(bd.ok&&bd.coords&&bd.coords.length){_newZone.boundary=bd.coords;_doUpdateMapZones();}
+              }).catch(function(){});
+            }
             // 구역명 자동입력
             var areaInp = document.getElementById('pw-area');
             if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
@@ -16977,16 +16984,22 @@ function _doUpdateMapZones(){
   var COLORS=['#4f78f5','#10b981','#f59e0b','#f97316','#8b5cf6'];
   window._zones.forEach(function(z,i){
     var color=COLORS[i%COLORS.length];
-    // 우편번호 기초구역 근사 직사각형 (약 500×550m)
-    var dlat=0.0025,dlng=0.003;
-    var poly=new kakao.maps.Polygon({
-      path:[
+    var path;
+    if(z.boundary&&z.boundary.length){
+      // vWorld 실제 경계선
+      path=z.boundary.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
+    } else {
+      // 근사 직사각형 (약 500×550m)
+      var dlat=0.0025,dlng=0.003;
+      path=[
         new kakao.maps.LatLng(z.lat-dlat,z.lng-dlng),
         new kakao.maps.LatLng(z.lat+dlat,z.lng-dlng),
         new kakao.maps.LatLng(z.lat+dlat,z.lng+dlng),
         new kakao.maps.LatLng(z.lat-dlat,z.lng+dlng)
-      ],
-      strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
+      ];
+    }
+    var poly=new kakao.maps.Polygon({
+      path:path,strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
       fillColor:color,fillOpacity:.13,map:_map
     });
     window._zonePolygons.push(poly);
@@ -17066,27 +17079,36 @@ function _showDetailMap(lat,lng,name,zipcode){
     // 기존 오버레이 제거
     if(window._detailPoly){window._detailPoly.setMap(null);window._detailPoly=null;}
     if(window._detailLabel){window._detailLabel.setMap(null);window._detailLabel=null;}
-    // 우편번호 기초구역 직사각형 (약 500×550m)
-    var dlat=0.0025,dlng=0.003;
-    window._detailPoly=new kakao.maps.Polygon({
-      path:[
-        new kakao.maps.LatLng(lat-dlat,lng-dlng),
-        new kakao.maps.LatLng(lat+dlat,lng-dlng),
-        new kakao.maps.LatLng(lat+dlat,lng+dlng),
-        new kakao.maps.LatLng(lat-dlat,lng+dlng)
-      ],
-      strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.95,
-      fillColor:'#4f78f5',fillOpacity:.12,
-      map:window._detailMap
-    });
-    // 우편번호 라벨
     var lbl=(zipcode&&!/^MAP/.test(zipcode)?zipcode+' ':'')+(name||'');
-    if(lbl){
-      window._detailLabel=new kakao.maps.CustomOverlay({
-        position:pos,
-        content:'<div style="background:#4f78f5;color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+_esc(lbl)+'</div>',
-        map:window._detailMap,yAnchor:1.6
+    function _drawDetailPoly(path){
+      window._detailPoly=new kakao.maps.Polygon({
+        path:path,strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.95,
+        fillColor:'#4f78f5',fillOpacity:.12,map:window._detailMap
       });
+      if(lbl){
+        window._detailLabel=new kakao.maps.CustomOverlay({
+          position:pos,
+          content:'<div style="background:#4f78f5;color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+_esc(lbl)+'</div>',
+          map:window._detailMap,yAnchor:1.6
+        });
+      }
+    }
+    // vWorld 실제 경계선 우선, 없으면 근사 직사각형
+    if(zipcode&&/^\d{5}$/.test(zipcode)){
+      fetch('/api/yongcha/zone-boundary?zip='+zipcode).then(function(r){return r.json();}).then(function(bd){
+        if(bd.ok&&bd.coords&&bd.coords.length){
+          _drawDetailPoly(bd.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);}));
+        } else {
+          var dlat=0.0025,dlng=0.003;
+          _drawDetailPoly([new kakao.maps.LatLng(lat-dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng+dlng),new kakao.maps.LatLng(lat-dlat,lng+dlng)]);
+        }
+      }).catch(function(){
+        var dlat=0.0025,dlng=0.003;
+        _drawDetailPoly([new kakao.maps.LatLng(lat-dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng+dlng),new kakao.maps.LatLng(lat-dlat,lng+dlng)]);
+      });
+    } else {
+      var dlat=0.0025,dlng=0.003;
+      _drawDetailPoly([new kakao.maps.LatLng(lat-dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng-dlng),new kakao.maps.LatLng(lat+dlat,lng+dlng),new kakao.maps.LatLng(lat-dlat,lng+dlng)]);
     }
     var badge=document.getElementById('zone-map-badge');
     if(badge&&name)badge.textContent=name;
@@ -18134,6 +18156,36 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
     }
     return new Response(JSON.stringify(results, null, 2), { headers: corsH });
+  }
+
+  // ── vWorld WFS: 우편번호 기초구역 실제 경계 폴리곤 ────────────────
+  if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const zip = new URL(request.url).searchParams.get('zip') || '';
+      if (!zip || !/^\d{5}$/.test(zip)) {
+        return new Response(JSON.stringify({ ok: false, error: '유효하지 않은 우편번호' }), { headers: corsH });
+      }
+      const vKey = env.VWORLD_API_KEY;
+      if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
+      const wfsUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_upisumd&key=${encodeURIComponent(vKey)}&CQL_FILTER=zip_no='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
+      const res = await fetch(wfsUrl);
+      const data = await res.json();
+      const features = data?.features || [];
+      if (!features.length) return new Response(JSON.stringify({ ok: false, error: '구역 없음' }), { headers: corsH });
+      const geom = features[0]?.geometry;
+      if (!geom) return new Response(JSON.stringify({ ok: false, error: '경계 없음' }), { headers: corsH });
+      let coords = [];
+      if (geom.type === 'Polygon') {
+        coords = geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
+      } else if (geom.type === 'MultiPolygon') {
+        coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+      }
+      const props = features[0]?.properties || {};
+      return new Response(JSON.stringify({ ok: true, coords, zipName: props.zip_nm || props.emd_nm || '' }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
   }
 
   // ── 차량 검사 만료 조회 (수동 입력 — 내정보에서 직접 설정) ────────
