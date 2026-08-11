@@ -18059,7 +18059,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── 차량 검사 만료 조회 (KOTSA) ────────────────────────────────
+  // ── 차량 검사 만료 조회 (data.go.kr KOTSA) ──────────────────────
   if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
@@ -18067,12 +18067,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (!carNum) return new Response(JSON.stringify({ ok: false, error: '차량번호 필수' }), { status: 400, headers: corsH });
       const apiKey = env.KOTSA_API_KEY;
       if (!apiKey) return new Response(JSON.stringify({ ok: true, carNum, inspectDue: null, msg: 'KOTSA_API_KEY 미설정' }), { headers: corsH });
-      const resp = await fetch(`https://openapi.kotsa.or.kr/api/publicdata/vehicleInspect/v1?serviceKey=${encodeURIComponent(apiKey)}&carNum=${encodeURIComponent(carNum)}&type=JSON`);
-      const data = await resp.json();
-      const first = data?.resultList?.[0] || null;
-      // KOTSA 응답 필드명: inspValidDate, inspectValidDate, exprde, insp_valid_de 등 버전마다 다름
-      const dueDate = first?.inspValidDate || first?.inspectValidDate || first?.exprde || first?.insp_valid_de || first?.periodDate || null;
-      return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate, _debug: first }), { headers: corsH });
+      const apiUrl = `https://apis.data.go.kr/1613000/VhclInspecdInsrnInfo/getVhclInspecdInsrnInfo?serviceKey=${encodeURIComponent(apiKey)}&carNo=${encodeURIComponent(carNum)}&_type=json`;
+      const resp = await fetch(apiUrl);
+      const text = await resp.text();
+      let dueDate = null, debugInfo = null;
+      try {
+        const data = JSON.parse(text);
+        const item = data?.response?.body?.items?.item;
+        const items = Array.isArray(item) ? item : (item ? [item] : []);
+        const first = items[0] || null;
+        debugInfo = first;
+        dueDate = first?.inspcExprde || first?.inspcValidde || first?.inspValidDate || first?.exprde || null;
+      } catch(jsonErr) {
+        const m = text.match(/<inspcExprde>(\d+)<\/inspcExprde>/) || text.match(/<inspcValidde>(\d+)<\/inspcValidde>/) || text.match(/<exprde>(\d+)<\/exprde>/);
+        if (m) dueDate = m[1];
+        debugInfo = { _xml: text.slice(0, 500) };
+      }
+      return new Response(JSON.stringify({ ok: true, carNum, inspectDue: dueDate, _debug: debugInfo }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
     }
