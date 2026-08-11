@@ -18070,37 +18070,61 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     try {
       const { lat, lng, radius, fuelType } = await request.json();
+      const r = Number(radius) || 2000;
+      const opiKey = env.OPINET_API_KEY;
       const kakaoKey = env.KAKAO_REST_KEY;
+
+      // OPINET aroundAll: 위치 기반 주유소 + 실시간 가격
+      if (opiKey) {
+        const isLPG = fuelType === 'LPG';
+        const isElec = fuelType === '전기';
+        const prodcd = isLPG ? 'K015' : 'D047'; // 경유 기본(용차), LPG 선택
+        const opiUrl = `https://www.opinet.co.kr/api/aroundAll.do?out=json&code=${encodeURIComponent(opiKey)}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
+        const opiRes = await fetch(opiUrl);
+        const opiData = await opiRes.json();
+        const list = opiData?.RESULT?.OIL || [];
+        if (list.length > 0) {
+          const stations = list.slice(0, 10).map((s, i) => ({
+            id: s.UNI_ID || String(i),
+            name: s.OS_NM || '',
+            address: s.NEW_ADR || s.VAN_ADR || '',
+            price: Number(s.PRICE) || 0,
+            dist: parseFloat((Number(s.DISTANCE)/1000).toFixed(2)),
+            brand: s.POLL_DIV_NM || '',
+            lat: parseFloat(s.GIS_Y_COOR) || lat,
+            lng: parseFloat(s.GIS_X_COOR) || lng,
+            phone: '', url: ''
+          }));
+          const maxD = Math.max(...stations.map(s => s.dist), 0.001);
+          const minP = Math.min(...stations.filter(s=>s.price>0).map(s=>s.price), 99999);
+          stations.forEach(s => {
+            const dScore = (1 - s.dist/maxD) * 50;
+            const pScore = s.price > 0 ? (1 - (s.price - minP)/500) * 50 : 0;
+            s.aiScore = Math.round(Math.max(0, dScore + pScore));
+          });
+          stations.sort((a,b) => b.aiScore - a.aiScore);
+          return new Response(JSON.stringify({ ok: true, stations, source: 'opinet' }), { headers: corsH });
+        }
+      }
+
+      // OPINET 키 없거나 결과 없으면 카카오 폴백 (가격 없음)
       if (!kakaoKey) return new Response(JSON.stringify({ ok: false, error: 'KAKAO_REST_KEY 미설정' }), { status: 500, headers: corsH });
       const isLPG = fuelType === 'LPG';
-      const query = isLPG ? 'LPG충전소' : '주유소';
-      const r = Number(radius) || 2000;
+      const query = isLPG ? 'LPG충전소' : fuelType === '전기' ? '전기차충전소' : '주유소';
       const kakaUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${r}&size=15&sort=distance&category_group_code=OL7`;
       const res = await fetch(kakaUrl, { headers: { 'Authorization': 'KakaoAK ' + kakaoKey } });
       if (!res.ok) throw new Error('카카오 API 오류 ' + res.status);
       const data = await res.json();
-      const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','HD현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소','E1에너지','세왕에너지','오일뱅크'];
-      const getBrand = name => {
-        const b = BRANDS.find(b => name.includes(b));
-        if (b) return b;
-        const parts = name.trim().split(/\s+/);
-        if (parts.length >= 2 && /주유소|충전소/.test(parts[parts.length-1])) return parts[0];
-        const stripped = name.replace(/(주유소|충전소)$/, '').trim();
-        if (stripped && stripped !== name && stripped.length <= 10) return stripped;
-        return '';
-      };
+      const BRANDS = ['SK에너지','GS칼텍스','현대오일뱅크','HD현대오일뱅크','S-OIL','알뜰주유소','농협주유소','자영주유소','E1에너지','세왕에너지'];
+      const getBrand = n => { const b=BRANDS.find(b=>n.includes(b)); return b||n.replace(/(주유소|충전소)$/,'').trim().split(/\s+/)[0]||''; };
       const stations = (data.documents || []).slice(0, 10).map(d => ({
-        id: d.id, name: d.place_name,
-        address: d.road_address_name || d.address_name,
+        id: d.id, name: d.place_name, address: d.road_address_name || d.address_name,
         price: 0, dist: parseFloat((parseInt(d.distance)/1000).toFixed(2)),
-        brand: getBrand(d.place_name),
-        lat: parseFloat(d.y), lng: parseFloat(d.x),
+        brand: getBrand(d.place_name), lat: parseFloat(d.y), lng: parseFloat(d.x),
         phone: d.phone || '', url: d.place_url || ''
       }));
-      if (stations.length > 0) {
-        const maxD = Math.max(...stations.map(s => s.dist), 0.001);
-        stations.forEach(s => { s.aiScore = Math.round((1 - s.dist/maxD) * 100); });
-      }
+      const maxD = Math.max(...stations.map(s=>s.dist), 0.001);
+      stations.forEach(s => { s.aiScore = Math.round((1-s.dist/maxD)*100); });
       return new Response(JSON.stringify({ ok: true, stations, source: 'kakao' }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
