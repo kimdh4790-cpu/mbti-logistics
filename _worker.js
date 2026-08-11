@@ -17131,25 +17131,10 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
-// ── 클라이언트 vWorld WFS 직접 호출 (Cloudflare → vWorld 502 우회) ──
-// vWorld는 한국 IP에서만 접근 가능. 브라우저(한국 사용자)에서 직접 호출.
-var _vwKey=null;
+// ── 우편번호 구역 경계 조회: 서버사이드 프록시 → Kakao Geocoder 순 ──
+// 서버(Cloudflare 한국 PoP)에서 vWorld 호출 → CORS 문제 없음
 function _fetchZoneBoundary(zip,cb){
-  // Kakao Maps Geocoder로 우편번호 → 좌표 변환 (클라이언트 사이드, 차단 없음)
-  // 브라우저에서 직접 Nominatim 호출 — 서버사이드와 달리 차단 없음, CORS OK
-  function _nominatimSearch(){
-    fetch('https://nominatim.openstreetmap.org/search?postalcode='+zip+'&country=kr&format=json&limit=1&addressdetails=1')
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(!d||!d.length){cb({ok:false});return;}
-        var lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon);
-        var addr=d[0].address||{};
-        var zipName=addr.suburb||addr.city_district||addr.quarter||addr.neighbourhood||addr.town||addr.city||zip;
-        cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
-      })
-      .catch(function(){cb({ok:false});});
-  }
-  function _kakaoPsSearch(){
+  function _kakaoFallback(){
     _loadKakaoMap(function(){
       try{
         var gc=new kakao.maps.services.Geocoder();
@@ -17160,53 +17145,35 @@ function _fetchZoneBoundary(zip,cb){
             var zipName=a.region_3depth_name||a.region_2depth_name||zip;
             cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
           } else {
-            var ps=new kakao.maps.services.Places();
-            ps.keywordSearch(zip,function(pres,pst){
-              if(pst===kakao.maps.services.Status.OK&&pres.length){
-                var lat2=parseFloat(pres[0].y),lng2=parseFloat(pres[0].x);
-                var zipName2=pres[0].address_name||zip;
-                cb({ok:true,coords:[],zipName:zipName2,lat:lat2,lng:lng2});
-              } else { _nominatimSearch(); }
-            },{size:1});
+            fetch('https://nominatim.openstreetmap.org/search?postalcode='+zip+'&country=kr&format=json&limit=1&addressdetails=1')
+              .then(function(r){return r.json();})
+              .then(function(d){
+                if(!d||!d.length){cb({ok:false});return;}
+                var addr=d[0].address||{};
+                var zipName2=addr.suburb||addr.city_district||addr.neighbourhood||addr.town||zip;
+                cb({ok:true,coords:[],zipName:zipName2,lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)});
+              })
+              .catch(function(){cb({ok:false});});
           }
         });
-      } catch(e){ _nominatimSearch(); }
+      } catch(e){cb({ok:false});}
     });
   }
-  function _call(key){
-    if(!key){_kakaoPsSearch();return;}
-    var url='https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature'
-      +'&typeName=lt_c_basidco&key='+encodeURIComponent(key)
-      +"&CQL_FILTER=bas_id='"+zip+"'&outputFormat=application/json&srsName=EPSG:4326";
-    fetch(url)
-      .then(function(r){return r.json();})
-      .then(function(d){
-        var features=d.features||[];
-        if(!features.length){_kakaoPsSearch();return;}
-        var geom=features[0].geometry;
-        var rings=geom.type==='MultiPolygon'?geom.coordinates[0][0]:
-                  geom.type==='Polygon'?geom.coordinates[0]:[];
-        var coords=rings.map(function(c){return{lat:c[1],lng:c[0]};});
-        var props=features[0].properties||{};
-        var zipName=props.sig_nm||props.emd_nm||props.dong_nm||zip;
+  // 서버사이드 프록시 (vWorld API 키는 서버에만 존재)
+  fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zip))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok&&d.coords&&d.coords.length){
         var sumLat=0,sumLng=0;
-        coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
-        var centLat=coords.length?sumLat/coords.length:null;
-        var centLng=coords.length?sumLng/coords.length:null;
-        cb({ok:true,coords:coords,zipName:zipName,lat:centLat,lng:centLng});
-      })
-      .catch(function(){_kakaoPsSearch();});
-  }
-  if(_vwKey!==null){_call(_vwKey);return;}
-  var u=firebase.auth().currentUser;
-  var _getKey=function(tok){
-    fetch('/api/yongcha/vworld-key',{headers:tok?{'Authorization':'Bearer '+tok}:{}})
-      .then(function(r){return r.json();})
-      .then(function(d){_vwKey=d.key||'';_call(_vwKey);})
-      .catch(function(){_vwKey='';_call('');});
-  };
-  if(u){u.getIdToken().then(_getKey).catch(function(){_getKey('');});}
-  else{_getKey('');}
+        d.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+        var centLat=d.coords.length?sumLat/d.coords.length:null;
+        var centLng=d.coords.length?sumLng/d.coords.length:null;
+        cb({ok:true,coords:d.coords,zipName:d.zipName||zip,lat:centLat,lng:centLng});
+      } else {
+        _kakaoFallback();
+      }
+    })
+    .catch(function(){_kakaoFallback();});
 }
 
 // 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
@@ -18653,7 +18620,11 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         coords = geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
       }
       const props = features[0]?.properties || {};
-      return new Response(JSON.stringify({ ok: true, coords, zipName: props.zip_nm || props.emd_nm || '' }), { headers: corsH });
+      const sumLat = coords.reduce((s,c)=>s+c.lat,0);
+      const sumLng = coords.reduce((s,c)=>s+c.lng,0);
+      const centLat = coords.length ? sumLat/coords.length : null;
+      const centLng = coords.length ? sumLng/coords.length : null;
+      return new Response(JSON.stringify({ ok: true, coords, zipName: props.zip_nm || props.emd_nm || props.bas_cd || '', lat: centLat, lng: centLng }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
