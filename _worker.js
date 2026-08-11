@@ -17151,25 +17151,16 @@ function _geocodeLoadingAddr(){
 // vWorld는 한국 IP에서만 접근 가능. 브라우저(한국 사용자)에서 직접 호출.
 var _vwKey=null;
 function _fetchZoneBoundary(zip,cb){
-  // vWorld 실패 시 Kakao Places/Geocoder 폴백
+  // vWorld 실패 시 서버사이드 Nominatim 폴백
   function _kakaoPsSearch(){
-    _loadKakaoMap(function(){
-      var ps=new kakao.maps.services.Places();
-      ps.keywordSearch(zip,function(data,status){
-        if(status===kakao.maps.services.Status.OK&&data.length){
-          var lat=parseFloat(data[0].y),lng=parseFloat(data[0].x);
-          cb({ok:true,coords:[],zipName:data[0].address_name||zip,lat:lat,lng:lng});
-        } else {
-          var gc=new kakao.maps.services.Geocoder();
-          gc.addressSearch(zip,function(res,st2){
-            if(st2===kakao.maps.services.Status.OK&&res.length){
-              var a=res[0].address||{};
-              cb({ok:true,coords:[],zipName:a.region_3depth_name||a.region_2depth_name||zip,lat:parseFloat(res[0].y),lng:parseFloat(res[0].x)});
-            } else { cb({ok:false}); }
-          });
-        }
-      },{size:1});
-    });
+    fetch('/api/yongcha/zip2loc?zip='+zip)
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok&&d.lat&&d.lng){
+          cb({ok:true,coords:[],zipName:d.zipName||zip,lat:d.lat,lng:d.lng});
+        } else { cb({ok:false}); }
+      })
+      .catch(function(){cb({ok:false});});
   }
   function _call(key){
     if(!key){_kakaoPsSearch();return;}
@@ -18558,6 +18549,28 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }), { headers: corsH });
     } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
+  }
+
+  // ── 우편번호 → 좌표 (Nominatim OSM, 인증 불필요) ─────────────────
+  if (path === '/api/yongcha/zip2loc' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = url.searchParams.get('zip') || '';
+    if (!/^[0-9]{5}$/.test(zip)) return new Response(JSON.stringify({ ok: false }), { headers: corsH });
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=kr&format=json&limit=1&addressdetails=1`,
+        { headers: { 'User-Agent': 'yongcha.app/1.0 delivery zone lookup' }, signal: AbortSignal.timeout(8000) }
+      );
+      const data = await r.json();
+      if (!data || !data.length) return new Response(JSON.stringify({ ok: false }), { headers: corsH });
+      const item = data[0];
+      const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+      const addr = item.address || {};
+      const zipName = addr.suburb || addr.city_district || addr.neighbourhood || addr.city || zip;
+      return new Response(JSON.stringify({ ok: true, lat, lng, zipName }), { headers: corsH });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false }), { headers: corsH });
     }
   }
 
