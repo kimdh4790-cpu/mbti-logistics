@@ -11106,7 +11106,8 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
         'style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px;color:'+(isFav?'var(--br)':'var(--t3)')+';" '+
         'title="'+(isFav?'즐겨찾기 해제':'즐겨찾기 등록')+'">'+(isFav?'★':'☆')+'</button>';
       var priceArea=s.price?
-        '<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':
+        '<div class="gas-price">'+Number(s.price).toLocaleString()+'</div>'+
+        '<div style="font-size:10px;color:var(--t3);margin-bottom:2px">'+(s.priceEstimated?'전국평균/L':'원/L')+'</div>':
         '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:700;color:var(--ac);text-decoration:none;margin:2px 0 4px;text-align:right;line-height:1.4;display:block">카카오맵<br>가격확인 ›</a>';
       return '<div class="gas-item">'+
         '<div class="gas-ico" style="background:rgba(217,119,6,.12)">'+
@@ -18129,7 +18130,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       // OPINET aroundAll: 위치 기반 주유소 + 실시간 가격
       if (opiKey) {
         const isLPG = fuelType === 'LPG';
-        const prodcd = isLPG ? 'K015' : 'D047';
+        const prodcd = isLPG ? 'K015' : fuelType === '경유' ? 'D047' : 'B027';
         const opiUrl = `http://www.opinet.co.kr/api/aroundAll.do?out=json&code=${encodeURIComponent(opiKey)}&x=${lng}&y=${lat}&radius=${Math.min(r,5000)}&sort=1&prodcd=${prodcd}`;
         try {
           const opiRes = await fetch(opiUrl);
@@ -18170,11 +18171,12 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       let avgPrice = 0;
       if (opiKey) {
         try {
-          const prodcd = isLPG ? 'K015' : fuelType === '경유' ? 'D047' : 'B027';
-          const avgUrl = `http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${encodeURIComponent(opiKey)}&prodcd=${prodcd}`;
+          const targetProdcd = isLPG ? 'K015' : fuelType === '경유' ? 'D047' : 'B027';
+          const avgUrl = `http://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${encodeURIComponent(opiKey)}`;
           const avgRes = await fetch(avgUrl);
           const avgData = await avgRes.json().catch(() => null);
-          const avgOil = avgData?.RESULT?.OIL?.[0];
+          const oilList = avgData?.RESULT?.OIL || [];
+          const avgOil = oilList.find(o => o.PRODCD === targetProdcd) || oilList[0];
           if (avgOil?.PRICE) avgPrice = Math.round(Number(avgOil.PRICE));
         } catch(e) { /* 무시 */ }
       }
@@ -18185,7 +18187,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const getBrand = n => { const b=BRANDS.find(b=>n.includes(b)); return b||n.replace(/(주유소|충전소)$/,'').trim().split(/\s+/)[0]||''; };
       const rawStations = (data.documents || []).slice(0, 6).map(d => ({
         id: d.id, name: d.place_name, address: d.road_address_name || d.address_name,
-        price: 0, dist: parseFloat((parseInt(d.distance)/1000).toFixed(2)),
+        price: avgPrice, priceEstimated: avgPrice > 0,
+        dist: parseFloat((parseInt(d.distance)/1000).toFixed(2)),
         brand: getBrand(d.place_name), lat: parseFloat(d.y), lng: parseFloat(d.x),
         phone: d.phone || '', url: d.place_url || ''
       }));
