@@ -18091,13 +18091,22 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     const keyNames = ['OPINET_API_KEY','OPINET_API_KE','OPINET_KEY','OPINET','opinet_api_key','WEATHER_API_KEY','KAKAO_REST_KEY'];
     for (const k of keyNames) { keyChecks[k] = env[k] ? `설정됨(${String(env[k]).length}자)` : '없음'; }
     results['_env_check'] = keyChecks;
-    // OPINET 전국평균 시도
+    // OPINET 여러 엔드포인트 테스트
     const opiKey = env.OPINET_API_KEY || env.OPINET_API_KE || env.OPINET_KEY || env.OPINET;
     if (opiKey) {
-      try {
-        const opiRes = await fetch(`http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${encodeURIComponent(opiKey)}&prodcd=B027`);
-        results['opinet_avg'] = { status: opiRes.status, text: (await opiRes.text()).slice(0, 300) };
-      } catch(e) { results['opinet_avg'] = { error: e.message }; }
+      const opiUrls = [
+        `http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
+        `https://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
+        `http://www.opinet.co.kr/api/aroundAll.do?out=json&code=${opiKey}&x=129.08&y=35.15&radius=2000&sort=1&prodcd=B027`,
+        `http://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${opiKey}`,
+      ];
+      for (const u of opiUrls) {
+        try {
+          const r = await fetch(u);
+          const t = await r.text();
+          results['opinet_' + u.split('/').pop().split('?')[0]] = { status: r.status, preview: t.slice(0, 200) };
+        } catch(e) { results['opinet_err'] = e.message; }
+      }
     }
     return new Response(JSON.stringify(results, null, 2), { headers: corsH });
   }
