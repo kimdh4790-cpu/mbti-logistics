@@ -18563,141 +18563,34 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── vWorld WFS → 기초구역 경계 좌표 프록시 ───────────────────────
+  // ── 기초구역 경계 프록시 (Oracle Cloud 프록시 설정 시 vWorld 정확 경계 제공) ──
+  // 미설정 시 ok:false 반환 → 클라이언트가 Nominatim 법정동 폴백 사용
   if (path === '/api/yongcha/basidco' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     const zip = new URL(request.url).searchParams.get('zip') || '';
     if (!/^[0-9]{5}$/.test(zip)) {
       return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
     }
-    const vKey = env.VWORLD_API_KEY;
-    if (!vKey) {
-      return new Response(JSON.stringify({ ok: false, error: 'no_key' }), { headers: corsH });
-    }
-    function geomToCoords(geom) {
-      if (!geom) return [];
-      const ring = geom.type === 'Polygon' ? geom.coordinates[0]
-                 : geom.type === 'MultiPolygon' ? geom.coordinates[0][0] : [];
-      return ring.map(c => ({ lat: c[1], lng: c[0] }));
-    }
-    // Overpass OSM relation[boundary=postal_code] 조회 (코드만으로 동작, 서버 불필요)
-    function stitchOsmWays(members) {
-      // outer role 웨이들의 geometry를 이어붙여 하나의 링으로 만들기
-      const outers = members.filter(m => m.type === 'way' && m.role === 'outer' && m.geometry?.length);
-      if (!outers.length) return [];
-      const pts = [];
-      for (const w of outers) {
-        for (const p of w.geometry) pts.push({ lat: p.lat, lng: p.lon });
-      }
-      return pts;
+    if (!env.ORACLE_PROXY_URL) {
+      return new Response(JSON.stringify({ ok: false, error: 'proxy_not_configured' }), { headers: corsH });
     }
     try {
-      // 1차 시도: Oracle/외부 프록시 (ORACLE_PROXY_URL 설정 시)
-      if (env.ORACLE_PROXY_URL) {
-        const proxySecret = env.ORACLE_PROXY_SECRET || '';
-        const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
-          signal: AbortSignal.timeout(10000),
-          headers: proxySecret ? { 'x-secret': proxySecret } : {}
-        });
-        if (pr.ok) {
-          const txt = await pr.text();
-          const fc = JSON.parse(txt);
-          const feat = fc?.features?.[0];
-          if (feat?.geometry) {
-            const coords = geomToCoords(feat.geometry);
-            if (coords.length >= 4) {
-              const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
-            }
-          }
-        }
-      }
-      // 2차 시도: Overpass API — OSM boundary=postal_code 관계 조회
-      const overpassQ = `[out:json][timeout:12];relation["boundary"="postal_code"]["postal_code"="${zip}"];out geom;`;
-      const ovr = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: `data=${encodeURIComponent(overpassQ)}`,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        signal: AbortSignal.timeout(14000)
+      const proxySecret = env.ORACLE_PROXY_SECRET || '';
+      const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
+        signal: AbortSignal.timeout(10000),
+        headers: proxySecret ? { 'x-secret': proxySecret } : {}
       });
-      if (ovr.ok) {
-        const oj = await ovr.json();
-        const rel = oj?.elements?.[0];
-        if (rel?.members) {
-          const coords = stitchOsmWays(rel.members);
-          if (coords.length >= 4) {
-            const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-            return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'osm' }), { headers: corsH });
-          }
-        }
-      }
-      return new Response(JSON.stringify({ ok: false, error: 'no_boundary_found' }), { headers: corsH });
+      if (!pr.ok) return new Response(JSON.stringify({ ok: false, error: `proxy_${pr.status}` }), { headers: corsH });
+      const fc = await pr.json();
+      const feat = fc?.features?.[0];
+      if (!feat?.geometry) return new Response(JSON.stringify({ ok: false, error: 'no_feature' }), { headers: corsH });
+      const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                 : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+      const coords = ring.map(c => ({ lat: c[1], lng: c[0] }));
+      if (coords.length < 4) return new Response(JSON.stringify({ ok: false, error: 'too_few_coords' }), { headers: corsH });
+      const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+      return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
     } catch (e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
-    }
-  }
-
-  // ── data.go.kr 연결 테스트 (키 없이 도달 여부 확인) ───────────
-  if (path === '/api/yongcha/datagokr-test' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const dgKey = env.DATAGOKR_KEY || 'TEST';
-    // 기초구역 경계 관련 후보 엔드포인트 목록
-    const candidates = [
-      'tn_pubr_public_basidco_info_api',
-      'tn_pubr_public_bsidco_info_api',
-      'tn_pubr_public_basid_info_api',
-      'tn_pubr_public_bsid_info_api',
-      'tn_pubr_public_basidcoinfo_api',
-      'tn_pubr_public_basisdist_info_zone_api',
-      'tn_pubr_public_ngii_basidco_info_api',
-      'tn_pubr_public_nali_basidco_api',
-    ];
-    const results = await Promise.all(candidates.map(async (ep) => {
-      const url = `https://api.data.go.kr/openapi/${ep}?serviceKey=${encodeURIComponent(dgKey)}&type=json&numOfRows=1&pageNo=1&basId=48267`;
-      try {
-        const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-        const txt = await r.text();
-        let errCode = null;
-        const m = txt.match(/"errCode"\s*:\s*"([^"]+)"/);
-        if (m) errCode = m[1];
-        const m2 = txt.match(/<errCode>([^<]+)<\/errCode>/);
-        if (!errCode && m2) errCode = m2[1];
-        // errCode 12 = 서비스없음(불합격), 그 외 = 서비스 존재(합격)
-        return { ep, httpStatus: r.status, errCode, exists: errCode !== '12' && errCode !== null, snippet: txt.slice(0, 200) };
-      } catch(e) {
-        return { ep, error: e.message, exists: false };
-      }
-    }));
-    results.push({ keySet: !!(env.DATAGOKR_KEY), keyLen: (env.DATAGOKR_KEY||'').length });
-    return new Response(JSON.stringify(results, null, 2), { headers: corsH });
-  }
-
-  // ── vWorld API 키 반환 (Firebase 로그인 유저 전용) ─────────────
-  if (path === '/api/yongcha/vworld-key' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const user = await verifyFirebaseToken(request);
-    if (!user) return new Response(JSON.stringify({ key: '' }), { headers: corsH });
-    return new Response(JSON.stringify({ key: env.VWORLD_API_KEY || '' }), { headers: corsH });
-  }
-
-  // ── vWorld 연결 테스트 ──────────────────────────────────────────
-  if (path === '/api/yongcha/vworld-test' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const zip = new URL(request.url).searchParams.get('zip') || '48267';
-    const vKey = env.VWORLD_API_KEY;
-    if (!vKey) return new Response(JSON.stringify({ ok: false, error: 'VWORLD_API_KEY 미설정' }), { headers: corsH });
-    const testUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=bas_id='${zip}'&outputFormat=application/json&srsName=EPSG:4326`;
-    try {
-      const r = await fetch(testUrl, { signal: AbortSignal.timeout(10000) });
-      const text = await r.text();
-      let parsed = null;
-      try { parsed = JSON.parse(text); } catch(_) {}
-      return new Response(JSON.stringify({
-        ok: true, httpStatus: r.status,
-        featuresCount: parsed?.features?.length ?? '(파싱실패)',
-        rawSnippet: text.slice(0, 600)
-      }), { headers: corsH });
-    } catch(e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
@@ -18724,37 +18617,6 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── vWorld 진단 엔드포인트 (일시적 디버그용) ─────────────────────
-  if (path === '/api/yongcha/vworld-debug' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const zip = new URL(request.url).searchParams.get('zip') || '48267';
-    const vKey = env.VWORLD_API_KEY || '';
-    const results = [];
-    // 시도 1: Data API attrFilter
-    try {
-      const u = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`;
-      const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
-      const txt = await r.text();
-      results.push({ method: 'data-api-attrFilter', status: r.status, bodySnippet: txt.slice(0, 500) });
-    } catch(e) { results.push({ method: 'data-api-attrFilter', error: e.message }); }
-    // 시도 2: WFS CQL_FILTER
-    try {
-      const cql = encodeURIComponent(`bas_id='${zip}'`);
-      const u = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
-      const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
-      const txt = await r.text();
-      results.push({ method: 'wfs-cql', status: r.status, bodySnippet: txt.slice(0, 500) });
-    } catch(e) { results.push({ method: 'wfs-cql', error: e.message }); }
-    // 시도 3: Nominatim
-    try {
-      const u = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&polygon_geojson=1&format=json&limit=1`;
-      const r = await fetch(u, { headers: { 'User-Agent': 'yongcha-app/1.0' }, signal: AbortSignal.timeout(8000) });
-      const txt = await r.text();
-      results.push({ method: 'nominatim', status: r.status, bodySnippet: txt.slice(0, 500) });
-    } catch(e) { results.push({ method: 'nominatim', error: e.message }); }
-    return new Response(JSON.stringify({ zip, vKeyLen: vKey.length, results }, null, 2), { headers: corsH });
-  }
-
   // ── 우편번호 기초구역 경계 + 중심좌표 ────────────────────────────
   if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -18769,119 +18631,14 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
       let centLat = null, centLng = null, zipName = '', coords = [];
 
-      // 헬퍼: GeoJSON geometry → coords 배열
       function _geomCoords(geom) {
         if (!geom) return [];
         if (geom.type === 'Polygon') return geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
         if (geom.type === 'MultiPolygon') return geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
         return [];
       }
-      // 헬퍼: vWorld feature에서 bas_id 추출 (Data API: field[] 배열 또는 WFS: 플랫 객체)
-      function _basId(feat) {
-        const p = feat?.properties || {};
-        if (p.bas_id) return String(p.bas_id).trim();
-        if (Array.isArray(p.field)) { const f = p.field.find(x => x.key === 'bas_id'); if (f) return String(f.value).trim(); }
-        return '';
-      }
-      function _basNm(feat) {
-        const p = feat?.properties || {};
-        if (p.bas_nm) return p.bas_nm;
-        if (p.emd_nm) return p.emd_nm;
-        if (Array.isArray(p.field)) { const f = p.field.find(x => x.key === 'bas_nm' || x.key === 'emd_nm'); if (f) return f.value; }
-        return '';
-      }
 
-      const vKey = env.VWORLD_API_KEY;
-
-      // ① vWorld INTERSECTS 공간쿼리 (좌표 제공 시 — 가장 정확)
-      if (!coords.length && !isNaN(qLat) && !isNaN(qLng) && vKey) {
-        try {
-          const sCql = encodeURIComponent(`INTERSECTS(geometry,POINT(${qLng} ${qLat}))`);
-          const sUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${sCql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
-          const sRes = await fetch(sUrl, { signal: AbortSignal.timeout(6000) });
-          if (sRes.ok) {
-            const sData = await sRes.json();
-            const sFs = sData?.features || [];
-            if (sFs.length) {
-              const c = _geomCoords(sFs[0]?.geometry);
-              const rid = _basId(sFs[0]);
-              if (c.length && (!rid || rid === zip)) {
-                coords = c;
-                centLat = c.reduce((s,x) => s+x.lat,0)/c.length;
-                centLng = c.reduce((s,x) => s+x.lng,0)/c.length;
-                zipName = _basNm(sFs[0]);
-              }
-            }
-          }
-        } catch(_) {}
-      }
-
-      // ② vWorld Data API — bbox로 후보 조회 후 bas_id 매칭 (IP 차단 우회 가능성)
-      if (!coords.length && !isNaN(qLat) && !isNaN(qLng) && vKey) {
-        try {
-          const d = 0.006;
-          const bbox = `${qLng-d},${qLat-d},${qLng+d},${qLat+d}`;
-          const bUrl = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&bbox=${bbox}&size=20`;
-          const bRes = await fetch(bUrl, { signal: AbortSignal.timeout(8000) });
-          if (bRes.ok) {
-            const bData = await bRes.json();
-            const bFs = bData?.response?.result?.featureCollection?.features || bData?.features || [];
-            const match = bFs.find(f => _basId(f) === zip) || bFs[0];
-            if (match) {
-              const c = _geomCoords(match?.geometry);
-              if (c.length) {
-                coords = c;
-                centLat = c.reduce((s,x) => s+x.lat,0)/c.length;
-                centLng = c.reduce((s,x) => s+x.lng,0)/c.length;
-                zipName = _basNm(match);
-              }
-            }
-          }
-        } catch(_) {}
-      }
-
-      // ③ vWorld Data API attrFilter (bas_id 직접 필터)
-      if (!coords.length && vKey) {
-        try {
-          const aUrl = `https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&geometry=true&crs=EPSG:4326&data=LT_C_BASIDCO&key=${encodeURIComponent(vKey)}&attrFilter=bas_id:=:${zip}&size=1`;
-          const aRes = await fetch(aUrl, { signal: AbortSignal.timeout(8000) });
-          if (aRes.ok) {
-            const aData = await aRes.json();
-            const aFs = aData?.response?.result?.featureCollection?.features || aData?.features || [];
-            if (aFs.length) {
-              const c = _geomCoords(aFs[0]?.geometry);
-              if (c.length) {
-                coords = c;
-                if (!centLat) { centLat = c.reduce((s,x) => s+x.lat,0)/c.length; centLng = c.reduce((s,x) => s+x.lng,0)/c.length; }
-                zipName = zipName || _basNm(aFs[0]);
-              }
-            }
-          }
-        } catch(_) {}
-      }
-
-      // ④ vWorld WFS CQL_FILTER bas_id
-      if (!coords.length && vKey) {
-        try {
-          const cql = encodeURIComponent(`bas_id='${zip}'`);
-          const wUrl = `https://api.vworld.kr/req/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=lt_c_basidco&key=${encodeURIComponent(vKey)}&CQL_FILTER=${cql}&outputFormat=application/json&srsName=EPSG:4326&count=1`;
-          const wRes = await fetch(wUrl, { signal: AbortSignal.timeout(8000) });
-          if (wRes.ok) {
-            const wData = await wRes.json();
-            const wFs = wData?.features || [];
-            if (wFs.length) {
-              const c = _geomCoords(wFs[0]?.geometry);
-              if (c.length) {
-                coords = c;
-                if (!centLat) { centLat = c.reduce((s,x) => s+x.lat,0)/c.length; centLng = c.reduce((s,x) => s+x.lng,0)/c.length; }
-                zipName = zipName || _basNm(wFs[0]);
-              }
-            }
-          }
-        } catch(_) {}
-      }
-
-      // ⑤ Nominatim (OpenStreetMap) — 글로벌 접근 가능, API 키 불필요
+      // ① Nominatim (OpenStreetMap)
       if (!coords.length) {
         try {
           const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&polygon_geojson=1&format=json&limit=1`;
@@ -18900,7 +18657,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         } catch(_) {}
       }
 
-      // ⑥ Kakao REST zone_no 매칭 (중심좌표만 — 폴리곤 없음)
+      // ② Kakao REST zone_no 매칭 (중심좌표만 — 폴리곤 없음)
       if (!centLat) {
         const kakaoKey = env.KAKAO_REST_KEY;
         if (kakaoKey) {
@@ -18919,7 +18676,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         }
       }
 
-      // ⑦ 최후 폴백: 클라이언트가 보낸 좌표를 중심으로 사용
+      // ③ 최후 폴백: 클라이언트가 보낸 좌표를 중심으로 사용
       if (!centLat && !isNaN(qLat) && !isNaN(qLng)) { centLat = qLat; centLng = qLng; }
 
       if (!centLat) return new Response(JSON.stringify({ ok: false, error: '좌표 없음' }), { headers: corsH });
