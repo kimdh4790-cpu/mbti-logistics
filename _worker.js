@@ -17233,7 +17233,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 기초구역 경계 비동기 로드: Worker(data.go.kr) → Nominatim(폴백)
+          // 기초구역 경계 비동기 로드: vWorld WFS(브라우저직접) → Nominatim(폴백)
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17248,15 +17248,26 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            // 시도 1: Worker → data.go.kr 국토교통부 기초구역도 (DATAGOKR_KEY 설정 시)
-            fetch('/api/yongcha/basidco?zip='+zipcode)
+            // 시도 1: vWorld WFS 브라우저 직접 호출 — lt_c_basidco 기초구역 정확 경계
+            _yAuthFetch('/api/yongcha/vworld-key')
             .then(function(r){return r.json();})
             .then(function(d){
-              if(d.ok&&d.coords&&d.coords.length>=4){
-                _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
-              } else {
-                _fetchNominatim();
-              }
+              if(!d.key)return _fetchNominatim();
+              var params=new URLSearchParams({
+                service:'WFS',version:'2.0.0',request:'GetFeature',
+                typeName:'lt_c_basidco',key:d.key,
+                CQL_FILTER:"bas_id='"+zipcode+"'",
+                outputFormat:'application/json',srsName:'EPSG:4326',count:'1'
+              });
+              return fetch('https://api.vworld.kr/req/wfs?'+params.toString(),{signal:AbortSignal.timeout(8000)})
+              .then(function(r){return r.json();})
+              .then(function(fc){
+                var feat=fc&&fc.features&&fc.features[0];
+                if(!feat||!feat.geometry)return _fetchNominatim();
+                var coords=_geomToCoords(feat.geometry);
+                if(coords.length>=4)_applyBoundary({coords:coords});
+                else _fetchNominatim();
+              });
             })
             .catch(function(){_fetchNominatim();});
             // 시도 2: Nominatim — 법정동 이름 검색 (최종 폴백)
