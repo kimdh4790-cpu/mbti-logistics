@@ -18615,16 +18615,34 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   // ── data.go.kr 연결 테스트 (키 없이 도달 여부 확인) ───────────
   if (path === '/api/yongcha/datagokr-test' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const results = [];
-    // 1) api.data.go.kr 기본 접근 테스트 (키 없이)
-    try {
-      const r = await fetch('https://api.data.go.kr/openapi/tn_pubr_public_basisdist_info_zone_api?serviceKey=TEST&type=json&numOfRows=1&pageNo=1&entZip=48267', {
-        signal: AbortSignal.timeout(8000)
-      });
-      const txt = await r.text();
-      results.push({ endpoint: 'basisdist_info_zone_api', httpStatus: r.status, snippet: txt.slice(0, 300) });
-    } catch(e) { results.push({ endpoint: 'basisdist_info_zone_api', error: e.message }); }
-    // 2) DATAGOKR_KEY 설정 여부
+    const dgKey = env.DATAGOKR_KEY || 'TEST';
+    // 기초구역 경계 관련 후보 엔드포인트 목록
+    const candidates = [
+      'tn_pubr_public_basidco_info_api',
+      'tn_pubr_public_bsidco_info_api',
+      'tn_pubr_public_basid_info_api',
+      'tn_pubr_public_bsid_info_api',
+      'tn_pubr_public_basidcoinfo_api',
+      'tn_pubr_public_basisdist_info_zone_api',
+      'tn_pubr_public_ngii_basidco_info_api',
+      'tn_pubr_public_nali_basidco_api',
+    ];
+    const results = await Promise.all(candidates.map(async (ep) => {
+      const url = `https://api.data.go.kr/openapi/${ep}?serviceKey=${encodeURIComponent(dgKey)}&type=json&numOfRows=1&pageNo=1&basId=48267`;
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        const txt = await r.text();
+        let errCode = null;
+        const m = txt.match(/"errCode"\s*:\s*"([^"]+)"/);
+        if (m) errCode = m[1];
+        const m2 = txt.match(/<errCode>([^<]+)<\/errCode>/);
+        if (!errCode && m2) errCode = m2[1];
+        // errCode 12 = 서비스없음(불합격), 그 외 = 서비스 존재(합격)
+        return { ep, httpStatus: r.status, errCode, exists: errCode !== '12' && errCode !== null, snippet: txt.slice(0, 200) };
+      } catch(e) {
+        return { ep, error: e.message, exists: false };
+      }
+    }));
     results.push({ keySet: !!(env.DATAGOKR_KEY), keyLen: (env.DATAGOKR_KEY||'').length });
     return new Response(JSON.stringify(results, null, 2), { headers: corsH });
   }
