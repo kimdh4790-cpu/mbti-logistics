@@ -17233,7 +17233,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 기초구역 경계 비동기 로드: Worker(data.go.kr 정밀) → Overpass → Nominatim(폴백)
+          // 기초구역 경계 비동기 로드: Worker(data.go.kr) → Nominatim(폴백)
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17248,59 +17248,18 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            function _centroid(coords){
-              var sLat=0,sLng=0,n=coords.length;
-              if(!n)return{lat:lat,lng:lng};
-              for(var i=0;i<n;i++){sLat+=coords[i].lat;sLng+=coords[i].lng;}
-              return{lat:sLat/n,lng:sLng/n};
-            }
-            // 시도 1: Worker → data.go.kr 국토교통부 기초구역도 (정밀 기초구역 경계)
+            // 시도 1: Worker → data.go.kr 국토교통부 기초구역도 (DATAGOKR_KEY 설정 시)
             fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
             .then(function(d){
               if(d.ok&&d.coords&&d.coords.length>=4){
                 _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
               } else {
-                _tryOverpass();
+                _fetchNominatim();
               }
             })
-            .catch(function(){_tryOverpass();});
-            // 시도 2: Overpass API — OSM postal_code boundary
-            function _tryOverpass(){
-              var oq='[out:json][timeout:15];(relation["postal_code"="'+zipcode+'"]["boundary"="postal_code"];relation["addr:postcode"="'+zipcode+'"];);(._;>;);out geom;';
-              fetch('https://overpass-api.de/api/interpreter',{
-                method:'POST',
-                headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body:'data='+encodeURIComponent(oq)
-              })
-              .then(function(r){return r.json();})
-              .then(function(od){
-                var ways={},rels=[];
-                (od.elements||[]).forEach(function(el){
-                  if(el.type==='way'&&el.geometry)ways[el.id]=el.geometry;
-                  if(el.type==='relation')rels.push(el);
-                });
-                var coords=[];
-                if(rels.length>0){
-                  var outerIds=[];
-                  (rels[0].members||[]).forEach(function(m){
-                    if(m.type==='way'&&(m.role==='outer'||m.role===''))outerIds.push(m.ref);
-                  });
-                  outerIds.forEach(function(wid){
-                    var wg=ways[wid];
-                    if(wg)wg.forEach(function(pt){coords.push({lat:pt.lat,lng:pt.lon});});
-                  });
-                }
-                if(coords.length>=4){
-                  var cen=_centroid(coords);
-                  _applyBoundary({coords:coords,lat:cen.lat,lng:cen.lng});
-                } else {
-                  _fetchNominatim();
-                }
-              })
-              .catch(function(){_fetchNominatim();});
-            }
-            // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
+            .catch(function(){_fetchNominatim();});
+            // 시도 2: Nominatim — 법정동 이름 검색 (최종 폴백)
             function _fetchNominatim(){
               if(!zoneName)return;
               fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
