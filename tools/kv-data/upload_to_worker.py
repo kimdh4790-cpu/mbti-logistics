@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""
-전국 기초구역 경계 데이터 → yongcha.app Worker KV 업로드
-
-사용법 (mbti-logistics 폴더에서):
-  python tools\kv-data\upload_to_worker.py
-
-CF API 키 불필요 — Worker가 직접 KV에 씀.
-"""
+# 전국 기초구역 경계 데이터 -> yongcha.app Worker KV 업로드
+# 사용법: python tools/kv-data/upload_to_worker.py
+# CF API 키 불필요 - Worker가 직접 KV에 씀.
 import json, os, glob, time, sys
 try:
     import requests
