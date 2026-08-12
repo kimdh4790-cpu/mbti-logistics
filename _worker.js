@@ -18570,7 +18570,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     try {
       const items = await request.json();
       if (!Array.isArray(items)) return new Response('bad format', { status: 400 });
-      await Promise.all(items.map(({ key, value }) => env.KV.put(key, value)));
+      const CHUNK = 25;
+      for (let i = 0; i < items.length; i += CHUNK) {
+        await Promise.all(items.slice(i, i + CHUNK).map(({ key, value }) => env.KV.put(key, value)));
+      }
       return new Response(JSON.stringify({ ok: true, count: items.length }), {
         headers: { 'Content-Type': 'application/json' }
       });
