@@ -17238,7 +17238,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 법정동 경계 비동기 로드: Nominatim(OSM) — CORS 허용, 무료
+          // 기초구역 경계 비동기 로드: Overpass(기초구역 우선) → Nominatim(법정동 폴백)
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17253,22 +17253,65 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            if(!zoneName)return;
-            fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
-              {headers:{'User-Agent':'yongcha-app/1.0 (yongcha.app)'}})
-              .then(function(r){return r.json();})
-              .then(function(arr){
-                for(var i=0;i<arr.length;i++){
-                  var g=arr[i].geojson;
-                  if(!g)continue;
-                  var c=_geomToCoords(g);
-                  if(c.length>=4){
-                    _applyBoundary({coords:c,lat:parseFloat(arr[i].lat),lng:parseFloat(arr[i].lon)});
-                    break;
+            function _centroid(coords){
+              var sLat=0,sLng=0,n=coords.length;
+              if(!n)return{lat:lat,lng:lng};
+              for(var i=0;i<n;i++){sLat+=coords[i].lat;sLng+=coords[i].lng;}
+              return{lat:sLat/n,lng:sLng/n};
+            }
+            // 시도 1: Overpass API — OSM postal_code 경계 (기초구역 정밀)
+            var oq='[out:json][timeout:15];(relation["postal_code"="'+zipcode+'"]["boundary"="postal_code"];relation["addr:postcode"="'+zipcode+'"];);(._;>;);out geom;';
+            fetch('https://overpass-api.de/api/interpreter',{
+              method:'POST',
+              headers:{'Content-Type':'application/x-www-form-urlencoded'},
+              body:'data='+encodeURIComponent(oq)
+            })
+            .then(function(r){return r.json();})
+            .then(function(od){
+              var ways={},rels=[];
+              (od.elements||[]).forEach(function(el){
+                if(el.type==='way'&&el.geometry)ways[el.id]=el.geometry;
+                if(el.type==='relation')rels.push(el);
+              });
+              var coords=[];
+              if(rels.length>0){
+                // outer wayを順番に連結してポリゴン構築
+                var outerWayIds=[];
+                (rels[0].members||[]).forEach(function(m){
+                  if(m.type==='way'&&(m.role==='outer'||m.role===''))outerWayIds.push(m.ref);
+                });
+                outerWayIds.forEach(function(wid){
+                  var wg=ways[wid];
+                  if(wg)wg.forEach(function(pt){coords.push({lat:pt.lat,lng:pt.lon});});
+                });
+              }
+              if(coords.length>=4){
+                var cen=_centroid(coords);
+                _applyBoundary({coords:coords,lat:cen.lat,lng:cen.lng});
+              } else {
+                _fetchNominatim();
+              }
+            })
+            .catch(function(){_fetchNominatim();});
+            // 시도 2: Nominatim — 법정동 이름 검색 (폴백)
+            function _fetchNominatim(){
+              if(!zoneName)return;
+              fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
+                {headers:{'User-Agent':'yongcha-app/1.0 (yongcha.app)'}})
+                .then(function(r){return r.json();})
+                .then(function(arr){
+                  for(var i=0;i<arr.length;i++){
+                    var g=arr[i].geojson;
+                    if(!g)continue;
+                    var c=_geomToCoords(g);
+                    if(c.length>=4){
+                      _applyBoundary({coords:c,lat:parseFloat(arr[i].lat),lng:parseFloat(arr[i].lon)});
+                      break;
+                    }
                   }
-                }
-              })
-              .catch(function(){});
+                })
+                .catch(function(){});
+            }
           })();
         });
       });
