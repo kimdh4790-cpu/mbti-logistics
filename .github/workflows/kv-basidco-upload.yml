@@ -1,0 +1,21 @@
+name: KV 기초구역 업로드
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 의존성 설치
+        run: pip install requests
+
+      - name: 기초구역 KV 업로드
+        run: python tools/kv-data/upload_to_worker.py
