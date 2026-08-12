@@ -5,18 +5,17 @@
 로컬 PC에서 실행 (CF API 키 불필요):
   pip install pyshp pyproj requests
 
-  Windows:
-    python tools/basidco_convert_upload.py C:\다운로드폴더\TL_KODIS_BAS.*.shp
-    또는 폴더 지정:
-    python tools/basidco_convert_upload.py --dir C:\다운로드폴더
+  Windows (폴더 지정):
+    cd C:\\Users\\82104\\Desktop\\mbti-logistics
+    python tools\\basidco_convert_upload.py --dir C:\\다운로드\\기초구역도
 
   Mac/Linux:
-    python3 tools/basidco_convert_upload.py /path/to/TL_KODIS_BAS.*.shp
+    python3 tools/basidco_convert_upload.py --dir /path/to/기초구역도
 
 준비물:
   - data.go.kr "행정안전부_도로명주소 기초구역도 전자지도"에서
     시도별 ZIP 파일 모두 다운로드 후 압축 해제
-  - TL_KODIS_BAS.*.shp 파일들이 있어야 함
+  - 압축 해제 폴더를 --dir 로 지정
 """
 
 import os, sys, json, math, glob, time, argparse
@@ -103,24 +102,46 @@ def main():
     parser.add_argument('--dir', help='SHP 파일이 있는 디렉터리')
     args = parser.parse_args()
 
-    # SHP 파일 목록 수집
+    # SHP 파일 목록 수집 (하위 폴더 포함, 모든 SHP 파일)
     shp_files = []
     if args.dir:
-        shp_files = glob.glob(os.path.join(args.dir, 'TL_KODIS_BAS.*.shp'))
+        d = args.dir
+        if not os.path.isdir(d):
+            print(f'폴더를 찾을 수 없습니다: {d}')
+            sys.exit(1)
+        # 하위 폴더까지 재귀 탐색
+        for root, dirs, files in os.walk(d):
+            for f in files:
+                if f.lower().endswith('.shp'):
+                    shp_files.append(os.path.join(root, f))
+        if not shp_files:
+            print(f'폴더에 SHP 파일이 없습니다: {d}')
+            print('폴더 내 파일 목록:')
+            for root, dirs, files in os.walk(d):
+                for f in files:
+                    print(f'  {os.path.join(root, f)}')
+            sys.exit(1)
     elif args.shp:
         for p in args.shp:
             shp_files.extend(glob.glob(p) if '*' in p or '?' in p else [p])
     else:
-        shp_files = glob.glob('TL_KODIS_BAS.*.shp')
+        # 현재 폴더 + 하위 탐색
+        for root, dirs, files in os.walk('.'):
+            for f in files:
+                if f.lower().endswith('.shp'):
+                    shp_files.append(os.path.join(root, f))
 
     if not shp_files:
         print('SHP 파일을 찾을 수 없습니다.')
-        print('사용법: python basidco_convert_upload.py --dir <폴더경로>')
+        print('사용법: python tools\\basidco_convert_upload.py --dir <압축해제폴더>')
         sys.exit(1)
+
+    # BAS_ID 필드 없는 SHP(행정구역 등) 사전 필터링 안내
+    print(f'발견된 SHP 파일 {len(shp_files)}개 — BAS_ID 필드 있는 파일만 처리합니다.')
 
     print(f'발견된 SHP 파일 {len(shp_files)}개:')
     for f in sorted(shp_files):
-        print(f'  {os.path.basename(f)}')
+        print(f'  {f}')
     print()
 
     try:
