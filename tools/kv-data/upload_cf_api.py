@@ -16,7 +16,7 @@ except ImportError:
 ACCOUNT_ID = '02709cbec18d848913b4246015b9148f'
 NS_ID      = '7f0e90efaea64f3ab08ff00f8970b28b'
 BASE_URL   = f'https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{NS_ID}/bulk'
-BATCH_SIZE = 5000
+BATCH_SIZE = 1000
 
 # 인증 방식 자동 선택
 if os.environ.get('CF_API_KEY'):
@@ -52,14 +52,20 @@ for ci, chunk_path in enumerate(chunks):
         batch = items[start:start+BATCH_SIZE]
         end = min(start+BATCH_SIZE, len(items))
 
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 r = requests.put(BASE_URL, headers=headers, json=batch, timeout=120)
                 data = r.json()
                 if r.status_code == 200 and data.get('success'):
                     total_ok += len(batch)
                     print(f'  {end}/{len(items)} 완료')
+                    time.sleep(0.5)
                     break
+                if r.status_code == 429:
+                    wait = int(r.headers.get('Retry-After', 60))
+                    print(f'  Rate limit — {wait}초 대기 후 재시도...')
+                    time.sleep(wait)
+                    continue
                 print(f'  HTTP {r.status_code}: {data.get("errors", r.text[:200])}')
             except Exception as e:
                 print(f'  오류: {e}')
