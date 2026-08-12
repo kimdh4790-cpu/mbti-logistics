@@ -18587,15 +18587,12 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         CQL_FILTER: `bas_id='${zip}'`,
         outputFormat: 'application/json', srsName: 'EPSG:4326', count: '1'
       });
-      // vWorld가 Cloudflare Worker IP를 차단(520)할 수 있어 브라우저 헤더로 우회 시도
-      const r = await fetch(`https://api.vworld.kr/req/wfs?${params}`, {
-        signal: AbortSignal.timeout(8000),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-          'Referer': 'https://map.vworld.kr/',
-          'Accept': 'application/json, */*',
-          'Accept-Language': 'ko-KR,ko;q=0.9'
-        }
+      // vWorld가 Cloudflare IP를 차단 → Oracle Cloud 프록시를 통해 우회
+      const proxyBase = env.ORACLE_PROXY_URL || 'http://155.248.187.99:8787';
+      const proxySecret = env.ORACLE_PROXY_SECRET || '';
+      const r = await fetch(`${proxyBase}/?zip=${zip}`, {
+        signal: AbortSignal.timeout(10000),
+        headers: proxySecret ? { 'x-secret': proxySecret } : {}
       });
       const txt = await r.text();
       if (r.status !== 200 || txt.startsWith('error')) {
