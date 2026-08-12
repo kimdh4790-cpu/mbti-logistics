@@ -18,4 +18,6 @@ jobs:
         run: pip install requests
 
       - name: 기초구역 KV 업로드
-        run: python tools/kv-data/upload_to_worker.py
+        run: python tools/kv-data/upload_cf_api.py
+        env:
+          CF_API_KEY: ${{ secrets.CF_GLOBAL_KEY }}
