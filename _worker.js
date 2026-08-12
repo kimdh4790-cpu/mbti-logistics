@@ -17233,7 +17233,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 기초구역 경계 비동기 로드: vWorld WFS(브라우저직접) → Nominatim(폴백)
+          // 기초구역 경계 비동기 로드: Worker vWorld 프록시 → Nominatim(폴백)
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17248,26 +17248,15 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            // 시도 1: vWorld WFS 브라우저 직접 호출 — lt_c_basidco 기초구역 정확 경계
-            _yAuthFetch('/api/yongcha/vworld-key')
+            // 시도 1: Worker 프록시 → vWorld WFS lt_c_basidco 기초구역 정확 경계
+            fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
             .then(function(d){
-              if(!d.key)return _fetchNominatim();
-              var params=new URLSearchParams({
-                service:'WFS',version:'2.0.0',request:'GetFeature',
-                typeName:'lt_c_basidco',key:d.key,
-                CQL_FILTER:"bas_id='"+zipcode+"'",
-                outputFormat:'application/json',srsName:'EPSG:4326',count:'1'
-              });
-              return fetch('https://api.vworld.kr/req/wfs?'+params.toString(),{signal:AbortSignal.timeout(8000)})
-              .then(function(r){return r.json();})
-              .then(function(fc){
-                var feat=fc&&fc.features&&fc.features[0];
-                if(!feat||!feat.geometry)return _fetchNominatim();
-                var coords=_geomToCoords(feat.geometry);
-                if(coords.length>=4)_applyBoundary({coords:coords});
-                else _fetchNominatim();
-              });
+              if(d.ok&&d.coords&&d.coords.length>=4){
+                _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
+              } else {
+                _fetchNominatim();
+              }
             })
             .catch(function(){_fetchNominatim();});
             // 시도 2: Nominatim — 법정동 이름 검색 (최종 폴백)
@@ -18574,50 +18563,60 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── data.go.kr 기초구역도 → 경계 좌표 프록시 ─────────────────────
+  // ── vWorld WFS → 기초구역 경계 좌표 프록시 ───────────────────────
   if (path === '/api/yongcha/basidco' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     const zip = new URL(request.url).searchParams.get('zip') || '';
     if (!/^[0-9]{5}$/.test(zip)) {
       return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
     }
-    const dgKey = env.DATAGOKR_KEY;
-    if (!dgKey) {
+    const vKey = env.VWORLD_API_KEY;
+    if (!vKey) {
       return new Response(JSON.stringify({ ok: false, error: 'no_key' }), { headers: corsH });
     }
-    // WKT POLYGON 또는 MULTIPOLYGON 파싱 → [{lat,lng}] 배열
-    function parseWkt(wkt) {
-      if (!wkt) return [];
-      const m = wkt.match(/POLYGON\s*\(\s*\(([^)]+)\)/i);
-      if (!m) return [];
-      return m[1].split(',').map(p => {
-        const parts = p.trim().split(/\s+/);
-        const a = parseFloat(parts[0]), b = parseFloat(parts[1]);
-        // WGS84 한국 범위 검증 (lng 124~132, lat 33~39)
-        if (a >= 124 && a <= 132 && b >= 33 && b <= 39) return { lat: b, lng: a };
-        if (b >= 124 && b <= 132 && a >= 33 && a <= 39) return { lat: a, lng: b };
-        return null;
-      }).filter(Boolean);
+    function geomToCoords(geom) {
+      if (!geom) return [];
+      const ring = geom.type === 'Polygon' ? geom.coordinates[0]
+                 : geom.type === 'MultiPolygon' ? geom.coordinates[0][0] : [];
+      return ring.map(c => ({ lat: c[1], lng: c[0] }));
     }
     try {
-      const dgUrl = `https://api.data.go.kr/openapi/tn_pubr_public_basisdist_info_zone_api?serviceKey=${dgKey}&type=json&numOfRows=1&pageNo=1&entZip=${zip}`;
-      const r = await fetch(dgUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
-      const j = await r.json();
-      const rawItem = j?.response?.body?.items?.item;
-      const item = Array.isArray(rawItem) ? rawItem[0] : rawItem;
-      if (item?.geom) {
-        const coords = parseWkt(item.geom);
-        if (coords.length >= 4) {
-          const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-          return new Response(JSON.stringify({
-            ok: true, coords,
-            lat: cen.lat / coords.length,
-            lng: cen.lng / coords.length,
-            source: 'datagokr'
-          }), { headers: corsH });
+      const params = new URLSearchParams({
+        service: 'WFS', version: '2.0.0', request: 'GetFeature',
+        typeName: 'lt_c_basidco', key: vKey,
+        CQL_FILTER: `bas_id='${zip}'`,
+        outputFormat: 'application/json', srsName: 'EPSG:4326', count: '1'
+      });
+      // vWorld가 Cloudflare Worker IP를 차단(520)할 수 있어 브라우저 헤더로 우회 시도
+      const r = await fetch(`https://api.vworld.kr/req/wfs?${params}`, {
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+          'Referer': 'https://map.vworld.kr/',
+          'Accept': 'application/json, */*',
+          'Accept-Language': 'ko-KR,ko;q=0.9'
         }
+      });
+      const txt = await r.text();
+      if (r.status !== 200 || txt.startsWith('error')) {
+        return new Response(JSON.stringify({ ok: false, error: `vworld_${r.status}`, raw: txt.slice(0, 100) }), { headers: corsH });
       }
-      return new Response(JSON.stringify({ ok: false, error: 'no_geom' }), { headers: corsH });
+      const fc = JSON.parse(txt);
+      const feat = fc?.features?.[0];
+      if (!feat?.geometry) {
+        return new Response(JSON.stringify({ ok: false, error: 'no_feature' }), { headers: corsH });
+      }
+      const coords = geomToCoords(feat.geometry);
+      if (coords.length < 4) {
+        return new Response(JSON.stringify({ ok: false, error: 'too_few_coords' }), { headers: corsH });
+      }
+      const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+      return new Response(JSON.stringify({
+        ok: true, coords,
+        lat: cen.lat / coords.length,
+        lng: cen.lng / coords.length,
+        source: 'vworld'
+      }), { headers: corsH });
     } catch (e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
