@@ -18585,40 +18585,58 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
                  : geom.type === 'MultiPolygon' ? geom.coordinates[0][0] : [];
       return ring.map(c => ({ lat: c[1], lng: c[0] }));
     }
+    // Overpass OSM relation[boundary=postal_code] 조회 (코드만으로 동작, 서버 불필요)
+    function stitchOsmWays(members) {
+      // outer role 웨이들의 geometry를 이어붙여 하나의 링으로 만들기
+      const outers = members.filter(m => m.type === 'way' && m.role === 'outer' && m.geometry?.length);
+      if (!outers.length) return [];
+      const pts = [];
+      for (const w of outers) {
+        for (const p of w.geometry) pts.push({ lat: p.lat, lng: p.lon });
+      }
+      return pts;
+    }
     try {
-      const params = new URLSearchParams({
-        service: 'WFS', version: '2.0.0', request: 'GetFeature',
-        typeName: 'lt_c_basidco', key: vKey,
-        CQL_FILTER: `bas_id='${zip}'`,
-        outputFormat: 'application/json', srsName: 'EPSG:4326', count: '1'
+      // 1차 시도: Oracle/외부 프록시 (ORACLE_PROXY_URL 설정 시)
+      if (env.ORACLE_PROXY_URL) {
+        const proxySecret = env.ORACLE_PROXY_SECRET || '';
+        const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
+          signal: AbortSignal.timeout(10000),
+          headers: proxySecret ? { 'x-secret': proxySecret } : {}
+        });
+        if (pr.ok) {
+          const txt = await pr.text();
+          const fc = JSON.parse(txt);
+          const feat = fc?.features?.[0];
+          if (feat?.geometry) {
+            const coords = geomToCoords(feat.geometry);
+            if (coords.length >= 4) {
+              const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
+            }
+          }
+        }
+      }
+      // 2차 시도: Overpass API — OSM boundary=postal_code 관계 조회
+      const overpassQ = `[out:json][timeout:12];relation["boundary"="postal_code"]["postal_code"="${zip}"];out geom;`;
+      const ovr = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: `data=${encodeURIComponent(overpassQ)}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        signal: AbortSignal.timeout(14000)
       });
-      // vWorld가 Cloudflare IP를 차단 → Oracle Cloud 프록시를 통해 우회
-      const proxyBase = env.ORACLE_PROXY_URL || 'http://155.248.187.99:8787';
-      const proxySecret = env.ORACLE_PROXY_SECRET || '';
-      const r = await fetch(`${proxyBase}/?zip=${zip}`, {
-        signal: AbortSignal.timeout(10000),
-        headers: proxySecret ? { 'x-secret': proxySecret } : {}
-      });
-      const txt = await r.text();
-      if (r.status !== 200 || txt.startsWith('error')) {
-        return new Response(JSON.stringify({ ok: false, error: `vworld_${r.status}`, raw: txt.slice(0, 100) }), { headers: corsH });
+      if (ovr.ok) {
+        const oj = await ovr.json();
+        const rel = oj?.elements?.[0];
+        if (rel?.members) {
+          const coords = stitchOsmWays(rel.members);
+          if (coords.length >= 4) {
+            const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+            return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'osm' }), { headers: corsH });
+          }
+        }
       }
-      const fc = JSON.parse(txt);
-      const feat = fc?.features?.[0];
-      if (!feat?.geometry) {
-        return new Response(JSON.stringify({ ok: false, error: 'no_feature' }), { headers: corsH });
-      }
-      const coords = geomToCoords(feat.geometry);
-      if (coords.length < 4) {
-        return new Response(JSON.stringify({ ok: false, error: 'too_few_coords' }), { headers: corsH });
-      }
-      const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-      return new Response(JSON.stringify({
-        ok: true, coords,
-        lat: cen.lat / coords.length,
-        lng: cen.lng / coords.length,
-        source: 'vworld'
-      }), { headers: corsH });
+      return new Response(JSON.stringify({ ok: false, error: 'no_boundary_found' }), { headers: corsH });
     } catch (e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
