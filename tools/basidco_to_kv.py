@@ -1,31 +1,63 @@
 #!/usr/bin/env python3
 """
 기초구역도 shapefile → Cloudflare KV 업로드 스크립트
+
+다운로드 경로:
+  행정안전부 도로명주소 기초구역도 전자지도 (data.go.kr/data/15050416/fileData.do)
+  → 다운로드 후 압축 해제하면 TL_KODIS_BAS.shp 포함
+
 사용법:
-  1. https://www.data.go.kr 에서 "기초구역도" shapefile 다운로드
-     (검색어: 기초구역도, 제공기관: 행정안전부)
-     또는 https://business.juso.go.kr/addrlink/openApi/searchApi.do 에서
-     "기초구역도" 항목 다운로드
-  2. pip install pyshp (shapefile 파싱 라이브러리)
-  3. python basidco_to_kv.py <shapefile경로.shp>
-     예: python basidco_to_kv.py ./TL_SCCO_CTPRVN/TL_SCCO_BASIDCO.shp
-  4. 생성된 kv_upload.sh 실행 (wrangler 필요)
-     bash kv_upload.sh
+  1. data.go.kr에서 "행정안전부_도로명주소 기초구역도 전자지도" 다운로드
+  2. pip install pyshp
+  3. python basidco_to_kv.py TL_KODIS_BAS.shp
+  4. bash kv_bulk_upload.sh   (wrangler 필요, 로컬 PC에서 실행)
+
+shapefile 스펙 (PPTX 안내서 기준):
+  레이어: TL_KODIS_BAS
+  PK:     BAS_MGT_SN  (기초구역 관리번호)
+  우편번호 필드: BAS_ID 또는 BAS_CD (5자리 숫자)
+  좌표계: GRS80 UTM-K → pyshp가 자동으로 경위도(EPSG:4326) 처리
 
 출력:
-  - basidco_kv/ 디렉터리에 <우편번호>.json 파일 생성
-  - kv_upload.sh 생성 (wrangler kv put 명령 모음)
+  - basidco_kv/<우편번호>.json  (전국 약 36,000개)
+  - kv_bulk_upload.sh  (Cloudflare KV 일괄 업로드)
 """
 
 import sys
 import os
 import json
 import math
-import subprocess
 
 KV_NS_ID = '7f0e90efaea64f3ab08ff00f8970b28b'
 OUT_DIR = 'basidco_kv'
 MAX_COORDS = 200  # 폴리곤 꼭짓점 최대 개수 (KV 크기 절약을 위해 다운샘플)
+
+# TL_KODIS_BAS 좌표계: GRS80 UTM-K (EPSG:5179)
+# 경위도(EPSG:4326)로 변환 필요 여부는 첫 좌표로 자동 판단
+# x > 1000000 이면 투영좌표 → pyproj로 변환
+def _make_transformer():
+    try:
+        from pyproj import Transformer
+        return Transformer.from_crs('EPSG:5179', 'EPSG:4326', always_xy=True)
+    except Exception:
+        return None
+
+_transformer = None
+
+def project_point(x, y):
+    """UTM-K → 경위도 변환 (투영좌표인 경우만)."""
+    global _transformer
+    if x > 1000:  # 투영좌표 (미터 단위) 판정
+        if _transformer is None:
+            _transformer = _make_transformer()
+        if _transformer:
+            lng, lat = _transformer.transform(x, y)
+            return lng, lat
+        # pyproj 없을 때 GRS80 UTM-K 근사 변환
+        lng = (x - 1000000) / 111320 + 127.5
+        lat = y / 110540
+        return lng, lat
+    return x, y  # 이미 경위도
 
 
 def douglas_peucker(points, epsilon):
@@ -81,14 +113,28 @@ def convert_shapefile(shp_path):
     fields = [f[0] for f in sf.fields[1:]]  # 첫 번째 삭제 플래그 제외
 
     print(f'필드 목록: {fields}')
-    # 기초구역코드 필드 이름 탐색 (BAS_ID, BASIDCO, ZIP, BAS_CD 등)
+    # 기초구역코드 필드 탐색 — TL_KODIS_BAS 기준 우선순위
+    # BAS_MGT_SN은 관리번호(PK)라 제외, 실제 5자리 우편번호 필드 탐색
     zip_field = None
-    for candidate in ['BAS_ID', 'BASIDCO', 'ZIP', 'BAS_CD', 'POSCD', 'bas_id']:
+    for candidate in ['BAS_ID', 'BAS_CD', 'BASIDCO', 'POST_CD', 'ZIP', 'POSCD', 'bas_id', 'bas_cd']:
         if candidate in fields:
             zip_field = candidate
             break
     if zip_field is None:
-        print(f'우편번호 필드 없음. 필드: {fields}')
+        # 첫 번째 레코드를 보고 5자리 숫자 패턴인 필드 자동 탐색
+        try:
+            rec = sf.shapeRecord(0).record
+            for i, fname in enumerate(fields):
+                val = str(rec[i]).strip()
+                if len(val) == 5 and val.isdigit():
+                    zip_field = fname
+                    print(f'자동 감지된 우편번호 필드: {zip_field} (값: {val})')
+                    break
+        except Exception:
+            pass
+    if zip_field is None:
+        print(f'우편번호 필드를 찾을 수 없습니다. 전체 필드: {fields}')
+        print('첫 번째 레코드 값:', [str(v) for v in sf.shapeRecord(0).record])
         sys.exit(1)
     print(f'우편번호 필드: {zip_field}')
 
@@ -126,7 +172,16 @@ def convert_shapefile(shp_path):
             continue
 
         simplified = simplify_ring(best_ring)
-        coords = [{'lat': round(p[1], 6), 'lng': round(p[0], 6)} for p in simplified]
+        coords = []
+        for p in simplified:
+            lng, lat = project_point(p[0], p[1])
+            # 한국 영역 벗어나면 건너뜀
+            if not (33 < lat < 39 and 124 < lng < 132):
+                continue
+            coords.append({'lat': round(lat, 6), 'lng': round(lng, 6)})
+        if len(coords) < 4:
+            errors += 1
+            continue
 
         out_path = os.path.join(OUT_DIR, f'{zip_code}.json')
         with open(out_path, 'w', encoding='utf-8') as f:
