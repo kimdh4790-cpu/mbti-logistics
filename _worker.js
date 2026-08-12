@@ -18568,36 +18568,48 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── 기초구역 경계 프록시 (Oracle Cloud 프록시 설정 시 vWorld 정확 경계 제공) ──
-  // 미설정 시 ok:false 반환 → 클라이언트가 Nominatim 법정동 폴백 사용
+  // ── 기초구역 경계 (KV → Oracle 프록시 → ok:false 순) ──────────────────
   if (path === '/api/yongcha/basidco' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     const zip = new URL(request.url).searchParams.get('zip') || '';
     if (!/^[0-9]{5}$/.test(zip)) {
       return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
     }
-    if (!env.ORACLE_PROXY_URL) {
-      return new Response(JSON.stringify({ ok: false, error: 'proxy_not_configured' }), { headers: corsH });
-    }
+    // 1) KV 조회 (shapefile 변환 데이터 — 가장 빠름)
     try {
-      const proxySecret = env.ORACLE_PROXY_SECRET || '';
-      const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
-        signal: AbortSignal.timeout(10000),
-        headers: proxySecret ? { 'x-secret': proxySecret } : {}
-      });
-      if (!pr.ok) return new Response(JSON.stringify({ ok: false, error: `proxy_${pr.status}` }), { headers: corsH });
-      const fc = await pr.json();
-      const feat = fc?.features?.[0];
-      if (!feat?.geometry) return new Response(JSON.stringify({ ok: false, error: 'no_feature' }), { headers: corsH });
-      const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
-                 : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
-      const coords = ring.map(c => ({ lat: c[1], lng: c[0] }));
-      if (coords.length < 4) return new Response(JSON.stringify({ ok: false, error: 'too_few_coords' }), { headers: corsH });
-      const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-      return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
-    } catch (e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+      const kvVal = await env.KV.get('basidco:' + zip);
+      if (kvVal) {
+        const coords = JSON.parse(kvVal);
+        if (Array.isArray(coords) && coords.length >= 4) {
+          const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+          return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'kv' }), { headers: corsH });
+        }
+      }
+    } catch (_) {}
+    // 2) Oracle Cloud vWorld 프록시 (설정된 경우)
+    if (env.ORACLE_PROXY_URL) {
+      try {
+        const proxySecret = env.ORACLE_PROXY_SECRET || '';
+        const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
+          signal: AbortSignal.timeout(10000),
+          headers: proxySecret ? { 'x-secret': proxySecret } : {}
+        });
+        if (pr.ok) {
+          const fc = await pr.json();
+          const feat = fc?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = ring.map(c => ({ lat: c[1], lng: c[0] }));
+            if (coords.length >= 4) {
+              const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
+            }
+          }
+        }
+      } catch (_) {}
     }
+    return new Response(JSON.stringify({ ok: false, error: 'no_data' }), { headers: corsH });
   }
 
   // ── 우편번호 → 좌표 (Nominatim OSM, 인증 불필요) ─────────────────
