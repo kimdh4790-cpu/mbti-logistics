@@ -18568,6 +18568,22 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
+  // ── [임시] 기초구역 KV 배치 쓰기 (배포 후 제거 예정) ─────────────────
+  if (path === '/api/yongcha/kv-batch-write' && method === 'POST') {
+    const j = request.headers.get('x-batch-secret');
+    if (j !== 'basidco2024write') return new Response('forbidden', { status: 403 });
+    try {
+      const items = await request.json();
+      if (!Array.isArray(items)) return new Response('bad format', { status: 400 });
+      await Promise.all(items.map(({ key, value }) => env.KV.put(key, value)));
+      return new Response(JSON.stringify({ ok: true, count: items.length }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+  }
+
   // ── 기초구역 경계 (KV → Oracle 프록시 → ok:false 순) ──────────────────
   if (path === '/api/yongcha/basidco' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
