@@ -17233,7 +17233,7 @@ function _addZoneByZip(){
           document.getElementById('pw-zip-input').value='';
           var areaInp=document.getElementById('pw-area');
           if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-          // 기초구역 경계 비동기 로드: Overpass(기초구역 우선) → Nominatim(법정동 폴백)
+          // 기초구역 경계 비동기 로드: Worker(data.go.kr 정밀) → Overpass → Nominatim(폴백)
           (function(){
             function _applyBoundary(bd){
               if(bd&&bd.coords&&bd.coords.length){
@@ -17254,41 +17254,53 @@ function _addZoneByZip(){
               for(var i=0;i<n;i++){sLat+=coords[i].lat;sLng+=coords[i].lng;}
               return{lat:sLat/n,lng:sLng/n};
             }
-            // 시도 1: Overpass API — OSM postal_code 경계 (기초구역 정밀)
-            var oq='[out:json][timeout:15];(relation["postal_code"="'+zipcode+'"]["boundary"="postal_code"];relation["addr:postcode"="'+zipcode+'"];);(._;>;);out geom;';
-            fetch('https://overpass-api.de/api/interpreter',{
-              method:'POST',
-              headers:{'Content-Type':'application/x-www-form-urlencoded'},
-              body:'data='+encodeURIComponent(oq)
-            })
+            // 시도 1: Worker → data.go.kr 국토교통부 기초구역도 (정밀 기초구역 경계)
+            fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
-            .then(function(od){
-              var ways={},rels=[];
-              (od.elements||[]).forEach(function(el){
-                if(el.type==='way'&&el.geometry)ways[el.id]=el.geometry;
-                if(el.type==='relation')rels.push(el);
-              });
-              var coords=[];
-              if(rels.length>0){
-                // outer wayを順番に連結してポリゴン構築
-                var outerWayIds=[];
-                (rels[0].members||[]).forEach(function(m){
-                  if(m.type==='way'&&(m.role==='outer'||m.role===''))outerWayIds.push(m.ref);
-                });
-                outerWayIds.forEach(function(wid){
-                  var wg=ways[wid];
-                  if(wg)wg.forEach(function(pt){coords.push({lat:pt.lat,lng:pt.lon});});
-                });
-              }
-              if(coords.length>=4){
-                var cen=_centroid(coords);
-                _applyBoundary({coords:coords,lat:cen.lat,lng:cen.lng});
+            .then(function(d){
+              if(d.ok&&d.coords&&d.coords.length>=4){
+                _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
               } else {
-                _fetchNominatim();
+                _tryOverpass();
               }
             })
-            .catch(function(){_fetchNominatim();});
-            // 시도 2: Nominatim — 법정동 이름 검색 (폴백)
+            .catch(function(){_tryOverpass();});
+            // 시도 2: Overpass API — OSM postal_code boundary
+            function _tryOverpass(){
+              var oq='[out:json][timeout:15];(relation["postal_code"="'+zipcode+'"]["boundary"="postal_code"];relation["addr:postcode"="'+zipcode+'"];);(._;>;);out geom;';
+              fetch('https://overpass-api.de/api/interpreter',{
+                method:'POST',
+                headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                body:'data='+encodeURIComponent(oq)
+              })
+              .then(function(r){return r.json();})
+              .then(function(od){
+                var ways={},rels=[];
+                (od.elements||[]).forEach(function(el){
+                  if(el.type==='way'&&el.geometry)ways[el.id]=el.geometry;
+                  if(el.type==='relation')rels.push(el);
+                });
+                var coords=[];
+                if(rels.length>0){
+                  var outerIds=[];
+                  (rels[0].members||[]).forEach(function(m){
+                    if(m.type==='way'&&(m.role==='outer'||m.role===''))outerIds.push(m.ref);
+                  });
+                  outerIds.forEach(function(wid){
+                    var wg=ways[wid];
+                    if(wg)wg.forEach(function(pt){coords.push({lat:pt.lat,lng:pt.lon});});
+                  });
+                }
+                if(coords.length>=4){
+                  var cen=_centroid(coords);
+                  _applyBoundary({coords:coords,lat:cen.lat,lng:cen.lng});
+                } else {
+                  _fetchNominatim();
+                }
+              })
+              .catch(function(){_fetchNominatim();});
+            }
+            // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
             function _fetchNominatim(){
               if(!zoneName)return;
               fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
@@ -18588,6 +18600,55 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       try { result = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { result = JSON.parse(m[0]); } catch(e2) {} }
       return new Response(JSON.stringify({ ok: true, data: result }), { headers: corsH });
     } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
+  }
+
+  // ── data.go.kr 기초구역도 → 경계 좌표 프록시 ─────────────────────
+  if (path === '/api/yongcha/basidco' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = new URL(request.url).searchParams.get('zip') || '';
+    if (!/^[0-9]{5}$/.test(zip)) {
+      return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
+    }
+    const dgKey = env.DATAGOKR_KEY;
+    if (!dgKey) {
+      return new Response(JSON.stringify({ ok: false, error: 'no_key' }), { headers: corsH });
+    }
+    // WKT POLYGON 또는 MULTIPOLYGON 파싱 → [{lat,lng}] 배열
+    function parseWkt(wkt) {
+      if (!wkt) return [];
+      const m = wkt.match(/POLYGON\s*\(\s*\(([^)]+)\)/i);
+      if (!m) return [];
+      return m[1].split(',').map(p => {
+        const parts = p.trim().split(/\s+/);
+        const a = parseFloat(parts[0]), b = parseFloat(parts[1]);
+        // WGS84 한국 범위 검증 (lng 124~132, lat 33~39)
+        if (a >= 124 && a <= 132 && b >= 33 && b <= 39) return { lat: b, lng: a };
+        if (b >= 124 && b <= 132 && a >= 33 && a <= 39) return { lat: a, lng: b };
+        return null;
+      }).filter(Boolean);
+    }
+    try {
+      const dgUrl = `https://api.data.go.kr/openapi/tn_pubr_public_basisdist_info_zone_api?serviceKey=${dgKey}&type=json&numOfRows=1&pageNo=1&entZip=${zip}`;
+      const r = await fetch(dgUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+      const j = await r.json();
+      const rawItem = j?.response?.body?.items?.item;
+      const item = Array.isArray(rawItem) ? rawItem[0] : rawItem;
+      if (item?.geom) {
+        const coords = parseWkt(item.geom);
+        if (coords.length >= 4) {
+          const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+          return new Response(JSON.stringify({
+            ok: true, coords,
+            lat: cen.lat / coords.length,
+            lng: cen.lng / coords.length,
+            source: 'datagokr'
+          }), { headers: corsH });
+        }
+      }
+      return new Response(JSON.stringify({ ok: false, error: 'no_geom' }), { headers: corsH });
+    } catch (e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
