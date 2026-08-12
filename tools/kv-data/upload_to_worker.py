@@ -11,7 +11,7 @@ except ImportError:
 
 WORKER_URL = 'https://yongcha.app/api/yongcha/kv-batch-write'
 SECRET = 'basidco2024write'
-BATCH = 500
+BATCH = 100
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 chunks = sorted(glob.glob(os.path.join(script_dir, 'chunk_*.json')))
