@@ -11579,6 +11579,8 @@ function _goPage(p){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   if(p!=='chat'&&_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
+  if(_weeklyAgencyUnsub){_weeklyAgencyUnsub();_weeklyAgencyUnsub=null;}
+  if(_todayRecordsUnsub){_todayRecordsUnsub();_todayRecordsUnsub=null;}
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
   var el=document.getElementById('content');
@@ -14984,7 +14986,7 @@ function _yConfirmRecord(recordId,driverId){
     status:'confirmed',confirmedAt:firebase.firestore.FieldValue.serverTimestamp(),
     confirmedBy:_CU.uid
   }).then(function(){
-    _yNotify(driverId||'','건수 확인 완료',_CU.name+'에서 오늘 배송 건수를 확인했어요','work');
+    if(driverId)_yNotify(driverId,'건수 확인 완료',_CU.name+'에서 오늘 배송 건수를 확인했어요','work');
     _yToast('건수 확인 완료');
   }).catch(function(e){_yToast('확인 실패: '+e.message);});
 }
@@ -15093,7 +15095,7 @@ function _pgPostWrite(el){
     '<span style="font-size:11px;color:var(--t3);font-weight:500">한 줄로 입력하면 AI가 자동 완성</span>'+
   '</div>'+
   '<div style="display:flex;gap:8px">'+
-    '<input id="nl-input" class="inp" style="flex:1;margin:0;font-size:13px" placeholder=\'예: 쿠팡 금정 120건 야간 18만\' onkeydown="if(event.key===\'Enter\')_yNLPost()">'+
+    '<input id="nl-input" class="inp" style="flex:1;margin:0;font-size:13px" placeholder=\\'예: 쿠팡 금정 120건 야간 18만\\' onkeydown="if(event.key===\\'Enter\\')_yNLPost()">'+
     '<button id="nl-btn" onclick="_yNLPost()" style="flex-shrink:0;padding:0 14px;background:var(--gn);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;min-height:44px">AI 작성</button>'+
   '</div>'+
   '<div id="nl-result" style="display:none;margin-top:8px;font-size:11.5px;color:var(--gn);font-weight:700"></div>'+
@@ -16598,6 +16600,7 @@ function _yDoDeleteAccount(){
   var btn=document.getElementById('del-confirm-btn');
   var reason=(document.getElementById('del-reason')||{}).value||'기타';
   if(btn){btn.textContent='탈퇴 처리 중...';btn.disabled=true;}
+  // Firestore 먼저 — 실패 시 auth 유지되어 재시도 가능 (auth 삭제 후엔 Firestore 권한 없음)
   _db.collection('yongcha_users').doc(_CU.uid).update({
     deleted:true,
     deletedReason:reason,
@@ -18459,9 +18462,9 @@ function _pgDashboard(el){
     '<div class="page-hdr"><h1 class="page-title">정산 현황</h1>'+
     '<p class="page-sub">운행 수입과 소장별 정산 내역이에요</p></div>'+
     '<div style="display:flex;gap:6px;margin-bottom:14px">'+
-      '<button class="dash-tab-b" id="dt-total" onclick="_switchDashTab(\'total\')" '+
+      '<button class="dash-tab-b" id="dt-total" onclick="_switchDashTab(\\'total\\')" '+
         'style="flex:1;min-height:40px;border-radius:var(--r);border:none;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;'+(_dt==='total'?'background:var(--ac);color:#fff':'background:var(--bg2);color:var(--t2);border:1px solid var(--bd)')+'">전체 현황</button>'+
-      '<button class="dash-tab-b" id="dt-agency" onclick="_switchDashTab(\'agency\')" '+
+      '<button class="dash-tab-b" id="dt-agency" onclick="_switchDashTab(\\'agency\\')" '+
         'style="flex:1;min-height:40px;border-radius:var(--r);border:none;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;'+(_dt==='agency'?'background:var(--ac);color:#fff':'background:var(--bg2);color:var(--t2);border:1px solid var(--bd)')+'">소장별 내역</button>'+
     '</div>'+
     '<div id="dash-body">'+_skRows(4)+'</div>';
@@ -18569,7 +18572,7 @@ function _pgDashboard(el){
           wRows+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
             '<span style="font-size:12.5px;font-weight:700;min-width:75px">'+_esc(r.date)+'</span>'+
             '<span style="font-size:12px;color:var(--t2);flex:1">'+_won(r.count||0)+'건</span>'+
-            '<span style="font-size:13px;font-weight:800;color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+_won(Number(r.amount||0).toLocaleString())+'원</span>'+
+            '<span style="font-size:13px;font-weight:800;color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+_won(r.amount||0)+'원</span>'+
             '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(r.status==='confirmed'?'var(--gnl)':'var(--brl)')+';color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+
               (r.status==='confirmed'?'확인':'대기')+'</span>'+
           '</div>';
