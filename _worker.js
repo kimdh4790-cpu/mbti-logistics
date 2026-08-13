@@ -18656,11 +18656,12 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         }
       }
     } catch(_) {}
-    // 1) vWorld WFS 직접 조회 (폴백)
-    if (env.VWORLD_API_KEY) {
+    // 1) vWorld WFS — 데모키 우선, env 키 폴백
+    const _vwKeys = ['DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A', env.VWORLD_API_KEY].filter(Boolean);
+    for (const vKey of _vwKeys) {
       try {
         const vFilter = encodeURIComponent(`BAS_ID='${zip}'`);
-        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${vKey}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
         const vr = await fetch(vUrl, { signal: AbortSignal.timeout(10000) });
         if (vr.ok) {
           const fc = await vr.json();
@@ -18745,13 +18746,18 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         dbg.cql[prop+'_detail']=info;
       } catch(e){dbg.cql[prop]='error:'+e.message;dbg.steps.push('cql_err:'+prop);}
     }
-    // DescribeFeatureType — 실제 컬럼명 확인
+    // vWorld 데모키 테스트
+    const _dbgVwKey = 'DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
     try {
-      const dft=await fetch('https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&REQUEST=DescribeFeatureType&TYPENAME=daip:TBL_KARB_SBD&outputFormat=application/json',{headers:jusoHdrs,signal:AbortSignal.timeout(10000)});
-      const dtxt=await dft.text();
-      dbg.describeStatus=dft.status;
-      dbg.describeSnippet=dtxt.substring(0,800);
-    } catch(e){dbg.describeError=e.message;}
+      const vFilter=encodeURIComponent(`BAS_ID='${zip}'`);
+      const vUrl=`https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${_dbgVwKey}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+      const vr=await fetch(vUrl,{signal:AbortSignal.timeout(10000)});
+      const vtxt=await vr.text();
+      dbg.vworldStatus=vr.status;
+      dbg.vworldSnippet=vtxt.substring(0,500);
+      if(vr.ok){try{const vfc=JSON.parse(vtxt);dbg.vworldFeats=(vfc.features||[]).length;if(vfc.features?.length)dbg.vworldProps=vfc.features[0].properties;}catch(_){}}
+      dbg.steps.push('vworld_http_'+vr.status);
+    } catch(e){dbg.vworldError=e.message;dbg.steps.push('vworld_err:'+e.message);}
     return new Response(JSON.stringify(dbg,null,2),{headers:corsH});
   }
 
