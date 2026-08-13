@@ -102,6 +102,20 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
       <div class="type-chip premium" onclick="openPremiumCheck('quickflex',this)">⚡ 퀵플렉스 부속합의서<span class="prem-lock">🔒</span></div>
     </div>
 
+    <!-- 대리점(甲) 정보 -->
+    <div class="card" id="agency-card">
+      <div class="sec-label">대리점 (甲) 정보 <span style="font-size:9px;color:var(--gray);font-weight:400;letter-spacing:0;text-transform:none">— 저장됨</span></div>
+      <div class="row2">
+        <div class="fg"><label class="fl">상호명 *</label><input class="fi" id="c-agency-name" placeholder="홍길동 택배" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">대표자명</label><input class="fi" id="c-agency-rep" placeholder="홍길동" oninput="saveAgency()"></div>
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="fl">사업자번호</label><input class="fi fi-mono" id="c-agency-bizno" placeholder="000-00-00000" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-agency-phone" placeholder="051-000-0000" oninput="saveAgency()"></div>
+      </div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">주소</label><input class="fi" id="c-agency-addr" placeholder="부산시 ..." oninput="saveAgency()"></div>
+    </div>
+
     <!-- 직원 자동 불러오기 -->
     <div class="card">
       <div class="sec-label">직원 선택</div>
@@ -726,7 +740,7 @@ function goPay(){
   alert('입금 후 카카오채널 "MBTI Co. LOGISTICS"으로\n[프리미엄 계약서 + 사업자번호]를 보내주세요.\n\n하나은행 270-910019-24204 (유)엠비티아이\n담당자가 활성화 코드를 발송드립니다.');
 }
 
-// 페이지 로드 시 해금 상태 복원
+// 페이지 로드 시 해금 상태 복원 + 대리점 정보 복원
 document.addEventListener('DOMContentLoaded', function(){
   _unlockedPrem.forEach(function(type){
     var btns = document.querySelectorAll('#ctype-row .type-chip.premium');
@@ -737,6 +751,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
   });
+  loadAgency();
 });
 
 function setCTypeById(type){
@@ -753,12 +768,29 @@ function setCTypeById(type){
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+function saveAgency(){
+  var ag={name:getVal('c-agency-name'),rep:getVal('c-agency-rep'),bizno:getVal('c-agency-bizno'),phone:getVal('c-agency-phone'),addr:getVal('c-agency-addr')};
+  try{localStorage.setItem('dw_agency',JSON.stringify(ag));}catch(e){}
+}
+function loadAgency(){
+  try{
+    var ag=JSON.parse(localStorage.getItem('dw_agency')||'{}');
+    if(ag.name)setVal('c-agency-name',ag.name);
+    if(ag.rep)setVal('c-agency-rep',ag.rep);
+    if(ag.bizno)setVal('c-agency-bizno',ag.bizno);
+    if(ag.phone)setVal('c-agency-phone',ag.phone);
+    if(ag.addr)setVal('c-agency-addr',ag.addr);
+  }catch(e){}
+}
+
 function requestEsign(){
   var d=_buildData();
   if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
   if(!d.phone){toast('전화번호를 입력하세요 (기사에게 OTP SMS 발송됩니다)','err');return;}
   if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
   if(!d.pay){toast('임금/수수료를 입력하세요','err');return;}
+  var agencyName=getVal('c-agency-name');
+  if(!agencyName){toast('대리점 상호명을 입력하세요','err');return;}
   var btn=document.getElementById('esign-btn');
   btn.disabled=true;btn.textContent='발송 중...';
   var payload={
@@ -766,7 +798,11 @@ function requestEsign(){
     startDate:d.startDate,endDate:d.endDate||'',
     loc:d.loc||'',pay:d.pay,payDay:d.payDay||'',payType:d.payType||'',
     vehicle:getVal('c-vehicle'),special:d.special||'',
-    companyName:'엠비티아이(유)'
+    agencyName:agencyName,
+    agencyRep:getVal('c-agency-rep'),
+    agencyBizno:getVal('c-agency-bizno'),
+    agencyPhone:getVal('c-agency-phone'),
+    agencyAddr:getVal('c-agency-addr')
   };
   fetch('/api/contract/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})

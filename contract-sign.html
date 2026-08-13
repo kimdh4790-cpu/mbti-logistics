@@ -121,14 +121,19 @@ function renderForm(){
 }
 
 function buildHtml(c, today){
+  var agName = c.agencyName || '';
+  var agRep = c.agencyRep || '';
+  var agBizno = c.agencyBizno || '';
+  var agPhone = c.agencyPhone || '';
+  var agAddr = c.agencyAddr || '';
   if (c.ctype === 'courier' || c.ctype === 'quickflex') {
     return '<div class="ctitle">영업점 – 택배기사<br>위·수탁 표준계약서</div>' +
       '<div class="clause"><div class="ch">제1조 계약 당사자</div><div class="cb">' +
       '<table class="tbl"><tr><th>구분</th><th>영업점 (甲)</th><th>택배기사 (乙)</th></tr>' +
-      '<tr><td>업체명/성명</td><td>엠비티아이(유)</td><td>' + esc(c.name) + '</td></tr>' +
-      '<tr><td>사업자/주민번호</td><td>373-86-02536</td><td>&nbsp;</td></tr>' +
-      '<tr><td>연락처</td><td>051-711-3103</td><td>' + esc(maskPhone(c.phone)) + '</td></tr>' +
-      '<tr><td>주소</td><td>부산시 수영로 668, 607호</td><td>&nbsp;</td></tr>' +
+      '<tr><td>업체명/성명</td><td>' + esc(agName) + (agRep ? ' / ' + esc(agRep) : '') + '</td><td>' + esc(c.name) + '</td></tr>' +
+      '<tr><td>사업자번호</td><td>' + esc(agBizno) + '</td><td>&nbsp;</td></tr>' +
+      '<tr><td>연락처</td><td>' + esc(agPhone) + '</td><td>' + esc(maskPhone(c.phone)) + '</td></tr>' +
+      '<tr><td>주소</td><td>' + esc(agAddr) + '</td><td>&nbsp;</td></tr>' +
       '</table></div></div>' +
       '<div class="clause"><div class="ch">제2조 계약 기간 및 담당구역</div><div class="cb">' +
       '① 계약 기간: ' + esc(c.startDate) + ' ~ ' + esc(c.endDate || '1년') + '<br>' +
@@ -154,7 +159,7 @@ function buildHtml(c, today){
       '④ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>' +
       (c.special ? '<div class="clause"><div class="ch">특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
       '<div class="seal-row">' +
-        '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">엠비티아이(유)</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">대표 김형우 (인)</div></div>' +
+        '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">' + esc(agName) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">' + (agRep ? esc(agRep) + ' (인)' : '(인)') + '</div></div>' +
         '<div class="seal-box"><div class="seal-lbl">乙 (택배기사)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
       '</div>' +
       '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';
@@ -174,7 +179,7 @@ function buildHtml(c, today){
     '② 계약 해지 시 일방은 30일 전에 상대방에게 통보한다.</div></div>' +
     (c.special ? '<div class="clause"><div class="ch">특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
     '<div class="seal-row">' +
-      '<div class="seal-box"><div class="seal-lbl">사업주 (갑)</div><div class="seal-name">엠비티아이(유)</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">대표 김형우 (인)</div></div>' +
+      '<div class="seal-box"><div class="seal-lbl">사업주 (갑)</div><div class="seal-name">' + esc(agName) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">' + (agRep ? esc(agRep) + ' (인)' : '(인)') + '</div></div>' +
       '<div class="seal-box"><div class="seal-lbl">근로자 (을)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
     '</div>' +
     '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';

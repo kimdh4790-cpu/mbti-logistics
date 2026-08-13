@@ -1758,7 +1758,9 @@ async function acceptExchange(){
             startDate:gs('startDate'), endDate:gs('endDate'), loc:gs('loc'),
             pay:gs('pay'), payDay:gs('payDay'), payType:gs('payType'),
             vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
-            companyName:gs('companyName'), createdAt:gs('createdAt')
+            agencyName:gs('agencyName'), agencyRep:gs('agencyRep'),
+            agencyBizno:gs('agencyBizno'), agencyPhone:gs('agencyPhone'),
+            agencyAddr:gs('agencyAddr'), createdAt:gs('createdAt')
           }}), {headers:{'Content-Type':'application/json'}});
         } catch(e) {
           return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
@@ -1767,8 +1769,9 @@ async function acceptExchange(){
       if (path === '/api/contract/otp' && method === 'POST') {
         try {
           const body = await request.json();
-          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, companyName } = body;
+          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr } = body;
           if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          if (!agencyName) return new Response(JSON.stringify({ok:false,error:'대리점 상호명 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
           const fsToken = await getAccessToken(env);
           const contractId = 'EC' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
           const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -1783,7 +1786,9 @@ async function acceptExchange(){
               pay:{stringValue:String(pay||'')}, payDay:{stringValue:payDay||''},
               payType:{stringValue:payType||''}, vehicle:{stringValue:vehicle||''},
               special:{stringValue:special||''}, status:{stringValue:'pending'},
-              companyName:{stringValue:companyName||'엠비티아이(유)'}, createdAt:{stringValue:now}
+              agencyName:{stringValue:agencyName}, agencyRep:{stringValue:agencyRep||''},
+              agencyBizno:{stringValue:agencyBizno||''}, agencyPhone:{stringValue:agencyPhone||''},
+              agencyAddr:{stringValue:agencyAddr||''}, createdAt:{stringValue:now}
             }})
           });
           await fetch(`${FS_BASE}/contract_otps`, {
