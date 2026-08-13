@@ -13329,7 +13329,7 @@ function _renderPostList(){
   var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var q=(_pf.q||'').trim().toLowerCase();
   var _shortTypes=['하루 대타','주단위'];
-  var _longTypes=['월단위','상시모집'];
+  var _longTypes=['월단위','고정 용차','상시모집'];
   var filtered=_allPosts.filter(function(p){
     if(p.blinded)return false;
     // 탭별 postType 필터
@@ -15074,9 +15074,10 @@ function _pgPostWrite(el){
   '<button onclick="_selType(this,\\'하루 대타\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(79,120,245,.2);background:rgba(79,120,245,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">하루 대타</button>'+
   '<button onclick="_selType(this,\\'주단위\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(79,120,245,.2);background:rgba(79,120,245,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">주단위</button>'+
   '</div>'+
-  '<div style="font-size:11px;color:var(--t3);margin-bottom:5px">장기 용차 (월단위 계약)</div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:5px">장기 용차 (월단위·정기)</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
   '<button onclick="_selType(this,\\'월단위\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(16,185,129,.2);background:rgba(16,185,129,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">월단위</button>'+
+  '<button onclick="_selType(this,\\'고정 용차\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(16,185,129,.2);background:rgba(16,185,129,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">고정 용차</button>'+
   '<button onclick="_selType(this,\\'상시모집\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(16,185,129,.2);background:rgba(16,185,129,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">상시모집</button>'+
   '</div></div></div>'+
   '<input type="hidden" id="pw-type">'+
