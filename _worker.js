@@ -18597,7 +18597,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // 1) vWorld WFS 직접 조회 — 행안부 공식 기초구역 경계 (가장 정확)
     if (env.VWORLD_API_KEY) {
       try {
-        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=BAS_ID='${zip}'&SRSNAME=EPSG:4326`;
+        const vFilter = encodeURIComponent(`BAS_ID='${zip}'`);
+        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
         const vr = await fetch(vUrl, { signal: AbortSignal.timeout(10000) });
         if (vr.ok) {
           const fc = await vr.json();
@@ -18694,20 +18695,37 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         return [];
       }
 
-      // ① Nominatim (OpenStreetMap)
-      if (!coords.length) {
+      // ① vWorld WFS — 공식 기초구역 경계 (가장 정확)
+      if (env.VWORLD_API_KEY && !coords.length) {
         try {
-          const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&polygon_geojson=1&format=json&limit=1`;
+          const vFilter = encodeURIComponent(`BAS_ID='${zip}'`);
+          const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+          const vr = await fetch(vUrl, { signal: AbortSignal.timeout(8000) });
+          if (vr.ok) {
+            const fc = await vr.json();
+            const feat = fc?.features?.[0];
+            if (feat?.geometry) {
+              const c = _geomCoords(feat.geometry);
+              if (c.length) {
+                coords = c;
+                const s = c.reduce((a, p) => ({ lat: a.lat + p.lat, lng: a.lng + p.lng }), { lat: 0, lng: 0 });
+                if (!centLat) { centLat = s.lat / c.length; centLng = s.lng / c.length; }
+                zipName = zipName || feat.properties?.DONG_NM || feat.properties?.SGG_NM || zip;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      // ② Nominatim — 중심 좌표만 사용 (폴리곤은 행정동 단위라 부정확)
+      if (!centLat) {
+        try {
+          const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`;
           const nRes = await fetch(nUrl, { headers: { 'User-Agent': 'yongcha-delivery-app/1.0 (contact@yongcha.app)' }, signal: AbortSignal.timeout(8000) });
           if (nRes.ok) {
             const nData = await nRes.json();
-            if (nData.length && nData[0].geojson) {
-              const c = _geomCoords(nData[0].geojson);
-              if (c.length) {
-                coords = c;
-                if (!centLat) { centLat = parseFloat(nData[0].lat); centLng = parseFloat(nData[0].lon); }
-                zipName = zipName || (nData[0].display_name || '').split(',')[0].trim();
-              }
+            if (nData.length) {
+              if (!centLat) { centLat = parseFloat(nData[0].lat); centLng = parseFloat(nData[0].lon); }
+              zipName = zipName || (nData[0].display_name || '').split(',')[0].trim();
             }
           }
         } catch(_) {}
