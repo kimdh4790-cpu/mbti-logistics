@@ -11579,8 +11579,8 @@ function _goPage(p){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   if(p!=='chat'&&_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
-  if(_weeklyAgencyUnsub){try{_weeklyAgencyUnsub();}catch(e){}; _weeklyAgencyUnsub=null;}
-  if(_todayRecordsUnsub){try{_todayRecordsUnsub();}catch(e){}; _todayRecordsUnsub=null;}
+  if(_weeklyAgencyUnsub){_weeklyAgencyUnsub();_weeklyAgencyUnsub=null;}
+  if(_todayRecordsUnsub){_todayRecordsUnsub();_todayRecordsUnsub=null;}
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
   var el=document.getElementById('content');
@@ -16600,13 +16600,13 @@ function _yDoDeleteAccount(){
   var btn=document.getElementById('del-confirm-btn');
   var reason=(document.getElementById('del-reason')||{}).value||'기타';
   if(btn){btn.textContent='탈퇴 처리 중...';btn.disabled=true;}
-  // Auth 삭제를 먼저 — 실패 시 Firestore는 건드리지 않아 불일치 방지
-  firebase.auth().currentUser.delete().then(function(){
-    return _db.collection('yongcha_users').doc(_CU.uid).update({
-      deleted:true,
-      deletedReason:reason,
-      deletedAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+  // Firestore 먼저 — 실패 시 auth 유지되어 재시도 가능 (auth 삭제 후엔 Firestore 권한 없음)
+  _db.collection('yongcha_users').doc(_CU.uid).update({
+    deleted:true,
+    deletedReason:reason,
+    deletedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    return firebase.auth().currentUser.delete();
   }).then(function(){
     _closeModal();
     _CU=null;

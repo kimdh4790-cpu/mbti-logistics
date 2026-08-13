@@ -4192,7 +4192,6 @@ async function openDeliveryMap(){
             // fallback: 단지 중심 좌표 (kakao-apt로 저장 → 재검색 방지)
             if(!gGot&&gBaseLat){
               x.gps={lat:gBaseLat,lng:gBaseLng,acc:0,src:'kakao-apt'};
-              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
             }
           }else{
             // 일반 주소 (동 없음) — 호/층 제거 후 건물 단위로 지오코딩, kakao-addr로 저장 → 재검색 방지
@@ -4202,9 +4201,9 @@ async function openDeliveryMap(){
             var gKd3=await gR3.json();
             if(gKd3.documents&&gKd3.documents[0]){
               x.gps={lat:parseFloat(gKd3.documents[0].y),lng:parseFloat(gKd3.documents[0].x),acc:0,src:'kakao-addr'};
-              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
             }
           }
+          if(x.gps){_db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});}
         }catch(e2){}
       }
       locs.push(x);
@@ -4846,7 +4845,7 @@ async function _fuSaveAll() {
         var kData = await kRes.json();
         if(kData.documents && kData.documents[0]) {
           var kd = kData.documents[0];
-          gps = {lat:parseFloat(kd.y),lng:parseFloat(kd.x),acc:0,src:'kakao'};
+          gps = {lat:parseFloat(kd.y),lng:parseFloat(kd.x),acc:0,src:'kakao-addr'};
         }
       } catch(e) {}
     }
@@ -4957,7 +4956,7 @@ async function _aiSave() {
         var data2 = await res2.json();
         if(data2.documents && data2.documents[0]) {
           var d2 = data2.documents[0];
-          gps = {lat:parseFloat(d2.y),lng:parseFloat(d2.x),acc:0,src:'kakao'};
+          gps = {lat:parseFloat(d2.y),lng:parseFloat(d2.x),acc:0,src:'kakao-addr'};
         }
       } catch(e) {}
     }
