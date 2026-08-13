@@ -2626,6 +2626,7 @@ async function acceptExchange(){
       }
       if (path === '/store.js') return serveKVFile(env, 'store.js', 'application/javascript');
       if (path.startsWith('/store')) return serveKVFile(env, 'store.html', 'text/html');
+      if (path === '/refund' || path === '/refund.html') return serveKVFile(env, 'refund.html', 'text/html');
       if (path === '/' || path === '') return serveKVFile(env, 'filo-landing.html', 'text/html');
       // ★ /{slug} 직접 접속 → filo.html 서빙 + dealerId 주입
       const filoSlugMatch = path.match(/^\/([A-Za-z0-9\-_]+)$/);
