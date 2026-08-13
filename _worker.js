@@ -14375,8 +14375,8 @@ function _yOpenCalc(prefill){
       '<input class="inp" id="cal-etc" type="number" inputmode="numeric" value="'+_esc(v('etc',150000))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
     '<div class="toggle-row" style="margin-top:6px">'+
-      '<div><div class="toggle-lbl">부가세 3.3% 원천징수</div>'+
-      '<div class="toggle-desc">사업소득 공제분을 차감해요</div></div>'+
+      '<div><div class="toggle-lbl">사업소득세 3.3% 원천징수</div>'+
+      '<div class="toggle-desc">개인사업자·프리랜서 기사 해당 (세금계산서 발행 시 제외)</div></div>'+
       '<button type="button" class="toggle'+(v('tax',true)?' on':'')+'" id="cal-tax" onclick="this.classList.toggle(\\'on\\');_yCalcRun()"></button>'+
     '</div>'+
     '</div>'+
@@ -15312,11 +15312,17 @@ function _pgDriverOffer(el){
 
 function _loadMyDriverOffers(){
   var el=document.getElementById('my-offer-list');if(!el)return;
-  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(10).get()
+  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).limit(20).get()
   .then(function(snap){
     if(snap.empty){el.innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--t3);text-align:center">아직 등록한 공고가 없어요</div>';return;}
     el.innerHTML='';
-    snap.docs.forEach(function(doc){
+    var docs=snap.docs.slice().sort(function(a,b){
+      var at=a.data().createdAt,bt=b.data().createdAt;
+      var av=at&&at.toDate?at.toDate().getTime():0;
+      var bv=bt&&bt.toDate?bt.toDate().getTime():0;
+      return bv-av;
+    });
+    docs.forEach(function(doc){
       var d=Object.assign({id:doc.id},doc.data());
       var isActive=d.status==='active';
       var row=document.createElement('div');row.className='card';row.style.cssText='margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;';
@@ -15335,7 +15341,9 @@ function _loadMyDriverOffers(){
           'style="min-height:34px;padding:0 12px;background:none;border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--t2);cursor:pointer;font-family:inherit;flex-shrink:0">내리기</button>':'');
       el.appendChild(row);
     });
-  }).catch(function(){});
+  }).catch(function(e){
+    if(el)el.innerHTML='<div style="padding:12px;font-size:12.5px;color:var(--rd);text-align:center">로드 실패: '+_esc(e.message)+'</div>';
+  });
 }
 
 function _submitDriverOffer(){
@@ -17131,15 +17139,20 @@ function _riqRecord(el){
     '<div id="riq-record-list">'+_skRows(3)+'</div>';
   el.innerHTML=html;
 
+  var isAgency=_CU.type==='agency';
   var q=isDriver
-    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(30)
-    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).orderBy('createdAt','desc').limit(50);
+    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).limit(30)
+    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).limit(50);
   q.get().then(function(snap){
     var list=document.getElementById('riq-record-list');if(!list)return;
     if(snap.empty){list.innerHTML=_emptyHtml('📋','실적 없음',isDriver?'첫 실적을 등록해보세요':'기사가 실적을 등록하면 여기에 나타나요');return;}
+    var docs=snap.docs.slice().sort(function(a,b){
+      var ad=a.data().date||'',bd=b.data().date||'';
+      return bd>ad?1:bd<ad?-1:0;
+    });
     var totalCnt=0,totalEarning=0;
     var rows='';
-    snap.forEach(function(d){
+    docs.forEach(function(d){
       var r=d.data();
       var earning=(r.price||0)*(r.count||0);
       totalCnt+=r.count||0;totalEarning+=earning;
@@ -17164,7 +17177,6 @@ function _riqRecord(el){
         '<div style="font-size:10px;color:var(--t3)">수령액</div></div>'+
         '</div></div>';
     });
-    var isAgency=_CU.type==='agency';
     var summary='<div style="background:linear-gradient(135deg,#0d1f35,#0f172a);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
       '<div style="text-align:center">'+
       '<div style="font-size:22px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums">'+totalCnt.toLocaleString()+'</div>'+
