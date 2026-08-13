@@ -17354,45 +17354,66 @@ function _addZoneByZip(){
               }
             })
             .catch(function(){_fetchVworld(null,lat,lng);});
-            // 시도 2: vWorld /req/data JSONP (CORS 우회, 브라우저 한국 IP)
+            // 시도 2: vWorld JSONP + fetch 병행 (CORS 우회, 브라우저 한국 IP)
             function _fetchVworld(fallbackCoords,cLat,cLng){
               var vKey='DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
-              var cbName='_vwCb'+Date.now();
-              var sid='_vws'+Date.now();
               var done=false;
+              var cbName='_vwCb'+Date.now();
+              var sid='_vws'+cbName.slice(-6);
+              if(typeof _yToast==='function')_yToast('경계 조회중('+zipcode+')...');
+              function _applyVCoords(geom){
+                var c=_geomToCoords(geom);
+                if(c.length>=4){var sLat=0,sLng=0;c.forEach(function(p){sLat+=p.lat;sLng+=p.lng;});_applyBoundary({coords:c,lat:sLat/c.length,lng:sLng/c.length});return true;}
+                return false;
+              }
               function _cleanup(){
                 clearTimeout(tid);
                 if(window[cbName])delete window[cbName];
                 var el=document.getElementById(sid);
                 if(el&&el.parentNode)el.parentNode.removeChild(el);
               }
-              function _fb(){
+              function _fb(reason){
                 if(done)return; done=true;
                 _cleanup();
+                if(typeof _yToast==='function')_yToast('KV폴백('+reason+')');
                 if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
                 else{_fetchNominatim();}
               }
-              var tid=setTimeout(_fb,12000);
+              var tid=setTimeout(function(){_fb('timeout');},12000);
+              // A) fetch 먼저 (vWorld CORS 지원 시)
+              var vDataUrl='https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key='+vKey+'&attrFilter=BAS_ID:=:'+zipcode+'&pageSize=1&geometry=true&srsName=EPSG:4326';
+              fetch(vDataUrl)
+              .then(function(r){return r.json();})
+              .then(function(res){
+                if(done)return;
+                var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
+                if(feats.length&&_applyVCoords(feats[0].geometry)){
+                  done=true;_cleanup();
+                  if(typeof _yToast==='function')_yToast('경계 fetch OK');
+                  return;
+                }
+                if(typeof _yToast==='function')_yToast('fetch빈결과→JSONP시도');
+              })
+              .catch(function(e){
+                if(typeof _yToast==='function')_yToast('fetch실패→JSONP:'+(e.message||'cors'));
+              });
+              // B) JSONP 병행 (fetch CORS 차단 시 대체)
               window[cbName]=function(res){
                 if(done)return; done=true;
                 _cleanup();
                 var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
-                if(feats.length){
-                  var c=_geomToCoords(feats[0].geometry);
-                  if(c.length>=4){
-                    var sLat=0,sLng=0;
-                    c.forEach(function(p){sLat+=p.lat;sLng+=p.lng;});
-                    _applyBoundary({coords:c,lat:sLat/c.length,lng:sLng/c.length});
-                    return;
-                  }
+                if(feats.length&&_applyVCoords(feats[0].geometry)){
+                  if(typeof _yToast==='function')_yToast('경계 JSONP OK');
+                  return;
                 }
+                if(typeof _yToast==='function')_yToast('JSONP빈결과→KV폴백');
                 if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
                 else{_fetchNominatim();}
               };
               var sc=document.createElement('script');
               sc.id=sid;
-              sc.onerror=_fb;
-              sc.src='https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key='+vKey+'&attrFilter=BAS_ID:=:'+zipcode+'&pageSize=1&geometry=true&srsName=EPSG:4326&callback='+cbName;
+              sc.onerror=function(){_fb('script-error');};
+              sc.src=vDataUrl+'&callback='+cbName;
               document.head.appendChild(sc);
             }
             // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
