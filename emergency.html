@@ -14282,7 +14282,7 @@ async function openDeliveryMap(){
             }
           }else{
             // 일반 주소 (동 없음) — 호/층 제거 후 건물 단위로 지오코딩
-            var gQ3=x.addr.replace(/,?\s*\d+\s*(층|호)\b.*/,'').replace(/\s+/g,' ').trim()||x.addr;
+            var gQ3=x.addr.replace(/,?\s*\d+\s*(층|호).*/,'').replace(/\s+/g,' ').trim()||x.addr;
             var gR3=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(gQ3)+'&size=1',
               {headers:{'Authorization':'KakaoAK '+kKey}});
             var gKd3=await gR3.json();
@@ -14500,7 +14500,9 @@ function _renderLeafletMap(locs){
         window._geoLocMarker.setLatLng(ll);
         if(locCircle){locCircle.setLatLng(ll);locCircle.setRadius(pos.coords.accuracy||30);}
       }
-    },{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+    },function(err){
+      if(err.code===1){var t=document.getElementById('geo-denied-hint');if(!t){var h=document.createElement('div');h.id='geo-denied-hint';h.style.cssText='position:absolute;bottom:60px;left:8px;z-index:1000;background:rgba(220,38,38,.9);color:#fff;font-size:11px;padding:5px 10px;border-radius:6px;pointer-events:none';h.textContent='위치 권한을 허용해 주세요';var mp=document.getElementById('dm-map');if(mp){mp.style.position='relative';mp.appendChild(h);setTimeout(function(){h.remove();},4000);}}}
+    },{enableHighAccuracy:false,maximumAge:10000,timeout:30000});
   }
 }
 
