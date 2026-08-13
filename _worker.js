@@ -18954,11 +18954,12 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
             const jr2=await fetch(`${jusoBase}&BBOX=${bbox}&SRSNAME=EPSG:4326`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
             if (jr2.ok){
               const jfc2=await jr2.json();
-              // BAS_ID / KARB_CD 필드만 정확히 매칭 (오탐 방지)
-              const f2=(jfc2.features||[]).find(f=>{
+              // 알려진 필드명 우선 → 전체 값 검색 폴백 (juso WFS 실제 필드명 불명)
+              const feats2=jfc2.features||[];
+              const f2=feats2.find(f=>{
                 const p=f.properties||{};
-                return ['BAS_ID','KARB_CD','BASEID','ZONE_NO','BAS_CD'].some(k=>String(p[k]||'')===zip);
-              });
+                return ['BAS_ID','KARB_CD','BASEID','ZONE_NO','BAS_CD','KARB_CD_M','ZIP','ZIPNO'].some(k=>String(p[k]||'')===zip);
+              })||feats2.find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
               if(f2)jFeats=[f2];
             }
           }
