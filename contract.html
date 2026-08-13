@@ -191,6 +191,10 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
       <button class="btn-sub" onclick="saveContract()">☁ 저장</button>
       <button class="btn-main" onclick="printContract()" style="margin-top:0">🖨 계약서 출력</button>
     </div>
+    <div style="margin:0 0 8px">
+      <button class="btn-main" id="esign-btn" onclick="requestEsign()" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:0">📱 전자서명 요청 (SMS 발송)</button>
+    </div>
+    <div id="esign-info" style="display:none;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--white);line-height:1.8;margin-bottom:8px"></div>
   </div>
 </div>
 
@@ -748,6 +752,44 @@ function setCTypeById(type){
 
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function requestEsign(){
+  var d=_buildData();
+  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
+  if(!d.phone){toast('전화번호를 입력하세요 (기사에게 OTP SMS 발송됩니다)','err');return;}
+  if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
+  if(!d.pay){toast('임금/수수료를 입력하세요','err');return;}
+  var btn=document.getElementById('esign-btn');
+  btn.disabled=true;btn.textContent='발송 중...';
+  var payload={
+    ctype:_ctype,name:d.name,phone:d.phone,
+    startDate:d.startDate,endDate:d.endDate||'',
+    loc:d.loc||'',pay:d.pay,payDay:d.payDay||'',payType:d.payType||'',
+    vehicle:getVal('c-vehicle'),special:d.special||'',
+    companyName:'엠비티아이(유)'
+  };
+  fetch('/api/contract/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      btn.disabled=false;btn.textContent='📱 전자서명 요청 (SMS 발송)';
+      if(data.ok){
+        toast('✅ OTP SMS 발송 완료 → '+d.phone,'ok');
+        var info=document.getElementById('esign-info');
+        if(info){
+          info.style.display='block';
+          info.innerHTML='<strong style="color:var(--green)">전자서명 링크 발송 완료</strong><br>'
+            +'계약 ID: <span style="font-family:monospace;color:var(--cyan)">'+esc(data.contractId||'')+'</span><br>'
+            +'서명 링크: <a href="'+esc(data.signUrl||'')+ '" target="_blank" style="color:var(--cyan)">'+esc(data.signUrl||'')+'</a>';
+        }
+      } else {
+        toast('❌ '+(data.error||'발송 실패'),'err');
+      }
+    })
+    .catch(function(e){
+      btn.disabled=false;btn.textContent='📱 전자서명 요청 (SMS 발송)';
+      toast('❌ 오류: '+e.message,'err');
+    });
+}
 </script>
 </body>
 </html>

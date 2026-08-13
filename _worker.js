@@ -1740,11 +1740,131 @@ async function acceptExchange(){
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
 
+      // ── 전자계약서 ─────────────────────────────────────────────────────────────
+      if (path === '/sign') return serveKVFile(env, 'contract-sign.html', 'text/html');
+      if (path === '/api/contract/view' && method === 'GET') {
+        const t = url.searchParams.get('t') || '';
+        if (!t) return new Response(JSON.stringify({ok:false,error:'token required'}),{status:400,headers:{'Content-Type':'application/json'}});
+        try {
+          const fsToken = await getAccessToken(env);
+          const docRes = await fetch(`${FS_BASE}/eContracts/${encodeURIComponent(t)}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
+          if (!docRes.ok) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
+          const fd = await docRes.json();
+          if (fd.error) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
+          const f = fd.fields || {};
+          const gs = k => f[k]?.stringValue || '';
+          return new Response(JSON.stringify({ok:true, contract:{
+            ctype:gs('ctype'), name:gs('name'), phone:gs('phone'),
+            startDate:gs('startDate'), endDate:gs('endDate'), loc:gs('loc'),
+            pay:gs('pay'), payDay:gs('payDay'), payType:gs('payType'),
+            vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
+            companyName:gs('companyName'), createdAt:gs('createdAt')
+          }}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      if (path === '/api/contract/otp' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, companyName } = body;
+          if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const fsToken = await getAccessToken(env);
+          const contractId = 'EC' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
+          const otp = String(Math.floor(100000 + Math.random() * 900000));
+          const now = new Date().toISOString();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+          await fetch(`${FS_BASE}/eContracts/${contractId}`, {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              ctype:{stringValue:ctype||'regular'}, name:{stringValue:name||''},
+              phone:{stringValue:phone}, startDate:{stringValue:startDate||''},
+              endDate:{stringValue:endDate||''}, loc:{stringValue:loc||''},
+              pay:{stringValue:String(pay||'')}, payDay:{stringValue:payDay||''},
+              payType:{stringValue:payType||''}, vehicle:{stringValue:vehicle||''},
+              special:{stringValue:special||''}, status:{stringValue:'pending'},
+              companyName:{stringValue:companyName||'엠비티아이(유)'}, createdAt:{stringValue:now}
+            }})
+          });
+          await fetch(`${FS_BASE}/contract_otps`, {
+            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              contractId:{stringValue:contractId}, phone:{stringValue:phone},
+              otp:{stringValue:otp}, expiresAt:{stringValue:expiresAt},
+              used:{booleanValue:false}, createdAt:{stringValue:now}
+            }})
+          });
+          const signUrl = `https://donway.ai.kr/sign?t=${contractId}`;
+          const smsText = `[DONWAY] ${name||'귀하'}님 계약서 전자서명\nOTP: ${otp} (10분 유효)\n서명: ${signUrl}`;
+          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
+            const dt = new Date().toISOString();
+            const sl = Math.random().toString(36).slice(2);
+            const enc = new TextEncoder();
+            const ck = await crypto.subtle.importKey('raw', enc.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+            const sg = await crypto.subtle.sign('HMAC', ck, enc.encode(dt+sl));
+            const sig = Array.from(new Uint8Array(sg)).map(b=>b.toString(16).padStart(2,'0')).join('');
+            await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`},
+              body: JSON.stringify({messages:[{to:phone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText}]})
+            }).catch(()=>{});
+          }
+          return new Response(JSON.stringify({ok:true, contractId, signUrl}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      if (path === '/api/contract/sign' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { token: contractId, otp, signatureB64, contentHash } = body;
+          if (!contractId || !otp || !signatureB64) return new Response(JSON.stringify({ok:false,error:'필수 파라미터 누락'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const fsToken = await getAccessToken(env);
+          const now = new Date().toISOString();
+          const qRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ structuredQuery:{
+              from:[{collectionId:'contract_otps'}],
+              where:{ compositeFilter:{ op:'AND', filters:[
+                {fieldFilter:{field:{fieldPath:'contractId'},op:'EQUAL',value:{stringValue:contractId}}},
+                {fieldFilter:{field:{fieldPath:'otp'},op:'EQUAL',value:{stringValue:String(otp)}}},
+                {fieldFilter:{field:{fieldPath:'used'},op:'EQUAL',value:{booleanValue:false}}}
+              ]}}, limit:1
+            }})
+          });
+          const qData = await qRes.json();
+          const otpDoc = qData?.[0]?.document;
+          if (!otpDoc) return new Response(JSON.stringify({ok:false,error:'OTP가 올바르지 않거나 만료되었습니다'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const expiresAt = otpDoc.fields?.expiresAt?.stringValue || '';
+          if (expiresAt && new Date(expiresAt) < new Date()) {
+            return new Response(JSON.stringify({ok:false,error:'OTP가 만료되었습니다. 다시 요청해 주세요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          }
+          await fetch(otpDoc.name + '?updateMask.fieldPaths=used&updateMask.fieldPaths=usedAt', {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{ used:{booleanValue:true}, usedAt:{stringValue:now} } })
+          });
+          const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
+          const ua = request.headers.get('User-Agent') || '';
+          await fetch(`${FS_BASE}/eContracts/${contractId}?updateMask.fieldPaths=status&updateMask.fieldPaths=signedAt&updateMask.fieldPaths=signatureB64&updateMask.fieldPaths=contentHash&updateMask.fieldPaths=ip&updateMask.fieldPaths=ua`, {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              status:{stringValue:'signed'}, signedAt:{stringValue:now},
+              signatureB64:{stringValue:signatureB64}, contentHash:{stringValue:contentHash||''},
+              ip:{stringValue:ip}, ua:{stringValue:ua}
+            }})
+          });
+          return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      // ── 전자계약서 끝 ─────────────────────────────────────────────────────────
+
+
 
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
       if (!path.startsWith('/api/') && method === 'GET') {
         const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
-        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
+        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/sign','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {

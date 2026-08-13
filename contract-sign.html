@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>DONWAY 계약서 전자서명</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#f0f2f5;color:#111;font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh;padding-bottom:40px}
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+.hd{background:#fff;border-radius:14px;padding:20px 24px;margin-bottom:14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.hd-logo{font-size:14px;font-weight:900;letter-spacing:3px;color:#0066ff;margin-bottom:6px}
+.hd-title{font-size:19px;font-weight:800;color:#111;margin-bottom:4px}
+.hd-sub{font-size:12px;color:#777}
+.cbox{background:#fff;border-radius:14px;padding:24px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow-y:auto;max-height:55vh}
+.ctitle{text-align:center;font-size:17pt;font-weight:900;letter-spacing:4px;padding-bottom:10px;border-bottom:3px double #000;margin-bottom:16px;line-height:1.4}
+.clause{margin-bottom:14px}
+.ch{font-size:10pt;font-weight:900;background:#f0f0f0;padding:5px 12px;border-left:4px solid #0066ff;margin-bottom:7px}
+.cb{font-size:9.5pt;padding:0 12px;line-height:1.9}
+.fill{border-bottom:1px solid #000;display:inline-block;min-width:60px;text-align:center;padding:0 6px;font-weight:700}
+.tbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:9pt}
+.tbl th{background:#f0f0f0;padding:5px 7px;border:1px solid #ccc;text-align:center;font-weight:700}
+.tbl td{padding:5px 7px;border:1px solid #ccc}
+.sig-sec{background:#fff;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.step-label{font-size:13px;font-weight:800;color:#111;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.step-num{width:22px;height:22px;background:#0066ff;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
+.step-sub{font-size:11px;color:#777;margin-bottom:14px;margin-left:30px}
+.otp-row{display:flex;gap:10px;margin-bottom:18px}
+.otp-in{flex:1;padding:14px;border:2px solid #ddd;border-radius:10px;font-size:26px;font-weight:700;text-align:center;letter-spacing:10px;color:#0066ff;outline:none;font-family:monospace;transition:.2s}
+.otp-in:focus{border-color:#0066ff;background:#f0f5ff}
+.canvas-wrap{border:2px dashed #ccc;border-radius:10px;background:#fafafa;position:relative;overflow:hidden;margin-bottom:8px}
+canvas{display:block;touch-action:none;cursor:crosshair;width:100%}
+.canvas-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#bbb;pointer-events:none;white-space:nowrap;user-select:none}
+.btn-clr{background:none;border:1px solid #ddd;border-radius:8px;padding:6px 16px;font-size:11px;color:#777;cursor:pointer;margin-bottom:16px;transition:.2s}
+.btn-clr:hover{border-color:#999;color:#333}
+.agree-row{display:flex;align-items:flex-start;gap:10px;background:#f8faff;border:1px solid #e0e9ff;border-radius:10px;padding:14px;margin-bottom:16px}
+.agree-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;margin-top:1px;cursor:pointer;accent-color:#0066ff}
+.agree-text{font-size:11px;color:#555;line-height:1.8}
+.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,#0066ff,#0099ff);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:1px;transition:.3s}
+.btn-submit:active{transform:scale(.98)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+.done-box{background:#fff;border-radius:14px;padding:48px 24px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.done-ic{margin-bottom:16px;display:flex;justify-content:center}
+.done-title{font-size:22px;font-weight:900;color:#059669;margin-bottom:10px}
+.done-sub{font-size:13px;color:#666;line-height:1.9}
+.loading{text-align:center;padding:60px 16px;color:#888;font-size:14px}
+.err-box{background:#fff3f3;border:1px solid #fca5a5;border-radius:12px;padding:24px;text-align:center;color:#dc2626;font-size:14px;line-height:1.7}
+.seal-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.seal-box{border:1px solid #ccc;border-radius:6px;padding:14px;text-align:center}
+.seal-lbl{font-size:9pt;color:#888;margin-bottom:5px}
+.seal-name{font-size:12pt;font-weight:900;margin-bottom:10px}
+.seal-line{border-bottom:1.5px solid #000;height:32px;margin:0 10px}
+#_tw{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;width:calc(100% - 32px);max-width:400px}
+._tn{background:#1e293b;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transition:opacity .25s;text-align:center}
+._tn.err{background:#dc2626}
+._tn.ok{background:#059669}
+._tn.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div class="hd-logo">DONWAY</div>
+    <div class="hd-title">계약서 전자서명</div>
+    <div class="hd-sub">아래 계약 내용을 확인하고 서명해 주세요</div>
+  </div>
+  <div id="app"><div class="loading">계약서 불러오는 중...</div></div>
+</div>
+<div id="_tw"></div>
+
+<script>
+(function(){
+function _toast(msg, type){
+  var tw = document.getElementById('_tw');
+  var el = document.createElement('div');
+  el.className = '_tn' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  tw.appendChild(el);
+  requestAnimationFrame(function(){ el.classList.add('show'); });
+  setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ el.remove(); }, 300); }, 3000);
+}
+var _c = null;
+var _token = new URLSearchParams(location.search).get('t');
+
+if (!_token) {
+  document.getElementById('app').innerHTML = '<div class="err-box">올바르지 않은 링크입니다.<br>문자로 받은 링크를 다시 확인해 주세요.</div>';
+  return;
+}
+
+fetch('/api/contract/view?t=' + encodeURIComponent(_token))
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (!d.ok) {
+      document.getElementById('app').innerHTML = '<div class="err-box">' + esc(d.error || '계약서를 찾을 수 없습니다.') + '</div>';
+      return;
+    }
+    _c = d.contract;
+    if (_c.status === 'signed') { showDone(true); return; }
+    renderForm();
+  })
+  .catch(function(e){
+    document.getElementById('app').innerHTML = '<div class="err-box">불러오기 실패: ' + esc(e.message) + '</div>';
+  });
+
+function renderForm(){
+  var today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('app').innerHTML =
+    '<div class="cbox" id="contract-content">' + buildHtml(_c, today) + '</div>' +
+    '<div class="sig-sec">' +
+      '<div class="step-label"><span class="step-num">1</span>OTP 입력</div>' +
+      '<div class="step-sub">등록된 휴대폰(' + maskPhone(_c.phone) + ')으로 발송된 6자리 숫자를 입력하세요.</div>' +
+      '<div class="otp-row"><input class="otp-in" id="otp-in" type="tel" inputmode="numeric" maxlength="6" placeholder="_ _ _ _ _ _" autocomplete="one-time-code"></div>' +
+      '<div class="step-label"><span class="step-num">2</span>서명</div>' +
+      '<div class="step-sub">아래 서명란에 손가락 또는 마우스로 서명하세요.</div>' +
+      '<div class="canvas-wrap" id="cwrap"><canvas id="sig-cv"></canvas><div class="canvas-hint" id="cv-hint">여기에 서명하세요</div></div>' +
+      '<button class="btn-clr" onclick="clearSig()">서명 지우기</button>' +
+      '<div class="agree-row"><input type="checkbox" id="agree"><div class="agree-text">위 계약서 내용을 충분히 읽고 이해했으며, 전자서명법 제2조에 따라 전자서명으로 계약에 동의합니다. 본 서명은 자필 서명과 동일한 법적 효력을 가집니다.</div></div>' +
+      '<button class="btn-submit" id="sub-btn" onclick="doSign()">서명 및 계약 완료</button>' +
+    '</div>';
+  initCanvas();
+}
+
+function buildHtml(c, today){
+  if (c.ctype === 'courier' || c.ctype === 'quickflex') {
+    return '<div class="ctitle">영업점 – 택배기사<br>위·수탁 표준계약서</div>' +
+      '<div class="clause"><div class="ch">제1조 계약 당사자</div><div class="cb">' +
+      '<table class="tbl"><tr><th>구분</th><th>영업점 (甲)</th><th>택배기사 (乙)</th></tr>' +
+      '<tr><td>업체명/성명</td><td>엠비티아이(유)</td><td>' + esc(c.name) + '</td></tr>' +
+      '<tr><td>사업자/주민번호</td><td>373-86-02536</td><td>&nbsp;</td></tr>' +
+      '<tr><td>연락처</td><td>051-711-3103</td><td>' + esc(maskPhone(c.phone)) + '</td></tr>' +
+      '<tr><td>주소</td><td>부산시 수영로 668, 607호</td><td>&nbsp;</td></tr>' +
+      '</table></div></div>' +
+      '<div class="clause"><div class="ch">제2조 계약 기간 및 담당구역</div><div class="cb">' +
+      '① 계약 기간: ' + esc(c.startDate) + ' ~ ' + esc(c.endDate || '1년') + '<br>' +
+      '② 담당 구역: ' + esc(c.loc || '') + '<br>' +
+      '③ 구역 변경 시 양 당사자 합의하에 변경할 수 있다.</div></div>' +
+      '<div class="clause"><div class="ch">제3조 수수료</div><div class="cb">' +
+      '① 1건당 <span class="fill">' + esc(c.pay) + '</span>원<br>' +
+      '② 지급일: ' + esc(c.payDay || '매월 25일') + '<br>' +
+      '③ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>' +
+      '<div class="clause"><div class="ch">제4조 차량 및 종사자격</div><div class="cb">' +
+      '① 차량번호: ' + esc(c.vehicle || '') + '<br>' +
+      '② 乙은 화물자동차 운수사업법 등 관련 법령에서 정한 자격 요건을 유지하여야 한다.<br>' +
+      '③ 차량보험(화물배상책임 포함)은 乙이 직접 가입·유지하여야 한다.</div></div>' +
+      '<div class="clause"><div class="ch">제5조 의무 사항</div><div class="cb">' +
+      '① 乙은 배송 서비스 기준(SLA)을 준수하여야 한다.<br>' +
+      '② 乙은 배송 물품을 분실·훼손하지 않도록 주의의무를 다하여야 한다.<br>' +
+      '③ 乙은 정당한 이유 없이 배송을 거부하거나 지연하여서는 아니 된다.<br>' +
+      '④ 甲은 乙의 업무 수행에 필요한 정보와 지원을 제공하여야 한다.</div></div>' +
+      '<div class="clause"><div class="ch">제6조 계약의 해지</div><div class="cb">' +
+      '① 일방이 계약을 해지하고자 할 경우 60일 전에 서면으로 2회 이상 통보하여야 한다.<br>' +
+      '② 총 계약기간 6년 이하 시 갱신 거절 불가 (생활물류서비스법 제11조).<br>' +
+      '③ 중대한 귀책사유가 있는 경우 즉시 해지할 수 있다.<br>' +
+      '④ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>' +
+      (c.special ? '<div class="clause"><div class="ch">특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
+      '<div class="seal-row">' +
+        '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">엠비티아이(유)</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">대표 김형우 (인)</div></div>' +
+        '<div class="seal-box"><div class="seal-lbl">乙 (택배기사)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
+      '</div>' +
+      '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';
+  }
+  return '<div class="ctitle">근 로 계 약 서</div>' +
+    '<div class="clause"><div class="ch">제1조 근로자 정보</div><div class="cb">' +
+    '성명: <strong>' + esc(c.name) + '</strong><br>' +
+    '연락처: ' + esc(maskPhone(c.phone)) + '</div></div>' +
+    '<div class="clause"><div class="ch">제2조 근로 기간 및 장소</div><div class="cb">' +
+    '계약 기간: ' + esc(c.startDate) + (c.endDate ? ' ~ ' + esc(c.endDate) : ' ~ 기간 미정') + '<br>' +
+    '근무 장소: ' + esc(c.loc || '') + '</div></div>' +
+    '<div class="clause"><div class="ch">제3조 임금</div><div class="cb">' +
+    '임금: <strong>' + esc(c.pay) + '원</strong> / ' + esc(c.payType || '건당') + '<br>' +
+    '지급일: ' + esc(c.payDay || '') + '</div></div>' +
+    '<div class="clause"><div class="ch">제4조 일반 조항</div><div class="cb">' +
+    '① 본 계약에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.<br>' +
+    '② 계약 해지 시 일방은 30일 전에 상대방에게 통보한다.</div></div>' +
+    (c.special ? '<div class="clause"><div class="ch">특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
+    '<div class="seal-row">' +
+      '<div class="seal-box"><div class="seal-lbl">사업주 (갑)</div><div class="seal-name">엠비티아이(유)</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">대표 김형우 (인)</div></div>' +
+      '<div class="seal-box"><div class="seal-lbl">근로자 (을)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
+    '</div>' +
+    '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';
+}
+
+var _cv, _ctx, _drawing = false, _signed = false;
+
+function initCanvas(){
+  _cv = document.getElementById('sig-cv');
+  if (!_cv) return;
+  var dpr = window.devicePixelRatio || 1;
+  var w = document.getElementById('cwrap').offsetWidth || 560;
+  var h = 140;
+  _cv.width = w * dpr;
+  _cv.height = h * dpr;
+  _cv.style.width = w + 'px';
+  _cv.style.height = h + 'px';
+  _ctx = _cv.getContext('2d');
+  _ctx.scale(dpr, dpr);
+  _ctx.strokeStyle = '#111';
+  _ctx.lineWidth = 2.5;
+  _ctx.lineCap = 'round';
+  _ctx.lineJoin = 'round';
+
+  function getPos(e) {
+    var r = _cv.getBoundingClientRect();
+    var s = e.touches ? e.touches[0] : e;
+    return { x: (s.clientX - r.left) * (w / r.width), y: (s.clientY - r.top) * (h / r.height) };
+  }
+  _cv.addEventListener('mousedown', function(e){ _drawing=true; var p=getPos(e); _ctx.beginPath(); _ctx.moveTo(p.x,p.y); e.preventDefault(); });
+  _cv.addEventListener('mousemove', function(e){ if(!_drawing)return; var p=getPos(e); _ctx.lineTo(p.x,p.y); _ctx.stroke(); markSigned(); e.preventDefault(); });
+  _cv.addEventListener('mouseup', function(){ _drawing=false; });
+  _cv.addEventListener('mouseleave', function(){ _drawing=false; });
+  _cv.addEventListener('touchstart', function(e){ _drawing=true; var p=getPos(e); _ctx.beginPath(); _ctx.moveTo(p.x,p.y); e.preventDefault(); },{passive:false});
+  _cv.addEventListener('touchmove', function(e){ if(!_drawing)return; var p=getPos(e); _ctx.lineTo(p.x,p.y); _ctx.stroke(); markSigned(); e.preventDefault(); },{passive:false});
+  _cv.addEventListener('touchend', function(){ _drawing=false; });
+}
+
+function markSigned(){
+  _signed = true;
+  var hint = document.getElementById('cv-hint');
+  if (hint) hint.style.display = 'none';
+}
+
+function clearSig(){
+  if (!_ctx || !_cv) return;
+  _ctx.clearRect(0, 0, _cv.width, _cv.height);
+  _signed = false;
+  var hint = document.getElementById('cv-hint');
+  if (hint) hint.style.display = '';
+}
+
+async function doSign(){
+  var otp = (document.getElementById('otp-in').value || '').replace(/\D/g,'');
+  if (otp.length !== 6) { _toast('OTP 6자리를 입력해 주세요.', 'err'); return; }
+  if (!_signed) { _toast('서명란에 서명해 주세요.', 'err'); return; }
+  if (!document.getElementById('agree').checked) { _toast('동의 체크박스를 선택해 주세요.', 'err'); return; }
+
+  var btn = document.getElementById('sub-btn');
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+
+  try {
+    var contractText = [_c.ctype||'',_c.name||'',_c.startDate||'',_c.endDate||'',_c.loc||'',String(_c.pay||''),_c.payDay||'',_c.vehicle||''].join('|');
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(contractText));
+    var hash = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+
+    var sigB64 = _cv.toDataURL('image/png');
+
+    var res = await fetch('/api/contract/sign', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token: _token, otp: otp, signatureB64: sigB64, contentHash: hash })
+    });
+    var d = await res.json();
+    if (d.ok) {
+      showDone(false);
+    } else {
+      _toast(d.error || '서명 처리에 실패했습니다. 다시 시도해 주세요.', 'err');
+      btn.disabled = false;
+      btn.textContent = '서명 및 계약 완료';
+    }
+  } catch(e) {
+    _toast('오류: ' + e.message, 'err');
+    btn.disabled = false;
+    btn.textContent = '서명 및 계약 완료';
+  }
+}
+
+function showDone(alreadySigned){
+  var now = new Date().toLocaleString('ko-KR');
+  document.getElementById('app').innerHTML =
+    '<div class="done-box">' +
+      '<div class="done-ic"><svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div>' +
+      '<div class="done-title">' + (alreadySigned ? '이미 서명된 계약서입니다' : '서명 완료') + '</div>' +
+      '<div class="done-sub">' +
+        (alreadySigned
+          ? '이 계약서는 이미 전자서명이 완료되었습니다.<br>문의사항은 담당 대리점에 연락해 주세요.'
+          : '계약서에 전자서명이 완료되었습니다.<br>서명된 계약서는 대리점에서 확인 가능합니다.<br><br>서명 일시: ' + now + '<br><br><strong>DONWAY 전자계약 시스템</strong><br>전자서명법 제2조 기반 법적 효력 보장') +
+      '</div>' +
+    '</div>';
+}
+
+function maskPhone(p){
+  if (!p) return '***-****-****';
+  var n = p.replace(/[^0-9]/g,'');
+  if (n.length === 11) return n.slice(0,3) + '-****-' + n.slice(7);
+  return p.replace(/\d(?=\d{4})/g, '*');
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+})();
+</script>
+</body>
+</html>
