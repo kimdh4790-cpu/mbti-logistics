@@ -2227,6 +2227,8 @@ async function acceptExchange(){
       }
       /* /api/claude — AI 인사이트·리뷰답글 프록시 (filo-margin.js, filo-settings.js) */
       if (path === '/api/claude' && method === 'POST') {
+        const _claudeUser = await verifyFirebaseToken(request, env);
+        if (!_claudeUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
         if(!apiKey) return new Response(JSON.stringify({error:'API key not configured'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
@@ -3298,6 +3300,8 @@ fetch('/qr/members?did='+DID)
 
       // ── /api/routeiq-match — ROUTEIQ AI 맞춤 공고 추천
       if (path === '/api/routeiq-match' && method === 'POST') {
+        const _riqUser = await verifyFirebaseToken(request, env);
+        if (!_riqUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { driver, posts } = body;
@@ -3360,6 +3364,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/cs-bot — AI CS봇 (고객 문의 자동 답변 + FCM 푸시)
       if (path === '/api/cs-bot' && method === 'POST') {
+        const _csbUser = await verifyFirebaseToken(request, env);
+        if (!_csbUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did, question, fcmToken, lang } = body;
@@ -3412,6 +3418,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/ai-insight — 대시보드 한줄 브리핑
       if (path === '/api/ai-insight' && method === 'POST') {
+        const _insUser = await verifyFirebaseToken(request, env);
+        if (!_insUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did } = body;
@@ -3451,6 +3459,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/ai-forecast — AI 매출 예측 (내일+7일)
       if (path === '/api/ai-forecast' && method === 'POST') {
+        const _fcstUser = await verifyFirebaseToken(request, env);
+        if (!_fcstUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did } = body;
@@ -3521,6 +3531,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/ai-menu-recommend — AI 메뉴 추천 (날씨·시간대·재고)
       if (path === '/api/ai-menu-recommend' && method === 'POST') {
+        const _mrUser = await verifyFirebaseToken(request, env);
+        if (!_mrUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did, lat, lon } = body;
@@ -3573,6 +3585,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/ai-schedule — AI 직원 스케줄 최적화
       if (path === '/api/ai-schedule' && method === 'POST') {
+        const _schedUser = await verifyFirebaseToken(request, env);
+        if (!_schedUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did } = body;
@@ -3634,6 +3648,8 @@ ${JSON.stringify(postSummary)}
 
       // ── /api/ai-voice-order — 음성 주문 파싱
       if (path === '/api/ai-voice-order' && method === 'POST') {
+        const _voUser = await verifyFirebaseToken(request, env);
+        if (!_voUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const { did, text } = body;
@@ -3725,7 +3741,7 @@ ${JSON.stringify(postSummary)}
         try {
           let body; try{body=await request.json();}catch(e){body={};}
           const did = body.did || 'haemul_gwangan_2026';
-          if (body.secret !== (env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ds = env.DEMO_SECRET||''; if(!_ds||body.secret!==_ds) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token = await getAccessToken(env);
           function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
           function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
@@ -3815,7 +3831,7 @@ ${JSON.stringify(postSummary)}
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         try {
           let body; try{body=await request.json();}catch(e){body={};}
-          if(body.secret!==(env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ds2=env.DEMO_SECRET||''; if(!_ds2||body.secret!==_ds2) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           function fsv2(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv2)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv2(x)]))}};return{nullValue:null};}
           function fsd2(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv2(v)]))}}}
@@ -3906,7 +3922,7 @@ ${JSON.stringify(postSummary)}
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         try {
           let body; try{body=await request.json();}catch(e){body={};}
-          if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ds3=env.DEMO_SECRET||''; if(!_ds3||body.secret!==_ds3) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           const FB_DOC=`projects/mbti-logistics/databases/(default)/documents`;
           const DEMO_IDS=['demo_cafe','demo_korean','demo_japanese','demo_snack','demo_western','demo_bakery'];
@@ -5433,6 +5449,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
     // ── 회사 승인 요청 (/api/approval-request) ──
     if (path === '/api/approval-request' && method === 'POST') {
+      const _arUser = await verifyFirebaseToken(request, env);
+      if (!_arUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { uid, companyName, email, phone, serviceType, services, bizNumber } = body;
@@ -7109,6 +7127,8 @@ service cloud.firestore {
 
     // ── 관제센터 알림 발송 (/api/ctrl-notify) ──
     if (path === '/api/ctrl-notify' && method === 'POST') {
+      const _cnUser = await verifyFirebaseToken(request, env);
+      if (!_cnUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { type, dealerId, title, body: msgBody, data } = body;
@@ -7321,6 +7341,8 @@ service cloud.firestore {
 
     // ── 로그인 알림 (/api/login-notify) ──
     if (path === '/api/login-notify' && method === 'POST') {
+      const _lnUser = await verifyFirebaseToken(request, env);
+      if (!_lnUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { dealerId, loginName, timeStr } = body;
@@ -7388,6 +7410,8 @@ service cloud.firestore {
 
     // ── DONWAY 팝빌 전자세금계산서 역발행 (/api/popbill-issue) ──
     if (path === '/api/popbill-issue' && method === 'POST') {
+      const _pbAdmin = await requireAdmin(request, env);
+      if (!_pbAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body = await request.json();
         const result = await popbillIssueReverseDonway(env, body);
@@ -7528,6 +7552,8 @@ service cloud.firestore {
 
     // ── 로그인 알림 푸시 (/api/send-push) ──
     if (path === '/api/send-push' && method === 'POST') {
+      const _spAdmin = await requireAdmin(request, env);
+      if (!_spAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { token, title, body: msgBody } = body;
@@ -7558,6 +7584,8 @@ service cloud.firestore {
 
     // ── 카카오 알림톡 (/api/send-alimtalk) — Aligo ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
+      const _atAdmin = await requireAdmin(request, env);
+      if (!_atAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
@@ -7610,6 +7638,8 @@ service cloud.firestore {
 
     // ══ Aligo SMS 자동발송 ══
     if (path === '/api/send-sms' && method === 'POST') {
+      const _smsAdmin = await requireAdmin(request, env);
+      if (!_smsAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       const headers = {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json'
@@ -8112,6 +8142,8 @@ service cloud.firestore {
     // ★ /api/link-account — 3도메인 통합 계정 연결
     // 같은 이메일로 donway/filo/mbti 가입 시 companies 통합
     if (path === '/api/link-account' && method === 'POST') {
+      const _laAdmin = await requireAdmin(request, env);
+      if (!_laAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { email, fromDomain } = body;
