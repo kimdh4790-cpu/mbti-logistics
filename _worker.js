@@ -18744,17 +18744,25 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         } catch(_){}
       }
       if (!jFeats) {
-        // BBOX 폴백 (KV centroid가 있는 경우)
+        // BBOX 폴백 (KV centroid → WGS84 BBOX, SRSNAME=EPSG:4326으로 변환 없이 사용)
         const kvRaw=await env.DONWAY_ASSETS.get('basidco:'+zip);
         if (kvRaw) {
           const kv=JSON.parse(kvRaw);
           if (Array.isArray(kv)&&kv.length) {
             const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
             const cLat=s.lat/kv.length, cLng=s.lng/kv.length;
-            const tm=_wgs84ToTM(cLat,cLng), pad=3000;
-            const bbox=`${tm.x-pad},${tm.y-pad},${tm.x+pad},${tm.y+pad},EPSG:5179`;
-            const jr2=await fetch(`${jusoBase}&BBOX=${bbox}`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
-            if (jr2.ok){const jfc2=await jr2.json();const f2=(jfc2.features||[]).find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));if(f2)jFeats=[f2];}
+            const d=0.04; // ±0.04° ≈ ±4km
+            const bbox=`${cLng-d},${cLat-d},${cLng+d},${cLat+d},EPSG:4326`;
+            const jr2=await fetch(`${jusoBase}&BBOX=${bbox}&SRSNAME=EPSG:4326`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
+            if (jr2.ok){
+              const jfc2=await jr2.json();
+              // BAS_ID / KARB_CD 필드만 정확히 매칭 (오탐 방지)
+              const f2=(jfc2.features||[]).find(f=>{
+                const p=f.properties||{};
+                return ['BAS_ID','KARB_CD','BASEID','ZONE_NO','BAS_CD'].some(k=>String(p[k]||'')===zip);
+              });
+              if(f2)jFeats=[f2];
+            }
           }
         }
       }
@@ -18762,10 +18770,17 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const feat=jFeats[0];
         if (feat?.geometry) {
           const ring=feat.geometry.type==='Polygon'?feat.geometry.coordinates[0]:feat.geometry.type==='MultiPolygon'?feat.geometry.coordinates[0][0]:[];
-          const coords=ring.map(c=>_tmToWgs84(c[0],c[1]));
+          // SRSNAME=EPSG:4326 → [lng,lat] 순서, TM변환 불필요
+          const coords=ring.map(c=>({lat:c[1],lng:c[0]}));
           if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
             const cen=_centroid(coords);
             return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
+          }
+          // WGS84 실패 시 EPSG:5179 TM 변환 시도
+          const coords5179=ring.map(c=>_tmToWgs84(c[0],c[1]));
+          if (coords5179.length>=4&&coords5179[0].lat>33&&coords5179[0].lat<39&&coords5179[0].lng>124) {
+            const cen=_centroid(coords5179);
+            return new Response(JSON.stringify({ok:true,coords:coords5179,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
           }
         }
       }
