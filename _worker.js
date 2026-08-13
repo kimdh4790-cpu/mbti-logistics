@@ -19019,11 +19019,11 @@ function _exportSettleCSV(){
   var months=window._adashMonths,order=window._adashOrder;
   if(!months||!order){_yToast('데이터를 먼저 로드해주세요');return;}
   var bom='﻿';
-  var header='월,완료건수,운임합계(원),수수료(원),순수입(원)\n';
+  var header='월,완료건수,운임합계(원),수수료(원),순수입(원)\\n';
   var rows=order.map(function(k){
     var m=months[k];
     return k+','+m.cnt+','+m.amt+','+m.fee+','+m.net;
-  }).join('\n');
+  }).join('\\n');
   var csv=bom+header+rows;
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var url=URL.createObjectURL(blob);
