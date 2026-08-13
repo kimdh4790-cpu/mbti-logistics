@@ -4287,7 +4287,7 @@ function _showMapModal(locs){
         }).join('')
         +'</div></div>'
       :(isDone?'<div style="margin-left:32px;margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.3)">사진 없음</div>':'');
-    return '<div data-map-idx="'+i+'" style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px;transition:box-shadow .2s">'
+    return '<div data-map-idx="'+i+'" data-addr="'+(x.addr||'').replace(/"/g,'&quot;')+'" style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px;transition:box-shadow .2s">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
       +'<b style="font-size:13px;flex:1">'+(x.recipient||'미확인')+warn+'</b>'
@@ -4316,6 +4316,7 @@ function _showMapModal(locs){
     +'<span id="map-filter-txt" style="font-size:12px;color:#c9a84c;flex:1;font-weight:700"></span>'
     +'<button onclick="_mapShowAll()" style="padding:4px 14px;background:#c9a84c;border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">전체 보기</button>'
     +'</div>'
+    +'<div id="ho-filter-row" style="display:none;flex-shrink:0;padding:8px 16px;overflow-x:auto;white-space:nowrap;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.07)"></div>'
     +'<div id="dm-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 24px">'
     +listHtml+'</div></div></div>'
   );
@@ -4415,6 +4416,34 @@ function _renderLeafletMap(locs){
             var ba2=_baseAddr(grp.items[0].addr||'');
             txt.textContent=(ba2||grp.items[0].addr||'')+(n>1?' · '+n+'건':'');
           }
+          // 호수 필터 버튼 렌더링
+          var hoRow=mo.querySelector('#ho-filter-row');
+          if(hoRow){
+            if(n>1){
+              // idxList의 각 항목에서 호수 추출
+              var hoList=idxList.map(function(idx){
+                var c=mo.querySelector('[data-map-idx="'+idx+'"]');
+                var addr=c?c.getAttribute('data-addr'):'';
+                var hm=(addr||'').match(/(\d+)\s*호/);
+                return {idx:idx, ho:hm?hm[1]+'호':'—', label:hm?hm[1]+'호':'—'};
+              });
+              var btns='<button onclick="_hoFilterAll()" '
+                +'style="display:inline-block;margin-right:6px;padding:5px 12px;background:#c9a84c;border:none;border-radius:20px;color:#08101f;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation">전체</button>';
+              hoList.forEach(function(h){
+                btns+='<button onclick="_hoFilter('+h.idx+')" '
+                  +'style="display:inline-block;margin-right:6px;padding:5px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation" '
+                  +'data-ho-idx="'+h.idx+'">'+h.label+'</button>';
+              });
+              hoRow.innerHTML=btns;
+              hoRow.style.display='block';
+              // 현재 보이는 idxList를 전역 저장
+              window._curHoIdxList=idxList.slice();
+            }else{
+              hoRow.innerHTML='';
+              hoRow.style.display='none';
+              window._curHoIdxList=null;
+            }
+          }
         });
     })(idxList,grp);
   });
@@ -4469,6 +4498,51 @@ function _mapShowAll(){
   for(var i=0;i<allCards.length;i++) allCards[i].style.display='';
   var bar=mo.querySelector('#map-filter-bar');
   if(bar)bar.style.display='none';
+  var hoRow=mo.querySelector('#ho-filter-row');
+  if(hoRow){hoRow.innerHTML='';hoRow.style.display='none';}
+  window._curHoIdxList=null;
+}
+function _hoFilter(targetIdx){
+  var mo=document.getElementById('delivery-map-mo');
+  if(!mo)return;
+  var idxList=window._curHoIdxList||[];
+  // 현재 클러스터 내 카드만 표시/숨김
+  idxList.forEach(function(idx){
+    var c=mo.querySelector('[data-map-idx="'+idx+'"]');
+    if(c) c.style.display=(idx===targetIdx)?'':'none';
+  });
+  // 선택된 카드로 스크롤
+  var sel=mo.querySelector('[data-map-idx="'+targetIdx+'"]');
+  if(sel) sel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  // 버튼 활성화 표시
+  var btns=mo.querySelectorAll('#ho-filter-row button[data-ho-idx]');
+  for(var b=0;b<btns.length;b++){
+    var isActive=parseInt(btns[b].getAttribute('data-ho-idx'))===targetIdx;
+    btns[b].style.background=isActive?'#c9a84c':'rgba(255,255,255,.1)';
+    btns[b].style.color=isActive?'#08101f':'#fff';
+    btns[b].style.border=isActive?'none':'1px solid rgba(255,255,255,.2)';
+  }
+  // 전체 버튼 비활성화
+  var allBtn=mo.querySelector('#ho-filter-row button[onclick="_hoFilterAll()"]');
+  if(allBtn){allBtn.style.background='rgba(255,255,255,.1)';allBtn.style.color='#fff';}
+}
+function _hoFilterAll(){
+  var mo=document.getElementById('delivery-map-mo');
+  if(!mo)return;
+  var idxList=window._curHoIdxList||[];
+  idxList.forEach(function(idx){
+    var c=mo.querySelector('[data-map-idx="'+idx+'"]');
+    if(c) c.style.display='';
+  });
+  // 전체 버튼 활성화
+  var allBtn=mo.querySelector('#ho-filter-row button[onclick="_hoFilterAll()"]');
+  if(allBtn){allBtn.style.background='#c9a84c';allBtn.style.color='#08101f';}
+  var btns=mo.querySelectorAll('#ho-filter-row button[data-ho-idx]');
+  for(var b=0;b<btns.length;b++){
+    btns[b].style.background='rgba(255,255,255,.1)';
+    btns[b].style.color='#fff';
+    btns[b].style.border='1px solid rgba(255,255,255,.2)';
+  }
 }
 
 function _openPhotoFull(url){
