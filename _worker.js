@@ -602,6 +602,118 @@ async function fsGet(token, collectionId, docId) {
   return res.json();
 }
 
+// ── No-Show Penalty Job ───────────────────────────────────────────────────────
+// 승인 후 48시간 경과, 노쇼 경고 발생, 아직 완료 안된 apply → trustScore -10
+async function runNoShowPenaltyJob(env) {
+  try {
+    const token = await getAccessToken(env);
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const rows = await fetch(`${FS_BASE}:runQuery`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'yongcha_applies' }],
+        where: { compositeFilter: { op: 'AND', filters: [
+          { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'approved' } } },
+          { fieldFilter: { field: { fieldPath: 'noShowWarned' }, op: 'EQUAL', value: { booleanValue: true } } },
+          { fieldFilter: { field: { fieldPath: 'penaltyApplied' }, op: 'EQUAL', value: { booleanValue: false } } },
+          { fieldFilter: { field: { fieldPath: 'noShowWarnedAt' }, op: 'LESS_THAN', value: { timestampValue: cutoff } } }
+        ] } }
+      } })
+    }).then(r => r.json()).catch(() => []);
+    let penalized = 0;
+    for (const row of (rows || [])) {
+      if (!row.document) continue;
+      const f = row.document.fields || {};
+      const driverId = f.driverId?.stringValue;
+      const applyId = row.document.name.split('/').pop();
+      if (!driverId) continue;
+      const userDoc = await fetch(`${FS_BASE}/yongcha_users/${driverId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(r => r.json()).catch(() => ({}));
+      const uf = userDoc.fields || {};
+      const curScore = parseInt(uf.trustScore?.integerValue || uf.trustScore?.doubleValue || 60);
+      const newScore = Math.max(0, curScore - 10);
+      const noShowCount = parseInt(uf.noShowCount?.integerValue || 0) + 1;
+      await fsPatch(token, `${FS_BASE}/yongcha_users/${driverId}`, {
+        trustScore: { integerValue: newScore },
+        noShowCount: { integerValue: noShowCount }
+      }).catch(() => {});
+      await fsPatch(token, `${FS_BASE}/yongcha_applies/${applyId}`, {
+        penaltyApplied: { booleanValue: true },
+        status: { stringValue: 'noshow' }
+      }).catch(() => {});
+      penalized++;
+    }
+    console.log(`[cron-noshowpenalty] penalized=${penalized}`);
+  } catch (e) {
+    console.error('[cron-noshowpenalty]', e.message);
+  }
+}
+
+// ── Settlement Alert Job ──────────────────────────────────────────────────────
+// 정산 pending 7일 초과 → 대리점에 FCM 알림
+async function runSettlementAlertJob(env) {
+  try {
+    const token = await getAccessToken(env);
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const rows = await fetch(`${FS_BASE}:runQuery`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'yongcha_settlements' }],
+        where: { compositeFilter: { op: 'AND', filters: [
+          { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'pending' } } },
+          { fieldFilter: { field: { fieldPath: 'alertSent' }, op: 'EQUAL', value: { booleanValue: false } } },
+          { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'LESS_THAN', value: { timestampValue: cutoff } } }
+        ] } }
+      } })
+    }).then(r => r.json()).catch(() => []);
+    let alerted = 0;
+    const fcmUrl = 'https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send';
+    for (const row of (rows || [])) {
+      if (!row.document) continue;
+      const f = row.document.fields || {};
+      const settleId = row.document.name.split('/').pop();
+      const agencyId = f.agencyId?.stringValue;
+      const driverName = f.driverName?.stringValue || '기사';
+      const amount = parseInt(f.amount?.integerValue || f.amount?.doubleValue || 0);
+      if (!agencyId) continue;
+      const tokenRows = await fetch(`${FS_BASE}:runQuery`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structuredQuery: {
+          from: [{ collectionId: 'yongcha_fcm_tokens' }],
+          where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL', value: { stringValue: agencyId } } },
+          limit: 3
+        } })
+      }).then(r => r.json()).catch(() => []);
+      for (const tr of (tokenRows || [])) {
+        if (!tr.document) continue;
+        const fcmToken = tr.document.fields?.token?.stringValue;
+        if (!fcmToken) continue;
+        await fetch(fcmUrl, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: {
+            token: fcmToken,
+            notification: { title: '정산 미지급 알림', body: `${driverName}님 정산 ${amount.toLocaleString()}원이 7일째 미지급 상태예요` },
+            data: { type: 'settle_overdue', settleId }
+          } })
+        }).catch(() => {});
+      }
+      await fsPatch(token, `${FS_BASE}/yongcha_settlements/${settleId}`, {
+        alertSent: { booleanValue: true },
+        alertSentAt: { timestampValue: new Date().toISOString() }
+      }).catch(() => {});
+      alerted++;
+    }
+    console.log(`[cron-settleAlert] alerted=${alerted}`);
+  } catch (e) {
+    console.error('[cron-settleAlert]', e.message);
+  }
+}
+
 // ── Expire Job ────────────────────────────────────────────────────────────────
 async function runExpireJob(env) {
   const token = await getAccessToken(env);
@@ -8772,9 +8884,11 @@ service cloud.firestore {
 
   // Cloudflare Cron Trigger — 매일 01:00 UTC (한국 10:00 KST)
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      runExpireJob(env).catch(e => console.error('[cron-expire]', e.message))
-    );
+    ctx.waitUntil(Promise.all([
+      runExpireJob(env).catch(e => console.error('[cron-expire]', e.message)),
+      runNoShowPenaltyJob(env).catch(e => console.error('[cron-noshow]', e.message)),
+      runSettlementAlertJob(env).catch(e => console.error('[cron-settle]', e.message))
+    ]));
   }
 };
 
@@ -11890,6 +12004,7 @@ function _renderPostList(){
   var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var q=(_pf.q||'').trim().toLowerCase();
   var filtered=_allPosts.filter(function(p){
+    if(p.blinded)return false;
     // 맞춤공고 탭 — 기사 프리퍼런스 점수 1 이상만
     if(_pf.matchTab==='matched'&&_CU&&_CU.type==='driver'&&_prefs){
       if((_yMatchScore(p)||0)<1)return false;
@@ -12880,6 +12995,17 @@ function _applyPost(postId,agencyId,agencyName,btnEl){
     _yToast(' 휴식 중에는 지원할 수 없어요'+(_CU.restUntil?' ('+_CU.restUntil+'까지)':''));
     return;
   }
+  // 취소율 50% 초과 시 지원 차단
+  var _cancelCount=_CU.cancelCount||0;
+  var _completed=_CU.completedRoutes||0;
+  var _cancelRate=(_cancelCount+_completed)>0?_cancelCount/(_cancelCount+_completed):0;
+  if(_cancelRate>=0.5){
+    _yToast('지원 취소율 '+Math.round(_cancelRate*100)+'% — 50% 초과 시 지원이 제한됩니다. 신뢰도를 높여주세요.');
+    return;
+  }
+  if(_cancelRate>=0.3){
+    _yToast('취소율 '+Math.round(_cancelRate*100)+'% 주의 — 취소가 잦으면 신뢰등급이 낮아져요');
+  }
   var btn=btnEl||document.getElementById('apply-btn');
   var origTxt=btn?btn.textContent:'';
   if(btn){btn.textContent='지원 중...';btn.disabled=true;}
@@ -12962,6 +13088,10 @@ function _yCancelApply(applyId,postId){
         applicantCount:firebase.firestore.FieldValue.increment(-1)
       }).catch(function(){});
     }
+    _db.collection('yongcha_users').doc(_CU.uid).update({
+      cancelCount:firebase.firestore.FieldValue.increment(1)
+    }).catch(function(){});
+    _CU.cancelCount=(_CU.cancelCount||0)+1;
     _yToast('지원을 취소했어요');
     _pgMyApplies(document.getElementById('content'));
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -13236,9 +13366,9 @@ function _showApplicants(postId){
 
 function _judgeApply(applyId,status,name,driverId){
   if(_CU.type==='driver'){_yToast('소장/관리자 전용 기능이에요');return;}
-  _db.collection('yongcha_applies').doc(applyId).update({
-    status:status,judgedAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
+  var _judgeUpd={status:status,judgedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(status==='approved')_judgeUpd.penaltyApplied=false;
+  _db.collection('yongcha_applies').doc(applyId).update(_judgeUpd).then(function(){
     _yToast(status==='approved'?name+'님 승인했어요!':'거절했어요');
     if(driverId){
       if(status==='approved'){
@@ -13452,7 +13582,8 @@ function _yRequestSettle(driverId,driverName,cnt,amt,weekStart){
     agencyId:_CU.uid,agencyName:_CU.name,
     driverId:driverId,driverName:driverName,
     weekStart:weekStart,totalCount:cnt,totalAmount:amt,
-    status:'pending_driver',
+    amount:amt,
+    status:'pending',alertSent:false,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yNotify(driverId,'💰 정산 확인 요청',_CU.name+'에서 '+weekStart+' 주간 정산 확인을 요청했어요 ('+cnt+'건/'+Number(amt).toLocaleString()+'원)','settle');
@@ -13991,16 +14122,35 @@ function _submitPost(){
     return;
   }
 
+  // 신규 대리점 30일 이내 일 3건 제한
+  var _agencyLimitOk=new Promise(function(resolve){
+    if(!_CU.createdAt){resolve(true);return;}
+    var cDate=_CU.createdAt.toDate?_CU.createdAt.toDate():new Date(_CU.createdAt);
+    if(Date.now()-cDate.getTime()>=30*24*60*60*1000){resolve(true);return;}
+    var todayStart=new Date();todayStart.setHours(0,0,0,0);
+    _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('createdAt','>=',todayStart).get()
+      .then(function(t){
+        if(t.size>=3){
+          _yToast('신규 대리점은 30일 이내 하루 3건까지 공고 등록 가능해요');
+          btn.textContent=' 공고 등록하기';btn.disabled=false;_unlock();
+          resolve(false);
+        } else {resolve(true);}
+      }).catch(function(){resolve(true);});
+  });
+
   // 중복 공고 방지: 24시간 내 동일 지문(대리점+택배사+구역+노선번호+단가+시작일)
   var cutoff=new Date(Date.now()-24*60*60*1000);
   var myKey=_yPostKey({agencyId:_CU.uid,courier:courier,area:area,routeNo:routeNo,
                        unitPrice:parseInt(price),startDate:date,workShift:workShift});
-  _db.collection('yongcha_posts')
+  _agencyLimitOk.then(function(ok){
+    if(!ok)return;
+    return _db.collection('yongcha_posts')
     .where('agencyId','==',_CU.uid)
     .where('courier','==',courier)
     .where('area','==',area)
-    .get()
-    .then(function(dupSnap){
+    .get();
+  }).then(function(dupSnap){
+    if(!dupSnap)return;
       var hasDup=false;
       dupSnap.forEach(function(d){
         var v=d.data();
@@ -16202,6 +16352,20 @@ function _doReportFake(postId,agencyId){
   });
   batch.commit().then(function(){
     _calcTrustScore(agencyId);
+    return _db.collection('yongcha_reports').where('postId','==',postId).where('status','==','pending').get()
+      .then(function(rSnap){
+        if(rSnap.size>=3){
+          var b2=_db.batch();
+          b2.update(_db.collection('yongcha_posts').doc(postId),{
+            blinded:true,blindedAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+          b2.update(_db.collection('yongcha_users').doc(agencyId),{
+            fakeCount:firebase.firestore.FieldValue.increment(1)
+          });
+          return b2.commit();
+        }
+      });
+  }).then(function(){
     _yToast('신고가 접수됐어요. 검토 후 처리됩니다.');
     _closeModal();
   }).catch(function(e){btn.textContent='신고 제출';btn.disabled=false;_yToast('오류: '+e.message);});
