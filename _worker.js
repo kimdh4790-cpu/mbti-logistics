@@ -17340,18 +17340,46 @@ function _addZoneByZip(){
               if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
               return[];
             }
-            // 시도 1: Worker 프록시 → vWorld WFS lt_c_basidco 기초구역 정확 경계
+            // 시도 1: Worker 프록시 → juso/vWorld WFS 기초구역 정확 경계
             fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
             .then(function(d){
-              if(d.ok&&d.coords&&d.coords.length>=4){
+              if(d.ok&&d.coords&&d.coords.length>=4&&d.source!=='kv'){
                 _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
+              } else if(d.ok&&d.coords&&d.coords.length>=4){
+                // KV 데이터(부정확) → 브라우저에서 vWorld 직접 재시도
+                _fetchVworld(d.coords,d.lat||lat,d.lng||lng);
               } else {
-                _fetchNominatim();
+                _fetchVworld(null,lat,lng);
               }
             })
-            .catch(function(){_fetchNominatim();});
-            // 시도 2: Nominatim — 법정동 이름 검색 (최종 폴백)
+            .catch(function(){_fetchVworld(null,lat,lng);});
+            // 시도 2: 브라우저에서 vWorld WFS 직접 (한국 IP → Cloudflare 차단 없음)
+            function _fetchVworld(fallbackCoords,cLat,cLng){
+              var vKey='DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
+              var vUrl='https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key='+vKey+'&CQL_FILTER='+encodeURIComponent("BAS_ID='"+zipcode+"'")+'&SRSNAME=EPSG:4326&MAXFEATURES=1';
+              fetch(vUrl,{signal:AbortSignal.timeout(12000)})
+              .then(function(r){return r.json();})
+              .then(function(fc){
+                var feats=(fc.features||[]);
+                if(feats.length){
+                  var c=_geomToCoords(feats[0].geometry);
+                  if(c.length>=4){
+                    var sumLat=0,sumLng=0;
+                    c.forEach(function(p){sumLat+=p.lat;sumLng+=p.lng;});
+                    _applyBoundary({coords:c,lat:sumLat/c.length,lng:sumLng/c.length});
+                    return;
+                  }
+                }
+                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
+                else{_fetchNominatim();}
+              })
+              .catch(function(){
+                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
+                else{_fetchNominatim();}
+              });
+            }
+            // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
             function _fetchNominatim(){
               if(!zoneName)return;
               fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
