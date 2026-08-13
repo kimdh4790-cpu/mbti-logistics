@@ -13654,6 +13654,7 @@ function _makePostCard(d,mini){
     '<div class="pc-head">'+
       '<span class="courier-badge">'+_courierIcon(d.courier)+'</span>'+
       '<span class="trust-chip" style="font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:'+grade.bg+';color:'+grade.color+'">'+grade.label+'</span>'+
+      (d.postType?'<span style="font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">'+_esc(d.postType)+'</span>':'')+
       '<span class="st '+stCls+'" style="margin-left:auto">'+stLabel+'</span>'+
     '</div>'+
     // ── 본문
@@ -14362,8 +14363,13 @@ function _showPostDetail(d){
    ① 계약서 terms 가 전부 빈 값, ② 내 노선 화면에 노선 정보 미표시,
    ③ 일일 건수 입력이 unitPrice=0 으로 수입 0원 계산 — 이 세 가지가 모두 깨졌다.
    여기서 공고 스냅샷을 함께 저장해 해결한다. */
+var _lastApplyMs=0;
 function _applyPost(postId,agencyId,agencyName,btnEl){
   if(!_CU||_CU.type!=='driver'){_yToast('기사 회원만 지원할 수 있어요');return;}
+  // 매크로 방지: 5초 이내 연속 지원 차단
+  var _now=Date.now();
+  if(_now-_lastApplyMs<5000){_yToast('너무 빠른 연속 지원이에요. 잠시 후 다시 시도해 주세요.');return;}
+  _lastApplyMs=_now;
   //  휴식 중 지원 차단 (로컬 상태로 1차 차단, 아래에서 서버 값으로 재확인)
   if(_yIsResting()){
     _yToast(' 휴식 중에는 지원할 수 없어요'+(_CU.restUntil?' ('+_CU.restUntil+'까지)':''));
@@ -14719,6 +14725,8 @@ function _showApplicants(postId){
           (p.docVerified?'<span style="background:rgba(16,185,129,.15);color:var(--gn);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">서류인증</span>':
            p.licenseSubmitted&&p.insuranceSubmitted?'<span style="background:rgba(245,158,11,.15);color:var(--br);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">서류제출</span>':
            '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">서류미등록</span>')+
+          (p.noShowCount>=2?'<span style="background:rgba(239,68,68,.15);color:var(--rd);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">노쇼 '+p.noShowCount+'회</span>':'')+
+          (p.cancelCount>=5?'<span style="background:rgba(245,158,11,.15);color:var(--br);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">취소 '+p.cancelCount+'회</span>':'')+
           (p.company?'<span style="color:var(--t2)">'+_esc(p.company)+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
@@ -15655,6 +15663,39 @@ function _submitPost(){
               });
             }).catch(function(){});
         }
+        // 공고 알림 구독자 FCM 알림
+        var _notifyRegion=_CU.region||'';
+        var _notifyCourier=courier||'';
+        _db.collection('yongcha_alerts').get().then(function(alSnap){
+          alSnap.forEach(function(alDoc){
+            if(alDoc.id===_CU.uid)return;
+            var subs=alDoc.data().subs||[];
+            var matched=subs.some(function(s){
+              var rOk=!s.region||s.region===_notifyRegion;
+              var cOk=s.courier==='전체'||!s.courier||s.courier===_notifyCourier;
+              return rOk&&cOk;
+            });
+            if(!matched)return;
+            _db.collection('yongcha_fcm_tokens').doc(alDoc.id).get().then(function(td){
+              var tk=td.exists?td.data().token:null;
+              if(tk)fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({token:tk,title:'구독 공고 알림',body:_notifyRegion+' '+_notifyCourier+' 새 공고가 등록됐어요!'})}).catch(function(){});
+            }).catch(function(){});
+          });
+        }).catch(function(){});
+        // 공차 등록 기사 알림
+        if(_notifyRegion){
+          _db.collection('yongcha_users').where('emptyCarAvailable','==',true).where('emptyCarRegion','==',_notifyRegion).get().then(function(ecSnap){
+            ecSnap.forEach(function(ecDoc){
+              if(ecDoc.id===_CU.uid)return;
+              _db.collection('yongcha_fcm_tokens').doc(ecDoc.id).get().then(function(td){
+                var tk=td.exists?td.data().token:null;
+                if(tk)fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({token:tk,title:'공차 알림',body:_notifyRegion+' 공차 기사님! '+_notifyCourier+' 공고가 등록됐어요'})}).catch(function(){});
+              }).catch(function(){});
+            });
+          }).catch(function(){});
+        }
         _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
         // 지역 시세 통계 업데이트
         if(_CU.region&&courier&&parseInt(price)){
@@ -16159,6 +16200,29 @@ function _pgProfile(el){
   '<button type="button" onclick="_yOpenCalc()" style="min-height:var(--tap);background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:var(--r);font-size:13.5px;font-weight:800"> 실수령액 계산</button>'+
   '</div>':'')+
 
+  // 기사 이달 통계 카드
+  (type==='driver'?
+  '<div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,var(--bg2),#071a30);border-color:rgba(0,212,170,.15)" id="driver-month-stats">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="font-size:14px;font-weight:800">이달 운행 요약</div>'+
+    '<span id="driver-month-label" style="font-size:11px;color:var(--t3)"></span>'+
+  '</div>'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+    '<div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">'+
+      '<div id="ms-routes" style="font-size:20px;font-weight:900;color:var(--ac)">—</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">승인 노선</div>'+
+    '</div>'+
+    '<div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">'+
+      '<div id="ms-agencies" style="font-size:20px;font-weight:900;color:var(--gn)">—</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">거래 대리점</div>'+
+    '</div>'+
+    '<div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">'+
+      '<div id="ms-cancel" style="font-size:20px;font-weight:900;color:var(--br)">—</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">취소</div>'+
+    '</div>'+
+  '</div>'+
+  '</div>':'')+
+
   // 휴식 원장 (전 역할)
   '<button type="button" onclick="_goPage(\\'rest\\')" style="width:100%;min-height:var(--tap);background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">'+
   '<span>휴식 원장</span>'+
@@ -16236,6 +16300,36 @@ function _pgProfile(el){
     '</div>';
   })():'')+
 
+  // 기사 공차 등록 카드
+  (type==='driver'?
+  '<div class="card" style="margin-top:8px;padding:16px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between">'+
+    '<div>'+
+      '<div style="font-size:15px;font-weight:800">공차 등록</div>'+
+      '<div style="font-size:11.5px;color:var(--t2);margin-top:2px">빈 차 가용 상태 — 인근 새 공고 즉시 알림</div>'+
+    '</div>'+
+    '<button type="button" onclick="_yToggleEmptyCar()" id="empty-car-btn" '+
+      'style="min-height:38px;padding:0 16px;border-radius:20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid '+(_CU.emptyCarAvailable?'var(--gnln)':'var(--bd)')+';background:'+(_CU.emptyCarAvailable?'var(--gnl)':'var(--bg3)')+';color:'+(_CU.emptyCarAvailable?'var(--gn)':'var(--t2)')+'">'+
+      (_CU.emptyCarAvailable?'등록됨':'등록')+
+    '</button>'+
+  '</div>'+
+  '</div>':'')+
+
+  // 기사 공고 알림 구독 카드
+  (type==='driver'?
+  '<div class="card" style="margin-top:8px" id="alert-subs-card">'+
+  '<div style="font-size:15px;font-weight:800;margin-bottom:4px">공고 알림 구독</div>'+
+  '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">지역·택배사 신규 공고 등록 시 FCM 즉시 알림</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+    '<input id="alt-region" class="inp" style="margin:0" placeholder="지역 예: 부산 해운대">'+
+    '<select id="alt-courier" class="inp" style="margin:0">'+
+      ['전체','CJ대한통운','한진택배','롯데택배','쿠팡로지스틱스','우체국','로젠택배'].map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('')+
+    '</select>'+
+  '</div>'+
+  '<button onclick="_yAddAlertSub()" style="width:100%;padding:11px;background:var(--acl);color:var(--ac);border:none;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">구독 추가</button>'+
+  '<div id="alert-subs-list">'+_skRows(1)+'</div>'+
+  '</div>':'')+
+
   // 구인구직 바로가기 (대리점)
   (type==='agency'?
   '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">소속 기사 채용 공고 (구인구직)</button>':'')+
@@ -16257,6 +16351,32 @@ function _pgProfile(el){
   '<div style="font-size:15px;font-weight:800;margin-bottom:10px">💬 받은 후기</div>'+
   '<div id="my-reviews-list">'+_skRows(2)+'</div>'+
   '</div>';
+
+  // 기사 이달 통계 로드
+  if(type==='driver'){
+    var now=new Date();
+    var mLabel=now.getFullYear()+'.'+(now.getMonth()+1)+'월';
+    var monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+    var mLabel2=now.getFullYear()+'년 '+(now.getMonth()+1)+'월';
+    var labelEl=document.getElementById('driver-month-label');
+    if(labelEl)labelEl.textContent=mLabel2;
+    _db.collection('yongcha_applies').where('driverId','==',_CU.uid)
+      .where('createdAt','>=',firebase.firestore.Timestamp.fromDate(monthStart)).get()
+      .then(function(snap){
+        var approved=0,cancelled=0,agencies=new Set();
+        snap.forEach(function(doc){
+          var d=doc.data();
+          if(d.status==='approved'){approved++;if(d.agencyId)agencies.add(d.agencyId);}
+          else if(d.status==='cancelled')cancelled++;
+        });
+        var el1=document.getElementById('ms-routes');
+        var el2=document.getElementById('ms-agencies');
+        var el3=document.getElementById('ms-cancel');
+        if(el1)el1.textContent=approved;
+        if(el2)el2.textContent=agencies.size;
+        if(el3)el3.textContent=cancelled;
+      }).catch(function(){});
+  }
 
   // 기사 포트폴리오 로드
   if(type==='driver'){
@@ -16311,6 +16431,84 @@ function _pgProfile(el){
       var list=document.getElementById('my-reviews-list');
       if(list)list.innerHTML='<div class="empty" style="padding:20px"><div class="empty-msg">후기 로드 실패: '+_esc(e.message)+'</div></div>';
     });
+
+  // 기사: 공고 알림 구독 목록 로드
+  if(type==='driver') _yLoadAlertSubs();
+}
+
+// ── 공차 등록 토글 ─────────────────────────────────────────
+function _yToggleEmptyCar(){
+  if(!_CU||_CU.type!=='driver'){return;}
+  var nw=!(_CU.emptyCarAvailable||false);
+  _db.collection('yongcha_users').doc(_CU.uid).update({
+    emptyCarAvailable:nw,
+    emptyCarRegion:_CU.region||'',
+    emptyCarUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _CU.emptyCarAvailable=nw;
+    var btn=document.getElementById('empty-car-btn');
+    if(btn){
+      btn.textContent=nw?'등록됨':'등록';
+      btn.style.background=nw?'var(--gnl)':'var(--bg3)';
+      btn.style.color=nw?'var(--gn)':'var(--t2)';
+      btn.style.borderColor=nw?'var(--gnln)':'var(--bd)';
+    }
+    _yToast(nw?'공차 등록 완료 — 인근 공고 등록 시 알림을 드려요':'공차 등록 해제됐어요');
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+// ── 공고 알림 구독 ──────────────────────────────────────────
+function _yAddAlertSub(){
+  if(!_CU||_CU.type!=='driver'){return;}
+  var region=(document.getElementById('alt-region')||{}).value||'';
+  var courier=(document.getElementById('alt-courier')||{}).value||'전체';
+  if(!region.trim()){_yToast('지역을 입력하세요');return;}
+  var ref=_db.collection('yongcha_alerts').doc(_CU.uid);
+  ref.get().then(function(snap){
+    var subs=snap.exists?(snap.data().subs||[]):[];
+    var dup=subs.some(function(s){return s.region===region.trim()&&s.courier===courier;});
+    if(dup){_yToast('이미 구독 중인 조합이에요');return;}
+    subs.push({region:region.trim(),courier:courier,addedAt:Date.now()});
+    return ref.set({subs:subs,uid:_CU.uid},{merge:true}).then(function(){
+      _yToast(region+' · '+courier+' 구독 추가됐어요');
+      var regionEl=document.getElementById('alt-region');
+      if(regionEl)regionEl.value='';
+      _yLoadAlertSubs();
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _yDelAlertSub(idx){
+  if(!_CU)return;
+  var ref=_db.collection('yongcha_alerts').doc(_CU.uid);
+  ref.get().then(function(snap){
+    if(!snap.exists)return;
+    var subs=snap.data().subs||[];
+    subs.splice(idx,1);
+    return ref.set({subs:subs},{merge:true}).then(function(){
+      _yToast('구독 해제됐어요');
+      _yLoadAlertSubs();
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _yLoadAlertSubs(){
+  if(!_CU)return;
+  var listEl=document.getElementById('alert-subs-list');
+  if(!listEl)return;
+  _db.collection('yongcha_alerts').doc(_CU.uid).get().then(function(snap){
+    var subs=snap.exists?(snap.data().subs||[]):[];
+    if(!subs.length){
+      listEl.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:center;padding:12px">구독 중인 조합 없음</div>';
+      return;
+    }
+    listEl.innerHTML=subs.map(function(s,i){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+        '<span style="font-size:13px;font-weight:700">'+_esc(s.region)+' · <span style="color:var(--ac)">'+_esc(s.courier)+'</span></span>'+
+        '<button onclick="_yDelAlertSub('+i+')" style="padding:4px 12px;background:var(--rdl);color:var(--rd);border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">삭제</button>'+
+        '</div>';
+    }).join('');
+  }).catch(function(){listEl.innerHTML='';});
 }
 
 // ── 관리자 대시보드 ──────────────────────────────────────────
