@@ -14244,7 +14244,7 @@ async function openDeliveryMap(){
       var d=snap.docs[i];
       var x=d.data();x.fbId=d.id;
       // GPS 없거나 이전 방식으로 저장된 경우 재검색
-      var needGeo=!x.gps||!x.gps.lat||x.gps.src==='kakao'||x.gps.src==='kakao-kw';
+      var needGeo=!x.gps||!x.gps.lat||!x.gps.src||x.gps.src==='kakao'||x.gps.src==='kakao-kw';
       if(needGeo&&x.addr&&kKey){
         try{
           var gDong=/(\d+)동/.exec(x.addr);
@@ -14399,7 +14399,7 @@ function _renderLeafletMap(locs){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
 
   // 동일/인근 좌표 그룹핑 — 50m 이내 OR 동일 건물 주소(호/층 제거 후 일치)
-  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(동|층|호)\b.*/,'').replace(/\s+/g,' ').trim();}
+  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(동|층|호).*/,'').replace(/\s+/g,' ').trim();}
   var groups=[];
   locs.forEach(function(x){
     var ba=_baseAddr(x.addr);
