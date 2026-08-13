@@ -10352,9 +10352,6 @@ function _pgHomeDriver(el){
   // 수입 목표 달성률 위젯 (monthlyGoal 설정 시 표시)
   '<div id="home-goal-widget"></div>'+
 
-  // 차량 검사 만료 배너 (조건부 — JS에서 채움)
-  '<div id="home-inspect-banner"></div>'+
-
   // 홈 지도
   '<div class="home-map-card" style="position:relative" id="home-drv-map-wrap">'+
     '<div id="home-drv-map"></div>'+
@@ -10588,49 +10585,6 @@ function _pgHomeDriver(el){
   // 수입 목표 달성률 위젯
   _renderGoalWidget();
 
-  // 차량 검사 만료 배너
-  var inspBanner=document.getElementById('home-inspect-banner');
-  if(_CU.carNumber){
-    var carNum=_CU.carNumber;
-    var stored=null;
-    try{stored=JSON.parse(localStorage.getItem('yc_inspect_'+carNum)||'null');}catch(e){}
-    var fetchInspect=function(){
-      fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
-        if(!d.ok){
-          if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
-          else if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
-          return;
-        }
-        if(!d.inspectDue){
-          if(_CU.inspectDue){
-            try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:_CU.inspectDue,ts:Date.now()}));}catch(e){}
-            _renderInspectBanner(_CU.inspectDue);
-          } else {
-            if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
-          }
-          return;
-        }
-        try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:d.inspectDue,ts:Date.now()}));}catch(e){}
-        _renderInspectBanner(d.inspectDue);
-      }).catch(function(e){
-        if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
-        else if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
-      });
-    };
-    if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
-      _renderInspectBanner(stored.due);
-    } else {
-      fetchInspect();
-    }
-  } else if(inspBanner){
-    inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;margin-bottom:10px;cursor:pointer">'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'+
-      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:var(--tx)">차량번호 미등록</div>'+
-      '<div style="font-size:11.5px;color:var(--t3)">내정보에서 차량번호 입력 시 검사 만료일을 알려드려요</div></div>'+
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'+
-    '</div>';
-  }
-}
 
 /* ── 소장 홈 ── */
 function _pgHomeAgency(el){
@@ -10839,54 +10793,6 @@ function _loadAgencyControlMap(){
   });
 }
 
-// ── 차량 검사 배너 렌더 ──────────────────────────────────────────────────────
-function _renderInspectBanner(dueStr){
-  var el=document.getElementById('home-inspect-banner');if(!el)return;
-  if(!dueStr){el.innerHTML='';return;}
-  var due=new Date(dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1-$2-$3'));
-  var daysLeft=Math.ceil((due-Date.now())/(86400000));
-  var dateLabel=dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3');
-  var danger=daysLeft<=7, warn=daysLeft<=30&&daysLeft>7, safe=daysLeft>30;
-  var bg=danger?'var(--rdl)':warn?'var(--brl)':'var(--gnl)';
-  var bd=danger?'var(--rdln)':warn?'var(--brln)':'rgba(16,163,74,.2)';
-  var clr=danger?'var(--rd)':warn?'var(--br)':'var(--gn)';
-  var lbl=daysLeft<0?'검사 만료 '+Math.abs(daysLeft)+'일 경과':daysLeft===0?'오늘 만료!':'D-'+daysLeft;
-  var statusTxt=daysLeft<0?'즉시 수검 필요!':safe?'검사 유효':warn?'수검 준비 필요':'긴급 수검 필요!';
-  var icon=danger||daysLeft<0?
-    '<svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"'+clr+'\\" stroke-width=\\"2.5\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><circle cx=\\"12\\" cy=\\"12\\" r=\\"10\\"/><line x1=\\"12\\" y1=\\"8\\" x2=\\"12\\" y2=\\"12\\"/><line x1=\\"12\\" y1=\\"16\\" x2=\\"12.01\\" y2=\\"16\\"/></svg>':
-    '<svg width=\\"18\\" height=\\"18\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"'+clr+'\\" stroke-width=\\"2\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><rect x=\\"3\\" y=\\"4\\" width=\\"18\\" height=\\"18\\" rx=\\"2\\" ry=\\"2\\"/><line x1=\\"16\\" y1=\\"2\\" x2=\\"16\\" y2=\\"6\\"/><line x1=\\"8\\" y1=\\"2\\" x2=\\"8\\" y2=\\"6\\"/><line x1=\\"3\\" y1=\\"10\\" x2=\\"21\\" y2=\\"10\\"/></svg>';
-  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+bg+';border:1px solid '+bd+';margin-bottom:10px">'+
-    icon+
-    '<div style="flex:1;min-width:0">'+
-      '<div style="font-size:13px;font-weight:800;color:'+clr+'">차량 정기검사 '+lbl+'</div>'+
-      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">만료: '+dateLabel+' · '+statusTxt+'</div>'+
-    '</div>'+
-  '</div>';
-}
-function _quickSetInspectDue(){
-  var today=new Date(),carNum=(_CU&&_CU.carNumber)||'';
-  var initVal=_CU&&_CU.inspectDue?_CU.inspectDue.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'';
-  document.getElementById('modal-body').innerHTML=
-    '<div style="font-size:15px;font-weight:900;margin-bottom:16px">정기검사 만료일 등록</div>'+
-    '<div style="font-size:13px;color:var(--t2);margin-bottom:6px">차량검사 만료일을 입력하면 홈에서 D-day를 바로 확인할 수 있어요.</div>'+
-    '<label class="inp-lbl" style="margin-top:12px;display:block">만료일</label>'+
-    '<input id="qinspect-date" type="date" class="inp" style="width:100%;margin-top:4px" value="'+initVal+'">'+
-    '<button type="button" class="btn" style="width:100%;margin-top:16px;min-height:48px;font-size:15px;font-weight:800" onclick="_saveQuickInspect()">저장</button>';
-  _openModal();
-}
-function _saveQuickInspect(){
-  var raw=((document.getElementById('qinspect-date')||{}).value||'').trim();
-  if(!raw){_yToast('날짜를 선택해주세요');return;}
-  var val=raw.replace(/-/g,'');
-  var carNum=(_CU&&_CU.carNumber)||'';
-  _db.collection('yongcha_users').doc(_CU.uid).update({inspectDue:val}).then(function(){
-    _CU.inspectDue=val;
-    try{if(carNum)localStorage.removeItem('yc_inspect_'+carNum);}catch(e){}
-    _closeModal();
-    _renderInspectBanner(val);
-    _yToast('정기검사 만료일이 저장됐어요');
-  }).catch(function(e){_yToast('저장 실패: '+e.message);});
-}
 
 // ── 수입 목표 달성률 위젯 ──────────────────────────────────────────────────────
 function _renderGoalWidget(){
@@ -14570,8 +14476,6 @@ function _pgProfile(el){
         '</select></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
         '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
-      '<div class="inp-wrap"><label class="inp-lbl">정기검사 만료일</label>'+
-        '<input id="pref-inspectDue" type="date" class="inp" value="'+(_CU.inspectDue?_CU.inspectDue.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'')+'"></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">월 목표 수입 (원) — 홈 달성률 표시</label>'+
         '<input id="pref-monthlyGoal" type="number" class="inp" placeholder="예: 3000000" value="'+(_CU.monthlyGoal||'')+'"></div>'+
       '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">맞춤 조건 저장</button>'+
@@ -16327,21 +16231,17 @@ function _ySavePrefs(){
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
   var fuelType=(document.getElementById('pref-fuelType')||{}).value||'휘발유';
   var carNum=((document.getElementById('pref-carNum')||{}).value||'').trim();
-  var inspectDueRaw=((document.getElementById('pref-inspectDue')||{}).value||'').trim();
-  var inspectDue=inspectDueRaw.replace(/-/g,'');
   var monthlyGoal=parseInt((document.getElementById('pref-monthlyGoal')||{}).value)||0;
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
   patch.carFuelType=fuelType;
   if(carNum)patch.carNumber=carNum;
-  if(inspectDue)patch.inspectDue=inspectDue;
   if(monthlyGoal)patch.monthlyGoal=monthlyGoal;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
     _CU.carFuelType=fuelType;
     if(carNum)_CU.carNumber=carNum;
-    if(inspectDue){_CU.inspectDue=inspectDue;try{localStorage.removeItem('yc_inspect_'+carNum);}catch(e){};}
     if(monthlyGoal)_CU.monthlyGoal=monthlyGoal;
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
@@ -19612,11 +19512,6 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── 차량 검사 만료 조회 (수동 입력 — 내정보에서 직접 설정) ────────
-  if (path === '/api/yongcha/vehicle-inspect' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    return new Response(JSON.stringify({ ok: true, inspectDue: null }), { headers: corsH });
-  }
 
   // ── Gas Stations: 카카오 로컬 API 주유소 검색 ──────────────────
   if (path === '/api/yongcha/gas-stations' && method === 'POST') {
