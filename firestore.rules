@@ -117,6 +117,7 @@ service cloud.firestore {
     match /mbetco_sales/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /message_history/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /contracts/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /eContracts/{docId}             { allow read: if isAuth(); allow write: if isSuperAdmin(); }
     match /expenses/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /vehicles/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /customers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
