@@ -17127,8 +17127,8 @@ function _riqRecord(el){
   if(isDriver){
     html+='<div class="card" style="margin-bottom:14px">'+
       '<div style="font-size:14px;font-weight:800;margin-bottom:14px">실적 등록</div>'+
-      '<div class="inp-wrap"><label class="inp-lbl">대리점명</label>'+
-      '<input class="inp" id="riq-agency" placeholder="예) 부산 동구 CJ대한통운"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">대리점 선택</label>'+
+      '<select class="inp" id="riq-agency"><option value="">승인 대리점 불러오는 중...</option></select></div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
       '<div class="inp-wrap"><label class="inp-lbl">날짜</label>'+
       '<input class="inp" id="riq-date" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
@@ -17155,9 +17155,34 @@ function _riqRecord(el){
   el.innerHTML=html;
 
   var isAgency=_CU.type==='agency';
+
+  if(isDriver){
+    _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').limit(50).get()
+    .then(function(aSnap){
+      var sel=document.getElementById('riq-agency');if(!sel)return;
+      if(aSnap.empty){
+        sel.innerHTML='<option value="">승인된 대리점 없음</option>';
+        return;
+      }
+      var seen={};
+      var opts='<option value="">대리점 선택</option>';
+      aSnap.forEach(function(d){
+        var r=d.data();
+        if(r.agencyId&&!seen[r.agencyId]){
+          seen[r.agencyId]=true;
+          opts+='<option value="'+_esc(r.agencyId)+'">'+_esc(r.agencyName||'대리점')+'</option>';
+        }
+      });
+      sel.innerHTML=opts;
+    }).catch(function(){
+      var sel=document.getElementById('riq-agency');
+      if(sel)sel.innerHTML='<option value="">대리점 목록 로드 실패</option>';
+    });
+  }
+
   var q=isDriver
     ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).limit(30)
-    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).limit(50);
+    : _db.collection('yongcha_records').where('agencyId','==',_CU.uid).limit(50);
   q.get().then(function(snap){
     var list=document.getElementById('riq-record-list');if(!list)return;
     if(snap.empty){list.innerHTML=_emptyHtml('📋','실적 없음',isDriver?'첫 실적을 등록해보세요':'기사가 실적을 등록하면 여기에 나타나요');return;}
@@ -17212,12 +17237,13 @@ function _riqSaveRecord(){
   var cntEl=document.getElementById('riq-cnt');
   var priceEl=document.getElementById('riq-price');
   var courierEl=document.getElementById('riq-courier');
-  var agencyName=(agencyEl&&agencyEl.value||'').trim();
+  var agencyId=(agencyEl&&agencyEl.value||'').trim();
+  var agencyName=agencyEl&&agencyEl.selectedIndex>=0?((agencyEl.options[agencyEl.selectedIndex]&&agencyEl.options[agencyEl.selectedIndex].text)||''):'';
   var date=(dateEl&&dateEl.value||'').trim();
   var count=parseInt((cntEl&&cntEl.value)||'0');
   var price=parseInt((priceEl&&priceEl.value)||'0');
   var courier=(courierEl&&courierEl.value||'').trim();
-  if(!agencyName||!date||!count||!price||!courier){_yToast('모든 항목을 입력해주세요');return;}
+  if(!agencyId||!date||!count||!price||!courier){_yToast('모든 항목을 입력해주세요');return;}
   var btn=document.getElementById('riq-save-btn');
   if(btn){btn.textContent='저장 중...';btn.disabled=true;}
   _db.collection('yongcha_records').add({
@@ -17225,6 +17251,7 @@ function _riqSaveRecord(){
     driverName:_CU.name||'',
     driverRegion:_CU.region||'',
     driverPhone:_CU.phone||'',
+    agencyId:agencyId,
     agencyName:agencyName,
     date:date,
     count:count,
