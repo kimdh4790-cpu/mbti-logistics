@@ -18701,7 +18701,7 @@ function _pgSettleByAgency(body){
       _db.collection('yongcha_settlements').where('driverId','==',_CU.uid).limit(200).get()
     ]).then(function(results){
       var recSnap=results[0],setSnap=results[1];
-      var recByAgency={};
+      var recByAgency={},confirmedByAgency={};
       recSnap.forEach(function(doc){
         var r=doc.data();if(!r.agencyId)return;
         if(!recByAgency[r.agencyId]){recByAgency[r.agencyId]={cnt:0,amt:0,days:0,lastDate:''};}
@@ -18709,13 +18709,22 @@ function _pgSettleByAgency(body){
         recByAgency[r.agencyId].amt+=Number(r.amount||0);
         recByAgency[r.agencyId].days++;
         if(r.date>recByAgency[r.agencyId].lastDate)recByAgency[r.agencyId].lastDate=r.date;
+        if(r.status==='confirmed'){
+          if(!confirmedByAgency[r.agencyId])confirmedByAgency[r.agencyId]={cnt:0,amt:0};
+          confirmedByAgency[r.agencyId].cnt+=Number(r.count||0);
+          confirmedByAgency[r.agencyId].amt+=Number(r.amount||0);
+        }
       });
       var settleByAgency={};
       setSnap.forEach(function(doc){
         var s=doc.data();if(!s.agencyId)return;
-        if(!settleByAgency[s.agencyId]){settleByAgency[s.agencyId]={pending:0,done:0};}
+        if(!settleByAgency[s.agencyId]){settleByAgency[s.agencyId]={pending:0,done:0,taxState:'',settleId:''};}
         if(s.status==='done')settleByAgency[s.agencyId].done++;
         else settleByAgency[s.agencyId].pending++;
+        var ts=s.taxInvoiceState||'';
+        var tsPri={'기사발행요청':4,'명세서발송':3,'역발행요청':3,'역발행승인':2,'역발행거부':1};
+        var curPri=tsPri[settleByAgency[s.agencyId].taxState]||0;
+        if((tsPri[ts]||0)>curPri){settleByAgency[s.agencyId].taxState=ts;settleByAgency[s.agencyId].settleId=doc.id;}
       });
       var grandTotal=0,grandCnt=0;
       agencyList.forEach(function(ag){
@@ -18767,7 +18776,21 @@ function _pgSettleByAgency(body){
                 '<div style="font-size:12.5px;font-weight:900;color:'+(nextDaysLeft<=3?'var(--rd)':nextDaysLeft<=7?'var(--br)':'var(--gn)')+'">D-'+nextDaysLeft+'</div>'+
               '</div>':
               '<button type="button" onclick="_ySetSettleDay(\\''+ag.agencyId+'\\')" style="width:100%;min-height:38px;background:var(--bg3);border:1px dashed var(--bd);border-radius:10px;color:var(--t3);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">정산일 설정하기</button>')+
-            (r.lastDate?'<div style="font-size:11px;color:var(--t3)">마지막 운행: '+_esc(r.lastDate)+'</div>':'')+
+            (r.lastDate?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">마지막 운행: '+_esc(r.lastDate)+'</div>':'')+
+            (function(){
+              var conf=confirmedByAgency[ag.agencyId]||{cnt:0,amt:0};
+              var tsInfo=settleByAgency[ag.agencyId]||{taxState:'',settleId:''};
+              if(!conf.cnt)return '';
+              var ts=tsInfo.taxState||'';
+              if(!ts||ts==='역발행거부')return (ts==='역발행거부'?'<div style="font-size:11px;color:var(--rd);margin-bottom:4px">이전 요청 거부 — 다시 요청하세요</div>':'')+
+                '<button type="button" onclick="_yRequestTaxInvoice(\\''+ag.agencyId+'\\',\\''+_jsq(ag.agencyName)+'\\','+conf.cnt+','+conf.amt+')" '+
+                'style="width:100%;min-height:44px;background:rgba(79,120,245,.1);border:1.5px solid rgba(79,120,245,.35);border-radius:var(--r);color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
+                '세금계산서 발행 요청 ('+_won(conf.cnt)+'건 · '+_won(Math.round(conf.amt/10000))+'만원)</button>';
+              if(ts==='기사발행요청')return '<div style="padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--r);font-size:12px;font-weight:700;color:var(--br)">발행 요청 완료 — 소장 발행 대기중</div>';
+              if(ts==='역발행요청'||ts==='명세서발송')return '<button type="button" onclick="_pgTaxApprove(document.getElementById(\\'content\\'),\\''+tsInfo.settleId+'\\')" style="width:100%;min-height:44px;background:rgba(16,185,129,.1);border:1.5px solid var(--gn);border-radius:var(--r);color:var(--gn);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">세금계산서 승인 대기 — 탭하여 확인</button>';
+              if(ts==='역발행승인')return '<div style="padding:8px 12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:var(--r);font-size:12px;font-weight:700;color:var(--gn)">세금계산서 등록 완료</div>';
+              return '';
+            })()+
           '</div>';
       });
       body.innerHTML=html;
@@ -18798,6 +18821,38 @@ function _yDoSetSettleDay(agencyId){
     _closeModal();_yToast('정산일 저장됐어요 — 매월 '+day+'일');
     var body=document.getElementById('dash-body');if(body)_pgSettleByAgency(body);
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+function _yRequestTaxInvoice(agencyId,agencyName,cnt,amt){
+  var mb=document.getElementById('modal-body');
+  mb.innerHTML=
+    '<div style="font-size:18px;font-weight:900;margin-bottom:4px">세금계산서 발행 요청</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:16px">소장에게 세금계산서 발행을 요청해요. 소장이 발행하면 승인 알림이 와요.</div>'+
+    '<div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:16px">'+
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">소장</span><span style="font-size:13px;font-weight:800">'+_esc(agencyName)+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)"><span style="font-size:13px;color:var(--t2)">소장 확인된 건수</span><span style="font-size:13px;font-weight:800">'+_won(cnt)+'건</span></div>'+
+      '<div style="display:flex;justify-content:space-between;padding:10px 0 4px"><span style="font-size:14px;font-weight:900">금액</span><span style="font-size:18px;font-weight:900;color:var(--ac)">'+_won(amt)+'원</span></div>'+
+    '</div>'+
+    '<button onclick="_yDoRequestTaxInvoice(\\''+agencyId+'\\',\\''+_jsq(agencyName)+'\\','+cnt+','+amt+')" style="width:100%;padding:14px;background:var(--ac);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">발행 요청</button>';
+  _openModal();
+}
+
+function _yDoRequestTaxInvoice(agencyId,agencyName,cnt,amt){
+  var now=new Date();
+  var weekStartStr=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-01';
+  _db.collection('yongcha_settlements').add({
+    driverId:_CU.uid,driverName:_CU.name||'',driverPhone:_CU.phone||'',
+    agencyId:agencyId,agencyName:agencyName,
+    totalCount:cnt,totalAmount:amt,amount:amt,
+    weekStart:weekStartStr,status:'pending',
+    taxInvoiceState:'기사발행요청',
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _closeModal();
+    _yNotify(agencyId,'세금계산서 발행 요청',(_CU.name||'기사')+'이 세금계산서 발행을 요청했어요. 앱에서 확인하세요.','tax');
+    _yToast('발행 요청 완료! 소장이 발행하면 알림을 드려요.');
+    var body=document.getElementById('dash-body');if(body)_pgSettleByAgency(body);
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 function _reportUnpaidSettle(settleId,agencyId){
@@ -18924,9 +18979,10 @@ function _pgDashboardAgency(el){
         else if(state==='명세서발송')badge='<span style="background:rgba(79,120,245,.12);color:var(--ac);border:1px solid rgba(79,120,245,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">명세서 발송됨</span>';
         else if(state==='역발행요청')badge='<span style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 승인 대기</span>';
         else if(state==='역발행거부')badge='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 거부</span>';
+        else if(state==='기사발행요청')badge='<span style="background:rgba(79,120,245,.12);color:var(--ac);border:1px solid rgba(79,120,245,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 발행 요청</span>';
         else badge='<span style="background:var(--bg3);color:var(--t3);border:1px solid var(--bd);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">미발송</span>';
         if(s.disputeReported)badge+='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">미지급 신고됨</span>';
-        var canSend=(state===''||state==='미발송'||state==='역발행거부');
+        var canSend=(state===''||state==='미발송'||state==='역발행거부'||state==='기사발행요청');
         var dPhone=_esc(s.driverPhone||s.notifyPhone||'');
         var dName=_jsq(s.driverName||'기사');
         var aName=_jsq(s.agencyName||_CU.name||'');
@@ -18934,9 +18990,10 @@ function _pgDashboardAgency(el){
         var amt=Number(s.totalAmount||0);
         var cnt=Number(s.totalCount||0);
         var wk=(s.weekStart||'').slice(0,10);
+        var btnLbl=state==='기사발행요청'?'발행하기':'명세서 발송';
         var btn=canSend?
           '<button type="button" onclick="_ySendSettleNotify(\\''+id+'\\',\\''+dPhone+'\\',\\''+dName+'\\',\\''+aName+'\\',\\''+dId+'\\','+amt+','+cnt+',\\''+_esc(wk)+'\\')" '+
-          'style="min-height:40px;padding:0 12px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">명세서 발송</button>':'';
+          'style="min-height:40px;padding:0 12px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">'+btnLbl+'</button>':'';
         html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
           '<div style="flex:1;min-width:0">'+
             '<div style="font-size:13.5px;font-weight:800">'+_esc(s.driverName||'기사')+'</div>'+
