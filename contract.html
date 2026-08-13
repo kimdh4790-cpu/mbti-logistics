@@ -158,10 +158,16 @@ textarea.fi{resize:vertical;font-weight:400;font-size:12px;line-height:1.6}
   <div class="step">
     <div class="step-title">③ 계약 조건</div>
 
-    <!-- 계약 시작일 (공통) -->
-    <div class="fg">
-      <label class="fl">계약 시작일 *</label>
-      <input class="fi" id="c-start" type="date">
+    <!-- 계약 기간 (공통) -->
+    <div class="row2">
+      <div class="fg">
+        <label class="fl">계약 시작일 *</label>
+        <input class="fi" id="c-start" type="date" onchange="autoEndDate()">
+      </div>
+      <div class="fg">
+        <label class="fl" id="end-label">계약 종료일</label>
+        <input class="fi" id="c-end" type="date">
+      </div>
     </div>
 
     <!-- 임금 형태 — 근로계약만 표시 -->
@@ -187,10 +193,17 @@ textarea.fi{resize:vertical;font-weight:400;font-size:12px;line-height:1.6}
       <input class="fi" id="c-vehicle" placeholder="부산12가3456" style="font-family:monospace">
     </div>
 
-    <!-- 계약 종료일 — 근로계약만 -->
-    <div id="end-row" style="display:none" class="fg">
-      <label class="fl">계약 종료일</label>
-      <input class="fi" id="c-end" type="date">
+    <!-- 지급일 (공통) -->
+    <div class="fg">
+      <label class="fl">정산·지급일</label>
+      <select class="fi" id="c-payday-sel" onchange="document.getElementById('c-payday').value=this.value">
+        <option value="매월 25일">매월 25일</option>
+        <option value="매월 10일">매월 10일</option>
+        <option value="매월 15일">매월 15일</option>
+        <option value="매월 말일">매월 말일</option>
+        <option value="익월 5일">익월 5일</option>
+        <option value="격주 금요일">격주 금요일</option>
+      </select>
     </div>
 
     <!-- 퀵플렉스 추가 필드 -->
@@ -299,7 +312,16 @@ document.addEventListener('DOMContentLoaded',function(){
   var si=document.getElementById('c-start');if(si)si.value=today;
   // 위수탁 기본 선택
   setCType('courier');
+  // 종료일 기본 1년 후로 자동 채우기
+  autoEndDate();
 });
+
+function autoEndDate(){
+  var s=getVal('c-start');if(!s)return;
+  var d=new Date(s);d.setFullYear(d.getFullYear()+1);
+  var end=document.getElementById('c-end');
+  if(end&&!end.value)end.value=d.toISOString().slice(0,10);
+}
 
 function switchTab(t){
   ['write','list'].forEach(function(x){
@@ -333,7 +355,10 @@ function setCType(type, clickedBtn){
   if(vr)vr.style.display=(isCourier||isQF)?'block':'none';
   if(qfe)qfe.style.display=isQF?'block':'none';
   if(ptr)ptr.style.display=isLabor?'block':'none';
-  if(er)er.style.display=isLabor?'block':'none';
+
+  // 종료일 라벨 변경 (근로계약: 필수, 위수탁: 선택)
+  var endLabel=document.getElementById('end-label');
+  if(endLabel)endLabel.textContent=isLabor?'계약 종료일 *':'계약 종료일 (기본 1년)';
 
   // 라벨 변경
   var payLabel=document.getElementById('pay-label');
@@ -416,7 +441,7 @@ function _buildData(){
     loc:getVal('c-loc'), job:getVal('c-job'),
     hours:getVal('c-hours')||'8시간', days:getVal('c-days')||'월~금', breakTime:getVal('c-break')||'60분',
     payType:getVal('c-paytype')||'건당', pay:getVal('c-pay'),
-    payDay:getVal('c-payday')||'매월 25일', payMethod:getVal('c-paymethod')||'계좌이체',
+    payDay:getVal('c-payday-sel')||getVal('c-payday')||'매월 25일', payMethod:getVal('c-paymethod')||'계좌이체',
     payAccount:getVal('c-payaccount'),
     ins4:false, insEmp:true, insAcc:true, insHealth:false, insPension:false,
     special:getVal('c-special'),
@@ -672,6 +697,7 @@ function reprinkContract(id){
     var map={name:'c-name',birth:'c-birth',addr:'c-addr',phone:'c-phone',startDate:'c-start',endDate:'c-end',loc:'c-loc',job:'c-job',hours:'c-hours',days:'c-days',breakTime:'c-break',pay:'c-pay',payDay:'c-payday',payMethod:'c-paymethod',payAccount:'c-payaccount',special:'c-special',vehicle:'c-vehicle',camp:'c-camp',route:'c-route',licenseNo:'c-license-no'};
     Object.keys(map).forEach(function(k){var el=document.getElementById(map[k]);if(el)el.value=r[k]||'';});
     if(r.payType){var pt=document.getElementById('c-paytype');if(pt)pt.value=r.payType;}
+    if(r.payDay){var ps=document.getElementById('c-payday-sel');if(ps)ps.value=r.payDay;}
     switchTab('write');
     toast('✅ 계약서 불러오기 완료','ok');
   });
