@@ -14399,14 +14399,18 @@ function _renderLeafletMap(locs){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
 
   // 동일/인근 좌표 그룹핑 — 50m 이내 OR 동일 건물 주소(호/층 제거 후 일치)
-  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(동|층|호).*/,'').replace(/\s+/g,' ').trim();}
+  // 동 주소는 동 단위로 유지, 호/층만 제거 → 아파트는 동별 핀, 오피스는 건물별 핀
+  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(층|호).*/,'').replace(/\s+/g,' ').trim();}
   var groups=[];
   locs.forEach(function(x){
     var ba=_baseAddr(x.addr);
+    var hasDong=/\d+동/.test(x.addr||'');
     var found=null;
     for(var p=0;p<groups.length;p++){
       var sameBuilding=ba&&groups[p].baseAddr&&ba===groups[p].baseAddr;
-      var nearby=gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<50;
+      var grpHasDong=groups[p].items[0]&&/\d+동/.test(groups[p].items[0].addr||'');
+      // 동 없는 주소만 거리 클러스터링 (아파트 동간 혼용 방지)
+      var nearby=!hasDong&&!grpHasDong&&gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<50;
       if(sameBuilding||nearby){found=groups[p];break;}
     }
     if(found){found.items.push(x);}
