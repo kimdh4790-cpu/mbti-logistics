@@ -98,8 +98,8 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
       <div class="type-chip" onclick="setCType('parttime',this)">⏰ 단시간 근로</div>
       <div class="type-chip" onclick="setCType('fixed',this)">📅 기간제</div>
       <div class="type-chip" onclick="setCType('dispatch',this)">🚚 위탁계약</div>
-      <div class="type-chip premium" onclick="openPremiumCheck('courier',this)">🏷 영업점-택배기사 위수탁<span class="prem-lock">🔒</span></div>
-      <div class="type-chip premium" onclick="openPremiumCheck('quickflex',this)">⚡ 퀵플렉스 부속합의서<span class="prem-lock">🔒</span></div>
+      <div class="type-chip" onclick="setCTypeById('courier',this)">🏷 영업점-택배기사 위수탁</div>
+      <div class="type-chip" onclick="setCTypeById('quickflex',this)">⚡ 퀵플렉스 부속합의서</div>
     </div>
 
     <!-- 대리점(甲) 정보 -->
@@ -251,8 +251,8 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
 
 <script>
 
-var _db=null, _ctype='regular', _drivers=[];
-var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fixed:'📅 기간제',dispatch:'🚚 위탁계약'};
+var _db=null, _ctype='regular', _drivers=[], _curUid=null;
+var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fixed:'📅 기간제',dispatch:'🚚 위탁계약',courier:'🏷 위수탁',quickflex:'⚡ 퀵플렉스'};
 
 (function init(){
   if(typeof firebase==='undefined'){setTimeout(init,300);return;}
@@ -266,9 +266,9 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
     app.auth().onAuthStateChanged(function(user){
       if(user){
         _authDone=true;
+        _curUid=user.uid;
         loadDrivers();
       } else if(!_authDone){
-        // IndexedDB에서 auth 복원 전에 null 발화할 수 있음 — 1초 대기 후 재확인
         setTimeout(function(){
           if(!app.auth().currentUser) window.location.href='/settle';
         },1000);
@@ -522,7 +522,7 @@ function saveContract(){
   if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
   if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
   if(!_db){toast('Firebase 연결 필요','err');return;}
-  _db.collection('contracts').add(Object.assign(d,{type:'contract',status:'유효',docNo:'C-'+Date.now().toString().slice(-6)}))
+  _db.collection('contracts').add(Object.assign(d,{type:'contract',status:'유효',docNo:'C-'+Date.now().toString().slice(-6),dealerId:_curUid||''}))
     .then(function(){toast('✅ 계약서 저장 완료','ok');})
     .catch(function(e){toast('❌ '+e.message,'err');});
 }
@@ -633,7 +633,7 @@ function loadList(){
   var el=document.getElementById('contract-list');
   el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>';
   if(!_db)return;
-  _db.collection('contracts').orderBy('createdAt','desc').limit(100).get()
+  _db.collection('contracts').where('dealerId','==',_curUid||'').orderBy('createdAt','desc').limit(100).get()
     .then(function(s){
       if(s.empty){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)">📭 계약서 없음</div>';return;}
       el.innerHTML=s.docs.map(function(d){
