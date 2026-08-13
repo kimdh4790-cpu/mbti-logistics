@@ -11579,6 +11579,8 @@ function _goPage(p){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   if(p!=='chat'&&_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
+  if(_weeklyAgencyUnsub){try{_weeklyAgencyUnsub();}catch(e){}; _weeklyAgencyUnsub=null;}
+  if(_todayRecordsUnsub){try{_todayRecordsUnsub();}catch(e){}; _todayRecordsUnsub=null;}
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
   var el=document.getElementById('content');
@@ -14984,7 +14986,7 @@ function _yConfirmRecord(recordId,driverId){
     status:'confirmed',confirmedAt:firebase.firestore.FieldValue.serverTimestamp(),
     confirmedBy:_CU.uid
   }).then(function(){
-    _yNotify(driverId||'','건수 확인 완료',_CU.name+'에서 오늘 배송 건수를 확인했어요','work');
+    if(driverId)_yNotify(driverId,'건수 확인 완료',_CU.name+'에서 오늘 배송 건수를 확인했어요','work');
     _yToast('건수 확인 완료');
   }).catch(function(e){_yToast('확인 실패: '+e.message);});
 }
@@ -16598,12 +16600,13 @@ function _yDoDeleteAccount(){
   var btn=document.getElementById('del-confirm-btn');
   var reason=(document.getElementById('del-reason')||{}).value||'기타';
   if(btn){btn.textContent='탈퇴 처리 중...';btn.disabled=true;}
-  _db.collection('yongcha_users').doc(_CU.uid).update({
-    deleted:true,
-    deletedReason:reason,
-    deletedAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
-    return firebase.auth().currentUser.delete();
+  // Auth 삭제를 먼저 — 실패 시 Firestore는 건드리지 않아 불일치 방지
+  firebase.auth().currentUser.delete().then(function(){
+    return _db.collection('yongcha_users').doc(_CU.uid).update({
+      deleted:true,
+      deletedReason:reason,
+      deletedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
   }).then(function(){
     _closeModal();
     _CU=null;
@@ -18569,7 +18572,7 @@ function _pgDashboard(el){
           wRows+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
             '<span style="font-size:12.5px;font-weight:700;min-width:75px">'+_esc(r.date)+'</span>'+
             '<span style="font-size:12px;color:var(--t2);flex:1">'+_won(r.count||0)+'건</span>'+
-            '<span style="font-size:13px;font-weight:800;color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+_won(Number(r.amount||0).toLocaleString())+'원</span>'+
+            '<span style="font-size:13px;font-weight:800;color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+_won(r.amount||0)+'원</span>'+
             '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(r.status==='confirmed'?'var(--gnl)':'var(--brl)')+';color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+
               (r.status==='confirmed'?'확인':'대기')+'</span>'+
           '</div>';
