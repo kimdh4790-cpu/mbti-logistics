@@ -9867,6 +9867,13 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
     </div>
+    <div style="margin:0 0 12px;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--bg3);border-radius:10px">
+      <input type="checkbox" id="r-terms-agree" style="margin-top:2px;accent-color:var(--ac);width:16px;height:16px;flex-shrink:0">
+      <label for="r-terms-agree" style="font-size:12px;color:var(--t2);line-height:1.6;cursor:pointer">
+        <span onclick="_showTermsOverlay()" style="color:var(--ac);text-decoration:underline;cursor:pointer">이용약관</span> 및
+        <span onclick="_showPrivacyOverlay()" style="color:var(--ac);text-decoration:underline;cursor:pointer">개인정보처리방침</span>에 동의합니다. (필수)
+      </label>
+    </div>
     <div class="err" id="r-err"></div>
     <button class="btn-main" id="r-btn" onclick="_yRegister()">가입하기</button>
   </div>
@@ -10231,6 +10238,9 @@ function _yRegister(){
   var btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  if(!(document.getElementById('r-terms-agree')||{}).checked){
+    err.textContent='이용약관 및 개인정보처리방침에 동의해주세요';err.style.display='block';return;
+  }
   if(_regType==='agency'&&!_bizVerified){
     err.textContent='사업자번호 인증이 필요합니다';err.style.display='block';return;
   }
@@ -10244,6 +10254,8 @@ function _yRegister(){
       carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       rating:0,reviewCount:0,status:'active',
+      trustScore:60,trustGrade:'B',cancelCount:0,noShowCount:0,completedRoutes:0,
+      termsAgreedAt:firebase.firestore.FieldValue.serverTimestamp(),
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     if(userType==='agency'&&corpNum){
@@ -10357,6 +10369,8 @@ function _goPage(p){
   else if(p==='tax_approve')_pgTaxApprove(el,'');
   else if(p==='maintenance')_pgMaintenance(el);
   else if(p==='accident')_pgAccident(el);
+  else if(p==='terms')_pgTerms(el);
+  else if(p==='privacy')_pgPrivacy(el);
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -10413,6 +10427,86 @@ var _NOTIF_TYPES={
     ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
     bg:'var(--bg3)',col:'var(--t3)'}
 };
+
+function _showTermsOverlay(){
+  var o=document.getElementById('terms-overlay');
+  if(!o){
+    o=document.createElement('div');
+    o.id='terms-overlay';
+    o.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:9999;overflow-y:auto;padding:0';
+    document.body.appendChild(o);
+  }
+  o.style.display='block';
+  o.innerHTML=_termsHtml(function(){o.style.display='none';},'이용약관',_termsContent());
+}
+function _showPrivacyOverlay(){
+  var o=document.getElementById('terms-overlay');
+  if(!o){
+    o=document.createElement('div');
+    o.id='terms-overlay';
+    o.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:9999;overflow-y:auto;padding:0';
+    document.body.appendChild(o);
+  }
+  o.style.display='block';
+  o.innerHTML=_termsHtml(function(){o.style.display='none';},'개인정보처리방침',_privacyContent());
+}
+function _termsHtml(onBack,title,content){
+  return '<div style="padding:20px 16px 60px">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'+
+      '<button onclick="document.getElementById(\\'terms-overlay\\').style.display=\\'none\\'" style="background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;padding:0;line-height:1">&#8592;</button>'+
+      '<div style="font-size:18px;font-weight:900">'+title+'</div>'+
+    '</div>'+content+'</div>';
+}
+function _termsContent(){
+  return '<div style="font-size:13px;color:var(--t2);line-height:1.9">'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제1조 (목적)</p>'+
+    '<p style="margin:0 0 16px">본 약관은 유한회사 엠비티아이(이하 "회사")가 운영하는 용차 플랫폼(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자 간의 권리·의무를 규정함을 목적으로 합니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제2조 (서비스의 성격 — 중요)</p>'+
+    '<p style="margin:0 0 16px">서비스는 배차 공고를 등록하는 대리점(사업주)과 공고에 지원하는 기사(개인사업자 또는 근로자) 간의 연결을 중개하는 플랫폼입니다. 회사는 대리점과 기사 간 근로계약·용역계약의 당사자가 아니며, 대리점이 게시한 공고 내용·보장 조건·임금 지급에 대해 어떠한 보증도 하지 않습니다. "약정 최소보장" 등의 표시는 대리점이 기사에게 약속한 조건이며, 회사가 이를 이행할 의무가 없습니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제3조 (면책)</p>'+
+    '<p style="margin:0 0 16px">① 대리점과 기사 간 분쟁(임금 미지급, 공고 허위 기재, 계약 불이행 등)에 대해 회사는 직접적인 법적 책임을 지지 않습니다.<br>'+
+    '② 임금 미지급 등 노동 분쟁은 고용노동부(대표전화 1350) 또는 관할 노동청에 신고하시기 바랍니다.<br>'+
+    '③ 회사는 불법·허위 게시물 신고 접수 시 검토 후 조치하나, 모든 게시물의 정확성을 사전 보증하지 않습니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제4조 (이용 제한)</p>'+
+    '<p style="margin:0 0 16px">허위공고 게시, 임금 미지급 신고 누적, 취소율 50% 초과, 노쇼 반복 등의 경우 서비스 이용이 제한될 수 있습니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제5조 (약관 변경)</p>'+
+    '<p style="margin:0 0 4px">회사는 관련 법령을 위배하지 않는 범위에서 약관을 변경할 수 있으며, 변경 시 앱 공지사항으로 사전 안내합니다.</p>'+
+    '<p style="color:var(--t3);font-size:11px;margin-top:20px">시행일: 2025년 1월 1일 / 회사: 유한회사 엠비티아이 / 대표: 김형우</p>'+
+    '</div>';
+}
+function _privacyContent(){
+  return '<div style="font-size:13px;color:var(--t2);line-height:1.9">'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">수집하는 개인정보 항목</p>'+
+    '<p style="margin:0 0 16px">이름, 이메일, 연락처, 지역, 사업자등록번호(대리점), 차종·연료 정보(기사), Firebase UID, FCM 토큰</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">수집 및 이용 목적</p>'+
+    '<p style="margin:0 0 16px">회원 인증 및 서비스 제공, 배차 공고 매칭, 채팅·알림 발송, 정산 및 세금계산서 처리, 서비스 품질 향상</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">보유 및 이용 기간</p>'+
+    '<p style="margin:0 0 16px">회원 탈퇴 후 30일 이내 파기. 단, 분쟁 해결·법령 의무에 따라 일부 기록은 최대 3년 보관될 수 있습니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">제3자 제공</p>'+
+    '<p style="margin:0 0 16px">배차 확정 시 대리점·기사 간 연락처가 상호 공개됩니다. 팝빌 세금계산서 발행 시 국세청에 사업자 정보가 전송됩니다. 그 외 제3자에게 개인정보를 제공하지 않습니다.</p>'+
+    '<p style="font-weight:800;color:var(--t1);margin:0 0 4px">이용자의 권리</p>'+
+    '<p style="margin:0 0 4px">개인정보 열람·정정·삭제·처리정지 요청은 앱 내 프로필 수정 또는 이메일(kimdh4790@gmail.com)로 문의하세요.</p>'+
+    '<p style="color:var(--t3);font-size:11px;margin-top:20px">시행일: 2025년 1월 1일 / 처리자: 유한회사 엠비티아이</p>'+
+    '</div>';
+}
+
+function _pgTerms(el){
+  el.innerHTML=
+    '<div style="padding:20px 16px 40px">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'+
+      '<button onclick="_goPage(\\'home\\')" style="background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;padding:0;line-height:1">&#8592;</button>'+
+      '<div style="font-size:18px;font-weight:900">이용약관</div>'+
+    '</div>'+_termsContent()+'</div>';
+}
+
+function _pgPrivacy(el){
+  el.innerHTML=
+    '<div style="padding:20px 16px 40px">'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'+
+      '<button onclick="_goPage(\\'home\\')" style="background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;padding:0;line-height:1">&#8592;</button>'+
+      '<div style="font-size:18px;font-weight:900">개인정보처리방침</div>'+
+    '</div>'+_privacyContent()+'</div>';
+}
 
 var _notifFilter='all';
 var _notifAllData=[];
@@ -12722,9 +12816,9 @@ function _showPostDetail(d){
   '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
     'border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
     '<div>'+
-      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">플랫폼 최소보장</div>'+
+      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">약정 최소보장 (대리점 제공)</div>'+
       '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
-      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시에도 보장액 지급 의무</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시 보장액 지급 (대리점 약정 — 플랫폼 미보증)</div>'+
     '</div>'+
     '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(16,185,129,.4)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'+
   '</div>'+
@@ -13854,9 +13948,9 @@ function _pgPostWrite(el){
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
   '<div style="padding:10px 12px;background:var(--acl);border-radius:10px;margin-bottom:4px">'+
-  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:3px">플랫폼 최소보장 (고정)</div>'+
+  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:3px">약정 최소보장 (대리점 설정)</div>'+
   '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:3px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:3px">실건수×단가 < 최소보장액 시 대리점 약정에 따라 지급 (플랫폼 미보증)</div>'+
   '</div>'+
   '</div>'+
 
@@ -13980,7 +14074,7 @@ function _selType(btn, val, hiddenId){
   // 최소보장 표시 업데이트
   if(hiddenId==='pw-shift'){
     var g=document.getElementById('pw-guarantee-display');
-    if(g) g.textContent=val==='야간'?'야간: 일 35만원 보장 (플랫폼 고정)':'주간: 일 30만원 보장 (플랫폼 고정)';
+    if(g) g.textContent=val==='야간'?'야간: 일 35만원 (대리점 약정)':'주간: 일 30만원 (대리점 약정)';
   }
 }
 
@@ -16349,6 +16443,7 @@ function _calcTrustScore(userId){
         var completed=ud.completedRoutes||0;
         var score=Math.min(100, completed*5 + highRatingCount*10);
         upd.trustScore=score;
+        upd.trustGrade=score>=80?'S':score>=60?'A':score>=40?'B':'C';
       }
       _db.collection('yongcha_users').doc(userId).update(upd).catch(function(){});
     }).catch(function(){
@@ -16814,7 +16909,7 @@ function _pgDashboard(el){
 }
 
 function _reportUnpaidSettle(settleId,agencyId){
-  if(!confirm('미지급 정산을 신고할까요?\n관리자가 확인 후 조치합니다.'))return;
+  if(!confirm('미지급 정산을 신고할까요? 허위 신고 시 이용이 제한될 수 있어요.'))return;
   var now=firebase.firestore.FieldValue.serverTimestamp();
   _db.collection('yongcha_reports').add({
     type:'settle_dispute',
