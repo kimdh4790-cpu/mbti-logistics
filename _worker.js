@@ -18587,24 +18587,38 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
   }
 
-  // ── 기초구역 경계 (KV → Oracle 프록시 → ok:false 순) ──────────────────
+  // ── 기초구역 경계 (vWorld WFS → Oracle 프록시 → KV → ok:false 순) ────
   if (path === '/api/yongcha/basidco' && method === 'GET') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
     const zip = new URL(request.url).searchParams.get('zip') || '';
     if (!/^[0-9]{5}$/.test(zip)) {
       return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
     }
-    // 1) KV 조회 (shapefile 변환 데이터 — 가장 빠름)
-    try {
-      const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
-      if (kvVal) {
-        const coords = JSON.parse(kvVal);
-        if (Array.isArray(coords) && coords.length >= 4) {
-          const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-          return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'kv' }), { headers: corsH });
+    function _ringToCoords(ring) { return ring.map(c => ({ lat: c[1], lng: c[0] })); }
+    function _centroid(coords) {
+      const s = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+      return { lat: s.lat / coords.length, lng: s.lng / coords.length };
+    }
+    // 1) vWorld WFS 직접 조회 — 행안부 공식 기초구역 경계 (가장 정확)
+    if (env.VWORLD_API_KEY) {
+      try {
+        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=BAS_ID='${zip}'&SRSNAME=EPSG:4326`;
+        const vr = await fetch(vUrl, { signal: AbortSignal.timeout(10000) });
+        if (vr.ok) {
+          const fc = await vr.json();
+          const feat = fc?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = _ringToCoords(ring);
+            if (coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'vworld' }), { headers: corsH });
+            }
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
     // 2) Oracle Cloud vWorld 프록시 (설정된 경우)
     if (env.ORACLE_PROXY_URL) {
       try {
@@ -18619,15 +18633,26 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
           if (feat?.geometry) {
             const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
                        : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
-            const coords = ring.map(c => ({ lat: c[1], lng: c[0] }));
+            const coords = _ringToCoords(ring);
             if (coords.length >= 4) {
-              const cen = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
-              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat / coords.length, lng: cen.lng / coords.length, source: 'vworld' }), { headers: corsH });
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'oracle' }), { headers: corsH });
             }
           }
         }
       } catch (_) {}
     }
+    // 3) KV 캐시 (shapefile 변환 데이터 — 폴백)
+    try {
+      const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
+      if (kvVal) {
+        const coords = JSON.parse(kvVal);
+        if (Array.isArray(coords) && coords.length >= 4) {
+          const cen = _centroid(coords);
+          return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'kv' }), { headers: corsH });
+        }
+      }
+    } catch (_) {}
     return new Response(JSON.stringify({ ok: false, error: 'no_data' }), { headers: corsH });
   }
 
