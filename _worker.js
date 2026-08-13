@@ -2532,80 +2532,33 @@ async function acceptExchange(){
 
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
-      // /api/menu-image — Pexels 음식 이미지 검색
+      // /api/menu-image — Pexels 우선, 키 없거나 결과 없으면 Pollinations 폴백
       if (path === '/api/menu-image') {
         const q = new URL(request.url).searchParams.get('q') || 'food';
+        const CORS = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        const pollinationsUrl = (prompt) => {
+          const seed = prompt.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 9999;
+          return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=800&nologo=true&seed=${seed}&model=flux&enhance=true`;
+        };
         const pexelsKey = env.PEXELS_API_KEY || '';
-        if (!pexelsKey) return Response.json({url:''});
-        try {
-          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
-          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
-          const _pex = async (extra) => {
-            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
-              headers: {'Authorization': pexelsKey}
-            });
-            const d = await r.json();
-            return d.photos || [];
-          };
-          let photos = await _pex('&orientation=square');
-          if (!photos.length) photos = await _pex('');
-          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
-          // 랜덤으로 하나 선택
-          const photo = photos[Math.floor(Math.random() * photos.length)];
-          const url = photo.src?.medium || photo.src?.original || '';
-          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return Response.json({url:''});
+        if (pexelsKey) {
+          try {
+            const _pex = async (extra) => {
+              const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {headers:{'Authorization':pexelsKey}});
+              const d = await r.json();
+              return d.photos || [];
+            };
+            let photos = await _pex('&orientation=square');
+            if (!photos.length) photos = await _pex('');
+            if (photos.length) {
+              const photo = photos[Math.floor(Math.random() * photos.length)];
+              const url = photo.src?.medium || photo.src?.original || '';
+              if (url) return Response.json({url}, {headers:CORS});
+            }
+          } catch(e) {}
         }
-      }
-
-      if (path === '/api/store') {
-        const slug = new URL(request.url).searchParams.get('slug');
-        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const token = await getAccessToken(env);
-        // slug로 조회
-        const r1 = await fetch(FS_BASE+'/companies/'+slug,{headers:{'Authorization':'Bearer '+token}});
-        const d1 = await r1.json();
-        if(d1.fields){
-          const f=d1.fields;
-          const store={id:slug,name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
-          return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-        // slug 필드로 검색
-        const r2 = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}},limit:1}})});
-        const d2 = await r2.json();
-        const doc=(d2||[]).find(function(r){return r.document;});
-        if(!doc) return new Response(JSON.stringify({error:'매장을 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const f=doc.document.fields||{};
-        const store={id:doc.document.name.split('/').pop(),name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
-        return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-      }
-      // /api/menu-image — Pexels 음식 이미지 검색
-      if (path === '/api/menu-image') {
-        const q = new URL(request.url).searchParams.get('q') || 'food';
-        const pexelsKey = env.PEXELS_API_KEY || '';
-        if (!pexelsKey) return Response.json({url:''});
-        try {
-          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
-          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
-          const _pex = async (extra) => {
-            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
-              headers: {'Authorization': pexelsKey}
-            });
-            const d = await r.json();
-            return d.photos || [];
-          };
-          let photos = await _pex('&orientation=square');
-          if (!photos.length) photos = await _pex('');
-          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
-          // 랜덤으로 하나 선택
-          const photo = photos[Math.floor(Math.random() * photos.length)];
-          const url = photo.src?.medium || photo.src?.original || '';
-          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return Response.json({url:''});
-        }
+        // Pexels 키 없거나 결과 없으면 Pollinations 폴백
+        return Response.json({url: pollinationsUrl(q)}, {headers:CORS});
       }
 
       if (path === '/api/store') {
