@@ -14299,6 +14299,13 @@ async function openDeliveryMap(){
   }catch(e){toast('❌ 오류: '+e.message);}
 }
 
+function _closeDeliveryMap(){
+  if(window._geoWatchId!=null){navigator.geolocation.clearWatch(window._geoWatchId);window._geoWatchId=null;}
+  window._geoLocMarker=null;
+  var mo=document.getElementById('delivery-map-mo');
+  if(mo)mo.remove();
+}
+
 function _showMapModal(locs){
   window._mapLocs=locs;
   document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
@@ -14345,15 +14352,15 @@ function _showMapModal(locs){
       +'</div></div>';
   }).join(''):'<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">오늘 등록된 배송이 없습니다</div>';
   document.body.insertAdjacentHTML('beforeend',
-    '<div id="delivery-map-mo" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;display:flex;align-items:flex-end;justify-content:center">'
-    +'<div onclick="event.stopPropagation()" style="background:#0f172a;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto">'
-    +'<div style="width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 16px"></div>'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
-    +'<span style="font-size:20px">📍</span><b style="font-size:16px">오늘 배송 핀 지도</b>'
-    +'<span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px">'+locs.length+'건'+(gpsLocs.length<locs.length?' · GPS '+gpsLocs.length+'건':'')+'</span>'
-    +'<button onclick="document.getElementById(\'delivery-map-mo\').remove()" style="margin-left:auto;padding:5px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:12px;color:#fff">닫기</button>'
+    '<div id="delivery-map-mo" onclick="if(event.target===this)_closeDeliveryMap()" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;display:flex;align-items:flex-end;justify-content:center">'
+    +'<div onclick="event.stopPropagation()" style="background:#0f172a;border-radius:16px 16px 0 0;padding:16px 16px 20px;width:100%;max-width:520px;max-height:96vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 12px"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<b style="font-size:15px">오늘 배송 핀 지도</b>'
+    +'<span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:2px">'+locs.length+'건'+(gpsLocs.length<locs.length?' · GPS '+gpsLocs.length+'건':'')+'</span>'
+    +'<button onclick="_closeDeliveryMap()" style="margin-left:auto;padding:5px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:12px;color:#fff">닫기</button>'
     +'</div>'
-    +(gpsLocs.length>0?'<div id="dm-map" style="width:100%;height:220px;border-radius:12px;margin-bottom:14px;overflow:hidden;background:#1e293b"></div>':'')
+    +(gpsLocs.length>0?'<div id="dm-map" style="width:100%;height:52vh;min-height:260px;border-radius:12px;margin-bottom:10px;overflow:hidden;background:#1e293b"></div>':'')
     +'<div id="map-filter-bar" style="display:none;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:8px">'
     +'<span id="map-filter-txt" style="font-size:12px;color:#c9a84c;flex:1;font-weight:700"></span>'
     +'<button onclick="_mapShowAll()" style="padding:4px 14px;background:#c9a84c;border:none;border-radius:6px;color:#000;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">전체 보기</button>'
@@ -14453,6 +14460,43 @@ function _renderLeafletMap(locs){
 
   if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20]});
   setTimeout(function(){map.invalidateSize();},300);
+
+  // 실시간 내 위치 추적
+  if(window._geoWatchId!=null){navigator.geolocation.clearWatch(window._geoWatchId);window._geoWatchId=null;}
+  if(navigator.geolocation){
+    var locCircle=null;
+    var locIcon=L.divIcon({
+      className:'',
+      html:'<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.3)"></div>',
+      iconSize:[18,18],iconAnchor:[9,9]
+    });
+    // 내 위치로 이동 버튼
+    var BtnCtrl=L.Control.extend({
+      onAdd:function(){
+        var d=L.DomUtil.create('div','');
+        d.innerHTML='<button title="내 위치로 이동" style="width:36px;height:36px;background:#fff;border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);touch-action:manipulation"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>';
+        d.querySelector('button').addEventListener('click',function(e){
+          e.stopPropagation();
+          if(window._geoLocMarker){map.setView(window._geoLocMarker.getLatLng(),17);}
+          else{_filoToast&&_filoToast('위치 권한을 허용해 주세요');}
+        });
+        L.DomEvent.disableClickPropagation(d);
+        return d;
+      }
+    });
+    new BtnCtrl({position:'bottomleft'}).addTo(map);
+    window._geoLocMarker=null;
+    window._geoWatchId=navigator.geolocation.watchPosition(function(pos){
+      var ll=[pos.coords.latitude,pos.coords.longitude];
+      if(!window._geoLocMarker){
+        window._geoLocMarker=L.marker(ll,{icon:locIcon,zIndexOffset:2000}).addTo(map);
+        locCircle=L.circle(ll,{radius:pos.coords.accuracy||30,color:'#3b82f6',fillColor:'#93c5fd',fillOpacity:0.15,weight:1}).addTo(map);
+      }else{
+        window._geoLocMarker.setLatLng(ll);
+        if(locCircle){locCircle.setLatLng(ll);locCircle.setRadius(pos.coords.accuracy||30);}
+      }
+    },{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+  }
 }
 
 function _mapShowAll(){
