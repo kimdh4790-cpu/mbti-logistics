@@ -79,9 +79,9 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
   </div>
   <div class="main-area">
     <div class="stat-row">
-      <div class="stat-box"><div class="stat-num" id="cnt-scan">0</div><div class="stat-label">스캔</div></div>
-      <div class="stat-box"><div class="stat-num" id="cnt-save">0</div><div class="stat-label">저장</div></div>
-      <div class="stat-box"><div class="stat-num" id="cnt-today">0</div><div class="stat-label">오늘 처리</div></div>
+      <div class="stat-box"><div class="stat-num" id="cnt-scan" style="color:#f87171">0</div><div class="stat-label">미완료</div></div>
+      <div class="stat-box"><div class="stat-num" id="cnt-save" style="color:#4ade80">0</div><div class="stat-label">완료</div></div>
+      <div class="stat-box"><div class="stat-num" id="cnt-today">0</div><div class="stat-label">전체</div></div>
     </div>
     <div class="action-btns">
       <button class="btn btn-blue" onclick="openEmergencyDelivery()" style="display:flex;align-items:center;justify-content:center;gap:6px">
@@ -10452,13 +10452,19 @@ function saveGoogleKey(){
 }
 function loadTodayStats(){
   var today=new Date().toISOString().slice(0,10);
-  _db.collection('emergency_deliveries').where('dealerId','==',_CU.uid).where('date','==',today).get()
-    .then(function(snap){document.getElementById('cnt-today').textContent=snap.size;}).catch(function(){});
+  var did=(_CU&&_CU.uid)||localStorage.getItem('mbti_emer_dealerId')||'';
+  if(!did)return;
+  _db.collection('emergency_deliveries').where('dealerId','==',did).where('date','==',today).get()
+    .then(function(snap){
+      var total=snap.size,done=0;
+      snap.docs.forEach(function(d){if(d.data().status==='완료')done++;});
+      var el1=document.getElementById('cnt-scan'),el2=document.getElementById('cnt-save'),el3=document.getElementById('cnt-today');
+      if(el1)el1.textContent=total-done;
+      if(el2)el2.textContent=done;
+      if(el3)el3.textContent=total;
+    }).catch(function(){});
 }
-function _updateEmerCounters(){
-  var cs=document.getElementById('cnt-scan');var cv=document.getElementById('cnt-save');
-  if(cs)cs.textContent=window._emerScanCount||0;if(cv)cv.textContent=window._emerSaveCount||0;
-}
+function _updateEmerCounters(){ loadTodayStats(); }
 async function _callOcr(b64,mimeType){
   try{
     var resp=await fetch('/claude-ocr',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -14403,8 +14409,6 @@ function _renderLeafletMap(locs){
       var ma=(a.addr||'').match(/(\d+)동/),mb=(b.addr||'').match(/(\d+)동/);
       return ((ma?parseInt(ma[1]):9999)-(mb?parseInt(mb[1]):9999));
     });
-    // 이 그룹에 속한 카드 인덱스 목록 (핀 클릭 시 필터링에 사용)
-    var groupIdxs=grp.items.map(function(m){return m._locsIdx!=null?m._locsIdx:0;});
     grp.items.forEach(function(x,gi){
       var dlat=0,dlng=0;
       if(n>1){
@@ -14422,35 +14426,28 @@ function _renderLeafletMap(locs){
         html:'<div style="width:26px;height:26px;border-radius:50%;background:'+color+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(origIdx+1)+'</div>',
         iconSize:[26,26],iconAnchor:[13,13]
       });
-      (function(oi,gIdxs){
+      (function(oi){
         L.marker(ll,{icon:icon}).addTo(map)
           .bindPopup((function(){var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';})())
           .on('click',function(){
             var mo=document.getElementById('delivery-map-mo');
             if(!mo)return;
-            // 전체 카드 숨기기
+            // 전체 카드 숨기기 → 이 핀 1건만 표시
             var allCards=mo.querySelectorAll('[data-map-idx]');
             for(var ci=0;ci<allCards.length;ci++) allCards[ci].style.display='none';
-            // 이 핀 그룹 카드만 표시 + 클릭된 카드 하이라이트
-            for(var fi=0;fi<gIdxs.length;fi++){
-              (function(idx,isMain){
-                var c=mo.querySelector('[data-map-idx="'+idx+'"]');
-                if(!c)return;
-                c.style.display='';
-                if(isMain){
-                  c.scrollIntoView({behavior:'smooth',block:'nearest'});
-                  c.style.boxShadow='0 0 0 2px #c9a84c,0 0 12px rgba(201,168,76,.4)';
-                  setTimeout(function(){c.style.boxShadow='';},2000);
-                }
-              })(gIdxs[fi],gIdxs[fi]===oi);
+            var c=mo.querySelector('[data-map-idx="'+oi+'"]');
+            if(c){
+              c.style.display='';
+              c.scrollIntoView({behavior:'smooth',block:'nearest'});
+              c.style.boxShadow='0 0 0 2px #c9a84c,0 0 12px rgba(201,168,76,.4)';
+              setTimeout(function(){c.style.boxShadow='';},2000);
             }
-            // 필터 바 표시
             var bar=mo.querySelector('#map-filter-bar');
             var txt=mo.querySelector('#map-filter-txt');
             if(bar)bar.style.display='flex';
-            if(txt)txt.textContent='핀 선택됨 · '+gIdxs.length+'건';
+            if(txt){var dm2=(x.addr||'').match(/(\d+)동/);txt.textContent=(dm2?dm2[1]+'동 ':'')+(x.recipient||'미확인');}
           });
-      })(origIdx,groupIdxs);
+      })(origIdx);
     });
   });
 
