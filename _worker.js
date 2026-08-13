@@ -14093,6 +14093,9 @@ function _pgMyApplies(el){
       });
       list.appendChild(apDiv);
     }
+  }).catch(function(e){
+    var list=document.getElementById('applies-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+_esc(e.message)+'</div></div>';
   });
 }
 
@@ -14748,6 +14751,9 @@ function _admLoadMembers(){
         '</div>';
       list.appendChild(card);
     });
+  }).catch(function(e){
+    var list=document.getElementById('members-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">회원 목록 로드 실패: '+_esc(e.message)+'</div></div>';
   });
 }
 
