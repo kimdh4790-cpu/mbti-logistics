@@ -17297,16 +17297,65 @@ function _addZoneByZip(){
             fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
             .then(function(d){
-              if(d.ok&&d.coords&&d.coords.length>=4&&d.source!=='kv'){
-                _applyBoundary({coords:d.coords,lat:d.lat||lat,lng:d.lng||lng});
-              } else if(d.ok&&d.coords&&d.coords.length>=4){
-                // KV 데이터(부정확) → 브라우저에서 vWorld 직접 재시도
-                _fetchVworld(d.coords,d.lat||lat,d.lng||lng);
+              if(typeof _yToast==='function')_yToast('서버:'+((d.ok&&d.source)||'오류'));
+              var sCoords=(d.ok&&d.coords&&d.coords.length>=4)?d.coords:null;
+              var sLat=d.lat||lat, sLng=d.lng||lng;
+              if(d.source==='juso'){
+                // juso 데이터는 이미 정확 — 직접 적용
+                _applyBoundary({coords:sCoords,lat:sLat,lng:sLng});
               } else {
-                _fetchVworld(null,lat,lng);
+                // 브라우저에서 juso.go.kr WFS 직접 시도 (한국 IP, CORS 허용 여부 확인)
+                _tryJusoBrowser(sCoords,sLat,sLng);
               }
             })
-            .catch(function(){_fetchVworld(null,lat,lng);});
+            .catch(function(){
+              if(typeof _yToast==='function')_yToast('basidco 오류→vWorld');
+              _fetchVworld(null,lat,lng);
+            });
+            // 시도 1.5: 브라우저에서 juso.go.kr WFS 직접 (서버 IP 차단 우회 시도)
+            function _tryJusoBrowser(fallback,cLat,cLng){
+              function _t2w(x,y){
+                var a=6378137,f=1/298.257222101,b=a*(1-f),e2=1-b*b/(a*a),ep2=e2/(1-e2);
+                var lat0=38*Math.PI/180,lng0=127.5*Math.PI/180,E0=1e6,N0=2e6,e4=e2*e2,e6=e4*e2;
+                var e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+                function mA(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+                var M=mA(lat0)+(y-N0),mu=M/(a*(1-e2/4-3*e4/64-5*e6/256));
+                var phi1=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*Math.pow(e1,4)/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu)+(1097*Math.pow(e1,4)/512)*Math.sin(8*mu);
+                var sp1=Math.sin(phi1),cp1=Math.cos(phi1),tp1=Math.tan(phi1);
+                var N1=a/Math.sqrt(1-e2*sp1*sp1),T1=tp1*tp1,C1=ep2*cp1*cp1;
+                var R1=a*(1-e2)/Math.pow(1-e2*sp1*sp1,1.5),D=(x-E0)/N1;
+                var lr=phi1-(N1*tp1/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*Math.pow(D,6)/720);
+                var lo=lng0+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*Math.pow(D,5)/120)/cp1;
+                return{lat:lr*180/Math.PI,lng:lo*180/Math.PI};
+              }
+              function _applyFallback(){
+                if(fallback&&fallback.length>=4){_applyBoundary({coords:fallback,lat:cLat,lng:cLng});}
+                else{_fetchVworld(null,cLat,cLng);}
+              }
+              var jusoUrl='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD&CQL_FILTER='+encodeURIComponent("BAS_ID='"+zipcode+"'");
+              fetch(jusoUrl,{signal:AbortSignal.timeout?AbortSignal.timeout(10000):undefined})
+              .then(function(r){return r.json();})
+              .then(function(jfc){
+                var feats=jfc.features||[];
+                if(feats.length&&feats[0].geometry){
+                  var g=feats[0].geometry;
+                  var ring=g.type==='Polygon'?g.coordinates[0]:g.type==='MultiPolygon'?g.coordinates[0][0]:[];
+                  var coords=ring.map(function(c){return _t2w(c[0],c[1]);});
+                  if(coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124){
+                    if(typeof _yToast==='function')_yToast('juso 브라우저 성공!');
+                    var sL=0,sG=0;coords.forEach(function(p){sL+=p.lat;sG+=p.lng;});
+                    _applyBoundary({coords:coords,lat:sL/coords.length,lng:sG/coords.length});
+                    return;
+                  }
+                }
+                if(typeof _yToast==='function')_yToast('juso 빈결과→폴백');
+                _applyFallback();
+              })
+              .catch(function(e){
+                if(typeof _yToast==='function')_yToast('juso CORS/오류→'+(e.message||'').substring(0,12));
+                _applyFallback();
+              });
+            }
             // 시도 2: vWorld JSONP + fetch 병행 (CORS 우회, 브라우저 한국 IP)
             function _fetchVworld(fallbackCoords,cLat,cLng){
               var vKey='DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
