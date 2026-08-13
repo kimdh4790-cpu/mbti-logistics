@@ -13228,8 +13228,8 @@ function _yAutoChat(driverId,driverName,applyData,postTitle,unitPrice,startDate)
     chatRef.collection('messages').add({
       senderId:'system',senderName:'시스템',text:firstMsg,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function(){});
-  }).catch(function(){});
+    }).catch(function(e){console.warn('[yAutoChat] msg add 실패:',e.message);});
+  }).catch(function(e){console.warn('[yAutoChat] chat set 실패:',e.message);});
 }
 
 function _yConfirmStart(applyId,postId){
@@ -13296,7 +13296,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
   _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
     if(!ap.exists)return;
     var a=ap.data();
-    var recordId=_CU.uid+'_'+date;
+    var recordId=_CU.uid+'_'+applyId+'_'+date;
     _db.collection('yongcha_daily_records').doc(recordId).set({
       applyId:applyId,postId:a.postId||'',
       driverId:_CU.uid,driverName:_CU.name,
@@ -15125,7 +15125,7 @@ function _toggleJobStatus(id, status){
   _db.collection('yongcha_jobs').doc(id).update({status:next}).then(function(){
     _yToast(next==='open'?'채용공고 재오픈됐어요':'채용공고 마감됐어요');
     _pgJobsAgency(document.getElementById('content'));
-  });
+  }).catch(function(e){_yToast('처리 실패: '+e.message);});
 }
 
 function _loadJobApplicants(jobId){
@@ -15165,7 +15165,7 @@ function _judgeJobApply(applyId, status, name, driverId){
       else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요','hire');
     }
     _closeModal();
-  });
+  }).catch(function(e){_yToast('처리 실패: '+e.message);});
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -15510,8 +15510,8 @@ function _applyJob(jobId, agencyId, agencyName){
   if(btn){btn.textContent='지원 중...';btn.disabled=true;}
   _db.collection('yongcha_applies').add({
     jobId:jobId, postId:'',
-    driverId:_CU.uid, driverName:_CU.name,
-    driverPhone:_CU.phone, driverRegion:_CU.region,
+    driverId:_CU.uid, driverName:_CU.name||'',
+    driverPhone:_CU.phone||'', driverRegion:_CU.region||'',
     agencyId:agencyId, agencyName:agencyName,
     status:'pending',
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -15537,6 +15537,9 @@ function _loadMyResume(el){
       var doc=snap.docs[0];
       _renderResumeForm(area,doc.id,doc.data());
     }
+  }).catch(function(e){
+    var area=document.getElementById('resume-area');
+    if(area)area.innerHTML='<div class="empty"><div class="empty-msg">이력서 로드 실패: '+_esc(e.message)+'</div></div>';
   });
 }
 
@@ -15831,7 +15834,7 @@ function _openChatRoom(otherUid,otherName,otherType){
         participantNames:names,participantTypes:types,
         lastMessage:'',lastAt:firebase.firestore.FieldValue.serverTimestamp(),
         unread:unread,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(function(){});
+      }).catch(function(e){console.warn('[openChat] set 실패:',e.message);});
     }
   }).then(function(){_pgChatRoom(chatId,otherUid,otherName);}).catch(function(e){_yToast('채팅 오류: '+e.message);});
 }
@@ -15927,7 +15930,10 @@ function _pgChatRoom(chatId,otherUid,otherName){
       msgs.innerHTML='';
       msgs.appendChild(frag);
       msgs.scrollTop=msgs.scrollHeight;
-    },function(){});
+    },function(e){
+      var msgs=document.getElementById('chat-msgs');
+      if(msgs)msgs.innerHTML='<div style="text-align:center;font-size:13px;color:var(--rd);padding:24px">채팅 로드 실패: '+_esc(e.message)+'</div>';
+    });
 }
 
 function _sendMsg(chatId,otherUid){
@@ -18573,15 +18579,16 @@ async function handleYongcha(request, env) {
     }
   }
 
-  // FCM 알림
+  // FCM 알림 (FCM v1 OAuth2)
   if (path === '/api/ctrl-notify' && method === 'POST') {
     try {
       const body = await request.json();
-      if (body.token && env.FCM_SERVER_KEY) {
-        await fetch('https://fcm.googleapis.com/fcm/send', {
-          method: 'POST',
-          headers: { 'Authorization': 'key='+env.FCM_SERVER_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: body.token, notification: { title: body.title||'용차', body: body.body||'' }, data: body.data||{} })
+      if (body.token) {
+        await sendAdminFCM(env, body.token, {
+          title: body.title || '용차',
+          body: body.body || '',
+          type: (body.data && body.data.type) || 'alert',
+          url: (body.data && body.data.url) || undefined
         });
       }
       return new Response(JSON.stringify({ok:true}), { headers: {'Content-Type':'application/json'} });
