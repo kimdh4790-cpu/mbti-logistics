@@ -14200,22 +14200,36 @@ function openDeliveryMap(){
     .limit(50).get()
     .then(function(snap){
       var locs=[];
-      snap.forEach(function(d){var x=d.data();if(x.gps&&x.gps.lat)locs.push(x);});
+      snap.forEach(function(d){var x=d.data();x.fbId=d.id;if(x.gps&&x.gps.lat)locs.push(x);});
       _showMapModal(locs);
     }).catch(function(e){toast('❌ 오류: '+e.message);});
 }
 
 function _showMapModal(locs){
+  window._mapLocs = locs;
   document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
   var listHtml=locs.length?locs.map(function(x,i){
     var warn=x._misdelivery_warn?'<span style="background:#dc2626;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">⚠️ 오배송의심</span>':'';
-    return '<div onclick="window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')" style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+    var isDone=x.status==='완료';
+    var isPart=x.status==='부분완료';
+    var statusDot=isDone?'<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:999px;font-weight:700">✅완료</span>':(isPart?'<span style="font-size:10px;background:#fff7ed;color:#f97316;padding:2px 7px;border-radius:999px;font-weight:700">🟠부분</span>':'<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:999px;font-weight:700">⏳미완료</span>');
+    var fbId=x.fbId||'';
+    var trackVal=x.tracking||(x.trackings&&x.trackings[0])||'';
+    var completeBtn=fbId&&!isDone
+      ?'<button onclick="event.stopPropagation();openDelivComplete(\''+fbId+'\','+i+')" style="flex:1;padding:8px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">✅ 완료처리</button>'
+      :(isDone?'<div style="flex:1;padding:8px;text-align:center;font-size:11px;color:#16a34a;font-weight:700">✅ 완료됨</div>':'');
+    return '<div style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
-      +'<b style="font-size:13px">'+(x.recipient||'미확인')+warn+'</b></div>'
-      +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px">'+(x.addr||'주소없음')+'</div>'
-      +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px">운송장: '+(x.tracking||x.trackings&&x.trackings[0]||'—')+'</div>'
-      +'</div>';
+      +'<b style="font-size:13px;flex:1">'+(x.recipient||'미확인')+warn+'</b>'
+      +statusDot
+      +'</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
+      +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:8px">운송장: '+(trackVal||'—')+'</div>'
+      +'<div style="display:flex;gap:6px;margin-left:32px">'
+      +'<button onclick="event.stopPropagation();window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')" style="flex:1;padding:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer">🗺️ 지도</button>'
+      +completeBtn
+      +'</div></div>';
   }).join(''):'<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">오늘 등록된 배송 핀이 없습니다</div>';
 
   document.body.insertAdjacentHTML('beforeend',
@@ -14228,6 +14242,76 @@ function _showMapModal(locs){
     +'<button onclick="document.getElementById(\'delivery-map-mo\').remove()" style="margin-left:auto;padding:5px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:12px;color:#fff">닫기</button>'
     +'</div>'+listHtml+'</div></div>'
   );
+}
+
+function openDelivComplete(fbId, locIdx){
+  var x=(window._mapLocs&&window._mapLocs[locIdx])||{};
+  document.getElementById('deliv-complete-mo')&&document.getElementById('deliv-complete-mo').remove();
+  window._dcPhoto=null;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="deliv-complete-mo" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:950;display:flex;align-items:flex-end;justify-content:center">'
+    +'<div onclick="event.stopPropagation()" style="background:#0f172a;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="font-size:15px;font-weight:800;margin-bottom:14px">✅ 배송완료 처리</div>'
+    +'<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:12px;margin-bottom:16px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(x.recipient||'수령인미상')+'</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:3px">📍 '+(x.addr||'주소없음')+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.4)">운송장: '+(x.tracking||(x.trackings&&x.trackings[0])||'—')+'</div>'
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px">완료 사진 (선택)</div>'
+    +'<label id="dc-photo-label" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.2);border-radius:10px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:14px;box-sizing:border-box">📷 사진 선택 (선택사항)<input type="file" accept="image/*" capture="environment" id="dc-photo-inp" onchange="_dcHandlePhoto(this)" style="display:none"></label>'
+    +'<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px">완료 메모 (선택)</div>'
+    +'<textarea id="dc-memo-inp" placeholder="예: 현관 앞 배치, 경비실 맡김..." style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;font-family:inherit;min-height:60px;resize:vertical;outline:none;box-sizing:border-box;margin-bottom:14px"></textarea>'
+    +'<button id="dc-save-btn" onclick="_dcSave(\''+fbId+'\','+locIdx+')" style="width:100%;padding:14px;background:#16a34a;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px;touch-action:manipulation">✅ 완료 처리</button>'
+    +'<button onclick="document.getElementById(\'deliv-complete-mo\').remove()" style="width:100%;padding:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.7);font-size:13px;cursor:pointer">취소</button>'
+    +'</div></div>'
+  );
+}
+
+window._dcPhoto=null;
+
+function _dcHandlePhoto(inp){
+  var file=inp.files&&inp.files[0];
+  if(!file) return;
+  window._dcPhoto=file;
+  var label=document.getElementById('dc-photo-label');
+  if(label) label.innerHTML='📷 '+file.name+' <span style="color:#16a34a;font-size:10px">✓ 선택됨</span><input type="file" accept="image/*" capture="environment" id="dc-photo-inp" onchange="_dcHandlePhoto(this)" style="display:none">';
+}
+
+async function _dcSave(fbId, locIdx){
+  if(!fbId){toast('❌ 배송 ID 없음');return;}
+  var btn=document.getElementById('dc-save-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ 처리 중...';}
+  try{
+    var memo=(document.getElementById('dc-memo-inp')||{}).value.trim();
+    var now=new Date();
+    var completedAt=now.toISOString();
+    var completePhotos=[];
+    if(window._dcPhoto&&FB&&_st){
+      try{
+        toast('📷 사진 업로드 중...');
+        var compressed=await _emerCompressPhoto(window._dcPhoto,1200,0.82);
+        var x2=(window._mapLocs&&window._mapLocs[locIdx])||{};
+        var driver2=x2.driver||localStorage.getItem('mbti_emer_driver')||'unknown';
+        var url2=await _emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',3);
+        if(url2) completePhotos.push(url2);
+      }catch(e){ console.warn('[dcSave] 사진 업로드 실패:',e.message); }
+    }
+    var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:completePhotos};
+    if(memo) upd.completeMemo=memo;
+    await _db.collection('emergency_deliveries').doc(fbId).update(upd);
+    if(window._mapLocs&&window._mapLocs[locIdx]){
+      Object.assign(window._mapLocs[locIdx],upd);
+    }
+    window._dcPhoto=null;
+    document.getElementById('deliv-complete-mo')&&document.getElementById('deliv-complete-mo').remove();
+    document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
+    toast('✅ 배송완료 처리 완료!');
+    setTimeout(openDeliveryMap,600);
+  }catch(e){
+    toast('❌ 오류: '+(e.message||'저장 실패'));
+    if(btn){btn.disabled=false;btn.textContent='✅ 완료 처리';}
+  }
 }
 
 function openDrivingMemo(){
