@@ -14188,33 +14188,55 @@ function gpsDistance(lat1,lng1,lat2,lng2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function openDeliveryMap(){
+async function openDeliveryMap(){
   var did=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
   var today=new Date().toISOString().slice(0,10);
   if(!did){toast('로그인 후 이용하세요');return;}
   toast('📍 지도 로딩 중...');
-  _db.collection('emergency_deliveries')
-    .where('dealerId','==',did)
-    .where('date','==',today)
-    .orderBy('savedAt','desc')
-    .limit(50).get()
-    .then(function(snap){
-      var locs=[];
-      snap.forEach(function(d){var x=d.data();x.fbId=d.id;if(x.gps&&x.gps.lat)locs.push(x);});
-      _showMapModal(locs);
-    }).catch(function(e){toast('❌ 오류: '+e.message);});
+  try{
+    var snap=await _db.collection('emergency_deliveries')
+      .where('dealerId','==',did)
+      .where('date','==',today)
+      .orderBy('savedAt','desc')
+      .limit(100).get();
+    var locs=[];
+    var kKey=window._cachedKakaoApiKey||localStorage.getItem('mbti_kakao_api_key')||'';
+    for(var i=0;i<snap.docs.length;i++){
+      var d=snap.docs[i];
+      var x=d.data();x.fbId=d.id;
+      if((!x.gps||!x.gps.lat)&&x.addr&&kKey){
+        try{
+          var r=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(x.addr),
+            {headers:{'Authorization':'KakaoAK '+kKey}});
+          var kd=await r.json();
+          if(kd.documents&&kd.documents[0]){
+            var kDoc=kd.documents[0];
+            x.gps={lat:parseFloat(kDoc.y),lng:parseFloat(kDoc.x),acc:0,src:'kakao'};
+            _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+          }
+        }catch(e2){}
+      }
+      locs.push(x);
+    }
+    _showMapModal(locs);
+  }catch(e){toast('❌ 오류: '+e.message);}
 }
 
 function _showMapModal(locs){
-  window._mapLocs = locs;
+  window._mapLocs=locs;
   document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
+  var gpsLocs=locs.filter(function(x){return x.gps&&x.gps.lat;});
   var listHtml=locs.length?locs.map(function(x,i){
     var warn=x._misdelivery_warn?'<span style="background:#dc2626;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">⚠️ 오배송의심</span>':'';
     var isDone=x.status==='완료';
     var isPart=x.status==='부분완료';
+    var hasGps=!!(x.gps&&x.gps.lat);
     var statusDot=isDone?'<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:999px;font-weight:700">✅완료</span>':(isPart?'<span style="font-size:10px;background:#fff7ed;color:#f97316;padding:2px 7px;border-radius:999px;font-weight:700">🟠부분</span>':'<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:999px;font-weight:700">⏳미완료</span>');
     var fbId=x.fbId||'';
     var trackVal=x.tracking||(x.trackings&&x.trackings[0])||'';
+    var mapBtn=hasGps
+      ?'<button onclick="event.stopPropagation();window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')" style="flex:1;padding:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer">🗺️ 지도</button>'
+      :'<div style="flex:1;padding:8px;text-align:center;font-size:10px;color:rgba(255,255,255,.3)">GPS없음</div>';
     var completeBtn=fbId&&!isDone
       ?'<button onclick="event.stopPropagation();openDelivComplete(\''+fbId+'\','+i+')" style="flex:1;padding:8px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">✅ 완료처리</button>'
       :(isDone?'<div style="flex:1;padding:8px;text-align:center;font-size:11px;color:#16a34a;font-weight:700">✅ 완료됨</div>':'');
@@ -14227,21 +14249,58 @@ function _showMapModal(locs){
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
       +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:8px">운송장: '+(trackVal||'—')+'</div>'
       +'<div style="display:flex;gap:6px;margin-left:32px">'
-      +'<button onclick="event.stopPropagation();window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')" style="flex:1;padding:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer">🗺️ 지도</button>'
+      +mapBtn
       +completeBtn
       +'</div></div>';
-  }).join(''):'<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">오늘 등록된 배송 핀이 없습니다</div>';
-
+  }).join(''):'<div style="text-align:center;padding:40px;color:rgba(255,255,255,.4)">오늘 등록된 배송이 없습니다</div>';
   document.body.insertAdjacentHTML('beforeend',
     '<div id="delivery-map-mo" onclick="if(event.target===this)this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;display:flex;align-items:flex-end;justify-content:center">'
-    +'<div onclick="event.stopPropagation()" style="background:#0f172a;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">'
+    +'<div onclick="event.stopPropagation()" style="background:#0f172a;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto">'
     +'<div style="width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 16px"></div>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'
     +'<span style="font-size:20px">📍</span><b style="font-size:16px">오늘 배송 핀 지도</b>'
-    +'<span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px">'+locs.length+'건</span>'
+    +'<span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px">'+locs.length+'건'+(gpsLocs.length<locs.length?' · GPS '+gpsLocs.length+'건':'')+'</span>'
     +'<button onclick="document.getElementById(\'delivery-map-mo\').remove()" style="margin-left:auto;padding:5px 12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:12px;color:#fff">닫기</button>'
-    +'</div>'+listHtml+'</div></div>'
+    +'</div>'
+    +(gpsLocs.length>0?'<div id="dm-map" style="width:100%;height:220px;border-radius:12px;margin-bottom:14px;overflow:hidden;background:#1e293b"></div>':'')
+    +listHtml+'</div></div>'
   );
+  if(gpsLocs.length>0)_loadLeafletMap(gpsLocs);
+}
+
+function _loadLeafletMap(locs){
+  if(window.L){_renderLeafletMap(locs);return;}
+  var css=document.createElement('link');
+  css.rel='stylesheet';
+  css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  document.head.appendChild(css);
+  var s=document.createElement('script');
+  s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload=function(){_renderLeafletMap(locs);};
+  document.head.appendChild(s);
+}
+
+function _renderLeafletMap(locs){
+  var el=document.getElementById('dm-map');
+  if(!el||!window.L)return;
+  var center=[locs[0].gps.lat,locs[0].gps.lng];
+  var map=L.map(el,{zoomControl:false}).setView(center,13);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  var bounds=[];
+  locs.forEach(function(x,i){
+    var ll=[x.gps.lat,x.gps.lng];
+    bounds.push(ll);
+    var color=x.status==='완료'?'#16a34a':(x.status==='부분완료'?'#f97316':'#dc2626');
+    var icon=L.divIcon({
+      className:'',
+      html:'<div style="width:26px;height:26px;border-radius:50%;background:'+color+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(i+1)+'</div>',
+      iconSize:[26,26],iconAnchor:[13,13]
+    });
+    L.marker(ll,{icon:icon}).addTo(map)
+      .bindPopup('<b>'+(x.recipient||'미확인')+'</b><br><span style="font-size:11px">'+(x.addr||'')+'</span>');
+  });
+  if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20]});
 }
 
 function openDelivComplete(fbId, locIdx){
