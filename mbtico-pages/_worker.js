@@ -5349,18 +5349,33 @@ service cloud.firestore {
       return serveKVFile(env, 'mbtico-manifest.json', 'application/manifest+json');
     }
 
+    if (path === '/emergency-icon.svg') {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#08101f"/>
+  <polygon points="256,100 360,160 360,280 256,340 152,280 152,160" fill="none" stroke="#c9a84c" stroke-width="18"/>
+  <line x1="256" y1="100" x2="256" y2="340" stroke="#c9a84c" stroke-width="10" opacity=".5"/>
+  <line x1="152" y1="160" x2="360" y2="160" stroke="#c9a84c" stroke-width="10" opacity=".35"/>
+  <polygon points="256,100 152,160 256,220 360,160" fill="#c9a84c" opacity=".18"/>
+  <polygon points="256,220 152,160 152,280 256,340" fill="#c9a84c" opacity=".10"/>
+  <polygon points="256,220 360,160 360,280 256,340" fill="#c9a84c" opacity=".22"/>
+  <text x="256" y="268" font-size="130" font-family="Arial,sans-serif" font-weight="900" fill="#c9a84c" text-anchor="middle" dominant-baseline="middle" letter-spacing="-4">M</text>
+  <text x="256" y="410" font-size="44" font-family="Arial,sans-serif" font-weight="700" fill="#c9a84c" text-anchor="middle" letter-spacing="6" opacity=".85">MBTICO</text>
+</svg>`;
+      return new Response(svg, {status:200, headers:{'Content-Type':'image/svg+xml','Cache-Control':'public,max-age=86400'}});
+    }
+
     if (path === '/emergency-manifest.json') {
       return new Response(JSON.stringify({
-        name:'DONWAY 배송앱', short_name:'배송앱',
+        name:'MBTICO 배송앱', short_name:'배송앱',
         description:'MBTICO 현장 배송 관리',
         start_url:'/emergency', scope:'/',
         display:'standalone', orientation:'portrait',
         background_color:'#08101f', theme_color:'#c9a84c', lang:'ko',
         categories:['business','productivity'],
         icons:[
-          {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
-          {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'},
-          {src:'/apple-touch-icon.png',sizes:'180x180',type:'image/png',purpose:'any'}
+          {src:'/emergency-icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'},
+          {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any'},
+          {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any'}
         ]
       }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
     }
