@@ -1753,11 +1753,164 @@ async function acceptExchange(){
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
 
+      // ── 전자계약서 ─────────────────────────────────────────────────────────────
+      if (path === '/sign') return serveKVFile(env, 'contract-sign.html', 'text/html');
+      if (path === '/api/contract/view' && method === 'GET') {
+        const t = url.searchParams.get('t') || '';
+        if (!t) return new Response(JSON.stringify({ok:false,error:'token required'}),{status:400,headers:{'Content-Type':'application/json'}});
+        try {
+          const fsToken = await getAccessToken(env);
+          const docRes = await fetch(`${FS_BASE}/eContracts/${encodeURIComponent(t)}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
+          if (!docRes.ok) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
+          const fd = await docRes.json();
+          if (fd.error) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
+          const f = fd.fields || {};
+          const gs = k => f[k]?.stringValue || '';
+          return new Response(JSON.stringify({ok:true, contract:{
+            ctype:gs('ctype'), name:gs('name'), phone:gs('phone'),
+            startDate:gs('startDate'), endDate:gs('endDate'), loc:gs('loc'),
+            pay:gs('pay'), payDay:gs('payDay'), payType:gs('payType'),
+            vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
+            agencyName:gs('agencyName'), agencyRep:gs('agencyRep'),
+            agencyBizno:gs('agencyBizno'), agencyPhone:gs('agencyPhone'),
+            agencyAddr:gs('agencyAddr'), agencyAccount:gs('agencyAccount'),
+            camp:gs('camp'), route:gs('route'), returnFee:gs('returnFee'),
+            licenseNo:gs('licenseNo'), sortWork:gs('sortWork'), createdAt:gs('createdAt')
+          }}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      if (path === '/api/contract/otp' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr, agencyAccount, camp, route, returnFee, licenseNo, sortWork } = body;
+          if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          if (!agencyName) return new Response(JSON.stringify({ok:false,error:'대리점 상호명 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const fsToken = await getAccessToken(env);
+          const contractId = 'EC' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
+          const otp = String(Math.floor(100000 + Math.random() * 900000));
+          const now = new Date().toISOString();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+          await fetch(`${FS_BASE}/eContracts/${contractId}`, {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              ctype:{stringValue:ctype||'regular'}, name:{stringValue:name||''},
+              phone:{stringValue:phone}, startDate:{stringValue:startDate||''},
+              endDate:{stringValue:endDate||''}, loc:{stringValue:loc||''},
+              pay:{stringValue:String(pay||'')}, payDay:{stringValue:payDay||''},
+              payType:{stringValue:payType||''}, vehicle:{stringValue:vehicle||''},
+              special:{stringValue:special||''}, status:{stringValue:'pending'},
+              agencyName:{stringValue:agencyName}, agencyRep:{stringValue:agencyRep||''},
+              agencyBizno:{stringValue:agencyBizno||''}, agencyPhone:{stringValue:agencyPhone||''},
+              agencyAddr:{stringValue:agencyAddr||''}, agencyAccount:{stringValue:agencyAccount||''},
+              camp:{stringValue:camp||''}, route:{stringValue:route||''},
+              returnFee:{stringValue:String(returnFee||'')}, licenseNo:{stringValue:licenseNo||''},
+              sortWork:{stringValue:sortWork||'미수행'}, createdAt:{stringValue:now}
+            }})
+          });
+          await fetch(`${FS_BASE}/contract_otps`, {
+            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              contractId:{stringValue:contractId}, phone:{stringValue:phone},
+              otp:{stringValue:otp}, expiresAt:{stringValue:expiresAt},
+              used:{booleanValue:false}, createdAt:{stringValue:now}
+            }})
+          });
+          const signUrl = `https://donway.ai.kr/sign?t=${contractId}`;
+          const smsText = `[DONWAY] ${name||'귀하'}님 계약서 전자서명\nOTP: ${otp} (10분 유효)\n서명: ${signUrl}`;
+          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
+            const dt = new Date().toISOString();
+            const sl = Math.random().toString(36).slice(2);
+            const enc = new TextEncoder();
+            const ck = await crypto.subtle.importKey('raw', enc.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+            const sg = await crypto.subtle.sign('HMAC', ck, enc.encode(dt+sl));
+            const sig = Array.from(new Uint8Array(sg)).map(b=>b.toString(16).padStart(2,'0')).join('');
+            await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`},
+              body: JSON.stringify({messages:[{to:phone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText}]})
+            }).catch(()=>{});
+          }
+          return new Response(JSON.stringify({ok:true, contractId, signUrl}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      if (path === '/api/contract/sign' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { token: contractId, otp, signatureB64, contentHash } = body;
+          if (!contractId || !otp || !signatureB64) return new Response(JSON.stringify({ok:false,error:'필수 파라미터 누락'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const fsToken = await getAccessToken(env);
+          const now = new Date().toISOString();
+          const qRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ structuredQuery:{
+              from:[{collectionId:'contract_otps'}],
+              where:{ compositeFilter:{ op:'AND', filters:[
+                {fieldFilter:{field:{fieldPath:'contractId'},op:'EQUAL',value:{stringValue:contractId}}},
+                {fieldFilter:{field:{fieldPath:'otp'},op:'EQUAL',value:{stringValue:String(otp)}}},
+                {fieldFilter:{field:{fieldPath:'used'},op:'EQUAL',value:{booleanValue:false}}}
+              ]}}, limit:1
+            }})
+          });
+          const qData = await qRes.json();
+          const otpDoc = qData?.[0]?.document;
+          if (!otpDoc) return new Response(JSON.stringify({ok:false,error:'OTP가 올바르지 않거나 만료되었습니다'}),{status:400,headers:{'Content-Type':'application/json'}});
+          const expiresAt = otpDoc.fields?.expiresAt?.stringValue || '';
+          if (expiresAt && new Date(expiresAt) < new Date()) {
+            return new Response(JSON.stringify({ok:false,error:'OTP가 만료되었습니다. 다시 요청해 주세요'}),{status:400,headers:{'Content-Type':'application/json'}});
+          }
+          await fetch(otpDoc.name + '?updateMask.fieldPaths=used&updateMask.fieldPaths=usedAt', {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{ used:{booleanValue:true}, usedAt:{stringValue:now} } })
+          });
+          const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
+          const ua = request.headers.get('User-Agent') || '';
+          // 계약서 서명 상태 업데이트
+          const contractDoc = await fetch(`${FS_BASE}/eContracts/${contractId}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
+          const contractData = contractDoc.ok ? await contractDoc.json() : null;
+          const cf = contractData?.fields || {};
+          const gs2 = k => cf[k]?.stringValue || '';
+          await fetch(`${FS_BASE}/eContracts/${contractId}?updateMask.fieldPaths=status&updateMask.fieldPaths=signedAt&updateMask.fieldPaths=signatureB64&updateMask.fieldPaths=contentHash&updateMask.fieldPaths=ip&updateMask.fieldPaths=ua`, {
+            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({ fields:{
+              status:{stringValue:'signed'}, signedAt:{stringValue:now},
+              signatureB64:{stringValue:signatureB64}, contentHash:{stringValue:contentHash||''},
+              ip:{stringValue:ip}, ua:{stringValue:ua}
+            }})
+          });
+          // 계약서 사본 안내 SMS 발송 (근로기준법 제17조 — 계약서 교부 의무)
+          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
+            const drPhone = gs2('phone');
+            const signUrl2 = `https://donway.ai.kr/sign?t=${contractId}`;
+            const smsText2 = `[DONWAY] 전자서명 완료\n계약서 사본: ${signUrl2}\n서명일시: ${now.slice(0,16)}\n이 링크로 계약서를 언제든지 확인하세요.`;
+            if (drPhone) {
+              const dt2 = new Date().toISOString();
+              const sl2 = Math.random().toString(36).slice(2);
+              const enc2 = new TextEncoder();
+              const ck2 = await crypto.subtle.importKey('raw', enc2.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+              const sg2 = await crypto.subtle.sign('HMAC', ck2, enc2.encode(dt2+sl2));
+              const sig2 = Array.from(new Uint8Array(sg2)).map(b=>b.toString(16).padStart(2,'0')).join('');
+              await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt2}, salt=${sl2}, signature=${sig2}`},
+                body: JSON.stringify({messages:[{to:drPhone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText2}]})
+              }).catch(()=>{});
+            }
+          }
+          return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
+        }
+      }
+      // ── 전자계약서 끝 ─────────────────────────────────────────────────────────
+
+
 
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
       if (!path.startsWith('/api/') && method === 'GET') {
         const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
-        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
+        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/sign','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {
@@ -2544,80 +2697,33 @@ async function acceptExchange(){
 
       if (path === '/order.js') return serveKVFile(env, 'order.js', 'application/javascript');
       if (path === '/order' || path === '/order.html') return serveKVFile(env, 'order.html', 'text/html');
-      // /api/menu-image — Pexels 음식 이미지 검색
+      // /api/menu-image — Pexels 우선, 키 없거나 결과 없으면 Pollinations 폴백
       if (path === '/api/menu-image') {
         const q = new URL(request.url).searchParams.get('q') || 'food';
+        const CORS = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        const pollinationsUrl = (prompt) => {
+          const seed = prompt.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % 9999;
+          return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=800&nologo=true&seed=${seed}&model=flux&enhance=true`;
+        };
         const pexelsKey = env.PEXELS_API_KEY || '';
-        if (!pexelsKey) return Response.json({url:''});
-        try {
-          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
-          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
-          const _pex = async (extra) => {
-            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
-              headers: {'Authorization': pexelsKey}
-            });
-            const d = await r.json();
-            return d.photos || [];
-          };
-          let photos = await _pex('&orientation=square');
-          if (!photos.length) photos = await _pex('');
-          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
-          // 랜덤으로 하나 선택
-          const photo = photos[Math.floor(Math.random() * photos.length)];
-          const url = photo.src?.medium || photo.src?.original || '';
-          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return Response.json({url:''});
+        if (pexelsKey) {
+          try {
+            const _pex = async (extra) => {
+              const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {headers:{'Authorization':pexelsKey}});
+              const d = await r.json();
+              return d.photos || [];
+            };
+            let photos = await _pex('&orientation=square');
+            if (!photos.length) photos = await _pex('');
+            if (photos.length) {
+              const photo = photos[Math.floor(Math.random() * photos.length)];
+              const url = photo.src?.medium || photo.src?.original || '';
+              if (url) return Response.json({url}, {headers:CORS});
+            }
+          } catch(e) {}
         }
-      }
-
-      if (path === '/api/store') {
-        const slug = new URL(request.url).searchParams.get('slug');
-        if (!slug) return new Response(JSON.stringify({error:'slug required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const token = await getAccessToken(env);
-        // slug로 조회
-        const r1 = await fetch(FS_BASE+'/companies/'+slug,{headers:{'Authorization':'Bearer '+token}});
-        const d1 = await r1.json();
-        if(d1.fields){
-          const f=d1.fields;
-          const store={id:slug,name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
-          return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-        // slug 필드로 검색
-        const r2 = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:slug}}},limit:1}})});
-        const d2 = await r2.json();
-        const doc=(d2||[]).find(function(r){return r.document;});
-        if(!doc) return new Response(JSON.stringify({error:'매장을 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        const f=doc.document.fields||{};
-        const store={id:doc.document.name.split('/').pop(),name:(f.companyName&&f.companyName.stringValue)||(f.name&&f.name.stringValue)||'',address:(f.address&&f.address.stringValue)||''};
-        return new Response(JSON.stringify({store}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-      }
-      // /api/menu-image — Pexels 음식 이미지 검색
-      if (path === '/api/menu-image') {
-        const q = new URL(request.url).searchParams.get('q') || 'food';
-        const pexelsKey = env.PEXELS_API_KEY || '';
-        if (!pexelsKey) return Response.json({url:''});
-        try {
-          // orientation=square 로만 찾으면 정사각 사진이 없는 검색어(sushi, ramen 등)는
-          // 결과가 0이 되어 이미지가 안 나온다 → 없으면 필터 없이 한 번 더 찾는다
-          const _pex = async (extra) => {
-            const r = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=5${extra}`, {
-              headers: {'Authorization': pexelsKey}
-            });
-            const d = await r.json();
-            return d.photos || [];
-          };
-          let photos = await _pex('&orientation=square');
-          if (!photos.length) photos = await _pex('');
-          if (!photos.length) return Response.json({url:''}, {headers:{'Access-Control-Allow-Origin':'*'}});
-          // 랜덤으로 하나 선택
-          const photo = photos[Math.floor(Math.random() * photos.length)];
-          const url = photo.src?.medium || photo.src?.original || '';
-          return Response.json({url}, {headers:{'Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return Response.json({url:''});
-        }
+        // Pexels 키 없거나 결과 없으면 Pollinations 폴백
+        return Response.json({url: pollinationsUrl(q)}, {headers:CORS});
       }
 
       if (path === '/api/store') {
@@ -3619,7 +3725,7 @@ ${JSON.stringify(postSummary)}
         try {
           let body; try{body=await request.json();}catch(e){body={};}
           const did = body.did || 'haemul_gwangan_2026';
-          if (body.secret !== 'filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if (body.secret !== (env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token = await getAccessToken(env);
           function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
           function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
@@ -3709,7 +3815,7 @@ ${JSON.stringify(postSummary)}
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         try {
           let body; try{body=await request.json();}catch(e){body={};}
-          if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if(body.secret!==(env.DEMO_SECRET||'filo2026demo')) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           function fsv2(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv2)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv2(x)]))}};return{nullValue:null};}
           function fsd2(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv2(v)]))}}}
@@ -8846,16 +8952,27 @@ select.inp option{background:#24243d;color:#f0f1f8}
    [헤드: 택배사·상태] [본문: 구역→단가→게이지→태그→보장] [푸터: 대리점·액션]
    ══════════════════════════════════════════════ */
 .pcard{position:relative;display:block;width:100%;text-align:left;overflow:hidden;
-  background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r-lg);
-  margin-bottom:12px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.5);
+  background:var(--bg2);border:1.5px solid var(--bd2);border-radius:var(--r-lg);
+  margin-bottom:12px;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),border-color .2s,box-shadow .2s}
-.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rail,var(--bd2))}
-.pcard:active{transform:scale(.985);border-color:var(--bd2);box-shadow:none}
-.pcard.is-open{--rail:var(--ac)}
-.pcard.is-urgent{--rail:var(--rd)}
-.pcard.is-matched{--rail:var(--gn)}
-.pcard.is-closed{--rail:var(--bd2);opacity:.46}
-.pcard.is-premium{--rail:var(--pu);border-color:var(--puln)}
+.pcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rail,var(--bd2));border-radius:2px 0 0 2px}
+.pcard:active{transform:scale(.983);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.pcard.is-open{--rail:var(--ac);border-color:rgba(79,120,245,.35);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(79,120,245,.06)}
+.pcard.is-urgent{--rail:var(--rd);border-color:rgba(239,68,68,.4);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(239,68,68,.07)}
+.pcard.is-matched{--rail:var(--gn);border-color:rgba(16,185,129,.35);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(16,185,129,.06)}
+.pcard.is-closed{--rail:var(--bd2);opacity:.44}
+.pcard.is-premium{--rail:var(--pu);border-color:rgba(139,92,246,.4);box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 28px rgba(139,92,246,.07)}
+/* 수평 페이지네이션 */
+.posts-viewport{overflow:hidden}
+.posts-rail{display:flex;will-change:transform}
+.posts-page{min-width:100%;flex-shrink:0}
+.posts-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:0 2px}
+.posts-nav-btn{min-height:44px;padding:0 18px;border:1.5px solid var(--bd);border-radius:var(--r-full);background:var(--bg2);color:var(--t2);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s,color .15s}
+.posts-nav-btn:not(:disabled):active{background:var(--ac);color:#000;border-color:var(--ac)}
+.posts-nav-btn:disabled{opacity:.28;cursor:default}
+.posts-dots{display:flex;justify-content:center;gap:5px;margin:10px 0 4px}
+.posts-dot{width:6px;height:6px;border-radius:50%;background:var(--bd2);transition:all .25s}
+.posts-dot.on{width:22px;border-radius:3px;background:var(--ac)}
 
 .pc-ribbon{display:flex;align-items:center;justify-content:center;gap:5px;
   background:linear-gradient(90deg,var(--pu),#7c5cf5);color:#fff;font-size:10.5px;font-weight:800;
@@ -9616,6 +9733,23 @@ select.inp option{background:#24243d;color:#f0f1f8}
 <script>
 // ── 전역 ─────────────────────────────────────────────────────
 var _db, _auth, _CU=null, _regType='agency';
+
+// ── 공통 상수 ───────────────────────────────────────────────────────────────
+var _STATUS_MAP_APPLY    = {pending:'검토중', approved:'승인', rejected:'거절'};
+var _STATUS_MAP_CONTRACT = {pending:'미응답', accepted:'수락', rejected:'거절'};
+var _STATUS_MAP_JOBS     = {pending:'검토중', approved:'승인', rejected:'미선발'};
+
+// ── 인증 공통 헬퍼 ─────────────────────────────────────────────────────────
+// Firebase ID 토큰을 자동으로 첨부하는 fetch 래퍼
+function _yAuthFetch(url, opts){
+  var u=firebase.auth().currentUser;
+  if(!u) return Promise.reject(new Error('로그인이 필요해요'));
+  return u.getIdToken().then(function(tok){
+    var o=opts||{};
+    var headers=Object.assign({'Authorization':'Bearer '+tok}, o.headers||{});
+    return fetch(url, Object.assign({}, o, {headers:headers}));
+  });
+}
 var _postsUnsub=null, _notifUnsub=null;
 var ADMINS=['kimdh4790@gmail.com','skypjh1101@naver.com','yongcha.test.admin@gmail.com','playwright.admin@ytest.io'];
 var API_KEY='AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
@@ -11470,13 +11604,87 @@ function _renderPostList(){
     return;
   }
 
-  // 큰 목록은 DocumentFragment 로 한 번에 삽입 (리플로우 최소화)
-  var frag=document.createDocumentFragment();
-  filtered.forEach(function(d){ frag.appendChild(_makePostCard(d)); });
-  list.innerHTML=_yDupNotice(dd.hidden,'공고');
-  list.appendChild(frag);
+  var PER=5;
+  _postsTotalPages=Math.ceil(filtered.length/PER);
+  _postsPage=0;
+
+  var dupNotice=_yDupNotice(dd.hidden,'공고');
+
+  // 5건 이하 — 페이지네이션 없이 단순 렌더
+  if(_postsTotalPages<=1){
+    var f2=document.createDocumentFragment();
+    filtered.forEach(function(d){f2.appendChild(_makePostCard(d));});
+    list.innerHTML=dupNotice;
+    list.appendChild(f2);
+    return;
+  }
+
+  // 5건 초과 — 수평 페이지 슬라이더
+  list.innerHTML=dupNotice;
+
+  // 상단 네비
+  var nav=document.createElement('div');
+  nav.className='posts-nav';
+  nav.innerHTML=
+    '<button class="posts-nav-btn" id="posts-prev" onclick="_postsGoPrev()" disabled>◀ 이전</button>'+
+    '<span id="posts-ind" style="font-size:13px;font-weight:800;color:var(--t2)">1 / '+_postsTotalPages+'</span>'+
+    '<button class="posts-nav-btn" id="posts-next" onclick="_postsGoNext()">다음 ▶</button>';
+  list.appendChild(nav);
+
+  // 뷰포트
+  var vp=document.createElement('div');
+  vp.className='posts-viewport';
+  var rail=document.createElement('div');
+  rail.className='posts-rail';
+  rail.id='posts-rail';
+  for(var pi=0;pi<filtered.length;pi+=PER){
+    var pg=document.createElement('div');
+    pg.className='posts-page';
+    filtered.slice(pi,pi+PER).forEach(function(d){pg.appendChild(_makePostCard(d));});
+    rail.appendChild(pg);
+  }
+  vp.appendChild(rail);
+  list.appendChild(vp);
+
+  // 하단 점 인디케이터
+  var dots=document.createElement('div');
+  dots.className='posts-dots';
+  dots.innerHTML=Array.from({length:_postsTotalPages}).map(function(_,i){
+    return '<span class="posts-dot'+(i===0?' on':'')+'"></span>';
+  }).join('');
+  list.appendChild(dots);
+
+  // 터치 스와이프 초기화
+  setTimeout(function(){_postsInitSwipe(vp);},50);
 }
 
+
+var _postsPage=0,_postsTotalPages=0;
+function _postsSetPage(p,animate){
+  _postsPage=Math.max(0,Math.min(p,_postsTotalPages-1));
+  var rail=document.getElementById('posts-rail');
+  if(rail){
+    rail.style.transition=animate===false?'none':'transform .28s ease';
+    rail.style.transform='translateX(-'+(_postsPage*100)+'%)';
+  }
+  var prev=document.getElementById('posts-prev'),next=document.getElementById('posts-next');
+  if(prev)prev.disabled=_postsPage<=0;
+  if(next)next.disabled=_postsPage>=_postsTotalPages-1;
+  var ind=document.getElementById('posts-ind');
+  if(ind)ind.textContent=(_postsPage+1)+' / '+_postsTotalPages;
+  document.querySelectorAll('.posts-dot').forEach(function(d,i){d.classList.toggle('on',i===_postsPage);});
+}
+function _postsGoPrev(){_postsSetPage(_postsPage-1,true);}
+function _postsGoNext(){_postsSetPage(_postsPage+1,true);}
+function _postsInitSwipe(vp){
+  if(!vp)return;
+  var sx=0;
+  vp.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+  vp.addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>50){if(dx<0)_postsGoNext();else _postsGoPrev();}
+  },{passive:true});
+}
 
 var _prefs=null; // driver 맞춤 추천 조건 (_CU.preferences에서 로딩)
 
@@ -11630,12 +11838,14 @@ function _makePostCard(d,mini){
     ? '<span class="dist-chip'+(myKm<=15?' near':'')+'">내 위치에서 '+_yDistLabel(myKm)+'</span>'
     : '';
 
-  // 카카오맵 링크
+  // 카카오맵 링크 — 대리점·기사 모두 항상 노출
   var mapHref='';
   if(d.zones&&d.zones.length&&d.zones[0].lat){
     mapHref='https://map.kakao.com/link/map/'+encodeURIComponent(d.zones[0].name||d.area||'')+','+d.zones[0].lat+','+d.zones[0].lng;
   } else if(d.lat&&d.lng){
     mapHref='https://map.kakao.com/link/map/'+encodeURIComponent(d.area||'')+','+d.lat+','+d.lng;
+  } else {
+    mapHref='https://map.kakao.com/?q='+encodeURIComponent((d.region||'')+(d.area?' '+d.area:''));
   }
 
   var isDriver=_CU&&_CU.type==='driver';
@@ -11802,7 +12012,7 @@ function _ySendSettleNotify(settleId,driverPhone,driverName,agencyName,driverId,
       if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
       return;
     }
-    return fetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+    return _yAuthFetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({settleId:settleId,driverPhone:driverPhone,driverName:driverName,
         agencyId:_CU.uid,agencyName:agencyName,driverId:driverId,
         totalAmount:totalAmount,totalCount:totalCount,weekStart:weekStart})
@@ -11879,7 +12089,7 @@ function _yTaxApprove(settleId){
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
     return;
   }
-  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
+  _yAuthFetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'승인 실패');
@@ -11896,7 +12106,7 @@ function _yTaxReject(settleId){
   if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
   var btn=document.getElementById('tax-reject-btn');
   if(btn){btn.disabled=true;btn.textContent='처리중...';}
-  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
+  _yAuthFetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
@@ -12179,49 +12389,63 @@ function _showPostDetail(d){
   _openModal();
   window._detailMapRadius=_mapR;
 
-  // 배송지역 주유소 로드
+  // 배송지역 주유소 — 배송지(zone zipcode) 기준. 캠프(loadingLat) 아님
   if(isDriver){
-    var _gLat=null,_gLng=null;
-    if(typeof d.loadingLat==='number'){_gLat=d.loadingLat;_gLng=d.loadingLng;}
-    else if(d.zones&&d.zones.length&&typeof d.zones[0].lat==='number'){_gLat=d.zones[0].lat;_gLng=d.zones[0].lng;}
-    if(_gLat!=null){
-      setTimeout(function(){_yLoadGasStations(_gLat,_gLng,'detail-gas-stations',_CU.carFuelType);},300);
-    } else {
-      var _gAddr=(d.area||d.region||'').replace(/\s*\d+노선.*$/,'').trim();
-      if(_gAddr&&window.kakao&&kakao.maps&&kakao.maps.services){
-        var _gc2=new kakao.maps.services.Geocoder();
-        _gc2.addressSearch(_gAddr,function(res,status){
+    var _gZip=(d.zones&&d.zones.length&&d.zones[0].zipcode)||'';
+    var _gCity=(d.region||'').replace(/\s*·.*$/,'').trim();
+    var _gArea=(d.area||'').replace(/\s*·.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
+    var _gRegion=_gCity&&_gArea?_gCity+' '+_gArea:_gCity||_gArea;
+    function _loadGasFromLatLng(gLat,gLng){
+      _yLoadGasStations(gLat,gLng,'detail-gas-stations',_CU.carFuelType);
+    }
+    function _loadGasFromRegion(){
+      if(!_gRegion)return;
+      _loadKakaoMap(function(){
+        var _gc=new kakao.maps.services.Geocoder();
+        _gc.addressSearch(_gRegion,function(res,status){
           if(status===kakao.maps.services.Status.OK&&res[0]){
-            _yLoadGasStations(parseFloat(res[0].y),parseFloat(res[0].x),'detail-gas-stations',_CU.carFuelType);
+            _loadGasFromLatLng(parseFloat(res[0].y),parseFloat(res[0].x));
           }
         });
-      }
+      });
+    }
+    if(_gZip&&/^[0-9]{5}$/.test(_gZip)){
+      // vWorld zone-boundary centroid (클라이언트 직접 호출)
+      _fetchZoneBoundary(_gZip,function(bd){
+        if(bd.ok&&bd.coords&&bd.coords.length){
+          var sLat=0,sLng=0,n=bd.coords.length;
+          bd.coords.forEach(function(c){sLat+=c.lat;sLng+=c.lng;});
+          _loadGasFromLatLng(sLat/n,sLng/n);
+        } else {_loadGasFromRegion();}
+      });
+    } else {
+      setTimeout(function(){_loadGasFromRegion();},300);
     }
   }
 
   // 지도 표시
   window._detailZones = d.zones||[];
   var _firstZone=d.zones&&d.zones.length&&d.zones[0];
-  if(_firstZone&&typeof _firstZone.lat==='number'&&typeof _firstZone.lng==='number'){
-    setTimeout(function(){_showDetailMap(_firstZone.lat,_firstZone.lng,_firstZone.name);},400);
+  if(_firstZone){
+    // _showZoneOnMap: lat/lng 있으면 바로 사용, 없으면 zipcode+name 합쳐 검색
+    // → zone.name만으로 검색하면 같은 이름의 엉뚱한 장소가 걸릴 수 있음
+    setTimeout(function(){_showZoneOnMap(0);},400);
   } else if(typeof d.lat==='number'&&typeof d.lng==='number'){
-    setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
+    setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area||'',d.zipcode||'');},400);
   } else {
-    // 좌표 없음 → 지역명으로 geocode 시도
-    var _geoQuery=(_firstZone&&_firstZone.name)||d.area||d.region||'';
+    var _geoQuery=d.area||d.region||'';
     if(_geoQuery){
       setTimeout(function(){
         _loadKakaoMap(function(){
           var gc=new kakao.maps.services.Geocoder();
           gc.addressSearch(_geoQuery,function(res,status){
             if(status===kakao.maps.services.Status.OK&&res[0]){
-              _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),_geoQuery);
+              _showDetailMap(parseFloat(res[0].y),parseFloat(res[0].x),_geoQuery,'');
             } else {
-              // 주소 검색 실패 → 지역명 키워드 검색
               var ps=new kakao.maps.services.Places();
               ps.keywordSearch(_geoQuery,function(data,s2){
                 if(s2===kakao.maps.services.Status.OK&&data[0]){
-                  _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery);
+                  _showDetailMap(parseFloat(data[0].y),parseFloat(data[0].x),_geoQuery,'');
                 } else {
                   var ph=document.getElementById('detail-map-placeholder');
                   if(ph)ph.innerHTML=
@@ -12237,7 +12461,7 @@ function _showPostDetail(d){
       },400);
     } else {
       var ph=document.getElementById('detail-map-placeholder');
-      if(ph){var _qa=(_detailPost&&(_detailPost.area||_detailPost.region))||'배송구역';
+      if(ph){var _qa=(d.area||d.region||'배송구역');
         ph.innerHTML=
           '<div style="font-size:28px;font-weight:900;color:var(--tx);letter-spacing:-.8px;margin-bottom:8px">'+_esc(_qa)+'</div>'+
           '<div style="font-size:12px;color:var(--t2);margin-bottom:14px">배송구역</div>'+
@@ -12453,10 +12677,100 @@ function _pgMyPosts(el){
           // 🤖 AI 배차 추천 — 모집중인 공고에서만 노출
           (d.status==='open'?
           '<button onclick="_yAiRecommend(\\''+d.id+'\\')" style="grid-column:span 2;margin-top:2px;padding:11px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:10px;color:var(--ac);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI 기사 추천 받기</button>':'')+
+          '<button onclick="_editPost(\\''+d.id+'\\')" style="padding:10px;background:var(--bg3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:2px">공고 수정</button>'+
+          '<button onclick="_deletePost(\\''+d.id+'\\')" style="padding:10px;background:var(--rdl);border:1px solid var(--rdln);border-radius:10px;color:var(--rd);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:2px">삭제</button>'+
           '</div>';
         list.appendChild(card);
       });
     });
+}
+
+function _deletePost(postId){
+  if(!confirm('공고를 삭제할까요? 복구할 수 없어요.'))return;
+  _db.collection('yongcha_posts').doc(postId).delete().then(function(){
+    _yToast('공고가 삭제됐어요');
+    _pgMyPosts(document.getElementById('content'));
+  }).catch(function(e){_yToast('삭제 오류: '+e.message);});
+}
+
+function _editPost(postId){
+  _db.collection('yongcha_posts').doc(postId).get().then(function(doc){
+    if(!doc.exists){_yToast('공고를 찾을 수 없어요');return;}
+    var d=Object.assign({id:doc.id},doc.data());
+    var el=document.getElementById('content');
+    _pgPostWrite(el);
+    window._editPostId=postId;  // _pgPostWrite가 null로 초기화한 뒤 재설정
+    setTimeout(function(){_fillPostForm(d);},200);
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _fillPostForm(d){
+  function sv(id,v){var el=document.getElementById(id);if(el&&v!=null)el.value=v;}
+  function selBtn(groupId,val,hiddenId){
+    document.querySelectorAll('#'+groupId+' button').forEach(function(b){
+      if(b.textContent.trim()===val)_selType(b,val,hiddenId);
+    });
+  }
+  sv('pw-courier',d.courier||'');
+  sv('pw-routeNo',d.routeNo||'');
+  sv('pw-area',d.area||'');
+  sv('pw-apt',d.areaAptRatio!=null?d.areaAptRatio:'');
+  sv('pw-areaType',d.areaType||'');
+  sv('pw-date',d.startDate||'');
+  sv('pw-enddate',d.endDate||'');
+  sv('pw-hours',d.workHours||'');
+  sv('pw-price',d.unitPrice||'');
+  sv('pw-houseprice',d.housePricePerUnit||'');
+  sv('pw-volume',d.volume||'');
+  sv('pw-settleDay',d.settleDay||'');
+  sv('pw-desc',d.desc||'');
+  sv('pw-loadingAddr',d.loadingAddr||'');
+  sv('pw-loadingLat',d.loadingLat||'');
+  sv('pw-loadingLng',d.loadingLng||'');
+  if(d.postType)selBtn('pw-type-group',d.postType,'pw-type');
+  if(d.workShift)selBtn('pw-shift-group',d.workShift,'pw-shift');
+  if(d.vehicleType)selBtn('pw-vehicle-group',d.vehicleType,'pw-vehicle');
+  if(d.plateType)selBtn('pw-plate-group',d.plateType,'pw-plate');
+  if(d.priceType)selBtn('pw-pricetype-group',d.priceType,'pw-pricetype');
+  if(d.vatIncluded)selBtn('pw-vat-group','VAT '+d.vatIncluded,'pw-vat');
+  if(d.settleFreq)selBtn('pw-settle-group',d.settleFreq,'pw-settle');
+  _selectedDays=[];
+  if(d.workDays&&d.workDays.length){
+    var days=d.workDays.split(',');
+    document.querySelectorAll('#pw-days-group button').forEach(function(b){
+      if(days.indexOf(b.textContent.trim())>=0){
+        _selectedDays.push(b.textContent.trim());
+        b.style.background='var(--acl)';b.style.color='var(--ac)';b.style.borderColor='var(--ac)';
+      }
+    });
+  }
+  _selectedExtras=[];
+  if(d.extras&&d.extras.length){
+    var extras=d.extras.split(',');
+    document.querySelectorAll('#pw-extras button').forEach(function(b){
+      if(extras.indexOf(b.textContent.trim())>=0){
+        _selectedExtras.push(b.textContent.trim());
+        b.style.background='var(--acl)';b.style.color='var(--ac)';b.style.borderColor='var(--ac)';
+      }
+    });
+  }
+  _isUrgent=d.urgent||false;
+  var urgentBtn=document.getElementById('toggle-urgent');
+  if(urgentBtn)urgentBtn.classList.toggle('on',_isUrgent);
+  window._zones=Array.isArray(d.zones)?d.zones:[];
+  _renderZoneTags();
+  if(window._zones.length)_updateMapZones();
+  var trustFilter=document.getElementById('pw-trust-filter');
+  if(trustFilter)trustFilter.checked=d.trustFilter||false;
+  _calcEst();
+  var titleEl=document.querySelector('.page-title');
+  if(titleEl)titleEl.textContent='공고 수정';
+  var subEl=document.querySelector('.page-sub');
+  if(subEl)subEl.textContent='공고 내용을 수정하고 저장하세요';
+  var btn=document.getElementById('submit-btn');
+  if(btn){
+    btn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg> 공고 수정하기';
+  }
 }
 
 function _yShowMatchedDrivers(postId,agencyId){
@@ -12538,7 +12852,7 @@ function _showApplicants(postId){
         '<button onclick="_yAiRecommend(\\''+_esc(postId)+'\\')" style="width:100%;min-height:var(--tap);margin-top:10px;background:linear-gradient(135deg,var(--acl),rgba(0,212,170,.06));border:1px solid var(--acln);border-radius:var(--r);color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🤖 AI로 적합한 기사 찾아보기</button>';
       return;
     }
-    var statusMap={pending:'검토중',approved:'승인',rejected:'거절'};
+    var statusMap=_STATUS_MAP_APPLY;
     var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
     var applyDocs=snap.docs;
     var profileFetches=applyDocs.map(function(doc){
@@ -12555,12 +12869,12 @@ function _showApplicants(postId){
           '<div class="applicant-top">'+
           '<span class="applicant-name">🚗 '+_esc(a.driverName)+'</span>'+
           '<span style="font-size:12px;font-weight:700;color:'+(statusColor[a.status]||'var(--t2)')+'">'+
-          (statusMap[a.status]||a.status)+'</span></div>'+
+          _esc(statusMap[a.status]||a.status)+'</span></div>'+
           '<div class="applicant-meta">📍 '+_esc(a.driverRegion||'—')+' · 📞 '+_esc(a.driverPhone||'—')+'</div>'+
           '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:8px 0;font-size:11px">'+
           '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
           '<div style="color:var(--t3);margin-bottom:2px">차종</div>'+
-          '<div style="font-weight:700">'+(p.carType||'미입력')+'</div></div>'+
+          '<div style="font-weight:700">'+_esc(p.carType||'미입력')+'</div></div>'+
           '<div style="background:var(--bg3);border-radius:8px;padding:6px;text-align:center">'+
           '<div style="color:var(--t3);margin-bottom:2px">완료건수</div>'+
           '<div style="font-weight:700;color:var(--gn)">'+(p.completedRoutes||0)+'건</div></div>'+
@@ -12571,7 +12885,7 @@ function _showApplicants(postId){
           '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px">'+
           '<span style="background:'+grade.bg+';color:'+grade.color+';padding:2px 8px;border-radius:20px;font-weight:700">'+grade.label+'</span>'+
           '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">점수 '+(p.trustScore||0)+'점</span>'+
-          (p.company?'<span style="color:var(--t2)">🏢 '+p.company+'</span>':'')+'</div>'+
+          (p.company?'<span style="color:var(--t2)">'+_esc(p.company)+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
           '<button class="judge-btn judge-approve" onclick="_judgeApply(\\''+a.id+'\\',\\'approved\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">승인</button>'+
@@ -12895,11 +13209,13 @@ function _pgPostWrite(el){
     return;
   }
   window._zones=[];
+  window._editPostId=null;
+  _map=null; _markers=[]; window._zonePolygons=[]; window._zoneLabels=[];
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
-  '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
+  '<div class="page-hdr"><div class="page-title">공고 등록</div>'+
+  '<div class="page-sub">템플릿으로 5초 만에 발송하거나 직접 입력하세요</div></div>'+
 
-  // 템플릿 선택 (모형에서 가장 위)
+  // 템플릿 선택
   '<div class="form-section" style="padding:14px;background:linear-gradient(135deg,rgba(59,126,248,.12),rgba(59,126,248,.06));border:1px solid var(--acln);border-radius:var(--r-lg);margin-bottom:12px">'+
   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>'+
@@ -12914,58 +13230,90 @@ function _pgPostWrite(el){
   '</select>'+
   '</div>'+
 
-  // 택배사
+  // 기본 정보 + 공고유형 + 긴급여부
   '<div class="form-section">'+
   '<div class="form-section-title">기본 정보</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span></label>'+
   '<select class="inp" id="pw-courier"><option value="">선택</option>'+
   ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
   '</select></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
-  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
-  '</div>'+
-
-  // 공고 유형
-  '<div class="form-section">'+
-  '<div class="form-section-title">공고 유형</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">공고 유형 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-type-group">'+
-  ['하루 대타','주단위','월단위','상시모집'].map(function(t,i){
+  ['하루 대타','주단위','월단위','상시모집'].map(function(t){
     return '<button onclick="_selType(this,\\''+t+'\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-type">'+
+  '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
+  '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
+  '<div class="toggle-row" style="margin-top:6px"><div><div class="toggle-lbl">긴급 공고</div>'+
+  '<div class="toggle-desc">상단에 우선 노출돼요</div></div>'+
+  '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
+  '</div>'+
 
-  // 근무 시간대
+  // 구역 정보 (MOVED UP)
   '<div class="form-section">'+
-  '<div class="form-section-title">근무 시간대</div>'+
+  '<div class="form-section-title">구역 정보</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
+  '</div>'+
+  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
+  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
+  '</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 우편번호 추가</label>'+
+  '<div style="display:flex;gap:8px;align-items:stretch">'+
+    '<input id="pw-zip-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="우편번호 5자리 입력" '+
+      'style="flex:1;padding:12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;background:var(--bg2);color:var(--t1);font-family:inherit;outline:none" '+
+      'oninput="_fzipInput(this)" onchange="_fzipInput(this)" onblur="_fzipInput(this)" '+
+      'onkeydown="_fzipKey(event)">'+
+    '<button type="button" ontouchstart="_zipCapture()" onmousedown="_zipCapture()" onclick="_addZoneByZip()" style="padding:12px 18px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">추가</button>'+
+  '</div>'+
+  '<div id="zip-lookup-st" style="font-size:12px;color:var(--t3);margin:4px 0;min-height:16px"></div>'+
+  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>'+
+  '</div>'+
+  '<div id="addr-result"></div>'+
+  '<div id="selected-zones" style="display:none"></div>'+
+  '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 전체 명칭 <span style="color:var(--rd)">*</span></label>'+
+  '<input class="inp" id="pw-area" placeholder="구역 추가 시 자동입력 (직접 수정 가능)"></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
+  '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
+  '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
+  ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
+  '</select></div>'+
+  '</div>'+
+  '</div>'+
+
+  // 근무 조건 (시간대+요일+기간 통합)
+  '<div class="form-section">'+
+  '<div class="form-section-title">근무 조건</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 시간대</label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pw-shift-group">'+
   ['주간','야간','협의'].map(function(s){
     return '<button onclick="_selType(this,\\''+s+'\\',\\'pw-shift\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
   }).join('')+
   '</div>'+
   '<input type="hidden" id="pw-shift">'+
-  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
-  '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
   '</div>'+
-
-  // 근무 요일
-  '<div class="form-section">'+
-  '<div class="form-section-title">근무 요일</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
+  '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">근무 요일</label>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap" id="pw-days-group">'+
   ['월','화','수','목','금','토','일'].map(function(d){
-    return '<button onclick="_toggleDay(this,\\''+d+'\\')" type="button" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
+    return '<button onclick="_toggleDay(this,\\''+d+'\\')" type="button" style="width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
   }).join('')+
-  '</div>'+
+  '</div></div>'+
   '<div id="pw-days-val" style="display:none"></div>'+
-  '</div>'+
-
-  // 기간
-  '<div class="form-section">'+
-  '<div class="form-section-title">기간</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
   '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
   '<input class="inp" id="pw-date" type="date"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">종료일</label>'+
   '<input class="inp" id="pw-enddate" type="date" placeholder="상시모집이면 비워두세요"></div>'+
+  '</div>'+
   '</div>'+
 
   // 차량 요건
@@ -12988,9 +13336,9 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-plate">'+
   '</div>'+
 
-  // 단가 구조
+  // 단가/물량 통합
   '<div class="form-section">'+
-  '<div class="form-section-title">단가 구조</div>'+
+  '<div class="form-section-title">단가 / 물량</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">단가 방식</label>'+
   '<div style="display:flex;gap:8px" id="pw-pricetype-group">'+
   ['건당','가구당','건당+가구당'].map(function(p){
@@ -13019,21 +13367,16 @@ function _pgPostWrite(el){
   }).join('')+
   '</div></div>'+
   '<input type="hidden" id="pw-vat">'+
-  '</div>'+
-
-  // 물량 및 최소보장
-  '<div class="form-section">'+
-  '<div class="form-section-title">물량</div>'+
   '<div class="inp-wrap"><label class="inp-lbl">예상 일 물량 (건) <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="pw-volume" type="number" placeholder="예: 150" oninput="_calcEst()"></div>'+
   '<div id="pw-est-display" style="margin:8px 0;padding:12px;background:var(--gnl);border-radius:10px;display:none">'+
   '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">예상 일 수익</div>'+
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
-  '<div style="padding:12px;background:var(--acl);border-radius:10px;margin-bottom:8px">'+
-  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">플랫폼 최소보장 (고정)</div>'+
+  '<div style="padding:10px 12px;background:var(--acl);border-radius:10px;margin-bottom:4px">'+
+  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:3px">플랫폼 최소보장 (고정)</div>'+
   '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:3px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
   '</div>'+
   '</div>'+
 
@@ -13051,33 +13394,7 @@ function _pgPostWrite(el){
   '<input class="inp" id="pw-settleDay" placeholder="예: 매주 목요일 / 매월 25일"></div>'+
   '</div>'+
 
-  // 구역
-  '<div class="form-section">'+
-  '<div class="form-section-title">구역 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
-  '<div style="display:flex;gap:8px">'+
-  '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
-  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
-  '</div>'+
-  '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
-  '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
-  '</div>'+
-  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
-  '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
-  '<div id="addr-result"></div>'+
-  '<div id="selected-zones" style="display:none"></div>'+
-  '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
-  '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역 유형</label>'+
-  '<select class="inp" id="pw-areaType"><option value="">선택</option>'+
-  ['아파트 중심','단독주택 중심','혼합','상가 중심'].map(function(t){return '<option>'+t+'</option>';}).join('')+
-  '</select></div>'+
-  '</div>'+
-
-  // 추가 조건
+  // 추가 조건 + 신뢰도 필터 통합
   '<div class="form-section">'+
   '<div class="form-section-title">추가 조건</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-extras">'+
@@ -13087,34 +13404,24 @@ function _pgPostWrite(el){
   '</div>'+
   '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">상세 설명</label>'+
   '<textarea class="inp" id="pw-desc" rows="3" placeholder="구역 특이사항, 요청사항 등" style="resize:none"></textarea></div>'+
-  '</div>'+
-
-  // 긴급
-  '<div class="form-section">'+
-  '<div class="toggle-row"><div><div class="toggle-lbl">긴급 공고</div>'+
-  '<div class="toggle-desc">상단에 우선 노출돼요</div></div>'+
-  '<button class="toggle" id="toggle-urgent" onclick="_toggleUrgent()"></button></div>'+
-  '</div>'+
-
-  // 기사 신뢰도 필터
-  '<div class="form-section">'+
-  '<div class="toggle-row">'+
+  '<div class="toggle-row" style="margin-top:4px">'+
     '<div><div class="toggle-lbl">기사 신뢰도 필터</div>'+
     '<div class="toggle-desc">평점 4.5 이상 기사만 지원 가능</div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;cursor:pointer">'+
       '<input type="checkbox" id="pw-trust-filter" style="width:20px;height:20px;cursor:pointer;accent-color:var(--ac)">'+
       '<span style="font-size:12px;font-weight:800;color:var(--br)">★ 4.5+</span>'+
     '</label>'+
-  '</div></div>'+
+  '</div>'+
+  '</div>'+
 
-  // 발송 버튼 — 주황 그라데이션 (모형 일치)
+  // 발송 버튼
   '<button id="submit-btn" onclick="_submitPost()" style="width:100%;min-height:62px;border:none;border-radius:var(--r-lg);'+
     'background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;'+
     'font-size:17px;font-weight:900;letter-spacing:-.3px;cursor:pointer;font-family:inherit;'+
     'display:flex;align-items:center;justify-content:center;gap:10px;'+
     'box-shadow:0 10px 28px -6px rgba(249,115,22,.6);margin-top:8px">'+
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
-    '초고속 용차 공고 발송</button>';
+    '용차 공고 발송</button>';
 
   // 하이탑 기본 선택 처리
   setTimeout(function(){
@@ -13324,6 +13631,39 @@ function _submitPost(){
 
   btn.textContent='확인 중...';btn.disabled=true;
 
+  // 수정 모드: 기존 공고 업데이트
+  if(window._editPostId){
+    var _editId=window._editPostId;
+    btn.textContent='수정 중...';
+    _db.collection('yongcha_posts').doc(_editId).update({
+      courier:courier, area:area, routeNo:routeNo,
+      loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
+      zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
+      postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
+      contractType:contractType||null, contractDuration:contractDuration||null,
+      workHours:hours, startDate:date, endDate:endDate,
+      vehicleType:vehicle, plateType:plate,
+      priceType:priceType||'건당', unitPrice:parseInt(price),
+      housePricePerUnit:housePrice?parseInt(housePrice):null,
+      vatIncluded:vatIncluded, volume:parseInt(volume),
+      minGuarantee:minGuarantee, areaType:areaType,
+      settleFreq:settle, settleDay:settleDay,
+      extras:_selectedExtras.join(','), desc:desc,
+      urgent:_isUrgent,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      _yToast('공고가 수정됐어요!');
+      window._editPostId=null;
+      _isUrgent=false;_selectedDays=[];_selectedExtras=[];window._zones=[];
+      _unlock();
+      _goPage('my_posts');
+    }).catch(function(e){
+      btn.textContent='공고 수정하기';btn.disabled=false;_unlock();
+      _yToast('오류: '+e.message);
+    });
+    return;
+  }
+
   // 중복 공고 방지: 24시간 내 동일 지문(대리점+택배사+구역+노선번호+단가+시작일)
   var cutoff=new Date(Date.now()-24*60*60*1000);
   var myKey=_yPostKey({agencyId:_CU.uid,courier:courier,area:area,routeNo:routeNo,
@@ -13427,7 +13767,7 @@ function _pgMyApplies(el){
       scDiv.innerHTML='<div style="font-size:13px;font-weight:800;color:var(--pu);margin-bottom:8px">💌 받은 스카웃 제안</div>';
       scSnap.docs.forEach(function(doc){
         var s=Object.assign({id:doc.id},doc.data());
-        var statusMap={pending:'미응답',accepted:'수락',rejected:'거절'};
+        var statusMap=_STATUS_MAP_CONTRACT;
         var date=s.createdAt?new Date(s.createdAt.seconds*1000).toLocaleDateString():'—';
         var card=document.createElement('div');card.className='card';
         card.style.borderColor='var(--pu)';
@@ -13457,7 +13797,7 @@ function _pgMyApplies(el){
       apTitle.style.cssText='font-size:13px;font-weight:800;color:var(--t2);margin:8px 0';
       apTitle.textContent=' 지원 내역';
       if(!scSnap.empty)apDiv.appendChild(apTitle);
-      var statusMap={pending:'검토중',approved:'승인',rejected:'거절'};
+      var statusMap=_STATUS_MAP_APPLY;
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
       var _apDocs=apSnap.docs.sort(function(a,b){var at=a.data().appliedAt;var bt=b.data().appliedAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);});
       _apDocs.forEach(function(doc){
@@ -14529,7 +14869,7 @@ function _loadJobApplicants(jobId){
     if(snap.empty){body.innerHTML+='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">아직 지원자가 없어요</div></div>';_openModal();return;}
     snap.forEach(function(doc){
       var a=Object.assign({id:doc.id},doc.data());
-      var statusMap={pending:'검토중',approved:'승인',rejected:'미선발'};
+      var statusMap=_STATUS_MAP_JOBS;
       var statusColor={pending:'var(--br)',approved:'var(--gn)',rejected:'var(--t3)'};
       var card=document.createElement('div');card.className='applicant-card';
       card.innerHTML=
@@ -16891,6 +17231,8 @@ function _yAiRenderPicks(data,post,postId){
 
 // ── 카카오맵 ────────────────────────────────────────────────
 var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
+// vWorld API 키 (서버가 주입 — 브라우저 직접 호출용)
+window._vwKey='__VWORLD_KEY__';
 
 function _loadKakaoMap(callback){
   // 이미 로드됨
@@ -16930,23 +17272,22 @@ function _initKakaoScript(callback){
 // 공고 등록 지도 초기화
 function _initPostMap(){
   var wrap=document.getElementById('post-map-wrap');
-  if(wrap&&wrap.style.display==='none') return; // 구역 추가 전엔 초기화 안 함
+  if(wrap&&wrap.style.display==='none') return;
   var container=document.getElementById('post-map');
-  if(!container){ return; }
+  if(!container) return;
   _loadKakaoMap(function(){
     container=document.getElementById('post-map');
-    if(!container)return;
+    if(!container) return;
     container.style.width='100%';
     container.style.height='240px';
     container.style.display='block';
     try {
-      var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
-      _map=new kakao.maps.Map(container,opts);
-      _map.setDraggable(true);
-      _map.setZoomable(true);
-      _map.relayout();
-      // 지도 클릭 → 구역 자동 추가
-      kakao.maps.event.addListener(_map,'click',function(mouseEvent){
+      if(!_map){
+        var opts={center:new kakao.maps.LatLng(35.1796,129.0756),level:5};
+        _map=new kakao.maps.Map(container,opts);
+        _map.setDraggable(true);
+        _map.setZoomable(true);
+        kakao.maps.event.addListener(_map,'click',function(mouseEvent){
         var latlng=mouseEvent.latLng;
         var lat=latlng.getLat(),lng=latlng.getLng();
         var gc=new kakao.maps.services.Geocoder();
@@ -16965,6 +17306,9 @@ function _initPostMap(){
           }
         });
       });
+      } // end if(!_map)
+      _map.relayout();
+      _doUpdateMapZones(); // 지도 준비 완료 후 구역 즉시 반영
     } catch(e){ console.error('카카오맵 오류:',e); }
   });
 }
@@ -17010,8 +17354,272 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
-// Daum 우편번호 팝업 - 다중 구역 추가
+// ── 우편번호 구역 경계 조회: 서버사이드 프록시 → Kakao Geocoder 순 ──
+// 서버(Cloudflare 한국 PoP)에서 vWorld 호출 → CORS 문제 없음
+function _fetchZoneBoundary(zip,cb){
+  function _kakaoFallback(){
+    _loadKakaoMap(function(){
+      try{
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(zip,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res.length){
+            var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+            var a=res[0].address||res[0].road_address||{};
+            var zipName=a.region_3depth_name||a.region_2depth_name||zip;
+            cb({ok:true,coords:[],zipName:zipName,lat:lat,lng:lng});
+          } else {
+            fetch('https://nominatim.openstreetmap.org/search?postalcode='+zip+'&country=kr&format=json&limit=1&addressdetails=1')
+              .then(function(r){return r.json();})
+              .then(function(d){
+                if(!d||!d.length){cb({ok:false});return;}
+                var addr=d[0].address||{};
+                var zipName2=addr.suburb||addr.city_district||addr.neighbourhood||addr.town||zip;
+                cb({ok:true,coords:[],zipName:zipName2,lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)});
+              })
+              .catch(function(){cb({ok:false});});
+          }
+        });
+      } catch(e){cb({ok:false});}
+    });
+  }
+  // 서버사이드 프록시 (vWorld API 키는 서버에만 존재)
+  fetch('/api/yongcha/zone-boundary?zip='+encodeURIComponent(zip))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok&&d.coords&&d.coords.length){
+        var sumLat=0,sumLng=0;
+        d.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+        var centLat=d.coords.length?sumLat/d.coords.length:null;
+        var centLng=d.coords.length?sumLng/d.coords.length:null;
+        cb({ok:true,coords:d.coords,zipName:d.zipName||zip,lat:centLat,lng:centLng});
+      } else {
+        _kakaoFallback();
+      }
+    })
+    .catch(function(){_kakaoFallback();});
+}
+
+// 우편번호 직접 입력 → vWorld 경계 → 지도 표시 → 구역 추가
 window._zones = window._zones || [];
+var _zipVal=''; // 버튼 탭 직전 포착된 우편번호 (IME 우회용)
+function _fzipNorm(s){
+  var r='';
+  for(var i=0;i<(s||'').length;i++){
+    var cc=(s||'').charCodeAt(i);
+    if(cc>=0xFF10&&cc<=0xFF19)r+=String.fromCharCode(cc-0xFEE0); // 전각→반각
+    else if(cc>=48&&cc<=57)r+=s[i]; // 반각 숫자
+  }
+  return r.slice(0,5);
+}
+function _fzipInput(el){var v=_fzipNorm(el.value);_zipVal=v;if(el.value!==v)el.value=v;}
+function _fzipKey(ev){if(ev.key==='Enter')_addZoneByZip();}
+function _zipCapture(){
+  // ontouchstart/onmousedown — 포커스 이동 전 값 포착
+  var el=document.getElementById('pw-zip-input');
+  if(el){var v=_fzipNorm(el.value);if(v.length)_zipVal=v;}
+}
+function _addZoneByZip(){
+  var el=document.getElementById('pw-zip-input');
+  var fromEl=_fzipNorm(el?el.value:'');
+  var zip=fromEl.length===5?fromEl:(_zipVal.length===5?_zipVal:fromEl||_zipVal);
+  _zipVal='';
+  var st=document.getElementById('zip-lookup-st');
+  if(!/^[0-9]{5}$/.test(zip)){_yToast('우편번호 5자리를 입력해주세요');return;}
+  var dup=window._zones.some(function(z){return z.zipcode===zip;});
+  if(dup){_yToast('이미 추가된 우편번호예요');return;}
+  if(st){st.style.color='var(--t3)';st.textContent='주소를 선택해주세요';}
+  new daum.Postcode({
+    oncomplete:function(data){
+      var addr=data.roadAddress||data.jibunAddress;
+      var zipcode=data.zonecode||zip;
+      var dongName=(data.bname2||data.bname||data.bname1||'');
+      var zoneName=((data.sido||'')+' '+(data.sigungu||'')+' '+dongName).trim();
+      if(st){st.style.color='var(--t3)';st.textContent='좌표 변환 중...';}
+      // 다음 위젯이 선택한 주소 → Kakao Geocoder (반드시 기초구역 내 좌표)
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status!==kakao.maps.services.Status.OK){
+            if(st){st.style.color='var(--rd)';st.textContent='좌표 변환에 실패했어요';}
+            return;
+          }
+          var lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+          var dup2=window._zones.some(function(z){return z.zipcode===zipcode;});
+          if(dup2){_yToast('이미 추가된 우편번호예요');return;}
+          var newZone={zipcode:zipcode,name:zoneName,lat:lat,lng:lng,boundary:[]};
+          window._zones.push(newZone);
+          _renderZoneTags();
+          _updateMapZones();
+          if(st){st.style.color='var(--gn)';st.textContent=zipcode+' '+zoneName+' 구역이 추가됐어요';}
+          document.getElementById('pw-zip-input').value='';
+          var areaInp=document.getElementById('pw-area');
+          if(areaInp)areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+          // 기초구역 경계 비동기 로드: Worker vWorld 프록시 → Nominatim(폴백)
+          (function(){
+            function _applyBoundary(bd){
+              if(bd&&bd.coords&&bd.coords.length){
+                newZone.boundary=bd.coords;
+                if(typeof bd.lat==='number'&&typeof bd.lng==='number'){newZone.lat=bd.lat;newZone.lng=bd.lng;}
+                _doUpdateMapZones();
+              }
+            }
+            function _geomToCoords(geom){
+              if(!geom)return[];
+              if(geom.type==='Polygon')return geom.coordinates[0].map(function(c){return{lat:c[1],lng:c[0]};});
+              if(geom.type==='MultiPolygon')return geom.coordinates[0][0].map(function(c){return{lat:c[1],lng:c[0]};});
+              return[];
+            }
+            // 시도 1: Worker 프록시 → juso/vWorld WFS 기초구역 정확 경계
+            fetch('/api/yongcha/basidco?zip='+zipcode)
+            .then(function(r){return r.json();})
+            .then(function(d){
+              if(typeof _yToast==='function')_yToast('서버:'+((d.ok&&d.source)||'오류'));
+              var sCoords=(d.ok&&d.coords&&d.coords.length>=4)?d.coords:null;
+              var sLat=d.lat||lat, sLng=d.lng||lng;
+              if(d.source==='juso'){
+                // juso 데이터는 이미 정확 — 직접 적용
+                _applyBoundary({coords:sCoords,lat:sLat,lng:sLng});
+              } else {
+                // 브라우저에서 juso.go.kr WFS 직접 시도 (한국 IP, CORS 허용 여부 확인)
+                _tryJusoBrowser(sCoords,sLat,sLng);
+              }
+            })
+            .catch(function(){
+              if(typeof _yToast==='function')_yToast('basidco 오류→vWorld');
+              _fetchVworld(null,lat,lng);
+            });
+            // 시도 1.5: 브라우저에서 juso.go.kr WFS 직접 (서버 IP 차단 우회 시도)
+            function _tryJusoBrowser(fallback,cLat,cLng){
+              function _t2w(x,y){
+                var a=6378137,f=1/298.257222101,b=a*(1-f),e2=1-b*b/(a*a),ep2=e2/(1-e2);
+                var lat0=38*Math.PI/180,lng0=127.5*Math.PI/180,E0=1e6,N0=2e6,e4=e2*e2,e6=e4*e2;
+                var e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+                function mA(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+                var M=mA(lat0)+(y-N0),mu=M/(a*(1-e2/4-3*e4/64-5*e6/256));
+                var phi1=mu+(3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu)+(21*e1*e1/16-55*Math.pow(e1,4)/32)*Math.sin(4*mu)+(151*e1*e1*e1/96)*Math.sin(6*mu)+(1097*Math.pow(e1,4)/512)*Math.sin(8*mu);
+                var sp1=Math.sin(phi1),cp1=Math.cos(phi1),tp1=Math.tan(phi1);
+                var N1=a/Math.sqrt(1-e2*sp1*sp1),T1=tp1*tp1,C1=ep2*cp1*cp1;
+                var R1=a*(1-e2)/Math.pow(1-e2*sp1*sp1,1.5),D=(x-E0)/N1;
+                var lr=phi1-(N1*tp1/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*Math.pow(D,6)/720);
+                var lo=lng0+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*Math.pow(D,5)/120)/cp1;
+                return{lat:lr*180/Math.PI,lng:lo*180/Math.PI};
+              }
+              function _applyFallback(){
+                if(fallback&&fallback.length>=4){_applyBoundary({coords:fallback,lat:cLat,lng:cLng});}
+                else{_fetchVworld(null,cLat,cLng);}
+              }
+              var jusoUrl='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD&CQL_FILTER='+encodeURIComponent("BAS_ID='"+zipcode+"'");
+              fetch(jusoUrl,{signal:AbortSignal.timeout?AbortSignal.timeout(10000):undefined})
+              .then(function(r){return r.json();})
+              .then(function(jfc){
+                var feats=jfc.features||[];
+                if(feats.length&&feats[0].geometry){
+                  var g=feats[0].geometry;
+                  var ring=g.type==='Polygon'?g.coordinates[0]:g.type==='MultiPolygon'?g.coordinates[0][0]:[];
+                  var coords=ring.map(function(c){return _t2w(c[0],c[1]);});
+                  if(coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124){
+                    if(typeof _yToast==='function')_yToast('juso 브라우저 성공!');
+                    var sL=0,sG=0;coords.forEach(function(p){sL+=p.lat;sG+=p.lng;});
+                    _applyBoundary({coords:coords,lat:sL/coords.length,lng:sG/coords.length});
+                    return;
+                  }
+                }
+                if(typeof _yToast==='function')_yToast('juso 빈결과→폴백');
+                _applyFallback();
+              })
+              .catch(function(e){
+                if(typeof _yToast==='function')_yToast('juso CORS/오류→'+(e.message||'').substring(0,12));
+                _applyFallback();
+              });
+            }
+            // 시도 2: vWorld JSONP + fetch 병행 (CORS 우회, 브라우저 한국 IP)
+            function _fetchVworld(fallbackCoords,cLat,cLng){
+              var vKey='DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
+              var done=false;
+              var cbName='_vwCb'+Date.now();
+              var sid='_vws'+cbName.slice(-6);
+              if(typeof _yToast==='function')_yToast('경계 조회중('+zipcode+')...');
+              function _applyVCoords(geom){
+                var c=_geomToCoords(geom);
+                if(c.length>=4){var sLat=0,sLng=0;c.forEach(function(p){sLat+=p.lat;sLng+=p.lng;});_applyBoundary({coords:c,lat:sLat/c.length,lng:sLng/c.length});return true;}
+                return false;
+              }
+              function _cleanup(){
+                clearTimeout(tid);
+                if(window[cbName])delete window[cbName];
+                var el=document.getElementById(sid);
+                if(el&&el.parentNode)el.parentNode.removeChild(el);
+              }
+              function _fb(reason){
+                if(done)return; done=true;
+                _cleanup();
+                if(typeof _yToast==='function')_yToast('KV폴백('+reason+')');
+                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
+                else{_fetchNominatim();}
+              }
+              var tid=setTimeout(function(){_fb('timeout');},12000);
+              // A) fetch 먼저 (vWorld CORS 지원 시)
+              var vDataUrl='https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key='+vKey+'&attrFilter=BAS_ID:=:'+zipcode+'&pageSize=1&geometry=true&srsName=EPSG:4326';
+              fetch(vDataUrl)
+              .then(function(r){return r.json();})
+              .then(function(res){
+                if(done)return;
+                var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
+                if(feats.length&&_applyVCoords(feats[0].geometry)){
+                  done=true;_cleanup();
+                  if(typeof _yToast==='function')_yToast('경계 fetch OK');
+                  return;
+                }
+                if(typeof _yToast==='function')_yToast('fetch빈결과→JSONP시도');
+              })
+              .catch(function(e){
+                if(typeof _yToast==='function')_yToast('fetch실패→JSONP:'+(e.message||'cors'));
+              });
+              // B) JSONP 병행 (fetch CORS 차단 시 대체)
+              window[cbName]=function(res){
+                if(done)return; done=true;
+                _cleanup();
+                var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
+                if(feats.length&&_applyVCoords(feats[0].geometry)){
+                  if(typeof _yToast==='function')_yToast('경계 JSONP OK');
+                  return;
+                }
+                if(typeof _yToast==='function')_yToast('JSONP빈결과→KV폴백');
+                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
+                else{_fetchNominatim();}
+              };
+              var sc=document.createElement('script');
+              sc.id=sid;
+              sc.onerror=function(){_fb('script-error');};
+              sc.src=vDataUrl+'&callback='+cbName;
+              document.head.appendChild(sc);
+            }
+            // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
+            function _fetchNominatim(){
+              if(!zoneName)return;
+              fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(zoneName)+'&format=json&polygon_geojson=1&limit=5&accept-language=ko',
+                {headers:{'User-Agent':'yongcha-app/1.0 (yongcha.app)'}})
+                .then(function(r){return r.json();})
+                .then(function(arr){
+                  for(var i=0;i<arr.length;i++){
+                    var g=arr[i].geojson;
+                    if(!g)continue;
+                    var c=_geomToCoords(g);
+                    if(c.length>=4){
+                      _applyBoundary({coords:c,lat:parseFloat(arr[i].lat),lng:parseFloat(arr[i].lon)});
+                      break;
+                    }
+                  }
+                })
+                .catch(function(){});
+            }
+          })();
+        });
+      });
+    }
+  }).open({q:zip});
+}
+// 주소 검색 fallback
 function _openDaumPost(){
   new daum.Postcode({
     oncomplete: function(data){
@@ -17026,9 +17634,16 @@ function _openDaumPost(){
             // 중복 체크
             var dup = window._zones.some(function(z){return z.zipcode===zipcode;});
             if(dup){_yToast('이미 추가된 우편번호예요');return;}
-            window._zones.push({zipcode:zipcode, name:sigungu.trim(), lat:lat, lng:lng});
+            var _newZone={zipcode:zipcode, name:sigungu.trim(), lat:lat, lng:lng};
+            window._zones.push(_newZone);
             _renderZoneTags();
             _updateMapZones();
+            // vWorld 실제 경계선 비동기 로드
+            if(zipcode&&/^[0-9]{5}$/.test(zipcode)){
+              _fetchZoneBoundary(zipcode,function(bd){
+                if(bd.ok&&bd.coords&&bd.coords.length){_newZone.boundary=bd.coords;_doUpdateMapZones();}
+              });
+            }
             // 구역명 자동입력
             var areaInp = document.getElementById('pw-area');
             if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
@@ -17067,35 +17682,60 @@ function _removeZone(i){
   _updateMapZones();
 }
 function _updateMapZones(){
-  // 구역 있으면 지도 표시
   var wrap = document.getElementById('post-map-wrap');
-  if(wrap){
-    wrap.style.display = window._zones.length ? 'block' : 'none';
-    if(window._zones.length && !_map){
-      _initPostMap();
-      setTimeout(_doUpdateMapZones, 800);
-      return;
-    }
+  if(wrap) wrap.style.display = window._zones.length ? 'block' : 'none';
+  if(window._zones.length && !_map){
+    setTimeout(_initPostMap, 100); // _initPostMap가 완료 후 _doUpdateMapZones 직접 호출
+    return;
   }
   _doUpdateMapZones();
 }
 function _doUpdateMapZones(){
   if(!_map) return;
   (_markers||[]).forEach(function(m){m.setMap(null);});
-  _markers = [];
+  _markers=[];
   (window._circles||[]).forEach(function(c){c.setMap(null);});
-  window._circles = [];
-  window._zones.forEach(function(z){
-    var pos = new kakao.maps.LatLng(z.lat, z.lng);
-    var m = new kakao.maps.Marker({position:pos, map:_map});
-    _markers.push(m);
-    var c = new kakao.maps.Circle({center:pos,radius:600,strokeWeight:2,strokeColor:'#00d4aa',strokeOpacity:.8,fillColor:'#00d4aa',fillOpacity:.12,map:_map});
-    window._circles.push(c);
+  window._circles=[];
+  (window._zonePolygons||[]).forEach(function(p){p.setMap(null);});
+  window._zonePolygons=[];
+  (window._zoneFbCircles||[]).forEach(function(c){c.setMap(null);});
+  window._zoneFbCircles=[];
+  (window._zoneLabels||[]).forEach(function(l){l.setMap(null);});
+  window._zoneLabels=[];
+  var COLORS=['#4f78f5','#10b981','#f59e0b','#f97316','#8b5cf6'];
+  window._zones.forEach(function(z,i){
+    if(typeof z.lat!=='number'||typeof z.lng!=='number')return;
+    var color=COLORS[i%COLORS.length];
+    if(z.boundary&&z.boundary.length){
+      // vWorld 실제 경계선 폴리곤
+      var path=z.boundary.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
+      var poly=new kakao.maps.Polygon({
+        path:path,strokeWeight:2.5,strokeColor:color,strokeOpacity:.95,
+        fillColor:color,fillOpacity:.13,map:_map
+      });
+      window._zonePolygons.push(poly);
+    } else {
+      // 경계선 로드 전 fallback: 400m 원형 (직사각형보다 실제 구역에 근접)
+      var fbCircle=new kakao.maps.Circle({
+        center:new kakao.maps.LatLng(z.lat,z.lng),
+        radius:400,
+        strokeWeight:2,strokeColor:color,strokeOpacity:.8,strokeStyle:'dashed',
+        fillColor:color,fillOpacity:.10,map:_map
+      });
+      window._zoneFbCircles.push(fbCircle);
+    }
+    var label=new kakao.maps.CustomOverlay({
+      position:new kakao.maps.LatLng(z.lat,z.lng),
+      content:'<div style="background:'+color+';color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+(z.zipcode&&!/^MAP/.test(z.zipcode)?z.zipcode+' ':'')+(z.name||'')+'</div>',
+      map:_map,yAnchor:1.6
+    });
+    window._zoneLabels.push(label);
   });
-  if(window._zones.length){
-    var last = window._zones[window._zones.length-1];
-    _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
-    _map.setLevel(5);
+  var zonesWithCoords=window._zones.filter(function(z){return typeof z.lat==='number'&&typeof z.lng==='number';});
+  if(zonesWithCoords.length){
+    var last=zonesWithCoords[zonesWithCoords.length-1];
+    _map.setCenter(new kakao.maps.LatLng(last.lat,last.lng));
+    _map.setLevel(4);
     _map.relayout();
   }
 }
@@ -17142,42 +17782,86 @@ function _selectAddr(idx){
   window._lastLng=lng;
 }
 
-// 공고 상세 지도 v3 — 배송구역 원 + 스타일 핀
-function _showDetailMap(lat,lng,name){
-  if(typeof lat!=='number'||typeof lng!=='number'||isNaN(lat)||isNaN(lng))return;
+// 공고 상세 지도 — 우편번호 centroid 우선, 저장 좌표 fallback
+function _showDetailMap(lat,lng,name,zipcode){
+  var hasPos=typeof lat==='number'&&typeof lng==='number'&&!isNaN(lat)&&!isNaN(lng);
+  var hasZip=zipcode&&/^[0-9]{5}$/.test(zipcode);
+  if(!hasPos&&!hasZip)return;
   _loadKakaoMap(function(){
     var container=document.getElementById('detail-map');
     if(!container)return;
     var ph=document.getElementById('detail-map-placeholder');
     if(ph)ph.style.display='none';
     container.style.display='block';
-    var pos=new kakao.maps.LatLng(lat,lng);
-    var radius=window._detailMapRadius||600;
-    // 반경에 맞는 줌 레벨 자동 조정
-    var lvl=radius<=350?4:radius<=600?5:6;
-    window._detailMap=new kakao.maps.Map(container,{center:pos,level:lvl});
-    // 배송구역 원 (투명 청색)
-    window._detailCircle=new kakao.maps.Circle({
-      center:pos,radius:radius,
-      strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.9,
-      fillColor:'#4f78f5',fillOpacity:.1,
-      map:window._detailMap
-    });
-    // 커스텀 핀 (글로우)
-    var pinHtml='<div style="position:relative;display:flex;flex-direction:column;align-items:center">'+
-      '<div style="width:36px;height:36px;background:linear-gradient(135deg,#4f78f5,#00d4aa);border-radius:50% 50% 50% 0;'+
-        'transform:rotate(-45deg);box-shadow:0 4px 16px rgba(79,120,245,.6);border:2.5px solid rgba(255,255,255,.9)">'+
-      '</div>'+
-      '<div style="position:absolute;top:9px;left:9px;width:18px;height:18px;background:#fff;border-radius:50%;"></div>'+
-    '</div>';
-    var customOverlay=new kakao.maps.CustomOverlay({
-      position:pos,content:pinHtml,yAnchor:1
-    });
-    customOverlay.setMap(window._detailMap);
-    // 구역 이름 오버레이 (지도 위 좌상단 배지는 HTML 레이어로 처리)
-    var badge=document.getElementById('zone-map-badge');
-    if(badge&&name)badge.textContent=name;
-    window._detailMarker=null;
+    // 모달 재오픈 시 이전 컨테이너를 가리키면 지도 재생성
+    if(window._detailMap&&window._detailMapEl!==container){
+      window._detailMap=null;
+    }
+    var lbl=(zipcode&&!/^MAP/.test(zipcode)?zipcode+' ':'')+(name||'');
+    function _initAt(pos){
+      if(window._detailPoly){window._detailPoly.setMap(null);window._detailPoly=null;}
+      if(window._detailLabel){window._detailLabel.setMap(null);window._detailLabel=null;}
+      if(!window._detailMap){
+        window._detailMap=new kakao.maps.Map(container,{center:pos,level:4});
+        window._detailMapEl=container;
+      } else {
+        window._detailMap.setCenter(pos);
+        window._detailMap.setLevel(4);
+      }
+      if(lbl){
+        window._detailLabel=new kakao.maps.CustomOverlay({
+          position:pos,
+          content:'<div style="background:#4f78f5;color:#fff;border-radius:6px;padding:3px 9px;font-size:13px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none">'+_esc(lbl)+'</div>',
+          map:window._detailMap,yAnchor:1.6
+        });
+      }
+      var badge=document.getElementById('zone-map-badge');
+      if(badge&&name)badge.textContent=name;
+      window._detailMap.relayout();
+    }
+    function _drawPoly(path){
+      window._detailPoly=new kakao.maps.Polygon({
+        path:path,strokeWeight:2.5,strokeColor:'#4f78f5',strokeOpacity:.95,
+        fillColor:'#4f78f5',fillOpacity:.12,map:window._detailMap
+      });
+    }
+    function _approxRect(pos){
+      var flat=pos.getLat(),flng=pos.getLng(),dlat=0.0025,dlng=0.003;
+      _drawPoly([new kakao.maps.LatLng(flat-dlat,flng-dlng),new kakao.maps.LatLng(flat+dlat,flng-dlng),
+                 new kakao.maps.LatLng(flat+dlat,flng+dlng),new kakao.maps.LatLng(flat-dlat,flng+dlng)]);
+    }
+    function _fallback(){
+      // '부산 · 48267' → '부산' 추출 (· 이하 제거). 도시명만 지오코딩해야 정확함
+      var rawRegion=(window._detailPost&&window._detailPost.region)||'';
+      var city=rawRegion.replace(/\s*[···⋅]\s*\d.*$/,'').replace(/\s*\d+노선.*$/,'').trim();
+      var gc=new kakao.maps.services.Geocoder();
+      function _useStored(){
+        // zipcode가 있으면 저장 좌표를 신뢰하지 않음 (잘못 저장됐을 수 있음)
+        if(hasPos&&!hasZip){_initAt(new kakao.maps.LatLng(lat,lng));_approxRect(new kakao.maps.LatLng(lat,lng));}
+      }
+      if(city){
+        gc.addressSearch(city,function(res,status){
+          if(status===kakao.maps.services.Status.OK&&res[0]){
+            var p=new kakao.maps.LatLng(parseFloat(res[0].y),parseFloat(res[0].x));
+            _initAt(p);_approxRect(p);
+          } else { _useStored(); }
+        });
+      } else { _useStored(); }
+    }
+    if(hasZip){
+      // vWorld 폴리곤 — 클라이언트에서 직접 호출 (Cloudflare 502 우회)
+      _fetchZoneBoundary(zipcode,function(bd){
+        if(bd.ok&&bd.coords&&bd.coords.length){
+          var sumLat=0,sumLng=0,n=bd.coords.length;
+          bd.coords.forEach(function(c){sumLat+=c.lat;sumLng+=c.lng;});
+          _initAt(new kakao.maps.LatLng(sumLat/n,sumLng/n));
+          _drawPoly(bd.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);}));
+        } else { _fallback(); }
+      });
+    } else {
+      // zipcode 없으면 저장 좌표 신뢰 안 함 — region 지오코딩(최소 올바른 도시)
+      _fallback();
+    }
   });
 }
 
@@ -17497,43 +18181,49 @@ function _showZoneOnMap(i){
     t.style.background = j===i ? 'var(--ac)' : 'transparent';
     t.style.color = j===i ? '#fff' : 'var(--ac)';
   });
-  if(typeof z.lat==='number'&&typeof z.lng==='number'){
-    _loadKakaoMap(function(){
-      var pos = new kakao.maps.LatLng(z.lat, z.lng);
-      if(window._detailMap){
-        window._detailMap.setCenter(pos);
-        window._detailMap.setLevel(5);
-        if(window._detailMarker) window._detailMarker.setPosition(pos);
-        if(window._detailCircle) window._detailCircle.setCenter(pos);
-      } else {
-        _showDetailMap(z.lat,z.lng,z.name||'');
-      }
-    });
-  } else if(z.name||z.zipcode){
-    var q=(z.zipcode||'')+' '+(z.name||'');
-    _loadKakaoMap(function(){
-      var gc=new kakao.maps.services.Geocoder();
-      gc.addressSearch(q.trim(),function(res,status){
-        if(status===kakao.maps.services.Status.OK&&res[0]){
-          var lat2=parseFloat(res[0].y),lng2=parseFloat(res[0].x);
-          if(window._detailMap){
-            var pos=new kakao.maps.LatLng(lat2,lng2);
-            window._detailMap.setCenter(pos);window._detailMap.setLevel(5);
-            if(window._detailMarker)window._detailMarker.setPosition(pos);
-            if(window._detailCircle)window._detailCircle.setCenter(pos);
-          } else {
-            _showDetailMap(lat2,lng2,z.name||q.trim());
-          }
-        }
-      });
-    });
-  }
+  // 항상 _showDetailMap으로 위임 — zipcode 있으면 vWorld centroid → region fallback
+  // addressSearch(zipcode+name) 직접 호출 금지 (동명 장소 오검색 위험)
+  var zLat=typeof z.lat==='number'?z.lat:NaN;
+  var zLng=typeof z.lng==='number'?z.lng:NaN;
+  _showDetailMap(zLat,zLng,z.name||'',z.zipcode||'');
 }
 </script>
 </body>
 </html>
 
 `
+// 시장 기준 단가 (서버 공통 상수)
+const YONGCHA_MKT_AVG = {
+  'CJ대한통운':880, '한진택배':855, '롯데택배':860,
+  '우체국':900, '쿠팡로지스틱스':960, '로젠택배':840
+};
+
+// Firebase ID 토큰 서버 측 검증
+async function verifyYongchaToken(request, env) {
+  const auth = (request.headers.get('Authorization') || '').trim();
+  if (!auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+  if (token.length < 100) return null;
+  const apiKey = env.FIREBASE_API_KEY || '';
+  if (!apiKey) return token ? { uid: 'verified' } : null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.users && data.users[0]) || null;
+  } catch(e) { return null; }
+}
+
+function authRequired(corsH) {
+  return new Response(JSON.stringify({ ok: false, error: '인증이 필요해요' }), {
+    status: 401, headers: corsH
+  });
+}
+
 async function handleYongcha(request, env) {
   const url    = new URL(request.url);
   const path   = url.pathname;
@@ -17625,7 +18315,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 전자세금계산서 역발행 요청 ──────────────────────────────────
   if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { workId, agencyId, driverId, driverName, fare } = body;
@@ -17792,7 +18484,9 @@ async function handleYongcha(request, env) {
 
   // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
   if (path === '/api/yongcha/settle-notify' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, driverPhone, driverName, agencyId, agencyName,
@@ -17858,7 +18552,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, senderCorpNum, mgtKey } = body;
@@ -17910,7 +18606,9 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
       const { settleId, senderCorpNum, mgtKey, rejectReason } = body;
@@ -17961,14 +18659,16 @@ async function handleYongcha(request, env) {
 
   // ── AI 코치 (Claude) ───────────────────────────────────────────────────────
   if (path === '/api/ai-coach' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT_AVG = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
       const postSummary = (posts || []).slice(0, 8).map(p => {
-        const avg = MKT_AVG[p.courier] || 880;
+        const avg = YONGCHA_MKT_AVG[p.courier] || 880;
         const rp = Math.round((p.unitPrice - avg) / avg * 100);
         const dayEst = Math.round((p.unitPrice || 0) * (p.volume || 0) / 10000);
         return `[${p.id}] ${p.courier} ${p.region} ${p.area} / 단가:${p.unitPrice}원(시세${rp > 0 ? '+' : ''}${rp}%) / 일물량:${p.volume}건 / 일수익:~${dayEst}만원 / ${p.workShift || ''}`;
@@ -18015,13 +18715,9 @@ ${postSummary || '공고 없음'}
         if (m) { try { parsed = JSON.parse(m[0]); } catch(e2) {} }
       }
 
-      return new Response(JSON.stringify({ ok: true, data: parsed }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: true, data: parsed }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
@@ -18068,14 +18764,16 @@ ${postSummary || '공고 없음'}
 
   // ── SmartMatch AI: 공고 스코어링 ─────────────────────────────
   if (path === '/api/yongcha/smart-match' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
       const postList = (posts || []).slice(0, 10).map(p => {
-        const avg = MKT[p.courier] || 880;
+        const avg = YONGCHA_MKT_AVG[p.courier] || 880;
         const rp = Math.round((p.unitPrice - avg) / avg * 100);
         return `id:${p.id}|${p.courier} ${p.region} ${p.area}|단가:${p.unitPrice}원(시세${rp>=0?'+':''}${rp}%)|물량:${p.volume}건|${p.workShift||''}|${p.urgent?'긴급':'일반'}`;
       }).join('\n');
@@ -18106,18 +18804,21 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '[]';
       let scores = [];
       try { scores = JSON.parse(raw); } catch(e) { const m = raw.match(/\[[\s\S]*\]/); if(m) try { scores = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, scores }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, scores }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
   // ── Quick Post NL Parser: 자연어 → 공고 필드 ────────────────
   if (path === '/api/yongcha/quick-post' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { text } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
       const prompt = `한국 택배 대리점 소장이 입력한 자연어에서 배차 공고 필드를 추출하세요.
 
@@ -18146,21 +18847,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '{}';
       let fields = {};
       try { fields = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { fields = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, fields }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, fields }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
   // ── Price Suggest AI: 단가 최적화 추천 ───────────────────────
   if (path === '/api/yongcha/price-suggest' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { courier, region, workShift, volume } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
 
-      const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
-      const mktBase = MKT[courier] || 880;
+      const mktBase = YONGCHA_MKT_AVG[courier] || 880;
       const prompt = `한국 택배 용차 단가 전문가입니다. 다음 조건의 적정 단가를 분석하세요.
 
 조건:
@@ -18189,54 +18892,404 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const raw = data.content?.[0]?.text || '{}';
       let result = {};
       try { result = JSON.parse(raw); } catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) try { result = JSON.parse(m[0]); } catch(e2) {} }
-      return new Response(JSON.stringify({ ok: true, data: result }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: true, data: result }), { headers: corsH });
     } catch(e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
-  // ── 주유소 가격 API 디버그 ────────────────────────────────────────
-  if (path === '/api/yongcha/gas-debug' && method === 'GET') {
-    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-    const pid = new URL(request.url).searchParams.get('pid') || '26640143';
-    const results = {};
-    // 카카오 place detail 시도
-    for (const url of [
-      `https://place.map.kakao.com/api/place/v1/info?cid=${pid}&service=place`,
-      `https://place.map.kakao.com/m/${pid}`,
-      `https://place.map.kakao.com/api/place/v2/detail?pid=${pid}`,
-      `https://place.map.kakao.com/main/v/${pid}`,
-    ]) {
-      try {
-        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://map.kakao.com/' } });
-        const ct = r.headers.get('content-type') || '';
-        const text = await r.text();
-        results[url] = { status: r.status, ct, preview: text.slice(0, 400) };
-      } catch(e) { results[url] = { error: e.message }; }
-    }
-    // 가능한 키 이름들 체크
-    const keyChecks = {};
-    const keyNames = ['OPINET_API_KEY','OPINET_API_KE','OPINET_KEY','OPINET','opinet_api_key','WEATHER_API_KEY','KAKAO_REST_KEY'];
-    for (const k of keyNames) { keyChecks[k] = env[k] ? `설정됨(${String(env[k]).length}자)` : '없음'; }
-    results['_env_check'] = keyChecks;
-    // OPINET 여러 엔드포인트 테스트
-    const opiKey = env.OPINET_API_KEY || env.OPINET_API_KE || env.OPINET_KEY || env.OPINET;
-    if (opiKey) {
-      const opiUrls = [
-        `http://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
-        `https://www.opinet.co.kr/api/avgAllPriceU.do?out=json&code=${opiKey}&prodcd=B027`,
-        `http://www.opinet.co.kr/api/aroundAll.do?out=json&code=${opiKey}&x=129.08&y=35.15&radius=2000&sort=1&prodcd=B027`,
-        `http://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${opiKey}`,
-      ];
-      for (const u of opiUrls) {
-        try {
-          const r = await fetch(u);
-          const t = await r.text();
-          results['opinet_' + u.split('/').pop().split('?')[0]] = { status: r.status, preview: t.slice(0, 200) };
-        } catch(e) { results['opinet_err'] = e.message; }
+  // ── [임시] 기초구역 KV 배치 쓰기 (배포 후 제거 예정) ─────────────────
+  if (path === '/api/yongcha/kv-batch-write' && method === 'POST') {
+    const j = request.headers.get('x-batch-secret');
+    if (j !== 'basidco2024write') return new Response('forbidden', { status: 403 });
+    try {
+      const items = await request.json();
+      if (!Array.isArray(items)) return new Response('bad format', { status: 400 });
+      const CHUNK = 25;
+      for (let i = 0; i < items.length; i += CHUNK) {
+        await Promise.all(items.slice(i, i + CHUNK).map(({ key, value }) => env.DONWAY_ASSETS.put(key, value)));
       }
+      return new Response(JSON.stringify({ ok: true, count: items.length }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
-    return new Response(JSON.stringify(results, null, 2), { headers: corsH });
+  }
+
+  // ── 기초구역 경계 (vWorld WFS → Oracle 프록시 → KV → ok:false 순) ────
+  if (path === '/api/yongcha/basidco' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = new URL(request.url).searchParams.get('zip') || '';
+    if (!/^[0-9]{5}$/.test(zip)) {
+      return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
+    }
+    function _ringToCoords(ring) { return ring.map(c => ({ lat: c[1], lng: c[0] })); }
+    function _centroid(coords) {
+      const s = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+      return { lat: s.lat / coords.length, lng: s.lng / coords.length };
+    }
+    // EPSG:5179 (Korea 2000 Unified CS) ↔ WGS84 TM 변환
+    function _wgs84ToTM(lat, lng) {
+      const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
+      const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
+      const phi=lat*Math.PI/180, lam=lng*Math.PI/180;
+      const sp=Math.sin(phi), cp=Math.cos(phi), tp=Math.tan(phi);
+      const NN=a/Math.sqrt(1-e2*sp*sp), T=tp*tp, C=ep2*cp*cp, A=cp*(lam-lng0);
+      function mArc(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+      return {x:E0+NN*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120), y:N0+(mArc(phi)-mArc(lat0)+NN*tp*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))};
+    }
+    function _tmToWgs84(x, y) {
+      const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
+      const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
+      const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+      function mArc(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+      const M=mArc(lat0)+(y-N0), mu=M/(a*(1-e2/4-3*e4/64-5*e6/256));
+      const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+      const sp1=Math.sin(phi1), cp1=Math.cos(phi1), tp1=Math.tan(phi1);
+      const N1=a/Math.sqrt(1-e2*sp1*sp1), T1=tp1*tp1, C1=ep2*cp1*cp1;
+      const R1=a*(1-e2)/Math.pow(1-e2*sp1*sp1,1.5), D=(x-E0)/N1;
+      const lat=phi1-(N1*tp1/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+      const lng2=lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/cp1;
+      return {lat:lat*180/Math.PI, lng:lng2*180/Math.PI};
+    }
+    // 0) business.juso.go.kr WFS — CQL_FILTER로 직접 조회 (centroid 불필요)
+    try {
+      const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+      const jusoHdrs={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+      let jFeats=null;
+      for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO']) {
+        try {
+          const jr=await fetch(`${jusoBase}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`,{headers:jusoHdrs,signal:AbortSignal.timeout(12000)});
+          if (jr.ok){const jfc=await jr.json();if((jfc.features||[]).length){jFeats=jfc.features;break;}}
+        } catch(_){}
+      }
+      if (!jFeats) {
+        // BBOX 폴백 (KV centroid → WGS84 BBOX, SRSNAME=EPSG:4326으로 변환 없이 사용)
+        const kvRaw=await env.DONWAY_ASSETS.get('basidco:'+zip);
+        if (kvRaw) {
+          const kv=JSON.parse(kvRaw);
+          if (Array.isArray(kv)&&kv.length) {
+            const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
+            const cLat=s.lat/kv.length, cLng=s.lng/kv.length;
+            const d=0.04; // ±0.04° ≈ ±4km
+            const bbox=`${cLng-d},${cLat-d},${cLng+d},${cLat+d},EPSG:4326`;
+            const jr2=await fetch(`${jusoBase}&BBOX=${bbox}&SRSNAME=EPSG:4326`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
+            if (jr2.ok){
+              const jfc2=await jr2.json();
+              // 알려진 필드명 우선 → 전체 값 검색 폴백 (juso WFS 실제 필드명 불명)
+              const feats2=jfc2.features||[];
+              const f2=feats2.find(f=>{
+                const p=f.properties||{};
+                return ['BAS_ID','KARB_CD','BASEID','ZONE_NO','BAS_CD','KARB_CD_M','ZIP','ZIPNO'].some(k=>String(p[k]||'')===zip);
+              })||feats2.find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
+              if(f2)jFeats=[f2];
+            }
+          }
+        }
+      }
+      if (jFeats&&jFeats.length) {
+        const feat=jFeats[0];
+        if (feat?.geometry) {
+          const ring=feat.geometry.type==='Polygon'?feat.geometry.coordinates[0]:feat.geometry.type==='MultiPolygon'?feat.geometry.coordinates[0][0]:[];
+          // SRSNAME=EPSG:4326 → [lng,lat] 순서, TM변환 불필요
+          const coords=ring.map(c=>({lat:c[1],lng:c[0]}));
+          if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
+            const cen=_centroid(coords);
+            return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
+          }
+          // WGS84 실패 시 EPSG:5179 TM 변환 시도
+          const coords5179=ring.map(c=>_tmToWgs84(c[0],c[1]));
+          if (coords5179.length>=4&&coords5179[0].lat>33&&coords5179[0].lat<39&&coords5179[0].lng>124) {
+            const cen=_centroid(coords5179);
+            return new Response(JSON.stringify({ok:true,coords:coords5179,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
+          }
+        }
+      }
+    } catch(_) {}
+    // 1) vWorld WFS — 데모키 우선, env 키 폴백
+    const _vwKeys = ['DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A', env.VWORLD_API_KEY].filter(Boolean);
+    for (const vKey of _vwKeys) {
+      try {
+        const vFilter = encodeURIComponent(`BAS_ID='${zip}'`);
+        const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${vKey}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+        const vr = await fetch(vUrl, { signal: AbortSignal.timeout(10000) });
+        if (vr.ok) {
+          const fc = await vr.json();
+          const feat = fc?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = _ringToCoords(ring);
+            if (coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'vworld' }), { headers: corsH });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    // 2) vWorld /req/data REST API (WFS와 다른 인프라 — IP 차단 여부 별개)
+    for (const vKey of _vwKeys) {
+      try {
+        const vdUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key=${vKey}&attrFilter=BAS_ID:=:${zip}&pageSize=1&geometry=true&srsName=EPSG:4326`;
+        const vdr = await fetch(vdUrl, { signal: AbortSignal.timeout(10000) });
+        if (vdr.ok) {
+          const vd = await vdr.json();
+          const feat = vd?.response?.result?.featureCollection?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = _ringToCoords(ring);
+            if (coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'vworld-data' }), { headers: corsH });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    // 3) Oracle Cloud vWorld 프록시 (설정된 경우)
+    if (env.ORACLE_PROXY_URL) {
+      try {
+        const proxySecret = env.ORACLE_PROXY_SECRET || '';
+        const pr = await fetch(`${env.ORACLE_PROXY_URL}/?zip=${zip}`, {
+          signal: AbortSignal.timeout(10000),
+          headers: proxySecret ? { 'x-secret': proxySecret } : {}
+        });
+        if (pr.ok) {
+          const fc = await pr.json();
+          const feat = fc?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = _ringToCoords(ring);
+            if (coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'oracle' }), { headers: corsH });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    // 3) KV 캐시 (shapefile 변환 데이터 — 폴백)
+    try {
+      const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
+      if (kvVal) {
+        const coords = JSON.parse(kvVal);
+        if (Array.isArray(coords) && coords.length >= 4) {
+          const cen = _centroid(coords);
+          return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'kv' }), { headers: corsH });
+        }
+      }
+    } catch (_) {}
+    return new Response(JSON.stringify({ ok: false, error: 'no_data' }), { headers: corsH });
+  }
+
+  // ── juso WFS 디버그 엔드포인트 (/api/yongcha/juso-debug?zip=XXXXX) ─
+  if (path === '/api/yongcha/juso-debug' && method === 'GET') {
+    const corsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+    const zip = url.searchParams.get('zip') || '';
+    if (!/^\d{5}$/.test(zip)) return new Response(JSON.stringify({error:'invalid_zip'}),{headers:corsH});
+    const dbg = {zip, steps:[], cql:{}};
+    // KV 확인
+    try {
+      const kvRaw = await env.DONWAY_ASSETS.get('basidco:'+zip);
+      dbg.steps.push(kvRaw ? 'kv_ok' : 'kv_missing');
+    } catch(e) { dbg.steps.push('kv_error:'+e.message); }
+    // juso WFS CQL_FILTER 방식 (centroid 불필요)
+    const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+    const jusoHdrs={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+    for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO','PBDCO']) {
+      try {
+        const cqlUrl=`${jusoBase}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`;
+        const jr=await fetch(cqlUrl,{headers:jusoHdrs,signal:AbortSignal.timeout(12000)});
+        const txt=await jr.text();
+        const info={status:jr.status,bodyLen:txt.length,snippet:txt.substring(0,300)};
+        if (jr.ok) {
+          try {
+            const jfc=JSON.parse(txt);
+            info.featureCount=(jfc.features||[]).length;
+            if (info.featureCount>0){info.sampleProps=jfc.features[0].properties;dbg.steps.push('cql_ok:'+prop);dbg.cql[prop]='OK '+info.featureCount+'개';}
+            else {dbg.cql[prop]='0개';dbg.steps.push('cql_empty:'+prop);}
+          } catch(pe){info.parseError=pe.message;dbg.steps.push('cql_parse_err:'+prop);}
+        } else {dbg.cql[prop]='HTTP '+jr.status;dbg.steps.push('cql_http_'+jr.status+':'+prop);}
+        dbg.cql[prop+'_detail']=info;
+      } catch(e){dbg.cql[prop]='error:'+e.message;dbg.steps.push('cql_err:'+prop);}
+    }
+    // vWorld 데모키 테스트
+    const _dbgVwKey = 'DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
+    try {
+      const vFilter=encodeURIComponent(`BAS_ID='${zip}'`);
+      const vUrl=`https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${_dbgVwKey}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+      const vr=await fetch(vUrl,{signal:AbortSignal.timeout(10000)});
+      const vtxt=await vr.text();
+      dbg.vworldStatus=vr.status;
+      dbg.vworldSnippet=vtxt.substring(0,500);
+      if(vr.ok){try{const vfc=JSON.parse(vtxt);dbg.vworldFeats=(vfc.features||[]).length;if(vfc.features?.length)dbg.vworldProps=vfc.features[0].properties;}catch(_){}}
+      dbg.steps.push('vworld_http_'+vr.status);
+    } catch(e){dbg.vworldError=e.message;dbg.steps.push('vworld_err:'+e.message);}
+    return new Response(JSON.stringify(dbg,null,2),{headers:corsH});
+  }
+
+  // ── 우편번호 → 좌표 (Nominatim OSM, 인증 불필요) ─────────────────
+  if (path === '/api/yongcha/zip2loc' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    const zip = url.searchParams.get('zip') || '';
+    if (!/^[0-9]{5}$/.test(zip)) return new Response(JSON.stringify({ ok: false }), { headers: corsH });
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=kr&format=json&limit=1&addressdetails=1`,
+        { headers: { 'User-Agent': 'yongcha.app/1.0 delivery zone lookup' }, signal: AbortSignal.timeout(8000) }
+      );
+      const data = await r.json();
+      if (!data || !data.length) return new Response(JSON.stringify({ ok: false }), { headers: corsH });
+      const item = data[0];
+      const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+      const addr = item.address || {};
+      const zipName = addr.suburb || addr.city_district || addr.neighbourhood || addr.city || zip;
+      return new Response(JSON.stringify({ ok: true, lat, lng, zipName }), { headers: corsH });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false }), { headers: corsH });
+    }
+  }
+
+  // ── 우편번호 기초구역 경계 + 중심좌표 ────────────────────────────
+  if (path === '/api/yongcha/zone-boundary' && method === 'GET') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const _u = new URL(request.url);
+      const zip = _u.searchParams.get('zip') || '';
+      const qLat = parseFloat(_u.searchParams.get('lat') || '');
+      const qLng = parseFloat(_u.searchParams.get('lng') || '');
+      if (!zip || !/^\d{5}$/.test(zip)) {
+        return new Response(JSON.stringify({ ok: false, error: '유효하지 않은 우편번호' }), { headers: corsH });
+      }
+
+      let centLat = null, centLng = null, zipName = '', coords = [];
+
+      function _geomCoords(geom) {
+        if (!geom) return [];
+        if (geom.type === 'Polygon') return geom.coordinates[0].map(c => ({ lat: c[1], lng: c[0] }));
+        if (geom.type === 'MultiPolygon') return geom.coordinates[0][0].map(c => ({ lat: c[1], lng: c[0] }));
+        return [];
+      }
+
+      // ⓪ business.juso.go.kr WFS — CQL_FILTER 직접 조회 (centroid 불필요)
+      if (!coords.length) {
+        try {
+          const _t2w = (x, y) => {
+            const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
+            const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
+            const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+            function mArc(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+            const M=mArc(lat0)+(y-N0), mu=M/(a*(1-e2/4-3*e4/64-5*e6/256));
+            const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+            const sp1=Math.sin(phi1), cp1=Math.cos(phi1), tp1=Math.tan(phi1);
+            const N1=a/Math.sqrt(1-e2*sp1*sp1), T1=tp1*tp1, C1=ep2*cp1*cp1;
+            const R1=a*(1-e2)/Math.pow(1-e2*sp1*sp1,1.5), D=(x-E0)/N1;
+            const lat=phi1-(N1*tp1/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+            const lng2=lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/cp1;
+            return {lat:lat*180/Math.PI, lng:lng2*180/Math.PI};
+          };
+          const jusoBase2='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+          const jusoHdrs2={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+          let jfeat2=null;
+          for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO']) {
+            try {
+              const jjr=await fetch(`${jusoBase2}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`,{headers:jusoHdrs2,signal:AbortSignal.timeout(12000)});
+              if (jjr.ok){const jjfc=await jjr.json();if((jjfc.features||[]).length){jfeat2=jjfc.features[0];break;}}
+            } catch(_){}
+          }
+          if (jfeat2?.geometry) {
+            const jring=jfeat2.geometry.type==='Polygon'?jfeat2.geometry.coordinates[0]:jfeat2.geometry.type==='MultiPolygon'?jfeat2.geometry.coordinates[0][0]:[];
+            const jcoords=jring.map(c=>_t2w(c[0],c[1]));
+            if (jcoords.length>=4&&jcoords[0].lat>33&&jcoords[0].lat<39&&jcoords[0].lng>124) {
+              coords=jcoords;
+              const s=jcoords.reduce((a,p)=>({lat:a.lat+p.lat,lng:a.lng+p.lng}),{lat:0,lng:0});
+              if (!centLat){centLat=s.lat/jcoords.length;centLng=s.lng/jcoords.length;}
+              zipName=zipName||Object.values(jfeat2.properties||{}).find(v=>typeof v==='string'&&v.length>1&&!/^\d+$/.test(v))||zip;
+            }
+          }
+        } catch(_) {}
+      }
+      // ① vWorld WFS — 공식 기초구역 경계 (폴백)
+      if (env.VWORLD_API_KEY && !coords.length) {
+        try {
+          const vFilter = encodeURIComponent(`BAS_ID='${zip}'`);
+          const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${env.VWORLD_API_KEY}&CQL_FILTER=${vFilter}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+          const vr = await fetch(vUrl, { signal: AbortSignal.timeout(8000) });
+          if (vr.ok) {
+            const fc = await vr.json();
+            const feat = fc?.features?.[0];
+            if (feat?.geometry) {
+              const c = _geomCoords(feat.geometry);
+              if (c.length) {
+                coords = c;
+                const s = c.reduce((a, p) => ({ lat: a.lat + p.lat, lng: a.lng + p.lng }), { lat: 0, lng: 0 });
+                if (!centLat) { centLat = s.lat / c.length; centLng = s.lng / c.length; }
+                zipName = zipName || feat.properties?.DONG_NM || feat.properties?.SGG_NM || zip;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      // ② KV 기초구역 경계 (shapefile 변환 데이터)
+      if (!coords.length) {
+        try {
+          const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
+          if (kvVal) {
+            const kvCoords = JSON.parse(kvVal);
+            if (Array.isArray(kvCoords) && kvCoords.length >= 4) {
+              coords = kvCoords;
+              const s = kvCoords.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
+              if (!centLat) { centLat = s.lat / kvCoords.length; centLng = s.lng / kvCoords.length; }
+            }
+          }
+        } catch(_) {}
+      }
+      // ③ Nominatim — 중심 좌표만 사용 (폴리곤은 행정동 단위라 부정확)
+      if (!centLat) {
+        try {
+          const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`;
+          const nRes = await fetch(nUrl, { headers: { 'User-Agent': 'yongcha-delivery-app/1.0 (contact@yongcha.app)' }, signal: AbortSignal.timeout(8000) });
+          if (nRes.ok) {
+            const nData = await nRes.json();
+            if (nData.length) {
+              if (!centLat) { centLat = parseFloat(nData[0].lat); centLng = parseFloat(nData[0].lon); }
+              zipName = zipName || (nData[0].display_name || '').split(',')[0].trim();
+            }
+          }
+        } catch(_) {}
+      }
+
+      // ② Kakao REST zone_no 매칭 (중심좌표만 — 폴리곤 없음)
+      if (!centLat) {
+        const kakaoKey = env.KAKAO_REST_KEY;
+        if (kakaoKey) {
+          try {
+            const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
+            const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(5000) });
+            const kData = await kRes.json();
+            const docs = (kData.documents || []).filter(d => (d.address?.zone_no || d.road_address?.zone_no || '') === zip);
+            if (docs.length) {
+              centLat = docs.reduce((s,d) => s+parseFloat(d.y),0)/docs.length;
+              centLng = docs.reduce((s,d) => s+parseFloat(d.x),0)/docs.length;
+              const ra = docs[0].road_address || {};
+              zipName = zipName || [ra.region_1depth_name, ra.region_2depth_name, ra.region_3depth_name].filter(Boolean).join(' ');
+            }
+          } catch(_) {}
+        }
+      }
+
+      // ③ 최후 폴백: 클라이언트가 보낸 좌표를 중심으로 사용
+      if (!centLat && !isNaN(qLat) && !isNaN(qLng)) { centLat = qLat; centLng = qLng; }
+
+      if (!centLat) return new Response(JSON.stringify({ ok: false, error: '좌표 없음' }), { headers: corsH });
+      return new Response(JSON.stringify({ ok: true, coords, zipName, lat: centLat, lng: centLng }), { headers: corsH });
+    } catch(e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
   }
 
   // ── 차량 검사 만료 조회 (수동 입력 — 내정보에서 직접 설정) ────────
@@ -18330,6 +19383,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
   // AI 기사 배차 추천
   if (path === '/api/yongcha/recommend' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
+    const user = await verifyYongchaToken(request, env);
+    if (!user) return authRequired(corsH);
     try {
       const { topN = 5, post = {}, drivers = [] } = await request.json();
       const postRegion = (post.region || '').trim();
@@ -18380,13 +19436,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         ? `상위 추천 기사 ${results.length}명 선정 완료. 지역·차량·실적 기반 규칙 엔진 분석.`
         : '조건에 맞는 기사를 찾지 못했어요.';
 
-      return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), { headers: corsH });
     } catch (e) {
-      return new Response(JSON.stringify({ ok: false, error: e.message }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
     }
   }
 
@@ -18406,8 +19458,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     return serveKVFile(env, 'yongcha-landing.html', 'text/html');
   }
 
-  // 모든 경로 → 인라인 HTML 서빙
-  return new Response(YONGCHA_HTML_YONGCHA, {
+  // 모든 경로 → 인라인 HTML 서빙 (vWorld 키 주입)
+  const _yHtml = YONGCHA_HTML_YONGCHA.replace('__VWORLD_KEY__', env.VWORLD_API_KEY || '');
+  return new Response(_yHtml, {
     headers: {
       'Content-Type': 'text/html;charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate',

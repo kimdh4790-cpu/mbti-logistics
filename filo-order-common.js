@@ -238,21 +238,24 @@ function _renderCatBar(menus, barId, gridId){
 // ── 카드 번역 적용 ────────────────────────────────────────────────────────────
 function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
+ var lang=_lang;
+ var needApi=[];
  menus.forEach(function(m){
   var trId='tr-'+_menuSlug(m.name);
   var el=document.getElementById(trId);
   if(!el) return;
-  // 해당 카드의 메인 이름 엘리먼트 찾기 (data-orig 속성으로 식별)
   var card=el.closest?el.closest('.mi'):null;
   var nameEl=card?card.querySelector('[data-orig]'):null;
-  var ck=m.name+'_'+_lang;
+  var ck=m.name+'_'+lang;
+  // 캐시 hit
   if(_tlCache[ck]){
    if(nameEl)nameEl.textContent=_tlCache[ck];
    el.textContent='';
    return;
   }
-  if(m.nameTranslations&&m.nameTranslations[_lang]){
-   var saved=m.nameTranslations[_lang];
+  // Firestore 저장 번역
+  if(m.nameTranslations&&m.nameTranslations[lang]){
+   var saved=m.nameTranslations[lang];
    if(saved&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
     _tlCache[ck]=saved;
     if(nameEl)nameEl.textContent=saved;
@@ -260,23 +263,31 @@ function _applyTranslationsToGrid(menus){
     return;
    }
   }
-  // API 번역
-  fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({name:m.name,lang:_lang})})
-  .then(function(r){return r.json();})
-  .then(function(d){
-   var tr=d.translated;
-   if(tr&&tr!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-    _tlCache[ck]=tr;
-    var e2=document.getElementById(trId);
-    if(e2){
-     var card2=e2.closest?e2.closest('.mi'):null;
-     var nameEl2=card2?card2.querySelector('[data-orig]'):null;
-     if(nameEl2)nameEl2.textContent=tr;
-     e2.textContent='';
+  // API 번역 필요
+  needApi.push({m:m,trId:trId,ck:ck});
+ });
+ // 동시 요청 과다로 rate-limit 걸리지 않도록 100ms 간격으로 순차 호출
+ needApi.forEach(function(item,i){
+  setTimeout(function(){
+   if(_lang!==lang) return; // 언어 바뀌면 취소
+   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:item.m.name,lang:lang})})
+   .then(function(r){return r.json();})
+   .then(function(d){
+    if(_lang!==lang) return;
+    var tr=d.translated;
+    if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+     _tlCache[item.ck]=tr;
+     var e2=document.getElementById(item.trId);
+     if(e2){
+      var card2=e2.closest?e2.closest('.mi'):null;
+      var nameEl2=card2?card2.querySelector('[data-orig]'):null;
+      if(nameEl2)nameEl2.textContent=tr;
+      e2.textContent='';
+     }
     }
-   }
-  }).catch(function(){});
+   }).catch(function(){});
+  },i*100);
  });
 }
 
@@ -357,9 +368,10 @@ function _openMdlCommon(m){
     body:JSON.stringify({name:m.name,lang:_lang})})
    .then(function(r){return r.json();})
    .then(function(d){
-    var t=d.translated||m.name;
-    _tlCache[ck]=t;
-    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=t;
+    var t=d.translated;
+    var valid=t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t);
+    _tlCache[ck]=valid?t:'';
+    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=valid?t:'';
    }).catch(function(){if(trEl)trEl.textContent='';});
   }
   // 설명 번역
