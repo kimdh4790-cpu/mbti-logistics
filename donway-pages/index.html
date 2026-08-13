@@ -699,7 +699,9 @@ async function _getCachedDriversForDispatch() {
     return window._dispatchDriversCache;
   }
   if(!_db) return ls('drivers');
-  var snap = await _db.collection('drivers').where('is_active','==',true).get();
+  var _did=window._CU&&window._CU.dealerId||'';
+  var _q=_did?_db.collection('drivers').where('dealerId','==',_did).where('is_active','==',true):_db.collection('drivers').where('is_active','==',true);
+  var snap = await _q.get();
   var all = [];
   snap.forEach(function(doc){ var d=doc.data(); d.fbId=doc.id; all.push(d); });
   window._dispatchDriversCache = all;
