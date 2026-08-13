@@ -19954,7 +19954,6 @@ function _addZoneByZip(){
             fetch('/api/yongcha/basidco?zip='+zipcode)
             .then(function(r){return r.json();})
             .then(function(d){
-              if(typeof _yToast==='function')_yToast('서버:'+((d.ok&&d.source)||'오류'));
               var sCoords=(d.ok&&d.coords&&d.coords.length>=4)?d.coords:null;
               var sLat=d.lat||lat, sLng=d.lng||lng;
               if(d.source==='juso'){
@@ -19966,7 +19965,6 @@ function _addZoneByZip(){
               }
             })
             .catch(function(){
-              if(typeof _yToast==='function')_yToast('basidco 오류→vWorld');
               _fetchVworld(null,lat,lng);
             });
             // 시도 1.5: 브라우저에서 juso.go.kr WFS 직접 (서버 IP 차단 우회 시도)
@@ -19999,17 +19997,14 @@ function _addZoneByZip(){
                   var ring=g.type==='Polygon'?g.coordinates[0]:g.type==='MultiPolygon'?g.coordinates[0][0]:[];
                   var coords=ring.map(function(c){return _t2w(c[0],c[1]);});
                   if(coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124){
-                    if(typeof _yToast==='function')_yToast('juso 브라우저 성공!');
                     var sL=0,sG=0;coords.forEach(function(p){sL+=p.lat;sG+=p.lng;});
                     _applyBoundary({coords:coords,lat:sL/coords.length,lng:sG/coords.length});
                     return;
                   }
                 }
-                if(typeof _yToast==='function')_yToast('juso 빈결과→폴백');
                 _applyFallback();
               })
-              .catch(function(e){
-                if(typeof _yToast==='function')_yToast('juso CORS/오류→'+(e.message||'').substring(0,12));
+              .catch(function(){
                 _applyFallback();
               });
             }
@@ -20019,7 +20014,6 @@ function _addZoneByZip(){
               var done=false;
               var cbName='_vwCb'+Date.now();
               var sid='_vws'+cbName.slice(-6);
-              if(typeof _yToast==='function')_yToast('경계 조회중('+zipcode+')...');
               function _applyVCoords(geom){
                 var c=_geomToCoords(geom);
                 if(c.length>=4){var sLat=0,sLng=0;c.forEach(function(p){sLat+=p.lat;sLng+=p.lng;});_applyBoundary({coords:c,lat:sLat/c.length,lng:sLng/c.length});return true;}
@@ -20031,14 +20025,13 @@ function _addZoneByZip(){
                 var el=document.getElementById(sid);
                 if(el&&el.parentNode)el.parentNode.removeChild(el);
               }
-              function _fb(reason){
+              function _fb(){
                 if(done)return; done=true;
                 _cleanup();
-                if(typeof _yToast==='function')_yToast('KV폴백('+reason+')');
                 if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
                 else{_fetchNominatim();}
               }
-              var tid=setTimeout(function(){_fb('timeout');},12000);
+              var tid=setTimeout(function(){_fb();},12000);
               // A) fetch 먼저 (vWorld CORS 지원 시)
               var vDataUrl='https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key='+vKey+'&attrFilter=BAS_ID:=:'+zipcode+'&pageSize=1&geometry=true&srsName=EPSG:4326';
               fetch(vDataUrl)
@@ -20048,30 +20041,22 @@ function _addZoneByZip(){
                 var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
                 if(feats.length&&_applyVCoords(feats[0].geometry)){
                   done=true;_cleanup();
-                  if(typeof _yToast==='function')_yToast('경계 fetch OK');
                   return;
                 }
-                if(typeof _yToast==='function')_yToast('fetch빈결과→JSONP시도');
               })
-              .catch(function(e){
-                if(typeof _yToast==='function')_yToast('fetch실패→JSONP:'+(e.message||'cors'));
-              });
+              .catch(function(){});
               // B) JSONP 병행 (fetch CORS 차단 시 대체)
               window[cbName]=function(res){
                 if(done)return; done=true;
                 _cleanup();
                 var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
-                if(feats.length&&_applyVCoords(feats[0].geometry)){
-                  if(typeof _yToast==='function')_yToast('경계 JSONP OK');
-                  return;
-                }
-                if(typeof _yToast==='function')_yToast('JSONP빈결과→KV폴백');
+                if(feats.length&&_applyVCoords(feats[0].geometry)){return;}
                 if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
                 else{_fetchNominatim();}
               };
               var sc=document.createElement('script');
               sc.id=sid;
-              sc.onerror=function(){_fb('script-error');};
+              sc.onerror=function(){_fb();};
               sc.src=vDataUrl+'&callback='+cbName;
               document.head.appendChild(sc);
             }
