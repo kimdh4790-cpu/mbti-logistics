@@ -14263,6 +14263,18 @@ function _showMapModal(locs){
     var completeBtn=fbId&&!isDone
       ?'<button onclick="event.stopPropagation();openDelivComplete(\''+fbId+'\','+i+')" style="flex:1;padding:8px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">✅ 완료처리</button>'
       :(isDone?'<div style="flex:1;padding:8px;text-align:center;font-size:11px;color:#16a34a;font-weight:700">✅ 완료됨</div>':'');
+    var cPhotos=(x.completePhotos||[]).filter(Boolean);
+    var photoHtml=isDone&&cPhotos.length
+      ?'<div style="margin-left:32px;margin-bottom:8px">'
+        +'<div style="font-size:10px;color:#16a34a;font-weight:700;margin-bottom:4px">완료 사진 '+cPhotos.length+'장</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+        +cPhotos.map(function(u){
+          return '<img src="'+u+'" onclick="event.stopPropagation();_openPhotoFull(\''+u+'\')" '
+            +'style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid #16a34a;touch-action:manipulation" '
+            +'onerror="this.style.display=\'none\'">';
+        }).join('')
+        +'</div></div>'
+      :(isDone?'<div style="margin-left:32px;margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.3)">사진 없음</div>':'');
     return '<div style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
@@ -14271,6 +14283,7 @@ function _showMapModal(locs){
       +'</div>'
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
       +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:8px">운송장: '+(trackVal||'—')+'</div>'
+      +photoHtml
       +'<div style="display:flex;gap:6px;margin-left:32px">'
       +mapBtn
       +completeBtn
@@ -14332,6 +14345,16 @@ function _renderLeafletMap(locs){
   if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20]});
   // 컨테이너 크기 재계산 (bottom sheet 애니메이션 완료 후)
   setTimeout(function(){map.invalidateSize();},300);
+}
+
+function _openPhotoFull(url){
+  document.getElementById('photo-full-mo')&&document.getElementById('photo-full-mo').remove();
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="photo-full-mo" onclick="this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px">'
+    +'<img src="'+url+'" style="max-width:100%;max-height:90vh;border-radius:10px;object-fit:contain" onerror="this.parentElement.remove()">'
+    +'<div style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:#fff">✕</div>'
+    +'</div>'
+  );
 }
 
 function openDelivComplete(fbId, locIdx){
