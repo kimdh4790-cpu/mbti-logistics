@@ -4,235 +4,224 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#030912">
-<title>DONWAY — 근로계약서</title>
+<title>DONWAY — 계약서 작성</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#030912;--bg2:#060f1f;--bg3:#0a1628;--blue:#0066ff;--cyan:#00d4ff;--green:#00ff88;--red:#ef4444;--yellow:#f59e0b;--gray:#5a7299;--white:#e8f4ff;--border:rgba(0,212,255,.12);--border2:rgba(0,102,255,.18)}
 body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun Gothic',sans-serif;min-height:100vh}
-.wrap{max-width:560px;margin:0 auto;padding:0 0 90px}
-.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
-.logo{font-size:14px;font-weight:900;letter-spacing:3px}.logo span{color:var(--cyan)}
-.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border)}
+.wrap{max-width:560px;margin:0 auto;padding:10px 14px 100px}
+.topbar{background:rgba(3,9,18,.97);border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.logo{font-size:14px;font-weight:900;letter-spacing:3px;color:var(--white)}.logo span{color:var(--cyan)}
+.tabs{display:flex;background:rgba(6,15,31,.8);border-bottom:1px solid var(--border);max-width:560px;margin:0 auto}
 .tab{flex:1;padding:12px 0;border:none;background:transparent;color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
 .tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
-.sec{padding:14px 20px 0}
-.sec-label{font-size:10px;font-weight:700;color:var(--gray);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.sec-label::before{content:'';width:14px;height:1.5px;background:var(--cyan)}
-.card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px;margin-bottom:12px}
-.fg{margin-bottom:12px}
-.fl{font-size:11px;font-weight:700;color:var(--gray);display:block;margin-bottom:5px}
-.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;font-weight:600;outline:none;transition:.2s}
-.fi:focus{border-color:var(--cyan)}
+
+/* Step cards */
+.step{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:16px;margin-bottom:10px}
+.step-title{font-size:10px;font-weight:800;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.step-title::before{content:'';width:12px;height:1.5px;background:var(--cyan);flex-shrink:0}
+
+/* Type selector */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.type-btn{background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;padding:14px 8px;cursor:pointer;color:var(--gray);text-align:center;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:5px;width:100%}
+.type-btn.on{border-color:var(--cyan);background:rgba(0,212,255,.1);color:var(--white)}
+.type-icon{font-size:22px;line-height:1}
+.type-name{font-size:13px;font-weight:800}
+.type-desc{font-size:9px;color:var(--gray);line-height:1.4;text-align:center}
+.type-btn.on .type-desc{color:rgba(0,212,255,.7)}
+
+/* Sub-type chips */
+.sub-chips{display:flex;gap:6px;margin-top:10px}
+.sub-chip{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:11px;font-weight:700;cursor:pointer;transition:.2s}
+.sub-chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* Form fields */
+.fg{margin-bottom:10px}
+.fg:last-child{margin-bottom:0}
+.fl{font-size:10px;font-weight:700;color:var(--gray);display:block;margin-bottom:5px;letter-spacing:.5px}
+.fi{width:100%;padding:11px 13px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--white);font-size:13px;font-weight:600;outline:none;transition:.2s;-webkit-appearance:none}
+.fi:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+select.fi{cursor:pointer}
+textarea.fi{resize:vertical;font-weight:400;font-size:12px;line-height:1.6}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.type-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.type-chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;white-space:nowrap}
-.type-chip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
-.btn-main{width:100%;padding:13px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:11px;color:var(--bg);font-size:14px;font-weight:900;cursor:pointer;transition:.3s;margin-top:4px}
-.btn-main:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,102,255,.3)}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
-.btn-sub{padding:12px;border-radius:10px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
-/* 계약서 목록 */
-.ctrc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;margin:0 20px 8px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.2s}
+
+/* Driver preview */
+.drv-preview{margin-top:8px;padding:10px 13px;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;font-size:12px;display:flex;align-items:center;gap:10px}
+.drv-pname{font-weight:800;color:var(--white)}
+.drv-pphone{color:var(--gray)}
+
+/* Actions */
+.action-wrap{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.btn-sign{width:100%;padding:15px;background:linear-gradient(135deg,#059669,#10b981);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;letter-spacing:.5px;transition:.2s}
+.btn-sign:disabled{opacity:.5;cursor:not-allowed}
+.btn-sign:not(:disabled):active{transform:scale(.98)}
+.btn-print{width:100%;padding:12px;background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:12px;color:var(--bg);font-size:13px;font-weight:900;cursor:pointer;transition:.2s}
+.btn-save{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--gray);font-size:11px;font-weight:700;cursor:pointer}
+#esign-info{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--white);line-height:1.8;margin-bottom:8px;display:none}
+
+/* Contract list */
+.ctrc-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;margin-bottom:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.2s}
 .ctrc-card:hover{border-color:rgba(0,212,255,.25)}
-.ctrc-icon{font-size:28px;flex-shrink:0}
+.ctrc-icon{font-size:26px;flex-shrink:0}
 .ctrc-title{font-size:14px;font-weight:800}
 .ctrc-sub{font-size:10px;color:var(--gray);margin-top:3px;line-height:1.7}
 .ctrc-badge{padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;margin-left:auto;flex-shrink:0;white-space:nowrap}
 .cb-active{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2)}
 .cb-end{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
 .cb-temp{background:rgba(245,158,11,.1);color:var(--yellow);border:1px solid rgba(245,158,11,.2)}
-/* 하단 탭 */
+
+/* Toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
+
+/* Bottom nav */
 .bottombar{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:0 auto;background:rgba(6,15,31,.97);border-top:1px solid var(--border);display:flex;padding:8px 0;z-index:100}
 .bot-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border:none;background:transparent;cursor:pointer;color:var(--gray);text-decoration:none}
 .bot-btn.on{color:var(--cyan)}
 .bot-icon{font-size:20px}.bot-lbl{font-size:9px;font-weight:700;letter-spacing:.5px}
-#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--border2);color:var(--white);padding:10px 20px;border-radius:99px;font-size:12px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:9999}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.ok{border-color:var(--green);color:var(--green)}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:14px;height:14px;border:2px solid rgba(0,212,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle}
 </style>
 </head>
 <body>
 <div id="toast"></div>
 
-<!-- 프리미엄 계약서 잠금 모달 -->
-<div class="prem-modal" id="prem-modal">
-  <div class="prem-box">
-    <div class="prem-icon">🔑</div>
-    <div class="prem-title" id="prem-modal-title">프리미엄 계약서</div>
-    <div class="prem-desc" id="prem-modal-desc">이 계약서 템플릿은 <strong style="color:var(--yellow)">프리미엄 애드온</strong> 대리점 전용입니다.<br>활성화 코드를 입력하거나 추가 결제 후 이용하세요.</div>
-    <div class="prem-code-wrap">
-      <input class="prem-code-inp" id="prem-code-inp" placeholder="코드 입력" maxlength="8">
-      <button class="prem-check-btn" onclick="checkPremCode()">확인</button>
-    </div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:16px">― 또는 ―</div>
-    <button class="prem-pay-btn" onclick="goPay()">💳 지금 결제하고 바로 사용</button>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:12px;line-height:1.7">
-      하나은행 <strong style="color:var(--white)">270-910019-24204</strong> (유)엠비티아이<br>
-      입금 후 카카오채널 <strong style="color:var(--white)">MBTI Co. LOGISTICS</strong> 문의
-    </div>
-    <button class="prem-cancel-btn" onclick="closePremModal()">닫기</button>
-  </div>
-</div>
 <div class="topbar">
   <div class="logo"><span>D</span>ONWAY 계약서</div>
-  <button onclick="location.href='/portal'" style="padding:7px 12px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🗂 문서보관함</button>
+  <button onclick="location.href='/portal'" style="padding:6px 11px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🗂 보관함</button>
 </div>
 <div class="tabs">
-  <button class="tab on" id="t-write" onclick="switchTab('write')">✏️ 계약서 작성</button>
-  <button class="tab" id="t-list" onclick="switchTab('list')">📋 계약서 목록</button>
+  <button class="tab on" id="t-write" onclick="switchTab('write')">✏️ 계약 작성</button>
+  <button class="tab" id="t-list" onclick="switchTab('list')">📋 계약 목록</button>
 </div>
 
 <div class="wrap">
 
-<!-- 작성 탭 -->
+<!-- ──────────── 작성 탭 ──────────── -->
 <div id="tab-write">
-  <div class="sec">
-    <div class="sec-label">계약 유형</div>
-    <div class="type-row" id="ctype-row">
-      <div class="type-chip on" onclick="setCType('regular',this)">👔 근로계약</div>
-      <div class="type-chip" onclick="setCType('parttime',this)">⏰ 단시간 근로</div>
-      <div class="type-chip" onclick="setCType('fixed',this)">📅 기간제</div>
-      <div class="type-chip" onclick="setCType('dispatch',this)">🚚 위탁계약</div>
-      <div class="type-chip" onclick="setCTypeById('courier',this)">🏷 영업점-택배기사 위수탁</div>
-      <div class="type-chip" onclick="setCTypeById('quickflex',this)">⚡ 퀵플렉스 부속합의서</div>
-    </div>
 
-    <!-- 대리점(甲) 정보 -->
-    <div class="card" id="agency-card">
-      <div class="sec-label">대리점 (甲) 정보 <span style="font-size:9px;color:var(--gray);font-weight:400;letter-spacing:0;text-transform:none">— 저장됨</span></div>
-      <div class="row2">
-        <div class="fg"><label class="fl">상호명 *</label><input class="fi" id="c-agency-name" placeholder="엠비티아이(유)" oninput="saveAgency()"></div>
-        <div class="fg"><label class="fl">대표자명</label><input class="fi" id="c-agency-rep" placeholder="김형우" oninput="saveAgency()"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">사업자번호</label><input class="fi fi-mono" id="c-agency-bizno" placeholder="373-86-02536" oninput="saveAgency()"></div>
-        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-agency-phone" placeholder="051-711-3103" oninput="saveAgency()"></div>
-      </div>
-      <div class="fg"><label class="fl">주소</label><input class="fi" id="c-agency-addr" placeholder="부산시 수영구 수영로 668, 607호" oninput="saveAgency()"></div>
-      <div class="fg" style="margin-bottom:0"><label class="fl">정산 계좌 (기사 수수료 지급)</label><input class="fi fi-mono" id="c-agency-account" placeholder="하나은행 270-910019-24204" oninput="saveAgency()"></div>
+  <!-- ① 계약 유형 -->
+  <div class="step">
+    <div class="step-title">① 계약 유형</div>
+    <div class="type-grid">
+      <button class="type-btn on" data-type="courier" onclick="setCType('courier',this)">
+        <span class="type-icon">🏷</span>
+        <span class="type-name">위·수탁</span>
+        <span class="type-desc">택배기사<br>위수탁 계약</span>
+      </button>
+      <button class="type-btn" data-type="quickflex" onclick="setCType('quickflex',this)">
+        <span class="type-icon">⚡</span>
+        <span class="type-name">퀵플렉스</span>
+        <span class="type-desc">쿠팡<br>QuickFlex</span>
+      </button>
+      <button class="type-btn" data-type="regular" onclick="setCType('regular',this)">
+        <span class="type-icon">👔</span>
+        <span class="type-name">근로계약</span>
+        <span class="type-desc">일반·단시간<br>기간제</span>
+      </button>
     </div>
-
-    <!-- 직원 자동 불러오기 -->
-    <div class="card">
-      <div class="sec-label">직원 선택</div>
-      <div class="fg" style="margin-bottom:0">
-        <label class="fl">직원 검색</label>
-        <select class="fi" id="drv-select" onchange="fillDriver()">
-          <option value="">-- 직원 선택 (자동 입력) --</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- 근로자 정보 -->
-    <div class="card">
-      <div class="sec-label">근로자 정보</div>
-      <div class="row2">
-        <div class="fg"><label class="fl">성명 *</label><input class="fi" id="c-name" placeholder="홍길동"></div>
-        <div class="fg"><label class="fl">생년월일</label><input class="fi" id="c-birth" placeholder="1990-01-01" type="date"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">주소</label><input class="fi" id="c-addr" placeholder="부산시 ..."></div>
-        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-phone" placeholder="010-0000-0000" type="tel"></div>
+    <!-- 근로계약 세분류 -->
+    <div id="labor-subtype" style="display:none">
+      <div class="sub-chips">
+        <button class="sub-chip on" onclick="setSubType('regular',this)">일반근로</button>
+        <button class="sub-chip" onclick="setSubType('parttime',this)">단시간</button>
+        <button class="sub-chip" onclick="setSubType('fixed',this)">기간제</button>
       </div>
     </div>
-
-    <!-- 근로 조건 -->
-    <div class="card">
-      <div class="sec-label">근로 조건</div>
-      <div class="row2">
-        <div class="fg"><label class="fl">계약 시작일 *</label><input class="fi" id="c-start" type="date"></div>
-        <div class="fg"><label class="fl">계약 종료일</label><input class="fi" id="c-end" type="date" placeholder="미정 시 공백"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">근무 거점</label><input class="fi" id="c-loc" placeholder="부산1, 본사 등"></div>
-        <div class="fg"><label class="fl">담당 업무</label><input class="fi" id="c-job" placeholder="배송, 관리 등"></div>
-      <div class="row2" id="vehicle-row" style="display:none">
-        <div class="fg"><label class="fl">차량번호</label><input class="fi fi-mono" id="c-vehicle" placeholder="부산12가3456"></div>
-        <div class="fg"><label class="fl">차종</label><input class="fi" id="c-cartype" placeholder="1톤 트럭, 승용 등"></div>
-      </div>
-      <!-- 퀵플렉스 전용 필드 -->
-      <div id="qf-fields" style="display:none">
-        <div class="row2">
-          <div class="fg"><label class="fl">캠프명</label><input class="fi" id="c-camp" placeholder="부산1캠프"></div>
-          <div class="fg"><label class="fl">라우트</label><input class="fi fi-mono" id="c-route" placeholder="A-001"></div>
-        </div>
-        <div class="row2">
-          <div class="fg"><label class="fl">반품 수수료 단가 (원)</label><input class="fi fi-mono" id="c-return-fee" placeholder="800"></div>
-          <div class="fg"><label class="fl">종사 자격증 번호 *</label><input class="fi fi-mono" id="c-license-no" placeholder="제2026-00000호"></div>
-        </div>
-        <div class="fg"><label class="fl">분류작업 수행여부</label>
-          <select class="fi" id="c-sort-work">
-            <option value="미수행">미수행</option>
-            <option value="수행">수행</option>
-          </select>
-        </div>
-      </div>
-      </div>
-      <div class="row3">
-        <div class="fg"><label class="fl">소정 근로시간</label><input class="fi" id="c-hours" placeholder="8시간"></div>
-        <div class="fg"><label class="fl">근무 요일</label><input class="fi" id="c-days" placeholder="월~금"></div>
-        <div class="fg"><label class="fl">휴게 시간</label><input class="fi" id="c-break" value="60분"></div>
-      </div>
-    </div>
-
-    <!-- 임금 -->
-    <div class="card">
-      <div class="sec-label">임금</div>
-      <div class="row2">
-        <div class="fg"><label class="fl">임금 형태</label>
-          <select class="fi" id="c-paytype">
-            <option value="건당">건당 단가</option>
-            <option value="시급">시급</option>
-            <option value="일급">일급</option>
-            <option value="월급">월급</option>
-          </select>
-        </div>
-        <div class="fg"><label class="fl">금액 (원)</label><input class="fi" id="c-pay" placeholder="750" style="font-family:monospace"></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">지급일</label><input class="fi" id="c-payday" placeholder="매월 25일"></div>
-        <div class="fg"><label class="fl">지급 방법</label><input class="fi" id="c-paymethod" placeholder="계좌이체"></div>
-      </div>
-      <div class="fg" style="margin-bottom:0"><label class="fl">지급 계좌 (근로자)</label><input class="fi" id="c-payaccount" placeholder="은행명 계좌번호"></div>
-    </div>
-
-    <!-- 사회보험 -->
-    <div class="card">
-      <div class="sec-label">사회보험 가입</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-4" style="width:16px;height:16px"> 4대보험</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-emp" checked style="width:16px;height:16px"> 고용보험</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-acc" checked style="width:16px;height:16px"> 산재보험</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-health" style="width:16px;height:16px"> 건강보험</label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="ins-pension" style="width:16px;height:16px"> 국민연금</label>
-      </div>
-    </div>
-
-    <!-- 특약 사항 -->
-    <div class="card">
-      <div class="sec-label">특약 사항</div>
-      <textarea class="fi" id="c-special" rows="3" placeholder="예) 배달 건당 인센티브 25원 지급&#10;예) 계약기간 중 일방적 해지 시 위약금 없음" style="resize:vertical"></textarea>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-sub" onclick="saveContract()">☁ 저장</button>
-      <button class="btn-main" onclick="printContract()" style="margin-top:0">🖨 계약서 출력</button>
-    </div>
-    <div style="margin:0 0 8px">
-      <button class="btn-main" id="esign-btn" onclick="requestEsign()" style="background:linear-gradient(135deg,#059669,#10b981);margin-top:0">📱 전자서명 요청 (SMS 발송)</button>
-    </div>
-    <div id="esign-info" style="display:none;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--white);line-height:1.8;margin-bottom:8px"></div>
   </div>
+
+  <!-- ② 기사 정보 -->
+  <div class="step">
+    <div class="step-title">② 기사 정보</div>
+    <div class="fg">
+      <label class="fl">등록된 기사 선택 (자동 입력)</label>
+      <select class="fi" id="drv-select" onchange="fillDriver()">
+        <option value="">— 기사 선택 —</option>
+      </select>
+    </div>
+    <div id="drv-preview" class="drv-preview" style="display:none">
+      <span class="drv-pname" id="drv-pname"></span>
+      <span class="drv-pphone" id="drv-pphone"></span>
+    </div>
+    <div class="row2" style="margin-top:10px">
+      <div class="fg"><label class="fl">성명 *</label><input class="fi" id="c-name" placeholder="홍길동"></div>
+      <div class="fg"><label class="fl">전화번호 *</label><input class="fi" id="c-phone" placeholder="010-0000-0000" type="tel"></div>
+    </div>
+  </div>
+
+  <!-- ③ 계약 조건 -->
+  <div class="step">
+    <div class="step-title">③ 계약 조건</div>
+
+    <!-- 계약 시작일 (공통) -->
+    <div class="fg">
+      <label class="fl">계약 시작일 *</label>
+      <input class="fi" id="c-start" type="date">
+    </div>
+
+    <!-- 임금 형태 — 근로계약만 표시 -->
+    <div id="paytype-row" style="display:none" class="fg">
+      <label class="fl">임금 형태</label>
+      <select class="fi" id="c-paytype">
+        <option value="시급">시급</option>
+        <option value="건당">건당</option>
+        <option value="일급">일급</option>
+        <option value="월급">월급</option>
+      </select>
+    </div>
+
+    <!-- 단가/임금 + 구역/장소 (공통, 라벨만 변경) -->
+    <div class="row2">
+      <div class="fg"><label class="fl" id="pay-label">건당 단가 (원) *</label><input class="fi" id="c-pay" type="number" placeholder="880" style="font-family:monospace"></div>
+      <div class="fg"><label class="fl" id="loc-label">담당 구역</label><input class="fi" id="c-loc" placeholder="해운대구 우동"></div>
+    </div>
+
+    <!-- 차량번호 — 위수탁/퀵플렉스만 -->
+    <div id="vehicle-row" class="fg">
+      <label class="fl">차량번호</label>
+      <input class="fi" id="c-vehicle" placeholder="부산12가3456" style="font-family:monospace">
+    </div>
+
+    <!-- 계약 종료일 — 근로계약만 -->
+    <div id="end-row" style="display:none" class="fg">
+      <label class="fl">계약 종료일</label>
+      <input class="fi" id="c-end" type="date">
+    </div>
+
+    <!-- 퀵플렉스 추가 필드 -->
+    <div id="qf-extra-fields" style="display:none">
+      <div class="row2">
+        <div class="fg"><label class="fl">캠프명</label><input class="fi" id="c-camp" placeholder="부산1캠프"></div>
+        <div class="fg"><label class="fl">라우트</label><input class="fi" id="c-route" placeholder="A-001" style="font-family:monospace"></div>
+      </div>
+      <div class="fg"><label class="fl">종사 자격증 번호</label><input class="fi" id="c-license-no" placeholder="제2026-00000호" style="font-family:monospace"></div>
+    </div>
+
+    <!-- 특약 (공통) -->
+    <div class="fg" style="margin-top:2px">
+      <label class="fl">특약 사항 <span style="font-weight:400;opacity:.5">(선택)</span></label>
+      <textarea class="fi" id="c-special" rows="2" placeholder="예) 계약기간 중 일방적 해지 시 위약금 없음"></textarea>
+    </div>
+  </div>
+
+  <!-- 액션 버튼 -->
+  <div class="action-wrap">
+    <button class="btn-sign" id="esign-btn" onclick="requestEsign()">📱 SMS 서명 요청</button>
+    <button class="btn-print" onclick="printContract()">🖨 계약서 출력</button>
+    <button class="btn-save" onclick="saveContract()">☁ 저장만</button>
+  </div>
+  <div id="esign-info"></div>
+
 </div>
 
-<!-- 목록 탭 -->
+<!-- ──────────── 목록 탭 ──────────── -->
 <div id="tab-list" style="display:none">
-  <div style="padding:12px 20px 8px;display:flex;justify-content:flex-end">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
     <button onclick="loadList()" style="padding:7px 14px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer">🔄 새로고침</button>
   </div>
   <div id="contract-list">
@@ -240,7 +229,7 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
   </div>
 </div>
 
-</div>
+</div><!-- /wrap -->
 
 <div class="bottombar">
   <button class="bot-btn on"><span class="bot-icon">📝</span><span class="bot-lbl">계약서</span></button>
@@ -249,19 +238,44 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
   <a href="/dashboard" class="bot-btn"><span class="bot-icon">📊</span><span class="bot-lbl">대시보드</span></a>
 </div>
 
-<script>
+<!-- 숨김 필드: _buildData / requestEsign 호환용 -->
+<input type="hidden" id="c-birth">
+<input type="hidden" id="c-addr">
+<input type="hidden" id="c-job">
+<input type="hidden" id="c-hours" value="8시간">
+<input type="hidden" id="c-days" value="월~금">
+<input type="hidden" id="c-break" value="60분">
+<input type="hidden" id="c-payday" value="매월 25일">
+<input type="hidden" id="c-paymethod" value="계좌이체">
+<input type="hidden" id="c-payaccount">
+<input type="hidden" id="c-agency-name" value="엠비티아이(유)">
+<input type="hidden" id="c-agency-rep" value="김형우">
+<input type="hidden" id="c-agency-bizno" value="373-86-02536">
+<input type="hidden" id="c-agency-phone" value="051-711-3103">
+<input type="hidden" id="c-agency-addr" value="부산시 수영구 수영로 668, 607호">
+<input type="hidden" id="c-agency-account" value="하나은행 270-910019-24204 (유)엠비티아이">
+<input type="hidden" id="c-return-fee" value="">
+<input type="hidden" id="c-sort-work" value="미수행">
+<input type="hidden" id="c-end-hidden">
 
-var _db=null, _ctype='regular', _drivers=[], _curUid=null;
+<script>
+var _db=null, _ctype='courier', _drivers=[], _curUid=null;
 var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fixed:'📅 기간제',dispatch:'🚚 위탁계약',courier:'🏷 위수탁',quickflex:'⚡ 퀵플렉스'};
 
 (function init(){
   if(typeof firebase==='undefined'){setTimeout(init,300);return;}
   try{
     var app;try{app=firebase.app('ctrc');}catch(e){
-      app=firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'},'ctrc');
+      app=firebase.initializeApp({
+        apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+        authDomain:'mbti-logistics.firebaseapp.com',
+        projectId:'mbti-logistics',
+        storageBucket:'mbti-logistics.firebasestorage.app',
+        messagingSenderId:'40761160761',
+        appId:'1:40761160761:web:20545b610f03f534e949e8'
+      },'ctrc');
     }
     _db=app.firestore();
-    // ── Firebase Auth 가드 (탭 간 공유됨) ────────────────────────────
     var _authDone=false;
     app.auth().onAuthStateChanged(function(user){
       if(user){
@@ -280,6 +294,8 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
 document.addEventListener('DOMContentLoaded',function(){
   var today=new Date().toISOString().slice(0,10);
   var si=document.getElementById('c-start');if(si)si.value=today;
+  // 위수탁 기본 선택
+  setCType('courier');
 });
 
 function switchTab(t){
@@ -290,13 +306,61 @@ function switchTab(t){
   if(t==='list')loadList();
 }
 
-function setCType(type,el){
+function setCType(type, clickedBtn){
   _ctype=type;
-  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
+  var isLabor=(type==='regular'||type==='parttime'||type==='fixed');
+  var isCourier=(type==='courier');
+  var isQF=(type==='quickflex');
+  var mainType=isLabor?'regular':type;
+
+  // 타입 버튼 하이라이트
+  document.querySelectorAll('.type-btn').forEach(function(btn){
+    btn.classList.toggle('on', btn.dataset.type===mainType);
+  });
+  // 근로계약 세분류 표시
+  var subDiv=document.getElementById('labor-subtype');
+  if(subDiv)subDiv.style.display=isLabor?'block':'none';
+
+  // 필드 표시 제어
+  var vr=document.getElementById('vehicle-row');
+  var qfe=document.getElementById('qf-extra-fields');
+  var ptr=document.getElementById('paytype-row');
+  var er=document.getElementById('end-row');
+
+  if(vr)vr.style.display=(isCourier||isQF)?'block':'none';
+  if(qfe)qfe.style.display=isQF?'block':'none';
+  if(ptr)ptr.style.display=isLabor?'block':'none';
+  if(er)er.style.display=isLabor?'block':'none';
+
+  // 라벨 변경
+  var payLabel=document.getElementById('pay-label');
+  var locLabel=document.getElementById('loc-label');
+  if(payLabel)payLabel.textContent=isLabor?'금액 (원) *':'건당 단가 (원) *';
+  if(locLabel)locLabel.textContent=isLabor?'근무 장소':(isQF?'거점(캠프)':'담당 구역');
+
+  // 단가 placeholder 변경
+  var payInput=document.getElementById('c-pay');
+  if(payInput)payInput.placeholder=isLabor?'10030':'880';
+  var locInput=document.getElementById('c-loc');
+  if(locInput)locInput.placeholder=isLabor?'부산 본사':'해운대구 우동';
+}
+
+function setSubType(type, el){
+  _ctype=type;
+  document.querySelectorAll('.sub-chip').forEach(function(c){c.classList.remove('on');});
   if(el)el.classList.add('on');
 }
 
-// 직원 목록 로드
+// 목록에서 불러올 때 호환성 유지
+function setCTypeById(type){
+  var mainType = (type==='parttime'||type==='fixed')?'regular':type;
+  _ctype=type||'regular';
+  document.querySelectorAll('.type-btn').forEach(function(btn){
+    btn.classList.toggle('on', btn.dataset.type===mainType);
+  });
+  setCType(type);
+}
+
 function loadDrivers(){
   if(!_db)return;
   _db.collection('drivers').orderBy('name').limit(200).get().then(function(s){
@@ -313,50 +377,82 @@ function loadDrivers(){
 
 function fillDriver(){
   var id=(document.getElementById('drv-select')||{}).value;
-  if(!id)return;
+  if(!id){
+    var prev=document.getElementById('drv-preview');
+    if(prev)prev.style.display='none';
+    return;
+  }
   var d=_drivers.find(function(x){return x.docId===id;});
   if(!d)return;
+  var fmtPhone=function(p){return(p||'').replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3');};
   setVal('c-name',d.name||'');
-  setVal('c-phone',(d.phone||'').replace(/(\d{3})(\d{3,4})(\d{4})/,'$1-$2-$3'));
+  setVal('c-phone',fmtPhone(d.phone||''));
   setVal('c-loc',d.camp||d.loc||'');
+  setVal('c-vehicle',d.vehicle||'');
+  // 미리보기
+  var prev=document.getElementById('drv-preview');
+  var pname=document.getElementById('drv-pname');
+  var pphone=document.getElementById('drv-pphone');
+  if(prev&&pname&&pphone){
+    pname.textContent=d.name||'';
+    pphone.textContent=fmtPhone(d.phone||'');
+    prev.style.display='flex';
+  }
 }
 
-function setVal(id,v){var e=document.getElementById(id);if(e&&!e.value)e.value=v||'';}
+function setVal(id,v){var e=document.getElementById(id);if(e){if(e.tagName==='INPUT'||e.tagName==='TEXTAREA'){if(!e.value)e.value=v||'';}}}
 function getVal(id){return(document.getElementById(id)||{value:''}).value||'';}
 function getCheck(id){return(document.getElementById(id)||{checked:false}).checked;}
 
 function _buildData(){
   return{
-    ctype:_ctype,ctypeLabel:CTYPE_LABEL[_ctype]||'',
-    name:getVal('c-name'),birth:getVal('c-birth'),
-    addr:getVal('c-addr'),phone:getVal('c-phone'),
-    startDate:getVal('c-start'),endDate:getVal('c-end'),
-    loc:getVal('c-loc'),job:getVal('c-job'),
-    hours:getVal('c-hours')||'8시간',days:getVal('c-days')||'월~금',breakTime:getVal('c-break')||'60분',
-    payType:getVal('c-paytype'),pay:getVal('c-pay'),
-    payDay:getVal('c-payday'),payMethod:getVal('c-paymethod')||'계좌이체',
+    ctype:_ctype, ctypeLabel:CTYPE_LABEL[_ctype]||'',
+    name:getVal('c-name'), birth:getVal('c-birth'),
+    addr:getVal('c-addr'), phone:getVal('c-phone'),
+    startDate:getVal('c-start'), endDate:getVal('c-end'),
+    loc:getVal('c-loc'), job:getVal('c-job'),
+    hours:getVal('c-hours')||'8시간', days:getVal('c-days')||'월~금', breakTime:getVal('c-break')||'60분',
+    payType:getVal('c-paytype')||'건당', pay:getVal('c-pay'),
+    payDay:getVal('c-payday')||'매월 25일', payMethod:getVal('c-paymethod')||'계좌이체',
     payAccount:getVal('c-payaccount'),
-    ins4:getCheck('ins-4'),insEmp:getCheck('ins-emp'),insAcc:getCheck('ins-acc'),
-    insHealth:getCheck('ins-health'),insPension:getCheck('ins-pension'),
+    ins4:false, insEmp:true, insAcc:true, insHealth:false, insPension:false,
     special:getVal('c-special'),
     createdAt:new Date().toISOString()
   };
 }
 
-// ── 영업점-택배기사 위수탁 표준계약서 출력 ──
-function _printCourier(){
-  var name = getVal('c-name')||'(성명)';
-  var phone = getVal('c-phone')||'';
-  var startDate = getVal('c-start')||'';
-  var endDate = getVal('c-end')||'1년';
-  var loc = getVal('c-loc')||'(담당구역)';
-  var pay = getVal('c-pay')||'___';
-  var payDay = getVal('c-payday')||'매월 25일';
-  var vehicle = getVal('c-vehicle')||'(차량번호)';
-  var special = getVal('c-special')||'';
-  var today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+function saveContract(){
+  var d=_buildData();
+  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
+  if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
+  if(!_db){toast('연결 오류','err');return;}
+  _db.collection('contracts').add(Object.assign(d,{
+    type:'contract',status:'유효',
+    docNo:'C-'+Date.now().toString().slice(-6),
+    dealerId:_curUid||''
+  })).then(function(){toast('✅ 계약서 저장 완료','ok');})
+    .catch(function(e){toast('❌ '+e.message,'err');});
+}
 
-  var html2 = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>위수탁 표준계약서</title>'
+function printContract(){
+  if(_ctype==='courier'){_printCourier();return;}
+  if(_ctype==='quickflex'){_printQuickflex();return;}
+  _printLabor();
+}
+
+// ── 위수탁 표준계약서 출력 ──
+function _printCourier(){
+  var name=getVal('c-name')||'(성명)';
+  var phone=getVal('c-phone')||'';
+  var startDate=getVal('c-start')||'';
+  var endDate=getVal('c-end')||'1년';
+  var loc=getVal('c-loc')||'(담당구역)';
+  var pay=getVal('c-pay')||'___';
+  var payDay=getVal('c-payday')||'매월 25일';
+  var vehicle=getVal('c-vehicle')||'(차량번호)';
+  var special=getVal('c-special')||'';
+  var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>위수탁 표준계약서</title>'
     +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
     +'body{padding:15mm;font-size:10pt;color:#111;line-height:1.7}'
     +'.title{text-align:center;font-size:18pt;font-weight:900;letter-spacing:5px;padding-bottom:10px;border-bottom:3px double #000;margin-bottom:16px}'
@@ -364,7 +460,6 @@ function _printCourier(){
     +'.clause{margin-bottom:16px}'
     +'.clause-title{font-size:11pt;font-weight:900;background:#f0f0f0;padding:5px 12px;border-left:4px solid #0066ff;margin-bottom:8px}'
     +'.clause-body{font-size:10pt;padding:0 12px;line-height:1.9}'
-    +'.fill{border-bottom:1px solid #000;display:inline-block;min-width:80px;text-align:center;padding:0 8px}'
     +'.table{width:100%;border-collapse:collapse;margin:10px 0}'
     +'.table th{background:#f0f0f0;padding:7px 10px;font-size:9pt;font-weight:700;border:1px solid #ccc;text-align:center}'
     +'.table td{padding:7px 10px;border:1px solid #ccc;font-size:10pt}'
@@ -391,10 +486,9 @@ function _printCourier(){
     +'③ 구역 변경 시 양 당사자 합의하에 변경할 수 있다.</div></div>'
     +'<div class="clause"><div class="clause-title">제3조 수수료</div>'
     +'<div class="clause-body">'
-    +'① 1건당 <span class="fill">'+esc(pay)+'</span>원 (또는 택배사업자-영업점 간 수수료 기준 금액의 ____%)<br>'
-    +'② 단, 별도로 합의한 금액이 있는 경우 그에 따른다.<br>'
-    +'③ 지급일: '+esc(payDay)+'<br>'
-    +'④ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>'
+    +'① 1건당 '+esc(pay)+'원<br>'
+    +'② 지급일: '+esc(payDay)+'<br>'
+    +'③ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>'
     +'<div class="clause"><div class="clause-title">제4조 차량 및 종사자격</div>'
     +'<div class="clause-body">'
     +'① 차량번호: '+esc(vehicle)+'<br>'
@@ -402,18 +496,16 @@ function _printCourier(){
     +'③ 차량보험(화물배상책임 포함)은 乙이 직접 가입·유지하여야 한다.</div></div>'
     +'<div class="clause"><div class="clause-title">제5조 의무 사항</div>'
     +'<div class="clause-body">'
-    +'① 乙은 배송 서비스 기준(SLA)을 준수하여야 하며, 수취인 부재 시 안전하게 보관 또는 연락하여야 한다.<br>'
+    +'① 乙은 배송 서비스 기준(SLA)을 준수하여야 한다.<br>'
     +'② 乙은 배송 물품을 분실·훼손하지 않도록 주의의무를 다하여야 한다.<br>'
-    +'③ 乙은 정당한 이유 없이 배송을 거부하거나 지연하여서는 아니 된다.<br>'
-    +'④ 甲은 乙의 업무 수행에 필요한 정보와 지원을 제공하여야 한다.</div></div>'
+    +'③ 甲은 乙의 업무 수행에 필요한 정보와 지원을 제공하여야 한다.</div></div>'
     +'<div class="clause"><div class="clause-title">제6조 계약의 해지</div>'
     +'<div class="clause-body">'
     +'① 일방이 계약을 해지하고자 할 경우 30일 전에 서면으로 통보하여야 한다.<br>'
-    +'② 중대한 귀책사유가 있는 경우 즉시 해지할 수 있다.<br>'
-    +'③ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>'
+    +'② 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>'
     +'<div class="clause"><div class="clause-title">제7조 분쟁 해결</div>'
     +'<div class="clause-body">'
-    +'본 계약과 관련한 분쟁은 당사자 간 협의로 해결하며, 협의가 이루어지지 않을 경우 부산지방법원을 관할법원으로 한다.</div></div>'
+    +'본 계약과 관련한 분쟁은 협의로 해결하며, 협의 불성립 시 부산지방법원을 관할법원으로 한다.</div></div>'
     +(special?'<div class="clause"><div class="clause-title">제8조 특약 사항</div><div class="clause-body">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
     +'<div style="text-align:center;margin:20px 0;font-size:11pt">계약 체결일: '+today+'</div>'
     +'<div class="sig-area">'
@@ -423,81 +515,52 @@ function _printCourier(){
     +'<div class="sig-box"><div class="sig-title">乙 (택배기사)</div>'
     +'<div class="sig-name">'+esc(name)+'</div>'
     +'<div class="sig-line"></div><div style="font-size:9pt;color:#555;margin-top:6px">서 명</div></div>'
-    +'</div>'
-    +'<div style="text-align:right;margin-top:16px;font-size:8pt;color:#aaa;border-top:1px solid #eee;padding-top:8px">'
-    +'엠비티아이(유) · 051-711-3103 · DONWAY 프리미엄 계약서</div>'
-    +'</body></html>';
-
+    +'</div></body></html>';
   var w=window.open('','_blank','width=900,height=700');
-  if(w){w.document.write(html2);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
-  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업 차단됨 — 팝업을 허용하세요','err');}
 }
 
-// ── 퀵플렉스 부속 합의서 출력 ──
+// ── 퀵플렉스 부속합의서 출력 ──
 function _printQuickflex(){
-  var name = getVal('c-name')||'(성명)';
-  var phone = getVal('c-phone')||'';
-  var startDate = getVal('c-start')||'';
-  var loc = getVal('c-loc')||'(거점)';
-  var pay = getVal('c-pay')||'___';
-  var special = getVal('c-special')||'';
-  var today = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
-
-  var html3 = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>퀵플렉스 부속 합의서</title>'
+  var name=getVal('c-name')||'(성명)';
+  var phone=getVal('c-phone')||'';
+  var startDate=getVal('c-start')||'';
+  var loc=getVal('c-loc')||'(거점)';
+  var pay=getVal('c-pay')||'___';
+  var camp=getVal('c-camp')||'';
+  var route=getVal('c-route')||'';
+  var special=getVal('c-special')||'';
+  var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>퀵플렉스 부속 합의서</title>'
     +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
     +'body{padding:15mm;font-size:10pt;color:#111;line-height:1.8}'
     +'.title{text-align:center;font-size:17pt;font-weight:900;letter-spacing:4px;padding-bottom:10px;border-bottom:3px double #000;margin-bottom:8px}'
     +'.sub{text-align:center;font-size:9pt;color:#555;margin-bottom:20px}'
-    +''
     +'.ch{font-size:11pt;font-weight:900;background:#f0f0f0;padding:5px 12px;border-left:4px solid #e63946;margin-bottom:8px}'
     +'.cb{font-size:10pt;padding:0 12px;line-height:1.9}'
-    +''
+    +'.table{width:100%;border-collapse:collapse;margin:8px 0}'
     +'.table th{background:#f0f0f0;padding:7px 10px;font-size:9pt;font-weight:700;border:1px solid #ccc}'
     +'.table td{padding:7px 10px;border:1px solid #ccc;font-size:10pt}'
-    +'.highlight{background:#fff8e1;border:1px solid #ffd54f;border-radius:4px;padding:10px 14px;margin:10px 0;font-size:9pt}'
     +'.sig-area{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}'
     +'.sig-box{border:1px solid #ccc;padding:16px;text-align:center;border-radius:4px}'
     +'@media print{body{padding:8mm}}</style></head><body>'
     +'<div class="title">쿠팡 QuickFlex 부속 합의서</div>'
-    +'<div class="sub">본 합의서는 위·수탁 표준계약서의 부속 문서로서, 퀵플렉스 서비스에 관한 사항을 별도로 합의합니다.</div>'
-    +'<div class="clause"><div class="ch">제1조 당사자 확인</div>'
-    +'<div class="cb">'
-    +'<table class="table">'
+    +'<div class="sub">본 합의서는 위·수탁 표준계약서의 부속 문서입니다.</div>'
+    +'<div style="margin-bottom:12px"><div class="ch">제1조 당사자 확인</div>'
+    +'<div class="cb"><table class="table">'
     +'<tr><th>구분</th><th>영업점 (甲)</th><th>기사 (乙)</th></tr>'
     +'<tr><td>상호/성명</td><td>엠비티아이(유)</td><td>'+esc(name)+'</td></tr>'
-    +'<tr><td>거점</td><td>'+esc(loc)+'</td><td>동일</td></tr>'
+    +'<tr><td>거점</td><td>'+esc(camp||loc)+'</td><td>동일</td></tr>'
+    +'<tr><td>라우트</td><td>'+esc(route)+'</td><td>동일</td></tr>'
     +'<tr><td>연락처</td><td>051-711-3103</td><td>'+esc(phone)+'</td></tr>'
     +'</table></div></div>'
-    +'<div class="clause"><div class="ch">제2조 퀵플렉스 서비스 기준 (SLA)</div>'
-    +'<div class="cb">'
-    +'① <strong>배송 성공률</strong>: 월 평균 95% 이상 유지<br>'
-    +'② <strong>당일 배송 완료율</strong>: 수령 당일 배송 완료 원칙<br>'
-    +'③ <strong>미배송 처리</strong>: 미배송 발생 시 즉시 영업점에 보고<br>'
-    +'④ <strong>반품 처리</strong>: 반품 물량은 지정 장소에 정리 반납<br>'
-    +'⑤ 乙은 쿠팡 앱을 통해 배송 현황을 실시간 업데이트하여야 한다.</div></div>'
-    +'<div class="clause"><div class="ch">제3조 수수료 및 인센티브</div>'
-    +'<div class="cb">'
-    +'① 기본 단가: 건당 <strong>'+esc(pay)+'</strong>원<br>'
-    +'② <strong>인센티브</strong>: 월 300건 초과 시 건당 25원 추가 지급<br>'
-    +'③ <strong>페널티</strong>: 분실·훼손 발생 시 해당 물품 손해액 공제<br>'
-    +'④ 정산일: 익월 25일 (하나은행 270-910019-24204)<br>'
-    +'<div class="highlight">※ 인센티브 지급 기준은 쿠팡 본사 정책 변경 시 갑의 통보에 따라 변경될 수 있습니다.</div></div></div>'
-    +'<div class="clause"><div class="ch">제4조 장비 및 보험</div>'
-    +'<div class="cb">'
-    +'① 乙은 배송에 필요한 차량, 스마트폰, 쿠팡 앱을 직접 준비·유지한다.<br>'
-    +'② 차량보험(화물배상책임 포함) 및 산재보험 가입 의무는 乙에게 있다.<br>'
-    +'③ 甲은 배송 과정에서 발생한 사고에 대해 직접적인 책임을 지지 않는다.</div></div>'
-    +'<div class="clause"><div class="ch">제5조 개인정보 보호</div>'
-    +'<div class="cb">'
-    +'① 乙은 배송 과정에서 취득한 수취인 개인정보(성명, 주소, 연락처)를 배송 목적 외에 사용하거나 제3자에게 제공하여서는 아니 된다.<br>'
-    +'② 위반 시 관련 법령에 따른 민·형사상 책임을 진다.</div></div>'
-    +'<div class="clause"><div class="ch">제6조 위약 및 손해배상</div>'
-    +'<div class="cb">'
-    +'① 乙이 고의 또는 중대한 과실로 물품을 분실·훼손한 경우, 해당 물품 손해액을 배상한다.<br>'
-    +'② SLA 기준 미달이 반복되는 경우(3회 이상) 甲은 계약을 해지할 수 있다.</div></div>'
-    +(special?'<div class="clause"><div class="ch">제7조 특약 사항</div><div class="cb">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
+    +'<div style="margin-bottom:12px"><div class="ch">제2조 서비스 기준 (SLA)</div>'
+    +'<div class="cb">① 배송 성공률: 월 평균 95% 이상<br>② 당일 배송 완료 원칙<br>③ 미배송 발생 시 즉시 영업점 보고</div></div>'
+    +'<div style="margin-bottom:12px"><div class="ch">제3조 수수료</div>'
+    +'<div class="cb">① 기본 단가: 건당 '+esc(pay)+'원<br>② 인센티브: 월 300건 초과 시 건당 25원 추가<br>③ 정산일: 익월 25일</div></div>'
+    +(special?'<div style="margin-bottom:12px"><div class="ch">제4조 특약</div><div class="cb">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
     +'<div style="text-align:center;margin:20px 0;font-size:11pt">합의 체결일: '+today+'</div>'
-    +'<div style="font-size:10pt;text-align:center;color:#555;margin-bottom:16px">본 합의서는 위·수탁 표준계약서와 함께 효력을 가집니다.</div>'
     +'<div class="sig-area">'
     +'<div class="sig-box"><div style="font-size:9pt;color:#888;margin-bottom:6px">甲 (영업점)</div>'
     +'<div style="font-size:14pt;font-weight:900;margin-bottom:14px">엠비티아이(유)</div>'
@@ -507,42 +570,20 @@ function _printQuickflex(){
     +'<div style="font-size:14pt;font-weight:900;margin-bottom:14px">'+esc(name)+'</div>'
     +'<div style="border-bottom:1.5px solid #000;height:36px;margin:0 12px"></div>'
     +'<div style="font-size:9pt;color:#555;margin-top:6px">서 명</div></div>'
-    +'</div>'
-    +'<div style="text-align:right;margin-top:12px;font-size:8pt;color:#aaa;border-top:1px solid #eee;padding-top:8px">'
-    +'엠비티아이(유) · DONWAY 프리미엄 계약서 · 퀵플렉스 부속합의서</div>'
-    +'</body></html>';
-
+    +'</div></body></html>';
   var w=window.open('','_blank','width=900,height=700');
-  if(w){w.document.write(html3);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
-  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+  if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
+  else{toast('팝업 차단됨','err');}
 }
 
-function saveContract(){
+// ── 근로계약서 출력 ──
+function _printLabor(){
   var d=_buildData();
   if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
-  if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
-  if(!_db){toast('Firebase 연결 필요','err');return;}
-  _db.collection('contracts').add(Object.assign(d,{type:'contract',status:'유효',docNo:'C-'+Date.now().toString().slice(-6),dealerId:_curUid||''}))
-    .then(function(){toast('✅ 계약서 저장 완료','ok');})
-    .catch(function(e){toast('❌ '+e.message,'err');});
-}
-
-function printContract(){
-  if(_ctype === 'courier'){_printCourier();return;}
-  if(_ctype === 'quickflex'){_printQuickflex();return;}
-  var d=_buildData();
-  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
-
-  var insItems=[];
-  if(d.ins4)insItems.push('4대보험');else{if(d.insEmp)insItems.push('고용보험');if(d.insAcc)insItems.push('산재보험');if(d.insHealth)insItems.push('건강보험');if(d.insPension)insItems.push('국민연금');}
-  var insText=insItems.length?insItems.join(', '):'해당없음';
-
   var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   var period=d.startDate+(d.endDate?' ~ '+d.endDate:' ~ 기간 미정');
-
   var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>근로계약서</title>'
-    +'<style>'
-    +'*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0;font-family:"맑은 고딕","Malgun Gothic",sans-serif}'
     +'body{padding:20mm;font-size:10pt;color:#111;line-height:1.6}'
     +'.title{text-align:center;font-size:20pt;font-weight:900;letter-spacing:5px;border-bottom:3px double #000;padding-bottom:12px;margin-bottom:20px}'
     +'.type-badge{text-align:center;font-size:10pt;color:#666;margin-bottom:20px}'
@@ -552,105 +593,67 @@ function printContract(){
     +'.rk{width:120px;font-size:9pt;color:#666;flex-shrink:0;font-weight:700}'
     +'.rv{font-size:10pt;font-weight:600;flex:1}'
     +'.terms{font-size:9pt;color:#555;line-height:1.9;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:12px;margin-bottom:16px}'
-    +'.special-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:12px;font-size:9pt;margin-bottom:16px}'
     +'.sig-area{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}'
     +'.sig-box{border:1px solid #ddd;border-radius:4px;padding:16px;text-align:center}'
-    +'.sig-title{font-size:9pt;color:#888;margin-bottom:8px}'
-    +'.sig-name{font-size:14pt;font-weight:900;margin-bottom:8px}'
     +'.sig-line{border-bottom:2px solid #000;margin:16px 8px 6px;height:40px}'
-    +'.sig-hint{font-size:8pt;color:#aaa}'
-    +'.date-line{text-align:center;font-size:11pt;margin-bottom:20px}'
     +'@media print{body{padding:10mm}}'
     +'</style></head><body>'
     +'<div class="title">근 로 계 약 서</div>'
     +'<div class="type-badge">'+esc(d.ctypeLabel)+'</div>'
-
     +'<div class="section"><div class="sec-title">제1조 근로자 정보</div>'
     +'<div class="row"><span class="rk">성 명</span><span class="rv">'+esc(d.name)+'</span></div>'
-    +'<div class="row"><span class="rk">생년월일</span><span class="rv">'+esc(d.birth||'-')+'</span></div>'
-    +'<div class="row"><span class="rk">주 소</span><span class="rv">'+esc(d.addr||'-')+'</span></div>'
     +'<div class="row"><span class="rk">전화번호</span><span class="rv">'+esc(d.phone||'-')+'</span></div>'
     +'</div>'
-
     +'<div class="section"><div class="sec-title">제2조 근로 기간 및 장소</div>'
     +'<div class="row"><span class="rk">계약 기간</span><span class="rv">'+esc(period)+'</span></div>'
     +'<div class="row"><span class="rk">근무 장소</span><span class="rv">'+esc(d.loc||'사업장 내')+'</span></div>'
-    +'<div class="row"><span class="rk">담당 업무</span><span class="rv">'+esc(d.job||'-')+'</span></div>'
     +'</div>'
-
-    +'<div class="section"><div class="sec-title">제3조 근로시간 및 휴게</div>'
-    +'<div class="row"><span class="rk">소정 근로시간</span><span class="rv">'+esc(d.hours)+'</span></div>'
-    +'<div class="row"><span class="rk">근무 요일</span><span class="rv">'+esc(d.days)+'</span></div>'
-    +'<div class="row"><span class="rk">휴게 시간</span><span class="rv">'+esc(d.breakTime)+'</span></div>'
-    +'</div>'
-
-    +'<div class="section"><div class="sec-title">제4조 임금</div>'
+    +'<div class="section"><div class="sec-title">제3조 임금</div>'
     +'<div class="row"><span class="rk">임금 형태</span><span class="rv">'+esc(d.payType)+'</span></div>'
     +'<div class="row"><span class="rk">임금 금액</span><span class="rv"><strong>'+esc(d.pay?Number(d.pay).toLocaleString('ko-KR')+'원':'-')+'</strong></span></div>'
-    +'<div class="row"><span class="rk">지 급 일</span><span class="rv">'+esc(d.payDay||'-')+'</span></div>'
+    +'<div class="row"><span class="rk">지 급 일</span><span class="rv">'+esc(d.payDay)+'</span></div>'
     +'<div class="row"><span class="rk">지급 방법</span><span class="rv">'+esc(d.payMethod)+'</span></div>'
-    +'<div class="row"><span class="rk">입금 계좌</span><span class="rv">'+esc(d.payAccount||'-')+'</span></div>'
     +'</div>'
-
-    +'<div class="section"><div class="sec-title">제5조 사회보험</div>'
-    +'<div class="row"><span class="rk">가입 항목</span><span class="rv">'+esc(insText)+'</span></div>'
+    +'<div class="section"><div class="sec-title">제4조 일반 조항</div>'
+    +'<div class="terms">① 본 계약에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.<br>② 근로계약 해지 시 일방은 30일 전에 상대방에게 통보한다.<br>③ 근로자의 개인정보는 근로 목적 외 사용하지 아니한다.</div>'
     +'</div>'
-
-    +'<div class="section"><div class="sec-title">제6조 일반 조항</div>'
-    +'<div class="terms">'
-    +'① 본 계약에 명시되지 않은 사항은 근로기준법 및 관계 법령에 따른다.<br>'
-    +'② 근로자는 사업주의 정당한 업무 지시에 따라야 하며, 취업규칙을 준수한다.<br>'
-    +'③ 근로계약 해지 시 일방은 30일 전에 상대방에게 통보한다.<br>'
-    +'④ 근로자의 개인정보는 근로 목적 외 사용하지 아니한다.'
-    +'</div></div>'
-
-    +(d.special?'<div class="section"><div class="sec-title">제7조 특약 사항</div><div class="special-box">'+esc(d.special).replace(/\n/g,'<br>')+'</div></div>':'')
-
-    +'<div class="date-line">계약 체결일: '+today+'</div>'
-
+    +(d.special?'<div class="section"><div class="sec-title">제5조 특약 사항</div><div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:4px;padding:12px;font-size:9pt">'+esc(d.special).replace(/\n/g,'<br>')+'</div></div>':'')
+    +'<div style="text-align:center;font-size:11pt;margin-bottom:20px">계약 체결일: '+today+'</div>'
     +'<div class="sig-area">'
-    +'<div class="sig-box"><div class="sig-title">사 업 주 (갑)</div>'
-    +'<div class="sig-name">엠비티아이(유)</div>'
+    +'<div class="sig-box"><div style="font-size:9pt;color:#888;margin-bottom:8px">사 업 주 (갑)</div>'
+    +'<div style="font-size:14pt;font-weight:900;margin-bottom:8px">엠비티아이(유)</div>'
     +'<div class="sig-line"></div>'
-    +'<div style="font-size:9pt;color:#555">대표 김형우 (인)</div>'
-    +'<div style="font-size:8pt;color:#aaa;margin-top:4px">사업자: 373-86-02536</div>'
-    +'</div>'
-    +'<div class="sig-box"><div class="sig-title">근 로 자 (을)</div>'
-    +'<div class="sig-name">'+esc(d.name)+'</div>'
+    +'<div style="font-size:9pt;color:#555">대표 김형우 (인)</div></div>'
+    +'<div class="sig-box"><div style="font-size:9pt;color:#888;margin-bottom:8px">근 로 자 (을)</div>'
+    +'<div style="font-size:14pt;font-weight:900;margin-bottom:8px">'+esc(d.name)+'</div>'
     +'<div class="sig-line"></div>'
-    +'<div style="font-size:9pt;color:#555">서 명 란</div>'
-    +'<div class="sig-hint">위 내용을 확인하고 서명합니다</div>'
-    +'</div></div>'
+    +'<div style="font-size:9pt;color:#555">서 명</div></div></div>'
     +'</body></html>';
-
   var w=window.open('','_blank','width=860,height=700');
   if(w){w.document.write(html);w.document.close();setTimeout(function(){w.focus();w.print();},500);}
-  else{toast('팝업 차단됨. 허용 후 다시 시도하세요','err');}
+  else{toast('팝업 차단됨','err');}
 }
 
-// 계약서 목록
+// ── 계약서 목록 ──
 function loadList(){
   var el=document.getElementById('contract-list');
   el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)"><span class="spin"></span></div>';
   if(!_db)return;
   _db.collection('contracts').where('dealerId','==',_curUid||'').orderBy('createdAt','desc').limit(100).get()
     .then(function(s){
-      if(s.empty){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)">📭 계약서 없음</div>';return;}
+      if(s.empty){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--gray)">📭 저장된 계약서 없음</div>';return;}
       el.innerHTML=s.docs.map(function(d){
         var r=Object.assign({id:d.id},d.data());
         var status=r.status||'유효';
         var bCls=status==='유효'?'cb-active':status==='만료'?'cb-end':'cb-temp';
-        var now=new Date();
-        var isExpired=r.endDate&&new Date(r.endDate)<now;
+        var isExpired=r.endDate&&new Date(r.endDate)<new Date();
         if(isExpired&&status==='유효')bCls='cb-end';
+        var icon=r.ctype==='courier'?'🏷':r.ctype==='quickflex'?'⚡':r.ctype==='dispatch'?'🚚':r.ctype==='fixed'?'📅':r.ctype==='parttime'?'⏰':'👔';
         return '<div class="ctrc-card" onclick="reprinkContract(\''+esc(r.id)+'\')">'
-          +'<div class="ctrc-icon">'+(r.ctype==='dispatch'?'🚚':r.ctype==='fixed'?'📅':r.ctype==='parttime'?'⏰':'👔')+'</div>'
+          +'<div class="ctrc-icon">'+icon+'</div>'
           +'<div style="flex:1;min-width:0">'
           +'<div class="ctrc-title">'+esc(r.name||'')+'</div>'
-          +'<div class="ctrc-sub">'
-          +esc(r.ctypeLabel||r.ctype||'')+' · '+esc(r.loc||'')+' · '+esc(r.startDate||'')
-          +(r.endDate?' ~ '+esc(r.endDate):'')
-          +'</div></div>'
+          +'<div class="ctrc-sub">'+esc(r.ctypeLabel||r.ctype||'')+' · '+esc(r.loc||'')+' · '+esc(r.startDate||'')+'</div></div>'
           +'<span class="ctrc-badge '+bCls+'">'+(isExpired&&status==='유효'?'만료됨':status)+'</span>'
           +'</div>';
       }).join('');
@@ -662,197 +665,68 @@ function reprinkContract(id){
   _db.collection('contracts').doc(id).get().then(function(d){
     if(!d.exists)return;
     var r=d.data();
-    // 폼 채우기
-    setCTypeById(r.ctype);
-    var fields={name:'c-name',birth:'c-birth',addr:'c-addr',phone:'c-phone',startDate:'c-start',endDate:'c-end',loc:'c-loc',job:'c-job',hours:'c-hours',days:'c-days',breakTime:'c-break',pay:'c-pay',payDay:'c-payday',payMethod:'c-paymethod',payAccount:'c-payaccount',special:'c-special'};
-    Object.keys(fields).forEach(function(k){var el=document.getElementById(fields[k]);if(el)el.value=r[k]||'';});
+    setCTypeById(r.ctype||'regular');
+    var map={name:'c-name',birth:'c-birth',addr:'c-addr',phone:'c-phone',startDate:'c-start',endDate:'c-end',loc:'c-loc',job:'c-job',hours:'c-hours',days:'c-days',breakTime:'c-break',pay:'c-pay',payDay:'c-payday',payMethod:'c-paymethod',payAccount:'c-payaccount',special:'c-special',vehicle:'c-vehicle',camp:'c-camp',route:'c-route',licenseNo:'c-license-no'};
+    Object.keys(map).forEach(function(k){var el=document.getElementById(map[k]);if(el)el.value=r[k]||'';});
     if(r.payType){var pt=document.getElementById('c-paytype');if(pt)pt.value=r.payType;}
-    var checks={ins4:'ins-4',insEmp:'ins-emp',insAcc:'ins-acc',insHealth:'ins-health',insPension:'ins-pension'};
-    Object.keys(checks).forEach(function(k){var el=document.getElementById(checks[k]);if(el)el.checked=!!r[k];});
     switchTab('write');
-    toast('✅ 계약서 불러오기 완료. 확인 후 출력하세요.','ok');
+    toast('✅ 계약서 불러오기 완료','ok');
   });
 }
 
-// ══════════════════════════════
-// ██ 프리미엄 계약서 잠금 시스템 ██
-// ══════════════════════════════
-var _premTarget = null;
-// 해금된 프리미엄 (로컬 세션 유지)
-var _unlockedPrem = JSON.parse(localStorage.getItem('dw_prem_unlock') || '[]');
-
-// 프리미엄 버튼 클릭
-function openPremiumCheck(type, el) {
-  if(_unlockedPrem.indexOf(type) >= 0) {
-    // 이미 해금됨 → 바로 적용
-    _ctype = type;
-    document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
-    if(el)el.classList.add('on');
-    return;
-  }
-  _premTarget = {type:type, el:el};
-  var titles = {
-    courier: '영업점-택배기사 위·수탁 표준계약서',
-    quickflex: '퀵플렉스(QuickFlex) 부속 합의서'
-  };
-  var descs = {
-    courier: '쿠팡 영업점과 택배기사 간 <strong style="color:var(--yellow)">위·수탁 표준계약서</strong>입니다.<br>담당구역·수수료·차량·종사자격 등 법정 필수 항목 포함.',
-    quickflex: '쿠팡 <strong style="color:var(--yellow)">퀵플렉스(QuickFlex)</strong> 기사 부속 합의서입니다.<br>SLA·배송기준·인센티브·위약금 등 특약 포함.'
-  };
-  document.getElementById('prem-modal-title').innerHTML = '🔑 ' + (titles[type]||'프리미엄 계약서');
-  document.getElementById('prem-modal-desc').innerHTML = (descs[type]||'') + '<br><br>활성화 코드를 입력하거나 추가 결제 후 이용하세요.';
-  document.getElementById('prem-code-inp').value = '';
-  document.getElementById('prem-modal').classList.add('show');
-}
-
-function checkPremCode(){
-  var code = (document.getElementById('prem-code-inp').value||'').trim().toUpperCase();
-  // 관리자가 발급한 코드 확인 (Firestore)
-  if(!_db){toast('Firebase 연결 필요','err');return;}
-  _db.collection('premiumCodes').where('code','==',code).where('used','==',false).limit(1).get()
-    .then(function(s){
-      if(s.empty){
-        // 데모용: MBTI2026, COUPANG 코드 허용
-        if(code === 'MBTI2026' || code === 'COURIER1' || code === 'QFLEX001'){
-          unlockPremium(_premTarget.type, _premTarget.el, code);
-        } else {
-          toast('❌ 유효하지 않은 코드입니다','err');
-        }
-        return;
-      }
-      var doc = s.docs[0];
-      // 코드 사용 처리
-      _db.collection('premiumCodes').doc(doc.id).update({used:true, usedAt:new Date().toISOString()})
-        .then(function(){unlockPremium(_premTarget.type, _premTarget.el, code);})
-        .catch(function(){unlockPremium(_premTarget.type, _premTarget.el, code);});
-    }).catch(function(){
-      if(code === 'MBTI2026' || code === 'COURIER1' || code === 'QFLEX001'){
-        unlockPremium(_premTarget.type, _premTarget.el, code);
-      } else {
-        toast('❌ 코드 확인 실패','err');
-      }
-    });
-}
-
-function unlockPremium(type, el, code){
-  _unlockedPrem.push(type);
-  try{localStorage.setItem('dw_prem_unlock', JSON.stringify(_unlockedPrem));}catch(e){}
-  closePremModal();
-  _ctype = type;
-  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c){c.classList.remove('on');});
-  if(el)el.classList.add('on');
-  // 🔒 → ✅ 변경
-  var lock = el.querySelector('.prem-lock');
-  if(lock) lock.textContent = '✅';
-  toast('✅ 프리미엄 계약서 해금!','ok');
-}
-
-function closePremModal(){document.getElementById('prem-modal').classList.remove('show');_premTarget=null;}
-
-function goPay(){
-  closePremModal();
-  _toast('입금 후 카카오채널 "MBTI Co. LOGISTICS"에 [프리미엄 계약서 + 사업자번호] 전송 → 하나은행 270-910019-24204 (유)엠비티아이');
-}
-
-// 페이지 로드 시 해금 상태 복원 + 대리점 정보 복원
-document.addEventListener('DOMContentLoaded', function(){
-  _unlockedPrem.forEach(function(type){
-    var btns = document.querySelectorAll('#ctype-row .type-chip.premium');
-    btns.forEach(function(btn){
-      if(btn.getAttribute('onclick') && btn.getAttribute('onclick').indexOf("'"+type+"'") >= 0){
-        var lock = btn.querySelector('.prem-lock');
-        if(lock) lock.textContent = '✅';
-      }
-    });
-  });
-  loadAgency();
-});
-
-function setCTypeById(type){
-  _ctype=type||'regular';
-  document.querySelectorAll('#ctype-row .type-chip').forEach(function(c,i){
-    var types=['regular','parttime','fixed','dispatch'];
-    c.classList.toggle('on',types[i]===_ctype);
-  });
-  var vr=document.getElementById('vehicle-row');
-  if(vr)vr.style.display=(type==='courier'||type==='dispatch'||type==='quickflex')?'grid':'none';
-  var qf=document.getElementById('qf-fields');
-  if(qf)qf.style.display=(type==='quickflex')?'block':'none';
-}
-
-function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-function saveAgency(){
-  var ag={name:getVal('c-agency-name'),rep:getVal('c-agency-rep'),bizno:getVal('c-agency-bizno'),phone:getVal('c-agency-phone'),addr:getVal('c-agency-addr'),account:getVal('c-agency-account')};
-  try{localStorage.setItem('dw_agency',JSON.stringify(ag));}catch(e){}
-}
-function loadAgency(){
-  try{
-    var stored=localStorage.getItem('dw_agency');
-    var ag=stored?JSON.parse(stored):null;
-    if(!ag||!ag.name){
-      // 엠비티아이(유) 기본값
-      ag={name:'엠비티아이(유)',rep:'김형우',bizno:'373-86-02536',phone:'051-711-3103',addr:'부산시 수영구 수영로 668, 607호',account:'하나은행 270-910019-24204 (유)엠비티아이'};
-    }
-    setVal('c-agency-name',ag.name||'');
-    setVal('c-agency-rep',ag.rep||'');
-    setVal('c-agency-bizno',ag.bizno||'');
-    setVal('c-agency-phone',ag.phone||'');
-    setVal('c-agency-addr',ag.addr||'');
-    setVal('c-agency-account',ag.account||'');
-  }catch(e){}
-}
-
+// ── 전자서명 요청 ──
 function requestEsign(){
   var d=_buildData();
-  if(!d.name){toast('근로자 성명을 입력하세요','err');return;}
-  if(!d.phone){toast('전화번호를 입력하세요 (기사에게 OTP SMS 발송됩니다)','err');return;}
+  if(!d.name){toast('기사 성명을 입력하세요','err');return;}
+  if(!d.phone){toast('전화번호를 입력하세요 (OTP SMS 발송됩니다)','err');return;}
   if(!d.startDate){toast('계약 시작일을 입력하세요','err');return;}
-  if(!d.pay){toast('임금/수수료를 입력하세요','err');return;}
-  var agencyName=getVal('c-agency-name');
-  if(!agencyName){toast('대리점 상호명을 입력하세요','err');return;}
+  if(!d.pay){toast('단가/임금을 입력하세요','err');return;}
   var btn=document.getElementById('esign-btn');
   btn.disabled=true;btn.textContent='발송 중...';
-  var payload={
-    ctype:_ctype,name:d.name,phone:d.phone,
-    startDate:d.startDate,endDate:d.endDate||'',
-    loc:d.loc||'',pay:d.pay,payDay:d.payDay||'',payType:d.payType||'',
-    vehicle:getVal('c-vehicle'),special:d.special||'',
-    agencyName:agencyName,
-    agencyRep:getVal('c-agency-rep'),
-    agencyBizno:getVal('c-agency-bizno'),
-    agencyPhone:getVal('c-agency-phone'),
-    agencyAddr:getVal('c-agency-addr'),
-    agencyAccount:getVal('c-agency-account'),
-    camp:getVal('c-camp'),
-    route:getVal('c-route'),
-    returnFee:getVal('c-return-fee'),
-    licenseNo:getVal('c-license-no'),
-    sortWork:getVal('c-sort-work')||'미수행'
-  };
-  fetch('/api/contract/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch('/api/contract/otp',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      ctype:_ctype,name:d.name,phone:d.phone,
+      startDate:d.startDate,endDate:d.endDate||'',
+      loc:d.loc||'',pay:d.pay,payDay:d.payDay||'',payType:d.payType||'건당',
+      vehicle:getVal('c-vehicle'),special:d.special||'',
+      agencyName:getVal('c-agency-name'),
+      agencyRep:getVal('c-agency-rep'),
+      agencyBizno:getVal('c-agency-bizno'),
+      agencyPhone:getVal('c-agency-phone'),
+      agencyAddr:getVal('c-agency-addr'),
+      agencyAccount:getVal('c-agency-account'),
+      camp:getVal('c-camp'),route:getVal('c-route'),
+      returnFee:getVal('c-return-fee'),
+      licenseNo:getVal('c-license-no'),
+      sortWork:getVal('c-sort-work')||'미수행'
+    })
+  })
     .then(function(r){return r.json();})
     .then(function(data){
-      btn.disabled=false;btn.textContent='📱 전자서명 요청 (SMS 발송)';
+      btn.disabled=false;btn.textContent='📱 SMS 서명 요청';
       if(data.ok){
-        toast('✅ OTP SMS 발송 완료 → '+d.phone,'ok');
+        toast('✅ OTP SMS 발송 → '+d.phone,'ok');
         var info=document.getElementById('esign-info');
         if(info){
           info.style.display='block';
           info.innerHTML='<strong style="color:var(--green)">전자서명 링크 발송 완료</strong><br>'
             +'계약 ID: <span style="font-family:monospace;color:var(--cyan)">'+esc(data.contractId||'')+'</span><br>'
-            +'서명 링크: <a href="'+esc(data.signUrl||'')+ '" target="_blank" style="color:var(--cyan)">'+esc(data.signUrl||'')+'</a>';
+            +'<a href="'+esc(data.signUrl||'')+'" target="_blank" style="color:var(--cyan)">서명 링크 열기</a>';
         }
       } else {
         toast('❌ '+(data.error||'발송 실패'),'err');
       }
     })
     .catch(function(e){
-      btn.disabled=false;btn.textContent='📱 전자서명 요청 (SMS 발송)';
-      toast('❌ 오류: '+e.message,'err');
+      btn.disabled=false;btn.textContent='📱 SMS 서명 요청';
+      toast('❌ '+e.message,'err');
     });
 }
+
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3500);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
 </body>
 </html>
