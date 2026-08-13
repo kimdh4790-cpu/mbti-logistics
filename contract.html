@@ -265,7 +265,8 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
 (function init(){
   if(typeof firebase==='undefined'){setTimeout(init,300);return;}
   try{
-    var app;try{app=firebase.app('ctrc');}catch(e){
+    // 기본 앱(unnamed) 사용 — settle.html과 같은 앱 → sessionStorage 키 공유
+    var app;try{app=firebase.app();}catch(e){
       app=firebase.initializeApp({
         apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
         authDomain:'mbti-logistics.firebaseapp.com',
@@ -273,7 +274,7 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
         storageBucket:'mbti-logistics.firebasestorage.app',
         messagingSenderId:'40761160761',
         appId:'1:40761160761:web:20545b610f03f534e949e8'
-      },'ctrc');
+      });
     }
     _db=app.firestore();
     var _authDone=false;
@@ -283,9 +284,11 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
         _curUid=user.uid;
         loadDrivers();
       } else if(!_authDone){
+        // settle.html이 SESSION persistence 사용 → IndexedDB 아닌 sessionStorage 복원 필요
+        // 최대 3초 대기 후 미인증 시 로그인 화면 이동
         setTimeout(function(){
           if(!app.auth().currentUser) window.location.href='/settle';
-        },1000);
+        },3000);
       }
     });
   }catch(e){console.warn(e);}
