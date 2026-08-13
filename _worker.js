@@ -11004,16 +11004,35 @@ function _openAccidentReport(){
     '<div id="acc-gps-lbl" style="font-size:11.5px;color:var(--t3);margin-bottom:12px">GPS 위치 가져오는 중...</div>'+
     '<button type="button" class="btn" style="width:100%;min-height:48px;font-size:15px;font-weight:800;background:var(--rdl);color:var(--rd);border:1px solid var(--rdln)" onclick="_submitAccident()">소장에게 즉시 보고</button>';
   _openModal();
+  window._accLat=null;window._accLng=null;window._accAddr='';
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function(pos){
       window._accLat=pos.coords.latitude;window._accLng=pos.coords.longitude;
       var el=document.getElementById('acc-gps-lbl');
-      if(el)el.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> GPS 위치 확인됨 ('+pos.coords.latitude.toFixed(5)+', '+pos.coords.longitude.toFixed(5)+')';
+      if(el)el.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> 주소 변환 중...';
+      fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+pos.coords.latitude+'&lon='+pos.coords.longitude+'&accept-language=ko',
+        {headers:{'User-Agent':'yongcha-app/1.0 (yongcha.app)'}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var a=d.address||{};
+        var road=a.road||a.pedestrian||a.footway||'';
+        var city=a.city||a.county||a.town||a.village||'';
+        var district=a.suburb||a.neighbourhood||a.quarter||'';
+        var addr=(city+' '+district+' '+road).trim().replace(/\s+/,' ');
+        if(!addr)addr=d.display_name||'';
+        window._accAddr=addr||'';
+        var el=document.getElementById('acc-gps-lbl');
+        if(el)el.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> <b style="color:var(--gn)">'+_esc(addr||'위치 확인됨')+'</b>';
+      })
+      .catch(function(){
+        window._accAddr='';
+        var el=document.getElementById('acc-gps-lbl');
+        if(el)el.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> GPS 확인됨 (주소 변환 실패)';
+      });
     },function(){
       var el=document.getElementById('acc-gps-lbl');
-      if(el)el.textContent='GPS 위치 불가 (수동 주소를 설명란에 입력해주세요)';
-      window._accLat=null;window._accLng=null;
-    });
+      if(el)el.textContent='GPS 위치 불가 — 설명란에 주소를 직접 입력해주세요';
+    },{timeout:8000});
   }
 }
 function _submitAccident(){
@@ -11025,6 +11044,7 @@ function _submitAccident(){
     uid:_CU.uid,driverName:_CU.name,driverPhone:_CU.phone||'',
     agencyId:_CU.agencyId||'',type:type,typeLabel:typeLabel,desc:desc,
     lat:window._accLat||null,lng:window._accLng||null,
+    address:window._accAddr||'',
     reportedAt:firebase.firestore.FieldValue.serverTimestamp(),
     status:'reported'
   };
@@ -11073,7 +11093,8 @@ function _pgAccident(el){
           '<span style="font-size:11px;color:var(--t3)">'+ts.toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'+
         '</div>'+
         '<div style="font-size:12.5px;color:var(--t2)">'+_esc(d.desc)+'</div>'+
-        (d.lat?'<div style="font-size:11px;color:var(--t3);margin-top:4px">GPS: '+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</div>':'');
+        (d.address?'<div style="font-size:11px;color:var(--t3);margin-top:4px">위치: '+_esc(d.address)+'</div>':
+          d.lat?'<div style="font-size:11px;color:var(--t3);margin-top:4px">GPS: '+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</div>':'');
       list.appendChild(row);
     });
   }).catch(function(){});
