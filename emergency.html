@@ -4138,12 +4138,15 @@ async function openDeliveryMap(){
     for(var i=0;i<snap.docs.length;i++){
       var d=snap.docs[i];
       var x=d.data();x.fbId=d.id;
-      // GPS 없거나 이전 방식으로 저장된 경우 재검색
-      var needGeo=!x.gps||!x.gps.lat||!x.gps.src||x.gps.src==='kakao'||x.gps.src==='kakao-kw';
+      // GPS 없거나 이전 방식(kakao/kakao-kw/kakao-dong)으로 저장된 경우 재검색
+      // kakao-dong: 동 번호 검증 없이 저장된 구버전 → 재보정 대상
+      // kakao-dong-v2: 동 번호 검증 완료 → 재검색 불필요
+      var needGeo=!x.gps||!x.gps.lat||!x.gps.src||x.gps.src==='kakao'||x.gps.src==='kakao-kw'||x.gps.src==='kakao-dong';
       if(needGeo&&x.addr&&kKey){
         try{
           var gDong=/(\d+)동/.exec(x.addr);
           if(gDong){
+            var gDongLabel=gDong[1]+'동';
             // [1단계] 도로명(동 이전)으로 address 검색 → 단지명(building_name) 획득
             var gBaseQ=x.addr.replace(/,/g,' ').replace(/\s*\d+동.*/,'').replace(/\s+/g,' ').trim();
             var gR1=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(gBaseQ)+'&size=1',
@@ -4154,17 +4157,24 @@ async function openDeliveryMap(){
             var gBaseLat=gDoc1?parseFloat(gDoc1.y):null;
             var gBaseLng=gDoc1?parseFloat(gDoc1.x):null;
             var gGot=false;
-            // [2단계] "단지명 N동" keyword 검색 → 단지 중심 500m 반경 내에서 정확한 동 건물 좌표
+            // [2단계] "단지명 N동" keyword 검색 → 결과 중 장소명/주소에 N동이 포함된 항목만 채택
             if(gBldName&&gBaseLat){
-              var gKwQ2=gBldName+' '+gDong[1]+'동';
+              var gKwQ2=gBldName+' '+gDongLabel;
               var gKwUrl='https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(gKwQ2)
-                +'&x='+gBaseLng+'&y='+gBaseLat+'&radius=500&size=1';
+                +'&x='+gBaseLng+'&y='+gBaseLat+'&radius=500&size=10';
               var gR2=await fetch(gKwUrl,{headers:{'Authorization':'KakaoAK '+kKey}});
               var gKd2=await gR2.json();
-              if(gKd2.documents&&gKd2.documents[0]){
-                var gKwLat=parseFloat(gKd2.documents[0].y),gKwLng=parseFloat(gKd2.documents[0].x);
+              var gDocs2=(gKd2.documents||[]).filter(function(doc){
+                // 장소명 또는 주소에 정확한 동 번호가 포함된 결과만 채택 (102동/105동 혼용 방지)
+                var nm=(doc.place_name||'')+(doc.address_name||'')+(doc.road_address_name||'');
+                return nm.indexOf(gDongLabel)>=0;
+              });
+              // 동 번호 매칭 결과 없으면 전체 결과 사용 (fallback)
+              if(!gDocs2.length) gDocs2=gKd2.documents||[];
+              if(gDocs2[0]){
+                var gKwLat=parseFloat(gDocs2[0].y),gKwLng=parseFloat(gDocs2[0].x);
                 if(gpsDistance(gBaseLat,gBaseLng,gKwLat,gKwLng)<500){
-                  x.gps={lat:gKwLat,lng:gKwLng,acc:0,src:'kakao-dong'};
+                  x.gps={lat:gKwLat,lng:gKwLng,acc:0,src:'kakao-dong-v2'};
                   _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
                   gGot=true;
                 }
