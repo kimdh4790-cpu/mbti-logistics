@@ -1760,7 +1760,7 @@ async function acceptExchange(){
             vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
             agencyName:gs('agencyName'), agencyRep:gs('agencyRep'),
             agencyBizno:gs('agencyBizno'), agencyPhone:gs('agencyPhone'),
-            agencyAddr:gs('agencyAddr'),
+            agencyAddr:gs('agencyAddr'), agencyAccount:gs('agencyAccount'),
             camp:gs('camp'), route:gs('route'), returnFee:gs('returnFee'),
             licenseNo:gs('licenseNo'), sortWork:gs('sortWork'), createdAt:gs('createdAt')
           }}), {headers:{'Content-Type':'application/json'}});
@@ -1771,7 +1771,7 @@ async function acceptExchange(){
       if (path === '/api/contract/otp' && method === 'POST') {
         try {
           const body = await request.json();
-          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr, camp, route, returnFee, licenseNo, sortWork } = body;
+          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr, agencyAccount, camp, route, returnFee, licenseNo, sortWork } = body;
           if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
           if (!agencyName) return new Response(JSON.stringify({ok:false,error:'대리점 상호명 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
           const fsToken = await getAccessToken(env);
@@ -1790,7 +1790,7 @@ async function acceptExchange(){
               special:{stringValue:special||''}, status:{stringValue:'pending'},
               agencyName:{stringValue:agencyName}, agencyRep:{stringValue:agencyRep||''},
               agencyBizno:{stringValue:agencyBizno||''}, agencyPhone:{stringValue:agencyPhone||''},
-              agencyAddr:{stringValue:agencyAddr||''},
+              agencyAddr:{stringValue:agencyAddr||''}, agencyAccount:{stringValue:agencyAccount||''},
               camp:{stringValue:camp||''}, route:{stringValue:route||''},
               returnFee:{stringValue:String(returnFee||'')}, licenseNo:{stringValue:licenseNo||''},
               sortWork:{stringValue:sortWork||'미수행'}, createdAt:{stringValue:now}
@@ -1854,6 +1854,11 @@ async function acceptExchange(){
           });
           const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
           const ua = request.headers.get('User-Agent') || '';
+          // 계약서 서명 상태 업데이트
+          const contractDoc = await fetch(`${FS_BASE}/eContracts/${contractId}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
+          const contractData = contractDoc.ok ? await contractDoc.json() : null;
+          const cf = contractData?.fields || {};
+          const gs2 = k => cf[k]?.stringValue || '';
           await fetch(`${FS_BASE}/eContracts/${contractId}?updateMask.fieldPaths=status&updateMask.fieldPaths=signedAt&updateMask.fieldPaths=signatureB64&updateMask.fieldPaths=contentHash&updateMask.fieldPaths=ip&updateMask.fieldPaths=ua`, {
             method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
             body: JSON.stringify({ fields:{
@@ -1862,6 +1867,24 @@ async function acceptExchange(){
               ip:{stringValue:ip}, ua:{stringValue:ua}
             }})
           });
+          // 계약서 사본 안내 SMS 발송 (근로기준법 제17조 — 계약서 교부 의무)
+          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
+            const drPhone = gs2('phone');
+            const signUrl2 = `https://donway.ai.kr/sign?t=${contractId}`;
+            const smsText2 = `[DONWAY] 전자서명 완료\n계약서 사본: ${signUrl2}\n서명일시: ${now.slice(0,16)}\n이 링크로 계약서를 언제든지 확인하세요.`;
+            if (drPhone) {
+              const dt2 = new Date().toISOString();
+              const sl2 = Math.random().toString(36).slice(2);
+              const enc2 = new TextEncoder();
+              const ck2 = await crypto.subtle.importKey('raw', enc2.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+              const sg2 = await crypto.subtle.sign('HMAC', ck2, enc2.encode(dt2+sl2));
+              const sig2 = Array.from(new Uint8Array(sg2)).map(b=>b.toString(16).padStart(2,'0')).join('');
+              await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt2}, salt=${sl2}, signature=${sig2}`},
+                body: JSON.stringify({messages:[{to:drPhone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText2}]})
+              }).catch(()=>{});
+            }
+          }
           return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
         } catch(e) {
           return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});

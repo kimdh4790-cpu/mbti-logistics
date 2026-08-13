@@ -106,14 +106,15 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
     <div class="card" id="agency-card">
       <div class="sec-label">대리점 (甲) 정보 <span style="font-size:9px;color:var(--gray);font-weight:400;letter-spacing:0;text-transform:none">— 저장됨</span></div>
       <div class="row2">
-        <div class="fg"><label class="fl">상호명 *</label><input class="fi" id="c-agency-name" placeholder="홍길동 택배" oninput="saveAgency()"></div>
-        <div class="fg"><label class="fl">대표자명</label><input class="fi" id="c-agency-rep" placeholder="홍길동" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">상호명 *</label><input class="fi" id="c-agency-name" placeholder="엠비티아이(유)" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">대표자명</label><input class="fi" id="c-agency-rep" placeholder="김형우" oninput="saveAgency()"></div>
       </div>
       <div class="row2">
-        <div class="fg"><label class="fl">사업자번호</label><input class="fi fi-mono" id="c-agency-bizno" placeholder="000-00-00000" oninput="saveAgency()"></div>
-        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-agency-phone" placeholder="051-000-0000" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">사업자번호</label><input class="fi fi-mono" id="c-agency-bizno" placeholder="373-86-02536" oninput="saveAgency()"></div>
+        <div class="fg"><label class="fl">전화번호</label><input class="fi" id="c-agency-phone" placeholder="051-711-3103" oninput="saveAgency()"></div>
       </div>
-      <div class="fg" style="margin-bottom:0"><label class="fl">주소</label><input class="fi" id="c-agency-addr" placeholder="부산시 ..." oninput="saveAgency()"></div>
+      <div class="fg"><label class="fl">주소</label><input class="fi" id="c-agency-addr" placeholder="부산시 수영구 수영로 668, 607호" oninput="saveAgency()"></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">정산 계좌 (기사 수수료 지급)</label><input class="fi fi-mono" id="c-agency-account" placeholder="하나은행 270-910019-24204" oninput="saveAgency()"></div>
     </div>
 
     <!-- 직원 자동 불러오기 -->
@@ -787,17 +788,23 @@ function toast(msg,type){var t=document.getElementById('toast');t.textContent=ms
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 function saveAgency(){
-  var ag={name:getVal('c-agency-name'),rep:getVal('c-agency-rep'),bizno:getVal('c-agency-bizno'),phone:getVal('c-agency-phone'),addr:getVal('c-agency-addr')};
+  var ag={name:getVal('c-agency-name'),rep:getVal('c-agency-rep'),bizno:getVal('c-agency-bizno'),phone:getVal('c-agency-phone'),addr:getVal('c-agency-addr'),account:getVal('c-agency-account')};
   try{localStorage.setItem('dw_agency',JSON.stringify(ag));}catch(e){}
 }
 function loadAgency(){
   try{
-    var ag=JSON.parse(localStorage.getItem('dw_agency')||'{}');
-    if(ag.name)setVal('c-agency-name',ag.name);
-    if(ag.rep)setVal('c-agency-rep',ag.rep);
-    if(ag.bizno)setVal('c-agency-bizno',ag.bizno);
-    if(ag.phone)setVal('c-agency-phone',ag.phone);
-    if(ag.addr)setVal('c-agency-addr',ag.addr);
+    var stored=localStorage.getItem('dw_agency');
+    var ag=stored?JSON.parse(stored):null;
+    if(!ag||!ag.name){
+      // 엠비티아이(유) 기본값
+      ag={name:'엠비티아이(유)',rep:'김형우',bizno:'373-86-02536',phone:'051-711-3103',addr:'부산시 수영구 수영로 668, 607호',account:'하나은행 270-910019-24204 (유)엠비티아이'};
+    }
+    setVal('c-agency-name',ag.name||'');
+    setVal('c-agency-rep',ag.rep||'');
+    setVal('c-agency-bizno',ag.bizno||'');
+    setVal('c-agency-phone',ag.phone||'');
+    setVal('c-agency-addr',ag.addr||'');
+    setVal('c-agency-account',ag.account||'');
   }catch(e){}
 }
 
@@ -821,6 +828,7 @@ function requestEsign(){
     agencyBizno:getVal('c-agency-bizno'),
     agencyPhone:getVal('c-agency-phone'),
     agencyAddr:getVal('c-agency-addr'),
+    agencyAccount:getVal('c-agency-account'),
     camp:getVal('c-camp'),
     route:getVal('c-route'),
     returnFee:getVal('c-return-fee'),

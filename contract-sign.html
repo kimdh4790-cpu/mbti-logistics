@@ -114,7 +114,7 @@ function renderForm(){
       '<div class="step-sub">아래 서명란에 손가락 또는 마우스로 서명하세요.</div>' +
       '<div class="canvas-wrap" id="cwrap"><canvas id="sig-cv"></canvas><div class="canvas-hint" id="cv-hint">여기에 서명하세요</div></div>' +
       '<button class="btn-clr" onclick="clearSig()">서명 지우기</button>' +
-      '<div class="agree-row"><input type="checkbox" id="agree"><div class="agree-text">위 계약서 내용을 충분히 읽고 이해했으며, 전자서명법 제2조에 따라 전자서명으로 계약에 동의합니다. 본 서명은 자필 서명과 동일한 법적 효력을 가집니다.</div></div>' +
+      '<div class="agree-row"><input type="checkbox" id="agree"><div class="agree-text">본인은 위 계약서 내용을 충분히 읽고 이해하였으며, 이에 자유의사로 동의합니다.<br>· 전자서명법 제2조 및 제3조에 따라 본 전자서명은 자필서명·날인과 동일한 법적 효력을 가집니다.<br>· 전자문서법 제4조에 따라 본 전자문서는 서면으로서의 효력을 가집니다.<br>· 계약서는 Firestore에 암호화 보관되며 운송계약 기준 10년간 보존됩니다.</div></div>' +
       '<button class="btn-submit" id="sub-btn" onclick="doSign()">서명 및 계약 완료</button>' +
     '</div>';
   initCanvas();
@@ -126,6 +126,7 @@ function buildHtml(c, today){
   var agBizno = c.agencyBizno || '';
   var agPhone = c.agencyPhone || '';
   var agAddr = c.agencyAddr || '';
+  var agAccount = c.agencyAccount || '계좌이체';
   var sealRow = '<div class="seal-row">' +
     '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">' + esc(agName) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">' + (agRep ? esc(agRep) + ' (인)' : '(인)') + '</div></div>' +
     '<div class="seal-box"><div class="seal-lbl">乙 (택배기사)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
@@ -153,7 +154,7 @@ function buildHtml(c, today){
       '② 반품 수수료: 1건당 <span class="fill">' + esc(c.returnFee || '') + '</span>원<br>' +
       '③ 집화 수수료: 별도 합의에 따름<br>' +
       '④ 지급일: ' + esc(c.payDay || '매월 25일') + '<br>' +
-      '⑤ 지급 방법: 계좌이체</div></div>' +
+      '⑤ 지급 방법: ' + esc(agAccount) + '</div></div>' +
       '<div class="clause"><div class="ch">제4조 차량 및 종사자격</div><div class="cb">' +
       '① 담당 캠프/라우트: <span class="fill">' + esc(campRoute || '') + '</span><br>' +
       '② 차량번호: ' + esc(c.vehicle || '') + '<br>' +
@@ -193,7 +194,7 @@ function buildHtml(c, today){
       '<div class="clause"><div class="ch">제3조 수수료</div><div class="cb">' +
       '① 1건당 <span class="fill">' + esc(c.pay) + '</span>원<br>' +
       '② 지급일: ' + esc(c.payDay || '매월 25일') + '<br>' +
-      '③ 지급 방법: 계좌이체</div></div>' +
+      '③ 지급 방법: ' + esc(agAccount) + '</div></div>' +
       '<div class="clause"><div class="ch">제4조 차량 및 종사자격</div><div class="cb">' +
       '① 차량번호: ' + esc(c.vehicle || '') + '<br>' +
       '② 乙은 화물자동차 운수사업법 등 관련 법령에서 정한 자격 요건을 유지하여야 한다.<br>' +
@@ -318,14 +319,23 @@ async function doSign(){
 
 function showDone(alreadySigned){
   var now = new Date().toLocaleString('ko-KR');
+  var signUrl = location.href;
   document.getElementById('app').innerHTML =
     '<div class="done-box">' +
       '<div class="done-ic"><svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></div>' +
       '<div class="done-title">' + (alreadySigned ? '이미 서명된 계약서입니다' : '서명 완료') + '</div>' +
       '<div class="done-sub">' +
         (alreadySigned
-          ? '이 계약서는 이미 전자서명이 완료되었습니다.<br>문의사항은 담당 대리점에 연락해 주세요.'
-          : '계약서에 전자서명이 완료되었습니다.<br>서명된 계약서는 대리점에서 확인 가능합니다.<br><br>서명 일시: ' + now + '<br><br><strong>DONWAY 전자계약 시스템</strong><br>전자서명법 제2조 기반 법적 효력 보장') +
+          ? '이 계약서는 이미 전자서명이 완료되었습니다.<br>문의사항은 담당 대리점에 연락해 주세요.<br><br><a href="' + signUrl + '" style="color:#0066ff">계약서 다시 보기</a>'
+          : '전자서명이 완료되었습니다.<br><strong style="color:#059669">이 페이지 링크를 저장해 두시면 계약서를 언제든지 확인하실 수 있습니다.</strong><br><br>'
+            + '서명 일시: ' + now + '<br><br>'
+            + '<div style="background:#f0f5ff;border-radius:8px;padding:10px 14px;font-size:11px;color:#555;text-align:left;margin-top:8px">'
+            + '<strong style="color:#0066ff">계약서 사본 보관 안내</strong><br>'
+            + '· 이 URL을 저장하시면 언제든지 계약서 확인 가능<br>'
+            + '· 전자서명법 제2조·제3조 기반 법적 효력<br>'
+            + '· 전자문서법 제4조 — 서면과 동일 효력<br>'
+            + '· 10년간 안전 보관 (운송계약 기준)'
+            + '</div>') +
       '</div>' +
     '</div>';
 }
