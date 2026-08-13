@@ -14084,6 +14084,10 @@ function _yNLPost(){
     var filled=[];
     if(f.courier){var cs=document.getElementById('pw-courier');if(cs){cs.value=f.courier;filled.push('택배사');}}
     if(f.area){var ai=document.getElementById('pw-area');if(ai){ai.value=f.area;filled.push('구역');}}
+    if(f.region||f.area){
+      var la=document.getElementById('pw-loadingAddr');
+      if(la&&!la.value){la.value=(f.region||'')+(f.area?' '+f.area:'');filled.push('상차지 힌트');}
+    }
     if(f.volume!=null){var vi=document.getElementById('pw-volume');if(vi){vi.value=f.volume;filled.push('물량');}}
     if(f.unitPrice!=null){var pi=document.getElementById('pw-price');if(pi){pi.value=f.unitPrice;_calcEst();filled.push('단가');}}
     if(f.workShift){
