@@ -16338,7 +16338,22 @@ function _pgProfile(el){
   (type==='agency'?
   '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
+  // 알림 수신 토글
+  '<div class="card" style="margin-top:8px;padding:14px 16px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+    '<div>'+
+      '<div style="font-size:14px;font-weight:800">푸시 알림</div>'+
+      '<div style="font-size:11.5px;color:var(--t2);margin-top:2px">배차 확정·공고 알림 수신 여부</div>'+
+    '</div>'+
+    '<button type="button" id="notif-toggle-btn" onclick="_yToggleNotif()" style="min-height:38px;padding:0 16px;border-radius:20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;border:1px solid '+(_CU.notifEnabled===false?'var(--bd)':'var(--gnln)')+';background:'+(_CU.notifEnabled===false?'var(--bg3)':'var(--gnl)')+';color:'+(_CU.notifEnabled===false?'var(--t2)':'var(--gn)')+'">'+
+      (_CU.notifEnabled===false?'꺼짐':'켜짐')+
+    '</button>'+
+  '</div>'+
+  '</div>'+
+
   '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
+
+  '<button onclick="_yDeleteAccount()" style="width:100%;padding:12px;background:transparent;color:var(--t3);border:none;border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:4px;font-family:inherit">회원 탈퇴</button>'+
 
   // 기사 포트폴리오
   (type==='driver'?
@@ -16509,6 +16524,76 @@ function _yLoadAlertSubs(){
         '</div>';
     }).join('');
   }).catch(function(){listEl.innerHTML='';});
+}
+
+// ── 알림 수신 토글 ───────────────────────────────────────────
+function _yToggleNotif(){
+  if(!_CU)return;
+  var nw=(_CU.notifEnabled===false)?true:false;
+  _db.collection('yongcha_users').doc(_CU.uid).update({notifEnabled:nw}).then(function(){
+    _CU.notifEnabled=nw;
+    var btn=document.getElementById('notif-toggle-btn');
+    if(btn){
+      btn.textContent=nw?'켜짐':'꺼짐';
+      btn.style.border='1px solid '+(nw?'var(--gnln)':'var(--bd)');
+      btn.style.background=nw?'var(--gnl)':'var(--bg3)';
+      btn.style.color=nw?'var(--gn)':'var(--t2)';
+    }
+    _yToast(nw?'푸시 알림이 켜졌어요':'푸시 알림이 꺼졌어요');
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+// ── 회원 탈퇴 ─────────────────────────────────────────────────
+function _yDeleteAccount(){
+  if(!_CU)return;
+  var modal=document.getElementById('modal-body');
+  modal.innerHTML=
+    '<div style="font-size:18px;font-weight:900;color:var(--rd);margin-bottom:8px">회원 탈퇴</div>'+
+    '<div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:16px">'+
+      '탈퇴 시 모든 공고·배차·정산 이력이 삭제되며 복구되지 않습니다.<br>'+
+      '진행 중인 배차가 있으면 먼저 완료 처리 후 탈퇴해 주세요.'+
+    '</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">탈퇴 사유 (선택)</label>'+
+      '<select id="del-reason" class="inp">'+
+        ['서비스 불만','개인정보 우려','사용 빈도 낮음','다른 앱으로 이동','기타'].map(function(v){return '<option>'+v+'</option>';}).join('')+
+      '</select></div>'+
+    '<div class="err" id="del-err"></div>'+
+    '<button id="del-confirm-btn" onclick="_yDoDeleteAccount()" '+
+      'style="width:100%;min-height:var(--tap);background:var(--rdl);color:var(--rd);border:1.5px solid var(--rd);border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">'+
+      '탈퇴 확인</button>'+
+    '<button onclick="_closeModal()" '+
+      'style="width:100%;margin-top:8px;min-height:var(--tap);background:transparent;color:var(--t2);border:none;font-size:14px;cursor:pointer;font-family:inherit">'+
+      '취소</button>';
+  _openModal();
+}
+
+function _yDoDeleteAccount(){
+  var btn=document.getElementById('del-confirm-btn');
+  var reason=(document.getElementById('del-reason')||{}).value||'기타';
+  if(btn){btn.textContent='탈퇴 처리 중...';btn.disabled=true;}
+  _db.collection('yongcha_users').doc(_CU.uid).update({
+    deleted:true,
+    deletedReason:reason,
+    deletedAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    return firebase.auth().currentUser.delete();
+  }).then(function(){
+    _closeModal();
+    _CU=null;
+    _yToast('탈퇴가 완료됐어요. 이용해주셔서 감사합니다.');
+    setTimeout(function(){
+      document.getElementById('auth-wrap').style.display='';
+      document.getElementById('app-wrap').style.display='none';
+    },1500);
+  }).catch(function(e){
+    if(btn){btn.textContent='탈퇴 확인';btn.disabled=false;}
+    if(e.code==='auth/requires-recent-login'){
+      var errEl=document.getElementById('del-err');
+      if(errEl){errEl.textContent='보안을 위해 로그아웃 후 다시 로그인하고 탈퇴를 시도해 주세요';errEl.style.display='block';}
+    } else {
+      _yToast('오류: '+e.message);
+    }
+  });
 }
 
 // ── 관리자 대시보드 ──────────────────────────────────────────
@@ -18159,10 +18244,13 @@ function _yNotify(recipientId,title,body,type){
     type:type||'system',
     read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(e){console.warn('[yNotify] notification write 실패:',e.message);});
-  // FCM push
-  _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
-    .then(function(snap){
-      if(!snap.exists)return;
+  // FCM push — 수신자의 notifEnabled 설정 확인 후 발송
+  _db.collection('yongcha_users').doc(recipientId).get()
+    .then(function(userSnap){
+      if(userSnap.exists&&userSnap.data().notifEnabled===false)return;
+      return _db.collection('yongcha_fcm_tokens').doc(recipientId).get();
+    }).then(function(snap){
+      if(!snap||!snap.exists)return;
       var token=snap.data().token;
       if(!token)return;
       return fetch('/api/ctrl-notify',{
@@ -18423,7 +18511,52 @@ function _pgDashboard(el){
           '<div style="font-size:12px;color:var(--t2)">평균단가 '+_won(avgUnit)+'원</div>'+
           '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(Math.round(totalAmt/10000))+'만</div>'+
         '</div>'+
+      '</div>'+
+
+      // 이번 주 근무 요약
+      '<div class="card" style="margin-top:6px" id="weekly-work-card">'+
+        '<div style="font-size:15px;font-weight:900;margin-bottom:14px">이번 주 건수 · 수입</div>'+
+        '<div id="dash-weekly-list">'+_skRows(2)+'</div>'+
       '</div>';
+
+    // 이번 주 데이터 로드
+    (function(){
+      var ws=_weekStart();
+      _db.collection('yongcha_daily_records').where('driverId','==',_CU.uid).where('date','>=',ws).get()
+      .then(function(wsnap){
+        var el=document.getElementById('dash-weekly-list');if(!el)return;
+        if(wsnap.empty){el.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px">이번 주 입력된 건수가 없어요</div>';return;}
+        var wTotal={cnt:0,amt:0},wRows='';
+        var wDocs=wsnap.docs.sort(function(a,b){return a.data().date<b.data().date?-1:1;});
+        wDocs.forEach(function(doc){
+          var r=doc.data();
+          wTotal.cnt+=Number(r.count||0);wTotal.amt+=Number(r.amount||0);
+          wRows+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:12.5px;font-weight:700;min-width:75px">'+_esc(r.date)+'</span>'+
+            '<span style="font-size:12px;color:var(--t2);flex:1">'+_won(r.count||0)+'건</span>'+
+            '<span style="font-size:13px;font-weight:800;color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+_won(Number(r.amount||0).toLocaleString())+'원</span>'+
+            '<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:'+(r.status==='confirmed'?'var(--gnl)':'var(--brl)')+';color:'+(r.status==='confirmed'?'var(--gn)':'var(--br)')+'">'+
+              (r.status==='confirmed'?'확인':'대기')+'</span>'+
+          '</div>';
+        });
+        el.innerHTML=
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+            '<div style="background:var(--gnl);border-radius:10px;padding:11px;text-align:center">'+
+              '<div style="font-size:20px;font-weight:900;color:var(--gn)">'+_won(wTotal.cnt)+'건</div>'+
+              '<div style="font-size:10.5px;color:var(--t2);margin-top:2px">주간 총 건수</div>'+
+            '</div>'+
+            '<div style="background:var(--brl);border-radius:10px;padding:11px;text-align:center">'+
+              '<div style="font-size:20px;font-weight:900;color:var(--br)">'+_won(Math.round(wTotal.amt/10000))+'만</div>'+
+              '<div style="font-size:10.5px;color:var(--t2);margin-top:2px">주간 수입</div>'+
+            '</div>'+
+          '</div>'+
+          '<div>'+wRows+'</div>';
+      }).catch(function(){
+        var el=document.getElementById('dash-weekly-list');
+        if(el)el.innerHTML='<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px">주간 데이터 로드 실패</div>';
+      });
+    })();
+
   }).catch(function(e){
     var body=document.getElementById('dash-body');
     if(body)body.innerHTML=_errHtml(e);
@@ -18547,6 +18680,7 @@ function _pgDashboardAgency(el){
     var totalCnt=order.reduce(function(a,k){return a+months[k].cnt;},0);
     var totalNet=order.reduce(function(a,k){return a+months[k].net;},0);
     var deltaNet=cur.net-prev.net;
+    window._adashMonths=months;window._adashOrder=order;
 
     body.innerHTML=
       '<div class="kpi-grid col2">'+
@@ -18588,6 +18722,9 @@ function _pgDashboardAgency(el){
           '<div style="font-size:12px;color:var(--t2)">'+_won(totalCnt)+'건</div>'+
           '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(Math.round(totalNet/10000))+'만</div>'+
         '</div>'+
+        '<button type="button" onclick="_exportSettleCSV()" style="width:100%;margin-top:12px;min-height:var(--tap);background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">'+
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'+
+          'CSV 내보내기</button>'+
       '</div>'+
       '<div class="card" style="margin-top:10px">'+
         '<div style="font-size:15px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
@@ -18639,6 +18776,28 @@ function _pgDashboardAgency(el){
     var body=document.getElementById('adash-body');
     if(body)body.innerHTML=_errHtml(e);
   });
+}
+
+/* ══ 정산 CSV 내보내기 ════════════════════════════════════ */
+function _exportSettleCSV(){
+  var months=window._adashMonths,order=window._adashOrder;
+  if(!months||!order){_yToast('데이터를 먼저 로드해주세요');return;}
+  var bom='﻿';
+  var header='월,완료건수,운임합계(원),수수료(원),순수입(원)\n';
+  var rows=order.map(function(k){
+    var m=months[k];
+    return k+','+m.cnt+','+m.amt+','+m.fee+','+m.net;
+  }).join('\n');
+  var csv=bom+header+rows;
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  var now=new Date();
+  a.download='정산내역_'+now.getFullYear()+('0'+(now.getMonth()+1)).slice(-2)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  _yToast('CSV 파일이 저장됐어요');
 }
 
 /* ══ 대리점/관리자 — 배차 현황 ══════════════════════════════ */
