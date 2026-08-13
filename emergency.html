@@ -14237,33 +14237,24 @@ async function openDeliveryMap(){
     for(var i=0;i<snap.docs.length;i++){
       var d=snap.docs[i];
       var x=d.data();x.fbId=d.id;
-      if((!x.gps||!x.gps.lat)&&x.addr&&kKey){
+      // GPS 없거나 이전 방식(단지 입구 수준)으로 저장된 경우 재검색
+      var needGeo=!x.gps||!x.gps.lat||x.gps.src==='kakao'||x.gps.src==='kakao-kw';
+      if(needGeo&&x.addr&&kKey){
         try{
-          var r=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(x.addr),
+          var hasDong=/\d+동/.test(x.addr);
+          // 동 주소: 쉼표→공백, 호수 제거 → "백양대로 879 103동" 형태로 정제 → 건물 단위 검색
+          var searchQ=hasDong
+            ?x.addr.replace(/,/g,' ').replace(/(\d+동)\s*[\d\-]+호/g,'$1').replace(/\s+/g,' ').trim()
+            :x.addr;
+          var r2=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(searchQ),
             {headers:{'Authorization':'KakaoAK '+kKey}});
-          var kd=await r.json();
-          if(kd.documents&&kd.documents[0]){
-            var kDoc=kd.documents[0];
-            x.gps={lat:parseFloat(kDoc.y),lng:parseFloat(kDoc.x),acc:0,src:'kakao'};
+          var kd2=await r2.json();
+          if(kd2.documents&&kd2.documents[0]){
+            x.gps={lat:parseFloat(kd2.documents[0].y),lng:parseFloat(kd2.documents[0].x),acc:0,
+              src:hasDong?'kakao-dong':'kakao'};
             _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
           }
         }catch(e2){}
-      }
-      // 아파트 동 주소: keyword 검색으로 동별 좌표 보정 (입구 → 실제 동 건물)
-      if(x.gps&&x.gps.lat&&x.gps.src!=='kakao-kw'&&x.addr&&/\d+동/.test(x.addr)&&kKey){
-        try{
-          var kwQ=x.addr.replace(/,/g,' ').replace(/\s+/g,' ').trim();
-          var kwR=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQ)+'&size=1',
-            {headers:{'Authorization':'KakaoAK '+kKey}});
-          var kwD=await kwR.json();
-          if(kwD.documents&&kwD.documents[0]){
-            var kwLat=parseFloat(kwD.documents[0].y),kwLng=parseFloat(kwD.documents[0].x);
-            if(gpsDistance(x.gps.lat,x.gps.lng,kwLat,kwLng)<300){
-              x.gps={lat:kwLat,lng:kwLng,acc:0,src:'kakao-kw'};
-              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
-            }
-          }
-        }catch(e3){}
       }
       locs.push(x);
     }
