@@ -10984,6 +10984,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
     </div>
     <div class="err" id="l-err"></div>
     <button class="btn-main" id="l-btn" onclick="_yLogin()">로그인</button>
+    <div style="text-align:right;margin-top:8px">
+      <button type="button" onclick="_yForgotPassword()" style="background:none;border:none;color:var(--t2);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;font-family:inherit">비밀번호 찾기</button>
+    </div>
   </div>
 
   <!-- 회원가입 -->
@@ -11377,6 +11380,20 @@ function _yCarOptions(sel,includeAny){
   }).join('');
 }
 
+function _yForgotPassword(){
+  var e=(document.getElementById('l-email').value||'').trim();
+  var err=document.getElementById('l-err');
+  if(!e){err.textContent='위 이메일란에 가입한 이메일을 입력하세요';err.style.display='block';return;}
+  err.style.display='none';
+  _auth.sendPasswordResetEmail(e).then(function(){
+    _yToast('비밀번호 재설정 이메일을 보냈어요. 메일함을 확인하세요.');
+  }).catch(function(ex){
+    err.textContent=ex.code==='auth/user-not-found'?'등록된 이메일이 없어요':
+                    ex.code==='auth/invalid-email'?'이메일 형식을 확인하세요':'오류: '+ex.message;
+    err.style.display='block';
+  });
+}
+
 function _yLogin(){
   var e=(document.getElementById('l-email').value||'').trim();
   var p=(document.getElementById('l-pw').value||'').trim();
@@ -11467,7 +11484,7 @@ function _yRegister(){
       carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       rating:0,reviewCount:0,status:'active',
-      trustScore:60,trustGrade:'B',cancelCount:0,noShowCount:0,completedRoutes:0,
+      trustScore:50,trustGrade:'B',cancelCount:0,noShowCount:0,completedRoutes:0,
       docVerified:false,
       termsAgreedAt:firebase.firestore.FieldValue.serverTimestamp(),
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -11481,10 +11498,12 @@ function _yRegister(){
       _doc.corpNum=corpNum;
       _doc.bizVerified=true;
     }
+    c.user.sendEmailVerification().catch(function(){});
     return _db.collection('yongcha_users').doc(c.user.uid).set(_doc).then(function(){
       if(_CU&&_CU.uid===c.user.uid)return;
       _CU=Object.assign({uid:c.user.uid},_doc);
       _showApp();
+      _yToast('가입 완료! 이메일 인증 메일을 보냈어요. 메일함을 확인해 주세요.');
     });
   }).catch(function(ex){
     btn.textContent='가입하기';btn.disabled=false;
@@ -12744,7 +12763,7 @@ function _pgPosts(el){
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
       '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='long'?'장기 용차':_postsMainTab==='jobs'?(_CU&&_CU.type==='driver'?'구직 게시판':'구인 게시판'):'단기 용차')+'</h1>'+
-      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='long'?'월단위·상시모집 정기 노선':_postsMainTab==='jobs'?'정직원·계약직 장기 채용':'하루 대타·주단위 단기 공고')+'</p></div>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='long'?'월단위·고정 용차 정기 노선':_postsMainTab==='jobs'?'정직원·계약직 장기 채용':'하루 대타·주단위 단기 공고')+'</p></div>'+
       '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
@@ -12916,7 +12935,7 @@ function _pfSwitchMainTab(tab){
   } else if(tab==='long'){
     routeSec.style.display='block';
     if(title)title.textContent='장기 용차';
-    if(sub)sub.textContent='월단위·상시모집 정기 노선';
+    if(sub)sub.textContent='월단위·고정 용차 정기 노선';
     if(descEl)descEl.textContent='월단위 이상 정기 노선 — 장기 계약';
     if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
     _loadFilteredPosts();
@@ -15148,7 +15167,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
   '<input class="inp" id="pw-date" type="date"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">종료일</label>'+
-  '<input class="inp" id="pw-enddate" type="date" placeholder="상시모집이면 비워두세요"></div>'+
+  '<input class="inp" id="pw-enddate" type="date" placeholder="고정 용차는 종료일 없이 비워두세요"></div>'+
   '</div>'+
   '</div>'+
 
@@ -17761,11 +17780,11 @@ function _submitReview(targetId,targetName,targetType,applyId){
 }
 
 function _driverGrade(score, completedRoutes){
-  var s=score||0, r=completedRoutes||0;
-  if(s>=91&&r>=30)return{label:'👑 VIP',color:'var(--br)',bg:'var(--brl)',short:'VIP'};
-  if(s>=71&&r>=10)return{label:'우수',color:'var(--ac)',bg:'var(--acl)',short:'우수'};
-  if(s>=41||r>=3)return{label:'일반',color:'var(--t2)',bg:'var(--bg3)',short:'일반'};
-  return{label:'🌱 새내기',color:'var(--t3)',bg:'var(--bg3)',short:'새내기'};
+  var s=score||0;
+  if(s>=80)return{label:'S',color:'var(--br)',bg:'var(--brl)',short:'S'};
+  if(s>=60)return{label:'A',color:'var(--gn)',bg:'var(--gnl)',short:'A'};
+  if(s>=40)return{label:'B',color:'var(--ac)',bg:'var(--acl)',short:'B'};
+  return{label:'C',color:'var(--t3)',bg:'var(--bg3)',short:'C'};
 }
 
 function _calcTrustScore(userId){
