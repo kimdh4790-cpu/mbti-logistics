@@ -262,12 +262,16 @@ var CTYPE_LABEL={regular:'👔 근로계약',parttime:'⏰ 단시간 근로',fix
     }
     _db=app.firestore();
     // ── Firebase Auth 가드 (탭 간 공유됨) ────────────────────────────
+    var _authDone=false;
     app.auth().onAuthStateChanged(function(user){
-      if(!user){
-        window.location.href='/settle';
-      } else {
+      if(user){
+        _authDone=true;
         loadDrivers();
-        loadAgency();
+      } else if(!_authDone){
+        // IndexedDB에서 auth 복원 전에 null 발화할 수 있음 — 1초 대기 후 재확인
+        setTimeout(function(){
+          if(!app.auth().currentUser) window.location.href='/settle';
+        },1000);
       }
     });
   }catch(e){console.warn(e);}
@@ -747,8 +751,7 @@ function closePremModal(){document.getElementById('prem-modal').classList.remove
 
 function goPay(){
   closePremModal();
-  // 카카오채널로 이동
-  alert('입금 후 카카오채널 "MBTI Co. LOGISTICS"으로\n[프리미엄 계약서 + 사업자번호]를 보내주세요.\n\n하나은행 270-910019-24204 (유)엠비티아이\n담당자가 활성화 코드를 발송드립니다.');
+  _toast('입금 후 카카오채널 "MBTI Co. LOGISTICS"에 [프리미엄 계약서 + 사업자번호] 전송 → 하나은행 270-910019-24204 (유)엠비티아이');
 }
 
 // 페이지 로드 시 해금 상태 복원 + 대리점 정보 복원
