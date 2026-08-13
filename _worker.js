@@ -10103,6 +10103,8 @@ function _goPage(p){
   else if(p==='entrance_codes')_pgEntranceCodes(el);
   else if(p==='settle_reconcile')_pgSettlementReconcile(el);
   else if(p==='tax_approve')_pgTaxApprove(el,'');
+  else if(p==='maintenance')_pgMaintenance(el);
+  else if(p==='accident')_pgAccident(el);
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -10315,6 +10317,9 @@ function _pgHomeDriver(el){
     '</div>'+
   '</div>'+
 
+  // 수입 목표 달성률 위젯 (monthlyGoal 설정 시 표시)
+  '<div id="home-goal-widget"></div>'+
+
   // 차량 검사 만료 배너 (조건부 — JS에서 채움)
   '<div id="home-inspect-banner"></div>'+
 
@@ -10350,6 +10355,12 @@ function _pgHomeDriver(el){
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>용차 등록</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'rest\\')" style="border-color:rgba(139,92,246,.3);color:#8b5cf6">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>휴식 원장</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'maintenance\\')" style="border-color:rgba(245,158,11,.4);color:#f59e0b">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>차량 정비</button>'+
+    '<button type="button" class="quick-btn" onclick="_openAccidentReport()" style="border-color:rgba(239,68,68,.3);color:var(--rd)">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>사고 신고</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -10541,6 +10552,9 @@ function _pgHomeDriver(el){
       }
     }).catch(function(){});
   });
+
+  // 수입 목표 달성률 위젯
+  _renderGoalWidget();
 
   // 차량 검사 만료 배너
   var inspBanner=document.getElementById('home-inspect-banner');
@@ -10840,6 +10854,229 @@ function _saveQuickInspect(){
     _renderInspectBanner(val);
     _yToast('정기검사 만료일이 저장됐어요');
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+// ── 수입 목표 달성률 위젯 ──────────────────────────────────────────────────────
+function _renderGoalWidget(){
+  var el=document.getElementById('home-goal-widget');
+  if(!el||!_CU)return;
+  var goal=Number(_CU.monthlyGoal||0);
+  if(!goal)return;
+  var now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
+  var ym=y+''+String(m).padStart(2,'0');
+  _db.collection('yongcha_daily_records')
+    .where('uid','==',_CU.uid)
+    .where('ym','==',ym)
+    .get().then(function(snap){
+      var earned=0;
+      snap.forEach(function(d){earned+=Number(d.data().fare||d.data().totalFare||0);});
+      var pct=Math.min(100,Math.round(earned/goal*100));
+      var clr=pct>=100?'var(--gn)':pct>=70?'var(--ac)':pct>=40?'var(--br)':'var(--t3)';
+      var daysInMonth=new Date(y,m,0).getDate(),today=now.getDate();
+      var pace=Math.round(earned/today*daysInMonth);
+      el.innerHTML='<div style="padding:12px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<span style="font-size:12.5px;font-weight:800;color:var(--t2)">이번 달 수입 목표</span>'+
+          '<span style="font-size:12px;font-weight:700;color:'+clr+'">'+pct+'% 달성</span>'+
+        '</div>'+
+        '<div style="height:8px;background:var(--bg3);border-radius:99px;overflow:hidden;margin-bottom:8px">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+clr+';border-radius:99px;transition:width .6s ease"></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3)">'+
+          '<span>'+_won(earned)+'원 / '+_won(goal)+'원</span>'+
+          '<span>월말 예상 '+_won(pace)+'원</span>'+
+        '</div>'+
+      '</div>';
+    }).catch(function(){});
+}
+
+// ── 차량 유지보수 알림 ─────────────────────────────────────────────────────────
+var _MAINT_ITEMS=[
+  {key:'oilChange',  label:'엔진 오일 교환',   icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>',intervalDays:180,intervalKm:5000,unit:'km'},
+  {key:'tire',       label:'타이어 교체',       icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>',intervalDays:1095,intervalKm:40000,unit:'km'},
+  {key:'airFilter',  label:'에어필터 교체',     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',intervalDays:365,intervalKm:15000,unit:'일'},
+  {key:'brake',      label:'브레이크 패드',     icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',intervalDays:730,intervalKm:30000,unit:'km'},
+  {key:'battery',    label:'배터리 교체',       icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"/><line x1="22" y1="11" x2="22" y2="13"/></svg>',intervalDays:1095,intervalKm:0,unit:'일'}
+];
+function _pgMaintenance(el){
+  var m=(_CU&&_CU.maintenance)||{};
+  var curKm=Number(_CU&&_CU.currentKm||0);
+  el.innerHTML=
+    '<div class="page-hdr">'+
+      '<h1 class="page-title">차량 정비 관리</h1>'+
+      '<p class="page-sub">교환 주기를 등록하면 D-day로 알려드려요</p>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:12px">'+
+      '<label class="inp-lbl">현재 주행거리 (km)</label>'+
+      '<div style="display:flex;gap:8px;margin-top:4px">'+
+        '<input id="maint-km" type="number" class="inp" placeholder="예: 85000" value="'+(curKm||'')+'" style="flex:1">'+
+        '<button type="button" class="btn" style="flex-shrink:0;padding:0 16px;min-height:44px;font-size:13px" onclick="_saveMaintKm()">저장</button>'+
+      '</div>'+
+    '</div>'+
+    _MAINT_ITEMS.map(function(item){
+      var rec=m[item.key]||{};
+      var lastDate=rec.lastDate||'';
+      var lastKm=Number(rec.lastKm||0);
+      var dateVal=lastDate?lastDate.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'';
+      var daysLeft='', kmLeft='', statusClr='var(--t3)', badge='미등록';
+      if(lastDate){
+        var ld=new Date(lastDate.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'));
+        var nextDate=new Date(ld.getTime()+item.intervalDays*86400000);
+        daysLeft=Math.ceil((nextDate-Date.now())/86400000);
+        if(item.intervalKm&&curKm&&lastKm){kmLeft=item.intervalKm-(curKm-lastKm);}
+        var urgent=(typeof daysLeft==='number'&&daysLeft<=14)||(kmLeft!==''&&kmLeft<=1000);
+        var warn=(typeof daysLeft==='number'&&daysLeft<=30)||(kmLeft!==''&&kmLeft<=3000);
+        statusClr=urgent?'var(--rd)':warn?'var(--br)':'var(--gn)';
+        badge=urgent?'긴급':warn?'주의':'정상';
+      }
+      return '<div class="card" style="margin-bottom:10px">'+
+        '<div style="display:flex;align-items:flex-start;gap:12px">'+
+          '<div style="color:'+statusClr+';flex-shrink:0;margin-top:2px">'+item.icon+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+              '<span style="font-size:14px;font-weight:800;color:var(--tx)">'+item.label+'</span>'+
+              '<span style="font-size:11px;font-weight:700;color:'+statusClr+';background:var(--bg2);padding:2px 8px;border-radius:99px;border:1px solid '+statusClr+'20">'+badge+'</span>'+
+            '</div>'+
+            (lastDate?
+              '<div style="font-size:11.5px;color:var(--t2);margin-bottom:8px">'+
+                '마지막 교환: '+dateVal+(lastKm?' ('+lastKm.toLocaleString()+'km)':'')+
+                (typeof daysLeft==='number'?'&nbsp;·&nbsp;<b style="color:'+statusClr+'">'+
+                  (daysLeft<0?'만료 '+Math.abs(daysLeft)+'일 경과':'D-'+daysLeft)+'</b>':'')+
+                (kmLeft!==''?'&nbsp;·&nbsp;<b style="color:'+statusClr+'">잔여 '+kmLeft.toLocaleString()+'km</b>':'')+
+              '</div>':'<div style="font-size:11.5px;color:var(--t3);margin-bottom:8px">마지막 교환일을 입력해주세요</div>')+
+            '<div style="display:grid;grid-template-columns:1fr'+(item.intervalKm?' 1fr':'')+';gap:6px">'+
+              '<div><label class="inp-lbl" style="font-size:10.5px">마지막 교환일</label>'+
+                '<input id="maint-date-'+item.key+'" type="date" class="inp" value="'+dateVal+'" style="font-size:13px"></div>'+
+              (item.intervalKm?'<div><label class="inp-lbl" style="font-size:10.5px">교환 시 주행거리</label>'+
+                '<input id="maint-km-'+item.key+'" type="number" class="inp" placeholder="km" value="'+(lastKm||'')+'" style="font-size:13px"></div>':'')+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<button type="button" class="btn" style="width:100%;margin-top:10px;min-height:40px;font-size:13px" onclick="_saveMaintItem(\\''+item.key+'\\')">저장</button>'+
+      '</div>';
+    }).join('')+
+    '<div style="height:20px"></div>';
+}
+function _saveMaintKm(){
+  var km=Number((document.getElementById('maint-km')||{}).value||0);
+  if(!km){_yToast('주행거리를 입력해주세요');return;}
+  _db.collection('yongcha_users').doc(_CU.uid).update({currentKm:km}).then(function(){
+    _CU.currentKm=km;_yToast('주행거리가 저장됐어요');_pgMaintenance(document.getElementById('content'));
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+function _saveMaintItem(key){
+  var dateEl=document.getElementById('maint-date-'+key);
+  var kmEl=document.getElementById('maint-km-'+key);
+  var raw=(dateEl&&dateEl.value)||'';
+  if(!raw){_yToast('날짜를 선택해주세요');return;}
+  var dateVal=raw.replace(/-/g,'');
+  var kmVal=kmEl?Number(kmEl.value||0):0;
+  var patch={};
+  patch['maintenance.'+key+'.lastDate']=dateVal;
+  if(kmVal)patch['maintenance.'+key+'.lastKm']=kmVal;
+  _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
+    if(!_CU.maintenance)_CU.maintenance={};
+    _CU.maintenance[key]={lastDate:dateVal,lastKm:kmVal||(_CU.maintenance[key]&&_CU.maintenance[key].lastKm)||0};
+    _yToast('저장됐어요');
+    _pgMaintenance(document.getElementById('content'));
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+// ── 사고 즉시 보고 ──────────────────────────────────────────────────────────
+function _openAccidentReport(){
+  document.getElementById('modal-body').innerHTML=
+    '<div style="font-size:15px;font-weight:900;margin-bottom:16px;color:var(--rd)">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>사고 즉시 보고'+
+    '</div>'+
+    '<div style="font-size:12.5px;color:var(--t2);margin-bottom:14px">사고 발생 즉시 기록하면 GPS·시간이 자동 저장됩니다. 소장에게 알림이 전송됩니다.</div>'+
+    '<label class="inp-lbl">사고 유형</label>'+
+    '<select id="acc-type" class="inp" style="margin-bottom:12px">'+
+      '<option value="collision">차량 충돌</option>'+
+      '<option value="parcel">배송물 파손</option>'+
+      '<option value="injury">인명 부상</option>'+
+      '<option value="breakdown">차량 고장</option>'+
+      '<option value="other">기타</option>'+
+    '</select>'+
+    '<label class="inp-lbl">상황 설명</label>'+
+    '<textarea id="acc-desc" class="inp" rows="3" placeholder="어디서, 어떻게 발생했는지 간략히 적어주세요" style="resize:none;margin-bottom:12px"></textarea>'+
+    '<label class="inp-lbl">사고 사진 (선택)</label>'+
+    '<input id="acc-photo" type="file" accept="image/*" capture="camera" class="inp" style="margin-bottom:16px">'+
+    '<div id="acc-gps-lbl" style="font-size:11.5px;color:var(--t3);margin-bottom:12px">GPS 위치 가져오는 중...</div>'+
+    '<button type="button" class="btn" style="width:100%;min-height:48px;font-size:15px;font-weight:800;background:var(--rdl);color:var(--rd);border:1px solid var(--rdln)" onclick="_submitAccident()">소장에게 즉시 보고</button>';
+  _openModal();
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      window._accLat=pos.coords.latitude;window._accLng=pos.coords.longitude;
+      var el=document.getElementById('acc-gps-lbl');
+      if(el)el.innerHTML='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg> GPS 위치 확인됨 ('+pos.coords.latitude.toFixed(5)+', '+pos.coords.longitude.toFixed(5)+')';
+    },function(){
+      var el=document.getElementById('acc-gps-lbl');
+      if(el)el.textContent='GPS 위치 불가 (수동 주소를 설명란에 입력해주세요)';
+      window._accLat=null;window._accLng=null;
+    });
+  }
+}
+function _submitAccident(){
+  var type=(document.getElementById('acc-type')||{}).value||'other';
+  var desc=((document.getElementById('acc-desc')||{}).value||'').trim();
+  if(!desc){_yToast('상황을 간략히 입력해주세요');return;}
+  var typeLabel={collision:'차량 충돌',parcel:'배송물 파손',injury:'인명 부상',breakdown:'차량 고장',other:'기타'}[type]||type;
+  var accData={
+    uid:_CU.uid,driverName:_CU.name,driverPhone:_CU.phone||'',
+    agencyId:_CU.agencyId||'',type:type,typeLabel:typeLabel,desc:desc,
+    lat:window._accLat||null,lng:window._accLng||null,
+    reportedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    status:'reported'
+  };
+  var photoFile=(document.getElementById('acc-photo')||{}).files&&document.getElementById('acc-photo').files[0];
+  function _doSave(photoDataUrl){
+    if(photoDataUrl)accData.photoDataUrl=photoDataUrl;
+    _db.collection('yongcha_accidents').add(accData).then(function(ref){
+      _closeModal();
+      _yToast('사고 보고가 완료됐어요. 소장에게 알림을 보냈습니다.');
+      if(_CU.agencyId){
+        firebase.auth().currentUser.getIdToken().then(function(tok){
+          fetch('/api/yongcha/notify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+            body:JSON.stringify({targetUid:_CU.agencyId,type:'accident',
+              title:'사고 발생 보고 — '+_CU.name,
+              body:typeLabel+': '+desc.substring(0,60),
+              data:{accidentId:ref.id}})}).catch(function(){});
+        }).catch(function(){});
+      }
+    }).catch(function(e){_yToast('저장 실패: '+e.message);});
+  }
+  if(photoFile&&photoFile.size<2000000){
+    var reader=new FileReader();
+    reader.onload=function(e){_doSave(e.target.result);};
+    reader.readAsDataURL(photoFile);
+  } else {
+    _doSave(null);
+  }
+}
+function _pgAccident(el){
+  el.innerHTML=
+    '<div class="page-hdr"><h1 class="page-title">사고 보고 내역</h1></div>'+
+    '<button type="button" class="btn" style="width:100%;min-height:48px;font-size:15px;font-weight:800;background:var(--rdl);color:var(--rd);border:1px solid var(--rdln);margin-bottom:16px" onclick="_openAccidentReport()">새 사고 보고하기</button>'+
+    '<div id="acc-list">'+_skRows(3)+'</div>';
+  _db.collection('yongcha_accidents').where('uid','==',_CU.uid).orderBy('reportedAt','desc').limit(20).get()
+  .then(function(snap){
+    var list=document.getElementById('acc-list');if(!list)return;
+    if(snap.empty){list.innerHTML=_emptyHtml('','사고 보고 내역 없음','사고 발생 시 즉시 기록해두면 보험 처리에 도움돼요');return;}
+    list.innerHTML='';
+    snap.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var ts=d.reportedAt&&d.reportedAt.toDate?d.reportedAt.toDate():new Date();
+      var row=document.createElement('div');row.className='card';row.style.marginBottom='10px';
+      row.innerHTML=
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+          '<span style="font-size:13px;font-weight:800;color:var(--rd)">'+_esc(d.typeLabel||d.type)+'</span>'+
+          '<span style="font-size:11px;color:var(--t3)">'+ts.toLocaleDateString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>'+
+        '</div>'+
+        '<div style="font-size:12.5px;color:var(--t2)">'+_esc(d.desc)+'</div>'+
+        (d.lat?'<div style="font-size:11px;color:var(--t3);margin-top:4px">GPS: '+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</div>':'');
+      list.appendChild(row);
+    });
+  }).catch(function(){});
 }
 
 // ── 공동현관 비밀번호 DB ─────────────────────────────────────────────────────
@@ -14282,6 +14519,8 @@ function _pgProfile(el){
         '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">정기검사 만료일</label>'+
         '<input id="pref-inspectDue" type="date" class="inp" value="'+(_CU.inspectDue?_CU.inspectDue.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">월 목표 수입 (원) — 홈 달성률 표시</label>'+
+        '<input id="pref-monthlyGoal" type="number" class="inp" placeholder="예: 3000000" value="'+(_CU.monthlyGoal||'')+'"></div>'+
       '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">맞춤 조건 저장</button>'+
     '</div>';
   })():'')+
@@ -16037,17 +16276,20 @@ function _ySavePrefs(){
   var carNum=((document.getElementById('pref-carNum')||{}).value||'').trim();
   var inspectDueRaw=((document.getElementById('pref-inspectDue')||{}).value||'').trim();
   var inspectDue=inspectDueRaw.replace(/-/g,'');
+  var monthlyGoal=parseInt((document.getElementById('pref-monthlyGoal')||{}).value)||0;
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
   patch.carFuelType=fuelType;
   if(carNum)patch.carNumber=carNum;
   if(inspectDue)patch.inspectDue=inspectDue;
+  if(monthlyGoal)patch.monthlyGoal=monthlyGoal;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
     _CU.carFuelType=fuelType;
     if(carNum)_CU.carNumber=carNum;
     if(inspectDue){_CU.inspectDue=inspectDue;try{localStorage.removeItem('yc_inspect_'+carNum);}catch(e){};}
+    if(monthlyGoal)_CU.monthlyGoal=monthlyGoal;
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
