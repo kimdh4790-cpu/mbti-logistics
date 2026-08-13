@@ -14237,22 +14237,52 @@ async function openDeliveryMap(){
     for(var i=0;i<snap.docs.length;i++){
       var d=snap.docs[i];
       var x=d.data();x.fbId=d.id;
-      // GPS 없거나 이전 방식(단지 입구 수준)으로 저장된 경우 재검색
+      // GPS 없거나 이전 방식으로 저장된 경우 재검색
       var needGeo=!x.gps||!x.gps.lat||x.gps.src==='kakao'||x.gps.src==='kakao-kw';
       if(needGeo&&x.addr&&kKey){
         try{
-          var hasDong=/\d+동/.test(x.addr);
-          // 동 주소: 쉼표→공백, 호수 제거 → "백양대로 879 103동" 형태로 정제 → 건물 단위 검색
-          var searchQ=hasDong
-            ?x.addr.replace(/,/g,' ').replace(/(\d+동)\s*[\d\-]+호/g,'$1').replace(/\s+/g,' ').trim()
-            :x.addr;
-          var r2=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(searchQ),
-            {headers:{'Authorization':'KakaoAK '+kKey}});
-          var kd2=await r2.json();
-          if(kd2.documents&&kd2.documents[0]){
-            x.gps={lat:parseFloat(kd2.documents[0].y),lng:parseFloat(kd2.documents[0].x),acc:0,
-              src:hasDong?'kakao-dong':'kakao'};
-            _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+          var gDong=/(\d+)동/.exec(x.addr);
+          if(gDong){
+            // [1단계] 도로명(동 이전)으로 address 검색 → 단지명(building_name) 획득
+            var gBaseQ=x.addr.replace(/,/g,' ').replace(/\s*\d+동.*/,'').replace(/\s+/g,' ').trim();
+            var gR1=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(gBaseQ)+'&size=1',
+              {headers:{'Authorization':'KakaoAK '+kKey}});
+            var gKd1=await gR1.json();
+            var gDoc1=gKd1.documents&&gKd1.documents[0];
+            var gBldName=(gDoc1&&gDoc1.road_address&&gDoc1.road_address.building_name)||'';
+            var gBaseLat=gDoc1?parseFloat(gDoc1.y):null;
+            var gBaseLng=gDoc1?parseFloat(gDoc1.x):null;
+            var gGot=false;
+            // [2단계] "단지명 N동" keyword 검색 → 단지 중심 500m 반경 내에서 정확한 동 건물 좌표
+            if(gBldName&&gBaseLat){
+              var gKwQ2=gBldName+' '+gDong[1]+'동';
+              var gKwUrl='https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(gKwQ2)
+                +'&x='+gBaseLng+'&y='+gBaseLat+'&radius=500&size=1';
+              var gR2=await fetch(gKwUrl,{headers:{'Authorization':'KakaoAK '+kKey}});
+              var gKd2=await gR2.json();
+              if(gKd2.documents&&gKd2.documents[0]){
+                var gKwLat=parseFloat(gKd2.documents[0].y),gKwLng=parseFloat(gKd2.documents[0].x);
+                if(gpsDistance(gBaseLat,gBaseLng,gKwLat,gKwLng)<500){
+                  x.gps={lat:gKwLat,lng:gKwLng,acc:0,src:'kakao-dong'};
+                  _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+                  gGot=true;
+                }
+              }
+            }
+            // fallback: 단지 중심 좌표
+            if(!gGot&&gBaseLat){
+              x.gps={lat:gBaseLat,lng:gBaseLng,acc:0,src:'kakao'};
+              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+            }
+          }else{
+            // 일반 주소 (동 없음)
+            var gR3=await fetch('https://dapi.kakao.com/v2/local/search/address.json?query='+encodeURIComponent(x.addr)+'&size=1',
+              {headers:{'Authorization':'KakaoAK '+kKey}});
+            var gKd3=await gR3.json();
+            if(gKd3.documents&&gKd3.documents[0]){
+              x.gps={lat:parseFloat(gKd3.documents[0].y),lng:parseFloat(gKd3.documents[0].x),acc:0,src:'kakao'};
+              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+            }
           }
         }catch(e2){}
       }
