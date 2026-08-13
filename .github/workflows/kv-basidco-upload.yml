@@ -20,4 +20,5 @@ jobs:
       - name: 기초구역 KV 업로드
         run: python tools/kv-data/upload_cf_api.py
         env:
-          CF_API_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_GLOBAL_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_EMAIL: kimdh4790@gmail.com
