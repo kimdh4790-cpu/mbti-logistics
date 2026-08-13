@@ -18724,61 +18724,39 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     const corsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
     const zip = url.searchParams.get('zip') || '';
     if (!/^\d{5}$/.test(zip)) return new Response(JSON.stringify({error:'invalid_zip'}),{headers:corsH});
-    const dbg = {zip, steps:[]};
-    let cLat=0, cLng=0;
+    const dbg = {zip, steps:[], cql:{}};
+    // KV 확인
     try {
       const kvRaw = await env.DONWAY_ASSETS.get('basidco:'+zip);
-      if (kvRaw) {
-        const kv=JSON.parse(kvRaw);
-        if (Array.isArray(kv)&&kv.length) {
-          const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
-          cLat=s.lat/kv.length; cLng=s.lng/kv.length;
-          dbg.kvCentroid={lat:cLat,lng:cLng,points:kv.length};
-          dbg.steps.push('kv_ok');
-        }
-      } else { dbg.steps.push('kv_missing'); }
+      dbg.steps.push(kvRaw ? 'kv_ok' : 'kv_missing');
     } catch(e) { dbg.steps.push('kv_error:'+e.message); }
-    if (!cLat) {
+    // juso WFS CQL_FILTER 방식 (centroid 불필요)
+    const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+    const jusoHdrs={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+    for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO','PBDCO']) {
       try {
-        const nr=await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`,{headers:{'User-Agent':'yongcha.app/1.0'},signal:AbortSignal.timeout(6000)});
-        const nd=await nr.json();
-        if (nd.length){cLat=parseFloat(nd[0].lat);cLng=parseFloat(nd[0].lon);dbg.nominatim={lat:cLat,lng:cLng};dbg.steps.push('nominatim_ok');}
-        else dbg.steps.push('nominatim_empty');
-      } catch(e){dbg.steps.push('nominatim_error:'+e.message);}
-    }
-    if (cLat) {
-      const a=6378137,f=1/298.257222101,b=a*(1-f),e2=1-b*b/(a*a),ep2=e2/(1-e2);
-      const lat0=38*Math.PI/180,lng0=127.5*Math.PI/180,E0=1e6,N0=2e6,e4=e2*e2,e6=e4*e2;
-      const phi=cLat*Math.PI/180,lam=cLng*Math.PI/180,sp=Math.sin(phi),cp=Math.cos(phi),tp=Math.tan(phi);
-      const NN=a/Math.sqrt(1-e2*sp*sp),T=tp*tp,C=ep2*cp*cp,A=cp*(lam-lng0);
-      function dM(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
-      const tmX=E0+NN*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120);
-      const tmY=N0+(dM(phi)-dM(lat0)+NN*tp*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
-      dbg.tmCoords={x:Math.round(tmX),y:Math.round(tmY)};
-      const pad=3000, bbox=`${tmX-pad},${tmY-pad},${tmX+pad},${tmY+pad},EPSG:5179`;
-      dbg.bbox=bbox;
-      try {
-        const jusoUrl=`https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD&BBOX=${bbox}`;
-        dbg.jusoUrl=jusoUrl;
-        const jr=await fetch(jusoUrl,{headers:{'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},signal:AbortSignal.timeout(15000)});
-        dbg.jusoStatus=jr.status; dbg.jusoOk=jr.ok;
-        const jtext=await jr.text();
-        dbg.jusoBodyLen=jtext.length;
-        dbg.jusoBodySnippet=jtext.substring(0,600);
-        dbg.steps.push('juso_http_'+jr.status);
+        const cqlUrl=`${jusoBase}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`;
+        const jr=await fetch(cqlUrl,{headers:jusoHdrs,signal:AbortSignal.timeout(12000)});
+        const txt=await jr.text();
+        const info={status:jr.status,bodyLen:txt.length,snippet:txt.substring(0,300)};
         if (jr.ok) {
           try {
-            const jfc=JSON.parse(jtext);
-            dbg.featureCount=(jfc.features||[]).length;
-            const feat=(jfc.features||[]).find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
-            dbg.targetFound=!!feat;
-            if (feat) dbg.targetProps=feat.properties;
-            else if (jfc.features?.length) dbg.sampleProps=jfc.features[0].properties;
-            dbg.steps.push(feat?'feat_found':'feat_not_found_in_bbox');
-          } catch(pe){dbg.steps.push('json_parse_error:'+pe.message);}
-        }
-      } catch(e){dbg.jusoError=e.message;dbg.steps.push('juso_fetch_error:'+e.message);}
+            const jfc=JSON.parse(txt);
+            info.featureCount=(jfc.features||[]).length;
+            if (info.featureCount>0){info.sampleProps=jfc.features[0].properties;dbg.steps.push('cql_ok:'+prop);dbg.cql[prop]='OK '+info.featureCount+'개';}
+            else {dbg.cql[prop]='0개';dbg.steps.push('cql_empty:'+prop);}
+          } catch(pe){info.parseError=pe.message;dbg.steps.push('cql_parse_err:'+prop);}
+        } else {dbg.cql[prop]='HTTP '+jr.status;dbg.steps.push('cql_http_'+jr.status+':'+prop);}
+        dbg.cql[prop+'_detail']=info;
+      } catch(e){dbg.cql[prop]='error:'+e.message;dbg.steps.push('cql_err:'+prop);}
     }
+    // DescribeFeatureType — 실제 컬럼명 확인
+    try {
+      const dft=await fetch('https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&REQUEST=DescribeFeatureType&TYPENAME=daip:TBL_KARB_SBD&outputFormat=application/json',{headers:jusoHdrs,signal:AbortSignal.timeout(10000)});
+      const dtxt=await dft.text();
+      dbg.describeStatus=dft.status;
+      dbg.describeSnippet=dtxt.substring(0,800);
+    } catch(e){dbg.describeError=e.message;}
     return new Response(JSON.stringify(dbg,null,2),{headers:corsH});
   }
 
