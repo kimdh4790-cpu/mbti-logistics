@@ -18577,7 +18577,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       if (!Array.isArray(items)) return new Response('bad format', { status: 400 });
       const CHUNK = 25;
       for (let i = 0; i < items.length; i += CHUNK) {
-        await Promise.all(items.slice(i, i + CHUNK).map(({ key, value }) => env.KV.put(key, value)));
+        await Promise.all(items.slice(i, i + CHUNK).map(({ key, value }) => env.DONWAY_ASSETS.put(key, value)));
       }
       return new Response(JSON.stringify({ ok: true, count: items.length }), {
         headers: { 'Content-Type': 'application/json' }
@@ -18596,7 +18596,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     }
     // 1) KV 조회 (shapefile 변환 데이터 — 가장 빠름)
     try {
-      const kvVal = await env.KV.get('basidco:' + zip);
+      const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
       if (kvVal) {
         const coords = JSON.parse(kvVal);
         if (Array.isArray(coords) && coords.length >= 4) {
