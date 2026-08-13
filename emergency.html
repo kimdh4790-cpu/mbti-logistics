@@ -10410,7 +10410,18 @@ function doLogin(){
   if(!email||!pw){toast('이메일과 비밀번호를 입력해주세요');return;}
   _auth.signInWithEmailAndPassword(email,pw).catch(function(e){toast('❌ 로그인 실패: '+e.message);});
 }
-function doLogout(){_auth.signOut();}
+function doLogout(){
+  localStorage.removeItem('mbti_emer_driver');
+  localStorage.removeItem('mbti_emer_camp');
+  _emerSelDriver='';
+  _emerSelCamp='';
+  _CU=null;window._CU=null;
+  var ls=document.getElementById('login-screen');
+  var ms=document.getElementById('main-screen');
+  if(ms)ms.style.display='none';
+  if(ls)ls.style.display='flex';
+  _auth.signOut().catch(function(){});
+}
 
 function loadApiKeys(){
   var kKey=(localStorage.getItem('mbti_kakao_api_key')||'').trim();
@@ -14183,7 +14194,7 @@ function _saveApiKey(type) {
     localStorage.setItem('mbti_kakao_api_key', val);
     window._cachedKakaoApiKey = val;
     // Firestore에도 저장 (SA/관리자 전용)
-    if(_db && isSuperAdmin && isSuperAdmin()) {
+    if(_db && typeof isSuperAdmin==='function' && isSuperAdmin()) {
       _db.collection('settings').doc('claude_config').set({kakaoApiKey:val},{merge:true});
     }
     toast('✅ 카카오 키 저장');
@@ -14248,6 +14259,7 @@ async function openDeliveryMap(){
 function _showMapModal(locs){
   window._mapLocs=locs;
   document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
+  locs.forEach(function(x,i){ x._locsIdx=i; });
   var gpsLocs=locs.filter(function(x){return x.gps&&x.gps.lat;});
   var listHtml=locs.length?locs.map(function(x,i){
     var warn=x._misdelivery_warn?'<span style="background:#dc2626;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">⚠️ 오배송의심</span>':'';
@@ -14275,7 +14287,7 @@ function _showMapModal(locs){
         }).join('')
         +'</div></div>'
       :(isDone?'<div style="margin-left:32px;margin-bottom:8px;font-size:10px;color:rgba(255,255,255,.3)">사진 없음</div>':'');
-    return '<div style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px">'
+    return '<div data-map-idx="'+i+'" style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px;transition:box-shadow .2s">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
       +'<b style="font-size:13px;flex:1">'+(x.recipient||'미확인')+warn+'</b>'
@@ -14323,27 +14335,63 @@ function _loadLeafletMap(locs){
 function _renderLeafletMap(locs){
   var el=document.getElementById('dm-map');
   if(!el||!window.L)return;
-  // 이미 초기화된 경우 제거
   if(el._leaflet_id)return;
   var center=[locs[0].gps.lat,locs[0].gps.lng];
-  var map=L.map(el,{zoomControl:false,attributionControl:false}).setView(center,13);
+  var map=L.map(el,{zoomControl:false,attributionControl:false}).setView(center,15);
   L.control.zoom({position:'bottomright'}).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
-  var bounds=[];
-  locs.forEach(function(x,i){
-    var ll=[x.gps.lat,x.gps.lng];
-    bounds.push(ll);
-    var color=x.status==='완료'?'#16a34a':(x.status==='부분완료'?'#f97316':'#dc2626');
-    var icon=L.divIcon({
-      className:'',
-      html:'<div style="width:26px;height:26px;border-radius:50%;background:'+color+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(i+1)+'</div>',
-      iconSize:[26,26],iconAnchor:[13,13]
-    });
-    L.marker(ll,{icon:icon}).addTo(map)
-      .bindPopup('<b>'+(x.recipient||'미확인')+'</b><br><span style="font-size:11px">'+(x.addr||'')+'</span>');
+
+  // 동일/인근 좌표 그룹핑 (15m 이내 → 별도 핀)
+  var groups=[];
+  locs.forEach(function(x){
+    var found=null;
+    for(var p=0;p<groups.length;p++){
+      if(gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<15){
+        found=groups[p];break;
+      }
+    }
+    if(found){found.items.push(x);}
+    else{groups.push({lat:x.gps.lat,lng:x.gps.lng,items:[x]});}
   });
+
+  var bounds=[];
+  groups.forEach(function(grp){
+    var n=grp.items.length;
+    grp.items.forEach(function(x,gi){
+      // 같은 좌표에 여러 핀 → 원형으로 분산 (반경 약 20m)
+      var dlat=0,dlng=0;
+      if(n>1){
+        var angle=(2*Math.PI*gi)/n;
+        var r=0.00018;
+        dlat=r*Math.cos(angle);
+        dlng=r*Math.sin(angle)/Math.cos(grp.lat*Math.PI/180);
+      }
+      var ll=[grp.lat+dlat,grp.lng+dlng];
+      bounds.push(ll);
+      var origIdx=x._locsIdx!=null?x._locsIdx:0;
+      var color=x.status==='완료'?'#16a34a':(x.status==='부분완료'?'#f97316':'#dc2626');
+      var icon=L.divIcon({
+        className:'',
+        html:'<div style="width:26px;height:26px;border-radius:50%;background:'+color+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(origIdx+1)+'</div>',
+        iconSize:[26,26],iconAnchor:[13,13]
+      });
+      (function(oi){
+        L.marker(ll,{icon:icon}).addTo(map)
+          .bindPopup('<b>'+(x.recipient||'미확인')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>')
+          .on('click',function(){
+            var mo=document.getElementById('delivery-map-mo');
+            var card=mo&&mo.querySelector('[data-map-idx="'+oi+'"]');
+            if(card){
+              card.scrollIntoView({behavior:'smooth',block:'nearest'});
+              card.style.boxShadow='0 0 0 2px #c9a84c, 0 0 12px rgba(201,168,76,.4)';
+              setTimeout(function(){card.style.boxShadow='';},2000);
+            }
+          });
+      })(origIdx);
+    });
+  });
+
   if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20]});
-  // 컨테이너 크기 재계산 (bottom sheet 애니메이션 완료 후)
   setTimeout(function(){map.invalidateSize();},300);
 }
 
