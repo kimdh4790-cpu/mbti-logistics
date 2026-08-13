@@ -14249,6 +14249,22 @@ async function openDeliveryMap(){
           }
         }catch(e2){}
       }
+      // 아파트 동 주소: keyword 검색으로 동별 좌표 보정 (입구 → 실제 동 건물)
+      if(x.gps&&x.gps.lat&&x.gps.src!=='kakao-kw'&&x.addr&&/\d+동/.test(x.addr)&&kKey){
+        try{
+          var kwQ=x.addr.replace(/,/g,' ').replace(/\s+/g,' ').trim();
+          var kwR=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kwQ)+'&size=1',
+            {headers:{'Authorization':'KakaoAK '+kKey}});
+          var kwD=await kwR.json();
+          if(kwD.documents&&kwD.documents[0]){
+            var kwLat=parseFloat(kwD.documents[0].y),kwLng=parseFloat(kwD.documents[0].x);
+            if(gpsDistance(x.gps.lat,x.gps.lng,kwLat,kwLng)<300){
+              x.gps={lat:kwLat,lng:kwLng,acc:0,src:'kakao-kw'};
+              _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+            }
+          }
+        }catch(e3){}
+      }
       locs.push(x);
     }
     locs.sort(function(a,b){return (b.savedAt||'').localeCompare(a.savedAt||'');});
@@ -14357,12 +14373,17 @@ function _renderLeafletMap(locs){
   var bounds=[];
   groups.forEach(function(grp){
     var n=grp.items.length;
+    // 동 번호 기준으로 정렬 → 같은 아파트 단지면 동 번호 순으로 고정 배치
+    grp.items.sort(function(a,b){
+      var ma=(a.addr||'').match(/(\d+)동/),mb=(b.addr||'').match(/(\d+)동/);
+      return ((ma?parseInt(ma[1]):9999)-(mb?parseInt(mb[1]):9999));
+    });
     grp.items.forEach(function(x,gi){
-      // 같은 좌표에 여러 핀 → 원형으로 분산 (반경 약 20m)
+      // 같은 좌표에 여러 핀 → 원형으로 분산 (반경 약 30m)
       var dlat=0,dlng=0;
       if(n>1){
         var angle=(2*Math.PI*gi)/n;
-        var r=0.00018;
+        var r=0.00025;
         dlat=r*Math.cos(angle);
         dlng=r*Math.sin(angle)/Math.cos(grp.lat*Math.PI/180);
       }
@@ -14377,7 +14398,7 @@ function _renderLeafletMap(locs){
       });
       (function(oi){
         L.marker(ll,{icon:icon}).addTo(map)
-          .bindPopup('<b>'+(x.recipient||'미확인')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>')
+          .bindPopup((function(){var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';})())
           .on('click',function(){
             var mo=document.getElementById('delivery-map-mo');
             var card=mo&&mo.querySelector('[data-map-idx="'+oi+'"]');
