@@ -13207,7 +13207,7 @@ function _judgeApply(applyId,status,name,driverId){
     }
     _closeModal();
     _pgHome(document.getElementById('content'));
-  });
+  }).catch(function(e){_yToast('처리 실패: '+e.message);});
 }
 
 function _yAutoChat(driverId,driverName,applyData,postTitle,unitPrice,startDate){
@@ -13308,7 +13308,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
       _yToast('건수 저장됐어요! '+cnt+'건 / '+Number(cnt*unitPrice).toLocaleString()+'원');
       _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
       _closeModal();
-    });
+    }).catch(function(e){_yToast('저장 실패: '+e.message);});
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
@@ -13344,7 +13344,7 @@ function _yShowWeeklyDriver(el){
       '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+Number(totalAmt).toLocaleString()+'원</div>'+
       '<div style="font-size:12px;color:var(--t3)">총 '+totalCnt+'건</div></div>'+
       '<div>'+rows+'</div>';
-  }).catch(function(){});
+  }).catch(function(e){var list=document.getElementById('weekly-driver-list');if(list)list.innerHTML='<div style="font-size:12px;color:var(--rd);padding:8px">주간 데이터 로드 실패: '+_esc(e.message)+'</div>';});
 }
 
 function _yShowWeeklyAgency(el, agencyId){
@@ -13377,7 +13377,7 @@ function _yShowWeeklyAgency(el, agencyId){
         '</div>';
     });
     list.innerHTML=html;
-  }).catch(function(){});
+  }).catch(function(e){var list=document.getElementById('weekly-agency-list');if(list)list.innerHTML='<div style="font-size:12px;color:var(--rd);padding:8px">기사 건수 로드 실패: '+_esc(e.message)+'</div>';});
 }
 
 function _yRequestSettle(driverId,driverName,cnt,amt,weekStart){

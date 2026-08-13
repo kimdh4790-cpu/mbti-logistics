@@ -232,7 +232,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
     match /yongcha_resumes/{docId} {
-      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || isSuperAdmin());
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.isPublic == true || isSuperAdmin());
       allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
       allow update: if isAuth() && resource.data.driverId == request.auth.uid;
       allow delete: if isAuth() && resource.data.driverId == request.auth.uid || isSuperAdmin();
@@ -270,7 +270,7 @@ service cloud.firestore {
     }
     match /yongcha_stats/{region} {
       allow read: if isAuth();
-      allow write: if isSuperAdmin();
+      allow write: if isAuth();
     }
     match /yongcha_daily_records/{docId} {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
