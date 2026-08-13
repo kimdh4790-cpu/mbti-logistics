@@ -12831,6 +12831,28 @@ function _showPostDetail(d){
   _openModal();
   window._detailMapRadius=_mapR;
 
+  // 미지급 정산 경고 배지 — 기사가 공고 상세 볼 때 비동기 주입
+  if(isDriver&&d.agencyId){
+    var d7ago2=new Date(Date.now()-7*24*60*60*1000);
+    _db.collection('yongcha_settlements')
+      .where('agencyId','==',d.agencyId).where('status','==','pending').get()
+      .then(function(snap){
+        var overdue=0;
+        snap.forEach(function(doc){
+          var s=doc.data();var ct=s.createdAt;
+          if(ct&&ct.toDate&&ct.toDate()<d7ago2) overdue++;
+        });
+        if(!overdue)return;
+        var mb=document.getElementById('modal-body');if(!mb)return;
+        var warn=document.createElement('div');
+        warn.style.cssText='background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px';
+        warn.innerHTML=
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'+
+          '<span style="font-size:12.5px;font-weight:700;color:var(--rd)">이 대리점은 현재 미지급 정산이 '+overdue+'건 있어요. 지원 전 확인하세요.</span>';
+        mb.insertAdjacentElement('afterbegin',warn);
+      }).catch(function(){});
+  }
+
   // 배송지역 주유소 — 배송지(zone zipcode) 기준. 캠프(loadingLat) 아님
   if(isDriver){
     var _gZip=(d.zones&&d.zones.length&&d.zones[0].zipcode)||'';
@@ -14122,6 +14144,26 @@ function _submitPost(){
     return;
   }
 
+  // 미지급 정산 7일 초과 시 공고 등록 차단
+  var _settleOk=new Promise(function(resolve){
+    var d7ago=new Date(Date.now()-7*24*60*60*1000);
+    _db.collection('yongcha_settlements')
+      .where('agencyId','==',_CU.uid).where('status','==','pending').get()
+      .then(function(snap){
+        var overdue=false;
+        snap.forEach(function(doc){
+          var s=doc.data();
+          var ct=s.createdAt;
+          if(ct&&ct.toDate&&ct.toDate()<d7ago) overdue=true;
+        });
+        if(overdue){
+          _yToast('미지급 정산이 7일 이상 있어요. 먼저 정산을 완료해야 새 공고를 등록할 수 있어요.');
+          btn.textContent=' 공고 등록하기';btn.disabled=false;_unlock();
+          resolve(false);
+        } else {resolve(true);}
+      }).catch(function(){resolve(true);});
+  });
+
   // 신규 대리점 30일 이내 일 3건 제한
   var _agencyLimitOk=new Promise(function(resolve){
     if(!_CU.createdAt){resolve(true);return;}
@@ -14142,7 +14184,7 @@ function _submitPost(){
   var cutoff=new Date(Date.now()-24*60*60*1000);
   var myKey=_yPostKey({agencyId:_CU.uid,courier:courier,area:area,routeNo:routeNo,
                        unitPrice:parseInt(price),startDate:date,workShift:workShift});
-  _agencyLimitOk.then(function(ok){
+  _settleOk.then(function(ok){return ok?_agencyLimitOk:false;}).then(function(ok){
     if(!ok)return;
     return _db.collection('yongcha_posts')
     .where('agencyId','==',_CU.uid)
@@ -16728,6 +16770,63 @@ function _pgDashboard(el){
     var db=document.getElementById('dash-body');
     if(db)db.insertAdjacentElement('beforebegin',banner);
   }).catch(function(){});
+
+  // 미지급 정산 목록 + 신고 버튼 (기사 전용)
+  _db.collection('yongcha_settlements').where('driverId','==',_CU.uid)
+    .where('status','==','pending').get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var d7ago=new Date(Date.now()-7*24*60*60*1000);
+    var overdue=[];
+    snap.forEach(function(doc){
+      var s=doc.data();var ct=s.createdAt;
+      if(ct&&ct.toDate&&ct.toDate()<d7ago) overdue.push({id:doc.id,s:s});
+    });
+    if(!overdue.length)return;
+    var wrap=document.createElement('div');
+    wrap.style.cssText='background:rgba(239,68,68,.06);border:1.5px solid rgba(239,68,68,.25);border-radius:12px;padding:14px;margin-bottom:14px';
+    var html='<div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">'+
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--rd)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'+
+      '<span style="font-size:14px;font-weight:900;color:var(--rd)">7일 이상 미지급 정산 '+overdue.length+'건</span></div>';
+    overdue.forEach(function(item){
+      var s=item.s,id=item.id;
+      var ct=s.createdAt&&s.createdAt.toDate?s.createdAt.toDate():new Date();
+      var daysAgo=Math.floor((Date.now()-ct.getTime())/(24*60*60*1000));
+      html+='<div style="background:var(--bg2);border-radius:9px;padding:11px 13px;margin-bottom:8px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+          '<div>'+
+            '<div style="font-size:13.5px;font-weight:800">'+_esc(s.agencyName||'대리점')+'</div>'+
+            '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
+              _esc((s.weekStart||'').slice(0,10))+' · '+_won(Number(s.totalCount||0))+'건 · <span style="color:var(--rd);font-weight:800">'+_won(Number(s.totalAmount||s.amount||0))+'원</span>'+
+              ' <span style="color:var(--t3)">('+(daysAgo)+'일 경과)</span>'+
+            '</div>'+
+          '</div>'+
+          '<button type="button" onclick="_reportUnpaidSettle(\\''+id+'\\',\\''+_esc(s.agencyId||'')+'\\')" '+
+          'style="flex-shrink:0;min-height:36px;padding:0 12px;background:var(--rdl);color:var(--rd);border:1.5px solid var(--rd);border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">'+
+          '미지급 신고</button>'+
+        '</div>'+
+      '</div>';
+    });
+    wrap.innerHTML=html;
+    var db=document.getElementById('dash-body');
+    if(db)db.insertAdjacentElement('beforebegin',wrap);
+  }).catch(function(){});
+}
+
+function _reportUnpaidSettle(settleId,agencyId){
+  if(!confirm('미지급 정산을 신고할까요?\n관리자가 확인 후 조치합니다.'))return;
+  var now=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('yongcha_reports').add({
+    type:'settle_dispute',
+    settleId:settleId,agencyId:agencyId,
+    reporterId:_CU.uid,reporterName:_CU.name,reporterType:'driver',
+    status:'pending',createdAt:now
+  }).then(function(){
+    _db.collection('yongcha_settlements').doc(settleId).update({
+      disputeReported:true,disputeAt:now
+    }).catch(function(){});
+    _yToast('신고가 접수됐어요. 관리자가 대리점에 연락합니다.');
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 // ── 소장 정산 관리 대시보드 ────────────────────────────────────
@@ -16835,6 +16934,7 @@ function _pgDashboardAgency(el){
         else if(state==='역발행요청')badge='<span style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 승인 대기</span>';
         else if(state==='역발행거부')badge='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 거부</span>';
         else badge='<span style="background:var(--bg3);color:var(--t3);border:1px solid var(--bd);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">미발송</span>';
+        if(s.disputeReported)badge+='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">미지급 신고됨</span>';
         var canSend=(state===''||state==='미발송'||state==='역발행거부');
         var dPhone=_esc(s.driverPhone||s.notifyPhone||'');
         var dName=_jsq(s.driverName||'기사');
