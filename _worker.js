@@ -289,6 +289,8 @@ function getPlanUrl(planType, slug) {
 // POST /sa/firestore { collection, docId, fields: {key:value} }
 async function handleSAFirestore(request, env) {
   try {
+    const _saAdmin = await requireAdmin(request, env);
+    if (!_saAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
     const body = await request.json();
     const { collection, docId, fields } = body;
     if (!collection || !docId || !fields) {
@@ -347,6 +349,8 @@ async function handleSAFirestore(request, env) {
 // ── 기사 배치 업데이트 (이름 기준 ssn/joinDate/bizNum) ──
 async function handleDriversBatch(request, env) {
   try {
+    const _dbAdmin = await requireAdmin(request, env);
+    if (!_dbAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
     const body = await request.json();
     const { dealerId, drivers } = body;
     if (!dealerId || !drivers) return new Response(JSON.stringify({error:'dealerId/drivers 필수'}), {status:400, headers:{'Content-Type':'application/json'}});
@@ -1997,6 +2001,8 @@ async function acceptExchange(){
       if (path === '/api/save-member' && method === 'POST') {
         // 사장님이 직원 등록/수정 — SA 토큰으로 Firestore 저장
         try {
+          const _smUser = await verifyFirebaseToken(request, env);
+          if (!_smUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const body = await request.json();
           if (!body.dealerId || !body.name) return new Response(JSON.stringify({error:'dealerId and name required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token = await getAccessToken(env);
@@ -2150,6 +2156,10 @@ async function acceptExchange(){
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        const _trIP1 = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (!checkRateLimit(_trIP1 + ':translate', 30, 60000)) {
+          return new Response(JSON.stringify({error:'요청 한도 초과'}),{status:429,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
@@ -2254,8 +2264,8 @@ async function acceptExchange(){
         }
       }
       if (path === '/api/menus-bulk' && method === 'POST') {
-        const adminEmail = request.headers.get('X-Admin-Email') || '';
-        if (!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(adminEmail)) {
+        const _mbAdmin = await requireAdmin(request, env);
+        if (!_mbAdmin) {
           return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
         }
         try {
@@ -3278,6 +3288,8 @@ fetch('/qr/members?did='+DID)
       // ── /api/review-reply — AI 리뷰 답글 생성
       if (path === '/api/review-reply' && method === 'POST') {
         try {
+          const _rrUser = await verifyFirebaseToken(request, env);
+          if (!_rrUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const body = await request.json();
           const { review, type, compName } = body;
           const typeLabel = type===1?'긍정적이고 감사한':type===0?'사과하고 개선 의지를 보이는':'친절하고 전문적인';
@@ -3692,6 +3704,8 @@ ${JSON.stringify(postSummary)}
       // ── /api/filo-push — 사장님 FCM 신규주문/웨이팅/재고부족 알림
       if (path === '/api/filo-push' && method === 'POST') {
         try {
+          const _fpUser = await verifyFirebaseToken(request, env);
+          if (!_fpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const body = await request.json();
           const { did, title, body: msgBody } = body;
           if (!did || !title) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
@@ -3714,6 +3728,8 @@ ${JSON.stringify(postSummary)}
       // ── /api/payslip-fcm — 직원 급여명세서 FCM 발송
       if (path === '/api/payslip-fcm' && method === 'POST') {
         try {
+          const _psUser = await verifyFirebaseToken(request, env);
+          if (!_psUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const body = await request.json();
           const { did, ym, employees } = body;
           if (!did || !employees || !employees.length) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
@@ -3959,6 +3975,10 @@ ${JSON.stringify(postSummary)}
 
       if (path === '/api/translate') {
         if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        const _trIP2 = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (!checkRateLimit(_trIP2 + ':translate', 30, 60000)) {
+          return new Response(JSON.stringify({error:'요청 한도 초과'}),{status:429,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
@@ -5084,6 +5104,9 @@ fetch('/qr/members?did='+DID)
       try {
         const body = await request.json();
         const { storagePath, base64data, contentType, idToken } = body;
+        if (!base64data || base64data.length > 10 * 1024 * 1024) {
+          return new Response(JSON.stringify({ok:false,error:'파일 크기 초과 (최대 7.5MB)'}),{status:413,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
         const bucket = 'mbti-logistics.appspot.com';
         const uploadUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o?uploadType=media&name=' + encodeURIComponent(storagePath);
         const binary = atob(base64data);
@@ -5137,7 +5160,14 @@ fetch('/qr/members?did='+DID)
         });
       }
       try {
+        const _loUser = await verifyFirebaseToken(request, env);
+        if (!_loUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const body = await request.json();
+        const safeBody = {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: Math.min(body.max_tokens || 1024, 2048),
+          messages: body.messages
+        };
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         if (!apiKey) {
           return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정. Cloudflare Workers 환경변수를 확인하세요.' } }), {
@@ -5151,7 +5181,7 @@ fetch('/qr/members?did='+DID)
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01'
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(safeBody)
         });
         const data = await resp.json();
         // Anthropic 응답 그대로 전달 (에러 status code 포함)
@@ -5169,7 +5199,14 @@ fetch('/qr/members?did='+DID)
 
     if (path === '/claude-ocr' && method === 'POST') {
       try {
+        const _coUser = await verifyFirebaseToken(request, env);
+        if (!_coUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const body = await request.json();
+        const safeOcrBody = {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: Math.min(body.max_tokens || 1024, 2048),
+          messages: body.messages
+        };
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         if (!apiKey) {
           return new Response(JSON.stringify({ error: { message: 'ANTHROPIC_API_KEY 환경변수 미설정' } }), {
@@ -5184,7 +5221,7 @@ fetch('/qr/members?did='+DID)
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01'
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(safeOcrBody)
         });
         const data = await resp.json();
         return new Response(JSON.stringify(data), {
@@ -5355,8 +5392,7 @@ fetch('/qr/members?did='+DID)
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await fetchAsset(new URL(req.url).pathname, request, env);
       const html = await resp.text();
-      const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
+      const injected = html.replace('<head>', '<head><script>window.__AK="";</script>');
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
@@ -5753,6 +5789,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     if (path === '/api/send-email') {
       if (method !== 'POST') return new Response('Method Not Allowed', {status:405});
       try {
+        const _seAdmin = await requireAdmin(request, env);
+        if (!_seAdmin) return new Response(JSON.stringify({ok:false,reason:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
         const body = await request.json();
         const { email, companyName, tempPassword, loginUrl } = body;
         if (!email || !companyName) return new Response(JSON.stringify({ok:false,reason:'missing_params'}), {status:400,headers:{'Content-Type':'application/json'}});
@@ -5824,11 +5862,10 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const resp = await fetchAsset('/settle.html', request, env);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
-        const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
         // manifest 링크를 슬러그 기반으로 교체
         html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
-        const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
+        const slugScript = '<script>window.__AK="";window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         // 구독 팝업: AI정산+배달대행만 노출 / 회사등록: 범용·재고 숨김 / 요금 실제값으로 교체
         const hideScript = '<style>' +
           '#svc-universal-card,#svc-inventory-card{display:none!important}' +
@@ -6049,6 +6086,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     // 모두싸인 계약서 발송 프록시 (API 키 보호)
     if (path === '/modusign-send' && method === 'POST') {
       try {
+        const _msUser = await verifyFirebaseToken(request, env);
+        if (!_msUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const body = await request.json();
         const apiKey = env.MODUSIGN_API_KEY || '';
         if(!apiKey) return new Response(JSON.stringify({error:'MODUSIGN_API_KEY 미설정'}),{status:500,headers:{'Content-Type':'application/json'}});
@@ -7945,8 +7984,8 @@ service cloud.firestore {
     // ══════════════════════════════════════════
     if (path === '/sa/manual-activate' && method === 'POST') {
       try {
-        // 슈퍼어드민만 허용
-        const authHeader = request.headers.get('Authorization') || '';
+        const _maAdmin = await requireAdmin(request, env);
+        if (!_maAdmin) return new Response(JSON.stringify({ok:false,reason:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
         const body = await request.json();
         const { email, plan, months=1, memo='' } = body;
         if (!email || !plan) return new Response(JSON.stringify({ok:false,reason:'이메일/플랜 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
@@ -8044,6 +8083,10 @@ service cloud.firestore {
     // ══════════════════════════════════════════
     if (path === '/hana/webhook' && method === 'POST') {
       try {
+        const _hanaSecret = env.HANA_WEBHOOK_SECRET || '';
+        if (!_hanaSecret) return new Response('webhook disabled',{status:503});
+        const _hanaProvided = request.headers.get('X-Hana-Secret') || '';
+        if (_hanaProvided !== _hanaSecret) return new Response(JSON.stringify({error:'forbidden'}),{status:403,headers:{'Content-Type':'application/json'}});
         const body = await request.json();
         // 하나은행 입금 알림 파라미터
         // inAmt: 입금액, dpstrNm: 입금자명, acctNo: 계좌번호, trDt: 거래일자
@@ -8199,6 +8242,8 @@ service cloud.firestore {
     // ── 관리자 FCM 알림 (/fcm/notify-admin) ──
     if (path === '/fcm/notify-admin' && method === 'POST') {
       try {
+        const _naAdmin = await requireAdmin(request, env);
+        if (!_naAdmin) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json',...SECURITY_HEADERS}});
         const body = await request.json();
         const { title, body: msgBody, type } = body;
         const token = await getAccessToken(env);
@@ -8220,6 +8265,8 @@ service cloud.firestore {
     // ── 기사 FCM 알림 (/fcm/notify-drivers) ──
     if (path === '/fcm/notify-drivers' && method === 'POST') {
       try {
+        const _ndUser = await verifyFirebaseToken(request, env);
+        if (!_ndUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const body = await request.json();
         const { tokens, title, body: msgBody, type, url, data: extraData } = body;
         if (!tokens || !tokens.length) {
@@ -8416,14 +8463,10 @@ service cloud.firestore {
     // POST /toss/payout  — 즉시송금(EXPRESS) or 예약송금(SCHEDULED)
     if (path === '/toss/payout' && method === 'POST') {
       try {
+        const _payAdmin = await requireAdmin(request, env);
+        if (!_payAdmin) return new Response(JSON.stringify({ error: '권한 없음' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         const body = await request.json();
-        const { dealerId, adminEmail, payouts, scheduleType, payoutDate } = body;
-        const ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
-
-        // 슈퍼어드민 or 해당 딜러만 허용
-        if (!adminEmail || (!ADMIN_EMAILS.includes(adminEmail) && adminEmail !== dealerId)) {
-          return new Response(JSON.stringify({ error: '권한 없음' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-        }
+        const { dealerId, payouts, scheduleType, payoutDate } = body;
 
         const TOSS_PAYOUT_SECRET = env.TOSS_PAYOUT_SECRET_KEY || env.TOSS_SECRET_KEY || '';
         if (!TOSS_PAYOUT_SECRET) {
@@ -8558,14 +8601,10 @@ service cloud.firestore {
     // ── 임시 비밀번호 조회 (슈퍼어드민 전용) /toss/temp-pw ──
     if (path === '/toss/temp-pw' && method === 'POST') {
       try {
+        const _twAdmin = await requireAdmin(request, env);
+        if (!_twAdmin) return new Response(JSON.stringify({ error: '권한 없음' }), { status: 401, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS } });
         const body = await request.json();
-        const { dealerId, adminEmail } = body;
-        const ADMIN_EMAILS = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
-        if (!ADMIN_EMAILS.includes(adminEmail)) {
-          return new Response(JSON.stringify({ error: '권한 없음' }), {
-            status: 403, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS }
-          });
-        }
+        const { dealerId } = body;
         const token = await getAccessToken(env);
         const resp = await fetch(`${FS_BASE}/companies/${dealerId}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -19120,8 +19159,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
   // ── [임시] 기초구역 KV 배치 쓰기 (배포 후 제거 예정) ─────────────────
   if (path === '/api/yongcha/kv-batch-write' && method === 'POST') {
+    const _kvBatchSecret = env.KV_BATCH_SECRET || '';
+    if (!_kvBatchSecret) return new Response('disabled', { status: 503 });
     const j = request.headers.get('x-batch-secret');
-    if (j !== 'basidco2024write') return new Response('forbidden', { status: 403 });
+    if (j !== _kvBatchSecret) return new Response('forbidden', { status: 403 });
     try {
       const items = await request.json();
       if (!Array.isArray(items)) return new Response('bad format', { status: 400 });
