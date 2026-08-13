@@ -14306,6 +14306,45 @@ function _closeDeliveryMap(){
   var mo=document.getElementById('delivery-map-mo');
   if(mo)mo.remove();
 }
+function _openNaviSheet(lat,lng,name){
+  var old=document.getElementById('navi-sheet');if(old)old.remove();
+  var enc=encodeURIComponent(name||'배송지');
+  var apps=[
+    {label:'T map',     clr:'#1a6fe8',fg:'#fff',
+     url:'tmap://route?goalname='+enc+'&goalx='+lng+'&goaly='+lat,
+     web:'https://tmap.life/route/car?goalname='+enc+'&goalx='+lng+'&goaly='+lat},
+    {label:'카카오맵',  clr:'#fee500',fg:'#3c1e1e',
+     url:'kakaomap://route?ep='+lat+','+lng+'&by=CAR',
+     web:'https://map.kakao.com/link/to/'+enc+','+lat+','+lng},
+    {label:'네이버지도',clr:'#03c75a',fg:'#fff',
+     url:'nmap://route/car?dlat='+lat+'&dlng='+lng+'&dname='+enc+'&appname=kr.co.mbtico',
+     web:'https://map.naver.com/index.nhn?elat='+lat+'&elng='+lng+'&etext='+enc+'&menu=route'},
+    {label:'구글지도',  clr:'#4285f4',fg:'#fff',
+     url:'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng,
+     web:'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng}
+  ];
+  var btns=apps.map(function(a){
+    return '<button onclick="event.stopPropagation();(function(){'
+      +'var done=false;'
+      +'var t=setTimeout(function(){if(!done){done=true;window.open(\''+a.web+'\',\'_blank\');}},800);'
+      +'try{location.href=\''+a.url+'\';}catch(e){}'
+      +'setTimeout(function(){done=true;clearTimeout(t);},1400);'
+      +'})();var s=document.getElementById(\'navi-sheet\');if(s)s.remove();" '
+      +'style="padding:16px 8px;background:'+a.clr+';border:none;border-radius:12px;color:'+a.fg+';font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;width:100%">'+a.label+'</button>';
+  }).join('');
+  var disp=(name||'').length>30?name.slice(0,30)+'…':name;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="navi-sheet" onclick="if(event.target.id===\'navi-sheet\')this.remove()" '
+    +'style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1100;display:flex;align-items:flex-end;justify-content:center;font-family:Pretendard,sans-serif">'
+    +'<div onclick="event.stopPropagation()" style="background:#1e293b;border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:16px 16px 36px">'
+    +'<div style="width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 16px"></div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">길 안내 앱 선택</div>'
+    +'<div style="font-size:13px;font-weight:700;color:#c9a84c;margin-bottom:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+disp+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+btns+'</div>'
+    +'<button onclick="document.getElementById(\'navi-sheet\').remove()" style="width:100%;margin-top:12px;padding:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:rgba(255,255,255,.6);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation">취소</button>'
+    +'</div></div>'
+  );
+}
 
 function _showMapModal(locs){
   window._mapLocs=locs;
@@ -14320,8 +14359,9 @@ function _showMapModal(locs){
     var statusDot=isDone?'<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:999px;font-weight:700">✅완료</span>':(isPart?'<span style="font-size:10px;background:#fff7ed;color:#f97316;padding:2px 7px;border-radius:999px;font-weight:700">🟠부분</span>':'<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:999px;font-weight:700">⏳미완료</span>');
     var fbId=x.fbId||'';
     var trackVal=x.tracking||(x.trackings&&x.trackings[0])||'';
+    var _navN=((x.recipient||'')+'·'+(x.addr||'')).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var mapBtn=hasGps
-      ?'<button onclick="event.stopPropagation();window.open(\'https://maps.google.com/?q='+x.gps.lat+','+x.gps.lng+'\',\'_blank\')" style="flex:1;padding:8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.4);border-radius:8px;color:#3b82f6;font-size:11px;font-weight:700;cursor:pointer">🗺️ 지도</button>'
+      ?'<button onclick="event.stopPropagation();_openNaviSheet('+x.gps.lat+','+x.gps.lng+',\''+_navN+'\')" style="flex:1;padding:8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:8px;color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">길 안내</button>'
       :'<div style="flex:1;padding:8px;text-align:center;font-size:10px;color:rgba(255,255,255,.3)">GPS없음</div>';
     var completeBtn=fbId&&!isDone
       ?'<button onclick="event.stopPropagation();openDelivComplete(\''+fbId+'\','+i+')" style="flex:1;padding:8px;background:#16a34a;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">✅ 완료처리</button>'
