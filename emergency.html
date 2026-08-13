@@ -83,8 +83,8 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       배송
     </div>
-    <button id="pwa-install-btn" onclick="_pwaInstall()" style="display:none;font-size:11px;padding:5px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:8px;color:#c9a84c;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>홈화면
+    <button id="pwa-install-btn" onclick="_pwaInstall()" style="display:flex;align-items:center;gap:4px;font-size:11px;padding:5px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:8px;color:#c9a84c;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>홈화면
     </button>
     <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px">로그아웃</button>
   </div>
@@ -5011,8 +5011,6 @@ var _pwaDeferred=null;
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   _pwaDeferred=e;
-  var btn=document.getElementById('pwa-install-btn');
-  if(btn)btn.style.display='flex';
 });
 window.addEventListener('appinstalled',function(){
   _pwaDeferred=null;
@@ -5020,9 +5018,36 @@ window.addEventListener('appinstalled',function(){
   if(btn)btn.style.display='none';
 });
 function _pwaInstall(){
-  if(!_pwaDeferred)return;
-  _pwaDeferred.prompt();
-  _pwaDeferred.userChoice.then(function(){ _pwaDeferred=null; });
+  if(_pwaDeferred){
+    _pwaDeferred.prompt();
+    _pwaDeferred.userChoice.then(function(r){
+      if(r.outcome==='accepted')_pwaDeferred=null;
+    });
+    return;
+  }
+  // 수동 안내 시트
+  var old=document.getElementById('pwa-guide-sheet');if(old)old.remove();
+  var isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var sheet=document.createElement('div');
+  sheet.id='pwa-guide-sheet';
+  sheet.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:flex-end';
+  sheet.onclick=function(e){if(e.target===sheet)sheet.remove()};
+  sheet.innerHTML='<div style="width:100%;background:#1e293b;border-radius:20px 20px 0 0;padding:24px 20px 36px;max-width:480px;margin:0 auto">'
+    +'<div style="width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 20px"></div>'
+    +'<div style="font-size:15px;font-weight:800;color:#f1f5f9;margin-bottom:6px">홈화면에 배송앱 추가</div>'
+    +'<div style="font-size:12px;color:#94a3b8;margin-bottom:20px">앱처럼 빠르게 실행할 수 있어요</div>'
+    +(isIos
+      ?'<div style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:16px;font-size:13px;color:#f1f5f9;line-height:1.8">'
+        +'<div style="margin-bottom:6px">① Safari 하단 <b style="color:#c9a84c">공유</b> 버튼 탭</div>'
+        +'<div style="margin-bottom:6px">② <b style="color:#c9a84c">홈 화면에 추가</b> 선택</div>'
+        +'<div>③ 오른쪽 상단 <b style="color:#c9a84c">추가</b> 탭</div></div>'
+      :'<div style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:16px;font-size:13px;color:#f1f5f9;line-height:1.8">'
+        +'<div style="margin-bottom:6px">① Chrome 우측 상단 <b style="color:#c9a84c">⋮ 메뉴</b> 탭</div>'
+        +'<div style="margin-bottom:6px">② <b style="color:#c9a84c">앱 설치</b> 또는 <b style="color:#c9a84c">홈 화면에 추가</b></div>'
+        +'<div>③ <b style="color:#c9a84c">설치</b> 탭</div></div>')
+    +'<button onclick="document.getElementById(\'pwa-guide-sheet\').remove()" style="width:100%;margin-top:16px;padding:14px;background:#334155;border:none;border-radius:10px;color:#f1f5f9;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>'
+    +'</div>';
+  document.body.appendChild(sheet);
 }
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
