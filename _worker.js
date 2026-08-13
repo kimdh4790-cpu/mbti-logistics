@@ -10623,7 +10623,7 @@ function _pgHomeDriver(el){
 
   // 수입 목표 달성률 위젯
   _renderGoalWidget();
-
+}
 
 /* ── 소장 홈 ── */
 function _pgHomeAgency(el){
