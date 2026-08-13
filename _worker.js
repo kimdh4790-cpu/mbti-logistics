@@ -17262,30 +17262,46 @@ function _addZoneByZip(){
               }
             })
             .catch(function(){_fetchVworld(null,lat,lng);});
-            // 시도 2: 브라우저에서 vWorld WFS 직접 (한국 IP → Cloudflare 차단 없음)
+            // 시도 2: vWorld /req/data JSONP (CORS 우회, 브라우저 한국 IP)
             function _fetchVworld(fallbackCoords,cLat,cLng){
               var vKey='DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A';
-              var vUrl='https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key='+vKey+'&CQL_FILTER='+encodeURIComponent("BAS_ID='"+zipcode+"'")+'&SRSNAME=EPSG:4326&MAXFEATURES=1';
-              fetch(vUrl,{signal:AbortSignal.timeout(12000)})
-              .then(function(r){return r.json();})
-              .then(function(fc){
-                var feats=(fc.features||[]);
+              var cbName='_vwCb'+Date.now();
+              var sid='_vws'+Date.now();
+              var done=false;
+              function _cleanup(){
+                clearTimeout(tid);
+                if(window[cbName])delete window[cbName];
+                var el=document.getElementById(sid);
+                if(el&&el.parentNode)el.parentNode.removeChild(el);
+              }
+              function _fb(){
+                if(done)return; done=true;
+                _cleanup();
+                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
+                else{_fetchNominatim();}
+              }
+              var tid=setTimeout(_fb,12000);
+              window[cbName]=function(res){
+                if(done)return; done=true;
+                _cleanup();
+                var feats=(((res.response||{}).result||{}).featureCollection||{}).features||[];
                 if(feats.length){
                   var c=_geomToCoords(feats[0].geometry);
                   if(c.length>=4){
-                    var sumLat=0,sumLng=0;
-                    c.forEach(function(p){sumLat+=p.lat;sumLng+=p.lng;});
-                    _applyBoundary({coords:c,lat:sumLat/c.length,lng:sumLng/c.length});
+                    var sLat=0,sLng=0;
+                    c.forEach(function(p){sLat+=p.lat;sLng+=p.lng;});
+                    _applyBoundary({coords:c,lat:sLat/c.length,lng:sLng/c.length});
                     return;
                   }
                 }
                 if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
                 else{_fetchNominatim();}
-              })
-              .catch(function(){
-                if(fallbackCoords){_applyBoundary({coords:fallbackCoords,lat:cLat,lng:cLng});}
-                else{_fetchNominatim();}
-              });
+              };
+              var sc=document.createElement('script');
+              sc.id=sid;
+              sc.onerror=_fb;
+              sc.src='https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key='+vKey+'&attrFilter=BAS_ID:=:'+zipcode+'&pageSize=1&geometry=true&srsName=EPSG:4326&callback='+cbName;
+              document.head.appendChild(sc);
             }
             // 시도 3: Nominatim — 법정동 이름 검색 (최종 폴백)
             function _fetchNominatim(){
