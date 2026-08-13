@@ -18618,35 +18618,40 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const lng2=lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/cp1;
       return {lat:lat*180/Math.PI, lng:lng2*180/Math.PI};
     }
-    // 0) business.juso.go.kr WFS — 행안부 공식 기초구역 경계 (EPSG:5179 BBOX, 가장 정확)
+    // 0) business.juso.go.kr WFS — CQL_FILTER로 직접 조회 (centroid 불필요)
     try {
-      let cLat=0, cLng=0;
-      const kvRaw=await env.DONWAY_ASSETS.get('basidco:'+zip);
-      if (kvRaw) {
-        const kv=JSON.parse(kvRaw);
-        if (Array.isArray(kv)&&kv.length) {
-          const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
-          cLat=s.lat/kv.length; cLng=s.lng/kv.length;
+      const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+      const jusoHdrs={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+      let jFeats=null;
+      for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO']) {
+        try {
+          const jr=await fetch(`${jusoBase}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`,{headers:jusoHdrs,signal:AbortSignal.timeout(12000)});
+          if (jr.ok){const jfc=await jr.json();if((jfc.features||[]).length){jFeats=jfc.features;break;}}
+        } catch(_){}
+      }
+      if (!jFeats) {
+        // BBOX 폴백 (KV centroid가 있는 경우)
+        const kvRaw=await env.DONWAY_ASSETS.get('basidco:'+zip);
+        if (kvRaw) {
+          const kv=JSON.parse(kvRaw);
+          if (Array.isArray(kv)&&kv.length) {
+            const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
+            const cLat=s.lat/kv.length, cLng=s.lng/kv.length;
+            const tm=_wgs84ToTM(cLat,cLng), pad=3000;
+            const bbox=`${tm.x-pad},${tm.y-pad},${tm.x+pad},${tm.y+pad},EPSG:5179`;
+            const jr2=await fetch(`${jusoBase}&BBOX=${bbox}`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
+            if (jr2.ok){const jfc2=await jr2.json();const f2=(jfc2.features||[]).find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));if(f2)jFeats=[f2];}
+          }
         }
       }
-      if (!cLat) {
-        const nr=await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`,{headers:{'User-Agent':'yongcha.app/1.0'},signal:AbortSignal.timeout(6000)});
-        if (nr.ok){const nd=await nr.json();if(nd.length){cLat=parseFloat(nd[0].lat);cLng=parseFloat(nd[0].lon);}}
-      }
-      if (cLat) {
-        const tm=_wgs84ToTM(cLat,cLng), pad=3000;
-        const bbox=`${tm.x-pad},${tm.y-pad},${tm.x+pad},${tm.y+pad},EPSG:5179`;
-        const jr=await fetch(`https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD&BBOX=${bbox}`,{headers:{'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},signal:AbortSignal.timeout(15000)});
-        if (jr.ok) {
-          const jfc=await jr.json();
-          const feat=(jfc.features||[]).find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
-          if (feat?.geometry) {
-            const ring=feat.geometry.type==='Polygon'?feat.geometry.coordinates[0]:feat.geometry.type==='MultiPolygon'?feat.geometry.coordinates[0][0]:[];
-            const coords=ring.map(c=>_tmToWgs84(c[0],c[1]));
-            if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
-              const cen=_centroid(coords);
-              return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
-            }
+      if (jFeats&&jFeats.length) {
+        const feat=jFeats[0];
+        if (feat?.geometry) {
+          const ring=feat.geometry.type==='Polygon'?feat.geometry.coordinates[0]:feat.geometry.type==='MultiPolygon'?feat.geometry.coordinates[0][0]:[];
+          const coords=ring.map(c=>_tmToWgs84(c[0],c[1]));
+          if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
+            const cen=_centroid(coords);
+            return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,source:'juso'}),{headers:corsH});
           }
         }
       }
@@ -18815,18 +18820,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         return [];
       }
 
-      // ⓪ business.juso.go.kr WFS — 행안부 공식 기초구역 경계 (EPSG:5179 BBOX, 가장 정확)
+      // ⓪ business.juso.go.kr WFS — CQL_FILTER 직접 조회 (centroid 불필요)
       if (!coords.length) {
         try {
-          const _w2t = (lat, lng) => {
-            const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
-            const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
-            const phi=lat*Math.PI/180, lam=lng*Math.PI/180;
-            const sp=Math.sin(phi), cp=Math.cos(phi), tp=Math.tan(phi);
-            const NN=a/Math.sqrt(1-e2*sp*sp), T=tp*tp, C=ep2*cp*cp, A=cp*(lam-lng0);
-            function mArc(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
-            return {x:E0+NN*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120), y:N0+(mArc(phi)-mArc(lat0)+NN*tp*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))};
-          };
           const _t2w = (x, y) => {
             const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
             const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
@@ -18841,33 +18837,23 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
             const lng2=lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/cp1;
             return {lat:lat*180/Math.PI, lng:lng2*180/Math.PI};
           };
-          let jCLat=0, jCLng=0;
-          const jKv=await env.DONWAY_ASSETS.get('basidco:'+zip);
-          if (jKv) {
-            const jArr=JSON.parse(jKv);
-            if (Array.isArray(jArr)&&jArr.length) { const s=jArr.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0}); jCLat=s.lat/jArr.length; jCLng=s.lng/jArr.length; }
+          const jusoBase2='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+          const jusoHdrs2={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+          let jfeat2=null;
+          for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO']) {
+            try {
+              const jjr=await fetch(`${jusoBase2}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`,{headers:jusoHdrs2,signal:AbortSignal.timeout(12000)});
+              if (jjr.ok){const jjfc=await jjr.json();if((jjfc.features||[]).length){jfeat2=jjfc.features[0];break;}}
+            } catch(_){}
           }
-          if (!jCLat) {
-            const jnr=await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`,{headers:{'User-Agent':'yongcha.app/1.0'},signal:AbortSignal.timeout(6000)});
-            if (jnr.ok){const jnd=await jnr.json();if(jnd.length){jCLat=parseFloat(jnd[0].lat);jCLng=parseFloat(jnd[0].lon);}}
-          }
-          if (jCLat) {
-            const jtm=_w2t(jCLat,jCLng), jpad=3000;
-            const jbbox=`${jtm.x-jpad},${jtm.y-jpad},${jtm.x+jpad},${jtm.y+jpad},EPSG:5179`;
-            const jjr=await fetch(`https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD&BBOX=${jbbox}`,{headers:{'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},signal:AbortSignal.timeout(15000)});
-            if (jjr.ok) {
-              const jjfc=await jjr.json();
-              const jfeat=(jjfc.features||[]).find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
-              if (jfeat?.geometry) {
-                const jring=jfeat.geometry.type==='Polygon'?jfeat.geometry.coordinates[0]:jfeat.geometry.type==='MultiPolygon'?jfeat.geometry.coordinates[0][0]:[];
-                const jcoords=jring.map(c=>_t2w(c[0],c[1]));
-                if (jcoords.length>=4&&jcoords[0].lat>33&&jcoords[0].lat<39&&jcoords[0].lng>124) {
-                  coords=jcoords;
-                  const s=jcoords.reduce((a,p)=>({lat:a.lat+p.lat,lng:a.lng+p.lng}),{lat:0,lng:0});
-                  if (!centLat){centLat=s.lat/jcoords.length;centLng=s.lng/jcoords.length;}
-                  zipName=zipName||Object.values(jfeat.properties||{}).find(v=>typeof v==='string'&&v.length>1&&!/^\d+$/.test(v))||zip;
-                }
-              }
+          if (jfeat2?.geometry) {
+            const jring=jfeat2.geometry.type==='Polygon'?jfeat2.geometry.coordinates[0]:jfeat2.geometry.type==='MultiPolygon'?jfeat2.geometry.coordinates[0][0]:[];
+            const jcoords=jring.map(c=>_t2w(c[0],c[1]));
+            if (jcoords.length>=4&&jcoords[0].lat>33&&jcoords[0].lat<39&&jcoords[0].lng>124) {
+              coords=jcoords;
+              const s=jcoords.reduce((a,p)=>({lat:a.lat+p.lat,lng:a.lng+p.lng}),{lat:0,lng:0});
+              if (!centLat){centLat=s.lat/jcoords.length;centLng=s.lng/jcoords.length;}
+              zipName=zipName||Object.values(jfeat2.properties||{}).find(v=>typeof v==='string'&&v.length>1&&!/^\d+$/.test(v))||zip;
             }
           }
         } catch(_) {}
