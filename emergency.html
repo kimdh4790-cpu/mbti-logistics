@@ -14446,6 +14446,7 @@ function _renderLeafletMap(locs){
         .on('click',function(){
           var mo=document.getElementById('delivery-map-mo');
           if(!mo)return;
+          map.flyTo(ll,17,{animate:true,duration:0.6});
           var allCards=mo.querySelectorAll('[data-map-idx]');
           for(var ci=0;ci<allCards.length;ci++) allCards[ci].style.display='none';
           var first=true;
