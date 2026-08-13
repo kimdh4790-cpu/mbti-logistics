@@ -23339,7 +23339,7 @@ function goPage(page){
   if(page==='ext_label'){window.open("/label","_blank");return;}
   if(page==='ext_scan'){window.open("/scan","_blank");return;}
   if(page==='ext_truck'){window.open("/truck","_blank");return;}
-  if(page==='ext_contract'){window.open("/contract","_blank");return;}
+  if(page==='ext_contract'){window.location.href='/contract';return;}
 
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
   var nav=document.getElementById('nav-'+page);
