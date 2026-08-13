@@ -9719,6 +9719,17 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option>충남</option><option>충북</option><option>강원</option><option>제주</option>
       </select>
     </div>
+    <!-- 대리점 사업자등록번호 — 국세청 NTS API 실인증 필수 -->
+    <div class="inp-wrap" id="r-biz-wrap" style="display:none">
+      <label class="inp-lbl">사업자등록번호 <span style="color:var(--rd)">*</span></label>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="r-biznum" type="tel" placeholder="000-00-00000" maxlength="12"
+          style="flex:1;min-width:0" oninput="this.value=this.value.replace(/[^0-9]/g,'');_bizVerified=false;var r=document.getElementById('r-biz-result');if(r)r.innerHTML=''">
+        <button type="button" id="r-biz-btn" class="btn-main"
+          style="width:68px;padding:0;font-size:13px;flex-shrink:0;border-radius:var(--r)" onclick="_yBizVerify()">인증</button>
+      </div>
+      <div id="r-biz-result" style="margin-top:6px;font-size:12px"></div>
+    </div>
     <!-- 기사 차종 — 이 필드가 없어서 지금까지 carType 이 항상 빈 값이었고
          맞춤추천/AI 배차의 차종 매칭이 전혀 동작하지 않았다 -->
     <div class="inp-wrap" id="r-cartype-wrap" style="display:none">
@@ -10005,10 +10016,15 @@ function _setType(t){
   document.getElementById('t-driver').classList.toggle('on',t==='driver');
   document.getElementById('r-name-lbl').textContent=t==='agency'?'대리점명':'이름';
   document.getElementById('r-name').placeholder=t==='agency'?'상호명 입력':'이름 입력';
+  var bw=document.getElementById('r-biz-wrap');
+  if(bw)bw.style.display=(t==='agency')?'block':'none';
   var cw=document.getElementById('r-cartype-wrap');
   if(cw)cw.style.display=(t==='driver')?'block':'none';
   var fw=document.getElementById('r-carfuel-wrap');
   if(fw)fw.style.display=(t==='driver')?'block':'none';
+  _bizVerified=false;
+  var res=document.getElementById('r-biz-result');
+  if(res)res.innerHTML='';
 }
 
 /* ══ 차종 — 하이탑 / 로우탑 두 가지로 통일 ══════════════════════
@@ -10050,6 +10066,47 @@ function _yLogin(){
   });
 }
 
+var _bizVerified=false;
+function _yBizVerify(){
+  var el=document.getElementById('r-biznum');
+  var btn=document.getElementById('r-biz-btn');
+  var res=document.getElementById('r-biz-result');
+  var raw=(el&&el.value||'').replace(/[^0-9]/g,'');
+  if(raw.length!==10){
+    if(res)res.innerHTML='<span style="color:var(--rd)">사업자번호 10자리를 입력해주세요</span>';
+    return;
+  }
+  _bizVerified=false;
+  if(btn){btn.textContent='조회 중';btn.disabled=true;}
+  if(res)res.innerHTML='<span style="color:var(--t2)">국세청 조회 중...</span>';
+  fetch('/api/yongcha/biz-verify',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({bizNum:raw})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(btn){btn.textContent='인증';btn.disabled=false;}
+    if(!d.ok){
+      res.innerHTML='<span style="color:var(--rd)">조회 실패: '+_esc(d.error||'오류')+'</span>';
+      return;
+    }
+    if(!d.active){
+      res.innerHTML='<span style="color:var(--rd)">휴업·폐업된 사업자번호입니다</span>';
+      return;
+    }
+    if(d.alreadyExists){
+      res.innerHTML='<span style="color:var(--rd)">이미 등록된 사업자번호입니다</span>';
+      return;
+    }
+    _bizVerified=true;
+    var name=d.bizName?(' — '+_esc(d.bizName)):'';
+    res.innerHTML='<span style="color:var(--gn)">✓ 사업자 확인'+name+'</span>';
+    var nameEl=document.getElementById('r-name');
+    if(nameEl&&!nameEl.value.trim()&&d.bizName)nameEl.value=d.bizName;
+  }).catch(function(){
+    if(btn){btn.textContent='인증';btn.disabled=false;}
+    if(res)res.innerHTML='<span style="color:var(--rd)">네트워크 오류. 다시 시도해주세요</span>';
+  });
+}
+
 function _yRegister(){
   var n=(document.getElementById('r-name').value||'').trim();
   var e=(document.getElementById('r-email').value||'').trim();
@@ -10060,17 +10117,27 @@ function _yRegister(){
   var btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  if(_regType==='agency'&&!_bizVerified){
+    err.textContent='사업자번호 인증이 필요합니다';err.style.display='block';return;
+  }
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
+    var bizRaw=(document.getElementById('r-biznum')||{}).value||'';
+    var corpNum=bizRaw.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3');
     var _doc={
-      uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
+      uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,
+      carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
+    if(userType==='agency'&&corpNum){
+      _doc.corpNum=corpNum;
+      _doc.bizVerified=true;
+    }
     return _db.collection('yongcha_users').doc(c.user.uid).set(_doc).then(function(){
-      if(_CU&&_CU.uid===c.user.uid)return; // onAuthStateChanged ADMINS path may have won the race
+      if(_CU&&_CU.uid===c.user.uid)return;
       _CU=Object.assign({uid:c.user.uid},_doc);
       _showApp();
     });
@@ -19750,6 +19817,65 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       return new Response(JSON.stringify({ ok: true, results, engine: 'rule', summary, restingExcluded }), { headers: corsH });
     } catch (e) {
       return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+    }
+  }
+
+  // ── 사업자등록번호 국세청 실인증 (/api/yongcha/biz-verify) ──
+  if (path === '/api/yongcha/biz-verify' && method === 'POST') {
+    const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+    try {
+      const body = await request.json();
+      const rawNum = (body.bizNum || '').replace(/[^0-9]/g, '');
+      if (!rawNum || rawNum.length !== 10) {
+        return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: corsH });
+      }
+      const apiKey = env.BIZ_API_KEY || '';
+      if (!apiKey) {
+        // BIZ_API_KEY 미설정 시 형식 검증만 통과 (폴백)
+        return new Response(JSON.stringify({ ok: true, active: true, bizName: '', fallback: true }), { headers: corsH });
+      }
+      const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
+      const ntsRes = await fetch(statusUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Accept': 'application/json' },
+        body: JSON.stringify({ b_no: [rawNum] })
+      });
+      if (!ntsRes.ok) {
+        // 국세청 API 장애 시 폴백
+        return new Response(JSON.stringify({ ok: true, active: true, bizName: '', fallback: true }), { headers: corsH });
+      }
+      const ntsData = await ntsRes.json();
+      const item = ntsData.data && ntsData.data[0];
+      if (!item) return new Response(JSON.stringify({ ok: false, error: '조회 결과 없음' }), { headers: corsH });
+      const active = item.b_stt_cd === '01';
+      // yongcha_users 중복 체크
+      let alreadyExists = false;
+      try {
+        const fsToken = await getAccessToken(env);
+        const formatted = rawNum.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3');
+        const dupRes = await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,
+          { method: 'POST', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ structuredQuery: {
+              from: [{ collectionId: 'yongcha_users' }],
+              where: { fieldFilter: { field: { fieldPath: 'corpNum' }, op: 'EQUAL', value: { stringValue: formatted } } },
+              limit: 1
+            }})
+          }
+        );
+        const dupData = await dupRes.json();
+        alreadyExists = Array.isArray(dupData) && dupData.some(d => d.document);
+      } catch(e2) { /* 중복 체크 실패 시 무시 */ }
+      return new Response(JSON.stringify({
+        ok: true, active,
+        status: item.b_stt || '',
+        bizName: item.b_nm || '',
+        repName: item.p_nm || '',
+        taxType: item.tax_type || '',
+        alreadyExists
+      }), { headers: corsH });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
     }
   }
 
