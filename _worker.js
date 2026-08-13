@@ -18722,7 +18722,27 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         }
       } catch (_) {}
     }
-    // 2) Oracle Cloud vWorld 프록시 (설정된 경우)
+    // 2) vWorld /req/data REST API (WFS와 다른 인프라 — IP 차단 여부 별개)
+    for (const vKey of _vwKeys) {
+      try {
+        const vdUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key=${vKey}&attrFilter=BAS_ID:=:${zip}&pageSize=1&geometry=true&srsName=EPSG:4326`;
+        const vdr = await fetch(vdUrl, { signal: AbortSignal.timeout(10000) });
+        if (vdr.ok) {
+          const vd = await vdr.json();
+          const feat = vd?.response?.result?.featureCollection?.features?.[0];
+          if (feat?.geometry) {
+            const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                       : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+            const coords = _ringToCoords(ring);
+            if (coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, source: 'vworld-data' }), { headers: corsH });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    // 3) Oracle Cloud vWorld 프록시 (설정된 경우)
     if (env.ORACLE_PROXY_URL) {
       try {
         const proxySecret = env.ORACLE_PROXY_SECRET || '';
