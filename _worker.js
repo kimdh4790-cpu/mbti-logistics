@@ -1760,7 +1760,9 @@ async function acceptExchange(){
             vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
             agencyName:gs('agencyName'), agencyRep:gs('agencyRep'),
             agencyBizno:gs('agencyBizno'), agencyPhone:gs('agencyPhone'),
-            agencyAddr:gs('agencyAddr'), createdAt:gs('createdAt')
+            agencyAddr:gs('agencyAddr'),
+            camp:gs('camp'), route:gs('route'), returnFee:gs('returnFee'),
+            licenseNo:gs('licenseNo'), sortWork:gs('sortWork'), createdAt:gs('createdAt')
           }}), {headers:{'Content-Type':'application/json'}});
         } catch(e) {
           return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
@@ -1769,7 +1771,7 @@ async function acceptExchange(){
       if (path === '/api/contract/otp' && method === 'POST') {
         try {
           const body = await request.json();
-          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr } = body;
+          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr, camp, route, returnFee, licenseNo, sortWork } = body;
           if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
           if (!agencyName) return new Response(JSON.stringify({ok:false,error:'대리점 상호명 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
           const fsToken = await getAccessToken(env);
@@ -1788,7 +1790,10 @@ async function acceptExchange(){
               special:{stringValue:special||''}, status:{stringValue:'pending'},
               agencyName:{stringValue:agencyName}, agencyRep:{stringValue:agencyRep||''},
               agencyBizno:{stringValue:agencyBizno||''}, agencyPhone:{stringValue:agencyPhone||''},
-              agencyAddr:{stringValue:agencyAddr||''}, createdAt:{stringValue:now}
+              agencyAddr:{stringValue:agencyAddr||''},
+              camp:{stringValue:camp||''}, route:{stringValue:route||''},
+              returnFee:{stringValue:String(returnFee||'')}, licenseNo:{stringValue:licenseNo||''},
+              sortWork:{stringValue:sortWork||'미수행'}, createdAt:{stringValue:now}
             }})
           });
           await fetch(`${FS_BASE}/contract_otps`, {

@@ -126,7 +126,58 @@ function buildHtml(c, today){
   var agBizno = c.agencyBizno || '';
   var agPhone = c.agencyPhone || '';
   var agAddr = c.agencyAddr || '';
-  if (c.ctype === 'courier' || c.ctype === 'quickflex') {
+  var sealRow = '<div class="seal-row">' +
+    '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">' + esc(agName) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">' + (agRep ? esc(agRep) + ' (인)' : '(인)') + '</div></div>' +
+    '<div class="seal-box"><div class="seal-lbl">乙 (택배기사)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
+    '</div>' +
+    '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';
+
+  // ── 퀵플렉스 (CLS 표준계약서 1-21) ──────────────────────────────
+  if (c.ctype === 'quickflex') {
+    var campRoute = (c.camp || '') + (c.route ? ' / ' + c.route : '');
+    return '<div class="ctitle">영업점 – 택배기사<br>위·수탁 표준계약서</div>' +
+      '<div style="text-align:center;font-size:9pt;color:#888;margin-bottom:12px">쿠팡로지스틱스서비스 QuickFlex</div>' +
+      '<div class="clause"><div class="ch">제1조 계약 당사자</div><div class="cb">' +
+      '<table class="tbl"><tr><th>구분</th><th>영업점 (甲)</th><th>택배기사 (乙)</th></tr>' +
+      '<tr><td>업체명/성명</td><td>' + esc(agName) + (agRep ? ' / ' + esc(agRep) : '') + '</td><td>' + esc(c.name) + '</td></tr>' +
+      '<tr><td>사업자번호</td><td>' + esc(agBizno) + '</td><td>&nbsp;</td></tr>' +
+      '<tr><td>연락처</td><td>' + esc(agPhone) + '</td><td>' + esc(maskPhone(c.phone)) + '</td></tr>' +
+      '<tr><td>주소</td><td>' + esc(agAddr) + '</td><td>&nbsp;</td></tr>' +
+      '</table></div></div>' +
+      '<div class="clause"><div class="ch">제2조 계약 기간 및 담당구역</div><div class="cb">' +
+      '① 계약 기간: ' + esc(c.startDate) + ' ~ ' + esc(c.endDate || '1년') + '<br>' +
+      '② 담당 구역: ' + esc(c.loc || '') + '<br>' +
+      '③ 구역 변경 시 양 당사자 합의하에 변경할 수 있다.</div></div>' +
+      '<div class="clause"><div class="ch">제3조 수수료</div><div class="cb">' +
+      '① 배송 수수료: 1건당 <span class="fill">' + esc(c.pay) + '</span>원<br>' +
+      '② 반품 수수료: 1건당 <span class="fill">' + esc(c.returnFee || '') + '</span>원<br>' +
+      '③ 집화 수수료: 별도 합의에 따름<br>' +
+      '④ 지급일: ' + esc(c.payDay || '매월 25일') + '<br>' +
+      '⑤ 지급 방법: 계좌이체</div></div>' +
+      '<div class="clause"><div class="ch">제4조 차량 및 종사자격</div><div class="cb">' +
+      '① 담당 캠프/라우트: <span class="fill">' + esc(campRoute || '') + '</span><br>' +
+      '② 차량번호: ' + esc(c.vehicle || '') + '<br>' +
+      '③ 종사 자격증 번호: <span class="fill">' + esc(c.licenseNo || '') + '</span><br>' +
+      '④ 乙은 화물자동차 운수사업법 등 관련 법령에서 정한 자격 요건을 유지하여야 한다.<br>' +
+      '⑤ 차량보험(화물배상책임 포함)은 乙이 직접 가입·유지하여야 한다.</div></div>' +
+      '<div class="clause"><div class="ch">제4조 2항 — 분류작업</div><div class="cb">' +
+      '분류 작업 수행 여부: <strong>' + esc(c.sortWork || '미수행') + '</strong></div></div>' +
+      '<div class="clause"><div class="ch">제5조 의무 사항</div><div class="cb">' +
+      '① 乙은 쿠팡로지스틱스서비스 택배사의 배송 서비스 기준(SLA)을 준수하여야 한다.<br>' +
+      '② 乙은 배송 물품을 분실·훼손하지 않도록 주의의무를 다하여야 한다.<br>' +
+      '③ 乙은 정당한 이유 없이 배송을 거부하거나 지연하여서는 아니 된다.<br>' +
+      '④ 甲은 乙의 업무 수행에 필요한 정보와 지원을 제공하여야 한다.</div></div>' +
+      '<div class="clause"><div class="ch">제6조 계약의 해지</div><div class="cb">' +
+      '① 쿠팡로지스틱스서비스 택배사와의 계약 해지 또는 서비스 기준 위반 시 본 계약은 자동 종료될 수 있다.<br>' +
+      '② 일방이 계약을 해지하고자 할 경우 60일 전에 서면으로 2회 이상 통보하여야 한다.<br>' +
+      '③ 총 계약기간 6년 이하 시 갱신 거절 불가 (생활물류서비스법 제11조).<br>' +
+      '④ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>' +
+      (c.special ? '<div class="clause"><div class="ch">부속 합의서 / 특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
+      sealRow;
+  }
+
+  // ── 일반 위수탁 (courier) ────────────────────────────────────────
+  if (c.ctype === 'courier') {
     return '<div class="ctitle">영업점 – 택배기사<br>위·수탁 표준계약서</div>' +
       '<div class="clause"><div class="ch">제1조 계약 당사자</div><div class="cb">' +
       '<table class="tbl"><tr><th>구분</th><th>영업점 (甲)</th><th>택배기사 (乙)</th></tr>' +
@@ -142,7 +193,7 @@ function buildHtml(c, today){
       '<div class="clause"><div class="ch">제3조 수수료</div><div class="cb">' +
       '① 1건당 <span class="fill">' + esc(c.pay) + '</span>원<br>' +
       '② 지급일: ' + esc(c.payDay || '매월 25일') + '<br>' +
-      '③ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>' +
+      '③ 지급 방법: 계좌이체</div></div>' +
       '<div class="clause"><div class="ch">제4조 차량 및 종사자격</div><div class="cb">' +
       '① 차량번호: ' + esc(c.vehicle || '') + '<br>' +
       '② 乙은 화물자동차 운수사업법 등 관련 법령에서 정한 자격 요건을 유지하여야 한다.<br>' +
@@ -158,11 +209,7 @@ function buildHtml(c, today){
       '③ 중대한 귀책사유가 있는 경우 즉시 해지할 수 있다.<br>' +
       '④ 계약 해지 시 미지급 수수료는 해지일로부터 7영업일 내에 정산한다.</div></div>' +
       (c.special ? '<div class="clause"><div class="ch">특약 사항</div><div class="cb">' + esc(c.special).replace(/\n/g,'<br>') + '</div></div>' : '') +
-      '<div class="seal-row">' +
-        '<div class="seal-box"><div class="seal-lbl">甲 (영업점)</div><div class="seal-name">' + esc(agName) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">' + (agRep ? esc(agRep) + ' (인)' : '(인)') + '</div></div>' +
-        '<div class="seal-box"><div class="seal-lbl">乙 (택배기사)</div><div class="seal-name">' + esc(c.name) + '</div><div class="seal-line"></div><div style="font-size:9pt;color:#555;margin-top:5px">전자서명</div></div>' +
-      '</div>' +
-      '<div style="text-align:center;margin:16px 0;font-size:10pt;color:#555">계약 체결 예정일: ' + today + '</div>';
+      sealRow;
   }
   return '<div class="ctitle">근 로 계 약 서</div>' +
     '<div class="clause"><div class="ch">제1조 근로자 정보</div><div class="cb">' +

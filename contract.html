@@ -154,6 +154,23 @@ body{background:var(--bg);color:var(--white);font-family:-apple-system,'Malgun G
         <div class="fg"><label class="fl">차량번호</label><input class="fi fi-mono" id="c-vehicle" placeholder="부산12가3456"></div>
         <div class="fg"><label class="fl">차종</label><input class="fi" id="c-cartype" placeholder="1톤 트럭, 승용 등"></div>
       </div>
+      <!-- 퀵플렉스 전용 필드 -->
+      <div id="qf-fields" style="display:none">
+        <div class="row2">
+          <div class="fg"><label class="fl">캠프명</label><input class="fi" id="c-camp" placeholder="부산1캠프"></div>
+          <div class="fg"><label class="fl">라우트</label><input class="fi fi-mono" id="c-route" placeholder="A-001"></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label class="fl">반품 수수료 단가 (원)</label><input class="fi fi-mono" id="c-return-fee" placeholder="800"></div>
+          <div class="fg"><label class="fl">종사 자격증 번호 *</label><input class="fi fi-mono" id="c-license-no" placeholder="제2026-00000호"></div>
+        </div>
+        <div class="fg"><label class="fl">분류작업 수행여부</label>
+          <select class="fi" id="c-sort-work">
+            <option value="미수행">미수행</option>
+            <option value="수행">수행</option>
+          </select>
+        </div>
+      </div>
       </div>
       <div class="row3">
         <div class="fg"><label class="fl">소정 근로시간</label><input class="fi" id="c-hours" placeholder="8시간"></div>
@@ -760,9 +777,10 @@ function setCTypeById(type){
     var types=['regular','parttime','fixed','dispatch'];
     c.classList.toggle('on',types[i]===_ctype);
   });
-  // 차량번호 필드 표시 (위수탁/퀵플렉스)
   var vr=document.getElementById('vehicle-row');
   if(vr)vr.style.display=(type==='courier'||type==='dispatch'||type==='quickflex')?'grid':'none';
+  var qf=document.getElementById('qf-fields');
+  if(qf)qf.style.display=(type==='quickflex')?'block':'none';
 }
 
 function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');clearTimeout(t._t);t._t=setTimeout(function(){t.className='';},3000);}
@@ -802,7 +820,12 @@ function requestEsign(){
     agencyRep:getVal('c-agency-rep'),
     agencyBizno:getVal('c-agency-bizno'),
     agencyPhone:getVal('c-agency-phone'),
-    agencyAddr:getVal('c-agency-addr')
+    agencyAddr:getVal('c-agency-addr'),
+    camp:getVal('c-camp'),
+    route:getVal('c-route'),
+    returnFee:getVal('c-return-fee'),
+    licenseNo:getVal('c-license-no'),
+    sortWork:getVal('c-sort-work')||'미수행'
   };
   fetch('/api/contract/otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r){return r.json();})
