@@ -9863,6 +9863,24 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option value="전기">전기</option>
       </select>
     </div>
+    <!-- 기사 전용 서류 정보 (법적 안전·보험 관리) -->
+    <div id="r-doc-wrap" style="display:none">
+      <div style="margin:4px 0 10px;padding:10px 12px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--t2);line-height:1.6">
+        아래 서류 정보는 선택사항이며, 나중에 프로필에서 추가·수정 가능합니다.<br>등록 시 공고 카드에 서류완비 배지가 표시됩니다.
+      </div>
+      <div class="inp-wrap">
+        <label class="inp-lbl">차량번호 (예: 12가 3456)</label>
+        <input class="inp" id="r-plate" placeholder="차량번호 입력">
+      </div>
+      <div class="inp-wrap">
+        <label class="inp-lbl">화물운송종사자 자격증 번호 (선택)</label>
+        <input class="inp" id="r-license" placeholder="자격증 번호 입력">
+      </div>
+      <div class="inp-wrap">
+        <label class="inp-lbl">보험 만료일 (선택)</label>
+        <input class="inp" id="r-ins-expiry" type="date">
+      </div>
+    </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
@@ -10143,6 +10161,8 @@ function _setType(t){
   if(cw)cw.style.display=(t==='driver')?'block':'none';
   var fw=document.getElementById('r-carfuel-wrap');
   if(fw)fw.style.display=(t==='driver')?'block':'none';
+  var dw=document.getElementById('r-doc-wrap');
+  if(dw)dw.style.display=(t==='driver')?'block':'none';
   _bizVerified=false;
   var res=document.getElementById('r-biz-result');
   if(res)res.innerHTML='';
@@ -10249,15 +10269,24 @@ function _yRegister(){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
     var bizRaw=(document.getElementById('r-biznum')||{}).value||'';
     var corpNum=bizRaw.replace(/[^0-9]/g,'').replace(/(\d{3})(\d{2})(\d{5})/,'$1-$2-$3');
+    var plate=((document.getElementById('r-plate')||{}).value||'').trim();
+    var licNum=((document.getElementById('r-license')||{}).value||'').trim();
+    var insExp=((document.getElementById('r-ins-expiry')||{}).value||'').trim();
     var _doc={
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,
       carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       rating:0,reviewCount:0,status:'active',
       trustScore:60,trustGrade:'B',cancelCount:0,noShowCount:0,completedRoutes:0,
+      docVerified:false,
       termsAgreedAt:firebase.firestore.FieldValue.serverTimestamp(),
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
+    if(userType==='driver'){
+      if(plate)_doc.carNumber=plate;
+      if(licNum){_doc.licenseNum=licNum;_doc.licenseSubmitted=true;}
+      if(insExp){_doc.insuranceExpiry=insExp;_doc.insuranceSubmitted=true;}
+    }
     if(userType==='agency'&&corpNum){
       _doc.corpNum=corpNum;
       _doc.bizVerified=true;
@@ -13455,9 +13484,12 @@ function _showApplicants(postId){
           '<div style="color:var(--t3);margin-bottom:2px">평점</div>'+
           '<div style="font-weight:700;color:var(--br)">'+((p.rating||0).toFixed?((p.rating||0).toFixed(1)):(p.rating||0))+'</div></div>'+
           '</div>'+
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;flex-wrap:wrap">'+
           '<span style="background:'+grade.bg+';color:'+grade.color+';padding:2px 8px;border-radius:20px;font-weight:700">'+grade.label+'</span>'+
           '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">점수 '+(p.trustScore||0)+'점</span>'+
+          (p.docVerified?'<span style="background:rgba(16,185,129,.15);color:var(--gn);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">서류인증</span>':
+           p.licenseSubmitted&&p.insuranceSubmitted?'<span style="background:rgba(245,158,11,.15);color:var(--br);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">서류제출</span>':
+           '<span style="background:var(--bg3);color:var(--t3);padding:2px 8px;border-radius:20px;font-size:10px">서류미등록</span>')+
           (p.company?'<span style="color:var(--t2)">'+_esc(p.company)+'</span>':'')+'</div>'+
           (a.status==='pending'?
           '<div class="judge-row">'+
@@ -14935,6 +14967,38 @@ function _pgProfile(el){
     '</div>';
   })():'')+
 
+  // 기사 서류 관리 카드
+  (type==='driver'?(function(){
+    var insExp=_CU.insuranceExpiry||'';
+    var daysLeft=9999;
+    if(insExp){
+      var ms=new Date(insExp).getTime()-Date.now();
+      daysLeft=Math.ceil(ms/(1000*60*60*24));
+    }
+    var insWarning=insExp&&daysLeft<=30;
+    var verified=_CU.docVerified;
+    var hasLic=!!_CU.licenseNum;
+    var hasIns=!!_CU.insuranceExpiry;
+    var statusColor=verified?'var(--gn)':hasLic&&hasIns?'var(--br)':'var(--t3)';
+    var statusLabel=verified?'서류인증완료':hasLic&&hasIns?'서류미인증':'서류미등록';
+    return '<div class="card" style="margin-top:8px;border-color:'+(verified?'rgba(16,185,129,.3)':insWarning?'rgba(239,68,68,.3)':'var(--bd)')+'">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+        '<div style="font-size:15px;font-weight:800">서류 관리</div>'+
+        '<span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:'+statusColor+'1a;color:'+statusColor+'">'+statusLabel+'</span>'+
+      '</div>'+
+      (verified?'<div style="font-size:12px;color:var(--gn);margin-bottom:12px">관리자가 서류를 확인했습니다. 공고 카드에 인증 배지가 표시됩니다.</div>':
+                '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">서류 등록 후 관리자 확인이 완료되면 인증 배지가 표시됩니다.</div>')+
+      (insWarning?'<div style="padding:8px 12px;background:var(--rdl);border-radius:8px;font-size:12px;color:var(--rd);font-weight:700;margin-bottom:12px">보험 만료 '+daysLeft+'일 전 — 갱신 후 날짜를 업데이트하세요</div>':'')+
+      '<div class="inp-wrap"><label class="inp-lbl">화물운송종사자 자격증 번호</label>'+
+        '<input id="doc-license" class="inp" placeholder="자격증 번호 (없으면 생략)" value="'+(_CU.licenseNum||'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">보험 만료일</label>'+
+        '<input id="doc-ins-expiry" type="date" class="inp" value="'+(insExp)+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
+        '<input id="doc-plate" class="inp" placeholder="예: 12가 3456" value="'+(_CU.carNumber||'')+'"></div>'+
+      '<button onclick="_ySaveDocs()" style="width:100%;padding:12px;background:var(--acl);color:var(--ac);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">서류 정보 저장</button>'+
+    '</div>';
+  })():'')+
+
   // 구인구직 바로가기 (대리점)
   (type==='agency'?
   '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">소속 기사 채용 공고 (구인구직)</button>':'')+
@@ -15117,24 +15181,27 @@ function _admLoadMembers(){
   '<div class="kpi-grid col2" style="margin-bottom:14px">'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="adm-agency">—</div><div class="kpi-lbl">대리점</div></div>'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="adm-driver">—</div><div class="kpi-lbl">기사</div></div>'+
-  '<div class="kpi-card" style="grid-column:span 2"><div class="kpi-val" style="color:var(--rd)" id="adm-suspended">—</div><div class="kpi-lbl">정지 회원</div></div>'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--ac)" id="adm-doc-pending">—</div><div class="kpi-lbl">서류미인증</div></div>'+
+  '<div class="kpi-card"><div class="kpi-val" style="color:var(--rd)" id="adm-suspended">—</div><div class="kpi-lbl">정지 회원</div></div>'+
   '</div>'+
   '<div id="members-list">'+_skRows(3)+'</div>';
 
   _db.collection('yongcha_users').get().then(function(snap){
-    var agencies=0,drivers=0,suspended=0;
+    var agencies=0,drivers=0,suspended=0,docPending=0;
     snap.forEach(function(doc){
       var t=doc.data().type,d=doc.data();
       if(t==='agency')agencies++;
-      else if(t==='driver')drivers++;
+      else if(t==='driver'){drivers++;if(d.licenseSubmitted&&!d.docVerified)docPending++;}
       if(d.suspended)suspended++;
     });
     var e1=document.getElementById('adm-agency');
     var e2=document.getElementById('adm-driver');
     var e3=document.getElementById('adm-suspended');
+    var e4=document.getElementById('adm-doc-pending');
     if(e1)e1.textContent=agencies+'명';
     if(e2)e2.textContent=drivers+'명';
     if(e3)e3.textContent=suspended+'명';
+    if(e4)e4.textContent=docPending+'명';
 
     var list=document.getElementById('members-list');if(!list)return;
     list.innerHTML='';
@@ -15159,6 +15226,9 @@ function _admLoadMembers(){
         '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
         '<span class="status-badge '+(u.type==='agency'?'badge-agency':'badge-driver')+'" style="font-size:11px">'+
           (u.type==='agency'?'대리점':'기사')+'</span>'+
+        (u.type==='driver'?
+          '<button onclick="_toggleDocVerify(\\''+u.id+'\\','+!!u.docVerified+')" style="padding:5px 10px;background:'+(u.docVerified?'var(--gnl)':'rgba(79,120,245,.12)')+';color:'+(u.docVerified?'var(--gn)':'var(--ac)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+          (u.docVerified?'인증완료':'서류인증')+'</button>':'')+
         '<button onclick="_toggleSuspend(\\''+u.id+'\\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
           (isSus?'정지 해제':'정지')+'</button>'+
         '</div>'+
@@ -15174,6 +15244,12 @@ function _admLoadMembers(){
 function _toggleSuspend(uid, isSus){
   _db.collection('yongcha_users').doc(uid).update({suspended:!isSus}).then(function(){
     _yToast(isSus?'정지가 해제되었습니다':'회원이 정지되었습니다');
+    _admLoadMembers();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+function _toggleDocVerify(uid, isVerified){
+  _db.collection('yongcha_users').doc(uid).update({docVerified:!isVerified}).then(function(){
+    _yToast(isVerified?'인증이 취소됐습니다':'서류 인증이 완료됐습니다');
     _admLoadMembers();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -16734,6 +16810,20 @@ function _ySavePrefs(){
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+function _ySaveDocs(){
+  var lic=((document.getElementById('doc-license')||{}).value||'').trim();
+  var ins=((document.getElementById('doc-ins-expiry')||{}).value||'').trim();
+  var plate=((document.getElementById('doc-plate')||{}).value||'').trim();
+  var patch={docVerified:false};
+  if(lic){patch.licenseNum=lic;patch.licenseSubmitted=true;}
+  if(ins){patch.insuranceExpiry=ins;patch.insuranceSubmitted=true;}
+  if(plate)patch.carNumber=plate;
+  _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
+    Object.assign(_CU,patch);
+    _yToast('서류 정보가 저장됐어요. 관리자 확인 후 인증 배지가 표시됩니다.');
+    _goPage('profile');
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
 /* ══════════════════════════════════════════════════════════
