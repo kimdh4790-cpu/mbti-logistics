@@ -5349,6 +5349,22 @@ service cloud.firestore {
       return serveKVFile(env, 'mbtico-manifest.json', 'application/manifest+json');
     }
 
+    if (path === '/emergency-manifest.json') {
+      return new Response(JSON.stringify({
+        name:'DONWAY 배송앱', short_name:'배송앱',
+        description:'MBTICO 현장 배송 관리',
+        start_url:'/emergency', scope:'/',
+        display:'standalone', orientation:'portrait',
+        background_color:'#08101f', theme_color:'#c9a84c', lang:'ko',
+        categories:['business','productivity'],
+        icons:[
+          {src:'/icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+          {src:'/icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'},
+          {src:'/apple-touch-icon.png',sizes:'180x180',type:'image/png',purpose:'any'}
+        ]
+      }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
+    }
+
     if (path === '/manifest.json') {
       // mbtico.kr → mbtico manifest 서빙
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {

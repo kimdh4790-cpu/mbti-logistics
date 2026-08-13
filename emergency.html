@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>배송 — DONWAY</title>
+<link rel="manifest" href="/emergency-manifest.json">
+<meta name="theme-color" content="#c9a84c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="배송앱">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 :root{--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--border:rgba(255,255,255,.12);--r:10px;--rl:14px;--blue:#185FA5;--blue-l:#E6F1FB;--red:#A32D2D;--red-l:#FCEBEB;--green:#3B6D11;--green-l:#EAF3DE;--teal:#0F6E56;--teal-l:#E1F5EE;--amber:#854F0B;--amber-l:#FAEEDA;--gray:#5F5E5A;--gray-l:#F1EFE8;--gray-m:#D3D1C7;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -77,6 +83,9 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       배송
     </div>
+    <button id="pwa-install-btn" onclick="_pwaInstall()" style="display:none;font-size:11px;padding:5px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:8px;color:#c9a84c;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:3px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>홈화면
+    </button>
     <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px">로그아웃</button>
   </div>
   <div class="main-area">
@@ -4996,6 +5005,28 @@ document.addEventListener('DOMContentLoaded',function(){
     +'<button onclick="openDrivingMemo()" style="flex:1;padding:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.7);font-size:13px;font-weight:700;cursor:pointer">📝 운행 메모</button>';
   mainArea.appendChild(btnWrap);
 });
+
+// ── PWA 홈화면 설치 ──
+var _pwaDeferred=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _pwaDeferred=e;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='flex';
+});
+window.addEventListener('appinstalled',function(){
+  _pwaDeferred=null;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='none';
+});
+function _pwaInstall(){
+  if(!_pwaDeferred)return;
+  _pwaDeferred.prompt();
+  _pwaDeferred.userChoice.then(function(){ _pwaDeferred=null; });
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(function(){});
+}
 </script>
 </body>
 </html>
