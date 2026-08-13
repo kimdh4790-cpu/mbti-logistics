@@ -14571,7 +14571,7 @@ function _pgProfile(el){
           '</div>'+
         '</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+courierList+'</div>';
-    }).catch(function(){});
+    }).catch(function(e){console.warn('[portfolio]',e.message);});
   }
 
   _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).limit(30).get()
@@ -14595,7 +14595,10 @@ function _pgProfile(el){
           (r.comment?'<div class="n-desc">'+_esc(r.comment)+'</div>':'');
         list.appendChild(div);
       });
-    }).catch(function(){});
+    }).catch(function(e){
+      var list=document.getElementById('my-reviews-list');
+      if(list)list.innerHTML='<div class="empty" style="padding:20px"><div class="empty-msg">후기 로드 실패: '+_esc(e.message)+'</div></div>';
+    });
 }
 
 // ── 관리자 대시보드 ──────────────────────────────────────────
@@ -16218,7 +16221,7 @@ function _yNotify(recipientId,title,body,type){
     userId:recipientId,title:title,body:body||'',
     type:type||'system',
     read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).catch(function(){});
+  }).catch(function(e){console.warn('[yNotify] notification write 실패:',e.message);});
   // FCM push
   _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
     .then(function(snap){
@@ -16229,7 +16232,7 @@ function _yNotify(recipientId,title,body,type){
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:body||''})
       });
-    }).catch(function(){});
+    }).catch(function(e){console.warn('[yNotify] FCM push 실패:',e.message);});
 }
 
 function _yStartNotifListener(){
@@ -16239,7 +16242,7 @@ function _yStartNotifListener(){
     .onSnapshot(function(snap){
       var dot=document.getElementById('notif-dot');
       if(dot)dot.style.display=snap.size>0?'block':'none';
-    },function(){});
+    },function(e){console.warn('[notifListener]',e.message);});
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────
