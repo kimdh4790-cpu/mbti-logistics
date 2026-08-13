@@ -16825,7 +16825,7 @@ function _reportUnpaidSettle(settleId,agencyId){
     _db.collection('yongcha_settlements').doc(settleId).update({
       disputeReported:true,disputeAt:now
     }).catch(function(){});
-    _yToast('신고가 접수됐어요. 관리자가 대리점에 연락합니다.');
+    _yToast('신고가 접수됐어요. 미지급 임금은 고용노동부(1350) 또는 가까운 노동청에 신고하실 수 있어요.');
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
