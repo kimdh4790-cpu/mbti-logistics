@@ -515,7 +515,7 @@ function _printCourier(){
     +'<div class="clause"><div class="clause-title">제3조 수수료</div>'
     +'<div class="clause-body">'
     +'① 1건당 '+esc(pay)+'원<br>'
-    +'② 지급일: '+esc(payDay)+'<br>'
+    +'② 지급일: '+esc(payDay)+' (지급일이 공휴일·토·일인 경우 돌아오는 첫 평일에 지급)<br>'
     +'③ 지급 방법: 계좌이체 (하나은행 270-910019-24204)</div></div>'
     +'<div class="clause"><div class="clause-title">제4조 차량 및 종사자격</div>'
     +'<div class="clause-body">'
@@ -558,6 +558,7 @@ function _printQuickflex(){
   var pay=getVal('c-pay')||'___';
   var camp=getVal('c-camp')||'';
   var route=getVal('c-route')||'';
+  var payDay=getVal('c-payday-sel')||getVal('c-payday')||'익월 25일';
   var special=getVal('c-special')||'';
   var today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   var html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>퀵플렉스 부속 합의서</title>'
@@ -586,7 +587,7 @@ function _printQuickflex(){
     +'<div style="margin-bottom:12px"><div class="ch">제2조 서비스 기준 (SLA)</div>'
     +'<div class="cb">① 배송 성공률: 월 평균 95% 이상<br>② 당일 배송 완료 원칙<br>③ 미배송 발생 시 즉시 영업점 보고</div></div>'
     +'<div style="margin-bottom:12px"><div class="ch">제3조 수수료</div>'
-    +'<div class="cb">① 기본 단가: 건당 '+esc(pay)+'원<br>② 인센티브: 월 300건 초과 시 건당 25원 추가<br>③ 정산일: 익월 25일</div></div>'
+    +'<div class="cb">① 기본 단가: 건당 '+esc(pay)+'원<br>② 인센티브: 월 300건 초과 시 건당 25원 추가<br>③ 정산일: '+esc(payDay||'익월 25일')+' (공휴일·토·일인 경우 돌아오는 첫 평일에 지급)</div></div>'
     +(special?'<div style="margin-bottom:12px"><div class="ch">제4조 특약</div><div class="cb">'+esc(special).replace(/\n/g,'<br>')+'</div></div>':'')
     +'<div style="text-align:center;margin:20px 0;font-size:11pt">합의 체결일: '+today+'</div>'
     +'<div class="sig-area">'
@@ -639,7 +640,7 @@ function _printLabor(){
     +'<div class="section"><div class="sec-title">제3조 임금</div>'
     +'<div class="row"><span class="rk">임금 형태</span><span class="rv">'+esc(d.payType)+'</span></div>'
     +'<div class="row"><span class="rk">임금 금액</span><span class="rv"><strong>'+esc(d.pay?Number(d.pay).toLocaleString('ko-KR')+'원':'-')+'</strong></span></div>'
-    +'<div class="row"><span class="rk">지 급 일</span><span class="rv">'+esc(d.payDay)+'</span></div>'
+    +'<div class="row"><span class="rk">지 급 일</span><span class="rv">'+esc(d.payDay)+' <span style="font-size:8pt;color:#666">(공휴일·토·일인 경우 돌아오는 첫 평일에 지급)</span></span></div>'
     +'<div class="row"><span class="rk">지급 방법</span><span class="rv">'+esc(d.payMethod)+'</span></div>'
     +'</div>'
     +'<div class="section"><div class="sec-title">제4조 일반 조항</div>'
