@@ -1487,7 +1487,9 @@ async function _getCachedDrivers(force) {
     return window._driversCache;
   }
   if (!FB || !_db) return [];
-  var snap = await _db.collection('drivers').get();
+  var did = S.dealerId || '';
+  var q = did ? _db.collection('drivers').where('dealerId','==',did) : _db.collection('drivers');
+  var snap = await q.get();
   window._driversCache = snap.docs.map(function(d){ return Object.assign({fbId: d.id}, d.data()); });
   window._driversCacheTs = now;
   return window._driversCache;
@@ -1830,7 +1832,8 @@ function doLogin(){
         setTimeout(function(){
           if(FB&&_db&&!ls('drivers').length){
             console.log('[Admin Login] 기사 목록 강제 로드...');
-            _db.collection('drivers').get().then(function(snap){
+            var _adDid=S.dealerId||'';
+            (_adDid?_db.collection('drivers').where('dealerId','==',_adDid):_db.collection('drivers')).get().then(function(snap){
               var all=[];
               snap.forEach(function(doc){var d=doc.data();d.fbId=doc.id;all.push(d);});
               if(all.length){
@@ -1885,10 +1888,12 @@ function doLogin(){
       // 전체스캔 fallback (userId 필드명 다를 수 있음)
       if(!found&&FB&&_db){
         try{
-          var qA=await _db.collection('drivers').limit(300).get();
+          var _fsDid=S.dealerId||'';
+          var qARef=_fsDid?_db.collection('drivers').where('dealerId','==',_fsDid).limit(300):_db.collection('drivers').limit(300);
+          var qA=await qARef.get();
           qA.forEach(function(doc){var d=doc.data();if(!found&&(d.userId===id||d.phone===id||d.id===id)){d.fbId=doc.id;found=d;}});
         }catch(e2){console.warn('전체스캔 실패',e2);}
-      
+
       }
       // localStorage fallback
       if(!found){
@@ -2395,7 +2400,8 @@ function loadEntriesHistory(period, col){
   if(_historyLoaded[cacheKey]) return; // 이미 로드됨 → 재조회 안 함
   if(!FB||!_db) return;
   _historyLoaded[cacheKey]=true;
-  _db.collection(col)
+  var _lhDid=S.dealerId||'';
+  (_lhDid?_db.collection(col).where('dealerId','==',_lhDid):_db.collection(col))
     .where('date','>=',cut)
     .where('date','<',today()) // 오늘 제외 (onSnapshot이 담당)
     .limit(500)
@@ -2476,7 +2482,8 @@ function rMemoLog(){
   // 첫 방문 시에만 Firebase 조회 (이후는 캐시 사용)
   if(FB&&_db&&!window._memoLogLoaded){
     window._memoLogLoaded=true;
-    _db.collection('delivery_memos').orderBy('date','desc').limit(80).get().then(function(snap){
+    var _memoDid=S.dealerId||'';
+    (_memoDid?_db.collection('delivery_memos').where('dealerId','==',_memoDid):_db.collection('delivery_memos')).orderBy('date','desc').limit(80).get().then(function(snap){
       var arr=ls('deliveryMemos');
       snap.forEach(function(doc){
         var d=doc.data();d.fbId=doc.id;
@@ -4013,7 +4020,9 @@ async function openLiveMap(){
   var driverLocs = [], emerLocs = [];
   if(FB && _db){
     try{
-      var snap1 = await _db.collection('driver_locations').where('date','==',today()).get();
+      var _mapDid=S.dealerId||'';
+      var _mapQ=_mapDid?_db.collection('driver_locations').where('dealerId','==',_mapDid).where('date','==',today()):_db.collection('driver_locations').where('date','==',today());
+      var snap1 = await _mapQ.get();
       snap1.forEach(function(d){ driverLocs.push(d.data()); });
     }catch(e){}
     try{
@@ -4272,9 +4281,9 @@ function _renderLiveMap(center, driverLocs, emerLocs){
 
   // ★ v9.25: Firebase 실시간 리스너 — 기사 위치 자동 업데이트
   if(FB && _db){
-    var liveUnsub = _db.collection('driver_locations')
-      .where('date','==',today())
-      .onSnapshot(function(snap){
+    var _liveDid=S.dealerId||'';
+    var _liveQ=_liveDid?_db.collection('driver_locations').where('dealerId','==',_liveDid).where('date','==',today()):_db.collection('driver_locations').where('date','==',today());
+    var liveUnsub = _liveQ.onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type === 'removed') return;
           var d = change.doc.data();
@@ -17717,7 +17726,8 @@ function startListeners(){
       var _schedNextMonth=new Date(_schedNow.getFullYear(),_schedNow.getMonth()+2,0); // 다음달 마지막일
       var _schedFromStr=_schedPrevMonth.getFullYear()+'-'+String(_schedPrevMonth.getMonth()+1).padStart(2,'0')+'-01';
       var _schedToStr=_schedNextMonth.getFullYear()+'-'+String(_schedNextMonth.getMonth()+1).padStart(2,'0')+'-31';
-      _db.collection('schedules')
+      var _schDid=S.dealerId||'';
+      (_schDid?_db.collection('schedules').where('dealerId','==',_schDid):_db.collection('schedules'))
         .where('date','>=',_schedFromStr)
         .where('date','<=',_schedToStr)
         .get().then(function(snap){
@@ -17777,8 +17787,9 @@ function startListeners(){
     var yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
     var yesterdayStr=yesterday.toISOString().slice(0,10);
     var _photoTodayStr=today(); // ★ v9.61: 오늘 날짜 직접 정의
-    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_db.collection('photo_logs')
-      .where('date','>=',_photoTodayStr) // ★ v9.61: 오늘만 (reads 절감)
+    var _plDid=S.dealerId||'';
+    var _plQ=_plDid?_db.collection('photo_logs').where('dealerId','==',_plDid).where('date','>=',_photoTodayStr):_db.collection('photo_logs').where('date','>=',_photoTodayStr);
+    if(!Array.isArray(window._fbUnsubs))window._fbUnsubs=[];window._fbUnsubs.push(_plQ
       .onSnapshot(function(snap){
         snap.docChanges().forEach(function(change){
           if(change.type==='added'){
@@ -17871,12 +17882,13 @@ function startListeners(){
     var _3moStr=_3monthsAgo.getFullYear()+'-'+String(_3monthsAgo.getMonth()+1).padStart(2,'0');
     var _7dStr=_7daysAgo.toISOString().slice(0,10);
     var _30dStr=_30daysAgo.toISOString().slice(0,10);
+    var _slDid=S.dealerId||'';
     Object.keys(colPageMap).forEach(col=>{
-      var q=_db.collection(col);
+      var q=_slDid?_db.collection(col).where('dealerId','==',_slDid):_db.collection(col);
       // entries/deliveries: 오늘만 실시간 구독
       if(col==='entries'||col==='deliveries') q=q.where('date','==',todayStr);
       // ★ v9.40: settlements는 최근 3개월만 (이전월+현재월+다음월 윈도우)
-      else if(col==='settlements') q=q.where('adminId','==','admin').orderBy('month','desc'); // ★ 복합인덱스 불필요
+      else if(col==='settlements') q=q.orderBy('month','desc'); // adminId 대신 dealerId 필터로 통일
       // ★ v9.40: temp_logs는 최근 7일만 (실시간 모니터링용)
       else if(col==='temp_logs') q=q.where('date','>=',_7dStr);
       // ★ v9.40: accidents는 최근 30일만
