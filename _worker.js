@@ -10552,7 +10552,7 @@ function _pgHomeDriver(el){
       fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
         if(!d.ok){
           if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
-          else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+          else if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
           return;
         }
         if(!d.inspectDue){
@@ -10560,7 +10560,7 @@ function _pgHomeDriver(el){
             try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:_CU.inspectDue,ts:Date.now()}));}catch(e){}
             _renderInspectBanner(_CU.inspectDue);
           } else {
-            if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+            if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
           }
           return;
         }
@@ -10568,7 +10568,7 @@ function _pgHomeDriver(el){
         _renderInspectBanner(d.inspectDue);
       }).catch(function(e){
         if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
-        else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+        else if(inspBanner)inspBanner.innerHTML='<div onclick="_quickSetInspectDue()" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">탭해서 바로 등록할 수 있어요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
       });
     };
     if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
@@ -10816,6 +10816,30 @@ function _renderInspectBanner(dueStr){
       '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">만료: '+dateLabel+' · '+statusTxt+'</div>'+
     '</div>'+
   '</div>';
+}
+function _quickSetInspectDue(){
+  var today=new Date(),carNum=(_CU&&_CU.carNumber)||'';
+  var initVal=_CU&&_CU.inspectDue?_CU.inspectDue.replace(/(\d{4})(\d{2})(\d{2})/,'$1-$2-$3'):'';
+  document.getElementById('modal-body').innerHTML=
+    '<div style="font-size:15px;font-weight:900;margin-bottom:16px">정기검사 만료일 등록</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:6px">차량검사 만료일을 입력하면 홈에서 D-day를 바로 확인할 수 있어요.</div>'+
+    '<label class="inp-lbl" style="margin-top:12px;display:block">만료일</label>'+
+    '<input id="qinspect-date" type="date" class="inp" style="width:100%;margin-top:4px" value="'+initVal+'">'+
+    '<button type="button" class="btn" style="width:100%;margin-top:16px;min-height:48px;font-size:15px;font-weight:800" onclick="_saveQuickInspect()">저장</button>';
+  _openModal();
+}
+function _saveQuickInspect(){
+  var raw=((document.getElementById('qinspect-date')||{}).value||'').trim();
+  if(!raw){_yToast('날짜를 선택해주세요');return;}
+  var val=raw.replace(/-/g,'');
+  var carNum=(_CU&&_CU.carNumber)||'';
+  _db.collection('yongcha_users').doc(_CU.uid).update({inspectDue:val}).then(function(){
+    _CU.inspectDue=val;
+    try{if(carNum)localStorage.removeItem('yc_inspect_'+carNum);}catch(e){}
+    _closeModal();
+    _renderInspectBanner(val);
+    _yToast('정기검사 만료일이 저장됐어요');
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
 
 // ── 공동현관 비밀번호 DB ─────────────────────────────────────────────────────
