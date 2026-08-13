@@ -4334,12 +4334,1202 @@ ${JSON.stringify(postSummary)}
       } // end _delegateToCommon guard
     }
 
+const _MBTICO_HUB_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>엠비티아이 배송앱</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0066ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="엠비티아이">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --brand:#0066ff;--acc:#00d4ff;--green:#22c55e;
+  --red:#ef4444;--yellow:#f59e0b;
+  --border:rgba(0,102,255,.2);
+}
+html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif}
+
+/* 상단 헤더 */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.header-logo{font-size:16px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-info{font-size:11px;color:var(--text3);text-align:right}
+.header-name{font-size:12px;color:var(--text2);font-weight:600}
+
+/* 구독 게이트 */
+#sub-gate{display:none;padding:20px;text-align:center}
+.sub-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:360px;margin:0 auto}
+
+/* 로그인 */
+#login-screen{display:none;padding:20px;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:360px}
+.login-card h2{font-size:16px;font-weight:800;margin-bottom:20px;text-align:center}
+.field{margin-bottom:12px}
+.field label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px}
+.field input{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none}
+.btn-login{width:100%;padding:13px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px}
+
+/* 메인 앱 */
+#app-screen{display:none}
+
+/* 메뉴 그리드 */
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+.menu-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 14px;text-align:center;text-decoration:none;color:var(--text);cursor:pointer;transition:.2s;active:scale(.97)}
+.menu-card:active{transform:scale(.97);background:var(--bg3)}
+.menu-card .icon{font-size:32px;margin-bottom:8px}
+.menu-card .name{font-size:13px;font-weight:800;margin-bottom:3px}
+.menu-card .desc{font-size:10px;color:var(--text3)}
+.menu-card.highlight{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)}
+.menu-card.highlight .name{color:var(--red)}
+
+/* 공지 배너 */
+.notice-banner{margin:0 16px 4px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--yellow);cursor:pointer}
+
+/* 하단 구독 상태 */
+.sub-status{margin:0 16px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+
+/* 로딩 */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;font-size:13px;color:var(--text3)}
+
+/* 토스트 */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:1000;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div id="loading">⏳ 로딩중...</div>
+
+<!-- 로그인 화면 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">🚚</div>
+      <div style="font-size:18px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">엠비티아이 배송앱</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">배송기사 전용 통합 앱</div>
+    </div>
+    <div class="field">
+      <label>이메일</label>
+      <input id="login-email" type="email" placeholder="이메일 입력">
+    </div>
+    <div class="field">
+      <label>비밀번호</label>
+      <input id="login-pw" type="password" placeholder="비밀번호 입력">
+    </div>
+    <div id="login-err" style="font-size:12px;color:var(--red);margin-bottom:8px;display:none"></div>
+    <button class="btn-login" onclick="_doLogin()">로그인</button>
+    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">
+      계정이 없으신가요? <a href="/register" style="color:var(--acc)">회사 등록</a>
+    </div>
+  </div>
+</div>
+
+<!-- 구독 게이트 -->
+<div id="sub-gate" style="display:none;padding:40px 20px;text-align:center">
+  <div class="sub-card">
+    <div style="font-size:40px;margin-bottom:12px">🔒</div>
+    <div style="font-size:16px;font-weight:800;margin-bottom:8px">구독이 필요합니다</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.7">
+      엠비티아이 배송앱을 사용하려면<br>구독 신청 후 관리자 승인이 필요합니다
+    </div>
+    <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank"
+       style="display:block;padding:12px;background:#FEE500;color:#3C1E1E;border-radius:10px;font-size:13px;font-weight:800;text-decoration:none;margin-bottom:8px">
+      💬 카카오로 구독 신청
+    </a>
+    <div style="font-size:11px;color:var(--text3)">051-711-3103</div>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="app-screen" style="display:none">
+  <!-- 헤더 -->
+  <div class="header">
+    <div>
+      <div class="header-logo">엠비티아이</div>
+      <div id="header-company" class="header-info"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="header-sub" style="font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(34,197,94,.15);color:#22c55e"></div>
+      <button onclick="_logout()" style="padding:6px 12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:11px;cursor:pointer">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 공지 배너 -->
+  <div id="notice-banner" class="notice-banner" style="display:none" onclick="location.href='/notice'">
+    📢 <span id="notice-text"></span>
+  </div>
+
+  <!-- 메뉴 그리드 -->
+  <div class="menu-grid">
+    <a href="/scan" class="menu-card">
+      <div class="icon">📷</div>
+      <div class="name">스캔</div>
+      <div class="desc">간선차 바코드 스캔</div>
+    </a>
+    <a href="/label" class="menu-card">
+      <div class="icon">🏷️</div>
+      <div class="name">라벨</div>
+      <div class="desc">라벨출력·AI번역</div>
+    </a>
+    <a href="/emergency" class="menu-card">
+      <div class="icon">🚚</div>
+      <div class="name">배송관리</div>
+      <div class="desc">배송기록·현황</div>
+    </a>
+    <a href="/emergency" class="menu-card highlight">
+      <div class="icon">🚨</div>
+      <div class="name">긴급배송</div>
+      <div class="desc">실시간 배송</div>
+    </a>
+    <a href="/checkin" class="menu-card">
+      <div class="icon">⏰</div>
+      <div class="name">출퇴근</div>
+      <div class="desc">QR 출퇴근 체크</div>
+    </a>
+    <a href="https://donway.ai.kr/settle" class="menu-card">
+      <div class="icon">👤</div>
+      <div class="name">기사관리</div>
+      <div class="desc">DONWAY에서 관리</div>
+    </a>
+    <a href="/notice" class="menu-card">
+      <div class="icon">📋</div>
+      <div class="name">공지사항</div>
+      <div class="desc">공지·알림</div>
+    </a>
+    <a href="/schedule" class="menu-card">
+      <div class="icon">📅</div>
+      <div class="name">스케줄</div>
+      <div class="desc">일정·캠프관리</div>
+    </a>
+  </div>
+
+  <!-- 구독 상태 -->
+  <div class="sub-status">
+    <div style="color:var(--text3)">구독 상태</div>
+    <div id="sub-expiry-main" style="color:var(--green)"></div>
+  </div>
+
+  <!-- DONWAY 연동 -->
+  <div style="margin:0 16px 20px;padding:12px 14px;background:rgba(0,102,255,.06);border:1px solid var(--border);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <div style="font-size:12px;font-weight:700">🤖 DONWAY 정산 연동</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">배송건수 → 자동 정산</div>
+    </div>
+    <a href="https://donway.ai.kr/settle" style="padding:6px 12px;background:var(--brand);color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none">정산 앱 →</a>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+var SA = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+var _db, _auth, _cu, _company;
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
+  authDomain: "mbti-logistics.firebaseapp.com",
+  projectId: "mbti-logistics",
+  storageBucket: "mbti-logistics.firebasestorage.app",
+  messagingSenderId: "40761160761",
+  appId: "1:40761160761:web:20545b610f03f534e949e8"
+});
+_db = firebase.firestore();
+_db.settings({experimentalAutoDetectLongPolling:true,merge:true});
+_auth = firebase.auth();
+
+function toast(msg,dur){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.opacity=1;
+  setTimeout(function(){t.style.opacity=0;},dur||2500);
+}
+function _isSA(email){return SA.indexOf(email||'')>=0;}
+
+_auth.onAuthStateChanged(function(user){
+  document.getElementById('loading').style.display='none';
+  if(!user){
+    document.getElementById('login-screen').style.display='flex';
+    return;
+  }
+  _cu=user;
+  _loadApp(user);
+});
+
+function _loadApp(user){
+  _db.collection('companies').doc(user.uid).get().then(function(snap){
+    if(!snap.exists){
+      // companies 없으면 이메일로 검색
+      return _db.collection('companies').where('email','==',user.email).limit(1).get()
+        .then(function(qs){return qs.empty?null:qs.docs[0];});
+    }
+    return snap;
+  }).then(function(doc){
+    if(!doc||!doc.exists){
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('sub-gate').style.display='block';
+      return;
+    }
+    _company=doc.data();
+    var isSA=_isSA(user.email);
+    // 구독 체크
+    var subs=_company.subscriptions||{};
+    var mbtiSub=subs.mbtico||subs.delivery||{};
+    var today=new Date().toISOString().slice(0,10);
+    var isActive=isSA||(mbtiSub.active&&(!mbtiSub.expiry||mbtiSub.expiry>=today));
+
+    if(!isActive){
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('sub-gate').style.display='block';
+      return;
+    }
+
+    // 앱 표시
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('sub-gate').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+
+    // 헤더
+    document.getElementById('header-company').textContent=_company.companyName||_company.name||'';
+    var expEl=document.getElementById('header-sub');
+    if(isSA){expEl.textContent='슈퍼어드민';}
+    else if(mbtiSub.expiry){expEl.textContent='만료: '+mbtiSub.expiry;expEl.style.background='rgba(245,158,11,.15)';expEl.style.color='#f59e0b';}
+    else{expEl.textContent='구독 활성';}
+    document.getElementById('sub-expiry-main').textContent=isSA?'슈퍼어드민':mbtiSub.expiry?'만료: '+mbtiSub.expiry:'구독 활성';
+
+    // 공지 로드
+    _loadNotice();
+
+    // 3도메인 통합 계정 연결
+    fetch('/api/link-account',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:user.email,fromDomain:'mbtico.kr'})}).catch(function(){});
+
+  }).catch(function(e){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+  });
+}
+
+function _loadNotice(){
+  _db.collection('notices').where('dealerId','==',_cu.uid)
+    .orderBy('createdAt','desc').limit(1).get()
+    .then(function(snap){
+      if(!snap.empty){
+        var v=snap.docs[0].data();
+        var banner=document.getElementById('notice-banner');
+        var text=document.getElementById('notice-text');
+        if(banner&&text&&v.title){
+          text.textContent=v.title;
+          banner.style.display='block';
+        }
+      }
+    }).catch(function(){});
+}
+
+function _doLogin(){
+  var email=(document.getElementById('login-email')||{}).value.trim();
+  var pw=(document.getElementById('login-pw')||{}).value;
+  var err=document.getElementById('login-err');
+  err.style.display='none';
+  if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
+  _auth.signInWithEmailAndPassword(email,pw)
+    .catch(function(e){
+      err.textContent=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'이메일 또는 비밀번호가 틀렸습니다':'오류: '+e.message;
+      err.style.display='block';
+    });
+}
+
+function _logout(){
+  _auth.signOut().then(function(){location.reload();});
+}
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter')_doLogin();
+});
+
+// 보안 차단
+document.addEventListener('contextmenu',function(e){if(!_isSA(_cu&&_cu.email))e.preventDefault();});
+document.addEventListener('keydown',function(e){
+  if(_isSA(_cu&&_cu.email))return;
+  if(e.keyCode===123){e.preventDefault();return false;}
+  if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
+  if(e.ctrlKey&&e.keyCode===85){e.preventDefault();return false;}
+});
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+</script>
+<script>
+// ★ mbtico.kr modules 기반 메뉴 제어
+var SA_EMAILS_HUB = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+
+function _applyMbticoModules(co, isSA) {
+  var subs = (co&&co.subscriptions)||{};
+  var mbSub = subs.mbtico||subs.delivery||{};
+  var modules = isSA ? ['scan','label','emergency','checkin','drivers'] : (mbSub.modules || []);
+
+  // 모든 data-module 카드 처리
+  document.querySelectorAll('.menu-card[data-module]').forEach(function(card) {
+    var mod = card.getAttribute('data-module');
+    var hasAccess = isSA || modules.indexOf(mod) >= 0;
+    if(!hasAccess) {
+      // 잠금 표시
+      card.style.opacity = '0.4';
+      card.style.pointerEvents = 'none';
+      card.href = '#';
+      if(!card.querySelector('.lock-badge')) {
+        var lb = document.createElement('div');
+        lb.className = 'lock-badge';
+        lb.style.cssText = 'position:absolute;top:6px;right:6px;background:rgba(239,68,68,.8);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:700';
+        lb.textContent = '🔒 미구독';
+        card.style.position = 'relative';
+        card.appendChild(lb);
+      }
+    } else {
+      card.style.opacity = '';
+      card.style.pointerEvents = '';
+      var lb = card.querySelector('.lock-badge');
+      if(lb) lb.remove();
+    }
+  });
+
+  // 구독 추가 안내 배너
+  var unsubCount = document.querySelectorAll('.menu-card[data-module][style*="0.4"]').length;
+  if(unsubCount > 0 && !isSA) {
+    var existing = document.getElementById('unsub-banner');
+    if(!existing) {
+      var banner = document.createElement('div');
+      banner.id = 'unsub-banner';
+      banner.style.cssText = 'margin:0 16px 10px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:12px';
+      banner.innerHTML = '<span style="color:#f59e0b">🔒 ' + unsubCount + '개 기능 미구독</span>' +
+        '<a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" style="padding:5px 10px;background:#FEE500;color:#3C1E1E;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">구독 추가</a>';
+      var grid = document.getElementById('menu-grid');
+      if(grid) grid.parentNode.insertBefore(banner, grid);
+    }
+  }
+}
+</script>
+</body>
+</html>
+`;
+const _MBTICO_LANDING_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>물류배송앱 — 쿠팡·택배 배송기사 전용 통합 솔루션</title>
+<meta name="description" content="긴급배송·QR스캔·라벨출력·출퇴근 관리 — 쿠팡 배송기사 전용 앱">
+<meta name="theme-color" content="#0066ff">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --brand:#0066ff;--acc:#00d4ff;--green:#22c55e;
+  --red:#ef4444;--purple:#7b2fff;--yellow:#f59e0b;
+  --border:rgba(0,102,255,.2)
+}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif;overflow:hidden;height:100vh;width:100vw}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:rgba(10,15,30,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-logo{font-size:17px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-btns{display:flex;gap:8px}
+.btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;border:none;display:inline-block;text-align:center;transition:.2s}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+.btn-lg{padding:14px 28px;font-size:15px;border-radius:12px}
+.btn-white{background:#fff;color:#0066ff;font-weight:800}
+
+/* SLIDES */
+.slides{display:flex;width:100%;height:100vh;overflow-x:scroll;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none}
+.slides::-webkit-scrollbar{display:none}
+.slide{min-width:100vw;height:100vh;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 40px;overflow:hidden}
+
+/* 배경 효과 */
+.glow{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:.6}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,102,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,102,255,.04) 1px,transparent 1px);background-size:40px 40px}
+
+/* 점 네비 */
+.dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:100}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:.3s;cursor:pointer;border:none;padding:0}
+.dot.active{background:var(--brand);transform:scale(1.5)}
+
+/* 슬라이드 카운터 */
+.counter{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);z-index:100;background:rgba(10,15,30,.7);padding:4px 12px;border-radius:20px}
+
+/* 텍스트 */
+.badge{display:inline-block;padding:5px 14px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:999px;font-size:11px;font-weight:700;color:var(--acc);margin-bottom:20px;letter-spacing:.5px}
+.s-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--acc);margin-bottom:8px;text-transform:uppercase}
+.s-title{font-size:32px;font-weight:900;line-height:1.2;margin-bottom:14px;text-align:center}
+.s-title span{background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.s-sub{font-size:14px;color:var(--text2);max-width:420px;text-align:center;line-height:1.8;margin-bottom:28px}
+
+/* 카드 */
+.card-grid{display:grid;gap:12px;width:100%;max-width:560px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.feat-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;padding:18px;transition:.2s}
+.feat-card:hover{border-color:var(--brand);background:rgba(0,102,255,.06)}
+.feat-icon{font-size:28px;margin-bottom:10px}
+.feat-name{font-size:13px;font-weight:800;margin-bottom:6px}
+.feat-desc{font-size:11px;color:var(--text2);line-height:1.6}
+.feat-tag{display:inline-block;margin-top:8px;font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(0,212,255,.1);color:var(--acc);font-weight:700}
+
+/* 스텝 */
+.steps{display:flex;flex-direction:column;gap:16px;width:100%;max-width:420px}
+.step-item{display:flex;gap:16px;align-items:flex-start}
+.step-num{min-width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--acc));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0}
+.step-body h3{font-size:14px;font-weight:800;margin-bottom:4px}
+.step-body p{font-size:12px;color:var(--text2);line-height:1.6}
+
+/* 요금 */
+.price-cards{display:flex;gap:16px;width:100%;max-width:560px;flex-wrap:wrap;justify-content:center}
+.price-card{flex:1;min-width:200px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative}
+.price-card.hot{border-color:var(--brand);background:linear-gradient(135deg,rgba(0,102,255,.1),rgba(0,212,255,.05))}
+.price-hot-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;font-size:10px;font-weight:700;padding:3px 14px;border-radius:999px;white-space:nowrap}
+.price-name{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px}
+.price-val{font-size:26px;font-weight:900;margin-bottom:4px}
+.price-val span{font-size:12px;font-weight:400;color:var(--text2)}
+.price-desc{font-size:11px;color:var(--text3);margin-bottom:16px}
+.price-list{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.price-list li{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.price-list li::before{content:'✓';color:var(--green);font-weight:700}
+
+/* 커스텀 섹션 */
+.custom-box{background:linear-gradient(135deg,rgba(123,47,255,.15),rgba(0,102,255,.1));border:1px solid rgba(123,47,255,.4);border-radius:20px;padding:32px;width:100%;max-width:500px;text-align:center}
+.custom-box h2{font-size:24px;font-weight:900;margin-bottom:12px}
+.custom-box p{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:20px}
+.custom-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px}
+.custom-tag{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:999px;font-size:11px;font-weight:600;color:var(--text2)}
+
+/* CTA 섹션 */
+.cta-box{text-align:center;width:100%;max-width:480px}
+.cta-box h2{font-size:28px;font-weight:900;margin-bottom:12px}
+.cta-box p{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.8}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* 화살표 힌트 */
+.arrow{position:absolute;bottom:24px;right:24px;font-size:11px;color:var(--text3);animation:pulse 2s infinite;display:flex;align-items:center;gap:4px}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* 애니 */
+.anim-1{animation:fadeUp .5s .1s both}
+.anim-2{animation:fadeUp .5s .2s both}
+.anim-3{animation:fadeUp .5s .3s both}
+.anim-4{animation:fadeUp .5s .4s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* 앱 칩 */
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:24px}
+.chip{display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600}
+
+/* 푸터 */
+.footer-bar{position:fixed;bottom:0;left:0;right:0;padding:8px 20px;background:rgba(10,15,30,.8);backdrop-filter:blur(8px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3);z-index:100}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">물류배송앱</div>
+  <div class="nav-btns">
+    <a href="/mbtico_hub" class="btn btn-outline">앱 로그인</a>
+    <a href="/mbtico-join" class="btn btn-primary">무료 체험</a>
+  </div>
+</nav>
+
+<!-- 점 네비 -->
+<div class="dots" id="dots"></div>
+
+<!-- 슬라이드 카운터 -->
+<div class="counter" id="counter">1 / 7</div>
+
+<!-- 슬라이드 컨테이너 -->
+<div class="slides" id="slides">
+
+  <!-- SLIDE 1: 히어로 -->
+  <div class="slide">
+    <div class="glow" style="width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="grid-bg"></div>
+    <div class="badge anim-1">🚚 쿠팡·택배 배송기사 전용</div>
+    <h1 class="s-title anim-2">배송의 모든 것을<br><span>하나의 앱</span>으로</h1>
+    <p class="s-sub anim-3">긴급배송 등록부터 QR스캔, 라벨출력, 출퇴근 관리까지<br>현장에서 바로 쓰는 배송기사 전용 통합 솔루션</p>
+    <div class="anim-4" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
+      <a href="/mbtico_hub" class="btn btn-outline btn-lg">앱 바로가기</a>
+    </div>
+    <div class="chips anim-4">
+      <div class="chip">📷 QR 스캔</div>
+      <div class="chip">🚨 긴급배송</div>
+      <div class="chip">🏷️ 라벨 출력</div>
+      <div class="chip">⏰ QR 출퇴근</div>
+      <div class="chip">🤖 AI OCR</div>
+    </div>
+    <div class="arrow">스와이프 →</div>
+  </div>
+
+  <!-- SLIDE 2: 핵심기능 1 (배송) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(239,68,68,.15),transparent 70%);top:30%;right:10%"></div>
+    <div class="s-label">핵심 기능 01</div>
+    <h2 class="s-title">🚨 긴급배송 등록</h2>
+    <p class="s-sub">쿠팡앱 오류 시에도 배송을 멈추지 마세요.<br>송장 촬영 한 번으로 모든 정보가 자동 입력됩니다.</p>
+    <div class="card-grid g3" style="max-width:680px">
+      <div class="feat-card">
+        <div class="feat-icon">📸</div>
+        <div class="feat-name">AI 송장 인식</div>
+        <div class="feat-desc">카메라로 촬영하면 Claude AI가 주소·수령인·운송장번호를 자동 추출합니다</div>
+        <div class="feat-tag">AI OCR</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📍</div>
+        <div class="feat-name">배송 핀 지도</div>
+        <div class="feat-desc">긴급배송 등록 시 GPS 핀 자동 생성. 지도에서 기사별 배송 위치 실시간 확인</div>
+        <div class="feat-tag">실시간 지도</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚠️</div>
+        <div class="feat-name">오배송 감지</div>
+        <div class="feat-desc">등록된 주소와 실제 GPS 위치 자동 비교. 오배송 의심 건 즉시 알림으로 손실 방지</div>
+        <div class="feat-tag">오류 방지</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎥</div>
+        <div class="feat-name">라이브 QR 스캔</div>
+        <div class="feat-desc">카메라를 대면 실시간으로 QR·바코드 인식. 운송장 훼손 시에도 정확하게</div>
+        <div class="feat-tag">실시간</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🔄</div>
+        <div class="feat-name">반품 처리</div>
+        <div class="feat-desc">반품 건 스캔 즉시 기록. 반품 건수·금액 자동 집계. 정산 시 자동 반영</div>
+        <div class="feat-tag">자동 집계</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">☁️</div>
+        <div class="feat-name">60일 기록 보관</div>
+        <div class="feat-desc">모든 배송 기록 클라우드 자동 저장. 60일 이력 조회·엑셀 다운로드 지원</div>
+        <div class="feat-tag">클라우드</div>
+      </div>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 3: 핵심기능 2 (스캔·라벨) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(0,212,255,.15),transparent 70%);top:20%;left:10%"></div>
+    <div class="s-label">핵심 기능 02</div>
+    <h2 class="s-title">📷 스캔 · 🏷️ 라벨</h2>
+    <p class="s-sub">간선차 하차부터 라벨 출력까지<br>현장 업무를 스마트하게 처리하세요.</p>
+    <div class="card-grid g3" style="max-width:560px">
+      <div class="feat-card">
+        <div class="feat-icon">📷</div>
+        <div class="feat-name">바코드 스캔</div>
+        <div class="feat-desc">간선차 하차 시 실시간 바코드 스캔. jsQR 내장으로 오프라인도 작동</div>
+        <div class="feat-tag">오프라인 지원</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏷️</div>
+        <div class="feat-name">라벨 출력</div>
+        <div class="feat-desc">블루투스 프린터 연동. 커스텀 라벨 디자인. 대량 출력 지원</div>
+        <div class="feat-tag">BT 프린터</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌐</div>
+        <div class="feat-name">AI 번역</div>
+        <div class="feat-desc">중국어·영어 송장도 한국어로 자동 번역. 해외직구 배송도 문제없음</div>
+        <div class="feat-tag">다국어</div>
+      </div>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 4: 핵심기능 3 (출퇴근·사고) -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(34,197,94,.12),transparent 70%);bottom:20%;right:10%"></div>
+    <div class="s-label">핵심 기능 03</div>
+    <h2 class="s-title">⏰ 출퇴근 · 🚗 사고접수</h2>
+    <p class="s-sub">기사 근태 관리와 사고 대응을<br>실시간으로 처리하세요.</p>
+    <div class="card-grid g3" style="max-width:680px">
+      <div class="feat-card">
+        <div class="feat-icon">⏰</div>
+        <div class="feat-name">QR 출퇴근</div>
+        <div class="feat-desc">GPS 300m 반경 체크인. 캠프별 출퇴근 기록. 근태 데이터 자동 집계</div>
+        <div class="feat-tag">GPS 반경 인증</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-name">캠프별 현황</div>
+        <div class="feat-desc">주간·야간 출근 현황 실시간 확인. 캠프별 배송 합계 자동 집계</div>
+        <div class="feat-tag">실시간</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🚨</div>
+        <div class="feat-name">사고 즉시 접수</div>
+        <div class="feat-desc">현장에서 즉시 사고 접수. 사진 첨부·유형 선택 후 관리자에게 실시간 알림</div>
+        <div class="feat-tag">즉시 알림</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🌡️</div>
+        <div class="feat-name">온도 이상 알림</div>
+        <div class="feat-desc">냉동·냉장·정온 화물 온도 이상 감지 시 즉시 알림. 화물 손상 사전 방지</div>
+        <div class="feat-tag">실시간 알림</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📝</div>
+        <div class="feat-name">운행 메모</div>
+        <div class="feat-desc">운행 중 특이사항 즉시 기록. 사진 첨부 가능. 관리자 60일 이력 조회</div>
+        <div class="feat-tag">기록 관리</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">💰</div>
+        <div class="feat-name">DONWAY 정산 연동</div>
+        <div class="feat-desc">배송 데이터 → 자동 정산 반영. 클릭 한 번으로 정산 완료. 알림톡 발송</div>
+        <div class="feat-tag">자동 연동</div>
+      </div>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 5: 100% 맞춤 제작 -->
+  <div class="slide">
+    <div class="glow" style="width:500px;height:500px;background:radial-gradient(circle,rgba(123,47,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="s-label">맞춤 제작</div>
+    <div class="custom-box">
+      <div style="font-size:40px;margin-bottom:12px">🛠️</div>
+      <h2>100% 맞춤 제작 가능</h2>
+      <p>기본 기능 외에도 업체별 특수 요구사항을<br>전부 맞춤 개발해드립니다.<br>어떤 업종이든, 어떤 기능이든 구현 가능합니다.</p>
+      <div class="custom-tags">
+        <div class="custom-tag">🏭 업종별 커스텀</div>
+        <div class="custom-tag">📱 전용 앱 UI</div>
+        <div class="custom-tag">🔗 외부 시스템 연동</div>
+        <div class="custom-tag">📊 맞춤 통계/리포트</div>
+        <div class="custom-tag">🖨️ 프린터 연동</div>
+        <div class="custom-tag">💳 결제 시스템</div>
+        <div class="custom-tag">🗺️ 지도 연동</div>
+        <div class="custom-tag">🤖 AI 자동화</div>
+        <div class="custom-tag">📦 재고 관리</div>
+        <div class="custom-tag">👥 다중 캠프 관리</div>
+      </div>
+      <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-primary btn-lg" style="display:inline-block">💬 맞춤 제작 문의</a>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 6: 시작하기 -->
+  <div class="slide">
+    <div class="glow" style="width:400px;height:400px;background:radial-gradient(circle,rgba(0,102,255,.15),transparent 70%);top:30%;left:20%"></div>
+    <div class="s-label">시작하기</div>
+    <h2 class="s-title">3단계로 <span>바로 시작</span></h2>
+    <p class="s-sub">복잡한 설치 없이 스마트폰으로 즉시 사용</p>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>회사 등록 (사장님)</h3>
+          <p>회사 정보 입력 → 사업자번호 인증 → 7일 무료 체험 시작. 승인 후 dealerId 발급.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>기사 가입</h3>
+          <p>회사 코드 입력 → 캠프 선택 → 이름 입력 → 바로 앱 사용. 앱 설치 불필요.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>현장에서 즉시 사용</h3>
+          <p>긴급배송 등록, QR 스캔, 라벨 출력 — 스마트폰 하나로 모든 배송 업무 처리.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:24px">
+      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 지금 시작하기</a>
+    </div>
+    <div class="arrow">다음 →</div>
+  </div>
+
+  <!-- SLIDE 7: CTA -->
+  <div class="slide">
+    <div class="glow" style="width:600px;height:600px;background:radial-gradient(circle,rgba(0,102,255,.2),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="cta-box">
+      <div style="font-size:48px;margin-bottom:16px">🚚</div>
+      <h2 class="s-title">지금 바로 <span>무료 체험</span></h2>
+      <p class="s-sub" style="margin:0 auto 28px">7일 무료 · 신용카드 불필요 · 언제든 해지<br>승인 후 즉시 모든 기능 사용 가능</p>
+      <div class="cta-btns">
+        <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험 시작</a>
+        <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-outline btn-lg">💬 카카오 문의</a>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--text3)">
+        <span>📞 051-711-3103</span>
+        <span>🕐 평일 09:00~18:00</span>
+        <span>📧 kimdh4790@gmail.com</span>
+      </div>
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.8">
+        엠비티아이 유한회사 · 부산광역시 수영구 수영로 668, 607호<br>
+        사업자번호 373-86-02536 · 대표 김형우<br>
+        <a href="https://donway.ai.kr" style="color:var(--acc);text-decoration:none">🤖 DONWAY 정산 연동</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 하단바 -->
+<div class="footer-bar">
+  <span>물류배송앱 · 엠비티아이</span>
+  <span>📞 051-711-3103</span>
+</div>
+
+<script>
+var slides=document.getElementById('slides');
+var dotsEl=document.getElementById('dots');
+var counterEl=document.getElementById('counter');
+var total=document.querySelectorAll('.slide').length;
+
+// 점 생성
+for(var i=0;i<total;i++){
+  var d=document.createElement('button');
+  d.className='dot'+(i===0?' active':'');
+  d.setAttribute('data-i',i);
+  d.onclick=(function(idx){return function(){scrollToSlide(idx);};})(i);
+  dotsEl.appendChild(d);
+}
+
+function scrollToSlide(i){
+  slides.scrollTo({left:i*window.innerWidth,behavior:'smooth'});
+}
+
+function updateDots(){
+  var idx=Math.round(slides.scrollLeft/window.innerWidth);
+  document.querySelectorAll('.dot').forEach(function(d,i){
+    d.className='dot'+(i===idx?' active':'');
+  });
+  counterEl.textContent=(idx+1)+' / '+total;
+}
+
+slides.addEventListener('scroll',updateDots);
+
+// 키보드
+document.addEventListener('keydown',function(e){
+  var idx=Math.round(slides.scrollLeft/window.innerWidth);
+  if(e.key==='ArrowRight'&&idx<total-1) scrollToSlide(idx+1);
+  if(e.key==='ArrowLeft'&&idx>0) scrollToSlide(idx-1);
+});
+</script>
+</body>
+</html>
+`;
+const _MBTICO_JOIN_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>회사 등록 — 엠비티아이 배송앱</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;--text:#e2e8f0;--text2:#94a3b8;--text3:#475569;--brand:#0066ff;--acc:#00d4ff;--green:#22c55e;--red:#ef4444;--border:rgba(0,102,255,.2)}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:460px}
+.logo{text-align:center;margin-bottom:28px}
+.logo h1{font-size:20px;font-weight:900;background:linear-gradient(90deg,var(--brand),var(--acc));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* 스텝퍼 */
+.stepper{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px}
+.step{display:flex;flex-direction:column;align-items:center;gap:4px}
+.step-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text3);transition:.3s}
+.step-circle.active{border-color:var(--brand);background:var(--brand);color:#fff}
+.step-circle.done{border-color:var(--green);background:var(--green);color:#fff}
+.step-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.step-line{width:40px;height:2px;background:var(--border);margin-bottom:16px;transition:.3s}
+.step-line.done{background:var(--green)}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px}
+.card-title{font-size:16px;font-weight:800;margin-bottom:6px}
+.card-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-weight:600}
+.field input,.field select{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;outline:none;transition:.2s;font-family:inherit}
+.field input:focus,.field select:focus{border-color:var(--brand)}
+.field input::placeholder{color:var(--text3)}
+.field-row{display:flex;gap:8px}
+.field-row .field{flex:1}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);margin-bottom:8px}
+.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
+.biz-check{display:flex;gap:8px;margin-top:6px}
+.biz-check input{flex:1}
+.biz-check button{padding:0 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.plan-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:.2s;text-align:center}
+.plan-card.active{border-color:var(--brand);background:rgba(0,102,255,.08)}
+.plan-card .icon{font-size:22px;margin-bottom:6px}
+.plan-card .name{font-size:12px;font-weight:800}
+.plan-card .price{font-size:11px;color:var(--text3);margin-top:3px}
+.divider{text-align:center;font-size:11px;color:var(--text3);margin:16px 0}
+.back-link{text-align:center;font-size:12px;color:var(--text3);margin-top:16px;cursor:pointer}
+.back-link a{color:var(--acc);text-decoration:none}
+
+/* 완료 화면 */
+.complete{text-align:center;padding:32px 0}
+.complete-icon{font-size:56px;margin-bottom:16px}
+.complete-title{font-size:20px;font-weight:900;margin-bottom:8px}
+.complete-sub{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:24px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="logo">
+    <h1>엠비티아이 배송앱</h1>
+    <p>쿠팡·택배 배송기사 전용 통합 솔루션</p>
+  </div>
+
+  <!-- 스텝퍼 -->
+  <div class="stepper">
+    <div class="step">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label">회사 정보</div>
+    </div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label">서비스 선택</div>
+    </div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label">계정 설정</div>
+    </div>
+    <div class="step-line" id="sl3"></div>
+    <div class="step">
+      <div class="step-circle" id="sc4">4</div>
+      <div class="step-label">완료</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: 회사 정보 -->
+  <div id="step1" class="card">
+    <div class="card-title">🏢 회사 정보</div>
+    <div class="card-sub">배송앱을 사용할 회사 정보를 입력하세요</div>
+    <div id="err1" class="err"></div>
+    <div class="field">
+      <label>회사명 (상호) *</label>
+      <input id="s1-company" placeholder="예: ○○물류, ○○배송">
+    </div>
+    <div class="field">
+      <label>사업자번호 *</label>
+      <div class="biz-check">
+        <input id="s1-biz" placeholder="000-00-00000" maxlength="12" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
+        <button onclick="_checkBiz()">인증</button>
+      </div>
+      <div id="biz-result" style="font-size:11px;margin-top:4px"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>대표자명 *</label>
+        <input id="s1-ceo" placeholder="홍길동">
+      </div>
+      <div class="field">
+        <label>연락처 *</label>
+        <input id="s1-phone" placeholder="010-0000-0000" type="tel">
+      </div>
+    </div>
+    <div class="field">
+      <label>캠프 목록 (쉼표로 구분)</label>
+      <input id="s1-camps" placeholder="예: 부산1,부산2,부산3" value="부산1,부산2,부산3,대구2,진주M">
+    </div>
+    <button class="btn btn-primary" onclick="_step1Next()">다음 →</button>
+  </div>
+
+  <!-- STEP 2: 서비스 선택 -->
+  <div id="step2" class="card" style="display:none">
+    <div class="card-title">📦 서비스 선택</div>
+    <div class="card-sub">필요한 기능을 선택하세요 (중복 선택 가능)</div>
+    <div id="err2" class="err"></div>
+    <div class="plan-grid">
+      <div class="plan-card active" id="svc-emergency" onclick="_toggleSvc('emergency',this)">
+        <div class="icon">🚨</div>
+        <div class="name">긴급배송</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-scan" onclick="_toggleSvc('scan',this)">
+        <div class="icon">📷</div>
+        <div class="name">QR 스캔</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-label" onclick="_toggleSvc('label',this)">
+        <div class="icon">🏷️</div>
+        <div class="name">라벨 출력</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card active" id="svc-checkin" onclick="_toggleSvc('checkin',this)">
+        <div class="icon">⏰</div>
+        <div class="name">QR 출퇴근</div>
+        <div class="price">필수 포함</div>
+      </div>
+      <div class="plan-card" id="svc-settle" onclick="_toggleSvc('settle',this)">
+        <div class="icon">🤖</div>
+        <div class="name">DONWAY 정산</div>
+        <div class="price">별도 요금</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>업종</label>
+      <select id="s2-industry">
+        <option value="courier">쿠팡 택배</option>
+        <option value="delivery">배달대행</option>
+        <option value="logistics">물류·창고</option>
+        <option value="other">기타</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>기사 인원</label>
+      <select id="s2-headcount">
+        <option value="~10">10명 이하</option>
+        <option value="~30" selected>~30명</option>
+        <option value="~50">~50명</option>
+        <option value="~100">~100명</option>
+        <option value="100+">100명 이상</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="_step2Next()">다음 →</button>
+    <button class="btn btn-outline" onclick="_goStep(1)">← 이전</button>
+  </div>
+
+  <!-- STEP 3: 계정 설정 -->
+  <div id="step3" class="card" style="display:none">
+    <div class="card-title">🔐 계정 설정</div>
+    <div class="card-sub">관리자 로그인 계정을 만드세요</div>
+    <div id="err3" class="err"></div>
+    <div class="field">
+      <label>이메일 (로그인 ID) *</label>
+      <input id="s3-email" type="email" placeholder="company@email.com">
+    </div>
+    <div class="field">
+      <label>비밀번호 * (8자 이상)</label>
+      <input id="s3-pw" type="password" placeholder="비밀번호 입력">
+    </div>
+    <div class="field">
+      <label>비밀번호 확인 *</label>
+      <input id="s3-pw2" type="password" placeholder="비밀번호 재입력">
+    </div>
+    <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--text3);line-height:1.6">
+      ✅ 가입 후 관리자 검토(1~2 영업일) 후 서비스가 활성화됩니다<br>
+      ✅ 7일 무료 체험 후 유료 전환 여부를 선택하실 수 있습니다<br>
+      ✅ 승인 시 이메일 + 카카오 알림톡으로 안내됩니다
+    </div>
+    <button class="btn btn-primary" id="s3-btn" onclick="_step3Submit()">✅ 가입 신청 완료</button>
+    <button class="btn btn-outline" onclick="_goStep(2)">← 이전</button>
+  </div>
+
+  <!-- STEP 4: 완료 -->
+  <div id="step4" class="card" style="display:none">
+    <div class="complete">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">가입 신청 완료!</div>
+      <div class="complete-sub">
+        관리자 검토 후 1~2 영업일 내에<br>
+        이메일과 카카오 알림톡으로 승인 안내를 드립니다.<br><br>
+        승인 후 배송앱을 바로 사용하실 수 있습니다.
+      </div>
+      <a href="/mbtico_hub" class="btn btn-primary" style="display:block;text-decoration:none">앱 로그인하기</a>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3)">
+        문의: 051-711-3103 · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--acc)" target="_blank">카카오 채널</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="back-link">
+    이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.firebasestorage.app',
+  messagingSenderId:'40761160761',
+  appId:'1:40761160761:web:20545b610f03f534e949e8'
+});
+var _db=firebase.firestore();
+var _auth=firebase.auth();
+var _curStep=1;
+var _bizVerified=false;
+var _selectedSvcs=['emergency','scan','label','checkin'];
+
+function _goStep(n){
+  for(var i=1;i<=4;i++){
+    var el=document.getElementById('step'+i);
+    if(el) el.style.display=(i===n?'block':'none');
+    var sc=document.getElementById('sc'+i);
+    if(sc){
+      sc.className='step-circle'+(i<n?' done':i===n?' active':'');
+      if(i<n) sc.textContent='✓';
+      else sc.textContent=i;
+    }
+    var sl=document.getElementById('sl'+i);
+    if(sl) sl.className='step-line'+(i<n?' done':'');
+  }
+  _curStep=n;
+  window.scrollTo(0,0);
+}
+
+function _showErr(id,msg){ var el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function _hideErr(id){ document.getElementById(id).style.display='none'; }
+
+async function _checkBiz(){
+  var biz=document.getElementById('s1-biz').value.replace(/-/g,'');
+  var res=document.getElementById('biz-result');
+  if(biz.length!==10){ res.style.color='var(--red)'; res.textContent='❌ 사업자번호 10자리를 입력하세요'; return; }
+  res.style.color='var(--text3)'; res.textContent='확인 중...';
+  try{
+    var r=await fetch('/api/biz-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bizNo:biz})});
+    var d=await r.json();
+    if(d.valid){
+      res.style.color='var(--green)'; res.textContent='✅ 정상 사업자입니다';
+      _bizVerified=true;
+    } else {
+      res.style.color='var(--red)'; res.textContent='❌ '+(d.message||'유효하지 않은 사업자번호입니다');
+      _bizVerified=false;
+    }
+  }catch(e){
+    // API 오류 시 통과
+    res.style.color='var(--text3)'; res.textContent='⚠️ 인증 서버 오류 — 계속 진행합니다';
+    _bizVerified=true;
+  }
+}
+
+function _toggleSvc(svc,el){
+  var forced=['emergency','scan','label','checkin'];
+  if(forced.includes(svc)){ return; } // 필수 항목
+  var idx=_selectedSvcs.indexOf(svc);
+  if(idx>=0){ _selectedSvcs.splice(idx,1); el.classList.remove('active'); }
+  else{ _selectedSvcs.push(svc); el.classList.add('active'); }
+}
+
+function _step1Next(){
+  _hideErr('err1');
+  var co=document.getElementById('s1-company').value.trim();
+  var biz=document.getElementById('s1-biz').value.trim();
+  var ceo=document.getElementById('s1-ceo').value.trim();
+  var phone=document.getElementById('s1-phone').value.trim();
+  if(!co){ _showErr('err1','회사명을 입력하세요'); return; }
+  if(!biz){ _showErr('err1','사업자번호를 입력하세요'); return; }
+  if(!ceo){ _showErr('err1','대표자명을 입력하세요'); return; }
+  if(!phone){ _showErr('err1','연락처를 입력하세요'); return; }
+  _goStep(2);
+}
+
+function _step2Next(){
+  _hideErr('err2');
+  _goStep(3);
+}
+
+async function _step3Submit(){
+  _hideErr('err3');
+  var email=document.getElementById('s3-email').value.trim();
+  var pw=document.getElementById('s3-pw').value;
+  var pw2=document.getElementById('s3-pw2').value;
+  if(!email){ _showErr('err3','이메일을 입력하세요'); return; }
+  if(pw.length<8){ _showErr('err3','비밀번호는 8자 이상이어야 합니다'); return; }
+  if(pw!==pw2){ _showErr('err3','비밀번호가 일치하지 않습니다'); return; }
+
+  var btn=document.getElementById('s3-btn');
+  btn.disabled=true; btn.textContent='처리 중...';
+
+  try{
+    // Firebase Auth 계정 생성
+    var uc=await _auth.createUserWithEmailAndPassword(email,pw);
+    var uid=uc.user.uid;
+
+    var co=document.getElementById('s1-company').value.trim();
+    var biz=document.getElementById('s1-biz').value.replace(/-/g,'');
+    var ceo=document.getElementById('s1-ceo').value.trim();
+    var phone=document.getElementById('s1-phone').value.trim();
+    var camps=document.getElementById('s1-camps').value.split(',').map(function(c){return c.trim();}).filter(Boolean);
+    var industry=document.getElementById('s2-industry').value;
+    var headcount=document.getElementById('s2-headcount').value;
+
+    // companies 문서 생성
+    await _db.collection('companies').doc(uid).set({
+      companyName: co,
+      bizNum: biz,
+      ceoName: ceo,
+      phone: phone,
+      email: email,
+      camps: camps,
+      industryType: industry,
+      headcount: headcount,
+      services: _selectedSvcs,
+      platform: 'mbtico',
+      status: 'pending',
+      plan: 'trial',
+      trialEnd: new Date(Date.now()+7*864e5).toISOString().slice(0,10),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // users 문서 생성
+    await _db.collection('users').doc(uid).set({
+      email: email,
+      dealerId: uid,
+      role: 'owner',
+      platform: 'mbtico',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 사업자번호 블랙리스트 등록
+    await _db.collection('used_biz_numbers').doc(biz).set({
+      email: email, dealerId: uid,
+      registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // 슈퍼어드민에게 알림 (Worker API)
+    fetch('/api/approval-request',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uid:uid,companyName:co,email:email,platform:'mbtico'})
+    }).catch(function(){});
+
+    _goStep(4);
+  }catch(e){
+    btn.disabled=false; btn.textContent='✅ 가입 신청 완료';
+    if(e.code==='auth/email-already-in-use'){
+      _showErr('err3','이미 등록된 이메일입니다. 로그인해주세요.');
+    } else {
+      _showErr('err3','오류: '+e.message);
+    }
+  }
+}
+</script>
+</body>
+</html>
+`;
         // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
-      if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
+      if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
-      if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
+      if (path === '/hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/control' || path === '/control/') {
         const ctrlHtml = `<!DOCTYPE html>
 <html lang="ko">
@@ -4613,8 +5803,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
       if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
-      if (path === '/mbtico_hub' || path === '/mbtico-hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
-      if (path === '/mbtico-join' || path === '/company-join') return serveKVFile(env, 'mbtico_join.html', 'text/html');
+      if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
@@ -5135,7 +6325,7 @@ fetch('/qr/members?did='+DID)
       // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
         // ★ workers.dev → 배송앱 허브
-        return serveKVFile(env, 'mbtico_hub.html', 'text/html');
+        return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       } else {
         const landingResp = await fetchAsset('/donway_landing.html', request, env);
         const landingHeaders = new Headers();
