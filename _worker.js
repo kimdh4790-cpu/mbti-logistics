@@ -12735,7 +12735,7 @@ function _srSubmit(){
 // ── 노선 공고 목록 ───────────────────────────────────────────
 var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,priceRange:'',statusFilter:'open',q:'',matchTab:'all'};
 var _allPosts=[];
-var _postsMainTab='route'; // 'route' | 'yongcha'
+var _postsMainTab='short'; // 'short' | 'long' | 'jobs'
 var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
 
@@ -12743,26 +12743,30 @@ function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'배차 공고')+'</h1>'+
-      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'임시 차용 가능 기사 목록 · 며칠~몇주 단위':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
-      '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\\'yongcha\\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='long'?'장기 용차':_postsMainTab==='jobs'?(_CU&&_CU.type==='driver'?'구직 게시판':'구인 게시판'):'단기 용차')+'</h1>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='long'?'월단위·상시모집 정기 노선':_postsMainTab==='jobs'?'정직원·계약직 장기 채용':'하루 대타·주단위 단기 공고')+'</p></div>'+
+      '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
 
-  // 배차 / 용차 / 구직(기사)|구인(소장) 전환 탭
-  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px">'+
-    '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'route\\')" '+
-      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
-      'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '배차 공고</button>'+
-    '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'yongcha\\')" '+
-      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
-      'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '용차 모집</button>'+
+  // 단기 용차 / 장기 용차 / 구인구직 전환 탭
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px">'+
+    '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'short\\')" '+
+      'style="min-height:48px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='short'?'var(--ac)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='short'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='short'?'#fff':'var(--t2)')+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3">'+
+      '단기 용차<br><span style="font-size:10px;opacity:.8">하루·주단위</span></button>'+
+    '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'long\\')" '+
+      'style="min-height:48px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='long'?'var(--gn)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='long'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='long'?'#fff':'var(--t2)')+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3">'+
+      '장기 용차<br><span style="font-size:10px;opacity:.8">월단위·상시</span></button>'+
     '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\\'jobs\\')" '+
-      'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
-      'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      (_CU&&_CU.type==='driver'?'구직':'구인')+'</button>'+
+      'style="min-height:48px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
+      'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3">'+
+      '구인구직<br><span style="font-size:10px;opacity:.8">정직원·계약직</span></button>'+
+  '</div>'+
+  '<div style="margin-bottom:10px;font-size:11px;color:var(--t3);text-align:center">'+
+    (_postsMainTab==='short'?'대타·주단위 단기 공고 — 건당 지급':
+     _postsMainTab==='long'?'월단위 이상 정기 노선 — 장기 계약':'정직원·계약직 채용 — 대리점 직접 고용')+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -12889,31 +12893,39 @@ function _pfSwitchMainTab(tab){
   var btnR=document.getElementById('pmtab-route');
   var btnY=document.getElementById('pmtab-yongcha');
   var btnJ=document.getElementById('pmtab-jobs');
-  if(!routeSec||!yongchaSec)return;
+  if(!routeSec)return;
   // 모두 숨김
-  routeSec.style.display='none';yongchaSec.style.display='none';if(jobsSec)jobsSec.style.display='none';
+  routeSec.style.display='none';
+  if(yongchaSec)yongchaSec.style.display='none';
+  if(jobsSec)jobsSec.style.display='none';
   // 버튼 초기화
   if(btnR){btnR.style.background='var(--bg2)';btnR.style.color='var(--t2)';btnR.style.borderColor='var(--bd)';}
   if(btnY){btnY.style.background='var(--bg2)';btnY.style.color='var(--t2)';btnY.style.borderColor='var(--bd)';}
   if(btnJ){btnJ.style.background='var(--bg2)';btnJ.style.color='var(--t2)';btnJ.style.borderColor='var(--bd)';}
-  if(tab==='yongcha'){
-    yongchaSec.style.display='block';
-    if(title)title.textContent='용차 모집';
-    if(sub)sub.textContent='임시 차용 가능 기사 목록 · 며칠~몇주 단위';
-    if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
-    _loadDriverOfferList();
-  } else if(tab==='jobs'){
+  // 설명 문구 업데이트
+  var descEl=document.getElementById('posts-tab-desc');
+  if(tab==='jobs'){
     if(jobsSec)jobsSec.style.display='block';
     var isDriver=_CU&&_CU.type==='driver';
     if(title)title.textContent=isDriver?'구직 게시판':'구인 게시판';
-    if(sub)sub.textContent=isDriver?'대리점 소속 채용 공고 · 이력서 등록':'기사 채용공고 등록 · 이력서 검색';
+    if(sub)sub.textContent='정직원·계약직 장기 채용';
+    if(descEl)descEl.textContent='정직원·계약직 채용 — 대리점 직접 고용';
     if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
     var inner=document.getElementById('posts-jobs-inner');
     if(inner)_loadJobsSection(inner);
-  } else {
+  } else if(tab==='long'){
     routeSec.style.display='block';
-    if(title)title.textContent='배차 공고';
-    if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
+    if(title)title.textContent='장기 용차';
+    if(sub)sub.textContent='월단위·상시모집 정기 노선';
+    if(descEl)descEl.textContent='월단위 이상 정기 노선 — 장기 계약';
+    if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
+    _loadFilteredPosts();
+  } else {
+    _postsMainTab='short';
+    routeSec.style.display='block';
+    if(title)title.textContent='단기 용차';
+    if(sub)sub.textContent='하루 대타·주단위 단기 공고';
+    if(descEl)descEl.textContent='대타·주단위 단기 공고 — 건당 지급';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
     _loadFilteredPosts();
   }
@@ -13316,8 +13328,16 @@ function _renderPostList(){
 
   var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var q=(_pf.q||'').trim().toLowerCase();
+  var _shortTypes=['하루 대타','주단위'];
+  var _longTypes=['월단위','상시모집'];
   var filtered=_allPosts.filter(function(p){
     if(p.blinded)return false;
+    // 탭별 postType 필터
+    if(_postsMainTab==='short'){
+      if(_shortTypes.indexOf(p.postType)===-1)return false;
+    } else if(_postsMainTab==='long'){
+      if(_longTypes.indexOf(p.postType)===-1)return false;
+    }
     // 맞춤공고 탭 — 기사 프리퍼런스 점수 1 이상만
     if(_pf.matchTab==='matched'&&_CU&&_CU.type==='driver'&&_prefs){
       if((_yMatchScore(p)||0)<1)return false;
@@ -15048,11 +15068,17 @@ function _pgPostWrite(el){
   ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
   '</select></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">공고 유형 <span style="color:var(--rd)">*</span></label>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="pw-type-group">'+
-  ['하루 대타','주단위','월단위','상시모집'].map(function(t){
-    return '<button onclick="_selType(this,\\''+t+'\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+t+'</button>';
-  }).join('')+
-  '</div></div>'+
+  '<div id="pw-type-group">'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:5px">단기 용차 (건당 지급)</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
+  '<button onclick="_selType(this,\\'하루 대타\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(79,120,245,.2);background:rgba(79,120,245,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">하루 대타</button>'+
+  '<button onclick="_selType(this,\\'주단위\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(79,120,245,.2);background:rgba(79,120,245,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">주단위</button>'+
+  '</div>'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:5px">장기 용차 (월단위 계약)</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  '<button onclick="_selType(this,\\'월단위\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(16,185,129,.2);background:rgba(16,185,129,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">월단위</button>'+
+  '<button onclick="_selType(this,\\'상시모집\\',\\'pw-type\\')" style="padding:10px;border-radius:10px;border:1.5px solid rgba(16,185,129,.2);background:rgba(16,185,129,.05);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">상시모집</button>'+
+  '</div></div></div>'+
   '<input type="hidden" id="pw-type">'+
   '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
   '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
@@ -15335,7 +15361,9 @@ function _yNLPost(){
 }
 
 function _selType(btn, val, hiddenId){
-  var grpId = btn.parentElement.id;
+  // pw-type-group은 inner grid들로 중첩되어 있으므로 closest로 wrapper를 찾음
+  var grp=btn.closest('[id]');
+  var grpId=grp?grp.id:'';
   document.querySelectorAll('#'+grpId+' button').forEach(function(b){
     b.style.background='transparent';
     b.style.color='var(--t2)';
