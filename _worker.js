@@ -1754,6 +1754,7 @@ async function acceptExchange(){
       if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
 
       // ── 전자계약서 ─────────────────────────────────────────────────────────────
+      if (path === '/contract' || path === '/contract/') return serveKVFile(env, 'contract.html', 'text/html');
       if (path === '/sign') return serveKVFile(env, 'contract-sign.html', 'text/html');
       if (path === '/api/contract/view' && method === 'GET') {
         const t = url.searchParams.get('t') || '';
@@ -1910,7 +1911,7 @@ async function acceptExchange(){
       // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
       if (!path.startsWith('/api/') && method === 'GET') {
         const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
-        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/sign','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
+        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/sign','/contract','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
         if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
           const slug2 = slugDirect[1];
           try {

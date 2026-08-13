@@ -21369,6 +21369,7 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
+    {ic:'📝',l:'전자계약서 작성',   p:'ext_contract',     plan_key:'free'},
     {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
     {ic:'📋',l:'근무표',           p:'roster',           plan_key:'settle'},
@@ -23338,6 +23339,7 @@ function goPage(page){
   if(page==='ext_label'){window.open("/label","_blank");return;}
   if(page==='ext_scan'){window.open("/scan","_blank");return;}
   if(page==='ext_truck'){window.open("/truck","_blank");return;}
+  if(page==='ext_contract'){window.open("/contract","_blank");return;}
 
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
   var nav=document.getElementById('nav-'+page);
