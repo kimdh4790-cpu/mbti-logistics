@@ -142,14 +142,15 @@ function checkRateLimit(ip, limit = 60, windowMs = 60000) {
 }
 
 // ── Firebase ID 토큰 검증 ──────────────────────────────────────────────────
-async function verifyFirebaseToken(request) {
+async function verifyFirebaseToken(request, _env) {
   try {
     const auth = request.headers.get('Authorization') || '';
     const token = auth.replace('Bearer ', '').trim();
     if (!token || token.length < 100) return null;
     // Firebase API Key는 환경변수에서 가져오기
-    const apiKey = (env && env.FIREBASE_API_KEY) ? env.FIREBASE_API_KEY : '';
-    if (!apiKey) return {uid: 'verified'}; // API Key 없으면 토큰 존재만 확인
+    const _e = _env || env;
+    const apiKey = (_e && _e.FIREBASE_API_KEY) ? _e.FIREBASE_API_KEY : '';
+    if (!apiKey) return null; // API Key 없으면 검증 불가 → 거부
     const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -159,6 +160,18 @@ async function verifyFirebaseToken(request) {
     const data = await res.json();
     return data.users?.[0] || null;
   } catch(e) { return null; }
+}
+
+// 슈퍼어드민 인증 헬퍼 — Firebase ID 토큰 검증 후 SA 이메일 확인
+const _SUPERADMIN_EMAILS = ['kimdh4790@gmail.com', 'soungkyekim@naver.com'];
+async function requireAdmin(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.replace('Bearer ', '').trim();
+  if (!token) return null;
+  const decoded = await verifyFirebaseToken(request, env);
+  if (!decoded) return null;
+  if (!_SUPERADMIN_EMAILS.includes(decoded.email)) return null;
+  return decoded;
 }
 
 // 보안 헤더 적용 헬퍼
@@ -1760,6 +1773,8 @@ async function acceptExchange(){
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/api/get-members') {
+        const _admin = await requireAdmin(request, env);
+        if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const dealerId = new URL(request.url).searchParams.get('dealerId');
         if (!dealerId) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
@@ -1780,6 +1795,8 @@ async function acceptExchange(){
         return new Response(JSON.stringify({ok:true,members:docs}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/admin/dedup-members' && method === 'POST') {
+        const _admin = await requireAdmin(request, env);
+        if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         try {
           const body = await request.json();
           const did = body.dealerId;
@@ -5067,7 +5084,10 @@ fetch('/qr/members?did='+DID)
   if (path === '/api/join-member' && request.method === 'POST') {
     try {
       const body = await request.json();
-      const uid = body.uid||''; const dealerId = body.dealerId||'';
+      // uid는 Firebase 토큰에서 추출 — body.uid는 무시하여 uid 위조 방지
+      const tokenDecoded = await verifyFirebaseToken(request, env);
+      const uid = (tokenDecoded && tokenDecoded.localId) ? tokenDecoded.localId : (body.uid||'');
+      const dealerId = body.dealerId||'';
       const name = body.name||''; const driverId = body.driverId||'';
       const email = body.email||''; const phone = body.phone||'';
       const companyName = body.companyName||''; const role = body.role||'member';
@@ -5092,17 +5112,6 @@ fetch('/qr/members?did='+DID)
       return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
     }
   }
-
-  if (path === '/test-inject') {
-      const key = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      return new Response(JSON.stringify({
-        key_len: key.length,
-        key_start: key.substring(0,15)+'...',
-        has_ak: !!env.ANTHROPIC_API_KEY,
-        has_ck: !!env.CLAUDE_API_KEY,
-        inject_test: '<head><script>window.__AK='+JSON.stringify(key)+';</script>'.substring(0,60)
-      }), { headers: {'Content-Type':'application/json'}});
-    }
 
     if (path === '/truck-save' && request.method === 'POST') {
       try {
@@ -5453,6 +5462,19 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       try {
         const uid = url.searchParams.get('uid');
         if (!uid) return new Response('uid 없음', {status:400});
+        // HMAC-SHA256 서명 검증 (48h 유효)
+        const approveSecret = env.APPROVE_SECRET || '';
+        if (!approveSecret) return new Response('승인 기능 비활성화',{status:503});
+        const tok = url.searchParams.get('token') || '';
+        const ts  = url.searchParams.get('ts') || '';
+        if (!tok || !ts) return new Response('token/ts 필수',{status:400});
+        if (Date.now() - parseInt(ts,10) > 172800000) return new Response('링크 만료(48h)',{status:403});
+        const msgBuf = new TextEncoder().encode(uid + ':' + ts);
+        const keyBuf = new TextEncoder().encode(approveSecret);
+        const cryptoKey = await crypto.subtle.importKey('raw',keyBuf,{name:'HMAC',hash:'SHA-256'},false,['verify']);
+        const sigBuf = Uint8Array.from(atob(tok), c => c.charCodeAt(0));
+        const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBuf, msgBuf);
+        if (!valid) return new Response('서명 불일치',{status:403});
         const fsToken3 = await getAccessToken(env);
 
         // 1) Firestore status → approved
@@ -5616,6 +5638,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     // /api/create-account
     if (path === '/api/create-account') {
       if (method !== 'POST') return new Response('Method Not Allowed', {status:405});
+      const _admin = await requireAdmin(request, env);
+      if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { email, companyName, companyId, trialExpiry } = body;
@@ -5649,7 +5673,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     // /sync-kv — GitHub 최신 파일 KV 저장 (터미널 없이 배포)
     if (path === '/sync-kv') {
       const secret = url.searchParams.get('s');
-      const syncSecret = env.SYNC_KV_SECRET || 'donway2026';
+      const syncSecret = env.SYNC_KV_SECRET || '';
+      if (!syncSecret) return new Response('disabled',{status:503});
       if (secret !== syncSecret) return new Response('unauthorized',{status:401});
       const files=['kiosk.html','inventory.html','qrpos.html','mbtico_hub.html','join.html','admin_sub.html','order.html','donway_landing.html'];
       const e2=env||_env_ref;
@@ -6708,7 +6733,8 @@ service cloud.firestore {
         if (!rawNum || rawNum.length !== 10) {
           return new Response(JSON.stringify({ ok: false, error: '사업자번호 10자리 필요' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
         }
-        const apiKey = env.BIZ_API_KEY || '2817b81658d3fd5d701ebb227ff81dd7cce603fee57f961c2b60c6452f9beed4';
+        const apiKey = env.BIZ_API_KEY || '';
+        if (!apiKey) return new Response(JSON.stringify({ok:false,error:'BIZ_API_KEY 미설정'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         // status API (serviceKey URL 인코딩 필수)
         const statusUrl = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`;
         const ntsRes = await fetch(statusUrl, {
@@ -6816,7 +6842,7 @@ service cloud.firestore {
     if (path === '/toss/pos-fail' && method === 'GET') {
       const u2 = new URL(request.url);
       const msg = u2.searchParams.get('message') || '결제 취소';
-      return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:"'+msg+'"},"*");window.close();</script>',{headers:{'Content-Type':'text/html','Access-Control-Allow-Origin':'*'}});
+      return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:'+JSON.stringify(msg)+'},"*");window.close();</script>',{headers:{'Content-Type':'text/html','Access-Control-Allow-Origin':'*'}});
     }
 
     if (path === '/api/geocode' && method === 'GET') {
@@ -6923,6 +6949,8 @@ service cloud.firestore {
 
     // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
     if (path === '/api/send-notice' && method === 'POST') {
+      const _admin = await requireAdmin(request, env);
+      if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { title, body: msgBody, type } = body;
