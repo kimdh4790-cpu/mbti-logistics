@@ -42,30 +42,39 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
 <body>
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--bg,#0f172a)">
-  <div style="font-size:48px;margin-bottom:8px">🚚</div>
+  <div style="margin-bottom:12px">
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+  </div>
   <div style="font-size:22px;font-weight:900;margin-bottom:4px" id="emer-co-name">배송앱</div>
   <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:28px" id="emer-co-sub">기사 전용</div>
   <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1)">
-    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">📍 캠프 선택</div>
-    <div id="emer-camp-row" style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap"></div>
-    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">👤 기사 이름</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      캠프 선택
+    </div>
+    <div id="emer-camp-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:20px"></div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      기사 이름
+    </div>
     <input id="emer-driver-name" type="text" placeholder="이름 입력 (예: 홍길동)"
-      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;font-weight:700;outline:none;margin-bottom:16px"
+      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;font-weight:700;outline:none;margin-bottom:16px;box-sizing:border-box"
       oninput="document.getElementById('emer-login-btn').disabled=!this.value.trim()">
     <button id="emer-login-btn" disabled onclick="_emerDoLogin()"
-      style="width:100%;padding:15px;background:#3b82f6;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;opacity:.5">
-      ▶ 배송 시작
+      style="width:100%;padding:15px;background:#c9a84c;border:none;border-radius:10px;color:#08101f;font-size:16px;font-weight:800;cursor:pointer;opacity:.5;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      배송 시작
     </button>
-  </div>
-</div>
-    <button class="btn btn-blue" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px" onclick="doLogin()">로그인</button>
   </div>
 </div>
 
 <div id="main-screen" style="display:none">
   <div class="top-bar">
     <div class="top-logo">DONWAY</div>
-    <div class="top-title">🚚 배송</div>
+    <div class="top-title" style="display:flex;align-items:center;gap:5px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      배송
+    </div>
     <button class="btn" onclick="doLogout()" style="font-size:11px;padding:5px 10px">로그아웃</button>
   </div>
   <div class="main-area">
@@ -75,15 +84,29 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <div class="stat-box"><div class="stat-num" id="cnt-today">0</div><div class="stat-label">오늘 처리</div></div>
     </div>
     <div class="action-btns">
-      <button class="btn btn-blue" onclick="openEmergencyDelivery()">📷 송장 스캔</button>
-      <button class="btn btn-teal" onclick="openEmergencyAdmin()">📋 처리 기록</button>
+      <button class="btn btn-blue" onclick="openEmergencyDelivery()" style="display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        송장 스캔
+      </button>
+      <button class="btn btn-teal" onclick="openEmergencyAdmin()" style="display:flex;align-items:center;justify-content:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+        처리 기록
+      </button>
     </div>
     <div class="action-btns" style="margin-bottom:8px">
-      <button class="btn" onclick="openFileUpload()" style="background:#7c3aed;border-color:#7c3aed;color:#fff;flex:1;min-width:140px;justify-content:center;padding:14px;font-size:14px">📂 파일 업로드</button>
-      <button class="btn" onclick="openAddressInput()" style="background:#059669;border-color:#059669;color:#fff;flex:1;min-width:140px;justify-content:center;padding:14px;font-size:14px">✏️ 주소 입력</button>
+      <button class="btn" onclick="openFileUpload()" style="background:#7c3aed;border-color:#7c3aed;color:#fff;flex:1;min-width:140px;justify-content:center;padding:14px;font-size:14px;display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        파일 업로드
+      </button>
+      <button class="btn" onclick="openAddressInput()" style="background:#059669;border-color:#059669;color:#fff;flex:1;min-width:140px;justify-content:center;padding:14px;font-size:14px;display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        주소 입력
+      </button>
     </div>
-    <!-- ⚙️ API 설정 버튼 (팝업으로 이동) -->
-    <button onclick="_openApiSettings()" style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;margin-top:6px">⚙️ API 키 설정</button>
+    <button onclick="_openApiSettings()" style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      API 키 설정
+    </button>
   </div>
 </div>
 
@@ -10300,7 +10323,7 @@ function _emerInitLogin() {
     btn.textContent = c;
     btn.setAttribute('data-camp', c);
     var isSel = c === _emerSelCamp;
-    btn.style.cssText = 'flex:1;min-width:60px;padding:10px 4px;background:'+(isSel?'rgba(59,130,246,.3)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#3b82f6':'rgba(255,255,255,.2)')+';border-radius:8px;color:'+(isSel?'#93c5fd':'#e2e8f0')+';font-size:12px;font-weight:700;cursor:pointer';
+    btn.style.cssText = 'padding:10px 4px;background:'+(isSel?'rgba(201,168,76,.2)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#c9a84c':'rgba(255,255,255,.15)')+';border-radius:8px;color:'+(isSel?'#c9a84c':'#e2e8f0')+';font-size:12px;font-weight:700;cursor:pointer;text-align:center';
     btn.onclick = function() {
       _emerSelCamp = this.getAttribute('data-camp');
       _emerInitLogin(); // 리렌더
@@ -14197,7 +14220,6 @@ async function openDeliveryMap(){
     var snap=await _db.collection('emergency_deliveries')
       .where('dealerId','==',did)
       .where('date','==',today)
-      .orderBy('savedAt','desc')
       .limit(100).get();
     var locs=[];
     var kKey=window._cachedKakaoApiKey||localStorage.getItem('mbti_kakao_api_key')||'';
@@ -14218,6 +14240,7 @@ async function openDeliveryMap(){
       }
       locs.push(x);
     }
+    locs.sort(function(a,b){return (b.savedAt||'').localeCompare(a.savedAt||'');});
     _showMapModal(locs);
   }catch(e){toast('❌ 오류: '+e.message);}
 }
