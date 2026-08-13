@@ -391,10 +391,16 @@ function setCTypeById(type){
 
 function loadDrivers(){
   if(!_db)return;
-  _db.collection('drivers').orderBy('name').limit(200).get().then(function(s){
+  if(!_curUid)return;
+  _db.collection('drivers').where('dealerId','==',_curUid).orderBy('name').limit(200).get().then(function(s){
     _drivers=s.docs.map(function(d){return Object.assign({docId:d.id},d.data());});
     var sel=document.getElementById('drv-select');
+    // 중복 제거: 같은 userId 첫 번째만 표시
+    var seen=new Set();
     _drivers.forEach(function(d){
+      var key=d.userId||d.docId;
+      if(seen.has(key))return;
+      seen.add(key);
       var o=document.createElement('option');
       o.value=d.docId;
       o.textContent=(d.name||'')+(d.camp||d.loc?' ('+( d.camp||d.loc)+')':'');
