@@ -14416,51 +14416,53 @@ function _renderLeafletMap(locs){
   var bounds=[];
   groups.forEach(function(grp){
     var n=grp.items.length;
-    // 동 번호 기준으로 정렬
     grp.items.sort(function(a,b){
       var ma=(a.addr||'').match(/(\d+)동/),mb=(b.addr||'').match(/(\d+)동/);
       return ((ma?parseInt(ma[1]):9999)-(mb?parseInt(mb[1]):9999));
     });
-    grp.items.forEach(function(x,gi){
-      var dlat=0,dlng=0;
-      if(n>1){
-        var angle=(2*Math.PI*gi)/n;
-        var r=0.00025;
-        dlat=r*Math.cos(angle);
-        dlng=r*Math.sin(angle)/Math.cos(grp.lat*Math.PI/180);
-      }
-      var ll=[grp.lat+dlat,grp.lng+dlng];
-      bounds.push(ll);
-      var origIdx=x._locsIdx!=null?x._locsIdx:0;
-      var color=x.status==='완료'?'#16a34a':(x.status==='부분완료'?'#f97316':'#dc2626');
-      var icon=L.divIcon({
-        className:'',
-        html:'<div style="width:26px;height:26px;border-radius:50%;background:'+color+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(origIdx+1)+'</div>',
-        iconSize:[26,26],iconAnchor:[13,13]
-      });
-      (function(oi){
-        L.marker(ll,{icon:icon}).addTo(map)
-          .bindPopup((function(){var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';})())
-          .on('click',function(){
-            var mo=document.getElementById('delivery-map-mo');
-            if(!mo)return;
-            // 전체 카드 숨기기 → 이 핀 1건만 표시
-            var allCards=mo.querySelectorAll('[data-map-idx]');
-            for(var ci=0;ci<allCards.length;ci++) allCards[ci].style.display='none';
-            var c=mo.querySelector('[data-map-idx="'+oi+'"]');
+    var idxList=grp.items.map(function(x){return x._locsIdx!=null?x._locsIdx:0;});
+    var allDone=grp.items.every(function(x){return x.status==='완료';});
+    var anyDone=grp.items.some(function(x){return x.status==='완료';});
+    var clr=allDone?'#16a34a':(anyDone?'#f97316':'#dc2626');
+    var ll=[grp.lat,grp.lng];
+    bounds.push(ll);
+    var pinHtml;
+    if(n===1){
+      pinHtml='<div style="width:28px;height:28px;border-radius:50%;background:'+clr+';border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)">'+(idxList[0]+1)+'</div>';
+    } else {
+      pinHtml='<div style="width:36px;height:36px;border-radius:50%;background:'+clr+';border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.5)">'+n+'</div>';
+    }
+    var icon=L.divIcon({className:'',html:pinHtml,iconSize:n===1?[28,28]:[36,36],iconAnchor:n===1?[14,14]:[18,18]});
+    var popupHtml=n===1
+      ?(function(){var x=grp.items[0];var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';}())
+      :'<b>'+n+'건</b><br><span style="font-size:11px;color:#aaa">'+(_baseAddr(grp.items[0].addr||'')||grp.items[0].addr||'')+'</span>';
+    (function(idxList,grp){
+      L.marker(ll,{icon:icon}).addTo(map)
+        .bindPopup(popupHtml)
+        .on('click',function(){
+          var mo=document.getElementById('delivery-map-mo');
+          if(!mo)return;
+          var allCards=mo.querySelectorAll('[data-map-idx]');
+          for(var ci=0;ci<allCards.length;ci++) allCards[ci].style.display='none';
+          var first=true;
+          for(var ii=0;ii<idxList.length;ii++){
+            var c=mo.querySelector('[data-map-idx="'+idxList[ii]+'"]');
             if(c){
               c.style.display='';
-              c.scrollIntoView({behavior:'smooth',block:'nearest'});
+              if(first){c.scrollIntoView({behavior:'smooth',block:'nearest'});first=false;}
               c.style.boxShadow='0 0 0 2px #c9a84c,0 0 12px rgba(201,168,76,.4)';
-              setTimeout(function(){c.style.boxShadow='';},2000);
+              setTimeout((function(cc){return function(){cc.style.boxShadow='';};})(c),2000);
             }
-            var bar=mo.querySelector('#map-filter-bar');
-            var txt=mo.querySelector('#map-filter-txt');
-            if(bar)bar.style.display='flex';
-            if(txt){var dm2=(x.addr||'').match(/(\d+)동/);txt.textContent=(dm2?dm2[1]+'동 ':'')+(x.recipient||'미확인');}
-          });
-      })(origIdx);
-    });
+          }
+          var bar=mo.querySelector('#map-filter-bar');
+          var txt=mo.querySelector('#map-filter-txt');
+          if(bar)bar.style.display='flex';
+          if(txt){
+            var ba2=_baseAddr(grp.items[0].addr||'');
+            txt.textContent=(ba2||grp.items[0].addr||'')+(n>1?' · '+n+'건':'');
+          }
+        });
+    })(idxList,grp);
   });
 
   if(bounds.length>1)map.fitBounds(bounds,{padding:[20,20]});
