@@ -1886,13 +1886,13 @@ function _pgHomeAgency(el){
   '<div id="home-recent">'+_skRows(2)+'</div>';
 
   // KPI 로딩 (카운트업 애니메이션)
-  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched','completed']).get().then(function(s){
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched','closed']).get().then(function(s){
     var reg=0,done=0,prog=0;
     s.forEach(function(d){
       var st=d.data().status;
       if(st==='open')reg++;
       else if(st==='matched')prog++;
-      else if(st==='completed')done++;
+      else if(st==='closed')done++;
     });
     var e1=document.getElementById('kpi-reg');if(e1)_yCountUp(e1,0,reg,700,'건');
     var e2=document.getElementById('kpi-done');if(e2)_yCountUp(e2,0,done,800,'건');
@@ -2863,7 +2863,7 @@ function _yDayBadge(startDate){
   var d=_yDays(startDate);
   if(d===null)return '';
   if(d<=0)return '<span class="dday dday-0">오늘 시작</span>';
-  if(d===1)return '<span class="dday dday-0">D-1 시작</span>';
+  if(d===1)return '<span class="dday dday-soon">D-1 시작</span>';
   if(d<=3)return '<span class="dday dday-soon">D-'+d+'</span>';
   return '';
 }
@@ -3646,7 +3646,7 @@ function _pgMyPosts(el){
   '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 새 공고 등록하기</button>'+
   '<div id="my-posts-list">'+_skRows(3)+'</div>';
 
-  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get()
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').limit(100).get()
     .then(function(snap){
       var list=document.getElementById('my-posts-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요<br><span style="font-size:11px;color:var(--t2)">uid: '+(_CU&&_CU.uid||'없음')+'</span></div></div>';return;}
@@ -3729,7 +3729,7 @@ function _togglePost(id,status){
    지금까지 completedRoutes 를 올리는 코드가 어디에도 없어 모든 기사가
    영원히 '새내기' 등급에 머물렀다. */
 function _yCompleteRoutes(postId){
-  _db.collection('yongcha_applies').where('postId','==',postId).where('status','==','approved').get()
+  _db.collection('yongcha_applies').where('postId','==',postId).where('status','in',['approved','done']).get()
   .then(function(snap){
     snap.forEach(function(doc){
       var a=doc.data();
@@ -3944,7 +3944,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
   _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
     if(!ap.exists)return;
     var a=ap.data();
-    var recordId=_CU.uid+'_'+date;
+    var recordId=_CU.uid+'_'+date+'_'+(applyId||'x');
     _db.collection('yongcha_daily_records').doc(recordId).set({
       applyId:applyId,postId:a.postId||'',
       driverId:_CU.uid,driverName:_CU.name,
@@ -3954,7 +3954,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(){
       _yToast('건수 저장됐어요! '+cnt+'건 / '+Number(cnt*unitPrice).toLocaleString()+'원');
-      _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
+      if(a.agencyId)_yNotify(a.agencyId,'📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
       _closeModal();
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -4570,6 +4570,7 @@ function _submitPost(){
       btn.textContent='등록 중...';
       return _db.collection('yongcha_posts').add({
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
+        agencyReviewCount:_CU.reviewCount||0, agencyFakeCount:_CU.fakeCount||0,
         region:_CU.region, courier:courier, area:area, routeNo:routeNo,
         loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
         zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
@@ -5322,7 +5323,7 @@ function _admLoadMembers(){
   '</div>'+
   '<div id="members-list">'+_skRows(3)+'</div>';
 
-  _db.collection('yongcha_users').get().then(function(snap){
+  _db.collection('yongcha_users').orderBy('createdAt','desc').limit(200).get().then(function(snap){
     var agencies=0,drivers=0,suspended=0;
     snap.forEach(function(doc){
       var t=doc.data().type,d=doc.data();
@@ -5625,7 +5626,7 @@ function _loadMyJobs(el){
 
   var q=_CU.type==='admin'
     ? _db.collection('yongcha_jobs').orderBy('createdAt','desc').limit(50)
-    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid);
+    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').limit(50);
 
   q.get().then(function(snap){
     var list=document.getElementById('myjobs-list');if(!list)return;
@@ -5662,7 +5663,7 @@ function _loadMyJobs(el){
 
 function _loadResumes(el){
   el.innerHTML='<div id="resume-list">'+_skRows(3)+'</div>';
-  _db.collection('yongcha_resumes').where('isPublic','==',true).limit(80).get()
+  _db.collection('yongcha_resumes').where('isPublic','==',true).orderBy('updatedAt','desc').limit(50).get()
   .then(function(snap){
     var list=document.getElementById('resume-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📄</div><div class="empty-msg">공개된 이력서가 없어요</div></div>';return;}
@@ -6023,7 +6024,7 @@ function _jSwitchDriver(tab){
 
 function _loadJobList(el){
   el.innerHTML='<div id="job-list">'+_skRows(3)+'</div>';
-  _db.collection('yongcha_jobs').where('status','==','open').limit(120).get()
+  _db.collection('yongcha_jobs').where('status','==','open').orderBy('createdAt','desc').limit(120).get()
   .then(function(snap){
     var list=document.getElementById('job-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 채용공고가 없어요</div></div>';return;}
@@ -6371,7 +6372,7 @@ function _pgChats(el){
 
   if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   _chatListUnsub=_db.collection('yongcha_chats').where('participants','array-contains',_CU.uid)
-    .limit(50)
+    .orderBy('lastAt','desc').limit(50)
     .onSnapshot(function(snap){
       var list=document.getElementById('chat-list');if(!list)return;
       if(snap.empty){
@@ -6421,6 +6422,7 @@ function _pgChats(el){
 }
 
 function _openChatRoom(otherUid,otherName,otherType){
+  if(!otherUid){_yToast('채팅 상대를 찾을 수 없어요');return;}
   _closeModal();
   var ids=[_CU.uid,otherUid].sort();
   var chatId=ids[0]+'__'+ids[1];
@@ -6855,6 +6857,8 @@ function _yLogout(){
 }
 function _doLogout(){
   _closeModal();
+  if(_chatBadgeUnsub){_chatBadgeUnsub();_chatBadgeUnsub=null;}
+  if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   _auth.signOut().then(function(){_CU=null;_prefs=null;_showLogin();});
 }
 
@@ -6959,6 +6963,7 @@ function _yRenderFatigue(el){
 function _pgDashboard(el){
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
   if(_CU.type==='agency') return _pgDashboardAgency(el);
+  if(_CU.type==='admin') return _pgMembers(el);
   el.innerHTML=
     '<div class="page-hdr"><h1 class="page-title">월 대시보드</h1>'+
     '<p class="page-sub">최근 6개월 운행 실적을 한눈에</p></div>'+
