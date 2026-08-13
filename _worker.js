@@ -13787,7 +13787,21 @@ function _pgPostWrite(el){
   _map=null; _markers=[]; window._zonePolygons=[]; window._zoneLabels=[];
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">공고 등록</div>'+
-  '<div class="page-sub">템플릿으로 5초 만에 발송하거나 직접 입력하세요</div></div>'+
+  '<div class="page-sub">AI 자연어 입력 또는 템플릿으로 빠르게 등록하세요</div></div>'+
+
+  // ── AI 자연어 입력바 ──
+  '<div style="padding:14px;background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(0,212,170,.06));border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);margin-bottom:12px">'+
+  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'+
+    '<span style="font-size:13px;font-weight:900;color:var(--gn)">AI 자연어 작성</span>'+
+    '<span style="font-size:11px;color:var(--t3);font-weight:500">한 줄로 입력하면 AI가 자동 완성</span>'+
+  '</div>'+
+  '<div style="display:flex;gap:8px">'+
+    '<input id="nl-input" class="inp" style="flex:1;margin:0;font-size:13px" placeholder=\'예: 쿠팡 금정 120건 야간 18만\' onkeydown="if(event.key===\'Enter\')_yNLPost()">'+
+    '<button id="nl-btn" onclick="_yNLPost()" style="flex-shrink:0;padding:0 14px;background:var(--gn);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;min-height:44px">AI 작성</button>'+
+  '</div>'+
+  '<div id="nl-result" style="display:none;margin-top:8px;font-size:11.5px;color:var(--gn);font-weight:700"></div>'+
+  '</div>'+
 
   // 템플릿 선택
   '<div class="form-section" style="padding:14px;background:linear-gradient(135deg,rgba(59,126,248,.12),rgba(59,126,248,.06));border:1px solid var(--acln);border-radius:var(--r-lg);margin-bottom:12px">'+
@@ -14052,6 +14066,46 @@ function _applyPostTemplate(key){
   var desc=document.getElementById('pw-desc');
   if(desc)desc.value=t.desc||'';
   _yToast('템플릿 적용 완료. 단가·지역을 입력하세요.');
+}
+
+function _yNLPost(){
+  var txt=(document.getElementById('nl-input')||{}).value||'';
+  if(!txt.trim()){_yToast('공고 내용을 한 줄로 입력해주세요');return;}
+  var btn=document.getElementById('nl-btn');
+  var res=document.getElementById('nl-result');
+  if(btn){btn.textContent='AI 분석 중...';btn.disabled=true;}
+  _yAuthFetch('/api/yongcha/quick-post',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:txt})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok||!d.fields){_yToast('파싱 실패. 직접 입력해주세요.');return;}
+    var f=d.fields;
+    var filled=[];
+    if(f.courier){var cs=document.getElementById('pw-courier');if(cs){cs.value=f.courier;filled.push('택배사');}}
+    if(f.area){var ai=document.getElementById('pw-area');if(ai){ai.value=f.area;filled.push('구역');}}
+    if(f.volume!=null){var vi=document.getElementById('pw-volume');if(vi){vi.value=f.volume;filled.push('물량');}}
+    if(f.unitPrice!=null){var pi=document.getElementById('pw-price');if(pi){pi.value=f.unitPrice;_calcEst();filled.push('단가');}}
+    if(f.workShift){
+      document.querySelectorAll('#pw-shift-group button').forEach(function(b){
+        if(b.textContent.trim()===f.workShift){
+          b.style.background='var(--acl)';b.style.color='var(--ac)';b.style.borderColor='var(--ac)';
+          var h=document.getElementById('pw-shift');if(h)h.value=f.workShift;
+          filled.push('시간대');
+        }else{b.style.background='transparent';b.style.color='var(--t2)';b.style.borderColor='var(--border)';}
+      });
+    }
+    if(f.settleDay!=null){var sd=document.getElementById('pw-settleDay');if(sd){sd.value='매월 '+f.settleDay+'일';filled.push('정산일');}}
+    if(f.urgent){
+      var tg=document.getElementById('toggle-urgent');
+      if(tg&&!tg.classList.contains('on'))_toggleUrgent();
+      filled.push('긴급');
+    }
+    if(res){res.style.display='block';res.textContent='자동 입력: '+filled.join(' · ')+' — 나머지 항목을 확인 후 등록하세요';}
+    _yToast('AI가 '+filled.length+'개 항목을 채웠어요. 확인 후 등록하세요.');
+  }).catch(function(e){_yToast('오류: '+e.message);}).then(function(){
+    if(btn){btn.textContent='AI 작성';btn.disabled=false;}
+  });
 }
 
 function _selType(btn, val, hiddenId){
