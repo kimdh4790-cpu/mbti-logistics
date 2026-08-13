@@ -18948,7 +18948,21 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
           }
         } catch (_) {}
       }
-      // ② Nominatim — 중심 좌표만 사용 (폴리곤은 행정동 단위라 부정확)
+      // ② KV 기초구역 경계 (shapefile 변환 데이터)
+      if (!coords.length) {
+        try {
+          const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
+          if (kvVal) {
+            const kvCoords = JSON.parse(kvVal);
+            if (Array.isArray(kvCoords) && kvCoords.length >= 4) {
+              coords = kvCoords;
+              const s = kvCoords.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
+              if (!centLat) { centLat = s.lat / kvCoords.length; centLng = s.lng / kvCoords.length; }
+            }
+          }
+        } catch(_) {}
+      }
+      // ③ Nominatim — 중심 좌표만 사용 (폴리곤은 행정동 단위라 부정확)
       if (!centLat) {
         try {
           const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`;
