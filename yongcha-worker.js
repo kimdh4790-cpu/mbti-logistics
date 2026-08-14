@@ -8764,11 +8764,10 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
         orientation: 'portrait',
         lang: 'ko',
         icons: [
+          { src: 'data:image/png;base64,' + YONGCHA_ICON_192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'data:image/png;base64,' + YONGCHA_ICON_192, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'any' }
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }
         ],
         categories: ['productivity', 'business'],
         screenshots: []
