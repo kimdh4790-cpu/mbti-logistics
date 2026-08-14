@@ -8764,10 +8764,8 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
         orientation: 'portrait',
         lang: 'ko',
         icons: [
-          { src: 'data:image/png;base64,' + YONGCHA_ICON_192, sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: 'data:image/png;base64,' + YONGCHA_ICON_192, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }
+          { src: '/icon-192.png?v=3', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icon-512.png?v=3', sizes: '512x512', type: 'image/png', purpose: 'any' }
         ],
         categories: ['productivity', 'business'],
         screenshots: []
@@ -8778,26 +8776,42 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
     }
 
     if (path === '/icon-192.png') {
-      return new Response(b64ToBin(YONGCHA_ICON_192), {
-        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public,max-age=604800' }
+      const bin = atob(YONGCHA_ICON_192);
+      const buf = new ArrayBuffer(bin.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+      return new Response(buf, {
+        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
     if (path === '/icon-512.png') {
-      return new Response(b64ToBin(YONGCHA_ICON_512), {
-        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public,max-age=604800' }
+      const bin = atob(YONGCHA_ICON_512);
+      const buf = new ArrayBuffer(bin.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+      return new Response(buf, {
+        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
     if (path === '/apple-touch-icon.png' || path === '/apple-touch-icon-precomposed.png') {
-      return new Response(b64ToBin(YONGCHA_ICON_APPLE), {
-        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public,max-age=604800' }
+      const bin = atob(YONGCHA_ICON_APPLE);
+      const buf = new ArrayBuffer(bin.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+      return new Response(buf, {
+        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
     if (path === '/favicon.ico') {
-      return new Response(b64ToBin(YONGCHA_ICON_ICO), {
-        headers: { 'Content-Type': 'image/x-icon', 'Cache-Control': 'public,max-age=604800' }
+      const bin = atob(YONGCHA_ICON_ICO);
+      const buf = new ArrayBuffer(bin.length);
+      const view = new Uint8Array(buf);
+      for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
+      return new Response(buf, {
+        headers: { 'Content-Type': 'image/x-icon', 'Cache-Control': 'no-cache' }
       });
     }
 
