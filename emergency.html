@@ -296,6 +296,10 @@ function _emerDoLogin() {
           || localStorage.getItem('mbti_emer_dealerId') || 'shared';
   _CU = { uid: did, email: '', dealerId: did, driver: name, camp: _emerSelCamp };
   window._CU = _CU;
+  // Firestore 보안규칙 통과를 위해 익명 로그인 (실패해도 무시)
+  if(!_auth.currentUser){
+    _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
+  }
   // 로그인 화면 → 메인 화면
   var ls = document.getElementById('login-screen');
   var ms = document.getElementById('main-screen');
