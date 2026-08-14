@@ -4435,6 +4435,9 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
     <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">
       계정이 없으신가요? <a href="/register" style="color:var(--acc)">회사 등록</a>
     </div>
+    <div style="text-align:center;margin-top:8px">
+      <a href="/driver-join" style="display:inline-block;width:100%;padding:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;color:#c9a84c;font-size:13px;font-weight:800;text-decoration:none;box-sizing:border-box">기사로 가입하기</a>
+    </div>
   </div>
 </div>
 
@@ -5534,6 +5537,185 @@ async function _step3Submit(){
 </body>
 </html>
 `;
+
+const _DRIVER_JOIN_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>기사 가입 — 엠비티아이 배송앱</title>
+<meta name="theme-color" content="#0a0f1e">
+<link rel="icon" type="image/png" href="/mbti-icon-192.png?v=3">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
+  --brand:#0066ff;--acc:#00d4ff;--gold:#c9a84c;
+  --green:#22c55e;--red:#ef4444;
+  --border:rgba(0,102,255,.2);
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif}
+.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:400px}
+.logo{text-align:center;margin-bottom:24px}
+.logo-title{font-size:20px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:4px}
+h2{font-size:15px;font-weight:800;margin-bottom:20px}
+.field{margin-bottom:14px}
+.field label{font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:600}
+.field input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none}
+.field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(0,102,255,.15)}
+.field input.err{border-color:var(--red)}
+.hint{font-size:10px;color:var(--text3);margin-top:4px}
+.err-msg{font-size:11px;color:var(--red);margin-top:4px;display:none}
+.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed}
+.divider{text-align:center;margin:16px 0;font-size:11px;color:var(--text3)}
+.login-link{text-align:center;font-size:12px;color:var(--text3)}
+.login-link a{color:var(--acc);text-decoration:none;font-weight:700}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="logo">
+      <div style="font-size:36px;margin-bottom:8px">🚚</div>
+      <div class="logo-title">엠비티아이 배송앱</div>
+      <div class="logo-sub">배송기사 가입</div>
+    </div>
+
+    <div id="success-view" style="display:none;text-align:center;padding:16px 0">
+      <div style="width:56px;height:56px;background:rgba(34,197,94,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">가입 완료!</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px">배송앱에 오신 것을 환영합니다.<br>바로 사용하실 수 있습니다.</div>
+      <button onclick="location.href='/mbtico_hub'" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">앱 시작하기</button>
+    </div>
+
+    <div id="form-view">
+      <h2>기사 정보 입력</h2>
+
+      <div class="field">
+        <label>이름 *</label>
+        <input id="f-name" type="text" placeholder="홍길동" autocomplete="name">
+        <div class="err-msg" id="e-name"></div>
+      </div>
+      <div class="field">
+        <label>전화번호 *</label>
+        <input id="f-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel">
+        <div class="err-msg" id="e-phone"></div>
+      </div>
+      <div class="field">
+        <label>이메일 *</label>
+        <input id="f-email" type="email" placeholder="example@email.com" autocomplete="email">
+        <div class="err-msg" id="e-email"></div>
+      </div>
+      <div class="field">
+        <label>비밀번호 * (8자 이상)</label>
+        <input id="f-pw" type="password" placeholder="비밀번호 입력" autocomplete="new-password">
+        <div class="err-msg" id="e-pw"></div>
+      </div>
+      <div class="field">
+        <label>비밀번호 확인 *</label>
+        <input id="f-pw2" type="password" placeholder="비밀번호 재입력" autocomplete="new-password">
+        <div class="err-msg" id="e-pw2"></div>
+      </div>
+      <div class="field">
+        <label>회사 코드 (선택)</label>
+        <input id="f-code" type="text" placeholder="소속 회사에서 받은 코드" autocomplete="off">
+        <div class="hint">소속 회사 코드가 없으면 비워두세요</div>
+      </div>
+
+      <div id="submit-err" style="font-size:12px;color:var(--red);margin-bottom:8px;text-align:center;display:none"></div>
+      <button id="btn-submit" class="btn-submit" onclick="_submit()">가입하기</button>
+
+      <div class="divider">또는</div>
+      <div class="login-link">이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a></div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
+  authDomain:"mbti-logistics.firebaseapp.com",
+  projectId:"mbti-logistics",
+  storageBucket:"mbti-logistics.firebasestorage.app",
+  messagingSenderId:"40761160761",
+  appId:"1:40761160761:web:20545b610f03f534e949e8"
+});
+var _db=firebase.firestore(),_auth=firebase.auth();
+_db.settings({experimentalAutoDetectLongPolling:true,merge:true});
+
+function _toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2500);}
+function _showErr(id,msg){var el=document.getElementById('e-'+id),inp=document.getElementById('f-'+id);if(el){el.textContent=msg;el.style.display='block';}if(inp)inp.classList.add('err');}
+function _clearErr(id){var el=document.getElementById('e-'+id),inp=document.getElementById('f-'+id);if(el)el.style.display='none';if(inp)inp.classList.remove('err');}
+
+['name','phone','email','pw','pw2'].forEach(function(id){
+  var inp=document.getElementById('f-'+id);
+  if(inp)inp.addEventListener('input',function(){_clearErr(id);});
+});
+
+document.getElementById('f-phone').addEventListener('input',function(e){
+  var v=e.target.value.replace(/[^0-9]/g,'');
+  if(v.length<=3)e.target.value=v;
+  else if(v.length<=7)e.target.value=v.slice(0,3)+'-'+v.slice(3);
+  else e.target.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
+});
+
+async function _submit(){
+  var name=document.getElementById('f-name').value.trim();
+  var phone=document.getElementById('f-phone').value.trim();
+  var email=document.getElementById('f-email').value.trim();
+  var pw=document.getElementById('f-pw').value;
+  var pw2=document.getElementById('f-pw2').value;
+  var code=document.getElementById('f-code').value.trim();
+  var ok=true;
+  if(!name){_showErr('name','이름을 입력하세요');ok=false;}
+  if(!phone){_showErr('phone','전화번호를 입력하세요');ok=false;}
+  if(!email||!email.includes('@')){_showErr('email','올바른 이메일을 입력하세요');ok=false;}
+  if(!pw||pw.length<8){_showErr('pw','비밀번호는 8자 이상이어야 합니다');ok=false;}
+  if(pw!==pw2){_showErr('pw2','비밀번호가 일치하지 않습니다');ok=false;}
+  if(!ok)return;
+  var btn=document.getElementById('btn-submit'),errEl=document.getElementById('submit-err');
+  btn.disabled=true;btn.textContent='처리 중...';errEl.style.display='none';
+  try{
+    var uc=await _auth.createUserWithEmailAndPassword(email,pw);
+    var uid=uc.user.uid;
+    await _db.collection('companies').doc(uid).set({
+      name:name,email:email,phone:phone,type:'driver',role:'driver',
+      parentDealerId:code||null,companyName:name+' 기사',platform:'mbtico',status:'active',
+      subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await _db.collection('delivery_drivers').doc(uid).set({
+      uid:uid,name:name,email:email,phone:phone,
+      parentDealerId:code||null,status:'active',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('form-view').style.display='none';
+    document.getElementById('success-view').style.display='block';
+  }catch(e){
+    btn.disabled=false;btn.textContent='가입하기';
+    if(e.code==='auth/email-already-in-use'){errEl.textContent='이미 가입된 이메일입니다. 로그인해 주세요.';}
+    else if(e.code==='auth/invalid-email'){errEl.textContent='올바른 이메일 형식이 아닙니다.';}
+    else{errEl.textContent='오류: '+e.message;}
+    errEl.style.display='block';
+  }
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter')_submit();});
+</script>
+</body>
+</html>
+`;
+
         // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
@@ -5815,6 +5997,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
