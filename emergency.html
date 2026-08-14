@@ -4919,12 +4919,10 @@ async function _fuSaveAll() {
       date:todayStr, time:timeStr, savedAt:now.toISOString()
     };
     try {
-      if(FB&&_db) { await _db.collection('emergency_deliveries').add(record); }
-      else {
-        var list = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-        list.push(Object.assign({},record,{_localId:'emer_'+Date.now()+'_'+i}));
-        localStorage.setItem('mbti_emergency_del',JSON.stringify(list));
-      }
+      var _bRes=await fetch('/api/emergency-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
+      var _bData=await _bRes.json();
+      if(!_bData.ok) throw new Error(_bData.error||'서버 오류');
+      try { var list=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); list.push(Object.assign({},record,{_fbId:_bData.docId})); localStorage.setItem('mbti_emergency_del',JSON.stringify(list)); }catch(e2){}
       saved++;
     } catch(e) { failed++; }
   }
@@ -5036,20 +5034,18 @@ async function _aiSave() {
     savedAt:now.toISOString()
   };
   try {
-    if(FB&&_db) { await _db.collection('emergency_deliveries').add(record); }
-    else {
-      var list2 = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
-      list2.push(Object.assign({},record,{_localId:'emer_'+Date.now()}));
-      localStorage.setItem('mbti_emergency_del',JSON.stringify(list2));
-    }
+    var _aiRes=await fetch('/api/emergency-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
+    var _aiData=await _aiRes.json();
+    if(!_aiData.ok) throw new Error(_aiData.error||'서버 오류');
     toast('✅ 배송 등록 완료'+(gps?' (GPS 인식됨)':''));
     document.getElementById('addr-input-mo')?.remove();
     window._aiGps = null;
+    try { var list2=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); list2.push(Object.assign({},record,{_fbId:_aiData.docId})); localStorage.setItem('mbti_emergency_del',JSON.stringify(list2)); }catch(e2){}
     loadTodayStats();
     window._emerSaveCount = (window._emerSaveCount||0)+1;
     _updateEmerCounters();
   } catch(e) {
-    toast('❌ 저장 실패: '+e.message);
+    toast('저장 실패: '+e.message);
     if(btn) { btn.disabled=false; btn.textContent='💾 배송 등록'; }
   }
 }
