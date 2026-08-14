@@ -21573,7 +21573,27 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     try {
       const { text } = await request.json();
       const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-      if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: corsH });
+      if (!apiKey) {
+        const f={};
+        if(/쿠팡/.test(text))f.courier='쿠팡로지스틱스';
+        else if(/CJ|씨제이/.test(text))f.courier='CJ대한통운';
+        else if(/한진/.test(text))f.courier='한진택배';
+        else if(/롯데/.test(text))f.courier='롯데택배';
+        else if(/우체국/.test(text))f.courier='우체국';
+        else if(/로젠/.test(text))f.courier='로젠택배';
+        const vM=text.match(/(\d+)\s*건/);if(vM)f.volume=parseInt(vM[1]);
+        const pM=text.match(/(\d+(?:\.\d+)?)\s*만\s*원?/);
+        if(pM)f.unitPrice=Math.round(parseFloat(pM[1])*10000);
+        else{const p2=text.match(/단가\s*(\d{4,})|(\d{4,})\s*원/);if(p2)f.unitPrice=parseInt(p2[1]||p2[2]);}
+        if(/야간|저녁/.test(text))f.workShift='야간';
+        else if(/새벽/.test(text))f.workShift='새벽';
+        else if(/당일/.test(text))f.workShift='당일';
+        else if(/주간|낮/.test(text))f.workShift='주간';
+        if(/긴급|급히|오늘/.test(text))f.urgent=true;
+        const rem=text.replace(/쿠팡|CJ대한통운|CJ|씨제이|한진택배|한진|롯데택배|롯데|우체국|로젠택배|로젠/g,'').replace(/\d+건|\d+만\s*원|\d+원/g,'').replace(/야간|주간|새벽|당일|저녁|낮|긴급|급히|오늘/g,'').trim();
+        const aM=rem.match(/([가-힣]{2,})/);if(aM)f.area=aM[1];
+        return new Response(JSON.stringify({ok:true,fields:f}),{headers:corsH});
+      }
 
       const prompt = `한국 택배 대리점 소장이 입력한 자연어에서 배차 공고 필드를 추출하세요.
 
