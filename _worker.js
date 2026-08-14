@@ -4352,7 +4352,8 @@ const _MBTICO_HUB_HTML = `<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="엠비티아이">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/mbti-icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/mbti-icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -4734,6 +4735,8 @@ const _MBTICO_LANDING_HTML = `<!DOCTYPE html>
 <title>물류배송앱 — 쿠팡·택배 배송기사 전용 통합 솔루션</title>
 <meta name="description" content="긴급배송·QR스캔·라벨출력·출퇴근 관리 — 쿠팡 배송기사 전용 앱">
 <meta name="theme-color" content="#0066ff">
+<link rel="icon" type="image/png" sizes="192x192" href="/mbti-icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/mbti-icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -9953,8 +9956,10 @@ service cloud.firestore {
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const ct = path.endsWith('.ico') ? 'image/jpeg' : 'image/png';
+      const cacheCtrl = (path === '/mbti-icon-192.png' || (isMbtico && path === '/apple-touch-icon.png'))
+        ? 'no-store' : 'public, max-age=86400';
       return new Response(bytes.buffer, {
-        headers: {'Content-Type': ct, 'Cache-Control': 'public, max-age=86400'}
+        headers: {'Content-Type': ct, 'Cache-Control': cacheCtrl}
       });
     }
 
