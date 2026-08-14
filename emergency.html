@@ -596,6 +596,30 @@ async function openEmergencyAdmin(){
   </div>`);
 }
 
+function _resizeImg(file, maxPx, quality){
+  return new Promise(function(resolve, reject){
+    var reader=new FileReader();
+    reader.onerror=reject;
+    reader.onload=function(e){
+      var img=new Image();
+      img.onerror=reject;
+      img.onload=function(){
+        var w=img.width,h=img.height;
+        if(w>maxPx||h>maxPx){
+          if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
+          else{w=Math.round(w*maxPx/h);h=maxPx;}
+        }
+        var cv=document.createElement('canvas');
+        cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(cv.toDataURL('image/jpeg',quality||0.72));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function _uplPhoto(inp, docId){
   if(!inp.files||!inp.files[0])return;
   var file=inp.files[0];
@@ -605,26 +629,23 @@ async function _uplPhoto(inp, docId){
   tmp.textContent='⏳';
   if(cell)cell.insertBefore(tmp,cell.lastElementChild);
   try{
-    // 인증 안 된 경우 익명 로그인
-    if(!_auth.currentUser){
-      await _auth.signInAnonymously();
-    }
-    var ref=_storage.ref('emergency_photos/'+docId+'/'+Date.now());
-    await ref.put(file,{contentType:file.type});
-    var url=await ref.getDownloadURL();
+    var dataUrl=await _resizeImg(file,800,0.72);
     await _db.collection('emergency_deliveries').doc(docId).update({
-      photos:firebase.firestore.FieldValue.arrayUnion(url)
+      photos:firebase.firestore.FieldValue.arrayUnion(dataUrl)
     });
     var img=document.createElement('img');
-    img.src=url;
-    img.onclick=function(){window.open(url,'_blank');};
+    img.src=dataUrl;
+    img.onclick=function(){
+      var w=window.open('','_blank');
+      w.document.write('<img src="'+dataUrl+'" style="max-width:100%;display:block;margin:auto">');
+    };
     img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);flex-shrink:0';
     if(cell&&tmp.parentNode)cell.replaceChild(img,tmp);
     toast('사진 등록 완료');
   }catch(e){
     console.error('[_uplPhoto]',e);
     if(cell&&tmp.parentNode)tmp.remove();
-    toast('사진 업로드 실패: '+(e.code||e.message), 6000);
+    toast('등록 실패: '+(e.code||e.message),6000);
   }
   inp.value='';
 }
