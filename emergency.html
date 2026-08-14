@@ -139,7 +139,7 @@ firebase.initializeApp({
     apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
     authDomain:'mbti-logistics.firebaseapp.com',
     projectId:'mbti-logistics',
-    storageBucket:'mbti-logistics.firebasestorage.app',
+    storageBucket:'mbti-logistics.appspot.com',
     messagingSenderId:'40761160761',
     appId:'1:40761160761:web:20545b610f03f534e949e8'
   });
@@ -600,29 +600,31 @@ async function _uplPhoto(inp, docId){
   if(!inp.files||!inp.files[0])return;
   var file=inp.files[0];
   var cell=document.getElementById('ph-'+docId);
-  // 로딩 표시
   var tmp=document.createElement('span');
-  tmp.style.cssText='display:inline-block;width:36px;height:36px;background:rgba(201,168,76,.15);border-radius:6px;line-height:36px;text-align:center;font-size:14px;vertical-align:top';
+  tmp.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;background:rgba(201,168,76,.15);border-radius:8px;font-size:20px;flex-shrink:0';
   tmp.textContent='⏳';
   if(cell)cell.insertBefore(tmp,cell.lastElementChild);
   try{
+    // 인증 안 된 경우 익명 로그인
+    if(!_auth.currentUser){
+      await _auth.signInAnonymously();
+    }
     var ref=_storage.ref('emergency_photos/'+docId+'/'+Date.now());
     await ref.put(file,{contentType:file.type});
     var url=await ref.getDownloadURL();
-    // Firestore photos 배열에 추가
     await _db.collection('emergency_deliveries').doc(docId).update({
       photos:firebase.firestore.FieldValue.arrayUnion(url)
     });
-    // 썸네일 교체
     var img=document.createElement('img');
     img.src=url;
     img.onclick=function(){window.open(url,'_blank');};
-    img.style.cssText='width:55px;height:55px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border);margin-right:4px;vertical-align:top';
+    img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);flex-shrink:0';
     if(cell&&tmp.parentNode)cell.replaceChild(img,tmp);
-    toast('📸 사진 등록 완료');
+    toast('사진 등록 완료');
   }catch(e){
+    console.error('[_uplPhoto]',e);
     if(cell&&tmp.parentNode)tmp.remove();
-    toast('사진 업로드 실패: '+e.message);
+    toast('사진 업로드 실패: '+(e.code||e.message), 6000);
   }
   inp.value='';
 }
