@@ -8715,6 +8715,35 @@ export default {
       });
     }
 
+    // ── Firebase 메시징 서비스 워커 ──────────────────────────────────────
+    if (path === '/firebase-messaging-sw.js') {
+      const swCode = `importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.appspot.com',
+  messagingSenderId:'40761160761',
+  appId:'1:40761160761:web:20545b610f03f534e949e8'
+});
+const messaging = firebase.messaging();
+messaging.onBackgroundMessage(function(payload) {
+  var title = (payload.notification && payload.notification.title) || '용차 알림';
+  var body  = (payload.notification && payload.notification.body)  || '';
+  return self.registration.showNotification(title, {
+    body: body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png'
+  });
+});
+self.addEventListener('install',  function(e){ e.waitUntil(self.skipWaiting()); });
+self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });`;
+      return new Response(swCode, {
+        headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache' }
+      });
+    }
+
     // ── PWA 매니페스트 & 아이콘 ─────────────────────────────────────────
     function b64ToBin(b64) {
       const bin = atob(b64);
