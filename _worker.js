@@ -5543,7 +5543,7 @@ const _DRIVER_JOIN_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>기사 가입 — 엠비티아이 배송앱</title>
+<title>기사 가입</title>
 <meta name="theme-color" content="#0a0f1e">
 <link rel="icon" type="image/png" href="/mbti-icon-192.png?v=3">
 <style>
@@ -5552,40 +5552,46 @@ const _DRIVER_JOIN_HTML = `<!DOCTYPE html>
   --bg:#0a0f1e;--bg2:#0d1b3e;--bg3:#1e3a5f;
   --text:#e2e8f0;--text2:#94a3b8;--text3:#475569;
   --brand:#0066ff;--acc:#00d4ff;--gold:#c9a84c;
-  --green:#22c55e;--red:#ef4444;
-  --border:rgba(0,102,255,.2);
+  --green:#22c55e;--red:#ef4444;--border:rgba(0,102,255,.2);
 }
 html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans KR',sans-serif}
-.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+#overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;font-size:13px;color:var(--text3)}
+.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;display:none}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:400px}
 .logo{text-align:center;margin-bottom:24px}
-.logo-title{font-size:20px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-title{font-size:18px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .logo-sub{font-size:11px;color:var(--text3);margin-top:4px}
-h2{font-size:15px;font-weight:800;margin-bottom:20px}
 .field{margin-bottom:14px}
-.field label{font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:600}
-.field input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none}
+.field>label{font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-weight:600;letter-spacing:.02em}
+.field input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none;transition:.15s}
 .field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(0,102,255,.15)}
 .field input.err{border-color:var(--red)}
+.id-row{display:flex;align-items:center;gap:8px}
+.id-row input{flex:1}
+.id-sep{color:var(--text3);font-size:16px;font-weight:700;flex-shrink:0}
 .hint{font-size:10px;color:var(--text3);margin-top:4px}
-.err-msg{font-size:11px;color:var(--red);margin-top:4px;display:none}
-.btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px}
-.btn-submit:disabled{opacity:.5;cursor:not-allowed}
-.divider{text-align:center;margin:16px 0;font-size:11px;color:var(--text3)}
+.err-msg{font-size:11px;color:var(--red);margin-top:5px;display:none}
+.zone-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.zc{padding:9px 2px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:.15s;line-height:1.2}
+.zc.on{background:rgba(201,168,76,.15);border-color:var(--gold);color:var(--gold)}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px}
+.btn-primary{background:linear-gradient(135deg,var(--brand),var(--acc));color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.divider{text-align:center;margin:16px 0 12px;font-size:11px;color:var(--text3)}
 .login-link{text-align:center;font-size:12px;color:var(--text3)}
 .login-link a{color:var(--acc);text-decoration:none;font-weight:700}
-.zc{padding:8px 4px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:.15s}
-.zc.on{background:rgba(201,168,76,.15);border-color:#c9a84c;color:#c9a84c}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="overlay">로딩 중...</div>
+
+<div class="wrap" id="main-wrap">
   <div class="card">
     <div class="logo">
-      <div style="font-size:36px;margin-bottom:8px">🚚</div>
-      <div class="logo-title">엠비티아이 배송앱</div>
-      <div class="logo-sub">배송기사 가입</div>
+      <div style="font-size:32px;margin-bottom:8px">🚚</div>
+      <div class="logo-title" id="co-name">엠비티아이 배송</div>
+      <div class="logo-sub" id="co-sub">배송기사 가입</div>
     </div>
 
     <div id="success-view" style="display:none;text-align:center;padding:16px 0">
@@ -5593,13 +5599,11 @@ h2{font-size:15px;font-weight:800;margin-bottom:20px}
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div style="font-size:16px;font-weight:800;margin-bottom:8px">가입 완료!</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px">배송앱에 오신 것을 환영합니다.<br>바로 사용하실 수 있습니다.</div>
-      <button onclick="location.href='/mbtico_hub'" style="width:100%;padding:13px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">앱 시작하기</button>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px" id="success-msg">환영합니다. 바로 앱을 사용하실 수 있습니다.</div>
+      <button class="btn btn-primary" style="font-size:14px" onclick="location.href='/mbtico_hub'">앱 시작하기</button>
     </div>
 
     <div id="form-view">
-      <h2>기사 정보 입력</h2>
-
       <div class="field">
         <label>이름 *</label>
         <input id="f-name" type="text" placeholder="홍길동" autocomplete="name">
@@ -5612,33 +5616,16 @@ h2{font-size:15px;font-weight:800;margin-bottom:20px}
       </div>
       <div class="field">
         <label>주민등록번호 *</label>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input id="f-id1" type="text" inputmode="numeric" maxlength="6" placeholder="앞 6자리" autocomplete="off" style="flex:1;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none">
-          <span style="color:var(--text3);font-weight:700;font-size:16px">—</span>
-          <input id="f-id2" type="password" inputmode="numeric" maxlength="7" placeholder="뒤 7자리" autocomplete="off" style="flex:1;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none">
+        <div class="id-row">
+          <input id="f-id1" type="text" inputmode="numeric" maxlength="6" placeholder="앞 6자리" autocomplete="off">
+          <span class="id-sep">—</span>
+          <input id="f-id2" type="password" inputmode="numeric" maxlength="7" placeholder="뒤 7자리" autocomplete="off">
         </div>
         <div class="err-msg" id="e-id"></div>
       </div>
       <div class="field">
-        <label>배송 구역 * (복수 선택 가능)</label>
-        <div id="zone-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px">
-          <button type="button" class="zc" data-v="강서구">강서구</button>
-          <button type="button" class="zc" data-v="금정구">금정구</button>
-          <button type="button" class="zc" data-v="기장군">기장군</button>
-          <button type="button" class="zc" data-v="남구">남구</button>
-          <button type="button" class="zc" data-v="동구">동구</button>
-          <button type="button" class="zc" data-v="동래구">동래구</button>
-          <button type="button" class="zc" data-v="부산진구">부산진구</button>
-          <button type="button" class="zc" data-v="북구">북구</button>
-          <button type="button" class="zc" data-v="사상구">사상구</button>
-          <button type="button" class="zc" data-v="사하구">사하구</button>
-          <button type="button" class="zc" data-v="서구">서구</button>
-          <button type="button" class="zc" data-v="수영구">수영구</button>
-          <button type="button" class="zc" data-v="연제구">연제구</button>
-          <button type="button" class="zc" data-v="영도구">영도구</button>
-          <button type="button" class="zc" data-v="중구">중구</button>
-          <button type="button" class="zc" data-v="해운대구">해운대구</button>
-        </div>
+        <label>배송 구역 * <span id="zone-count" style="color:var(--gold);font-weight:700"></span></label>
+        <div class="zone-grid" id="zone-grid"></div>
         <div class="err-msg" id="e-zone"></div>
       </div>
       <div class="field">
@@ -5656,15 +5643,8 @@ h2{font-size:15px;font-weight:800;margin-bottom:20px}
         <input id="f-pw2" type="password" placeholder="비밀번호 재입력" autocomplete="new-password">
         <div class="err-msg" id="e-pw2"></div>
       </div>
-      <div class="field">
-        <label>회사 코드 (선택)</label>
-        <input id="f-code" type="text" placeholder="소속 회사에서 받은 코드" autocomplete="off">
-        <div class="hint">소속 회사 코드가 없으면 비워두세요</div>
-      </div>
-
       <div id="submit-err" style="font-size:12px;color:var(--red);margin-bottom:8px;text-align:center;display:none"></div>
-      <button id="btn-submit" class="btn-submit" onclick="_submit()">가입하기</button>
-
+      <button id="btn-submit" class="btn btn-primary" onclick="_submit()">가입하기</button>
       <div class="divider">또는</div>
       <div class="login-link">이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a></div>
     </div>
@@ -5687,53 +5667,93 @@ firebase.initializeApp({
 var _db=firebase.firestore(),_auth=firebase.auth();
 _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 
-function _toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2500);}
-function _showErr(id,msg){var el=document.getElementById('e-'+id),inp=document.getElementById('f-'+id);if(el){el.textContent=msg;el.style.display='block';}if(inp)inp.classList.add('err');}
+// ── 업체별 기본 설정 (Firestore companies/{did}.driverJoin 으로 오버라이드) ──
+var _did=new URLSearchParams(location.search).get('did')||'';
+var _cfg={
+  companyName:'엠비티아이 배송',
+  welcomeMsg:'배송기사 가입',
+  successMsg:'환영합니다. 바로 앱을 사용하실 수 있습니다.',
+  zones:['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구']
+};
+var _selZones=[];
+
+// ── 유틸 ──
+function _toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2500);}
+function _showErr(id,m){var el=document.getElementById('e-'+id),inp=document.getElementById('f-'+id);if(el){el.textContent=m;el.style.display='block';}if(inp)inp.classList.add('err');}
 function _clearErr(id){var el=document.getElementById('e-'+id),inp=document.getElementById('f-'+id);if(el)el.style.display='none';if(inp)inp.classList.remove('err');}
 
-['name','phone','email','pw','pw2'].forEach(function(id){
-  var inp=document.getElementById('f-'+id);
-  if(inp)inp.addEventListener('input',function(){_clearErr(id);});
-});
-['id1','id2'].forEach(function(id){
-  var inp=document.getElementById('f-'+id);
-  if(inp)inp.addEventListener('input',function(){_clearErr('id');});
-});
-
-var _selZones=[];
-document.querySelectorAll('.zc').forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var v=this.getAttribute('data-v');
-    var idx=_selZones.indexOf(v);
-    if(idx>=0){_selZones.splice(idx,1);this.classList.remove('on');}
-    else{_selZones.push(v);this.classList.add('on');}
-    document.getElementById('e-zone').style.display='none';
+// ── 구역 칩 렌더 (설정 변경 시 재호출) ──
+function _renderZones(){
+  var grid=document.getElementById('zone-grid');
+  _selZones=[];
+  grid.innerHTML=_cfg.zones.map(function(z){
+    return '<button type="button" class="zc" data-v="'+z+'">'+z+'</button>';
+  }).join('');
+  grid.querySelectorAll('.zc').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var v=this.getAttribute('data-v'),idx=_selZones.indexOf(v);
+      if(idx>=0){_selZones.splice(idx,1);this.classList.remove('on');}
+      else{_selZones.push(v);this.classList.add('on');}
+      var cnt=document.getElementById('zone-count');
+      cnt.textContent=_selZones.length?'('+_selZones.length+'개)':'';
+      document.getElementById('e-zone').style.display='none';
+    });
   });
+}
+
+// ── 업체 설정 로드 및 초기화 ──
+async function _init(){
+  if(_did){
+    try{
+      var snap=await _db.collection('companies').doc(_did).get();
+      if(snap.exists){
+        var d=snap.data(),dj=d.driverJoin||{};
+        _cfg.companyName=d.companyName||d.name||_cfg.companyName;
+        if(dj.zones&&dj.zones.length)_cfg.zones=dj.zones;
+        if(dj.welcomeMsg)_cfg.welcomeMsg=dj.welcomeMsg;
+        if(dj.successMsg)_cfg.successMsg=dj.successMsg;
+      }
+    }catch(e){}
+  }
+  document.getElementById('co-name').textContent=_cfg.companyName;
+  document.getElementById('co-sub').textContent=_cfg.welcomeMsg;
+  document.getElementById('success-msg').textContent=_cfg.successMsg;
+  document.title='기사 가입 — '+_cfg.companyName;
+  _renderZones();
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('main-wrap').style.display='flex';
+}
+
+// ── 입력 이벤트 ──
+document.addEventListener('DOMContentLoaded',function(){
+  ['name','phone','email','pw','pw2'].forEach(function(id){
+    var el=document.getElementById('f-'+id);
+    if(el)el.addEventListener('input',function(){_clearErr(id);});
+  });
+  ['id1','id2'].forEach(function(id){
+    var el=document.getElementById('f-'+id);
+    if(el)el.addEventListener('input',function(){_clearErr('id');});
+  });
+  document.getElementById('f-phone').addEventListener('input',function(e){
+    var v=e.target.value.replace(/[^0-9]/g,'');
+    e.target.value=v.length<=3?v:v.length<=7?v.slice(0,3)+'-'+v.slice(3):v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
+  });
+  document.getElementById('f-id1').addEventListener('input',function(e){
+    e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,6);
+    if(e.target.value.length===6)document.getElementById('f-id2').focus();
+  });
+  document.getElementById('f-id2').addEventListener('input',function(e){
+    e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,7);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Enter')_submit();});
+  _init();
 });
 
-document.getElementById('f-phone').addEventListener('input',function(e){
-  var v=e.target.value.replace(/[^0-9]/g,'');
-  if(v.length<=3)e.target.value=v;
-  else if(v.length<=7)e.target.value=v.slice(0,3)+'-'+v.slice(3);
-  else e.target.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
-});
-document.getElementById('f-id1').addEventListener('input',function(e){
-  e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,6);
-  if(e.target.value.length===6)document.getElementById('f-id2').focus();
-});
-document.getElementById('f-id2').addEventListener('input',function(e){
-  e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,7);
-});
-
+// ── 가입 처리 ──
 async function _submit(){
-  var name=document.getElementById('f-name').value.trim();
-  var phone=document.getElementById('f-phone').value.trim();
-  var id1=document.getElementById('f-id1').value.trim();
-  var id2=document.getElementById('f-id2').value.trim();
-  var email=document.getElementById('f-email').value.trim();
-  var pw=document.getElementById('f-pw').value;
-  var pw2=document.getElementById('f-pw2').value;
-  var code=document.getElementById('f-code').value.trim();
+  var f=function(id){return(document.getElementById('f-'+id)||{value:''}).value.trim();};
+  var name=f('name'),phone=f('phone'),id1=f('id1'),id2=f('id2'),email=f('email');
+  var pw=document.getElementById('f-pw').value,pw2=document.getElementById('f-pw2').value;
   var ok=true;
   if(!name){_showErr('name','이름을 입력하세요');ok=false;}
   if(!phone){_showErr('phone','전화번호를 입력하세요');ok=false;}
@@ -5743,35 +5763,36 @@ async function _submit(){
   if(!pw||pw.length<8){_showErr('pw','비밀번호는 8자 이상이어야 합니다');ok=false;}
   if(pw!==pw2){_showErr('pw2','비밀번호가 일치하지 않습니다');ok=false;}
   if(!ok)return;
+
   var btn=document.getElementById('btn-submit'),errEl=document.getElementById('submit-err');
   btn.disabled=true;btn.textContent='처리 중...';errEl.style.display='none';
-  var idNum=id1+'-'+id2;
+
+  var doc={
+    name:name,email:email,phone:phone,
+    idNumber:id1+'-'+id2,deliveryZones:_selZones,
+    type:'driver',role:'driver',
+    parentDealerId:_did||null,
+    companyName:_cfg.companyName,
+    platform:'mbtico',status:'active',
+    subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
   try{
     var uc=await _auth.createUserWithEmailAndPassword(email,pw);
     var uid=uc.user.uid;
-    await _db.collection('companies').doc(uid).set({
-      name:name,email:email,phone:phone,idNumber:idNum,deliveryZones:_selZones,
-      type:'driver',role:'driver',
-      parentDealerId:code||null,companyName:name+' 기사',platform:'mbtico',status:'active',
-      subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await _db.collection('delivery_drivers').doc(uid).set({
-      uid:uid,name:name,email:email,phone:phone,idNumber:idNum,deliveryZones:_selZones,
-      parentDealerId:code||null,status:'active',
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await _db.collection('companies').doc(uid).set(doc);
+    await _db.collection('delivery_drivers').doc(uid).set(Object.assign({uid:uid},doc));
     document.getElementById('form-view').style.display='none';
     document.getElementById('success-view').style.display='block';
   }catch(e){
     btn.disabled=false;btn.textContent='가입하기';
-    if(e.code==='auth/email-already-in-use'){errEl.textContent='이미 가입된 이메일입니다. 로그인해 주세요.';}
-    else if(e.code==='auth/invalid-email'){errEl.textContent='올바른 이메일 형식이 아닙니다.';}
-    else{errEl.textContent='오류: '+e.message;}
+    errEl.textContent=
+      e.code==='auth/email-already-in-use'?'이미 가입된 이메일입니다. 로그인해 주세요.':
+      e.code==='auth/invalid-email'?'올바른 이메일 형식이 아닙니다.':
+      '오류: '+e.message;
     errEl.style.display='block';
   }
 }
-document.addEventListener('keydown',function(e){if(e.key==='Enter')_submit();});
 </script>
 </body>
 </html>
