@@ -543,7 +543,15 @@ async function openEmergencyAdmin(){
       +'<td style="font-family:monospace;font-size:11px">'+trackings+'</td>'
       +'<td style="font-size:11px">'+( r.recipient||'—')+'</td>'
       +'<td style="font-size:11px">'+( r.addr||'—')+'</td>'
-      +'<td>'+photos+'</td>'
+      +'<td id="ph-'+(r.id||'')+'" style="white-space:nowrap">'
+      +photos
+      +(r.id
+        ? '<label title="사진 추가" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(255,255,255,.06);border-radius:6px;border:1.5px dashed rgba(255,255,255,.2);vertical-align:top;margin-left:'+(r.photos&&r.photos.length?'4':'0')+'px">'
+          +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+          +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+r.id+'\')">'
+          +'</label>'
+        : '')
+      +'</td>'
       +'<td>'+gpsLink+'</td>'
       +'</tr>';
   }).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
@@ -582,6 +590,37 @@ async function openEmergencyAdmin(){
       </div>
     </div>
   </div>`);
+}
+
+async function _uplPhoto(inp, docId){
+  if(!inp.files||!inp.files[0])return;
+  var file=inp.files[0];
+  var cell=document.getElementById('ph-'+docId);
+  // 로딩 표시
+  var tmp=document.createElement('span');
+  tmp.style.cssText='display:inline-block;width:36px;height:36px;background:rgba(201,168,76,.15);border-radius:6px;line-height:36px;text-align:center;font-size:14px;vertical-align:top';
+  tmp.textContent='⏳';
+  if(cell)cell.insertBefore(tmp,cell.lastElementChild);
+  try{
+    var ref=_storage.ref('emergency_photos/'+docId+'/'+Date.now());
+    await ref.put(file,{contentType:file.type});
+    var url=await ref.getDownloadURL();
+    // Firestore photos 배열에 추가
+    await _db.collection('emergency_deliveries').doc(docId).update({
+      photos:firebase.firestore.FieldValue.arrayUnion(url)
+    });
+    // 썸네일 교체
+    var img=document.createElement('img');
+    img.src=url;
+    img.onclick=function(){window.open(url,'_blank');};
+    img.style.cssText='width:55px;height:55px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border);margin-right:4px;vertical-align:top';
+    if(cell&&tmp.parentNode)cell.replaceChild(img,tmp);
+    toast('📸 사진 등록 완료');
+  }catch(e){
+    if(cell&&tmp.parentNode)tmp.remove();
+    toast('사진 업로드 실패: '+e.message);
+  }
+  inp.value='';
 }
 
 function _emerCloseWithCheck(){
