@@ -1711,13 +1711,11 @@ function _pgHomeDriver(el){
   setTimeout(function(){
     var mapEl=document.getElementById('home-drv-map');
     if(!mapEl)return;
+    // GPS 확인 후 지도 초기화 (정확한 현위치 마커)
+    _yLoadGeo().then(function(){
     _loadKakaoMap(function(){
-      var center=new kakao.maps.LatLng(35.1796,129.0756);
-      if(typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
-        center=new kakao.maps.LatLng(_CU.lat,_CU.lng);
-      } else if(_myGeo){
-        center=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
-      }
+      var g=_myGeo;
+      var center=g?new kakao.maps.LatLng(g.lat,g.lng):new kakao.maps.LatLng(35.1796,129.0756);
       var m=new kakao.maps.Map(mapEl,{center:center,level:7});
       // 내 위치 마커 (파란 원)
       new kakao.maps.CustomOverlay({
@@ -1755,6 +1753,7 @@ function _pgHomeDriver(el){
         }).catch(function(){});
       }
     });
+  });  // _yLoadGeo().then
   },600);
 
   // 내 주변 공고 — GPS 우선, 없으면 지역명 매칭
@@ -2537,8 +2536,10 @@ var _myGeo=null;                       // {lat,lng}
 function _yLoadGeo(){
   return new Promise(function(res){
     if(_myGeo)return res(_myGeo);
-    // 저장된 좌표가 있으면 우선 사용 (권한 팝업 없이 즉시 동작)
-    if(_CU&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
+    // 저장된 좌표가 1시간 이내면 우선 사용 (권한 팝업 없이 즉시 동작)
+    var geoAge=_CU&&_CU.geoUpdatedAt?(_CU.geoUpdatedAt.toMillis?_CU.geoUpdatedAt.toMillis():_CU.geoUpdatedAt):0;
+    var isRecent=geoAge&&(Date.now()-geoAge<3600000);
+    if(isRecent&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
       _myGeo={lat:_CU.lat,lng:_CU.lng};return res(_myGeo);
     }
     if(!navigator.geolocation)return res(null);
@@ -2556,7 +2557,12 @@ function _yLoadGeo(){
         }).catch(function(){});
       }
       finish(_myGeo);
-    },function(){finish(null);},{enableHighAccuracy:false,timeout:5500,maximumAge:600000});
+    },function(){
+      // GPS 실패 시 저장된 좌표 폴백 (오래돼도)
+      if(_CU&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
+        _myGeo={lat:_CU.lat,lng:_CU.lng};finish(_myGeo);
+      } else {finish(null);}
+    },{enableHighAccuracy:true,timeout:5500,maximumAge:60000});
   });
 }
 /* 주유소/충전소 목록 조회 + 렌더링
