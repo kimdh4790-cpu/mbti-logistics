@@ -1387,6 +1387,7 @@ function _goPage(p){
   else if(p==='driver_offer')_pgDriverOffer(el);
   else if(p==='entrance_codes')_pgEntranceCodes(el);
   else if(p==='settle_reconcile')_pgSettlementReconcile(el);
+  else if(p==='my_settlements')_pgMySettlements(el);
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -1635,6 +1636,8 @@ function _pgHomeDriver(el){
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>용차 등록</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_settlements\\')" style="border-color:var(--gnln);color:var(--gn)">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>정산 내역</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -1899,6 +1902,7 @@ function _pgHomeAgency(el){
     '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">배차 공고</button>'+
     '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_settlements\\')" style="border-color:var(--gnln);color:var(--gn)">정산 내역</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'settle_reconcile\\')" style="border-color:var(--brln);color:var(--br)">정산 대사</button>'+
   '</div>'+
 
@@ -3866,7 +3870,8 @@ function _judgeApply(applyId,status,name,driverId){
             _CU.name+'\\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate,'dispatch');
           // 채팅방 자동 생성 + 첫 메시지
           _yAutoChat(driverId,name,a,postTitle,unitPrice,startDate);
-          // 계약서 초안 생성
+          // 계약서 초안 생성 (정산 보장 조건 포함)
+          var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);tomorrow.setHours(18,0,0,0);
           _db.collection('yongcha_contracts').add({
             applyId:applyId,postId:a.postId||'',
             agencyId:_CU.uid,agencyName:_CU.name,
@@ -3875,10 +3880,16 @@ function _judgeApply(applyId,status,name,driverId){
             terms:{courier:a.courier||'',area:a.area||'',unitPrice:unitPrice,
                    workShift:a.workShift||'',workDays:a.workDays||'',
                    settleFreq:a.settleFreq||'',settleDay:a.settleDay||'',
-                   minGuarantee:a.minGuarantee||0,startDate:startDate},
+                   minGuarantee:a.minGuarantee||0,startDate:startDate,
+                   payDueDays:1,payDueHour:18,penaltyRate:0.15,
+                   legalBasis:'하도급법 제13조, 화물자동차 운수사업법 제5조, 민법 제397조'},
+            termsVersion:'v1.2',
+            agencyDevice:navigator.userAgent.substring(0,200),
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
           }).then(function(ref){
             _db.collection('yongcha_applies').doc(applyId).update({contractId:ref.id}).catch(function(e){console.error('contractId link fail',e);});
+            // 기사에게 계약서 서명 요청 FCM
+            _yNotify(driverId,'계약서 서명 요청','배차가 확정됐어요. 계약서를 확인하고 서명해주세요.','contract');
           }).catch(function(e){_yToast('계약서 생성 실패: '+e.message);});
         }).catch(function(e){_yToast('지원 승인 저장 실패: '+e.message);});
       } else {
@@ -4076,6 +4087,7 @@ function _yRequestSettle(driverId,driverName,cnt,amt,weekStart){
 function _signContract(contractId, role){
   var field=role==='agency'?'agencySigned':'driverSigned';
   var upd={};upd[field]=true;upd[field+'At']=firebase.firestore.FieldValue.serverTimestamp();
+  upd[field.replace('Signed','Device')]=navigator.userAgent.substring(0,200);
   _db.collection('yongcha_contracts').doc(contractId).update(upd).then(function(){
     // 양쪽 모두 서명했는지 확인
     _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
@@ -4125,6 +4137,17 @@ function _showContract(contractId){
       '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">정산일</span> <strong>'+(t.settleDay||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">시작일</span> <strong>'+(t.startDate||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">배송완료 익일 정산</span> <strong>익일 18:00 KST 이내</strong></div>'+
+      '<div><span style="color:var(--t3)">연체 이율</span> <strong>연 15% (일할 계산)</strong></div>'+
+      '</div>'+
+
+      '<div style="background:#1a1a2e;border:1px solid var(--ac);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11.5px;line-height:1.8;color:var(--t2)">'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:6px">정산 보장 약정</div>'+
+      '제3조 (정산 의무) 소장은 기사의 배송 완료 확인 후 익일 18:00(KST) 이내에 약정 단가에 건수를 곱한 금액을 지급해야 한다.<br>'+
+      '제5조 (지연 이자) 정산 지연 시 연 15%의 이자를 일할 계산하여 추가 지급한다.<br>'+
+      '제8조 (신용 제한) 2회 이상 정산 지연 시 플랫폼이 신규 기사 배차를 제한할 수 있다.<br>'+
+      '<div style="margin-top:6px;font-size:11px;color:var(--t3)">근거: 하도급법 제13조 · 화물자동차 운수사업법 제5조 · 민법 제397조</div>'+
+      '<div style="margin-top:4px;font-size:10.5px;color:var(--t3)">※ 본 플랫폼(엠비티아이)은 중개 정보를 제공하는 사업자로, 계약의 당사자가 아닙니다.</div>'+
       '</div>'+
 
       '<div style="display:flex;gap:8px;margin-bottom:12px">'+
@@ -8452,15 +8475,40 @@ function _ySubmitComplete(applyId){
     _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
       if(!s.exists){_yToast('배차 정보 없음');_closeModal();return;}
       var a=s.data();
+      var unitPrice=a.unitPrice||0;
+      var volume=a.volume||0;
+      var gross=unitPrice*volume;
+      var fee=Math.round(gross*0.03);
+      var net=gross-fee;
+      // 익일 18:00 KST = UTC+9 → UTC 09:00
+      var dueDt=new Date();
+      dueDt.setDate(dueDt.getDate()+1);
+      dueDt.setHours(9,0,0,0);
+      var dueIso=dueDt.toISOString();
+      var settleData={
+        applyId:applyId,postId:a.postId||'',
+        agencyId:a.agencyId||'',agencyName:a.agencyName||'',
+        driverId:_CU.uid,driverName:_CU.name,
+        courier:a.courier||'',area:a.area||'',
+        unitPrice:unitPrice,volume:volume,
+        grossAmount:gross,platformFee:fee,netAmount:net,
+        dueDate:dueIso,
+        status:'pending',
+        contractId:a.contractId||'',
+        deliveryDate:new Date().toISOString(),
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
       return _db.collection('yongcha_applies').doc(applyId).update({
         step:3,status:'done',completedAt:firebase.firestore.FieldValue.serverTimestamp(),
         photoUrl:photoUrl||''
       }).then(function(){
+        return _db.collection('yongcha_settlements').add(settleData);
+      }).then(function(sRef){
         if(a.agencyId){
           _yNotify(a.agencyId,'정산 요청',
-            _CU.name+'님이 배송을 완료했어요. 정산을 확인해주세요. ('+_won(a.unitPrice||0)+'원/건)','settle');
+            _CU.name+'님이 배송을 완료했어요. 익일 18:00까지 '+_won(net)+'원을 정산해주세요.','settle');
         }
-        _yShowSettlementDone(a);
+        _yShowSettlementDone(a,sRef.id,dueIso,net);
       });
     }).catch(function(e){
       if(btn){btn.textContent='완료 확정 + 정산 요청';btn.disabled=false;}
@@ -8479,14 +8527,14 @@ function _ySubmitComplete(applyId){
 }
 
 // ── 정산 완료 내역 모달 ───────────────────────────────────────
-function _yShowSettlementDone(a){
+function _yShowSettlementDone(a,settleId,dueIso,net){
   var unitPrice=a.unitPrice||0;
   var volume=a.volume||0;
   var gross=unitPrice*volume;
   var fee=Math.round(gross*0.03);
-  var net=gross-fee;
-  var settleDt=new Date();settleDt.setDate(settleDt.getDate()+2);
-  var sdStr=settleDt.getFullYear()+'년 '+(settleDt.getMonth()+1)+'월 '+settleDt.getDate()+'일';
+  if(net===undefined)net=gross-fee;
+  var dueD=dueIso?new Date(dueIso):new Date(Date.now()+33*60*60*1000);
+  var sdStr=dueD.getFullYear()+'년 '+(dueD.getMonth()+1)+'월 '+dueD.getDate()+'일 18:00';
   var body=document.getElementById('modal-body');
   body.innerHTML=
     '<div style="text-align:center;margin-bottom:20px">'+
@@ -8511,13 +8559,87 @@ function _yShowSettlementDone(a){
         '<span style="font-size:24px;font-weight:900;color:var(--ac);letter-spacing:-.8px">'+_won(net)+'원</span>'+
       '</div>'+
     '</div>'+
-    '<div style="text-align:center;font-size:12.5px;color:var(--t3);margin-bottom:20px">'+
-      '정산 예정일: '+sdStr+
+    '<div style="background:#0a1628;border:1px solid var(--gn);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.8;color:var(--t2)">'+
+      '<div style="font-size:12px;font-weight:800;color:var(--gn);margin-bottom:4px">정산 보장 약정</div>'+
+      '<div>입금 기한: <strong style="color:#fff">'+sdStr+' 까지</strong></div>'+
+      '<div>연체 이율: <strong style="color:#fff">연 15%</strong> (일할 계산)</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-top:4px">하도급법 제13조 · 화물자동차 운수사업법 제5조 · 민법 제397조</div>'+
     '</div>'+
     '<button type="button" onclick="_closeModal();_goPage(\\'my_routes\\')" '+
       'style="width:100%;min-height:52px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;'+
-      'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>';
+      'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">정산 내역 확인</button>';
   _openModal();
+}
+
+// ── 소장: 정산 입금 확인 ─────────────────────────────────────────────────────
+function _yMarkPaid(settleId,net){
+  if(!confirm('입금 처리하셨나요? 확인하면 기사에게 알림이 발송됩니다.'))return;
+  firebase.auth().currentUser.getIdToken().then(function(tok){
+    return fetch('/api/yongcha/settlement-paid',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({settleId:settleId,netAmount:net||0})
+    });
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){_yToast('입금 처리 완료! 기사에게 알림을 보냈어요.');_loadSettleList();}
+    else _yToast(d.error||'처리 실패');
+  }).catch(function(){_yToast('처리 실패');});
+}
+
+// ── 정산 내역 목록 (기사/소장 공용) ─────────────────────────────────────────
+function _pgMySettlements(el){
+  el.innerHTML=
+    '<div class="page-hdr"><h1 class="page-title">정산 내역</h1>'+
+    '<p class="page-sub">배송 완료 건별 정산 현황이에요</p></div>'+
+    '<div id="settle-list">'+_skRows(4)+'</div>';
+  _loadSettleList();
+}
+
+function _loadSettleList(){
+  var listEl=document.getElementById('settle-list');
+  if(!listEl)return;
+  var field=_CU.type==='agency'?'agencyId':'driverId';
+  _db.collection('yongcha_settlements')
+    .where(field,'==',_CU.uid)
+    .orderBy('createdAt','desc').limit(30)
+    .get().then(function(snap){
+      if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);font-size:14px">아직 정산 내역이 없어요</div>';return;}
+      var html='';
+      snap.forEach(function(doc){
+        var s=doc.data(),sid=doc.id;
+        var dueD=s.dueDate?new Date(s.dueDate):null;
+        var now=new Date();
+        var isOverdue=dueD&&s.status==='pending'&&now>dueD;
+        var statusCls=s.status==='paid'?'var(--gn)':isOverdue?'#ef4444':'var(--t3)';
+        var statusTxt=s.status==='paid'?'입금완료':isOverdue?'연체':'입금대기';
+        var penalty='';
+        if(isOverdue&&dueD){
+          var days=Math.ceil((now-dueD)/(1000*60*60*24));
+          var penAmt=Math.round((s.netAmount||0)*0.15/365*days);
+          penalty='<div style="font-size:11.5px;color:#ef4444;margin-top:3px">연체 '+days+'일 — 이자 +'+_won(penAmt)+'원</div>';
+        }
+        html+='<div class="card" style="padding:14px 16px;margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+            '<div>'+
+              '<div style="font-size:13.5px;font-weight:800">'+(s.courier||'')+(s.area?' · '+s.area:'')+'</div>'+
+              '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
+                (s.driverId===_CU.uid?s.agencyName:s.driverName||'')+' · '+
+                (s.deliveryDate?s.deliveryDate.slice(0,10):'')+
+              '</div>'+
+              penalty+
+            '</div>'+
+            '<div style="text-align:right">'+
+              '<div style="font-size:17px;font-weight:900">'+_won(s.netAmount||0)+'원</div>'+
+              '<div style="font-size:11.5px;font-weight:700;color:'+statusCls+'">'+statusTxt+'</div>'+
+            '</div>'+
+          '</div>'+
+          (dueD?'<div style="font-size:11px;color:var(--t3);margin-top:8px">입금 기한: '+dueD.toLocaleDateString('ko-KR')+' 18:00</div>':'')+
+          (_CU.type==='agency'&&s.status==='pending'?
+            '<button onclick="_yMarkPaid(\''+sid+'\','+s.netAmount+')" style="width:100%;margin-top:10px;padding:10px;background:var(--gn);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">입금 완료 처리</button>':'')
+        +'</div>';
+      });
+      listEl.innerHTML=html;
+    }).catch(function(e){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--rd)">'+e.message+'</div>';});
 }
 
 // ── 멀티스톱 내비게이션 모달 (기사 홈 "내비게이션 시작" 버튼) ─────
@@ -9583,10 +9705,244 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       } catch(e) { return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH }); }
     }
 
+    // ── 정산 입금 완료 처리 (소장 호출) ─────────────────────────────────────
+    if (path === '/api/yongcha/settlement-paid' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const authHeader = request.headers.get('Authorization') || '';
+        if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), { status: 401, headers: corsH });
+        const verData = await (await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: authHeader.slice(7) }) })).json();
+        const uid = verData.users?.[0]?.localId;
+        if (!uid) return new Response(JSON.stringify({ ok: false, error: '인증 실패' }), { status: 401, headers: corsH });
+
+        const { settleId, netAmount } = await request.json();
+        if (!settleId) return new Response(JSON.stringify({ ok: false, error: 'settleId 필수' }), { status: 400, headers: corsH });
+
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
+
+        // 정산 문서 조회
+        const settleDoc = await (await fetch(`${FS}/yongcha_settlements/${settleId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+        const sf = settleDoc.fields || {};
+        if (!sf.agencyId) return new Response(JSON.stringify({ ok: false, error: '정산 내역 없음' }), { status: 404, headers: corsH });
+        if (sf.agencyId.stringValue !== uid) return new Response(JSON.stringify({ ok: false, error: '권한 없음 — 해당 배차의 소장만 처리 가능' }), { status: 403, headers: corsH });
+        if (sf.status?.stringValue === 'paid') return new Response(JSON.stringify({ ok: false, error: '이미 처리된 정산입니다' }), { status: 400, headers: corsH });
+
+        const paidAt = new Date().toISOString();
+        const pf = {
+          status: { stringValue: 'paid' },
+          paidAt: { stringValue: paidAt },
+          paidByUid: { stringValue: uid }
+        };
+        await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: pf })
+        });
+
+        // 소장 신뢰도 업데이트 (온타임 입금 카운트)
+        const agData = await (await fetch(`${FS}/yongcha_users/${uid}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+        const af = agData.fields || {};
+        const prevOnTime = Number(af.onTimePayments?.integerValue || 0);
+        const prevTotal  = Number(af.totalSettlements?.integerValue || 0);
+        const newOnTime  = prevOnTime + 1;
+        const newTotal   = prevTotal  + 1;
+        const uf = {
+          onTimePayments:  { integerValue: newOnTime },
+          totalSettlements:{ integerValue: newTotal },
+          onTimeRate:      { doubleValue: Math.round(newOnTime / newTotal * 100) },
+          lastSettlePaidAt:{ stringValue: paidAt }
+        };
+        await fetch(`${FS}/yongcha_users/${uid}?${Object.keys(uf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: uf })
+        });
+
+        // 기사에게 FCM 알림
+        const driverId = sf.driverId?.stringValue;
+        if (driverId && env.FCM_SERVER_KEY) {
+          const drData = await (await fetch(`${FS}/yongcha_users/${driverId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+          const drFcm  = drData.fields?.fcmToken?.stringValue;
+          const amt    = netAmount || Number(sf.netAmount?.integerValue || sf.netAmount?.doubleValue || 0);
+          if (drFcm) {
+            await fetch('https://fcm.googleapis.com/fcm/send', {
+              method: 'POST',
+              headers: { 'Authorization': 'key=' + env.FCM_SERVER_KEY, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: drFcm, notification: { title: '정산 입금 완료!', body: `${sf.agencyName?.stringValue || '소장'}님이 ${Number(amt).toLocaleString('ko-KR')}원을 입금 처리했어요.` }, data: { type: 'settle_paid', settleId } })
+            });
+          }
+        }
+
+        return new Response(JSON.stringify({ ok: true, settleId, paidAt }), { headers: corsH });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 정산 내역 목록 조회 ───────────────────────────────────────────────────
+    if (path === '/api/yongcha/my-settlements' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const authHeader = request.headers.get('Authorization') || '';
+        if (!authHeader.startsWith('Bearer ')) return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), { status: 401, headers: corsH });
+        const verData = await (await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: authHeader.slice(7) }) })).json();
+        const uid = verData.users?.[0]?.localId;
+        if (!uid) return new Response(JSON.stringify({ ok: false, error: '인증 실패' }), { status: 401, headers: corsH });
+
+        const role = url.searchParams.get('role') || 'driver';
+        const field = role === 'agency' ? 'agencyId' : 'driverId';
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
+
+        const q = { structuredQuery: {
+          from: [{ collectionId: 'yongcha_settlements' }],
+          where: { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: uid } } },
+          orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }],
+          limit: 50
+        }};
+        const docs = await (await fetch(`${FS}:runQuery`, { method: 'POST', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(q) })).json();
+        const now = Date.now();
+        const items = (docs || []).filter(d => d.document).map(d => {
+          const f = d.document.fields || {};
+          const id = d.document.name.split('/').pop();
+          const dueDate = f.dueDate?.stringValue || '';
+          const status  = f.status?.stringValue || 'pending';
+          const isOverdue = status === 'pending' && dueDate && now > new Date(dueDate).getTime();
+          const netAmt = Number(f.netAmount?.integerValue || f.netAmount?.doubleValue || 0);
+          let penaltyAmt = 0;
+          if (isOverdue && dueDate) {
+            const days = Math.ceil((now - new Date(dueDate).getTime()) / 86400000);
+            penaltyAmt = Math.round(netAmt * 0.15 / 365 * days);
+          }
+          return { id, agencyId: f.agencyId?.stringValue, agencyName: f.agencyName?.stringValue, driverId: f.driverId?.stringValue, driverName: f.driverName?.stringValue, courier: f.courier?.stringValue, area: f.area?.stringValue, unitPrice: Number(f.unitPrice?.integerValue || 0), volume: Number(f.volume?.integerValue || 0), grossAmount: Number(f.grossAmount?.integerValue || 0), platformFee: Number(f.platformFee?.integerValue || 0), netAmount: netAmt, dueDate, status, isOverdue, penaltyAmt, paidAt: f.paidAt?.stringValue, deliveryDate: f.deliveryDate?.stringValue };
+        });
+        return new Response(JSON.stringify({ ok: true, items }), { headers: corsH });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // ── 연체 자동 감지 (Cron / 수동 호출 가능) ──────────────────────────────
+    if (path === '/api/yongcha/overdue-check' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const secret = request.headers.get('X-Cron-Secret') || '';
+        if (env.CRON_SECRET && secret !== env.CRON_SECRET) return new Response(JSON.stringify({ ok: false, error: '권한 없음' }), { status: 403, headers: corsH });
+
+        const fsToken = await ycGetFsToken(env);
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
+        const now = new Date().toISOString();
+
+        // pending 상태이면서 dueDate가 지난 정산 조회
+        const q = { structuredQuery: {
+          from: [{ collectionId: 'yongcha_settlements' }],
+          where: { compositeFilter: { op: 'AND', filters: [
+            { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'pending' } } },
+            { fieldFilter: { field: { fieldPath: 'dueDate' }, op: 'LESS_THAN', value: { stringValue: now } } }
+          ]}},
+          limit: 200
+        }};
+        const docs = await (await fetch(`${FS}:runQuery`, { method: 'POST', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(q) })).json();
+        const overdueDocs = (docs || []).filter(d => d.document);
+
+        let updated = 0;
+        const agencyPenaltyCount = {};
+
+        for (const d of overdueDocs) {
+          const f = d.document.fields || {};
+          const id = d.document.name.split('/').pop();
+          const agencyId = f.agencyId?.stringValue;
+          const driverId = f.driverId?.stringValue;
+          const netAmt   = Number(f.netAmount?.integerValue || f.netAmount?.doubleValue || 0);
+          const dueDate  = f.dueDate?.stringValue;
+          const days     = dueDate ? Math.ceil((Date.now() - new Date(dueDate).getTime()) / 86400000) : 0;
+          const penalty  = Math.round(netAmt * 0.15 / 365 * days);
+
+          // status → overdue
+          const pf = { status: { stringValue: 'overdue' }, penaltyDays: { integerValue: days }, penaltyAmount: { integerValue: penalty }, overdueAt: { stringValue: now } };
+          await fetch(`${FS}/yongcha_settlements/${id}?${Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf }) });
+
+          // 기사에게 알림
+          if (driverId && env.FCM_SERVER_KEY) {
+            const drData = await (await fetch(`${FS}/yongcha_users/${driverId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+            const drFcm  = drData.fields?.fcmToken?.stringValue;
+            if (drFcm) { await fetch('https://fcm.googleapis.com/fcm/send', { method: 'POST', headers: { 'Authorization': 'key=' + env.FCM_SERVER_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ to: drFcm, notification: { title: '정산 연체 알림', body: `${f.agencyName?.stringValue || '소장'}의 정산이 ${days}일 연체됐어요. 연체이자 ${penalty.toLocaleString('ko-KR')}원 발생.` }, data: { type: 'overdue', settleId: id } }) }).catch(() => {}); }
+          }
+
+          if (agencyId) agencyPenaltyCount[agencyId] = (agencyPenaltyCount[agencyId] || 0) + 1;
+          updated++;
+        }
+
+        // 2회 이상 연체 소장 신규 배차 차단
+        for (const [agencyId, cnt] of Object.entries(agencyPenaltyCount)) {
+          if (cnt >= 2) {
+            const uf = { isPaymentBlocked: { booleanValue: true }, latePaymentCount: { integerValue: cnt }, blockedAt: { stringValue: now } };
+            await fetch(`${FS}/yongcha_users/${agencyId}?${Object.keys(uf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: uf }) });
+          }
+        }
+
+        return new Response(JSON.stringify({ ok: true, updated, blocked: Object.values(agencyPenaltyCount).filter(c => c >= 2).length }), { headers: corsH });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
     // Serve app
     return new Response(YONGCHA_HTML, {
       headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-cache' }
     });
+  },
+
+  // ── Cloudflare Cron Trigger (매일 09:00 UTC = 18:00 KST) ─────────────────
+  async scheduled(event, env, ctx) {
+    const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
+    try {
+      const fsToken = await ycGetFsToken(env);
+      const now = new Date().toISOString();
+      const q = { structuredQuery: {
+        from: [{ collectionId: 'yongcha_settlements' }],
+        where: { compositeFilter: { op: 'AND', filters: [
+          { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'pending' } } },
+          { fieldFilter: { field: { fieldPath: 'dueDate' }, op: 'LESS_THAN', value: { stringValue: now } } }
+        ]}},
+        limit: 200
+      }};
+      const docs = await (await fetch(`${FS}:runQuery`, { method: 'POST', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(q) })).json();
+      const overdueDocs = (docs || []).filter(d => d.document);
+      const agencyPenaltyCount = {};
+
+      for (const d of overdueDocs) {
+        const f = d.document.fields || {};
+        const id = d.document.name.split('/').pop();
+        const agencyId = f.agencyId?.stringValue;
+        const driverId = f.driverId?.stringValue;
+        const netAmt   = Number(f.netAmount?.integerValue || f.netAmount?.doubleValue || 0);
+        const dueDate  = f.dueDate?.stringValue;
+        const days     = dueDate ? Math.ceil((Date.now() - new Date(dueDate).getTime()) / 86400000) : 0;
+        const penalty  = Math.round(netAmt * 0.15 / 365 * days);
+
+        const pf = { status: { stringValue: 'overdue' }, penaltyDays: { integerValue: days }, penaltyAmount: { integerValue: penalty }, overdueAt: { stringValue: now } };
+        await fetch(`${FS}/yongcha_settlements/${id}?${Object.keys(pf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: pf }) });
+
+        if (driverId && env.FCM_SERVER_KEY) {
+          const drData = await (await fetch(`${FS}/yongcha_users/${driverId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+          const drFcm  = drData.fields?.fcmToken?.stringValue;
+          if (drFcm) { await fetch('https://fcm.googleapis.com/fcm/send', { method: 'POST', headers: { 'Authorization': 'key=' + env.FCM_SERVER_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ to: drFcm, notification: { title: '정산 연체 알림', body: `${f.agencyName?.stringValue || '소장'}의 정산이 ${days}일 연체됐어요. 연체이자 ${penalty.toLocaleString('ko-KR')}원 발생.` }, data: { type: 'overdue', settleId: id } }) }).catch(() => {}); }
+        }
+
+        if (agencyId) agencyPenaltyCount[agencyId] = (agencyPenaltyCount[agencyId] || 0) + 1;
+      }
+
+      for (const [agencyId, cnt] of Object.entries(agencyPenaltyCount)) {
+        if (cnt >= 2) {
+          const uf = { isPaymentBlocked: { booleanValue: true }, latePaymentCount: { integerValue: cnt }, blockedAt: { stringValue: now } };
+          await fetch(`${FS}/yongcha_users/${agencyId}?${Object.keys(uf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: uf }) });
+        }
+      }
+    } catch (e) {
+      console.error('overdue-cron error:', e.message);
+    }
   }
 };
 
