@@ -247,47 +247,61 @@ function _applyTranslationsToGrid(menus){
   var card=el.closest?el.closest('.mi'):null;
   var nameEl=card?card.querySelector('[data-orig]'):null;
   var ck=m.name+'_'+lang;
-  // 캐시 hit
+  // 1) 세션 캐시
   if(_tlCache[ck]){
    if(nameEl)nameEl.textContent=_tlCache[ck];
-   el.textContent='';
-   return;
+   el.textContent='';return;
   }
-  // Firestore 저장 번역
+  // 2) Firestore 저장 번역 (한글 포함이면 무효)
   if(m.nameTranslations&&m.nameTranslations[lang]){
    var saved=m.nameTranslations[lang];
-   if(saved&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
+   if(saved&&saved!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
     _tlCache[ck]=saved;
     if(nameEl)nameEl.textContent=saved;
-    el.textContent='';
-    return;
+    el.textContent='';return;
    }
   }
-  // API 번역 필요
-  needApi.push({m:m,trId:trId,ck:ck});
+  // 3) 번역 필요 — 로딩 표시
+  if(nameEl){el.textContent='···';}
+  needApi.push({m:m,trId:trId,ck:ck,nameEl:nameEl});
  });
- // 동시 요청 과다로 rate-limit 걸리지 않도록 100ms 간격으로 순차 호출
- needApi.forEach(function(item,i){
-  setTimeout(function(){
-   if(_lang!==lang) return; // 언어 바뀌면 취소
-   fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({name:item.m.name,lang:lang})})
-   .then(function(r){return r.json();})
-   .then(function(d){
-    if(_lang!==lang) return;
-    var tr=d.translated;
-    if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-     _tlCache[item.ck]=tr;
-     var e2=document.getElementById(item.trId);
-     if(e2){
-      var card2=e2.closest?e2.closest('.mi'):null;
-      var nameEl2=card2?card2.querySelector('[data-orig]'):null;
-      if(nameEl2)nameEl2.textContent=tr;
-      e2.textContent='';
-     }
-    }
-   }).catch(function(){});
-  },i*100);
+ if(!needApi.length) return;
+ // 배치 API 호출 (1회)
+ var batchNames=needApi.map(function(x){return x.m.name;});
+ fetch('/api/translate-batch',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({names:batchNames,lang:lang})
+ }).then(function(r){return r.json();})
+ .then(function(d){
+  if(_lang!==lang) return; // 언어 바뀐 경우 취소
+  var map=d.translations||{};
+  needApi.forEach(function(item){
+   var tr=(map[item.m.name]||'').trim();
+   var e2=document.getElementById(item.trId);
+   if(!e2) return;
+   var card2=e2.closest?e2.closest('.mi'):null;
+   var nameEl2=card2?card2.querySelector('[data-orig]'):null;
+   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+    _tlCache[item.ck]=tr;
+    if(nameEl2)nameEl2.textContent=tr;
+    e2.textContent='';
+   } else {
+    // 번역 실패 시 원문 복원
+    if(nameEl2)nameEl2.textContent=item.m.name;
+    e2.textContent='';
+   }
+  });
+ }).catch(function(){
+  if(_lang!==lang) return;
+  needApi.forEach(function(item){
+   var e2=document.getElementById(item.trId);
+   if(!e2) return;
+   var card2=e2.closest?e2.closest('.mi'):null;
+   var nameEl2=card2?card2.querySelector('[data-orig]'):null;
+   if(nameEl2)nameEl2.textContent=item.m.name;
+   e2.textContent='';
+  });
  });
 }
 
