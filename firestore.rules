@@ -164,8 +164,9 @@ service cloud.firestore {
     match /universal_settlements/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /payout_sessions/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /shop_orders/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /delivery_drivers/{uid}          { allow read: if isSuperAdmin() || (isAuth() && request.auth.uid == uid); allow create: if isAuth() && request.auth.uid == uid; allow update: if (isAuth() && request.auth.uid == uid) || isSuperAdmin(); allow delete: if isSuperAdmin(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /alimtalk_overcharge/{docId}    { allow read: if canRead(); allow create: if isAuth(); allow update, delete: if canOwn(); }
