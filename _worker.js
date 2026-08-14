@@ -5780,13 +5780,16 @@ async function _submit(){
     companyName:_cfg.companyName,
     platform:'mbtico',status:'active',
     subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    createdAt:new Date().toISOString()
   };
   try{
     var uc=await _auth.createUserWithEmailAndPassword(email,pw);
     var uid=uc.user.uid;
-    // delivery_drivers에 저장 (companies 보안규칙 우회)
-    await _db.collection('delivery_drivers').doc(uid).set(Object.assign({uid:uid},doc));
+    var idToken=await uc.user.getIdToken();
+    // 서버사이드 Firestore 저장 (보안규칙 우회)
+    var regRes=await fetch('/api/driver-register',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify(Object.assign({uid:uid},doc))});
+    var regData=await regRes.json();
+    if(!regData.ok) throw new Error(regData.error||'서버 저장 실패');
     document.getElementById('form-view').style.display='none';
     document.getElementById('success-view').style.display='block';
   }catch(e){
@@ -8546,6 +8549,99 @@ service cloud.firestore {
       return new Response(JSON.stringify({
         key: env.KAKAO_JS_KEY || ''
       }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }});
+    }
+
+    // ── Emergency Delivery 서버사이드 저장 (Firestore 보안규칙 우회) ──
+    function _toFsVal(v) {
+      if (v === null || v === undefined) return {nullValue:null};
+      if (typeof v === 'boolean') return {booleanValue:v};
+      if (typeof v === 'number') return isFinite(v)?(Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}):{nullValue:null};
+      if (typeof v === 'string') return {stringValue:v};
+      if (Array.isArray(v)) return {arrayValue:{values:v.map(_toFsVal)}};
+      if (typeof v === 'object') { const f={}; for(const [k,val] of Object.entries(v)) if(val!==undefined) f[k]=_toFsVal(val); return {mapValue:{fields:f}}; }
+      return {stringValue:String(v)};
+    }
+    if (path === '/api/emergency-save' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const dealerId = body.dealerId || '';
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}), {status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const cRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const cData = await cRes.json();
+        if (!cData.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}), {headers:{'Content-Type':'application/json'}});
+        const fields = {};
+        for (const [k,v] of Object.entries(body)) if(v!==undefined) fields[k]=_toFsVal(v);
+        const fsRes = await fetch(`${FS_BASE}/emergency_deliveries`, {
+          method:'POST', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({fields})
+        });
+        const fsData = await fsRes.json();
+        if (!fsRes.ok) return new Response(JSON.stringify({ok:false,error:JSON.stringify(fsData)}), {headers:{'Content-Type':'application/json'}});
+        const docId = (fsData.name||'').split('/').pop();
+        return new Response(JSON.stringify({ok:true,docId}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-update' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, docId, fields: updateFields } = body;
+        if (!dealerId || !docId || !updateFields) return new Response(JSON.stringify({ok:false,error:'dealerId/docId/fields 필수'}), {status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const getRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const getDoc = await getRes.json();
+        if (!getDoc.fields) return new Response(JSON.stringify({ok:false,error:'문서 없음'}), {headers:{'Content-Type':'application/json'}});
+        const docDealerId = getDoc.fields.dealerId?.stringValue;
+        if (docDealerId && docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
+        const mask = Object.keys(updateFields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+        const fsFields = {};
+        for (const [k,v] of Object.entries(updateFields)) fsFields[k]=_toFsVal(v);
+        const pRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}?${mask}`, {
+          method:'PATCH', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({fields:fsFields})
+        });
+        if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-photo' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, docId, photo } = body;
+        if (!dealerId || !docId || !photo) return new Response(JSON.stringify({ok:false,error:'dealerId/docId/photo 필수'}), {status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const getRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const getDoc = await getRes.json();
+        if (!getDoc.fields) return new Response(JSON.stringify({ok:false,error:'문서 없음'}), {headers:{'Content-Type':'application/json'}});
+        const docDealerId = getDoc.fields.dealerId?.stringValue;
+        if (docDealerId && docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
+        const existing = (getDoc.fields.photos?.arrayValue?.values||[]).map(v=>v.stringValue).filter(Boolean);
+        const newArr = [...existing, photo];
+        const pRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}?updateMask.fieldPaths=photos`, {
+          method:'PATCH', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({fields:{photos:{arrayValue:{values:newArr.map(p=>({stringValue:p}))}}}})
+        });
+        if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/driver-register' && method === 'POST') {
+      try {
+        const verified = await verifyFirebaseToken(request, env);
+        if (!verified) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
+        const body = await request.json();
+        const uid = body.uid || verified.localId;
+        if (uid !== verified.localId) return new Response(JSON.stringify({ok:false,error:'UID 불일치'}), {status:403,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const fields = {};
+        for (const [k,v] of Object.entries(body)) if(v!==undefined) fields[k]=_toFsVal(v);
+        const fsRes = await fetch(`${FS_BASE}/delivery_drivers/${uid}`, {
+          method:'PATCH', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({fields})
+        });
+        if (!fsRes.ok) { const d=await fsRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
     // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──

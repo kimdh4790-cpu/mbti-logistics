@@ -634,9 +634,10 @@ async function _uplPhoto(inp, docId){
   if(cell)cell.insertBefore(tmp,cell.lastElementChild);
   try{
     var dataUrl=await _resizeImg(file,800,0.72);
-    await _db.collection('emergency_deliveries').doc(docId).update({
-      photos:firebase.firestore.FieldValue.arrayUnion(dataUrl)
-    });
+    var did=(_CU&&_CU.dealerId)||localStorage.getItem('mbti_emer_dealerId')||'';
+    var res=await fetch('/api/emergency-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:did,docId:docId,photo:dataUrl})});
+    var resData=await res.json();
+    if(!resData.ok) throw new Error(resData.error||'서버 오류');
     var img=document.createElement('img');
     img.src=dataUrl;
     img.onclick=function(){
@@ -3706,8 +3707,10 @@ async function emerSave(){
   if(window._emerEntryMode === 'ocr') entryMode = 'ocr';
   else if(window._emerEntryMode === 'barcode') entryMode = 'barcode';
 
+  var _emerDealerId = (_CU&&_CU.dealerId)||localStorage.getItem('mbti_emer_dealerId')||'shared';
   var record = {
     type: 'emergency_delivery',
+    dealerId: _emerDealerId,
     driver: S.curDriver||'',
     order_id: orderId||'',
     trackings: window._emerTrackings.slice(),
@@ -3798,12 +3801,8 @@ async function emerSave(){
             if(newTrackings.length){
               var merged = prevTrackings.concat(newTrackings);
               var mergedPhotos = (existDoc.data.photos||[]).concat(uploaded);
-              await _db.collection('emergency_deliveries').doc(existDoc.id).update({
-                trackings: merged,
-                photos: mergedPhotos,
-                mergedAt: now.toISOString(),
-                memo: ((existDoc.data.memo||'')+(memo?(' | '+memo):'')).trim()
-              });
+              var _mRes=await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:_emerDealerId,docId:existDoc.id,fields:{trackings:merged,photos:mergedPhotos,mergedAt:now.toISOString(),memo:((existDoc.data.memo||'')+(memo?(' | '+memo):'')).trim()}})});
+              if(!(_mRes.ok&&(await _mRes.json()).ok)) throw new Error('merge update failed');
               mergedTo = existDoc.id;
               docId = existDoc.id;
               record._fbId = docId;
@@ -3825,21 +3824,12 @@ async function emerSave(){
 
       // 자동 묶음이 안 되었으면 → 새 핀 생성
       if(!mergedTo){
-        // undefined 완전 제거 후 저장
+        // 서버사이드 저장 (Firestore 보안규칙 우회)
         var fbRecord = JSON.parse(JSON.stringify(record)); // undefined 키 자동 제거
-        var docRef = await _db.collection('emergency_deliveries').add(fbRecord);
-      // 저장 완료 즉시 백그라운드 사진 업로드
-      if(window._pendingPhotoUpload && FB && _st){
-        var _pp=window._pendingPhotoUpload; window._pendingPhotoUpload=null;
-        var _did=docRef.id;
-        (async function(){
-          try{
-            var _pu=await _emerStorageUpload(_pp.photos[0],'emergency/'+_pp.driver+'/'+_pp.time+'_0.jpg',2);
-            if(_pu) await _db.collection('emergency_deliveries').doc(_did).update({photos:[_pu]});
-          }catch(e){ console.debug('[BG사진]',e.message); }
-        })();
-      }
-        docId = docRef.id;
+        var _saveRes=await fetch('/api/emergency-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fbRecord)});
+        var _saveData=await _saveRes.json();
+        if(!_saveData.ok) throw new Error(_saveData.error||'서버 저장 실패');
+        docId = _saveData.docId;
         record._fbId = docId;
       }
       // 로컬 마지막 항목에도 fbId 기록
@@ -3864,11 +3854,11 @@ async function emerSave(){
       }
       // toast는 아래 통합 처리
     }catch(e){
-      console.error('긴급배송 Firebase 저장 실패:', e);
+      console.error('긴급배송 저장 실패:', e);
       window._emerSaving = false;
       var saveBtn2=document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
       if(saveBtn2){saveBtn2.disabled=false;saveBtn2.textContent='🗺️ 지도에 배송핀 생성 + 저장';}
-      toast('⚠️ Firebase 저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨');
+      toast('저장 실패 ('+( e.code||e.message||'오류')+') — 로컬만 저장됨');
     }
   }
 
