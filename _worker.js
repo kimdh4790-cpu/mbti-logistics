@@ -2350,7 +2350,7 @@ async function acceptExchange(){
         if(translated && translated.trim() !== name && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated) && !hasCJK) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
-        return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       /* /api/claude — AI 인사이트·리뷰답글 프록시 (filo-margin.js, filo-settings.js) */
       if (path === '/api/claude' && method === 'POST') {
@@ -4154,7 +4154,7 @@ ${JSON.stringify(postSummary)}
         if(translated && translated.trim() !== name) {
           try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
         }
-        return new Response(JSON.stringify({translated:(translated||name).trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');
