@@ -6020,11 +6020,16 @@ function _pgDriverOffer(el){
 
 function _loadMyDriverOffers(){
   var el=document.getElementById('my-offer-list');if(!el)return;
-  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(10).get()
+  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).limit(20).get()
   .then(function(snap){
     if(snap.empty){el.innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--t3);text-align:center">아직 등록한 공고가 없어요</div>';return;}
     el.innerHTML='';
-    snap.docs.forEach(function(doc){
+    var sortedDocs=snap.docs.slice().sort(function(a,b){
+      var ta=(a.data().createdAt||{seconds:0}).seconds||0;
+      var tb=(b.data().createdAt||{seconds:0}).seconds||0;
+      return tb-ta;
+    }).slice(0,10);
+    sortedDocs.forEach(function(doc){
       var d=Object.assign({id:doc.id},doc.data());
       var isActive=d.status==='active';
       var row=document.createElement('div');row.className='card';row.style.cssText='margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;';
@@ -7755,14 +7760,20 @@ function _riqRecord(el){
   el.innerHTML=html;
 
   var q=isDriver
-    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(30)
-    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).orderBy('createdAt','desc').limit(50);
+    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).limit(30)
+    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).limit(50);
   q.get().then(function(snap){
     var list=document.getElementById('riq-record-list');if(!list)return;
     if(snap.empty){list.innerHTML=_emptyHtml('📋','실적 없음',isDriver?'첫 실적을 등록해보세요':'기사가 실적을 등록하면 여기에 나타나요');return;}
+    var sortedDocs=snap.docs.slice().sort(function(a,b){
+      var ta=(a.data().createdAt||{seconds:0}).seconds||0;
+      var tb=(b.data().createdAt||{seconds:0}).seconds||0;
+      return tb-ta;
+    });
     var totalCnt=0,totalEarning=0;
+    var isAgency=_CU.type==='agency';
     var rows='';
-    snap.forEach(function(d){
+    sortedDocs.forEach(function(d){
       var r=d.data();
       var earning=(r.price||0)*(r.count||0);
       totalCnt+=r.count||0;totalEarning+=earning;
@@ -7787,7 +7798,6 @@ function _riqRecord(el){
         '<div style="font-size:10px;color:var(--t3)">수령액</div></div>'+
         '</div></div>';
     });
-    var isAgency=_CU.type==='agency';
     var summary='<div style="background:linear-gradient(135deg,#0d1f35,#0f172a);border:1px solid var(--bd2);border-radius:var(--r-lg);padding:14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
       '<div style="text-align:center">'+
       '<div style="font-size:22px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums">'+totalCnt.toLocaleString()+'</div>'+
@@ -7847,7 +7857,7 @@ function _riqMatch(el){
 
   var recentRegions=[],avgPrice=0,preferredCouriers=[];
   _db.collection('yongcha_records').where('driverId','==',_CU.uid)
-    .orderBy('createdAt','desc').limit(20).get()
+    .limit(20).get()
   .then(function(recSnap){
     var priceSum=0,cnt=0,courierMap={};
     recSnap.forEach(function(d){
@@ -7859,7 +7869,7 @@ function _riqMatch(el){
     avgPrice=cnt>0?Math.round(priceSum/cnt):0;
     preferredCouriers=Object.keys(courierMap).sort(function(a,b){return courierMap[b]-courierMap[a];}).slice(0,3);
     return _db.collection('yongcha_posts').where('status','in',['open','urgent'])
-      .orderBy('createdAt','desc').limit(30).get();
+      .limit(30).get();
   }).then(function(postsSnap){
     var posts=[];
     postsSnap.forEach(function(d){posts.push(Object.assign({id:d.id},d.data()));});
