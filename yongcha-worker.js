@@ -5059,18 +5059,18 @@ function _yOpenCalc(prefill){
 
   var body=document.getElementById('modal-body');
   body.innerHTML=
-    '<div style="font-size:21px;font-weight:900;letter-spacing:-.6px;margin-bottom:4px"> 실수령액 계산기</div>'+
-    '<div style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6">단가와 물량만 넣으면 유류비·보험·할부까지 뺀<br>실제로 손에 쥐는 금액을 계산해요.</div>'+
+    '<div style="font-size:21px;font-weight:900;letter-spacing:-.6px;margin-bottom:4px">실수령액 계산기</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6">개인사업자 용차기사 기준 — 4대보험·세금 포함<br>실제 손에 쥐는 금액을 계산해요.</div>'+
 
     '<div class="form-section" style="margin-bottom:18px">'+
-    '<div class="form-section-title">수입</div>'+
+    '<div class="form-section-title">월 수입</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">건당 단가(원)</label>'+
       '<input class="inp" id="cal-price" type="number" inputmode="numeric" value="'+_esc(v('price',900))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">일 물량(건)</label>'+
       '<input class="inp" id="cal-vol" type="number" inputmode="numeric" value="'+_esc(v('vol',150))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
-    '<div class="inp-wrap" style="margin-top:12px;margin-bottom:0"><label class="inp-lbl">월 근무일수</label>'+
+    '<div class="inp-wrap" style="margin-top:10px;margin-bottom:0"><label class="inp-lbl">월 근무일수</label>'+
     '<input class="inp" id="cal-days" type="number" inputmode="numeric" value="'+_esc(v('days',26))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
 
@@ -5081,21 +5081,35 @@ function _yOpenCalc(prefill){
       '<input class="inp" id="cal-fuel" type="number" inputmode="numeric" value="'+_esc(v('fuel',700000))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">차량 할부/리스</label>'+
       '<input class="inp" id="cal-lease" type="number" inputmode="numeric" value="'+_esc(v('lease',600000))+'" oninput="_yCalcRun()"></div>'+
-      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">보험료</label>'+
+      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">차량보험료</label>'+
       '<input class="inp" id="cal-ins" type="number" inputmode="numeric" value="'+_esc(v('ins',180000))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">기타(통신·정비)</label>'+
       '<input class="inp" id="cal-etc" type="number" inputmode="numeric" value="'+_esc(v('etc',150000))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
-    '<div class="toggle-row" style="margin-top:6px">'+
-      '<div><div class="toggle-lbl">부가세 3.3% 원천징수</div>'+
-      '<div class="toggle-desc">사업소득 공제분을 차감해요</div></div>'+
+    '</div>'+
+
+    '<div class="form-section" style="margin-bottom:18px">'+
+    '<div class="form-section-title">4대보험 · 세금 <span style="font-size:11px;color:var(--t3);font-weight:500">(개인사업자 지역가입자)</span></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+      '<div class="inp-wrap" style="margin-bottom:0">'+
+        '<label class="inp-lbl">국민연금 <span style="font-size:10px;color:var(--t3)">소득의 9%</span></label>'+
+        '<input class="inp" id="cal-pension" type="number" inputmode="numeric" value="'+_esc(v('pension',270000))+'" oninput="_yCalcRun()"></div>'+
+      '<div class="inp-wrap" style="margin-bottom:0">'+
+        '<label class="inp-lbl">건강보험 <span style="font-size:10px;color:var(--t3)">소득+장기요양</span></label>'+
+        '<input class="inp" id="cal-health" type="number" inputmode="numeric" value="'+_esc(v('health',230000))+'" oninput="_yCalcRun()"></div>'+
+    '</div>'+
+    '<div class="toggle-row" style="margin-top:10px">'+
+      '<div><div class="toggle-lbl">사업소득세 3.3% 원천징수</div>'+
+      '<div class="toggle-desc">개인사업자·프리랜서 기사 해당 (세금계산서 발행 시 제외)</div></div>'+
       '<button type="button" class="toggle'+(v('tax',true)?' on':'')+'" id="cal-tax" onclick="this.classList.toggle(\\'on\\');_yCalcRun()"></button>'+
     '</div>'+
     '</div>'+
 
     '<div class="card" id="cal-out" style="margin-bottom:14px"></div>'+
-    '<div style="font-size:11.5px;color:var(--t3);line-height:1.6;margin-bottom:8px">'+
-      '※ 참고용 추정치입니다. 실제 정산은 계약 조건에 따라 달라질 수 있어요.</div>';
+    '<div style="font-size:11.5px;color:var(--t3);line-height:1.7;margin-bottom:8px">'+
+      '※ 국민연금 기준소득 하한 37만원(최소 33,300원) · 상한 590만원(최대 531,000원)<br>'+
+      '※ 건강보험 지역가입자는 소득·재산·자동차 합산 부과로 실제 금액 상이할 수 있음<br>'+
+      '※ 원천징수 3.3%는 선납세금 — 5월 종합소득세 신고 시 환급 또는 추납 정산</div>';
   _openModal();
   _yCalcRun();
 }
@@ -5104,38 +5118,51 @@ function _yCalcRun(){
   var g=function(id){return parseInt((document.getElementById(id)||{}).value)||0;};
   var price=g('cal-price'), vol=g('cal-vol'), days=g('cal-days');
   var fuel=g('cal-fuel'), lease=g('cal-lease'), ins=g('cal-ins'), etc=g('cal-etc');
+  var pension=g('cal-pension'), health=g('cal-health');
   var taxEl=document.getElementById('cal-tax');
   var useTax=taxEl&&taxEl.classList.contains('on');
 
   var gross=price*vol*days;
   var tax=useTax?Math.round(gross*0.033):0;
-  var cost=fuel+lease+ins+etc;
-  var net=gross-tax-cost;
+  var fixedCost=fuel+lease+ins+etc;
+  var socialInsurance=pension+health;
+  var net=gross-tax-fixedCost-socialInsurance;
   var perDay=days>0?Math.round(net/days):0;
-  var perHour=days>0?Math.round(net/days/10):0; // 1일 10시간 가정
+  var perHour=days>0?Math.round(net/days/10):0;
+
+  var effectiveRate=gross>0?Math.round((gross-net)/gross*100):0;
 
   try{
     localStorage.setItem(_CALC_KEY,JSON.stringify({price:price,vol:vol,days:days,
-      fuel:fuel,lease:lease,ins:ins,etc:etc,tax:useTax}));
+      fuel:fuel,lease:lease,ins:ins,etc:etc,pension:pension,health:health,tax:useTax}));
   }catch(e){}
 
   var out=document.getElementById('cal-out');
   if(!out)return;
   out.innerHTML=
     '<div class="calc-row"><span>월 총 매출</span><b>'+_won(gross)+'원</b></div>'+
-    (useTax?'<div class="calc-row"><span>원천징수 3.3%</span><b style="color:var(--rd)">−'+_won(tax)+'원</b></div>':'')+
-    '<div class="calc-row"><span>유류비</span><b style="color:var(--rd)">−'+_won(fuel)+'원</b></div>'+
-    '<div class="calc-row"><span>차량 할부/리스</span><b style="color:var(--rd)">−'+_won(lease)+'원</b></div>'+
-    '<div class="calc-row"><span>보험료</span><b style="color:var(--rd)">−'+_won(ins)+'원</b></div>'+
-    '<div class="calc-row"><span>기타</span><b style="color:var(--rd)">−'+_won(etc)+'원</b></div>'+
+    (useTax?'<div class="calc-row"><span>사업소득세 원천징수 3.3%</span><b style="color:var(--rd)">−'+_won(tax)+'원</b></div>':'')+
+    '<div class="calc-row" style="border-top:1px dashed var(--bd);padding-top:10px;margin-top:2px">'+
+      '<span style="color:var(--t2);font-size:12px">고정 지출</span><b style="color:var(--t2);font-size:12px">−'+_won(fixedCost)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">유류비</span><b style="color:var(--rd);font-size:12.5px">−'+_won(fuel)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">차량 할부/리스</span><b style="color:var(--rd);font-size:12.5px">−'+_won(lease)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">차량보험료</span><b style="color:var(--rd);font-size:12.5px">−'+_won(ins)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">기타(통신·정비)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(etc)+'원</b></div>'+
+    '<div class="calc-row" style="border-top:1px dashed var(--bd);padding-top:10px;margin-top:2px">'+
+      '<span style="color:var(--t2);font-size:12px">4대보험 (개인사업자)</span><b style="color:var(--t2);font-size:12px">−'+_won(socialInsurance)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">국민연금 (지역가입자 9%)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(pension)+'원</b></div>'+
+    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">건강보험 (지역가입자)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(health)+'원</b></div>'+
     '<div class="calc-total"><span>월 실수령액</span><b>'+_won(net)+'원</b></div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'+
-      '<div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center">'+
-      '<div style="font-size:17px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perDay)+'원</div>'+
-      '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-top:3px">일 실수령</div></div>'+
-      '<div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center">'+
-      '<div style="font-size:17px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perHour)+'원</div>'+
-      '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-top:3px">시급 환산(10h)</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">'+
+      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
+      '<div style="font-size:15px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perDay)+'원</div>'+
+      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">일 실수령</div></div>'+
+      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
+      '<div style="font-size:15px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perHour)+'원</div>'+
+      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">시급(10h)</div></div>'+
+      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
+      '<div style="font-size:15px;font-weight:900;color:var(--rd);font-variant-numeric:tabular-nums">'+effectiveRate+'%</div>'+
+      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">공제율</div></div>'+
     '</div>'+
     (net<=0?'<div style="margin-top:12px;padding:12px;border-radius:var(--r);background:var(--rdl);border:1px solid var(--rdln);color:var(--rd);font-size:12.5px;font-weight:800">고정 지출이 매출을 넘습니다. 조건을 다시 확인하세요.</div>':'');
 }
