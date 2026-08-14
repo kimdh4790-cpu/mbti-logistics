@@ -1988,6 +1988,71 @@ async function acceptExchange(){
         }
         return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
+      /* /api/translate-batch — 메뉴 다국어 일괄 번역 */
+      if (path === '/api/translate-batch') {
+        if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        let body2;try{body2=await request.json();}catch(e){body2={};}
+        const names2 = Array.isArray(body2.names)?body2.names:[];
+        const lang2 = body2.lang||'en';
+        const langNames2 = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        const langMap2 = {en:'en',zh:'zh-CN',ja:'ja'};
+        const tl2b = langMap2[lang2]||'en';
+        const CORS2 = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        if(!names2.length) return new Response(JSON.stringify({translations:{}}),{headers:CORS2});
+        // KV 캐시 조회 (각 항목별)
+        const slugFn = function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;};
+        const result2 = {};
+        const needTr = [];
+        for(const nm of names2){
+          const ck = 'tr:'+lang2+':'+slugFn(nm);
+          try{const cv=await env.DONWAY_ASSETS.get(ck);if(cv){result2[nm]=cv;continue;}}catch(e){}
+          needTr.push(nm);
+        }
+        if(needTr.length){
+          // Anthropic 배치 번역 (한 번 호출)
+          const k2 = (env.ANTHROPIC_API_KEY||'').trim();
+          let batchDone = false;
+          if(k2){
+            try{
+              const prompt = 'Translate these Korean restaurant menu names to '+langNames2[lang2]+'. Return ONLY a JSON object like {"Korean name":"Translation",...}. No markdown, no explanation, ONLY valid JSON:\n'+JSON.stringify(needTr);
+              const bRes = await fetch('https://api.anthropic.com/v1/messages',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})
+              });
+              if(bRes.ok){
+                const bd = await bRes.json();
+                const txt = (bd.content&&bd.content[0]&&bd.content[0].text)||'';
+                const m = txt.match(/\{[\s\S]*\}/);
+                if(m){
+                  const parsed = JSON.parse(m[0]);
+                  for(const nm of needTr){
+                    const tr = (parsed[nm]||'').trim();
+                    if(tr && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+                      result2[nm]=tr;
+                      const ck=slugFn(nm);
+                      try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+ck,tr,{expirationTtl:86400});}catch(e){}
+                    }
+                  }
+                  batchDone=true;
+                }
+              }
+            }catch(e){}
+          }
+          // 배치 실패한 항목 → Google 폴백 (개별)
+          if(!batchDone){
+            for(const nm of needTr){
+              if(result2[nm]) continue;
+              try{
+                const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2b+'&dt=t&q='+encodeURIComponent(nm),{headers:{'User-Agent':'Mozilla/5.0'}});
+                if(gRes.ok){const gd=await gRes.json();const tr=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';if(tr&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){result2[nm]=tr;try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),tr,{expirationTtl:86400});}catch(e){}}}
+              }catch(e){}
+            }
+          }
+        }
+        return new Response(JSON.stringify({translations:result2}),{headers:CORS2});
+      }
+
       /* /api/claude — AI 인사이트·리뷰답글 프록시 (filo-margin.js, filo-settings.js) */
       if (path === '/api/claude' && method === 'POST') {
         const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
