@@ -5574,6 +5574,8 @@ h2{font-size:15px;font-weight:800;margin-bottom:20px}
 .divider{text-align:center;margin:16px 0;font-size:11px;color:var(--text3)}
 .login-link{text-align:center;font-size:12px;color:var(--text3)}
 .login-link a{color:var(--acc);text-decoration:none;font-weight:700}
+.zc{padding:8px 4px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:.15s}
+.zc.on{background:rgba(201,168,76,.15);border-color:#c9a84c;color:#c9a84c}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
 </style>
 </head>
@@ -5607,6 +5609,37 @@ h2{font-size:15px;font-weight:800;margin-bottom:20px}
         <label>전화번호 *</label>
         <input id="f-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel">
         <div class="err-msg" id="e-phone"></div>
+      </div>
+      <div class="field">
+        <label>주민등록번호 *</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input id="f-id1" type="text" inputmode="numeric" maxlength="6" placeholder="앞 6자리" autocomplete="off" style="flex:1;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none">
+          <span style="color:var(--text3);font-weight:700;font-size:16px">—</span>
+          <input id="f-id2" type="password" inputmode="numeric" maxlength="7" placeholder="뒤 7자리" autocomplete="off" style="flex:1;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none">
+        </div>
+        <div class="err-msg" id="e-id"></div>
+      </div>
+      <div class="field">
+        <label>배송 구역 * (복수 선택 가능)</label>
+        <div id="zone-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px">
+          <button type="button" class="zc" data-v="강서구">강서구</button>
+          <button type="button" class="zc" data-v="금정구">금정구</button>
+          <button type="button" class="zc" data-v="기장군">기장군</button>
+          <button type="button" class="zc" data-v="남구">남구</button>
+          <button type="button" class="zc" data-v="동구">동구</button>
+          <button type="button" class="zc" data-v="동래구">동래구</button>
+          <button type="button" class="zc" data-v="부산진구">부산진구</button>
+          <button type="button" class="zc" data-v="북구">북구</button>
+          <button type="button" class="zc" data-v="사상구">사상구</button>
+          <button type="button" class="zc" data-v="사하구">사하구</button>
+          <button type="button" class="zc" data-v="서구">서구</button>
+          <button type="button" class="zc" data-v="수영구">수영구</button>
+          <button type="button" class="zc" data-v="연제구">연제구</button>
+          <button type="button" class="zc" data-v="영도구">영도구</button>
+          <button type="button" class="zc" data-v="중구">중구</button>
+          <button type="button" class="zc" data-v="해운대구">해운대구</button>
+        </div>
+        <div class="err-msg" id="e-zone"></div>
       </div>
       <div class="field">
         <label>이메일 *</label>
@@ -5662,6 +5695,21 @@ function _clearErr(id){var el=document.getElementById('e-'+id),inp=document.getE
   var inp=document.getElementById('f-'+id);
   if(inp)inp.addEventListener('input',function(){_clearErr(id);});
 });
+['id1','id2'].forEach(function(id){
+  var inp=document.getElementById('f-'+id);
+  if(inp)inp.addEventListener('input',function(){_clearErr('id');});
+});
+
+var _selZones=[];
+document.querySelectorAll('.zc').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var v=this.getAttribute('data-v');
+    var idx=_selZones.indexOf(v);
+    if(idx>=0){_selZones.splice(idx,1);this.classList.remove('on');}
+    else{_selZones.push(v);this.classList.add('on');}
+    document.getElementById('e-zone').style.display='none';
+  });
+});
 
 document.getElementById('f-phone').addEventListener('input',function(e){
   var v=e.target.value.replace(/[^0-9]/g,'');
@@ -5669,10 +5717,19 @@ document.getElementById('f-phone').addEventListener('input',function(e){
   else if(v.length<=7)e.target.value=v.slice(0,3)+'-'+v.slice(3);
   else e.target.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7,11);
 });
+document.getElementById('f-id1').addEventListener('input',function(e){
+  e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,6);
+  if(e.target.value.length===6)document.getElementById('f-id2').focus();
+});
+document.getElementById('f-id2').addEventListener('input',function(e){
+  e.target.value=e.target.value.replace(/[^0-9]/g,'').slice(0,7);
+});
 
 async function _submit(){
   var name=document.getElementById('f-name').value.trim();
   var phone=document.getElementById('f-phone').value.trim();
+  var id1=document.getElementById('f-id1').value.trim();
+  var id2=document.getElementById('f-id2').value.trim();
   var email=document.getElementById('f-email').value.trim();
   var pw=document.getElementById('f-pw').value;
   var pw2=document.getElementById('f-pw2').value;
@@ -5680,23 +5737,27 @@ async function _submit(){
   var ok=true;
   if(!name){_showErr('name','이름을 입력하세요');ok=false;}
   if(!phone){_showErr('phone','전화번호를 입력하세요');ok=false;}
+  if(id1.length!==6||id2.length!==7){_showErr('id','주민등록번호 13자리를 정확히 입력하세요');ok=false;}
+  if(!_selZones.length){var ez=document.getElementById('e-zone');ez.textContent='배송 구역을 하나 이상 선택하세요';ez.style.display='block';ok=false;}
   if(!email||!email.includes('@')){_showErr('email','올바른 이메일을 입력하세요');ok=false;}
   if(!pw||pw.length<8){_showErr('pw','비밀번호는 8자 이상이어야 합니다');ok=false;}
   if(pw!==pw2){_showErr('pw2','비밀번호가 일치하지 않습니다');ok=false;}
   if(!ok)return;
   var btn=document.getElementById('btn-submit'),errEl=document.getElementById('submit-err');
   btn.disabled=true;btn.textContent='처리 중...';errEl.style.display='none';
+  var idNum=id1+'-'+id2;
   try{
     var uc=await _auth.createUserWithEmailAndPassword(email,pw);
     var uid=uc.user.uid;
     await _db.collection('companies').doc(uid).set({
-      name:name,email:email,phone:phone,type:'driver',role:'driver',
+      name:name,email:email,phone:phone,idNumber:idNum,deliveryZones:_selZones,
+      type:'driver',role:'driver',
       parentDealerId:code||null,companyName:name+' 기사',platform:'mbtico',status:'active',
       subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
     await _db.collection('delivery_drivers').doc(uid).set({
-      uid:uid,name:name,email:email,phone:phone,
+      uid:uid,name:name,email:email,phone:phone,idNumber:idNum,deliveryZones:_selZones,
       parentDealerId:code||null,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
