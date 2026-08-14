@@ -8709,6 +8709,149 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── Emergency Delivery 서버사이드 읽기 (Firestore 보안규칙 우회) ──
+    function _fromFsVal(v) {
+      if (!v || typeof v !== 'object') return null;
+      if ('nullValue' in v) return null;
+      if ('booleanValue' in v) return v.booleanValue;
+      if ('integerValue' in v) return parseInt(v.integerValue);
+      if ('doubleValue' in v) return v.doubleValue;
+      if ('stringValue' in v) return v.stringValue;
+      if ('timestampValue' in v) return v.timestampValue;
+      if ('arrayValue' in v) return (v.arrayValue.values||[]).map(_fromFsVal);
+      if ('mapValue' in v) { const o={}; for(const[k,val] of Object.entries(v.mapValue.fields||{})) o[k]=_fromFsVal(val); return o; }
+      return null;
+    }
+    function _fsDocToObj(doc) {
+      const o={_fbId: doc.name.split('/').pop()};
+      for(const[k,v] of Object.entries(doc.fields||{})) o[k]=_fromFsVal(v);
+      return o;
+    }
+    async function _fsQuery(token, filters, orderBy, limit) {
+      const where = filters.length===1 ? filters[0] : {compositeFilter:{op:'AND',filters}};
+      const q = {structuredQuery:{from:[{collectionId:'emergency_deliveries'}],where,limit:limit||60}};
+      if(orderBy) q.structuredQuery.orderBy=[{field:{fieldPath:orderBy},direction:'DESCENDING'}];
+      const r = await fetch(`${FS_BASE}:runQuery`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(q)});
+      const rows = await r.json();
+      return (Array.isArray(rows)?rows:[]).filter(x=>x.document&&x.document.fields).map(x=>_fsDocToObj(x.document));
+    }
+    if (path === '/api/emergency-list' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const driver = u.searchParams.get('driver')||'';
+        const dealerId = u.searchParams.get('dealerId')||'';
+        const date = u.searchParams.get('date')||'';
+        if (!driver && !dealerId) return new Response(JSON.stringify({ok:false,error:'driver 또는 dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const filters = [];
+        if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
+        if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
+        if (date) filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
+        const docs = await _fsQuery(token, filters, 'savedAt', 60);
+        return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-stats' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const dealerId = u.searchParams.get('dealerId')||'';
+        const driver = u.searchParams.get('driver')||'';
+        const date = u.searchParams.get('date')||new Date().toISOString().slice(0,10);
+        if (!dealerId && !driver) return new Response(JSON.stringify({ok:false,error:'dealerId 또는 driver 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const filters = [];
+        if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
+        if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
+        filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
+        const docs = await _fsQuery(token, filters, null, 200);
+        const total = docs.length;
+        const done = docs.filter(d=>d.status==='완료').length;
+        return new Response(JSON.stringify({ok:true,total,done,pending:total-done}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-map' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const dealerId = u.searchParams.get('dealerId')||'';
+        const driver = u.searchParams.get('driver')||'';
+        const date = u.searchParams.get('date')||new Date().toISOString().slice(0,10);
+        if (!dealerId && !driver) return new Response(JSON.stringify({ok:false,error:'dealerId 또는 driver 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const filters = [];
+        if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
+        if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
+        filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
+        const docs = await _fsQuery(token, filters, 'savedAt', 100);
+        return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-apikeys' && method === 'GET') {
+      try {
+        const token = await getAccessToken(env);
+        const r = await fetch(`${FS_BASE}/settings/claude_config`, {headers:{'Authorization':`Bearer ${token}`}});
+        const doc = await r.json();
+        const f = doc.fields||{};
+        return new Response(JSON.stringify({
+          ok:true,
+          kakaoApiKey: f.kakaoApiKey?.stringValue||'',
+          googleApiKey: f.googleApiKey?.stringValue||'',
+          claudeApiKey: f.claudeApiKey?.stringValue||''
+        }),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/driving-memos' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const dealerId = u.searchParams.get('dealerId')||'';
+        const driver = u.searchParams.get('driver')||'';
+        const date = u.searchParams.get('date')||new Date().toISOString().slice(0,10);
+        if (!dealerId && !driver) return new Response(JSON.stringify({ok:false,error:'dealerId 또는 driver 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const filters = [];
+        if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
+        if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
+        filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
+        const q = {structuredQuery:{from:[{collectionId:'driving_memos'}],where:filters.length===1?filters[0]:{compositeFilter:{op:'AND',filters}},orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:20}};
+        const r = await fetch(`${FS_BASE}:runQuery`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(q)});
+        const rows = await r.json();
+        const docs = (Array.isArray(rows)?rows:[]).filter(x=>x.document&&x.document.fields).map(x=>_fsDocToObj(x.document));
+        return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/driving-memos' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, driver, camp, date, time, memo } = body;
+        if (!dealerId || !memo) return new Response(JSON.stringify({ok:false,error:'dealerId/memo 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const fields = {};
+        for (const [k,v] of Object.entries(body)) if(v!==undefined) fields[k]=_toFsVal(v);
+        fields.createdAt = {timestampValue: new Date().toISOString()};
+        const fsRes = await fetch(`${FS_BASE}/driving_memos`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+        if (!fsRes.ok) { const d=await fsRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-delete' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, docIds } = body;
+        if (!dealerId || !docIds || !docIds.length) return new Response(JSON.stringify({ok:false,error:'dealerId/docIds 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        let deleted = 0;
+        for (const docId of docIds) {
+          const getRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}`, {headers:{'Authorization':`Bearer ${token}`}});
+          const getDoc = await getRes.json();
+          if (!getDoc.fields) continue;
+          const docDealerId = getDoc.fields.dealerId?.stringValue;
+          if (docDealerId && docDealerId !== dealerId) continue;
+          const delRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}`, {method:'DELETE',headers:{'Authorization':`Bearer ${token}`}});
+          if (delRes.ok) deleted++;
+        }
+        return new Response(JSON.stringify({ok:true,deleted}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──
     if (path === '/api/toss-client-key' && method === 'GET') {
       return new Response(JSON.stringify({

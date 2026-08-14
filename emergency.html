@@ -345,9 +345,8 @@ function loadApiKeys(){
   var gInp=document.getElementById('google-key-input');
   if(kKey){window._cachedKakaoApiKey=kKey;if(kInp)kInp.value=kKey;}
   if(gKey){window._googleApiKey=gKey;if(gInp)gInp.value=gKey;}
-  _db.collection('settings').doc('claude_config').get().then(function(snap){
-    if(!snap.exists)return;
-    var d=snap.data();
+  fetch('/api/emergency-apikeys').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok)return;
     if(d.claudeApiKey){window._claudeApiKey=d.claudeApiKey;localStorage.setItem('mbti_claude_api_key',d.claudeApiKey);}
     if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;localStorage.setItem('mbti_kakao_api_key',d.kakaoApiKey);if(kInp)kInp.value=d.kakaoApiKey;}
     if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;localStorage.setItem('mbti_google_api_key',d.googleApiKey);if(gInp)gInp.value=d.googleApiKey;}
@@ -368,16 +367,16 @@ function saveGoogleKey(){
 function loadTodayStats(){
   var today=new Date().toISOString().slice(0,10);
   var did=(_CU&&_CU.uid)||localStorage.getItem('mbti_emer_dealerId')||'';
-  if(!did)return;
-  _db.collection('emergency_deliveries').where('dealerId','==',did).where('date','==',today).get()
-    .then(function(snap){
-      var total=snap.size,done=0;
-      snap.docs.forEach(function(d){if(d.data().status==='완료')done++;});
-      var el1=document.getElementById('cnt-scan'),el2=document.getElementById('cnt-save'),el3=document.getElementById('cnt-today');
-      if(el1)el1.textContent=total-done;
-      if(el2)el2.textContent=done;
-      if(el3)el3.textContent=total;
-    }).catch(function(){});
+  var drv=S.curDriver||localStorage.getItem('mbti_emer_driver')||'';
+  if(!did&&!drv)return;
+  var qs='date='+today+(did?'&dealerId='+encodeURIComponent(did):'')+(drv?'&driver='+encodeURIComponent(drv):'');
+  fetch('/api/emergency-stats?'+qs).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok)return;
+    var el1=document.getElementById('cnt-scan'),el2=document.getElementById('cnt-save'),el3=document.getElementById('cnt-today');
+    if(el1)el1.textContent=d.pending||0;
+    if(el2)el2.textContent=d.done||0;
+    if(el3)el3.textContent=d.total||0;
+  }).catch(function(){});
 }
 function _updateEmerCounters(){ loadTodayStats(); }
 async function _callOcr(b64,mimeType){
@@ -511,16 +510,17 @@ function openEmergencyDelivery(){
 async function openEmergencyAdmin(){
   var records=[];
   var fbOk = false;
-  // Firebase에서 최신 50건 조회
-  if(FB&&_db){
+  // 서버 API에서 최신 30건 조회
+  try{
     toast('🔍 긴급 배송기록 불러오는 중...');
-    try{
-      var snap=await _db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(30).get();
-      snap.forEach(function(d){records.push(Object.assign({id:d.id},d.data()));});
-      fbOk = true;
-    }catch(e){
-      console.warn('긴급배송 Firebase 조회 실패:', e.code, e.message);
-    }
+    var _adminDid=(_CU&&_CU.uid)||localStorage.getItem('mbti_emer_dealerId')||'';
+    var _adminDrv=S.curDriver||'';
+    var _adminQs=_adminDid?'dealerId='+encodeURIComponent(_adminDid):'driver='+encodeURIComponent(_adminDrv);
+    var _adminRes=await fetch('/api/emergency-list?'+_adminQs);
+    var _adminData=await _adminRes.json();
+    if(_adminData.ok){(_adminData.docs||[]).forEach(function(d){records.push(d);});fbOk=true;}
+  }catch(e){
+    console.warn('긴급배송 API 조회 실패:', e.message);
   }
   // localStorage도 항상 병합 (Firebase 저장 실패 건도 표시)
   try{
@@ -1997,10 +1997,11 @@ function _emerHandleScan(raw, statusEl){
         document.body.appendChild(_bt);
         setTimeout(function(){_bt.style.opacity='0';_bt.style.transition='opacity .3s';setTimeout(function(){_bt.remove();},300);},2000);
         // Firebase에 기존 레코드에 운송장 추가
-        if(FB && _db){
+        if(_bundle.fbId){
           var _newTrackings = (_bundle.trackings||[_bundle.tracking]).slice();
           if(_newTrackings.indexOf(_tnCheck)<0) _newTrackings.push(_tnCheck);
-          _db.collection('emergency_deliveries').doc(_bundle.fbId).update({trackings:_newTrackings}).catch(function(){});
+          var _did2=(_CU&&_CU.dealerId)||localStorage.getItem('mbti_emer_dealerId')||'';
+          fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:_did2,docId:_bundle.fbId,fields:{trackings:_newTrackings}})}).catch(function(){});
         }
         window._emerIncScan && window._emerIncScan();
         window._emerIncSave && window._emerIncSave();
@@ -2383,10 +2384,9 @@ async function emerLogSelectDelete(){
   if(!confirm(checked.length+'건을 삭제하시겠습니까?\n(되돌릴 수 없습니다)'))return;
   var fbIds=[];
   checked.forEach(function(c){if(c.dataset.fbid)fbIds.push(c.dataset.fbid);});
-  if(FB&&_db&&fbIds.length){
-    var batch=_db.batch();
-    fbIds.forEach(function(id){try{batch.delete(_db.collection('emergency_deliveries').doc(id));}catch(e){}});
-    try{await batch.commit();}catch(e){console.warn('emerDel:',e.code);}
+  if(fbIds.length){
+    var _delDid=(_CU&&_CU.dealerId)||(_CU&&_CU.uid)||localStorage.getItem('mbti_emer_dealerId')||'';
+    try{await fetch('/api/emergency-delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:_delDid,docIds:fbIds})});}catch(e){console.warn('emerDel:',e.message);}
   }
   try{
     var list=JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
@@ -2558,29 +2558,21 @@ function rEmergencyLog(){
     el.innerHTML = pendingHTML + partialHTML + doneHTML;
   }
 
-  // Firebase onSnapshot 실시간 구독
-  if(FB&&_db){
-    try{
-      // 기사 모드: where+orderBy 복합 인덱스 없이도 동작하도록 orderBy 제거 → 클라이언트 정렬
-      var q;
-      if(isAdmin){
-        q=_db.collection('emergency_deliveries').orderBy('savedAt','desc').limit(60); // reads 절감
-      } else {
-        q=_db.collection('emergency_deliveries').where('driver','==',S.curDriver||'').limit(60); // v9.61
-      }
-      window._emerLogUnsub=q.onSnapshot(function(snap){
-        var fbRecs=[];
-        snap.forEach(function(d){var x=d.data();x.fbId=d.id;fbRecs.push(x);});
-        window._emerLogCache = fbRecs; // 엑셀 다운로드용 캐시
-        _renderContent(fbRecs);
-      },function(e){
-        console.warn('emerLog snapshot:',e.code);
-        _renderContent([]);
-      });
-    }catch(e){ _renderContent([]); }
-  } else {
-    setTimeout(function(){ _renderContent([]); }, 50);
-  }
+  // 서버 API로 배송 기록 조회 (Firestore 보안규칙 우회)
+  (function(){
+    var _did=(_CU&&_CU.uid)||localStorage.getItem('mbti_emer_dealerId')||'';
+    var _drv=S.curDriver||localStorage.getItem('mbti_emer_driver')||'';
+    var qs=isAdmin
+      ?(_did?'dealerId='+encodeURIComponent(_did):(_drv?'driver='+encodeURIComponent(_drv):''))
+      :(_drv?'driver='+encodeURIComponent(_drv):(_did?'dealerId='+encodeURIComponent(_did):''));
+    if(!qs){setTimeout(function(){_renderContent([]);},50);return;}
+    fetch('/api/emergency-list?'+qs).then(function(r){return r.json();}).then(function(d){
+      var fbRecs=d.ok?(d.docs||[]):[];
+      window._emerLogCache=fbRecs;
+      _renderContent(fbRecs);
+    }).catch(function(){_renderContent([]);});
+    window._emerLogUnsub=function(){};
+  })();
 
   var totalLabel=isAdmin?'전체 기사':'내 기록';
   return '<div style="padding:12px 10px">'
@@ -2824,12 +2816,11 @@ async function _kakaoGeocode(address){
   var gKey = window._googleApiKey      || (localStorage.getItem('mbti_google_api_key')||'').trim();
   if(!kKey || !gKey){
     try{
-      var _snap = await _db.collection('settings').doc('claude_config').get();
-      if(_snap.exists){
-        var _d = _snap.data();
-        if(window._fsCacheStore) window._fsCacheStore['settings/claude_config']={ts:Date.now(),data:_d};
-        if(!kKey){ kKey=(_d.kakaoApiKey||'').trim(); if(kKey){window._cachedKakaoApiKey=kKey;localStorage.setItem('mbti_kakao_api_key',kKey);} }
-        if(!gKey){ gKey=(_d.googleApiKey||_d.googleMapsApiKey||'').trim(); if(gKey){window._googleApiKey=gKey;localStorage.setItem('mbti_google_api_key',gKey);} }
+      var _akRes=await fetch('/api/emergency-apikeys');
+      var _akData=await _akRes.json();
+      if(_akData.ok){
+        if(!kKey){ kKey=(_akData.kakaoApiKey||'').trim(); if(kKey){window._cachedKakaoApiKey=kKey;localStorage.setItem('mbti_kakao_api_key',kKey);} }
+        if(!gKey){ gKey=(_akData.googleApiKey||'').trim(); if(gKey){window._googleApiKey=gKey;localStorage.setItem('mbti_google_api_key',gKey);} }
       }
     }catch(e){}
   }
@@ -3527,18 +3518,15 @@ function _getEmerLocs(){
   var local = [];
   try{ local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]'); }catch(e){}
   var todayLocs = local.filter(function(x){ return x.driver===S.curDriver && x.date===today() && x.gps&&x.gps.lat; });
-  if(FB&&_db){
-    _db.collection('emergency_deliveries')
-      .where('driver','==',S.curDriver).where('date','==',today()).get()
-      .then(function(snap){
-        var fbLocs=[];
-        snap.forEach(function(d){ var x=d.data(); x.fbId=d.id; if(x.gps&&x.gps.lat) fbLocs.push(x); });
-        if(window._activeDriverMapEmerLocs && fbLocs.length > window._activeDriverMapEmerLocs.length){
-          window._activeDriverMapEmerLocs.length = 0;
-          fbLocs.forEach(function(x){ window._activeDriverMapEmerLocs.push(x); });
-          if(window._rerenderRoutePins) window._rerenderRoutePins();
-        }
-      }).catch(function(){});
+  if(S.curDriver){
+    fetch('/api/emergency-list?driver='+encodeURIComponent(S.curDriver)+'&date='+today()).then(function(r){return r.json();}).then(function(d){
+      var fbLocs=(d.ok?d.docs:[]).filter(function(x){return x.gps&&x.gps.lat;});
+      if(window._activeDriverMapEmerLocs && fbLocs.length > window._activeDriverMapEmerLocs.length){
+        window._activeDriverMapEmerLocs.length = 0;
+        fbLocs.forEach(function(x){ window._activeDriverMapEmerLocs.push(x); });
+        if(window._rerenderRoutePins) window._rerenderRoutePins();
+      }
+    }).catch(function(){});
   }
   return Promise.resolve(todayLocs);
 }
@@ -4195,19 +4183,20 @@ function gpsDistance(lat1,lng1,lat2,lng2){
 
 async function openDeliveryMap(){
   var did=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
+  var drv=S.curDriver||localStorage.getItem('mbti_emer_driver')||'';
   var today=new Date().toISOString().slice(0,10);
-  if(!did){toast('로그인 후 이용하세요');return;}
+  if(!did&&!drv){toast('로그인 후 이용하세요');return;}
   toast('📍 지도 로딩 중...');
   try{
-    var snap=await _db.collection('emergency_deliveries')
-      .where('dealerId','==',did)
-      .where('date','==',today)
-      .limit(100).get();
+    var qs='date='+today+(did?'&dealerId='+encodeURIComponent(did):'')+(drv&&!did?'&driver='+encodeURIComponent(drv):'');
+    var _mapRes=await fetch('/api/emergency-map?'+qs);
+    var _mapData=await _mapRes.json();
+    if(!_mapData.ok) throw new Error(_mapData.error||'서버 오류');
+    var snapDocs=_mapData.docs||[];
     var locs=[];
     var kKey=window._cachedKakaoApiKey||localStorage.getItem('mbti_kakao_api_key')||'';
-    for(var i=0;i<snap.docs.length;i++){
-      var d=snap.docs[i];
-      var x=d.data();x.fbId=d.id;
+    for(var i=0;i<snapDocs.length;i++){
+      var x=snapDocs[i];
       // GPS 없거나 이전 방식(kakao/kakao-kw/kakao-dong)으로 저장된 경우 재검색
       // kakao-dong: 동 번호 검증 없이 저장된 구버전 → 재보정 대상
       // kakao-dong-v2: 동 번호 검증 완료 → 재검색 불필요
@@ -4245,7 +4234,7 @@ async function openDeliveryMap(){
                 var gKwLat=parseFloat(gDocs2[0].y),gKwLng=parseFloat(gDocs2[0].x);
                 if(gpsDistance(gBaseLat,gBaseLng,gKwLat,gKwLng)<500){
                   x.gps={lat:gKwLat,lng:gKwLng,acc:0,src:'kakao-dong-v2'};
-                  _db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});
+                  fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:did||drv,docId:x._fbId,fields:{gps:x.gps}})}).catch(function(){});
                   gGot=true;
                 }
               }
@@ -4264,7 +4253,7 @@ async function openDeliveryMap(){
               x.gps={lat:parseFloat(gKd3.documents[0].y),lng:parseFloat(gKd3.documents[0].x),acc:0,src:'kakao-addr'};
             }
           }
-          if(x.gps){_db.collection('emergency_deliveries').doc(x.fbId).update({gps:x.gps}).catch(function(){});}
+          if(x.gps){fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:did||drv,docId:x._fbId,fields:{gps:x.gps}})}).catch(function(){});}
         }catch(e2){}
       }
       locs.push(x);
@@ -4679,7 +4668,10 @@ async function _dcSave(fbId, locIdx){
     }
     var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:completePhotos};
     if(memo) upd.completeMemo=memo;
-    await _db.collection('emergency_deliveries').doc(fbId).update(upd);
+    var _compDid=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
+    var _compRes=await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:_compDid,docId:fbId,fields:upd})});
+    var _compData=await _compRes.json();
+    if(!_compData.ok) throw new Error(_compData.error||'서버 오류');
     if(window._mapLocs&&window._mapLocs[locIdx]){
       Object.assign(window._mapLocs[locIdx],upd);
     }
@@ -4698,12 +4690,10 @@ function openDrivingMemo(){
   var did=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
   var driver=localStorage.getItem('mbti_emer_driver')||'';
   var today=new Date().toISOString().slice(0,10);
-  _db.collection('driving_memos').where('dealerId','==',did).where('driver','==',driver).where('date','==',today)
-    .orderBy('createdAt','desc').limit(20).get()
-    .then(function(snap){
-      var memos=[];snap.forEach(function(d){memos.push(d.data());});
-      _showMemoModal(memos);
-    }).catch(function(){_showMemoModal([]);});
+  var qs='date='+today+(did?'&dealerId='+encodeURIComponent(did):'')+(driver?'&driver='+encodeURIComponent(driver):'');
+  fetch('/api/driving-memos?'+qs).then(function(r){return r.json();}).then(function(d){
+    _showMemoModal(d.ok?d.docs:[]);
+  }).catch(function(){_showMemoModal([]);});
 }
 
 function _showMemoModal(memos){
@@ -4735,14 +4725,11 @@ function saveDrivingMemo(){
   var camp=localStorage.getItem('mbti_emer_camp')||'';
   var today=new Date().toISOString().slice(0,10);
   var now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-  _db.collection('driving_memos').add({
-    dealerId:did,driver:driver,camp:camp,
-    date:today,time:now,memo:txt,
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
-    toast('✅ 메모 저장 완료');
-    document.getElementById('driving-memo-mo')&&document.getElementById('driving-memo-mo').remove();
-  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+  fetch('/api/driving-memos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:did,driver:driver,camp:camp,date:today,time:now,memo:txt})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.ok){toast('✅ 메모 저장 완료');document.getElementById('driving-memo-mo')&&document.getElementById('driving-memo-mo').remove();}
+      else{toast('저장 실패: '+(d.error||'서버 오류'));}
+    }).catch(function(e){toast('저장 실패: '+e.message);});
 }
 
 // ═══════════════════════════════════════════════════════
