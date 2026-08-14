@@ -701,6 +701,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 @keyframes slideInBottom{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes badgePop{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 @keyframes aiDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+@keyframes geo-pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(3);opacity:0}}
 
 /* ── 기사용 v2 히어로 카드 ── */
 .hero-v2{background:linear-gradient(145deg,#1d4ed8 0%,#2563eb 45%,#1e40af 100%);
@@ -1721,10 +1722,14 @@ function _pgHomeDriver(el){
       var g=_myGeo;
       var center=g?new kakao.maps.LatLng(g.lat,g.lng):new kakao.maps.LatLng(35.1796,129.0756);
       var m=new kakao.maps.Map(mapEl,{center:center,level:7});
-      // 내 위치 마커 (파란 원)
-      new kakao.maps.CustomOverlay({
+      _homeMapRef=m;
+      // 내 위치 마커 (파란 원 + 실시간 pulse 애니메이션)
+      _homeDotRef=new kakao.maps.CustomOverlay({
         position:center,
-        content:'<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.6)"></div>',
+        content:'<div style="position:relative;width:20px;height:20px">'+
+          '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(37,99,235,.25);animation:geo-pulse 2s ease-out infinite"></div>'+
+          '<div style="position:absolute;inset:4px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.7)"></div>'+
+          '</div>',
         yAnchor:0.5,xAnchor:0.5,
         map:m
       });
@@ -2537,7 +2542,12 @@ window._yStats=window._yStats||{};
    기사의 현재 좌표를 1회 받아 캐시하고, 공고 상차지(loadingLat/Lng)와의
    실거리를 계산해 "가까운 공고 우선" 정렬 + 카드에 거리 배지를 노출한다.
    권한 거부/미지원이면 조용히 지역명 매칭으로 폴백한다. */
-var _myGeo=null;                       // {lat,lng}
+var _myGeo=null;                       // {lat,lng} — 현재 위치 (watchPosition 실시간 갱신)
+var _geoWatchId=null;                  // watchPosition 핸들러 ID
+var _homeMapRef=null;                  // 홈 지도 카카오맵 인스턴스
+var _homeDotRef=null;                  // 홈 지도 내 위치 마커 오버레이
+var _yGeoLastSave=0;                   // Firestore 저장 throttle 타임스탬프
+
 function _yLoadGeo(){
   return new Promise(function(res){
     if(_myGeo)return res(_myGeo);
@@ -2545,15 +2555,16 @@ function _yLoadGeo(){
     var geoAge=_CU&&_CU.geoUpdatedAt?(_CU.geoUpdatedAt.toMillis?_CU.geoUpdatedAt.toMillis():_CU.geoUpdatedAt):0;
     var isRecent=geoAge&&(Date.now()-geoAge<3600000);
     if(isRecent&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
-      _myGeo={lat:_CU.lat,lng:_CU.lng};return res(_myGeo);
+      _myGeo={lat:_CU.lat,lng:_CU.lng};
+      _yStartGeoWatch();
+      return res(_myGeo);
     }
     if(!navigator.geolocation)return res(null);
     var done=false;
     var finish=function(v){if(done)return;done=true;res(v);};
-    setTimeout(function(){finish(null);},6000);       // 응답 없으면 폴백
+    setTimeout(function(){finish(null);},6000);
     navigator.geolocation.getCurrentPosition(function(pos){
       _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
-      // 기사 문서에 저장 → AI 배차 추천이 대리점 쪽에서도 거리 계산 가능
       if(_CU&&_CU.type==='driver'){
         _CU.lat=_myGeo.lat;_CU.lng=_myGeo.lng;
         _db.collection('yongcha_users').doc(_CU.uid).update({
@@ -2562,13 +2573,36 @@ function _yLoadGeo(){
         }).catch(function(){});
       }
       finish(_myGeo);
+      _yStartGeoWatch();  // 최초 1회 확보 후 실시간 감시 시작
     },function(){
-      // GPS 실패 시 저장된 좌표 폴백 (오래돼도)
+      // GPS 실패 시 저장된 좌표 폴백
       if(_CU&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
         _myGeo={lat:_CU.lat,lng:_CU.lng};finish(_myGeo);
       } else {finish(null);}
     },{enableHighAccuracy:true,timeout:5500,maximumAge:60000});
   });
+}
+
+// 실시간 위치 감시 — 이동 시 홈 지도 파란 점 자동 이동
+function _yStartGeoWatch(){
+  if(_geoWatchId!=null||!navigator.geolocation)return;
+  _geoWatchId=navigator.geolocation.watchPosition(function(pos){
+    _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    // 홈 지도 파란 점 실시간 이동
+    if(_homeDotRef&&_homeMapRef&&window.kakao&&kakao.maps){
+      var newPos=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
+      _homeDotRef.setPosition(newPos);
+    }
+    // Firestore 저장 (3분 간격 throttle)
+    var now=Date.now();
+    if(_CU&&_CU.type==='driver'&&(now-_yGeoLastSave)>180000){
+      _yGeoLastSave=now;
+      _db.collection('yongcha_users').doc(_CU.uid).update({
+        lat:_myGeo.lat,lng:_myGeo.lng,
+        geoUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function(){});
+    }
+  },function(){},{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
 }
 /* 주유소/충전소 목록 조회 + 렌더링
    fuelType: '휘발유'|'경유'|'LPG'|'전기' (없으면 휘발유) */
