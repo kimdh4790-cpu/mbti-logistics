@@ -532,29 +532,38 @@ async function openEmergencyAdmin(){
 
   var rows=records.length ? records.map(function(r){
     var photos=(r.photos||[]).map(function(url){
-      return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:55px;height:55px;object-fit:cover;border-radius:6px;cursor:pointer;border:1px solid var(--border)">';
+      return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);flex-shrink:0">';
     }).join('');
-    var gpsLink=r.gps?'<a href="https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng+'" target="_blank" style="color:var(--blue);font-size:10px">📍지도</a>':'<span style="color:var(--text3);font-size:10px">GPS없음</span>';
-    var trackings = r.trackings ? r.trackings.join('<br>') : (r.tracking||'');
-    return '<tr>'
-      +'<td style="white-space:nowrap">'+( r.date||'')+' '+( r.time||'')+'</td>'
-      +'<td style="font-weight:700">'+( r.driver||'')+'</td>'
-      +'<td id="ph-'+(r.id||'')+'" style="white-space:nowrap">'
+    var gpsHref=r.gps?'https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng:'';
+    var trackings = r.trackings ? r.trackings.join(', ') : (r.tracking||'');
+    var detail=[
+      r.order_id?'주문 '+r.order_id:'',
+      trackings?'운송장 '+trackings:'',
+      r.recipient?r.recipient:'',
+      r.addr?r.addr:''
+    ].filter(Boolean).join(' · ');
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px">'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+            +'<span style="font-size:12px;color:var(--text2);white-space:nowrap">'+( r.date||'')+' '+(r.time||'')+'</span>'
+            +(r.driver?'<span style="font-size:14px;font-weight:800">'+r.driver+'</span>':'')
+            +(gpsHref?'<a href="'+gpsHref+'" target="_blank" style="font-size:11px;color:var(--blue);white-space:nowrap">지도</a>':'')
+          +'</div>'
+          +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+detail+'</div>':'')
+        +'</div>'
+      +'</div>'
+      +'<div id="ph-'+(r.id||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
       +photos
       +(r.id
-        ? '<label title="사진 추가" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(255,255,255,.06);border-radius:6px;border:1.5px dashed rgba(255,255,255,.2);vertical-align:top;margin-left:'+(r.photos&&r.photos.length?'4':'0')+'px">'
-          +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+        ? '<label title="사진 추가" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;background:rgba(255,255,255,.06);border-radius:8px;border:2px dashed rgba(255,255,255,.2);flex-shrink:0">'
+          +'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
           +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+r.id+'\')">'
           +'</label>'
-        : '')
-      +'</td>'
-      +'<td style="font-size:10px;color:var(--text3)">'+( r.order_id||'—')+'</td>'
-      +'<td style="font-family:monospace;font-size:11px">'+trackings+'</td>'
-      +'<td style="font-size:11px">'+( r.recipient||'—')+'</td>'
-      +'<td style="font-size:11px">'+( r.addr||'—')+'</td>'
-      +'<td>'+gpsLink+'</td>'
-      +'</tr>';
-  }).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
+        : '<span style="font-size:11px;color:var(--text3)">사진 없음</span>')
+      +'</div>'
+      +'</div>';
+  }).join('') : '<div style="text-align:center;padding:32px;color:var(--text3)">긴급 배송기록 없음</div>';
 
   // 로컬에만 있는 건 (Firebase 저장 실패 건) 카운트
   var localOnlyCount = 0;
@@ -582,12 +591,7 @@ async function openEmergencyAdmin(){
         </div>
       </div>
       ${fbWarning}${localWarn}
-      <div style="overflow-x:auto">
-        <table class="tbl" style="min-width:800px">
-          <thead><tr><th>일시</th><th>기사</th><th>사진</th><th>주문번호</th><th>운송장</th><th>수령인</th><th>주소</th><th>GPS</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <div style="max-height:60vh;overflow-y:auto">${rows}</div>
     </div>
   </div>`);
 }
