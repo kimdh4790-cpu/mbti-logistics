@@ -882,13 +882,13 @@ function _filoMenuAddModal(did, menu, cat){
     langs.forEach(function(lang){
      fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,lang:lang})})
      .then(function(r){return r.json();})
-     .then(function(d){translations[lang]=d.translated||name;done();})
-     .catch(function(){translations[lang]=name;done();});
+     .then(function(d){if(d.translated&&d.translated!==name)translations[lang]=d.translated;done();})
+     .catch(function(){done();});
      if(description){
       fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:description,lang:lang})})
       .then(function(r){return r.json();})
-      .then(function(d){descTranslations[lang]=d.translated||description;done();})
-      .catch(function(){descTranslations[lang]=description;done();});
+      .then(function(d){if(d.translated&&d.translated!==description)descTranslations[lang]=d.translated;done();})
+      .catch(function(){done();});
      }
     });
    } else {
