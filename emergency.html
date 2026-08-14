@@ -59,9 +59,9 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
   <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1)">
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      캠프 선택
+      배송 구역 선택
     </div>
-    <div id="emer-camp-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:20px"></div>
+    <div id="emer-camp-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px"></div>
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       기사 이름
@@ -225,7 +225,7 @@ var _emerSelCamp = localStorage.getItem('mbti_emer_camp') || '';
 var _emerSelDriver = localStorage.getItem('mbti_emer_driver') || '';
 
 function _emerInitLogin() {
-  var camps = window._CO_EMER_CAMPS || ['부산1','부산2','부산3','대구2','진주M'];
+  var camps = window._CO_EMER_CAMPS || ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'];
   var row = document.getElementById('emer-camp-row');
   if(!row) return;
   row.innerHTML = '';
@@ -287,7 +287,7 @@ function _emerLoadCoName() {
 function _emerDoLogin() {
   var name = (document.getElementById('emer-driver-name')||{}).value.trim();
   if(!name) { _emerToast('이름을 입력하세요'); return; }
-  if(!_emerSelCamp) { _emerToast('캠프를 선택하세요'); return; }
+  if(!_emerSelCamp) { _emerToast('배송 구역을 선택하세요'); return; }
   _emerSelDriver = name;
   localStorage.setItem('mbti_emer_driver', name);
   localStorage.setItem('mbti_emer_camp', _emerSelCamp);
