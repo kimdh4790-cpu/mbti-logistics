@@ -539,10 +539,6 @@ async function openEmergencyAdmin(){
     return '<tr>'
       +'<td style="white-space:nowrap">'+( r.date||'')+' '+( r.time||'')+'</td>'
       +'<td style="font-weight:700">'+( r.driver||'')+'</td>'
-      +'<td style="font-size:10px;color:var(--text3)">'+( r.order_id||'—')+'</td>'
-      +'<td style="font-family:monospace;font-size:11px">'+trackings+'</td>'
-      +'<td style="font-size:11px">'+( r.recipient||'—')+'</td>'
-      +'<td style="font-size:11px">'+( r.addr||'—')+'</td>'
       +'<td id="ph-'+(r.id||'')+'" style="white-space:nowrap">'
       +photos
       +(r.id
@@ -552,6 +548,10 @@ async function openEmergencyAdmin(){
           +'</label>'
         : '')
       +'</td>'
+      +'<td style="font-size:10px;color:var(--text3)">'+( r.order_id||'—')+'</td>'
+      +'<td style="font-family:monospace;font-size:11px">'+trackings+'</td>'
+      +'<td style="font-size:11px">'+( r.recipient||'—')+'</td>'
+      +'<td style="font-size:11px">'+( r.addr||'—')+'</td>'
       +'<td>'+gpsLink+'</td>'
       +'</tr>';
   }).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">긴급 배송기록 없음</td></tr>';
@@ -584,7 +584,7 @@ async function openEmergencyAdmin(){
       ${fbWarning}${localWarn}
       <div style="overflow-x:auto">
         <table class="tbl" style="min-width:800px">
-          <thead><tr><th>일시</th><th>기사</th><th>주문번호</th><th>운송장</th><th>수령인</th><th>주소</th><th>사진</th><th>GPS</th></tr></thead>
+          <thead><tr><th>일시</th><th>기사</th><th>사진</th><th>주문번호</th><th>운송장</th><th>수령인</th><th>주소</th><th>GPS</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
