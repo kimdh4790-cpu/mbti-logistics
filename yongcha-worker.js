@@ -14,8 +14,9 @@ const YONGCHA_HTML = `﻿<!DOCTYPE html>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="용차">
 <link rel="manifest" href="/manifest.json">
-<link rel="icon" href="/favicon.ico">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="shortcut icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <title>용차 — 택배 노선 매칭</title>
 <style>
 /* ═══════════════════════════════════════════════════════════
@@ -8734,15 +8735,17 @@ export default {
         orientation: 'portrait',
         lang: 'ko',
         icons: [
-          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png', purpose: 'any' }
         ],
         categories: ['productivity', 'business'],
         screenshots: []
       };
       return new Response(JSON.stringify(manifest), {
-        headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public,max-age=86400' }
+        headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' }
       });
     }
 
