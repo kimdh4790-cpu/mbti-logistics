@@ -171,8 +171,8 @@ firebase.initializeApp({
   messagingSenderId: "40761160761",
   appId: "1:40761160761:web:20545b610f03f534e949e8"
 });
-_db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 var _db = firebase.firestore();
+_db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 var _auth = firebase.auth();
 
 // _selectedPlans는 _selectIndustry에서 관리
