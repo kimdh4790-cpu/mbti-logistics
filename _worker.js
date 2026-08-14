@@ -1837,6 +1837,10 @@ async function acceptExchange(){
         return new Response(swTxt || '/* dine-sw */', { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' } });
       }
       if (path === '/' || path === '') return serveKVFile(env, 'dine-landing.html', 'text/html');
+      if (path === '/dine-manifest.json') return serveKVFile(env, 'dine-manifest.json', 'application/manifest+json');
+      if (path === '/dine-icon-192.png') return serveKVFile(env, 'dine-icon-192.png', 'image/png');
+      if (path === '/dine-icon-512.png') return serveKVFile(env, 'dine-icon-512.png', 'image/png');
+      if (path === '/dine-apple-icon.png') return serveKVFile(env, 'dine-apple-icon.png', 'image/png');
       if (path === '/app' || path === '/app.html') return serveKVFile(env, 'dine.html', 'text/html');
       // ★ /슬러그/status → 회원용 테이블/대기 현황 페이지
       if (path.match(/^\/[^/]+\/status$/)) {
@@ -2940,6 +2944,9 @@ fetch('/qr/members?did='+DID)
       if (path === '/universal' || path === '/universal.html') return Response.redirect('https://donway.ai.kr/join', 302);
       if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
+      if (path === '/filo-icon-192.png') return serveKVFile(env, 'filo-icon-192.png', 'image/png');
+      if (path === '/filo-icon-512.png') return serveKVFile(env, 'filo-icon-512.png', 'image/png');
+      if (path === '/filo-apple-icon.png') return serveKVFile(env, 'filo-apple-icon.png', 'image/png');
       if (path === '/admin_sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
       if (path === '/table' || path === '/table-reserve') return serveKVFile(env, 'table-reserve.html', 'text/html');
 
