@@ -2315,8 +2315,8 @@ async function acceptExchange(){
         if(!name) return new Response(JSON.stringify({translated:''}),{headers:CORS_H});
         const trHash = (function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         const cacheKey = 'tr:'+lang+':'+trHash;
-        // KV 캐시 우선
-        try{const cv=await env.DONWAY_ASSETS.get(cacheKey);if(cv)return new Response(JSON.stringify({translated:cv}),{headers:{...CORS_H,'X-Cache':'HIT'}});}catch(e){}
+        // KV 캐시 우선 (한국어 저장된 오염 캐시는 건너뜀)
+        try{const cv=await env.DONWAY_ASSETS.get(cacheKey);if(cv&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cv))return new Response(JSON.stringify({translated:cv}),{headers:{...CORS_H,'X-Cache':'HIT'}});}catch(e){}
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
         const tl = langMap[lang]||'en';
         let translated = '';
@@ -4176,7 +4176,7 @@ ${JSON.stringify(postSummary)}
         const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
         try {
           const cached = await env.DONWAY_ASSETS.get(cacheKey);
-          if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
+          if(cached&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cached)) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
         } catch(e){}
         const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};

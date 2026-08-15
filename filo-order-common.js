@@ -369,7 +369,7 @@ function _openMdlCommon(m){
  if(_lang!=='ko'){
   var ck=m.name+'_'+_lang;
   if(_tlCache[ck]){if(trEl)trEl.textContent=_tlCache[ck];}
-  else if(m.nameTranslations&&m.nameTranslations[_lang]){
+  else if(m.nameTranslations&&m.nameTranslations[_lang]&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(m.nameTranslations[_lang])){
    _tlCache[ck]=m.nameTranslations[_lang];
    if(trEl)trEl.textContent=m.nameTranslations[_lang];
   } else {
