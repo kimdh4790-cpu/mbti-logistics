@@ -334,15 +334,15 @@ function _loginAndRegister(){
   var existPwEl=document.getElementById('r-exist-pw');
   var pw=existPwEl&&existPwEl.value?existPwEl.value:document.getElementById('r-pw').value;
   var phone=document.getElementById('r-phone').value.trim();
+  var companySlug2=company.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,20);
+  var emailPrefix2=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  var baseSlug2=companySlug2||emailPrefix2||'co';
   var btn=document.getElementById('reg-btn');
   btn.disabled=true;btn.textContent='로그인 중...';
   _hide();
   _auth.signInWithEmailAndPassword(email,pw)
   .then(function(cred){
     var uid=cred.user.uid;
-    var companySlug2=company.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,20);
-    var emailPrefix2=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-    var baseSlug2=companySlug2||emailPrefix2||'co';
     var now=new Date();
     var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
     var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
