@@ -9110,7 +9110,8 @@ service cloud.firestore {
         if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
         if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
         if (date) filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
-        const docs = await _fsQuery(token, filters, 'savedAt', 60);
+        const docs = await _fsQuery(token, filters, null, 100);
+        docs.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
         return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
@@ -9144,7 +9145,8 @@ service cloud.firestore {
         if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
         if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
         filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
-        const docs = await _fsQuery(token, filters, 'savedAt', 100);
+        const docs = await _fsQuery(token, filters, null, 200);
+        docs.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
         return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
