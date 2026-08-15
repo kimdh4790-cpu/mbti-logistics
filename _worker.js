@@ -266,18 +266,19 @@ async function serveKVFile(env, fileName, contentType) {
 // register.html: _db 초기화 순서 패치 적용 후 서빙
 async function serveRegisterHTML(env) {
   try {
-    const _e = env || _env_ref;
-    let html = _e && _e.DONWAY_ASSETS ? await _e.DONWAY_ASSETS.get('register.html', 'text') : null;
-    if (!html) {
-      const r = await fetch('https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/contents/register.html');
-      if (r.ok) { const j = await r.json(); html = j.content ? atob(j.content.replace(/\n/g,'')) : null; }
+    // KV 우회: GitHub main 브랜치에서 항상 최신 버전 직접 서빙
+    const ghRes = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/register.html', {
+      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
+    });
+    if (ghRes.ok) {
+      const html = await ghRes.text();
+      return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache',...SECURITY_HEADERS}});
     }
-    if (!html) return new Response('register.html not found', {status:404});
-    html = html.replace(
-      /_db\.settings\(\{experimentalAutoDetectLongPolling:true,merge:true\}\);(\r?\n)var _db = firebase\.firestore\(\);/,
-      'var _db = firebase.firestore();$1_db.settings({experimentalAutoDetectLongPolling:true,merge:true});'
-    );
-    return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache',...SECURITY_HEADERS}});
+    // GitHub 실패 시 KV 폴백
+    const _e = env || _env_ref;
+    const kvHtml = _e && _e.DONWAY_ASSETS ? await _e.DONWAY_ASSETS.get('register.html', 'text') : null;
+    if (kvHtml) return new Response(kvHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store',...SECURITY_HEADERS}});
+    return new Response('register.html not found', {status:404});
   } catch(e) { return new Response('Error: '+e.message, {status:500}); }
 }
 
