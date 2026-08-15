@@ -9253,6 +9253,58 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 배송앱 단가/서비스 조회·저장 (/api/emergency-prices) ──
+    if (path === '/api/emergency-prices' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const dealerId = u.searchParams.get('dealerId')||'';
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const r = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const doc = await r.json();
+        if (!doc.fields) return new Response(JSON.stringify({ok:true,prices:{},services:[]}),{headers:{'Content-Type':'application/json'}});
+        const f = doc.fields;
+        const prices = {};
+        if (f.emergencyPrices && f.emergencyPrices.mapValue && f.emergencyPrices.mapValue.fields) {
+          for (const [k,v] of Object.entries(f.emergencyPrices.mapValue.fields)) {
+            prices[k] = parseInt(v.integerValue||v.doubleValue||0);
+          }
+        }
+        const services = [];
+        if (f.emergencyServices && f.emergencyServices.arrayValue && f.emergencyServices.arrayValue.values) {
+          for (const v of f.emergencyServices.arrayValue.values) if(v.stringValue) services.push(v.stringValue);
+        }
+        return new Response(JSON.stringify({ok:true,prices,services}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    if (path === '/api/emergency-prices' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, prices, services } = body;
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        // dealerId 존재 확인
+        const chk = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const chkDoc = await chk.json();
+        if (!chkDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
+        // 단가 맵 구성
+        const pricesFields = {};
+        if (prices && typeof prices === 'object') {
+          for (const [k,v] of Object.entries(prices)) pricesFields[k] = {integerValue: String(parseInt(v)||0)};
+        }
+        // 서비스 배열 구성
+        const svcValues = Array.isArray(services) ? services.map(s=>({stringValue:String(s)})) : [];
+        const fields = {
+          emergencyPrices: {mapValue:{fields:pricesFields}},
+          emergencyServices: {arrayValue:{values:svcValues}}
+        };
+        const patchUrl = `${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=emergencyPrices&updateMask.fieldPaths=emergencyServices`;
+        const pr = await fetch(patchUrl, {method:'PATCH',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+        if (!pr.ok) { const d=await pr.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──
     if (path === '/api/toss-client-key' && method === 'GET') {
       return new Response(JSON.stringify({
