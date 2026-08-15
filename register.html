@@ -145,7 +145,7 @@ function _doRegister(){
     })
     .then(function(uid){
       fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email,type:'join'})}).catch(function(){});
-      var driverUrl='https://mbtico.kr/driver-join?did='+uid;
+      var driverUrl='https://mbtico.kr/driver-join?did='+uid+'&name='+encodeURIComponent(company);
       _showOk('등록 완료!\n\n기사 가입 링크 (기사분들에게 공유):\n'+driverUrl+'\n\n담당자 확인 후 서비스가 활성화됩니다.');
       var okBox=document.getElementById('ok-box');
       var copyBtn=document.createElement('button');

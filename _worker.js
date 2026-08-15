@@ -5758,8 +5758,9 @@ _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 
 // ── 업체별 기본 설정 (Firestore companies/{did}.driverJoin 으로 오버라이드) ──
 var _did=new URLSearchParams(location.search).get('did')||'';
+var _nameParam=decodeURIComponent(new URLSearchParams(location.search).get('name')||'');
 var _cfg={
-  companyName:'엠비티아이 배송',
+  companyName:_nameParam||'엠비티아이 배송',
   welcomeMsg:'배송기사 가입',
   successMsg:'환영합니다. 바로 앱을 사용하실 수 있습니다.',
   zones:['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구']
