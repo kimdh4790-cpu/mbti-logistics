@@ -4520,10 +4520,10 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
       <div class="name">라벨</div>
       <div class="desc">라벨출력·AI번역</div>
     </a>
-    <a href="/emergency" class="menu-card">
-      <div class="icon">🚚</div>
-      <div class="name">배송관리</div>
-      <div class="desc">배송기록·현황</div>
+    <a href="/clients" class="menu-card">
+      <div class="icon">🏢</div>
+      <div class="name">배송처 관리</div>
+      <div class="desc">고객사 링크 생성</div>
     </a>
     <a href="/emergency" class="menu-card highlight">
       <div class="icon">🚨</div>
@@ -4538,7 +4538,7 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
     <a href="https://donway.ai.kr/settle" class="menu-card">
       <div class="icon">👤</div>
       <div class="name">기사관리</div>
-      <div class="desc">DONWAY에서 관리</div>
+      <div class="desc">DONWAY 정산 연동</div>
     </a>
     <a href="/notice" class="menu-card">
       <div class="icon">📋</div>
@@ -5656,6 +5656,12 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#08101f;color:
     <div class="lfield"><input id="l-pw" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
     <div id="l-err" class="lerr"></div>
     <button class="login-btn" onclick="_login()">로그인</button>
+    <div style="text-align:center;margin-top:10px;font-size:11px">
+      <span onclick="_resetPw()" style="color:#c9a84c;cursor:pointer;text-decoration:underline">비밀번호 재설정 메일 받기</span>
+    </div>
+    <div style="text-align:center;margin-top:6px;font-size:11px;color:#64748b">
+      계정 없으신가요? <a href="/register" style="color:#c9a84c">회사 등록</a>
+    </div>
   </div>
 </div>
 
@@ -5710,7 +5716,14 @@ async function _login(){
   var err=document.getElementById('l-err');err.style.display='none';
   if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   try{await _auth.signInWithEmailAndPassword(e,p);}
-  catch(ex){err.textContent=ex.code==='auth/wrong-password'||ex.code==='auth/user-not-found'?'이메일 또는 비밀번호가 올바르지 않습니다.':'오류: '+ex.message;err.style.display='block';}
+  catch(ex){var _bc=['auth/wrong-password','auth/user-not-found','auth/invalid-login-credentials','auth/invalid-credential'];err.textContent=_bc.indexOf(ex.code)>=0?'이메일 또는 비밀번호가 올바르지 않습니다. 비밀번호 재설정을 이용하세요.':'오류: '+ex.message;err.style.display='block';}
+}
+function _resetPw(){
+  var e=document.getElementById('l-email').value.trim();
+  var err=document.getElementById('l-err');err.style.display='none';err.style.color='';
+  if(!e){err.textContent='이메일을 먼저 입력하세요';err.style.display='block';return;}
+  _auth.sendPasswordResetEmail(e).then(function(){err.style.color='#22c55e';err.textContent='비밀번호 재설정 이메일을 보냈습니다.';err.style.display='block';})
+  .catch(function(ex){err.style.color='';err.textContent='전송 실패: '+ex.message;err.style.display='block';});
 }
 
 _auth.onAuthStateChanged(async function(u){
