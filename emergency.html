@@ -4713,7 +4713,7 @@ async function openDeliveryMap(){
   if(!did&&!drv){toast('로그인 후 이용하세요');return;}
   toast('📍 지도 로딩 중...');
   try{
-    var qs='date='+today+(did?'&dealerId='+encodeURIComponent(did):'')+(drv&&!did?'&driver='+encodeURIComponent(drv):'');
+    var qs='date='+today+(did?'&dealerId='+encodeURIComponent(did):'')+(drv?'&driver='+encodeURIComponent(drv):'');
     var _mapRes=await fetch('/api/emergency-map?'+qs);
     var _mapData=await _mapRes.json();
     if(!_mapData.ok) throw new Error(_mapData.error||'서버 오류');
