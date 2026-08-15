@@ -236,6 +236,16 @@ function _renderCatBar(menus, barId, gridId){
 }
 
 // ── 카드 번역 적용 ────────────────────────────────────────────────────────────
+// 카드 1개 번역 결과 반영
+function _applyOneTr(trId, origName, tr){
+ var e=document.getElementById(trId);
+ if(!e) return;
+ var card=e.closest?e.closest('.mi'):null;
+ var nameEl=card?card.querySelector('[data-orig]'):null;
+ if(nameEl) nameEl.textContent=(tr&&tr!==origName&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr))?tr:origName;
+ e.textContent='';
+}
+
 function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
  var lang=_lang;
@@ -247,60 +257,46 @@ function _applyTranslationsToGrid(menus){
   var card=el.closest?el.closest('.mi'):null;
   var nameEl=card?card.querySelector('[data-orig]'):null;
   var ck=m.name+'_'+lang;
-  // 1) 세션 캐시
+  // 1) 세션 캐시 → 즉시 반영
   if(_tlCache[ck]){
-   if(nameEl)nameEl.textContent=_tlCache[ck];
-   el.textContent='';return;
+   if(nameEl) nameEl.textContent=_tlCache[ck];
+   el.textContent='';
+   return;
   }
-  // 2) Firestore 저장 번역 (한글 포함이면 무효)
+  // 2) Firestore 저장 번역 (유효한 것만)
   if(m.nameTranslations&&m.nameTranslations[lang]){
    var saved=m.nameTranslations[lang];
    if(saved&&saved!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
     _tlCache[ck]=saved;
-    if(nameEl)nameEl.textContent=saved;
-    el.textContent='';return;
+    if(nameEl) nameEl.textContent=saved;
+    el.textContent='';
+    return;
    }
   }
-  // 3) 번역 필요 — 로딩 표시
-  if(nameEl){el.textContent='···';}
-  needApi.push({m:m,trId:trId,ck:ck,nameEl:nameEl});
+  // 3) API 필요 — 로딩 점 표시
+  el.textContent='···';
+  needApi.push({m:m,trId:trId,ck:ck});
  });
  if(!needApi.length) return;
- // 배치 API 호출 (1회)
- var batchNames=needApi.map(function(x){return x.m.name;});
- fetch('/api/translate-batch',{
-  method:'POST',
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({names:batchNames,lang:lang})
- }).then(function(r){return r.json();})
- .then(function(d){
-  if(_lang!==lang) return; // 언어 바뀐 경우 취소
-  var map=d.translations||{};
-  needApi.forEach(function(item){
-   var tr=(map[item.m.name]||'').trim();
-   var e2=document.getElementById(item.trId);
-   if(!e2) return;
-   var card2=e2.closest?e2.closest('.mi'):null;
-   var nameEl2=card2?card2.querySelector('[data-orig]'):null;
-   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-    _tlCache[item.ck]=tr;
-    if(nameEl2)nameEl2.textContent=tr;
-    e2.textContent='';
-   } else {
-    // 번역 실패 시 원문 복원
-    if(nameEl2)nameEl2.textContent=item.m.name;
-    e2.textContent='';
-   }
-  });
- }).catch(function(){
-  if(_lang!==lang) return;
-  needApi.forEach(function(item){
-   var e2=document.getElementById(item.trId);
-   if(!e2) return;
-   var card2=e2.closest?e2.closest('.mi'):null;
-   var nameEl2=card2?card2.querySelector('[data-orig]'):null;
-   if(nameEl2)nameEl2.textContent=item.m.name;
-   e2.textContent='';
+
+ // 개별 병렬 호출 (5초 타임아웃) — KV캐시 덕분에 2번째 방문부터 즉시 반환
+ needApi.forEach(function(item){
+  var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
+  var tid=ctrl?setTimeout(function(){ctrl.abort();},5000):null;
+  var fetchOpts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:item.m.name,lang:lang})};
+  if(ctrl) fetchOpts.signal=ctrl.signal;
+  fetch('/api/translate',fetchOpts)
+  .then(function(r){return r.json();})
+  .then(function(d){
+   if(ctrl&&tid) clearTimeout(tid);
+   if(_lang!==lang) return;
+   var tr=(d.translated||'').trim();
+   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)) _tlCache[item.ck]=tr;
+   _applyOneTr(item.trId, item.m.name, _tlCache[item.ck]||'');
+  })
+  .catch(function(){
+   if(_lang!==lang) return;
+   _applyOneTr(item.trId, item.m.name, ''); // 실패 시 원문 복원
   });
  });
 }
