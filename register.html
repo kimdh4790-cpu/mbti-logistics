@@ -126,7 +126,8 @@ function _doRegister(){
         uid:uid,dealerId:uid,
         settlePaid:false,inventoryPaid:false,qrPaid:false,kioskPaid:false,
         registeredFrom:'register.html',
-        appUrl:'https://mbtico.kr/app?did='+uid
+        driverJoinUrl:'https://mbtico.kr/driver-join?did='+uid,
+        appUrl:'https://mbtico.kr/hub'
       };
       var batch=_db.batch();
       batch.set(_db.collection('companies').doc(uid),companyDoc);
@@ -144,13 +145,13 @@ function _doRegister(){
     })
     .then(function(uid){
       fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email,type:'join'})}).catch(function(){});
-      var appUrl='https://mbtico.kr/app?did='+uid;
-      _showOk('등록 완료!\n\n담당자 확인 후 서비스가 활성화됩니다.\n\n앱 URL: '+appUrl);
+      var driverUrl='https://mbtico.kr/driver-join?did='+uid;
+      _showOk('등록 완료!\n\n기사 가입 링크 (기사분들에게 공유):\n'+driverUrl+'\n\n담당자 확인 후 서비스가 활성화됩니다.');
       var okBox=document.getElementById('ok-box');
       var copyBtn=document.createElement('button');
       copyBtn.className='copy-btn';
-      copyBtn.textContent='앱 URL 복사';
-      copyBtn.onclick=function(){navigator.clipboard.writeText(appUrl).then(function(){copyBtn.textContent='복사됨!';});};
+      copyBtn.textContent='기사 가입 링크 복사';
+      copyBtn.onclick=function(){navigator.clipboard.writeText(driverUrl).then(function(){copyBtn.textContent='복사됨!';});};
       okBox.appendChild(copyBtn);
       btn.textContent='등록 완료';
     })
