@@ -267,7 +267,7 @@ async function serveKVFile(env, fileName, contentType) {
 async function serveRegisterHTML(env) {
   try {
     // KV 우회: GitHub main 브랜치에서 항상 최신 버전 직접 서빙
-    const ghRes = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/register.html', {
+    const ghRes = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/register.html?v='+crypto.randomUUID(), {
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
     });
     if (ghRes.ok) {
