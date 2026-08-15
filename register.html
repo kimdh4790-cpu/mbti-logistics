@@ -69,9 +69,13 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:#08101f;colo
       <div class="section-title">회사 정보</div>
 
       <div class="field">
-        <label>회사명 *</label>
-        <input id="r-company" type="text" placeholder="예: 엠비티아이물류" autocomplete="organization" oninput="_previewSlug()">
-        <div class="slug-preview" id="slug-preview">회사명 입력 시 링크 자동 생성</div>
+        <label>회사명 * (한글/영문)</label>
+        <input id="r-company" type="text" placeholder="예: 엠비티아이물류" autocomplete="organization">
+      </div>
+      <div class="field">
+        <label>링크명 * (영문·숫자만, 소문자 권장)</label>
+        <input id="r-slug" type="text" placeholder="예: mbti" autocomplete="off" maxlength="20" oninput="_previewSlug()" style="text-transform:lowercase">
+        <div class="slug-preview" id="slug-preview">링크명 입력 시 미리보기</div>
       </div>
       <div class="field">
         <label>이메일 (로그인 ID) *</label>
@@ -123,17 +127,18 @@ var _auth=firebase.auth();
 
 var _clients=[]; // [{name, slug}]
 
-function _toSlug(str){return str.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,30);}
+function _toSlug(str){return str.replace(/[^a-zA-Z0-9\-_]/g,'').toLowerCase().slice(0,20);}
+function _toClientSlug(str){return str.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,30);}
 
 function _previewSlug(){
-  var company=document.getElementById('r-company').value.trim();
-  var slug=_toSlug(company)||'';
+  var raw=document.getElementById('r-slug').value;
+  var slug=_toSlug(raw);
   var el=document.getElementById('slug-preview');
   if(slug){
     el.innerHTML='회사 링크: <b>mbtico.kr/'+slug+'</b>';
     _renderChips();
   } else {
-    el.textContent='회사명 입력 시 링크 자동 생성';
+    el.textContent='영문·숫자만 입력 가능합니다 (예: mbti)';
   }
 }
 
@@ -141,7 +146,7 @@ function _addClient(){
   var inp=document.getElementById('client-input');
   var name=inp.value.trim();
   if(!name) return;
-  var slug=_toSlug(name);
+  var slug=_toClientSlug(name);
   if(!slug){inp.value='';return;}
   if(_clients.find(function(c){return c.slug===slug;})){
     inp.value='';return;
@@ -157,8 +162,8 @@ function _removeClient(slug){
 }
 
 function _renderChips(){
-  var company=document.getElementById('r-company').value.trim();
-  var coSlug=_toSlug(company)||'회사';
+  var raw=document.getElementById('r-slug').value;
+  var coSlug=_toSlug(raw)||'회사';
   var container=document.getElementById('client-chips');
   var hint=document.getElementById('empty-hint');
   if(!_clients.length){
@@ -202,8 +207,10 @@ async function _doRegister(){
   var btn=document.getElementById('reg-btn');
   btn.disabled=true;btn.textContent='등록 중...';
 
-  var baseSlug=_toSlug(company)||
+  var rawSlug=document.getElementById('r-slug').value;
+  var baseSlug=_toSlug(rawSlug)||
                email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase()||'co';
+  if(!_toSlug(rawSlug)){_showErr('링크명(영문)을 입력해 주세요');btn.disabled=false;btn.textContent='등록하기';return;}
 
   try{
     var cred=await _auth.createUserWithEmailAndPassword(email,pw);
