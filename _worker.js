@@ -5606,6 +5606,14 @@ const _MBTICO_CLIENTS_HTML = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>고객사 관리 · MBTICO</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="apple-touch-icon" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="manifest" href="/mbtico-manifest.json">
+<meta name="theme-color" content="#08101f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MBTICO">
 <link rel="preconnect" href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -6068,6 +6076,10 @@ async function _submit(){
         // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
+      if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
+        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+        return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
+      }
       if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
@@ -6078,6 +6090,14 @@ async function _submit(){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>엠비티아이 관제센터</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="apple-touch-icon" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="manifest" href="/mbtico-manifest.json">
+<meta name="theme-color" content="#08101f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MBTICO">
 <style>
 :root{
   --bg:#07080F;--bg2:#0D1117;--bg3:#161B22;--bd:rgba(255,255,255,.08);
