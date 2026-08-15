@@ -55,13 +55,25 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
     <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   </div>
   <div style="font-size:22px;font-weight:900;margin-bottom:4px" id="emer-co-name">배송앱</div>
-  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:28px" id="emer-co-sub">기사 전용</div>
-  <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1)">
+  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px" id="emer-co-sub">기사 전용</div>
+  <!-- 관리자/기사 탭 -->
+  <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.15);margin-bottom:20px;width:100%;max-width:360px">
+    <button id="tab-driver" onclick="_switchLoginTab('driver')" style="flex:1;padding:11px;background:#c9a84c;border:none;color:#08101f;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">기사 로그인</button>
+    <button id="tab-admin"  onclick="_switchLoginTab('admin')"  style="flex:1;padding:11px;background:transparent;border:none;color:rgba(255,255,255,.5);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">관리자 로그인</button>
+  </div>
+  <!-- 기사 로그인 폼 -->
+  <div id="login-driver-form" style="background:rgba(255,255,255,.05);border-radius:14px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1)">
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
       배송 구역 선택
     </div>
-    <div id="emer-camp-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px"></div>
+    <div id="emer-camp-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px"></div>
+    <!-- 배송 서비스(앱) 선택 -->
+    <div id="emer-service-label" style="display:none;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      배송 서비스 선택
+    </div>
+    <div id="emer-service-row" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:16px"></div>
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       기사 이름
@@ -75,11 +87,26 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       배송 시작
     </button>
   </div>
+  <!-- 관리자 로그인 폼 -->
+  <div id="login-admin-form" style="display:none;background:rgba(255,255,255,.05);border-radius:14px;padding:24px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1)">
+    <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:6px">관리자 이메일</div>
+    <input id="admin-email" type="email" placeholder="이메일 입력"
+      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box">
+    <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:6px">비밀번호</div>
+    <input id="admin-pw" type="password" placeholder="비밀번호 입력"
+      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:16px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')_emerAdminLogin()">
+    <button onclick="_emerAdminLogin()"
+      style="width:100%;padding:15px;background:#3b82f6;border:none;border-radius:10px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      관리자 로그인
+    </button>
+  </div>
 </div>
 
 <div id="main-screen" style="display:none">
   <div class="top-bar">
-    <div class="top-logo">DONWAY</div>
+    <div class="top-logo"></div>
     <div class="top-title" style="display:flex;align-items:center;gap:5px">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       배송
@@ -119,6 +146,40 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       API 키 설정
     </button>
+    <!-- 기사 오늘 정산 -->
+    <div id="driver-settle-box" style="display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span>오늘 내 정산</span>
+        <button onclick="_emerShowDriverSettle()" style="font-size:11px;padding:3px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>
+      </div>
+      <div id="driver-settle-list" style="font-size:13px;color:var(--text)"></div>
+      <div id="driver-settle-total" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:14px;font-weight:800;color:#c9a84c;text-align:right"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 화면 -->
+<div id="admin-screen" style="display:none;min-height:100vh;background:var(--bg);padding-bottom:64px">
+  <div class="top-bar">
+    <div class="top-logo"></div>
+    <div class="top-title">관제 센터</div>
+    <button class="btn" onclick="_emerAdminLogout()" style="font-size:11px;padding:5px 10px">로그아웃</button>
+  </div>
+  <!-- 탭 콘텐츠 -->
+  <div id="admin-monitor-view" style="padding:16px;max-width:600px;margin:0 auto"></div>
+  <div id="admin-prices-view"  style="display:none;padding:16px;max-width:600px;margin:0 auto"></div>
+  <div id="admin-settle-view"  style="display:none;padding:16px;max-width:600px;margin:0 auto"></div>
+  <!-- 하단 탭 네비게이션 -->
+  <div style="position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:200">
+    <button id="atab-monitor" onclick="_adminTab('monitor')" style="flex:1;padding:12px 4px 10px;background:#c9a84c;border:none;color:#08101f;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 3px"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>기사 현황
+    </button>
+    <button id="atab-prices" onclick="_adminTab('prices')" style="flex:1;padding:12px 4px 10px;background:transparent;border:none;color:rgba(255,255,255,.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 3px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>단가 설정
+    </button>
+    <button id="atab-settle" onclick="_adminTab('settle')" style="flex:1;padding:12px 4px 10px;background:transparent;border:none;color:rgba(255,255,255,.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 3px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>정산
+    </button>
   </div>
 </div>
 
@@ -147,6 +208,7 @@ var _db=firebase.firestore(),_auth=firebase.auth(),_storage=firebase.storage();
 var _fbReady=true;
 var _st=_storage; // v9 호환
 var _CU=null,FB=true;
+var _coNameLoaded=false; // Firestore companies 중복 조회 방지 플래그
 window._geoCacheMem={}; // 지오코딩 캐시
 // did URL 파라미터 즉시 저장
 (function(){
@@ -186,6 +248,7 @@ _auth.onAuthStateChanged(function(user){
     _db.collection('users').doc(user.uid).get().then(function(snap){
       var did=(snap.exists&&(snap.data().parentDealerId||snap.data().dealerId))||user.uid;
       localStorage.setItem('mbti_emer_dealerId',did);
+      _coNameLoaded=false; // 새 dealerId로 재조회 허용
       _emerLoadCoName();
     }).catch(function(){
       localStorage.setItem('mbti_emer_dealerId',user.uid);
@@ -232,11 +295,12 @@ if(false) _auth.onAuthStateChanged(function(user){
 });
 
 
-// emergency 로그인 — 캠프+이름 방식 (delivery 동일)
+// emergency 로그인 — 캠프+이름 방식
 var _emerSelCamp = localStorage.getItem('mbti_emer_camp') || '';
 var _emerSelDriver = localStorage.getItem('mbti_emer_driver') || '';
 
-function _emerInitLogin() {
+// 구역 버튼 렌더링 (독립 함수 — _emerLoadCoName 콜백에서도 호출)
+function _renderCampButtons() {
   var camps = window._CO_EMER_CAMPS || ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'];
   var row = document.getElementById('emer-camp-row');
   if(!row) return;
@@ -249,10 +313,43 @@ function _emerInitLogin() {
     btn.style.cssText = 'padding:10px 4px;background:'+(isSel?'rgba(201,168,76,.2)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#c9a84c':'rgba(255,255,255,.15)')+';border-radius:8px;color:'+(isSel?'#c9a84c':'#e2e8f0')+';font-size:12px;font-weight:700;cursor:pointer;text-align:center';
     btn.onclick = function() {
       _emerSelCamp = this.getAttribute('data-camp');
-      _emerInitLogin(); // 리렌더
+      _renderCampButtons();
     };
     row.appendChild(btn);
   });
+}
+
+// 배송 서비스(앱) 버튼 렌더링
+function _renderServiceButtons() {
+  var services = window._CO_EMER_SERVICES || [];
+  var label = document.getElementById('emer-service-label');
+  var row = document.getElementById('emer-service-row');
+  if(!row) return;
+  if(!services.length) {
+    if(label) label.style.display='none';
+    row.style.display='none';
+    return;
+  }
+  if(label) label.style.display='flex';
+  row.style.display='flex';
+  row.innerHTML = '';
+  var curApp = localStorage.getItem('mbti_emer_app') || '';
+  services.forEach(function(svc) {
+    var btn = document.createElement('button');
+    btn.textContent = svc;
+    var isSel = svc === curApp;
+    btn.style.cssText = 'padding:8px 12px;background:'+(isSel?'rgba(59,130,246,.2)':'rgba(255,255,255,.05)')+';border:1.5px solid '+(isSel?'#3b82f6':'rgba(255,255,255,.15)')+';border-radius:8px;color:'+(isSel?'#93c5fd':'#e2e8f0')+';font-size:12px;font-weight:700;cursor:pointer';
+    btn.onclick = function() {
+      localStorage.setItem('mbti_emer_app', svc);
+      _renderServiceButtons();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function _emerInitLogin() {
+  _renderCampButtons();
+  _renderServiceButtons();
   // 저장된 이름 복원
   var inp = document.getElementById('emer-driver-name');
   if(inp && _emerSelDriver) {
@@ -260,44 +357,47 @@ function _emerInitLogin() {
     var loginBtn = document.getElementById('emer-login-btn');
     if(loginBtn) { loginBtn.disabled = false; loginBtn.style.opacity = '1'; }
   }
-  // 회사명 로드
+  // 회사명 로드 (가드 플래그로 중복 Firestore 조회 방지)
   _emerLoadCoName();
 }
 
 function _emerLoadCoName() {
   var urlDid = new URLSearchParams(location.search).get('did');
-  if(urlDid) localStorage.setItem('mbti_emer_dealerId', urlDid); // URL에 있으면 즉시 저장
+  if(urlDid) { localStorage.setItem('mbti_emer_dealerId', urlDid); _coNameLoaded=false; }
   var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
-  if(!did) {
-    // did 없으면 기본 CAMPS 사용
-    return;
-  }
+  if(!did) return;
+  // 캐시된 이름 즉시 반영 (깜빡임 방지)
   var savedName = localStorage.getItem('mbti_emer_coname');
   if(savedName) {
     var t = document.getElementById('emer-co-name');
     var s = document.getElementById('emer-co-sub');
     if(t) t.textContent = savedName;
     if(s) s.textContent = savedName + ' 기사 전용';
-    var tl = document.querySelector('.top-logo');
-    if(tl) tl.textContent = savedName;
+    document.querySelectorAll('.top-logo').forEach(function(el){ el.textContent=savedName; });
   }
+  // 이미 조회 완료 → Firestore 재호출 금지 (무한루프 방지 핵심)
+  if(_coNameLoaded) return;
   if(!_fbReady || !_db) return;
+  _coNameLoaded = true; // .get() 전에 설정하여 재진입 차단
   _db.collection('companies').doc(did).get().then(function(snap) {
     if(!snap.exists) return;
     var co = snap.data();
     var name = co.companyName || co.company || '배송앱';
     localStorage.setItem('mbti_emer_dealerId', did);
     localStorage.setItem('mbti_emer_coname', name);
-    if(co.camps && co.camps.length) window._CO_EMER_CAMPS = co.camps;
     var t2 = document.getElementById('emer-co-name');
     var s2 = document.getElementById('emer-co-sub');
     if(t2) t2.textContent = name;
     if(s2) s2.textContent = name + ' 기사 전용';
-    var tl2 = document.querySelector('.top-logo');
-    if(tl2) tl2.textContent = name;
+    document.querySelectorAll('.top-logo').forEach(function(el){ el.textContent=name; });
     document.title = name + ' 배송앱';
-    _emerInitLogin(); // 캠프 목록 갱신
-  }).catch(function(){});
+    // 캠프 목록 변경 시 버튼만 재렌더 (_emerInitLogin 호출 금지 — 루프 원인)
+    if(co.camps && co.camps.length) { window._CO_EMER_CAMPS = co.camps; _renderCampButtons(); }
+    // 배송 서비스 목록
+    if(co.emergencyServices && co.emergencyServices.length) { window._CO_EMER_SERVICES = co.emergencyServices; _renderServiceButtons(); }
+    // 단가 캐시
+    if(co.emergencyPrices) window._CO_EMER_PRICES = co.emergencyPrices;
+  }).catch(function(){ _coNameLoaded=false; }); // 오류 시 재시도 허용
 }
 
 function _emerDoLogin() {
@@ -325,11 +425,12 @@ function _emerDoLogin() {
   // 상단 회사명 표시
   var topLogo = document.querySelector('.top-logo');
   if(topLogo) {
-    var coName = localStorage.getItem('mbti_emer_coname') || 'DONWAY';
+    var coName = localStorage.getItem('mbti_emer_coname') || '';
     topLogo.textContent = coName;
   }
   loadApiKeys();
   loadTodayStats();
+  _emerShowDriverSettle();
 }
 
 function _emerToast(msg) {
@@ -353,6 +454,409 @@ function doLogout(){
   if(ms)ms.style.display='none';
   if(ls)ls.style.display='flex';
   _auth.signOut().catch(function(){});
+}
+
+// ═══════════════════════════════════════
+// 관리자 / 기사 탭 전환
+// ═══════════════════════════════════════
+function _switchLoginTab(role) {
+  var driverForm = document.getElementById('login-driver-form');
+  var adminForm  = document.getElementById('login-admin-form');
+  var tabD = document.getElementById('tab-driver');
+  var tabA = document.getElementById('tab-admin');
+  if(role==='admin') {
+    if(driverForm) driverForm.style.display='none';
+    if(adminForm)  adminForm.style.display='block';
+    if(tabD) { tabD.style.background='transparent'; tabD.style.color='rgba(255,255,255,.5)'; }
+    if(tabA) { tabA.style.background='#3b82f6'; tabA.style.color='#fff'; }
+  } else {
+    if(driverForm) driverForm.style.display='block';
+    if(adminForm)  adminForm.style.display='none';
+    if(tabA) { tabA.style.background='transparent'; tabA.style.color='rgba(255,255,255,.5)'; }
+    if(tabD) { tabD.style.background='#c9a84c'; tabD.style.color='#08101f'; }
+  }
+}
+
+// 관리자 로그인
+function _emerAdminLogin() {
+  var email = (document.getElementById('admin-email')||{}).value.trim();
+  var pw    = (document.getElementById('admin-pw')||{}).value;
+  if(!email||!pw) { _emerToast('이메일과 비밀번호를 입력하세요'); return; }
+  var btn = document.querySelector('#login-admin-form button[onclick="_emerAdminLogin()"]');
+  if(btn) { btn.disabled=true; btn.textContent='로그인 중...'; }
+  _auth.signInWithEmailAndPassword(email, pw)
+    .then(function(uc) {
+      return _db.collection('users').doc(uc.user.uid).get();
+    }).then(function(snap) {
+      var did = (snap.exists && (snap.data().dealerId || snap.data().parentDealerId)) || '';
+      if(!did) throw new Error('관리자 권한이 없습니다');
+      localStorage.setItem('mbti_emer_dealerId', did);
+      localStorage.setItem('mbti_emer_role', 'admin');
+      _CU = { uid: did, email: email, dealerId: did, role: 'admin' };
+      window._CU = _CU;
+      _coNameLoaded = false;
+      _emerLoadCoName();
+      _emerShowAdminPanel();
+    }).catch(function(e) {
+      var msg = e.code==='auth/wrong-password'||e.code==='auth/user-not-found' ? '이메일 또는 비밀번호가 틀렸습니다' : (e.message||'로그인 실패');
+      _emerToast(msg);
+      if(btn) { btn.disabled=false; btn.textContent='관리자 로그인'; }
+    });
+}
+
+function _emerShowAdminPanel() {
+  var ls = document.getElementById('login-screen');
+  var as = document.getElementById('admin-screen');
+  if(ls) ls.style.display='none';
+  if(as) as.style.display='block';
+  _adminTab('monitor');
+}
+
+function _emerAdminLogout() {
+  localStorage.removeItem('mbti_emer_role');
+  _CU=null; window._CU=null;
+  var as = document.getElementById('admin-screen');
+  var ls = document.getElementById('login-screen');
+  if(as) as.style.display='none';
+  if(ls) ls.style.display='flex';
+  if(_adminMonitorTimer) { clearInterval(_adminMonitorTimer); _adminMonitorTimer=null; }
+  _auth.signOut().catch(function(){});
+}
+
+// ═══════════════════════════════════════
+// 관리자 탭 전환
+// ═══════════════════════════════════════
+var _adminMonitorTimer = null;
+function _adminTab(tab) {
+  ['monitor','prices','settle'].forEach(function(t) {
+    var v = document.getElementById('admin-'+t+'-view');
+    var b = document.getElementById('atab-'+t);
+    var isActive = t===tab;
+    if(v) v.style.display = isActive?'block':'none';
+    if(b) {
+      b.style.background = isActive?'#c9a84c':'transparent';
+      b.style.color = isActive?'#08101f':'rgba(255,255,255,.5)';
+      b.style.fontWeight = isActive?'800':'700';
+    }
+  });
+  if(tab==='monitor') _adminStartMonitor();
+  else if(tab==='prices') _adminLoadPrices();
+  else if(tab==='settle') _adminLoadSettle();
+}
+
+// ═══════════════════════════════════════
+// 기사 현황 탭 (30초 자동갱신)
+// ═══════════════════════════════════════
+function _adminStartMonitor() {
+  _adminLoadMonitor();
+  if(_adminMonitorTimer) clearInterval(_adminMonitorTimer);
+  _adminMonitorTimer = setInterval(_adminLoadMonitor, 30000);
+}
+
+function _adminLoadMonitor() {
+  var did = _CU && _CU.dealerId;
+  if(!did) return;
+  var dateStr = new Date().toISOString().slice(0,10);
+  fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if(d.ok) _renderMonitorCards(d.docs||[], dateStr);
+    }).catch(function(){});
+}
+
+function _renderMonitorCards(docs, dateStr) {
+  var view = document.getElementById('admin-monitor-view');
+  if(!view) return;
+  var now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  // 기사별 그룹화
+  var groups = {};
+  docs.forEach(function(d) {
+    var drv = d.driver||'미상';
+    if(!groups[drv]) groups[drv] = {driver:drv, camp:d.camp||'', docs:[], done:0, pending:0};
+    groups[drv].docs.push(d);
+    if(d.status==='done'||d.done) groups[drv].done++;
+    else groups[drv].pending++;
+  });
+  var driverList = Object.values(groups);
+  if(!driverList.length) {
+    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">오늘 배송 데이터가 없습니다</div>'
+      +'<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">마지막 갱신: '+now+'</div>';
+    return;
+  }
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text2)">'+dateStr+' 기사 현황 ('+driverList.length+'명)</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span style="font-size:11px;color:var(--text3)">'+now+' 갱신</span>'
+    +'<button onclick="_adminLoadMonitor()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>'
+    +'</div></div>';
+  driverList.forEach(function(g) {
+    var total = g.docs.length;
+    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">'
+      +'<div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'" style="padding:14px;cursor:pointer;display:flex;align-items:center;gap:10px">'
+      +'<div style="width:36px;height:36px;border-radius:50%;background:rgba(201,168,76,.15);border:1.5px solid rgba(201,168,76,.4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#c9a84c">'
+      +g.driver.charAt(0)+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:14px;font-weight:800;color:var(--text)">'+g.driver+'</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-top:2px">구역: '+(g.camp||'미설정')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<span style="background:rgba(248,113,113,.15);color:#f87171;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700;margin-right:4px">미완료 '+g.pending+'</span>'
+      +'<span style="background:rgba(74,222,128,.15);color:#4ade80;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700">완료 '+g.done+'</span>'
+      +'</div></div>'
+      +'<div style="display:none;border-top:1px solid var(--border);padding:10px">';
+    g.docs.forEach(function(doc) {
+      var isDone = doc.status==='done'||doc.done;
+      html += '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px">'
+        +'<span style="width:8px;height:8px;border-radius:50%;background:'+(isDone?'#4ade80':'#f87171')+';flex-shrink:0"></span>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(doc.addr||doc.recipient||'주소 없음')+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+(doc.time||'')+(doc.appName?' · '+doc.appName:'')+'</div>'
+        +'</div>'
+        +'<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:'+(isDone?'rgba(74,222,128,.1)':'rgba(248,113,113,.1)')+';color:'+(isDone?'#4ade80':'#f87171')+';">'+(isDone?'완료':'진행중')+'</span>'
+        +'</div>';
+    });
+    html += '</div></div>';
+  });
+  view.innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+// 단가 설정 탭
+// ═══════════════════════════════════════
+function _adminLoadPrices() {
+  var did = _CU && _CU.dealerId;
+  if(!did) return;
+  var view = document.getElementById('admin-prices-view');
+  if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">불러오는 중...</div>';
+  fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      window._CO_EMER_PRICES = d.prices || {};
+      if(d.services) { window._CO_EMER_SERVICES = d.services; _renderServiceButtons(); }
+      _renderPriceInputs();
+    }).catch(function(){ _renderPriceInputs(); });
+}
+
+function _renderPriceInputs() {
+  var view = document.getElementById('admin-prices-view');
+  if(!view) return;
+  var camps = window._CO_EMER_CAMPS || ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'];
+  var prices = window._CO_EMER_PRICES || {};
+  var services = window._CO_EMER_SERVICES || [];
+  var html = '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:16px">구별 배송 단가</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">';
+  camps.forEach(function(c) {
+    var val = prices[c] || '';
+    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">'+c+'</div>'
+      +'<div style="display:flex;align-items:center;gap:4px">'
+      +'<input id="price-'+c+'" type="number" value="'+val+'" placeholder="0" min="0" step="100"'
+      +' style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;width:100%">'
+      +'<span style="font-size:12px;color:var(--text2)">원</span>'
+      +'</div></div>';
+  });
+  html += '</div>'
+    +'<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;margin-top:4px">배송 서비스 목록 (앱 명칭)</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px">기사 로그인 화면에서 선택할 서비스 목록입니다</div>'
+    +'<div id="admin-svc-list" style="margin-bottom:8px">';
+  services.forEach(function(svc, i) {
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      +'<input type="text" value="'+svc+'" id="svc-inp-'+i+'" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">'
+      +'<button onclick="this.parentElement.remove()" style="padding:6px 10px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:6px;color:#f87171;cursor:pointer;font-size:12px">삭제</button>'
+      +'</div>';
+  });
+  html += '</div>'
+    +'<button onclick="_adminAddService()" style="width:100%;padding:8px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:16px">+ 서비스 추가</button>'
+    +'<button onclick="_adminSavePrices()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:12px;color:#08101f;font-size:14px;font-weight:800;cursor:pointer">저장</button>';
+  view.innerHTML = html;
+}
+
+function _adminAddService() {
+  var list = document.getElementById('admin-svc-list');
+  if(!list) return;
+  var idx = list.children.length;
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px';
+  div.innerHTML = '<input type="text" id="svc-inp-'+idx+'" placeholder="서비스명 (예: 쿠팡)" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">'
+    +'<button onclick="this.parentElement.remove()" style="padding:6px 10px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:6px;color:#f87171;cursor:pointer;font-size:12px">삭제</button>';
+  list.appendChild(div);
+}
+
+function _adminSavePrices() {
+  var did = _CU && _CU.dealerId;
+  if(!did) return;
+  var camps = window._CO_EMER_CAMPS || ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'];
+  var prices = {};
+  camps.forEach(function(c) {
+    var inp = document.getElementById('price-'+c);
+    if(inp && inp.value) prices[c] = parseInt(inp.value)||0;
+  });
+  // 서비스 목록 수집
+  var services = [];
+  var list = document.getElementById('admin-svc-list');
+  if(list) {
+    Array.from(list.querySelectorAll('input[type=text]')).forEach(function(inp) {
+      var v = inp.value.trim();
+      if(v) services.push(v);
+    });
+  }
+  var btn = document.querySelector('#admin-prices-view button[onclick="_adminSavePrices()"]');
+  if(btn) { btn.disabled=true; btn.textContent='저장 중...'; }
+  fetch('/api/emergency-prices', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({dealerId:did, prices:prices, services:services})
+  }).then(function(r){ return r.json(); })
+    .then(function(d) {
+      if(d.ok) {
+        window._CO_EMER_PRICES = prices;
+        window._CO_EMER_SERVICES = services;
+        _renderServiceButtons();
+        _emerToast('단가가 저장되었습니다');
+      } else { _emerToast('저장 실패: '+(d.error||'')); }
+      if(btn) { btn.disabled=false; btn.textContent='저장'; }
+    }).catch(function(e) {
+      _emerToast('저장 실패: '+e.message);
+      if(btn) { btn.disabled=false; btn.textContent='저장'; }
+    });
+}
+
+// ═══════════════════════════════════════
+// 정산 탭 (앱명칭별 분리)
+// ═══════════════════════════════════════
+function _adminLoadSettle() {
+  var did = _CU && _CU.dealerId;
+  if(!did) return;
+  var view = document.getElementById('admin-settle-view');
+  if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">불러오는 중...</div>';
+  var dateStr = new Date().toISOString().slice(0,10);
+  Promise.all([
+    fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
+  ]).then(function(results) {
+    var docs   = results[0].ok ? (results[0].docs||[]) : [];
+    var prices = results[1].prices || window._CO_EMER_PRICES || {};
+    _renderSettleTable(docs, prices, dateStr);
+  }).catch(function(e) {
+    if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+e.message+'</div>';
+  });
+}
+
+function _renderSettleTable(docs, prices, dateStr) {
+  var view = document.getElementById('admin-settle-view');
+  if(!view) return;
+  if(!docs.length) {
+    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">'+dateStr+' 배송 데이터가 없습니다</div>';
+    return;
+  }
+  // 기사별 → 앱명칭별 → 구역별 집계
+  var grouped = {}; // { 기사명: { 앱명칭: { 구역: count } } }
+  docs.forEach(function(d) {
+    var drv  = d.driver || '미상';
+    var app  = d.appName || '기타';
+    var camp = d.camp || '미분류';
+    if(!grouped[drv]) grouped[drv] = {};
+    if(!grouped[drv][app]) grouped[drv][app] = {};
+    grouped[drv][app][camp] = (grouped[drv][app][camp]||0) + 1;
+  });
+  var grandTotal = 0;
+  var html = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">'+dateStr+' 정산 내역</div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:var(--bg3);color:var(--text2)">'
+    +'<th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border)">기사</th>'
+    +'<th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border)">앱</th>'
+    +'<th style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)">구역</th>'
+    +'<th style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border)">건수</th>'
+    +'<th style="padding:8px 6px;text-align:right;border-bottom:1px solid var(--border)">단가</th>'
+    +'<th style="padding:8px 6px;text-align:right;border-bottom:1px solid var(--border)">금액</th>'
+    +'</tr></thead><tbody>';
+  Object.keys(grouped).forEach(function(drv) {
+    var driverTotal = 0;
+    var appGroups = grouped[drv];
+    Object.keys(appGroups).forEach(function(app) {
+      var campGroups = appGroups[app];
+      Object.keys(campGroups).forEach(function(camp) {
+        var cnt = campGroups[camp];
+        var price = prices[camp] || 0;
+        var amt = cnt * price;
+        driverTotal += amt;
+        grandTotal += amt;
+        html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05)">'
+          +'<td style="padding:8px 6px;color:var(--text);font-weight:600">'+drv+'</td>'
+          +'<td style="padding:8px 6px;color:var(--text2)">'+app+'</td>'
+          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+camp+'</td>'
+          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+cnt+'건</td>'
+          +'<td style="padding:8px 6px;text-align:right;color:var(--text2)">'+price.toLocaleString()+'원</td>'
+          +'<td style="padding:8px 6px;text-align:right;font-weight:700;color:#60a5fa">'+amt.toLocaleString()+'원</td>'
+          +'</tr>';
+      });
+      // 앱별 소계가 여러 구역인 경우만 표시
+      if(Object.keys(campGroups).length > 1) {
+        var appTotal = Object.keys(campGroups).reduce(function(s,c){ return s+(campGroups[c]*(prices[c]||0)); },0);
+        html += '<tr style="background:rgba(59,130,246,.05);border-bottom:1px solid var(--border)">'
+          +'<td colspan="5" style="padding:6px 6px;text-align:right;font-size:11px;color:var(--text3)">'+drv+' / '+app+' 소계</td>'
+          +'<td style="padding:6px 6px;text-align:right;font-weight:700;color:#93c5fd;font-size:12px">'+appTotal.toLocaleString()+'원</td>'
+          +'</tr>';
+      }
+    });
+    // 기사 소계
+    html += '<tr style="background:rgba(201,168,76,.08);border-bottom:2px solid rgba(201,168,76,.2)">'
+      +'<td colspan="5" style="padding:8px 6px;text-align:right;font-size:12px;font-weight:700;color:var(--text2)">'+drv+' 합계</td>'
+      +'<td style="padding:8px 6px;text-align:right;font-weight:800;font-size:13px;color:#c9a84c">'+driverTotal.toLocaleString()+'원</td>'
+      +'</tr>';
+  });
+  html += '</tbody></table></div>'
+    +'<div style="margin-top:12px;padding:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;text-align:right;font-size:15px;font-weight:900;color:#c9a84c">'
+    +'총합계 '+grandTotal.toLocaleString()+'원</div>'
+    +'<div style="text-align:right;margin-top:6px"><button onclick="_adminLoadSettle()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
+  view.innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+// 기사 오늘 정산 (기사 메인화면)
+// ═══════════════════════════════════════
+function _emerShowDriverSettle() {
+  var box = document.getElementById('driver-settle-box');
+  if(!box) return;
+  var did = (_CU&&_CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+  var drv = S.curDriver || localStorage.getItem('mbti_emer_driver') || '';
+  if(!did || !drv) return;
+  var dateStr = new Date().toISOString().slice(0,10);
+  Promise.all([
+    fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
+  ]).then(function(results) {
+    var docs   = results[0].ok ? (results[0].docs||[]) : [];
+    var prices = results[1].prices || window._CO_EMER_PRICES || {};
+    // 앱별 → 구역별 집계
+    var appGroups = {};
+    docs.forEach(function(d) {
+      var app  = d.appName || '기타';
+      var camp = d.camp || '미분류';
+      if(!appGroups[app]) appGroups[app] = {};
+      appGroups[app][camp] = (appGroups[app][camp]||0)+1;
+    });
+    var listEl  = document.getElementById('driver-settle-list');
+    var totalEl = document.getElementById('driver-settle-total');
+    var total = 0;
+    var html = '';
+    Object.keys(appGroups).forEach(function(app) {
+      Object.keys(appGroups[app]).forEach(function(camp) {
+        var cnt = appGroups[app][camp];
+        var price = prices[camp] || 0;
+        var amt = cnt * price;
+        total += amt;
+        html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+          +'<span style="color:var(--text2)">'+app+' · '+camp+' '+cnt+'건</span>'
+          +'<span style="font-weight:700;color:var(--text)">'+amt.toLocaleString()+'원</span>'
+          +'</div>';
+      });
+    });
+    if(!html) html = '<div style="color:var(--text3);font-size:12px;padding:8px 0">오늘 등록된 배송이 없습니다</div>';
+    if(listEl) listEl.innerHTML = html;
+    if(totalEl) totalEl.textContent = '오늘 합계 '+total.toLocaleString()+'원';
+    box.style.display = 'block';
+  }).catch(function(){});
 }
 
 function loadApiKeys(){
@@ -3736,7 +4240,9 @@ async function emerSave(){
     // 박스 규격 (RPB2.4 등)
     box_code: (window._emerBoxCode||'').trim(),
     // 주소-GPS 불일치 감지 (100m 이상 차이 시 미터 값, 정상이면 null)
-    addressGpsMismatch: addressGpsMismatch
+    addressGpsMismatch: addressGpsMismatch,
+    // 배송 서비스 앱 명칭 (쿠팡, CJ대한통운 등)
+    appName: localStorage.getItem('mbti_emer_app')||''
   };
 
   var saveBtn = document.querySelector('#emer-del-mo button[onclick="emerSave()"]');
@@ -3923,6 +4429,8 @@ async function emerSave(){
   var _gpsMsg = gpsClean ? gpsClean.src+' '+gpsClean.lat.toFixed(4)+','+gpsClean.lng.toFixed(4) : '없음';
   console.log('[GPS_SAVED]', _gpsMsg, 'addr:', record && record.addr);
   toast('✅ 저장완료');
+  loadTodayStats();
+  _emerShowDriverSettle();
 }
 
 // 관리자 알림 별도 전송
@@ -4920,7 +5428,8 @@ async function _fuSaveAll() {
       tracking:row.tracking||'', trackings:row.tracking?[row.tracking]:[],
       order_id:'', delivery_memo:row.memo||'', memo:'',
       gps:gps, photos:[], entryMode:'file',
-      date:todayStr, time:timeStr, savedAt:now.toISOString()
+      date:todayStr, time:timeStr, savedAt:now.toISOString(),
+      appName: localStorage.getItem('mbti_emer_app')||''
     };
     try {
       var _bRes=await fetch('/api/emergency-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
@@ -4935,6 +5444,7 @@ async function _fuSaveAll() {
   loadTodayStats();
   window._emerSaveCount = (window._emerSaveCount||0)+saved;
   _updateEmerCounters();
+  _emerShowDriverSettle();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5035,7 +5545,8 @@ async function _aiSave() {
     order_id:'', delivery_memo:'', memo:'',
     gps:gps, photos:[], entryMode:'manual',
     date:now.toISOString().slice(0,10), time:now.toTimeString().slice(0,5),
-    savedAt:now.toISOString()
+    savedAt:now.toISOString(),
+    appName: localStorage.getItem('mbti_emer_app')||''
   };
   try {
     var _aiRes=await fetch('/api/emergency-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)});
@@ -5048,6 +5559,7 @@ async function _aiSave() {
     loadTodayStats();
     window._emerSaveCount = (window._emerSaveCount||0)+1;
     _updateEmerCounters();
+    _emerShowDriverSettle();
   } catch(e) {
     toast('저장 실패: '+e.message);
     if(btn) { btn.disabled=false; btn.textContent='💾 배송 등록'; }
