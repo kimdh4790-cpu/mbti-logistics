@@ -5873,7 +5873,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-a
       </div>
       <div style="font-size:16px;font-weight:800;margin-bottom:8px">가입 완료!</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px" id="success-msg">환영합니다. 바로 앱을 사용하실 수 있습니다.</div>
-      <button class="btn btn-primary" style="font-size:14px" onclick="location.href='/hub'">앱 시작하기</button>
+      <button class="btn btn-primary" style="font-size:14px" onclick="location.href='/emergency'">배송앱 시작하기</button>
     </div>
 
     <div id="form-view">
@@ -6063,6 +6063,8 @@ async function _submit(){
     var regRes=await fetch('/api/driver-register',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify(Object.assign({uid:uid},doc))});
     var regData=await regRes.json();
     if(!regData.ok) throw new Error(regData.error||'서버 저장 실패');
+    if(_did) localStorage.setItem('mbti_emer_dealerId',_did);
+    if(_cfg.companyName) localStorage.setItem('mbti_emer_coname',_cfg.companyName);
     document.getElementById('form-view').style.display='none';
     document.getElementById('success-view').style.display='block';
   }catch(e){
