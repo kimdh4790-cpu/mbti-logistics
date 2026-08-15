@@ -4849,7 +4849,7 @@ function _showMapModal(locs){
     var isPart=x.status==='부분완료';
     var hasGps=!!(x.gps&&x.gps.lat);
     var statusDot=isDone?'<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 7px;border-radius:999px;font-weight:700">✅완료</span>':(isPart?'<span style="font-size:10px;background:#fff7ed;color:#f97316;padding:2px 7px;border-radius:999px;font-weight:700">🟠부분</span>':'<span style="font-size:10px;background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:999px;font-weight:700">⏳미완료</span>');
-    var fbId=x.fbId||'';
+    var fbId=x.fbId||x._fbId||x.id||'';
     var trackVal=x.tracking||(x.trackings&&x.trackings[0])||'';
     var _navN=((x.recipient||'')+'·'+(x.addr||'')).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var mapBtn=hasGps
