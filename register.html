@@ -302,9 +302,100 @@ function _doRegister(){
   })
   .catch(function(e){
     btn.disabled=false;btn.textContent='등록 신청';
-    if(e.code==='auth/email-already-in-use'){_showErr('이미 가입된 이메일입니다.');}
+    if(e.code==='auth/email-already-in-use'){
+      // 기존 계정으로 로그인 후 회사 데이터 생성
+      var email=document.getElementById('r-email').value.trim().toLowerCase();
+      var pw=document.getElementById('r-pw').value;
+      var errBox=document.getElementById('err-box');
+      errBox.innerHTML='이미 가입된 이메일입니다.<br><br>'+
+        '<button onclick="_loginAndRegister()" style="margin-top:6px;padding:9px 16px;background:#c9a84c;color:#08101f;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">기존 계정으로 이어서 등록</button>';
+      errBox.style.display='block';
+      document.getElementById('ok-box').style.display='none';
+    }
     else if(e.code==='auth/weak-password'){_showErr('비밀번호가 너무 간단합니다.');}
     else{_showErr('오류: '+e.message);}
+  });
+}
+
+function _loginAndRegister(){
+  var company=document.getElementById('r-company').value.trim();
+  var email=document.getElementById('r-email').value.trim().toLowerCase();
+  var pw=document.getElementById('r-pw').value;
+  var phone=document.getElementById('r-phone').value.trim();
+  var btn=document.getElementById('reg-btn');
+  btn.disabled=true;btn.textContent='로그인 중...';
+  _hide();
+  _auth.signInWithEmailAndPassword(email,pw)
+  .then(function(cred){
+    var uid=cred.user.uid;
+    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    var now=new Date();
+    var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
+    var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
+    var companyDoc={
+      companyName:company,name:company,email:email,phone:phone,
+      plan:'trial',services:['mbtico'],industry:'',
+      companyCode:companyCode,
+      slug:emailPrefix||uid.slice(0,8),
+      svcType:_svcType,
+      selectedClients:_svcType==='exist'?_selClients:[],
+      trialStart:now.toISOString().slice(0,10),
+      trialEnd:trialEnd.toISOString().slice(0,10),
+      trialUsed:true,trialEndISO:trialEnd.toISOString(),
+      subscriptions:{mbtico:{active:true,plan:'trial',expiry:trialEnd.toISOString().slice(0,10),expiryISO:trialEnd.toISOString(),modules:['scan','label','checkin','emergency','delivery','app']}},
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      uid:uid,dealerId:uid,
+      settlePaid:false,inventoryPaid:false,qrPaid:false,kioskPaid:false,
+      registeredFrom:'register.html',
+      appUrl:'https://mbtico.kr/hub'
+    };
+    var batch=_db.batch();
+    batch.set(_db.collection('companies').doc(uid),companyDoc,{merge:true});
+    batch.set(_db.collection('users').doc(uid),{uid:uid,email:email,name:company,companyName:company,role:'dealer',dealerId:uid},{merge:true});
+    return batch.commit().then(function(){return uid;});
+  })
+  .then(function(uid){
+    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    var slug2=emailPrefix||uid.slice(0,8);
+    var tok;
+    _auth.currentUser.getIdToken()
+    .then(function(t){
+      tok=t;
+      return fetch('/api/company-slug',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({uid:uid,slug:slug2,companyName:company})});
+    })
+    .then(function(){
+      if(_svcType==='exist'&&_selClients.length){
+        return Promise.all(_selClients.map(function(cid){
+          var meta=_availClients.find(function(a){return a.id===cid;})||{};
+          return fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:cid,clientName:meta.name||cid,zones:meta.zones||[]})});
+        }));
+      }
+    })
+    .then(function(){
+      fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'회사 등록 (기존계정)',body:company+' · '+email,type:'join'})}).catch(function(){});
+      var lines=['등록 완료!',''];
+      if(_svcType==='new'){
+        lines.push('신규 앱 제작 요청이 접수되었습니다.');
+        lines.push('고객사 관리: https://mbtico.kr/clients');
+      } else {
+        lines.push('선택하신 배송처가 즉시 사용 가능합니다.');lines.push('');
+        _selClients.forEach(function(cid){
+          lines.push('· '+cid+': https://mbtico.kr/'+slug2+'/'+cid);
+        });
+        lines.push('');lines.push('고객사 관리: https://mbtico.kr/clients');
+      }
+      _showOk(lines.join('\n'));
+      var okBox=document.getElementById('ok-box');
+      var copyBtn=document.createElement('button');
+      copyBtn.className='copy-btn';copyBtn.textContent='관리 페이지 주소 복사';
+      copyBtn.onclick=function(){navigator.clipboard.writeText('https://mbtico.kr/clients').then(function(){copyBtn.textContent='복사됨!';});};
+      okBox.appendChild(copyBtn);
+      btn.textContent='등록 완료';
+    });
+  })
+  .catch(function(e){
+    btn.disabled=false;btn.textContent='등록 신청';
+    _showErr('로그인 실패: '+e.message);
   });
 }
 
