@@ -105,20 +105,13 @@ function _doRegister(){
   var btn=document.getElementById('reg-btn');
   btn.disabled=true;btn.textContent='등록 중...';
 
-  _db.collection('companies').where('email','==',email).limit(1).get()
-  .then(function(snap){
-    if(!snap.empty){
-      _showErr('이미 등록된 이메일입니다. 로그인 후 이용해주세요.');
-      btn.disabled=false;btn.textContent='등록 신청';
-      return;
-    }
-    var now=new Date();
-    var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
-    var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
-    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  var now=new Date();
+  var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
+  var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
 
-    _auth.createUserWithEmailAndPassword(email,pw)
-    .then(function(cred){
+  _auth.createUserWithEmailAndPassword(email,pw)
+  .then(function(cred){
       var uid=cred.user.uid;
       var companyDoc={
         companyName:company,name:company,email:email,phone:phone,
@@ -161,14 +154,12 @@ function _doRegister(){
       okBox.appendChild(copyBtn);
       btn.textContent='등록 완료';
     })
-    .catch(function(e){
-      btn.disabled=false;btn.textContent='등록 신청';
-      if(e.code==='auth/email-already-in-use'){_showErr('이미 가입된 이메일입니다.');}
-      else if(e.code==='auth/weak-password'){_showErr('비밀번호가 너무 간단합니다.');}
-      else{_showErr('오류: '+e.message);}
-    });
-  })
-  .catch(function(e){btn.disabled=false;btn.textContent='등록 신청';_showErr('오류: '+e.message);});
+  .catch(function(e){
+    btn.disabled=false;btn.textContent='등록 신청';
+    if(e.code==='auth/email-already-in-use'){_showErr('이미 가입된 이메일입니다.');}
+    else if(e.code==='auth/weak-password'){_showErr('비밀번호가 너무 간단합니다.');}
+    else{_showErr('오류: '+e.message);}
+  });
 }
 
 document.addEventListener('keydown',function(e){if(e.key==='Enter')_doRegister();});
