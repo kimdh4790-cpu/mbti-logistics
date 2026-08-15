@@ -245,6 +245,7 @@ function _doRegister(){
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid,dealerId:uid,
       settlePaid:false,inventoryPaid:false,qrPaid:false,kioskPaid:false,
+      platform:'mbtico',
       registeredFrom:'register.html',
       appUrl:'https://mbtico.kr/hub'
     };
@@ -363,6 +364,7 @@ function _loginAndRegister(){
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       uid:uid,dealerId:uid,
       settlePaid:false,inventoryPaid:false,qrPaid:false,kioskPaid:false,
+      platform:'mbtico',
       registeredFrom:'register.html',
       appUrl:'https://mbtico.kr/hub'
     };
