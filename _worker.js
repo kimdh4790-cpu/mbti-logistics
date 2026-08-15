@@ -4908,7 +4908,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
 <nav class="nav">
   <div class="nav-logo">물류배송앱</div>
   <div class="nav-btns">
-    <a href="/mbtico_hub" class="btn btn-outline">앱 로그인</a>
+    <a href="/hub" class="btn btn-outline">앱 로그인</a>
     <a href="/register" class="btn btn-primary">무료 체험</a>
   </div>
 </nav>
@@ -4931,7 +4931,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
     <p class="s-sub anim-3">긴급배송 등록부터 QR스캔, 라벨출력, 출퇴근 관리까지<br>현장에서 바로 쓰는 배송기사 전용 통합 솔루션</p>
     <div class="anim-4" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
       <a href="/register" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
-      <a href="/mbtico_hub" class="btn btn-outline btn-lg">앱 바로가기</a>
+      <a href="/hub" class="btn btn-outline btn-lg">앱 바로가기</a>
     </div>
     <div class="chips anim-4">
       <div class="chip">📷 QR 스캔</div>
@@ -5415,7 +5415,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans
         이메일과 카카오 알림톡으로 승인 안내를 드립니다.<br><br>
         승인 후 배송앱을 바로 사용하실 수 있습니다.
       </div>
-      <a href="/mbtico_hub" class="btn btn-primary" style="display:block;text-decoration:none">앱 로그인하기</a>
+      <a href="/hub" class="btn btn-primary" style="display:block;text-decoration:none">앱 로그인하기</a>
       <div style="margin-top:12px;font-size:12px;color:var(--text3)">
         문의: 051-711-3103 · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--acc)" target="_blank">카카오 채널</a>
       </div>
@@ -5423,7 +5423,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans
   </div>
 
   <div class="back-link">
-    이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a>
+    이미 계정이 있으신가요? <a href="/hub">로그인</a>
   </div>
 </div>
 
@@ -5873,7 +5873,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-a
       </div>
       <div style="font-size:16px;font-weight:800;margin-bottom:8px">가입 완료!</div>
       <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px" id="success-msg">환영합니다. 바로 앱을 사용하실 수 있습니다.</div>
-      <button class="btn btn-primary" style="font-size:14px" onclick="location.href='/mbtico_hub'">앱 시작하기</button>
+      <button class="btn btn-primary" style="font-size:14px" onclick="location.href='/hub'">앱 시작하기</button>
     </div>
 
     <div id="form-view">
@@ -5919,7 +5919,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:-a
       <div id="submit-err" style="font-size:12px;color:var(--red);margin-bottom:8px;text-align:center;display:none"></div>
       <button id="btn-submit" class="btn btn-primary" onclick="_submit()">가입하기</button>
       <div class="divider">또는</div>
-      <div class="login-link">이미 계정이 있으신가요? <a href="/mbtico_hub">로그인</a></div>
+      <div class="login-link">이미 계정이 있으신가요? <a href="/hub">로그인</a></div>
     </div>
   </div>
 </div>
