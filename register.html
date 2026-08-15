@@ -13,22 +13,43 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:#08101f;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px}
-.wrap{width:100%;max-width:400px}
-.logo{text-align:center;margin-bottom:28px}
-.logo h1{font-size:26px;font-weight:900;color:#c9a84c;letter-spacing:-0.5px;margin-bottom:4px}
+.wrap{width:100%;max-width:420px}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{font-size:26px;font-weight:900;color:#c9a84c;margin-bottom:4px}
 .logo p{font-size:12px;color:#64748b}
-.app-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);border-radius:99px;font-size:11px;font-weight:700;color:#c9a84c;margin-bottom:12px}
 .card{background:#0d1b3e;border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:28px}
-.field{margin-bottom:16px}
+.section-title{font-size:11px;color:#64748b;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;margin-top:22px}
+.section-title:first-child{margin-top:0}
+.field{margin-bottom:14px}
 .field label{font-size:12px;color:#94a3b8;display:block;margin-bottom:6px;font-weight:600}
 .field input{width:100%;padding:13px 16px;background:#132035;border:1px solid rgba(201,168,76,.15);border-radius:10px;color:#e2e8f0;font-size:14px;outline:none;transition:.2s;font-family:inherit}
 .field input:focus{border-color:#c9a84c}
 .field input::placeholder{color:#3d5070}
-.btn{width:100%;padding:15px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;font-family:inherit;transition:.2s}
+.slug-preview{font-size:11px;color:#64748b;margin-top:5px;min-height:16px}
+.slug-preview b{color:#c9a84c}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;padding:12px 14px;background:#132035;border:1px solid rgba(201,168,76,.15);border-radius:10px;color:#e2e8f0;font-size:14px;outline:none;font-family:inherit;transition:.2s}
+.add-row input:focus{border-color:#c9a84c}
+.add-row input::placeholder{color:#3d5070}
+.add-row button{padding:0 16px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.client-chips{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.chip{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:13px}
+.chip-name{font-weight:700;color:#e2e8f0}
+.chip-link{font-size:11px;color:#c9a84c;margin-top:2px}
+.chip-del{background:transparent;border:none;color:#475569;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;flex-shrink:0}
+.chip-del:hover{color:#f87171}
+.empty-hint{font-size:12px;color:#3d5070;padding:12px 0;text-align:center}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:22px 0}
+.btn{width:100%;padding:15px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:.2s}
 .btn:hover{background:#d4b86a}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 14px;font-size:13px;color:#f87171;margin-bottom:14px;display:none;line-height:1.5}
-.ok{background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:20px;margin-bottom:14px;display:none}
+.ok{background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:24px;margin-bottom:14px;display:none}
+.link-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;margin-bottom:20px}
+.link-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#132035;border:1px solid rgba(201,168,76,.2);border-radius:10px}
+.link-item-name{font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:2px}
+.link-item-url{font-size:11px;color:#c9a84c;word-break:break-all}
+.copy-btn{padding:6px 12px;background:transparent;border:1px solid rgba(201,168,76,.3);border-radius:7px;color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:10px}
 .login-link{text-align:center;font-size:13px;color:#64748b;margin-top:16px}
 .login-link a{color:#c9a84c;text-decoration:none}
 </style>
@@ -36,12 +57,8 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:#08101f;colo
 <body>
 <div class="wrap">
   <div class="logo">
-    <div class="app-badge">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-      배송앱
-    </div>
-    <h1>MBTICO</h1>
-    <p>배송회사 등록</p>
+    <h1>MBTICO 배송앱</h1>
+    <p>회사 등록 · 기사 가입 링크 생성</p>
   </div>
 
   <div class="card">
@@ -49,22 +66,38 @@ body{font-family:-apple-system,'Noto Sans KR',sans-serif;background:#08101f;colo
     <div id="ok-box" class="ok" style="display:none"></div>
 
     <div id="form-area">
+      <div class="section-title">회사 정보</div>
+
       <div class="field">
         <label>회사명 *</label>
-        <input id="r-company" type="text" placeholder="예: 엠비티아이물류" autocomplete="organization">
+        <input id="r-company" type="text" placeholder="예: 엠비티아이물류" autocomplete="organization" oninput="_previewSlug()">
+        <div class="slug-preview" id="slug-preview">회사명 입력 시 링크 자동 생성</div>
       </div>
       <div class="field">
         <label>이메일 (로그인 ID) *</label>
         <input id="r-email" type="email" placeholder="company@email.com" autocomplete="email">
       </div>
-      <div class="field">
+      <div class="field" style="margin-bottom:0">
         <label>비밀번호 * (8자 이상)</label>
         <input id="r-pw" type="password" placeholder="비밀번호 입력" autocomplete="new-password">
       </div>
       <div class="field">
-        <label>비밀번호 확인 *</label>
-        <input id="r-pw2" type="password" placeholder="비밀번호 재입력" autocomplete="new-password">
+        <input id="r-pw2" type="password" placeholder="비밀번호 재입력" autocomplete="new-password" style="margin-top:8px">
       </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">배송처 추가 (기사 가입 링크 자동 생성)</div>
+      <div class="add-row">
+        <input id="client-input" type="text" placeholder="배송처명 입력 (예: 롯데백화점)" autocomplete="off" maxlength="30" onkeydown="if(event.key==='Enter'){event.preventDefault();_addClient();}">
+        <button onclick="_addClient()">추가</button>
+      </div>
+      <div id="client-chips" class="client-chips">
+        <div class="empty-hint" id="empty-hint">배송처를 추가하세요</div>
+      </div>
+
+      <div class="divider"></div>
+
       <button id="reg-btn" class="btn" onclick="_doRegister()">등록하기</button>
     </div>
   </div>
@@ -88,6 +121,67 @@ var _db=firebase.firestore();
 _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 var _auth=firebase.auth();
 
+var _clients=[]; // [{name, slug}]
+
+function _toSlug(str){return str.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,30);}
+
+function _previewSlug(){
+  var company=document.getElementById('r-company').value.trim();
+  var slug=_toSlug(company)||'';
+  var el=document.getElementById('slug-preview');
+  if(slug){
+    el.innerHTML='회사 링크: <b>mbtico.kr/'+slug+'</b>';
+    _renderChips();
+  } else {
+    el.textContent='회사명 입력 시 링크 자동 생성';
+  }
+}
+
+function _addClient(){
+  var inp=document.getElementById('client-input');
+  var name=inp.value.trim();
+  if(!name) return;
+  var slug=_toSlug(name);
+  if(!slug){inp.value='';return;}
+  if(_clients.find(function(c){return c.slug===slug;})){
+    inp.value='';return;
+  }
+  _clients.push({name:name,slug:slug});
+  inp.value='';
+  _renderChips();
+}
+
+function _removeClient(slug){
+  _clients=_clients.filter(function(c){return c.slug!==slug;});
+  _renderChips();
+}
+
+function _renderChips(){
+  var company=document.getElementById('r-company').value.trim();
+  var coSlug=_toSlug(company)||'회사';
+  var container=document.getElementById('client-chips');
+  var hint=document.getElementById('empty-hint');
+  if(!_clients.length){
+    if(hint) hint.style.display='block';
+    var existing=container.querySelectorAll('.chip');
+    existing.forEach(function(el){el.remove();});
+    return;
+  }
+  if(hint) hint.style.display='none';
+  var existing=container.querySelectorAll('.chip');
+  existing.forEach(function(el){el.remove();});
+  _clients.forEach(function(c){
+    var div=document.createElement('div');
+    div.className='chip';
+    div.innerHTML='<div><div class="chip-name">'+_esc(c.name)+'</div>'+
+      '<div class="chip-link">mbtico.kr/'+coSlug+'/'+_esc(c.slug)+'</div></div>'+
+      '<button class="chip-del" onclick="_removeClient(\''+_esc(c.slug)+'\')">×</button>';
+    container.appendChild(div);
+  });
+}
+
+function _esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
 function _showErr(msg){
   var e=document.getElementById('err-box');
   e.textContent=msg;e.style.display='block';
@@ -108,7 +202,7 @@ async function _doRegister(){
   var btn=document.getElementById('reg-btn');
   btn.disabled=true;btn.textContent='등록 중...';
 
-  var baseSlug=company.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,20)||
+  var baseSlug=_toSlug(company)||
                email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase()||'co';
 
   try{
@@ -135,6 +229,8 @@ async function _doRegister(){
     await batch.commit();
 
     var tok=await _auth.currentUser.getIdToken();
+
+    // 회사 슬러그 등록
     var r=await fetch('/api/company-slug',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
@@ -143,26 +239,69 @@ async function _doRegister(){
     var d=await r.json();
     if(!d.ok) throw new Error('슬러그 등록 실패: '+(d.error||''));
 
+    // 배송처 일괄 등록
+    var addedClients=[];
+    for(var i=0;i<_clients.length;i++){
+      var c=_clients[i];
+      try{
+        var cr=await fetch('/api/add-client',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+          body:JSON.stringify({clientSlug:c.slug,clientName:c.name})
+        });
+        var cd=await cr.json();
+        if(cd.ok) addedClients.push(c);
+      }catch(e2){}
+    }
+
     fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email,type:'join'})}).catch(function(){});
+      body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email+' (배송처 '+addedClients.length+'개)',type:'join'})}).catch(function(){});
+
+    // 성공 화면
+    var linksHtml='';
+    if(addedClients.length){
+      linksHtml='<div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:8px;letter-spacing:.05em">기사 가입 링크 (공유용)</div>'+
+        '<div class="link-list">'+
+        addedClients.map(function(c){
+          var url='https://mbtico.kr/'+baseSlug+'/'+c.slug;
+          return '<div class="link-item">'+
+            '<div><div class="link-item-name">'+_esc(c.name)+'</div>'+
+            '<div class="link-item-url">'+url+'</div></div>'+
+            '<button class="copy-btn" data-url="'+url+'">복사</button>'+
+            '</div>';
+        }).join('')+
+        '</div>';
+    } else {
+      linksHtml='<div style="font-size:12px;color:#64748b;margin-top:8px">/clients에서 배송처를 추가하면 링크가 생성됩니다</div>';
+    }
 
     document.getElementById('form-area').style.display='none';
     document.getElementById('ok-box').innerHTML=
-      '<div style="text-align:center">'+
-      '<div style="font-size:36px;margin-bottom:12px">✅</div>'+
-      '<div style="font-size:18px;font-weight:800;color:#c9a84c;margin-bottom:10px">등록 완료!</div>'+
-      '<div style="font-size:12px;color:#94a3b8;margin-bottom:4px">내 회사 링크</div>'+
-      '<div style="font-size:16px;font-weight:800;color:#e2e8f0;margin-bottom:6px;word-break:break-all">mbtico.kr/'+baseSlug+'</div>'+
-      '<div style="font-size:12px;color:#64748b;line-height:1.7;margin-bottom:20px">배송처(고객사)를 추가하면<br>기사 가입 링크가 자동으로 생성됩니다</div>'+
-      '<button onclick="location.href=\'/clients\'" style="width:100%;padding:13px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">배송처 관리 시작하기</button>'+
-      '</div>';
+      '<div style="text-align:center;margin-bottom:16px">'+
+      '<div style="font-size:36px;margin-bottom:10px">✅</div>'+
+      '<div style="font-size:18px;font-weight:800;color:#c9a84c;margin-bottom:6px">등록 완료!</div>'+
+      '<div style="font-size:12px;color:#94a3b8;margin-bottom:2px">회사 링크</div>'+
+      '<div style="font-size:15px;font-weight:800;color:#e2e8f0;margin-bottom:2px">mbtico.kr/'+baseSlug+'</div>'+
+      '</div>'+
+      linksHtml+
+      '<button onclick="location.href=\'/clients\'" style="width:100%;padding:13px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px">배송처 관리 · 링크 추가</button>';
     document.getElementById('ok-box').style.display='block';
+
+    document.getElementById('ok-box').querySelectorAll('.copy-btn').forEach(function(b){
+      b.addEventListener('click',function(){
+        var url=this.dataset.url;
+        navigator.clipboard.writeText(url).then(function(){
+          b.textContent='복사됨!';setTimeout(function(){b.textContent='복사';},1500);
+        });
+      });
+    });
+
     btn.textContent='등록 완료';
 
   }catch(e){
     btn.disabled=false;btn.textContent='등록하기';
     if(e.code==='auth/email-already-in-use'){
-      _showErr('이미 가입된 이메일입니다. 배송처 관리 로그인을 이용해 주세요.');
+      _showErr('이미 가입된 이메일입니다. 아래 "배송처 관리 로그인"을 이용해 주세요.');
     }else if(e.code==='auth/weak-password'){
       _showErr('비밀번호가 너무 간단합니다. 8자 이상 영문+숫자 조합을 사용하세요.');
     }else if(e.code==='auth/invalid-email'){
@@ -172,8 +311,6 @@ async function _doRegister(){
     }
   }
 }
-
-document.addEventListener('keydown',function(e){if(e.key==='Enter')_doRegister();});
 </script>
 </body>
 </html>
