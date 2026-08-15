@@ -263,6 +263,24 @@ async function serveKVFile(env, fileName, contentType) {
   }
 }
 
+// register.html: _db 초기화 순서 패치 적용 후 서빙
+async function serveRegisterHTML(env) {
+  try {
+    const _e = env || _env_ref;
+    let html = _e && _e.DONWAY_ASSETS ? await _e.DONWAY_ASSETS.get('register.html', 'text') : null;
+    if (!html) {
+      const r = await fetch('https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/contents/register.html');
+      if (r.ok) { const j = await r.json(); html = j.content ? atob(j.content.replace(/\n/g,'')) : null; }
+    }
+    if (!html) return new Response('register.html not found', {status:404});
+    html = html.replace(
+      /_db\.settings\(\{experimentalAutoDetectLongPolling:true,merge:true\}\);(\r?\n)var _db = firebase\.firestore\(\);/,
+      'var _db = firebase.firestore();$1_db.settings({experimentalAutoDetectLongPolling:true,merge:true});'
+    );
+    return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store, no-cache, must-revalidate, max-age=0','Pragma':'no-cache',...SECURITY_HEADERS}});
+  } catch(e) { return new Response('Error: '+e.message, {status:500}); }
+}
+
 // ── 임시 비밀번호 생성 (영문+숫자 8자리) ──
 function generateTempPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -1865,7 +1883,7 @@ async function acceptExchange(){
         }
       }
     }
-      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
       if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
       if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
 
@@ -3460,7 +3478,7 @@ fetch('/qr/members?did='+DID)
       if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
       if (path === '/universal' || path === '/universal.html') return Response.redirect('https://donway.ai.kr/join', 302);
-      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') return serveKVFile(env, 'filo-manifest.json', 'application/manifest+json');
       if (path === '/filo-icon-192.png') return serveKVFile(env, 'filo-icon-192.png', 'image/png');
       if (path === '/filo-icon-512.png') return serveKVFile(env, 'filo-icon-512.png', 'image/png');
@@ -6145,7 +6163,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
       // /v9 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
-      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
@@ -6549,7 +6567,7 @@ fetch('/qr/members?did='+DID)
       }
       if (path === '/qrpos' || path === '/qrpos.html') return serveKVFile(env, 'qrpos.html', 'text/html');
       if (path === '/kiosk' || path === '/kiosk.html') return serveKVFile(env, 'kiosk.html', 'text/html');
-      if (path === '/register' || path === '/register.html') return serveKVFile(env, 'register.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
     }
         // ── donway_og.jpg / OG 이미지 → KV 서빙 ──
     if (path === '/donway_og.jpg' || path === '/og_banner.jpg' || path === '/donway-og.jpg') {
