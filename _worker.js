@@ -5757,8 +5757,10 @@ var _db=firebase.firestore(),_auth=firebase.auth();
 _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 
 // ── 업체별 기본 설정 (Firestore companies/{did}.driverJoin 으로 오버라이드) ──
-var _did=new URLSearchParams(location.search).get('did')||'';
-var _nameParam=decodeURIComponent(new URLSearchParams(location.search).get('name')||'');
+var _params=new URLSearchParams(location.search);
+var _did=_params.get('did')||'';
+var _cid=_params.get('cid')||'';
+var _nameParam=decodeURIComponent(_params.get('name')||'');
 var _cfg={
   companyName:_nameParam||'엠비티아이 배송',
   welcomeMsg:'배송기사 가입',
@@ -5862,6 +5864,7 @@ async function _submit(){
     idNumber:id1+'-'+id2,deliveryZones:_selZones,
     type:'driver',role:'driver',
     parentDealerId:_did||null,
+    clientId:_cid||null,
     companyName:_cfg.companyName,
     platform:'mbtico',status:'active',
     subscriptions:{mbtico:{active:true,source:'driver-self',modules:['scan','label','emergency','checkin']}},
@@ -6173,7 +6176,19 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
-      // 슬러그 기반 기사 가입 링크: mbtico.kr/{slug} → /driver-join?did=UID&name=회사명
+      // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → /driver-join (고객사별 기사 가입)
+      if (method === 'GET' && !path.startsWith('/api/')) {
+        const _twoSlug = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+        if (_twoSlug) {
+          try {
+            const _kvClient = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('client:'+_twoSlug[1]+':'+_twoSlug[2], 'json') : null;
+            if (_kvClient && _kvClient.dealerId) {
+              return Response.redirect('https://mbtico.kr/driver-join?did='+_kvClient.dealerId+'&cid='+encodeURIComponent(_twoSlug[2])+'&name='+encodeURIComponent(_kvClient.clientName||_twoSlug[2]), 302);
+            }
+          } catch(e) {}
+        }
+      }
+      // 1단계 슬러그: mbtico.kr/{배송회사} → /driver-join (회사 기본 가입)
       if (method === 'GET' && !path.startsWith('/api/')) {
         const _slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery']);
@@ -8723,6 +8738,27 @@ service cloud.firestore {
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
+    // 고객사 추가: POST /api/add-client → mbtico.kr/{배송회사}/{고객사} 링크 생성
+    if (path === '/api/add-client' && method === 'POST') {
+      try {
+        const verified = await verifyFirebaseToken(request, env);
+        if (!verified) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
+        const uid = verified.localId;
+        const body = await request.json();
+        const clientSlug = (body.clientSlug||'').replace(/\s+/g,'').slice(0,30);
+        const clientName = body.clientName||clientSlug;
+        if (!clientSlug) return new Response(JSON.stringify({ok:false,error:'clientSlug 없음'}), {headers:{'Content-Type':'application/json'}});
+        if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
+        const companyData = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
+        if (!companyData||!companyData.slug) return new Response(JSON.stringify({ok:false,error:'회사 먼저 등록 필요'}), {headers:{'Content-Type':'application/json'}});
+        const companySlug = companyData.slug;
+        await env.DONWAY_ASSETS.put('client:'+companySlug+':'+clientSlug, JSON.stringify({
+          dealerId:uid, clientName, companySlug, companyName:companyData.companyName||'',
+          zones:body.zones||[], createdAt:new Date().toISOString()
+        }));
+        return new Response(JSON.stringify({ok:true, url:'https://mbtico.kr/'+companySlug+'/'+clientSlug}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
     // 회사 슬러그 KV 등록: POST /api/company-slug
     if (path === '/api/company-slug' && method === 'POST') {
       try {
@@ -8734,7 +8770,9 @@ service cloud.firestore {
         const slug = (body.slug||'').toLowerCase().replace(/[^a-z0-9가-힣\-_]/g,'').slice(0,30);
         if (!slug) return new Response(JSON.stringify({ok:false,error:'슬러그 없음'}), {headers:{'Content-Type':'application/json'}});
         if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
-        await env.DONWAY_ASSETS.put('company-slug:'+slug, JSON.stringify({uid, companyName: body.companyName||''}));
+        const _coData = {uid, companyName: body.companyName||''};
+        await env.DONWAY_ASSETS.put('company-slug:'+slug, JSON.stringify(_coData));
+        await env.DONWAY_ASSETS.put('company-uid:'+uid, JSON.stringify({slug, companyName: body.companyName||''}));
         return new Response(JSON.stringify({ok:true, url:'https://mbtico.kr/'+slug}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
