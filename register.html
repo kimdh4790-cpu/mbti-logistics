@@ -3,162 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>회사 등록 · DONWAY / filo.ai.kr</title>
+<title>회사 등록 · MBTICO</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0a0f1e;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-.wrap{width:100%;max-width:420px}
-.logo{text-align:center;margin-bottom:24px}
-.logo h1{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00d4ff,#7b2fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.logo p{font-size:12px;color:#64748b;margin-top:4px}
-.card{background:#0d1b3e;border:1px solid rgba(0,212,255,.15);border-radius:16px;padding:24px}
-.card h2{font-size:16px;font-weight:800;margin-bottom:18px;text-align:center}
-.field{margin-bottom:14px}
-.field label{font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;font-weight:600}
-.field input,.field select{width:100%;padding:11px 14px;background:#1e3a5f;border:1px solid rgba(0,212,255,.2);border-radius:10px;color:#e2e8f0;font-size:13px;outline:none;transition:.2s}
-.field input:focus,.field select:focus{border-color:#00d4ff}
-.field input::placeholder{color:#4a6080}
-.plans{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.plan-card{background:#1e3a5f;border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:12px;cursor:pointer;transition:.2s;text-align:center}
-.plan-card.active{border-color:#00d4ff;background:rgba(0,212,255,.08)}
-.plan-card .icon{font-size:20px;margin-bottom:4px}
-.plan-card .name{font-size:12px;font-weight:700}
-.plan-card .desc{font-size:10px;color:#64748b;margin-top:2px}
-.btn{width:100%;padding:14px;background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#08101f;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:400px}
+.logo{text-align:center;margin-bottom:28px}
+.logo h1{font-size:24px;font-weight:900;color:#c9a84c;letter-spacing:-0.5px}
+.logo p{font-size:13px;color:#64748b;margin-top:6px}
+.card{background:#0d1b3e;border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:28px}
+.card h2{font-size:16px;font-weight:700;margin-bottom:22px;text-align:center;color:#e2e8f0}
+.field{margin-bottom:16px}
+.field label{font-size:12px;color:#94a3b8;display:block;margin-bottom:6px;font-weight:600}
+.field input{width:100%;padding:13px 16px;background:#132035;border:1px solid rgba(201,168,76,.15);border-radius:10px;color:#e2e8f0;font-size:14px;outline:none;transition:.2s;font-family:inherit}
+.field input:focus{border-color:#c9a84c}
+.field input::placeholder{color:#3d5070}
+.btn{width:100%;padding:15px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;font-family:inherit;transition:.2s}
+.btn:hover{background:#d4b86a}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#ef4444;margin-bottom:12px;display:none}
-.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#22c55e;margin-bottom:12px;display:none}
-.divider{text-align:center;font-size:12px;color:#475569;margin:16px 0}
-.login-link{text-align:center;font-size:12px;color:#64748b;margin-top:16px}
-.login-link a{color:#00d4ff;text-decoration:none}
-.badge{font-size:10px;padding:2px 6px;border-radius:6px;background:rgba(0,212,255,.15);color:#00d4ff;margin-left:6px}
+.err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:12px 14px;font-size:13px;color:#f87171;margin-bottom:14px;display:none;line-height:1.5}
+.ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:12px 14px;font-size:13px;color:#4ade80;margin-bottom:14px;display:none;line-height:1.5;white-space:pre-wrap}
+.login-link{text-align:center;font-size:13px;color:#64748b;margin-top:18px}
+.login-link a{color:#c9a84c;text-decoration:none}
+.copy-btn{width:100%;padding:11px;background:#132035;color:#c9a84c;border:1px solid rgba(201,168,76,.3);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;font-family:inherit}
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <div class="logo">
-    <h1>DONWAY · filo.ai.kr</h1>
-    <p>통합 정산·재고·QR·키오스크 플랫폼</p>
+    <h1>MBTICO</h1>
+    <p>기업 전용 업무 자동화 플랫폼</p>
   </div>
 
   <div class="card">
-    <h2>🏢 회사 등록</h2>
+    <h2>회사 등록</h2>
 
     <div id="err-box" class="err"></div>
     <div id="ok-box" class="ok"></div>
 
     <div class="field">
       <label>회사명 (상호) *</label>
-      <input id="r-company" placeholder="예: ○○뷰티, ○○물류" maxlength="30">
+      <input id="r-company" type="text" placeholder="예: ○○물류, ○○유통" autocomplete="organization">
     </div>
-
     <div class="field">
       <label>이메일 (로그인 ID) *</label>
-      <input id="r-email" type="email" placeholder="company@email.com">
+      <input id="r-email" type="email" placeholder="company@email.com" autocomplete="email">
     </div>
-
     <div class="field">
-      <label>비밀번호 * <span style="font-size:10px;color:#64748b">(8자 이상)</span></label>
-      <input id="r-pw" type="password" placeholder="비밀번호 입력">
+      <label>비밀번호 * (8자 이상)</label>
+      <input id="r-pw" type="password" placeholder="비밀번호 입력" autocomplete="new-password">
     </div>
-
     <div class="field">
       <label>비밀번호 확인 *</label>
-      <input id="r-pw2" type="password" placeholder="비밀번호 재입력">
+      <input id="r-pw2" type="password" placeholder="비밀번호 재입력" autocomplete="new-password">
     </div>
-
     <div class="field">
       <label>연락처</label>
-      <input id="r-phone" type="tel" placeholder="010-0000-0000">
+      <input id="r-phone" type="tel" placeholder="010-0000-0000" autocomplete="tel">
     </div>
 
-<div class="field">
-<label>업종 선택 <span class="badge">필수</span></label>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px" id="industry-grid"><div class="plan-card" onclick="_selectIndustry(this,'food',['settle', 'qr'])" data-ind="food"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🍽️</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">음식점·카페</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'beauty',['settle', 'qr', 'filo'])" data-ind="beauty"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">💇</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">미용실·네일</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'health',['settle', 'qr', 'filo'])" data-ind="health"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">💪</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">헬스·요가</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'academy',['settle', 'qr'])" data-ind="academy"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">📚</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">학원·교습</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'laundry',['settle', 'filo'])" data-ind="laundry"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">👕</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">세탁·수선</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'stay',['settle', 'filo'])" data-ind="stay"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🏨</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">숙박·펜션</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'retail',['settle', 'filo'])" data-ind="retail"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🛍️</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">소매·잡화</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'delivery',['settle', 'qr'])" data-ind="delivery"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🚚</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">배달·물류</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'const',['settle', 'qr', 'payroll'])" data-ind="const"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🏗️</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">건설·일용</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'insurance',['settle', 'payroll'])" data-ind="insurance"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">🛡️</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">보험·영업</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'care',['settle', 'qr', 'payroll'])" data-ind="care"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">💊</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">요양·돌봄</div>
-</div><div class="plan-card" onclick="_selectIndustry(this,'other',['settle'])" data-ind="other"
-  style="padding:14px;background:#1e3a5f;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s">
-  <div style="font-size:26px;margin-bottom:6px">⚙️</div>
-  <div style="font-size:12px;font-weight:800;color:#fff">기타 업종</div>
-</div>
-</div></div>
-<div id="industry-features" style="display:none;margin-bottom:16px;padding:12px;background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.3);border-radius:10px">
-<div style="font-size:11px;font-weight:700;color:#00d4ff;margin-bottom:6px">✅ 선택된 기능</div>
-<div id="industry-feat-list" style="font-size:11px;color:#94a3b8;line-height:1.8"></div>
-</div>
-        <div class="desc">donway.ai.kr</div>
-      </div>
-      <div class="plan-card" data-plan="inventory" onclick="_togglePlan(this)">
-        <div class="icon">📦</div>
-        <div class="name">재고관리</div>
-        <div class="desc">filo.ai.kr</div>
-      </div>
-      <div class="plan-card" data-plan="qr" onclick="_togglePlan(this)">
-        <div class="icon">🔲</div>
-        <div class="name">QR 출퇴근</div>
-        <div class="desc">filo.ai.kr</div>
-      </div>
-      <div class="plan-card" data-plan="kiosk" onclick="_togglePlan(this)">
-        <div class="icon">🖥️</div>
-        <div class="name">키오스크 POS</div>
-        <div class="desc">filo.ai.kr</div>
-      </div>
-    </div>
-
-    <button class="btn" id="reg-btn" onclick="_doRegister()">🚀 지금 바로 시작 (24시간 무료)</button>
-
-    <div class="login-link">
-      이미 계정이 있으신가요?
-      <a href="https://donway.ai.kr/settle">AI정산 로그인</a> ·
-      <a href="https://filo.ai.kr">FILO 로그인</a>
-    </div>
+    <button id="reg-btn" class="btn" onclick="_doRegister()">등록 신청</button>
   </div>
+
+  <div class="login-link">이미 계정이 있으신가요? <a href="https://donway.ai.kr/settle">로그인</a></div>
 </div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -175,259 +86,92 @@ var _db = firebase.firestore();
 _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 var _auth = firebase.auth();
 
-// _selectedPlans는 _selectIndustry에서 관리
-function _togglePlan(el, plan) {
-  if(plan === 'all') {
-    _selectedPlans = ['settle'];
-    document.querySelectorAll('.plan-card').forEach(function(c){
-      c.style.borderColor = c.getAttribute('data-plan')==='all' ? '#00d4ff' : 'rgba(0,102,255,.4)';
-      c.style.background = 'rgba(0,102,255,.15)';
-    });
-    var indSel = document.getElementById('industry-select');
-    if(indSel) indSel.style.display = 'block';
-    return;
-  }
-  var idx = _selectedPlans.indexOf(plan);
-  if(idx >= 0) {
-    _selectedPlans.splice(idx, 1);
-    el.style.borderColor = 'rgba(0,102,255,.2)';
-    el.style.background = '#1e3a5f';
-  } else {
-    _selectedPlans.push(plan);
-    el.style.borderColor = '#00d4ff';
-    el.style.background = 'rgba(0,212,255,.1)';
-  }
-  // FILO 선택 시 업종 표시
-  var indSel = document.getElementById('industry-select');
-  if(indSel) indSel.style.display = _selectedPlans.indexOf('filo')>=0 ? 'block' : 'none';
-}
-
-function _togglePlan(el){
-  var plan = el.dataset.plan;
-  var idx = _selectedPlans.indexOf(plan);
-  if(idx >= 0){
-    _selectedPlans.splice(idx,1);
-    el.classList.remove('active');
-  } else {
-    _selectedPlans.push(plan);
-    el.classList.add('active');
-  }
-}
-
-function _showErr(msg){ var e=document.getElementById('err-box'); e.textContent=msg; e.style.display='block'; document.getElementById('ok-box').style.display='none'; }
-function _showOk(msg){ var e=document.getElementById('ok-box'); e.textContent=msg; e.style.display='block'; document.getElementById('err-box').style.display='none'; }
-function _hideMsg(){ document.getElementById('err-box').style.display='none'; document.getElementById('ok-box').style.display='none'; }
+function _showErr(msg){var e=document.getElementById('err-box');e.textContent=msg;e.style.display='block';document.getElementById('ok-box').style.display='none';}
+function _showOk(msg){var e=document.getElementById('ok-box');e.textContent=msg;e.style.display='block';document.getElementById('err-box').style.display='none';}
+function _hide(){document.getElementById('err-box').style.display='none';document.getElementById('ok-box').style.display='none';}
 
 function _doRegister(){
-  _hideMsg();
+  _hide();
   var company = document.getElementById('r-company').value.trim();
   var email   = document.getElementById('r-email').value.trim().toLowerCase();
   var pw      = document.getElementById('r-pw').value;
   var pw2     = document.getElementById('r-pw2').value;
   var phone   = document.getElementById('r-phone').value.trim();
 
-  if(!company||!email||!pw){ _showErr('회사명, 이메일, 비밀번호는 필수입니다'); return; }
-  if(pw.length < 8){ _showErr('비밀번호는 8자 이상이어야 합니다'); return; }
-  if(pw !== pw2){ _showErr('비밀번호가 일치하지 않습니다'); return; }
+  if(!company||!email||!pw){_showErr('회사명, 이메일, 비밀번호는 필수입니다');return;}
+  if(pw.length<8){_showErr('비밀번호는 8자 이상이어야 합니다');return;}
+  if(pw!==pw2){_showErr('비밀번호가 일치하지 않습니다');return;}
 
-  var btn = document.getElementById('reg-btn');
-  btn.disabled = true; btn.textContent = '등록 중...';
+  var btn=document.getElementById('reg-btn');
+  btn.disabled=true;btn.textContent='등록 중...';
 
-  // ★ 이메일로 기존 companies 검색 (FILO ↔ donway 통합)
   _db.collection('companies').where('email','==',email).limit(1).get()
   .then(function(snap){
     if(!snap.empty){
-      // 기존 계정 존재 → 로그인 후 서비스만 추가
-      _showErr('이미 등록된 이메일입니다. 로그인 후 서비스를 추가해주세요.');
-      btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
+      _showErr('이미 등록된 이메일입니다. 로그인 후 이용해주세요.');
+      btn.disabled=false;btn.textContent='등록 신청';
       return;
     }
+    var now=new Date();
+    var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
+    var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
+    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
 
-    // 신규 가입
-    var now = new Date();
-    var trialEnd = new Date(now.getTime() + 1*24*60*60*1000); // 1일 체험
-    var companyCode = Math.random().toString(36).slice(2,8).toUpperCase();
-    var emailPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-
-    _auth.createUserWithEmailAndPassword(email, pw)
+    _auth.createUserWithEmailAndPassword(email,pw)
     .then(function(cred){
-      var uid = cred.user.uid;
-      var services = _selectedPlans.length ? _selectedPlans : ['settle'];
-  var industry = _selectedIndustry || '';
-      var companyDoc = {
-        companyName: company,
-        name: company,
-        email: email,
-        phone: phone,
-        plan: 'trial',
-        services: services,
-      industry: industry,
-        companyCode: companyCode,
-        slug: emailPrefix || uid.slice(0,8),
-        trialStart: now.toISOString().slice(0,10),
-        trialEnd: trialEnd.toISOString().slice(0,10),
-        trialUsed: true,
-  trialEndISO: trialEnd.toISOString(),
-  subscriptions: {
-    donway: {
-      active: true,
-      plan: 'trial',
-      expiry: trialEnd.toISOString().slice(0,10),
-      expiryISO: trialEnd.toISOString(),
-      months: 0
-    },
-    mbtico: {
-      active: true,
-      plan: 'trial',
-      expiry: trialEnd.toISOString().slice(0,10),
-      expiryISO: trialEnd.toISOString(),
-      modules: ['scan','label','checkin','emergency','delivery','app']
-    }
-  },
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        uid: uid,
-        dealerId: uid,
-        // 모든 모듈 비활성 (수동활성화 후 켜짐)
-        settlePaid: false, inventoryPaid: false,
-        qrPaid: false, kioskPaid: false,
-        registeredFrom: 'register.html',
-  appUrl: 'https://mbtico.kr/app?did=' + uid
+      var uid=cred.user.uid;
+      var companyDoc={
+        companyName:company,name:company,email:email,phone:phone,
+        plan:'trial',services:['mbtico'],industry:'',
+        companyCode:companyCode,
+        slug:emailPrefix||uid.slice(0,8),
+        trialStart:now.toISOString().slice(0,10),
+        trialEnd:trialEnd.toISOString().slice(0,10),
+        trialUsed:true,trialEndISO:trialEnd.toISOString(),
+        subscriptions:{mbtico:{active:true,plan:'trial',expiry:trialEnd.toISOString().slice(0,10),expiryISO:trialEnd.toISOString(),modules:['scan','label','checkin','emergency','delivery','app']}},
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        uid:uid,dealerId:uid,
+        settlePaid:false,inventoryPaid:false,qrPaid:false,kioskPaid:false,
+        registeredFrom:'register.html',
+        appUrl:'https://mbtico.kr/app?did='+uid
       };
-
-      var batch = _db.batch();
-      // companies 생성
-      batch.set(_db.collection('companies').doc(uid), companyDoc);
-      // users 생성
-      batch.set(_db.collection('users').doc(uid), {
-        uid: uid, email: email,
-        name: company, companyName: company,
-        role: 'dealer', dealerId: uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      var batch=_db.batch();
+      batch.set(_db.collection('companies').doc(uid),companyDoc);
+      batch.set(_db.collection('users').doc(uid),{uid:uid,email:email,name:company,companyName:company,role:'dealer',dealerId:uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
       return batch.commit().then(function(){
-      var _adminPw = Math.random().toString(36).slice(2,8).toUpperCase();
-      window._regAdminPw = _adminPw;
-      window._regAdminId = (email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase()) || uid.slice(0,8);
-      return _db.collection('companies').doc(uid).collection('settings').doc('adminInfo').set({
-        userId: window._regAdminId,
-        pwPlain: _adminPw,
-        name: company,
-        email: email,
-        dealerId: uid,
-        createdAt: new Date().toISOString()
-      }).then(function(){ return uid; });
-    });
+        var _adminPw=Math.random().toString(36).slice(2,8).toUpperCase();
+        window._regAdminPw=_adminPw;
+        window._regUid=uid;
+        return _db.collection('companies').doc(uid).collection('settings').doc('adminInfo').set({
+          userId:emailPrefix||uid.slice(0,8),pwPlain:_adminPw,
+          name:company,email:email,dealerId:uid,
+          createdAt:new Date().toISOString()
+        }).then(function(){return uid;});
+      });
     })
     .then(function(uid){
-      // 대표님 FCM 알림
-      fetch('/sa/notify-admin', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          title: '🎉 신규 회사 등록!',
-          body: company + ' · ' + email + ' · ' + _selectedPlans.join(','),
-          type: 'join'
-        })
-      }).catch(function(){});
-
-      var _appUrl = 'https://mbtico.kr/app?did=' + uid;
-        var _msg = '✅ 등록 완료! 지금 바로 사용 가능합니다 (24시간 무료)\n\n' +
-          '📱 배송앱 URL:\n' + _appUrl + '\n\n' +
-          '🔑 관리자 초기 아이디: ' + (window._regAdminId||'') + '\n' +
-          '🔑 관리자 초기 비번: ' + (window._regAdminPw||'') + '\n\n' +
-          '⚠️ 로그인 후 반드시 비밀번호를 변경하세요\n' +
-          '담당자 확인 후 서비스가 활성화됩니다.';
-        _showOk(_msg);
-        // 앱 URL 복사 버튼 추가
-        setTimeout(function(){
-          var okBox = document.querySelector('.ok-box,.alert-box,[class*=ok]');
-          if(!okBox) return;
-          var copyBtn = document.createElement('button');
-          copyBtn.style.cssText = 'margin-top:12px;padding:10px 20px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%';
-          copyBtn.textContent = '📋 앱 URL 복사';
-          copyBtn.onclick = function(){
-            navigator.clipboard.writeText(_appUrl).then(function(){ copyBtn.textContent='✅ 복사됨!'; });
-          };
-          okBox.appendChild(copyBtn);
-        }, 200);
-      btn.textContent = '✅ 등록 완료';
-
-      // 3초 후 해당 서비스로 이동
-      setTimeout(function(){
-        if(_selectedPlans.includes('settle')){
-          location.href = 'https://donway.ai.kr/settle';
-        } else {
-          location.href = 'https://filo.ai.kr';
-        }
-      }, 3000);
+      fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email,type:'join'})}).catch(function(){});
+      var appUrl='https://mbtico.kr/app?did='+uid;
+      _showOk('등록 완료!\n\n담당자 확인 후 서비스가 활성화됩니다.\n\n앱 URL: '+appUrl);
+      var okBox=document.getElementById('ok-box');
+      var copyBtn=document.createElement('button');
+      copyBtn.className='copy-btn';
+      copyBtn.textContent='앱 URL 복사';
+      copyBtn.onclick=function(){navigator.clipboard.writeText(appUrl).then(function(){copyBtn.textContent='복사됨!';});};
+      okBox.appendChild(copyBtn);
+      btn.textContent='등록 완료';
     })
     .catch(function(e){
-      btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
-      if(e.code === 'auth/email-already-in-use'){
-        _showErr('이미 가입된 이메일입니다. 로그인해주세요.');
-      } else if(e.code === 'auth/weak-password'){
-        _showErr('비밀번호가 너무 간단합니다. 8자 이상 입력해주세요.');
-      } else {
-        _showErr('오류: ' + e.message);
-      }
+      btn.disabled=false;btn.textContent='등록 신청';
+      if(e.code==='auth/email-already-in-use'){_showErr('이미 가입된 이메일입니다.');}
+      else if(e.code==='auth/weak-password'){_showErr('비밀번호가 너무 간단합니다.');}
+      else{_showErr('오류: '+e.message);}
     });
   })
-  .catch(function(e){
-    btn.disabled=false; btn.textContent='🚀 1일 무료 체험 시작';
-    _showErr('오류: ' + e.message);
-  });
+  .catch(function(e){btn.disabled=false;btn.textContent='등록 신청';_showErr('오류: '+e.message);});
 }
 
-// 엔터키 지원
-document.addEventListener('keydown', function(e){
-  if(e.key==='Enter') _doRegister();
-});
-
-// ★ 업종 선택 → services 자동 설정
-var _selectedIndustry = '';
-var _selectedPlans = ['settle']; // 기본값
-
-// 업종별 기능 설명
-var _INDUSTRY_FEATURES = {
-  food:     {name:'음식점·카페',    svcs:['settle','qr'],                desc:['출퇴근 QR','급여 자동계산','세무사 연동','매출 관리']},
-  beauty:   {name:'미용실·네일',    svcs:['settle','qr','filo'],         desc:['출퇴근 QR','고객 회원관리','예약 관리','급여 자동계산']},
-  health:   {name:'헬스·요가',      svcs:['settle','qr','filo'],         desc:['회원권 관리','QR 출입','출퇴근','급여 자동계산']},
-  academy:  {name:'학원·교습',      svcs:['settle','qr'],                desc:['출퇴근 QR','수강생 관리','급여 계산','연차 관리']},
-  laundry:  {name:'세탁·수선',      svcs:['settle','filo'],              desc:['접수 관리','POS 결제','고객 관리','급여 계산']},
-  stay:     {name:'숙박·펜션',      svcs:['settle','filo'],              desc:['객실 관리','체크인/아웃','POS 결제','매출 관리']},
-  retail:   {name:'소매·잡화',      svcs:['settle','filo'],              desc:['재고 관리','POS 결제','출퇴근','급여 계산']},
-  delivery: {name:'배달·물류',      svcs:['settle','qr'],                desc:['정산 자동화','기사 관리','출퇴근','급여 계산']},
-  const:    {name:'건설·일용직',    svcs:['settle','qr','payroll'],      desc:['일용직 정산','출퇴근 QR','4대보험 계산','급여명세서']},
-  insurance:{name:'보험·영업',      svcs:['settle','payroll'],           desc:['수수료 정산','급여 계산','실적 관리','세무사 연동']},
-  care:     {name:'요양·돌봄',      svcs:['settle','qr','payroll'],      desc:['출퇴근 QR','4대보험 계산','급여명세서','연차 관리']},
-  other:    {name:'기타',           svcs:['settle'],                     desc:['출퇴근 관리','급여 계산','세무사 연동','직원 관리']},
-};
-
-function _selectIndustry(el, key, svcs) {
-  // 선택 표시
-  document.querySelectorAll('[data-ind]').forEach(function(c) {
-    c.style.borderColor = 'rgba(255,255,255,.1)';
-    c.style.background = '#1e3a5f';
-  });
-  el.style.borderColor = '#0066ff';
-  el.style.background = 'rgba(0,102,255,.2)';
-  _selectedIndustry = key;
-  _selectedPlans = svcs || ['settle'];
-
-  // 기능 미리보기 표시
-  var info = _INDUSTRY_FEATURES[key] || {};
-  var featEl = document.getElementById('industry-features');
-  var listEl = document.getElementById('industry-feat-list');
-  if(featEl && listEl) {
-    featEl.style.display = 'block';
-    listEl.innerHTML = (info.desc||[]).map(function(d){ return '✅ '+d; }).join('<br>');
-  }
-
-  // 가입 버튼 활성화
-  var btn = document.getElementById('r-submit');
-  if(btn) { btn.disabled = false; btn.style.opacity = '1'; }
-}
-
+document.addEventListener('keydown',function(e){if(e.key==='Enter')_doRegister();});
 </script>
 </body>
 </html>
