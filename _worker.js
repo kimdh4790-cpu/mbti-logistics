@@ -5627,6 +5627,181 @@ async function _step3Submit(){
 </html>
 `;
 
+const _MBTICO_CLIENTS_HTML = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>고객사 관리 · MBTICO</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/static/pretendard.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#08101f;color:#e2e8f0;min-height:100vh;padding:20px 16px}
+.wrap{max-width:560px;margin:0 auto}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.header-left h1{font-size:20px;font-weight:900;color:#c9a84c}
+.header-left p{font-size:12px;color:#64748b;margin-top:3px}
+.logout-btn{padding:7px 14px;background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#64748b;font-size:12px;cursor:pointer;font-family:inherit}
+.card{background:#0d1b3e;border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:20px;margin-bottom:16px}
+.card-title{font-size:11px;color:#64748b;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;padding:12px 14px;background:#132035;border:1px solid rgba(201,168,76,.15);border-radius:10px;color:#e2e8f0;font-size:14px;outline:none;font-family:inherit;transition:.2s}
+.add-row input:focus{border-color:#c9a84c}
+.add-row input::placeholder{color:#3d5070}
+.add-btn{padding:12px 18px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:.2s}
+.add-btn:hover{background:#d4b86a}
+.add-btn:disabled{opacity:.5;cursor:not-allowed}
+.err-msg{font-size:12px;color:#f87171;margin-top:8px;display:none}
+.client-item{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.client-item:last-child{border-bottom:none}
+.client-info{flex:1;min-width:0}
+.client-name{font-size:14px;font-weight:700}
+.client-url{font-size:11px;color:#c9a84c;margin-top:3px;word-break:break-all}
+.copy-btn{padding:7px 12px;background:#132035;color:#c9a84c;border:1px solid rgba(201,168,76,.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;transition:.2s}
+.copy-btn:hover{background:#1a2d4a}
+.empty{text-align:center;padding:28px 0;color:#3d5070;font-size:13px;line-height:1.7}
+#login-overlay{position:fixed;inset:0;background:#08101f;display:flex;align-items:center;justify-content:center;z-index:100}
+.login-card{background:#0d1b3e;border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:28px;width:100%;max-width:360px}
+.login-logo{text-align:center;font-size:22px;font-weight:900;color:#c9a84c;margin-bottom:6px}
+.login-sub{text-align:center;font-size:12px;color:#64748b;margin-bottom:22px}
+.lfield{margin-bottom:14px}
+.lfield input{width:100%;padding:13px 16px;background:#132035;border:1px solid rgba(201,168,76,.15);border-radius:10px;color:#e2e8f0;font-size:14px;outline:none;font-family:inherit;transition:.2s}
+.lfield input:focus{border-color:#c9a84c}
+.lfield input::placeholder{color:#3d5070}
+.login-btn{width:100%;padding:14px;background:#c9a84c;color:#08101f;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+.lerr{font-size:12px;color:#f87171;margin-bottom:10px;display:none}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">MBTICO</div>
+    <div class="login-sub">고객사 관리 로그인</div>
+    <div class="lfield"><input id="l-email" type="email" placeholder="이메일" autocomplete="email"></div>
+    <div class="lfield"><input id="l-pw" type="password" placeholder="비밀번호" autocomplete="current-password"></div>
+    <div id="l-err" class="lerr"></div>
+    <button class="login-btn" onclick="_login()">로그인</button>
+  </div>
+</div>
+
+<div id="main" style="display:none">
+<div class="wrap">
+  <div class="header">
+    <div class="header-left">
+      <h1 id="co-name">고객사 관리</h1>
+      <p id="co-base-url"></p>
+    </div>
+    <button class="logout-btn" onclick="firebase.auth().signOut()">로그아웃</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">고객사 추가</div>
+    <div class="add-row">
+      <input id="new-name" type="text" placeholder="고객사명 입력 (예: 롯데백화점)" autocomplete="off" maxlength="30">
+      <button class="add-btn" id="add-btn" onclick="_add()">추가</button>
+    </div>
+    <div id="add-err" class="err-msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">기사 가입 링크</div>
+    <div id="list"><div class="empty">고객사를 추가하면<br>기사 가입 링크가 자동 생성됩니다</div></div>
+  </div>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",authDomain:"mbti-logistics.firebaseapp.com",projectId:"mbti-logistics",storageBucket:"mbti-logistics.firebasestorage.app",messagingSenderId:"40761160761",appId:"1:40761160761:web:20545b610f03f534e949e8"});
+var _auth=firebase.auth(),_slug='',_clients=[];
+
+function _toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2200);}
+
+async function _login(){
+  var e=document.getElementById('l-email').value.trim().toLowerCase();
+  var p=document.getElementById('l-pw').value;
+  var err=document.getElementById('l-err');err.style.display='none';
+  if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
+  try{await _auth.signInWithEmailAndPassword(e,p);}
+  catch(ex){err.textContent=ex.code==='auth/wrong-password'||ex.code==='auth/user-not-found'?'이메일 또는 비밀번호가 올바르지 않습니다.':'오류: '+ex.message;err.style.display='block';}
+}
+
+_auth.onAuthStateChanged(async function(u){
+  if(!u){document.getElementById('login-overlay').style.display='flex';document.getElementById('main').style.display='none';return;}
+  document.getElementById('login-overlay').style.display='none';
+  document.getElementById('main').style.display='block';
+  await _load();
+});
+
+async function _load(){
+  var tok=await _auth.currentUser.getIdToken();
+  var r=await fetch('/api/my-clients',{headers:{'Authorization':'Bearer '+tok}});
+  var d=await r.json();
+  if(d.ok){
+    _slug=d.companySlug||'';
+    document.getElementById('co-name').textContent=d.companyName||'고객사 관리';
+    document.getElementById('co-base-url').textContent=_slug?'mbtico.kr/'+_slug+'/{고객사}':"";
+    _clients=d.clients||[];
+    _render();
+  }
+}
+
+function _render(){
+  var el=document.getElementById('list');
+  if(!_clients.length){el.innerHTML='<div class="empty">고객사를 추가하면<br>기사 가입 링크가 자동 생성됩니다</div>';return;}
+  el.innerHTML=_clients.map(function(c){
+    var url='https://mbtico.kr/'+_slug+'/'+c.clientSlug;
+    return '<div class="client-item">'+
+      '<div class="client-info">'+
+        '<div class="client-name">'+_esc(c.clientName)+'</div>'+
+        '<div class="client-url">'+url+'</div>'+
+      '</div>'+
+      '<button class="copy-btn" data-url="'+url+'">복사</button>'+
+    '</div>';
+  }).join('');
+  el.querySelectorAll('.copy-btn').forEach(function(b){
+    b.addEventListener('click',function(){
+      navigator.clipboard.writeText(this.dataset.url).then(function(){b.textContent='복사됨!';setTimeout(function(){b.textContent='복사';},1500);});
+    });
+  });
+}
+
+function _esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+async function _add(){
+  var inp=document.getElementById('new-name');
+  var errEl=document.getElementById('add-err');
+  var name=inp.value.trim();
+  errEl.style.display='none';
+  if(!name){errEl.textContent='고객사명을 입력하세요';errEl.style.display='block';return;}
+  var slug=name.replace(/\s+/g,'').slice(0,30);
+  var btn=document.getElementById('add-btn');
+  btn.disabled=true;btn.textContent='추가 중...';
+  try{
+    var tok=await _auth.currentUser.getIdToken();
+    var r=await fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:slug,clientName:name})});
+    var d=await r.json();
+    if(d.ok){
+      inp.value='';
+      _clients.push({clientSlug:slug,clientName:name});
+      _render();
+      _toast(name+' 추가 완료');
+    }else{errEl.textContent=d.error||'추가 실패';errEl.style.display='block';}
+  }catch(e){errEl.textContent='오류: '+e.message;errEl.style.display='block';}
+  btn.disabled=false;btn.textContent='추가';
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.activeElement===document.getElementById('new-name'))_add();});
+</script>
+</body>
+</html>
+`;
+
 const _DRIVER_JOIN_HTML = `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6176,6 +6351,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/clients') return new Response(_MBTICO_CLIENTS_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → /driver-join (고객사별 기사 가입)
       if (method === 'GET' && !path.startsWith('/api/')) {
         const _twoSlug = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
@@ -6191,7 +6367,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // 1단계 슬러그: mbtico.kr/{배송회사} → /driver-join (회사 기본 가입)
       if (method === 'GET' && !path.startsWith('/api/')) {
         const _slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery']);
+        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients']);
         if (_slugMatch && !_reserved.has(path.replace(/\/$/,''))) {
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
@@ -8736,6 +8912,26 @@ service cloud.firestore {
         });
         if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    // 고객사 목록 조회: GET /api/my-clients
+    if (path === '/api/my-clients' && method === 'GET') {
+      try {
+        const verified = await verifyFirebaseToken(request, env);
+        if (!verified) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
+        const uid = verified.localId;
+        if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
+        const companyData = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
+        if (!companyData) return new Response(JSON.stringify({ok:false,error:'회사 등록 필요'}), {headers:{'Content-Type':'application/json'}});
+        const companySlug = companyData.slug;
+        const listResult = await env.DONWAY_ASSETS.list({prefix:'client:'+companySlug+':'});
+        const clients = [];
+        for (const key of (listResult.keys||[])) {
+          const clientSlug = key.name.replace('client:'+companySlug+':', '');
+          const cd = await env.DONWAY_ASSETS.get(key.name, 'json');
+          if (cd) clients.push({clientSlug, clientName:cd.clientName||clientSlug});
+        }
+        return new Response(JSON.stringify({ok:true, companySlug, companyName:companyData.companyName||'', clients}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
     // 고객사 추가: POST /api/add-client → mbtico.kr/{배송회사}/{고객사} 링크 생성
