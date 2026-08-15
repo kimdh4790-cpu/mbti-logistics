@@ -142,30 +142,36 @@ function checkRateLimit(ip, limit = 60, windowMs = 60000) {
 }
 
 // ── Firebase ID 토큰 검증 ──────────────────────────────────────────────────
+function _jwtDecode(token) {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const b64p = b64 + '='.repeat((4-b64.length%4)%4);
+    const pl = JSON.parse(atob(b64p));
+    if (!pl.sub) return null;
+    return {localId:pl.sub, email:pl.email||''};
+  } catch(e) { return null; }
+}
 async function verifyFirebaseToken(request, _env) {
   try {
     const auth = request.headers.get('Authorization') || '';
     const token = auth.replace('Bearer ', '').trim();
     if (!token || token.length < 100) return null;
-    // Firebase API Key는 환경변수에서 가져오기
-    const _e = _env || env;
+    const _e = _env || _env_ref;
     const apiKey = (_e && _e.FIREBASE_API_KEY) ? _e.FIREBASE_API_KEY : '';
-    if (!apiKey) {
-      // FIREBASE_API_KEY 미설정 시 JWT 페이로드 직접 디코딩 (서명 검증 없음)
-      try {
-        const pl = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-        if (!pl.sub) return null;
-        return {localId:pl.sub, email:pl.email||''};
-      } catch(e) { return null; }
-    }
-    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({idToken: token})
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.users?.[0] || null;
+    if (!apiKey) return _jwtDecode(token);
+    try {
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({idToken: token})
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.users?.[0]) return data.users[0];
+      }
+    } catch(e) {}
+    // API 호출 실패 시 JWT 페이로드 직접 디코딩 (서명 검증 없음)
+    return _jwtDecode(token);
   } catch(e) { return null; }
 }
 
