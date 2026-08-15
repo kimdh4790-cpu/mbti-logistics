@@ -4947,7 +4947,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
   <div class="nav-logo">물류배송앱</div>
   <div class="nav-btns">
     <a href="/mbtico_hub" class="btn btn-outline">앱 로그인</a>
-    <a href="/mbtico-join" class="btn btn-primary">무료 체험</a>
+    <a href="/register" class="btn btn-primary">무료 체험</a>
   </div>
 </nav>
 
@@ -4968,7 +4968,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
     <h1 class="s-title anim-2">배송의 모든 것을<br><span>하나의 앱</span>으로</h1>
     <p class="s-sub anim-3">긴급배송 등록부터 QR스캔, 라벨출력, 출퇴근 관리까지<br>현장에서 바로 쓰는 배송기사 전용 통합 솔루션</p>
     <div class="anim-4" style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
+      <a href="/register" class="btn btn-primary btn-lg">🚀 7일 무료 체험</a>
       <a href="/mbtico_hub" class="btn btn-outline btn-lg">앱 바로가기</a>
     </div>
     <div class="chips anim-4">
@@ -5159,7 +5159,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
       </div>
     </div>
     <div style="margin-top:24px">
-      <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 지금 시작하기</a>
+      <a href="/register" class="btn btn-primary btn-lg">🚀 지금 시작하기</a>
     </div>
     <div class="arrow">다음 →</div>
   </div>
@@ -5172,7 +5172,7 @@ html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto
       <h2 class="s-title">지금 바로 <span>무료 체험</span></h2>
       <p class="s-sub" style="margin:0 auto 28px">7일 무료 · 신용카드 불필요 · 언제든 해지<br>승인 후 즉시 모든 기능 사용 가능</p>
       <div class="cta-btns">
-        <a href="/mbtico-join" class="btn btn-primary btn-lg">🚀 7일 무료 체험 시작</a>
+        <a href="/register" class="btn btn-primary btn-lg">🚀 7일 무료 체험 시작</a>
         <a href="https://pf.kakao.com/_xkuxabX/chat" target="_blank" class="btn btn-outline btn-lg">💬 카카오 문의</a>
       </div>
       <div style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:12px;color:var(--text3)">
@@ -6408,8 +6408,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
       if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
-      if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
-      if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
+      if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/clients') return new Response(_MBTICO_CLIENTS_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → 기사 가입 페이지 직접 서빙 (URL 유지)
@@ -6431,7 +6431,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (method === 'GET' && !path.startsWith('/api/')) {
         let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
         const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients']);
+        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients','/label']);
         if (_slugMatch && !_reserved.has(_mbtPath1.replace(/\/$/,''))) {
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
