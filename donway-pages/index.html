@@ -34967,6 +34967,8 @@ function openAdminPanel(){
     var items=[];
     compSnap.forEach(function(doc){
       var d=doc.data();
+      // mbtico.kr/register 전용 등록 제외 (DONWAY 패널과 분리)
+      if(d.registeredFrom==='register.html') return;
       items.push({
         id:doc.id,
         name:d.companyName||d.name||doc.id,
