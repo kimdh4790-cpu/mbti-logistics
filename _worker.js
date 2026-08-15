@@ -5910,11 +5910,12 @@ firebase.initializeApp({
 var _db=firebase.firestore(),_auth=firebase.auth();
 _db.settings({experimentalAutoDetectLongPolling:true,merge:true});
 
-// ── 업체별 기본 설정 (Firestore companies/{did}.driverJoin 으로 오버라이드) ──
+// ── 업체별 기본 설정 (슬러그 URL 직접 서빙 또는 ?did= 파라미터) ──
 var _params=new URLSearchParams(location.search);
-var _did=_params.get('did')||'';
-var _cid=_params.get('cid')||'';
-var _nameParam=decodeURIComponent(_params.get('name')||'');
+var _mbt=window.__MBT||{};
+var _did=_mbt.did||_params.get('did')||'';
+var _cid=_mbt.cid||_params.get('cid')||'';
+var _nameParam=_mbt.name||decodeURIComponent(_params.get('name')||'');
 var _cfg={
   companyName:_nameParam||'엠비티아이 배송',
   welcomeMsg:'배송기사 가입',
@@ -6343,7 +6344,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/clients') return new Response(_MBTICO_CLIENTS_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
-      // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → /driver-join (고객사별 기사 가입)
+      // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → 기사 가입 페이지 직접 서빙 (URL 유지)
       if (method === 'GET' && !path.startsWith('/api/')) {
         let _mbtPath; try{_mbtPath=decodeURIComponent(path);}catch(e){_mbtPath=path;}
         const _twoSlug = _mbtPath.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
@@ -6351,12 +6352,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           try {
             const _kvClient = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('client:'+_twoSlug[1]+':'+_twoSlug[2], 'json') : null;
             if (_kvClient && _kvClient.dealerId) {
-              return Response.redirect('https://mbtico.kr/driver-join?did='+_kvClient.dealerId+'&cid='+encodeURIComponent(_twoSlug[2])+'&name='+encodeURIComponent(_kvClient.clientName||_twoSlug[2]), 302);
+              const _inj = '<script>window.__MBT={did:'+JSON.stringify(_kvClient.dealerId)+',cid:'+JSON.stringify(_twoSlug[2])+',name:'+JSON.stringify(_kvClient.clientName||_twoSlug[2])+',co:'+JSON.stringify(_kvClient.companyName||_twoSlug[1])+'};' + '<\/script>';
+              const _html = _DRIVER_JOIN_HTML.replace('</head>', _inj+'</head>');
+              return new Response(_html, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
             }
           } catch(e) {}
         }
       }
-      // 1단계 슬러그: mbtico.kr/{배송회사} → /driver-join (회사 기본 가입)
+      // 1단계 슬러그: mbtico.kr/{배송회사} → 회사 클라이언트 목록 페이지
       if (method === 'GET' && !path.startsWith('/api/')) {
         let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
         const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
@@ -6365,7 +6368,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
             if (_kvSlug && _kvSlug.uid) {
-              return Response.redirect('https://mbtico.kr/driver-join?did='+_kvSlug.uid+'&name='+encodeURIComponent(_kvSlug.companyName||''), 302);
+              // 회사 슬러그 페이지: 배송처 목록 + 각 기사 가입 링크
+              const _coSlug = _slugMatch[1];
+              const _coName = _kvSlug.companyName || _coSlug;
+              const _listResult = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.list({prefix:'client:'+_coSlug+':'}) : {keys:[]};
+              const _clientLinks = await Promise.all((_listResult.keys||[]).map(async function(k){
+                const _cd = await env.DONWAY_ASSETS.get(k.name, 'json');
+                const _cs = k.name.replace('client:'+_coSlug+':','');
+                return {slug:_cs, name:(_cd&&_cd.clientName)||_cs};
+              }));
+              const _coPageHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${_coName} 배송앱</title><meta name="theme-color" content="#0a0f1e"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0f1e;color:#e2e8f0;font-family:-apple-system,'Noto Sans KR',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}.card{background:#0d1b3e;border:1px solid rgba(0,102,255,.2);border-radius:20px;padding:32px 24px;width:100%;max-width:400px}.logo{text-align:center;margin-bottom:28px}.truck{font-size:40px;margin-bottom:12px}.title{font-size:22px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.sub{font-size:12px;color:#64748b;margin-top:6px}.section-title{font-size:11px;color:#64748b;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}.client-list{display:flex;flex-direction:column;gap:10px}.client-btn{display:block;padding:16px 20px;background:rgba(0,102,255,.08);border:1.5px solid rgba(0,102,255,.2);border-radius:14px;color:#e2e8f0;text-decoration:none;font-size:15px;font-weight:700;transition:.15s}.client-btn:hover{background:rgba(0,102,255,.18);border-color:rgba(0,102,255,.5)}.client-btn .sub2{font-size:11px;color:#64748b;font-weight:400;margin-top:3px}.empty{text-align:center;color:#475569;font-size:13px;padding:24px 0}.login-row{text-align:center;margin-top:20px;font-size:11px;color:#475569}.login-row a{color:#00d4ff;text-decoration:none}</style></head><body><div class="card"><div class="logo"><div class="truck">🚚</div><div class="title">${_coName} 배송앱</div><div class="sub">배송기사 가입 안내</div></div>${_clientLinks.length?'<div class="section-title">배송처 선택</div><div class="client-list">'+_clientLinks.map(function(c){return '<a href="/'+encodeURIComponent(_coSlug)+'/'+encodeURIComponent(c.slug)+'" class="client-btn"><span>'+c.name+'</span><div class="sub2">기사 가입하기</div></a>';}).join('')+'</div>':'<div class="empty">등록된 배송처가 없습니다</div>'}<div class="login-row"><a href="/hub">회사 관리자 로그인</a></div></div></body></html>`;
+              return new Response(_coPageHtml, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
             }
           } catch(e) {}
         }
