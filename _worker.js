@@ -6108,6 +6108,19 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/mbtico-join' || path === '/company-join') return new Response(_MBTICO_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      // 슬러그 기반 기사 가입 링크: mbtico.kr/{slug} → /driver-join?did=UID&name=회사명
+      if (method === 'GET' && !path.startsWith('/api/')) {
+        const _slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery']);
+        if (_slugMatch && !_reserved.has(path.replace(/\/$/,''))) {
+          try {
+            const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
+            if (_kvSlug && _kvSlug.uid) {
+              return Response.redirect('https://mbtico.kr/driver-join?did='+_kvSlug.uid+'&name='+encodeURIComponent(_kvSlug.companyName||''), 302);
+            }
+          } catch(e) {}
+        }
+      }
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
@@ -8643,6 +8656,21 @@ service cloud.firestore {
         });
         if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    // 회사 슬러그 KV 등록: POST /api/company-slug
+    if (path === '/api/company-slug' && method === 'POST') {
+      try {
+        const verified = await verifyFirebaseToken(request, env);
+        if (!verified) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
+        const body = await request.json();
+        const uid = body.uid || verified.localId;
+        if (uid !== verified.localId) return new Response(JSON.stringify({ok:false,error:'UID 불일치'}), {status:403,headers:{'Content-Type':'application/json'}});
+        const slug = (body.slug||'').toLowerCase().replace(/[^a-z0-9가-힣\-_]/g,'').slice(0,30);
+        if (!slug) return new Response(JSON.stringify({ok:false,error:'슬러그 없음'}), {headers:{'Content-Type':'application/json'}});
+        if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
+        await env.DONWAY_ASSETS.put('company-slug:'+slug, JSON.stringify({uid, companyName: body.companyName||''}));
+        return new Response(JSON.stringify({ok:true, url:'https://mbtico.kr/'+slug}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
     if (path === '/api/driver-register' && method === 'POST') {

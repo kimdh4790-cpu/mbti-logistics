@@ -145,15 +145,23 @@ function _doRegister(){
     })
     .then(function(uid){
       fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록',body:company+' · '+email,type:'join'})}).catch(function(){});
-      var driverUrl='https://mbtico.kr/driver-join?did='+uid+'&name='+encodeURIComponent(company);
-      _showOk('등록 완료!\n\n기사 가입 링크 (기사분들에게 공유):\n'+driverUrl+'\n\n담당자 확인 후 서비스가 활성화됩니다.');
-      var okBox=document.getElementById('ok-box');
-      var copyBtn=document.createElement('button');
-      copyBtn.className='copy-btn';
-      copyBtn.textContent='기사 가입 링크 복사';
-      copyBtn.onclick=function(){navigator.clipboard.writeText(driverUrl).then(function(){copyBtn.textContent='복사됨!';});};
-      okBox.appendChild(copyBtn);
-      btn.textContent='등록 완료';
+      var slug2=emailPrefix||uid.slice(0,8);
+      var fallbackUrl='https://mbtico.kr/driver-join?did='+uid+'&name='+encodeURIComponent(company);
+      function _showSuccess(driverUrl){
+        _showOk('등록 완료!\n\n기사 가입 링크 (기사분들에게 공유):\n'+driverUrl+'\n\n담당자 확인 후 서비스가 활성화됩니다.');
+        var okBox=document.getElementById('ok-box');
+        var copyBtn=document.createElement('button');
+        copyBtn.className='copy-btn';
+        copyBtn.textContent='기사 가입 링크 복사';
+        copyBtn.onclick=function(){navigator.clipboard.writeText(driverUrl).then(function(){copyBtn.textContent='복사됨!';});};
+        okBox.appendChild(copyBtn);
+        btn.textContent='등록 완료';
+      }
+      _auth.currentUser.getIdToken()
+        .then(function(tok){return fetch('/api/company-slug',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({uid:uid,slug:slug2,companyName:company})});})
+        .then(function(r){return r.json();})
+        .then(function(d){_showSuccess(d.ok?'https://mbtico.kr/'+slug2:fallbackUrl);})
+        .catch(function(){_showSuccess(fallbackUrl);});
     })
   .catch(function(e){
     btn.disabled=false;btn.textContent='등록 신청';
