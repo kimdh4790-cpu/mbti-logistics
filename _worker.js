@@ -5688,6 +5688,14 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#08101f;color:
 
 <div id="main" style="display:none">
 <div class="wrap">
+  <!-- 슈퍼어드민 전용: 회사 전환 바 -->
+  <div id="sa-bar" style="display:none;align-items:center;gap:8px;margin-bottom:16px;padding:12px 14px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:12px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span style="font-size:11px;color:#c9a84c;font-weight:700;flex-shrink:0">슈퍼어드민</span>
+    <input id="sa-slug-input" type="text" placeholder="회사 슬러그 입력 (예: kimdh4790)" style="flex:1;padding:7px 10px;background:#132035;border:1px solid rgba(201,168,76,.2);border-radius:8px;color:#e2e8f0;font-size:12px;outline:none;font-family:inherit">
+    <button onclick="_saSwitch()" style="padding:7px 12px;background:#c9a84c;color:#08101f;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">이동</button>
+  </div>
+
   <div class="header">
     <div class="header-left">
       <h1 id="co-name">고객사 관리</h1>
@@ -5718,7 +5726,8 @@ body{font-family:'Pretendard',-apple-system,sans-serif;background:#08101f;color:
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script>
 firebase.initializeApp({apiKey:"AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",authDomain:"mbti-logistics.firebaseapp.com",projectId:"mbti-logistics",storageBucket:"mbti-logistics.firebasestorage.app",messagingSenderId:"40761160761",appId:"1:40761160761:web:20545b610f03f534e949e8"});
-var _auth=firebase.auth(),_slug='',_clients=[];
+var _auth=firebase.auth(),_slug='',_clients=[],_isSA=false;
+var _SA_EMAILS=['kimdh4790@gmail.com','soungkyekim@naver.com'];
 
 function _toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;setTimeout(function(){t.style.opacity=0;},2200);}
 
@@ -5733,14 +5742,20 @@ async function _login(){
 
 _auth.onAuthStateChanged(async function(u){
   if(!u){document.getElementById('login-overlay').style.display='flex';document.getElementById('main').style.display='none';return;}
+  _isSA=_SA_EMAILS.includes((u.email||'').toLowerCase());
   document.getElementById('login-overlay').style.display='none';
   document.getElementById('main').style.display='block';
+  if(_isSA){
+    var saBar=document.getElementById('sa-bar');
+    if(saBar)saBar.style.display='flex';
+  }
   await _load();
 });
 
-async function _load(){
+async function _load(targetSlug){
   var tok=await _auth.currentUser.getIdToken();
-  var r=await fetch('/api/my-clients',{headers:{'Authorization':'Bearer '+tok}});
+  var url='/api/my-clients'+(targetSlug?'?slug='+encodeURIComponent(targetSlug):'');
+  var r=await fetch(url,{headers:{'Authorization':'Bearer '+tok}});
   var d=await r.json();
   if(d.ok){
     _slug=d.companySlug||'';
@@ -5773,6 +5788,12 @@ function _render(){
 
 function _esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
+function _saSwitch(){
+  var slug=document.getElementById('sa-slug-input').value.trim();
+  if(!slug){_toast('슬러그를 입력하세요');return;}
+  _load(slug);
+}
+
 async function _add(){
   var inp=document.getElementById('new-name');
   var errEl=document.getElementById('add-err');
@@ -5784,7 +5805,9 @@ async function _add(){
   btn.disabled=true;btn.textContent='추가 중...';
   try{
     var tok=await _auth.currentUser.getIdToken();
-    var r=await fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:slug,clientName:name})});
+    var payload={clientSlug:slug,clientName:name};
+    if(_isSA&&_slug)payload.targetSlug=_slug;
+    var r=await fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(payload)});
     var d=await r.json();
     if(d.ok){
       inp.value='';
@@ -8946,9 +8969,17 @@ service cloud.firestore {
         if (!verified) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
         const uid = verified.localId;
         if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
-        const companyData = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
-        if (!companyData) return new Response(JSON.stringify({ok:false,error:'회사 등록 필요'}), {headers:{'Content-Type':'application/json'}});
-        const companySlug = companyData.slug;
+        const isSA = _SUPERADMIN_EMAILS.includes((verified.email||'').toLowerCase());
+        const qSlug = new URL(request.url).searchParams.get('slug')||'';
+        let companyData, companySlug;
+        if (isSA && qSlug) {
+          // 슈퍼어드민: slug로 직접 조회
+          companyData = {slug: qSlug, companyName: qSlug};
+        } else {
+          companyData = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
+          if (!companyData) return new Response(JSON.stringify({ok:false,error:'회사 등록 필요'}), {headers:{'Content-Type':'application/json'}});
+        }
+        companySlug = companyData.slug;
         const listResult = await env.DONWAY_ASSETS.list({prefix:'client:'+companySlug+':'});
         const clients = [];
         for (const key of (listResult.keys||[])) {
@@ -8956,7 +8987,7 @@ service cloud.firestore {
           const cd = await env.DONWAY_ASSETS.get(key.name, 'json');
           if (cd) clients.push({clientSlug, clientName:cd.clientName||clientSlug});
         }
-        return new Response(JSON.stringify({ok:true, companySlug, companyName:companyData.companyName||'', clients}), {headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:true, companySlug, companyName:companyData.companyName||companySlug, clients, isSuperAdmin:isSA}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
     // 고객사 추가: POST /api/add-client → mbtico.kr/{배송회사}/{고객사} 링크 생성
@@ -8970,11 +9001,21 @@ service cloud.firestore {
         const clientName = body.clientName||clientSlug;
         if (!clientSlug) return new Response(JSON.stringify({ok:false,error:'clientSlug 없음'}), {headers:{'Content-Type':'application/json'}});
         if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
-        const companyData = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
-        if (!companyData||!companyData.slug) return new Response(JSON.stringify({ok:false,error:'회사 먼저 등록 필요'}), {headers:{'Content-Type':'application/json'}});
-        const companySlug = companyData.slug;
+        const isSA2 = _SUPERADMIN_EMAILS.includes((verified.email||'').toLowerCase());
+        let companySlug2, companyName2;
+        if (isSA2 && body.targetSlug) {
+          companySlug2 = body.targetSlug;
+          companyName2 = body.targetSlug;
+        } else {
+          const companyData2 = await env.DONWAY_ASSETS.get('company-uid:'+uid, 'json');
+          if (!companyData2||!companyData2.slug) return new Response(JSON.stringify({ok:false,error:'회사 먼저 등록 필요'}), {headers:{'Content-Type':'application/json'}});
+          companySlug2 = companyData2.slug;
+          companyName2 = companyData2.companyName||'';
+        }
+        const companySlug = companySlug2;
+        const companyName_val = companyName2;
         await env.DONWAY_ASSETS.put('client:'+companySlug+':'+clientSlug, JSON.stringify({
-          dealerId:uid, clientName, companySlug, companyName:companyData.companyName||'',
+          dealerId:uid, clientName, companySlug, companyName:companyName_val||'',
           zones:body.zones||[], createdAt:new Date().toISOString()
         }));
         return new Response(JSON.stringify({ok:true, url:'https://mbtico.kr/'+companySlug+'/'+clientSlug}), {headers:{'Content-Type':'application/json'}});
