@@ -180,7 +180,19 @@ function toast(msg, duration){
 }
 
 var _SA_EM=['kimdh4790@gmail.com','soungkyekim@naver.com'];
-// _auth.onAuthStateChanged disabled — 캠프+이름 방식 사용
+// Firebase 로그인 시 dealerId 자동 설정 (캠프+이름 방식과 병행)
+_auth.onAuthStateChanged(function(user){
+  if(user && !localStorage.getItem('mbti_emer_dealerId')){
+    _db.collection('users').doc(user.uid).get().then(function(snap){
+      var did=(snap.exists&&(snap.data().parentDealerId||snap.data().dealerId))||user.uid;
+      localStorage.setItem('mbti_emer_dealerId',did);
+      _emerLoadCoName();
+    }).catch(function(){
+      localStorage.setItem('mbti_emer_dealerId',user.uid);
+    });
+  }
+});
+// (구버전 구독 체크 비활성)
 if(false) _auth.onAuthStateChanged(function(user){
   if(user){
     _CU={uid:user.uid,email:user.email,dealerId:user.uid};
@@ -266,6 +278,8 @@ function _emerLoadCoName() {
     var s = document.getElementById('emer-co-sub');
     if(t) t.textContent = savedName;
     if(s) s.textContent = savedName + ' 기사 전용';
+    var tl = document.querySelector('.top-logo');
+    if(tl) tl.textContent = savedName;
   }
   if(!_fbReady || !_db) return;
   _db.collection('companies').doc(did).get().then(function(snap) {
@@ -279,6 +293,8 @@ function _emerLoadCoName() {
     var s2 = document.getElementById('emer-co-sub');
     if(t2) t2.textContent = name;
     if(s2) s2.textContent = name + ' 기사 전용';
+    var tl2 = document.querySelector('.top-logo');
+    if(tl2) tl2.textContent = name;
     document.title = name + ' 배송앱';
     _emerInitLogin(); // 캠프 목록 갱신
   }).catch(function(){});
@@ -293,8 +309,9 @@ function _emerDoLogin() {
   localStorage.setItem('mbti_emer_camp', _emerSelCamp);
   // _CU 설정 (기존 코드와 호환)
   var did = new URLSearchParams(location.search).get('did')
-          || localStorage.getItem('mbti_emer_dealerId') || 'shared';
-  _CU = { uid: did, email: '', dealerId: did, driver: name, camp: _emerSelCamp };
+          || localStorage.getItem('mbti_emer_dealerId')
+          || (_auth.currentUser && _auth.currentUser.uid) || '';
+  _CU = { uid: did, email: (_auth.currentUser&&_auth.currentUser.email)||'', dealerId: did, driver: name, camp: _emerSelCamp };
   window._CU = _CU;
   // Firestore 보안규칙 통과를 위해 익명 로그인 (실패해도 무시)
   if(!_auth.currentUser){
