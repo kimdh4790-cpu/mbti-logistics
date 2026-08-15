@@ -6332,7 +6332,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/clients') return new Response(_MBTICO_CLIENTS_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
       // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → /driver-join (고객사별 기사 가입)
       if (method === 'GET' && !path.startsWith('/api/')) {
-        const _twoSlug = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+        let _mbtPath; try{_mbtPath=decodeURIComponent(path);}catch(e){_mbtPath=path;}
+        const _twoSlug = _mbtPath.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         if (_twoSlug) {
           try {
             const _kvClient = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('client:'+_twoSlug[1]+':'+_twoSlug[2], 'json') : null;
@@ -6344,9 +6345,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       }
       // 1단계 슬러그: mbtico.kr/{배송회사} → /driver-join (회사 기본 가입)
       if (method === 'GET' && !path.startsWith('/api/')) {
-        const _slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+        let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
+        const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients']);
-        if (_slugMatch && !_reserved.has(path.replace(/\/$/,''))) {
+        if (_slugMatch && !_reserved.has(_mbtPath1.replace(/\/$/,''))) {
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
             if (_kvSlug && _kvSlug.uid) {
