@@ -311,14 +311,15 @@ function _doRegister(){
   .catch(function(e){
     btn.disabled=false;btn.textContent='등록 신청';
     if(e.code==='auth/email-already-in-use'){
-      // 기존 계정으로 로그인 후 회사 데이터 생성
-      var email=document.getElementById('r-email').value.trim().toLowerCase();
-      var pw=document.getElementById('r-pw').value;
       var errBox=document.getElementById('err-box');
-      errBox.innerHTML='이미 가입된 이메일입니다.<br><br>'+
-        '<button onclick="_loginAndRegister()" style="margin-top:6px;padding:9px 16px;background:#c9a84c;color:#08101f;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">기존 계정으로 이어서 등록</button>';
+      errBox.innerHTML='이미 가입된 이메일입니다.<br>'+
+        '<span style="font-size:12px;color:#94a3b8;line-height:1.6">기존 계정의 비밀번호를 입력하면 회사 정보가 추가됩니다.</span><br><br>'+
+        '<input id="r-exist-pw" type="password" placeholder="기존 계정 비밀번호" autocomplete="current-password" '+
+        'style="width:100%;padding:11px 13px;background:#132035;border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#e2e8f0;font-size:14px;outline:none;font-family:inherit;margin-bottom:10px;display:block">'+
+        '<button onclick="_loginAndRegister()" style="width:100%;padding:11px 16px;background:#c9a84c;color:#08101f;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">기존 계정으로 이어서 등록</button>';
       errBox.style.display='block';
       document.getElementById('ok-box').style.display='none';
+      setTimeout(function(){var el=document.getElementById('r-exist-pw');if(el)el.focus();},100);
     }
     else if(e.code==='auth/weak-password'){_showErr('비밀번호가 너무 간단합니다.');}
     else{_showErr('오류: '+e.message);}
@@ -328,7 +329,8 @@ function _doRegister(){
 function _loginAndRegister(){
   var company=document.getElementById('r-company').value.trim();
   var email=document.getElementById('r-email').value.trim().toLowerCase();
-  var pw=document.getElementById('r-pw').value;
+  var existPwEl=document.getElementById('r-exist-pw');
+  var pw=existPwEl&&existPwEl.value?existPwEl.value:document.getElementById('r-pw').value;
   var phone=document.getElementById('r-phone').value.trim();
   var btn=document.getElementById('reg-btn');
   btn.disabled=true;btn.textContent='로그인 중...';
@@ -403,7 +405,11 @@ function _loginAndRegister(){
   })
   .catch(function(e){
     btn.disabled=false;btn.textContent='등록 신청';
-    _showErr('로그인 실패: '+e.message);
+    if(e.code==='auth/invalid-login-credentials'||e.code==='auth/wrong-password'){
+      _showErr('비밀번호가 틀렸습니다. 기존 계정의 비밀번호를 다시 확인해주세요.');
+    } else {
+      _showErr('로그인 실패: '+e.message);
+    }
   });
 }
 
