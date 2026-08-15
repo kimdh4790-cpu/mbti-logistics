@@ -224,7 +224,9 @@ function _doRegister(){
   var now=new Date();
   var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
   var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
+  var companySlug=company.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,20);
   var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  var baseSlug=companySlug||emailPrefix||'co';
 
   _auth.createUserWithEmailAndPassword(email,pw)
   .then(function(cred){
@@ -233,7 +235,7 @@ function _doRegister(){
       companyName:company,name:company,email:email,phone:phone,
       plan:'trial',services:['mbtico'],industry:'',
       companyCode:companyCode,
-      slug:emailPrefix||uid.slice(0,8),
+      slug:baseSlug,
       svcType:_svcType,
       selectedClients:_svcType==='exist'?_selClients:[],
       trialStart:now.toISOString().slice(0,10),
@@ -260,7 +262,7 @@ function _doRegister(){
   })
   .then(function(uid){
     fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록 ('+(_svcType==='new'?'신규제작':'기존:'+_selClients.join(','))+')',body:company+' · '+email,type:'join'})}).catch(function(){});
-    var slug2=emailPrefix||uid.slice(0,8);
+    var slug2=baseSlug;
     var tok;
     _auth.currentUser.getIdToken()
     .then(function(t){
@@ -338,7 +340,9 @@ function _loginAndRegister(){
   _auth.signInWithEmailAndPassword(email,pw)
   .then(function(cred){
     var uid=cred.user.uid;
-    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    var companySlug2=company.replace(/[^a-zA-Z0-9가-힣\-_]/g,'').slice(0,20);
+    var emailPrefix2=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+    var baseSlug2=companySlug2||emailPrefix2||'co';
     var now=new Date();
     var trialEnd=new Date(now.getTime()+1*24*60*60*1000);
     var companyCode=Math.random().toString(36).slice(2,8).toUpperCase();
@@ -346,7 +350,7 @@ function _loginAndRegister(){
       companyName:company,name:company,email:email,phone:phone,
       plan:'trial',services:['mbtico'],industry:'',
       companyCode:companyCode,
-      slug:emailPrefix||uid.slice(0,8),
+      slug:baseSlug2,
       svcType:_svcType,
       selectedClients:_svcType==='exist'?_selClients:[],
       trialStart:now.toISOString().slice(0,10),
@@ -365,8 +369,7 @@ function _loginAndRegister(){
     return batch.commit().then(function(){return uid;});
   })
   .then(function(uid){
-    var emailPrefix=email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-    var slug2=emailPrefix||uid.slice(0,8);
+    var slug2=baseSlug2;
     var tok;
     _auth.currentUser.getIdToken()
     .then(function(t){
