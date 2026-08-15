@@ -8914,6 +8914,31 @@ service cloud.firestore {
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
+    // 가용 배송처 목록 (공개): GET /api/available-clients
+    if (path === '/api/available-clients' && method === 'GET') {
+      try {
+        const _defaults = [
+          {id:'롯데백화점', name:'롯데백화점', desc:'롯데 선물세트 / 특가 배송', zones:['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구']},
+          {id:'신세계백화점', name:'신세계백화점', desc:'신세계 배송', zones:[]},
+          {id:'현대백화점', name:'현대백화점', desc:'현대백화점 배송', zones:[]},
+          {id:'홈플러스', name:'홈플러스', desc:'홈플러스 식품/생활용품 배송', zones:[]},
+          {id:'이마트', name:'이마트', desc:'이마트 배송', zones:[]},
+        ];
+        const extraClients = [];
+        if (env.DONWAY_ASSETS) {
+          try {
+            const kl = await env.DONWAY_ASSETS.list({prefix:'avail:'});
+            for (const k of (kl.keys||[])) {
+              const cd = await env.DONWAY_ASSETS.get(k.name, 'json');
+              if (cd) extraClients.push(cd);
+            }
+          } catch(e) {}
+        }
+        const allIds = new Set(_defaults.map(c=>c.id));
+        const clients = [..._defaults, ...extraClients.filter(c=>!allIds.has(c.id))];
+        return new Response(JSON.stringify({ok:true, clients}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
+    }
     // 고객사 목록 조회: GET /api/my-clients
     if (path === '/api/my-clients' && method === 'GET') {
       try {
