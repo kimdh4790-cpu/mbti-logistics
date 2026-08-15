@@ -2298,78 +2298,51 @@ async function acceptExchange(){
         let body;try{body=await request.json();}catch(e){body={};}
         const name = body.name || '';
         const lang = body.lang || 'en';
-        if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
-        try {
-          const cached = await env.DONWAY_ASSETS.get(cacheKey);
-          if(cached) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
-        } catch(e){}
-        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+        const CORS_H = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        if(!name) return new Response(JSON.stringify({translated:''}),{headers:CORS_H});
+        const trHash = (function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
+        const cacheKey = 'tr:'+lang+':'+trHash;
+        // KV 캐시 우선
+        try{const cv=await env.DONWAY_ASSETS.get(cacheKey);if(cv)return new Response(JSON.stringify({translated:cv}),{headers:{...CORS_H,'X-Cache':'HIT'}});}catch(e){}
         const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
+        const tl = langMap[lang]||'en';
         let translated = '';
-        // Anthropic 재시도 3회 (키 없으면 즉시 Google 폴백)
-        const k = (env.ANTHROPIC_API_KEY||'').trim();
-        const tl2 = langMap[lang]||'en';
-        if(k) {
-          for(let attempt=0; attempt<3 && !translated; attempt++) {
-            try {
-              if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
-              const res = await fetch('https://api.anthropic.com/v1/messages',{
-                method:'POST',
+        const isKo = function(s){return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(s);};
+        const isValid = function(s){return s&&s!==name&&!isKo(s)&&(lang==='zh'||!/[一-鿿]/.test(s));};
+        // 1) Google 무료 API — 빠르고 무료
+        try{
+          const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name),{headers:{'User-Agent':'Mozilla/5.0'}});
+          if(gRes.ok){const gd=await gRes.json();const t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';if(isValid(t))translated=t;}
+        }catch(e){}
+        // 2) Anthropic 폴백 (Google 실패 시, 타임아웃 8초)
+        if(!translated){
+          const k=(env.ANTHROPIC_API_KEY||'').trim();
+          if(k){
+            try{
+              const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
+              const res=await fetch('https://api.anthropic.com/v1/messages',{
+                method:'POST',signal:ctrl.signal,
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
               });
-              if(res.ok){
-                const d = await res.json();
-                translated = (d.content&&d.content[0]&&d.content[0].text)||'';
-                console.log('[tr] anthropic ok(attempt '+attempt+'):'+translated);
-              } else {
-                console.log('[tr] anthropic '+res.status+' attempt '+attempt);
-              }
-            } catch(e){console.log('[tr] anthropic err:'+e.message);}
+              clearTimeout(tid);
+              if(res.ok){const d=await res.json();const t=(d.content&&d.content[0]&&d.content[0].text||'').trim();if(isValid(t))translated=t;}
+            }catch(e){}
           }
         }
-        // Google 폴백
-        if(!translated || translated===name) {
-          try {
-            const gKey = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+        // 3) Google 공식 API 폴백
+        if(!translated){
+          const gKey=(env.GOOGLE_TRANSLATE_KEY||'').trim();
           if(gKey){
-            const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
-            if(!gRes.ok) throw new Error('google-official:'+gRes.status);
-            const gData = await gRes.json();
-            translated = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||'';
-            console.log('[tr] google official:'+translated);
-          } else {
-            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name),{
-              headers:{'User-Agent':'Mozilla/5.0 (compatible; FILO/1.0)','Accept':'application/json, text/plain, */*'}
-            });
-            if(!gRes.ok) throw new Error('google-free:'+gRes.status);
-            const gData = await gRes.json();
-            translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
-            console.log('[tr] google fallback:'+translated);
+            try{
+              const gRes=await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl,format:'text'})});
+              if(gRes.ok){const gd=await gRes.json();const t=(gd&&gd.data&&gd.data.translations&&gd.data.translations[0]&&gd.data.translations[0].translatedText)||'';if(isValid(t))translated=t;}
+            }catch(e){}
           }
-          } catch(e){console.log('[tr] google err:'+e.message);}
         }
-        // 한글 포함이면 번역 실패로 처리 → Google 재시도
-        const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated);
-        if(!translated || hasKorean || translated.trim() === name) {
-          try {
-            const gKey3 = (env.GOOGLE_TRANSLATE_KEY||'').trim();
-            if(gKey3) {
-              const gRes3 = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey3,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
-              const gData3 = await gRes3.json();
-              const gt3 = (gData3&&gData3.data&&gData3.data.translations&&gData3.data.translations[0]&&gData3.data.translations[0].translatedText)||'';
-              if(gt3 && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(gt3)) translated = gt3;
-            }
-          } catch(e){}
-        }
-        // 번역 성공 시만 KV 캐시 저장 (한글/한자 포함이면 저장 안함 — 단 zh 타깃은 한자 허용)
-        const hasCJK = lang !== 'zh' && /[一-鿿]/.test(translated);
-        if(translated && translated.trim() !== name && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(translated) && !hasCJK) {
-          try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
-        }
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // KV 저장 (성공 시만, 7일)
+        if(translated){try{await env.DONWAY_ASSETS.put(cacheKey,translated,{expirationTtl:604800});}catch(e){}}
+        return new Response(JSON.stringify({translated:translated}),{headers:CORS_H});
       }
       /* /api/translate-batch — 메뉴 다국어 일괄 번역 */
       if (path === '/api/translate-batch') {
