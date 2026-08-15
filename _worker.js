@@ -4490,23 +4490,23 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:32px;margin-bottom:8px">🚚</div>
       <div style="font-size:18px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">엠비티아이 배송앱</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px">배송기사 전용 통합 앱</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">배송회사 관리자 로그인</div>
     </div>
     <div class="field">
       <label>이메일</label>
-      <input id="login-email" type="email" placeholder="이메일 입력">
+      <input id="login-email" type="email" placeholder="이메일 입력" autocomplete="email">
     </div>
     <div class="field">
       <label>비밀번호</label>
-      <input id="login-pw" type="password" placeholder="비밀번호 입력">
+      <input id="login-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password">
     </div>
     <div id="login-err" style="font-size:12px;color:var(--red);margin-bottom:8px;display:none"></div>
     <button class="btn-login" onclick="_doLogin()">로그인</button>
-    <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text3)">
-      계정이 없으신가요? <a href="/register" style="color:var(--acc)">회사 등록</a>
+    <div style="text-align:center;margin-top:10px;font-size:11px">
+      <span onclick="_doReset()" style="color:var(--acc);cursor:pointer;text-decoration:underline">비밀번호 재설정 메일 받기</span>
     </div>
-    <div style="text-align:center;margin-top:8px">
-      <a href="/driver-join" style="display:inline-block;width:100%;padding:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;color:#c9a84c;font-size:13px;font-weight:800;text-decoration:none;box-sizing:border-box">기사로 가입하기</a>
+    <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text3)">
+      계정이 없으신가요? <a href="/register" style="color:var(--acc)">회사 등록</a>
     </div>
   </div>
 </div>
@@ -4724,13 +4724,30 @@ function _doLogin(){
   var email=(document.getElementById('login-email')||{}).value.trim();
   var pw=(document.getElementById('login-pw')||{}).value;
   var err=document.getElementById('login-err');
-  err.style.display='none';
+  err.style.display='none';err.style.color='';
   if(!email||!pw){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   _auth.signInWithEmailAndPassword(email,pw)
     .catch(function(e){
-      err.textContent=e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'이메일 또는 비밀번호가 틀렸습니다':'오류: '+e.message;
+      var _bad=['auth/wrong-password','auth/user-not-found','auth/invalid-login-credentials','auth/invalid-credential'];
+      err.textContent=_bad.indexOf(e.code)>=0?'이메일 또는 비밀번호가 틀렸습니다. 비밀번호 재설정을 이용하세요.':'오류: '+e.message;
       err.style.display='block';
     });
+}
+
+function _doReset(){
+  var email=(document.getElementById('login-email')||{}).value.trim();
+  var err=document.getElementById('login-err');
+  err.style.color='';err.style.display='none';
+  if(!email){err.textContent='이메일을 먼저 입력하세요';err.style.display='block';return;}
+  _auth.sendPasswordResetEmail(email).then(function(){
+    err.style.color='#22c55e';
+    err.textContent='비밀번호 재설정 이메일을 보냈습니다. 받은편지함을 확인하세요.';
+    err.style.display='block';
+  }).catch(function(e){
+    err.style.color='';
+    err.textContent='전송 실패: '+e.message;
+    err.style.display='block';
+  });
 }
 
 function _logout(){
