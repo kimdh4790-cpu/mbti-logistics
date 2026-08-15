@@ -264,17 +264,20 @@ function _doRegister(){
     fetch('/sa/notify-admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:'신규 회사 등록 ('+(_svcType==='new'?'신규제작':'기존:'+_selClients.join(','))+')',body:company+' · '+email,type:'join'})}).catch(function(){});
     var slug2=baseSlug;
     var tok;
-    _auth.currentUser.getIdToken()
+    return _auth.currentUser.getIdToken()
     .then(function(t){
       tok=t;
       return fetch('/api/company-slug',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({uid:uid,slug:slug2,companyName:company})});
     })
     .then(function(r){return r.json();})
-    .then(function(){
+    .then(function(d){
+      if(!d.ok)throw new Error('회사 슬러그 등록 실패: '+(d.error||''));
       if(_svcType==='exist'&&_selClients.length){
         var jobs=_selClients.map(function(cid){
           var meta=_availClients.find(function(a){return a.id===cid;})||{};
-          return fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:cid,clientName:meta.name||cid,zones:meta.zones||[]})});
+          return fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:cid,clientName:meta.name||cid,zones:meta.zones||[]})})
+            .then(function(r){return r.json();})
+            .then(function(d){if(!d.ok)throw new Error('배송처 추가 실패 ('+cid+'): '+(d.error||''));});
         });
         return Promise.all(jobs);
       }
@@ -371,16 +374,20 @@ function _loginAndRegister(){
   .then(function(uid){
     var slug2=baseSlug2;
     var tok;
-    _auth.currentUser.getIdToken()
+    return _auth.currentUser.getIdToken()
     .then(function(t){
       tok=t;
       return fetch('/api/company-slug',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+t},body:JSON.stringify({uid:uid,slug:slug2,companyName:company})});
     })
-    .then(function(){
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok)throw new Error('회사 슬러그 등록 실패: '+(d.error||''));
       if(_svcType==='exist'&&_selClients.length){
         return Promise.all(_selClients.map(function(cid){
           var meta=_availClients.find(function(a){return a.id===cid;})||{};
-          return fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:cid,clientName:meta.name||cid,zones:meta.zones||[]})});
+          return fetch('/api/add-client',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({clientSlug:cid,clientName:meta.name||cid,zones:meta.zones||[]})})
+            .then(function(r){return r.json();})
+            .then(function(d){if(!d.ok)throw new Error('배송처 추가 실패 ('+cid+'): '+(d.error||''));});
         }));
       }
     })
@@ -410,8 +417,10 @@ function _loginAndRegister(){
     btn.disabled=false;btn.textContent='등록 신청';
     if(e.code==='auth/invalid-login-credentials'||e.code==='auth/wrong-password'){
       _showErr('비밀번호가 틀렸습니다. 기존 계정의 비밀번호를 다시 확인해주세요.');
-    } else {
+    } else if(e.code){
       _showErr('로그인 실패: '+e.message);
+    } else {
+      _showErr(e.message||'등록 중 오류가 발생했습니다.');
     }
   });
 }
