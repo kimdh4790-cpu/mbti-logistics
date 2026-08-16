@@ -33,6 +33,11 @@ Oracle Cloud IP:     155.248.187.99 (4코어/24GB, opc 계정)
 - filo-common.js 직접 수정 금지
 - DONWAY preFreshback/dateFresh 로직 수정 금지
 
+## 📦 배송앱 작업 전 필독
+emergency.html / _worker.js 수정 전 반드시 읽을 것:
+→ `배송앱_변경내역.md` (구조 설명, 절대 금지 사항, 앱별 동작 차이, 변경 이력 포함)
+배송앱 수정 후에는 해당 파일 변경 이력도 함께 업데이트할 것.
+
 ---
 
 ## 📦 배포 규칙
