@@ -5336,7 +5336,7 @@ function _showMapModal(locs){
     return '<div data-map-idx="'+i+'" data-addr="'+(x.addr||'').replace(/"/g,'&quot;')+'" style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px;transition:box-shadow .2s">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
-      +'<b style="font-size:13px;flex:1">'+(x.recipient||'미확인')+warn+'</b>'
+      +'<b style="font-size:13px;flex:1">'+(function(){var hm=(x.addr||'').match(/(\d+)\s*호/);return x.recipient||(hm?hm[1]+'호':'미확인');}())+warn+'</b>'
       +statusDot
       +'</div>'
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
@@ -5396,8 +5396,14 @@ function _renderLeafletMap(locs){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
 
   // 동일/인근 좌표 그룹핑 — 50m 이내 OR 동일 건물 주소(호/층 제거 후 일치)
-  // 동 주소는 동 단위로 유지, 호/층만 제거 → 아파트는 동별 핀, 오피스는 건물별 핀
-  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(층|호).*/,'').replace(/\s+/g,' ').trim();}
+  // 동 주소: 동 단위로 유지 + 15m 이내 GPS 겹침 허용 (같은 아파트 동 다중 핀 방지)
+  function _baseAddr(a){
+    return (a||'')
+      .replace(/^[가-힣]+(광역시|특별시|특별자치시|시|도)\s+/,'')  // 부산광역시·부산시 등 제거
+      .replace(/^[가-힣]+(구|군)\s+/,'')                           // 사상구 등 제거
+      .replace(/,?\s*\d+\s*(층|호).*/,'')
+      .replace(/\s+/g,' ').trim();
+  }
   var groups=[];
   locs.forEach(function(x){
     var ba=_baseAddr(x.addr);
@@ -5406,9 +5412,11 @@ function _renderLeafletMap(locs){
     for(var p=0;p<groups.length;p++){
       var sameBuilding=ba&&groups[p].baseAddr&&ba===groups[p].baseAddr;
       var grpHasDong=groups[p].items[0]&&/\d+동/.test(groups[p].items[0].addr||'');
-      // 동 없는 주소만 거리 클러스터링 (아파트 동간 혼용 방지)
+      // 동 없는 주소: 50m 이내 GPS 클러스터링
       var nearby=!hasDong&&!grpHasDong&&gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<50;
-      if(sameBuilding||nearby){found=groups[p];break;}
+      // 동 있는 주소: 15m 이내 GPS 겹침도 같은 핀으로 (동일 아파트 동 좌표 겹침 처리)
+      var sameGps=hasDong&&grpHasDong&&gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<15;
+      if(sameBuilding||nearby||sameGps){found=groups[p];break;}
     }
     if(found){found.items.push(x);}
     else{groups.push({lat:x.gps.lat,lng:x.gps.lng,baseAddr:ba,items:[x]});}
@@ -5435,7 +5443,7 @@ function _renderLeafletMap(locs){
     }
     var icon=L.divIcon({className:'',html:pinHtml,iconSize:n===1?[28,28]:[36,36],iconAnchor:n===1?[14,14]:[18,18]});
     var popupHtml=n===1
-      ?(function(){var x=grp.items[0];var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';}())
+      ?(function(){var x=grp.items[0];var dm=(x.addr||'').match(/(\d+)동/);var hm=(x.addr||'').match(/(\d+)\s*호/);var dispN=x.recipient||(hm?hm[1]+'호':'미확인');return '<b>'+dispN+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';}())
       :'<b>'+n+'건</b><br><span style="font-size:11px;color:#aaa">'+(_baseAddr(grp.items[0].addr||'')||grp.items[0].addr||'')+'</span>';
     (function(idxList,grp){
       L.marker(ll,{icon:icon}).addTo(map)
