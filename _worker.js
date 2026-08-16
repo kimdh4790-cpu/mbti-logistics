@@ -9213,6 +9213,11 @@ service cloud.firestore {
         const driver = u.searchParams.get('driver')||'';
         const date = u.searchParams.get('date')||new Date().toISOString().slice(0,10);
         if (!dealerId && !driver) return new Response(JSON.stringify({ok:false,error:'dealerId 또는 driver 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const _cacheKey = 'emap:'+(dealerId||driver)+':'+date;
+        if (env.DONWAY_ASSETS) {
+          const _cached = await env.DONWAY_ASSETS.get(_cacheKey, 'text');
+          if (_cached) return new Response(_cached, {headers:{'Content-Type':'application/json','X-Cache':'HIT'}});
+        }
         const token = await getAccessToken(env);
         const filters = [];
         if (dealerId) filters.push({fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}});
@@ -9220,7 +9225,9 @@ service cloud.firestore {
         filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
         const docs = await _fsQuery(token, filters, null, 200);
         docs.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
-        return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
+        const _body = JSON.stringify({ok:true,docs});
+        if (env.DONWAY_ASSETS) await env.DONWAY_ASSETS.put(_cacheKey, _body, {expirationTtl: 60});
+        return new Response(_body, {headers:{'Content-Type':'application/json','X-Cache':'MISS'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
     if (path === '/api/emergency-apikeys' && method === 'GET') {
