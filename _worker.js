@@ -16937,7 +16937,7 @@ function _submitPost(){
             .then(function(snap){
               snap.forEach(function(doc){
                 var t=doc.data().token;
-                if(t) fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                if(t) _yAuthFetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
                   body:JSON.stringify({token:t,title:'긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
               });
             }).catch(function(){});
@@ -16957,7 +16957,7 @@ function _submitPost(){
             if(!matched)return;
             _db.collection('yongcha_fcm_tokens').doc(alDoc.id).get().then(function(td){
               var tk=td.exists?td.data().token:null;
-              if(tk)fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+              if(tk)_yAuthFetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({token:tk,title:'구독 공고 알림',body:_notifyRegion+' '+_notifyCourier+' 새 공고가 등록됐어요!'})}).catch(function(){});
             }).catch(function(){});
           });
@@ -16969,7 +16969,7 @@ function _submitPost(){
               if(ecDoc.id===_CU.uid)return;
               _db.collection('yongcha_fcm_tokens').doc(ecDoc.id).get().then(function(td){
                 var tk=td.exists?td.data().token:null;
-                if(tk)fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                if(tk)_yAuthFetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
                   body:JSON.stringify({token:tk,title:'공차 알림',body:_notifyRegion+' 공차 기사님! '+_notifyCourier+' 공고가 등록됐어요'})}).catch(function(){});
               }).catch(function(){});
             });
@@ -19533,7 +19533,7 @@ function _yNotify(recipientId,title,body,type){
       if(!snap||!snap.exists)return;
       var token=snap.data().token;
       if(!token)return;
-      return fetch('/api/ctrl-notify',{
+      return _yAuthFetch('/api/ctrl-notify',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:body||''})
       });
@@ -22303,6 +22303,8 @@ async function handleYongcha(request, env) {
 
   // FCM 알림 (FCM v1 OAuth2)
   if (path === '/api/ctrl-notify' && method === 'POST') {
+    const cnUser = await verifyYongchaToken(request, env);
+    if (!cnUser) return new Response(JSON.stringify({ok:false,error:'인증이 필요해요'}),{status:401,headers:{'Content-Type':'application/json'}});
     try {
       const body = await request.json();
       if (body.token) {
@@ -22380,6 +22382,10 @@ async function handleYongcha(request, env) {
 
   // ── 팝빌 웹훅 수신 (상태 변경 콜백) ────────────────────────────────────
   if (path === '/api/yongcha/popbill-webhook' && method === 'POST') {
+    const whSecret = request.headers.get('X-Popbill-Webhook-Secret') || url.searchParams.get('secret') || '';
+    if (env.POPBILL_WEBHOOK_SECRET && whSecret !== env.POPBILL_WEBHOOK_SECRET) {
+      return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+    }
     try {
       const body = await request.json();
       // 팝빌에서 전송하는 이벤트: 역발행승인, 역발행거부, 발행취소, 발행완료 등
