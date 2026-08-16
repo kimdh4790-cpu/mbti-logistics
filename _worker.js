@@ -9404,6 +9404,58 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 기사 프로필 저장: POST /api/emergency-driver-profile ──
+    if (path === '/api/emergency-driver-profile' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, driverName, phone, idNum, carNum, carType, bankAccount } = body;
+        if (!dealerId || !driverName || !phone) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName·phone 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const docId = (dealerId+'_'+driverName).replace(/[^a-zA-Z0-9가-힣_\-]/g,'_').slice(0,100);
+        const fields = {
+          dealerId:{stringValue:dealerId},
+          driverName:{stringValue:driverName},
+          phone:{stringValue:phone||''},
+          idNum:{stringValue:idNum||''},
+          carNum:{stringValue:carNum||''},
+          carType:{stringValue:carType||''},
+          bankAccount:{stringValue:bankAccount||''},
+          registeredAt:{stringValue:new Date().toISOString()}
+        };
+        const pr = await fetch(`${FS_BASE}/driver_profiles/${docId}`, {
+          method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({fields})
+        });
+        if (!pr.ok) { const d=await pr.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
+    // ── 기사 프로필 조회: GET /api/emergency-driver-profile ──
+    if (path === '/api/emergency-driver-profile' && method === 'GET') {
+      try {
+        const params = new URL(request.url).searchParams;
+        const dealerId = params.get('dealerId')||'';
+        const driverName = params.get('driverName')||'';
+        if (!dealerId || !driverName) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const docId = (dealerId+'_'+driverName).replace(/[^a-zA-Z0-9가-힣_\-]/g,'_').slice(0,100);
+        const res = await fetch(`${FS_BASE}/driver_profiles/${docId}`, {headers:{'Authorization':'Bearer '+token}});
+        const doc = await res.json();
+        if (!doc.fields) return new Response(JSON.stringify({ok:true,profile:null}),{headers:{'Content-Type':'application/json'}});
+        const p = doc.fields;
+        const profile = {
+          driverName: p.driverName?.stringValue||'',
+          phone: p.phone?.stringValue||'',
+          idNum: p.idNum?.stringValue||'',
+          carNum: p.carNum?.stringValue||'',
+          carType: p.carType?.stringValue||'',
+          bankAccount: p.bankAccount?.stringValue||'',
+          registeredAt: p.registeredAt?.stringValue||''
+        };
+        return new Response(JSON.stringify({ok:true,profile}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 기사 앱 배정 수정 (관리자): POST /api/emergency-driver-apps ──
     if (path === '/api/emergency-driver-apps' && method === 'POST') {
       try {
