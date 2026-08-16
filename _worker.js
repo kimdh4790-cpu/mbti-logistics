@@ -9081,7 +9081,7 @@ service cloud.firestore {
         const slug = (body.slug||'').toLowerCase().replace(/[^a-z0-9가-힣\-_]/g,'').slice(0,30);
         if (!slug) return new Response(JSON.stringify({ok:false,error:'슬러그 없음'}), {headers:{'Content-Type':'application/json'}});
         if (!env.DONWAY_ASSETS) return new Response(JSON.stringify({ok:false,error:'KV 없음'}), {headers:{'Content-Type':'application/json'}});
-        const _coData = {uid, companyName: body.companyName||''};
+        const _coData = {uid, companyName: body.companyName||'', emergency: true};
         await env.DONWAY_ASSETS.put('company-slug:'+slug, JSON.stringify(_coData));
         await env.DONWAY_ASSETS.put('company-uid:'+uid, JSON.stringify({slug, companyName: body.companyName||''}));
         return new Response(JSON.stringify({ok:true, url:'https://mbtico.kr/'+slug}), {headers:{'Content-Type':'application/json'}});
