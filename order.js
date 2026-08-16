@@ -339,12 +339,16 @@ function _doOrder(payType){
   date:_today()
  };
  if(_fcmToken)orderData.fcmToken=_fcmToken;
- // Worker API 경유 — 비로그인 고객도 안전하게 Firestore 쓰기
+ // Worker API 경유 — 비로그인 고객도 안전하게 Firestore 쓰기 (12s 타임아웃)
+ var _ctrl=new AbortController();
+ var _tim=setTimeout(function(){_ctrl.abort();},12000);
  fetch('/api/filo-order',{
   method:'POST',
   headers:{'Content-Type':'application/json'},
-  body:JSON.stringify(orderData)
+  body:JSON.stringify(orderData),
+  signal:_ctrl.signal
  }).then(function(r){return r.json();}).then(function(data){
+  clearTimeout(_tim);
   if(!data.ok||!data.id){throw new Error(data.error||'주문 실패');}
   var orderId=data.id;
   _closeCart();_cart={};_updFab();
@@ -375,8 +379,9 @@ function _doOrder(payType){
   }
   _autoReceiptFCM(orderId, total, items);
  }).catch(function(e){
+  clearTimeout(_tim);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
-  _filoToast('주문 실패 — 다시 시도해주세요');
+  _filoToast(e.name==='AbortError'?'주문 시간 초과 — 다시 시도해주세요':'주문 실패 — 다시 시도해주세요');
  });
 }
 
