@@ -534,21 +534,36 @@ function _emerAdminLogin() {
   if(!email||!pw) { _emerToast('이메일과 비밀번호를 입력하세요'); return; }
   var btn = document.querySelector('#login-admin-form button[onclick="_emerAdminLogin()"]');
   if(btn) { btn.disabled=true; btn.textContent='로그인 중...'; }
+  // 회사 dealerId = URL ?did= 우선, 없으면 localStorage (기사들이 배송 저장할 때 쓴 것과 동일)
+  var urlDid = new URLSearchParams(location.search).get('did') || '';
+  var companyDid = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   _auth.signInWithEmailAndPassword(email, pw)
     .then(function(uc) {
-      return _db.collection('users').doc(uc.user.uid).get();
-    }).then(function(snap) {
-      var did = (snap.exists && (snap.data().dealerId || snap.data().parentDealerId)) || '';
-      if(!did) throw new Error('관리자 권한이 없습니다');
-      localStorage.setItem('mbti_emer_dealerId', did);
-      localStorage.setItem('mbti_emer_role', 'admin');
-      _CU = { uid: did, email: email, dealerId: did, role: 'admin' };
-      window._CU = _CU;
-      _coNameLoaded = false;
-      _emerLoadCoName();
-      _emerShowAdminPanel();
+      if(companyDid) {
+        // URL/localStorage에 회사 dealerId가 있으면 그것 사용
+        localStorage.setItem('mbti_emer_dealerId', companyDid);
+        localStorage.setItem('mbti_emer_role', 'admin');
+        _CU = { uid: uc.user.uid, email: email, dealerId: companyDid, role: 'admin' };
+        window._CU = _CU;
+        _coNameLoaded = false;
+        _emerLoadCoName();
+        _emerShowAdminPanel();
+      } else {
+        // URL dealerId 없으면 사용자 문서에서 조회
+        return _db.collection('users').doc(uc.user.uid).get().then(function(snap) {
+          var did = (snap.exists && (snap.data().parentDealerId || snap.data().dealerId)) || '';
+          if(!did) throw new Error('관리자 권한이 없습니다. URL에 ?did= 파라미터가 필요합니다');
+          localStorage.setItem('mbti_emer_dealerId', did);
+          localStorage.setItem('mbti_emer_role', 'admin');
+          _CU = { uid: uc.user.uid, email: email, dealerId: did, role: 'admin' };
+          window._CU = _CU;
+          _coNameLoaded = false;
+          _emerLoadCoName();
+          _emerShowAdminPanel();
+        });
+      }
     }).catch(function(e) {
-      var msg = e.code==='auth/wrong-password'||e.code==='auth/user-not-found' ? '이메일 또는 비밀번호가 틀렸습니다' : (e.message||'로그인 실패');
+      var msg = e.code==='auth/wrong-password'||e.code==='auth/user-not-found'||e.code==='auth/invalid-credential' ? '이메일 또는 비밀번호가 틀렸습니다' : (e.message||'로그인 실패');
       _emerToast(msg);
       if(btn) { btn.disabled=false; btn.textContent='관리자 로그인'; }
     });
