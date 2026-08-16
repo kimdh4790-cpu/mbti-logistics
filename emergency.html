@@ -674,7 +674,7 @@ function _adminStartMonitor() {
   _adminLoadMonitor();
   _adminLoadDriverMatrix();
   if(_adminMonitorTimer) clearInterval(_adminMonitorTimer);
-  _adminMonitorTimer = setInterval(function(){ _adminLoadMonitor(); _adminLoadDriverMatrix(); }, 30000);
+  _adminMonitorTimer = setInterval(function(){ _adminLoadMonitor(); _adminLoadDriverMatrix(); }, 120000);
 }
 
 function _adminLoadMonitor() {
@@ -4596,6 +4596,25 @@ async function emerSave(){
         if(el2.length>0) el2[el2.length-1]._fbId = docId;
         localStorage.setItem('mbti_emergency_del', JSON.stringify(el2));
       }catch(e){}
+      // 백그라운드 사진 업로드 (저장 블로킹 없음)
+      if(docId && window._pendingPhotoUpload && FB && _st){
+        (async function(_ppu, _pid, _did){
+          try{
+            var _urls = [];
+            for(var _pi=0;_pi<_ppu.photos.length;_pi++){
+              var _ppath = 'emergency_deliveries/'+_ppu.driver+'/'+_ppu.time+'_'+_pi+'.jpg';
+              var _purl = await _emerStorageUpload(_ppu.photos[_pi], _ppath, 3);
+              if(_purl) _urls.push(_purl);
+            }
+            if(_urls.length){
+              await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({dealerId:_did,docId:_pid,fields:{photos:_urls}})});
+            }
+          }catch(e){ console.warn('백그라운드 사진 업로드 실패:', e); }
+          window._pendingPhotoUpload = null;
+        })(window._pendingPhotoUpload, docId, _emerDealerId||localStorage.getItem('mbti_emer_dealerId')||'');
+        window._pendingPhotoUpload = null;
+      }
       var adminFcm = JSON.parse(localStorage.getItem('mbti_admin_fcm')||'""');
       if(adminFcm){
         var trackingStr = window._emerTrackings.length>1
