@@ -6444,6 +6444,22 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
         const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients','/label']);
+        // ── 슬러그 manifest.json: /{slug}/manifest.json 또는 /{slug}/{app}/manifest.json
+        const _mani2 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
+        const _mani1 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
+        if (_mani2 || _mani1) {
+          try {
+            const _ms = _mani2 ? _mani2[1] : _mani1[1];
+            const _ma = _mani2 ? _mani2[2] : '';
+            const _mkv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_ms, 'json') : null;
+            if (_mkv && _mkv.emergency) {
+              const _mStart = _ma ? '/'+_ms+'/'+_ma : '/'+_ms;
+              const _mName = (_mkv.companyName||'배송앱').replace(/[<>"&]/g,'');
+              const _mManifest = { name:_mName, short_name:_mName, start_url:_mStart, scope:'/', display:'standalone', background_color:'#0f172a', theme_color:'#c9a84c', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
+              return new Response(JSON.stringify(_mManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'}});
+            }
+          } catch(e) {}
+        }
         // ── 2단계 슬러그: /{slug}/{appSlug} → 앱별 기사 로그인 페이지
         const _appSlugMatch2 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         if (_appSlugMatch2 && !_reserved.has('/'+_appSlugMatch2[1]) && _appSlugMatch2[2]!=='manifest.json' && _appSlugMatch2[2]!=='sw.js') {
