@@ -205,7 +205,10 @@ service cloud.firestore {
     match /yongcha_users/{uid} {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == uid;
-      allow update: if request.auth.uid == uid || isSuperAdmin();
+      allow update: if isSuperAdmin() ||
+        (request.auth.uid == uid &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['type','suspended','trustScore','trustGrade','noShowCount','acceptRate','isAdmin']));
       allow delete: if isSuperAdmin();
     }
     match /yongcha_posts/{docId} {
@@ -270,7 +273,8 @@ service cloud.firestore {
     }
     match /yongcha_stats/{region} {
       allow read: if isAuth();
-      allow write: if isAuth();
+      allow write: if isAuth() &&
+        request.resource.data.keys().hasOnly(['region','courier','avgUnitPrice','postCount','updatedAt']);
     }
     match /yongcha_daily_records/{docId} {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
