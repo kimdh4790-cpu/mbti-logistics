@@ -156,17 +156,8 @@ function _dineAnalytics(el){
 }
 
 function _av2SyncLive(){
- var did=_CU&&_CU.dealerId;if(!did||!_db)return;
- var today=_today();
- _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(snap){
-   var tot=0,cnt=0;
-   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){tot+=d.total||0;cnt++;}});
-   var la=document.getElementById('av2-live-amt');
-   var lc=document.getElementById('av2-live-cnt');
-   if(la)la.textContent='₩'+tot.toLocaleString();
-   if(lc)lc.textContent=cnt+'건';
-  },function(){});
+ // _dineWatchFiloSales(dine.js)가 av2-live-amt·av2-live-cnt를 이미 업데이트함
+ // 중복 리스너 생성 방지 — no-op
 }
 
 function _dineAnaTab2(btn){
@@ -827,7 +818,7 @@ function _dineAivoInsight(){
   body:JSON.stringify({message:prompt,type:'aivo'})
  }).then(function(r){return r.json();})
  .then(function(d){
-  if(d.reply)res.innerHTML=d.reply.replace(/\n/g,'<br>');
+  if(d.reply){res.textContent='';d.reply.split('\n').forEach(function(line,i){if(i)res.appendChild(document.createElement('br'));res.appendChild(document.createTextNode(line));});}
   else res.textContent='응답을 받지 못했습니다.';
  }).catch(function(e){
   res.textContent='분석 오류: '+e.message;

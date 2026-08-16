@@ -169,7 +169,7 @@ function _filoPageKiosk(el){
        btn.style.outline='2px solid #0891b2';
        // 주문 내역 헤더 업데이트
        var cartTitle=document.querySelector('.cart-panel div:first-child');
-       if(cartTitle)cartTitle.innerHTML=_svgIcon('list')+' '+table.name+' 주문';
+       if(cartTitle)cartTitle.innerHTML=_svgIcon('list')+' '+esc(table.name)+' 주문';
        _filoToast(table.name+' 선택됨');
        // 주문 있으면 주문 내역 모달 표시
        if(order&&order.orders&&order.orders.length){
@@ -493,7 +493,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  items.forEach(function(it){
   var row=document.createElement('div');
   row.style.cssText='display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;align-items:center';
-  row.innerHTML='<span style="color:var(--t2)">'+it.name+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
+  row.innerHTML='<span style="color:var(--t2)">'+esc(it.name)+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
    '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span>';
   body.appendChild(row);
  });

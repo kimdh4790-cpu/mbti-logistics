@@ -630,7 +630,7 @@ function _staffiqAnalyze(){
   body:JSON.stringify({message:prompt,type:'staffiq'})
  }).then(function(r){return r.json();})
  .then(function(d){
-  if(d.reply)res.innerHTML=d.reply.replace(/\n/g,'<br>');
+  if(d.reply){res.textContent='';d.reply.split('\n').forEach(function(line,i){if(i)res.appendChild(document.createElement('br'));res.appendChild(document.createTextNode(line));});}
   else res.textContent='분석 결과를 받지 못했습니다.';
  }).catch(function(e){
   res.textContent='분석 오류: '+e.message;

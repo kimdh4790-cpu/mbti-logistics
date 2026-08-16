@@ -494,8 +494,8 @@ function _filoWaitCard(w,did,isCalled,num){
  card.appendChild(badge);
  var info=document.createElement('div');
  info.style.cssText='flex:1;min-width:0';
- info.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--tx)">'+(w.name||'손님')+'</div>'+
-  '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+(w.seats||1)+'명 · '+waitMin+'분 전'+(w.phone?' · '+w.phone:'')+'</div>';
+ info.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--tx)">'+esc(w.name||'손님')+'</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+esc(String(w.seats||1))+'명 · '+waitMin+'분 전'+(w.phone?' · '+esc(w.phone):'')+'</div>';
  var btns=document.createElement('div');
  btns.style.cssText='display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end';
  var wid=w.id;var wname=w.name||'손님';

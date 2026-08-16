@@ -860,8 +860,9 @@ var _FILO_WATCHERS=[
  {pages:['delivery'],        keys:['_deliveryUnsub']},
  {pages:['sales_report','margin','sales'], keys:['_marginUnsub']},
  {pages:['schedule'],        keys:['_calUnsub']},
- {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub']},
- {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']}
+ {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub','_tableOrderUnsub']},
+ {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']},
+ {pages:['waiting'],         keys:['_waitUnsub','_waitSeatedUnsub']}
 ];
 
 function _filoReleaseOne(key){
