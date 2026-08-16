@@ -854,8 +854,9 @@ export default {
     // ── firebase core compat JS 프록시 (모든 도메인 공통 — 도메인 라우팅 전 처리) ──
     // filo JS 모듈 서빙 (모든 도메인 공통 - 가장 먼저!)
     const pathNoQ = path.split('?')[0]; // 쿼리스트링 제거
-    // ⚠️ order-common.js / order.js / store.js 는 GitHub Raw 직접 서빙 (KV 캐시 우회)
-    const _GITHUB_JS = ['/filo-order-common.js','/order.js','/store.js'];
+    // ⚠️ order-common.js / store.js 는 GitHub Raw 직접 서빙 (KV 캐시 우회)
+    // order.js 는 KV 서빙 (항상 최신 배포본 — GitHub Raw CDN 캐시 우회)
+    const _GITHUB_JS = ['/filo-order-common.js','/store.js'];
     if (_GITHUB_JS.indexOf(pathNoQ) !== -1) {
       const _fname = pathNoQ.slice(1);
       const _ghUrl = 'https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/' + _fname + '?bust=' + Date.now();
