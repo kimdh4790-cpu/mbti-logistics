@@ -55,7 +55,11 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
     <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
   </div>
   <div style="font-size:22px;font-weight:900;margin-bottom:4px" id="emer-co-name">배송앱</div>
-  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:20px" id="emer-co-sub">기사 전용</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:8px" id="emer-co-sub">기사 전용</div>
+  <div id="emer-co-link" style="display:none;align-items:center;gap:6px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:8px;padding:6px 10px;margin-bottom:16px;width:100%;max-width:360px;box-sizing:border-box">
+    <span id="emer-co-link-text" style="font-size:11px;color:rgba(255,255,255,.5);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="_emerCopyLink()" style="flex-shrink:0;padding:4px 10px;background:#c9a84c;border:none;border-radius:6px;color:#08101f;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">링크 복사</button>
+  </div>
   <!-- 관리자/기사 탭 -->
   <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.15);margin-bottom:20px;width:100%;max-width:360px">
     <button id="tab-driver" onclick="_switchLoginTab('driver')" style="flex:1;padding:11px;background:#c9a84c;border:none;color:#08101f;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">기사 로그인</button>
@@ -361,11 +365,42 @@ function _emerInitLogin() {
   _emerLoadCoName();
 }
 
+function _emerUpdateLinkDisplay(did) {
+  var linkWrap = document.getElementById('emer-co-link');
+  var linkText = document.getElementById('emer-co-link-text');
+  if(!linkWrap || !did) return;
+  var url = location.origin + location.pathname + '?did=' + encodeURIComponent(did);
+  if(linkText) linkText.textContent = url;
+  linkWrap.style.display = 'flex';
+}
+function _emerCopyLink() {
+  var did = localStorage.getItem('mbti_emer_dealerId') || '';
+  if(!did) { _emerToast('회사 정보를 불러오는 중입니다'); return; }
+  var url = location.origin + location.pathname + '?did=' + encodeURIComponent(did);
+  if(navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function(){ _emerToast('링크 복사 완료'); }).catch(function(){
+      _emerFallbackCopy(url);
+    });
+  } else { _emerFallbackCopy(url); }
+}
+function _emerFallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); _emerToast('링크 복사 완료'); } catch(e) { _emerToast('직접 복사하세요: '+text); }
+  document.body.removeChild(ta);
+}
 function _emerLoadCoName() {
   var urlDid = new URLSearchParams(location.search).get('did');
   if(urlDid) { localStorage.setItem('mbti_emer_dealerId', urlDid); _coNameLoaded=false; }
   var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   if(!did) return;
+  // URL에 ?did= 반영 (기사가 북마크 가능하도록)
+  if(!urlDid && did && location.search.indexOf('did=') < 0) {
+    var newUrl = location.pathname + '?did=' + encodeURIComponent(did);
+    try { history.replaceState(null,'',newUrl); } catch(e){}
+  }
+  _emerUpdateLinkDisplay(did);
   // 캐시된 이름 즉시 반영 (깜빡임 방지)
   var savedName = localStorage.getItem('mbti_emer_coname');
   if(savedName) {
