@@ -84,23 +84,25 @@ function _filoMarginLoad(){
 }
 
 function _filoStartMarginLive(did,ym){
- /* 기존 리스너 해제 */
  if(_marginUnsub){_marginUnsub();_marginUnsub=null;}
  var start=ym+'-01',end=ym+'-31';
  var today=_today();
 
- /* filo_sales(POS) 실시간 onSnapshot */
- _marginUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did)
-  .where('date','>=',start)
-  .where('date','<=',end)
-  .onSnapshot(function(posSnap){
-   /* 수동 매출도 같이 조회 */
-   _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
-   .then(function(manSnap){
+ /* mbetco_sales 1회 로드 — filo_sales 변경마다 재조회 방지 */
+ _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
+ .then(function(manSnap){
+  _marginUnsub=_db.collection('filo_sales')
+   .where('dealerId','==',did).where('date','>=',start).where('date','<=',end)
+   .onSnapshot(function(posSnap){
     _filoCalcAndRender(posSnap,manSnap,today,ym,did);
-   });
-  },function(e){console.error('margin listener:',e);});
+   },function(e){console.error('margin listener:',e);});
+ }).catch(function(){
+  _marginUnsub=_db.collection('filo_sales')
+   .where('dealerId','==',did).where('date','>=',start).where('date','<=',end)
+   .onSnapshot(function(posSnap){
+    _filoCalcAndRender(posSnap,{forEach:function(){}},today,ym,did);
+   },function(e){console.error('margin listener:',e);});
+ });
 }
 
 function _filoCalcAndRender(posSnap,manSnap,today,ym,did){

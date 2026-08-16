@@ -72,45 +72,45 @@ function _filoPageKiosk(el){
 
  // 테이블 현황 바 실시간 로드 (5개씩)
  var _kioskTableUnsub=null;
+ /* 테이블 목록 캐시 — 주문 변경마다 재조회 방지 */
+ var _kioskTablesCache=null;
  function _loadKioskTableBar(){
   var bar=document.getElementById('kiosk-table-bar');
   if(!bar)return;
   var today=_today();
-  // 주문 맵 로드
-  _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
-   .onSnapshot(function(oSnap){
-    var oMap={};
-    oSnap.forEach(function(doc){
-     var d=doc.data();
-     if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
-      var k=String(d.tableNum||'');
-      var k2=d.tableName||'';
-      if(!k&&k2)k=k2.replace(/[^0-9]/g,'')||k2;
-      var isCleared=(d.status==='cleared');
-      var isPd=(d.status==='paid'||d.payType==='prepay'||isCleared);
-      if(k){
-       if(!oMap[k])oMap[k]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
-       oMap[k].total+=(d.total||0);
-       oMap[k].orders.push(Object.assign({_id:doc.id},d));
-       if(isCleared){oMap[k].paidTotal+=(d.total||0);oMap[k].hasCleared=true;}
-       else if(isPd){oMap[k].paidTotal+=(d.total||0);}
-       else{oMap[k].pendingTotal+=(d.total||0);oMap[k].hasPending=true;}
-       if(!oMap[k].hasPending&&oMap[k].paidTotal>0)oMap[k].paid=true;
-      }
-      if(k2&&k2!==k){
-       if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
-       oMap[k2].total+=(d.total||0);
-       oMap[k2].orders.push(Object.assign({_id:doc.id},d));
-       if(isCleared){oMap[k2].paidTotal+=(d.total||0);oMap[k2].hasCleared=true;}
-       else if(isPd){oMap[k2].paidTotal+=(d.total||0);}
-       else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
-       if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
-      }
+  /* 테이블 목록 1회 로드 후 캐시 */
+  var _renderBar=function(oSnap){
+   var oMap={};
+   oSnap.forEach(function(doc){
+    var d=doc.data();
+    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
+     var k=String(d.tableNum||'');
+     var k2=d.tableName||'';
+     if(!k&&k2)k=k2.replace(/[^0-9]/g,'')||k2;
+     var isCleared=(d.status==='cleared');
+     var isPd=(d.status==='paid'||d.payType==='prepay'||isCleared);
+     if(k){
+      if(!oMap[k])oMap[k]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
+      oMap[k].total+=(d.total||0);
+      oMap[k].orders.push(Object.assign({_id:doc.id},d));
+      if(isCleared){oMap[k].paidTotal+=(d.total||0);oMap[k].hasCleared=true;}
+      else if(isPd){oMap[k].paidTotal+=(d.total||0);}
+      else{oMap[k].pendingTotal+=(d.total||0);oMap[k].hasPending=true;}
+      if(!oMap[k].hasPending&&oMap[k].paidTotal>0)oMap[k].paid=true;
      }
-    });
-    // 테이블 목록 로드
-    _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
-     var tables=tSnap.empty?
+     if(k2&&k2!==k){
+      if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
+      oMap[k2].total+=(d.total||0);
+      oMap[k2].orders.push(Object.assign({_id:doc.id},d));
+      if(isCleared){oMap[k2].paidTotal+=(d.total||0);oMap[k2].hasCleared=true;}
+      else if(isPd){oMap[k2].paidTotal+=(d.total||0);}
+      else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
+      if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
+     }
+    }
+   });
+   var tSnap=_kioskTablesCache;
+   var tables=(!tSnap||tSnap.empty)?
       Array.from({length:10},function(_,i){return {num:i+1,name:'테이블 '+(i+1),status:'empty'};})
       :tSnap.docs.map(function(d){var f=d.data();return {num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty'};})
        .sort(function(a,b){return a.num-b.num;})
@@ -186,8 +186,20 @@ function _filoPageKiosk(el){
       nextBtn.onclick=function(){window._kioskTablePage=Math.min(Math.ceil(tables.length/5)-1,page+1);_loadKioskTableBar();};
       bar.appendChild(nextBtn);
      }
-    });
-   });
+  }; /* _renderBar 끝 */
+  /* 테이블 목록 1회 로드 → onSnapshot 콜백에서 캐시 재사용 */
+  var _startOrderWatch=function(){
+   if(_kioskTableUnsub){try{_kioskTableUnsub();}catch(e){}}
+   _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+    .onSnapshot(function(oSnap){_renderBar(oSnap);},function(){});
+  };
+  if(_kioskTablesCache){_startOrderWatch();}
+  else{
+   _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
+    _kioskTablesCache=tSnap;
+    _startOrderWatch();
+   }).catch(function(){_kioskTablesCache={empty:true,docs:[]};_startOrderWatch();});
+  }
  }
  _loadKioskTableBar();
 

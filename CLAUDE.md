@@ -95,7 +95,27 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
-## 🔴 미완료 작업 (박람회 D-13, 2026-08-20)
+## ✅ 완료 작업 (2026-08-16)
+
+### Firestore 읽기 최적화 (2만/일 → 8천~1만/일 목표, ~40% 절감)
+- filo-auth.js: mbetco_sales·menu_costs·inventory 1회 로드 → onSnapshot 콜백 내 반복 get() 제거
+- filo-auth.js: filo_sales 중복 onSnapshot 제거 (L851 → L749에 통합)
+- filo-auth.js: inventory 배지 onSnapshot → get() 교체
+- filo-pos.js: filo_orders onSnapshot 콜백 내 filo_tables.get() 캐시화 (_kioskTablesCache)
+- filo-staff.js: attendance 2쿼리(in/out 별도) → 1쿼리(where type in ['in','out']) 통합
+- filo-staff.js: members 5분 TTL 캐시 (_membersCache/_membersCacheAt) 전역 적용
+- filo-order.js: filo_orders onSnapshot에 date 필터 추가 (JS 필터 → DB 필터)
+- filo-margin.js: mbetco_sales 1회 로드 → filo_sales onSnapshot 콜백 내 반복 get() 제거
+- filo-booking.js: 예약 확정/거절 시 불필요한 get() 제거 (bookingData 파라미터 추가)
+- dine-payroll.js: companies 쿼리 제거 (_CU._company 재사용)
+- _worker.js: 번역 KV 캐시 한국어 오염 검증 추가
+
+### Firebase Blaze 플랜 전환 (사용자 직접 필요)
+- Firebase 콘솔 → Spark → Blaze 업그레이드 (읽기 5만/일 초과 시 차단 방지)
+
+---
+
+## 🔴 미완료 작업 (박람회 D-4, 2026-08-20)
 
 ### 최우선
 1. 선결제/후불 모달 - table-order.html 미작업

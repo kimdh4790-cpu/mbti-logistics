@@ -132,14 +132,10 @@ function _filoPageOrders(el){
    _renderOrders();
   });
  var _u2=_db.collection('filo_orders')
-  .where('dealerId','==',did).where('type','==','table')
+  .where('dealerId','==',did).where('type','==','table').where('date','==',today)
   .onSnapshot(function(snap){
    _oQR=[];
-   snap.forEach(function(doc){
-    var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today)
-     _oQR.push(Object.assign({_id:doc.id,_src:'qr'},d));
-   });
+   snap.forEach(function(doc){_oQR.push(Object.assign({_id:doc.id,_src:'qr'},doc.data()));});
    _renderOrders();
   });
  _ordersUnsub=function(){_u1();_u2();};
