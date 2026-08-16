@@ -4682,7 +4682,7 @@ function _submitPost(){
             .then(function(snap){
               snap.forEach(function(doc){
                 var t=doc.data().token;
-                if(t) fetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+                if(t) _yAuthFetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
                   body:JSON.stringify({token:t,title:'긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
               });
             }).catch(function(){});
@@ -6928,7 +6928,7 @@ function _yNotify(recipientId,title,body,type){
       if(!snap.exists)return;
       var token=snap.data().token;
       if(!token)return;
-      return fetch('/api/ctrl-notify',{
+      return _yAuthFetch('/api/ctrl-notify',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({token:token,title:title,body:body||''})
       });
@@ -9236,6 +9236,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
     // ── Price Suggest AI: 단가 최적화 추천 ───────────────────────
     if (path === '/api/yongcha/price-suggest' && method === 'POST') {
+      const psH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const psUser = await ycVerifyToken(request, env);
+      if (!psUser) return ycAuthReq(psH);
       try {
         const { courier, region, workShift, volume } = await request.json();
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
@@ -9341,6 +9344,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 팝빌 세금계산서 역발행 ────────────────────────────────────────
     if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const pbUser = await ycVerifyToken(request, env);
+      if (!pbUser) return ycAuthReq(corsH);
       try {
         const body = await request.json();
         const { workId, agencyId, driverId, driverName, fare } = body;
@@ -9395,6 +9400,10 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
 
     // ── 팝빌 웹훅 ─────────────────────────────────────────────────────
     if (path === '/api/yongcha/popbill-webhook' && method === 'POST') {
+      const whSecret = request.headers.get('X-Popbill-Webhook-Secret') || url.searchParams.get('secret') || '';
+      if (env.POPBILL_WEBHOOK_SECRET && whSecret !== env.POPBILL_WEBHOOK_SECRET) {
+        return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+      }
       try {
         const body = await request.json();
         const { MgtKey, State, StateDate } = body;
@@ -9435,6 +9444,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
     if (path === '/api/yongcha/settle-notify' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const snUser = await ycVerifyToken(request, env);
+      if (!snUser) return ycAuthReq(corsH);
       try {
         const body = await request.json();
         const { settleId, driverPhone, driverName, agencyId, agencyName,
@@ -9500,6 +9511,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
     if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const paUser = await ycVerifyToken(request, env);
+      if (!paUser) return ycAuthReq(corsH);
       try {
         const body = await request.json();
         const { settleId, senderCorpNum, mgtKey } = body;
@@ -9546,6 +9559,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
     if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const prUser = await ycVerifyToken(request, env);
+      if (!prUser) return ycAuthReq(corsH);
       try {
         const body = await request.json();
         const { settleId, senderCorpNum, mgtKey, rejectReason } = body;
@@ -9738,6 +9753,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 기사 위험도 점수 집계 ────────────────────────────────────────────────
     if (path === '/api/yongcha/risk-score' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const rsUser = await ycVerifyToken(request, env);
+      if (!rsUser) return ycAuthReq(corsH);
       try {
         const { driverId } = await request.json();
         if (!driverId) return new Response(JSON.stringify({ ok: false, error: 'driverId 필수' }), { status: 400, headers: corsH });
@@ -9761,6 +9778,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 노쇼 자동 에스컬레이션 ───────────────────────────────────────────────
     if (path === '/api/yongcha/noshow-escalate' && method === 'POST') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const neUser = await ycVerifyToken(request, env);
+      if (!neUser) return ycAuthReq(corsH);
       try {
         const { applyId, postId, agencyId, driverId, driverName } = await request.json();
         if (!applyId || !postId) return new Response(JSON.stringify({ ok: false, error: '필수값 누락' }), { status: 400, headers: corsH });
@@ -9954,7 +9973,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
       try {
         const secret = request.headers.get('X-Cron-Secret') || '';
-        if (env.CRON_SECRET && secret !== env.CRON_SECRET) return new Response(JSON.stringify({ ok: false, error: '권한 없음' }), { status: 403, headers: corsH });
+        if (!env.CRON_SECRET || secret !== env.CRON_SECRET) return new Response(JSON.stringify({ ok: false, error: '권한 없음' }), { status: 403, headers: corsH });
 
         const fsToken = await ycGetFsToken(env);
         const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
