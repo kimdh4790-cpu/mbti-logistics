@@ -744,51 +744,60 @@ function _filoPageHome(el){
  /* 페이지 재진입 시 이전 리스너 정리 — 중첩 onSnapshot 누수 방지 */
  _filoStopHomeWatch();
 
- /* ① 오늘 POS 매출 · 순이익 · 마진율 (실시간) */
+ /* 정적 데이터 1회 로드 (mbetco_sales 오늘·이번달, menu_costs, inventory) */
+ var _mbToday=[], _mbMonth=[], _costMap={};
+ Promise.all([
+  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
+  _db.collection('mbetco_sales').where('dealerId','==',did)
+   .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get(),
+  _db.collection('inventory').where('dealerId','==',did).get()
+ ]).then(function(res){
+  _mbToday=[]; res[0].forEach(function(doc){_mbToday.push(doc.data());});
+  _mbMonth=[]; res[1].forEach(function(doc){_mbMonth.push(doc.data());});
+  res[2].forEach(function(doc){var c=doc.data();_costMap[c.name]=c;});
+  /* ④ 재고 부족 배지 — 정적 데이터이므로 get()으로 1회 표시 */
+  var low=0;
+  res[3].forEach(function(doc){var i=doc.data();var stock=(i.stock!=null?i.stock:(i.qty||0));var min=(i.minStock!=null?i.minStock:5);if(stock<=min)low++;});
+  var e2=document.getElementById('hs-2');
+  if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
+ }).catch(function(){});
+
+ /* ① 오늘 POS 매출 · 순이익 · 마진율 (실시간) — 캐시된 costMap·mbToday 재사용 */
  window._filoHomeUnsubs.push(
   _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
   .onSnapshot(function(posSnap){
-   Promise.all([
-    _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
-    _db.collection('menu_costs').where('dealerId','==',did).get()
-   ]).then(function(res){
-    var costMap={};
-    res[1].forEach(function(doc){var c=doc.data();costMap[c.name]=c;});
-    var todayRev=0,todayCost=0;
-    posSnap.forEach(function(doc){
-     var s=doc.data();
-     if(s.status==='cancel'||s.status==='cancelled')return;
-     todayRev+=(s.total||0);
-     (s.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
-    });
-    res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
+   var todayRev=0,todayCost=0,cnt=0;
+   posSnap.forEach(function(doc){
+    var s=doc.data();
+    if(s.status==='cancel'||s.status==='cancelled')return;
+    todayRev+=(s.total||0);cnt++;
+    (s.items||[]).forEach(function(it){todayCost+=((_costMap[it.name]||{}).cost||0)*(it.qty||1);});
+   });
+   _mbToday.forEach(function(d){todayRev+=(d.revenue||d.totalAmount||0);});
 
-    var todayProfit=todayRev-todayCost;
-    var todayMargin=todayRev>0?Math.round(todayProfit/todayRev*100):0;
-    var e0=document.getElementById('hs-0'),ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
-    if(e0)_countUp(e0,todayRev,400,'₩','');
-    if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
-    if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
-   }).catch(function(){});
+   var todayProfit=todayRev-todayCost;
+   var todayMargin=todayRev>0?Math.round(todayProfit/todayRev*100):0;
+   var e0=document.getElementById('hs-0'),ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
+   if(e0)_countUp(e0,todayRev,400,'₩','');
+   if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
+   if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
+   /* DINE 연동 카드 매출 — 동일 스냅샷 재사용으로 중복 리스너 제거 */
+   var t=document.getElementById('filo-dine-sales');
+   if(t)t.textContent='₩'+todayRev.toLocaleString()+'('+cnt+'건)';
   },function(){})
  );
 
- /* ② 이번 달 매출 (실시간) */
+ /* ② 이번 달 매출 — 캐시된 _mbMonth 재사용, 콜백 내 추가 get() 제거 */
  window._filoHomeUnsubs.push(
   _db.collection('filo_sales').where('dealerId','==',did)
    .where('date','>=',ym+'-01').where('date','<=',ym+'-31')
   .onSnapshot(function(snap){
    var monthRev=0;
    snap.forEach(function(doc){var s=doc.data();if(s.status!=='cancel'&&s.status!=='cancelled')monthRev+=(s.total||0);});
-   _db.collection('mbetco_sales').where('dealerId','==',did)
-    .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get().then(function(ms){
-     ms.forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-     var eM=document.getElementById('hs-month');
-     if(eM)_countUp(eM,monthRev,600,'₩','');
-    }).catch(function(){
-     var eM=document.getElementById('hs-month');
-     if(eM)_countUp(eM,monthRev,600,'₩','');
-    });
+   _mbMonth.forEach(function(d){monthRev+=(d.revenue||d.totalAmount||0);});
+   var eM=document.getElementById('hs-month');
+   if(eM)_countUp(eM,monthRev,600,'₩','');
   },function(){})
  );
 
@@ -806,21 +815,7 @@ function _filoPageHome(el){
   },function(){})
  );
 
- /* ④ 재고 부족 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('inventory').where('dealerId','==',did)
-  .onSnapshot(function(snap){
-   var low=0;
-   snap.forEach(function(doc){
-    var i=doc.data();
-    var stock=(i.stock!=null?i.stock:(i.qty||0));
-    var min=(i.minStock!=null?i.minStock:5);
-    if(stock<=min)low++;
-   });
-   var e2=document.getElementById('hs-2');
-   if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
-  },function(){})
- );
+ /* ④ 재고 부족 — 위 Promise.all에서 처리 (onSnapshot 제거) */
 
  /* ⑤ 출근 인원 (실시간 · DINE 출퇴근 연동) */
  window._filoHomeUnsubs.push(
@@ -840,7 +835,7 @@ function _filoPageHome(el){
   },function(){})
  );
 
- /* ⑥ DINE 연동 카드 — 오늘 예약 (pending) · POS 매출 (실시간) */
+ /* ⑥ DINE 연동 카드 — 오늘 예약 (pending) */
  window._filoHomeUnsubs.push(
   _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
   .onSnapshot(function(snap){
@@ -848,15 +843,7 @@ function _filoPageHome(el){
    if(b)b.textContent=snap.size>0?snap.size+'건':'없음';
   },function(){})
  );
- window._filoHomeUnsubs.push(
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(snap){
-   var total=0,cnt=0;
-   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
-   var t=document.getElementById('filo-dine-sales');
-   if(t)t.textContent='₩'+total.toLocaleString()+'('+cnt+'건)';
-  },function(){})
- );
+ /* ⑦ filo-dine-sales — ① onSnapshot에서 통합 처리 (중복 리스너 제거됨) */
 
  /* ⑦ AI 한줄 브리핑 */
  if(typeof _filoAiBriefing==='function') _filoAiBriefing('home-ai-briefing');

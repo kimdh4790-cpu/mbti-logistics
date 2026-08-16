@@ -30,20 +30,23 @@
  */
 
 // ── 예약 확정/거절 (테이블카드 인라인) ──────────────────────────
-window._filoBookingConfirm=function(bid,did){
- _db.collection('filo_bookings').doc(bid).get().then(function(snap){
-  var d=snap.data()||{};
+window._filoBookingConfirm=function(bid,did,bookingData){
+ /* bookingData가 있으면 get() 생략 — 없으면 폴백 */
+ var _doConfirm=function(d){
   _db.collection('filo_bookings').doc(bid).update({status:'confirmed',confirmedAt:_nowISO()})
   .then(function(){_filoToast('예약 확정');_filoTableLoad(did);_filoNotifyReservation(did,d,'confirmed');});
- });
+ };
+ if(bookingData){_doConfirm(bookingData);}
+ else{_db.collection('filo_bookings').doc(bid).get().then(function(snap){_doConfirm(snap.data()||{});});}
 };
-window._filoBookingReject=function(bid,did){
+window._filoBookingReject=function(bid,did,bookingData){
  if(!confirm('예약을 거절하시겠습니까?'))return;
- _db.collection('filo_bookings').doc(bid).get().then(function(snap){
-  var d=snap.data()||{};
+ var _doReject=function(d){
   _db.collection('filo_bookings').doc(bid).update({status:'rejected',rejectedAt:_nowISO()})
   .then(function(){_filoToast('예약 거절');_filoTableLoad(did);_filoNotifyReservation(did,d,'rejected');});
- });
+ };
+ if(bookingData){_doReject(bookingData);}
+ else{_db.collection('filo_bookings').doc(bid).get().then(function(snap){_doReject(snap.data()||{});});}
 };
 
 // ── 예약 알림: FCM 우선, 없으면 알림톡 ─────────────────────────
