@@ -5220,7 +5220,8 @@ function _showMapModal(locs){
       +statusDot
       +'</div>'
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
-      +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:8px">운송장: '+(trackVal||'—')+'</div>'
+      +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:'+(isDone?'3':'8')+'px">운송장: '+(trackVal||'—')+'</div>'
+      +(isDone&&(x.lastCompletedAt||x.completedAt)?'<div style="font-size:10px;color:#4ade80;margin-left:32px;margin-bottom:8px;font-weight:600">✅ 완료 '+(x.lastCompletedAt||x.completedAt).slice(11,16)+'</div>':'')
       +photoHtml
       +'<div style="display:flex;gap:6px;margin-left:32px">'
       +mapBtn
@@ -5537,21 +5538,25 @@ async function _dcSave(fbId, locIdx){
     document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
     toast('✅ 배송완료!');
     setTimeout(openDeliveryMap,400);
-    // 2단계: 사진 백그라운드 업로드 (완료 후)
-    if(_savedPhoto&&FB&&_st){
+    // 2단계: 사진 백그라운드 저장 (base64 → Firestore 직접 저장, Storage 불필요)
+    if(_savedPhoto){
+      var _bgDid=_compDid; var _bgFbId=fbId;
       (async function(){
         try{
-          var x2=(window._mapLocs&&window._mapLocs[locIdx])||{};
-          var driver2=x2.driver||localStorage.getItem('mbti_emer_driver')||'unknown';
-          var compressed=await _emerCompressPhoto(_savedPhoto,800,0.70);
-          var _t15=new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},15000);});
-          var url2=await Promise.race([_emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',2),_t15]);
-          if(url2){
-            await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({dealerId:_compDid,docId:fbId,fields:{completePhotos:[url2]}})});
-            if(window._mapLocs&&window._mapLocs[locIdx]) window._mapLocs[locIdx].completePhotos=[url2];
+          var compressed=await _emerCompressPhoto(_savedPhoto,700,0.68);
+          var _res=await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({dealerId:_bgDid,docId:_bgFbId,fields:{completePhotos:[compressed]}})});
+          var _rd=await _res.json();
+          if(_rd.ok){
+            if(window._mapLocs){
+              for(var _mi=0;_mi<window._mapLocs.length;_mi++){
+                if((window._mapLocs[_mi].id||window._mapLocs[_mi].fbId)===_bgFbId){
+                  window._mapLocs[_mi].completePhotos=[compressed]; break;
+                }
+              }
+            }
           }
-        }catch(e){ console.warn('[dcSave] 사진 백그라운드 업로드 실패:',e.message); }
+        }catch(e){ console.warn('[dcSave] 사진 저장 실패:',e.message); }
       })();
     }
   }catch(e){
