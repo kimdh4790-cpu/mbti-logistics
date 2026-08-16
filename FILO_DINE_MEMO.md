@@ -159,6 +159,13 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-16 (2차)
+**로그인 화면 로고 base64 삽입**
+- `filo.html` L1059: 그라디언트div+SVG → `<img src="data:image/png;base64,...">` (filo-icon-192.png, 48×48)
+- `dine.html` L302 위: DINE 텍스트 로고 위에 `<img src="data:image/png;base64,...">` (dine-icon-192.png, 56×56) 추가
+- `filo-landing.html` / `dine-landing.html`: 이미 base64 삽입 완료 (1차)
+- PNG 파일이 KV에 업로드 안 돼 로고가 표시 안 됐던 문제 해결. deploy.yml은 텍스트 파일만 업로드 → PNG는 base64 인라인이 유일한 해결책.
+
 ### 2026-08-16
 **Firestore 읽기 최적화 (~40% 절감)**
 - `filo-auth.js`: mbetco_sales·menu_costs·inventory 1회 로드 → onSnapshot 콜백 내 반복 get() 제거
