@@ -8978,6 +8978,10 @@ service cloud.firestore {
         const fsData = await fsRes.json();
         if (!fsRes.ok) return new Response(JSON.stringify({ok:false,error:JSON.stringify(fsData)}), {headers:{'Content-Type':'application/json'}});
         const docId = (fsData.name||'').split('/').pop();
+        if (env.DONWAY_ASSETS) {
+          const _today = new Date().toISOString().slice(0,10);
+          env.DONWAY_ASSETS.delete('emap:'+dealerId+':'+_today).catch(()=>{});
+        }
         return new Response(JSON.stringify({ok:true,docId}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
@@ -9000,6 +9004,10 @@ service cloud.firestore {
           body:JSON.stringify({fields:fsFields})
         });
         if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        if (env.DONWAY_ASSETS && dealerId) {
+          const _today = new Date().toISOString().slice(0,10);
+          env.DONWAY_ASSETS.delete('emap:'+dealerId+':'+_today).catch(()=>{});
+        }
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}}); }
     }
