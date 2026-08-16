@@ -9183,7 +9183,8 @@ service cloud.firestore {
         const date = u.searchParams.get('date')||new Date().toISOString().slice(0,10);
         if (!dealerId && !driver) return new Response(JSON.stringify({ok:false,error:'dealerId 또는 driver 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
         const _cacheKey = 'emap:'+(dealerId||driver)+':'+date;
-        if (env.DONWAY_ASSETS) {
+        const _noCache = u.searchParams.get('nocache') === '1';
+        if (!_noCache && env.DONWAY_ASSETS) {
           const _cached = await env.DONWAY_ASSETS.get(_cacheKey, 'text');
           if (_cached) return new Response(_cached, {headers:{'Content-Type':'application/json','X-Cache':'HIT'}});
         }
