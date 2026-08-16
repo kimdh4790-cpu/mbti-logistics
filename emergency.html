@@ -419,14 +419,12 @@ function _emerUpdateLinkDisplay(did) {
   var linkWrap = document.getElementById('emer-co-link');
   var linkText = document.getElementById('emer-co-link-text');
   if(!linkWrap || !did) return;
-  var url = location.origin + location.pathname + '?did=' + encodeURIComponent(did);
+  var url = location.origin + location.pathname.replace(/\/$/, '');
   if(linkText) linkText.textContent = url;
   linkWrap.style.display = 'flex';
 }
 function _emerCopyLink() {
-  var did = localStorage.getItem('mbti_emer_dealerId') || '';
-  if(!did) { _emerToast('회사 정보를 불러오는 중입니다'); return; }
-  var url = location.origin + location.pathname + '?did=' + encodeURIComponent(did);
+  var url = location.origin + location.pathname.replace(/\/$/, '');
   if(navigator.clipboard) {
     navigator.clipboard.writeText(url).then(function(){ _emerToast('링크 복사 완료'); }).catch(function(){
       _emerFallbackCopy(url);
