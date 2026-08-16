@@ -445,11 +445,6 @@ function _emerLoadCoName() {
   if(urlDid) { localStorage.setItem('mbti_emer_dealerId', urlDid); _coNameLoaded=false; }
   var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   if(!did) return;
-  // URL에 ?did= 반영 (기사가 북마크 가능하도록)
-  if(!urlDid && did && location.search.indexOf('did=') < 0) {
-    var newUrl = location.pathname + '?did=' + encodeURIComponent(did);
-    try { history.replaceState(null,'',newUrl); } catch(e){}
-  }
   // manifest 링크 업데이트 (PWA 홈화면 설치 시 올바른 start_url 사용)
   (function(){ var ml=document.getElementById('pwa-manifest-link'); if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did); })();
   _emerUpdateLinkDisplay(did);
