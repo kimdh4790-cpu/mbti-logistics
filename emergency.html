@@ -349,6 +349,20 @@ function _renderServiceButtons() {
     };
     row.appendChild(btn);
   });
+  // 선택된 서비스 헤더에 반영 (회사명 / 앱명칭)
+  _emerUpdateSubtitle();
+}
+
+function _emerUpdateSubtitle() {
+  var coName = localStorage.getItem('mbti_emer_coname') || '';
+  var appName = localStorage.getItem('mbti_emer_app') || '';
+  var sub = document.getElementById('emer-co-sub');
+  if(!sub) return;
+  if(coName && appName) {
+    sub.textContent = coName + ' / ' + appName + ' 기사 전용';
+  } else if(coName) {
+    sub.textContent = coName + ' 기사 전용';
+  }
 }
 
 function _emerInitLogin() {
@@ -423,9 +437,10 @@ function _emerLoadCoName() {
     var t2 = document.getElementById('emer-co-name');
     var s2 = document.getElementById('emer-co-sub');
     if(t2) t2.textContent = name;
-    if(s2) s2.textContent = name + ' 기사 전용';
-    document.querySelectorAll('.top-logo').forEach(function(el){ el.textContent=name; });
-    document.title = name + ' 배송앱';
+    var appN = localStorage.getItem('mbti_emer_app') || '';
+    if(s2) s2.textContent = name + (appN ? ' / ' + appN : '') + ' 기사 전용';
+    document.querySelectorAll('.top-logo').forEach(function(el){ el.textContent = name + (appN ? ' / ' + appN : ''); });
+    document.title = name + (appN ? ' / ' + appN : '') + ' 배송앱';
     // 캠프 목록 변경 시 버튼만 재렌더 (_emerInitLogin 호출 금지 — 루프 원인)
     if(co.camps && co.camps.length) { window._CO_EMER_CAMPS = co.camps; _renderCampButtons(); }
     // 배송 서비스 목록
