@@ -4,8 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>배송앱 — MBTICO</title>
-<link rel="manifest" href="/emergency-manifest.json">
+<link rel="manifest" href="/emergency-manifest.json" id="pwa-manifest-link">
 <link rel="icon" type="image/png" href="/mbti-icon-192.png">
+<script>
+(function(){
+  var d=new URLSearchParams(location.search).get('did')||localStorage.getItem('mbti_emer_dealerId')||'';
+  if(d){var ml=document.getElementById('pwa-manifest-link');if(ml)ml.href='/emergency-manifest.json?did='+encodeURIComponent(d);}
+})();
+</script>
 <link rel="apple-touch-icon" href="/mbti-icon-192.png">
 <meta name="theme-color" content="#c9a84c">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -414,6 +420,8 @@ function _emerLoadCoName() {
     var newUrl = location.pathname + '?did=' + encodeURIComponent(did);
     try { history.replaceState(null,'',newUrl); } catch(e){}
   }
+  // manifest 링크 업데이트 (PWA 홈화면 설치 시 올바른 start_url 사용)
+  (function(){ var ml=document.getElementById('pwa-manifest-link'); if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did); })();
   _emerUpdateLinkDisplay(did);
   // 캐시된 이름 즉시 반영 (깜빡임 방지)
   var savedName = localStorage.getItem('mbti_emer_coname');
