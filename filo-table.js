@@ -101,14 +101,16 @@ function _filoTableLoad(did){
    }
   });
  var tableSnap=null,bookingSnap=null,orderMap={};
- // 실시간 주문 감지 (테이블별 주문금액)
+ // 실시간 주문 감지 (테이블별 주문금액) — 오늘 날짜 DB 필터
  var today=_today();
- _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+ if(window._tableOrderUnsub){window._tableOrderUnsub();window._tableOrderUnsub=null;}
+ window._tableOrderUnsub=_db.collection('filo_orders')
+  .where('dealerId','==',did).where('type','==','table').where('date','==',today)
   .onSnapshot(function(snap){
    orderMap={};
    snap.forEach(function(doc){
     var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
+    if(d.status!=='cancel'){
      // tableNum 우선, 없으면 tableName에서 숫자 추출
      var tNum=String(d.tableNum||'');
      if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;

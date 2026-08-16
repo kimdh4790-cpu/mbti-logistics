@@ -159,6 +159,27 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-16 (3차)
+**보안 취약점 수정 (XSS·미인증 API 엔드포인트)**
+- `dine-member.js`: `_de()` XSS 이스케이프 헬퍼 추가. 회원 목록 `d.name`·`d.phone`, 수정 모달 `existing.name`·`existing.phone`·`existing.birth`·`existing.memo` value="" 속성 전체 적용
+- `filo-booking.js`: 웨이팅 카드 `w.name`·`w.phone`·`w.seats` → `esc()` 적용
+- `filo-staff.js`: Claude AI 응답 `innerHTML` 할당 → `textContent`+`createElement('br')` 방식으로 XSS 차단
+- `dine-analytics.js`: Claude AI 응답 `innerHTML` 할당 → `textContent`+`createElement('br')` 방식으로 XSS 차단
+- `filo-inventory.js`: `it.name`·`it.supplier` innerHTML 삽입 → `esc()` 적용
+- `filo-pos.js`: `table.name`·`it.name` innerHTML 삽입 → `esc()` 적용
+- `filo-pos-ui.js`: `it.name` innerHTML 삽입 → `esc()` 적용
+- `filo-members.js`: `d.phone`·`d.dept`·initials innerHTML 삽입 → `esc()` 적용
+- `_worker.js`: `/api/waiting-update` (L2819) → `verifyFirebaseToken` 인증 추가
+- `_worker.js`: `/fcm/notify-drivers` (L2853) → `verifyFirebaseToken` 인증 추가
+
+**Firestore 리스너 누수·중복 수정**
+- `filo-auth.js`: `_FILO_WATCHERS`에 `table_qr` 페이지의 `_tableOrderUnsub`, `waiting` 페이지 항목 추가
+- `filo-table.js`: `_tableOrderUnsub` 전역 저장 + `where('date','==',today)` DB 필터 추가 → JS 클라이언트 필터 제거
+- `filo-order.js`: 배달탭 사용 안 하는 `filo_orders` onSnapshot(u2) 제거 → `callUnsub` 연결
+- `dine.js`: `_dineLoadDashboard` N+1 패턴 수정 — menu_costs·attendance·members를 `Promise.all`로 1회 로드 후 `filo_sales` onSnapshot 시작
+- `dine.js`: `_dineWatchAttend` 60초 `setInterval` 폴링 제거 (onSnapshot이 실시간 담당)
+- `dine-analytics.js`: `_av2SyncLive` → no-op (중복 리스너 방지, `_dineWatchFiloSales`가 이미 업데이트)
+
 ### 2026-08-16 (2차)
 **로그인 화면 로고 base64 삽입**
 - `filo.html` L1059: 그라디언트div+SVG → `<img src="data:image/png;base64,...">` (filo-icon-192.png, 48×48)

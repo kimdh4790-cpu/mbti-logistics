@@ -466,7 +466,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  items.forEach(function(it){
   var row=document.createElement('div');
   row.style.cssText='display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;align-items:center';
-  row.innerHTML='<span style="color:var(--t2)">'+it.name+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
+  row.innerHTML='<span style="color:var(--t2)">'+esc(it.name)+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
    '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span>';
   body.appendChild(row);
  });
