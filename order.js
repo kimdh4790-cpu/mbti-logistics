@@ -159,6 +159,7 @@ window.onload=function(){
   appId:'1:40761160761:web:20545b610f03f534e949e8'
  });
  _db=firebase.firestore();
+ try{_db.settings({experimentalAutoDetectLongPolling:true});}catch(e){}
  _did=_p('d')||'';
  _tNum=_p('t')||'';
  var _takeout=_p('takeout')==='1';
@@ -345,8 +346,8 @@ function _doOrder(payType){
   if(_orderDone)return;
   _orderDone=true;
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
-  _filoToast('네트워크 오류 — 다시 시도해주세요');
- },15000);
+  _filoToast('주문 오류 — 다시 시도해주세요');
+ },10000);
  _db.collection('filo_orders').add(orderData).then(function(ref){
   if(_orderDone){clearTimeout(_orderTimer);return;}
   _orderDone=true;clearTimeout(_orderTimer);
