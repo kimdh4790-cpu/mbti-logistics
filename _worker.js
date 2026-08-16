@@ -8957,7 +8957,7 @@ service cloud.firestore {
         const getDoc = await getRes.json();
         if (!getDoc.fields) return new Response(JSON.stringify({ok:false,error:'문서 없음'}), {headers:{'Content-Type':'application/json'}});
         const docDealerId = getDoc.fields.dealerId?.stringValue;
-        if (docDealerId && docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
+        if (!docDealerId || docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
         const mask = Object.keys(updateFields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
         const fsFields = {};
         for (const [k,v] of Object.entries(updateFields)) fsFields[k]=_toFsVal(v);
@@ -8983,7 +8983,8 @@ service cloud.firestore {
         const getDoc = await getRes.json();
         if (!getDoc.fields) return new Response(JSON.stringify({ok:false,error:'문서 없음'}), {headers:{'Content-Type':'application/json'}});
         const docDealerId = getDoc.fields.dealerId?.stringValue;
-        if (docDealerId && docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
+        if (!docDealerId || docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}), {status:403,headers:{'Content-Type':'application/json'}});
+        if (photo.length > 3145728) return new Response(JSON.stringify({ok:false,error:'사진 크기 초과 (3MB 이하)'}),{status:413,headers:{'Content-Type':'application/json'}});
         const existing = (getDoc.fields.photos?.arrayValue?.values||[]).map(v=>v.stringValue).filter(Boolean);
         const newArr = [...existing, photo];
         const pRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}?updateMask.fieldPaths=photos`, {
@@ -9202,7 +9203,12 @@ service cloud.firestore {
     }
     if (path === '/api/emergency-apikeys' && method === 'GET') {
       try {
+        const dealerId = new URL(request.url).searchParams.get('dealerId') || '';
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
         const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
         const r = await fetch(`${FS_BASE}/settings/claude_config`, {headers:{'Authorization':`Bearer ${token}`}});
         const doc = await r.json();
         const f = doc.fields||{};
@@ -9259,7 +9265,7 @@ service cloud.firestore {
           const getDoc = await getRes.json();
           if (!getDoc.fields) continue;
           const docDealerId = getDoc.fields.dealerId?.stringValue;
-          if (docDealerId && docDealerId !== dealerId) continue;
+          if (!docDealerId || docDealerId !== dealerId) continue;
           const delRes = await fetch(`${FS_BASE}/emergency_deliveries/${docId}`, {method:'DELETE',headers:{'Authorization':`Bearer ${token}`}});
           if (delRes.ok) deleted++;
         }
@@ -9293,9 +9299,12 @@ service cloud.firestore {
     }
     if (path === '/api/emergency-prices' && method === 'POST') {
       try {
+        // 관리자(Firebase 로그인) 또는 유효한 dealerId 소유자만 단가 수정 가능
+        const verified = await verifyFirebaseToken(request, env);
         const body = await request.json();
         const { dealerId, prices, services } = body;
         if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        if (!verified) return new Response(JSON.stringify({ok:false,error:'관리자 로그인 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
         const token = await getAccessToken(env);
         // dealerId 존재 확인
         const chk = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
@@ -9374,6 +9383,10 @@ service cloud.firestore {
         const { dealerId, driverName, phone, idNum, carNum, carType, bankAccount } = body;
         if (!dealerId || !driverName || !phone) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName·phone 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
         const token = await getAccessToken(env);
+        // dealerId 유효성 확인 (개인정보 저장 전 회사 존재 검증)
+        const coChk = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':`Bearer ${token}`}});
+        const coChkDoc = await coChk.json();
+        if (!coChkDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
         const docId = (dealerId+'_'+driverName).replace(/[^a-zA-Z0-9가-힣_\-]/g,'_').slice(0,100);
         const fields = {
           dealerId:{stringValue:dealerId},

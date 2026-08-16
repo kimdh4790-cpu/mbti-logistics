@@ -283,6 +283,7 @@ window.S=S;
 function today(){ return new Date().toISOString().slice(0,10); }
 window._emerScanCount=0;window._emerSaveCount=0;
 window._cachedKakaoApiKey='';window._googleApiKey='';
+function _esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── 토스트 (toast-container 방식) ──
 function toast(msg, duration){
@@ -803,8 +804,8 @@ function _renderMonitorCards(docs, dateStr, did) {
       html += '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px">'
         +'<span style="width:8px;height:8px;border-radius:50%;background:'+(isDone?'#4ade80':'#f87171')+';flex-shrink:0"></span>'
         +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(doc.addr||doc.recipient||'주소 없음')+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+(doc.time||'')+(doc.appName?' · '+doc.appName:'')+'</div>'
+        +'<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(doc.addr||doc.recipient||'주소 없음')+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+_esc(doc.time||'')+(doc.appName?' · '+_esc(doc.appName):'')+'</div>'
         +'</div>'
         +'<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:'+(isDone?'rgba(74,222,128,.1)':'rgba(248,113,113,.1)')+';color:'+(isDone?'#4ade80':'#f87171')+';">'+(isDone?'완료':'진행중')+'</span>'
         +(isDone&&doc.completePhotos&&doc.completePhotos[0]?'<img src="'+doc.completePhotos[0]+'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" onclick="window.open(this.src,\'_blank\')">':'')
@@ -822,7 +823,7 @@ function _adminShowDriverProfile(did, driverName) {
     '<div id="driver-profile-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box" onclick="if(event.target===this)this.remove()">'
     +'<div style="background:#1e293b;border-radius:16px;width:100%;max-width:340px;padding:24px;border:1px solid rgba(255,255,255,.15)">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
-    +'<b style="font-size:15px;color:#fff">'+driverName+' 기사 정보</b>'
+    +'<b style="font-size:15px;color:#fff">'+_esc(driverName)+' 기사 정보</b>'
     +'<button onclick="document.getElementById(\'driver-profile-mo\').remove()" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:4px 10px;color:#fff;cursor:pointer;font-size:12px">닫기</button>'
     +'</div>'
     +'<div id="dpm-body" style="font-size:13px;color:rgba(255,255,255,.7)">불러오는 중...</div>'
@@ -1130,9 +1131,9 @@ function _renderSettleTable(docs, prices, dateStr) {
         grandTotal += amt;
         grandCount += cnt;
         html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05)">'
-          +'<td style="padding:8px 6px;color:var(--text);font-weight:600">'+drv+'</td>'
-          +'<td style="padding:8px 6px;color:var(--text2)">'+app+'</td>'
-          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+camp+'</td>'
+          +'<td style="padding:8px 6px;color:var(--text);font-weight:600">'+_esc(drv)+'</td>'
+          +'<td style="padding:8px 6px;color:var(--text2)">'+_esc(app)+'</td>'
+          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+_esc(camp)+'</td>'
           +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+cnt+'건</td>'
           +'<td style="padding:8px 6px;text-align:right;color:var(--text2)">'+price.toLocaleString()+'원</td>'
           +'<td style="padding:8px 6px;text-align:right;font-weight:700;color:#60a5fa">'+amt.toLocaleString()+'원</td>'
@@ -1220,11 +1221,13 @@ function loadApiKeys(){
   var gInp=document.getElementById('google-key-input');
   if(kKey){window._cachedKakaoApiKey=kKey;if(kInp)kInp.value=kKey;}
   if(gKey){window._googleApiKey=gKey;if(gInp)gInp.value=gKey;}
-  fetch('/api/emergency-apikeys').then(function(r){return r.json();}).then(function(d){
+  var _akDid = localStorage.getItem('mbti_emer_dealerId') || '';
+  if(_akDid) fetch('/api/emergency-apikeys?dealerId='+encodeURIComponent(_akDid)).then(function(r){return r.json();}).then(function(d){
     if(!d.ok)return;
-    if(d.claudeApiKey){window._claudeApiKey=d.claudeApiKey;localStorage.setItem('mbti_claude_api_key',d.claudeApiKey);}
-    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;localStorage.setItem('mbti_kakao_api_key',d.kakaoApiKey);if(kInp)kInp.value=d.kakaoApiKey;}
-    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;localStorage.setItem('mbti_google_api_key',d.googleApiKey);if(gInp)gInp.value=d.googleApiKey;}
+    // 서버 발급 키는 세션 메모리에만 보관 (localStorage 저장 않음 — XSS 탈취 방지)
+    if(d.claudeApiKey) window._claudeApiKey=d.claudeApiKey;
+    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;if(kInp)kInp.value=d.kakaoApiKey;}
+    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;if(gInp)gInp.value=d.googleApiKey;}
   }).catch(function(){});
 }
 function saveKakaoKey(){
@@ -1424,11 +1427,11 @@ async function openEmergencyAdmin(){
       +'<div style="display:flex;align-items:flex-start;gap:10px">'
         +'<div style="flex:1;min-width:0">'
           +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-            +'<span style="font-size:12px;color:var(--text2);white-space:nowrap">'+( r.date||'')+' '+(r.time||'')+'</span>'
-            +(r.driver?'<span style="font-size:14px;font-weight:800">'+r.driver+'</span>':'')
+            +'<span style="font-size:12px;color:var(--text2);white-space:nowrap">'+_esc(r.date||'')+' '+_esc(r.time||'')+'</span>'
+            +(r.driver?'<span style="font-size:14px;font-weight:800">'+_esc(r.driver)+'</span>':'')
             +(gpsHref?'<a href="'+gpsHref+'" target="_blank" style="font-size:11px;color:var(--blue);white-space:nowrap">지도</a>':'')
           +'</div>'
-          +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+detail+'</div>':'')
+          +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+_esc(detail)+'</div>':'')
         +'</div>'
       +'</div>'
       +'<div id="ph-'+(rid||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
@@ -3689,11 +3692,12 @@ async function _kakaoGeocode(address){
   var gKey = window._googleApiKey      || (localStorage.getItem('mbti_google_api_key')||'').trim();
   if(!kKey || !gKey){
     try{
-      var _akRes=await fetch('/api/emergency-apikeys');
+      var _akDid2 = localStorage.getItem('mbti_emer_dealerId') || '';
+      var _akRes=await fetch('/api/emergency-apikeys'+(_akDid2?'?dealerId='+encodeURIComponent(_akDid2):''));
       var _akData=await _akRes.json();
       if(_akData.ok){
-        if(!kKey){ kKey=(_akData.kakaoApiKey||'').trim(); if(kKey){window._cachedKakaoApiKey=kKey;localStorage.setItem('mbti_kakao_api_key',kKey);} }
-        if(!gKey){ gKey=(_akData.googleApiKey||'').trim(); if(gKey){window._googleApiKey=gKey;localStorage.setItem('mbti_google_api_key',gKey);} }
+        if(!kKey){ kKey=(_akData.kakaoApiKey||'').trim(); if(kKey) window._cachedKakaoApiKey=kKey; }
+        if(!gKey){ gKey=(_akData.googleApiKey||'').trim(); if(gKey) window._googleApiKey=gKey; }
       }
     }catch(e){}
   }
