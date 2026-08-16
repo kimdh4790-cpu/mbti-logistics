@@ -4450,7 +4450,7 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
 <div id="login-screen">
   <div class="login-card">
     <div style="text-align:center;margin-bottom:20px">
-      <img src="/mbtico-192.png" alt="MBTICO" style="width:64px;height:64px;border-radius:16px;margin-bottom:10px;object-fit:contain">
+      <img src="/mbti-icon-192.png" alt="MBTICO" style="width:64px;height:64px;border-radius:16px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto">
       <div style="font-size:11px;color:var(--text3);margin-top:2px">배송회사 관리자 로그인</div>
     </div>
     <div class="field">
