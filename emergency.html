@@ -415,6 +415,15 @@ function _emerInitLogin() {
   }
   // 회사명 로드 (가드 플래그로 중복 Firestore 조회 방지)
   _emerLoadCoName();
+  // 자동 로그인: 이름+구역+프로필 완료 시 로그인 화면 생략하고 바로 메인으로
+  if(_emerSelDriver && _emerSelCamp && localStorage.getItem('mbti_emer_profile_done')) {
+    var _autoDid = localStorage.getItem('mbti_emer_dealerId') || '';
+    _CU = { uid: _autoDid, email: '', dealerId: _autoDid, driver: _emerSelDriver, camp: _emerSelCamp };
+    window._CU = _CU;
+    if(!_auth.currentUser) _auth.signInAnonymously().catch(function(){});
+    _emerGoMain();
+    return;
+  }
 }
 
 function _emerUpdateLinkDisplay(did) {
@@ -445,8 +454,13 @@ function _emerLoadCoName() {
   if(urlDid) { localStorage.setItem('mbti_emer_dealerId', urlDid); _coNameLoaded=false; }
   var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   if(!did) return;
-  // manifest 링크 업데이트 (PWA 홈화면 설치 시 올바른 start_url 사용)
-  (function(){ var ml=document.getElementById('pwa-manifest-link'); if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did); })();
+  // manifest 링크 업데이트 — 슬러그 URL 사용 중이면 덮어쓰지 않음 (PWA start_url 보존)
+  (function(){
+    var sl=window._pwaSlug||localStorage.getItem('mbti_emer_slug')||'';
+    if(sl) return; // 이미 head script 또는 Firestore 콜백에서 슬러그 기반 URL 설정됨
+    var ml=document.getElementById('pwa-manifest-link');
+    if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did);
+  })();
   _emerUpdateLinkDisplay(did);
   // 캐시된 이름 즉시 반영 (깜빡임 방지)
   var savedName = localStorage.getItem('mbti_emer_coname');
