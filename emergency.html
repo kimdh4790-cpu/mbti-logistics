@@ -619,17 +619,28 @@ function _adminStartMonitor() {
 }
 
 function _adminLoadMonitor() {
-  var did = _CU && _CU.dealerId;
-  if(!did) return;
+  var did = (_CU && _CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+  var view = document.getElementById('admin-monitor-view');
+  if(!did) {
+    if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">회사 ID 없음 — URL에 ?did= 파라미터를 추가하세요</div>';
+    return;
+  }
   var dateStr = new Date().toISOString().slice(0,10);
+  if(view) view.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">불러오는 중...<br><span style="font-size:10px;opacity:.6">ID: '+did+'</span></div>';
   fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr)
     .then(function(r){ return r.json(); })
     .then(function(d) {
-      if(d.ok) _renderMonitorCards(d.docs||[], dateStr);
-    }).catch(function(){});
+      if(d.ok) {
+        _renderMonitorCards(d.docs||[], dateStr, did);
+      } else {
+        if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+(d.error||'알 수 없음')+'<br><span style="font-size:10px;opacity:.6">ID: '+did+'</span></div>';
+      }
+    }).catch(function(e){
+      if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">네트워크 오류<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
+    });
 }
 
-function _renderMonitorCards(docs, dateStr) {
+function _renderMonitorCards(docs, dateStr, did) {
   var view = document.getElementById('admin-monitor-view');
   if(!view) return;
   var now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
@@ -645,7 +656,9 @@ function _renderMonitorCards(docs, dateStr) {
   var driverList = Object.values(groups);
   if(!driverList.length) {
     view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">오늘 배송 데이터가 없습니다</div>'
-      +'<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">마지막 갱신: '+now+'</div>';
+      +'<div style="text-align:center;font-size:10px;color:var(--text3);margin-top:4px;opacity:.6">날짜: '+dateStr+' / ID: '+(did||'없음')+'</div>'
+      +'<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">마지막 갱신: '+now
+      +'&nbsp;<button onclick="_adminLoadMonitor()" style="font-size:11px;padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
     return;
   }
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
