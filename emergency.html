@@ -123,6 +123,46 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
   </div>
 </div>
 
+<!-- 기사 정보 등록 화면 (최초 1회) -->
+<div id="register-screen" style="display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--bg,#0f172a);box-sizing:border-box">
+  <div style="margin-bottom:12px">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  </div>
+  <div id="reg-co-name" style="font-size:20px;font-weight:900;margin-bottom:2px">배송앱</div>
+  <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:20px">기사 정보 등록 · 최초 1회</div>
+  <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:20px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1);box-sizing:border-box">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">기사 이름</div>
+    <div id="reg-name-display" style="padding:12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;margin-bottom:14px"></div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">휴대폰 번호 <span style="color:#f87171">*</span></div>
+    <input id="reg-phone" type="tel" placeholder="010-0000-0000"
+      style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">주민등록번호 <span style="color:#f87171">*</span></div>
+    <input id="reg-id-num" type="text" placeholder="000000-0000000" maxlength="14"
+      style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">차량번호</div>
+    <input id="reg-car-num" type="text" placeholder="12가3456"
+      style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">차량 종류</div>
+    <select id="reg-car-type"
+      style="width:100%;padding:12px;background:#1e293b;border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit;-webkit-appearance:none">
+      <option value="">선택하세요</option>
+      <option value="오토바이">오토바이</option>
+      <option value="다마스/라보">다마스/라보</option>
+      <option value="1톤 트럭">1톤 트럭</option>
+      <option value="2.5톤 이상">2.5톤 이상</option>
+      <option value="승용차">승용차</option>
+      <option value="기타">기타</option>
+    </select>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">정산 계좌번호 <span style="color:#f87171">*</span></div>
+    <input id="reg-bank" type="text" placeholder="은행명 + 계좌번호"
+      style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:20px;box-sizing:border-box;font-family:inherit">
+    <button onclick="_emerSaveProfile()"
+      style="width:100%;padding:15px;background:#c9a84c;border:none;border-radius:10px;color:#08101f;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;touch-action:manipulation">
+      등록 완료
+    </button>
+  </div>
+</div>
+
 <div id="main-screen" style="display:none">
   <div class="top-bar">
     <div class="top-logo"></div>
@@ -475,20 +515,79 @@ function _emerDoLogin() {
   if(!_auth.currentUser){
     _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
   }
-  // 로그인 화면 → 메인 화면
+  // 첫 접속 → 기사 정보 등록 화면
+  if(!localStorage.getItem('mbti_emer_profile_done')) {
+    _emerShowRegister(name);
+    return;
+  }
+  _emerGoMain();
+}
+
+function _emerGoMain() {
   var ls = document.getElementById('login-screen');
+  var rs = document.getElementById('register-screen');
   var ms = document.getElementById('main-screen');
   if(ls) ls.style.display = 'none';
+  if(rs) rs.style.display = 'none';
   if(ms) ms.style.display = 'block';
-  // 상단 회사명 표시
   var topLogo = document.querySelector('.top-logo');
-  if(topLogo) {
-    var coName = localStorage.getItem('mbti_emer_coname') || '';
-    topLogo.textContent = coName;
-  }
+  if(topLogo) topLogo.textContent = localStorage.getItem('mbti_emer_coname') || '';
   loadApiKeys();
   loadTodayStats();
   _emerShowDriverSettle();
+}
+
+function _emerShowRegister(name) {
+  var ls = document.getElementById('login-screen');
+  var rs = document.getElementById('register-screen');
+  if(ls) ls.style.display = 'none';
+  if(rs) rs.style.display = 'flex';
+  var nd = document.getElementById('reg-name-display');
+  if(nd) nd.textContent = name || localStorage.getItem('mbti_emer_driver') || '';
+  var rcn = document.getElementById('reg-co-name');
+  if(rcn) rcn.textContent = localStorage.getItem('mbti_emer_coname') || '배송앱';
+  // 저장된 프로필 있으면 필드 채우기 (재등록 시)
+  try {
+    var saved = JSON.parse(localStorage.getItem('mbti_emer_profile') || 'null');
+    if(saved) {
+      if(document.getElementById('reg-phone')) document.getElementById('reg-phone').value = saved.phone||'';
+      if(document.getElementById('reg-id-num')) document.getElementById('reg-id-num').value = saved.idNum||'';
+      if(document.getElementById('reg-car-num')) document.getElementById('reg-car-num').value = saved.carNum||'';
+      if(document.getElementById('reg-car-type')) document.getElementById('reg-car-type').value = saved.carType||'';
+      if(document.getElementById('reg-bank')) document.getElementById('reg-bank').value = saved.bankAccount||'';
+    }
+  } catch(e) {}
+}
+
+function _emerSaveProfile() {
+  var phone = (document.getElementById('reg-phone')||{}).value.trim();
+  var idNum = (document.getElementById('reg-id-num')||{}).value.trim();
+  var carNum = (document.getElementById('reg-car-num')||{}).value.trim();
+  var carType = (document.getElementById('reg-car-type')||{}).value;
+  var bankAccount = (document.getElementById('reg-bank')||{}).value.trim();
+  if(!phone) { _emerToast('휴대폰 번호를 입력하세요'); return; }
+  if(!idNum) { _emerToast('주민등록번호를 입력하세요'); return; }
+  if(!bankAccount) { _emerToast('정산 계좌번호를 입력하세요'); return; }
+  var name = localStorage.getItem('mbti_emer_driver') || '';
+  var did = localStorage.getItem('mbti_emer_dealerId') || '';
+  var profile = {driverName:name, dealerId:did, phone:phone, idNum:idNum, carNum:carNum, carType:carType, bankAccount:bankAccount};
+  localStorage.setItem('mbti_emer_profile', JSON.stringify(profile));
+  var btn = document.querySelector('#register-screen button[onclick="_emerSaveProfile()"]');
+  if(btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  fetch('/api/emergency-driver-profile', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(profile)
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.ok) throw new Error(d.error||'저장 실패');
+    localStorage.setItem('mbti_emer_profile_done', '1');
+    _emerToast('등록 완료!');
+    document.getElementById('register-screen').style.display = 'none';
+    _emerGoMain();
+  }).catch(function(e){
+    _emerToast('저장 실패: '+e.message);
+    if(btn) { btn.disabled = false; btn.textContent = '등록 완료'; }
+  });
 }
 
 function _emerToast(msg) {
@@ -691,9 +790,12 @@ function _renderMonitorCards(docs, dateStr, did) {
       +'<div style="font-size:14px;font-weight:800;color:var(--text)">'+g.driver+'</div>'
       +'<div style="font-size:11px;color:var(--text3);margin-top:2px">구역: '+(g.camp||'미설정')+'</div>'
       +'</div>'
-      +'<div style="text-align:right">'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+      +'<div>'
       +'<span style="background:rgba(248,113,113,.15);color:#f87171;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700;margin-right:4px">미완료 '+g.pending+'</span>'
       +'<span style="background:rgba(74,222,128,.15);color:#4ade80;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700">완료 '+g.done+'</span>'
+      +'</div>'
+      +'<button onclick="event.stopPropagation();_adminShowDriverProfile(\''+did+'\',\''+g.driver.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:2px 8px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#c9a84c;cursor:pointer;font-family:inherit">정보 보기</button>'
       +'</div></div>'
       +'<div style="display:none;border-top:1px solid var(--border);padding:10px">';
     g.docs.forEach(function(doc) {
@@ -710,6 +812,43 @@ function _renderMonitorCards(docs, dateStr, did) {
     html += '</div></div>';
   });
   view.innerHTML = html;
+}
+
+function _adminShowDriverProfile(did, driverName) {
+  var old = document.getElementById('driver-profile-mo');
+  if(old) old.remove();
+  document.body.insertAdjacentHTML('beforeend',
+    '<div id="driver-profile-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box" onclick="if(event.target===this)this.remove()">'
+    +'<div style="background:#1e293b;border-radius:16px;width:100%;max-width:340px;padding:24px;border:1px solid rgba(255,255,255,.15)">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<b style="font-size:15px;color:#fff">'+driverName+' 기사 정보</b>'
+    +'<button onclick="document.getElementById(\'driver-profile-mo\').remove()" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:4px 10px;color:#fff;cursor:pointer;font-size:12px">닫기</button>'
+    +'</div>'
+    +'<div id="dpm-body" style="font-size:13px;color:rgba(255,255,255,.7)">불러오는 중...</div>'
+    +'</div></div>'
+  );
+  fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(driverName))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('dpm-body');
+      if(!el) return;
+      if(!d.ok || !d.profile) { el.innerHTML = '<div style="color:rgba(255,255,255,.4);text-align:center;padding:16px">등록 정보 없음</div>'; return; }
+      var p = d.profile;
+      var rows = [
+        ['휴대폰', p.phone||'—'],
+        ['주민번호', p.idNum||'—'],
+        ['차량번호', p.carNum||'—'],
+        ['차량종류', p.carType||'—'],
+        ['정산계좌', p.bankAccount||'—'],
+        ['등록일', (p.registeredAt||'').slice(0,10)||'—']
+      ];
+      el.innerHTML = rows.map(function(r){
+        return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)">'
+          +'<span style="color:rgba(255,255,255,.4);font-size:11px;width:60px;flex-shrink:0">'+r[0]+'</span>'
+          +'<span style="flex:1;word-break:break-all">'+r[1]+'</span></div>';
+      }).join('');
+    })
+    .catch(function(){ var el=document.getElementById('dpm-body'); if(el)el.innerHTML='<div style="color:#f87171">조회 실패</div>'; });
 }
 
 // ═══════════════════════════════════════
