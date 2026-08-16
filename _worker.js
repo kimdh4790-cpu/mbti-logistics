@@ -3900,11 +3900,11 @@ ${JSON.stringify(postSummary)}
           const {dealerId,type,status,payType,tableNum,tableName,items,total,createdAt,date,fcmToken}=body;
           if(!dealerId||!items||!Array.isArray(items)||!items.length)
             return new Response(JSON.stringify({error:'invalid'}),{status:400,headers:_foCors});
-          // JS 값 → Firestore REST 형식
+          // JS 값 → Firestore REST 형식 (integerValue는 반드시 string)
           function _fsv(v){
             if(v===null||v===undefined)return{nullValue:null};
             if(typeof v==='boolean')return{booleanValue:v};
-            if(typeof v==='number')return Number.isInteger(v)?{integerValue:v}:{doubleValue:v};
+            if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
             if(typeof v==='string')return{stringValue:v};
             if(Array.isArray(v))return{arrayValue:{values:v.map(_fsv)}};
             if(typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,vv])=>[k,_fsv(vv)]))}};
