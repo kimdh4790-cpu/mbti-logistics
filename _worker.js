@@ -6402,6 +6402,12 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         return Response.redirect('https://mbtico.kr/drivers' + (did ? '?did=' + did : ''), 302);
       }
       if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
+      if (path === '/emergency-manifest.json') {
+        const did = new URL(request.url).searchParams.get('did') || '';
+        const startUrl = '/emergency' + (did ? '?did=' + encodeURIComponent(did) : '');
+        const manifest = { name:'긴급배송앱', short_name:'배송앱', start_url:startUrl, scope:'/', display:'standalone', background_color:'#0f172a', theme_color:'#0f172a', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
+        return new Response(JSON.stringify(manifest), { headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'} });
+      }
       if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
       // /v9 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
