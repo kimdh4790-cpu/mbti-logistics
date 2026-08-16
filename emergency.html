@@ -763,7 +763,7 @@ function _renderMonitorCards(docs, dateStr, did) {
     var drv = d.driver||'미상';
     if(!groups[drv]) groups[drv] = {driver:drv, camp:d.camp||'', docs:[], done:0, pending:0};
     groups[drv].docs.push(d);
-    if(d.status==='done'||d.done) groups[drv].done++;
+    if(d.status==='완료'||d.status==='done'||d.done) groups[drv].done++;
     else groups[drv].pending++;
   });
   var driverList = Object.values(groups);
@@ -799,7 +799,7 @@ function _renderMonitorCards(docs, dateStr, did) {
       +'</div></div>'
       +'<div style="display:none;border-top:1px solid var(--border);padding:10px">';
     g.docs.forEach(function(doc) {
-      var isDone = doc.status==='done'||doc.done;
+      var isDone = doc.status==='완료'||doc.status==='done'||doc.done;
       html += '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px">'
         +'<span style="width:8px;height:8px;border-radius:50%;background:'+(isDone?'#4ade80':'#f87171')+';flex-shrink:0"></span>'
         +'<div style="flex:1;min-width:0">'
