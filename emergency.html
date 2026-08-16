@@ -260,8 +260,7 @@ function toast(msg, duration){
   },duration||2500);
 }
 
-var _SA_EM=['kimdh4790@gmail.com','soungkyekim@naver.com'];
-// Firebase 로그인 시 dealerId 자동 설정 (캠프+이름 방식과 병행)
+// Firebase 로그인 시 dealerId 자동 설정
 _auth.onAuthStateChanged(function(user){
   if(user && !localStorage.getItem('mbti_emer_dealerId')){
     _db.collection('users').doc(user.uid).get().then(function(snap){
@@ -272,44 +271,6 @@ _auth.onAuthStateChanged(function(user){
     }).catch(function(){
       localStorage.setItem('mbti_emer_dealerId',user.uid);
     });
-  }
-});
-// (구버전 구독 체크 비활성)
-if(false) _auth.onAuthStateChanged(function(user){
-  if(user){
-    _CU={uid:user.uid,email:user.email,dealerId:user.uid};
-    window._CU=_CU;
-    // 구독 체크
-    _db.collection('companies').doc(user.uid).get().then(function(snap){
-      var co=snap.exists?snap.data():{};
-      var isSA=_SA_EM.indexOf(user.email)>=0;
-      var subs=(co.subscriptions||{});
-      var sub=subs.mbtico||subs.delivery||subs.settle||{};
-      var today=new Date().toISOString().slice(0,10);
-      var ok=isSA||(sub.active&&(!sub.expiry||sub.expiry>=today))||co.settlePaid;
-      if(!ok){
-        document.getElementById('login-screen').style.display='flex';
-        document.getElementById('main-screen').style.display='none';
-        toast('❌ 구독이 필요합니다. 관리자에게 문의하세요.');
-        _auth.signOut();
-        return;
-      }
-      S.curDriver=user.email||''; S.curAdminName=user.email||'';
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('main-screen').style.display='block';
-      loadApiKeys();loadTodayStats();
-      // 3도메인 통합 연결
-      fetch('/api/link-account',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email:user.email,fromDomain:'mbtico.kr'})}).catch(function(){});
-    }).catch(function(){
-      S.curDriver=user.email||'';
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('main-screen').style.display='block';
-      loadApiKeys();loadTodayStats();
-    });
-  } else {
-    document.getElementById('login-screen').style.display='flex';
-    document.getElementById('main-screen').style.display='none';
   }
 });
 
@@ -534,12 +495,6 @@ function _emerToast(msg) {
   toast(msg);
 }
 
-function doLogin(){
-  var email=document.getElementById('login-email').value.trim();
-  var pw=document.getElementById('login-pw').value;
-  if(!email||!pw){toast('이메일과 비밀번호를 입력해주세요');return;}
-  _auth.signInWithEmailAndPassword(email,pw).catch(function(e){toast('❌ 로그인 실패: '+e.message);});
-}
 function doLogout(){
   localStorage.removeItem('mbti_emer_driver');
   localStorage.removeItem('mbti_emer_camp');
@@ -1187,8 +1142,6 @@ window._geoCacheMem = window._geoCacheMem || {};
   }catch(e){ console.debug('cache flush skip:', e); }
 })();
 
-function showLoading(msg){toast(msg||'처리 중...');}
-function hideLoading(){}
 function _tts(msg){console.log('[tts]',msg);} // 음성 스텁
 
 
@@ -2290,7 +2243,6 @@ function emerUnifiedScan(input){
     }
 
     function goOCR(){
-      toast('📷 goOCR호출', 2000); // 디버그
       if(statusEl) statusEl.innerHTML = '🔍 OCR 분석 중...';
       statusEl.id = 'emer-ocr-status';
       setTimeout(function(){ var el=document.getElementById('emer-ocr-status'); if(el) el.id='emer-unified-status'; }, 10000);
@@ -3963,21 +3915,6 @@ async function _kakaoGeocode(address){
   return null;
 }
 
-async function _googleGeocodePin(addrFull, gKey){
-  // _kakaoGeocode 내부에서 직접 Google 호출하므로 이 함수는 호환용 래퍼
-  if(!gKey) return null;
-  try{
-    var noHo = addrFull.replace(/\s*\d+호\s*$/,'').trim();
-    var gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(noHo)+'&language=ko&region=kr&key='+gKey);
-    var gd = await gr.json();
-    if(gd.status==='OK' && gd.results && gd.results[0]){
-      var gl = gd.results[0].geometry.location;
-      return {lat:gl.lat, lng:gl.lng, src:'google'};
-    }
-  }catch(e){}
-  return null;
-}
-
 function _geoResultBanner(msg){
   var existing = document.getElementById('geo-result-banner');
   if(existing) existing.remove();
@@ -5317,7 +5254,7 @@ function _renderLeafletMap(locs){
         d.querySelector('button').addEventListener('click',function(e){
           e.stopPropagation();
           if(window._geoLocMarker){map.setView(window._geoLocMarker.getLatLng(),17);}
-          else{_filoToast&&_filoToast('위치 권한을 허용해 주세요');}
+          else{toast('위치 권한을 허용해 주세요');}
         });
         L.DomEvent.disableClickPropagation(d);
         return d;
