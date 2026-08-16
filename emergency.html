@@ -1169,9 +1169,10 @@ function _emerShowDriverSettle() {
   ]).then(function(results) {
     var docs   = results[0].ok ? (results[0].docs||[]) : [];
     var prices = results[1].prices || window._CO_EMER_PRICES || {};
-    // 앱별 → 구역별 집계
+    // 완료된 배송건만 정산
     var appGroups = {};
-    docs.forEach(function(d) {
+    var doneDocs = docs.filter(function(d){return d.status==='완료';});
+    doneDocs.forEach(function(d) {
       var app  = d.appName || '기타';
       var camp = d.camp || '미분류';
       if(!appGroups[app]) appGroups[app] = {};
@@ -5557,13 +5558,17 @@ async function _dcSave(fbId, locIdx){
           if(_rd.ok){
             if(window._mapLocs){
               for(var _mi=0;_mi<window._mapLocs.length;_mi++){
-                if((window._mapLocs[_mi].id||window._mapLocs[_mi].fbId)===_bgFbId){
-                  window._mapLocs[_mi].completePhotos=[compressed]; break;
+                var _loc=window._mapLocs[_mi];
+                if((_loc._fbId||_loc.fbId||_loc.id)===_bgFbId){
+                  _loc.completePhotos=[compressed]; break;
                 }
               }
             }
+          }else{
+            console.warn('[dcSave] 사진 저장 실패:',_rd.error);
+            toast('⚠️ 사진 저장 실패: '+(_rd.error||'서버 오류'));
           }
-        }catch(e){ console.warn('[dcSave] 사진 저장 실패:',e.message); }
+        }catch(e){ console.warn('[dcSave] 사진 저장 오류:',e.message); toast('⚠️ 사진 저장 오류'); }
       })();
     }
   }catch(e){
