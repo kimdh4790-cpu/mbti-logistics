@@ -4843,7 +4843,8 @@ async function _emerStorageUpload(dataUrl, path, maxRetry){
   for(var attempt=1; attempt<=maxRetry; attempt++){
     try{
       var ref = _st.ref(path);
-      await ref.put(blob);
+      var _putTimeout=new Promise(function(_,rej){setTimeout(function(){rej(new Error('put timeout'));},10000);});
+      await Promise.race([ref.put(blob),_putTimeout]);
       var url = await ref.getDownloadURL();
       if(attempt > 1) console.log('✅ Storage 업로드 성공 (재시도 '+attempt+'회차)');
       return url;
@@ -5529,9 +5530,16 @@ async function _dcSave(fbId, locIdx){
         var compressed=await _emerCompressPhoto(window._dcPhoto,1200,0.82);
         var x2=(window._mapLocs&&window._mapLocs[locIdx])||{};
         var driver2=x2.driver||localStorage.getItem('mbti_emer_driver')||'unknown';
-        var url2=await _emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',3);
+        var _timeout15=new Promise(function(_,rej){setTimeout(function(){rej(new Error('업로드 타임아웃(15초)'));},15000);});
+        var url2=await Promise.race([
+          _emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',2),
+          _timeout15
+        ]);
         if(url2) completePhotos.push(url2);
-      }catch(e){ console.warn('[dcSave] 사진 업로드 실패:',e.message); }
+      }catch(e){
+        console.warn('[dcSave] 사진 업로드 실패:',e.message);
+        toast('📷 사진 저장 실패 — 완료 처리는 계속 진행합니다');
+      }
     }
     var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:completePhotos};
     if(memo) upd.completeMemo=memo;
