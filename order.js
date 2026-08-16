@@ -338,7 +338,18 @@ function _doOrder(payType){
   date:_today()
  };
  if(_fcmToken)orderData.fcmToken=_fcmToken;
+ if(!_db){_filoToast('초기화 중입니다. 잠시 후 다시 시도해주세요');if(btn){btn.disabled=false;btn.textContent=_t('order');}return;}
+ // 15초 타임아웃 — 네트워크 지연 시 버튼 복구
+ var _orderDone=false;
+ var _orderTimer=setTimeout(function(){
+  if(_orderDone)return;
+  _orderDone=true;
+  if(btn){btn.disabled=false;btn.textContent=_t('order');}
+  _filoToast('네트워크 오류 — 다시 시도해주세요');
+ },15000);
  _db.collection('filo_orders').add(orderData).then(function(ref){
+  if(_orderDone){clearTimeout(_orderTimer);return;}
+  _orderDone=true;clearTimeout(_orderTimer);
   _closeCart();_cart={};_updFab();
   // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
@@ -375,6 +386,8 @@ function _doOrder(payType){
   // 고객 영수증 FCM 자동 발송 (이미 토큰 있으면 즉시, 없으면 토큰 발급 후)
   _autoReceiptFCM(ref.id, total, items);
  }).catch(function(e){
+  if(_orderDone){clearTimeout(_orderTimer);return;}
+  _orderDone=true;clearTimeout(_orderTimer);
   _filoToast('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
  });

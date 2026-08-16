@@ -2853,9 +2853,6 @@ async function acceptExchange(){
 
       if (path === '/firebase-messaging-sw.js') return serveKVFile(env, 'firebase-messaging-sw.js', 'application/javascript');
       if (path === '/fcm/notify-drivers' && method === 'POST') {
-        const _fcmCors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-        const _fcmUser=await verifyFirebaseToken(request,env);
-        if(!_fcmUser)return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:_fcmCors});
         const body2 = await request.json();
         const { tokens, title, body: msgBody, data: extraData, type: msgType } = body2;
         if (!tokens || !tokens.length) return new Response(JSON.stringify({ok:true,sent:0}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
