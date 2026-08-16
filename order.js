@@ -339,44 +339,33 @@ function _doOrder(payType){
   date:_today()
  };
  if(_fcmToken)orderData.fcmToken=_fcmToken;
- if(!_db){_filoToast('초기화 중입니다. 잠시 후 다시 시도해주세요');if(btn){btn.disabled=false;btn.textContent=_t('order');}return;}
- // 15초 타임아웃 — 네트워크 지연 시 버튼 복구
- var _orderDone=false;
- var _orderTimer=setTimeout(function(){
-  if(_orderDone)return;
-  _orderDone=true;
-  if(btn){btn.disabled=false;btn.textContent=_t('order');}
-  _filoToast('주문 오류 — 다시 시도해주세요');
- },10000);
- _db.collection('filo_orders').add(orderData).then(function(ref){
-  if(_orderDone){clearTimeout(_orderTimer);return;}
-  _orderDone=true;clearTimeout(_orderTimer);
+ // Worker API 경유 — 비로그인 고객도 안전하게 Firestore 쓰기
+ fetch('/api/filo-order',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(orderData)
+ }).then(function(r){return r.json();}).then(function(data){
+  if(!data.ok||!data.id){throw new Error(data.error||'주문 실패');}
+  var orderId=data.id;
   _closeCart();_cart={};_updFab();
-  // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+ref.id.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+orderId.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
-  // payType별 영수증 UI
-  _lastOrderItems=items; _lastOrderTotal=total; _lastPayType=payType;
+  _lastOrderItems=items;_lastOrderTotal=total;_lastPayType=payType;
   var rcChoice=document.getElementById('receipt-choice');
   var postNotice=document.getElementById('postpay-notice');
   if(payType==='postpay'){
-   // 후불: 카운터 안내 + 영수증 선택 (주문 영수증)
    if(postNotice)postNotice.style.display='block';
    if(rcChoice)rcChoice.style.display='block';
   } else {
-   // 선불: 영수증 선택만 (결제 영수증은 선불 완료 시 따로 표시)
    if(rcChoice)rcChoice.style.display='block';
   }
-  // 픽업 감지 시작
-  _lastOrderId=ref.id;
-  _listenPickup(ref.id);
-  // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
-  try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
-  // 사장님 FCM 신규주문 알림
+  _lastOrderId=orderId;
+  _listenPickup(orderId);
+  try{localStorage.setItem('filo_order_'+_did,orderId);}catch(e){}
   if(_did){
    fetch('/api/filo-push',{
     method:'POST',
@@ -384,13 +373,10 @@ function _doOrder(payType){
     body:JSON.stringify({did:_did,title:_storeName+' 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
-  // 고객 영수증 FCM 자동 발송 (이미 토큰 있으면 즉시, 없으면 토큰 발급 후)
-  _autoReceiptFCM(ref.id, total, items);
+  _autoReceiptFCM(orderId, total, items);
  }).catch(function(e){
-  if(_orderDone){clearTimeout(_orderTimer);return;}
-  _orderDone=true;clearTimeout(_orderTimer);
-  _filoToast('주문 실패: '+e.message);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
+  _filoToast('주문 실패 — 다시 시도해주세요');
  });
 }
 
