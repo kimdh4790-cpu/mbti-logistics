@@ -5523,38 +5523,37 @@ async function _dcSave(fbId, locIdx){
     var memo=(document.getElementById('dc-memo-inp')||{}).value.trim();
     var now=new Date();
     var completedAt=now.toISOString();
-    var completePhotos=[];
-    if(window._dcPhoto&&FB&&_st){
-      try{
-        toast('📷 사진 업로드 중...');
-        var compressed=await _emerCompressPhoto(window._dcPhoto,1200,0.82);
-        var x2=(window._mapLocs&&window._mapLocs[locIdx])||{};
-        var driver2=x2.driver||localStorage.getItem('mbti_emer_driver')||'unknown';
-        var _timeout15=new Promise(function(_,rej){setTimeout(function(){rej(new Error('업로드 타임아웃(15초)'));},15000);});
-        var url2=await Promise.race([
-          _emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',2),
-          _timeout15
-        ]);
-        if(url2) completePhotos.push(url2);
-      }catch(e){
-        console.warn('[dcSave] 사진 업로드 실패:',e.message);
-        toast('📷 사진 저장 실패 — 완료 처리는 계속 진행합니다');
-      }
-    }
-    var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:completePhotos};
-    if(memo) upd.completeMemo=memo;
     var _compDid=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
+    // 1단계: 상태 즉시 저장 (사진 없이)
+    var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:[]};
+    if(memo) upd.completeMemo=memo;
     var _compRes=await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dealerId:_compDid,docId:fbId,fields:upd})});
     var _compData=await _compRes.json();
     if(!_compData.ok) throw new Error(_compData.error||'서버 오류');
-    if(window._mapLocs&&window._mapLocs[locIdx]){
-      Object.assign(window._mapLocs[locIdx],upd);
-    }
+    if(window._mapLocs&&window._mapLocs[locIdx]) Object.assign(window._mapLocs[locIdx],upd);
+    var _savedPhoto=window._dcPhoto;
     window._dcPhoto=null;
     document.getElementById('deliv-complete-mo')&&document.getElementById('deliv-complete-mo').remove();
     document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
-    toast('✅ 배송완료 처리 완료!');
-    setTimeout(openDeliveryMap,600);
+    toast('✅ 배송완료!');
+    setTimeout(openDeliveryMap,400);
+    // 2단계: 사진 백그라운드 업로드 (완료 후)
+    if(_savedPhoto&&FB&&_st){
+      (async function(){
+        try{
+          var x2=(window._mapLocs&&window._mapLocs[locIdx])||{};
+          var driver2=x2.driver||localStorage.getItem('mbti_emer_driver')||'unknown';
+          var compressed=await _emerCompressPhoto(_savedPhoto,800,0.70);
+          var _t15=new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},15000);});
+          var url2=await Promise.race([_emerStorageUpload(compressed,'emergency_complete/'+driver2+'/'+now.getTime()+'.jpg',2),_t15]);
+          if(url2){
+            await fetch('/api/emergency-update',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({dealerId:_compDid,docId:fbId,fields:{completePhotos:[url2]}})});
+            if(window._mapLocs&&window._mapLocs[locIdx]) window._mapLocs[locIdx].completePhotos=[url2];
+          }
+        }catch(e){ console.warn('[dcSave] 사진 백그라운드 업로드 실패:',e.message); }
+      })();
+    }
   }catch(e){
     toast('❌ 오류: '+(e.message||'저장 실패'));
     if(btn){btn.disabled=false;btn.textContent='✅ 완료 처리';}
