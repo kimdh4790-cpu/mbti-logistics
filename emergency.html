@@ -807,6 +807,7 @@ function _renderMonitorCards(docs, dateStr, did) {
         +'<div style="font-size:11px;color:var(--text3)">'+(doc.time||'')+(doc.appName?' · '+doc.appName:'')+'</div>'
         +'</div>'
         +'<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:'+(isDone?'rgba(74,222,128,.1)':'rgba(248,113,113,.1)')+';color:'+(isDone?'#4ade80':'#f87171')+';">'+(isDone?'완료':'진행중')+'</span>'
+        +(isDone&&doc.completePhotos&&doc.completePhotos[0]?'<img src="'+doc.completePhotos[0]+'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" onclick="window.open(this.src,\'_blank\')">':'')
         +'</div>';
     });
     html += '</div></div>';
@@ -1387,8 +1388,7 @@ async function openEmergencyAdmin(){
   try{
     var local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
     local.forEach(function(lx){
-      // Firebase에 이미 있는 건 중복 제외 (_fbId 기준)
-      var dup = lx._fbId && records.some(function(r){ return r.id===lx._fbId; });
+      var dup = lx._fbId && records.some(function(r){ return (r._fbId||r.id||r.fbId)===lx._fbId; });
       if(!dup) records.push(lx);
     });
   }catch(e){}
@@ -1396,7 +1396,9 @@ async function openEmergencyAdmin(){
   records.sort(function(a,b){ return (b.savedAt||'').localeCompare(a.savedAt||''); });
 
   var rows=records.length ? records.map(function(r){
-    var photos=(r.photos||[]).map(function(url){
+    var rid=r._fbId||r.id||r.fbId||'';
+    var allPhotos=(r.photos||[]).concat(r.completePhotos||[]).filter(Boolean);
+    var photos=allPhotos.map(function(url){
       return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);flex-shrink:0">';
     }).join('');
     var gpsHref=r.gps?'https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng:'';
@@ -1418,14 +1420,14 @@ async function openEmergencyAdmin(){
           +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+detail+'</div>':'')
         +'</div>'
       +'</div>'
-      +'<div id="ph-'+(r.id||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
+      +'<div id="ph-'+(rid||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
       +photos
-      +(r.id
+      +(rid
         ? '<label title="사진 추가" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;background:rgba(255,255,255,.06);border-radius:8px;border:2px dashed rgba(255,255,255,.2);flex-shrink:0">'
           +'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
-          +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+r.id+'\')">'
+          +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+rid+'\')">'
           +'</label>'
-        : '<span style="font-size:11px;color:var(--text3)">사진 없음</span>')
+        : (allPhotos.length?'':'<span style="font-size:11px;color:var(--text3)">사진 없음</span>'))
       +'</div>'
       +'</div>';
   }).join('') : '<div style="text-align:center;padding:32px;color:var(--text3)">긴급 배송기록 없음</div>';
