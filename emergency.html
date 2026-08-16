@@ -3388,7 +3388,7 @@ function rEmergencyLog(){
           +orderCopy
           +'</div>':'')
         +'<div style="font-size:11px;color:var(--text3)">⏰ '+(x.date||'')+' '+(x.time||'')
-        +((isDone||isPartial)&&(x.lastCompletedAt||x.completedAt)?' → '+(isPartial?'🟠':'✅')+' '+(x.lastCompletedAt||x.completedAt).slice(11,16):'')
+        +((isDone||isPartial)&&(x.lastCompletedAt||x.completedAt)?' → '+(isPartial?'🟠':'✅')+' '+_kstTime(x.lastCompletedAt||x.completedAt):'')
         +'</div>'
         +trackBreakdownHtml
         +phHTML
@@ -5181,6 +5181,13 @@ function _openNaviSheet(lat,lng,name){
   );
 }
 
+function _kstTime(s) {
+  if(!s) return '';
+  if(s.endsWith('Z')) {
+    try { var d=new Date(s); var h=(d.getUTCHours()+9)%24; return ('0'+h).slice(-2)+':'+('0'+d.getUTCMinutes()).slice(-2); } catch(e){}
+  }
+  return s.slice(11,16)||'';
+}
 function _showMapModal(locs){
   window._mapLocs=locs;
   document.getElementById('delivery-map-mo')&&document.getElementById('delivery-map-mo').remove();
@@ -5221,7 +5228,7 @@ function _showMapModal(locs){
       +'</div>'
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
       +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-left:32px;margin-bottom:'+(isDone?'3':'8')+'px">운송장: '+(trackVal||'—')+'</div>'
-      +(isDone&&(x.lastCompletedAt||x.completedAt)?'<div style="font-size:10px;color:#4ade80;margin-left:32px;margin-bottom:8px;font-weight:600">✅ 완료 '+(x.lastCompletedAt||x.completedAt).slice(11,16)+'</div>':'')
+      +(isDone&&(x.lastCompletedAt||x.completedAt)?'<div style="font-size:10px;color:#4ade80;margin-left:32px;margin-bottom:8px;font-weight:600">✅ 완료 '+_kstTime(x.lastCompletedAt||x.completedAt)+'</div>':'')
       +photoHtml
       +'<div style="display:flex;gap:6px;margin-left:32px">'
       +mapBtn
@@ -5523,7 +5530,7 @@ async function _dcSave(fbId, locIdx){
   try{
     var memo=(document.getElementById('dc-memo-inp')||{}).value.trim();
     var now=new Date();
-    var completedAt=now.toISOString();
+    var completedAt=new Date(now.getTime()+9*3600*1000).toISOString().slice(0,-1);
     var _compDid=localStorage.getItem('mbti_emer_dealerId')||(_CU&&_CU.uid)||'';
     // 1단계: 상태 즉시 저장 (사진 없이)
     var upd={status:'완료',completedAt:completedAt,lastCompletedAt:completedAt,completePhotos:[]};
