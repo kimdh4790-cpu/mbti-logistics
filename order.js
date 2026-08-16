@@ -59,7 +59,7 @@
  *
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
-var _did='', _tNum='', _tName='', _storeName='매장';
+var _did='', _tNum='', _tName='', _storeName='매장', _takeout=false;
 var _cart={}; // _menus/_lang/_tlCache/_curMdlMenu/_tlQtyVal 는 filo-order-common.js 공유
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
@@ -162,7 +162,7 @@ window.onload=function(){
  try{_db.settings({experimentalAutoDetectLongPolling:true});}catch(e){}
  _did=_p('d')||'';
  _tNum=_p('t')||'';
- var _takeout=_p('takeout')==='1';
+ _takeout=_p('takeout')==='1';
  if(_takeout){_tNum='0';_tName='포장';}
  else{_tName=_p('name')||('테이블 '+_tNum);}
  if(!_did){
