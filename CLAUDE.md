@@ -21,15 +21,120 @@ Oracle Cloud IP:     155.248.187.99 (4코어/24GB, opc 계정)
 
 ---
 
-## 🚫 절대 수정 금지
-- wrangler.toml
-- wrangler.toml [vars] 섹션
+## 📱 앱별 구조 & 담당 파일 (세션 시작 시 담당 앱 확인 필수)
+
+### 🟣 FILO (filo.ai.kr) — 매장 관리 SaaS
+> 담당 메모: FILO_DINE_MEMO.md 필독
+- **진입**: filo.html / filo-auth.js (로그인·홈 대시보드·라우팅)
+- **공통**: filo-common.js ← 절대 직접 수정 금지. 읽기만 허용
+- **POS**: filo-pos.js, filo-pos-core.js, filo-pos-ui.js
+- **주문**: filo-order.js, filo-order-common.js
+- **테이블**: filo-table.js
+- **메뉴**: filo-menu.js (55KB), filo-menu-mgmt.js, filo-menu-recipe.js
+- **예약/웨이팅**: filo-booking.js
+- **직원/QR출퇴근**: filo-staff.js, filo-qr.js
+- **급여**: filo-payroll2.js
+- **회원**: filo-members.js
+- **재고**: filo-inventory.js
+- **마진분석**: filo-margin.js
+- **결제**: filo-payment.js
+- **스케줄**: filo-schedule.js
+- **설정**: filo-settings.js
+- **리포트**: filo-report.js
+- **랜딩**: filo-landing.html, filo-landing.js
+
+**FILO 절대 금지**
+- filo-common.js 수정 금지
+- Firestore filo_orders 컬렉션 필드명 변경 금지 (tableNum·status·date·dealerId·items)
+- tableNum 타입 혼재(String·int) 상태 유지 — 변경 시 전체 주문 조회 깨짐
+- _filoToast() 대신 alert() 사용 금지
+
+---
+
+### 🟢 DINE (dine.ne.kr) — 직원 전용 앱
+> 담당 메모: FILO_DINE_MEMO.md 필독
+- **진입**: dine.html / dine.js
+- **스케줄**: dine-schedule.js
+- **분석**: dine-analytics.js
+- **직원**: dine-staff.js ← FILO의 members 컬렉션 공유 사용
+- **급여**: dine-payroll.js
+- **매출**: dine-sales.js
+- **세금**: dine-tax.js
+- **회원·예약**: dine-member.js ← filo_bookings, filo_customers 공유
+- **랜딩**: dine-landing.html, dine-landing.js
+
+**DINE 절대 금지**
+- DINE용 별도 직원 컬렉션 생성 금지 (FILO members 컬렉션 그대로 공유)
+- FILO·DINE 공유 컬렉션: members, attendance, filo_bookings, filo_customers, filo_sales
+- _dineToast() 대신 alert() 사용 금지
+
+---
+
+### 🟡 QR 주문·주방 (filo.ai.kr/order·/store·/kitchen)
+- order.html, order.js, order-done.html — 고객 QR 주문
+- table-order.html — 테이블 직접 주문 (선결제/후불 모달 미완료)
+- store.html — 매장 주문 현황
+- kitchen.html — 주방 디스플레이
+- filo-order-common.js — 메뉴 로딩·번역 공통 (order·table-order·store 공유)
+
+**QR 주문 절대 금지**
+- filo_orders 컬렉션 구조 변경 금지
+- filo-order-common.js의 _applyTranslationsToGrid() 로직 단독 수정 금지 (order·store 동시 영향)
+
+---
+
+### 🔵 DONWAY (donway.ai.kr) — 물류 정산
+- donway_landing.js — 랜딩
+- donway-pages/index.html → KV key: settle.html
+- drivers.html — 기사 전용 화면
+
+**DONWAY 절대 금지**
+- preFreshback / dateFresh 로직 수정 금지
+- settle.html / drivers.html 리팩토링 금지
+- KV 업로드 시 settle.html 키 예외: `--path donway-pages/index.html`
+
+---
+
+### 🟠 용차앱 (yongcha.app)
+- yongcha.html, yongcha-landing.html
+- yongcha-worker.js ← 별도 wrangler 설정 (KV 업로드 효과 없음)
+
+**용차앱 절대 금지**
+- KV 업로드로 배포 불가. 반드시 `npx wrangler deploy` 사용
+- 현재 버그: 접속 시 DONWAY 랜딩으로 라우팅됨 (미수정)
+
+---
+
+### ⚪ MBTICO 관제센터 (mbtico.kr)
+- mbtico-pages/ ← 별도 wrangler (cd mbtico-pages && npx wrangler deploy)
+- mbtico-ctrl.js — 슈퍼어드민용 (채팅·공지·결제·매장 관리)
+
+**MBTICO 절대 금지**
+- mbtico-pages/_worker.js 대규모 수정 금지 (515KB — 리팩토링은 박람회 이후)
+- 슈퍼어드민 UID·dealerId 변경 금지
+
+---
+
+### ⚫ 공유 Worker (_worker.js) — 전체 앱 API 라우터
+- filo.ai.kr·dine.ne.kr·donway.ai.kr·mbtico.kr·yongcha.app 모두 이 파일 거침
+- KV(DONWAY_ASSETS)에서 HTML·JS 파일 서빙
+- Firestore SA 키로 서버사이드 Firestore 직접 접근
+
+**_worker.js 절대 금지**
+- `}{status:400` 치환 패턴 수정 금지 (Worker 빌드 깨짐)
+- wrangler.toml [vars] 수정 금지
+- Cloudflare Secrets는 대시보드에서만 관리
+
+---
+
+## 🚫 전체 공통 절대 수정 금지
+- wrangler.toml 및 [vars] 섹션
 - _worker.js 내 }{status:400 치환 패턴
-- Cloudflare KV NS_ID
+- Cloudflare KV NS_ID (7f0e90efaea64f3ab08ff00f8970b28b)
 - Firebase mbti-logistics 프로젝트 설정
 - GitHub Actions secrets (CF_GLOBAL_KEY)
-- 슈퍼어드민 UIDdealerId
-- settle.html / drivers.html 리팩토링 금지
+- 슈퍼어드민 UID·dealerId
+- deploy.yml 수정 금지 (GitHub App 권한 없음 → auto-merge 실패)
 - filo-common.js 직접 수정 금지
 - DONWAY preFreshback/dateFresh 로직 수정 금지
 
@@ -148,10 +253,17 @@ cd mbtico-pages && npx wrangler deploy
 
 ## 📋 세션 시작 체크리스트
 1. CLAUDE.md 전체 읽기 완료
-2. git pull origin main
-3. 미완료 작업 목록 확인
-4. 로컬 환경 확인 (클라우드 원격 금지)
-5. 작업 전 대상 파일 백업 확인
+2. 담당 앱 확인 → 해당 메모 파일 읽기
+   - FILO·DINE 담당 → FILO_DINE_MEMO.md
+3. git pull origin main
+4. 미완료 작업 목록 확인
+5. 작업 전 대상 파일 절대 금지 항목 재확인
+
+## 📝 메모 업데이트 규칙
+- FILO·DINE 파일 수정 시 → FILO_DINE_MEMO.md 수정 이력에 날짜·파일·내용 추가
+- 새 캐시 변수 추가 시 → 전역 캐시 변수 섹션 업데이트
+- 새 버그 발견 시 → 알려진 버그 섹션에 등록
+- 컬렉션 구조 변경 시 → Firestore 컬렉션 구조 섹션 업데이트
 
 ---
 
