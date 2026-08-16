@@ -132,7 +132,14 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
   <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:20px">기사 정보 등록 · 최초 1회</div>
   <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:20px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1);box-sizing:border-box">
     <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">기사 이름</div>
-    <div id="reg-name-display" style="padding:12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;margin-bottom:14px"></div>
+    <div id="reg-name-display" style="padding:12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;margin-bottom:10px"></div>
+    <div id="reg-name-conflict" style="display:none;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:#f87171;letter-spacing:.05em;margin-bottom:6px">동명이인 발견</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">'<span id="reg-dup-orig"></span>' 기사가 이미 등록되어 있습니다.<br>사용할 이름을 선택하거나 직접 입력하세요.</div>
+      <div id="reg-dup-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <input id="reg-dup-custom" type="text" placeholder="또는 직접 입력 (예: 김형우1)"
+        style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">
+    </div>
     <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">휴대폰 번호 <span style="color:#f87171">*</span></div>
     <input id="reg-phone" type="tel" placeholder="010-0000-0000"
       style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
@@ -574,7 +581,7 @@ function _emerShowRegister(name) {
   } catch(e) {}
 }
 
-function _emerSaveProfile() {
+async function _emerSaveProfile() {
   var phone = (document.getElementById('reg-phone')||{}).value.trim();
   var idNum = (document.getElementById('reg-id-num')||{}).value.trim();
   var carNum = (document.getElementById('reg-car-num')||{}).value.trim();
@@ -583,26 +590,100 @@ function _emerSaveProfile() {
   if(!phone) { _emerToast('휴대폰 번호를 입력하세요'); return; }
   if(!idNum) { _emerToast('주민등록번호를 입력하세요'); return; }
   if(!bankAccount) { _emerToast('정산 계좌번호를 입력하세요'); return; }
-  var name = localStorage.getItem('mbti_emer_driver') || '';
+  var origName = localStorage.getItem('mbti_emer_driver') || '';
   var did = localStorage.getItem('mbti_emer_dealerId') || '';
-  var profile = {driverName:name, dealerId:did, phone:phone, idNum:idNum, carNum:carNum, carType:carType, bankAccount:bankAccount};
-  localStorage.setItem('mbti_emer_profile', JSON.stringify(profile));
+  // 동명이인 UI가 표시 중이면 선택/입력한 이름 사용
+  var conflictBox = document.getElementById('reg-name-conflict');
+  var conflictVisible = conflictBox && conflictBox.style.display !== 'none';
+  var finalName = conflictVisible
+    ? ((document.getElementById('reg-dup-custom')||{}).value||'').trim() || origName
+    : origName;
+  if(!finalName) { _emerToast('이름을 입력하세요'); return; }
   var btn = document.querySelector('#register-screen button[onclick="_emerSaveProfile()"]');
-  if(btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  if(btn) { btn.disabled = true; btn.textContent = '확인 중...'; }
+  // 동명이인 체크 (충돌 UI 표시 중이 아닐 때만)
+  if(!conflictVisible) {
+    try {
+      var dupResult = await _checkDriverNameAvailable(finalName, phone, did);
+      if(!dupResult.available) {
+        if(btn) { btn.disabled = false; btn.textContent = '등록 완료'; }
+        _showDriverNameConflict(origName, dupResult.suggestions);
+        return;
+      }
+      finalName = dupResult.name;
+    } catch(e) { /* 네트워크 오류 시 그냥 진행 */ }
+  }
+  if(btn) btn.textContent = '저장 중...';
+  // 이름 변경 시 localStorage 업데이트
+  if(finalName !== origName) {
+    localStorage.setItem('mbti_emer_driver', finalName);
+    _emerSelDriver = finalName;
+    var nd = document.getElementById('reg-name-display');
+    if(nd) nd.textContent = finalName;
+  }
+  var profile = {driverName:finalName, dealerId:did, phone:phone, idNum:idNum, carNum:carNum, carType:carType, bankAccount:bankAccount};
+  localStorage.setItem('mbti_emer_profile', JSON.stringify(profile));
   fetch('/api/emergency-driver-profile', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(profile)
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profile)
   }).then(function(r){ return r.json(); }).then(function(d){
     if(!d.ok) throw new Error(d.error||'저장 실패');
     localStorage.setItem('mbti_emer_profile_done', '1');
     _emerToast('등록 완료!');
     document.getElementById('register-screen').style.display = 'none';
+    if(conflictBox) conflictBox.style.display = 'none';
     _emerGoMain();
   }).catch(function(e){
     _emerToast('저장 실패: '+e.message);
     if(btn) { btn.disabled = false; btn.textContent = '등록 완료'; }
   });
+}
+
+async function _checkDriverNameAvailable(name, phone, did) {
+  var normPhone = phone.replace(/[^0-9]/g,'');
+  var r = await fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(name));
+  var d = await r.json();
+  if(!d.ok || !d.profile) return {available:true, name:name}; // 미등록 → 사용 가능
+  var existPhone = (d.profile.phone||'').replace(/[^0-9]/g,'');
+  if(existPhone === normPhone) return {available:true, name:name}; // 같은 사람 재등록 → OK
+  // 다른 사람 동명이인 → 사용 가능한 접미어 찾기
+  var suggestions = [];
+  var letters = ['A','B','C','D','E','F'];
+  for(var i=0; i<letters.length; i++) {
+    var candidate = name + letters[i];
+    var r2 = await fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(candidate));
+    var d2 = await r2.json();
+    if(!d2.ok || !d2.profile) { suggestions.push(candidate); if(suggestions.length >= 3) break; }
+    else {
+      var ep2 = (d2.profile.phone||'').replace(/[^0-9]/g,'');
+      if(ep2 === normPhone) { suggestions.unshift(candidate); break; } // 내 이름이 이미 있으면 최우선
+    }
+  }
+  return {available:false, suggestions:suggestions};
+}
+
+function _showDriverNameConflict(origName, suggestions) {
+  var box = document.getElementById('reg-name-conflict');
+  var origSpan = document.getElementById('reg-dup-orig');
+  var sugsEl = document.getElementById('reg-dup-suggestions');
+  var custInp = document.getElementById('reg-dup-custom');
+  if(!box || !origSpan || !sugsEl) return;
+  origSpan.textContent = origName;
+  sugsEl.innerHTML = suggestions.map(function(s){
+    return '<button onclick="_pickDriverName(\''+_esc(s)+'\',this)" style="padding:8px 16px;background:rgba(201,168,76,.12);border:1.5px solid #c9a84c;border-radius:8px;color:#c9a84c;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+_esc(s)+'</button>';
+  }).join('');
+  if(custInp) custInp.value = suggestions[0]||'';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+  _emerToast('동명이인이 있습니다. 이름을 선택하세요');
+}
+
+function _pickDriverName(name, el) {
+  var inp = document.getElementById('reg-dup-custom');
+  if(inp) inp.value = name;
+  document.querySelectorAll('#reg-dup-suggestions button').forEach(function(b){
+    b.style.background='rgba(201,168,76,.12)'; b.style.color='#c9a84c';
+  });
+  if(el) { el.style.background='#c9a84c'; el.style.color='#08101f'; }
 }
 
 function _emerToast(msg) {
