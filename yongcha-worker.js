@@ -13,10 +13,10 @@ const YONGCHA_HTML = `﻿<!DOCTYPE html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="용차">
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-<link rel="shortcut icon" type="image/png" href="/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json?v=5">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
+<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=5">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5">
 <title>용차 — 택배 노선 매칭</title>
 <style>
 /* ═══════════════════════════════════════════════════════════
@@ -8982,10 +8982,10 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
         orientation: 'portrait',
         lang: 'ko',
         icons: [
-          { src: '/icon-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/icon-192.png?v=4', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-          { src: '/icon-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: '/icon-512.png?v=4', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: '/icon-192.png?v=5', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-192.png?v=5', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/icon-512.png?v=5', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png?v=5', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ],
         categories: ['productivity', 'business'],
         screenshots: []
