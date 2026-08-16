@@ -3892,6 +3892,51 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // ── /api/filo-order — 비로그인 고객 QR 주문 제출 (SA 토큰으로 Firestore 쓰기)
+      if (path === '/api/filo-order' && method === 'POST') {
+        const _foCors={'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+        try {
+          const body=await request.json();
+          const {dealerId,type,status,payType,tableNum,tableName,items,total,createdAt,date,fcmToken}=body;
+          if(!dealerId||!items||!Array.isArray(items)||!items.length)
+            return new Response(JSON.stringify({error:'invalid'}),{status:400,headers:_foCors});
+          // JS 값 → Firestore REST 형식
+          function _fsv(v){
+            if(v===null||v===undefined)return{nullValue:null};
+            if(typeof v==='boolean')return{booleanValue:v};
+            if(typeof v==='number')return Number.isInteger(v)?{integerValue:v}:{doubleValue:v};
+            if(typeof v==='string')return{stringValue:v};
+            if(Array.isArray(v))return{arrayValue:{values:v.map(_fsv)}};
+            if(typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,vv])=>[k,_fsv(vv)]))}};
+            return{stringValue:String(v)};
+          }
+          const fields={
+            dealerId:_fsv(dealerId),
+            type:_fsv(type||'table'),
+            status:_fsv(status||'pending'),
+            payType:_fsv(payType||'postpay'),
+            tableNum:_fsv(tableNum||''),
+            tableName:_fsv(tableName||''),
+            items:_fsv(items.map(function(it){return{name:it.name||'',price:it.price||0,qty:it.qty||1};})),
+            total:_fsv(total||0),
+            createdAt:_fsv(createdAt||new Date().toISOString()),
+            date:_fsv(date||new Date().toISOString().slice(0,10))
+          };
+          if(fcmToken)fields.fcmToken=_fsv(fcmToken);
+          const tok=await getAccessToken(env);
+          const fsRes=await fetch(`${FS_BASE}/filo_orders`,{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+            body:JSON.stringify({fields})
+          });
+          const fsData=await fsRes.json();
+          if(!fsRes.ok)return new Response(JSON.stringify({error:fsData.error?.message||'fs error'}),{status:500,headers:_foCors});
+          // 문서 ID 추출
+          const docId=(fsData.name||'').split('/').pop();
+          return new Response(JSON.stringify({ok:true,id:docId}),{headers:_foCors});
+        } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:_foCors});}
+      }
+
       // ── /api/filo-push — 사장님 FCM 신규주문/웨이팅/재고부족 알림
       if (path === '/api/filo-push' && method === 'POST') {
         try {
