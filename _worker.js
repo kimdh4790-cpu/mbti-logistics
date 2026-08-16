@@ -6454,8 +6454,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const _mkv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_ms, 'json') : null;
             if (_mkv && _mkv.emergency) {
               const _mStart = _ma ? '/'+_ms+'/'+_ma : '/'+_ms;
-              const _mName = (_mkv.companyName||'배송앱').replace(/[<>"&]/g,'');
-              const _mManifest = { name:_mName, short_name:_mName, start_url:_mStart, scope:'/', display:'standalone', background_color:'#0f172a', theme_color:'#c9a84c', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
+              const _mScope = '/'+_ms; // /mbti 또는 /mbti/앱 모두 커버, start_url 포함
+              const _coName = (_mkv.companyName||'').replace(/[<>"&]/g,'');
+              const _mName = _coName ? _coName+' 배송앱' : '배송앱';
+              const _mManifest = { name:_mName, short_name:'배송앱', start_url:_mStart, scope:_mScope, display:'standalone', background_color:'#0f172a', theme_color:'#c9a84c', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
               return new Response(JSON.stringify(_mManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'}});
             }
           } catch(e) {}
