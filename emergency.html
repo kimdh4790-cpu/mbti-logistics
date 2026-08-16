@@ -393,10 +393,11 @@ function _emerUpdateSubtitle() {
   var appName = localStorage.getItem('mbti_emer_app') || '';
   var sub = document.getElementById('emer-co-sub');
   if(!sub) return;
-  if(coName && appName) {
-    sub.textContent = coName + ' / ' + appName + ' 기사 전용';
+  var lockedApp = _CO_EMER_APP_NAME || appName;
+  if(coName && lockedApp) {
+    sub.textContent = coName + ' / ' + lockedApp + ' 기사 전용';
   } else if(coName) {
-    sub.textContent = coName + ' 기사 전용';
+    sub.textContent = '기사 전용';
   }
 }
 
@@ -458,8 +459,8 @@ function _emerLoadCoName() {
     var t = document.getElementById('emer-co-name');
     var s = document.getElementById('emer-co-sub');
     if(t) t.textContent = savedName;
-    if(s) s.textContent = savedName + ' 기사 전용';
     document.querySelectorAll('.top-logo').forEach(function(el){ el.textContent=savedName; });
+    _emerUpdateSubtitle();
   }
   // 이미 조회 완료 → Firestore 재호출 금지 (무한루프 방지 핵심)
   if(_coNameLoaded) return;
@@ -567,16 +568,22 @@ function _switchLoginTab(role) {
   var adminForm  = document.getElementById('login-admin-form');
   var tabD = document.getElementById('tab-driver');
   var tabA = document.getElementById('tab-admin');
+  var sub = document.getElementById('emer-co-sub');
+  var coName = localStorage.getItem('mbti_emer_coname') || '';
   if(role==='admin') {
     if(driverForm) driverForm.style.display='none';
     if(adminForm)  adminForm.style.display='block';
     if(tabD) { tabD.style.background='transparent'; tabD.style.color='rgba(255,255,255,.5)'; }
     if(tabA) { tabA.style.background='#3b82f6'; tabA.style.color='#fff'; }
+    // 관리자: 회사명만 (내부에서 앱별 확인)
+    if(sub) sub.textContent = coName || '관리자';
   } else {
     if(driverForm) driverForm.style.display='block';
     if(adminForm)  adminForm.style.display='none';
     if(tabA) { tabA.style.background='transparent'; tabA.style.color='rgba(255,255,255,.5)'; }
     if(tabD) { tabD.style.background='#c9a84c'; tabD.style.color='#08101f'; }
+    // 기사: 회사명 / 앱명칭 기사 전용
+    _emerUpdateSubtitle();
   }
 }
 
