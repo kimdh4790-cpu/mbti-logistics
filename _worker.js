@@ -6444,6 +6444,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
             if (_kvSlug && _kvSlug.uid) {
+              // ── 긴급배송앱 슬러그: emergency:true 이면 emergency.html 직접 서빙
+              if (_kvSlug.emergency) {
+                const _emerHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('emergency.html', 'text') : null;
+                if (_emerHtml) {
+                  const _safeUid = (_kvSlug.uid||'').replace(/['"<>]/g,'');
+                  const _safeSlug = _slugMatch[1].replace(/['"<>]/g,'');
+                  const _injected = _emerHtml.replace('<head>',
+                    `<head><script>try{localStorage.setItem('mbti_emer_dealerId','${_safeUid}');window._pwaSlug='${_safeSlug}';}catch(e){}</script>`);
+                  return new Response(_injected, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
+                }
+              }
               // 회사 슬러그 페이지: 배송처 목록 + 각 기사 가입 링크
               const _coSlug = _slugMatch[1];
               const _coName = _kvSlug.companyName || _coSlug;
@@ -9309,7 +9320,13 @@ service cloud.firestore {
         const patchUrl = `${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=emergencyPrices&updateMask.fieldPaths=emergencyServices`;
         const pr = await fetch(patchUrl, {method:'PATCH',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
         if (!pr.ok) { const d=await pr.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
-        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+        // 슬러그 KV 저장: mbtico.kr/{slug} → 긴급배송앱 직접 열기
+        const slug = (body.slug||'').trim().toLowerCase().replace(/[^a-z0-9가-힣\-_]/g,'');
+        if (slug && env.DONWAY_ASSETS) {
+          const companyName = chkDoc.fields?.companyName?.stringValue || chkDoc.fields?.company?.stringValue || '';
+          await env.DONWAY_ASSETS.put('company-slug:'+slug, JSON.stringify({uid:dealerId, companyName, emergency:true}));
+        }
+        return new Response(JSON.stringify({ok:true, slug:slug||null}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
@@ -11038,6 +11055,20 @@ service cloud.firestore {
     const slugManifestMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
     if (slugManifestMatch) {
       const slug = slugManifestMatch[1];
+      // 긴급배송 슬러그면 배송앱 manifest
+      const _smKv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+slug, 'json') : null;
+      if (_smKv && _smKv.emergency) {
+        const _smName = (_smKv.companyName||'배송앱') + ' 배송앱';
+        return new Response(JSON.stringify({
+          name:_smName, short_name:'배송앱',
+          start_url:'/'+slug, scope:'/', display:'standalone',
+          orientation:'portrait', background_color:'#0f172a', theme_color:'#0f172a', lang:'ko',
+          icons:[
+            {src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+            {src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+          ]
+        }), { status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'} });
+      }
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
         description:'AI 자동 정산 · QR 출퇴근 · 급여 관리',

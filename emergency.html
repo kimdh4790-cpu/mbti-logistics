@@ -9,7 +9,13 @@
 <script>
 (function(){
   var d=new URLSearchParams(location.search).get('did')||localStorage.getItem('mbti_emer_dealerId')||'';
-  if(d){var ml=document.getElementById('pwa-manifest-link');if(ml)ml.href='/emergency-manifest.json?did='+encodeURIComponent(d);}
+  var sl=(typeof _pwaSlug!=='undefined'&&_pwaSlug)?_pwaSlug:(localStorage.getItem('mbti_emer_slug')||'');
+  var ml=document.getElementById('pwa-manifest-link');
+  if(ml){
+    if(sl) ml.href='/'+encodeURIComponent(sl)+'/manifest.json';
+    else if(d) ml.href='/emergency-manifest.json?did='+encodeURIComponent(d);
+  }
+  if(sl) localStorage.setItem('mbti_emer_slug',sl);
 })();
 </script>
 <link rel="apple-touch-icon" href="/mbti-icon-192.png">
@@ -455,6 +461,13 @@ function _emerLoadCoName() {
     if(co.emergencyServices && co.emergencyServices.length) { window._CO_EMER_SERVICES = co.emergencyServices; _renderServiceButtons(); }
     // 단가 캐시
     if(co.emergencyPrices) window._CO_EMER_PRICES = co.emergencyPrices;
+    // 슬러그 저장 → manifest 링크 업데이트 (PWA 홈화면 start_url = mbtico.kr/{slug})
+    var slug = co.slug || co.emergencySlug || '';
+    if(slug) {
+      localStorage.setItem('mbti_emer_slug', slug);
+      var ml = document.getElementById('pwa-manifest-link');
+      if(ml) ml.href = '/' + encodeURIComponent(slug) + '/manifest.json';
+    }
   }).catch(function(){ _coNameLoaded=false; }); // 오류 시 재시도 허용
 }
 
@@ -751,8 +764,16 @@ function _renderPriceInputs() {
       +'<button onclick="this.parentElement.remove()" style="padding:6px 10px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:6px;color:#f87171;cursor:pointer;font-size:12px">삭제</button>'
       +'</div>';
   });
+  var savedSlug = localStorage.getItem('mbti_emer_slug') || '';
   html += '</div>'
     +'<button onclick="_adminAddService()" style="width:100%;padding:8px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:16px">+ 서비스 추가</button>'
+    +'<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;margin-top:4px">회사 링크 슬러그</div>'
+    +'<div style="display:flex;align-items:center;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:6px">'
+    +'<span style="padding:10px 10px;background:var(--bg3);color:var(--text3);font-size:12px;white-space:nowrap;border-right:1px solid var(--border)">mbtico.kr/</span>'
+    +'<input id="admin-slug-inp" type="text" value="'+savedSlug+'" placeholder="예: mbti" maxlength="30"'
+    +' style="flex:1;padding:10px;background:transparent;border:none;color:var(--text);font-size:13px;outline:none">'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:16px">저장하면 mbtico.kr/{슬러그} URL로 배송앱 바로 접속 가능 (소문자·숫자·하이픈)</div>'
     +'<button onclick="_adminSavePrices()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:12px;color:#08101f;font-size:14px;font-weight:800;cursor:pointer">저장</button>';
   view.innerHTML = html;
 }
@@ -791,14 +812,19 @@ function _adminSavePrices() {
   fetch('/api/emergency-prices', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({dealerId:did, prices:prices, services:services})
+    body:JSON.stringify({dealerId:did, prices:prices, services:services, slug:(document.getElementById('admin-slug-inp')||{}).value||''})
   }).then(function(r){ return r.json(); })
     .then(function(d) {
       if(d.ok) {
         window._CO_EMER_PRICES = prices;
         window._CO_EMER_SERVICES = services;
         _renderServiceButtons();
-        _emerToast('단가가 저장되었습니다');
+        if(d.slug) {
+          localStorage.setItem('mbti_emer_slug', d.slug);
+          var ml = document.getElementById('pwa-manifest-link');
+          if(ml) ml.href = '/'+encodeURIComponent(d.slug)+'/manifest.json';
+        }
+        _emerToast('단가가 저장되었습니다'+(d.slug?' (링크: mbtico.kr/'+d.slug+')':''));
       } else { _emerToast('저장 실패: '+(d.error||'')); }
       if(btn) { btn.disabled=false; btn.textContent='저장'; }
     }).catch(function(e) {
