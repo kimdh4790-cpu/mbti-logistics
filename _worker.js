@@ -6440,6 +6440,24 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
         const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
         const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients','/label']);
+        // ── 2단계 슬러그: /{slug}/{appSlug} → 앱별 기사 로그인 페이지
+        const _appSlugMatch2 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
+        if (_appSlugMatch2 && !_reserved.has('/'+_appSlugMatch2[1]) && _appSlugMatch2[2]!=='manifest.json' && _appSlugMatch2[2]!=='sw.js') {
+          try {
+            const _pkv2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_appSlugMatch2[1], 'json') : null;
+            if (_pkv2 && _pkv2.emergency) {
+              const _eh2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('emergency.html', 'text') : null;
+              if (_eh2) {
+                const _su2 = (_pkv2.uid||'').replace(/['"<>\\]/g,'');
+                const _ss2 = _appSlugMatch2[1].replace(/['"<>\\]/g,'');
+                const _sa2 = _appSlugMatch2[2].replace(/['"<>\\]/g,'');
+                const _inj2 = _eh2.replace('<head>',
+                  `<head><script>try{localStorage.setItem('mbti_emer_dealerId','${_su2}');window._pwaSlug='${_ss2}';window._pwaAppName='${_sa2}';}catch(e){}</script>`);
+                return new Response(_inj2, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
+              }
+            }
+          } catch(e) {}
+        }
         if (_slugMatch && !_reserved.has(_mbtPath1.replace(/\/$/,''))) {
           try {
             const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
@@ -9330,6 +9348,69 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 기사 앱 등록: POST /api/emergency-register ──
+    if (path === '/api/emergency-register' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, driverName, appName } = body;
+        if (!dealerId || !driverName || !appName) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName·appName 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const driversMap = { ...(coDoc.fields.emergencyDrivers?.mapValue?.fields || {}) };
+        const existingApps = (driversMap[driverName]?.arrayValue?.values || []).map(v => v.stringValue).filter(Boolean);
+        if (!existingApps.includes(appName)) existingApps.push(appName);
+        driversMap[driverName] = {arrayValue:{values: existingApps.map(a=>({stringValue:a}))}};
+        const fields = {emergencyDrivers:{mapValue:{fields:driversMap}}};
+        const pr = await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=emergencyDrivers`, {
+          method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({fields})
+        });
+        if (!pr.ok) { const d=await pr.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true, apps:existingApps}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
+    // ── 기사 앱 목록 조회: GET /api/emergency-drivers ──
+    if (path === '/api/emergency-drivers' && method === 'GET') {
+      try {
+        const dealerId = new URL(request.url).searchParams.get('dealerId')||'';
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const driversRaw = coDoc.fields.emergencyDrivers?.mapValue?.fields || {};
+        const drivers = {};
+        for (const [name, val] of Object.entries(driversRaw)) {
+          drivers[name] = (val.arrayValue?.values||[]).map(v=>v.stringValue).filter(Boolean);
+        }
+        const services = (coDoc.fields.emergencyServices?.arrayValue?.values||[]).map(v=>v.stringValue).filter(Boolean);
+        return new Response(JSON.stringify({ok:true, drivers, services}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
+    // ── 기사 앱 배정 수정 (관리자): POST /api/emergency-driver-apps ──
+    if (path === '/api/emergency-driver-apps' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, driverName, apps } = body;
+        if (!dealerId || !driverName || !Array.isArray(apps)) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName·apps 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const driversMap = { ...(coDoc.fields.emergencyDrivers?.mapValue?.fields || {}) };
+        driversMap[driverName] = {arrayValue:{values: apps.map(a=>({stringValue:String(a)}))}};
+        const fields = {emergencyDrivers:{mapValue:{fields:driversMap}}};
+        const pr = await fetch(`${FS_BASE}/companies/${dealerId}?updateMask.fieldPaths=emergencyDrivers`, {
+          method:'PATCH', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify({fields})
+        });
+        if (!pr.ok) { const d=await pr.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true, driverName, apps}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──
     if (path === '/api/toss-client-key' && method === 'GET') {
       return new Response(JSON.stringify({
@@ -11051,6 +11132,27 @@ service cloud.firestore {
     }
 
     // ── manifest.json 인라인 서빙 ──
+    // /{slug}/{appSlug}/manifest.json → 앱별 배송앱 manifest
+    const appManifestMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
+    if (appManifestMatch) {
+      const _amParent = appManifestMatch[1];
+      const _amApp    = decodeURIComponent(appManifestMatch[2]);
+      const _amKv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_amParent, 'json') : null;
+      if (_amKv && _amKv.emergency) {
+        const _amCoName = _amKv.companyName || '배송앱';
+        return new Response(JSON.stringify({
+          name: _amCoName+' '+_amApp+' 배송앱',
+          short_name: _amApp+' 배송',
+          start_url: '/'+encodeURIComponent(_amParent)+'/'+encodeURIComponent(_amApp),
+          scope: '/', display: 'standalone',
+          orientation: 'portrait', background_color: '#0f172a', theme_color: '#0f172a', lang: 'ko',
+          icons: [
+            {src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+            {src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+          ]
+        }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
+      }
+    }
     // /{slug}/manifest.json → 슬러그별 start_url 주입
     const slugManifestMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
     if (slugManifestMatch) {

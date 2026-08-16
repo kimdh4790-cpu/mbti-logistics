@@ -10,12 +10,15 @@
 (function(){
   var d=new URLSearchParams(location.search).get('did')||localStorage.getItem('mbti_emer_dealerId')||'';
   var sl=(typeof _pwaSlug!=='undefined'&&_pwaSlug)?_pwaSlug:(localStorage.getItem('mbti_emer_slug')||'');
+  var ap=(typeof _pwaAppName!=='undefined'&&_pwaAppName)?_pwaAppName:(localStorage.getItem('mbti_emer_app_locked')||'');
   var ml=document.getElementById('pwa-manifest-link');
   if(ml){
-    if(sl) ml.href='/'+encodeURIComponent(sl)+'/manifest.json';
+    if(sl&&ap) ml.href='/'+encodeURIComponent(sl)+'/'+encodeURIComponent(ap)+'/manifest.json';
+    else if(sl) ml.href='/'+encodeURIComponent(sl)+'/manifest.json';
     else if(d) ml.href='/emergency-manifest.json?did='+encodeURIComponent(d);
   }
   if(sl) localStorage.setItem('mbti_emer_slug',sl);
+  if(ap) localStorage.setItem('mbti_emer_app_locked',ap);
 })();
 </script>
 <link rel="apple-touch-icon" href="/mbti-icon-192.png">
@@ -314,6 +317,8 @@ if(false) _auth.onAuthStateChanged(function(user){
 // emergency 로그인 — 캠프+이름 방식
 var _emerSelCamp = localStorage.getItem('mbti_emer_camp') || '';
 var _emerSelDriver = localStorage.getItem('mbti_emer_driver') || '';
+// URL 기반 앱명칭 잠금 (mbtico.kr/{slug}/{appName} 으로 접속 시 설정됨)
+var _CO_EMER_APP_NAME = (typeof _pwaAppName!=='undefined'&&_pwaAppName) ? _pwaAppName : (localStorage.getItem('mbti_emer_app_locked')||'');
 
 // 구역 버튼 렌더링 (독립 함수 — _emerLoadCoName 콜백에서도 호출)
 function _renderCampButtons() {
@@ -341,6 +346,24 @@ function _renderServiceButtons() {
   var label = document.getElementById('emer-service-label');
   var row = document.getElementById('emer-service-row');
   if(!row) return;
+  // URL 기반 앱명칭 잠금: 선택 불가, 고정 표시
+  if(_CO_EMER_APP_NAME) {
+    if(label) { label.style.display='flex'; label.textContent='배송 앱'; }
+    row.style.display='flex';
+    row.innerHTML='';
+    var lb=document.createElement('button');
+    lb.textContent=_CO_EMER_APP_NAME;
+    lb.disabled=true;
+    lb.style.cssText='padding:8px 16px;background:rgba(59,130,246,.2);border:1.5px solid #3b82f6;border-radius:8px;color:#93c5fd;font-size:13px;font-weight:800;cursor:default;opacity:1';
+    var li=document.createElement('span');
+    li.textContent='이 앱 전용';
+    li.style.cssText='font-size:11px;color:var(--text3);margin-left:8px;align-self:center';
+    row.appendChild(lb);
+    row.appendChild(li);
+    localStorage.setItem('mbti_emer_app',_CO_EMER_APP_NAME);
+    _emerUpdateSubtitle();
+    return;
+  }
   if(!services.length) {
     if(label) label.style.display='none';
     row.style.display='none';
@@ -478,10 +501,19 @@ function _emerDoLogin() {
   _emerSelDriver = name;
   localStorage.setItem('mbti_emer_driver', name);
   localStorage.setItem('mbti_emer_camp', _emerSelCamp);
+  // 앱 명칭 설정 (URL 잠금 우선)
+  var appName = _CO_EMER_APP_NAME || localStorage.getItem('mbti_emer_app') || '';
+  if(appName) localStorage.setItem('mbti_emer_app', appName);
   // _CU 설정 (기존 코드와 호환)
   var did = new URLSearchParams(location.search).get('did')
           || localStorage.getItem('mbti_emer_dealerId')
           || (_auth.currentUser && _auth.currentUser.uid) || '';
+  // 첫 로그인 시 기사 자동 등록 (앱명칭 있을 때만)
+  if(appName && did) {
+    fetch('/api/emergency-register',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({dealerId:did,driverName:name,appName:appName})
+    }).catch(function(){});
+  }
   _CU = { uid: did, email: (_auth.currentUser&&_auth.currentUser.email)||'', dealerId: did, driver: name, camp: _emerSelCamp };
   window._CU = _CU;
   // Firestore 보안규칙 통과를 위해 익명 로그인 (실패해도 무시)
@@ -634,14 +666,20 @@ function _adminTab(tab) {
 // 기사 현황 탭 (30초 자동갱신)
 // ═══════════════════════════════════════
 function _adminStartMonitor() {
+  var outerView = document.getElementById('admin-monitor-view');
+  if(outerView && !document.getElementById('admin-monitor-cards')) {
+    outerView.innerHTML = '<div id="admin-monitor-cards"></div>'
+      +'<div id="admin-monitor-matrix" style="margin-top:24px;padding-bottom:16px"></div>';
+  }
   _adminLoadMonitor();
+  _adminLoadDriverMatrix();
   if(_adminMonitorTimer) clearInterval(_adminMonitorTimer);
-  _adminMonitorTimer = setInterval(_adminLoadMonitor, 30000);
+  _adminMonitorTimer = setInterval(function(){ _adminLoadMonitor(); _adminLoadDriverMatrix(); }, 30000);
 }
 
 function _adminLoadMonitor() {
   var did = (_CU && _CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
-  var view = document.getElementById('admin-monitor-view');
+  var view = document.getElementById('admin-monitor-cards') || document.getElementById('admin-monitor-view');
   if(!did) {
     if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">회사 ID 없음 — URL에 ?did= 파라미터를 추가하세요</div>';
     return;
@@ -662,7 +700,7 @@ function _adminLoadMonitor() {
 }
 
 function _renderMonitorCards(docs, dateStr, did) {
-  var view = document.getElementById('admin-monitor-view');
+  var view = document.getElementById('admin-monitor-cards') || document.getElementById('admin-monitor-view');
   if(!view) return;
   var now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   // 기사별 그룹화
@@ -720,6 +758,85 @@ function _renderMonitorCards(docs, dateStr, did) {
 }
 
 // ═══════════════════════════════════════
+// 기사 앱 관리 매트릭스 (기사 현황 탭 하단)
+// ═══════════════════════════════════════
+function _adminLoadDriverMatrix() {
+  var matrix = document.getElementById('admin-monitor-matrix');
+  if(!matrix) return;
+  var did = (_CU && _CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+  if(!did) return;
+  fetch('/api/emergency-drivers?dealerId='+encodeURIComponent(did))
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.ok) _renderDriverMatrix(d.drivers||{}, d.services||[]); })
+    .catch(function(){});
+}
+
+function _renderDriverMatrix(drivers, services) {
+  var matrix = document.getElementById('admin-monitor-matrix');
+  if(!matrix) return;
+  if(!services.length) { matrix.innerHTML=''; return; }
+  var slug = localStorage.getItem('mbti_emer_slug')||'';
+  var names = Object.keys(drivers).sort();
+  var html = '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px;padding-top:8px;border-top:1px solid var(--border)">기사 앱 배정</div>';
+  // 앱별 접속 링크
+  if(slug) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+    services.forEach(function(svc){
+      var url='mbtico.kr/'+slug+'/'+encodeURIComponent(svc);
+      html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px">'
+        +'<div style="font-weight:700;color:var(--text)">'+svc+'</div>'
+        +'<div style="color:var(--text3);margin-top:2px">'+url+'</div>'
+        +'<button onclick="navigator.clipboard&&navigator.clipboard.writeText(\'https://'+url+'\').then(function(){_emerToast(\'링크 복사됨\')})" '
+        +'style="margin-top:4px;padding:2px 8px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:4px;color:#c9a84c;font-size:10px;cursor:pointer">복사</button>'
+        +'</div>';
+    });
+    html+='</div>';
+  }
+  if(!names.length) {
+    html+='<div style="font-size:12px;color:var(--text3);padding:12px;background:var(--bg2);border-radius:8px">'
+      +'등록된 기사가 없습니다<br><span style="font-size:11px;opacity:.7">기사가 앱 URL로 첫 로그인하면 자동 등록됩니다</span></div>';
+    matrix.innerHTML=html;
+    return;
+  }
+  html+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    +'<thead><tr style="background:var(--bg2)">'
+    +'<th style="text-align:left;padding:8px 10px;color:var(--text2);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap">기사명</th>'
+    +services.map(function(s){return '<th style="text-align:center;padding:8px 6px;color:var(--text2);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap">'+s+'</th>';}).join('')
+    +'</tr></thead><tbody>';
+  names.forEach(function(name){
+    var apps=drivers[name]||[];
+    html+='<tr><td style="padding:10px 10px;color:var(--text);font-weight:700;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap">'+name+'</td>'
+      +services.map(function(svc){
+        var ck=apps.indexOf(svc)>-1;
+        return '<td style="text-align:center;padding:10px 6px;border-bottom:1px solid rgba(255,255,255,.05)">'
+          +'<input type="checkbox"'+(ck?' checked':'')+' onchange="_adminToggleDriverApp(\''+name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\',\''+svc.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:#c9a84c">'
+          +'</td>';
+      }).join('')+'</tr>';
+  });
+  html+='</tbody></table></div>';
+  matrix.innerHTML=html;
+}
+
+function _adminToggleDriverApp(driverName, appName, checked) {
+  var did = (_CU && _CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+  if(!did) return;
+  fetch('/api/emergency-drivers?dealerId='+encodeURIComponent(did))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d.ok) { _emerToast('조회 실패'); return Promise.reject(); }
+      var apps = (d.drivers[driverName]||[]).slice();
+      if(checked && apps.indexOf(appName)<0) apps.push(appName);
+      else if(!checked) apps = apps.filter(function(a){ return a!==appName; });
+      return fetch('/api/emergency-driver-apps',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({dealerId:did,driverName:driverName,apps:apps})});
+    }).then(function(r){ return r&&r.json(); })
+    .then(function(d){
+      if(d&&d.ok) _emerToast(driverName+' / '+appName+' '+(checked?'추가':'제거'));
+      else if(d) _emerToast('실패: '+(d.error||''));
+    }).catch(function(e){ if(e) _emerToast('오류: '+(e.message||'')); });
+}
+
+// ═══════════════════════════════════════
 // 단가 설정 탭
 // ═══════════════════════════════════════
 function _adminLoadPrices() {
@@ -766,8 +883,26 @@ function _renderPriceInputs() {
   });
   var savedSlug = localStorage.getItem('mbti_emer_slug') || '';
   html += '</div>'
-    +'<button onclick="_adminAddService()" style="width:100%;padding:8px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:16px">+ 서비스 추가</button>'
-    +'<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;margin-top:4px">회사 링크 슬러그</div>'
+    +'<button onclick="_adminAddService()" style="width:100%;padding:8px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;cursor:pointer;margin-bottom:16px">+ 서비스 추가</button>';
+  // 앱별 기사 링크 (슬러그 + 서비스 목록 있을 때만 표시)
+  if(savedSlug && services.length) {
+    html += '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;margin-top:4px">앱별 기사 접속 링크</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px">각 링크를 기사들에게 공유하세요</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">';
+    services.forEach(function(svc){
+      var appUrl = 'mbtico.kr/'+savedSlug+'/'+encodeURIComponent(svc);
+      html += '<div style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:12px;font-weight:800;color:var(--text)">'+svc+'</div>'
+        +'<div style="font-size:11px;color:var(--text3);margin-top:2px;word-break:break-all">'+appUrl+'</div>'
+        +'</div>'
+        +'<button onclick="navigator.clipboard&&navigator.clipboard.writeText(\'https://'+appUrl+'\').then(function(){_emerToast(\'링크 복사됨\')})" '
+        +'style="flex-shrink:0;padding:6px 10px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;color:#c9a84c;font-size:11px;cursor:pointer">복사</button>'
+        +'</div>';
+    });
+    html += '</div>';
+  }
+  html += '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;margin-top:4px">회사 링크 슬러그</div>'
     +'<div style="display:flex;align-items:center;gap:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:6px">'
     +'<span style="padding:10px 10px;background:var(--bg3);color:var(--text3);font-size:12px;white-space:nowrap;border-right:1px solid var(--border)">mbtico.kr/</span>'
     +'<input id="admin-slug-inp" type="text" value="'+savedSlug+'" placeholder="예: mbti" maxlength="30"'
