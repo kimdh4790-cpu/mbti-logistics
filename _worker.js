@@ -22203,13 +22203,14 @@ const YONGCHA_MKT_AVG = {
 };
 
 // Firebase ID 토큰 서버 측 검증
+// Firebase web API key는 클라이언트에 이미 공개된 값이므로 fallback으로 사용 가능
+const _FIREBASE_WEB_KEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 async function verifyYongchaToken(request, env) {
   const auth = (request.headers.get('Authorization') || '').trim();
   if (!auth.startsWith('Bearer ')) return null;
   const token = auth.slice(7);
   if (token.length < 100) return null;
-  const apiKey = env.FIREBASE_API_KEY || '';
-  if (!apiKey) return token ? { uid: 'verified' } : null;
+  const apiKey = env.FIREBASE_API_KEY || _FIREBASE_WEB_KEY;
   try {
     const res = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,

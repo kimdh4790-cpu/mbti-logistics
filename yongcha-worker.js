@@ -8892,6 +8892,31 @@ function _showZoneOnMap(i){
 </html>
 
 `;
+// Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
+const YC_FB_KEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+
+async function ycVerifyToken(request, env) {
+  const auth = (request.headers.get('Authorization') || '').trim();
+  if (!auth.startsWith('Bearer ')) return null;
+  const token = auth.slice(7);
+  if (token.length < 100) return null;
+  try {
+    const apiKey = env.FIREBASE_API_KEY || YC_FB_KEY;
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.users && data.users[0]) || null;
+  } catch(e) { return null; }
+}
+
+function ycAuthReq(h) {
+  return new Response(JSON.stringify({ ok: false, error: '인증이 필요해요' }), { status: 401, headers: h });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url    = new URL(request.url);
@@ -8902,8 +8927,8 @@ export default {
       return new Response(null, {
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         }
       });
     }
@@ -9015,6 +9040,9 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
     }
 
     if (path === '/api/ctrl-notify' && method === 'POST') {
+      const cnH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const cnUser = await ycVerifyToken(request, env);
+      if (!cnUser) return ycAuthReq(cnH);
       try {
         const body = await request.json();
         if (body.token && env.FCM_SERVER_KEY) {
@@ -9024,17 +9052,20 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
             body: JSON.stringify({ to: body.token, notification: { title: body.title || '용차', body: body.body || '' }, data: body.data || {} })
           });
         }
-        return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ ok: true }), { headers: cnH });
       } catch(e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: cnH });
       }
     }
 
     if (path === '/api/ai-coach' && method === 'POST') {
+      const acH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const acUser = await ycVerifyToken(request, env);
+      if (!acUser) return ycAuthReq(acH);
       try {
         const { driver, posts } = await request.json();
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-        if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json' } });
+        if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: acH });
 
         const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
         const postSummary = (posts || []).slice(0, 8).map(p => {
@@ -9085,22 +9116,21 @@ ${postSummary || '공고 없음'}
           if (m) { try { parsed = JSON.parse(m[0]); } catch(e2) {} }
         }
 
-        return new Response(JSON.stringify({ ok: true, data: parsed }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+        return new Response(JSON.stringify({ ok: true, data: parsed }), { headers: acH });
       } catch(e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: acH });
       }
     }
 
     // ── SmartMatch AI: driver job scoring ─────────────────────
     if (path === '/api/yongcha/smart-match' && method === 'POST') {
+      const smH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const smUser = await ycVerifyToken(request, env);
+      if (!smUser) return ycAuthReq(smH);
       try {
         const { driver, posts } = await request.json();
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
-        if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: smH });
 
         const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
         const postList = (posts || []).slice(0, 10).map(p => {
@@ -9135,9 +9165,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const raw = data.content?.[0]?.text || '[]';
         let scores = [];
         try { scores = JSON.parse(raw); } catch(e) { const m = raw.match(/\[[\s\S]*\]/); if(m) try { scores = JSON.parse(m[0]); } catch(e2) {} }
-        return new Response(JSON.stringify({ ok: true, scores }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        return new Response(JSON.stringify({ ok: true, scores }), { headers: smH });
       } catch(e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: smH });
       }
     }
 
@@ -9689,6 +9719,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 공동현관 비밀번호 DB — 검증/신고 ────────────────────────────────────
     if (path.startsWith('/api/yongcha/entrance-codes/') && method === 'PATCH') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const ecUser = await ycVerifyToken(request, env);
+      if (!ecUser) return ycAuthReq(corsH);
       try {
         const docId = path.replace('/api/yongcha/entrance-codes/','');
         const { action } = await request.json();
