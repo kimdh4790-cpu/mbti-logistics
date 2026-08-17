@@ -4449,7 +4449,6 @@ ${JSON.stringify(postSummary)}
             body: JSON.stringify({structuredQuery:{
               from:[{collectionId:'filo_orders'}],
               where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:kDid}}},
-              orderBy:[{field:{fieldPath:'createdAt'},direction:'ASCENDING'}],
               limit:200
             }})
           });
@@ -4472,7 +4471,7 @@ ${JSON.stringify(postSummary)}
                 qty:Number(v.mapValue?.fields?.qty?.integerValue||v.mapValue?.fields?.qty?.doubleValue||1)
               }))
             };
-          }).filter(o=>o.date===kDate&&o.status==='pending');
+          }).filter(o=>o.date===kDate&&o.status==='pending').sort((a,b)=>a.createdAt<b.createdAt?-1:1);
           return Response.json({company, orders}, {headers:{'Cache-Control':'no-store'}});
         } catch(e) {
           return Response.json({error:e.message});
