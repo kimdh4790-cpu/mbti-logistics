@@ -4403,11 +4403,11 @@ ${JSON.stringify(postSummary)}
             primaryColor: cData.fields?.primaryColor?.stringValue || '',
             bgColor: cData.fields?.bgColor?.stringValue || ''
           };
-          function _fsMap(d){
+          function _fsMap(col,d){
             const f=d.document.fields||{};
             const id=d.document.name.split('/').pop();
             return {
-              _id:id,
+              _id:id,_col:col,
               tableName:f.tableName?.stringValue||f.customerName?.stringValue||'',
               total:Number(f.total?.integerValue||f.total?.doubleValue||0),
               createdAt:f.createdAt?.stringValue||'',
@@ -4429,7 +4429,7 @@ ${JSON.stringify(postSummary)}
                 where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:kDid}}},
                 limit:200
               }})
-            }).then(r=>r.json()).then(docs=>Array.isArray(docs)?docs.filter(d=>d.document).map(_fsMap):[]);
+            }).then(r=>r.json()).then(docs=>Array.isArray(docs)?docs.filter(d=>d.document).map(d=>_fsMap(col,d)):[]);
           }
           const [ordDocs, salDocs] = await Promise.all([_fsQuery('filo_orders'), _fsQuery('filo_sales')]);
           const orders = [...ordDocs, ...salDocs]
@@ -4444,7 +4444,7 @@ ${JSON.stringify(postSummary)}
       if (path === '/kitchen/update' && request.method === 'POST') {
         try {
           const body = await request.json();
-          const {did, orderId, status} = body;
+          const {did, orderId, status, col} = body;
           if (!did||!orderId||!status) return Response.json({ok:false,error:'파라미터 오류'});
           const token = await getAccessToken(env);
           const allowed = ['done','cancel','pending'];
@@ -4453,12 +4453,11 @@ ${JSON.stringify(postSummary)}
           const fields = {status:{stringValue:status}};
           if (status==='done') fields.doneAt = {stringValue:updateTime};
           const masks = status==='done' ? 'updateMask.fieldPaths=status&updateMask.fieldPaths=doneAt' : 'updateMask.fieldPaths=status';
-          const tryPatch = async (col) => fetch(`${FS_BASE}/${col}/${orderId}?${masks}`,{
+          const targetCol = (col==='filo_sales')?'filo_sales':'filo_orders';
+          await fetch(`${FS_BASE}/${targetCol}/${orderId}?${masks}`,{
             method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body:JSON.stringify({fields})
           });
-          const r1=await tryPatch('filo_orders');
-          if(!r1.ok) await tryPatch('filo_sales');
           return Response.json({ok:true});
         } catch(e) {
           return Response.json({ok:false,error:e.message});
