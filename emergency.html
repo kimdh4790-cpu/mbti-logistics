@@ -132,7 +132,14 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
   <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:20px">기사 정보 등록 · 최초 1회</div>
   <div style="background:rgba(255,255,255,.05);border-radius:14px;padding:20px;width:100%;max-width:360px;border:1px solid rgba(255,255,255,.1);box-sizing:border-box">
     <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">기사 이름</div>
-    <div id="reg-name-display" style="padding:12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;margin-bottom:14px"></div>
+    <div id="reg-name-display" style="padding:12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:10px;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;margin-bottom:10px"></div>
+    <div id="reg-name-conflict" style="display:none;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:#f87171;letter-spacing:.05em;margin-bottom:6px">동명이인 발견</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.55);margin-bottom:10px">'<span id="reg-dup-orig"></span>' 기사가 이미 등록되어 있습니다.<br>사용할 이름을 선택하거나 직접 입력하세요.</div>
+      <div id="reg-dup-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+      <input id="reg-dup-custom" type="text" placeholder="또는 직접 입력 (예: 김형우1)"
+        style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit">
+    </div>
     <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;margin-bottom:6px">휴대폰 번호 <span style="color:#f87171">*</span></div>
     <input id="reg-phone" type="tel" placeholder="010-0000-0000"
       style="width:100%;padding:12px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;margin-bottom:14px;box-sizing:border-box;font-family:inherit">
@@ -208,9 +215,10 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
     <!-- 기사 오늘 정산 -->
     <div id="driver-settle-box" style="display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-        <span>오늘 내 정산</span>
+        <span id="driver-settle-title">오늘 내 정산</span>
         <button onclick="_emerShowDriverSettle()" style="font-size:11px;padding:3px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>
       </div>
+      <div id="driver-settle-tabrow" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
       <div id="driver-settle-list" style="font-size:13px;color:var(--text)"></div>
       <div id="driver-settle-total" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:14px;font-weight:800;color:#c9a84c;text-align:right"></div>
     </div>
@@ -283,6 +291,7 @@ window.S=S;
 function today(){ return new Date().toISOString().slice(0,10); }
 window._emerScanCount=0;window._emerSaveCount=0;
 window._cachedKakaoApiKey='';window._googleApiKey='';
+function _esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── 토스트 (toast-container 방식) ──
 function toast(msg, duration){
@@ -414,6 +423,15 @@ function _emerInitLogin() {
   }
   // 회사명 로드 (가드 플래그로 중복 Firestore 조회 방지)
   _emerLoadCoName();
+  // 자동 로그인: 이름+구역+프로필 완료 시 로그인 화면 생략하고 바로 메인으로
+  if(_emerSelDriver && _emerSelCamp && localStorage.getItem('mbti_emer_profile_done')) {
+    var _autoDid = localStorage.getItem('mbti_emer_dealerId') || '';
+    _CU = { uid: _autoDid, email: '', dealerId: _autoDid, driver: _emerSelDriver, camp: _emerSelCamp };
+    window._CU = _CU;
+    if(!_auth.currentUser) _auth.signInAnonymously().catch(function(){});
+    _emerGoMain();
+    return;
+  }
 }
 
 function _emerUpdateLinkDisplay(did) {
@@ -444,8 +462,13 @@ function _emerLoadCoName() {
   if(urlDid) { localStorage.setItem('mbti_emer_dealerId', urlDid); _coNameLoaded=false; }
   var did = urlDid || localStorage.getItem('mbti_emer_dealerId') || '';
   if(!did) return;
-  // manifest 링크 업데이트 (PWA 홈화면 설치 시 올바른 start_url 사용)
-  (function(){ var ml=document.getElementById('pwa-manifest-link'); if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did); })();
+  // manifest 링크 업데이트 — 슬러그 URL 사용 중이면 덮어쓰지 않음 (PWA start_url 보존)
+  (function(){
+    var sl=window._pwaSlug||localStorage.getItem('mbti_emer_slug')||'';
+    if(sl) return; // 이미 head script 또는 Firestore 콜백에서 슬러그 기반 URL 설정됨
+    var ml=document.getElementById('pwa-manifest-link');
+    if(ml) ml.href='/emergency-manifest.json?did='+encodeURIComponent(did);
+  })();
   _emerUpdateLinkDisplay(did);
   // 캐시된 이름 즉시 반영 (깜빡임 방지)
   var savedName = localStorage.getItem('mbti_emer_coname');
@@ -559,7 +582,7 @@ function _emerShowRegister(name) {
   } catch(e) {}
 }
 
-function _emerSaveProfile() {
+async function _emerSaveProfile() {
   var phone = (document.getElementById('reg-phone')||{}).value.trim();
   var idNum = (document.getElementById('reg-id-num')||{}).value.trim();
   var carNum = (document.getElementById('reg-car-num')||{}).value.trim();
@@ -568,26 +591,100 @@ function _emerSaveProfile() {
   if(!phone) { _emerToast('휴대폰 번호를 입력하세요'); return; }
   if(!idNum) { _emerToast('주민등록번호를 입력하세요'); return; }
   if(!bankAccount) { _emerToast('정산 계좌번호를 입력하세요'); return; }
-  var name = localStorage.getItem('mbti_emer_driver') || '';
+  var origName = localStorage.getItem('mbti_emer_driver') || '';
   var did = localStorage.getItem('mbti_emer_dealerId') || '';
-  var profile = {driverName:name, dealerId:did, phone:phone, idNum:idNum, carNum:carNum, carType:carType, bankAccount:bankAccount};
-  localStorage.setItem('mbti_emer_profile', JSON.stringify(profile));
+  // 동명이인 UI가 표시 중이면 선택/입력한 이름 사용
+  var conflictBox = document.getElementById('reg-name-conflict');
+  var conflictVisible = conflictBox && conflictBox.style.display !== 'none';
+  var finalName = conflictVisible
+    ? ((document.getElementById('reg-dup-custom')||{}).value||'').trim() || origName
+    : origName;
+  if(!finalName) { _emerToast('이름을 입력하세요'); return; }
   var btn = document.querySelector('#register-screen button[onclick="_emerSaveProfile()"]');
-  if(btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  if(btn) { btn.disabled = true; btn.textContent = '확인 중...'; }
+  // 동명이인 체크 (충돌 UI 표시 중이 아닐 때만)
+  if(!conflictVisible) {
+    try {
+      var dupResult = await _checkDriverNameAvailable(finalName, phone, did);
+      if(!dupResult.available) {
+        if(btn) { btn.disabled = false; btn.textContent = '등록 완료'; }
+        _showDriverNameConflict(origName, dupResult.suggestions);
+        return;
+      }
+      finalName = dupResult.name;
+    } catch(e) { /* 네트워크 오류 시 그냥 진행 */ }
+  }
+  if(btn) btn.textContent = '저장 중...';
+  // 이름 변경 시 localStorage 업데이트
+  if(finalName !== origName) {
+    localStorage.setItem('mbti_emer_driver', finalName);
+    _emerSelDriver = finalName;
+    var nd = document.getElementById('reg-name-display');
+    if(nd) nd.textContent = finalName;
+  }
+  var profile = {driverName:finalName, dealerId:did, phone:phone, idNum:idNum, carNum:carNum, carType:carType, bankAccount:bankAccount};
+  localStorage.setItem('mbti_emer_profile', JSON.stringify(profile));
   fetch('/api/emergency-driver-profile', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(profile)
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(profile)
   }).then(function(r){ return r.json(); }).then(function(d){
     if(!d.ok) throw new Error(d.error||'저장 실패');
     localStorage.setItem('mbti_emer_profile_done', '1');
     _emerToast('등록 완료!');
     document.getElementById('register-screen').style.display = 'none';
+    if(conflictBox) conflictBox.style.display = 'none';
     _emerGoMain();
   }).catch(function(e){
     _emerToast('저장 실패: '+e.message);
     if(btn) { btn.disabled = false; btn.textContent = '등록 완료'; }
   });
+}
+
+async function _checkDriverNameAvailable(name, phone, did) {
+  var normPhone = phone.replace(/[^0-9]/g,'');
+  var r = await fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(name));
+  var d = await r.json();
+  if(!d.ok || !d.profile) return {available:true, name:name}; // 미등록 → 사용 가능
+  var existPhone = (d.profile.phone||'').replace(/[^0-9]/g,'');
+  if(existPhone === normPhone) return {available:true, name:name}; // 같은 사람 재등록 → OK
+  // 다른 사람 동명이인 → 사용 가능한 접미어 찾기
+  var suggestions = [];
+  var letters = ['A','B','C','D','E','F'];
+  for(var i=0; i<letters.length; i++) {
+    var candidate = name + letters[i];
+    var r2 = await fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(candidate));
+    var d2 = await r2.json();
+    if(!d2.ok || !d2.profile) { suggestions.push(candidate); if(suggestions.length >= 3) break; }
+    else {
+      var ep2 = (d2.profile.phone||'').replace(/[^0-9]/g,'');
+      if(ep2 === normPhone) { suggestions.unshift(candidate); break; } // 내 이름이 이미 있으면 최우선
+    }
+  }
+  return {available:false, suggestions:suggestions};
+}
+
+function _showDriverNameConflict(origName, suggestions) {
+  var box = document.getElementById('reg-name-conflict');
+  var origSpan = document.getElementById('reg-dup-orig');
+  var sugsEl = document.getElementById('reg-dup-suggestions');
+  var custInp = document.getElementById('reg-dup-custom');
+  if(!box || !origSpan || !sugsEl) return;
+  origSpan.textContent = origName;
+  sugsEl.innerHTML = suggestions.map(function(s){
+    return '<button onclick="_pickDriverName(\''+_esc(s)+'\',this)" style="padding:8px 16px;background:rgba(201,168,76,.12);border:1.5px solid #c9a84c;border-radius:8px;color:#c9a84c;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+_esc(s)+'</button>';
+  }).join('');
+  if(custInp) custInp.value = suggestions[0]||'';
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+  _emerToast('동명이인이 있습니다. 이름을 선택하세요');
+}
+
+function _pickDriverName(name, el) {
+  var inp = document.getElementById('reg-dup-custom');
+  if(inp) inp.value = name;
+  document.querySelectorAll('#reg-dup-suggestions button').forEach(function(b){
+    b.style.background='rgba(201,168,76,.12)'; b.style.color='#c9a84c';
+  });
+  if(el) { el.style.background='#c9a84c'; el.style.color='#08101f'; }
 }
 
 function _emerToast(msg) {
@@ -803,10 +900,11 @@ function _renderMonitorCards(docs, dateStr, did) {
       html += '<div style="padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:8px">'
         +'<span style="width:8px;height:8px;border-radius:50%;background:'+(isDone?'#4ade80':'#f87171')+';flex-shrink:0"></span>'
         +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(doc.addr||doc.recipient||'주소 없음')+'</div>'
-        +'<div style="font-size:11px;color:var(--text3)">'+(doc.time||'')+(doc.appName?' · '+doc.appName:'')+'</div>'
+        +'<div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(doc.addr||doc.recipient||'주소 없음')+'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+_esc(doc.time||'')+(doc.appName?' · '+_esc(doc.appName):'')+'</div>'
         +'</div>'
         +'<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:'+(isDone?'rgba(74,222,128,.1)':'rgba(248,113,113,.1)')+';color:'+(isDone?'#4ade80':'#f87171')+';">'+(isDone?'완료':'진행중')+'</span>'
+        +(isDone&&doc.completePhotos&&doc.completePhotos[0]?'<img src="'+doc.completePhotos[0]+'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;cursor:pointer" onclick="window.open(this.src,\'_blank\')">':'')
         +'</div>';
     });
     html += '</div></div>';
@@ -821,7 +919,7 @@ function _adminShowDriverProfile(did, driverName) {
     '<div id="driver-profile-mo" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box" onclick="if(event.target===this)this.remove()">'
     +'<div style="background:#1e293b;border-radius:16px;width:100%;max-width:340px;padding:24px;border:1px solid rgba(255,255,255,.15)">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
-    +'<b style="font-size:15px;color:#fff">'+driverName+' 기사 정보</b>'
+    +'<b style="font-size:15px;color:#fff">'+_esc(driverName)+' 기사 정보</b>'
     +'<button onclick="document.getElementById(\'driver-profile-mo\').remove()" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:4px 10px;color:#fff;cursor:pointer;font-size:12px">닫기</button>'
     +'</div>'
     +'<div id="dpm-body" style="font-size:13px;color:rgba(255,255,255,.7)">불러오는 중...</div>'
@@ -1086,13 +1184,16 @@ function _adminLoadSettle() {
 function _renderSettleTable(docs, prices, dateStr) {
   var view = document.getElementById('admin-settle-view');
   if(!view) return;
-  if(!docs.length) {
-    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">'+dateStr+' 배송 데이터가 없습니다</div>';
+  var totalCount = docs.length;
+  // 완료건만 정산
+  var doneDocs = docs.filter(function(d){ return d.status==='완료'||d.status==='done'||d.done; });
+  if(!doneDocs.length) {
+    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">'+dateStr+' 완료된 배송이 없습니다<br><span style="font-size:11px;color:var(--text3)">(전체 '+totalCount+'건 중 완료 0건)</span></div>';
     return;
   }
   // 기사별 → 앱명칭별 → 구역별 집계
   var grouped = {}; // { 기사명: { 앱명칭: { 구역: count } } }
-  docs.forEach(function(d) {
+  doneDocs.forEach(function(d) {
     var drv  = d.driver || '미상';
     var app  = d.appName || '기타';
     var camp = d.camp || '미분류';
@@ -1101,7 +1202,9 @@ function _renderSettleTable(docs, prices, dateStr) {
     grouped[drv][app][camp] = (grouped[drv][app][camp]||0) + 1;
   });
   var grandTotal = 0;
-  var html = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">'+dateStr+' 정산 내역</div>'
+  var grandCount = 0;
+  var html = '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">'+dateStr+' 정산 내역</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">완료 '+doneDocs.length+'건 / 전체 '+totalCount+'건</div>'
     +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
     +'<thead><tr style="background:var(--bg3);color:var(--text2)">'
     +'<th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border)">기사</th>'
@@ -1122,10 +1225,11 @@ function _renderSettleTable(docs, prices, dateStr) {
         var amt = cnt * price;
         driverTotal += amt;
         grandTotal += amt;
+        grandCount += cnt;
         html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05)">'
-          +'<td style="padding:8px 6px;color:var(--text);font-weight:600">'+drv+'</td>'
-          +'<td style="padding:8px 6px;color:var(--text2)">'+app+'</td>'
-          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+camp+'</td>'
+          +'<td style="padding:8px 6px;color:var(--text);font-weight:600">'+_esc(drv)+'</td>'
+          +'<td style="padding:8px 6px;color:var(--text2)">'+_esc(app)+'</td>'
+          +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+_esc(camp)+'</td>'
           +'<td style="padding:8px 6px;text-align:center;color:var(--text)">'+cnt+'건</td>'
           +'<td style="padding:8px 6px;text-align:right;color:var(--text2)">'+price.toLocaleString()+'원</td>'
           +'<td style="padding:8px 6px;text-align:right;font-weight:700;color:#60a5fa">'+amt.toLocaleString()+'원</td>'
@@ -1141,14 +1245,19 @@ function _renderSettleTable(docs, prices, dateStr) {
       }
     });
     // 기사 소계
+    var drvCount = Object.keys(appGroups).reduce(function(s,a){return s+Object.keys(appGroups[a]).reduce(function(s2,c){return s2+appGroups[a][c];},0);},0);
     html += '<tr style="background:rgba(201,168,76,.08);border-bottom:2px solid rgba(201,168,76,.2)">'
-      +'<td colspan="5" style="padding:8px 6px;text-align:right;font-size:12px;font-weight:700;color:var(--text2)">'+drv+' 합계</td>'
+      +'<td colspan="3" style="padding:8px 6px;text-align:right;font-size:12px;font-weight:700;color:var(--text2)">'+drv+' 합계</td>'
+      +'<td style="padding:8px 6px;text-align:center;font-weight:700;font-size:12px;color:#c9a84c">'+drvCount+'건</td>'
+      +'<td></td>'
       +'<td style="padding:8px 6px;text-align:right;font-weight:800;font-size:13px;color:#c9a84c">'+driverTotal.toLocaleString()+'원</td>'
       +'</tr>';
   });
   html += '</tbody></table></div>'
-    +'<div style="margin-top:12px;padding:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;text-align:right;font-size:15px;font-weight:900;color:#c9a84c">'
-    +'총합계 '+grandTotal.toLocaleString()+'원</div>'
+    +'<div style="margin-top:12px;padding:12px 16px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);border-radius:10px;display:flex;justify-content:space-between;align-items:center">'
+    +'<span style="font-size:13px;color:#c9a84c;font-weight:700">완료 '+grandCount+'건</span>'
+    +'<span style="font-size:15px;font-weight:900;color:#c9a84c">총합계 '+grandTotal.toLocaleString()+'원</span>'
+    +'</div>'
     +'<div style="text-align:right;margin-top:6px"><button onclick="_adminLoadSettle()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
   view.innerHTML = html;
 }
@@ -1156,29 +1265,60 @@ function _renderSettleTable(docs, prices, dateStr) {
 // ═══════════════════════════════════════
 // 기사 오늘 정산 (기사 메인화면)
 // ═══════════════════════════════════════
-function _emerShowDriverSettle() {
+function _emerShowDriverSettle(dateStr) {
   var box = document.getElementById('driver-settle-box');
   if(!box) return;
   var did = (_CU&&_CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
   var drv = S.curDriver || localStorage.getItem('mbti_emer_driver') || '';
   if(!did || !drv) return;
-  var dateStr = new Date().toISOString().slice(0,10);
+  var today = new Date();
+  var todayStr = today.toISOString().slice(0,10);
+  if(!dateStr) dateStr = todayStr;
+
+  // 날짜 탭 렌더 (최근 7일)
+  var tabRow = document.getElementById('driver-settle-tabrow');
+  if(tabRow) {
+    var tabHtml = '';
+    for(var i=0;i<7;i++){
+      var td = new Date(today); td.setDate(td.getDate()-i);
+      var ds = td.toISOString().slice(0,10);
+      var lbl = i===0 ? '오늘' : i===1 ? '어제' : (td.getMonth()+1)+'/'+(td.getDate());
+      var sel = ds===dateStr;
+      tabHtml += '<button onclick="_emerShowDriverSettle(\''+ds+'\')" style="flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid '+(sel?'#c9a84c':'rgba(255,255,255,.15)')+';background:'+(sel?'rgba(201,168,76,.18)':'rgba(255,255,255,.05)')+';color:'+(sel?'#c9a84c':'rgba(255,255,255,.45)')+';font-size:11px;font-weight:'+(sel?'700':'400')+';cursor:pointer;touch-action:manipulation;white-space:nowrap">'+lbl+'</button>';
+    }
+    tabRow.innerHTML = tabHtml;
+  }
+
+  // 제목 업데이트
+  var titleEl = document.getElementById('driver-settle-title');
+  if(titleEl) titleEl.textContent = dateStr===todayStr ? '오늘 내 정산' : dateStr.slice(5).replace('-','/')+ '일 정산';
+
+  // 로딩 표시
+  var listEl = document.getElementById('driver-settle-list');
+  var totalEl = document.getElementById('driver-settle-total');
+  if(listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">불러오는 중...</div>';
+  if(totalEl) totalEl.textContent = '';
+  box.style.display = 'block';
+
+  // 오늘은 캐시된 map API, 과거는 list API
+  var apiUrl = dateStr===todayStr
+    ? '/api/emergency-map?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr
+    : '/api/emergency-list?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr;
+
   Promise.all([
-    fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch(apiUrl).then(function(r){return r.json();}),
     fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
   ]).then(function(results) {
     var docs   = results[0].ok ? (results[0].docs||[]) : [];
     var prices = results[1].prices || window._CO_EMER_PRICES || {};
-    // 앱별 → 구역별 집계
     var appGroups = {};
-    docs.forEach(function(d) {
+    var doneDocs = docs.filter(function(d){return d.status==='완료';});
+    doneDocs.forEach(function(d) {
       var app  = d.appName || '기타';
       var camp = d.camp || '미분류';
       if(!appGroups[app]) appGroups[app] = {};
       appGroups[app][camp] = (appGroups[app][camp]||0)+1;
     });
-    var listEl  = document.getElementById('driver-settle-list');
-    var totalEl = document.getElementById('driver-settle-total');
     var total = 0;
     var html = '';
     Object.keys(appGroups).forEach(function(app) {
@@ -1193,11 +1333,11 @@ function _emerShowDriverSettle() {
           +'</div>';
       });
     });
-    if(!html) html = '<div style="color:var(--text3);font-size:12px;padding:8px 0">오늘 등록된 배송이 없습니다</div>';
+    var dateLabel = dateStr===todayStr ? '오늘' : dateStr.slice(5).replace('-','/');
+    if(!html) html = '<div style="color:var(--text3);font-size:12px;padding:8px 0">완료된 배송이 없습니다</div>';
     if(listEl) listEl.innerHTML = html;
-    if(totalEl) totalEl.textContent = '오늘 합계 '+total.toLocaleString()+'원';
-    box.style.display = 'block';
-  }).catch(function(){});
+    if(totalEl) totalEl.textContent = dateLabel+' 합계 '+total.toLocaleString()+'원';
+  }).catch(function(){ if(listEl) listEl.innerHTML='<div style="color:#f87171;font-size:12px;padding:8px 0">불러오기 실패</div>'; });
 }
 
 function loadApiKeys(){
@@ -1207,11 +1347,13 @@ function loadApiKeys(){
   var gInp=document.getElementById('google-key-input');
   if(kKey){window._cachedKakaoApiKey=kKey;if(kInp)kInp.value=kKey;}
   if(gKey){window._googleApiKey=gKey;if(gInp)gInp.value=gKey;}
-  fetch('/api/emergency-apikeys').then(function(r){return r.json();}).then(function(d){
+  var _akDid = localStorage.getItem('mbti_emer_dealerId') || '';
+  if(_akDid) fetch('/api/emergency-apikeys?dealerId='+encodeURIComponent(_akDid)).then(function(r){return r.json();}).then(function(d){
     if(!d.ok)return;
-    if(d.claudeApiKey){window._claudeApiKey=d.claudeApiKey;localStorage.setItem('mbti_claude_api_key',d.claudeApiKey);}
-    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;localStorage.setItem('mbti_kakao_api_key',d.kakaoApiKey);if(kInp)kInp.value=d.kakaoApiKey;}
-    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;localStorage.setItem('mbti_google_api_key',d.googleApiKey);if(gInp)gInp.value=d.googleApiKey;}
+    // 서버 발급 키는 세션 메모리에만 보관 (localStorage 저장 않음 — XSS 탈취 방지)
+    if(d.claudeApiKey) window._claudeApiKey=d.claudeApiKey;
+    if(d.kakaoApiKey&&!kKey){window._cachedKakaoApiKey=d.kakaoApiKey;if(kInp)kInp.value=d.kakaoApiKey;}
+    if(d.googleApiKey&&!gKey){window._googleApiKey=d.googleApiKey;if(gInp)gInp.value=d.googleApiKey;}
   }).catch(function(){});
 }
 function saveKakaoKey(){
@@ -1386,8 +1528,7 @@ async function openEmergencyAdmin(){
   try{
     var local = JSON.parse(localStorage.getItem('mbti_emergency_del')||'[]');
     local.forEach(function(lx){
-      // Firebase에 이미 있는 건 중복 제외 (_fbId 기준)
-      var dup = lx._fbId && records.some(function(r){ return r.id===lx._fbId; });
+      var dup = lx._fbId && records.some(function(r){ return (r._fbId||r.id||r.fbId)===lx._fbId; });
       if(!dup) records.push(lx);
     });
   }catch(e){}
@@ -1395,7 +1536,9 @@ async function openEmergencyAdmin(){
   records.sort(function(a,b){ return (b.savedAt||'').localeCompare(a.savedAt||''); });
 
   var rows=records.length ? records.map(function(r){
-    var photos=(r.photos||[]).map(function(url){
+    var rid=r._fbId||r.id||r.fbId||'';
+    var allPhotos=(r.photos||[]).concat(r.completePhotos||[]).filter(Boolean);
+    var photos=allPhotos.map(function(url){
       return '<img src="'+url+'" onclick="window.open(\''+url+'\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border);flex-shrink:0">';
     }).join('');
     var gpsHref=r.gps?'https://maps.google.com/?q='+r.gps.lat+','+r.gps.lng:'';
@@ -1410,21 +1553,21 @@ async function openEmergencyAdmin(){
       +'<div style="display:flex;align-items:flex-start;gap:10px">'
         +'<div style="flex:1;min-width:0">'
           +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-            +'<span style="font-size:12px;color:var(--text2);white-space:nowrap">'+( r.date||'')+' '+(r.time||'')+'</span>'
-            +(r.driver?'<span style="font-size:14px;font-weight:800">'+r.driver+'</span>':'')
+            +'<span style="font-size:12px;color:var(--text2);white-space:nowrap">'+_esc(r.date||'')+' '+_esc(r.time||'')+'</span>'
+            +(r.driver?'<span style="font-size:14px;font-weight:800">'+_esc(r.driver)+'</span>':'')
             +(gpsHref?'<a href="'+gpsHref+'" target="_blank" style="font-size:11px;color:var(--blue);white-space:nowrap">지도</a>':'')
           +'</div>'
-          +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+detail+'</div>':'')
+          +(detail?'<div style="font-size:11px;color:var(--text3);margin-top:4px;word-break:break-all">'+_esc(detail)+'</div>':'')
         +'</div>'
       +'</div>'
-      +'<div id="ph-'+(r.id||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
+      +'<div id="ph-'+(rid||r.savedAt||'')+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">'
       +photos
-      +(r.id
+      +(rid
         ? '<label title="사진 추가" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;background:rgba(255,255,255,.06);border-radius:8px;border:2px dashed rgba(255,255,255,.2);flex-shrink:0">'
           +'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
-          +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+r.id+'\')">'
+          +'<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_uplPhoto(this,\''+rid+'\')">'
           +'</label>'
-        : '<span style="font-size:11px;color:var(--text3)">사진 없음</span>')
+        : (allPhotos.length?'':'<span style="font-size:11px;color:var(--text3)">사진 없음</span>'))
       +'</div>'
       +'</div>';
   }).join('') : '<div style="text-align:center;padding:32px;color:var(--text3)">긴급 배송기록 없음</div>';
@@ -3675,11 +3818,12 @@ async function _kakaoGeocode(address){
   var gKey = window._googleApiKey      || (localStorage.getItem('mbti_google_api_key')||'').trim();
   if(!kKey || !gKey){
     try{
-      var _akRes=await fetch('/api/emergency-apikeys');
+      var _akDid2 = localStorage.getItem('mbti_emer_dealerId') || '';
+      var _akRes=await fetch('/api/emergency-apikeys'+(_akDid2?'?dealerId='+encodeURIComponent(_akDid2):''));
       var _akData=await _akRes.json();
       if(_akData.ok){
-        if(!kKey){ kKey=(_akData.kakaoApiKey||'').trim(); if(kKey){window._cachedKakaoApiKey=kKey;localStorage.setItem('mbti_kakao_api_key',kKey);} }
-        if(!gKey){ gKey=(_akData.googleApiKey||'').trim(); if(gKey){window._googleApiKey=gKey;localStorage.setItem('mbti_google_api_key',gKey);} }
+        if(!kKey){ kKey=(_akData.kakaoApiKey||'').trim(); if(kKey) window._cachedKakaoApiKey=kKey; }
+        if(!gKey){ gKey=(_akData.googleApiKey||'').trim(); if(gKey) window._googleApiKey=gKey; }
       }
     }catch(e){}
   }
@@ -5223,7 +5367,7 @@ function _showMapModal(locs){
     return '<div data-map-idx="'+i+'" data-addr="'+(x.addr||'').replace(/"/g,'&quot;')+'" style="background:var(--bg3,#1e293b);border-radius:10px;padding:12px;margin-bottom:8px;transition:box-shadow .2s">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">'+(i+1)+'</div>'
-      +'<b style="font-size:13px;flex:1">'+(x.recipient||'미확인')+warn+'</b>'
+      +'<b style="font-size:13px;flex:1">'+(function(){var hm=(x.addr||'').match(/(\d+)\s*호/);return x.recipient||(hm?hm[1]+'호':'미확인');}())+warn+'</b>'
       +statusDot
       +'</div>'
       +'<div style="font-size:11px;color:rgba(255,255,255,.6);margin-left:32px;margin-bottom:3px">'+(x.addr||'주소없음')+'</div>'
@@ -5283,8 +5427,14 @@ function _renderLeafletMap(locs){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true}).addTo(map);
 
   // 동일/인근 좌표 그룹핑 — 50m 이내 OR 동일 건물 주소(호/층 제거 후 일치)
-  // 동 주소는 동 단위로 유지, 호/층만 제거 → 아파트는 동별 핀, 오피스는 건물별 핀
-  function _baseAddr(a){return (a||'').replace(/,?\s*\d+\s*(층|호).*/,'').replace(/\s+/g,' ').trim();}
+  // 동 주소: 동 단위로 유지 + 15m 이내 GPS 겹침 허용 (같은 아파트 동 다중 핀 방지)
+  function _baseAddr(a){
+    return (a||'')
+      .replace(/^[가-힣]+(광역시|특별시|특별자치시|시|도)\s+/,'')  // 부산광역시·부산시 등 제거
+      .replace(/^[가-힣]+(구|군)\s+/,'')                           // 사상구 등 제거
+      .replace(/,?\s*\d+\s*(층|호).*/,'')
+      .replace(/\s+/g,' ').trim();
+  }
   var groups=[];
   locs.forEach(function(x){
     var ba=_baseAddr(x.addr);
@@ -5293,9 +5443,11 @@ function _renderLeafletMap(locs){
     for(var p=0;p<groups.length;p++){
       var sameBuilding=ba&&groups[p].baseAddr&&ba===groups[p].baseAddr;
       var grpHasDong=groups[p].items[0]&&/\d+동/.test(groups[p].items[0].addr||'');
-      // 동 없는 주소만 거리 클러스터링 (아파트 동간 혼용 방지)
+      // 동 없는 주소: 50m 이내 GPS 클러스터링
       var nearby=!hasDong&&!grpHasDong&&gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<50;
-      if(sameBuilding||nearby){found=groups[p];break;}
+      // 동 있는 주소: 15m 이내 GPS 겹침도 같은 핀으로 (동일 아파트 동 좌표 겹침 처리)
+      var sameGps=hasDong&&grpHasDong&&gpsDistance(x.gps.lat,x.gps.lng,groups[p].lat,groups[p].lng)<15;
+      if(sameBuilding||nearby||sameGps){found=groups[p];break;}
     }
     if(found){found.items.push(x);}
     else{groups.push({lat:x.gps.lat,lng:x.gps.lng,baseAddr:ba,items:[x]});}
@@ -5322,7 +5474,7 @@ function _renderLeafletMap(locs){
     }
     var icon=L.divIcon({className:'',html:pinHtml,iconSize:n===1?[28,28]:[36,36],iconAnchor:n===1?[14,14]:[18,18]});
     var popupHtml=n===1
-      ?(function(){var x=grp.items[0];var dm=(x.addr||'').match(/(\d+)동/);return '<b>'+(x.recipient||'미확인')+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';}())
+      ?(function(){var x=grp.items[0];var dm=(x.addr||'').match(/(\d+)동/);var hm=(x.addr||'').match(/(\d+)\s*호/);var dispN=x.recipient||(hm?hm[1]+'호':'미확인');return '<b>'+dispN+(dm?' <span style="background:#c9a84c;color:#000;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+dm[1]+'동</span>':'')+'</b><br><span style="font-size:11px;color:#aaa">'+(x.addr||'')+'</span>';}())
       :'<b>'+n+'건</b><br><span style="font-size:11px;color:#aaa">'+(_baseAddr(grp.items[0].addr||'')||grp.items[0].addr||'')+'</span>';
     (function(idxList,grp){
       L.marker(ll,{icon:icon}).addTo(map)
@@ -5557,13 +5709,17 @@ async function _dcSave(fbId, locIdx){
           if(_rd.ok){
             if(window._mapLocs){
               for(var _mi=0;_mi<window._mapLocs.length;_mi++){
-                if((window._mapLocs[_mi].id||window._mapLocs[_mi].fbId)===_bgFbId){
-                  window._mapLocs[_mi].completePhotos=[compressed]; break;
+                var _loc=window._mapLocs[_mi];
+                if((_loc._fbId||_loc.fbId||_loc.id)===_bgFbId){
+                  _loc.completePhotos=[compressed]; break;
                 }
               }
             }
+          }else{
+            console.warn('[dcSave] 사진 저장 실패:',_rd.error);
+            toast('⚠️ 사진 저장 실패: '+(_rd.error||'서버 오류'));
           }
-        }catch(e){ console.warn('[dcSave] 사진 저장 실패:',e.message); }
+        }catch(e){ console.warn('[dcSave] 사진 저장 오류:',e.message); toast('⚠️ 사진 저장 오류'); }
       })();
     }
   }catch(e){

@@ -679,12 +679,18 @@ function _dineSchedule(el){
  var wrap=document.createElement('div');wrap.className='slide-up';
  var now=new Date();
  var days=['일','월','화','수','목','금','토'];
- /* 이번주 월~일 */
  var weekStart=new Date(now);
- weekStart.setDate(now.getDate()-now.getDay()+1);
+ weekStart.setDate(now.getDate()-now.getDay()+1+(window._schedWeekOffset||0)*7);
+ var PAGE_SIZE=5;
+ if(window._schedPage===undefined)window._schedPage=0;
 
- wrap.innerHTML='<div style="margin-bottom:16px"><div class="page-title">근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
-  '<div class="card"><div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px" id="schedule-grid">'+
+ wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
+  '<div><div class="page-title">근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
+  '<div style="display:flex;gap:6px">'+
+  '<button onclick="_dineScheduleWeek(-1)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">← 이전주</button>'+
+  '<button onclick="_dineScheduleWeek(1)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">다음주 →</button>'+
+  '</div></div>'+
+  '<div class="card" style="overflow-x:auto"><div id="sch-header" style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;padding-bottom:8px;border-bottom:1px solid var(--bd);margin-bottom:8px">'+
   '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
   Array.from({length:7},function(_,i){
    var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
@@ -692,7 +698,10 @@ function _dineSchedule(el){
    return '<div style="padding:6px;text-align:center;font-weight:700;'+(isToday?'color:var(--br)':'color:var(--t3)')+'">'+
     days[d.getDay()]+'<br><span style="font-size:9px">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></div>';
   }).join('')+
-  '</div></div>';
+  '</div>'+
+  '<div id="sch-rows"></div>'+
+  '<div id="sch-pager" style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px 4px;border-top:1px solid var(--bd);margin-top:8px"></div>'+
+  '</div>';
  el.appendChild(wrap);
 
  Promise.all([
@@ -703,32 +712,66 @@ function _dineSchedule(el){
   var memSnap=results[0],attSnap=results[1];
   var attMap={};
   attSnap.forEach(function(doc){
-   var d=doc.data();
-   var key=d.memberId+'_'+d.date;
+   var d=doc.data();var key=d.memberId+'_'+d.date;
    if(!attMap[key])attMap[key]={in:null,out:null};
-   if(d.type==='in')attMap[key].in=d.time;
-   else attMap[key].out=d.time;
+   if(d.type==='in')attMap[key].in=d.time;else attMap[key].out=d.time;
   });
-  var grid=document.getElementById('schedule-grid');if(!grid)return;
-  memSnap.forEach(function(doc){
-   var m=doc.data();
-   var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
-   var row='<div style="padding:6px;font-weight:700;font-size:11px;color:'+partColor+'">'+m.name+'</div>';
-   for(var i=0;i<7;i++){
-    var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-    var dateStr=d.toISOString().slice(0,10);
-    var key=doc.id+'_'+dateStr;
-    var att=attMap[key];
-    if(att&&att.in){
-     var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
-     var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
-     row+='<div style="padding:4px;background:rgba(34,197,94,.1);border-radius:6px;text-align:center;font-size:9px;color:#22c55e">'+inT+'<br>'+outT+'</div>';
-    } else {
-     row+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3)">-</div>';
+  var members=[];
+  memSnap.forEach(function(doc){members.push({id:doc.id,m:doc.data()});});
+  var total=members.length;
+  var totalPages=Math.ceil(total/PAGE_SIZE)||1;
+  if(window._schedPage>=totalPages)window._schedPage=0;
+
+  function renderSchPage(page){
+   window._schedPage=page;
+   var rowsDiv=document.getElementById('sch-rows');
+   var pagerDiv=document.getElementById('sch-pager');
+   if(!rowsDiv)return;
+   var pageMem=members.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE);
+   var rowsHtml='';
+   pageMem.forEach(function(item){
+    var m=item.m;
+    var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
+    rowsHtml+='<div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;margin-bottom:4px">'+
+     '<div style="padding:6px;font-weight:700;font-size:11px;color:'+partColor+'">'+m.name+'</div>';
+    for(var i=0;i<7;i++){
+     var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+     var dateStr=d.toISOString().slice(0,10);
+     var att=attMap[item.id+'_'+dateStr];
+     if(att&&att.in){
+      var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
+      var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
+      rowsHtml+='<div style="padding:4px;background:rgba(34,197,94,.1);border-radius:6px;text-align:center;font-size:9px;color:#22c55e;cursor:pointer" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')">'+inT+'<br>'+outT+'</div>';
+     } else {
+      rowsHtml+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3);cursor:pointer" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')">-</div>';
+     }
     }
+    rowsHtml+='</div>';
+   });
+   rowsDiv.innerHTML=rowsHtml;
+   if(pagerDiv){
+    pagerDiv.innerHTML=
+     '<button onclick="window._schedPage=Math.max(0,window._schedPage-1);_renderSchPageCall()" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page===0?'opacity:.35;pointer-events:none':'')+'">← 이전</button>'+
+     '<span style="font-size:12px;color:var(--t3);font-weight:700">'+(total?(page+1)+' / '+totalPages+' 페이지':'')+'</span>'+
+     '<button onclick="window._schedPage=Math.min('+(totalPages-1)+',window._schedPage+1);_renderSchPageCall()" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page>=totalPages-1?'opacity:.35;pointer-events:none':'')+'">다음 →</button>';
    }
-   grid.insertAdjacentHTML('beforeend',row);
-  });
+  }
+  window._renderSchPageCall=function(){renderSchPage(window._schedPage);};
+  renderSchPage(window._schedPage);
+
+  /* 스와이프 */
+  var card=document.querySelector('.card');
+  var swX=0;
+  if(card){
+   card.addEventListener('touchstart',function(e){swX=e.touches[0].clientX;},{passive:true});
+   card.addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-swX;
+    if(Math.abs(dx)>50){
+     if(dx<0&&window._schedPage<totalPages-1){window._schedPage++;renderSchPage(window._schedPage);}
+     else if(dx>0&&window._schedPage>0){window._schedPage--;renderSchPage(window._schedPage);}
+    }
+   },{passive:true});
+  }
  });
 }
 

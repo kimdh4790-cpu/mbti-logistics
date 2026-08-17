@@ -206,7 +206,10 @@ service cloud.firestore {
     match /yongcha_users/{uid} {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == uid;
-      allow update: if request.auth.uid == uid || isSuperAdmin();
+      allow update: if isSuperAdmin() ||
+        (request.auth.uid == uid &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['type','suspended','trustScore','trustGrade','noShowCount','acceptRate','isAdmin']));
       allow delete: if isSuperAdmin();
     }
     match /yongcha_posts/{docId} {
@@ -219,7 +222,8 @@ service cloud.firestore {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
       allow create: if isAuth();
       allow update: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid || isSuperAdmin());
-      allow delete: if isSuperAdmin();
+      allow delete: if isSuperAdmin() ||
+        (isAuth() && resource.data.driverId == request.auth.uid && resource.data.status == 'pending');
     }
     match /yongcha_reviews/{docId} {
       allow read: if isAuth();
@@ -271,7 +275,8 @@ service cloud.firestore {
     }
     match /yongcha_stats/{region} {
       allow read: if isAuth();
-      allow write: if isAuth();
+      allow write: if isAuth() &&
+        request.resource.data.keys().hasOnly(['region','courier','avgUnitPrice','postCount','updatedAt']);
     }
     match /yongcha_daily_records/{docId} {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
@@ -325,9 +330,29 @@ service cloud.firestore {
     }
 
     match /payroll/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /yongcha_locations/{docId}      { allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin()); allow create: if isAuth() && request.resource.data.driverId == request.auth.uid; allow update: if isAuth() && resource.data.driverId == request.auth.uid; allow delete: if isSuperAdmin(); }
-    match /yongcha_bookmarks/{docId}      { allow read: if isAuth() && resource.data.userId == request.auth.uid; allow create: if isAuth() && request.resource.data.userId == request.auth.uid; allow update, delete: if isAuth() && resource.data.userId == request.auth.uid; }
-    match /yongcha_rest/{docId}           { allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin()); allow create: if isAuth() && request.resource.data.driverId == request.auth.uid; allow update: if isAuth() && (resource.data.driverId == request.auth.uid || isSuperAdmin()); allow delete: if isSuperAdmin(); }
+    match /yongcha_locations/{docId} {
+      allow get: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow list: if isAuth();
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && resource.data.driverId == request.auth.uid;
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_bookmarks/{docId} {
+      allow read: if isAuth() && resource.data.driverId == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update, delete: if isAuth() && resource.data.driverId == request.auth.uid;
+    }
+    match /yongcha_rest/{docId} {
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow list: if isAuth();
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_alerts/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == docId;
+    }
 
     match /{document=**} {
       allow read, write: if isSuperAdmin();
