@@ -578,7 +578,7 @@ function _filoGoPage(p){
  /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
  var _routed=true;
 
- else if(p==='ai') _filoPageAI(el);
+ if(p==='ai') _filoPageAI(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
  else if(p==='qr_mgmt') {
