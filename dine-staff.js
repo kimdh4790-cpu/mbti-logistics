@@ -237,8 +237,10 @@ function _dineAddStaff(did,staffId,existing){
   else data.monthlySalary=wage;
   if(!staffId) data.createdAt=_nowISO();
   if(staffId) data.staffId=staffId;
-  fetch('/api/save-member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
-  .then(function(r){return r.json();}).then(function(res){
+  var cu=firebase.auth().currentUser;
+  (cu?cu.getIdToken():Promise.reject(new Error('로그인 필요'))).then(function(tok){
+   return fetch('/api/save-member',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(data)});
+  }).then(function(r){return r.json();}).then(function(res){
    if(res.ok){_dineToast('저장됐습니다');mo.remove();_dinePage('staff',document.getElementById('content'));}
    else{btn.disabled=false;btn.textContent='저장';_dineToast('' + (res.error||'저장 실패'));}
   }).catch(function(err){btn.disabled=false;btn.textContent='저장';_dineToast(err.message);});
