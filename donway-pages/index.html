@@ -6081,7 +6081,7 @@ if(window.location.hash==='#join'){
               window._cachedHasPaid=false;
               window._trialActive=false;
               window._trialExpired=true;
-              setTimeout(function(){_showTrialExpiredPopup();},1500);
+              if(!isSuperAdmin()) setTimeout(function(){_showTrialExpiredPopup();},1500);
             } else if(cd.subscriptions&&cd.subscriptions.donway&&cd.subscriptions.donway.active){
               var subExp=cd.subscriptions.donway.expiry||'';
               if(!subExp||subExp>=_today){window._cachedHasPaid=true;}

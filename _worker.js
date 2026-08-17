@@ -3606,6 +3606,7 @@ ${JSON.stringify(postSummary)}
         try {
           let body; try{body=await request.json();}catch(e){body={};}
           if(body.secret!=='filo2026demo') return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if(!body.force) return new Response(JSON.stringify({ok:false,error:'seeding disabled'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           function fsv2(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv2)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv2(x)]))}};return{nullValue:null};}
           function fsd2(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv2(v)]))}}}
