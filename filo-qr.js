@@ -32,7 +32,6 @@ function _filoPageTableQR(el){
   '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
   '<input id="table-count-inp" type="number" value="10" min="1" max="30" style="width:70px;padding:6px 8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:12px">'+
   '<button class="btn btn-brand btn-sm" onclick="_filoTableInit()">테이블 설정</button>'+
-  '<button id="table-qr-btn" class="btn btn-sm" style="background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);color:#38bdf8">QR 생성</button>'+
   '<button class="btn btn-sm" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e" onclick="_filoTableRefresh()">새로고침</button>'+
   '</div></div>'+
   '<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">'+
@@ -45,14 +44,6 @@ function _filoPageTableQR(el){
   '<div style="text-align:center;padding:30px;color:var(--t3);grid-column:1/-1">로딩중...</div></div>'+
   '<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">예약 대기</div>'+
   '<div id="filo-booking-list"><div style="text-align:center;padding:16px;color:var(--t3);font-size:12px">로딩중...</div></div></div>'+
-  /* QR 섹션 */
-  '<div class="card" style="margin-top:12px;display:none" id="qr-section">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-  '<div style="font-size:13px;font-weight:800">테이블 QR 코드</div>'+
-  '<button onclick="_filoQRPrintAll()" style="padding:5px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer">전체 인쇄</button>'+
-  '</div>'+
-  '<div id="qr-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>'+
-  '</div>'+
   /* 리뷰 QR 섹션 */
   '<div class="card" style="margin-top:12px" id="review-qr-section">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
@@ -66,8 +57,6 @@ function _filoPageTableQR(el){
 
  el.appendChild(wrap);
  _filoTableLoad(did);
- var qrBtn=document.getElementById('table-qr-btn');
- if(qrBtn)qrBtn.onclick=function(){_filoGenQRs(did);};
  _filoLoadReviewQR();
 }
 

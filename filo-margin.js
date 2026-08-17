@@ -519,12 +519,16 @@ function _aiSkeleton(lines) {
 
 /* POST 헬퍼 — 실패해도 화면이 죽지 않도록 항상 객체를 반환한다 */
 function _aiPost(path, payload) {
-  return fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  }).then(function (r) { return r.json(); })
-    .catch(function (e) { return { ok: false, error: e.message }; });
+  var user = firebase.auth ? firebase.auth().currentUser : null;
+  var tokenP = user ? user.getIdToken() : Promise.resolve('');
+  return tokenP.then(function(token) {
+    return fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload || {})
+    }).then(function (r) { return r.json(); })
+      .catch(function (e) { return { ok: false, error: e.message }; });
+  });
 }
 
 /* 카드 안에 오류를 그린다 */
@@ -581,37 +585,6 @@ function _filoPageAI(el) {
         '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
       '</section>' +
 
-      /* ③ 음성 주문 — 1×1 */
-      '<section class="bento-item fade-up-3" id="ai-card-voice">' +
-        '<header class="bento-head"><div><h3>음성 주문</h3></div></header>' +
-        '<div class="bento-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center">' +
-          '<button class="ai-mic" onclick="_filoVoiceOrderOpen()" aria-label="음성 주문 시작">' +
-            '<span class="ai-mic-ring"></span>' +
-          '</button>' +
-          '<div style="font-size:11px;color:var(--t3);line-height:1.6">말로 주문을 받아<br>바로 장바구니에 담습니다</div>' +
-        '</div>' +
-      '</section>' +
-
-      /* ④ 스케줄 최적화 — 2×1 */
-      '<section class="bento-item bento-wide fade-up-3" id="ai-card-sched">' +
-        '<header class="bento-head">' +
-          '<div><h3>AI 스케줄 최적화</h3></div>' +
-          '<button class="ai-chip" onclick="_filoAiSchedule()">다시 계산</button>' +
-        '</header>' +
-        '<div class="bento-body" id="ai-sched-body">' + _aiSkeleton(3) + '</div>' +
-      '</section>' +
-
-      /* ⑤ CS봇 — 1×1 */
-      '<section class="bento-item fade-up-4" id="ai-card-cs">' +
-        '<header class="bento-head"><div><h3>AI CS봇</h3></div></header>' +
-        '<div class="bento-body" style="display:flex;flex-direction:column;gap:10px">' +
-          '<div style="font-size:11px;color:var(--t3);line-height:1.7">' +
-            '메뉴·영업시간·실시간 웨이팅까지 학습한 매장 전용 상담봇입니다.' +
-          '</div>' +
-          '<button class="ai-btn-primary" onclick="_filoAiChatToggle()">상담봇 열기</button>' +
-          '<button class="ai-chip" onclick="_filoAiChatTest()">응답 테스트</button>' +
-        '</div>' +
-      '</section>' +
 
     '</div>' +
   '</div>';
@@ -619,7 +592,6 @@ function _filoPageAI(el) {
   _filoAiBriefing('ai-briefing');
   _filoAiForecast();
   _filoAiMenuRec();
-  _filoAiSchedule();
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -760,346 +732,6 @@ function _filoAiMenuRec() {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   4. AI 스케줄 최적화
-   ═════════════════════════════════════════════════════════════ */
-function _filoAiSchedule() {
-  var body = document.getElementById('ai-sched-body');
-  if (!body) return;
-  var did = _aiDid();
-  if (!did) { _aiErr(body, '매장 정보를 불러오지 못했습니다.'); return; }
-
-  body.innerHTML = _aiSkeleton(3);
-  _aiPost('/api/ai-schedule', { did: did }).then(function (r) {
-    if (!r.ok) { _aiErr(body, r.error || '스케줄을 계산하지 못했습니다.', '_filoAiSchedule()'); return; }
-    if (r.insufficient) {
-      body.innerHTML = '<div class="ai-empty">' +
-        '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
-      return;
-    }
-
-    /* 요일 × 시간 히트맵 */
-    var maxNeed = 1;
-    r.days.forEach(function (d) { d.blocks.forEach(function (b) { if (b.need > maxNeed) maxNeed = b.need; }); });
-
-    var heat = '<div class="ai-heat"><div class="ai-heat-hours"><span></span>' +
-      r.days[0].blocks.map(function (b) { return '<span>' + b.hour + '</span>'; }).join('') + '</div>' +
-      r.days.map(function (d) {
-        return '<div class="ai-heat-row"><span class="ai-heat-dow">' + _aiEsc(d.dow) + '</span>' +
-          d.blocks.map(function (b) {
-            var lvl = b.need === 0 ? 0 : Math.ceil(b.need / maxNeed * 4);
-            return '<i class="ai-heat-cell lv' + lvl + '" title="' + _aiEsc(d.dow) + '요일 ' + b.hour + '시 · ' + b.need + '명 · ' + _aiWon(b.revenue) + '">' +
-              (b.need || '') + '</i>';
-          }).join('') + '</div>';
-      }).join('') + '</div>';
-
-    var savingPositive = r.saving > 0;
-    body.innerHTML =
-      '<div class="ai-stat-grid" style="margin-bottom:14px">' +
-        '<div class="ai-stat"><span>주간 필요 인시</span><strong>' + r.totalHeadHours + '시간</strong></div>' +
-        '<div class="ai-stat"><span>예상 인건비</span><strong>' + _aiWon(r.laborCost) + '</strong></div>' +
-        '<div class="ai-stat"><span>현재 추정</span><strong>' + _aiWon(r.actualCost) + '</strong></div>' +
-        '<div class="ai-stat"><span>' + (savingPositive ? '절감 여지' : '추가 필요') + '</span>' +
-          '<strong class="' + (savingPositive ? 'up' : 'down') + '">' + _aiWon(Math.abs(r.saving)) + '</strong></div>' +
-      '</div>' +
-      heat +
-      '<div class="ai-legend"><span>필요 인력</span>' +
-        '<i class="ai-heat-cell lv0"></i><i class="ai-heat-cell lv1"></i><i class="ai-heat-cell lv2"></i>' +
-        '<i class="ai-heat-cell lv3"></i><i class="ai-heat-cell lv4"></i><span>많음</span></div>' +
-
-      /* 직원별 배치 */
-      '<div class="ai-assign">' +
-        r.assignments.map(function (a) {
-          return '<div class="ai-assign-row">' +
-            '<div class="ai-assign-name">' + _aiEsc(a.name) +
-              '<small>' + _aiEsc(a.role) + ' · ' + _aiWon(a.hourlyRate) + '/h</small></div>' +
-            '<div class="ai-assign-hours">주 ' + a.weeklyHours + '시간</div>' +
-            '<div class="ai-assign-pay">' + _aiWon(a.weeklyPay) +
-              (a.holidayPay > 0 ? '<small class="ai-holiday">주휴 +' + _aiWon(a.holidayPay) + '</small>' : '') +
-            '</div></div>';
-        }).join('') +
-      '</div>' +
-
-      '<div class="ai-note"><span class="ai-note-tag">' + (r.aiPowered ? 'AI 분석' : '통계 분석') + '</span>' + _aiEsc(r.advice) + '</div>' +
-      '<div class="ai-foot">영업시간 ' + r.openFrom + '시~' + (r.openTo + 1) + '시 · 최근 ' + r.sampleDays + '일 매출 곡선 기준 · 주휴수당 합계 ' + _aiWon(r.holidayTotal) + '</div>';
-  });
-}
-
-/* ═════════════════════════════════════════════════════════════
-   5. 음성 주문 인식 (Web Speech API + 서버 파싱)
-   ═════════════════════════════════════════════════════════════ */
-/* ── 핸즈프리 음성 POS (상시 청취 · 자동 실행) ────────────────────────────── */
-var _aiRecog = null, _aiRecogActive = false;
-var _aiHFActive = false;
-
-function _filoVoiceOrderOpen() { _aiHFToggle(); }
-function _filoVoiceOrderClose() { _aiHFStop(); }
-
-function _aiHFToggle() {
-  if (_aiHFActive) { _aiHFStop(); return; }
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { _aiToast('Chrome 브라우저가 필요합니다'); return; }
-  _aiHFStart();
-}
-
-function _aiHFStart() {
-  _aiHFActive = true;
-  /* FAB 초록으로 */
-  var fab = document.getElementById('filo-voice-fab');
-  if (fab) { fab.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)'; fab.title = '음성 POS 켜짐 (클릭=종료)'; }
-  _aiHFShowUI();
-  _aiHFRecogLoop();
-}
-
-function _aiHFStop() {
-  _aiHFActive = false;
-  if (_aiRecog) { try { _aiRecog.stop(); } catch(e){} _aiRecog = null; }
-  var ui = document.getElementById('ai-hf-ui'); if (ui) ui.remove();
-  var fab = document.getElementById('filo-voice-fab');
-  if (fab) { fab.style.background = ''; fab.title = '음성 주문'; }
-}
-
-function _aiHFShowUI() {
-  var old = document.getElementById('ai-hf-ui'); if (old) old.remove();
-  var d = document.createElement('div');
-  d.id = 'ai-hf-ui';
-  d.style.cssText = 'position:fixed;bottom:150px;right:18px;background:rgba(8,16,31,.93);backdrop-filter:blur(14px);border:1px solid rgba(201,168,76,.35);border-radius:16px;padding:13px 16px;z-index:4500;width:240px;font-family:Pretendard,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.45)';
-  d.innerHTML =
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-      '<div id="ai-hf-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:aiBreathe 1.5s ease infinite;flex-shrink:0"></div>' +
-      '<span style="font-size:11px;font-weight:800;color:#c9a84c;letter-spacing:.5px;flex:1">음성 POS 작동중</span>' +
-      '<button onclick="_aiHFStop()" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:18px;cursor:pointer;line-height:1;padding:0">×</button>' +
-    '</div>' +
-    '<div id="ai-hf-heard" style="font-size:12px;color:rgba(255,255,255,.45);min-height:15px;margin-bottom:4px;font-style:italic"></div>' +
-    '<div id="ai-hf-result" style="font-size:13px;color:#fff;font-weight:700;min-height:18px;word-break:keep-all"></div>' +
-    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.3);line-height:1.8">' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 해물밥상 둘<br>' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 카드 결제<br>' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 비움' +
-    '</div>';
-  document.body.appendChild(d);
-}
-
-function _aiHFRecogLoop() {
-  if (!_aiHFActive) return;
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
-  var r = new SR();
-  r.lang = 'ko-KR';
-  r.continuous = false;
-  r.interimResults = true;
-  r.maxAlternatives = 1;
-  _aiRecog = r;
-
-  r.onstart = function() { _aiRecogActive = true; _aiHFSet('heard', '듣는 중…'); };
-  r.onresult = function(ev) {
-    var interim = '', fin = '', confidence = 0;
-    for (var i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) {
-        fin += ev.results[i][0].transcript;
-        confidence = ev.results[i][0].confidence || 0;
-      } else { interim += ev.results[i][0].transcript; }
-    }
-    _aiHFSet('heard', fin || interim);
-    if (!fin) return;
-    /* 신뢰도 0.85 미만 무시 */
-    if (confidence > 0 && confidence < 0.85) { _aiHFSet('heard', ''); return; }
-    /* 웨이크워드 "필로야" 필수 */
-    var clean = fin.trim().replace(/\s+/g,' ');
-    if (!clean.match(/필로야|피로야|필로 야/)) { _aiHFSet('heard', ''); return; }
-    var cmd = clean.replace(/^.*?(필로야|피로야|필로 야)\s*/,'').trim();
-    if (!cmd) return;
-    _aiHFProcess(cmd);
-  };
-  r.onerror = function(ev) {
-    _aiRecogActive = false;
-    if (ev.error === 'not-allowed') { _aiHFSet('result', '마이크 권한 필요'); _aiHFStop(); return; }
-    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 800);
-  };
-  r.onend = function() {
-    _aiRecogActive = false;
-    _aiHFSet('heard', '');
-    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 300);
-  };
-  try { r.start(); } catch(e) { if (_aiHFActive) setTimeout(_aiHFRecogLoop, 1000); }
-}
-
-function _aiHFSet(id, txt) {
-  var el = document.getElementById('ai-hf-' + id); if (el) el.textContent = txt;
-}
-
-function _aiHFProcess(text) {
-  _aiHFSet('result', '분석 중…');
-  /* 테이블 번호 추출 */
-  var tM = text.match(/(\d+)\s*번?\s*테이블/);
-  var tableNum = tM ? parseInt(tM[1]) : null;
-  var tableName = tableNum ? (tableNum + '번 테이블') : null;
-
-  /* 비움 / 정리 */
-  if (text.match(/비움|비워|정리|퇴장|클리어|비어|나갔/)) {
-    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
-    _aiHFClear(tableNum, tableName); return;
-  }
-
-  /* 결제 */
-  var pM = text.match(/(카드|현금|카카오)\s*결제/);
-  if (pM || (tableNum && text.match(/결제/))) {
-    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
-    var method = pM ? (pM[1] === '카드' ? 'card' : pM[1] === '현금' ? 'cash' : 'kakao') : 'card';
-    var mLabel = method === 'card' ? '카드' : method === 'cash' ? '현금' : '카카오페이';
-    _aiHFPay(tableNum, tableName, method, mLabel); return;
-  }
-
-  /* 주문 → AI 파싱 */
-  _aiPost('/api/ai-voice-order', { did: _aiDid(), text: text }).then(function(r) {
-    if (!r.ok || !r.items || !r.items.length) { _aiHFDone('메뉴를 인식하지 못했습니다'); return; }
-    if (tableNum) {
-      _aiHFRegister(tableNum, tableName, r.items, r.total);
-    } else {
-      /* 테이블 미지정 → POS 카트에 담기 */
-      if (typeof _cartAdd === 'function') {
-        r.items.forEach(function(it){ for(var i=0;i<it.qty;i++) _cartAdd(it.id||it.name,it.name,it.price); });
-        _aiHFDone(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담음');
-        _aiSpeak(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담았습니다');
-      } else { _aiHFDone('POS 화면에서 말씀해 주세요'); }
-    }
-  });
-}
-
-function _aiHFRegister(tableNum, tableName, items, total) {
-  var did = _aiDid(), now = new Date(), today = now.toISOString().slice(0,10);
-  _db.collection('filo_orders').add({
-    dealerId: did, tableNum: String(tableNum), tableName: tableName,
-    items: items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
-    total: total, type: 'table', source: 'voice', status: 'pending',
-    date: today, createdAt: now.toISOString()
-  }).then(function() {
-    var msg = tableName+' '+items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 등록';
-    _aiHFDone(msg); _aiSpeak(msg+'했습니다');
-  }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFClear(tableNum, tableName) {
-  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
-  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).where('date','==',today)
-    .get().then(function(snap) {
-      if (snap.empty) { _aiHFDone(tableName+' 주문 없음'); return; }
-      var batch = _db.batch();
-      snap.forEach(function(doc){ batch.update(doc.ref,{status:'cleared',clearedAt:new Date().toISOString()}); });
-      return batch.commit().then(function(){
-        _aiHFDone(tableName+' 비움 완료'); _aiSpeak(tableName+' 비웠습니다');
-      });
-    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFPay(tableNum, tableName, method, mLabel) {
-  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
-  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum))
-    .where('date','==',today).where('status','==','pending')
-    .get().then(function(snap) {
-      if (snap.empty) { _aiHFDone(tableName+' 결제할 주문 없음'); return; }
-      var items=[], total=0, orderIds=[];
-      snap.forEach(function(doc){ var d=doc.data(); orderIds.push(doc.id); (d.items||[]).forEach(function(it){items.push(it);}); total+=d.total||0; });
-      if (typeof _filoTablePay==='function') {
-        _filoTablePay(did,items,total,tableNum,tableName,method,orderIds);
-        var msg = tableName+' '+mLabel+' '+total.toLocaleString()+'원 결제 완료';
-        _aiHFDone(msg); _aiSpeak(msg);
-      }
-    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFDone(msg) { _aiHFSet('heard',''); _aiHFSet('result', msg); }
-
-function _aiSpeak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ko-KR'; u.rate = 1.05;
-  window.speechSynthesis.speak(u);
-}
-
-/* 구버전 호환 */
-function _aiVoiceToggle(){}
-function _aiVoiceStart(){}
-function _aiVoiceStop(){ _aiHFStop(); }
-function _aiVoiceToCart(){}
-function _aiFlushPendingCart(){}
-
-/* ═════════════════════════════════════════════════════════════
-   6. AI CS봇 — 플로팅 위젯 (대화 맥락 유지)
-   ═════════════════════════════════════════════════════════════ */
-var _aiChatHistory = [];
-
-function _filoAiChatToggle() {
-  var w = document.getElementById('ai-chat');
-  if (w) { w.classList.toggle('on'); if (w.classList.contains('on')) _aiChatFocus(); return; }
-
-  var d = document.createElement('div');
-  d.id = 'ai-chat';
-  d.className = 'ai-chat on';
-  d.innerHTML =
-    '<div class="ai-chat-head">' +
-      '<div><strong>AI 상담봇</strong><small>메뉴·영업시간·웨이팅 실시간 응답</small></div>' +
-      '<button class="ai-x" onclick="_filoAiChatToggle()" aria-label="닫기">×</button>' +
-    '</div>' +
-    '<div class="ai-chat-body" id="ai-chat-body">' +
-      '<div class="ai-msg bot">안녕하세요! 무엇을 도와드릴까요?</div>' +
-      '<div class="ai-chips" id="ai-chat-chips">' +
-        ['영업시간 알려주세요', '지금 대기 얼마나 되나요?', '추천 메뉴가 뭔가요?', '주차 되나요?']
-          .map(function (c) { return '<button class="ai-chip" onclick="_aiChatSend(\'' + c + '\')">' + c + '</button>'; }).join('') +
-      '</div>' +
-    '</div>' +
-    '<div class="ai-chat-input">' +
-      '<input id="ai-chat-inp" placeholder="궁금한 점을 입력하세요" onkeydown="if(event.key===\'Enter\')_aiChatSend()">' +
-      '<button onclick="_aiChatSend()" aria-label="보내기">↑</button>' +
-    '</div>';
-  document.body.appendChild(d);
-  _aiChatFocus();
-}
-
-function _aiChatFocus() {
-  setTimeout(function () { var i = document.getElementById('ai-chat-inp'); if (i) i.focus(); }, 120);
-}
-
-function _aiChatSend(preset) {
-  var inp = document.getElementById('ai-chat-inp');
-  var body = document.getElementById('ai-chat-body');
-  var q = (preset || (inp ? inp.value : '')).trim();
-  if (!q || !body) return;
-  if (inp && !preset) inp.value = '';
-
-  var chips = document.getElementById('ai-chat-chips');
-  if (chips) chips.remove();
-
-  body.insertAdjacentHTML('beforeend', '<div class="ai-msg me">' + _aiEsc(q) + '</div>');
-  body.insertAdjacentHTML('beforeend', '<div class="ai-msg bot" id="ai-msg-wait"><span class="ai-dots"><i></i><i></i><i></i></span></div>');
-  body.scrollTop = body.scrollHeight;
-
-  _aiChatHistory.push({ role: 'user', text: q });
-
-  _aiPost('/api/cs-bot', { did: _aiDid(), question: q, history: _aiChatHistory.slice(0, -1), lang: 'ko' })
-    .then(function (r) {
-      var wait = document.getElementById('ai-msg-wait');
-      var answer = r.ok ? r.answer : ('죄송합니다. 답변을 가져오지 못했습니다.' + (r.error ? ' (' + r.error + ')' : ''));
-      if (wait) { wait.id = ''; wait.innerHTML = _aiEsc(answer); }
-      _aiChatHistory.push({ role: 'bot', text: answer });
-      if (_aiChatHistory.length > 12) _aiChatHistory = _aiChatHistory.slice(-12);
-      if (r.ok && r.chips && r.chips.length) {
-        body.insertAdjacentHTML('beforeend',
-          '<div class="ai-chips">' + r.chips.slice(0, 3).map(function (c) {
-            return '<button class="ai-chip" onclick="_aiChatSend(\'' + _aiEsc(c).replace(/'/g, '') + '\')">' + _aiEsc(c) + '</button>';
-          }).join('') + '</div>');
-      }
-      body.scrollTop = body.scrollHeight;
-    });
-}
-
-/* 관리자용 응답 테스트 */
-function _filoAiChatTest() {
-  _filoAiChatToggle();
-  setTimeout(function () { _aiChatSend('오늘 영업시간이랑 추천 메뉴 알려주세요'); }, 400);
-}
-
-/* ═════════════════════════════════════════════════════════════
    7. 대시보드 한줄 브리핑
    ═════════════════════════════════════════════════════════════ */
 function _filoAiBriefing(targetId) {
@@ -1120,20 +752,7 @@ function _filoAiBriefing(targetId) {
 window._filoPageAI         = _filoPageAI;
 window._filoAiForecast     = _filoAiForecast;
 window._filoAiMenuRec      = _filoAiMenuRec;
-window._filoAiSchedule     = _filoAiSchedule;
-window._filoVoiceOrderOpen = _filoVoiceOrderOpen;
-window._filoVoiceOrderClose= _filoVoiceOrderClose;
-window._aiHFToggle         = _aiHFToggle;
-window._aiHFStop           = _aiHFStop;
-window._aiSpeak            = _aiSpeak;
-window._filoAiChatToggle   = _filoAiChatToggle;
-window._filoAiChatTest     = _filoAiChatTest;
 window._filoAiBriefing     = _filoAiBriefing;
-window._aiVoiceToggle      = _aiVoiceToggle;
-window._aiVoiceStart       = _aiVoiceStart;
-window._aiVoiceToCart      = _aiVoiceToCart;
-window._aiChatSend         = _aiChatSend;
-window._aiFlushPendingCart = _aiFlushPendingCart;
 
 /* ══════════════════════════════════════════════════════
  * AIVO 마진 분석 페이지 — 프리미엄 대시보드
