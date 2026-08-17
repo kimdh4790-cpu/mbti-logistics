@@ -4408,16 +4408,15 @@ ${JSON.stringify(postSummary)}
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body: JSON.stringify({structuredQuery:{
               from:[{collectionId:'filo_orders'}],
-              where:{compositeFilter:{op:'AND',filters:[
-                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:kDid}}},
-                {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:kDate}}},
-                {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'pending'}}}
-              ]}},
-              orderBy:[{field:{fieldPath:'createdAt'},direction:'ASCENDING'}]
+              where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:kDid}}},
+              orderBy:[{field:{fieldPath:'createdAt'},direction:'ASCENDING'}],
+              limit:200
             }})
           });
+          if(!oRes.ok){const errTxt=await oRes.text();return Response.json({error:'fs query failed: '+errTxt},{headers:{'Cache-Control':'no-store'}});}
           const oDocs = await oRes.json();
-          const orders = Array.isArray(oDocs) ? oDocs.filter(d=>d.document).map(d=>{
+          if(!Array.isArray(oDocs)){const msg=oDocs?.error?.message||JSON.stringify(oDocs).slice(0,100);return Response.json({error:'fs error: '+msg},{headers:{'Cache-Control':'no-store'}});}
+          const orders = oDocs.filter(d=>d.document).map(d=>{
             const f=d.document.fields||{};
             const id=d.document.name.split('/').pop();
             return {
@@ -4427,12 +4426,13 @@ ${JSON.stringify(postSummary)}
               createdAt:f.createdAt?.stringValue||'',
               status:f.status?.stringValue||'',
               payMethod:f.payMethod?.stringValue||'',
+              date:f.date?.stringValue||'',
               items:(f.items?.arrayValue?.values||[]).map(v=>({
                 name:v.mapValue?.fields?.name?.stringValue||'',
                 qty:Number(v.mapValue?.fields?.qty?.integerValue||v.mapValue?.fields?.qty?.doubleValue||1)
               }))
             };
-          }) : [];
+          }).filter(o=>o.date===kDate&&o.status==='pending');
           return Response.json({company, orders}, {headers:{'Cache-Control':'no-store'}});
         } catch(e) {
           return Response.json({error:e.message});
@@ -4451,7 +4451,7 @@ ${JSON.stringify(postSummary)}
           const fields = {status:{stringValue:status}};
           if (status==='done') fields.doneAt = {stringValue:updateTime};
           const masks = status==='done' ? 'updateMask.fieldPaths=status&updateMask.fieldPaths=doneAt' : 'updateMask.fieldPaths=status';
-          await fetch(`${FS_BASE}/filo_sales/${orderId}?${masks}`, {
+          await fetch(`${FS_BASE}/filo_orders/${orderId}?${masks}`, {
             method:'PATCH',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body: JSON.stringify({fields})
