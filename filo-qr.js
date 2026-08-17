@@ -371,44 +371,72 @@ function _filoQRPrintAll(){
  var wraps=document.querySelectorAll('[id^="qr-c-"]');
  if(!wraps.length){_filoToast('QR 코드 없음');return;}
  var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
- var cards='';
+
+ /* 카드 데이터 수집 */
+ var allCards=[];
  wraps.forEach(function(wrap){
   var num=wrap.id.replace('qr-c-','');
   var canvas=wrap.querySelector('canvas');
   var imgEl=wrap.querySelector('img');
   var src=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
-  if(!src)return;
-  cards+=
-  '<div class="sticker">'+
-  '<div class="gold-top"></div>'+
-  '<div class="deco1"></div>'+
-  '<div class="header">'+
-  (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
-  '<div class="divider"><div class="dline"></div><span class="ddot">✦</span><div class="dline"></div></div>'+
-  '<div class="brand"><span class="bf">FILO</span><span class="bdot">✦</span><span class="bd">DINE</span></div>'+
-  '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
-  '</div>'+
-  '<div class="sep"></div>'+
-  '<div class="qr-wrap"><div class="qr-box"><img src="'+src+'" style="width:140px;height:140px;display:block"></div></div>'+
-  '<div class="badge-wrap"><div class="badge-inner"><span class="blabel">TABLE</span><span class="bnum">'+num+'</span></div></div>'+
-  '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
-  '<div class="gold-bot"></div>'+
-  '</div>';
+  if(src)allCards.push({num:num,src:src});
  });
+ if(!allCards.length){_filoToast('QR 이미지를 불러오지 못했습니다');return;}
+
+ /* 카드 1장 HTML 생성 */
+ function makeCard(c){
+  return '<div class="sticker">'+
+   '<div class="gold-top"></div>'+
+   '<div class="deco1"></div>'+
+   '<div class="header">'+
+   (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
+   '<div class="divider"><div class="dline"></div><span class="ddot">✦</span><div class="dline"></div></div>'+
+   '<div class="brand"><span class="bf">FILO</span><span class="bdot">✦</span><span class="bd">DINE</span></div>'+
+   '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
+   '</div>'+
+   '<div class="sep"></div>'+
+   '<div class="qr-wrap"><div class="qr-box"><img src="'+c.src+'" class="qr-img"></div></div>'+
+   '<div class="badge-wrap"><div class="badge-inner">'+
+   '<span class="blabel">TABLE</span><span class="bnum">'+c.num+'</span>'+
+   '</div></div>'+
+   '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+   '<div class="gold-bot"></div>'+
+   '</div>';
+ }
+
+ /* A4 한 장에 4개씩 묶기 (2×2) */
+ var pages='';
+ for(var i=0;i<allCards.length;i+=4){
+  var group=allCards.slice(i,i+4);
+  /* 4개 미만이면 빈 칸으로 채워 2×2 유지 */
+  while(group.length<4)group.push(null);
+  pages+='<div class="a4-page">'+
+   group.map(function(c){return c?makeCard(c):'<div class="sticker empty"></div>';}).join('')+
+   '</div>';
+ }
+
  var w=window.open('','_blank');
- w.document.write('<html><head><meta charset="UTF-8"><title>테이블 QR 전체 인쇄</title>'+
+ if(!w||!w.document){alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');return;}
+ w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>테이블 QR 인쇄 (A4 · 4장)</title>'+
   '<style>'+
   '*{margin:0;padding:0;box-sizing:border-box}'+
-  'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#f5f5f5;padding:20px}'+
-  '.no-print{margin-bottom:16px}'+
-  '.grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:flex-start}'+
-  '.sticker{width:200px;height:250px;position:relative;overflow:hidden;background:#0A0E2A;border-radius:14px;flex-shrink:0;page-break-inside:avoid}'+
-  '.gold-top{height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
+  '@page{size:A4 portrait;margin:8mm}'+
+  'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#e5e7eb}'+
+  '.no-print{padding:14px 20px;background:#fff;display:flex;align-items:center;gap:12px;border-bottom:1px solid #e5e7eb}'+
+  /* A4 페이지: 2열 × 2행 그리드 */
+  '.a4-page{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:5mm;'+
+  'width:194mm;height:281mm;page-break-after:always;background:#fff;padding:0;margin:0 auto 10px}'+
+  '.a4-page:last-child{page-break-after:auto}'+
+  /* 카드: 셀 꽉 채우기 */
+  '.sticker{position:relative;overflow:hidden;background:#0A0E2A;border-radius:10px;'+
+  'display:flex;flex-direction:column;align-items:stretch;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  '.sticker.empty{background:transparent;border:1.5px dashed #d1d5db}'+
+  '.gold-top{height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent);flex-shrink:0}'+
   '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
-  '.deco1{position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;border:1px solid rgba(201,168,76,.12)}'+
-  '.header{padding:10px 14px 6px;text-align:center;position:relative;z-index:1}'+
-  '.rest-label{font-size:7px;color:rgba(201,168,76,.65);letter-spacing:3px;margin-bottom:3px}'+
-  '.store-name{font-size:16px;font-weight:900;color:#fff;letter-spacing:4px;line-height:1;margin-bottom:5px}'+
+  '.deco1{position:absolute;top:-25px;right:-25px;width:90px;height:90px;border-radius:50%;border:1px solid rgba(201,168,76,.12);pointer-events:none}'+
+  '.header{padding:10px 14px 5px;text-align:center;position:relative;z-index:1;flex-shrink:0}'+
+  '.rest-label{font-size:7px;color:rgba(201,168,76,.65);letter-spacing:3px;font-weight:500;margin-bottom:3px}'+
+  '.store-name{font-size:15px;font-weight:900;color:#fff;letter-spacing:3px;line-height:1.1;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
   '.divider{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px}'+
   '.dline{height:1px;width:20px;background:rgba(201,168,76,.5)}'+
   '.ddot{color:#C9A84C;font-size:7px}'+
@@ -417,27 +445,29 @@ function _filoQRPrintAll(){
   '.bd{font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px}'+
   '.bdot{color:rgba(201,168,76,.7);font-size:7px}'+
   '.sub{font-size:6px;color:rgba(255,255,255,.3);letter-spacing:1.5px}'+
-  '.sep{margin:0 14px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent)}'+
-  '.qr-wrap{padding:7px 0 5px;text-align:center;position:relative;z-index:1}'+
-  '.qr-box{background:#fff;border-radius:8px;padding:6px;display:inline-block}'+
-  '.badge-wrap{text-align:center;padding:2px 0 5px;position:relative;z-index:1}'+
-  '.badge-inner{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(201,168,76,.55);border-radius:50px;padding:4px 14px;background:rgba(201,168,76,.07)}'+
-  '.blabel{font-size:7px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
-  '.bnum{font-size:14px;font-weight:900;color:#C9A84C;line-height:1}'+
-  '.footer{text-align:center;padding:2px 0 5px;position:relative;z-index:1}'+
+  '.sep{margin:0 12px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);flex-shrink:0}'+
+  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:8px 0 4px;position:relative;z-index:1}'+
+  '.qr-box{background:#fff;border-radius:8px;padding:7px;display:inline-block}'+
+  '.qr-img{width:110px;height:110px;display:block}'+
+  '.badge-wrap{text-align:center;padding:3px 0 7px;position:relative;z-index:1;flex-shrink:0}'+
+  '.badge-inner{display:inline-flex;align-items:center;gap:6px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:5px 18px;background:rgba(201,168,76,.07)}'+
+  '.blabel{font-size:8px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
+  '.bnum{font-size:18px;font-weight:900;color:#C9A84C;line-height:1}'+
+  '.footer{text-align:center;padding:2px 0 8px;position:relative;z-index:1;flex-shrink:0}'+
   '.footer p{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px}'+
   '@media print{'+
-  '.no-print{display:none}'+
-  'body{background:#fff;padding:10px}'+
-  '.sticker{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  '.no-print{display:none!important}'+
+  'body{background:#fff}'+
+  '.a4-page{margin:0;box-shadow:none}'+
   '}'+
   '</style></head>'+
   '<body>'+
-  '<div class="no-print" style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'+
-  '<span style="font-size:16px;font-weight:800">테이블 QR 전체 인쇄</span>'+
-  '<button onclick="window.print()" style="padding:8px 20px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">인쇄</button>'+
+  '<div class="no-print">'+
+  '<span style="font-size:15px;font-weight:800">테이블 QR 인쇄 — A4 · 4장/페이지</span>'+
+  '<span style="font-size:12px;color:#6b7280">총 '+allCards.length+'개 · '+Math.ceil(allCards.length/4)+'페이지</span>'+
+  '<button onclick="window.print()" style="margin-left:auto;padding:8px 22px;background:#0A0E2A;color:#C9A84C;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer">인쇄</button>'+
   '</div>'+
-  '<div class="grid">'+cards+'</div>'+
+  pages+
   '</body></html>');
  w.document.close();
 }
