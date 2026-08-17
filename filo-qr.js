@@ -436,9 +436,6 @@ function _filoQRPrintBuild(allCards,storeName){
    '</div>'+
    '<div class="sep"></div>'+
    '<div class="qr-wrap"><div class="qr-box"><img src="'+c.src+'" class="qr-img"></div></div>'+
-   '<div class="badge-wrap"><div class="badge-inner">'+
-   '<span class="blabel">TABLE</span><span class="bnum">'+(c.name||c.num)+'</span>'+
-   '</div></div>'+
    '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
    '<div class="gold-bot"></div>'+
    '</div>';
@@ -481,13 +478,9 @@ function _filoQRPrintBuild(allCards,storeName){
   '.bdot{color:rgba(201,168,76,.7);font-size:7px}'+
   '.sub{font-size:6px;color:rgba(255,255,255,.3);letter-spacing:1.5px}'+
   '.sep{margin:0 12px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);flex-shrink:0}'+
-  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px 0 2px;position:relative;z-index:1}'+
+  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:4px 0 6px;position:relative;z-index:1}'+
   '.qr-box{background:#fff;border-radius:8px;padding:7px;display:inline-block}'+
-  '.qr-img{width:148px;height:148px;display:block}'+
-  '.badge-wrap{text-align:center;padding:3px 0 7px;position:relative;z-index:1;flex-shrink:0}'+
-  '.badge-inner{display:inline-flex;align-items:center;gap:6px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:5px 18px;background:rgba(201,168,76,.07)}'+
-  '.blabel{font-size:8px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
-  '.bnum{font-size:16px;font-weight:900;color:#C9A84C;line-height:1.1;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.qr-img{width:180px;height:180px;display:block}'+
   '.footer{text-align:center;padding:2px 0 8px;position:relative;z-index:1;flex-shrink:0}'+
   '.footer p{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px}'+
   '@media print{.no-print{display:none!important}body{background:#fff}.a4-page{margin:0;box-shadow:none}}'+
