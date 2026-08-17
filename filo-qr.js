@@ -367,23 +367,62 @@ function _filoQRPrint1(num,name){
  w.document.close();
 }
 
-function _filoQRPrintAll(){
- var wraps=document.querySelectorAll('[id^="qr-c-"]');
- if(!wraps.length){_filoToast('QR 코드 없음');return;}
- var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||'';
+/* ── A4 4장 인쇄 — Firestore 직접 로드 (DOM 독립) ── */
+function _filoQRPrintA4(did){
+ did=did||(_CU&&(_CU.dealerId||_CU.uid))||'';
+ if(!did){_filoToast('매장 정보 없음');return;}
+ var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||
+  (window._cachedCompanyDoc&&(window._cachedCompanyDoc.companyName||window._cachedCompanyDoc.name))||'';
 
- /* 카드 데이터 수집 */
- var allCards=[];
- wraps.forEach(function(wrap){
-  var num=wrap.id.replace('qr-c-','');
-  var canvas=wrap.querySelector('canvas');
-  var imgEl=wrap.querySelector('img');
-  var src=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
-  if(src)allCards.push({num:num,src:src});
- });
- if(!allCards.length){_filoToast('QR 이미지를 불러오지 못했습니다');return;}
+ _db.collection('filo_tables').where('dealerId','==',did).get().then(function(snap){
+  var tables=[];
+  if(snap.empty){
+   for(var i=1;i<=10;i++)tables.push({num:i,name:'테이블 '+i});
+  } else {
+   var seen={};
+   snap.forEach(function(doc){
+    var d=doc.data();
+    var num=d.tableNum||d.tableId||1;
+    var name=d.tableName||('테이블 '+num);
+    if(!seen[num])seen[num]={num:num,name:name};
+   });
+   tables=Object.values(seen);
+  }
+  tables.sort(function(a,b){return a.num-b.num;});
 
- /* 카드 1장 HTML 생성 */
+  _filoEnsureQR(function(){
+   /* 숨김 컨테이너에서 QR canvas 생성 후 data URL 추출 */
+   var hidden=document.createElement('div');
+   hidden.style.cssText='position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden';
+   document.body.appendChild(hidden);
+   var baseUrl='https://filo.ai.kr/order?d='+did+'&t=';
+   var pending=tables.map(function(t){
+    var url=baseUrl+t.num+'&name='+encodeURIComponent(t.name);
+    var wrap=document.createElement('div');
+    wrap.id='_qrp_'+t.num;
+    hidden.appendChild(wrap);
+    try{new QRCode(wrap,{text:url,width:200,height:200,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+    return {num:t.num,name:t.name,wrap:wrap};
+   });
+
+   setTimeout(function(){
+    var cards=pending.map(function(p){
+     var cv=p.wrap.querySelector('canvas');
+     var ig=p.wrap.querySelector('img');
+     var src=cv?cv.toDataURL('image/png'):(ig?ig.src:'');
+     return src?{num:p.num,name:p.name,src:src}:null;
+    }).filter(Boolean);
+    document.body.removeChild(hidden);
+    if(!cards.length){_filoToast('QR 생성 실패');return;}
+    _filoQRPrintBuild(cards,storeName);
+   },600);
+  });
+ }).catch(function(e){_filoToast('테이블 로드 오류: '+e.message);});
+}
+window._filoQRPrintA4=_filoQRPrintA4;
+
+/* ── 인쇄 HTML 빌드 (A4 4장/페이지) ── */
+function _filoQRPrintBuild(allCards,storeName){
  function makeCard(c){
   return '<div class="sticker">'+
    '<div class="gold-top"></div>'+
@@ -397,37 +436,31 @@ function _filoQRPrintAll(){
    '<div class="sep"></div>'+
    '<div class="qr-wrap"><div class="qr-box"><img src="'+c.src+'" class="qr-img"></div></div>'+
    '<div class="badge-wrap"><div class="badge-inner">'+
-   '<span class="blabel">TABLE</span><span class="bnum">'+c.num+'</span>'+
+   '<span class="blabel">TABLE</span><span class="bnum">'+(c.name||c.num)+'</span>'+
    '</div></div>'+
    '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
    '<div class="gold-bot"></div>'+
    '</div>';
  }
-
- /* A4 한 장에 4개씩 묶기 (2×2) */
  var pages='';
  for(var i=0;i<allCards.length;i+=4){
   var group=allCards.slice(i,i+4);
-  /* 4개 미만이면 빈 칸으로 채워 2×2 유지 */
   while(group.length<4)group.push(null);
   pages+='<div class="a4-page">'+
    group.map(function(c){return c?makeCard(c):'<div class="sticker empty"></div>';}).join('')+
    '</div>';
  }
-
  var w=window.open('','_blank');
  if(!w||!w.document){alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');return;}
- w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>테이블 QR 인쇄 (A4 · 4장)</title>'+
+ w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>테이블 QR 인쇄 (A4·4장)</title>'+
   '<style>'+
   '*{margin:0;padding:0;box-sizing:border-box}'+
   '@page{size:A4 portrait;margin:8mm}'+
   'body{font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif;background:#e5e7eb}'+
   '.no-print{padding:14px 20px;background:#fff;display:flex;align-items:center;gap:12px;border-bottom:1px solid #e5e7eb}'+
-  /* A4 페이지: 2열 × 2행 그리드 */
   '.a4-page{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:5mm;'+
   'width:194mm;height:281mm;page-break-after:always;background:#fff;padding:0;margin:0 auto 10px}'+
   '.a4-page:last-child{page-break-after:auto}'+
-  /* 카드: 셀 꽉 채우기 */
   '.sticker{position:relative;overflow:hidden;background:#0A0E2A;border-radius:10px;'+
   'display:flex;flex-direction:column;align-items:stretch;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
   '.sticker.empty{background:transparent;border:1.5px dashed #d1d5db}'+
@@ -452,14 +485,10 @@ function _filoQRPrintAll(){
   '.badge-wrap{text-align:center;padding:3px 0 7px;position:relative;z-index:1;flex-shrink:0}'+
   '.badge-inner{display:inline-flex;align-items:center;gap:6px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:5px 18px;background:rgba(201,168,76,.07)}'+
   '.blabel{font-size:8px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
-  '.bnum{font-size:18px;font-weight:900;color:#C9A84C;line-height:1}'+
+  '.bnum{font-size:16px;font-weight:900;color:#C9A84C;line-height:1.1;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
   '.footer{text-align:center;padding:2px 0 8px;position:relative;z-index:1;flex-shrink:0}'+
   '.footer p{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px}'+
-  '@media print{'+
-  '.no-print{display:none!important}'+
-  'body{background:#fff}'+
-  '.a4-page{margin:0;box-shadow:none}'+
-  '}'+
+  '@media print{.no-print{display:none!important}body{background:#fff}.a4-page{margin:0;box-shadow:none}}'+
   '</style></head>'+
   '<body>'+
   '<div class="no-print">'+
@@ -470,6 +499,31 @@ function _filoQRPrintAll(){
   pages+
   '</body></html>');
  w.document.close();
+}
+
+/* 기존 _filoQRPrintAll — 모달 DOM 요소 기반 (하위 호환) */
+function _filoQRPrintAll(){
+ /* 모달이 열려 있으면 DOM에서 읽고, 아니면 Firestore 직접 로드 */
+ var wraps=document.querySelectorAll('[id^="qr-c-"]');
+ var storeName=(_CU&&(_CU.storeName||_CU.displayName||_CU.businessName))||
+  (window._cachedCompanyDoc&&(window._cachedCompanyDoc.companyName||window._cachedCompanyDoc.name))||'';
+ if(!wraps.length){
+  /* 모달 없음 → Firestore 직접 */
+  _filoQRPrintA4((_CU&&(_CU.dealerId||_CU.uid))||'');
+  return;
+ }
+
+ /* 카드 데이터 수집 */
+ var allCards=[];
+ wraps.forEach(function(wrap){
+  var num=wrap.id.replace('qr-c-','');
+  var canvas=wrap.querySelector('canvas');
+  var imgEl=wrap.querySelector('img');
+  var src=canvas?canvas.toDataURL('image/png'):(imgEl?imgEl.src:'');
+  if(src)allCards.push({num:num,src:src});
+ });
+ if(!allCards.length){_filoToast('QR 이미지를 불러오지 못했습니다');return;}
+ _filoQRPrintBuild(allCards,storeName);
 }
 
 function _filoLoadReviewQR(){
