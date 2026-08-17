@@ -3891,6 +3891,136 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // ── /api/ai-margin-analysis — AI 마진 심층 분석 (메뉴엔지니어링 + 원가율 벤치마크)
+      if (path === '/api/ai-margin-analysis' && method === 'POST') {
+        const _mgnUser = await verifyFirebaseToken(request, env);
+        if (!_mgnUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        try {
+          const body = await request.json();
+          const { did, ym, businessType } = body;
+          if (!did || !ym) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const start = ym + '-01';
+          const end = ym + '-31';
+
+          // 업종별 식재료 원가율 벤치마크 (외식업 통계청 기준)
+          const BENCHMARKS = {
+            cafe:     {name:'카페/베이커리',    low:25,high:35,prime:60},
+            korean:   {name:'한식당',           low:35,high:45,prime:65},
+            japanese: {name:'일식/횟집',        low:40,high:55,prime:65},
+            chinese:  {name:'중식당',           low:32,high:42,prime:65},
+            fastfood: {name:'패스트푸드/분식',  low:30,high:40,prime:62},
+            izakaya:  {name:'이자카야/술집',    low:25,high:35,prime:60},
+            general:  {name:'일반 외식업',      low:30,high:45,prime:65}
+          };
+          const bench = BENCHMARKS[businessType||'general'];
+
+          // menu_costs 로드
+          let costMap = {};
+          try {
+            const cr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'menu_costs'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},limit:{value:200}}})});
+            const cd = await cr.json();
+            if(Array.isArray(cd)) cd.filter(d=>d.document).forEach(d=>{const f=d.document.fields||{};const nm=f.name?.stringValue||'';if(nm){costMap[nm]={cost:(f.cost?.integerValue||f.cost?.doubleValue||0)*1,price:(f.price?.integerValue||f.price?.doubleValue||0)*1};}});
+          } catch(e){}
+
+          // filo_sales 로드 (해당 월)
+          let totalRev=0, totalCost=0;
+          const menuStats = {};
+          const unregistered = new Set();
+          try {
+            const sr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_sales'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:start}}},{fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:end}}}]}},limit:{value:500}}})});
+            const sd = await sr.json();
+            if(Array.isArray(sd)) sd.filter(d=>d.document).forEach(d=>{
+              const f=d.document.fields||{};
+              if(f.status?.stringValue==='cancelled') return;
+              const total=(f.total?.integerValue||f.total?.doubleValue||0)*1;
+              totalRev+=total;
+              const items=f.items?.arrayValue?.values||[];
+              items.forEach(iv=>{
+                const m=iv.mapValue?.fields||{};
+                const nm=m.name?.stringValue||'';
+                const qty=(m.qty?.integerValue||m.qty?.doubleValue||1)*1;
+                const price=(m.price?.integerValue||m.price?.doubleValue||0)*1;
+                if(!nm) return;
+                if(!menuStats[nm]) menuStats[nm]={qty:0,rev:0,cost:0};
+                menuStats[nm].qty+=qty;
+                menuStats[nm].rev+=price*qty;
+                if(costMap[nm]){
+                  const itemCost=(costMap[nm].cost||0)*qty;
+                  menuStats[nm].cost+=itemCost;
+                  totalCost+=itemCost;
+                } else {
+                  unregistered.add(nm);
+                }
+              });
+            });
+          } catch(e){}
+
+          const foodCostPct = totalRev>0 ? Math.round(totalCost/totalRev*100) : 0;
+          const hasCostData = Object.keys(costMap).length > 0;
+          const totalMenus = Object.keys(menuStats).length;
+          const allEntries = Object.values(menuStats);
+          const avgQty = totalMenus>0 ? allEntries.reduce((s,m)=>s+m.qty,0)/totalMenus : 0;
+          const avgCM  = totalMenus>0 ? allEntries.reduce((s,m)=>s+(m.rev-m.cost),0)/totalMenus : 0;
+
+          // 메뉴 엔지니어링 분류 — Kasavana & Smith 1982
+          const menuEngineering = Object.entries(menuStats).map(([nm,m])=>{
+            const cm = m.rev-m.cost;
+            const cmPer = m.qty>0 ? cm/m.qty : 0;
+            const isHighCM  = cmPer >= (avgCM/Math.max(totalMenus,1));
+            const isHighPop = m.qty >= avgQty*0.7;
+            let category;
+            if(isHighCM && isHighPop)       category='star';
+            else if(!isHighCM && isHighPop) category='plowhorse';
+            else if(isHighCM && !isHighPop) category='puzzle';
+            else                             category='dog';
+            const costPct = m.rev>0 ? Math.round(m.cost/m.rev*100) : 0;
+            return {name:nm,qty:m.qty,rev:m.rev,cost:m.cost,cm:Math.round(cm),cmPer:Math.round(cmPer),costPct,category};
+          }).sort((a,b)=>b.cm-a.cm);
+
+          // 인건비 (attendance.wagePay 합산)
+          let laborCost=0;
+          try {
+            const lr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'attendance'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:start}}},{fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:end}}}]}},limit:{value:500}}})});
+            const ld = await lr.json();
+            if(Array.isArray(ld)) ld.filter(d=>d.document).forEach(d=>{const f=d.document.fields||{};laborCost+=(f.wagePay?.integerValue||f.wagePay?.doubleValue||0)*1;});
+          } catch(e){}
+          const laborCostPct = totalRev>0 ? Math.round(laborCost/totalRev*100) : 0;
+          const primeCost = foodCostPct + laborCostPct;
+
+          // Claude Haiku AI 분석 (한국어)
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          let aiNarrative='', aiPowered=false;
+          if(apiKey && hasCostData && totalRev>0){
+            try {
+              const stars=menuEngineering.filter(m=>m.category==='star').map(m=>m.name).slice(0,3);
+              const dogs=menuEngineering.filter(m=>m.category==='dog').map(m=>m.name).slice(0,3);
+              const unregList=[...unregistered].slice(0,5);
+              const prompt=`외식업 마진 분석 전문가로서 한국어로 3문장 이내로 핵심 조언을 작성하세요.\n업종: ${bench.name}\n식재료 원가율: ${foodCostPct}% (업종 기준 ${bench.low}~${bench.high}%)\n프라임코스트: ${primeCost}% (목표 ${bench.prime}% 이하)\n월 매출: ₩${totalRev.toLocaleString()}\n스타메뉴: ${stars.join(', ')||'없음'}\n개선필요(Dog): ${dogs.join(', ')||'없음'}\n원가미등록: ${unregList.join(', ')||'없음'}\n실행 가능한 조언:`;
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:250,messages:[{role:'user',content:prompt}]})});
+              const pd=await pr.json();
+              aiNarrative=pd.content?.[0]?.text||'';
+              if(aiNarrative) aiPowered=true;
+            } catch(e){}
+          }
+          if(!aiNarrative){
+            if(!hasCostData) aiNarrative='원가 등록 탭에서 메뉴별 원가를 등록하면 AI 마진 분석이 활성화됩니다.';
+            else if(foodCostPct>bench.high) aiNarrative=`식재료 원가율 ${foodCostPct}%가 업종 기준(${bench.high}%)을 초과합니다. Dog 카테고리 메뉴 정리와 식재료 공급처 재검토를 권장합니다.`;
+            else aiNarrative=`식재료 원가율 ${foodCostPct}%는 ${bench.name} 업종 기준 범위(${bench.low}~${bench.high}%) 내입니다. 스타 메뉴 판매 집중으로 수익성을 높이세요.`;
+          }
+
+          return new Response(JSON.stringify({
+            ok:true, bench, foodCostPct, laborCostPct, primeCost,
+            totalRev, totalCost, hasCostData,
+            menuEngineering, unregistered:[...unregistered],
+            aiNarrative, aiPowered,
+            costMapSize:Object.keys(costMap).length, menuCount:totalMenus
+          }),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // ── /api/ai-schedule — AI 직원 스케줄 최적화
       if (path === '/api/ai-schedule' && method === 'POST') {
         const _schedUser = await verifyFirebaseToken(request, env);

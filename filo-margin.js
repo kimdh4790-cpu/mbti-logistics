@@ -180,7 +180,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var kpiCards='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+
   [{label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#a78bfa',sub:todayCnt+'건'},
    {label:'오늘 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:'식재료'},
-   {label:'오늘 순이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
+   {label:'공제이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
    {label:'평균 객단가',val:'₩'+avgOrder.toLocaleString(),color:'#f59e0b',sub:'건당 평균'}
   ].map(function(s){
    return '<div class="kpi-card card-hover" style="text-align:center;padding:14px 10px">'+
@@ -421,12 +421,16 @@ function _filoRenderMarginAnalysis(did,ym){
   }
 
   /* 인건비 vs 매출 비율 */
+  var noCostWarn=Object.keys(costMap).length===0&&totalRev>0?
+  '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;font-size:12px;color:#b45309;font-weight:600">'+
+  '원가 미등록 — 원가 등록 탭에서 메뉴별 원가를 입력해야 마진율이 정확히 계산됩니다</div>':'';
+  html+=noCostWarn;
   html+='<div class="card">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">원가 구조 분석</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'+
   [
    {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
-   {label:'순이익',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
+   {label:'공제이익(식재료)',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
    {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'달성':'주의',c:totalProfit>=0?'#22c55e':'#ef4444'}
   ].map(function(s){
    return '<div style="background:var(--b3);border-radius:12px;padding:14px 10px">'+
@@ -434,7 +438,9 @@ function _filoRenderMarginAnalysis(did,ym){
    '<div style="font-size:16px;font-weight:900;color:'+s.c+'">'+s.val+'</div>'+
    '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.sub+'</div></div>';
   }).join('')+
-  '</div></div>';
+  '</div>'+
+  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">※ 식재료 원가만 공제 기준. 인건비·임차료 미포함</div>'+
+  '</div>';
 
   content.innerHTML=html;
  }).catch(function(e){
@@ -443,36 +449,241 @@ function _filoRenderMarginAnalysis(did,ym){
  });
 }
 
-/* ── 원가 등록 탭 ── */
+/* ── AI 인사이트 탭 (메뉴 엔지니어링 + 원가율 벤치마크 + AI 분석) ── */
+window._filoMarginBizType = window._filoMarginBizType || 'general';
+
+var _MARGIN_BENCH = {
+  cafe:     {name:'카페/베이커리',    low:25,high:35,prime:60},
+  korean:   {name:'한식당',           low:35,high:45,prime:65},
+  japanese: {name:'일식/횟집',        low:40,high:55,prime:65},
+  chinese:  {name:'중식당',           low:32,high:42,prime:65},
+  fastfood: {name:'패스트푸드/분식',  low:30,high:40,prime:62},
+  izakaya:  {name:'이자카야/술집',    low:25,high:35,prime:60},
+  general:  {name:'일반 외식업',      low:30,high:45,prime:65}
+};
+
 function _filoRenderInsights(did,ym){
  var content=document.getElementById('mg-content');
  if(!content)return;
- var start=ym+'-01',end=ym+'-31';
- Promise.all([
-  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('menu_costs').where('dealerId','==',did).get()
- ]).then(function(res){
-  var rev=0,cost=0,posRev=0;
-  res[0].forEach(function(d){rev+=d.data().revenue||0;cost+=d.data().cost||0;});
-  res[1].forEach(function(d){posRev+=d.data().total||0;});
-  var costMap={};res[2].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
-  var margin=rev>0?Math.round((rev-cost)/rev*100):0;
-  var insights=[];
-  if(margin<40)insights.push({icon:'[!]',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
-  else if(margin>=60)insights.push({icon:'↑',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
-  if(posRev>0&&rev===0)insights.push({icon:'[i]',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
-  if(Object.keys(costMap).length===0)insights.push({icon:'[설정]',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(201,168,76,.08)',border:'rgba(201,168,76,.25)'});
-  if(!insights.length)insights.push({icon:'[목표]',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
-  content.innerHTML='<div style="max-width:700px">'+
-  insights.map(function(ins){
-   return '<div class="insight-card" style="background:'+ins.color+';border-color:'+ins.border+'">'+
-   '<div class="insight-icon">'+ins.icon+'</div>'+
-   '<div><div style="font-size:13px;font-weight:800;margin-bottom:4px">'+ins.title+'</div>'+
-   '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+ins.desc+'</div></div></div>';
-  }).join('')+'</div>';
+ var biz=window._filoMarginBizType||'general';
+ var bench=_MARGIN_BENCH[biz]||_MARGIN_BENCH.general;
+
+ /* 스켈레톤 */
+ content.innerHTML=
+  '<div style="padding:8px 0 16px">'
+  +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px">업종 선택 (벤치마크 기준)</div>'
+  +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
+  +Object.keys(_MARGIN_BENCH).map(function(k){
+   var act=k===biz;
+   return '<button onclick="window._filoMarginBizType=\''+k+'\';_filoRenderInsights(\''+did+'\',\''+ym+'\')" '
+    +'style="padding:5px 12px;border-radius:20px;border:1.5px solid '+(act?'#6366f1':'rgba(0,0,0,.12)')+';background:'+(act?'#6366f1':'transparent')+';color:'+(act?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+esc(_MARGIN_BENCH[k].name)+'</button>';
+  }).join('')
+  +'</div>'
+  +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;padding:10px 14px;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.15);border-radius:12px">'
+  +'<div style="width:8px;height:8px;border-radius:50%;background:#6366f1;animation:pulse 2s infinite"></div>'
+  +'<span style="font-size:12px;color:#6366f1;font-weight:600">AI 마진 분석 중...</span>'
+  +'</div>'
+  +'</div>';
+
+ _aiPost('/api/ai-margin-analysis',{did:did,ym:ym,businessType:biz}).then(function(r){
+  if(!content.isConnected)return;
+  var b=r.ok?r.bench:bench;
+  var foodCostPct=r.ok?r.foodCostPct:0;
+  var primeCost=r.ok?r.primeCost:0;
+  var laborCostPct=r.ok?r.laborCostPct:0;
+  var menuEngineering=r.ok?(r.menuEngineering||[]):[];
+  var unregistered=r.ok?(r.unregistered||[]):[];
+  var hasCostData=r.ok?r.hasCostData:false;
+  var totalRev=r.ok?r.totalRev:0;
+  var aiNarrative=r.ok?r.aiNarrative:'';
+  var aiPowered=r.ok?r.aiPowered:false;
+
+  var html='<div style="padding:4px 0">';
+
+  /* 업종 선택 버튼 */
+  html+='<div style="font-size:11px;color:var(--t3);margin-bottom:8px">업종 선택 (벤치마크 기준)</div>'
+   +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">'
+   +Object.keys(_MARGIN_BENCH).map(function(k){
+    var act=k===biz;
+    return '<button onclick="window._filoMarginBizType=\''+k+'\';_filoRenderInsights(\''+esc(did)+'\',\''+esc(ym)+'\')" '
+     +'style="padding:5px 12px;border-radius:20px;border:1.5px solid '+(act?'#6366f1':'rgba(0,0,0,.12)')+';background:'+(act?'#6366f1':'transparent')+';color:'+(act?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+esc(_MARGIN_BENCH[k].name)+'</button>';
+   }).join('')
+   +'</div>';
+
+  /* ① 식재료 원가율 게이지 */
+  var gaugeColor=foodCostPct>b.high?'#ef4444':foodCostPct<b.low?'#3b82f6':'#22c55e';
+  var gaugeStatus=foodCostPct>b.high?'위험':foodCostPct<b.low?'양호':'정상';
+  var gaugePct=Math.min(foodCostPct,100);
+  html+='<div class="card" style="margin-bottom:12px">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+   +'<div style="font-size:13px;font-weight:800">식재료 원가율</div>'
+   +'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+gaugeColor+'22;color:'+gaugeColor+'">'+gaugeStatus+'</span>'
+   +'</div>'
+   +'<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:12px">'
+   +'<div style="font-size:40px;font-weight:900;color:'+gaugeColor+';letter-spacing:-2px">'+(hasCostData?foodCostPct:'—')+'<span style="font-size:18px">%</span></div>'
+   +'<div style="flex:1">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">업종 기준: '+b.low+'~'+b.high+'% ('+esc(b.name)+')</div>'
+   +'<div style="height:10px;background:var(--b3);border-radius:5px;position:relative;overflow:visible">'
+   +'<div style="position:absolute;left:0;top:0;height:100%;width:'+gaugePct+'%;background:'+gaugeColor+';border-radius:5px;transition:.6s"></div>'
+   +'<div style="position:absolute;top:-4px;height:18px;width:2px;background:#3b82f6;border-radius:1px;left:'+b.low+'%"></div>'
+   +'<div style="position:absolute;top:-4px;height:18px;width:2px;background:#ef4444;border-radius:1px;left:'+Math.min(b.high,100)+'%"></div>'
+   +'</div>'
+   +'<div style="display:flex;justify-content:space-between;margin-top:5px">'
+   +'<span style="font-size:9px;color:#3b82f6">하한 '+b.low+'%</span>'
+   +'<span style="font-size:9px;color:#ef4444">상한 '+b.high+'%</span>'
+   +'</div>'
+   +'</div>'
+   +'</div>';
+
+  /* Prime Cost 섹션 */
+  var primeColor=primeCost>b.prime?'#ef4444':'#22c55e';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">'
+   +'<div style="background:var(--b3);border-radius:12px;padding:12px;text-align:center">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">인건비율</div>'
+   +'<div style="font-size:20px;font-weight:900;color:#a78bfa">'+(laborCostPct||'—')+'<span style="font-size:12px">%</span></div>'
+   +'</div>'
+   +'<div style="background:var(--b3);border-radius:12px;padding:12px;text-align:center">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">프라임코스트 (목표 '+b.prime+'% 이하)</div>'
+   +'<div style="font-size:20px;font-weight:900;color:'+primeColor+'">'+(hasCostData?primeCost:'—')+'<span style="font-size:12px">%</span></div>'
+   +'</div>'
+   +'</div>'
+   +'<div style="font-size:10px;color:var(--t3);margin-top:6px">※ 프라임코스트 = 식재료원가율 + 인건비율. '+b.prime+'% 초과 시 수익성 악화 위험</div>'
+   +'</div>';
+
+  /* ② 원가 미등록 메뉴 경고 */
+  if(unregistered.length){
+   html+='<div class="card" style="margin-bottom:12px;border-left:3px solid #f59e0b">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    +'<div style="font-size:13px;font-weight:800;color:#b45309">원가 미등록 메뉴 ('+unregistered.length+'개)</div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px">아래 메뉴는 판매 중이나 원가가 없어 마진율이 과다 계상됩니다</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+    +unregistered.slice(0,10).map(function(nm){
+     return '<span style="padding:4px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:20px;font-size:11px;font-weight:700;color:#b45309">'+esc(nm)+'</span>';
+    }).join('')
+    +(unregistered.length>10?'<span style="font-size:10px;color:var(--t3);align-self:center">외 '+(unregistered.length-10)+'개</span>':'')
+    +'</div>'
+    +'<button onclick="_filoMgTab(1)" style="margin-top:12px;padding:7px 16px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">원가 등록 탭으로 이동</button>'
+    +'</div>';
+  }
+
+  /* ③ 메뉴 엔지니어링 매트릭스 */
+  if(menuEngineering.length){
+   var cats={star:[],plowhorse:[],puzzle:[],dog:[]};
+   menuEngineering.forEach(function(m){cats[m.category]&&cats[m.category].push(m);});
+   var CAT_DEF=[
+    {key:'star',      label:'Star',       sub:'고공헌·고인기',  color:'#22c55e', bg:'rgba(34,197,94,.08)',  desc:'판매 확대·홍보 집중'},
+    {key:'plowhorse', label:'Plow Horse', sub:'저공헌·고인기',  color:'#3b82f6', bg:'rgba(59,130,246,.08)', desc:'원가 절감 또는 가격 인상'},
+    {key:'puzzle',    label:'Puzzle',     sub:'고공헌·저인기',  color:'#a78bfa', bg:'rgba(167,139,250,.08)',desc:'홍보·배치로 판매 자극'},
+    {key:'dog',       label:'Dog',        sub:'저공헌·저인기',  color:'#ef4444', bg:'rgba(239,68,68,.08)',  desc:'가격 조정 또는 메뉴 정리'},
+   ];
+   html+='<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">메뉴 엔지니어링 매트릭스</div>'
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px">Kasavana &amp; Smith 기준 — 공헌이익(단가-원가) × 판매량으로 분류</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +CAT_DEF.map(function(cat){
+     var items=cats[cat.key]||[];
+     return '<div style="background:'+cat.bg+';border:1.5px solid '+cat.color+'33;border-radius:14px;padding:12px">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+cat.color+'"></div>'
+      +'<span style="font-size:12px;font-weight:900;color:'+cat.color+'">'+cat.label+'</span>'
+      +'<span style="font-size:10px;color:var(--t3)">'+cat.sub+'</span>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-bottom:8px">'+cat.desc+'</div>'
+      +(items.length
+       ?items.slice(0,4).map(function(m){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid '+cat.color+'22">'
+         +'<span style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">'+esc(m.name)+'</span>'
+         +'<span style="font-size:10px;color:'+cat.color+';font-weight:800;white-space:nowrap">+₩'+m.cmPer.toLocaleString()+'</span>'
+         +'</div>';
+       }).join('')+(items.length>4?'<div style="font-size:10px;color:var(--t3);margin-top:4px">외 '+(items.length-4)+'개</div>':'')
+       :'<div style="font-size:11px;color:var(--t3);padding:8px 0">해당 메뉴 없음</div>'
+      )
+      +'</div>';
+    }).join('')
+    +'</div></div>';
+  }
+
+  /* ④ 메뉴별 원가율 테이블 */
+  if(menuEngineering.length){
+   var topMenus=menuEngineering.slice(0,10);
+   html+='<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:12px">메뉴별 원가율 상세</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 50px 60px 54px;gap:4px;padding-bottom:8px;border-bottom:1px solid var(--bd)">'
+    +['메뉴','판매','공헌이익','원가율'].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')
+    +'</div>'
+    +topMenus.map(function(m){
+     var tl=m.costPct<=35?'#22c55e':m.costPct<=50?'#f59e0b':'#ef4444';
+     var cat=m.category;
+     var catLabel={star:'★',plowhorse:'➔',puzzle:'?',dog:'✕'}[cat]||'';
+     return '<div style="display:grid;grid-template-columns:1fr 50px 60px 54px;gap:4px;padding:8px 0;border-bottom:1px solid var(--bd);align-items:center">'
+      +'<div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +'<span style="color:'+{star:'#22c55e',plowhorse:'#3b82f6',puzzle:'#a78bfa',dog:'#ef4444'}[cat]+';margin-right:3px">'+catLabel+'</span>'
+      +esc(m.name)+'</div>'
+      +'<div style="font-size:11px;font-weight:700;text-align:right">'+m.qty+'개</div>'
+      +'<div style="font-size:11px;font-weight:800;text-align:right;color:'+(m.cm>=0?'#22c55e':'#ef4444')+'">₩'+m.cm.toLocaleString()+'</div>'
+      +'<div style="text-align:right"><span style="font-size:11px;font-weight:800;padding:2px 6px;border-radius:6px;background:'+tl+'22;color:'+tl+'">'+m.costPct+'%</span></div>'
+      +'</div>';
+    }).join('')
+    +(menuEngineering.length>10?'<div style="font-size:10px;color:var(--t3);padding:8px 0">외 '+(menuEngineering.length-10)+'개</div>':'')
+    +'<div style="display:flex;gap:10px;margin-top:8px">'
+    +[['#22c55e','원가율 35% 이하 (우수)'],['#f59e0b','35~50% (보통)'],['#ef4444','50% 초과 (위험)']].map(function(l){
+     return '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:'+l[0]+'"></div><span style="font-size:9px;color:var(--t3)">'+l[1]+'</span></div>';
+    }).join('')
+    +'</div></div>';
+  }
+
+  /* ⑤ BEP 계산기 */
+  html+='<div class="card" style="margin-bottom:12px">'
+   +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">손익분기점(BEP) 계산기</div>'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px">월 고정비 입력 시 최소 매출 목표 자동 계산</div>'
+   +'<div style="display:flex;gap:8px;align-items:center">'
+   +'<input id="bep-fixed" type="number" placeholder="월 고정비 (원)" '
+   +'style="flex:1;padding:9px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;font-size:13px;color:var(--tx)" '
+   +'oninput="_filoCalcBEP('+foodCostPct+')">'
+   +'<span style="font-size:12px;color:var(--t3)">원</span>'
+   +'</div>'
+   +'<div id="bep-result" style="margin-top:10px;font-size:13px;color:var(--t3)">고정비를 입력하면 BEP가 계산됩니다</div>'
+   +'</div>';
+
+  /* ⑥ AI 분석 카드 */
+  html+='<div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(167,139,250,.06));border:1.5px solid rgba(99,102,241,.2)">'
+   +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+   +'<div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#a78bfa);display:flex;align-items:center;justify-content:center">'
+   +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>'
+   +'</div>'
+   +'<div>'
+   +'<div style="font-size:13px;font-weight:800">AI 마진 분석</div>'
+   +'<div style="font-size:10px;color:var(--t3)">'+(aiPowered?'Claude Haiku 분석':'자동 분석')+'</div>'
+   +'</div>'
+   +'</div>'
+   +'<div style="font-size:13px;line-height:1.8;color:var(--t2)">'+esc(aiNarrative||'원가 데이터를 등록하면 AI 분석이 활성화됩니다.')+'</div>'
+   +'<button onclick="_filoRenderInsights(\''+esc(did)+'\',\''+esc(ym)+'\')" '
+   +'style="margin-top:12px;padding:7px 16px;background:linear-gradient(135deg,#6366f1,#a78bfa);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">다시 분석</button>'
+   +'</div>';
+
+  html+='</div>';
+  content.innerHTML=html;
+ }).catch(function(e){
+  content.innerHTML='<div style="padding:20px;color:var(--red)">분석 오류: '+esc(e.message)+'</div>';
  });
 }
+
+/* BEP 계산 헬퍼 */
+function _filoCalcBEP(foodCostPct){
+ var fixedEl=document.getElementById('bep-fixed');
+ var resultEl=document.getElementById('bep-result');
+ if(!fixedEl||!resultEl)return;
+ var fixed=parseFloat(fixedEl.value)||0;
+ if(!fixed){resultEl.textContent='고정비를 입력하면 BEP가 계산됩니다';return;}
+ var pct=foodCostPct>0?foodCostPct:40;
+ var bep=Math.round(fixed/(1-pct/100));
+ var color=bep>0?'#6366f1':'#ef4444';
+ resultEl.innerHTML='<span style="font-weight:800;color:'+color+'">BEP: ₩'+bep.toLocaleString()+'</span>'
+  +' <span style="color:var(--t3);font-size:11px">/ 월 (식재료원가율 '+pct+'% 기준)</span>';
+}
+window._filoCalcBEP=_filoCalcBEP;
 
 /* ══════════════════════════════════════════════════════
  * AI 어시스턴트 모듈 (구 filo-ai.js 통합 — 2026-08-04)
@@ -770,9 +981,9 @@ function _filoPageMargin(el){
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
   {id:'kpi-cost',label:'이번달 원가',color:'#f59e0b',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>'},
-  {id:'kpi-profit',label:'순이익',color:'#10b981',
+  {id:'kpi-profit',label:'공제이익(식재료)',color:'#10b981',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'},
-  {id:'kpi-margin',label:'마진율',color:'#0ea5e9',
+  {id:'kpi-margin',label:'식재료 마진율',color:'#0ea5e9',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>'},
  ];
 
