@@ -832,7 +832,7 @@ function _staffLoadAvg(did,sid,today){
    {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
    {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:startStr}}},
    {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:todayStr}}}
-  ]}}}}})
+  ]}}}})})
  .then(function(r){return r.json();}).then(function(docs){
   var attDocs=Array.isArray(docs)?docs.filter(function(d){return d.document;}).map(function(d){return d.document.fields;}):[];
   var attMap={};
