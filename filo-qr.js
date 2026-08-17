@@ -429,14 +429,11 @@ function _filoQRPrintBuild(allCards,storeName){
    '<div class="gold-top"></div>'+
    '<div class="tbl-big">'+numOnly+'</div>'+
    '<div class="header">'+
-   (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
-   '<div class="divider"><div class="dline"></div><span class="ddot">✦</span><div class="dline"></div></div>'+
+   (storeName?'<div class="store-name">'+storeName+'</div>':'')+
    '<div class="brand"><span class="bf">FILO</span><span class="bdot">✦</span><span class="bd">DINE</span></div>'+
-   '<div class="sub">Scan to Order · Menu &amp; Pay</div>'+
    '</div>'+
-   '<div class="sep"></div>'+
    '<div class="qr-wrap"><div class="qr-box"><img src="'+c.src+'" class="qr-img"></div></div>'+
-   '<div class="footer"><p>powered by FILO · dine.ne.kr</p></div>'+
+   '<div class="footer"><p>Scan to Order · powered by FILO</p></div>'+
    '<div class="gold-bot"></div>'+
    '</div>';
  }
@@ -466,22 +463,16 @@ function _filoQRPrintBuild(allCards,storeName){
   '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
   '.tbl-big{position:absolute;top:8px;left:12px;font-size:52px;font-weight:900;color:#C9A84C;line-height:1;z-index:10;'+
   'text-shadow:0 0 18px rgba(201,168,76,.35);letter-spacing:-2px;font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif}'+
-  '.header{padding:10px 14px 5px;text-align:center;position:relative;z-index:1;flex-shrink:0}'+
-  '.rest-label{font-size:7px;color:rgba(201,168,76,.65);letter-spacing:3px;font-weight:500;margin-bottom:3px}'+
-  '.store-name{font-size:15px;font-weight:900;color:#fff;letter-spacing:3px;line-height:1.1;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
-  '.divider{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:4px}'+
-  '.dline{height:1px;width:20px;background:rgba(201,168,76,.5)}'+
-  '.ddot{color:#C9A84C;font-size:7px}'+
-  '.brand{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:2px}'+
-  '.bf{font-size:9px;font-weight:800;color:#00CFFF;letter-spacing:2px}'+
-  '.bd{font-size:9px;font-weight:800;color:#00E890;letter-spacing:2px}'+
-  '.bdot{color:rgba(201,168,76,.7);font-size:7px}'+
-  '.sub{font-size:6px;color:rgba(255,255,255,.3);letter-spacing:1.5px}'+
-  '.sep{margin:0 12px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);flex-shrink:0}'+
-  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:4px 0 6px;position:relative;z-index:1}'+
-  '.qr-box{background:#fff;border-radius:8px;padding:7px;display:inline-block}'+
-  '.qr-img{width:180px;height:180px;display:block}'+
-  '.footer{text-align:center;padding:2px 0 8px;position:relative;z-index:1;flex-shrink:0}'+
+  '.header{padding:6px 14px 4px;text-align:center;position:relative;z-index:1;flex-shrink:0}'+
+  '.store-name{font-size:12px;font-weight:900;color:#fff;letter-spacing:2px;line-height:1.1;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.brand{display:flex;align-items:center;justify-content:center;gap:4px}'+
+  '.bf{font-size:8px;font-weight:800;color:#00CFFF;letter-spacing:2px}'+
+  '.bd{font-size:8px;font-weight:800;color:#00E890;letter-spacing:2px}'+
+  '.bdot{color:rgba(201,168,76,.7);font-size:6px}'+
+  '.qr-wrap{flex:1;display:flex;align-items:stretch;justify-content:center;padding:5px 8px 3px;position:relative;z-index:1}'+
+  '.qr-box{background:#fff;border-radius:8px;padding:6px;width:100%;display:flex;align-items:center;justify-content:center}'+
+  '.qr-img{width:100%;height:auto;display:block;aspect-ratio:1/1;object-fit:contain}'+
+  '.footer{text-align:center;padding:3px 0 6px;position:relative;z-index:1;flex-shrink:0}'+
   '.footer p{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px}'+
   '@media print{.no-print{display:none!important}body{background:#fff}.a4-page{margin:0;box-shadow:none}}'+
   '</style></head>'+
