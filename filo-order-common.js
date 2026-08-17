@@ -236,47 +236,68 @@ function _renderCatBar(menus, barId, gridId){
 }
 
 // ── 카드 번역 적용 ────────────────────────────────────────────────────────────
+// 카드 1개 번역 결과 반영
+function _applyOneTr(trId, origName, tr){
+ var e=document.getElementById(trId);
+ if(!e) return;
+ var card=e.closest?e.closest('.mi'):null;
+ var nameEl=card?card.querySelector('[data-orig]'):null;
+ if(nameEl) nameEl.textContent=(tr&&tr!==origName&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr))?tr:origName;
+ e.textContent='';
+}
+
 function _applyTranslationsToGrid(menus){
  if(_lang==='ko') return;
+ var lang=_lang;
+ var needApi=[];
  menus.forEach(function(m){
   var trId='tr-'+_menuSlug(m.name);
   var el=document.getElementById(trId);
   if(!el) return;
-  // 해당 카드의 메인 이름 엘리먼트 찾기 (data-orig 속성으로 식별)
   var card=el.closest?el.closest('.mi'):null;
   var nameEl=card?card.querySelector('[data-orig]'):null;
-  var ck=m.name+'_'+_lang;
+  var ck=m.name+'_'+lang;
+  // 1) 세션 캐시 → 즉시 반영
   if(_tlCache[ck]){
-   if(nameEl)nameEl.textContent=_tlCache[ck];
+   if(nameEl) nameEl.textContent=_tlCache[ck];
    el.textContent='';
    return;
   }
-  if(m.nameTranslations&&m.nameTranslations[_lang]){
-   var saved=m.nameTranslations[_lang];
-   if(saved&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
+  // 2) Firestore 저장 번역 (유효한 것만)
+  if(m.nameTranslations&&m.nameTranslations[lang]){
+   var saved=m.nameTranslations[lang];
+   if(saved&&saved!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(saved)){
     _tlCache[ck]=saved;
-    if(nameEl)nameEl.textContent=saved;
+    if(nameEl) nameEl.textContent=saved;
     el.textContent='';
     return;
    }
   }
-  // API 번역
-  fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({name:m.name,lang:_lang})})
+  // 3) API 필요 — 로딩 점 표시
+  el.textContent='···';
+  needApi.push({m:m,trId:trId,ck:ck});
+ });
+ if(!needApi.length) return;
+
+ // 개별 병렬 호출 (5초 타임아웃) — KV캐시 덕분에 2번째 방문부터 즉시 반환
+ needApi.forEach(function(item){
+  var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
+  var tid=ctrl?setTimeout(function(){ctrl.abort();},5000):null;
+  var fetchOpts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:item.m.name,lang:lang})};
+  if(ctrl) fetchOpts.signal=ctrl.signal;
+  fetch('/api/translate',fetchOpts)
   .then(function(r){return r.json();})
   .then(function(d){
-   var tr=d.translated;
-   if(tr&&tr!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-    _tlCache[ck]=tr;
-    var e2=document.getElementById(trId);
-    if(e2){
-     var card2=e2.closest?e2.closest('.mi'):null;
-     var nameEl2=card2?card2.querySelector('[data-orig]'):null;
-     if(nameEl2)nameEl2.textContent=tr;
-     e2.textContent='';
-    }
-   }
-  }).catch(function(){});
+   if(ctrl&&tid) clearTimeout(tid);
+   if(_lang!==lang) return;
+   var tr=(d.translated||'').trim();
+   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)) _tlCache[item.ck]=tr;
+   _applyOneTr(item.trId, item.m.name, _tlCache[item.ck]||'');
+  })
+  .catch(function(){
+   if(_lang!==lang) return;
+   _applyOneTr(item.trId, item.m.name, ''); // 실패 시 원문 복원
+  });
  });
 }
 
@@ -348,7 +369,7 @@ function _openMdlCommon(m){
  if(_lang!=='ko'){
   var ck=m.name+'_'+_lang;
   if(_tlCache[ck]){if(trEl)trEl.textContent=_tlCache[ck];}
-  else if(m.nameTranslations&&m.nameTranslations[_lang]){
+  else if(m.nameTranslations&&m.nameTranslations[_lang]&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(m.nameTranslations[_lang])){
    _tlCache[ck]=m.nameTranslations[_lang];
    if(trEl)trEl.textContent=m.nameTranslations[_lang];
   } else {
@@ -357,9 +378,10 @@ function _openMdlCommon(m){
     body:JSON.stringify({name:m.name,lang:_lang})})
    .then(function(r){return r.json();})
    .then(function(d){
-    var t=d.translated||m.name;
-    _tlCache[ck]=t;
-    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=t;
+    var t=d.translated;
+    var valid=t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t);
+    _tlCache[ck]=valid?t:'';
+    if(_curMdlMenu&&_curMdlMenu.name===m.name&&trEl)trEl.textContent=valid?t:'';
    }).catch(function(){if(trEl)trEl.textContent='';});
   }
   // 설명 번역

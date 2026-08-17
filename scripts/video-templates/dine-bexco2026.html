@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>DINE BEXCO 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1280px;height:720px;overflow:hidden;font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#08101f;}
+.slide{position:absolute;inset:0;display:none;width:1280px;height:720px;background:#fff;overflow:hidden;}
+.slide.on{display:flex;}
+
+/* ── Particle canvas ── */
+#bg0{position:absolute;inset:0;z-index:0;}
+
+/* ── Visibility system ── */
+.v{opacity:0;transform:translateY(28px);transition:opacity .6s,transform .6s cubic-bezier(.25,.8,.25,1);}
+.v.vis{opacity:1;transform:none;}
+.vl{opacity:0;transform:translateX(-40px);transition:opacity .55s,transform .55s cubic-bezier(.25,.8,.25,1);}
+.vl.vis{opacity:1;transform:none;}
+.vr{opacity:0;transform:translateX(40px);transition:opacity .55s,transform .55s cubic-bezier(.25,.8,.25,1);}
+.vr.vis{opacity:1;transform:none;}
+.vs{opacity:0;transform:scale(.88);transition:opacity .5s,transform .5s cubic-bezier(.34,1.56,.64,1);}
+.vs.vis{opacity:1;transform:scale(1);}
+
+/* ── Letter spring ── */
+.ll{display:inline-block;opacity:0;transform:translateY(-90px) rotate(-18deg) scale(.4);
+  transition:opacity .55s calc(var(--i)*.12s + .05s),transform .72s calc(var(--i)*.12s + .05s) cubic-bezier(.34,2,.64,1);}
+.ll.vis{opacity:1;transform:none;}
+
+/* ── Clip-path wipe ── */
+.wipe{clip-path:inset(0 100% 0 0);transition:clip-path .75s cubic-bezier(.77,0,.175,1);}
+.wipe.vis{clip-path:inset(0 0% 0 0);}
+
+/* ── Glow ring ── */
+.gring{position:absolute;border-radius:50%;border:2px solid rgba(109,40,217,.22);
+  top:50%;left:50%;transform:translate(-50%,-50%);animation:glowRing 3s ease-in-out infinite;pointer-events:none;}
+@keyframes glowRing{0%,100%{opacity:.3;transform:translate(-50%,-50%) scale(1);}50%{opacity:.6;transform:translate(-50%,-50%) scale(1.05);}}
+
+/* ── shimmer ── */
+.shim::after{content:'';position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  animation:shimSweep 2.8s ease-in-out 1.2s infinite;pointer-events:none;}
+@keyframes shimSweep{0%{transform:translateX(-100%) skewX(-15deg);}100%{transform:translateX(500%) skewX(-15deg);}}
+
+/* ── countFlash ── */
+@keyframes countFlash{0%{color:#08101f;text-shadow:none;}40%{color:#6d28d9;text-shadow:0 0 24px rgba(109,40,217,.85),0 0 48px rgba(109,40,217,.4);}100%{color:#08101f;text-shadow:none;}}
+
+/* ── badge pop ── */
+@keyframes badgePop{0%{transform:scale(0) rotate(10deg);}65%{transform:scale(1.1) rotate(-3deg);}82%{transform:scale(.95);}100%{transform:scale(1) rotate(0);}}
+@keyframes notifBounce{0%{transform:translateY(-20px);opacity:0;}65%{transform:translateY(4px);opacity:1;}82%{transform:translateY(-2px);}100%{transform:translateY(0);opacity:1;}}
+@keyframes kdsSlide{from{transform:translateX(42px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* ── CTA border ── */
+@keyframes ctaBdr{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* ── bar grow ── */
+@keyframes barGrow{from{height:0;}to{height:var(--h);}}
+
+/* ── pulse ── */
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+
+/* ── S0 HERO ── */
+#s0{align-items:center;justify-content:center;flex-direction:column;gap:0;position:relative;}
+#s0 .hero-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;}
+#s0 .logo-wrap{position:relative;width:240px;height:100px;display:flex;align-items:center;justify-content:center;}
+#s0 .logo-big{font-size:72px;font-weight:900;letter-spacing:-2px;color:#08101f;position:relative;z-index:2;overflow:visible;}
+#s0 .logo-big .ll.pur{color:#6d28d9;}
+#s0 .tagline{font-size:22px;font-weight:700;color:#444;letter-spacing:.5px;margin-top:4px;}
+#s0 .sub{font-size:15px;color:#777;letter-spacing:.8px;text-transform:uppercase;}
+#s0 .stats-row{display:flex;gap:32px;margin-top:24px;}
+#s0 .stat{text-align:center;padding:14px 24px;border-radius:16px;background:rgba(109,40,217,.06);border:1px solid rgba(109,40,217,.15);}
+#s0 .stat .num{font-size:28px;font-weight:900;color:#6d28d9;}
+#s0 .stat .lbl{font-size:13px;color:#666;margin-top:2px;}
+#s0 .pill-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+#s0 .pill{font-size:13px;font-weight:600;padding:7px 18px;border-radius:999px;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);color:#6d28d9;}
+
+/* ── S1 Multi-store ── */
+#s1{flex-direction:row;align-items:stretch;}
+#s1 .s1-left{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px;gap:18px;background:#fff;}
+#s1 .s1-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);padding:5px 14px;border-radius:999px;margin-bottom:4px;}
+#s1 .s1-ttl{font-size:32px;font-weight:900;line-height:1.2;color:#08101f;}
+#s1 .s1-ttl em{color:#6d28d9;font-style:normal;display:block;}
+#s1 .s1-desc{font-size:15px;color:#555;line-height:1.65;margin-top:4px;}
+#s1 .feat-list{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+#s1 .feat-item{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#333;}
+#s1 .feat-dot{width:8px;height:8px;border-radius:50%;background:#6d28d9;flex-shrink:0;}
+#s1 .s1-right{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;background:#f5f3ff;position:relative;}
+#s1 .dash{background:#fff;border-radius:20px;padding:24px;width:420px;box-shadow:0 8px 32px rgba(109,40,217,.12);}
+#s1 .dash-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+#s1 .dash-title{font-size:14px;font-weight:700;color:#08101f;}
+#s1 .dash-date{font-size:12px;color:#888;background:#f5f3ff;padding:3px 10px;border-radius:999px;}
+#s1 .kpi-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+#s1 .kpi{background:#f9f8ff;border-radius:12px;padding:14px 12px;text-align:center;border:1px solid rgba(109,40,217,.1);}
+#s1 .kpi .kv{font-size:20px;font-weight:900;color:#6d28d9;}
+#s1 .kpi .kl{font-size:11px;color:#888;margin-top:2px;}
+#s1 .store-cards{display:flex;flex-direction:column;gap:8px;}
+#s1 .sc{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9f8ff;border-radius:10px;border:1px solid rgba(109,40,217,.08);}
+#s1 .sc-dot{width:10px;height:10px;border-radius:50%;}
+#s1 .sc-name{font-size:13px;font-weight:700;flex:1;}
+#s1 .sc-rev{font-size:13px;font-weight:700;color:#6d28d9;}
+#s1 .sc-bar-wrap{width:70px;height:6px;background:#e8e4f8;border-radius:3px;overflow:hidden;}
+#s1 .sc-bar{height:6px;border-radius:3px;background:#6d28d9;}
+
+/* ── S2 Sales Analytics ── */
+#s2{flex-direction:row;align-items:stretch;}
+#s2 .s2-left{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px;gap:16px;}
+#s2 .s2-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);padding:5px 14px;border-radius:999px;}
+#s2 .s2-ttl{font-size:32px;font-weight:900;line-height:1.2;color:#08101f;}
+#s2 .s2-ttl em{color:#6d28d9;font-style:normal;display:block;}
+#s2 .s2-desc{font-size:15px;color:#555;line-height:1.65;}
+#s2 .ai-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(135deg,#6d28d9,#a855f7);border-radius:14px;color:#fff;font-size:14px;font-weight:700;box-shadow:0 4px 20px rgba(109,40,217,.35);margin-top:6px;}
+#s2 .ai-insight{font-size:14px;color:#555;line-height:1.6;background:#f9f8ff;border-left:3px solid #6d28d9;padding:14px 18px;border-radius:0 12px 12px 0;margin-top:4px;}
+#s2 .s2-right{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;background:#f5f3ff;}
+#s2 .chart-card{background:#fff;border-radius:20px;padding:28px;width:440px;box-shadow:0 8px 32px rgba(109,40,217,.12);}
+#s2 .chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+#s2 .chart-ttl{font-size:14px;font-weight:700;color:#08101f;}
+#s2 .chart-leg{display:flex;gap:12px;font-size:11px;color:#888;}
+#s2 .chart-leg span{display:flex;align-items:center;gap:4px;}
+#s2 .chart-leg i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+#s2 .bar-chart{display:flex;align-items:flex-end;gap:8px;height:160px;padding-bottom:4px;border-bottom:2px solid #f0edfc;}
+#s2 .bar-grp{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+#s2 .bar{border-radius:5px 5px 0 0;width:22px;animation:barGrow .8s ease-out both;animation-play-state:paused;}
+#s2 .bar.run{animation-play-state:running;}
+#s2 .bar.cur{background:linear-gradient(180deg,#a855f7,#6d28d9);}
+#s2 .bar.prev{background:#e8e4f8;}
+#s2 .bar-lbl{font-size:10px;color:#aaa;margin-top:6px;}
+#s2 .chart-total{margin-top:16px;display:flex;justify-content:space-between;align-items:center;}
+#s2 .chart-total .ct-num{font-size:24px;font-weight:900;color:#6d28d9;}
+#s2 .chart-total .ct-lbl{font-size:12px;color:#888;}
+#s2 .chart-total .ct-badge{font-size:12px;font-weight:700;color:#10b981;background:#ecfdf5;padding:3px 10px;border-radius:999px;}
+
+/* ── S3 CRM ── */
+#s3{flex-direction:row;align-items:stretch;}
+#s3 .s3-left{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;background:#f5f3ff;}
+#s3 .crm-card{background:#fff;border-radius:20px;padding:28px;width:440px;box-shadow:0 8px 32px rgba(109,40,217,.12);}
+#s3 .crm-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+#s3 .crm-title{font-size:14px;font-weight:700;}
+#s3 .crm-total{font-size:13px;font-weight:800;color:#6d28d9;}
+#s3 .crm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+#s3 .cs{background:#f9f8ff;border-radius:10px;padding:12px;text-align:center;border:1px solid rgba(109,40,217,.1);}
+#s3 .cs-num{font-size:20px;font-weight:900;color:#6d28d9;}
+#s3 .cs-lbl{font-size:11px;color:#888;margin-top:2px;}
+#s3 .seg-title{font-size:12px;font-weight:700;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+#s3 .seg-list{display:flex;flex-direction:column;gap:6px;}
+#s3 .seg-row{display:flex;align-items:center;gap:8px;}
+#s3 .seg-lbl{font-size:12px;font-weight:600;width:60px;flex-shrink:0;}
+#s3 .seg-bar-bg{flex:1;height:8px;background:#f0edfc;border-radius:4px;overflow:hidden;}
+#s3 .seg-bar{height:8px;border-radius:4px;background:linear-gradient(90deg,#a855f7,#6d28d9);transition:width 1.2s cubic-bezier(.25,.8,.25,1);}
+#s3 .seg-pct{font-size:12px;font-weight:700;color:#6d28d9;width:36px;text-align:right;}
+#s3 .s3-right{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px;gap:16px;}
+#s3 .s3-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);padding:5px 14px;border-radius:999px;}
+#s3 .s3-ttl{font-size:32px;font-weight:900;line-height:1.2;}
+#s3 .s3-ttl em{color:#6d28d9;font-style:normal;display:block;}
+#s3 .s3-desc{font-size:15px;color:#555;line-height:1.65;}
+#s3 .benefit-list{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+#s3 .bitem{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:#333;line-height:1.5;}
+#s3 .bicon{width:22px;height:22px;border-radius:6px;background:rgba(109,40,217,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+
+/* ── S4 근태·급여 연동 ── */
+#s4{flex-direction:row;align-items:stretch;}
+#s4 .s4-left{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:52px 44px;gap:16px;}
+#s4 .s4-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);padding:5px 14px;border-radius:999px;}
+#s4 .s4-ttl{font-size:30px;font-weight:900;line-height:1.25;}
+#s4 .s4-ttl em{color:#6d28d9;font-style:normal;display:block;}
+#s4 .s4-desc{font-size:14px;color:#555;line-height:1.65;}
+#s4 .flow-steps{display:flex;flex-direction:column;gap:12px;margin-top:4px;}
+#s4 .flow-step{display:flex;align-items:center;gap:12px;}
+#s4 .fs-num{width:28px;height:28px;border-radius:50%;background:#6d28d9;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+#s4 .fs-txt{font-size:14px;font-weight:700;color:#333;}
+#s4 .fs-sub{font-size:12px;color:#888;}
+#s4 .flow-arrow{width:28px;height:16px;display:flex;align-items:center;justify-content:center;margin-left:14px;}
+#s4 .s4-right{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:28px 24px;background:#f5f3ff;}
+#s4 .attn-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+#s4 .chip{font-size:13px;font-weight:700;padding:7px 16px;border-radius:999px;border:1px solid;}
+#s4 .chip.ok{color:#059669;background:#ecfdf5;border-color:#6ee7b7;}
+#s4 .chip.late{color:#d97706;background:#fffbeb;border-color:#fcd34d;}
+#s4 .chip.absent{color:#dc2626;background:#fef2f2;border-color:#fca5a5;}
+#s4 .chip.done{color:#6d28d9;background:#f5f3ff;border-color:#c4b5fd;}
+#s4 .emp-table{background:#fff;border-radius:14px;padding:16px;width:100%;max-width:460px;box-shadow:0 4px 18px rgba(109,40,217,.1);}
+#s4 .emp-table table{width:100%;border-collapse:collapse;font-size:13px;}
+#s4 .emp-table th{font-weight:700;color:#888;padding:6px 8px;text-align:left;border-bottom:2px solid #f0edfc;font-size:12px;}
+#s4 .emp-table td{padding:8px 8px;border-bottom:1px solid #f9f8ff;color:#333;}
+#s4 .emp-table td:last-child{font-weight:700;color:#6d28d9;text-align:right;}
+#s4 .pay-total{font-size:15px;font-weight:700;color:#333;display:flex;align-items:center;gap:10px;}
+#s4 .pay-num{font-size:28px;font-weight:900;color:#6d28d9;}
+#s4 .kakao-notif{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.12);width:280px;animation:notifBounce .7s cubic-bezier(.34,1.56,.64,1) both;}
+#s4 .kk-hdr{background:#fee500;padding:10px 16px;display:flex;align-items:center;gap:8px;}
+#s4 .kk-logo{width:26px;height:26px;border-radius:8px;background:#3a1d1d;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fee500;font-size:14px;}
+#s4 .kk-app{font-size:12px;font-weight:700;color:#3a1d1d;}
+#s4 .kk-body{padding:14px 16px;}
+#s4 .kk-title{font-size:14px;font-weight:800;color:#08101f;margin-bottom:6px;}
+#s4 .kk-msg{font-size:13px;color:#444;line-height:1.6;}
+#s4 .kk-highlight{color:#6d28d9;font-weight:700;}
+#s4 .kk-btn{margin:10px 0 4px;width:100%;padding:9px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;}
+
+/* ── S5 Real-time Analytics ── */
+#s5{flex-direction:row;align-items:stretch;}
+#s5 .s5-left{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:60px 48px;gap:16px;}
+#s5 .s5-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#6d28d9;background:rgba(109,40,217,.08);border:1px solid rgba(109,40,217,.2);padding:5px 14px;border-radius:999px;}
+#s5 .s5-ttl{font-size:32px;font-weight:900;line-height:1.2;}
+#s5 .s5-ttl em{color:#6d28d9;font-style:normal;display:block;}
+#s5 .s5-desc{font-size:15px;color:#555;line-height:1.65;}
+#s5 .rt-list{display:flex;flex-direction:column;gap:12px;margin-top:8px;}
+#s5 .rt-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9f8ff;border-radius:12px;border-left:4px solid #6d28d9;}
+#s5 .rt-icon{width:32px;height:32px;border-radius:8px;background:rgba(109,40,217,.12);display:flex;align-items:center;justify-content:center;}
+#s5 .rt-info{flex:1;}
+#s5 .rt-name{font-size:13px;font-weight:700;color:#333;}
+#s5 .rt-sub{font-size:12px;color:#888;margin-top:1px;}
+#s5 .rt-val{font-size:15px;font-weight:900;color:#6d28d9;}
+#s5 .s5-right{flex:1;display:flex;align-items:center;justify-content:center;padding:32px;background:#f5f3ff;}
+#s5 .rt-dash{background:#fff;border-radius:20px;padding:28px;width:440px;box-shadow:0 8px 32px rgba(109,40,217,.12);}
+#s5 .rt-hdr{font-size:14px;font-weight:700;color:#08101f;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+#s5 .live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;animation:pulse 1.5s ease-in-out infinite;}
+#s5 .rt-metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+#s5 .rm{background:#f9f8ff;border-radius:12px;padding:16px;border:1px solid rgba(109,40,217,.1);}
+#s5 .rm-num{font-size:24px;font-weight:900;color:#6d28d9;}
+#s5 .rm-lbl{font-size:11px;color:#888;margin-top:2px;}
+#s5 .rm-delta{font-size:12px;font-weight:600;color:#10b981;margin-top:4px;}
+#s5 .trend-row{display:flex;align-items:flex-end;gap:4px;height:60px;border-bottom:1px solid #f0edfc;padding-bottom:4px;}
+#s5 .tr-bar{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,#a855f7,#6d28d9);opacity:.7;}
+#s5 .tr-bar.hi{opacity:1;}
+#s5 .trend-lbr{display:flex;justify-content:space-between;margin-top:6px;}
+#s5 .trend-lbr span{font-size:10px;color:#bbb;}
+
+/* ── S6 CTA ── */
+#s6{align-items:center;justify-content:center;flex-direction:column;gap:24px;position:relative;}
+#s6 .cta-bg{position:absolute;inset:0;background:radial-gradient(ellipse 700px 400px at 50% 60%,rgba(109,40,217,.07) 0%,transparent 70%);pointer-events:none;}
+#s6 .cta-logo{font-size:60px;font-weight:900;color:#08101f;letter-spacing:-2px;position:relative;}
+#s6 .cta-logo span{color:#6d28d9;}
+#s6 .cta-tagline{font-size:26px;font-weight:700;color:#333;text-align:center;line-height:1.4;}
+#s6 .cta-sub{font-size:16px;color:#777;text-align:center;}
+#s6 .cta-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-top:8px;}
+#s6 .ctabdr{position:absolute;inset:-3px;border-radius:56px;background:conic-gradient(from 0deg,#6d28d9,#a855f7,#fff,#6d28d9);animation:ctaBdr 2.5s linear infinite;z-index:0;}
+#s6 .cta-btn{position:relative;z-index:1;padding:18px 54px;background:#6d28d9;color:#fff;border:none;border-radius:52px;font-size:20px;font-weight:800;cursor:pointer;letter-spacing:.3px;}
+#s6 .cta-domain{font-size:18px;font-weight:700;color:#6d28d9;letter-spacing:.5px;margin-top:4px;}
+#s6 .cta-features{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;max-width:760px;margin-top:8px;}
+#s6 .cf-item{font-size:14px;color:#555;display:flex;align-items:center;gap:6px;font-weight:600;}
+#s6 .cf-dot{width:6px;height:6px;border-radius:50%;background:#6d28d9;}
+</style>
+</head>
+<body>
+
+<!-- S0 HERO -->
+<div class="slide on" id="s0">
+  <canvas id="bg0"></canvas>
+  <div class="hero-inner">
+    <div class="logo-wrap">
+      <div class="gring" style="width:160px;height:160px;animation-delay:0s;"></div>
+      <div class="gring" style="width:220px;height:220px;animation-delay:.8s;"></div>
+      <div class="logo-big shim" style="position:relative;">
+        <span class="ll" style="--i:0">D</span><span class="ll" style="--i:1">I</span><span class="ll pur" style="--i:2">N</span><span class="ll pur" style="--i:3">E</span>
+      </div>
+    </div>
+    <div class="tagline v" id="s0tg">다점포 통합 관리 플랫폼</div>
+    <div class="sub v" id="s0sub">MULTI-STORE MANAGEMENT OS · BEXCO 2026</div>
+    <div class="stats-row v" id="s0stats">
+      <div class="stat">
+        <div class="num">3<span style="font-size:18px">초</span></div>
+        <div class="lbl">전점 현황 조회</div>
+      </div>
+      <div class="stat">
+        <div class="num">5<span style="font-size:18px">분</span></div>
+        <div class="lbl">급여 일괄 처리</div>
+      </div>
+      <div class="stat">
+        <div class="num">0<span style="font-size:18px">원</span></div>
+        <div class="lbl">추가 인건비</div>
+      </div>
+    </div>
+    <div class="pill-bar v" id="s0pills">
+      <span class="pill">매출 실시간 집계</span>
+      <span class="pill">FILO 연동</span>
+      <span class="pill">카카오 급여명세서</span>
+      <span class="pill">AI 분석</span>
+      <span class="pill">회원 CRM</span>
+    </div>
+  </div>
+</div>
+
+<!-- S1 Multi-store -->
+<div class="slide" id="s1">
+  <div class="s1-left">
+    <div class="s1-badge vl" id="s1b">01 · 다점포 통합관리</div>
+    <div class="s1-ttl vl" id="s1t">
+      <span class="wipe" id="s1w1">모든 매장을</span>
+      <em class="wipe" id="s1w2">하나의 화면으로</em>
+    </div>
+    <div class="s1-desc vl" id="s1d">10개 매장이든 100개 매장이든, 실시간 매출·주문·직원 현황을 한 눈에 파악하세요. 매장마다 로그인할 필요 없습니다.</div>
+    <div class="feat-list">
+      <div class="feat-item vl" id="s1f1"><span class="feat-dot"></span>실시간 전점 매출 합산</div>
+      <div class="feat-item vl" id="s1f2"><span class="feat-dot"></span>매장별 KPI 비교</div>
+      <div class="feat-item vl" id="s1f3"><span class="feat-dot"></span>이상 감지 즉시 알림</div>
+      <div class="feat-item vl" id="s1f4"><span class="feat-dot"></span>프랜차이즈 본부 전용 뷰</div>
+    </div>
+  </div>
+  <div class="s1-right">
+    <div class="dash vs" id="s1dash">
+      <div class="dash-hdr">
+        <div class="dash-title">전점 현황 대시보드</div>
+        <div class="dash-date">2026.08.11 실시간</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="kv" id="s1kv1">0</div><div class="kl">오늘 총매출</div></div>
+        <div class="kpi"><div class="kv" id="s1kv2">0</div><div class="kl">진행 주문</div></div>
+        <div class="kpi"><div class="kv" id="s1kv3">0</div><div class="kl">근무 직원</div></div>
+      </div>
+      <div class="store-cards">
+        <div class="sc" style="animation:kdsSlide .5s .1s ease-out both;"><span class="sc-dot" style="background:#10b981;"></span><span class="sc-name">해운대본점</span><div class="sc-bar-wrap"><div class="sc-bar" style="width:88%;"></div></div><span class="sc-rev">₩2.4M</span></div>
+        <div class="sc" style="animation:kdsSlide .5s .25s ease-out both;"><span class="sc-dot" style="background:#6d28d9;"></span><span class="sc-name">서면점</span><div class="sc-bar-wrap"><div class="sc-bar" style="width:72%;"></div></div><span class="sc-rev">₩1.8M</span></div>
+        <div class="sc" style="animation:kdsSlide .5s .4s ease-out both;"><span class="sc-dot" style="background:#f59e0b;"></span><span class="sc-name">광안리점</span><div class="sc-bar-wrap"><div class="sc-bar" style="width:61%;"></div></div><span class="sc-rev">₩1.5M</span></div>
+        <div class="sc" style="animation:kdsSlide .5s .55s ease-out both;"><span class="sc-dot" style="background:#3b82f6;"></span><span class="sc-name">남포점</span><div class="sc-bar-wrap"><div class="sc-bar" style="width:48%;"></div></div><span class="sc-rev">₩1.2M</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S2 Sales Analytics -->
+<div class="slide" id="s2">
+  <div class="s2-left">
+    <div class="s2-badge vl" id="s2b">02 · 매출 분석</div>
+    <div class="s2-ttl vl" id="s2t">
+      <span class="wipe" id="s2w1">AI가 분석하는</span>
+      <em class="wipe" id="s2w2">매출 인사이트</em>
+    </div>
+    <div class="s2-desc vl" id="s2d">일·주·월 매출 트렌드를 자동 분석하고, AI가 성수기·비수기 패턴과 최적 운영 시간을 추천합니다.</div>
+    <div class="ai-pill vs" id="s2ai">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 완료
+    </div>
+    <div class="ai-insight vl" id="s2ins">"금요일 저녁 18~21시 매출이 전체의 34% 집중.<br>해당 시간대 직원 2명 추가 배치 권장."</div>
+  </div>
+  <div class="s2-right">
+    <div class="chart-card vs" id="s2chart">
+      <div class="chart-hdr">
+        <div class="chart-ttl">주간 매출 비교</div>
+        <div class="chart-leg">
+          <span><i style="background:#6d28d9;"></i>이번 주</span>
+          <span><i style="background:#e8e4f8;"></i>지난 주</span>
+        </div>
+      </div>
+      <div class="bar-chart" id="s2bars">
+        <div class="bar-grp"><div class="bar prev" style="--h:70px;height:0;"></div><div class="bar cur" style="--h:85px;height:0;"></div><div class="bar-lbl">월</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:60px;height:0;"></div><div class="bar cur" style="--h:72px;height:0;"></div><div class="bar-lbl">화</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:80px;height:0;"></div><div class="bar cur" style="--h:95px;height:0;"></div><div class="bar-lbl">수</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:65px;height:0;"></div><div class="bar cur" style="--h:88px;height:0;"></div><div class="bar-lbl">목</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:110px;height:0;"></div><div class="bar cur" style="--h:140px;height:0;"></div><div class="bar-lbl">금</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:130px;height:0;"></div><div class="bar cur" style="--h:155px;height:0;"></div><div class="bar-lbl">토</div></div>
+        <div class="bar-grp"><div class="bar prev" style="--h:90px;height:0;"></div><div class="bar cur" style="--h:110px;height:0;"></div><div class="bar-lbl">일</div></div>
+      </div>
+      <div class="chart-total">
+        <div><div class="ct-lbl">이번 주 합계</div><div class="ct-num" id="s2total">₩0</div></div>
+        <div class="ct-badge">▲ 18.4% 성장</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S3 CRM -->
+<div class="slide" id="s3">
+  <div class="s3-left">
+    <div class="crm-card vs" id="s3card">
+      <div class="crm-hdr">
+        <div class="crm-title">회원 현황</div>
+        <div class="crm-total" id="s3tot">총 <span id="s3cnt">0</span>명</div>
+      </div>
+      <div class="crm-stats">
+        <div class="cs"><div class="cs-num" id="s3n1">0</div><div class="cs-lbl">신규(7일)</div></div>
+        <div class="cs"><div class="cs-num" id="s3n2">0%</div><div class="cs-lbl">재방문율</div></div>
+        <div class="cs"><div class="cs-num" id="s3n3">0</div><div class="cs-lbl">포인트 사용자</div></div>
+      </div>
+      <div class="seg-title">회원 등급 분포</div>
+      <div class="seg-list">
+        <div class="seg-row"><span class="seg-lbl">VIP</span><div class="seg-bar-bg"><div class="seg-bar" id="sg1" style="width:0%;"></div></div><span class="seg-pct">12%</span></div>
+        <div class="seg-row"><span class="seg-lbl">골드</span><div class="seg-bar-bg"><div class="seg-bar" id="sg2" style="width:0%;"></div></div><span class="seg-pct">28%</span></div>
+        <div class="seg-row"><span class="seg-lbl">실버</span><div class="seg-bar-bg"><div class="seg-bar" id="sg3" style="width:0%;"></div></div><span class="seg-pct">35%</span></div>
+        <div class="seg-row"><span class="seg-lbl">일반</span><div class="seg-bar-bg"><div class="seg-bar" id="sg4" style="width:0%;"></div></div><span class="seg-pct">25%</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="s3-right">
+    <div class="s3-badge vr" id="s3b">03 · 회원 CRM</div>
+    <div class="s3-ttl vr" id="s3t">
+      <span class="wipe" id="s3w1">단골 손님을</span>
+      <em class="wipe" id="s3w2">자동으로 관리</em>
+    </div>
+    <div class="s3-desc vr" id="s3d">전점 회원 데이터를 통합 관리합니다. 등급별 혜택, 포인트, 생일 쿠폰을 자동 발송합니다.</div>
+    <div class="benefit-list">
+      <div class="bitem vr" id="s3b1"><div class="bicon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>전점 통합 포인트 적립·사용</div>
+      <div class="bitem vr" id="s3b2"><div class="bicon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.5a19.79 19.79 0 01-3.07-8.63 2 2 0 012-2.18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg></div>카카오 생일 쿠폰 자동 발송</div>
+      <div class="bitem vr" id="s3b3"><div class="bicon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>이탈 우려 회원 자동 리타게팅</div>
+    </div>
+  </div>
+</div>
+
+<!-- S4 근태·급여 연동 -->
+<div class="slide" id="s4">
+  <div class="s4-left">
+    <div class="s4-badge vl" id="s4b">04 · FILO 근태·급여 연동</div>
+    <div class="s4-ttl vl" id="s4t">
+      <span class="wipe" id="s4w1">QR 출퇴근부터</span>
+      <em class="wipe" id="s4w2">카카오 급여명세서까지</em>
+    </div>
+    <div class="s4-desc vl" id="s4d">FILO에서 수집된 실시간 근태 데이터가 DINE으로 자동 집계됩니다. 시급 계산, 급여 명세서 발송까지 5분.</div>
+    <div class="flow-steps">
+      <div class="flow-step vl" id="s4fs1">
+        <div class="fs-num">1</div>
+        <div><div class="fs-txt">QR 출퇴근 스캔</div><div class="fs-sub">FILO 앱 자동 수집</div></div>
+      </div>
+      <div class="flow-step vl" id="s4fs2">
+        <div class="fs-num">2</div>
+        <div><div class="fs-txt">시급 × 근무시간 자동 계산</div><div class="fs-sub">DINE 연동 실시간 반영</div></div>
+      </div>
+      <div class="flow-step vl" id="s4fs3">
+        <div class="fs-num">3</div>
+        <div><div class="fs-txt">카카오 급여명세서 일괄 발송</div><div class="fs-sub">전 직원 동시 수신</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="s4-right">
+    <div class="attn-chips vs" id="s4chips">
+      <span class="chip ok">출근 18명</span>
+      <span class="chip late">지각 2명</span>
+      <span class="chip absent">결근 1명</span>
+      <span class="chip done">퇴근 7명</span>
+    </div>
+    <div class="emp-table vs" id="s4tbl">
+      <table>
+        <thead><tr><th>직원</th><th>근무시간</th><th>시급</th><th>급여</th></tr></thead>
+        <tbody>
+          <tr><td>김지수</td><td>48h</td><td>₩12,000</td><td>₩576,000</td></tr>
+          <tr><td>박현우</td><td>40h</td><td>₩10,500</td><td>₩420,000</td></tr>
+          <tr><td>이서연</td><td>52h</td><td>₩11,000</td><td>₩572,000</td></tr>
+          <tr><td>최민준</td><td>44h</td><td>₩10,000</td><td>₩440,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pay-total vs" id="s4pay">
+      전직원 급여 합계&nbsp;<span class="pay-num" id="s4paynum">₩0</span>
+    </div>
+    <div class="kakao-notif" id="s4kk" style="opacity:0;">
+      <div class="kk-hdr">
+        <div class="kk-logo">K</div>
+        <div class="kk-app">카카오톡 알림</div>
+      </div>
+      <div class="kk-body">
+        <div class="kk-title">급여명세서 발송 완료</div>
+        <div class="kk-msg">전 직원 <span class="kk-highlight">28명</span>에게<br>이번 달 급여명세서가<br>발송되었습니다.<br>총 급여: <span class="kk-highlight">₩36,820,000</span></div>
+        <button class="kk-btn">명세서 확인하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S5 Real-time -->
+<div class="slide" id="s5">
+  <div class="s5-left">
+    <div class="s5-badge vl" id="s5b">05 · 실시간 현황</div>
+    <div class="s5-ttl vl" id="s5t">
+      <span class="wipe" id="s5w1">지금 이 순간도</span>
+      <em class="wipe" id="s5w2">모든 걸 파악</em>
+    </div>
+    <div class="s5-desc vl" id="s5d">매장에 없어도 괜찮습니다. 실시간 주문, 재고 소진, 직원 근태까지 스마트폰으로 즉시 확인합니다.</div>
+    <div class="rt-list">
+      <div class="rt-item vl" id="s5r1">
+        <div class="rt-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div>
+        <div class="rt-info"><div class="rt-name">진행 주문</div><div class="rt-sub">전점 실시간</div></div>
+        <div class="rt-val" id="s5v1">0건</div>
+      </div>
+      <div class="rt-item vl" id="s5r2">
+        <div class="rt-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+        <div class="rt-info"><div class="rt-name">근무 직원</div><div class="rt-sub">현재 출근 중</div></div>
+        <div class="rt-val" id="s5v2">0명</div>
+      </div>
+      <div class="rt-item vl" id="s5r3">
+        <div class="rt-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+        <div class="rt-info"><div class="rt-name">오늘 매출</div><div class="rt-sub">전점 합산</div></div>
+        <div class="rt-val" id="s5v3">₩0</div>
+      </div>
+    </div>
+  </div>
+  <div class="s5-right">
+    <div class="rt-dash vs" id="s5dash">
+      <div class="rt-hdr"><div class="live-dot"></div> 실시간 모니터링</div>
+      <div class="rt-metrics">
+        <div class="rm"><div class="rm-num" id="s5m1">0</div><div class="rm-lbl">이번 시간 주문</div><div class="rm-delta">▲ 23% 전주 대비</div></div>
+        <div class="rm"><div class="rm-num" id="s5m2">₩0</div><div class="rm-lbl">이번 시간 매출</div><div class="rm-delta">▲ 31% 전주 대비</div></div>
+        <div class="rm"><div class="rm-num" id="s5m3">0%</div><div class="rm-lbl">테이블 점유율</div><div class="rm-delta">해운대본점 기준</div></div>
+        <div class="rm"><div class="rm-num" id="s5m4">0분</div><div class="rm-lbl">평균 대기시간</div><div class="rm-delta">▼ 2분 단축</div></div>
+      </div>
+      <div class="trend-row">
+        <div class="tr-bar" style="height:35%;"></div>
+        <div class="tr-bar" style="height:55%;"></div>
+        <div class="tr-bar" style="height:45%;"></div>
+        <div class="tr-bar" style="height:70%;"></div>
+        <div class="tr-bar" style="height:60%;"></div>
+        <div class="tr-bar hi" style="height:90%;"></div>
+        <div class="tr-bar" style="height:75%;"></div>
+        <div class="tr-bar" style="height:80%;"></div>
+        <div class="tr-bar hi" style="height:100%;"></div>
+        <div class="tr-bar" style="height:65%;"></div>
+        <div class="tr-bar" style="height:55%;"></div>
+        <div class="tr-bar" style="height:40%;"></div>
+      </div>
+      <div class="trend-lbr">
+        <span>08시</span><span>10시</span><span>12시</span><span>14시</span><span>16시</span><span>18시</span><span>20시</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- S6 CTA -->
+<div class="slide" id="s6">
+  <div class="cta-bg"></div>
+  <div class="gring" style="width:500px;height:500px;animation-delay:0s;"></div>
+  <div class="gring" style="width:700px;height:700px;animation-delay:1.2s;"></div>
+  <div class="cta-logo v" id="s6logo">DINE<span>.</span></div>
+  <div class="cta-tagline v" id="s6tg">여러 매장, 하나의 플랫폼<br>지금 바로 시작하세요</div>
+  <div class="cta-sub v" id="s6sub">BEXCO 2026 · 부산 해운대 · 8월 20-22일 · 1홀 C-12</div>
+  <div class="cta-wrap v" id="s6btn">
+    <div class="ctabdr"></div>
+    <button class="cta-btn">무료 체험 신청</button>
+  </div>
+  <div class="cta-domain v" id="s6dom">dine.ai.kr</div>
+  <div class="cta-features v" id="s6feats">
+    <span class="cf-item"><span class="cf-dot"></span>다점포 통합관리</span>
+    <span class="cf-item"><span class="cf-dot"></span>AI 매출 분석</span>
+    <span class="cf-item"><span class="cf-dot"></span>회원 CRM</span>
+    <span class="cf-item"><span class="cf-dot"></span>FILO 근태·급여 연동</span>
+    <span class="cf-item"><span class="cf-dot"></span>카카오 명세서 발송</span>
+    <span class="cf-item"><span class="cf-dot"></span>실시간 모니터링</span>
+  </div>
+</div>
+
+<script>
+var slides=['s0','s1','s2','s3','s4','s5','s6'];
+var cur=0;
+var timers=[];
+function T(fn,d){var id=setTimeout(fn,d);timers.push(id);return id;}
+function clearT(){timers.forEach(clearTimeout);timers=[];}
+
+function show(id,d){T(function(){var e=document.getElementById(id);if(e){e.classList.add('vis');}},d);}
+
+function countUp(el,target,dur,fmt){
+  if(!el)return;
+  var start=performance.now();
+  (function tick(now){
+    var p=Math.min((now-start)/dur,1),ease=1-Math.pow(1-p,3),val=Math.round(target*ease);
+    el.textContent=fmt?fmt(val):val.toLocaleString('ko-KR');
+    if(p<1){requestAnimationFrame(tick);}
+    else{el.style.animation='countFlash 1s ease-out both';}
+  })(start);
+}
+
+function switchSlide(i){
+  clearT();
+  var prev=document.getElementById(slides[cur]);
+  if(prev){
+    prev.classList.remove('on');
+    prev.querySelectorAll('.vis').forEach(function(e){e.classList.remove('vis');});
+    prev.querySelectorAll('.wipe').forEach(function(e){e.classList.remove('vis');});
+    prev.querySelectorAll('.bar').forEach(function(b){b.style.height='0';b.classList.remove('run');});
+  }
+  cur=i;
+  var next=document.getElementById(slides[cur]);
+  if(next){next.classList.add('on');}
+  cbs[slides[cur]]();
+}
+
+window.goNext=function(){if(cur<slides.length-1)switchSlide(cur+1);};
+
+// ── Particle canvas ──
+(function(){
+  var c=document.getElementById('bg0');
+  c.width=1280;c.height=720;
+  var ctx=c.getContext('2d');
+  var pts=[];
+  for(var i=0;i<55;i++){pts.push({x:Math.random()*1280,y:Math.random()*720,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,r:Math.random()*2.5+1});}
+  function frame(){
+    ctx.clearRect(0,0,1280,720);
+    for(var i=0;i<pts.length;i++){
+      var p=pts[i];
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>1280)p.vx*=-1;
+      if(p.y<0||p.y>720)p.vy*=-1;
+      for(var j=i+1;j<pts.length;j++){
+        var q=pts[j],dx=p.x-q.x,dy=p.y-q.y,dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<140){ctx.strokeStyle='rgba(109,40,217,'+(1-dist/140)*.12+')';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();}
+      }
+      ctx.fillStyle='rgba(109,40,217,.5)';
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+var cbs={
+  s0:function(){
+    var lls=document.querySelectorAll('#s0 .ll');
+    lls.forEach(function(l){T(function(){l.classList.add('vis');},80);});
+    show('s0tg',600);show('s0sub',850);show('s0stats',1100);show('s0pills',1400);
+  },
+  s1:function(){
+    show('s1b',100);show('s1t',200);
+    T(function(){var e=document.getElementById('s1w1');if(e)e.classList.add('vis');},300);
+    T(function(){var e=document.getElementById('s1w2');if(e)e.classList.add('vis');},550);
+    show('s1d',700);show('s1f1',900);show('s1f2',1050);show('s1f3',1200);show('s1f4',1350);
+    show('s1dash',400);
+    T(function(){
+      countUp(document.getElementById('s1kv1'),6800000,1200,function(v){return'₩'+(v/10000).toFixed(0)+'만';});
+      countUp(document.getElementById('s1kv2'),47,800);
+      countUp(document.getElementById('s1kv3'),28,800);
+    },600);
+  },
+  s2:function(){
+    show('s2b',100);show('s2t',200);
+    T(function(){var e=document.getElementById('s2w1');if(e)e.classList.add('vis');},300);
+    T(function(){var e=document.getElementById('s2w2');if(e)e.classList.add('vis');},550);
+    show('s2d',700);show('s2ai',900);show('s2ins',1100);
+    show('s2chart',300);
+    T(function(){
+      document.querySelectorAll('#s2bars .bar').forEach(function(b){b.style.height=b.style.getPropertyValue('--h')||'0';b.classList.add('run');});
+      countUp(document.getElementById('s2total'),7840000,1400,function(v){return'₩'+(v/10000).toFixed(0)+'만';});
+    },700);
+  },
+  s3:function(){
+    show('s3card',200);
+    T(function(){
+      countUp(document.getElementById('s3cnt'),2847,1200);
+      countUp(document.getElementById('s3n1'),143,900);
+      var n2=document.getElementById('s3n2');
+      if(n2){var s2=performance.now();(function t(n){var p=Math.min((n-s2)/900,1),ease=1-Math.pow(1-p,3),v=Math.round(68*ease);n2.textContent=v+'%';if(p<1)requestAnimationFrame(t);})(s2);}
+      countUp(document.getElementById('s3n3'),1204,1100);
+      T(function(){
+        document.getElementById('sg1').style.width='12%';
+        document.getElementById('sg2').style.width='28%';
+        document.getElementById('sg3').style.width='35%';
+        document.getElementById('sg4').style.width='25%';
+      },400);
+    },300);
+    show('s3b',100);show('s3t',200);
+    T(function(){var e=document.getElementById('s3w1');if(e)e.classList.add('vis');},300);
+    T(function(){var e=document.getElementById('s3w2');if(e)e.classList.add('vis');},550);
+    show('s3d',700);show('s3b1',900);show('s3b2',1100);show('s3b3',1300);
+  },
+  s4:function(){
+    show('s4b',100);show('s4t',200);
+    T(function(){var e=document.getElementById('s4w1');if(e)e.classList.add('vis');},300);
+    T(function(){var e=document.getElementById('s4w2');if(e)e.classList.add('vis');},550);
+    show('s4d',700);show('s4fs1',900);show('s4fs2',1100);show('s4fs3',1300);
+    show('s4chips',300);show('s4tbl',550);
+    T(function(){
+      countUp(document.getElementById('s4paynum'),12400000,1400,function(v){return'₩'+v.toLocaleString('ko-KR');});
+    },800);
+    show('s4pay',750);
+    T(function(){
+      var kk=document.getElementById('s4kk');
+      if(kk){kk.style.opacity='1';kk.style.animation='notifBounce .7s cubic-bezier(.34,1.56,.64,1) both';}
+    },2200);
+  },
+  s5:function(){
+    show('s5b',100);show('s5t',200);
+    T(function(){var e=document.getElementById('s5w1');if(e)e.classList.add('vis');},300);
+    T(function(){var e=document.getElementById('s5w2');if(e)e.classList.add('vis');},550);
+    show('s5d',700);show('s5r1',900);show('s5r2',1100);show('s5r3',1300);
+    show('s5dash',400);
+    T(function(){
+      countUp(document.getElementById('s5v1'),87,900,function(v){return v+'건';});
+      countUp(document.getElementById('s5v2'),28,900,function(v){return v+'명';});
+      countUp(document.getElementById('s5v3'),6800000,1200,function(v){return'₩'+(v/10000).toFixed(0)+'만';});
+      countUp(document.getElementById('s5m1'),34,800,function(v){return v+'건';});
+      countUp(document.getElementById('s5m2'),4200000,1200,function(v){return'₩'+(v/10000).toFixed(0)+'만';});
+      countUp(document.getElementById('s5m3'),78,900,function(v){return v+'%';});
+      countUp(document.getElementById('s5m4'),8,700,function(v){return v+'분';});
+    },600);
+  },
+  s6:function(){
+    var lls=document.querySelectorAll('#s6 .v');
+    var delays=[100,350,600,800,1000,1250];
+    lls.forEach(function(l,i){T(function(){l.classList.add('vis');},delays[i]||100+i*200);});
+  }
+};
+
+// init
+cbs.s0();
+</script>
+</body>
+</html>

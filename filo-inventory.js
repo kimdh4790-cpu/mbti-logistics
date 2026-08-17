@@ -418,7 +418,7 @@ function _filoInvDashLoad(did) {
           var statusColor = stock<=0?'#ef4444':stock<=min?'#f59e0b':'#059669';
           var statusBg = stock<=0?'rgba(239,68,68,.1)':stock<=min?'rgba(245,158,11,.1)':'rgba(5,150,105,.1)';
           return '<tr style="border-bottom:1px solid var(--bd)">' +
-            '<td style="padding:10px 6px;font-weight:700;color:var(--tx)">'+(it.name||'—')+'</td>' +
+            '<td style="padding:10px 6px;font-weight:700;color:var(--tx)">'+esc(it.name||'—')+'</td>' +
             '<td style="padding:10px 6px;font-weight:800;color:'+(stock<=min?'#ef4444':'var(--tx)')+'">'+stock+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px;color:var(--t3)">'+min+(it.unit||'개')+'</td>' +
             '<td style="padding:10px 6px"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+statusBg+';color:'+statusColor+'">'+status+'</span></td>' +
@@ -440,10 +440,10 @@ function _filoInvDashLoad(did) {
           var est=Math.round((it.stock||0)*((it.unitPrice||0)+2000));
           return '<div style="padding:10px 0;border-bottom:1px solid var(--bd)">' +
             '<div style="display:flex;justify-content:space-between;align-items:center">' +
-            '<span style="font-size:13px;font-weight:700;color:var(--tx)">'+it.name+'</span>' +
+            '<span style="font-size:13px;font-weight:700;color:var(--tx)">'+esc(it.name)+'</span>' +
             '<span style="width:8px;height:8px;border-radius:50%;background:#ef4444"></span>' +
             '</div>' +
-            '<div style="font-size:11px;color:var(--t3);margin-top:2px">공급처: '+(it.supplier||'미지정')+' / 예상금액: ₩'+est.toLocaleString()+'</div>' +
+            '<div style="font-size:11px;color:var(--t3);margin-top:2px">공급처: '+esc(it.supplier||'미지정')+' / 예상금액: ₩'+est.toLocaleString()+'</div>' +
             '</div>';
         }).join('');
       }

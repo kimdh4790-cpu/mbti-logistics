@@ -33,6 +33,7 @@ jobs:
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
+          KOTSA_API_KEY: ${{ secrets.KOTSA_API_KEY }}
         run: |
           npm install -g wrangler@4 --silent
           # 시크릿에 개행/공백이 섞이면 X-Auth-Key 형식 오류(code 6103)가 난다
@@ -42,9 +43,11 @@ jobs:
           # 토큰 인증을 먼저 시도하고, 실패하면 Global API Key 방식으로 폴백한다.
           if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy 2>&1; then
             echo "✅ Worker 배포 (API Token 인증)"
+            printf '%s' "$KOTSA_API_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put KOTSA_API_KEY 2>&1 || echo "⚠️ KOTSA_API_KEY 시크릿 설정 실패 (무시)"
           else
             echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
             CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy 2>&1
+            printf '%s' "$KOTSA_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KOTSA_API_KEY 2>&1 || echo "⚠️ KOTSA_API_KEY 시크릿 설정 실패 (무시)"
           fi
       - name: Upload HTML/JS assets to KV
         env:
@@ -53,7 +56,7 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          for FILE in filo.html filo-smart-pos.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-menu-mgmt.js filo-menu-recipe.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-pos-core.js filo-pos-ui.js filo-menu.js filo-qr.js filo-inventory.js filo-report.js filo-table.js filo-staff.js filo-order.js filo-order-common.js filo-landing.js filo-landing.html dine.html dine.js dine-schedule.js dine-analytics.js dine-staff.js dine-payroll.js dine-sales.js dine-tax.js dine-member.js dine-landing.html donway_landing.js order.html order.js order-done.html table-order.html store.html kitchen.html yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html; do
+          for FILE in filo.html filo-smart-pos.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-menu-mgmt.js filo-menu-recipe.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-pos-core.js filo-pos-ui.js filo-menu.js filo-qr.js filo-inventory.js filo-report.js filo-table.js filo-staff.js filo-order.js filo-order-common.js filo-landing.js filo-landing.html dine.html dine.js dine-schedule.js dine-analytics.js dine-staff.js dine-payroll.js dine-sales.js dine-tax.js dine-member.js dine-landing.html donway_landing.js order.html order.js order-done.html table-order.html store.html kitchen.html yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html scan.html label.html mbtico_hub.html; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
@@ -94,6 +97,18 @@ jobs:
           firebase deploy --only firestore:indexes --project mbti-logistics --non-interactive 2>&1 || echo "⚠️ Indexes 배포 실패"
           firebase deploy --only storage --project mbti-logistics --non-interactive 2>&1 || echo "⚠️ Storage Rules 배포 실패"
           rm -f /tmp/sa-key.json
+
+      - name: Seed demo store data
+        run: |
+          echo "데모 매장 Firestore 데이터 시딩..."
+          RESULT=$(curl -s -X POST "https://filo.ai.kr/api/demo-seed-all" \
+            -H "Content-Type: application/json" \
+            -d '{"secret":"filo2026demo"}')
+          if echo "$RESULT" | grep -q '"ok":true'; then
+            echo "✅ 데모 데이터 시딩 완료: $RESULT"
+          else
+            echo "⚠️ 데모 시딩 실패 (무시): $RESULT"
+          fi
 
       - name: Purge Cloudflare Cache
         env:

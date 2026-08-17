@@ -132,14 +132,10 @@ function _filoPageOrders(el){
    _renderOrders();
   });
  var _u2=_db.collection('filo_orders')
-  .where('dealerId','==',did).where('type','==','table')
+  .where('dealerId','==',did).where('type','==','table').where('date','==',today)
   .onSnapshot(function(snap){
    _oQR=[];
-   snap.forEach(function(doc){
-    var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today)
-     _oQR.push(Object.assign({_id:doc.id,_src:'qr'},d));
-   });
+   snap.forEach(function(doc){_oQR.push(Object.assign({_id:doc.id,_src:'qr'},doc.data()));});
    _renderOrders();
   });
  _ordersUnsub=function(){_u1();_u2();};
@@ -233,14 +229,8 @@ function _filoLoadDelivery(did){
    snap.forEach(function(doc){salesOrders.push(Object.assign({_id:doc.id,_src:'sales'},doc.data()));});
    renderAll();
   },function(e){console.error('delivery sales err:',e);renderAll();});
- var u2=_db.collection('filo_orders')
-  .where('dealerId','==',did)
-  .onSnapshot(function(snap){
-   qrOrders=[];
-   // 테이블QR 주문은 배달 탭에 표시하지 않음 (테이블 현황 탭에서 관리)
-   renderAll();
-  },function(e){console.error('delivery orders err:',e);renderAll();});
- window._deliveryUnsub=function(){u1();u2();};
+ // filo_orders 배달탭에서 미사용 (테이블 현황 탭 관리) — 리스너 불필요
+ window._deliveryUnsub=function(){u1();callUnsub();};
 }
 
 function _filoRenderDelivery(did,orders){

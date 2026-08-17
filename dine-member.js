@@ -11,6 +11,7 @@
  * @description 고객관리·예약·실시간onSnapshot
  */
 // dine.js에서 분리됨 (리팩토링 2026-07-13)
+function _de(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML;}
 
 function _dineMember(el){
  var did=_CU.dealerId;
@@ -42,8 +43,8 @@ function _dineMember(el){
     snap.docs.map(function(doc){
      var d=doc.data();
      return '<tr style="border-bottom:1px solid var(--bd)">'+
-      '<td style="padding:8px;font-weight:700">'+(d.name||'-')+'</td>'+
-      '<td style="padding:8px;color:var(--t2)">'+(d.phone||'-')+'</td>'+
+      '<td style="padding:8px;font-weight:700">'+_de(d.name||'-')+'</td>'+
+      '<td style="padding:8px;color:var(--t2)">'+_de(d.phone||'-')+'</td>'+
       '<td style="padding:8px;color:var(--yl);font-weight:700">'+(d.point||0)+'P</td>'+
       '<td style="padding:8px">'+(d.stamp||0)+'개</td>'+
       '<td style="padding:8px;color:var(--t3)">'+(d.createdAt||'').slice(0,10)+'</td>'+
@@ -58,9 +59,9 @@ function _dineAddMember(did,memberId,existing){
  var box=document.createElement('div');box.className='mo-box';box.style.padding='24px';
  var title=memberId?'회원 수정':'회원 등록';
  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:16px">'+title+'</div>'+
-  '<div class="input-group"><label>이름 *</label><input id="mb-name" class="inp" placeholder="홍길동" value="'+(existing&&existing.name||'')+'"></div>'+
-  '<div class="input-group"><label>연락처 *</label><input id="mb-phone" class="inp" type="tel" placeholder="010-0000-0000" value="'+(existing&&existing.phone||'')+'"></div>'+
-  '<div class="input-group"><label>생년월일</label><input id="mb-birth" class="inp" type="date" value="'+(existing&&existing.birth||'')+'"></div>'+
+  '<div class="input-group"><label>이름 *</label><input id="mb-name" class="inp" placeholder="홍길동" value="'+_de(existing&&existing.name||'')+'"></div>'+
+  '<div class="input-group"><label>연락처 *</label><input id="mb-phone" class="inp" type="tel" placeholder="010-0000-0000" value="'+_de(existing&&existing.phone||'')+'"></div>'+
+  '<div class="input-group"><label>생년월일</label><input id="mb-birth" class="inp" type="date" value="'+_de(existing&&existing.birth||'')+'"></div>'+
   '<div style="display:flex;gap:8px">'+
   '<div class="input-group" style="flex:1"><label>포인트</label><input id="mb-point" class="inp" type="number" min="0" value="'+(existing&&existing.point||0)+'"></div>'+
   '<div class="input-group" style="flex:1"><label>스탬프</label><input id="mb-stamp" class="inp" type="number" min="0" value="'+(existing&&existing.stamp||0)+'"></div>'+
@@ -68,7 +69,7 @@ function _dineAddMember(did,memberId,existing){
   '<div class="input-group"><label>등급</label><select id="mb-grade" class="inp">'+
   ['일반','실버','골드','VIP'].map(function(g){return '<option value="'+g+'"'+((existing&&existing.grade===g)?' selected':'')+'>'+g+'</option>';}).join('')+
   '</select></div>'+
-  '<div class="input-group"><label>메모</label><input id="mb-memo" class="inp" placeholder="특이사항" value="'+(existing&&existing.memo||'')+'"></div>'+
+  '<div class="input-group"><label>메모</label><input id="mb-memo" class="inp" placeholder="특이사항" value="'+_de(existing&&existing.memo||'')+'"></div>'+
   '<div style="display:flex;gap:8px;margin-top:16px">'+
   '<button class="btn btn-primary" style="flex:1" id="mb-save-btn">저장</button>'+
   '<button class="btn btn-ghost" onclick="this.closest(\'.mo\').remove()">취소</button>'+

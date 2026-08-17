@@ -30,20 +30,23 @@
  */
 
 // ── 예약 확정/거절 (테이블카드 인라인) ──────────────────────────
-window._filoBookingConfirm=function(bid,did){
- _db.collection('filo_bookings').doc(bid).get().then(function(snap){
-  var d=snap.data()||{};
+window._filoBookingConfirm=function(bid,did,bookingData){
+ /* bookingData가 있으면 get() 생략 — 없으면 폴백 */
+ var _doConfirm=function(d){
   _db.collection('filo_bookings').doc(bid).update({status:'confirmed',confirmedAt:_nowISO()})
   .then(function(){_filoToast('예약 확정');_filoTableLoad(did);_filoNotifyReservation(did,d,'confirmed');});
- });
+ };
+ if(bookingData){_doConfirm(bookingData);}
+ else{_db.collection('filo_bookings').doc(bid).get().then(function(snap){_doConfirm(snap.data()||{});});}
 };
-window._filoBookingReject=function(bid,did){
+window._filoBookingReject=function(bid,did,bookingData){
  if(!confirm('예약을 거절하시겠습니까?'))return;
- _db.collection('filo_bookings').doc(bid).get().then(function(snap){
-  var d=snap.data()||{};
+ var _doReject=function(d){
   _db.collection('filo_bookings').doc(bid).update({status:'rejected',rejectedAt:_nowISO()})
   .then(function(){_filoToast('예약 거절');_filoTableLoad(did);_filoNotifyReservation(did,d,'rejected');});
- });
+ };
+ if(bookingData){_doReject(bookingData);}
+ else{_db.collection('filo_bookings').doc(bid).get().then(function(snap){_doReject(snap.data()||{});});}
 };
 
 // ── 예약 알림: FCM 우선, 없으면 알림톡 ─────────────────────────
@@ -491,8 +494,8 @@ function _filoWaitCard(w,did,isCalled,num){
  card.appendChild(badge);
  var info=document.createElement('div');
  info.style.cssText='flex:1;min-width:0';
- info.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--tx)">'+(w.name||'손님')+'</div>'+
-  '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+(w.seats||1)+'명 · '+waitMin+'분 전'+(w.phone?' · '+w.phone:'')+'</div>';
+ info.innerHTML='<div style="font-size:14px;font-weight:700;color:var(--tx)">'+esc(w.name||'손님')+'</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:2px">'+esc(String(w.seats||1))+'명 · '+waitMin+'분 전'+(w.phone?' · '+esc(w.phone):'')+'</div>';
  var btns=document.createElement('div');
  btns.style.cssText='display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end';
  var wid=w.id;var wname=w.name||'손님';

@@ -699,7 +699,9 @@ async function _getCachedDriversForDispatch() {
     return window._dispatchDriversCache;
   }
   if(!_db) return ls('drivers');
-  var snap = await _db.collection('drivers').where('is_active','==',true).get();
+  var _did=window._CU&&window._CU.dealerId||'';
+  var _q=_did?_db.collection('drivers').where('dealerId','==',_did).where('is_active','==',true):_db.collection('drivers').where('is_active','==',true);
+  var snap = await _q.get();
   var all = [];
   snap.forEach(function(doc){ var d=doc.data(); d.fbId=doc.id; all.push(d); });
   window._dispatchDriversCache = all;
@@ -6019,6 +6021,18 @@ if(window.location.hash==='#join'){
           }
           if(cSnap.exists){
             var cd=cSnap.data();
+            // ★ 플랫폼 분리: mbtico.kr 가입 계정은 donway.ai.kr 접근 차단
+            if(cd.platform==='mbtico'&&!isSuperAdmin()){
+              (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
+                '<div style="text-align:center;padding:30px 20px">'
+                +'<div style="font-size:36px;margin-bottom:12px">🚫</div>'
+                +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">잘못된 앱입니다</div>'
+                +'<div style="font-size:13px;color:var(--text3);line-height:1.6">이 계정은 배송앱(mbtico.kr)에서 가입한 계정입니다.<br>배송 서비스는 mbtico.kr을 이용해주세요.<br><br>문의: 051-711-3103</div>'
+                +'<button onclick="_auth.signOut()" style="margin-top:16px;padding:10px 24px;background:var(--bg3);border:none;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)">로그아웃</button>'
+                +'</div>';
+              setTimeout(function(){_auth.signOut();},5000);
+              return;
+            }
             _CU.plan=cd.plan||'';
             _CU.trialEnd=cd.trialEnd||'';
             _CU.settlePaid=cd.settlePaid||false;
@@ -21369,6 +21383,7 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
+    {ic:'📝',l:'전자계약서 작성',   p:'ext_contract',     plan_key:'free'},
     {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
     {ic:'📋',l:'근무표',           p:'roster',           plan_key:'settle'},
@@ -23338,6 +23353,7 @@ function goPage(page){
   if(page==='ext_label'){window.open("/label","_blank");return;}
   if(page==='ext_scan'){window.open("/scan","_blank");return;}
   if(page==='ext_truck'){window.open("/truck","_blank");return;}
+  if(page==='ext_contract'){window.location.href='/contract';return;}
 
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
   var nav=document.getElementById('nav-'+page);
@@ -34954,6 +34970,8 @@ function openAdminPanel(){
     var items=[];
     compSnap.forEach(function(doc){
       var d=doc.data();
+      // mbtico.kr/register 전용 등록 제외 (DONWAY 패널과 분리)
+      if(d.registeredFrom==='register.html') return;
       items.push({
         id:doc.id,
         name:d.companyName||d.name||doc.id,

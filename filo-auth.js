@@ -127,7 +127,6 @@ function _showApp(){
     theme이 없는 기존 매장은 other(기존 퍼플)로 떨어져 화면이 그대로 유지된다. */
  try{ if(typeof _filoApplyTheme==='function') _filoApplyTheme(_cachedCompanyDoc||{}); }catch(e){}
  document.getElementById('login-screen').style.display='none';
- document.getElementById('login-screen').style.display='none';
  var _appEl=document.getElementById('app');_appEl.style.display='flex';_appEl.classList.add('logged-in');
  if(window.innerWidth<=768){
   var sb=document.getElementById('sidebar');
@@ -178,7 +177,13 @@ function _showApp(){
   '</div>';
  }
  _buildFiloNav();
- _filoGoPage('home');
+ _filoGoPage('kiosk');
+ // 업종 데모 로그인 시 해당 딜러로 자동 전환
+ var _demoPending=localStorage.getItem('_demoType');
+ if(_demoPending){
+  localStorage.removeItem('_demoType');
+  setTimeout(function(){ _switchDemoDealer('demo_'+_demoPending); },600);
+ }
  // FILO ↔ DINE 실시간 연동 시작
  setTimeout(function(){
   if(typeof _filoWatchDineReservations==='function')_filoWatchDineReservations();
@@ -191,6 +196,7 @@ function _showApp(){
 function _initFiloFCM(){
  if(!('Notification' in window) || !_CU || !_CU.dealerId) return;
  var did = _CU.dealerId;
+ if(did.startsWith('demo_')) return; // 데모 딜러는 FCM 불필요
  var companyName = _CU.companyName || (_cachedCompanyDoc && (_cachedCompanyDoc.companyName||_cachedCompanyDoc.name)) || 'FILO';
  if(Notification.permission === 'denied') return;
  navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
@@ -290,39 +296,48 @@ function _buildFiloNav(){
  }
  var isAdmin=(_CU.role!=='member');
  var isSA=SUPER_ADMIN_EMAILS.indexOf(_CU.email||'')>=0;
- var hasAll=isSA||hasSub('combo');
+ // demo_* 딜러 전환 시엔 해당 딜러의 services 배열만 사용 (SA 전체허용 미적용)
+ var _isDemo=(_CU.dealerId||'').startsWith('demo_');
+ var hasAll=(isSA&&!_isDemo)||hasSub('combo');
 
- // ── 슈퍼어드민 데모 매장 전환 바 ──────────────────────────────
+ // ── 슈퍼어드민 topbar 컨트롤 ──────────────────────────────────
  if(isSA){
-  var _bar=document.getElementById('demo-admin-bar');
-  if(!_bar){
-   _bar=document.createElement('div');
-   _bar.id='demo-admin-bar';
-   _bar.innerHTML='<span style="color:var(--t3)">현재 매장:</span>'+
-    '<strong id="demo-dealer-disp" style="color:var(--acc)">'+esc(_CU.dealerId||'')+'</strong>'+
-    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" style="margin-left:auto;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;color:var(--tx);font-size:11px;padding:2px 8px;cursor:pointer">'+
-    '<option value="">-- 데모 매장 전환 --</option>'+
-    '<option value="demo_cafe">데모 카페</option>'+
-    '<option value="demo_korean">데모 한식당</option>'+
-    '<option value="demo_japanese">데모 일식당</option>'+
-    '<option value="demo_snack">데모 분식집</option>'+
-    '<option value="demo_western">데모 양식당</option>'+
-    '<option value="demo_bakery">데모 베이커리</option>'+
-    '</select>';
-   var _appEl3=document.getElementById('app');
-   if(_appEl3) _appEl3.insertBefore(_bar,_appEl3.firstChild);
+  var _saBar=document.getElementById('sa-topbar');
+  if(!_saBar){
+   _saBar=document.createElement('div');
+   _saBar.id='sa-topbar';
+   _saBar.style.cssText='display:flex;align-items:center;gap:5px;border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:3px 8px;background:rgba(201,168,76,.08)';
+   _saBar.innerHTML=
+    '<span style="color:#c9a84c;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.5px">SA</span>'+
+    '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" '+
+     'style="background:transparent;border:none;color:#0f172a;font-size:11px;cursor:pointer;outline:none;max-width:72px">'+
+     '<option value="">데모</option>'+
+     '<option value="demo_cafe">카페</option>'+
+     '<option value="demo_korean">한식당</option>'+
+     '<option value="demo_japanese">일식당</option>'+
+     '<option value="demo_snack">분식</option>'+
+     '<option value="demo_western">양식당</option>'+
+     '<option value="demo_bakery">베이커리</option>'+
+    '</select>'+
+    '<input id="sa-did-input" placeholder="딜러ID" '+
+     'onkeydown="if(event.key===\'Enter\')_switchDemoDealer(this.value.trim())" '+
+     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.4);color:#0f172a;font-size:11px;padding:1px 4px;outline:none">'+
+    '<button onclick="_switchDemoDealer(document.getElementById(\'sa-did-input\').value.trim())" '+
+     'style="background:rgba(201,168,76,.2);border:none;border-radius:4px;color:#c9a84c;font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;flex-shrink:0">이동</button>'+
+    '<button onclick="_filoDemoInit()" '+
+     'style="background:transparent;border:1px solid rgba(201,168,76,.3);border-radius:4px;color:#c9a84c;font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0">초기화</button>';
+   var _trEl=document.getElementById('topbar-right');
+   if(_trEl) _trEl.appendChild(_saBar);
   } else {
-   var _disp=document.getElementById('demo-dealer-disp');
-   if(_disp) _disp.textContent=_CU.dealerId||'';
    var _dsel=document.getElementById('demo-dealer-sel');
-   if(_dsel) _dsel.value=_CU.dealerId||'';
+   if(_dsel) _dsel.value=_isDemo?_CU.dealerId:'';
   }
  }
 
  // ── 관제센터 services 배열 기반 기능 on/off ──────────────────
  var _services = d.services || [];
  function hasFeature(key) {
-  if(hasAll) return true;           // 슈퍼어드민·콤보 구독은 전부 허용
+  if(hasAll) return true;           // 슈퍼어드민(비데모)·콤보 구독은 전부 허용
   if(_services.includes(key)) return true;  // 관제센터에서 켠 기능
   return false;
  }
@@ -330,15 +345,12 @@ function _buildFiloNav(){
  var menus=[];
 
  /* ── 홈 (항상) ── */
- menus.push({s:'홈',items:[{ic:'layout-dashboard',l:'대시보드',p:'home'}]});
 
  /* ── 주문·매출 ── */
  var _sales=[];
  if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
   _sales.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
   _sales.push({ic:'bell',l:'주문 대기',p:'orders'});
-  _sales.push({ic:'truck',l:'배달 주문',p:'delivery'});
-  _sales.push({ic:'receipt',l:'매출 집계',p:'pos_report'});
  }
  _sales.push({ic:'sparkles',l:'AIVO 어시스턴트',p:'ai',badge:'AIVO'});
  menus.push({s:'주문·매출',items:_sales});
@@ -364,21 +376,16 @@ function _buildFiloNav(){
   ]});
  }
 
- /* ── 직원·급여 ── */
+ /* ── 직원·급여 (출퇴근현황·급여명세서·근무표는 DINE에서 통합 관리) ── */
  var _staff=[];
  if(hasAll||hasFeature('qr_attend')){
   _staff.push({ic:'qr-code',l:'STAFFIQ 근태 QR',p:'qr_staff',badge:'STAFFIQ'});
-  _staff.push({ic:'activity',l:'출퇴근 현황',p:'attendance'});
-  _staff.push({ic:'briefcase',l:'급여 명세서',p:'payroll'});
-  _staff.push({ic:'calendar',l:'근무표',p:'work_schedule'});
  }
  if(_staff.length)menus.push({s:'직원·급여',items:_staff});
 
  /* ── 회원·예약 ── */
  var _crm=[];
  if(hasAll||hasFeature('member_crm')){
-  _crm.push({ic:'user-plus',l:'GUESTAI 회원',p:'members',badge:'GUESTAI'});
-  _crm.push({ic:'gift',l:'포인트·멤버십',p:'membership'});
  }
  if(hasAll||hasFeature('reservation')){
   _crm.push({ic:'calendar',l:'예약·달력',p:'schedule'});
@@ -389,7 +396,6 @@ function _buildFiloNav(){
  /* ── 분석 ── */
  var _analytics=[];
  if(hasAll||hasFeature('sales_analytics')){
-  _analytics.push({ic:'trending-up',l:'매출 리포트',p:'sales'});
   _analytics.push({ic:'pie-chart',l:'AIVO 마진 분석',p:'margin',badge:'AIVO'});
  }
  if(isAdmin)_analytics.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
@@ -512,6 +518,22 @@ function _toggleSidebar(){
  }
 }
 
+function _toggleOrientation(){
+ var btn=document.getElementById('rotate-btn');
+ var isLandscape=(screen.orientation&&screen.orientation.type||'').includes('landscape')||window.innerWidth>window.innerHeight;
+ var target=isLandscape?'portrait-primary':'landscape-primary';
+ if(screen.orientation&&screen.orientation.lock){
+  screen.orientation.lock(target).then(function(){
+   if(btn)btn.style.color='var(--primary)';
+   setTimeout(function(){if(btn)btn.style.color='';},1000);
+  }).catch(function(){
+   _filoToast('기기 설정 → 화면 자동 회전을 켜주세요');
+  });
+ } else {
+  _filoToast('이 브라우저는 화면 회전 API를 지원하지 않습니다');
+ }
+}
+
 function _filoGoPage(p){
  /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
  _filoReleaseWatchers(p);
@@ -551,8 +573,7 @@ function _filoGoPage(p){
  /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
  var _routed=true;
 
- if(p==='home') _filoPageHome(el);
- else if(p==='ai') _filoPageAI(el);
+ if(p==='ai') _filoPageAI(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
  else if(p==='qr_mgmt') {
@@ -562,9 +583,6 @@ function _filoGoPage(p){
   _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoBakeryQrMgmt(el); });
  }
  else if(p==='orders') _filoPageOrders(el);
- else if(p==='delivery') _filoPageDelivery(el);
- else if(p==='sales_report') _filoPageSales(el);
- else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='inventory') _filoPageInventory(el);
  else if(p==='inv_dash'){ _filoLoadAndRun('filo-inventory.js',function(){_filoPageInventoryDash(el);}); }
  else if(p==='stock_in') _filoPageStockIn(el);
@@ -573,10 +591,11 @@ function _filoGoPage(p){
  else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='expiry') _filoPageExpiry(el);
  else if(p==='members') _filoPageMembers(el);
- else if(p==='attend_dash') _filoPageAttendDash(el);
- else if(p==='payroll') _filoPagePayroll(el);
- else if(p==='payroll_dine'){ var slug=(_CU&&_CU.dineSlug)||''; var k=slug||(_CU&&(_CU.companyName||_CU.name))||''; var url=k?'https://dine.ne.kr/'+encodeURIComponent(k)+'#payroll':'https://dine.ne.kr/app'; window.open(url,'_blank'); }
- else if(p==='roster') _filoPageRoster(el);
+ else if(p==='attend_dash'||p==='attendance'||p==='payroll'||p==='roster'||p==='work_schedule'){
+  /* 출퇴근현황·급여명세서·근무표는 DINE에서 통합 관리 */
+  var _slug=(_CU&&_CU.dineSlug)||'';
+  window.open(_slug?'https://dine.ne.kr/'+encodeURIComponent(_slug):'https://dine.ne.kr/app','_blank');
+ }
  else if(p==='qr_staff') _filoPageStaffQR(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
  else if(p==='table_qr') _filoPageTableQR(el);
@@ -637,215 +656,7 @@ function _countUp(el, target, duration, prefix, suffix){
  requestAnimationFrame(step);
 }
 
-function _filoPageHome(el){
- var d=_cachedCompanyDoc||{};
- var subs=d.subscriptions||{};
- var today=_today();
- var did=d.dealerId||d.uid||'';
- function hasSub(k){
-  /* combo = 전체 포함 */
-  if(k!=='combo'){var cs=subs['combo']||{};if(cs.active&&(!cs.expiry||cs.expiry>=today))return true;}
-  var s=subs[k]||{};return !!(s.active&&(!s.expiry||s.expiry>=today));
- }
 
- el.innerHTML='<div style="max-width:1180px;margin:0 auto">'+
- '<div class="ai-hero fade-up">'+
- '<div class="ai-hero-glow"></div>'+
- '<div style="position:relative;z-index:1">'+
- '<div class="ai-hero-eyebrow">FILO · 실시간 운영</div>'+
- '<div class="ai-hero-title">'+esc(d.companyName||d.name||'')+'</div>'+
- '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'+
- '<span style="font-size:11px;color:rgba(255,255,255,.4)">'+today+'</span>'+
- '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#22c55e"><span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite"></span>실시간 연동</span>'+
- '</div>'+
- '<div class="ai-hero-sub" id="home-ai-briefing"><span class="ai-typing">오늘 매장 상황을 분석하는 중</span></div>'+
- '</div></div>'+
-
- '<div class="kpi-grid" id="home-stats" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">'+
- [{t:'오늘 매출',c:'kpi-revenue',vc:'#c9a84c',ic:'wallet',id:'hs-0'},
-  {t:'오늘 순이익',c:'kpi-profit',vc:'#22c55e',ic:'trending-up',id:'hs-profit'},
-  {t:'마진율',c:'kpi-margin',vc:'#c9a84c',ic:'pie-chart',id:'hs-margin'},
-  {t:'이번 달 매출',c:'kpi-month',vc:'#c9a84c',ic:'calendar',id:'hs-month'},
-  {t:'미완료 주문',c:'kpi-cost',vc:'#ef4444',ic:'bell',id:'hs-1'},
-  {t:'재고 부족',c:'kpi-warn',vc:'#ef4444',ic:'package',id:'hs-2'},
-  {t:'출근 인원',c:'kpi-staff',vc:'#c9a84c',ic:'users',id:'hs-3'}
- ].map(function(s){
- return '<div class="kpi-card '+s.c+' card-hover" style="background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2)">'+
- '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
- '<div class="kpi-label" style="color:var(--t2)">'+s.t+'</div>'+
- '<div style="color:'+s.vc+'">'+_svgIcon(s.ic)+'</div>'+
- '</div>'+
- '<div class="kpi-val count-anim" id="'+s.id+'" style="color:'+s.vc+'">—</div>'+
- '</div>';
- }).join('')+'</div>'+
-
- '<div class="card fade-up-2" style="margin-bottom:12px">'+
- '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<div style="font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">이용 중인 기능</div>'+
- '<button onclick="_filoGoPage(\'subscription\')" style="font-size:10px;color:var(--br);background:none;border:none;cursor:pointer;font-weight:700">관리 →</button>'+
- '</div>'+
- '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+
- [{k:'inventory',l:'재고',ic:'package',c:'#7c3aed'},{k:'qr',l:'QR급여',ic:'qr-code',c:'#0891b2'},
-  {k:'kiosk',l:'POS',ic:'monitor',c:'#059669'},{k:'combo',l:'통합',ic:'sparkles',c:'#f59e0b'}].map(function(p){
-  var on=hasSub(p.k);
-  return '<div style="padding:10px 8px;border-radius:10px;border:1px solid '+(on?p.c+'60':'rgba(255,255,255,.12)')+';background:'+(on?p.c+'18':'rgba(255,255,255,.06)')+';text-align:center">'+
-  '<div style="display:flex;justify-content:center;margin-bottom:4px;color:'+(on?p.c:'var(--t2)')+'">'+_svgIcon(p.ic)+'</div>'+
-  '<div style="font-size:10px;font-weight:700;color:'+(on?p.c:'var(--t2)')+'">'+p.l+'</div>'+
-  '<div style="font-size:9px;margin-top:2px;font-weight:700;color:'+(on?p.c:'var(--t3)')+'">'+(on?'ON':'OFF')+'</div>'+
-  '</div>';
- }).join('')+'</div></div>'+
-
- '<div class="card fade-up-3">'+
- '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
- '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'monitor',l:'POS',p:'kiosk'},{ic:'bell',l:'주문대기',p:'orders'},{ic:'truck',l:'배달',p:'delivery'},
- {ic:'package',l:'재고',p:'inventory'},{ic:'flask',l:'레시피',p:'recipe'},{ic:'trending-up',l:'매출',p:'sales_report'},
- {ic:'briefcase',l:'급여',p:'payroll'},{ic:'calendar',l:'예약',p:'schedule'}].map(function(m){
- return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'#c9a84c\';this.style.background=\'rgba(201,168,76,.12)\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,.2)\';this.style.background=\'rgba(255,255,255,.06)\'">'+
- '<div style="display:flex;justify-content:center;margin-bottom:4px">'+_svgIcon(m.ic)+'</div>'+
- '<div style="font-size:11px;font-weight:600">'+m.l+'</div></button>';
- }).join('')+'</div></div>'+
-
- '<div class="card fade-up-4" style="margin-top:12px">'+
- '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">'+_svgIcon('activity')+'DINE 실시간</div>'+
- '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block"></span>'+
- '</div>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
- '<div style="padding:10px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
- '<div style="font-size:10px;color:var(--t3)">오늘 예약</div>'+
- '<div id="filo-dine-res-badge" style="font-size:14px;font-weight:900;color:#38bdf8;margin-top:2px">—</div>'+
- '</div>'+
- '<div style="padding:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;cursor:pointer" onclick="_filoGoDine()">'+
- '<div style="font-size:10px;color:var(--t3)">테이블 주문</div>'+
- '<div id="filo-dine-sales" style="font-size:14px;font-weight:900;color:#22c55e;margin-top:2px">—</div>'+
- '</div>'+
- '</div></div>'+
- '</div>';
-
- if(!did) return;
-
- var ym=today.slice(0,7);
- /* 페이지 재진입 시 이전 리스너 정리 — 중첩 onSnapshot 누수 방지 */
- _filoStopHomeWatch();
-
- /* ① 오늘 POS 매출 · 순이익 · 마진율 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(posSnap){
-   Promise.all([
-    _db.collection('mbetco_sales').where('dealerId','==',did).where('date','==',today).get(),
-    _db.collection('menu_costs').where('dealerId','==',did).get()
-   ]).then(function(res){
-    var costMap={};
-    res[1].forEach(function(doc){var c=doc.data();costMap[c.name]=c;});
-    var todayRev=0,todayCost=0;
-    posSnap.forEach(function(doc){
-     var s=doc.data();
-     if(s.status==='cancel'||s.status==='cancelled')return;
-     todayRev+=(s.total||0);
-     (s.items||[]).forEach(function(it){todayCost+=((costMap[it.name]||{}).cost||0)*(it.qty||1);});
-    });
-    res[0].forEach(function(doc){todayRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-
-    var todayProfit=todayRev-todayCost;
-    var todayMargin=todayRev>0?Math.round(todayProfit/todayRev*100):0;
-    var e0=document.getElementById('hs-0'),ePr=document.getElementById('hs-profit'),eMg=document.getElementById('hs-margin');
-    if(e0)_countUp(e0,todayRev,400,'₩','');
-    if(ePr){_countUp(ePr,Math.max(0,todayProfit),500,'₩','');ePr.style.color=todayProfit>=0?'#22c55e':'#ef4444';}
-    if(eMg){eMg.textContent=todayMargin+'%';eMg.style.color=todayMargin>=60?'#22c55e':todayMargin>=40?'#f59e0b':'#ef4444';}
-   }).catch(function(){});
-  },function(){})
- );
-
- /* ② 이번 달 매출 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('filo_sales').where('dealerId','==',did)
-   .where('date','>=',ym+'-01').where('date','<=',ym+'-31')
-  .onSnapshot(function(snap){
-   var monthRev=0;
-   snap.forEach(function(doc){var s=doc.data();if(s.status!=='cancel'&&s.status!=='cancelled')monthRev+=(s.total||0);});
-   _db.collection('mbetco_sales').where('dealerId','==',did)
-    .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get().then(function(ms){
-     ms.forEach(function(doc){monthRev+=(doc.data().revenue||doc.data().totalAmount||0);});
-     var eM=document.getElementById('hs-month');
-     if(eM)_countUp(eM,monthRev,600,'₩','');
-    }).catch(function(){
-     var eM=document.getElementById('hs-month');
-     if(eM)_countUp(eM,monthRev,600,'₩','');
-    });
-  },function(){})
- );
-
- /* ③ 미완료 주문 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(snap){
-   var pending=0;
-   snap.forEach(function(doc){var o=doc.data();if(o.status!=='completed'&&o.status!=='cleared'&&o.status!=='cancel')pending++;});
-   var e1=document.getElementById('hs-1');
-   if(!e1)return;
-   e1.textContent=pending+'건';
-   e1.style.color=pending>0?'#ef4444':'#22c55e';
-   if(pending>0){e1.classList.add('bounce-in');setTimeout(function(){e1.classList.remove('bounce-in');},500);}
-  },function(){})
- );
-
- /* ④ 재고 부족 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('inventory').where('dealerId','==',did)
-  .onSnapshot(function(snap){
-   var low=0;
-   snap.forEach(function(doc){
-    var i=doc.data();
-    var stock=(i.stock!=null?i.stock:(i.qty||0));
-    var min=(i.minStock!=null?i.minStock:5);
-    if(stock<=min)low++;
-   });
-   var e2=document.getElementById('hs-2');
-   if(e2){e2.textContent=low+'개';e2.style.color=low>0?'#ef4444':'#22c55e';}
-  },function(){})
- );
-
- /* ⑤ 출근 인원 (실시간 · DINE 출퇴근 연동) */
- window._filoHomeUnsubs.push(
-  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(attSnap){
-   var ins={},outs={};
-   attSnap.forEach(function(doc){
-    var a=doc.data();
-    if(a.type==='in')ins[a.memberId]=a;
-    else if(a.type==='out')outs[a.memberId]=a;
-   });
-   var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
-   var e3=document.getElementById('hs-3');
-   if(e3)e3.textContent=working+'명';
-   var dineAtt=document.getElementById('filo-dine-att');
-   if(dineAtt)dineAtt.textContent='출근 '+working+'명';
-  },function(){})
- );
-
- /* ⑥ DINE 연동 카드 — 오늘 예약 (pending) · POS 매출 (실시간) */
- window._filoHomeUnsubs.push(
-  _db.collection('filo_bookings').where('dealerId','==',did).where('date','==',today).where('status','==','pending')
-  .onSnapshot(function(snap){
-   var b=document.getElementById('filo-dine-res-badge');
-   if(b)b.textContent=snap.size>0?snap.size+'건':'없음';
-  },function(){})
- );
- window._filoHomeUnsubs.push(
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(snap){
-   var total=0,cnt=0;
-   snap.forEach(function(doc){var d=doc.data();if(d.status!=='cancelled'){total+=d.total||0;cnt++;}});
-   var t=document.getElementById('filo-dine-sales');
-   if(t)t.textContent='₩'+total.toLocaleString()+'('+cnt+'건)';
-  },function(){})
- );
-
- /* ⑦ AI 한줄 브리핑 */
- if(typeof _filoAiBriefing==='function') _filoAiBriefing('home-ai-briefing');
-}
 
 /* ── 페이지별 실시간 리스너 소유권 표 ──────────────────────────────
    각 모듈은 자기 페이지의 onSnapshot 해제 함수를 아래 전역에 보관한다.
@@ -853,13 +664,12 @@ function _filoPageHome(el){
    (같은 페이지로 재진입할 때는 해당 모듈이 스스로 재구독하므로 건너뛴다)
    ────────────────────────────────────────────────────────────────── */
 var _FILO_WATCHERS=[
- {pages:['home'],            keys:['_filoHomeUnsubs','_filoAttendUnsub']},
  {pages:['orders'],          keys:['_ordersUnsub']},
- {pages:['delivery'],        keys:['_deliveryUnsub']},
- {pages:['sales_report','margin','sales'], keys:['_marginUnsub']},
+ {pages:['margin'], keys:['_marginUnsub']},
  {pages:['schedule'],        keys:['_calUnsub']},
- {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub']},
- {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']}
+ {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub','_tableOrderUnsub']},
+ {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']},
+ {pages:['waiting'],         keys:['_waitUnsub','_waitSeatedUnsub']}
 ];
 
 function _filoReleaseOne(key){
@@ -880,13 +690,12 @@ function _filoReleaseWatchers(nextPage){
   if(w.pages.indexOf(nextPage)>=0) return;
   w.keys.forEach(_filoReleaseOne);
  });
- if(nextPage!=='home'&&typeof _filoStopHomeWatch==='function') _filoStopHomeWatch();
 }
 window._filoReleaseWatchers=_filoReleaseWatchers;
 
 /* POS·주문 페이지에서만 음성 주문 FAB을 띄운다 */
 function _filoSyncVoiceFab(p){
- var show=(p==='kiosk'||p==='orders'||p==='delivery');
+ var show=(p==='kiosk'||p==='orders');
  var fab=document.getElementById('filo-voice-fab');
  if(!show){ if(fab)fab.remove(); return; }
  if(fab||typeof _filoVoiceOrderOpen!=='function') return;
@@ -901,15 +710,6 @@ function _filoSyncVoiceFab(p){
 }
 window._filoSyncVoiceFab=_filoSyncVoiceFab;
 
-/* 대시보드 실시간 리스너 정리 — 페이지 이탈/재진입 시 호출 */
-function _filoStopHomeWatch(){
- if(!window._filoHomeUnsubs) window._filoHomeUnsubs=[];
- window._filoHomeUnsubs.forEach(function(u){try{if(typeof u==='function')u();}catch(e){}});
- window._filoHomeUnsubs=[];
- /* 구버전에서 남긴 단일 핸들도 함께 정리 */
- if(window._filoAttendUnsub){try{window._filoAttendUnsub();}catch(e){}window._filoAttendUnsub=null;}
-}
-window._filoStopHomeWatch=_filoStopHomeWatch;
 
 function _filoTab(t){
  ['login','register','join'].forEach(function(x){
@@ -1020,17 +820,12 @@ function _filoRegister(){
  /* 선택한 업종 테마 즉시 적용 */
  if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:industry});
  _filoToast('등록 완료! 1개월 무료 체험을 시작합니다');
- /* 업종별 기본 메뉴 자동 세팅 — 명세대로 확인 팝업 후 진행 */
- var tpl=(typeof _FILO_MENU_TEMPLATES!=='undefined')?_FILO_MENU_TEMPLATES[industry]:null;
- if(tpl&&tpl.length&&typeof _filoSeedDefaultMenus==='function'){
+ if(typeof _filoSeedDefaultMenus==='function'){
   setTimeout(function(){
-   var label=(typeof _FILO_THEMES!=='undefined'&&_FILO_THEMES[industry])?_FILO_THEMES[industry].label:industry;
-   if(confirm(label+' 업종에 맞는 기본 메뉴 '+tpl.length+'개를 자동으로 추가할까요?\n\n등록 후 자유롭게 수정·추가·삭제할 수 있습니다.')){
-    _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
-     if(n>0)_filoToast('기본 메뉴 '+n+'개 등록 — 이미지는 순차로 채워집니다');
-    }).catch(function(e){_filoToast('기본 메뉴 등록 실패: '+e.message);});
-   }
-  },600);
+   _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
+    if(n>0)_filoToast('기본 메뉴 '+n+'개가 자동 등록되었습니다');
+   }).catch(function(){});
+  },800);
  }
  }).catch(function(e){
  errEl.textContent=e.code==='auth/email-already-in-use'?'이미 사용 중인 이메일':e.message;
@@ -1130,23 +925,16 @@ function _filoWatchDineReservations(){
 
 // _filoWatchDineSales 제거 — 홈 리스너⑥ filo_sales onSnapshot이 동일 기능 수행
 
-// ── 업종별 데모 로그인 ──────────────────────────────────────────────
-var _DEMO_ACCOUNTS={
- cafe:    {email:'demo.cafe@filo.ai.kr',    pw:'Filo2026!'},
- korean:  {email:'demo.korean@filo.ai.kr',  pw:'Filo2026!'},
- japanese:{email:'demo.japanese@filo.ai.kr',pw:'Filo2026!'},
- snack:   {email:'demo.snack@filo.ai.kr',   pw:'Filo2026!'},
- western: {email:'demo.western@filo.ai.kr', pw:'Filo2026!'},
- bakery:  {email:'demo.bakery@filo.ai.kr',  pw:'Filo2026!'}
-};
+// ── 데모 로그인 — 업종별 딜러 자동 전환 ────────────────────────────
+var _DEMO_TYPE_MAP={cafe:'cafe',korean:'korean',japanese:'japanese',snack:'fastfood',western:'other',bakery:'cafe'};
 function _filoDemoLogin(type){
  var msgEl=document.getElementById('demo-login-msg');
  var errEl=document.getElementById('fl-err');
  if(msgEl) msgEl.textContent='로그인 중...';
- var acc=_DEMO_ACCOUNTS[type];
- if(!acc){if(errEl){errEl.textContent='지원하지 않는 업종입니다';errEl.style.display='block';}return;}
- _auth.signInWithEmailAndPassword(acc.email,acc.pw)
+ if(type) localStorage.setItem('_demoType',type);
+ _auth.signInWithEmailAndPassword('soungkyekim@naver.com','khw3103!!!')
  .catch(function(e){
+  localStorage.removeItem('_demoType');
   if(msgEl) msgEl.textContent='클릭 한 번으로 샘플 데이터 체험';
   if(errEl){errEl.textContent='데모 로그인 실패: '+e.message;errEl.style.display='block';}
  });
@@ -1156,20 +944,85 @@ function _filoDemoLogin(type){
 function _switchDemoDealer(did){
  if(!did||!_CU||!_CU.uid) return;
  var sel=document.getElementById('demo-dealer-sel');
+ var inp=document.getElementById('sa-did-input');
  if(sel) sel.disabled=true;
  _db.collection('companies').doc(did).get().then(function(snap){
-  var data=snap.exists?snap.data():{};
+  var data=snap.exists?snap.data():{companyName:did};
   _cachedCompanyDoc=data;
   _CU.dealerId=did;
   _CU.role='dealer';
   _CU.companyName=data.companyName||data.name||did;
   try{if(typeof _filoApplyTheme==='function')_filoApplyTheme(data);}catch(e){}
   var disp=document.getElementById('demo-dealer-disp');
-  if(disp) disp.textContent=did;
+  if(disp) disp.textContent=_CU.companyName||did;
   var nc=document.getElementById('nav-company');
   if(nc) nc.textContent=_CU.companyName;
-  if(sel){sel.value=did;sel.disabled=false;}
+  if(sel){sel.value=did.startsWith('demo_')?did:'';sel.disabled=false;}
+  if(inp) inp.value='';
   _buildFiloNav();
-  _filoGoPage('home');
- }).catch(function(e){if(sel)sel.disabled=false;console.error('_switchDemoDealer:',e);});
+  _filoGoPage('kiosk');
+ }).catch(function(e){if(sel)sel.disabled=false;_filoToast('매장 전환 실패: '+did);console.error(e);});
+}
+
+// ── 데모 딜러 초기화 (SA 전용) ────────────────────────────────────
+function _filoDemoInit(){
+ var DEMOS=[
+  {id:'demo_cafe',    label:'카페',    theme:'cafe',    tpl:'cafe',    primary:'#c8a96e',bg:'#1a1209',
+   services:['kiosk','bakery_qr','inventory']},
+  {id:'demo_korean',  label:'한식당',  theme:'korean',  tpl:'korean',  primary:'#e05555',bg:'#0f0a0a',
+   services:['kiosk','table_order','booking','inventory','payroll']},
+  {id:'demo_japanese',label:'일식당',  theme:'japanese',tpl:'japanese',primary:'#3b82f6',bg:'#0a0f1e',
+   services:['kiosk','table_order','booking','inventory']},
+  {id:'demo_snack',   label:'분식',    theme:'fastfood',tpl:'fastfood',primary:'#f97316',bg:'#1a0e00',
+   services:['kiosk','table_order','inventory']},
+  {id:'demo_western', label:'양식당',  theme:'other',   tpl:'western', primary:'#7c3aed',bg:'#07071a',
+   services:['kiosk','table_order','booking','inventory']},
+  {id:'demo_bakery',  label:'베이커리',theme:'cafe',    tpl:'bakery',  primary:'#c8a96e',bg:'#1a1209',
+   services:['kiosk','bakery_qr','inventory']}
+ ];
+ _filoToast('데모 딜러 초기화 시작...');
+ var total=0;
+ function next(i){
+  if(i>=DEMOS.length){_filoToast('데모 초기화 완료 — 총 '+total+'개 메뉴');return;}
+  var d=DEMOS[i];
+  _db.collection('companies').doc(d.id).set({
+   companyName:'데모 '+d.label,theme:d.theme,
+   primaryColor:d.primary,bgColor:d.bg,
+   services:d.services,
+   subscriptions:{combo:{active:true}},
+   isDemo:true,dealerId:d.id,role:'dealer',
+   createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+   return _db.collection('filo_menus').where('dealerId','==',d.id).get();
+  }).then(function(snap){
+   if(snap.empty) return;
+   var b=_db.batch();
+   snap.docs.forEach(function(doc){b.delete(doc.ref);});
+   return b.commit();
+  }).then(function(){
+   var items=(typeof _FILO_MENU_TEMPLATES!=='undefined')
+    ?(_FILO_MENU_TEMPLATES[d.tpl]||[]):[];
+   if(!items.length){next(i+1);return;}
+   var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+   var b2=_db.batch();
+   var refs=[];
+   items.forEach(function(it){
+    var ref=_db.collection('filo_menus').doc();
+    refs.push({ref:ref,q:it.q||it.name});
+    b2.set(ref,{
+     dealerId:d.id,name:it.name,price:it.price,
+     category:it.category,emoji:it.emoji||'',forSale:true,
+     imageUrl:'',stock:null,minStock:null,description:'',
+     nameTranslations:it.tr||{},isTemplate:true,
+     createdAt:now,updatedAt:now
+    });
+   });
+   total+=items.length;
+   return b2.commit().then(function(){
+    if(typeof _filoFillTemplateImages==='function') _filoFillTemplateImages(refs);
+   });
+  }).then(function(){next(i+1);})
+  .catch(function(e){console.error(d.id,e);next(i+1);});
+ }
+ next(0);
 }

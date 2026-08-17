@@ -65,14 +65,14 @@ function _dineCalcPayroll(did){
  if(!list)return;
  list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)"> 계산중...</div>';
 
+ /* companies는 이미 _CU에 캐시됨 — 별도 쿼리 불필요 */
+ var co=(_CU&&_CU._company)||{};
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
-  _db.collection('members').where('dealerId','==',did).get(),
-  _db.collection('companies').where('uid','==',did).limit(1).get()
+  _db.collection('members').where('dealerId','==',did).get()
  ]).then(function(results){
-  var attSnap=results[0],memSnap=results[1],coSnap=results[2];
+  var attSnap=results[0],memSnap=results[1];
   var empCnt=memSnap.size;
-  var co=coSnap.empty?{}:coSnap.docs[0].data();
 
   /* 직원별 출퇴근 + 휴식 집계 */
   var attMap={};

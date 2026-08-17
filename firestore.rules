@@ -55,10 +55,10 @@ service cloud.firestore {
     match /subscription_logs/{docId}     { allow read, create: if isSuperAdmin(); }
     match /audit_logs/{docId}            { allow read: if isSuperAdmin(); allow create: if isAuth(); }
     match /alimtalk_queue/{docId}        { allow create: if isAuth(); allow read, update: if isSuperAdmin(); }
-    match /join_requests/{docId}         { allow create: if true; allow read, update, delete: if isSuperAdmin(); }
-    match /open_event/{docId}            { allow read: if true; allow write: if isAuth(); }
-    match /used_biz_numbers/{docId}      { allow read: if true; allow write: if isAuth(); }
-    match /visitors/{docId}              { allow read: if true; allow write: if isAuth(); }
+    match /join_requests/{docId}         { allow create: if isAuth(); allow read, update, delete: if isSuperAdmin(); }
+    match /open_event/{docId}            { allow read: if true; allow write: if isSuperAdmin(); }
+    match /used_biz_numbers/{docId}      { allow read: if true; allow create: if isAuth(); allow update, delete: if false; }
+    match /visitors/{docId}              { allow read: if isAuth(); allow write: if isAuth(); }
 
     match /companies/{dealerId} {
       allow read: if isDealer(dealerId);
@@ -68,8 +68,10 @@ service cloud.firestore {
     }
     match /users/{userId} {
       allow read: if isAuth() && (request.auth.uid == userId || ownsDoc() || isSuperAdmin());
-      allow create: if isAuth();
-      allow update, delete: if isAuth() && (request.auth.uid == userId || isSuperAdmin());
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAuth() && (request.auth.uid == userId || isSuperAdmin())
+                    && (!request.resource.data.keys().hasAny(['dealerId']) || request.resource.data.dealerId == resource.data.dealerId);
+      allow delete: if isSuperAdmin();
     }
     match /subscriptions/{uid} {
       allow read: if isAuth() && (request.auth.uid == uid || isSuperAdmin());
@@ -81,7 +83,7 @@ service cloud.firestore {
       allow read: if isAuth() && (resource.data.email == request.auth.token.email || isSuperAdmin());
       allow write: if isSuperAdmin();
     }
-    match /statement_share/{docId}       { allow read: if true; allow create: if isAuth(); allow update, delete: if isSuperAdmin(); }
+    match /statement_share/{docId}       { allow read: if isAuth(); allow create: if isAuth(); allow update, delete: if isSuperAdmin(); }
     match /settings/{docId} {
       allow read: if canRead() || isSuperAdmin();
       allow create: if canWrite();
@@ -101,8 +103,8 @@ service cloud.firestore {
     match /drivers/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /attendance/{docId}             {
       allow read: if canRead();
-      allow create: if true;
-      allow update: if canOwn() || isAuth();
+      allow create: if isAuth();
+      allow update: if canOwn() || (isAuth() && request.auth.uid == resource.data.uid);
       allow delete: if canOwn();
     }
     match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if isAuth() && (request.auth.uid == docId || isDealer(request.resource.data.dealerId)); allow update: if isAuth() && (request.auth.uid == docId || canOwn() || isDealer(resource.data.dealerId)); allow delete: if canOwn(); }
@@ -117,6 +119,7 @@ service cloud.firestore {
     match /mbetco_sales/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /message_history/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /contracts/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /eContracts/{docId}             { allow read: if isAuth(); allow write: if isSuperAdmin(); }
     match /expenses/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /vehicles/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /customers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
@@ -161,25 +164,26 @@ service cloud.firestore {
     match /universal_settlements/{docId}  { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /payout_sessions/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /shop_orders/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /delivery_drivers/{uid}          { allow read: if isSuperAdmin() || (isAuth() && request.auth.uid == uid); allow create: if isAuth() && request.auth.uid == uid; allow update: if (isAuth() && request.auth.uid == uid) || isSuperAdmin(); allow delete: if isSuperAdmin(); }
     match /driving_memos/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /emergency_deliveries/{docId}   { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /activity/{docId}               { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /transfers/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /alimtalk_overcharge/{docId}    { allow read: if canRead(); allow create: if isAuth(); allow update, delete: if canOwn(); }
     match /payroll_logs/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /staff/{docId}                  { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
+    match /staff/{docId}                  { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || (isAuth() && request.auth.uid == resource.data.uid); allow delete: if canOwn(); }
 
     match /filo_menus/{docId}             { allow read: if true; allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /menu_recipes/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /menu_costs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_menu_costs/{docId}        { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_sales/{docId}             { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn(); allow delete: if canOwn(); }
-    match /filo_orders/{docId}            { allow read: if canRead(); allow create: if true; allow update: if isAuth(); allow delete: if canOwn(); }
-    match /filo_customers/{docId}         { allow read: if canRead(); allow create: if true; allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
+    match /filo_orders/{docId}            { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn(); allow delete: if canOwn(); }
+    match /filo_customers/{docId}         { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /filo_services/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_bookings/{docId}          { allow read: if canRead(); allow create: if true; allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
+    match /filo_bookings/{docId}          { allow read: if canRead(); allow create: if isAuth(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
     match /filo_settings/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /filo_point_log/{docId}         { allow read: if canRead(); allow create: if true; allow update, delete: if canOwn(); }
+    match /filo_point_log/{docId}         { allow read: if canRead(); allow create: if isAuth(); allow update, delete: if canOwn(); }
     match /filo_mb_types/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_memberships/{docId}       { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /filo_tables/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update: if canOwn() || isAuth(); allow delete: if canOwn(); }
@@ -202,7 +206,10 @@ service cloud.firestore {
     match /yongcha_users/{uid} {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == uid;
-      allow update: if request.auth.uid == uid || isSuperAdmin();
+      allow update: if isSuperAdmin() ||
+        (request.auth.uid == uid &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['type','suspended','trustScore','trustGrade','noShowCount','acceptRate','isAdmin']));
       allow delete: if isSuperAdmin();
     }
     match /yongcha_posts/{docId} {
@@ -215,7 +222,8 @@ service cloud.firestore {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
       allow create: if isAuth();
       allow update: if isAuth() && (resource.data.agencyId == request.auth.uid || resource.data.driverId == request.auth.uid || isSuperAdmin());
-      allow delete: if isSuperAdmin();
+      allow delete: if isSuperAdmin() ||
+        (isAuth() && resource.data.driverId == request.auth.uid && resource.data.status == 'pending');
     }
     match /yongcha_reviews/{docId} {
       allow read: if isAuth();
@@ -229,7 +237,7 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
     match /yongcha_resumes/{docId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.isPublic == true || isSuperAdmin());
       allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
       allow update: if isAuth() && resource.data.driverId == request.auth.uid;
       allow delete: if isAuth() && resource.data.driverId == request.auth.uid || isSuperAdmin();
@@ -267,7 +275,8 @@ service cloud.firestore {
     }
     match /yongcha_stats/{region} {
       allow read: if isAuth();
-      allow write: if isSuperAdmin();
+      allow write: if isAuth() &&
+        request.resource.data.keys().hasOnly(['region','courier','avgUnitPrice','postCount','updatedAt']);
     }
     match /yongcha_daily_records/{docId} {
       allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
@@ -293,6 +302,56 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
       allow delete: if isSuperAdmin();
+    }
+    match /yongcha_driver_posts/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && resource.data.driverId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.driverId == request.auth.uid || isSuperAdmin();
+    }
+
+    match /yongcha_entrance_codes/{docId} {
+      allow read: if isAuth() && (resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth() && request.resource.data.agencyId == request.auth.uid;
+      allow update: if isAuth() && resource.data.agencyId == request.auth.uid;
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_records/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_accidents/{docId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow create: if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /payroll/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /yongcha_locations/{docId} {
+      allow get: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow list: if isAuth();
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && resource.data.driverId == request.auth.uid;
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_bookmarks/{docId} {
+      allow read: if isAuth() && resource.data.driverId == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update, delete: if isAuth() && resource.data.driverId == request.auth.uid;
+    }
+    match /yongcha_rest/{docId} {
+      allow read: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow list: if isAuth();
+      allow create: if isAuth() && request.resource.data.driverId == request.auth.uid;
+      allow update: if isAuth() && (resource.data.driverId == request.auth.uid || resource.data.agencyId == request.auth.uid || isSuperAdmin());
+      allow delete: if isSuperAdmin();
+    }
+    match /yongcha_alerts/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == docId;
     }
 
     match /{document=**} {
