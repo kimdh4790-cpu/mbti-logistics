@@ -343,6 +343,8 @@ function _dineLogin(){
   }
   err.textContent='';
   _dineToken = d.idToken;
+  /* Firebase SDK 인증 동기화 — _db.* 콜렉션 읽기 권한 부여 */
+  _auth.signInWithEmailAndPassword(email, pw).catch(function(){});
   var _lid = d.localId; var _lemail = d.email;
   /* Firestore REST API로 companies 조회 */
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
@@ -413,6 +415,7 @@ function _dineGoFilo(){
 
 function _dineLogout(){
  if(!confirm('로그아웃하시겠습니까?'))return;
+ _auth.signOut().catch(function(){});
  _dineToken=null; _CU={};
  document.getElementById('login-wrap').style.display='flex';
  document.getElementById('app-wrap').style.display='none';
