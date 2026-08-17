@@ -527,6 +527,22 @@ function _toggleSidebar(){
  }
 }
 
+function _toggleOrientation(){
+ var btn=document.getElementById('rotate-btn');
+ var isLandscape=(screen.orientation&&screen.orientation.type||'').includes('landscape')||window.innerWidth>window.innerHeight;
+ var target=isLandscape?'portrait-primary':'landscape-primary';
+ if(screen.orientation&&screen.orientation.lock){
+  screen.orientation.lock(target).then(function(){
+   if(btn)btn.style.color='var(--primary)';
+   setTimeout(function(){if(btn)btn.style.color='';},1000);
+  }).catch(function(){
+   _filoToast('기기 설정 → 화면 자동 회전을 켜주세요');
+  });
+ } else {
+  _filoToast('이 브라우저는 화면 회전 API를 지원하지 않습니다');
+ }
+}
+
 function _filoGoPage(p){
  /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
  _filoReleaseWatchers(p);
