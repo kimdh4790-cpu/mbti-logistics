@@ -2090,14 +2090,14 @@ async function acceptExchange(){
     // ★ filo.ai.kr 라우팅
     if (hostname === 'dine.ne.kr' || hostname === 'www.dine.ne.kr') {
       if (path === '/api/get-members') {
-        const _admin = await requireAdmin(request, env);
-        if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const _gmUser = await verifyFirebaseToken(request, env);
+        if (!_gmUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const dealerId = new URL(request.url).searchParams.get('dealerId');
         if (!dealerId) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
         const res2 = await fetch(`${FS_BASE}:runQuery`,{
           method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]}})
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},limit:200}})
         });
         const rows = await res2.json();
         const docs = (rows||[]).filter(r=>r.document).map(r=>{
