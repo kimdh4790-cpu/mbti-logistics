@@ -1036,48 +1036,42 @@ _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
   document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   if(u){
-    if(_CU&&_CU.uid===u.uid)return; // already handled by registration flow
-    var _authTimer=setTimeout(function(){_showLogin();},30000);
-    function _tryLoadUser(retries){
-      return u.getIdToken().then(function(){
-        return _db.collection('yongcha_users').doc(u.uid).get();
-      }).catch(function(e){
-        if(retries>0){return new Promise(function(r){setTimeout(r,2000);}).then(function(){return _tryLoadUser(retries-1);});}
-        throw e;
-      });
-    }
-    _tryLoadUser(3).then(function(snap){
+    if(_CU&&_CU.uid===u.uid)return;
+    // 10초 내 Firestore 응답 없으면 타임아웃
+    var _authTimer=setTimeout(function(){
+      _showLogin();
+      setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='네트워크 연결이 불안정해요. 다시 시도해주세요.';err.style.display='block';}},100);
+    },10000);
+    _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
       clearTimeout(_authTimer);
-      if(_CU&&_CU.uid===u.uid)return; // registration flow already set _CU
+      if(_CU&&_CU.uid===u.uid)return;
       var _lBtn=document.getElementById('l-btn');
       if(_lBtn){_lBtn.textContent='로그인';_lBtn.disabled=false;}
       if(snap.exists){
         var _ud=snap.data();
         if(_ud.suspended){
           _auth.signOut();_showLogin();
-          setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='계정이 정지되었습니다. 관리자에게 문의하세요.';err.style.display='block';}},300);
+          setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='계정이 정지되었습니다. 관리자에게 문의하세요.';err.style.display='block';}},100);
           return;
         }
         _CU=Object.assign({uid:u.uid},_ud);_showApp();
-      }
-      else if(ADMINS.indexOf(u.email||'')>=0){
+      } else if(ADMINS.indexOf(u.email||'')>=0){
         var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,
           phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',
           createdAt:firebase.firestore.FieldValue.serverTimestamp()};
         _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){
-          clearTimeout(_authTimer);
-          if(_CU&&_CU.uid===u.uid)return; // registration flow may have already set _CU
+          if(_CU&&_CU.uid===u.uid)return;
           _CU=Object.assign({uid:u.uid},doc);_showApp();
-        }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] set error:',e);_showLogin();});
-      } else {clearTimeout(_authTimer);_showLogin();}
+        }).catch(function(){_showLogin();});
+      } else {
+        // Firebase Auth는 됐으나 yongcha_users 문서 없음 → 회원가입 필요
+        _auth.signOut();_showLogin();
+        setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='앱에서 회원가입을 완료해주세요.';err.style.display='block';}},100);
+      }
     }).catch(function(e){
       clearTimeout(_authTimer);
-      // 로그인 화면에 에러 표시
       _showLogin();
-      setTimeout(function(){
-        var err=document.getElementById('l-err');
-        if(err){err.textContent='DB오류: '+e.code+' / '+e.message;err.style.display='block';}
-      },300);
+      setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='로그인 오류가 발생했어요. 다시 시도해주세요.';err.style.display='block';}},100);
     });
   } else {_showLogin();}
 });
