@@ -40,40 +40,93 @@ function _filoTableLoad(did){
  if(window._bookingUnsub)window._bookingUnsub();
  if(window._callUnsub)window._callUnsub();
 
- /* 직원 호출 실시간 감지 */
+ /* 직원 호출 + 테이블 이동 요청 실시간 감지 */
  window._callUnsub=_db.collection('staff_calls')
   .where('dealerId','==',did).where('status','==','pending')
   .onSnapshot(function(snap){
    var banner=document.getElementById('staff-call-banner');
    var grid=document.getElementById('filo-table-grid');
    if(!banner)return;
-   // 호출 중인 테이블 번호 수집
-   var callMap={};
+   // 유형 분리: 일반 호출 vs 테이블 이동 요청
+   var callMap={}, xferDocs=[];
    snap.forEach(function(doc){
     var d=doc.data();
-    var tNum=d.tableNum||d.tableInfo||'?';
-    if(!callMap[tNum])callMap[tNum]={count:0,ids:[]};
-    callMap[tNum].count++;
-    callMap[tNum].ids.push(doc.id);
+    if(d.type==='table_transfer'){
+     xferDocs.push({id:doc.id,d:d});
+    } else {
+     var tNum=d.tableNum||d.tableInfo||'?';
+     if(!callMap[tNum])callMap[tNum]={count:0,ids:[]};
+     callMap[tNum].count++;
+     callMap[tNum].ids.push(doc.id);
+    }
    });
-   // 배너 업데이트
-   if(snap.size>0){
+   var regularCount=Object.keys(callMap).length;
+   var hasAny=regularCount>0||xferDocs.length>0;
+   if(hasAny){
     banner.innerHTML='';
-    var title=document.createElement('div');
-    title.style.cssText='font-size:12px;font-weight:800;color:#ef4444;margin-bottom:6px';
-    title.textContent='직원 호출 ('+snap.size+'건)';
-    banner.appendChild(title);
-    Object.keys(callMap).forEach(function(k){
-     var span=document.createElement('span');
-     span.style.cssText='display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px';
-     span.textContent='테이블 '+k+' ';
-     var btn=document.createElement('button');
-     btn.textContent='OK';
-     btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
-     (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
-     span.appendChild(btn);
-     banner.appendChild(span);
-    });
+    // ── 일반 호출 영역 ──
+    if(regularCount>0){
+     var ct=document.createElement('div');
+     ct.style.cssText='font-size:12px;font-weight:800;color:#ef4444;margin-bottom:6px';
+     ct.textContent='직원 호출 ('+regularCount+'건)';
+     banner.appendChild(ct);
+     Object.keys(callMap).forEach(function(k){
+      var span=document.createElement('span');
+      span.style.cssText='display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px';
+      span.textContent='테이블 '+k+' ';
+      var btn=document.createElement('button');
+      btn.textContent='OK';
+      btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
+      (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
+      span.appendChild(btn);
+      banner.appendChild(span);
+     });
+    }
+    // ── 테이블 이동 요청 영역 ──
+    if(xferDocs.length>0){
+     if(regularCount>0){var sep=document.createElement('div');sep.style.cssText='border-top:1px solid rgba(255,255,255,.08);margin:8px 0';banner.appendChild(sep);}
+     var xt=document.createElement('div');
+     xt.style.cssText='font-size:12px;font-weight:800;color:#0891b2;margin-bottom:6px';
+     xt.textContent='테이블 이동 요청 ('+xferDocs.length+'건)';
+     banner.appendChild(xt);
+     xferDocs.forEach(function(item){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.25);border-radius:10px;padding:8px 10px;margin-bottom:4px';
+      var info=document.createElement('span');
+      info.style.cssText='font-size:12px;font-weight:700;color:var(--tx)';
+      info.textContent=(item.d.fromTableName||('테이블 '+item.d.fromTable))+' → '+(item.d.toTableName||('테이블 '+item.d.toTable));
+      var btns=document.createElement('div');
+      btns.style.cssText='display:flex;gap:5px;flex-shrink:0;margin-left:8px';
+      var ok=document.createElement('button');
+      ok.textContent='승인';
+      ok.style.cssText='padding:3px 10px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+      var no=document.createElement('button');
+      no.textContent='거절';
+      no.style.cssText='padding:3px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+      (function(docId,xd){
+       ok.onclick=function(){
+        ok.disabled=true;ok.textContent='...';
+        _db.collection('filo_orders').doc(xd.orderId).update({
+         tableNum:xd.toTable,tableName:xd.toTableName,
+         movedFrom:xd.fromTable,movedAt:new Date().toISOString()
+        }).then(function(){
+         return _db.collection('staff_calls').doc(docId).update({status:'approved',approvedAt:new Date().toISOString()});
+        }).then(function(){
+         _filoToast((xd.fromTableName||xd.fromTable)+' → '+(xd.toTableName||xd.toTable)+' 이동 승인');
+         _filoTableLoad(did);
+        }).catch(function(e){_filoToast('승인 실패: '+e.message);ok.disabled=false;ok.textContent='승인';});
+       };
+       no.onclick=function(){
+        _db.collection('staff_calls').doc(docId).update({status:'rejected'})
+         .then(function(){_filoToast('이동 거절');})
+         .catch(function(){});
+       };
+      })(item.id,item.d);
+      btns.appendChild(ok);btns.appendChild(no);
+      row.appendChild(info);row.appendChild(btns);
+      banner.appendChild(row);
+     });
+    }
     banner.style.display='block';
    } else {
     banner.style.display='none';
