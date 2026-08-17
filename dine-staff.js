@@ -34,7 +34,10 @@ function _dineStaff(el){
  wrap.appendChild(grid);
  el.appendChild(wrap);
 
- fetch('/api/get-members?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();}).then(function(res){
+ var _cu=firebase.auth().currentUser;
+ (_cu?_cu.getIdToken():Promise.resolve('')).then(function(tok){
+  return fetch('/api/get-members?dealerId='+encodeURIComponent(did),tok?{headers:{'Authorization':'Bearer '+tok}}:{});
+ }).then(function(r){return r.json();}).then(function(res){
   var snap={docs:(res.members||[]),empty:!(res.members&&res.members.length)};
   /* 전화번호+이름 기준 중복 제거 */
   var _seenKey={};
@@ -411,7 +414,7 @@ function _dineLoadAttend(did){
     });
     if(kpi)kpi.innerHTML=
      '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">출근</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
+     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">퇴근</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
      '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
      '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
     var tbl=document.getElementById('att-table');if(!tbl)return;
