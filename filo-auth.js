@@ -352,8 +352,6 @@ function _buildFiloNav(){
  if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
   _sales.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
   _sales.push({ic:'bell',l:'주문 대기',p:'orders'});
-  _sales.push({ic:'truck',l:'배달 주문',p:'delivery'});
-  _sales.push({ic:'receipt',l:'매출 집계',p:'pos_report'});
  }
  _sales.push({ic:'sparkles',l:'AIVO 어시스턴트',p:'ai',badge:'AIVO'});
  menus.push({s:'주문·매출',items:_sales});
@@ -404,7 +402,6 @@ function _buildFiloNav(){
  /* ── 분석 ── */
  var _analytics=[];
  if(hasAll||hasFeature('sales_analytics')){
-  _analytics.push({ic:'trending-up',l:'매출 리포트',p:'sales'});
   _analytics.push({ic:'pie-chart',l:'AIVO 마진 분석',p:'margin',badge:'AIVO'});
  }
  if(isAdmin)_analytics.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
@@ -593,9 +590,6 @@ function _filoGoPage(p){
   _filoLoadAndRun('filo-menu-mgmt.js', function(){ _filoBakeryQrMgmt(el); });
  }
  else if(p==='orders') _filoPageOrders(el);
- else if(p==='delivery') _filoPageDelivery(el);
- else if(p==='sales_report') _filoPageSales(el);
- else if(p==='pos_report') _filoPagePosReport(el);
  else if(p==='inventory') _filoPageInventory(el);
  else if(p==='inv_dash'){ _filoLoadAndRun('filo-inventory.js',function(){_filoPageInventoryDash(el);}); }
  else if(p==='stock_in') _filoPageStockIn(el);
@@ -729,8 +723,8 @@ function _filoPageHome(el){
  '<div class="card fade-up-3">'+
  '<div style="font-size:12px;font-weight:700;color:var(--t3);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">빠른 실행</div>'+
  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">'+
- [{ic:'monitor',l:'POS',p:'kiosk'},{ic:'bell',l:'주문대기',p:'orders'},{ic:'truck',l:'배달',p:'delivery'},
- {ic:'package',l:'재고',p:'inventory'},{ic:'flask',l:'레시피',p:'recipe'},{ic:'trending-up',l:'매출',p:'sales_report'},
+ [{ic:'monitor',l:'POS',p:'kiosk'},{ic:'bell',l:'주문대기',p:'orders'},
+ {ic:'package',l:'재고',p:'inventory'},{ic:'flask',l:'레시피',p:'recipe'},
  {ic:'briefcase',l:'급여',p:'payroll'},{ic:'calendar',l:'예약',p:'schedule'}].map(function(m){
  return '<button onclick="_filoGoPage(\''+m.p+'\')" style="padding:14px 6px;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.2);border-radius:10px;color:var(--tx);cursor:pointer;text-align:center;transition:.2s;font-family:inherit" onmouseover="this.style.borderColor=\'#c9a84c\';this.style.background=\'rgba(201,168,76,.12)\'" onmouseout="this.style.borderColor=\'rgba(201,168,76,.2)\';this.style.background=\'rgba(255,255,255,.06)\'">'+
  '<div style="display:flex;justify-content:center;margin-bottom:4px">'+_svgIcon(m.ic)+'</div>'+
@@ -873,8 +867,7 @@ function _filoPageHome(el){
 var _FILO_WATCHERS=[
  {pages:['home'],            keys:['_filoHomeUnsubs','_filoAttendUnsub']},
  {pages:['orders'],          keys:['_ordersUnsub']},
- {pages:['delivery'],        keys:['_deliveryUnsub']},
- {pages:['sales_report','margin','sales'], keys:['_marginUnsub']},
+ {pages:['margin'], keys:['_marginUnsub']},
  {pages:['schedule'],        keys:['_calUnsub']},
  {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub','_tableOrderUnsub']},
  {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']},
@@ -905,7 +898,7 @@ window._filoReleaseWatchers=_filoReleaseWatchers;
 
 /* POS·주문 페이지에서만 음성 주문 FAB을 띄운다 */
 function _filoSyncVoiceFab(p){
- var show=(p==='kiosk'||p==='orders'||p==='delivery');
+ var show=(p==='kiosk'||p==='orders');
  var fab=document.getElementById('filo-voice-fab');
  if(!show){ if(fab)fab.remove(); return; }
  if(fab||typeof _filoVoiceOrderOpen!=='function') return;
