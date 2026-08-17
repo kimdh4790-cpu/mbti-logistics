@@ -386,8 +386,6 @@ function _buildFiloNav(){
  /* ── 회원·예약 ── */
  var _crm=[];
  if(hasAll||hasFeature('member_crm')){
-  _crm.push({ic:'user-plus',l:'GUESTAI 회원',p:'members',badge:'GUESTAI'});
-  _crm.push({ic:'gift',l:'포인트·멤버십',p:'membership'});
  }
  if(hasAll||hasFeature('reservation')){
   _crm.push({ic:'calendar',l:'예약·달력',p:'schedule'});
