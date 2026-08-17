@@ -376,13 +376,10 @@ function _buildFiloNav(){
   ]});
  }
 
- /* ── 직원·급여 ── */
+ /* ── 직원·급여 (출퇴근현황·급여명세서·근무표는 DINE에서 통합 관리) ── */
  var _staff=[];
  if(hasAll||hasFeature('qr_attend')){
   _staff.push({ic:'qr-code',l:'STAFFIQ 근태 QR',p:'qr_staff',badge:'STAFFIQ'});
-  _staff.push({ic:'activity',l:'출퇴근 현황',p:'attendance'});
-  _staff.push({ic:'briefcase',l:'급여 명세서',p:'payroll'});
-  _staff.push({ic:'calendar',l:'근무표',p:'work_schedule'});
  }
  if(_staff.length)menus.push({s:'직원·급여',items:_staff});
 
@@ -596,10 +593,11 @@ function _filoGoPage(p){
  else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='expiry') _filoPageExpiry(el);
  else if(p==='members') _filoPageMembers(el);
- else if(p==='attend_dash') _filoPageAttendDash(el);
- else if(p==='payroll') _filoPagePayroll(el);
- else if(p==='payroll_dine'){ var slug=(_CU&&_CU.dineSlug)||''; var k=slug||(_CU&&(_CU.companyName||_CU.name))||''; var url=k?'https://dine.ne.kr/'+encodeURIComponent(k)+'#payroll':'https://dine.ne.kr/app'; window.open(url,'_blank'); }
- else if(p==='roster') _filoPageRoster(el);
+ else if(p==='attend_dash'||p==='attendance'||p==='payroll'||p==='roster'||p==='work_schedule'){
+  /* 출퇴근현황·급여명세서·근무표는 DINE에서 통합 관리 */
+  var _slug=(_CU&&_CU.dineSlug)||'';
+  window.open(_slug?'https://dine.ne.kr/'+encodeURIComponent(_slug):'https://dine.ne.kr/app','_blank');
+ }
  else if(p==='qr_staff') _filoPageStaffQR(el);
  else if(p==='member_qr') _filoPageMemberQR(el);
  else if(p==='table_qr') _filoPageTableQR(el);
