@@ -215,9 +215,10 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
     <!-- 기사 오늘 정산 -->
     <div id="driver-settle-box" style="display:none;margin-top:12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px">
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-        <span>오늘 내 정산</span>
+        <span id="driver-settle-title">오늘 내 정산</span>
         <button onclick="_emerShowDriverSettle()" style="font-size:11px;padding:3px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>
       </div>
+      <div id="driver-settle-tabrow" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
       <div id="driver-settle-list" style="font-size:13px;color:var(--text)"></div>
       <div id="driver-settle-total" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:14px;font-weight:800;color:#c9a84c;text-align:right"></div>
     </div>
@@ -1264,20 +1265,52 @@ function _renderSettleTable(docs, prices, dateStr) {
 // ═══════════════════════════════════════
 // 기사 오늘 정산 (기사 메인화면)
 // ═══════════════════════════════════════
-function _emerShowDriverSettle() {
+function _emerShowDriverSettle(dateStr) {
   var box = document.getElementById('driver-settle-box');
   if(!box) return;
   var did = (_CU&&_CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
   var drv = S.curDriver || localStorage.getItem('mbti_emer_driver') || '';
   if(!did || !drv) return;
-  var dateStr = new Date().toISOString().slice(0,10);
+  var today = new Date();
+  var todayStr = today.toISOString().slice(0,10);
+  if(!dateStr) dateStr = todayStr;
+
+  // 날짜 탭 렌더 (최근 7일)
+  var tabRow = document.getElementById('driver-settle-tabrow');
+  if(tabRow) {
+    var tabHtml = '';
+    for(var i=0;i<7;i++){
+      var td = new Date(today); td.setDate(td.getDate()-i);
+      var ds = td.toISOString().slice(0,10);
+      var lbl = i===0 ? '오늘' : i===1 ? '어제' : (td.getMonth()+1)+'/'+(td.getDate());
+      var sel = ds===dateStr;
+      tabHtml += '<button onclick="_emerShowDriverSettle(\''+ds+'\')" style="flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid '+(sel?'#c9a84c':'rgba(255,255,255,.15)')+';background:'+(sel?'rgba(201,168,76,.18)':'rgba(255,255,255,.05)')+';color:'+(sel?'#c9a84c':'rgba(255,255,255,.45)')+';font-size:11px;font-weight:'+(sel?'700':'400')+';cursor:pointer;touch-action:manipulation;white-space:nowrap">'+lbl+'</button>';
+    }
+    tabRow.innerHTML = tabHtml;
+  }
+
+  // 제목 업데이트
+  var titleEl = document.getElementById('driver-settle-title');
+  if(titleEl) titleEl.textContent = dateStr===todayStr ? '오늘 내 정산' : dateStr.slice(5).replace('-','/')+ '일 정산';
+
+  // 로딩 표시
+  var listEl = document.getElementById('driver-settle-list');
+  var totalEl = document.getElementById('driver-settle-total');
+  if(listEl) listEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">불러오는 중...</div>';
+  if(totalEl) totalEl.textContent = '';
+  box.style.display = 'block';
+
+  // 오늘은 캐시된 map API, 과거는 list API
+  var apiUrl = dateStr===todayStr
+    ? '/api/emergency-map?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr
+    : '/api/emergency-list?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr;
+
   Promise.all([
-    fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch(apiUrl).then(function(r){return r.json();}),
     fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
   ]).then(function(results) {
     var docs   = results[0].ok ? (results[0].docs||[]) : [];
     var prices = results[1].prices || window._CO_EMER_PRICES || {};
-    // 완료된 배송건만 정산
     var appGroups = {};
     var doneDocs = docs.filter(function(d){return d.status==='완료';});
     doneDocs.forEach(function(d) {
@@ -1286,8 +1319,6 @@ function _emerShowDriverSettle() {
       if(!appGroups[app]) appGroups[app] = {};
       appGroups[app][camp] = (appGroups[app][camp]||0)+1;
     });
-    var listEl  = document.getElementById('driver-settle-list');
-    var totalEl = document.getElementById('driver-settle-total');
     var total = 0;
     var html = '';
     Object.keys(appGroups).forEach(function(app) {
@@ -1302,11 +1333,11 @@ function _emerShowDriverSettle() {
           +'</div>';
       });
     });
-    if(!html) html = '<div style="color:var(--text3);font-size:12px;padding:8px 0">오늘 등록된 배송이 없습니다</div>';
+    var dateLabel = dateStr===todayStr ? '오늘' : dateStr.slice(5).replace('-','/');
+    if(!html) html = '<div style="color:var(--text3);font-size:12px;padding:8px 0">완료된 배송이 없습니다</div>';
     if(listEl) listEl.innerHTML = html;
-    if(totalEl) totalEl.textContent = '오늘 합계 '+total.toLocaleString()+'원';
-    box.style.display = 'block';
-  }).catch(function(){});
+    if(totalEl) totalEl.textContent = dateLabel+' 합계 '+total.toLocaleString()+'원';
+  }).catch(function(){ if(listEl) listEl.innerHTML='<div style="color:#f87171;font-size:12px;padding:8px 0">불러오기 실패</div>'; });
 }
 
 function loadApiKeys(){
