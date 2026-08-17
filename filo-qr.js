@@ -401,7 +401,7 @@ function _filoQRPrintA4(did){
     var wrap=document.createElement('div');
     wrap.id='_qrp_'+t.num;
     hidden.appendChild(wrap);
-    try{new QRCode(wrap,{text:url,width:200,height:200,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+    try{new QRCode(wrap,{text:url,width:240,height:240,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
     return {num:t.num,name:t.name,wrap:wrap};
    });
 
@@ -424,9 +424,10 @@ window._filoQRPrintA4=_filoQRPrintA4;
 /* ── 인쇄 HTML 빌드 (A4 4장/페이지) ── */
 function _filoQRPrintBuild(allCards,storeName){
  function makeCard(c){
+  var numOnly=c.num;
   return '<div class="sticker">'+
    '<div class="gold-top"></div>'+
-   '<div class="deco1"></div>'+
+   '<div class="tbl-big">'+numOnly+'</div>'+
    '<div class="header">'+
    (storeName?'<div class="rest-label">RESTAURANT</div><div class="store-name">'+storeName+'</div>':'')+
    '<div class="divider"><div class="dline"></div><span class="ddot">✦</span><div class="dline"></div></div>'+
@@ -466,7 +467,8 @@ function _filoQRPrintBuild(allCards,storeName){
   '.sticker.empty{background:transparent;border:1.5px dashed #d1d5db}'+
   '.gold-top{height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent);flex-shrink:0}'+
   '.gold-bot{position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#C9A84C,#F5D97E,#C9A84C,transparent)}'+
-  '.deco1{position:absolute;top:-25px;right:-25px;width:90px;height:90px;border-radius:50%;border:1px solid rgba(201,168,76,.12);pointer-events:none}'+
+  '.tbl-big{position:absolute;top:8px;left:12px;font-size:52px;font-weight:900;color:#C9A84C;line-height:1;z-index:10;'+
+  'text-shadow:0 0 18px rgba(201,168,76,.35);letter-spacing:-2px;font-family:"Apple SD Gothic Neo","맑은 고딕","Noto Sans KR",sans-serif}'+
   '.header{padding:10px 14px 5px;text-align:center;position:relative;z-index:1;flex-shrink:0}'+
   '.rest-label{font-size:7px;color:rgba(201,168,76,.65);letter-spacing:3px;font-weight:500;margin-bottom:3px}'+
   '.store-name{font-size:15px;font-weight:900;color:#fff;letter-spacing:3px;line-height:1.1;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
@@ -479,9 +481,9 @@ function _filoQRPrintBuild(allCards,storeName){
   '.bdot{color:rgba(201,168,76,.7);font-size:7px}'+
   '.sub{font-size:6px;color:rgba(255,255,255,.3);letter-spacing:1.5px}'+
   '.sep{margin:0 12px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);flex-shrink:0}'+
-  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:8px 0 4px;position:relative;z-index:1}'+
+  '.qr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px 0 2px;position:relative;z-index:1}'+
   '.qr-box{background:#fff;border-radius:8px;padding:7px;display:inline-block}'+
-  '.qr-img{width:110px;height:110px;display:block}'+
+  '.qr-img{width:148px;height:148px;display:block}'+
   '.badge-wrap{text-align:center;padding:3px 0 7px;position:relative;z-index:1;flex-shrink:0}'+
   '.badge-inner{display:inline-flex;align-items:center;gap:6px;border:1.5px solid rgba(201,168,76,.55);border-radius:50px;padding:5px 18px;background:rgba(201,168,76,.07)}'+
   '.blabel{font-size:8px;font-weight:700;color:rgba(201,168,76,.8);letter-spacing:2px}'+
