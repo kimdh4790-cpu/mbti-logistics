@@ -107,11 +107,11 @@ function _poll(){
     .catch(function(e){console.warn('poll error:',e);});
 }
 
-function _orderAction(orderId,status){
+function _orderAction(orderId,status,col){
   fetch('/kitchen/update',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:_did,orderId:orderId,status:status})
+    body:JSON.stringify({did:_did,orderId:orderId,status:status,col:col||'filo_orders'})
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok)_poll();
   }).catch(function(){});
@@ -156,13 +156,13 @@ function _render(orders,newIds){
     var doneBtn=document.createElement('button');
     doneBtn.className='btn-done';
     doneBtn.textContent='완료';
-    (function(id){doneBtn.onclick=function(){_orderAction(id,'done');};})(o._id);
+    (function(id,c){doneBtn.onclick=function(){_orderAction(id,'done',c);};})(o._id,o._col);
     var cancelBtn=document.createElement('button');
     cancelBtn.className='btn-cancel';
     cancelBtn.textContent='취소';
-    (function(id){cancelBtn.onclick=function(){
-      if(confirm('주문을 취소하시겠습니까?'))_orderAction(id,'cancel');
-    };})(o._id);
+    (function(id,c){cancelBtn.onclick=function(){
+      if(confirm('주문을 취소하시겠습니까?'))_orderAction(id,'cancel',c);
+    };})(o._id,o._col);
     footer.appendChild(doneBtn);footer.appendChild(cancelBtn);
     card.appendChild(footer);
     grid.appendChild(card);
