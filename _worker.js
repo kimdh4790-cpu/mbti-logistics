@@ -3135,72 +3135,82 @@ filo.ai.kr &nbsp;·&nbsp; kimdh4790@gmail.com<br>
       if (path === '/smart-pos' || path === '/smart-pos.html') return serveKVFile(env, 'filo-smart-pos.html', 'text/html');
       if (path === '/inventory' || path === '/inventory.html') return serveKVFile(env, 'inventory.html', 'text/html');
       if (path === '/qr') {
-        // 직원 출퇴근 QR — 직원선택 + GPS + 기기 중복방지
+        // 직원 출퇴근 QR — 연락처 입력 + GPS + 기기 중복방지
         const params = new URL(request.url).searchParams;
         const did    = params.get('did');
         const action = params.get('action') || 'in';
         if (!did) return serveKVFile(env, 'qrpos.html', 'text/html');
 
         const actionMap = {in:'출근', out:'퇴근'};
-        const iconMap   = {in:'●', out:'○'};
         const label = actionMap[action] || '출근';
-        const icon  = iconMap[action]  || '●';
 
         try {
           const token = await getAccessToken(env);
-          // members 조회
-          // 매장 GPS 좌표 조회
           const cRes = await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
           const cData = await cRes.json();
           const shopLat = cData.fields?.lat?.doubleValue||cData.fields?.lat?.integerValue||0;
           const shopLng = cData.fields?.lng?.doubleValue||cData.fields?.lng?.integerValue||0;
 
-          // members는 클라이언트에서 Firebase SDK로 로드
-          const membersJson = '[]'; // 클라이언트에서 로드
-          const html = `<!DOCTYPE html>
-<html lang="ko"><head>
+          const html = `<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>${label}</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></` + `script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></` + `script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a14;color:#e8e8f0;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
   min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;}
 .card{background:#10101a;border:1px solid #1a1a2e;border-radius:24px;padding:28px 20px;max-width:360px;width:100%;}
-h2{font-size:20px;font-weight:900;text-align:center;margin-bottom:20px;color:#00ff88;}
-.mem-btn{width:100%;padding:14px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:12px;
-  color:#e8e8f0;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;text-align:left;}
-.mem-btn:active{background:#2a2a4e;}
-.status{text-align:center;font-size:14px;color:#666680;margin-top:12px;min-height:20px;}
+h2{font-size:20px;font-weight:900;text-align:center;margin-bottom:24px;color:${action==='in'?'#00ff88':'#ff6644'};}
+.inp{width:100%;padding:14px 16px;background:#1a1a2e;border:1.5px solid #2a2a4e;border-radius:12px;
+  color:#e8e8f0;font-size:18px;font-weight:700;outline:none;margin-bottom:12px;display:block;
+  -webkit-appearance:none;letter-spacing:2px;}
+.inp:focus{border-color:${action==='in'?'#00ff88':'#ff6644'};}
+.btn-main{width:100%;padding:16px;border:none;border-radius:12px;font-size:17px;font-weight:900;cursor:pointer;
+  background:${action==='in'?'#00c96e':'#e05544'};color:#fff;margin-bottom:10px;}
+.btn-main:active{opacity:.85;}
+.btn-sub{width:100%;padding:11px;background:transparent;border:1px solid #2a2a4e;border-radius:10px;
+  color:#888;font-size:13px;cursor:pointer;margin-bottom:8px;}
+.btn-sub:active{background:#1a1a2e;}
+.confirm-name{font-size:28px;font-weight:900;text-align:center;margin-bottom:6px;color:#e8e8f0;}
+.confirm-wage{font-size:13px;text-align:center;color:#888;margin-bottom:20px;}
 .done-card{text-align:center;}
-.done-icon{font-size:64px;margin-bottom:12px;}
-.done-label{font-size:24px;font-weight:900;color:#00ff88;margin-bottom:6px;}
-.done-name{font-size:16px;color:#888;margin-bottom:4px;}
-.done-time{font-size:13px;color:#555;}
-.btn{display:block;margin:20px auto 0;padding:12px 32px;background:#1a1a3e;border:1px solid #2a2a5e;
-  border-radius:12px;color:#e8e8f0;font-size:14px;font-weight:700;cursor:pointer;}
-.err{color:#ff4466;text-align:center;padding:12px;}
+.done-label{font-size:28px;font-weight:900;color:${action==='in'?'#00ff88':'#ff8866'};margin-bottom:8px;}
+.done-name{font-size:18px;color:#ccc;margin-bottom:4px;}
+.done-time{font-size:13px;color:#555;margin-bottom:16px;}
+.salary-card{background:#1a1a2e;border:1px solid #2a2a4e;border-radius:12px;padding:14px;margin:12px 0;}
+.salary-label{font-size:12px;color:#888;margin-bottom:4px;}
+.salary-amount{font-size:24px;font-weight:900;color:#00ff88;}
+.status{text-align:center;font-size:13px;color:#ff4466;margin-top:8px;min-height:18px;}
+.reg-title{font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:14px;}
 </style>
 </head><body>
 <div class="card" id="main">
-  <h2>${icon} ${label}</h2>
-  <div id="list"></div>
-  <div class="status" id="status">본인 이름을 선택하세요</div>
+  <h2>${label}</h2>
+  <div id="phone-form">
+    <input id="inp-phone" class="inp" type="tel" inputmode="numeric"
+      placeholder="연락처 (숫자만)" autocomplete="tel"
+      onkeydown="if(event.key==='Enter')doPhoneLookup()">
+    <button class="btn-main" onclick="doPhoneLookup()">${label} 확인</button>
+    <button class="btn-sub" onclick="showRegForm('')">처음이세요? 신규 등록</button>
+  </div>
+  <div id="confirm-panel" style="display:none"></div>
+  <div id="reg-panel" style="display:none"></div>
+  <div class="status" id="status"></div>
 </div>
-<script>
+<` + `script>
 var DID='${did}';
 var ACTION='${action}';
 var SHOP_LAT=${shopLat};
 var SHOP_LNG=${shopLng};
-var MEMBERS=${membersJson};
-var GPS_RADIUS=300; // 매장 반경 300m
+var GPS_RADIUS=300;
 var _qrFcmToken='';
+var _cur=null;
 var QR_VAPID='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
 try{
   firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'filo.ai.kr',projectId:'mbti-logistics',messagingSenderId:'862900137209',appId:'1:862900137209:web:filoapp'});
-  if('serviceWorker' in navigator&&'Notification' in navigator&&Notification.permission!=='denied'){
+  if('serviceWorker' in navigator&&'Notification' in window&&Notification.permission!=='denied'){
     var _fcmAsked=false;
     function _askFcmPerm(){
       if(_fcmAsked)return;_fcmAsked=true;
@@ -3209,7 +3219,6 @@ try{
       Notification.requestPermission().then(function(p){
         if(p!=='granted')return;
         navigator.serviceWorker.register('/firebase-messaging-sw.js',{scope:'/'})
-          .then(function(reg){return reg.update().then(function(){return reg;});})
           .then(function(reg){return firebase.messaging().getToken({vapidKey:QR_VAPID,serviceWorkerRegistration:reg});})
           .then(function(tok){if(tok)_qrFcmToken=tok;}).catch(function(){});
       });
@@ -3224,151 +3233,124 @@ try{
     }
   }
 }catch(e){}
-
 function getKST(){var n=new Date();return new Date(n.getTime()+9*3600000);}
 function getToday(){return getKST().toISOString().slice(0,10);}
-function getDeviceId(){
-  var k='filo_dev_id';
-  var id=localStorage.getItem(k);
-  if(!id){id='dev_'+Math.random().toString(36).slice(2)+'_'+Date.now();localStorage.setItem(k,id);}
-  return id;
+function getDeviceId(){var k='filo_dev_id';var id=localStorage.getItem(k);if(!id){id='dev_'+Math.random().toString(36).slice(2)+'_'+Date.now();localStorage.setItem(k,id);}return id;}
+function getDistM(lat1,lng1,lat2,lng2){var R=6371000;var dLat=(lat2-lat1)*Math.PI/180;var dLng=(lng2-lng1)*Math.PI/180;var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function setStatus(msg,col){var el=document.getElementById('status');if(el){el.textContent=msg;if(col)el.style.color=col;else el.style.color='#ff4466';}}
+function doPhoneLookup(){
+  var raw=(document.getElementById('inp-phone')&&document.getElementById('inp-phone').value||'').replace(/[^0-9]/g,'');
+  if(raw.length<9){setStatus('연락처를 올바르게 입력하세요');return;}
+  setStatus('조회 중...','#aaa');
+  fetch('/qr/lookup-phone?did='+DID+'&phone='+encodeURIComponent(raw))
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(res.member){_cur=res.member;showConfirm(res.member);}
+      else{setStatus('등록된 연락처가 없습니다. 신규 등록해주세요');document.getElementById('phone-form').style.display='none';showRegForm(raw);}
+    }).catch(function(){setStatus('오류가 발생했습니다');});
 }
-function getDistM(lat1,lng1,lat2,lng2){
-  var R=6371000;
-  var dLat=(lat2-lat1)*Math.PI/180;
-  var dLng=(lng2-lng1)*Math.PI/180;
-  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+
-    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-    Math.sin(dLng/2)*Math.sin(dLng/2);
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+function showConfirm(m){
+  setStatus('','');
+  document.getElementById('phone-form').style.display='none';
+  var panel=document.getElementById('confirm-panel');
+  panel.style.display='';
+  var wageInfo=m.wage?('시급 '+m.wage.toLocaleString()+'원'):'';
+  panel.innerHTML='<div class="confirm-name">'+m.name+'</div>'+
+    '<div class="confirm-wage">'+wageInfo+'</div>'+
+    '<button class="btn-main" onclick="selectMember()">'+(ACTION==='in'?'출근하기':'퇴근하기')+'</button>'+
+    '<button class="btn-sub" onclick="resetForm()">다시 입력</button>';
 }
-
-function setStatus(msg,col){
-  var el=document.getElementById('status');
-  if(el){el.textContent=msg;if(col)el.style.color=col;}
-}
-
-function renderList(){
-  var ul=document.getElementById('list');
-  if(!ul)return;
-  var html='';
-  if(MEMBERS.length){
-    html=MEMBERS.map(function(m){
-      return '<button class="mem-btn" onclick="selectMember(\''+m.id+'\',\''+m.name+'\')">'+m.name+'</button>';
-    }).join('');
-  } else {
-    html='<div class="err" style="margin-bottom:10px">등록된 직원이 없습니다</div>';
-  }
-  html+='<button class="mem-btn" style="border-color:#7c3aed;color:#a78bfa;background:rgba(124,58,237,.12);margin-top:8px" onclick="showRegForm()">+ 내 이름이 없어요 (신규 등록)</button>';
-  ul.innerHTML=html;
-}
-
-function showRegForm(){
-  var ul=document.getElementById('list');
-  if(!ul)return;
-  ul.innerHTML='<div>'+
-    '<div style="font-size:14px;font-weight:800;color:#a78bfa;margin-bottom:12px">신규 직원 등록</div>'+
-    '<input id="r-name" type="text" placeholder="이름을 입력하세요" autocomplete="name" '+
-    'style="width:100%;padding:12px;background:#1a1a2e;border:1.5px solid #7c3aed;border-radius:10px;color:#fff;font-size:15px;margin-bottom:8px;outline:none;display:block">'+
-    '<input id="r-phone" type="tel" placeholder="연락처 (선택사항, 010-0000-0000)" autocomplete="tel" '+
-    'style="width:100%;padding:12px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;display:block">'+
-    '<button onclick="doRegister()" style="width:100%;padding:14px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:800;cursor:pointer">등록 후 ${label}</button>'+
-    '<button onclick="renderList()" style="width:100%;padding:10px;background:transparent;border:none;color:#666;font-size:13px;cursor:pointer;margin-top:6px">← 목록으로 돌아가기</button>'+
-  '</div>';
-  setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
-}
-
-function doRegister(){
-  var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
-  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
-  if(!name){setStatus('이름을 입력하세요','#ff4466');return;}
-  setStatus('등록 중...','#aaa');
-  var deviceId=getDeviceId();
-  var today=getToday();
-  var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
-  if(localStorage.getItem(dupKey)){
-    setStatus('이 기기에서 이미 처리됐습니다','#ff4466');
-    return;
-  }
-  fetch('/qr/register',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:DID,name:name,phone:phone})
-  }).then(function(r){return r.json();}).then(function(res){
-    if(res.ok&&res.uid){
-      doSave(res.uid,name,deviceId,dupKey,0,0);
-    } else {
-      setStatus(res.error||'등록 오류','#ff4466');
-    }
-  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
-}
-
-function selectMember(uid,name){
+function selectMember(){
+  if(!_cur)return;
   setStatus('위치 확인 중...','#aaa');
   var deviceId=getDeviceId();
   var today=getToday();
-
-  // 기기 중복 체크
   var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
-  if(localStorage.getItem(dupKey)){
-    setStatus('이미 '+name+'님의 '+('${label}')+'이 처리됐습니다','#ff4466');
-    return;
-  }
-
-  // GPS 확인
+  if(localStorage.getItem(dupKey)){setStatus('이미 '+_cur.name+'님의 '+(ACTION==='in'?'출근':'퇴근')+'이 처리됐습니다');return;}
   if(SHOP_LAT&&SHOP_LNG&&navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(function(pos){
-      var dist=getDistM(pos.coords.latitude,pos.coords.longitude,SHOP_LAT,SHOP_LNG);
-      if(dist>GPS_RADIUS){
-        setStatus('매장에서 '+Math.round(dist)+'m 떨어져 있습니다 (최대 '+GPS_RADIUS+'m)','#ff4466');
-        return;
-      }
-      doSave(uid,name,deviceId,dupKey,pos.coords.latitude,pos.coords.longitude);
-    },function(){
-      // GPS 실패 시 그냥 진행
-      doSave(uid,name,deviceId,dupKey,0,0);
-    },{timeout:8000});
-  } else {
-    doSave(uid,name,deviceId,dupKey,0,0);
-  }
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        var dist=getDistM(pos.coords.latitude,pos.coords.longitude,SHOP_LAT,SHOP_LNG);
+        if(dist>GPS_RADIUS){setStatus('매장에서 '+Math.round(dist)+'m 떨어져 있습니다 (최대 '+GPS_RADIUS+'m)');return;}
+        doSave(deviceId,dupKey,pos.coords.latitude,pos.coords.longitude);
+      },
+      function(){doSave(deviceId,dupKey,0,0);},
+      {timeout:8000}
+    );
+  } else {doSave(deviceId,dupKey,0,0);}
 }
-
-function doSave(uid,name,deviceId,dupKey,lat,lng){
+function doSave(deviceId,dupKey,lat,lng){
   setStatus('저장 중...','#aaa');
+  var m=_cur;
   var now=new Date();
   var kst=new Date(now.getTime()+9*3600000);
   var date=kst.toISOString().slice(0,10);
   var timeStr=kst.toISOString().slice(11,16);
-
   fetch('/qr/confirm',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({did:DID,uid:uid,name:name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng,fcmToken:_qrFcmToken})
+    body:JSON.stringify({did:DID,uid:m.id,name:m.name,action:ACTION,deviceId:deviceId,lat:lat,lng:lng,fcmToken:_qrFcmToken})
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok){
       localStorage.setItem(dupKey,'1');
-      var card=document.getElementById('main');
-      card.innerHTML='<div class="done-card">'+
-        '<div class="done-icon">'+(ACTION==='in'?'출근':'퇴근')+'</div>'+
+      var wage=res.wage||0;
+      var workMin=res.workMin||0;
+      var salaryHtml='';
+      if(ACTION==='out'&&wage&&workMin){
+        var earned=Math.round(wage*workMin/60);
+        var hrs=Math.floor(workMin/60);
+        var mins=workMin%60;
+        salaryHtml='<div class="salary-card"><div class="salary-label">근무 '+hrs+'시간'+(mins?' '+mins+'분':'')+' 예상 급여</div><div class="salary-amount">'+earned.toLocaleString()+'원</div></div>';
+      } else if(ACTION==='in'&&wage){
+        salaryHtml='<div class="salary-card"><div class="salary-label">시급</div><div class="salary-amount">'+wage.toLocaleString()+'원</div></div>';
+      }
+      document.getElementById('main').innerHTML='<div class="done-card">'+
         '<div class="done-label">'+(ACTION==='in'?'출근':'퇴근')+' 완료</div>'+
-        '<div class="done-name">'+name+'</div>'+
+        '<div class="done-name">'+m.name+'</div>'+
         '<div class="done-time">'+date+' '+timeStr+'</div>'+
-        '<button class="btn" onclick="window.close();history.back()">확인</button>'+
-        '</div>';
-    } else {
-      setStatus(res.error||'오류가 발생했습니다','#ff4466');
-    }
-  }).catch(function(){setStatus('네트워크 오류','#ff4466');});
+        salaryHtml+
+        '<button class="btn-sub" style="margin-top:16px" onclick="history.back()">확인</button>'+
+      '</div>';
+    } else {setStatus(res.error||'오류가 발생했습니다');}
+  }).catch(function(){setStatus('네트워크 오류');});
 }
-
-// /qr/members API로 직원 목록 로드
-fetch('/qr/members?did='+DID)
-  .then(function(r){return r.json();})
-  .then(function(res){
-    if(res.members) MEMBERS=res.members;
-    renderList();
-  }).catch(function(){renderList();});
-</script>
+function showRegForm(phone){
+  setStatus('','');
+  document.getElementById('phone-form').style.display='none';
+  document.getElementById('confirm-panel').style.display='none';
+  var panel=document.getElementById('reg-panel');
+  panel.style.display='';
+  panel.innerHTML='<div class="reg-title">신규 직원 등록</div>'+
+    '<input id="r-name" type="text" class="inp" placeholder="이름" autocomplete="name">'+
+    '<input id="r-phone" type="tel" class="inp" placeholder="연락처 (010-0000-0000)" autocomplete="tel" value="'+(phone||'')+'">'+
+    '<button class="btn-main" onclick="doRegister()">'+(ACTION==='in'?'출근':'퇴근')+'하기</button>'+
+    '<button class="btn-sub" onclick="resetForm()">← 돌아가기</button>';
+  setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
+}
+function resetForm(){
+  document.getElementById('phone-form').style.display='';
+  document.getElementById('confirm-panel').style.display='none';
+  document.getElementById('reg-panel').style.display='none';
+  _cur=null;setStatus('','');
+}
+function doRegister(){
+  var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
+  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
+  if(!name){setStatus('이름을 입력하세요');return;}
+  setStatus('등록 중...','#aaa');
+  fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone})})
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(res.ok&&res.uid){
+        _cur={id:res.uid,name:name,wage:0,wageType:'hourly'};
+        var deviceId=getDeviceId();
+        var today=getToday();
+        var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
+        doSave(deviceId,dupKey,0,0);
+      } else {setStatus(res.error||'등록 오류');}
+    }).catch(function(){setStatus('네트워크 오류');});
+}
+</` + `script>
 </body></html>`;
           return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8'}});
         } catch(e) {
@@ -3376,7 +3358,6 @@ fetch('/qr/members?did='+DID)
             {headers:{'Content-Type':'text/html'}});
         }
       }
-
       // /qr/members — 직원 목록 조회 (SA 토큰)
       if (path === '/qr/members') {
         const did = new URL(request.url).searchParams.get('did');
@@ -3433,6 +3414,46 @@ fetch('/qr/members?did='+DID)
         }
       }
 
+
+      // /qr/lookup-phone — 연락처로 직원 조회
+      if (path === '/qr/lookup-phone') {
+        const lp2 = new URL(request.url).searchParams;
+        const lpDid = lp2.get('did');
+        const lpPhone = (lp2.get('phone')||'').replace(/[^0-9]/g,'');
+        if (!lpDid || !lpPhone) return Response.json({member:null});
+        try {
+          const token = await getAccessToken(env);
+          const formatted = lpPhone.length===11 ? lpPhone.slice(0,3)+'-'+lpPhone.slice(3,7)+'-'+lpPhone.slice(7) : lpPhone;
+          async function queryByPhone(phoneVal) {
+            const r = await fetch(`${FS_BASE}:runQuery`, {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body: JSON.stringify({structuredQuery:{
+                from:[{collectionId:'members'}],
+                where:{compositeFilter:{op:'AND',filters:[
+                  {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:lpDid}}},
+                  {fieldFilter:{field:{fieldPath:'phone'},op:'EQUAL',value:{stringValue:phoneVal}}}
+                ]}},limit:1
+              }})
+            });
+            const docs = await r.json();
+            return Array.isArray(docs)&&docs[0]&&docs[0].document ? docs[0].document : null;
+          }
+          let doc = await queryByPhone(formatted);
+          if (!doc && formatted !== lpPhone) doc = await queryByPhone(lpPhone);
+          if (!doc) return Response.json({member:null});
+          const f = doc.fields||{};
+          const id = doc.name.split('/').pop();
+          return Response.json({member:{
+            id, name:f.name?.stringValue||'',
+            wage:Number(f.wage?.integerValue||f.wage?.doubleValue||0),
+            wageType:f.wageType?.stringValue||'hourly'
+          }});
+        } catch(e) {
+          return Response.json({member:null,error:e.message});
+        }
+      }
+
       // /qr/confirm — 출퇴근 저장
       if (path === '/qr/confirm' && request.method === 'POST') {
         try {
@@ -3469,6 +3490,8 @@ fetch('/qr/members?did='+DID)
           const mr = await fetch(`${FS_BASE}/members/${uid}`, {headers:{'Authorization':'Bearer '+token}});
           const md = await mr.json();
           const memberName = md.fields?.name?.stringValue || name || '';
+          const wage = Number(md.fields?.wage?.integerValue || md.fields?.wage?.doubleValue || 0);
+          const wageType = md.fields?.wageType?.stringValue || 'hourly';
 
           await fetch(`${FS_BASE}/attendance`, {
             method:'POST',
@@ -3518,7 +3541,33 @@ fetch('/qr/members?did='+DID)
             }
           } catch(e){}
 
-          return Response.json({ok:true});
+          // 퇴근 시 근무시간 계산
+          let workMin = 0;
+          if (type === 'out') {
+            try {
+              const inRes = await fetch(`${FS_BASE}:runQuery`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+                body: JSON.stringify({structuredQuery:{
+                  from:[{collectionId:'attendance'}],
+                  where:{compositeFilter:{op:'AND',filters:[
+                    {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                    {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:uid}}},
+                    {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}},
+                    {fieldFilter:{field:{fieldPath:'type'},op:'EQUAL',value:{stringValue:'in'}}}
+                  ]}},
+                  orderBy:[{field:{fieldPath:'time'},direction:'DESCENDING'}],limit:1
+                }})
+              });
+              const inDocs = await inRes.json();
+              const inDoc = Array.isArray(inDocs)&&inDocs[0]&&inDocs[0].document ? inDocs[0].document : null;
+              if (inDoc) {
+                const inTimeStr = inDoc.fields?.time?.stringValue;
+                if (inTimeStr) workMin = Math.round((now - new Date(inTimeStr)) / 60000);
+              }
+            } catch(e) {}
+          }
+          return Response.json({ok:true, wage, wageType, workMin});
         } catch(e) {
           return Response.json({ok:false,error:e.message});
         }

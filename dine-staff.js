@@ -628,41 +628,76 @@ function _fmtDateKo(d){
 }
 
 function _staffLoadClock(did,sid,todayStr){
+ var FS='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
+ var tok=_dineToken||'';
+ function runQ1(sq){
+  return fetch(FS+':runQuery',{
+   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+   body:JSON.stringify({structuredQuery:sq})
+  }).then(function(r){return r.json();}).then(function(docs){
+   return Array.isArray(docs)&&docs[0]&&docs[0].document?docs[0].document:null;
+  });
+ }
+ function attFilter(type){return {from:[{collectionId:'attendance'}],where:{compositeFilter:{op:'AND',filters:[
+  {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+  {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
+  {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:todayStr}}},
+  {fieldFilter:{field:{fieldPath:'type'},op:'EQUAL',value:{stringValue:type}}}
+ ]}},limit:1};}
+ var schFilter={from:[{collectionId:'dine_schedules'}],where:{compositeFilter:{op:'AND',filters:[
+  {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+  {fieldFilter:{field:{fieldPath:'staffId'},op:'EQUAL',value:{stringValue:sid}}},
+  {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:todayStr}}}
+ ]}},limit:1};
  Promise.all([
-  _db.collection('attendance').where('dealerId','==',did).where('memberId','==',sid).where('date','==',todayStr).where('type','==','in').limit(1).get(),
-  _db.collection('attendance').where('dealerId','==',did).where('memberId','==',sid).where('date','==',todayStr).where('type','==','out').limit(1).get(),
-  _db.collection('dine_schedules').where('dealerId','==',did).where('staffId','==',sid).where('date','==',todayStr).limit(1).get()
+  runQ1(attFilter('in')),
+  runQ1(attFilter('out')),
+  runQ1(schFilter),
+  fetch(FS+'/members/'+sid,{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.json();}).catch(function(){return null;})
  ]).then(function(results){
-  var inSnap=results[0],outSnap=results[1],schSnap=results[2];
-  var inDoc=inSnap.empty?null:inSnap.docs[0].data();
-  var outDoc=outSnap.empty?null:outSnap.docs[0].data();
-  var inDocId=inSnap.empty?null:inSnap.docs[0].id;
-  var sch=schSnap.empty?null:schSnap.docs[0].data();
-
+  var inDoc=results[0]?results[0].fields:null;
+  var outDoc=results[1]?results[1].fields:null;
+  var inDocId=results[0]?results[0].name.split('/').pop():'';
+  var schFields=results[2]?results[2].fields:null;
+  var memFields=results[3]&&results[3].fields?results[3].fields:null;
   var isIn=!!inDoc&&!outDoc;
-  var inTimeStr=inDoc?inDoc.time.substring(11,16):'';
+  var inTimeStr=inDoc&&inDoc.time?inDoc.time.stringValue.substring(11,16):'';
+  var sch=schFields?{startTime:(schFields.startTime&&schFields.startTime.stringValue)||'',endTime:(schFields.endTime&&schFields.endTime.stringValue)||''}:null;
   var schStr=sch?(sch.startTime+'~'+sch.endTime):'일정없음';
-
+  var wage=memFields&&memFields.wage?Number(memFields.wage.integerValue||memFields.wage.doubleValue||0):0;
+  var wageType=memFields&&memFields.wageType?memFields.wageType.stringValue:'hourly';
   var inner=document.getElementById('staff-clock-inner');
   if(!inner)return;
-
   var badge=isIn?'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,.12);color:#16a34a;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700"><span style="width:6px;height:6px;background:#16a34a;border-radius:50%;display:inline-block"></span>근무중</span>':
    (inDoc&&outDoc?'<span style="background:rgba(71,85,105,.1);color:var(--t2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">퇴근완료</span>':
    '<span style="background:rgba(71,85,105,.1);color:var(--t2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">미출근</span>');
-
   var html='<div style="flex:1">';
   html+='<div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">'+badge+'</div>';
   if(sch)html+='<div style="font-size:13px;color:var(--t2)">스케줄 <b style="color:var(--tx)">'+schStr+'</b></div>';
   if(inTimeStr)html+='<div style="font-size:12px;color:var(--t2);margin-top:4px">출근 '+inTimeStr+'</div>';
+  if(wage>0&&inDoc){
+   var nowMs=new Date();
+   var inTime=inDoc.time?new Date(inDoc.time.stringValue):null;
+   if(inTime){
+    var outTime=outDoc&&outDoc.time?new Date(outDoc.time.stringValue):nowMs;
+    var workMin=Math.round((outTime.getTime()-inTime.getTime())/60000);
+    var workH=Math.floor(workMin/60);var workM=workMin%60;
+    var todayPay=wageType==='hourly'?Math.round(wage*workMin/60):Math.round(wage/30);
+    html+='<div style="font-size:11px;color:var(--t2);margin-top:6px">'+
+     (outDoc?'오늘 근무 ':'현재 ')+workH+'시간 '+workM+'분'+
+     ' → <b style="color:#c9a84c">'+todayPay.toLocaleString()+'원</b></div>';
+   }
+  } else if(memFields&&wage===0){
+   html+='<div style="font-size:11px;color:var(--t3);margin-top:6px">급여 미등록 (관리자 설정 필요)</div>';
+  }
   html+='</div>';
-
   if(!inDoc){
    html+='<button onclick="_dineStaffClockIn()" style="padding:10px 18px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:800;cursor:pointer">출근하기</button>';
   } else if(!outDoc){
    html+='<button onclick="_dineStaffClockOut(\''+inDocId+'\')" style="padding:10px 18px;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:800;cursor:pointer">퇴근하기</button>';
   }
   inner.innerHTML=html;
- }).catch(function(e){console.error(e);});
+ }).catch(function(e){console.error('clock load err:',e);});
 }
 
 window._dineStaffClockIn=function(){
@@ -670,12 +705,16 @@ window._dineStaffClockIn=function(){
  var sid=_CU.staffId||_CU.uid;
  var now=new Date();
  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- _db.collection('attendance').add({
-  dealerId:did,memberId:sid,type:'in',
-  time:now.toISOString(),date:todayStr,createdAt:now.toISOString()
- }).then(function(){
-  _dineToast('출근 처리됐습니다');
-  _staffLoadClock(did,sid,todayStr);
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/attendance',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+  body:JSON.stringify({fields:{
+   dealerId:{stringValue:did},memberId:{stringValue:sid},type:{stringValue:'in'},
+   time:{stringValue:now.toISOString()},date:{stringValue:todayStr},createdAt:{stringValue:now.toISOString()}
+  }})
+ }).then(function(r){return r.json();}).then(function(doc){
+  if(doc.name){_dineToast('출근 처리됐습니다');_staffLoadClock(did,sid,todayStr);}
+  else{_dineToast('오류: '+(doc.error&&doc.error.message||'저장 실패'));}
  }).catch(function(e){_dineToast('오류: '+e.message);});
 };
 
@@ -684,12 +723,16 @@ window._dineStaffClockOut=function(inDocId){
  var sid=_CU.staffId||_CU.uid;
  var now=new Date();
  var todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- _db.collection('attendance').add({
-  dealerId:did,memberId:sid,type:'out',
-  time:now.toISOString(),date:todayStr,createdAt:now.toISOString()
- }).then(function(){
-  _dineToast('퇴근 처리됐습니다');
-  _staffLoadClock(did,sid,todayStr);
+ fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/attendance',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_dineToken||'')},
+  body:JSON.stringify({fields:{
+   dealerId:{stringValue:did},memberId:{stringValue:sid},type:{stringValue:'out'},
+   time:{stringValue:now.toISOString()},date:{stringValue:todayStr},createdAt:{stringValue:now.toISOString()}
+  }})
+ }).then(function(r){return r.json();}).then(function(doc){
+  if(doc.name){_dineToast('퇴근 처리됐습니다');_staffLoadClock(did,sid,todayStr);}
+  else{_dineToast('오류: '+(doc.error&&doc.error.message||'저장 실패'));}
  }).catch(function(e){_dineToast('오류: '+e.message);});
 };
 
@@ -703,16 +746,39 @@ function _staffLoadWeek(did,sid,today){
  var startStr=_dateStr(dates[0]);
  var endStr=_dateStr(dates[6]);
 
+ var FS2='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
+ var tok2=_dineToken||'';
+ function runQAll(sq){
+  return fetch(FS2+':runQuery',{
+   method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok2},
+   body:JSON.stringify({structuredQuery:sq})
+  }).then(function(r){return r.json();}).then(function(docs){
+   return Array.isArray(docs)?docs.filter(function(d){return d.document;}).map(function(d){return d.document.fields;}):[];
+  });
+ }
  Promise.all([
-  _db.collection('dine_schedules').where('dealerId','==',did).where('staffId','==',sid).where('date','>=',startStr).where('date','<=',endStr).get(),
-  _db.collection('attendance').where('dealerId','==',did).where('memberId','==',sid).where('date','>=',startStr).where('date','<=',endStr).get()
+  runQAll({from:[{collectionId:'dine_schedules'}],where:{compositeFilter:{op:'AND',filters:[
+   {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+   {fieldFilter:{field:{fieldPath:'staffId'},op:'EQUAL',value:{stringValue:sid}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:startStr}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:endStr}}}
+  ]}}}),
+  runQAll({from:[{collectionId:'attendance'}],where:{compositeFilter:{op:'AND',filters:[
+   {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+   {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:startStr}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:endStr}}}
+  ]}}}),
  ]).then(function(results){
-  var schSnap=results[0],attSnap=results[1];
+  var schDocs=results[0],attDocs=results[1];
   var schMap={};
-  schSnap.docs.forEach(function(d){var v=d.data();schMap[v.date]=v;});
+  schDocs.forEach(function(f){if(f.date)schMap[f.date.stringValue]=f;});
   var attMap={};
-  attSnap.docs.forEach(function(d){var v=d.data();if(!attMap[v.date])attMap[v.date]={};attMap[v.date][v.type]=v.time;});
-
+  attDocs.forEach(function(f){
+   if(!f.date||!f.type)return;
+   var ds=f.date.stringValue;var tp=f.type.stringValue;var tm=f.time?f.time.stringValue:'';
+   if(!attMap[ds])attMap[ds]={};attMap[ds][tp]=tm;
+  });
   var grid=document.getElementById('staff-week-grid');
   if(!grid)return;
   grid.innerHTML=dates.map(function(d,i){
@@ -723,21 +789,19 @@ function _staffLoadWeek(did,sid,today){
    var bgColor=isToday?'rgba(8,145,178,.1)':'transparent';
    var txColor=isToday?'#0891b2':'var(--t2)';
    var borderColor=isToday?'rgba(8,145,178,.3)':'var(--bd)';
-   var timeHtml=sch?('<div style="font-size:9px;color:var(--tx);font-weight:700;margin-top:4px">'+sch.startTime+'</div><div style="font-size:9px;color:var(--t2)">'+sch.endTime+'</div>'):
+   var stTime=sch&&sch.startTime?sch.startTime.stringValue:'';
+   var enTime=sch&&sch.endTime?sch.endTime.stringValue:'';
+   var timeHtml=sch?('<div style="font-size:9px;color:var(--tx);font-weight:700;margin-top:4px">'+stTime+'</div><div style="font-size:9px;color:var(--t2)">'+enTime+'</div>'):
     (att.in?'<div style="font-size:9px;color:#16a34a;margin-top:4px">출근</div>':'<div style="font-size:9px;color:var(--t3);margin-top:4px">-</div>');
    return '<div style="background:'+bgColor+';border:1px solid '+borderColor+';border-radius:8px;padding:8px 4px">'+
     '<div style="font-size:10px;font-weight:700;color:'+txColor+'">'+dayNames[i]+'</div>'+
     '<div style="font-size:9px;color:'+txColor+'">'+d.getDate()+'</div>'+timeHtml+'</div>';
   }).join('');
-
-  /* 주간 합계 */
   var totalMin=0;
   dates.forEach(function(d){
-   var ds=_dateStr(d);
-   var att=attMap[ds]||{};
+   var ds=_dateStr(d);var att=attMap[ds]||{};
    if(att.in&&att.out){
-    var inMs=new Date(att.in).getTime();
-    var outMs=new Date(att.out).getTime();
+    var inMs=new Date(att.in).getTime();var outMs=new Date(att.out).getTime();
     if(outMs>inMs)totalMin+=(outMs-inMs)/60000;
    }
   });
@@ -752,46 +816,54 @@ function _staffLoadWeek(did,sid,today){
     '<div style="height:6px;background:var(--bd);border-radius:3px"><div style="height:6px;width:'+pct+'%;background:linear-gradient(90deg,#0891b2,#38bdf8);border-radius:3px;transition:.4s"></div></div>'+
     '<div style="font-size:10px;color:var(--t3);margin-top:4px;text-align:right">법정 40시간 기준</div>';
   }
- }).catch(function(e){console.error(e);});
+ }).catch(function(e){console.error('week load err:',e);});
 }
 
 function _staffLoadAvg(did,sid,today){
- /* 최근 4주 데이터로 평균 계산 */
  var fourWeeksAgo=new Date(today);fourWeeksAgo.setDate(today.getDate()-28);
  var startStr=_dateStr(fourWeeksAgo);
  var todayStr=_dateStr(today);
- _db.collection('attendance').where('dealerId','==',did).where('memberId','==',sid)
-  .where('date','>=',startStr).where('date','<=',todayStr).get()
-  .then(function(snap){
-   var attMap={};
-   snap.docs.forEach(function(d){var v=d.data();if(!attMap[v.date])attMap[v.date]={};attMap[v.date][v.type]=v.time;});
-   var weekMins=[0,0,0,0];
-   Object.keys(attMap).forEach(function(ds){
-    var att=attMap[ds];
-    if(att.in&&att.out){
-     var dayDate=new Date(ds);
-     var diffDays=Math.floor((today-dayDate)/86400000);
-     var wk=Math.min(3,Math.floor(diffDays/7));
-     var ms=new Date(att.out).getTime()-new Date(att.in).getTime();
-     if(ms>0)weekMins[wk]+=ms/60000;
-    }
-   });
-   var nonZero=weekMins.filter(function(m){return m>0;});
-   var avgMin=nonZero.length?nonZero.reduce(function(a,b){return a+b;},0)/nonZero.length:0;
-   var avgH=Math.floor(avgMin/60);
-   var avgM=Math.round(avgMin%60);
-   var pct=Math.min(100,Math.round(avgMin/2400*100));
-   var mo=fourWeeksAgo.getMonth()+1;
-   var mo2=today.getMonth()+1;
-   var rangeStr=mo===mo2?mo+'월':mo+'월~'+mo2+'월';
-
-   var el=document.getElementById('staff-avg-inner');
-   if(!el)return;
-   el.innerHTML='<div style="font-size:11px;color:var(--t2);margin-bottom:8px">'+rangeStr+' 기준</div>'+
-    '<div style="font-size:32px;font-weight:900;color:var(--tx);line-height:1">'+avgH+'<span style="font-size:14px;font-weight:400;color:var(--t2)">시간 '+avgM+'분</span></div>'+
-    '<div style="height:6px;background:var(--bd);border-radius:3px;margin-top:12px"><div style="height:6px;width:'+pct+'%;background:linear-gradient(90deg,#C8A356,#f0c56a);border-radius:3px;transition:.4s"></div></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:4px"><span>0h</span><span>법정 40h</span></div>';
-  }).catch(function(e){console.error(e);});
+ var FS3='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
+ var tok3=_dineToken||'';
+ fetch(FS3+':runQuery',{
+  method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok3},
+  body:JSON.stringify({structuredQuery:{from:[{collectionId:'attendance'}],where:{compositeFilter:{op:'AND',filters:[
+   {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+   {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:startStr}}},
+   {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:todayStr}}}
+  ]}}}}})
+ .then(function(r){return r.json();}).then(function(docs){
+  var attDocs=Array.isArray(docs)?docs.filter(function(d){return d.document;}).map(function(d){return d.document.fields;}):[];
+  var attMap={};
+  attDocs.forEach(function(f){
+   if(!f.date||!f.type)return;
+   var ds=f.date.stringValue;var tp=f.type.stringValue;var tm=f.time?f.time.stringValue:'';
+   if(!attMap[ds])attMap[ds]={};attMap[ds][tp]=tm;
+  });
+  var weekMins=[0,0,0,0];
+  Object.keys(attMap).forEach(function(ds){
+   var att=attMap[ds];
+   if(att.in&&att.out){
+    var dayDate=new Date(ds);var diffDays=Math.floor((today-dayDate)/86400000);
+    var wk=Math.min(3,Math.floor(diffDays/7));
+    var ms=new Date(att.out).getTime()-new Date(att.in).getTime();
+    if(ms>0)weekMins[wk]+=ms/60000;
+   }
+  });
+  var nonZero=weekMins.filter(function(m){return m>0;});
+  var avgMin=nonZero.length?nonZero.reduce(function(a,b){return a+b;},0)/nonZero.length:0;
+  var avgH=Math.floor(avgMin/60);var avgM=Math.round(avgMin%60);
+  var pct=Math.min(100,Math.round(avgMin/2400*100));
+  var mo=fourWeeksAgo.getMonth()+1;var mo2=today.getMonth()+1;
+  var rangeStr=mo===mo2?mo+'월':mo+'월~'+mo2+'월';
+  var el=document.getElementById('staff-avg-inner');
+  if(!el)return;
+  el.innerHTML='<div style="font-size:11px;color:var(--t2);margin-bottom:8px">'+rangeStr+' 기준</div>'+
+   '<div style="font-size:32px;font-weight:900;color:var(--tx);line-height:1">'+avgH+'<span style="font-size:14px;font-weight:400;color:var(--t2)">시간 '+avgM+'분</span></div>'+
+   '<div style="height:6px;background:var(--bd);border-radius:3px;margin-top:12px"><div style="height:6px;width:'+pct+'%;background:linear-gradient(90deg,#C8A356,#f0c56a);border-radius:3px;transition:.4s"></div></div>'+
+   '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:4px"><span>0h</span><span>법정 40h</span></div>';
+ }).catch(function(e){console.error('avg load err:',e);});
 }
 
 function _dateStr(d){
