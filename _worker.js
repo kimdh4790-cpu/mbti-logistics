@@ -2114,15 +2114,15 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAC83UlEQV
         const _dineArr = Uint8Array.from(atob(_dineIconData), c => c.charCodeAt(0));
         return new Response(_dineArr, {headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}});
       }
-            if (path === '/api/get-members') {
-        const _admin = await requireAdmin(request, env);
-        if (!_admin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      if (path === '/api/get-members') {
+        const _gmUser = await verifyFirebaseToken(request, env);
+        if (!_gmUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const dealerId = new URL(request.url).searchParams.get('dealerId');
         if (!dealerId) return new Response(JSON.stringify({error:'dealerId required'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const token = await getAccessToken(env);
         const res2 = await fetch(`${FS_BASE}:runQuery`,{
           method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}]}})
+          body:JSON.stringify({structuredQuery:{from:[{collectionId:'members'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},limit:200}})
         });
         const rows = await res2.json();
         const docs = (rows||[]).filter(r=>r.document).map(r=>{
