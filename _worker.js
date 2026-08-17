@@ -13420,22 +13420,23 @@ function _pgHomeDriver(el){
         center=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
       }
       var m=new kakao.maps.Map(mapEl,{center:center,level:7});
-      // 내 위치 마커 (파란 원) — 실제 GPS 우선
-      var myPos=_myGeo?new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng):center;
+      // 내 위치 마커 (파란 원) — 초기값은 center, watchPosition으로 실시간 갱신
       var _myDot=new kakao.maps.CustomOverlay({
-        position:myPos,
+        position:center,
         content:'<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.6)"></div>',
         yAnchor:0.5,xAnchor:0.5,
         map:m
       });
-      // GPS 미확보 시 실시간 취득 후 마커 이동
-      if(!_myGeo&&navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(function(pos){
+      // watchPosition — 실시간 GPS 추적 (항상 실행, _myGeo 상태 무관)
+      if(navigator.geolocation){
+        var _homeWatchFirst=true;
+        navigator.geolocation.watchPosition(function(pos){
           _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
           var gpsLatLng=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
           _myDot.setPosition(gpsLatLng);
-          m.setCenter(gpsLatLng);
-        },{timeout:8000,maximumAge:30000});
+          if(_homeWatchFirst){_homeWatchFirst=false;m.setCenter(gpsLatLng);}
+        },function(){},
+        {enableHighAccuracy:true,timeout:10000,maximumAge:5000});
       }
       // 공고 존 마커 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
       function _drawZoneMarkers(posts){
