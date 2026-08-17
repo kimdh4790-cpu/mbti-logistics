@@ -423,14 +423,33 @@ function _emerInitLogin() {
   }
   // 회사명 로드 (가드 플래그로 중복 Firestore 조회 방지)
   _emerLoadCoName();
-  // 자동 로그인: 이름+구역+프로필 완료 시 로그인 화면 생략하고 바로 메인으로
-  if(_emerSelDriver && _emerSelCamp && localStorage.getItem('mbti_emer_profile_done')) {
+  // 자동 로그인: 이름+구역 있을 때
+  if(_emerSelDriver && _emerSelCamp) {
     var _autoDid = localStorage.getItem('mbti_emer_dealerId') || '';
-    _CU = { uid: _autoDid, email: '', dealerId: _autoDid, driver: _emerSelDriver, camp: _emerSelCamp };
-    window._CU = _CU;
-    if(!_auth.currentUser) _auth.signInAnonymously().catch(function(){});
-    _emerGoMain();
-    return;
+    if(localStorage.getItem('mbti_emer_profile_done')) {
+      // 플래그 있음 → 즉시 자동 로그인
+      _CU = {uid:_autoDid,email:'',dealerId:_autoDid,driver:_emerSelDriver,camp:_emerSelCamp};
+      window._CU = _CU;
+      if(!_auth.currentUser) _auth.signInAnonymously().catch(function(){});
+      _emerGoMain();
+      return;
+    } else if(_autoDid && !window._profileRestoreInFlight) {
+      // 플래그 없음(localStorage 초기화 등) → Firestore 프로필 확인 후 복원
+      window._profileRestoreInFlight = true;
+      fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(_autoDid)+'&driverName='+encodeURIComponent(_emerSelDriver))
+        .then(function(r){return r.json();})
+        .then(function(d){
+          window._profileRestoreInFlight = false;
+          if(d.ok && d.profile) {
+            localStorage.setItem('mbti_emer_profile_done','1');
+            _CU = {uid:_autoDid,email:'',dealerId:_autoDid,driver:_emerSelDriver,camp:_emerSelCamp};
+            window._CU = _CU;
+            if(!_auth.currentUser) _auth.signInAnonymously().catch(function(){});
+            _emerGoMain();
+          }
+        })
+        .catch(function(){ window._profileRestoreInFlight = false; });
+    }
   }
 }
 
@@ -538,8 +557,23 @@ function _emerDoLogin() {
   if(!_auth.currentUser){
     _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
   }
-  // 첫 접속 → 기사 정보 등록 화면
+  // 프로필 등록 필요 여부 확인 (localStorage 플래그 우선, 없으면 API 확인)
   if(!localStorage.getItem('mbti_emer_profile_done')) {
+    if(did) {
+      fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(name))
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d.ok && d.profile) {
+            // 이미 등록된 기사 → 플래그 복원 후 메인으로
+            localStorage.setItem('mbti_emer_profile_done','1');
+            _emerGoMain();
+          } else {
+            _emerShowRegister(name);
+          }
+        })
+        .catch(function(){ _emerShowRegister(name); });
+      return;
+    }
     _emerShowRegister(name);
     return;
   }
