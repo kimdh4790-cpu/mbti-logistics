@@ -87,7 +87,7 @@ function _filoPageKiosk(el){
  '<span style="font-size:13px;font-weight:700">합계</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" onclick="_filoPay()">결제하기</button>'+
- '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">초기화</button>'+
+ '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
  '</div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)

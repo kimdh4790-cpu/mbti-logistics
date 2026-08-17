@@ -4390,10 +4390,10 @@ ${JSON.stringify(postSummary)}
       if (path === '/kitchen' || path === '/kitchen.html') return serveKVFile(env, 'kitchen.html', 'text/html');
       // /kitchen/data — 주방화면 주문 데이터 (서버 인증, 규칙 우회)
       if (path === '/kitchen/data') {
-        const kDid = lp.get('did');
-        const kDate = lp.get('date') || new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
-        if (!kDid) return Response.json({error:'did 파라미터 필요'});
         try {
+          const kDid = url.searchParams.get('did');
+          const kDate = url.searchParams.get('date') || new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+          if (!kDid) return Response.json({error:'did 파라미터 필요'});
           const token = await getAccessToken(env);
           const cRes = await fetch(`${FS_BASE}/companies/${kDid}`, {headers:{'Authorization':'Bearer '+token}});
           const cData = await cRes.json();
@@ -4407,7 +4407,7 @@ ${JSON.stringify(postSummary)}
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body: JSON.stringify({structuredQuery:{
-              from:[{collectionId:'filo_sales'}],
+              from:[{collectionId:'filo_orders'}],
               where:{compositeFilter:{op:'AND',filters:[
                 {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:kDid}}},
                 {fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:kDate}}},
