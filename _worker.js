@@ -4195,6 +4195,57 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // ── /api/point-earn — QR 주문 포인트 적립 (FCM 토큰 기반, 가입 불필요)
+      if (path === '/api/point-earn' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { did, fcmToken, orderId, total, tableNum, storeName } = body;
+          if (!did || !fcmToken || !total) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:corsH});
+          const earned = Math.floor(Number(total) / 100); // 1% 적립 (100원 = 1포인트)
+          if (earned < 1) return new Response(JSON.stringify({ok:true,earned:0}),{headers:corsH});
+          const token = await getAccessToken(env);
+          // filo_customers 에서 fcmToken으로 고객 조회
+          const qRes = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_customers'}],where:{compositeFilter:{op:'AND',filters:[
+              {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+              {fieldFilter:{field:{fieldPath:'fcmToken'},op:'EQUAL',value:{stringValue:fcmToken}}}
+            ]}},limit:{value:1}}})
+          });
+          const qData = await qRes.json();
+          const existing = Array.isArray(qData) && qData[0]?.document;
+          const now = new Date().toISOString();
+          let totalPoints, docId;
+          if (existing) {
+            docId = existing.name.split('/').pop();
+            const prev = Number((existing.fields?.points||{}).integerValue||0);
+            totalPoints = prev + earned;
+            await fetch(`${FS_BASE}/filo_customers/${docId}?updateMask.fieldPaths=points&updateMask.fieldPaths=updatedAt`,{
+              method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              body:JSON.stringify({fields:{points:{integerValue:totalPoints},updatedAt:{stringValue:now}}})
+            });
+          } else {
+            totalPoints = earned;
+            docId = did+'_'+fcmToken.slice(-12);
+            await fetch(`${FS_BASE}/filo_customers/${docId}`,{
+              method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              body:JSON.stringify({fields:{dealerId:{stringValue:did},fcmToken:{stringValue:fcmToken},points:{integerValue:totalPoints},createdAt:{stringValue:now},updatedAt:{stringValue:now},source:{stringValue:'qr_order'}}})
+            });
+          }
+          // 고객 FCM 푸시 발송
+          try {
+            await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{
+              method:'POST',
+              headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              body:JSON.stringify({message:{token:fcmToken,notification:{title:(storeName||'매장')+' 포인트 적립!',body:'+'+earned+'P 적립 완료 · 누적 '+totalPoints+'P'},webpush:{fcm_options:{link:'https://filo.ai.kr/order?d='+did+'&t='+(tableNum||'')}}}})
+            });
+          } catch(e){}
+          return new Response(JSON.stringify({ok:true,earned,totalPoints}),{headers:corsH});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:corsH});
+        }
+      }
+
       // ── /api/payslip-fcm — 직원 급여명세서 FCM 발송
       if (path === '/api/payslip-fcm' && method === 'POST') {
         try {

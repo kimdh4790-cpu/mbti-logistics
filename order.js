@@ -419,6 +419,14 @@ function _doOrder(payType){
     body:JSON.stringify({did:_did,title:_storeName+' 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
+  /* 포인트 적립 — FCM 토큰 기반, 가입 불필요 */
+  if(_fcmToken&&_did){
+   fetch('/api/point-earn',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,fcmToken:_fcmToken,orderId:orderId,total:total,tableNum:_tNum,storeName:_storeName})
+   }).catch(function(){});
+  }
   _autoReceiptFCM(orderId, total, items);
  }).catch(function(e){
   clearTimeout(_tim);
