@@ -850,34 +850,61 @@ function _adminTab(tab) {
 // ═══════════════════════════════════════
 // 기사 현황 탭 (30초 자동갱신)
 // ═══════════════════════════════════════
+function _makeAdminDateTabs(selectedDate, onClickFn) {
+  var today = new Date();
+  var html = '';
+  for(var i=0;i<7;i++){
+    var d=new Date(today); d.setDate(d.getDate()-i);
+    var ds=d.toISOString().slice(0,10);
+    var lbl=i===0?'오늘':i===1?'어제':(d.getMonth()+1)+'/'+(d.getDate());
+    var sel=ds===selectedDate;
+    html+='<button onclick="'+onClickFn+'(\''+ds+'\')" style="flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid '+(sel?'#c9a84c':'rgba(255,255,255,.15)')+';background:'+(sel?'rgba(201,168,76,.18)':'rgba(255,255,255,.05)')+';color:'+(sel?'#c9a84c':'rgba(255,255,255,.45)')+';font-size:11px;font-weight:'+(sel?'700':'400')+';cursor:pointer;touch-action:manipulation;white-space:nowrap">'+lbl+'</button>';
+  }
+  return html;
+}
+
 function _adminStartMonitor() {
   var outerView = document.getElementById('admin-monitor-view');
   if(outerView && !document.getElementById('admin-monitor-cards')) {
-    outerView.innerHTML = '<div id="admin-monitor-cards"></div>'
+    outerView.innerHTML = '<div id="admin-monitor-datetabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>'
+      +'<div id="admin-monitor-cards"></div>'
       +'<div id="admin-monitor-matrix" style="margin-top:24px;padding-bottom:16px"></div>';
   }
   _adminLoadMonitor();
   _adminLoadDriverMatrix();
   if(_adminMonitorTimer) clearInterval(_adminMonitorTimer);
-  _adminMonitorTimer = setInterval(function(){ _adminLoadMonitor(); _adminLoadDriverMatrix(); }, 120000);
+  // 자동 갱신은 오늘 탭 선택 중일 때만
+  _adminMonitorTimer = setInterval(function(){
+    var today=new Date().toISOString().slice(0,10);
+    if(!window._adminMonitorDate||window._adminMonitorDate===today){ _adminLoadMonitor(); _adminLoadDriverMatrix(); }
+  }, 120000);
 }
 
-function _adminLoadMonitor() {
+function _adminLoadMonitor(dateStr) {
   var did = (_CU && _CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
   var view = document.getElementById('admin-monitor-cards') || document.getElementById('admin-monitor-view');
   if(!did) {
-    if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">회사 ID 없음 — URL에 ?did= 파라미터를 추가하세요</div>';
+    if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">회사 ID 없음</div>';
     return;
   }
-  var dateStr = new Date().toISOString().slice(0,10);
-  if(view) view.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">불러오는 중...<br><span style="font-size:10px;opacity:.6">ID: '+did+'</span></div>';
-  fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr)
+  var today = new Date().toISOString().slice(0,10);
+  if(!dateStr) dateStr = today;
+  window._adminMonitorDate = dateStr;
+  // 날짜 탭 렌더
+  var tabRow = document.getElementById('admin-monitor-datetabs');
+  if(tabRow) tabRow.innerHTML = _makeAdminDateTabs(dateStr, '_adminLoadMonitor');
+  if(view) view.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">불러오는 중...</div>';
+  // 오늘은 캐시된 map API, 과거는 list API
+  var apiUrl = dateStr===today
+    ? '/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr
+    : '/api/emergency-list?dealerId='+encodeURIComponent(did)+'&date='+dateStr;
+  fetch(apiUrl)
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if(d.ok) {
         _renderMonitorCards(d.docs||[], dateStr, did);
       } else {
-        if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+(d.error||'알 수 없음')+'<br><span style="font-size:10px;opacity:.6">ID: '+did+'</span></div>';
+        if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+(d.error||'알 수 없음')+'</div>';
       }
     }).catch(function(e){
       if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">네트워크 오류<br><span style="font-size:10px;opacity:.6">'+e.message+'</span></div>';
@@ -899,17 +926,16 @@ function _renderMonitorCards(docs, dateStr, did) {
   });
   var driverList = Object.values(groups);
   if(!driverList.length) {
-    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">오늘 배송 데이터가 없습니다</div>'
-      +'<div style="text-align:center;font-size:10px;color:var(--text3);margin-top:4px;opacity:.6">날짜: '+dateStr+' / ID: '+(did||'없음')+'</div>'
+    view.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)">'+dateStr+' 배송 데이터가 없습니다</div>'
       +'<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:4px">마지막 갱신: '+now
-      +'&nbsp;<button onclick="_adminLoadMonitor()" style="font-size:11px;padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
+      +'&nbsp;<button onclick="_adminLoadMonitor(\''+dateStr+'\')" style="font-size:11px;padding:2px 8px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
     return;
   }
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
     +'<div style="font-size:12px;font-weight:700;color:var(--text2)">'+dateStr+' 기사 현황 ('+driverList.length+'명)</div>'
     +'<div style="display:flex;align-items:center;gap:8px">'
     +'<span style="font-size:11px;color:var(--text3)">'+now+' 갱신</span>'
-    +'<button onclick="_adminLoadMonitor()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>'
+    +'<button onclick="_adminLoadMonitor(\''+dateStr+'\')" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button>'
     +'</div></div>';
   driverList.forEach(function(g) {
     var total = g.docs.length;
@@ -1197,26 +1223,39 @@ function _adminSavePrices() {
 // ═══════════════════════════════════════
 // 정산 탭 (앱명칭별 분리)
 // ═══════════════════════════════════════
-function _adminLoadSettle() {
+function _adminLoadSettle(dateStr) {
   var did = _CU && _CU.dealerId;
   if(!did) return;
+  var today = new Date().toISOString().slice(0,10);
+  if(!dateStr) dateStr = today;
   var view = document.getElementById('admin-settle-view');
-  if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">불러오는 중...</div>';
-  var dateStr = new Date().toISOString().slice(0,10);
+  if(!view) return;
+  // 탭+콘텐츠 컨테이너 구조 초기화
+  if(!document.getElementById('admin-settle-content')) {
+    view.innerHTML = '<div id="admin-settle-datetabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>'
+      +'<div id="admin-settle-content"></div>';
+  }
+  var tabRow = document.getElementById('admin-settle-datetabs');
+  if(tabRow) tabRow.innerHTML = _makeAdminDateTabs(dateStr, '_adminLoadSettle');
+  var content = document.getElementById('admin-settle-content');
+  if(content) content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)">불러오는 중...</div>';
+  var apiUrl = dateStr===today
+    ? '/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr
+    : '/api/emergency-list?dealerId='+encodeURIComponent(did)+'&date='+dateStr;
   Promise.all([
-    fetch('/api/emergency-map?dealerId='+encodeURIComponent(did)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch(apiUrl).then(function(r){return r.json();}),
     fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
   ]).then(function(results) {
     var docs   = results[0].ok ? (results[0].docs||[]) : [];
     var prices = results[1].prices || window._CO_EMER_PRICES || {};
     _renderSettleTable(docs, prices, dateStr);
   }).catch(function(e) {
-    if(view) view.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+e.message+'</div>';
+    if(content) content.innerHTML = '<div style="text-align:center;padding:30px;color:#f87171">오류: '+e.message+'</div>';
   });
 }
 
 function _renderSettleTable(docs, prices, dateStr) {
-  var view = document.getElementById('admin-settle-view');
+  var view = document.getElementById('admin-settle-content') || document.getElementById('admin-settle-view');
   if(!view) return;
   var totalCount = docs.length;
   // 완료건만 정산
@@ -1292,7 +1331,7 @@ function _renderSettleTable(docs, prices, dateStr) {
     +'<span style="font-size:13px;color:#c9a84c;font-weight:700">완료 '+grandCount+'건</span>'
     +'<span style="font-size:15px;font-weight:900;color:#c9a84c">총합계 '+grandTotal.toLocaleString()+'원</span>'
     +'</div>'
-    +'<div style="text-align:right;margin-top:6px"><button onclick="_adminLoadSettle()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
+    +'<div style="text-align:right;margin-top:6px"><button onclick="_adminLoadSettle(\''+dateStr+'\')" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:6px;color:var(--text2);cursor:pointer">새로고침</button></div>';
   view.innerHTML = html;
 }
 
