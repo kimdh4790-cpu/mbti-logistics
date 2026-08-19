@@ -106,13 +106,36 @@ function _filoTableLoad(did){
       (function(docId,xd){
        ok.onclick=function(){
         ok.disabled=true;ok.textContent='...';
-        _db.collection('filo_orders').doc(xd.orderId).update({
-         tableNum:xd.toTable,tableName:xd.toTableName,
-         movedFrom:xd.fromTable,movedAt:new Date().toISOString()
+        var db=_db;var now=new Date().toISOString();
+        var toName=xd.toTableName||('테이블 '+xd.toTable);
+        var fromInt=parseInt(xd.fromTable)||xd.fromTable;
+        // filo_orders: fromTable의 모든 활성 주문을 toTable로 이동
+        Promise.all([
+         db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(xd.fromTable)).get(),
+         db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',fromInt).get()
+        ]).then(function(results){
+         var batch=db.batch();var seen={};
+         results.forEach(function(snap){
+          snap.forEach(function(doc){
+           if(seen[doc.id])return;seen[doc.id]=true;
+           if(doc.data().status==='cancel'||doc.data().status==='cleared')return;
+           batch.update(doc.ref,{tableNum:xd.toTable,tableName:toName,movedFrom:xd.fromTable,movedAt:now});
+          });
+         });
+         return batch.commit();
         }).then(function(){
-         return _db.collection('staff_calls').doc(docId).update({status:'approved',approvedAt:new Date().toISOString()});
+         return db.collection('staff_calls').doc(docId).update({status:'approved',approvedAt:now});
         }).then(function(){
-         _filoToast((xd.fromTableName||xd.fromTable)+' → '+(xd.toTableName||xd.toTable)+' 이동 승인');
+         // filo_tables: 원래 테이블 비움 (이동 기록 표시)
+         return db.collection('filo_tables').where('dealerId','==',did).where('tableNum','==',fromInt).get()
+          .then(function(snap){
+           if(snap.empty)return;
+           var b=db.batch();
+           snap.forEach(function(d){b.update(d.ref,{status:'empty',occupiedSince:'',updatedAt:now});});
+           return b.commit();
+          });
+        }).then(function(){
+         _filoToast((xd.fromTableName||xd.fromTable)+' → '+toName+' 이동 승인');
          _filoTableLoad(did);
         }).catch(function(e){_filoToast('승인 실패: '+e.message);ok.disabled=false;ok.textContent='승인';});
        };
