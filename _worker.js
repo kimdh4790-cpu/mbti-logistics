@@ -4456,6 +4456,90 @@ ${JSON.stringify(postSummary)}
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
       }
 
+      // ── /api/demo-seed-live — 실제 테스트 딜러에 오늘 날짜 박람회 데모 데이터 생성
+      if (path === '/api/demo-seed-live' && method === 'POST') {
+        if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          const _ds4=env.DEMO_SECRET||''; if(!_ds4||body.secret!==_ds4) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token=await getAccessToken(env);
+          const did=body.did||'9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+          const today=new Date().toISOString().slice(0,10);
+          const KST=9*3600000;
+          function kstISO(date,h,m){return new Date(new Date(date+'T00:00:00Z').getTime()+KST+(h*3600+m*60)*1000-KST).toISOString();}
+          function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
+          function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
+          const w=[];
+          // ── 매장 기본 정보 업데이트
+          w.push(fsd('companies',did,{name:'해물밥상 광안점',dealerId:did,type:'일식/횟집',address:'부산 수영구 광안해변로 219',phone:'051-752-1234',openHours:'11:00~22:00',status:'active',tableCount:8,updatedAt:today}));
+          // ── 직원 5명
+          const staff=[{id:'staff_m1',name:'김민형',role:'manager',hw:13000},{id:'staff_m2',name:'구자경',role:'staff',hw:11000},{id:'staff_m3',name:'김기현',role:'staff',hw:11500},{id:'staff_m4',name:'김성운',role:'staff',hw:10000},{id:'staff_m5',name:'이수진',role:'part',hw:10030}];
+          staff.forEach(s=>w.push(fsd('members',`${did}_${s.id}`,{uid:`${did}_${s.id}`,name:s.name,role:s.role,hourlyRate:s.hw,dealerId:did,status:'active',joinDate:'2026-01-01',phone:'010-0000-000'+s.id.slice(-1)})));
+          // ── 메뉴 15개
+          const menus=[{id:'me01',name:'모듬회(소)',price:35000,cat:'회'},{id:'me02',name:'모듬회(중)',price:55000,cat:'회'},{id:'me03',name:'광어회(소)',price:40000,cat:'회'},{id:'me04',name:'해물탕',price:35000,cat:'탕'},{id:'me05',name:'알탕',price:25000,cat:'탕'},{id:'me06',name:'매운탕',price:20000,cat:'탕'},{id:'me07',name:'새우구이',price:20000,cat:'구이'},{id:'me08',name:'전복구이',price:20000,cat:'구이'},{id:'me09',name:'생굴',price:15000,cat:'해산물'},{id:'me10',name:'소주',price:5000,cat:'주류'},{id:'me11',name:'맥주',price:6000,cat:'주류'},{id:'me12',name:'파전',price:10000,cat:'안주'},{id:'me13',name:'공기밥',price:1000,cat:'밥'},{id:'me14',name:'콜라',price:3000,cat:'음료'},{id:'me15',name:'생수',price:2000,cat:'음료'}];
+          menus.forEach(m=>w.push(fsd('filo_menus',`${did}_${m.id}`,{name:m.name,price:m.price,category:m.cat,dealerId:did,available:true,createdAt:'2026-01-01T00:00:00Z'})));
+          // ── 테이블 8개 세팅
+          const tableStates=[{n:1,s:'occupied'},{n:2,s:'occupied'},{n:3,s:'occupied'},{n:4,s:'empty'},{n:5,s:'occupied'},{n:6,s:'empty'},{n:7,s:'occupied'},{n:8,s:'empty'}];
+          tableStates.forEach(t=>w.push(fsd('filo_tables',`${did}_t${t.n}`,{dealerId:did,tableNum:t.n,tableName:`테이블 ${t.n}번`,status:t.s,occupiedSince:t.s==='occupied'?kstISO(today,11,0+t.n*10):'',updatedAt:today})));
+          // ── 오늘 완료 주문 15건 (매출)
+          const completedOrders=[
+            {t:1,h:11,m:20,items:[{name:'모듬회(소)',price:35000,qty:1},{name:'소주',price:5000,qty:2},{name:'파전',price:10000,qty:1}],pay:'card'},
+            {t:2,h:11,m:45,items:[{name:'광어회(소)',price:40000,qty:1},{name:'맥주',price:6000,qty:2}],pay:'card'},
+            {t:3,h:12,m:10,items:[{name:'해물탕',price:35000,qty:1},{name:'공기밥',price:1000,qty:2},{name:'소주',price:5000,qty:1}],pay:'kakaopay'},
+            {t:5,h:12,m:30,items:[{name:'모듬회(중)',price:55000,qty:1},{name:'소주',price:5000,qty:3}],pay:'card'},
+            {t:1,h:13,m:5,items:[{name:'새우구이',price:20000,qty:1},{name:'전복구이',price:20000,qty:1},{name:'맥주',price:6000,qty:2}],pay:'cash'},
+            {t:6,h:13,m:40,items:[{name:'알탕',price:25000,qty:1},{name:'공기밥',price:1000,qty:2}],pay:'card'},
+            {t:2,h:14,m:15,items:[{name:'매운탕',price:20000,qty:1},{name:'파전',price:10000,qty:1},{name:'소주',price:5000,qty:2}],pay:'card'},
+            {t:4,h:14,m:50,items:[{name:'생굴',price:15000,qty:2},{name:'맥주',price:6000,qty:3}],pay:'naverpay'},
+            {t:7,h:15,m:20,items:[{name:'모듬회(소)',price:35000,qty:2},{name:'소주',price:5000,qty:2}],pay:'card'},
+            {t:3,h:16,m:0,items:[{name:'해물탕',price:35000,qty:1},{name:'새우구이',price:20000,qty:1},{name:'소주',price:5000,qty:2}],pay:'cash'},
+            {t:5,h:16,m:35,items:[{name:'광어회(소)',price:40000,qty:1},{name:'파전',price:10000,qty:1}],pay:'card'},
+            {t:8,h:17,m:10,items:[{name:'알탕',price:25000,qty:1},{name:'콜라',price:3000,qty:2}],pay:'card'},
+            {t:1,h:17,m:45,items:[{name:'전복구이',price:20000,qty:2},{name:'맥주',price:6000,qty:2},{name:'생굴',price:15000,qty:1}],pay:'kakaopay'},
+            {t:6,h:18,m:20,items:[{name:'모듬회(중)',price:55000,qty:1},{name:'소주',price:5000,qty:3},{name:'공기밥',price:1000,qty:2}],pay:'card'},
+            {t:2,h:19,m:0,items:[{name:'해물탕',price:35000,qty:1},{name:'새우구이',price:20000,qty:1},{name:'맥주',price:6000,qty:2}],pay:'card'},
+          ];
+          let todayTotal=0;
+          completedOrders.forEach((o,i)=>{
+            const tot=o.items.reduce((s,it)=>s+it.price*it.qty,0);
+            todayTotal+=tot;
+            w.push(fsd('filo_orders',`${did}_live_done_${String(i+1).padStart(2,'0')}`,{dealerId:did,type:'table',status:'completed',payType:o.pay,tableNum:o.t,tableName:`테이블 ${o.t}번`,items:o.items,total:tot,createdAt:kstISO(today,o.h,o.m),date:today}));
+          });
+          // ── 현재 진행 중 테이블 주문 5개 (pending)
+          const activeOrders=[
+            {t:1,h:19,m:30,items:[{name:'모듬회(소)',price:35000,qty:2},{name:'소주',price:5000,qty:3},{name:'파전',price:10000,qty:1}]},
+            {t:2,h:19,m:50,items:[{name:'광어회(소)',price:40000,qty:1},{name:'맥주',price:6000,qty:4}]},
+            {t:3,h:20,m:5,items:[{name:'해물탕',price:35000,qty:1},{name:'새우구이',price:20000,qty:2},{name:'소주',price:5000,qty:2}]},
+            {t:5,h:19,m:45,items:[{name:'전복구이',price:20000,qty:2},{name:'맥주',price:6000,qty:2},{name:'공기밥',price:1000,qty:3}]},
+            {t:7,h:20,m:10,items:[{name:'모듬회(중)',price:55000,qty:1},{name:'소주',price:5000,qty:2}]},
+          ];
+          activeOrders.forEach((o,i)=>{
+            const tot=o.items.reduce((s,it)=>s+it.price*it.qty,0);
+            w.push(fsd('filo_orders',`${did}_live_active_${String(i+1).padStart(2,'0')}`,{dealerId:did,type:'table',status:'pending',tableNum:o.t,tableName:`테이블 ${o.t}번`,items:o.items,total:tot,createdAt:kstISO(today,o.h,o.m),date:today}));
+          });
+          // ── 오늘 매출 집계
+          w.push(fsd('filo_sales',`${did}_${today}`,{dealerId:did,date:today,total:todayTotal,itemCount:completedOrders.length,status:'open',updatedAt:new Date().toISOString()}));
+          // ── 직원 오늘 출근 기록
+          staff.forEach((s,i)=>{
+            const inH=9+Math.floor(i/2);const inM=i*7%60;
+            const inIso=kstISO(today,inH,inM);
+            w.push(fsd('attendance',`${did}_att_today_m${i+1}_in`,{dealerId:did,memberId:`${did}_${s.id}`,memberName:s.name,type:'in',date:today,time:inIso,createdAt:inIso}));
+          });
+          // ── 재고 12개 (3개 부족)
+          const invItems=[{n:'참기름(1L)',s:2,min:5},{n:'간장(1.8L)',s:1,min:5},{n:'된장(3kg)',s:3,min:5},{n:'쌀(20kg)',s:15,min:5},{n:'설탕(3kg)',s:8,min:5},{n:'소금(1kg)',s:10,min:5},{n:'고추장(5kg)',s:6,min:5},{n:'식용유(1.8L)',s:7,min:5},{n:'계란(30개)',s:12,min:5},{n:'마늘(1kg)',s:9,min:5},{n:'생선(1kg)',s:4,min:5},{n:'소주(360ml)',s:18,min:10}];
+          invItems.forEach((it,i)=>w.push(fsd('inventory',`${did}_inv${i+1}`,{dealerId:did,name:it.n,stock:it.s,minStock:it.min,unit:'개',category:'식자재',supplier:'광안시장',updatedAt:today})));
+          // 배치 저장
+          const burl=`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:batchWrite`;
+          const hdrs={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+          const bres=[];
+          for(let i=0;i<w.length;i+=400){
+            const br=await fetch(burl,{method:'POST',headers:hdrs,body:JSON.stringify({writes:w.slice(i,i+400)})});
+            const bd=await br.json();
+            bres.push({batch:Math.floor(i/400)+1,status:br.status,count:w.slice(i,i+400).length,err:(bd.status||[]).filter(x=>x&&x.code&&x.code!==0).length});
+          }
+          return new Response(JSON.stringify({ok:true,did,today,stats:{menus:menus.length,staff:staff.length,completedOrders:completedOrders.length,activeOrders:activeOrders.length,todayTotal,inventory:invItems.length},batches:bres}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+      }
       // ── /api/demo-delete-all — 데모 매장 데이터 일괄 삭제
       if (path === '/api/demo-delete-all' && method === 'POST') {
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
