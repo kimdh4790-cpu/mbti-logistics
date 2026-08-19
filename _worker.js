@@ -4679,6 +4679,24 @@ ${JSON.stringify(postSummary)}
             method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
             body:JSON.stringify({fields})
           });
+          // 주방 완료 시 손님 FCM 픽업 알림 발송
+          if (status === 'done') {
+            try {
+              const orderRes = await fetch(`${FS_BASE}/${targetCol}/${orderId}`,{
+                headers:{'Authorization':'Bearer '+token}
+              });
+              const orderDoc = await orderRes.json();
+              const fcmToken = orderDoc.fields?.fcmToken?.stringValue || orderDoc.fields?.guestFcmToken?.stringValue;
+              const tableNum = orderDoc.fields?.tableNum?.stringValue || orderDoc.fields?.tableNum?.integerValue;
+              if (fcmToken) {
+                const fcmRes = await fetch(`https://filo.ai.kr/fcm/notify-drivers`,{
+                  method:'POST',headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({tokens:[fcmToken],title:'픽업 알림',body:'주문하신 음식이 준비됐습니다! 카운터에서 수령해주세요',
+                    data:{type:'pickup',tableNum:String(tableNum||''),url:'https://filo.ai.kr/order?d='+did+'&t='+(tableNum||'')}})
+                });
+              }
+            } catch(_) {}
+          }
           return Response.json({ok:true});
         } catch(e) {
           return Response.json({ok:false,error:e.message});
