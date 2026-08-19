@@ -10814,6 +10814,42 @@ service cloud.firestore {
       }
     }
 
+    // ── 재고 부족 앱푸시 (/api/inv-notify) — 딜러 전용 ──
+    if (path === '/api/inv-notify' && method === 'POST') {
+      try {
+        const _invUser = await verifyFirebaseToken(request, env);
+        if (!_invUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const body = await request.json();
+        const { did, title, body: msgBody } = body;
+        if (!did) return new Response(JSON.stringify({ok:false,error:'did 필요'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const accessToken = await getAccessToken(env);
+        const compRes = await fetch(
+          `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${did}`,
+          {headers:{'Authorization':'Bearer '+accessToken}}
+        );
+        const compJson = await compRes.json();
+        const tokens = [
+          ...(compJson.fields?.fcmTokens?.arrayValue?.values?.map(v=>v.stringValue).filter(Boolean)||[]),
+          compJson.fields?.fcmToken?.stringValue
+        ].filter(Boolean);
+        if (!tokens.length) return new Response(JSON.stringify({ok:false,error:'FCM 토큰 없음 — 앱 설치 후 알림 허용 필요'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        let sent=0;
+        for (const tk of tokens) {
+          try {
+            const r = await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{
+              method:'POST',
+              headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+              body:JSON.stringify({message:{token:tk,notification:{title:title||'재고 부족',body:msgBody||''},android:{priority:'high'},webpush:{notification:{icon:'/icon-192.png',requireInteraction:true}}}})
+            });
+            if (r.ok) sent++;
+          } catch(e){}
+        }
+        return new Response(JSON.stringify({ok:true,sent}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
     // ══ Aligo SMS 자동발송 ══
     if (path === '/api/send-sms' && method === 'POST') {
       const _smsAdmin = await requireAdmin(request, env);

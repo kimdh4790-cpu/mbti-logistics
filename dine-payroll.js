@@ -433,18 +433,49 @@ function _dineAutoPayroll(did){
     var cards=[];
     memSnap.forEach(function(doc){var m=doc.data();m._id=doc.id;var att=attMap[doc.id]||{ins:[],outs:[]};cards.push({m:m,r:_calcPayFull(m,att,empCnt,ym)});});
     var totalNet=cards.reduce(function(s,c){return s+c.r.netSalary;},0);
-    var html='<div style="font-size:12px;color:var(--cyan);padding:8px;margin-bottom:8px;background:rgba(0,212,255,.06);border-radius:8px">'+
+    var statusHtml='<div style="font-size:12px;color:var(--cyan);padding:8px;margin-bottom:8px;background:rgba(0,212,255,.06);border-radius:8px">'+
      '● 실시간 연결됨 · 총 실수령 합계: <b>₩'+totalNet.toLocaleString()+'</b> ('+cards.length+'명)</div>';
-    cards.forEach(function(c){
-     var m=c.m,r=c.r;
-     html+='<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;padding:12px 14px">'+
-      '<div><div style="font-weight:800">'+m.name+'</div>'+
-      '<div style="font-size:10px;color:var(--t3)">'+r.monthlyHours+'h · '+({'hourly':'시급','monthly':'월급'}[m.payType]||m.payType)+'</div></div>'+
-      '<div style="text-align:right">'+
-      '<div style="font-weight:900;color:var(--gr)">₩'+r.netSalary.toLocaleString()+'</div>'+
-      '<div style="font-size:10px;color:var(--t3)">총지급 ₩'+r.grossSalary.toLocaleString()+'</div></div></div>';
-    });
-    list.innerHTML=html;
+
+    var PAGE=5, curPage=0, pages=Math.ceil(cards.length/PAGE);
+    function renderAutoPage(pg){
+     var slice=cards.slice(pg*PAGE,(pg+1)*PAGE);
+     var rows=slice.map(function(c){
+      var m=c.m,r=c.r;
+      var typeLabel={'hourly':'시급','monthly':'월급'}[m.payType]||'시급';
+      var partLabel={'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||(m.part||'');
+      var partColor={'kitchen':'#ef4444','hall':'#38bdf8','management':'#a78bfa'}[m.part]||'#a78bfa';
+      return '<div style="border-bottom:1px solid var(--bd);padding:10px 0">'+
+       '<div style="display:flex;align-items:center;justify-content:space-between">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+         '<span style="font-size:13px;font-weight:800">'+m.name+'</span>'+
+         (partLabel?'<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(255,255,255,.06);color:'+partColor+'">'+partLabel+'</span>':'')+
+        '</div>'+
+        '<span style="font-size:15px;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</span>'+
+       '</div>'+
+       '<div style="display:flex;gap:10px;margin-top:4px;font-size:11px;color:var(--t3)">'+
+        '<span>'+r.monthlyHours+'h · '+typeLabel+'</span>'+
+        '<span>기본 <b style="color:var(--tx)">₩'+r.basePay.toLocaleString()+'</b></span>'+
+        (r.insTotal+r.taxTotal?'<span>공제 <b style="color:#ef4444">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></span>':'')+
+       '</div>'+
+      '</div>';
+     }).join('');
+     var nav=pages>1?
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 4px">'+
+      '<button onclick="_dineAutoPayPage('+(pg-1)+')" '+(pg===0?'disabled style="opacity:.3;cursor:default"':'')+
+       ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);font-size:12px;cursor:pointer">이전</button>'+
+      '<span style="font-size:12px;color:var(--t3)"><b style="color:var(--tx)">'+(pg+1)+'</b> / '+pages+'페이지 ('+cards.length+'명)</span>'+
+      '<button onclick="_dineAutoPayPage('+(pg+1)+')" '+(pg===pages-1?'disabled style="opacity:.3;cursor:default"':'')+
+       ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);font-size:12px;cursor:pointer">다음</button>'+
+      '</div>':'';
+     return rows+nav;
+    }
+    window._dineAutoPayPage=function(pg){
+     if(pg<0||pg>=pages)return;
+     curPage=pg;
+     var el2=document.getElementById('auto-pay-cards');
+     if(el2) el2.innerHTML=renderAutoPage(pg);
+    };
+    list.innerHTML=statusHtml+'<div id="auto-pay-cards">'+renderAutoPage(0)+'</div>';
    });
   _dineToast('실시간 급여 계산 시작됨');
  });

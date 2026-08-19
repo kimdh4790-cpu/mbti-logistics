@@ -126,7 +126,7 @@ function _filoInvRender(items,did){
     (phone?'<div style="font-size:11px;color:var(--t3)">'+phone+'</div>':'')+
     '</div>'+
     '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
-    (phone?'<button onclick="_filoInvSendAlimtalk(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(8,145,178,.15);color:#38bdf8;border:1px solid rgba(8,145,178,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">알림톡</button>':'<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(100,116,139,.1);color:var(--t3);border:1px solid var(--bd);border-radius:8px;font-size:11px;cursor:pointer">번호등록</button>')+
+    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">앱푸시</button>'+
     '</div>':'')+
    '</div>';
  }
@@ -154,118 +154,71 @@ function _filoInvRender(items,did){
  list.innerHTML=html;
 }
 
-// ── +/- 빠른 조정 ─────────────────────────────────────────────────────────────
+// ── +/- 수량 입력 팝업 ────────────────────────────────────────────────────────
 window._filoInvAdjust=function(itemId,did,delta){
+ var ex=document.getElementById('inv-adj-pop'); if(ex) ex.remove();
+ var it=_invAllItems.find(function(x){return x.id===itemId;})||{};
+ var m=document.createElement('div');
+ m.id='inv-adj-pop';
+ m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end';
+ m.innerHTML='<div class="card" style="width:100%;border-radius:20px 20px 0 0;padding:24px">'+
+  '<div style="font-size:15px;font-weight:900;margin-bottom:4px">'+(delta>0?'입고 등록':'출고 등록')+'</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:16px">'+esc(it.name||'')+'  현재 '+(it.stock||0)+(it.unit||'개')+'</div>'+
+  '<input id="inv-adj-qty" type="number" value="1" min="1" placeholder="수량 입력" '+
+   'style="width:100%;box-sizing:border-box;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:22px;font-weight:900;text-align:center;margin-bottom:14px">'+
+  '<div style="display:flex;gap:8px">'+
+  '<button onclick="document.getElementById(\'inv-adj-pop\').remove()" '+
+   'style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
+  '<button onclick="_filoInvDoAdj(\''+itemId+'\',\''+did+'\','+delta+')" '+
+   'style="flex:2;padding:13px;background:'+(delta>0?'#22c55e':'#ef4444')+';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">'+(delta>0?'입고 확인':'출고 확인')+'</button>'+
+  '</div></div>';
+ document.body.appendChild(m);
+ setTimeout(function(){var inp=document.getElementById('inv-adj-qty');if(inp){inp.focus();inp.select();}},80);
+};
+
+window._filoInvDoAdj=function(itemId,did,delta){
+ var qty=parseInt((document.getElementById('inv-adj-qty')||{}).value||'1')||1;
  var ref=firebase.firestore().collection('inventory').doc(itemId);
  ref.get().then(function(doc){
   if(!doc.exists)return;
-  var next=Math.max(0,(doc.data().stock||0)+delta);
+  var next=Math.max(0,(doc.data().stock||0)+(delta>0?qty:-qty));
   var now=new Date().toISOString();
   var batch=firebase.firestore().batch();
   batch.update(ref,{stock:next,updatedAt:now});
   batch.set(firebase.firestore().collection(delta>0?'inventory_in':'inventory_out').doc(),{
-   dealerId:did,itemId:itemId,qty:Math.abs(delta),
+   dealerId:did,itemId:itemId,qty:qty,
    type:delta>0?'adjust_in':'adjust_out',
    createdAt:now,date:now.slice(0,10),
    createdBy:(_CU&&(_CU.name||_CU.userId))||''
   });
   return batch.commit();
- }).then(function(){_filoInvLoad(did);}).catch(function(e){_filoToast(e.message);});
+ }).then(function(){
+  var p=document.getElementById('inv-adj-pop'); if(p) p.remove();
+  _filoInvLoad(did);
+ }).catch(function(e){_filoToast(e.message);});
 };
 
-// ── AI 알림톡 발송 ───────────────────────────────────────────────────────────
-window._filoInvSendAlimtalk=function(itemId,did){
+// ── 앱푸시 알림 발송 ─────────────────────────────────────────────────────────
+window._filoInvSendPush=function(itemId,did){
  var it=_invAllItems.find(function(x){return x.id===itemId;});
- if(!it||!it.supplierPhone){_filoToast('거래처 전화번호가 없습니다. 수정에서 추가해주세요.');return;}
-
- /* AI 메시지 생성 */
+ if(!it){_filoToast('항목을 찾을 수 없습니다');return;}
  var storeName=(_cachedCompanyDoc||{}).name||'매장';
  var needed=Math.max(1,(it.minStock||5)*2-(it.stock||0));
- var prompt='한국어로 거래처에 재고 발주 요청 문자를 1문단으로 작성해줘. '+
-  '매장명: '+storeName+', 재료: '+it.name+', 필요수량: '+needed+(it.unit||'개')+
-  ', 공급처: '+(it.supplier||'거래처')+'. 짧고 정중하게 50자 이내로.';
-
- /* 로딩 모달 먼저 표시 */
- var ex=document.getElementById('inv-alimtalk-pop'); if(ex) ex.remove();
- var m=document.createElement('div');
- m.id='inv-alimtalk-pop';
- m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end';
- m.innerHTML='<div class="card" style="width:100%;border-radius:20px 20px 0 0;padding:24px">'+
-  '<div style="font-size:15px;font-weight:900;margin-bottom:4px">알림톡 발송</div>'+
-  '<div style="font-size:12px;color:var(--t3);margin-bottom:14px">'+esc(it.supplier||'거래처')+' · '+it.supplierPhone+'</div>'+
-  '<div id="iat-msg-wrap" style="background:var(--b3);border-radius:12px;padding:14px;margin-bottom:14px;min-height:80px;display:flex;align-items:center;justify-content:center">'+
-  '<div style="color:var(--t3);font-size:12px">AI 메시지 생성 중...</div></div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<button onclick="document.getElementById(\'inv-alimtalk-pop\').remove()" style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
-  '<button id="iat-send-btn" disabled style="flex:2;padding:13px;background:#38bdf8;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;opacity:.5">발송</button>'+
-  '</div></div>';
- document.body.appendChild(m);
-
- /* Firebase 토큰 얻고 AI 호출 */
+ var title='[재고부족] '+it.name;
+ var body=storeName+' '+it.name+' 재고 '+(it.stock||0)+(it.unit||'개') +' — 발주 '+needed+(it.unit||'개')+' 필요';
  (_auth&&_auth.currentUser?_auth.currentUser.getIdToken():Promise.resolve(''))
  .then(function(token){
-  return fetch('/api/claude',{
+  return fetch('/api/inv-notify',{
    method:'POST',
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-   body:JSON.stringify({
-    model:'claude-haiku-4-5-20251001',
-    max_tokens:150,
-    messages:[{role:'user',content:prompt}]
-   })
+   body:JSON.stringify({did:did,title:title,body:body,itemId:itemId})
   });
  }).then(function(r){return r.json();})
  .then(function(d){
-  var msg=(d.content&&d.content[0]&&d.content[0].text)||
-   storeName+'입니다. '+it.name+' '+needed+(it.unit||'개') +' 발주 부탁드립니다. 감사합니다.';
-  var wrap=document.getElementById('iat-msg-wrap');
-  if(wrap){
-   wrap.innerHTML='<textarea id="iat-msg" style="width:100%;box-sizing:border-box;background:transparent;border:none;color:var(--tx);font-size:13px;line-height:1.6;resize:none;outline:none;min-height:80px">'+msg+'</textarea>';
-  }
-  var btn=document.getElementById('iat-send-btn');
-  if(btn){btn.disabled=false;btn.style.opacity='1';btn.onclick=function(){_filoInvDoSendAlimtalk(it,did);};}
- }).catch(function(){
-  /* AI 실패 시 기본 메시지 */
-  var fallback=storeName+'입니다. '+it.name+' '+needed+(it.unit||'개')+' 발주 부탁드립니다. 감사합니다.';
-  var wrap=document.getElementById('iat-msg-wrap');
-  if(wrap) wrap.innerHTML='<textarea id="iat-msg" style="width:100%;box-sizing:border-box;background:transparent;border:none;color:var(--tx);font-size:13px;line-height:1.6;resize:none;outline:none;min-height:80px">'+fallback+'</textarea>';
-  var btn=document.getElementById('iat-send-btn');
-  if(btn){btn.disabled=false;btn.style.opacity='1';btn.onclick=function(){_filoInvDoSendAlimtalk(it,did);};}
- });
+  if(d.ok) _filoToast('앱 푸시 알림 발송 완료 ('+d.sent+'건)');
+  else _filoToast('발송 실패: '+(d.error||'FCM 토큰 없음'));
+ }).catch(function(e){_filoToast('오류: '+e.message);});
 };
-
-function _filoInvDoSendAlimtalk(it,did){
- var msg=(document.getElementById('iat-msg')||{}).value||'';
- if(!msg.trim()){_filoToast('메시지를 입력하세요');return;}
- var btn=document.getElementById('iat-send-btn');
- if(btn){btn.disabled=true;btn.textContent='발송 중...';}
- (_auth&&_auth.currentUser?_auth.currentUser.getIdToken():Promise.resolve(''))
- .then(function(token){
-  return fetch('/api/send-alimtalk',{
-   method:'POST',
-   headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-   body:JSON.stringify({
-    to:it.supplierPhone,
-    templateCode:'KA01TP260623201607025LtxVxj2AoHI',
-    fallbackText:msg,
-    variables:{}
-   })
-  });
- }).then(function(r){return r.json();})
- .then(function(d){
-  if(d.ok){
-   _filoToast(esc(it.supplier||'거래처')+'에 알림톡 발송 완료');
-   var p=document.getElementById('inv-alimtalk-pop'); if(p) p.remove();
-  } else {
-   _filoToast('발송 실패: '+(d.error||JSON.stringify(d.result||'')));
-   var btn2=document.getElementById('iat-send-btn');
-   if(btn2){btn2.disabled=false;btn2.textContent='발송';}
-  }
- }).catch(function(e){
-  _filoToast('오류: '+e.message);
-  var btn2=document.getElementById('iat-send-btn');
-  if(btn2){btn2.disabled=false;btn2.textContent='발송';}
- });
-}
 
 // ── 발주 팝업 ────────────────────────────────────────────────────────────────
 window._filoInvOrderInline=function(itemId,did){
