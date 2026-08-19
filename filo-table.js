@@ -515,16 +515,18 @@ function _filoTableOrderModal(did,table,order){
     readyBtn.textContent='준비완료';
     (function(d,tNum){readyBtn.onclick=function(){
      var db=firebase.firestore();
+     // pending/cooking/done 모두 포함 — 주방이 먼저 완료해도 FCM 발송
+     var activeStatuses=['pending','cooking','done'];
      Promise.all([
-      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','==','pending').get(),
-      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','==','pending').get()
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','in',activeStatuses).get(),
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','in',activeStatuses).get()
      ]).then(function(results){
       var batch=db.batch();var tokens=[];var seen={};
       results.forEach(function(snap){
        snap.forEach(function(doc){
         if(seen[doc.id])return;seen[doc.id]=true;
         batch.update(doc.ref,{status:'ready',readyAt:_nowISO()});
-        var tk=doc.data().fcmToken;
+        var tk=doc.data().fcmToken||doc.data().guestFcmToken;
         if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
        });
       });
@@ -536,7 +538,7 @@ function _filoTableOrderModal(did,table,order){
          data:{type:'pickup',tableNum:String(tNum),url:'https://filo.ai.kr/order?d='+d+'&t='+tNum}})
        }).catch(function(){});
        _filoToast('테이블 '+tNum+' 픽업 알림 전송!');
-      } else { _filoToast('Firestore 상태 ready 변경 완료'); }
+      } else { _filoToast('준비완료 처리됐습니다'); }
       mo.remove();
      }).catch(function(e){_filoToast(e.message);});
     };})(did,table.num);
