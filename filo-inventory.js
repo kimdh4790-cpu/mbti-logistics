@@ -103,55 +103,76 @@ function _filoInvRender(items,did){
   var dotColor=s<=0?'#ef4444':isLow?'#f59e0b':'#059669';
   var barColor=s<=0?'#ef4444':isLow?'#f59e0b':'#22c55e';
   var phone=it.supplierPhone||'';
-  return '<div style="padding:12px 14px;background:var(--b2,rgba(255,255,255,.04));border:1px solid '+(isLow?'rgba(239,68,68,.2)':'var(--bd)')+';border-radius:14px;margin-bottom:8px">'+
+  var cardBg=isLow?'#fff8f8':'#fff';
+  var cardBorder=isLow?'#fecaca':'#e5e7eb';
+  return '<div style="padding:12px 14px;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06)">'+
    /* 1행: 상태점 이름 수정버튼 */
    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
    '<div style="width:9px;height:9px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></div>'+
-   '<div style="font-size:14px;font-weight:800;flex:1;color:var(--tx)">'+esc(it.name||'—')+'</div>'+
-   '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="font-size:10px;padding:3px 8px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t3);cursor:pointer">수정</button>'+
+   '<div style="font-size:14px;font-weight:800;flex:1;color:#111">'+esc(it.name||'—')+'</div>'+
+   '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="font-size:10px;padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:pointer">수정</button>'+
    '</div>'+
    /* 2행: 진행바 + 수량 + +/- */
    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(isLow?'10':'0')+'px">'+
-   '<div style="flex:1;background:var(--b3);border-radius:6px;height:6px;overflow:hidden">'+
+   '<div style="flex:1;background:#f3f4f6;border-radius:6px;height:7px;overflow:hidden">'+
    '<div style="background:'+barColor+';width:'+pct+'%;height:100%;border-radius:6px;transition:width .6s"></div></div>'+
-   '<div style="font-size:12px;color:var(--t3);white-space:nowrap">'+s+'<span style="color:var(--bd)">/</span>'+m+(it.unit||'개')+'</div>'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.15);font-size:15px;cursor:pointer;line-height:1">−</button>'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="width:28px;height:28px;border-radius:7px;background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.15);font-size:15px;cursor:pointer;line-height:1">+</button>'+
+   '<div style="font-size:12px;color:#6b7280;white-space:nowrap">'+s+'<span style="color:#d1d5db">/</span>'+m+(it.unit||'개')+'</div>'+
+   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="width:30px;height:30px;border-radius:8px;background:#fee2e2;color:#ef4444;border:1px solid #fecaca;font-size:16px;cursor:pointer;line-height:1;font-weight:700">−</button>'+
+   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="width:30px;height:30px;border-radius:8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;font-size:16px;cursor:pointer;line-height:1;font-weight:700">+</button>'+
    '</div>'+
-   /* 부족 항목만: 거래처 정보 + 발주·알림톡 버튼 */
    (isLow?
-    '<div style="border-top:1px solid var(--bd);padding-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+    '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
     '<div style="flex:1;min-width:0">'+
-    (it.supplier?'<div style="font-size:11px;color:var(--t3)">거래처: <b style="color:var(--tx)">'+esc(it.supplier)+'</b></div>':'<div style="font-size:11px;color:#f59e0b">거래처 미등록 — 수정 버튼에서 추가</div>')+
-    (phone?'<div style="font-size:11px;color:var(--t3)">'+phone+'</div>':'')+
+    (it.supplier?'<div style="font-size:11px;color:#6b7280">거래처: <b style="color:#111">'+esc(it.supplier)+'</b></div>':'<div style="font-size:11px;color:#f59e0b">거래처 미등록 — 수정에서 추가</div>')+
+    (phone?'<div style="font-size:11px;color:#9ca3af">'+phone+'</div>':'')+
     '</div>'+
-    '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
-    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">앱푸시</button>'+
+    '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
+    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">앱푸시</button>'+
     '</div>':'')+
    '</div>';
  }
 
- var html='';
-
- /* ── 부족 섹션 ── */
- if(low.length){
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-   '<div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div>'+
-   '<div style="font-size:13px;font-weight:800;color:#ef4444">부족 · '+low.length+'건</div>'+
-   '</div>';
-  low.forEach(function(it){html+=itemCard(it,true);});
+ function navBtn(fn,pg,label,disabled){
+  return '<button onclick="'+fn+'('+pg+')" '+(disabled?'disabled':'')+
+   ' style="padding:6px 14px;border:1px solid #e5e7eb;border-radius:8px;background:'+(disabled?'#f9fafb':'#fff')+';color:'+(disabled?'#d1d5db':'#374151')+';font-size:12px;cursor:'+(disabled?'default':'pointer')+'">'+label+'</button>';
  }
 
- /* ── 양호 섹션 ── */
- if(ok.length){
-  html+='<div style="display:flex;align-items:center;gap:8px;margin:'+(low.length?'18':'0')+'px 0 10px">'+
-   '<div style="width:10px;height:10px;border-radius:50%;background:#059669"></div>'+
-   '<div style="font-size:13px;font-weight:800;color:#059669">양호 · '+ok.length+'건</div>'+
-   '</div>';
-  ok.forEach(function(it){html+=itemCard(it,false);});
+ function renderSection(arr,isLow,pgGlobal,label,dotColor,pgFn){
+  if(!arr.length) return '';
+  var PAGE=5, pages=Math.ceil(arr.length/PAGE);
+  var pg=Math.min(pgGlobal,pages-1);
+  var slice=arr.slice(pg*PAGE,(pg+1)*PAGE);
+  var cards=slice.map(function(it){return itemCard(it,isLow);}).join('');
+  var nav=pages>1?
+   '<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px">'+
+   navBtn(pgFn,pg-1,'이전',pg===0)+
+   '<span style="font-size:12px;color:#6b7280">'+(pg+1)+' / '+pages+'</span>'+
+   navBtn(pgFn,pg+1,'다음',pg===pages-1)+
+   '</div>':'';
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+   '<div style="width:10px;height:10px;border-radius:50%;background:'+dotColor+'"></div>'+
+   '<div style="font-size:13px;font-weight:800;color:'+dotColor+'">'+label+' · '+arr.length+'건</div>'+
+   '</div>'+cards+nav;
  }
 
- list.innerHTML=html;
+ var lowPg=0, okPg=0;
+ function doRender(){
+  var html='';
+  if(low.length) html+=renderSection(low,true,lowPg,'부족','#ef4444','_invLowPage');
+  if(ok.length) html+='<div style="margin-top:'+(low.length?'18':'0')+'px">'+renderSection(ok,false,okPg,'양호','#059669','_invOkPage')+'</div>';
+  list.innerHTML=html||'<div style="text-align:center;padding:40px;color:#9ca3af">등록된 재료가 없습니다</div>';
+ }
+ window._invLowPage=function(pg){
+  var pages=Math.ceil(low.length/5);
+  if(pg<0||pg>=pages)return;
+  lowPg=pg; doRender();
+ };
+ window._invOkPage=function(pg){
+  var pages=Math.ceil(ok.length/5);
+  if(pg<0||pg>=pages)return;
+  okPg=pg; doRender();
+ };
+ doRender();
 }
 
 // ── +/- 수량 입력 팝업 ────────────────────────────────────────────────────────
