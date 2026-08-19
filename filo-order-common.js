@@ -196,8 +196,21 @@ function _renderMenuGrid(menus, gridId){
    sold.textContent=_t('sold');
    item.appendChild(sold);
   }
-  (function(menu){item.onclick=function(){if(menu.stock!=null&&menu.stock<=0)return;_openMdlCommon(menu);};
-  item.ontouchend=function(e){e.preventDefault();if(menu.stock!=null&&menu.stock<=0)return;_openMdlCommon(menu);};})(m);
+  item.style.touchAction='manipulation';
+  (function(menu){
+   var _tx=0,_ty=0;
+   item.addEventListener('touchstart',function(e){
+    _tx=e.touches[0].clientX;_ty=e.touches[0].clientY;
+   },{passive:true});
+   item.addEventListener('touchend',function(e){
+    var dx=Math.abs(e.changedTouches[0].clientX-_tx);
+    var dy=Math.abs(e.changedTouches[0].clientY-_ty);
+    if(dx>10||dy>10)return; // 스크롤이면 무시
+    e.preventDefault();
+    if(menu.stock!=null&&menu.stock<=0)return;
+    _openMdlCommon(menu);
+   },{passive:false});
+  })(m);
   grid.appendChild(item);
  });
  // 언어 반영
