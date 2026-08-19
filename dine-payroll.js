@@ -481,11 +481,30 @@ function _dineAutoPayroll(did){
  });
 }
 
-/* 급여 확정 저장 */
+/* 급여 확정 저장 + 직원 앱푸시 */
 function _dinePayrollLock(ym){
- if(!confirm(ym+' 급여를 확정하시겠습니까?\n확정 후 Firestore에 저장됩니다.'))return;
+ var ex=document.getElementById('pay-lock-pop'); if(ex) ex.remove();
+ var pop=document.createElement('div');
+ pop.id='pay-lock-pop';
+ pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px';
+ pop.innerHTML='<div class="card" style="width:100%;max-width:400px;border-radius:20px;padding:28px;text-align:center">'+
+  '<div style="font-size:16px;font-weight:900;margin-bottom:8px">급여 확정</div>'+
+  '<div style="font-size:13px;color:var(--t3);margin-bottom:20px">'+ym+' 급여를 확정하고<br>직원에게 앱 푸시 알림을 발송합니다</div>'+
+  '<div style="display:flex;gap:10px">'+
+  '<button onclick="document.getElementById(\'pay-lock-pop\').remove()" '+
+   'style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
+  '<button id="pay-lock-btn" onclick="_dinePayrollDoLock(\''+ym+'\')" '+
+   'style="flex:2;padding:13px;background:#22c55e;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">확정 + 발송</button>'+
+  '</div></div>';
+ document.body.appendChild(pop);
+}
+
+function _dinePayrollDoLock(ym){
+ var btn=document.getElementById('pay-lock-btn');
+ if(btn){btn.disabled=true;btn.textContent='처리 중...';}
  var did=_CU.dealerId;
  var from=ym+'-01',to=ym+'-31';
+ var memberPayList=[];
  Promise.all([
   _db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get(),
   _db.collection('members').where('dealerId','==',did).get()
@@ -505,6 +524,7 @@ function _dinePayrollLock(ym){
    var m=doc.data();m._id=doc.id;
    var att=attMap[doc.id]||{ins:[],outs:[]};
    var r=_calcPayFull(m,att,empCnt,ym);
+   memberPayList.push({memberId:doc.id,name:m.name,netSalary:r.netSalary});
    saves.push(_db.collection('payroll').add({
     dealerId:did,memberId:doc.id,memberName:m.name,ym:ym,
     basePay:r.basePay,weeklyHoliday:r.weeklyHoliday,nightPay:r.nightPay,
@@ -515,7 +535,22 @@ function _dinePayrollLock(ym){
   });
   return Promise.all(saves);
  }).then(function(){
-  _dineToast(' '+ym+' 급여 확정 완료! Firestore에 저장됐습니다.');
- }).catch(function(e){_dineToast('오류:  '+e.message);});
+  /* Firestore 저장 완료 → 앱 푸시 발송 */
+  return (_auth&&_auth.currentUser?_auth.currentUser.getIdToken():Promise.resolve(''))
+  .then(function(token){
+   return fetch('/api/payslip-push',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({did:did,ym:ym,members:memberPayList})
+   });
+  }).then(function(r){return r.json();})
+  .then(function(d){
+   var p=document.getElementById('pay-lock-pop'); if(p) p.remove();
+   _dineToast(ym+' 급여 확정 완료 · 앱 푸시 '+( d.sent||0)+'명 발송');
+  });
+ }).catch(function(e){
+  _dineToast('오류: '+e.message);
+  if(btn){btn.disabled=false;btn.textContent='확정 + 발송';}
+ });
 }
 

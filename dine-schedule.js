@@ -311,21 +311,27 @@ function _dinePayslipList(did){
    else if(d.type==='out')attMap[d.memberId].outs.push(d);
   });
 
+  var isStaff=(_CU&&_CU.role==='staff');
+  var myStaffId=(_CU&&_CU.staffId)||'';
+
   var cards=[];
   var totalNet=0;
   memSnap.forEach(function(doc){
    var m=doc.data();
    if((m.status||'active')==='resigned')return;
+   /* 직원은 본인 카드만 */
+   if(isStaff&&doc.id!==myStaffId)return;
    var att=attMap[doc.id]||{ins:[],outs:[]};
    var r=_calcPayFull(m,att,memSnap.size,ym);
    totalNet+=r.netSalary;
    cards.push({m:m,r:r,mid:doc.id,days:att.ins.length});
   });
 
-  if(!cards.length){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">직원 데이터가 없습니다</div>';return;}
+  if(!cards.length){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">'+(isStaff?'이번 달 급여 데이터가 없습니다':'직원 데이터가 없습니다')+'</div>';return;}
 
-  /* ── 합계 + 일괄발송 ── */
-  var sumHtml=
+  /* ── 합계 + 일괄발송 (관리자만) ── */
+  var sumHtml=isStaff?
+   '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">'+ym+' 내 급여명세서 · 실수령 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>':
    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
    '<div style="font-size:12px;color:var(--t3)">'+ym+' 명세서 <b style="color:var(--tx)">총 '+cards.length+'명</b> · 실수령 합계 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>'+
    '<button data-did="'+did+'" data-ym="'+ym+'" onclick="_dinePayslipBulkSend(this.dataset.did,this.dataset.ym)" style="font-size:11px;padding:5px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:700">일괄발송</button>'+
@@ -347,7 +353,7 @@ function _dinePayslipList(did){
      '<span style="font-size:10px;font-weight:700;color:'+partColor+';background:'+partColor+'22;padding:2px 7px;border-radius:10px">'+partLabel+'</span>'+
      '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</div>'+
      '<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);cursor:pointer">보기</button>'+
-     '<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid rgba(8,145,178,.3);border-radius:6px;background:rgba(8,145,178,.08);color:#38bdf8;cursor:pointer">발송</button>'+
+     (isStaff?'':'<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid rgba(8,145,178,.3);border-radius:6px;background:rgba(8,145,178,.08);color:#38bdf8;cursor:pointer">발송</button>')+
      '</div>'+
      /* 2행: 출근일·근무·기본급·공제 인라인 */
      '<div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--t3)">'+

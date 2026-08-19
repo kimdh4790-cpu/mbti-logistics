@@ -10814,6 +10814,41 @@ service cloud.firestore {
       }
     }
 
+    // ── 급여확정 직원 앱푸시 (/api/payslip-push) — 딜러 전용 ──
+    if (path === '/api/payslip-push' && method === 'POST') {
+      try {
+        const _ppUser = await verifyFirebaseToken(request, env);
+        if (!_ppUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const body = await request.json();
+        const { did, ym, members } = body; // members: [{memberId, name, netSalary}]
+        if (!did || !members || !members.length) return new Response(JSON.stringify({ok:false,error:'파라미터 부족'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const accessToken = await getAccessToken(env);
+        let sent=0, skipped=0;
+        for (const mem of members) {
+          try {
+            const mRes = await fetch(
+              `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/members/${mem.memberId}`,
+              {headers:{'Authorization':'Bearer '+accessToken}}
+            );
+            const mJson = await mRes.json();
+            const fcmToken = mJson.fields?.fcmToken?.stringValue;
+            if (!fcmToken) { skipped++; continue; }
+            const title = ym+' 급여명세서 도착';
+            const msgBody = (mem.name||'')+'님 실수령액 ₩'+Number(mem.netSalary||0).toLocaleString()+'원이 확정되었습니다. DINE 앱에서 확인하세요.';
+            const r = await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{
+              method:'POST',
+              headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+              body:JSON.stringify({message:{token:fcmToken,notification:{title,body:msgBody},android:{priority:'high'},webpush:{notification:{icon:'/icon-192.png',requireInteraction:true}}}})
+            });
+            if (r.ok) sent++; else skipped++;
+          } catch(e){ skipped++; }
+        }
+        return new Response(JSON.stringify({ok:true,sent,skipped}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
     // ── 재고 부족 앱푸시 (/api/inv-notify) — 딜러 전용 ──
     if (path === '/api/inv-notify' && method === 'POST') {
       try {
