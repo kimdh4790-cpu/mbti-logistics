@@ -429,45 +429,88 @@ function _filoPayslipLoad(did, ym) {
       return;
     }
 
-    tbody.innerHTML = members.map(function(m){
-      var hours = hoursMap[m.id]||0;
-      var wage  = m.hourlyWage||m.wage||10000;
-      var base  = Math.round(hours * wage);
-      var overtime = hours>160 ? Math.round((hours-160)*wage*1.5) : 0;
-      var deduct = Math.round((base+overtime)*0.033);
-      var net   = base + overtime - deduct;
-      var pay   = payDocs[m.id];
-      var isPaid = pay && pay.status==='paid';
-      var payDate = pay ? (pay.paidAt||'').slice(0,10) : '';
-      totalPay += net;
-      totalHours += hours;
+    /* ── 직원별 계산 결과 배열 ── */
+    var cards=members.map(function(m){
+      var hours=hoursMap[m.id]||0;
+      var wage=m.hourlyWage||m.wage||10000;
+      var base=Math.round(hours*wage);
+      var overtime=hours>160?Math.round((hours-160)*wage*1.5):0;
+      var deduct=Math.round((base+overtime)*0.033);
+      var net=base+overtime-deduct;
+      var pay=payDocs[m.id];
+      var isPaid=pay&&pay.status==='paid';
+      var payDate=pay?(pay.paidAt||'').slice(0,10):'';
+      totalPay+=net; totalHours+=hours;
       if(!isPaid) pending++;
+      return {m:m,hours:hours,base:base,overtime:overtime,deduct:deduct,net:net,isPaid:isPaid,payDate:payDate};
+    });
 
-      var avatar = (m.name||'?').slice(0,1);
-      var colors = ['#c9a84c','#0891b2','#059669','#f59e0b','#ef4444'];
-      var color  = colors[Math.abs(m.id.charCodeAt(0))%5];
+    /* ── 테이블 tbody를 카드 컨테이너로 교체 ── */
+    var tableWrap=tbody.closest('div');
+    if(tableWrap) tableWrap.id='ps-card-wrap';
+    var PAGE=5, curPage=0, pages=Math.ceil(cards.length/PAGE);
 
-      return '<tr style="border-bottom:1px solid var(--bd)">' +
-        '<td style="padding:12px 8px;white-space:nowrap">' +
-        '<div style="display:flex;align-items:center;gap:8px">' +
-        '<div style="width:30px;height:30px;border-radius:50%;background:'+color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">'+avatar+'</div>' +
-        '<span style="font-weight:700">'+m.name+'</span></div></td>' +
-        '<td style="padding:12px 8px;color:var(--t3)"><div>'+(m.department||'—')+'</div><div style="font-size:10px">'+(m.position||'—')+'</div></td>' +
-        '<td style="padding:12px 8px;font-weight:600">'+hours+'h</td>' +
-        '<td style="padding:12px 8px">₩'+base.toLocaleString()+'</td>' +
-        '<td style="padding:12px 8px">₩'+overtime.toLocaleString()+'</td>' +
-        '<td style="padding:12px 8px;color:#ef4444">₩'+deduct.toLocaleString()+'</td>' +
-        '<td style="padding:12px 8px;font-weight:800;color:#c9a84c">₩'+net.toLocaleString()+'</td>' +
-        '<td style="padding:12px 8px;color:var(--t3);font-size:11px">'+(payDate||'—')+'</td>' +
-        '<td style="padding:12px 8px">' +
-        '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
-        (isPaid?'지급완료':'지급대기')+'</span></td>' +
-        '<td style="padding:12px 8px">' +
-        '<button onclick="_filoPayslipModal(\"'+m.id+'\",\"'+ym+'\")" style="padding:5px 10px;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--t2);font-size:11px;cursor:pointer;margin-right:4px">보기</button>'+
-        (!isPaid?'<button onclick="_filoPayslipProcess(\"'+m.id+'\",'+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
-        '</td>' +
-        '</tr>';
-    }).join('');
+    function renderPage(pg){
+      var slice=cards.slice(pg*PAGE,(pg+1)*PAGE);
+      var rows=slice.map(function(c){
+        var m=c.m;
+        var colors=['#c9a84c','#0891b2','#059669','#f59e0b','#ef4444'];
+        var color=colors[Math.abs(m.id.charCodeAt(0))%5];
+        var deptPart=m.department||m.part||'—';
+        return '<div style="border-bottom:1px solid var(--bd);padding:10px 0">'+
+          /* 1행: 아바타 + 이름 + 부서 + 실지급 + 상태뱃지 */
+          '<div style="display:flex;align-items:center;gap:8px">'+
+          '<div style="width:30px;height:30px;border-radius:50%;background:'+color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">'+(m.name||'?').slice(0,1)+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:800">'+m.name+'</div>'+
+          '<div style="font-size:10px;color:var(--t3)">'+deptPart+(m.position?' · '+m.position:'')+'</div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+          '<div style="font-size:14px;font-weight:900;color:#c9a84c">₩'+c.net.toLocaleString()+'</div>'+
+          '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+(c.isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(c.isPaid?'#059669':'#f59e0b')+'">'+(c.isPaid?'지급완료':'지급대기')+'</span>'+
+          '</div>'+
+          '</div>'+
+          /* 2행: 근무·기본·연장·공제 인라인 + 버튼 */
+          '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:11px;color:var(--t3)">'+
+          '<span>근무 <b style="color:var(--tx)">'+c.hours+'h</b></span>'+
+          '<span>기본 <b style="color:var(--tx)">₩'+c.base.toLocaleString()+'</b></span>'+
+          (c.overtime?'<span>연장 <b style="color:#f59e0b">₩'+c.overtime.toLocaleString()+'</b></span>':'')+
+          '<span>공제 <b style="color:#ef4444">-₩'+c.deduct.toLocaleString()+'</b></span>'+
+          (c.payDate?'<span style="color:var(--t3)">'+c.payDate+'</span>':'')+
+          '<div style="margin-left:auto;display:flex;gap:4px">'+
+          '<button onclick="_filoPayslipModal(\''+m.id+'\',\''+ym+'\')" style="padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);font-size:10px;cursor:pointer">보기</button>'+
+          (!c.isPaid?'<button onclick="_filoPayslipProcess(\''+m.id+'\',\''+did+'\',\''+ym+'\')" style="padding:4px 9px;background:var(--br);color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer">지급처리</button>':'')+
+          '</div></div>'+
+          '</div>';
+      }).join('');
+      var nav='';
+      if(pages>1){
+        nav='<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;font-size:12px">'+
+          '<button onclick="window._filoPayslipPage('+(pg-1)+')" '+(pg<=0?'disabled style="opacity:.3"':'')+
+          ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);cursor:pointer">이전</button>'+
+          '<span style="color:var(--t3)">'+(pg+1)+' / '+pages+'</span>'+
+          '<button onclick="window._filoPayslipPage('+(pg+1)+')" '+(pg>=pages-1?'disabled style="opacity:.3"':'')+
+          ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);cursor:pointer">다음</button>'+
+          '</div>';
+      }
+      return rows+nav;
+    }
+
+    window._filoPayslipPage=function(pg){
+      if(pg<0||pg>=pages)return;
+      curPage=pg;
+      var el2=document.getElementById('ps-card-list');
+      if(el2) el2.innerHTML=renderPage(pg);
+    };
+
+    /* 테이블 전체를 카드 목록으로 교체 */
+    var tableEl=tbody.closest('table');
+    if(tableEl){
+      var container=tableEl.parentElement;
+      container.innerHTML='<div id="ps-card-list">'+renderPage(0)+'</div>';
+    } else {
+      tbody.innerHTML='<tr><td colspan="10"><div id="ps-card-list">'+renderPage(0)+'</div></td></tr>';
+    }
 
     // KPI 업데이트
     var e1=document.getElementById('ps-total-staff');
