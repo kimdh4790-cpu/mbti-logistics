@@ -157,7 +157,7 @@ function _filoInvRender(items,did){
 
  var lowPg=0, okPg=0;
  function doRender(){
-  var html='';
+  var html='<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb">전체 품목 ('+items.length+'개)</div>';
   if(low.length) html+=renderSection(low,true,lowPg,'부족','#ef4444','_invLowPage');
   if(ok.length) html+='<div style="margin-top:'+(low.length?'18':'0')+'px">'+renderSection(ok,false,okPg,'양호','#059669','_invOkPage')+'</div>';
   list.innerHTML=html||'<div style="text-align:center;padding:40px;color:#9ca3af">등록된 재료가 없습니다</div>';
