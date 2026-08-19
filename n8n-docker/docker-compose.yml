@@ -1,0 +1,78 @@
+version: '3.8'
+
+# ================================================================
+# MBTICO n8n 자동화 서버 (Oracle Cloud 155.248.187.99)
+# 접속: http://155.248.187.99:5678
+# 아이디: admin@mbtico.kr / 비밀번호: mbtico2026!
+# ================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: n8n_db_2026
+      POSTGRES_DB: n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # DB 설정
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: n8n_db_2026
+
+      # 기본 설정
+      N8N_HOST: 155.248.187.99
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://155.248.187.99:5678
+
+      # 계정 설정 (최초 실행 시 자동 생성)
+      N8N_USER_MANAGEMENT_JWT_SECRET: mbtico_jwt_secret_2026
+      N8N_ENCRYPTION_KEY: mbtico_enc_key_2026_filo
+
+      # 타임존
+      GENERIC_TIMEZONE: Asia/Seoul
+      TZ: Asia/Seoul
+
+      # 이메일 알림 (선택)
+      N8N_EMAIL_MODE: smtp
+      N8N_SMTP_HOST: smtp.gmail.com
+      N8N_SMTP_PORT: 587
+      N8N_SMTP_SSL: false
+      N8N_SMTP_USER: kimdh4790@gmail.com
+      N8N_SMTP_PASS: ""
+      N8N_SMTP_SENDER: kimdh4790@gmail.com
+
+      # 기타
+      N8N_LOG_LEVEL: info
+      N8N_METRICS: false
+      EXECUTIONS_DATA_PRUNE: true
+      EXECUTIONS_DATA_MAX_AGE: 336
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  n8n_data:
