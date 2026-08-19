@@ -224,76 +224,38 @@ function _checkExistingOrder(){
   var d=doc.data();
   if(d.status!=='pending'&&d.status!=='ready'){try{localStorage.removeItem('filo_order_'+_did);}catch(e){}return;}
   if(String(d.tableNum)===String(_tNum))return; // 같은 테이블이면 무시
-  // 다른 테이블 QR 스캔 → 이동 확인 팝업
+  // 다른 테이블 QR 스캔 → 즉시 이동 확인 팝업 (직원 승인 없이 바로 처리)
   var pop=document.createElement('div');
   pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
-  var _xferDocRef=null, _xferUnsub=null;
-  function _showXferWait(){
-   pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:100%">'+
-    '<div style="font-size:36px;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block">&#8987;</div>'+
-    '<div style="font-size:17px;font-weight:900;margin-bottom:8px">직원 승인 대기 중</div>'+
-    '<div style="font-size:14px;color:#475569">'+_tName+'으로 이동 요청을 전송했습니다<br>잠시만 기다려 주세요</div>'+
-    '<button style="margin-top:16px;padding:10px 24px;background:#f1f5f9;border:none;border-radius:10px;color:#64748b;font-size:13px;cursor:pointer" onclick="if(window._xferDocRef)window._db.collection(\'staff_calls\').doc(window._xferDocRef).update({status:\'cancelled\'}).catch(function(){});if(window._xferUnsub)window._xferUnsub();document.querySelector(\'.xfer-pop\')&&document.querySelector(\'.xfer-pop\').remove()">취소</button>'+
-    '</div>';
-  }
+  var fromNum=String(d.tableNum);
+  var fromName=d.tableName||('테이블 '+d.tableNum);
   pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:100%">'+
    '<div style="font-size:40px;margin-bottom:12px">&#128682;</div>'+
    '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 이동</div>'+
    '<div style="font-size:14px;color:#475569;margin-bottom:20px">'+
-   '기존 주문을 <b style="color:#0891b2">'+_tName+'</b>으로<br>이동 요청할까요?<br><span style="font-size:11px;color:#94a3b8">직원 승인 후 이동됩니다</span></div>'+
+   fromName+'에서 <b style="color:#0891b2">'+_tName+'</b>으로<br>이동하시겠어요?</div>'+
    '<div style="display:flex;gap:10px">'+
-   '<button id="_mv_ok" style="flex:1;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동 요청</button>'+
+   '<button id="_mv_ok" style="flex:1;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동</button>'+
    '<button id="_mv_no" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">새 주문</button>'+
    '</div></div>';
   pop.className='xfer-pop';
   document.body.appendChild(pop);
   document.getElementById('_mv_ok').onclick=function(){
-   _showXferWait();
-   _db.collection('staff_calls').add({
-    dealerId:_did,
-    type:'table_transfer',
-    orderId:lastId,
-    fromTable:String(d.tableNum),
-    fromTableName:d.tableName||('테이블 '+d.tableNum),
-    toTable:String(_tNum),
-    toTableName:_tName,
-    tableNum:_tNum,
-    tableName:_tName,
-    status:'pending',
-    createdAt:_nowISO()
-   }).then(function(ref){
-    _xferDocRef=ref.id;
-    window._xferDocRef=ref.id;
-    _xferUnsub=_db.collection('staff_calls').doc(ref.id).onSnapshot(function(snap){
-     if(!snap.exists)return;
-     var xd=snap.data();
-     if(xd.status==='approved'){
-      if(_xferUnsub){_xferUnsub();_xferUnsub=null;}
-      _lastOrderId=lastId;
-      _listenPickup(lastId);
-      pop.remove();
-      var dn=document.getElementById('done');
-      var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=_tName+'으로 이동됐습니다';
-      var ditems=document.getElementById('done-items');
-      if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
-      if(dn)dn.style.display='flex';
-     } else if(xd.status==='rejected'){
-      if(_xferUnsub){_xferUnsub();_xferUnsub=null;}
-      pop.querySelector('div').innerHTML='<div style="font-size:36px;margin-bottom:12px">&#10060;</div>'+
-       '<div style="font-size:16px;font-weight:900;color:#ef4444;margin-bottom:8px">이동 거절됨</div>'+
-       '<div style="font-size:13px;color:#64748b;margin-bottom:16px">직원이 이동 요청을 거절했습니다</div>'+
-       '<button style="padding:10px 28px;background:#0891b2;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer" onclick="this.closest(\'.xfer-pop\').remove()">확인</button>';
-     }
-    });
-    window._xferUnsub=_xferUnsub;
-    /* 3분 후 자동 만료 */
-    setTimeout(function(){
-     if(!pop.isConnected)return;
-     if(_xferUnsub){_xferUnsub();_xferUnsub=null;}
-     _db.collection('staff_calls').doc(ref.id).update({status:'expired'}).catch(function(){});
-     pop.remove();
-    },180000);
-   }).catch(function(e){_filoToast('요청 실패: '+e.message);pop.remove();});
+   var okBtn=document.getElementById('_mv_ok');
+   okBtn.disabled=true;okBtn.textContent='이동 중...';
+   fetch('/order/move-table',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,orderId:lastId,fromTable:fromNum,toTable:String(_tNum),toTableName:_tName})
+   }).then(function(r){return r.json();}).then(function(res){
+    if(!res.ok){_filoToast('이동 실패: '+(res.error||''));okBtn.disabled=false;okBtn.textContent='이동';return;}
+    pop.remove();
+    _lastOrderId=lastId;
+    _listenPickup(lastId);
+    // 손님 화면 갱신
+    var dnum=document.getElementById('done-num');
+    if(dnum)dnum.textContent=_tName+' · 주문번호 #'+lastId.slice(-6).toUpperCase();
+    var dn=document.getElementById('done');if(dn)dn.style.display='flex';
+    _filoToast(_tName+'으로 이동됐습니다!');
+   }).catch(function(e){_filoToast('이동 실패: '+e.message);okBtn.disabled=false;okBtn.textContent='이동';});
   };
   document.getElementById('_mv_no').onclick=function(){pop.remove();};
  }).catch(function(){});

@@ -4662,6 +4662,42 @@ ${JSON.stringify(postSummary)}
           return Response.json({error:e.message});
         }
       }
+      // /order/move-table — 손님 QR 스캔 테이블 이동 (서비스 계정으로 권한 우회)
+      if (path === '/order/move-table' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did, orderId, fromTable, toTable, toTableName} = body;
+          if (!did||!orderId||!fromTable||!toTable) return Response.json({ok:false,error:'파라미터 오류'});
+          const token = await getAccessToken(env);
+          const now = new Date().toISOString();
+          const toName = toTableName || ('테이블 ' + toTable);
+          // filo_orders 업데이트
+          await fetch(`${FS_BASE}/filo_orders/${orderId}?updateMask.fieldPaths=tableNum&updateMask.fieldPaths=tableName&updateMask.fieldPaths=movedFrom&updateMask.fieldPaths=movedAt`, {
+            method: 'PATCH', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{
+              tableNum:{stringValue:String(toTable)},
+              tableName:{stringValue:toName},
+              movedFrom:{stringValue:String(fromTable)},
+              movedAt:{stringValue:now}
+            }})
+          });
+          // filo_tables: 원래 테이블 empty
+          const fromDocId = did + '_t' + fromTable;
+          await fetch(`${FS_BASE}/filo_tables/${fromDocId}?updateMask.fieldPaths=status&updateMask.fieldPaths=occupiedSince&updateMask.fieldPaths=updatedAt`, {
+            method: 'PATCH', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{status:{stringValue:'empty'},occupiedSince:{stringValue:''},updatedAt:{stringValue:now}}})
+          }).catch(()=>{});
+          // filo_tables: 이동한 테이블 occupied
+          const toDocId = did + '_t' + toTable;
+          await fetch(`${FS_BASE}/filo_tables/${toDocId}?updateMask.fieldPaths=status&updateMask.fieldPaths=updatedAt`, {
+            method: 'PATCH', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({fields:{status:{stringValue:'occupied'},updatedAt:{stringValue:now}}})
+          }).catch(()=>{});
+          return Response.json({ok:true});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
+        }
+      }
       // /kitchen/update — 주문 상태 변경
       if (path === '/kitchen/update' && request.method === 'POST') {
         try {
