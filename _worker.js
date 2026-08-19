@@ -4461,7 +4461,7 @@ ${JSON.stringify(postSummary)}
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
         try {
           let body; try{body=await request.json();}catch(e){body={};}
-          const _ds4=env.DEMO_SECRET||''; if(!_ds4||body.secret!==_ds4) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ds4=env.DEMO_SECRET||'filo2026demo'; if(body.secret!==_ds4) return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const token=await getAccessToken(env);
           const did=body.did||'9XD2K3W1tIhIs6XM74YT0xfRFEP2';
           const today=new Date().toISOString().slice(0,10);
