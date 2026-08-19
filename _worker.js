@@ -2287,7 +2287,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAC83UlEQV
       }
       // ★ /매장명 or /slug 경로 → dine.html 서빙 + 매장명 주입
       const dinePath = path.replace(/^\//, '');
-      if (dinePath && dinePath !== 'app' && dinePath !== 'app.html') {
+      if (dinePath && dinePath !== 'app' && dinePath !== 'app.html' && !path.startsWith('/api/') && !path.startsWith('/qr') && !path.startsWith('/fcm')) {
         const dineHtml = await env.DONWAY_ASSETS.get('dine.html', 'text');
         if (dineHtml) {
           const storeKey = decodeURIComponent(dinePath); // 한글 or 영문 slug
