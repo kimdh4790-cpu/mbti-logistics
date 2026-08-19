@@ -463,6 +463,7 @@ function _filoPayslipLoad(did, ym) {
         '<span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:'+(isPaid?'rgba(34,197,94,.12)':'rgba(245,158,11,.12)')+';color:'+(isPaid?'#059669':'#f59e0b')+'">'+
         (isPaid?'지급완료':'지급대기')+'</span></td>' +
         '<td style="padding:12px 8px">' +
+        '<button onclick="_filoPayslipModal(\"'+m.id+'\",\"'+ym+'\")" style="padding:5px 10px;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--t2);font-size:11px;cursor:pointer;margin-right:4px">보기</button>'+
         (!isPaid?'<button onclick="_filoPayslipProcess(\"'+m.id+'\",'+did+','+ym+')" style="padding:5px 10px;background:var(--br);color:#fff;border:none;border-radius:7px;font-size:11px;cursor:pointer">지급처리</button>':'')+
         '</td>' +
         '</tr>';
@@ -497,6 +498,164 @@ function _filoPayslipProcess(memberId, did, ym) {
 function _filoPayslipFilter(did){ _filoToast('필터 기능 준비 중'); }
 function _filoPayslipExcel(){ _filoToast('엑셀 다운로드 준비 중'); }
 function _filoPayslipGenerate(did){ _filoToast('명세서 자동 생성 준비 중'); }
+
+/* 급여명세서 상세 보기 모달 (FILO 관리자용) */
+function _filoPayslipModal(memberId, ym){
+ var db=firebase.firestore();
+ var did=_CU.dealerId;
+ var from=ym+'-01',to=ym+'-31';
+ Promise.all([
+  db.collection('members').doc(memberId).get(),
+  db.collection('members').where('dealerId','==',did).get(),
+  db.collection('attendance').where('dealerId','==',did).where('memberId','==',memberId).where('date','>=',from).where('date','<=',to).get()
+ ]).then(function(res){
+  var doc=res[0],allMem=res[1],attSnap=res[2];
+  if(!doc.exists)return _filoToast('직원 정보를 찾을 수 없습니다');
+  var m=doc.data();m._id=doc.id;
+  var empCnt=allMem.size;
+
+  /* 출퇴근 파싱 */
+  var ins=[],outs=[],breaks=[];
+  attSnap.forEach(function(d){
+   var dd=d.data();
+   if(dd.type==='in')ins.push(dd);
+   else if(dd.type==='out')outs.push(dd);
+   else breaks.push(dd);
+  });
+  ins.sort(function(a,b){return a.time>b.time?1:-1;});
+  outs.sort(function(a,b){return a.time>b.time?1:-1;});
+  var days=ins.length;
+
+  /* 근무시간 계산 (FILO 자체 로직) */
+  var totalMin=0,nightMin=0,overMin=0;
+  var breakEnds=breaks.filter(function(b){return b.type==='break_end';});
+  var breakStarts=breaks.filter(function(b){return b.type==='break_start';});
+  for(var i=0;i<Math.min(ins.length,outs.length);i++){
+   var inT=new Date(ins[i].time),outT=new Date(outs[i].time);
+   var diff=(outT-inT)/60000;
+   if(diff<=0||diff>720)continue;
+   var shiftBreak=0;
+   for(var bj=0;bj<Math.min(breakStarts.length,breakEnds.length);bj++){
+    var bs=new Date(breakStarts[bj].time),be=new Date(breakEnds[bj].time);
+    if(bs>=inT&&be<=outT){var bd=(be-bs)/60000;if(bd>0&&bd<240)shiftBreak+=bd;}
+   }
+   var br=shiftBreak>0?shiftBreak:(diff>=480?60:diff>=240?30:0);
+   var net=Math.max(0,diff-br);totalMin+=net;
+   var ns=new Date(inT);ns.setHours(22,0,0,0);
+   if(outT>ns)nightMin+=(outT-Math.max(inT,ns))/60000;
+   if(net>480)overMin+=net-480;
+  }
+  var totalHour=totalMin/60;
+  var nightHour=Math.round(nightMin/60*10)/10;
+  var overHour=Math.round(overMin/60*10)/10;
+  var monthlyHours=Math.round(totalHour);
+
+  /* 급여 계산 */
+  var MIN_WAGE=10320;
+  var basePay=0,weeklyHoliday=0,nightPay=0,overPay=0;
+  if(m.payType==='monthly'){
+   basePay=(m.monthlySalary||0)+(m.mealAllowance||0)+(m.transportAllowance||0);
+   if(empCnt>=5){var hw=Math.round((m.monthlySalary||0)/209);nightPay=Math.round(nightHour*hw*0.5);overPay=Math.round(overHour*hw*0.5);}
+  }else{
+   var wage=m.hourlyWage||MIN_WAGE;
+   basePay=Math.round(totalHour*wage);
+   var weekH=totalHour/4;
+   if(weekH>=15)weeklyHoliday=Math.round((weekH/40)*8*wage);
+   nightPay=Math.round(nightHour*wage*0.5);
+   if(empCnt>=5)overPay=Math.round(overHour*wage*0.5);
+  }
+  var grossSalary=basePay+weeklyHoliday+nightPay+overPay;
+
+  /* 공제 계산 */
+  var INS={pension:0.045,health:0.03545,longcare:0.03545*0.1281,employ:0.009};
+  var insTotal=0,insItems={};
+  var insured=m.payType==='monthly'||monthlyHours>=60;
+  if(insured&&m.insuranceType==='4대보험'){
+   insItems.pension=Math.floor(grossSalary*INS.pension);
+   insItems.health=Math.floor(grossSalary*INS.health);
+   insItems.longcare=Math.floor(insItems.health*INS.longcare);
+   insItems.employ=Math.floor(grossSalary*INS.employ);
+   insTotal=Object.values(insItems).reduce(function(s,v){return s+v;},0);
+  }else if(m.insuranceType==='3.3%'){
+   insTotal=Math.floor(grossSalary*0.033);
+  }
+  var taxBase=grossSalary-insTotal;
+  var incomeTax=taxBase<1060000?0:taxBase<2000000?Math.floor(taxBase*0.01):taxBase<3000000?Math.floor(taxBase*0.015):Math.floor(taxBase*0.02);
+  var localTax=Math.floor(incomeTax*0.1);
+  var taxTotal=incomeTax+localTax;
+  var netSalary=grossSalary-insTotal-taxTotal;
+  var totalDeduct=insTotal+taxTotal;
+
+  var partLabel={'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||(m.part||'');
+  var payTypeLabel=m.payType==='monthly'?'월급':m.payType==='daily'?'일급':'시급';
+  var insureLabel={'4대보험':'4대보험','3.3%':'3.3% 사업소득세','none':'미가입'}[m.insuranceType]||(m.insuranceType||'');
+  var today=new Date().toISOString().slice(0,10);
+  var ymLabel=ym.replace('-','년 ')+'월';
+
+  function _row(label,val,type,sub){
+   if(!val&&val!==0)return '';
+   var color=type==='add'?'#22c55e':type==='deduct'?'#ef4444':'var(--tx)';
+   var sign=type==='add'?'+ ':type==='deduct'?'- ':'';
+   return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px">'+
+    '<span style="color:var(--t2)">'+(sub?'&nbsp;&nbsp;&nbsp;':'')+label+'</span>'+
+    '<span style="font-weight:700;color:'+color+'">'+sign+'₩'+val.toLocaleString()+'</span></div>';
+  }
+  function _sec(label){
+   return '<div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--t3);margin:14px 0 6px;padding-bottom:4px;border-bottom:2px solid var(--bd)">'+label+'</div>';
+  }
+
+  var insBlock='';
+  if(m.insuranceType==='4대보험'&&insItems.pension){
+   insBlock+=_row('국민연금',insItems.pension,'deduct',true);
+   insBlock+=_row('건강보험',insItems.health,'deduct',true);
+   insBlock+=_row('장기요양',insItems.longcare,'deduct',true);
+   insBlock+=_row('고용보험',insItems.employ,'deduct',true);
+  }else if(insTotal){
+   insBlock+=_row(insureLabel,insTotal,'deduct',true);
+  }
+  if(incomeTax)insBlock+=_row('소득세',incomeTax,'deduct',true);
+  if(localTax) insBlock+=_row('지방소득세',localTax,'deduct',true);
+
+  var html=
+   '<div style="text-align:center;padding-bottom:14px;border-bottom:1px solid var(--bd);margin-bottom:4px">'+
+   '<div style="font-size:10px;color:var(--t3);letter-spacing:2px;margin-bottom:4px">MBTICO · 급여명세서</div>'+
+   '<div style="font-size:22px;font-weight:900">'+m.name+'</div>'+
+   '<div style="font-size:12px;color:var(--t2);margin-top:3px">'+partLabel+(payTypeLabel?' · '+payTypeLabel:'')+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+ymLabel+' | 발행일 '+today+'</div>'+
+   '</div>'+
+   _sec('근무 현황')+
+   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">'+
+   '<div style="background:var(--s3);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:10px;color:var(--t3)">출근일</div><div style="font-size:16px;font-weight:900">'+days+'일</div></div>'+
+   '<div style="background:var(--s3);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:10px;color:var(--t3)">총근무</div><div style="font-size:16px;font-weight:900;color:var(--br)">'+monthlyHours+'h</div></div>'+
+   (nightHour>0?'<div style="background:var(--s3);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:10px;color:var(--t3)">야간</div><div style="font-size:16px;font-weight:900;color:#a78bfa">'+nightHour+'h</div></div>':'')+
+   (overHour>0?'<div style="background:var(--s3);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:10px;color:var(--t3)">연장</div><div style="font-size:16px;font-weight:900;color:#f59e0b">'+overHour+'h</div></div>':'')+
+   '</div>'+
+   _sec('지급 내역')+
+   _row('기본급',basePay,'add')+
+   (weeklyHoliday?_row('주휴수당',weeklyHoliday,'add'):'')+
+   (nightPay?_row('야간수당 ('+nightHour+'h)',nightPay,'add'):'')+
+   (overPay?_row('연장수당 ('+overHour+'h)',overPay,'add'):'')+
+   '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:800;border-top:2px solid var(--bd);margin-top:4px">'+
+   '<span>총 지급액</span><span>₩'+grossSalary.toLocaleString()+'</span></div>'+
+   (totalDeduct>0?
+    _sec('공제 내역')+insBlock+
+    '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:800;border-top:2px solid var(--bd);margin-top:4px;color:#ef4444">'+
+    '<span>총 공제액</span><span>- ₩'+totalDeduct.toLocaleString()+'</span></div>'
+   :'')+
+   '<div style="background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 16px;margin:14px 0;text-align:center">'+
+   '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">실수령액</div>'+
+   '<div style="font-size:28px;font-weight:900;color:#c9a84c">₩'+netSalary.toLocaleString()+'</div>'+
+   '</div>'+
+   '<div style="font-size:10px;color:var(--t3);text-align:center">2026 근로기준법 기준 자동 계산 | '+insureLabel+'</div>';
+
+  var mo=document.createElement('div');mo.className='mo';
+  var box=document.createElement('div');box.className='mo-box';
+  box.style.cssText='padding:20px 20px 16px;max-height:90vh;overflow-y:auto';
+  box.innerHTML=html+'<button class="btn btn-ghost" style="width:100%;margin-top:14px" onclick="this.closest(\'.mo\').remove()">닫기</button>';
+  mo.appendChild(box);mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  document.body.appendChild(mo);
+ }).catch(function(e){_filoToast('오류: '+e.message);});
+}
 
 // ── 토스페이먼츠 POS 결제 ──────────────────────────────────────────
 function _filoTossPosPay(total, parentMo){
