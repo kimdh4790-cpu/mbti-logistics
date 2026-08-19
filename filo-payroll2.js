@@ -507,17 +507,18 @@ function _filoPayslipModal(memberId, ym){
  Promise.all([
   db.collection('members').doc(memberId).get(),
   db.collection('members').where('dealerId','==',did).get(),
-  db.collection('attendance').where('dealerId','==',did).where('memberId','==',memberId).where('date','>=',from).where('date','<=',to).get()
+  db.collection('attendance').where('dealerId','==',did).where('date','>=',from).where('date','<=',to).get()
  ]).then(function(res){
   var doc=res[0],allMem=res[1],attSnap=res[2];
   if(!doc.exists)return _filoToast('직원 정보를 찾을 수 없습니다');
   var m=doc.data();m._id=doc.id;
   var empCnt=allMem.size;
 
-  /* 출퇴근 파싱 */
+  /* 출퇴근 파싱 (memberId로 JS 필터) */
   var ins=[],outs=[],breaks=[];
   attSnap.forEach(function(d){
    var dd=d.data();
+   if(dd.memberId!==memberId)return;
    if(dd.type==='in')ins.push(dd);
    else if(dd.type==='out')outs.push(dd);
    else breaks.push(dd);

@@ -291,7 +291,7 @@ function _dinePayslipModal(memberId,ym){
  Promise.all([
   _db.collection('members').doc(memberId).get(),
   _db.collection('members').where('dealerId','==',_CU.dealerId).get(),
-  _db.collection('attendance').where('dealerId','==',_CU.dealerId).where('memberId','==',memberId).where('date','>=',from).where('date','<=',to).get()
+  _db.collection('attendance').where('dealerId','==',_CU.dealerId).where('date','>=',from).where('date','<=',to).get()
  ]).then(function(results){
   var doc=results[0],allMem=results[1],attSnap=results[2];
   if(!doc.exists)return;
@@ -300,6 +300,7 @@ function _dinePayslipModal(memberId,ym){
   var att={ins:[],outs:[],breaks:[]};
   attSnap.forEach(function(d){
    var dd=d.data();
+   if(dd.memberId!==memberId)return;
    if(dd.type==='in')att.ins.push(dd);
    else if(dd.type==='out')att.outs.push(dd);
    else att.breaks.push(dd);
