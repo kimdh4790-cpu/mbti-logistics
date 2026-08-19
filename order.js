@@ -517,29 +517,60 @@ function _speakPickup(count){
 var _lastOrderId = null;
 
 function _changeTable(){
- var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
- if(!newNum||!newNum.trim())return;
- newNum=newNum.trim();
  if(!_lastOrderId){_filoToast('주문 정보를 찾을 수 없습니다');return;}
- _db.collection('filo_orders').doc(_lastOrderId).update({
-  tableNum:newNum,
-  tableName:'테이블 '+newNum,
-  movedFrom:_tNum,
-  movedAt:_nowISO()
- }).then(function(){
-  _tNum=newNum;
-  var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
-  // 영수증 표시 중이면 헤더 테이블 번호도 갱신
-  var hdr=document.getElementById('order-receipt-header');
-  if(hdr&&hdr.querySelector('div')){
-   var now=new Date();
-   var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-   hdr.innerHTML='주문 영수증'+
-    '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
-    '테이블 '+newNum+'번 &nbsp;|&nbsp; '+timeStr+'</div>';
-  }
-  _filoToast('테이블 '+newNum+'번으로 변경됐습니다!');
- }).catch(function(e){_filoToast('변경 실패: '+e.message);});
+ // 커스텀 모달 — prompt() 대신 사용
+ var mo=document.createElement('div');
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+ mo.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:320px;text-align:center">'+
+  '<div style="font-size:36px;margin-bottom:10px">&#128682;</div>'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 번호 변경</div>'+
+  '<div style="font-size:13px;color:#64748b;margin-bottom:16px">이동할 테이블 번호를 입력하면<br>직원이 확인 후 이동 처리합니다</div>'+
+  '<input id="_ct_input" type="number" min="1" placeholder="테이블 번호 입력" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:18px;margin-bottom:14px;box-sizing:border-box;text-align:center;font-weight:700">'+
+  '<div style="display:flex;gap:8px">'+
+  '<button id="_ct_cancel" style="flex:1;padding:13px;background:#f1f5f9;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:#475569">취소</button>'+
+  '<button id="_ct_ok" style="flex:1;padding:13px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동 요청</button>'+
+  '</div></div>';
+ document.body.appendChild(mo);
+ document.getElementById('_ct_cancel').onclick=function(){mo.remove();};
+ document.getElementById('_ct_input').focus();
+ document.getElementById('_ct_ok').onclick=function(){
+  var newNum=(document.getElementById('_ct_input').value||'').trim();
+  if(!newNum){_filoToast('테이블 번호를 입력해주세요');return;}
+  if(String(newNum)===String(_tNum)){_filoToast('현재 테이블과 같습니다');return;}
+  var btn=document.getElementById('_ct_ok');btn.disabled=true;btn.textContent='요청 중...';
+  // staff_calls를 통해 직원 승인 요청 (직접 Firestore 쓰기 권한 없음)
+  _db.collection('staff_calls').add({
+   dealerId:_did,
+   type:'table_transfer',
+   orderId:_lastOrderId,
+   fromTable:String(_tNum),
+   fromTableName:_tName||('테이블 '+_tNum),
+   toTable:newNum,
+   toTableName:'테이블 '+newNum,
+   tableNum:newNum,
+   tableName:'테이블 '+newNum,
+   status:'pending',
+   createdAt:_nowISO()
+  }).then(function(ref){
+   mo.remove();
+   _filoToast('직원에게 이동 요청을 전송했습니다');
+   // 승인/거절 onSnapshot 대기
+   var unsub=_db.collection('staff_calls').doc(ref.id).onSnapshot(function(snap){
+    if(!snap.exists)return;
+    var xd=snap.data();
+    if(xd.status==='approved'){
+     unsub();
+     _tNum=newNum;
+     var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
+     var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+newNum+'번으로 이동됐습니다';
+     _filoToast('테이블 '+newNum+'번으로 이동됐습니다!');
+    } else if(xd.status==='rejected'){
+     unsub();
+     _filoToast('직원이 이동 요청을 거절했습니다');
+    }
+   });
+  }).catch(function(e){_filoToast('요청 실패: '+e.message);});
+ };
 }
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────
