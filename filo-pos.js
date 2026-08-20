@@ -54,8 +54,8 @@ function _filoPageKiosk(el){
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
  '<div class="pos-wrap" style="flex:1;min-height:0;height:auto">'+
- '<div style="display:flex;flex-direction:column">'+
- '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
+ '<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0">'+
+ '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0" id="kiosk-cats"></div>'+
  '<div class="menu-grid" id="kiosk-menu">'+
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">메뉴 로딩 중...</div>'+
  '</div></div>'+
