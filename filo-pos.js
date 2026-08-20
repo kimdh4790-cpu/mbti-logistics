@@ -243,13 +243,13 @@ function _filoRenderKiosk(menus){
  var _kc=_kColors[(m.name||'').charCodeAt(0)%_kColors.length];
  var _ki=(m.name||'?')[0];
  var imgHtml=m.imageUrl?
-  '<div style="height:72px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:'+_kc+'1a"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.opacity=0"></div>':
-  '<div style="height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="width:44px;height:44px;border-radius:12px;background:'+_kc+'22;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:'+_kc+';font-family:Pretendard,sans-serif">'+_ki+'</div></div>';
- return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
+  '<div style="height:80px;border-radius:10px;overflow:hidden;margin-bottom:7px;background:'+_kc+'1a;flex-shrink:0"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.style.opacity=0"></div>':
+  '<div style="height:52px;display:flex;align-items:center;justify-content:center;margin-bottom:7px;flex-shrink:0"><div style="width:48px;height:48px;border-radius:14px;background:'+_kc+'22;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:'+_kc+';font-family:Pretendard,sans-serif">'+_ki+'</div></div>';
+ return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="display:flex;flex-direction:column;align-items:stretch">'+
  imgHtml+
- '<div style="font-size:13px;font-weight:800;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
- '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+m.price.toLocaleString()+'</div>'+
- (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:3px">재고 '+m.stock+'개</div>':'')+'</div>';
+ '<div style="font-size:12px;font-weight:800;margin-bottom:4px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word">'+esc(m.name)+'</div>'+
+ '<div style="font-size:13px;font-weight:900;color:#22c55e;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
+ (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px">재고 '+m.stock+'개</div>':'')+'</div>';
  }).join('');
  }
  window._kioskMenus=menus;
