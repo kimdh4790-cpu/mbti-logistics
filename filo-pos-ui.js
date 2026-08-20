@@ -258,8 +258,8 @@ function _filoRenderKiosk(menus){
   :'<div style="width:48px;height:48px;border-radius:14px;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px;font-weight:900;color:'+_c+';flex-shrink:0">'+_init+'</div>';
  return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="display:flex;flex-direction:column;align-items:stretch">'+
  _emIcon+
- '<div style="font-size:12px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word">'+esc(m.name)+'</div>'+
- '<div style="font-size:13px;font-weight:900;color:#10b981;letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
+ '<div style="font-size:12px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word;color:#1a1a2e">'+esc(m.name)+'</div>'+
+ '<div style="font-size:13px;font-weight:900;color:#059669;letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
  (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+'</div>';
  }).join('');
  }
