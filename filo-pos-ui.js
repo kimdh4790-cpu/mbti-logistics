@@ -275,7 +275,7 @@ function _filoFilterKiosk(cat,btn){
  b.style.fontWeight=b===btn?'800':'700';
  });
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
- el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
+ el.style.display=(cat==='전체'||el.dataset.cat===cat)?'flex':'none';
  });
 }
 
