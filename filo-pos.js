@@ -601,6 +601,17 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
         pendingIds.forEach(function(id){
          batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
         });
+        // filo_sales pending 테이블 주문도 함께 cleared → 주방 중복 방지
+        _db.collection('filo_sales')
+         .where('dealerId','==',did).where('status','==','pending').where('type','==','table').get()
+         .then(function(sSnap){
+          sSnap.forEach(function(doc){
+           var sd=doc.data();
+           if(String(sd.tableNum)===String(tableNum)||String(sd.tableId)===String(tableNum)){
+            batch.update(_db.collection('filo_sales').doc(doc.id),{status:'done',paidAt:now.toISOString()});
+           }
+          });
+         }).catch(function(){}).finally(function(){
         batch.commit().then(function(){
           // batch 완료 후 filo_orders에서 fcmToken 수집 → FCM 영수증 자동 발송
           Promise.all([
@@ -633,6 +644,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
             }).catch(function(){});
           }).catch(function(){});
         }).catch(function(){});
+        }); // finally
        }
       }).catch(function(){});
     }).catch(function(){});
