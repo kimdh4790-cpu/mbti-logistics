@@ -4748,6 +4748,42 @@ ${JSON.stringify(postSummary)}
           return Response.json({error:e.message});
         }
       }
+      // /admin/cleanup-dup-orders — filo_sales 테이블 중복 주문 삭제
+      if (path === '/admin/cleanup-dup-orders' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const {did} = body;
+          if (!did) return Response.json({ok:false,error:'did 필요'});
+          const token = await getAccessToken(env);
+          // filo_sales에서 type=table, status=pending 인 문서 조회 (중복 주문)
+          const qRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body: JSON.stringify({structuredQuery:{
+              from:[{collectionId:'filo_sales'}],
+              where:{compositeFilter:{op:'AND',filters:[
+                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+                {fieldFilter:{field:{fieldPath:'type'},op:'EQUAL',value:{stringValue:'table'}}},
+                {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'pending'}}}
+              ]}},
+              limit:500
+            }})
+          }).then(r=>r.json());
+          const docs = Array.isArray(qRes) ? qRes.filter(d=>d.document) : [];
+          let deleted = 0;
+          for (const d of docs) {
+            const docPath = d.document.name;
+            await fetch(`https://firestore.googleapis.com/v1/${docPath}`, {
+              method:'DELETE',
+              headers:{'Authorization':'Bearer '+token}
+            }).catch(()=>{});
+            deleted++;
+          }
+          return Response.json({ok:true, deleted});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message});
+        }
+      }
       // /order/move-table — 손님 QR 스캔 테이블 이동 (서비스 계정으로 권한 우회)
       if (path === '/order/move-table' && request.method === 'POST') {
         try {

@@ -69,6 +69,12 @@ function _filoPageSettings(el){
  '</div>'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">※ 테마는 이 매장에만 적용되며 주문·매장·주방 화면에도 함께 반영됩니다</div>'+
  '</div>'+
+ /* 🗑️ 데이터 관리 */
+ '<div class="card" style="margin-top:12px;border:1px solid rgba(220,38,38,.25)">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#ef4444">데이터 관리</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">주방화면·주문대기 중복 표시 문제가 있을 때 실행하세요. filo_sales의 테이블 임시 주문 데이터를 삭제합니다.</div>'+
+ '<button class="btn btn-sm" style="background:rgba(220,38,38,.1);color:#ef4444;border:1px solid rgba(220,38,38,.3)" onclick="_filoCleanupDupOrders()">중복 주문 데이터 정리</button>'+
+ '</div>'+
  '</div></div>';
  _filoThemePreview();
 }
@@ -119,6 +125,23 @@ function _filoSaveTheme(){
   if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:key,primaryColor:primary,bgColor:bg});
   _filoToast('테마가 적용됐습니다');
  }).catch(function(e){_filoToast(e.message);});
+}
+function _filoCleanupDupOrders(){
+ var did=_CU.dealerId||_CU.uid;
+ if(!did){_filoToast('매장 정보를 불러오는 중입니다');return;}
+ _filoToast('중복 데이터 정리 중...');
+ fetch('/admin/cleanup-dup-orders',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({did:did})
+ }).then(function(r){return r.json();})
+ .then(function(data){
+  if(data.ok){
+   _filoToast('정리 완료 — '+data.deleted+'건 삭제됨');
+  }else{
+   _filoToast('오류: '+(data.error||'알 수 없음'));
+  }
+ }).catch(function(e){_filoToast('네트워크 오류: '+e.message);});
 }
 function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;
