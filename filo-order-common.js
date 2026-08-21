@@ -664,7 +664,7 @@ function _renderRecommendBanner(menus){
 }
 
 // ── 메뉴 로드 (order.js / store.js 공통) ────────────────────────────────────
-function _loadMenus(){
+function _loadMenus(onDone){
  fetch('/api/menus?did='+encodeURIComponent(_did))
  .then(function(r){return r.json();})
  .then(function(d){
@@ -672,6 +672,7 @@ function _loadMenus(){
   _renderCatBar(_menus,'cat-bar');
   _renderMenuGrid(_menus,'menu-grid');
   _renderRecommendBanner(_menus);
+  if(onDone) onDone(_menus);
  }).catch(function(){
   var g=document.getElementById('menu-grid');
   if(g)g.innerHTML='<div class="empty"><div class="empty-msg">메뉴를 불러올 수 없습니다</div></div>';

@@ -183,7 +183,13 @@ window.onload=function(){
  var tn=document.getElementById('table-name');if(tn)tn.textContent=_tName;
  document.getElementById('ld').style.display='none';
  document.getElementById('app').style.display='flex';
- _loadMenus();
+ _loadMenus(function(){
+  // NFC 메뉴 태그: ?item= 파라미터로 특정 메뉴 자동 장바구니 추가
+  var itemName=decodeURIComponent(_p('item')||'');
+  if(!itemName) return;
+  var m=(_menus||[]).filter(function(x){return x.name===itemName;})[0];
+  if(m){_addToCart(m);_filoToast((m.emoji||'🍽')+' '+m.name+' 담겼습니다!');}
+ });
  _listenOrders(); // 픽업 알림
  _checkExistingOrder();
  _loadBakeryCart(); // 빵 진열대 QR 스캔 카트 자동 로드 // 기존 주문 테이블 이동 감지
