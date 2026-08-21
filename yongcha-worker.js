@@ -7945,7 +7945,7 @@ function _riqMatch(el){
           '<div class="pc-body">'+
           '<div class="pc-title">'+_esc(post.title||'공고')+'</div>'+
           '<div class="pc-price" style="margin-top:10px">'+
-          '<span class="pc-price-num">'+(post.price||0).toLocaleString()+'</span>'+
+          '<span class="pc-price-num">'+(post.unitPrice||post.price||0).toLocaleString()+'</span>'+
           '<span class="pc-price-unit">원/건</span></div>'+
           (m.reason?'<div style="margin-top:9px;padding:8px 11px;background:var(--acl);border-radius:var(--r-sm);font-size:12px;color:var(--ac);font-weight:700;line-height:1.5">'+_esc(m.reason)+'</div>':'')+
           '</div>'+
@@ -8895,6 +8895,18 @@ function _showZoneOnMap(i){
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
 const YC_FB_KEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
 
+function _ycCarNorm(v) {
+  if (!v) return '';
+  const s = String(v).replace(/\s/g,'');
+  if (s.includes('다마스')||s.includes('라보')||s.includes('경트럭')) return '경';
+  if (s.includes('1톤')||s.includes('1.4톤')) return '1톤';
+  if (s.includes('1.5톤')) return '1.5톤';
+  if (s.includes('2.5톤')) return '2.5톤';
+  if (s.includes('3.5톤')) return '3.5톤';
+  if (s.includes('5톤')||s.includes('5t')) return '5톤';
+  return s;
+}
+
 async function ycVerifyToken(request, env) {
   const auth = (request.headers.get('Authorization') || '').trim();
   if (!auth.startsWith('Bearer ')) return null;
@@ -9104,7 +9116,7 @@ ${postSummary || '공고 없음'}
             'content-type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'claude-haiku-4-5',
             max_tokens: 500,
             messages: [{ role: 'user', content: prompt }]
           })
@@ -9121,6 +9133,83 @@ ${postSummary || '공고 없음'}
         return new Response(JSON.stringify({ ok: true, data: parsed }), { headers: acH });
       } catch(e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: acH });
+      }
+    }
+
+    // ── RouteIQ Match: thin smart-match proxy (no auth required for frontend) ──
+    if (path === '/api/routeiq-match' && method === 'POST') {
+      const riqH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const { driver, posts } = await request.json();
+        const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
+        if (!apiKey || !posts?.length) {
+          // Rule-based fallback: score by region + carType overlap
+          const scored = (posts || []).map(p => {
+            let score = 50;
+            if (driver?.region && p.region && p.region.startsWith(driver.region.slice(0,2))) score += 20;
+            if (driver?.carType && p.vehicleType && _ycCarNorm(p.vehicleType) === _ycCarNorm(driver.carType)) score += 20;
+            if (driver?.avgPrice && p.unitPrice && Math.abs(p.unitPrice - driver.avgPrice) < 30000) score += 10;
+            return { id: p.id, score, reason: '지역·차종 기준 추천' };
+          }).sort((a, b) => b.score - a.score);
+          return new Response(JSON.stringify({ ok: true, matches: scored }), { headers: riqH });
+        }
+        const prompt = `당신은 택배 배차 AI입니다. 기사 프로필과 공고 목록을 보고 각 공고의 매칭 점수(0-100)와 1줄 이유를 JSON으로 반환하세요.
+기사: ${JSON.stringify(driver)}
+공고(최대10개): ${JSON.stringify((posts||[]).slice(0,10).map(p=>({id:p.id,region:p.region,area:p.area,courier:p.courier,unitPrice:p.unitPrice||p.price,vehicleType:p.vehicleType||p.carType})))}
+반환 형식: {"matches":[{"id":"공고id","score":85,"reason":"이유"},...]}`;
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+        });
+        const aiJson = await aiRes.json();
+        const text = aiJson.content?.[0]?.text || '{}';
+        const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+        return new Response(JSON.stringify({ ok: true, matches: parsed.matches || [] }), { headers: riqH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message, matches: [] }), { headers: riqH });
+      }
+    }
+
+    // ── Recommend: rank drivers for a post ────────────────────
+    if (path === '/api/yongcha/recommend' && method === 'POST') {
+      const recH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const { post, drivers, topN = 5 } = await request.json();
+        if (!drivers?.length) return new Response(JSON.stringify({ ok: true, picks: [] }), { headers: recH });
+
+        // Rule-based pre-score
+        const scored = drivers.map(d => {
+          let score = 50;
+          if (post.region && d.region && d.region.startsWith(post.region.slice(0,2))) score += 20;
+          if (post.carType && d.carType && _ycCarNorm(d.carType) === _ycCarNorm(post.carType)) score += 15;
+          if (d.rating >= 4.5) score += 10;
+          if (d.completedRoutes >= 50) score += 5;
+          if (d.resting) score -= 30;
+          return { ...d, _score: score };
+        }).sort((a, b) => b._score - a._score).slice(0, Math.min(20, drivers.length));
+
+        const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
+        if (!apiKey) {
+          const picks = scored.slice(0, topN).map(d => ({ driverId: d.driverId, name: d.name, score: d._score, reason: '지역·차종·평점 기준 추천' }));
+          return new Response(JSON.stringify({ ok: true, picks }), { headers: recH });
+        }
+
+        const prompt = `택배 배차 AI입니다. 공고 조건에 맞는 기사를 상위 ${topN}명 추천하고 JSON으로 반환하세요.
+공고: ${JSON.stringify({region:post.region,carType:post.carType,courier:post.courier,unitPrice:post.unitPrice})}
+기사 후보: ${JSON.stringify(scored.map(d=>({driverId:d.driverId,name:d.name,region:d.region,carType:d.carType,rating:d.rating,completedRoutes:d.completedRoutes,trustScore:d.trustScore})))}
+반환 형식: {"picks":[{"driverId":"id","name":"이름","score":85,"reason":"이유"},...]}`;
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+        });
+        const aiJson = await aiRes.json();
+        const text = aiJson.content?.[0]?.text || '{}';
+        const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || '{}');
+        return new Response(JSON.stringify({ ok: true, picks: parsed.picks || [] }), { headers: recH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message, picks: [] }), { headers: recH });
       }
     }
 
@@ -9161,7 +9250,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+          body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
         });
         const data = await res.json();
         const raw = data.content?.[0]?.text || '[]';
@@ -9223,7 +9312,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+          body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
         });
         const data = await res.json();
         const raw = data.content?.[0]?.text || '{}';
@@ -9270,7 +9359,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+          body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
         });
         const data = await res.json();
         const raw = data.content?.[0]?.text || '{}';
