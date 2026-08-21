@@ -646,8 +646,9 @@ function _toSubmitOrder(did){
  if(!items.length){_filoToast('메뉴를 선택하세요');return;}
  var total=items.reduce(function(s,it){return s+it.price*it.qty;},0);
  var now=new Date();
- _db.collection('filo_sales').add({
-  dealerId:did,tableId:_toTable.tableId,
+ // filo_orders에 저장 (filo_sales 아님) — 주방/주문대기 중복 방지
+ _db.collection('filo_orders').add({
+  dealerId:did,tableId:_toTable.tableId,tableNum:_toTable.tableId,
   tableName:_toTable.tableId+'번 테이블',
   items:items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
   total:total,status:'pending',type:'table',source:'staff',

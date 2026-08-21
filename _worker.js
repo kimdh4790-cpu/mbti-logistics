@@ -4738,17 +4738,10 @@ ${JSON.stringify(postSummary)}
             }).then(r=>r.json()).then(docs=>Array.isArray(docs)?docs.filter(d=>d.document).map(d=>_fsMap(col,d)):[]);
           }
           const [ordDocs, salDocs] = await Promise.all([_fsQuery('filo_orders'), _fsQuery('filo_sales')]);
-          // 같은 테이블 중복 제거: filo_orders 우선, filo_sales는 배달/외부 주문만 보충
-          const seenTable = new Set();
-          ordDocs.filter(o=>o.date===kDate&&o.status==='pending').forEach(o=>{
-            if(o.tableName) seenTable.add(o.tableName);
-          });
-          const salFiltered = salDocs.filter(o=>{
-            if(o.date!==kDate||o.status!=='pending') return false;
-            if(o.type==='table'&&o.tableName&&seenTable.has(o.tableName)) return false; // filo_orders에 있으면 제외
-            return true;
-          });
-          const orders = [...ordDocs.filter(o=>o.date===kDate&&o.status==='pending'), ...salFiltered]
+          // filo_orders: 테이블 주문 / filo_sales: 배달 주문만 (type=delivery) — 중복 방지
+          const tableOrders = ordDocs.filter(o=>o.date===kDate&&o.status==='pending');
+          const deliveryOrders = salDocs.filter(o=>o.date===kDate&&o.status==='pending'&&o.type==='delivery');
+          const orders = [...tableOrders, ...deliveryOrders]
             .sort((a,b)=>a.createdAt<b.createdAt?-1:1);
           return Response.json({company, orders}, {headers:{'Cache-Control':'no-store'}});
         } catch(e) {
