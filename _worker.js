@@ -9471,6 +9471,68 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 백화점 배송 저장: POST /api/dept-save ──
+    if (path === '/api/dept-save' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, customerName, addr } = body;
+        if (!dealerId || !customerName || !addr) return new Response(JSON.stringify({ok:false,error:'dealerId·customerName·addr 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const cRes = await fetch(`${FS_BASE}/companies/${dealerId}`,{headers:{'Authorization':`Bearer ${token}`}});
+        const cData = await cRes.json();
+        if (!cData.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{headers:{'Content-Type':'application/json'}});
+        const fields = {};
+        for (const [k,v] of Object.entries(body)) if(v!==undefined&&v!==null&&v!=='') fields[k]=_toFsVal(v);
+        fields.status = {stringValue: body.status||'대기'};
+        fields.savedAt = {timestampValue: new Date().toISOString()};
+        const fsRes = await fetch(`${FS_BASE}/dept_deliveries`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+        const fsData = await fsRes.json();
+        if (!fsRes.ok) return new Response(JSON.stringify({ok:false,error:JSON.stringify(fsData)}),{headers:{'Content-Type':'application/json'}});
+        const docId = (fsData.name||'').split('/').pop();
+        return new Response(JSON.stringify({ok:true,docId}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    // ── 백화점 배송 목록: GET /api/dept-list ──
+    if (path === '/api/dept-list' && method === 'GET') {
+      try {
+        const u = new URL(request.url);
+        const dealerId = u.searchParams.get('dealerId')||'';
+        const driver = u.searchParams.get('driver')||'';
+        const date = u.searchParams.get('date')||'';
+        if (!dealerId) return new Response(JSON.stringify({ok:false,error:'dealerId 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const filters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}];
+        if (driver) filters.push({fieldFilter:{field:{fieldPath:'driver'},op:'EQUAL',value:{stringValue:driver}}});
+        if (date) filters.push({fieldFilter:{field:{fieldPath:'date'},op:'EQUAL',value:{stringValue:date}}});
+        const where = filters.length===1 ? filters[0] : {compositeFilter:{op:'AND',filters}};
+        const qRes = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'dept_deliveries'}],where,limit:200}})});
+        const rows = await qRes.json();
+        const docs = (Array.isArray(rows)?rows:[]).filter(x=>x.document&&x.document.fields).map(x=>_fsDocToObj(x.document));
+        docs.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+        return new Response(JSON.stringify({ok:true,docs}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+    // ── 백화점 배송 업데이트: POST /api/dept-update ──
+    if (path === '/api/dept-update' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, docId, fields: updateFields } = body;
+        if (!dealerId || !docId || !updateFields) return new Response(JSON.stringify({ok:false,error:'dealerId/docId/fields 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const getRes = await fetch(`${FS_BASE}/dept_deliveries/${docId}`,{headers:{'Authorization':`Bearer ${token}`}});
+        const getDoc = await getRes.json();
+        if (!getDoc.fields) return new Response(JSON.stringify({ok:false,error:'문서 없음'}),{headers:{'Content-Type':'application/json'}});
+        const docDealerId = getDoc.fields.dealerId?.stringValue;
+        if (!docDealerId || docDealerId !== dealerId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:{'Content-Type':'application/json'}});
+        const fsFields = {};
+        for (const [k,v] of Object.entries(updateFields)) fsFields[k]=_toFsVal(v);
+        const mask = Object.keys(fsFields).map(k=>`updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+        const pRes = await fetch(`${FS_BASE}/dept_deliveries/${docId}?${mask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({fields:fsFields})});
+        if (!pRes.ok) { const d=await pRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(d)}),{headers:{'Content-Type':'application/json'}}); }
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 토스페이먼츠 클라이언트 키 전달 (/api/toss-client-key) ──
     if (path === '/api/toss-client-key' && method === 'GET') {
       return new Response(JSON.stringify({
