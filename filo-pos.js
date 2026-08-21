@@ -577,78 +577,26 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
    date:today, createdAt:now.toISOString(), paidAt:now.toISOString()
   }).catch(function(e){console.warn('[filo_sales]',e.message);});
 
-  // 3. 전체 결제 완료 확인 → filo_orders cleared
+  // 3. filo_orders cleared — orderIds 직접 업데이트 (쿼리 없이)
+  var batch=_db.batch();
   if(orderIds&&orderIds.length){
-   _db.collection('filo_payments')
-    .where('dealerId','==',did).where('tableNum','==',tableNum).where('date','==',today)
-    .get().then(function(snap){
-     var paidTotal=0;
-     snap.forEach(function(doc){paidTotal+=doc.data().amount||0;});
-     // 해당 테이블 filo_orders 합계
-     _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
-      .get().then(function(oSnap){
-       var orderTotal=0;
-       var pendingIds=[];
-       oSnap.forEach(function(doc){
-        var d=doc.data();
-        if((String(d.tableNum)===String(tableNum)||d.tableName===tableName)&&d.status!=='cleared'){
-         orderTotal+=(d.total||0);
-         pendingIds.push(doc.id);
-        }
-       });
-       if(orderTotal>0&&paidTotal>=orderTotal&&pendingIds.length){
-        var batch=_db.batch();
-        pendingIds.forEach(function(id){
-         batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
-        });
-        // filo_sales pending 테이블 주문도 함께 cleared → 주방 중복 방지
-        _db.collection('filo_sales')
-         .where('dealerId','==',did).where('status','==','pending').where('type','==','table').get()
-         .then(function(sSnap){
-          sSnap.forEach(function(doc){
-           var sd=doc.data();
-           if(String(sd.tableNum)===String(tableNum)||String(sd.tableId)===String(tableNum)){
-            batch.update(_db.collection('filo_sales').doc(doc.id),{status:'done',paidAt:now.toISOString()});
-           }
-          });
-         }).catch(function(){}).finally(function(){
-        batch.commit().then(function(){
-          // batch 완료 후 filo_orders에서 fcmToken 수집 → FCM 영수증 자동 발송
-          Promise.all([
-            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).get(),
-            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',parseInt(tableNum)||0).get()
-          ]).then(function(results){
-            var tokens=[]; var seen={};
-            results.forEach(function(snap){
-              snap.forEach(function(doc){
-                if(seen[doc.id])return; seen[doc.id]=true;
-                var tk=doc.data().fcmToken;
-                if(tk&&tk.length>20&&tokens.indexOf(tk)<0)tokens.push(tk);
-              });
-            });
-            if(!tokens.length)return;
-            var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
-            if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
-            fetch('/fcm/notify-drivers',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({
-                tokens:tokens,
-                title:methodLabel+' 완료 · ₩'+total.toLocaleString(),
-                body:iNames,
-                type:'receipt',
-                url:'https://filo.ai.kr/order?d='+did+'&t='+tableNum+'#done'
-              })
-            }).then(function(r){return r.json();}).then(function(d){
-              if(d.sent>0)_filoToast('손님 영수증 발송 완료');
-            }).catch(function(){});
-          }).catch(function(){});
-        }).catch(function(){});
-        }); // finally
-       }
-      }).catch(function(){});
-    }).catch(function(){});
+   orderIds.forEach(function(id){
+    batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
+   });
   }
+  // filo_sales pending 테이블 주문도 함께 정리
+  _db.collection('filo_sales')
+   .where('dealerId','==',did).where('status','==','pending').where('type','==','table').get()
+   .then(function(sSnap){
+    sSnap.forEach(function(doc){
+     var sd=doc.data();
+     if(String(sd.tableNum)===String(tableNum)||String(sd.tableId)===String(tableNum)){
+      batch.update(_db.collection('filo_sales').doc(doc.id),{status:'done',paidAt:now.toISOString()});
+     }
+    });
+   }).catch(function(){}).finally(function(){
+   batch.commit().catch(function(e){console.warn('[batch]',e.message);});
+  });
   // 결제완료 알림 + 영수증 발송 버튼
   _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
