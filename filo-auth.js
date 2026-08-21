@@ -141,7 +141,7 @@ function _showApp(){
    if(cont2)cont2.style.marginLeft='52px';
   }
  }
- var company=_cachedCompanyDoc.companyName||_cachedCompanyDoc.name||'내 회사';
+ var company=(_cachedCompanyDoc||{}).companyName||(_cachedCompanyDoc||{}).name||'내 회사';
  var role=_CU.role==='member'?'직원':'관리자';
  var nc=document.getElementById('nav-company');if(nc)nc.textContent=company;
  var nr=document.getElementById('nav-role');if(nr)nr.textContent=role;
