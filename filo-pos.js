@@ -62,7 +62,7 @@ function _filoPageKiosk(el){
  '<div class="cart-panel">'+
  '<div style="padding:12px 16px;border-bottom:1px solid var(--bd)">'+
  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<span style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">'+_svgIcon('list')+' 주문 내역</span>'+
+ '<span id="cart-title-span" style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">'+_svgIcon('list')+' 주문 내역</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="_filoPay()">'+_svgIcon('credit-card')+' 결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
@@ -167,9 +167,9 @@ function _filoPageKiosk(el){
        });
        btn.setAttribute('data-selected','1');
        btn.style.outline='2px solid #0891b2';
-       // 주문 내역 헤더 업데이트
-       var cartTitle=document.querySelector('.cart-panel div:first-child');
-       if(cartTitle)cartTitle.innerHTML=_svgIcon('list')+' '+esc(table.name)+' 주문';
+       // 주문 내역 헤더 업데이트 (버튼은 유지, 제목 span만 교체)
+       var cartTitleSpan=document.querySelector('.cart-panel #cart-title-span');
+       if(cartTitleSpan)cartTitleSpan.innerHTML=_svgIcon('list')+' '+esc(table.name)+' 주문';
        _filoToast(table.name+' 선택됨');
        // 주문 있으면 주문 내역 모달 표시
        if(order&&order.orders&&order.orders.length){
