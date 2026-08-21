@@ -105,7 +105,7 @@ service cloud.firestore {
       allow update: if canOwn();
       allow delete: if canOwn();
     }
-    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if isAuth() && (request.auth.uid == docId || isDealer(request.resource.data.dealerId)); allow update: if isAuth() && (request.auth.uid == docId || canOwn() || isDealer(resource.data.dealerId)); allow delete: if canOwn(); }
+    match /members/{docId}                { allow read: if canRead() || (isAuth() && request.auth.uid == docId); allow create: if isAuth() && (request.auth.uid == docId || isDealer(request.resource.data.dealerId)); allow update: if isAuth() && (request.auth.uid == docId || isDealer(resource.data.dealerId)); allow delete: if canOwn() || isSuperAdmin(); }
     match /leaves/{docId}                 { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /leaveBalance/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /overtimes/{docId}              { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
