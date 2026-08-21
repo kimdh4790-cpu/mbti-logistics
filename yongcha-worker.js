@@ -9469,11 +9469,11 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const params = {
           settleId:        workId,
           senderCorpNum:   df.corpNum?.stringValue || '',
-          senderName:      df.displayName?.stringValue || driverName || '',
-          senderCEO:       df.displayName?.stringValue || driverName || '',
+          senderName:      df.name?.stringValue || driverName || '',
+          senderCEO:       df.name?.stringValue || driverName || '',
           senderEmail:     df.email?.stringValue || '',
           receiverCorpNum: af.corpNum?.stringValue || '',
-          receiverName:    af.displayName?.stringValue || af.companyName?.stringValue || '',
+          receiverName:    af.name?.stringValue || af.companyName?.stringValue || '',
           receiverEmail:   af.email?.stringValue || '',
           supplyAmt:       supply, taxAmt: tax, totalAmt: Number(actualFare),
           writeDate:       new Date().toISOString().slice(0,10).replace(/-/g,''),
@@ -9492,8 +9492,9 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 팝빌 웹훅 ─────────────────────────────────────────────────────
     if (path === '/api/yongcha/popbill-webhook' && method === 'POST') {
       const whSecret = request.headers.get('X-Popbill-Webhook-Secret') || url.searchParams.get('secret') || '';
+      const whCorsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
       if (env.POPBILL_WEBHOOK_SECRET && whSecret !== env.POPBILL_WEBHOOK_SECRET) {
-        return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:whCorsH});
       }
       try {
         const body = await request.json();
@@ -9503,11 +9504,12 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
           const fsToken  = await ycGetFsToken(env);
           const FS       = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
           const pf       = { taxInvoiceState: { stringValue: State || '' }, taxInvoiceUpdatedAt: { stringValue: StateDate || new Date().toISOString() }, taxInvoiceMgtKey: { stringValue: MgtKey } };
-          await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
+          const pr = await fetch(`${FS}/yongcha_settlements/${settleId}?${Object.keys(pf).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ fields: pf })
           });
+          if (!pr.ok) throw new Error('Firestore PATCH failed: ' + await pr.text());
         }
         return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
       } catch(e) {
@@ -9761,7 +9763,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         if (!fare) return new Response(JSON.stringify({ ok: false, error: '운임 필수' }), { status: 400, headers: corsH });
         let fuelPrice = 1650;
         try {
-          const fuelCode = fuelType === 'LPG' ? 'B034' : fuelType === '경유' ? 'B027' : 'B034';
+          const fuelCode = fuelType === 'LPG' ? 'B034' : fuelType === '경유' ? 'B027' : 'B004';
           const opKey = env.OPINET_API_KEY || 'F186390162';
           const opResp = await fetch(`https://www.opinet.co.kr/api/avgAllPrice.do?out=json&code=${opKey}`);
           if (opResp.ok) { const opData = await opResp.json(); const item = (opData.RESULT?.OIL||[]).find(o=>o.PRODCD===fuelCode); if (item) fuelPrice = Number(item.PRICE) || fuelPrice; }
@@ -9852,7 +9854,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const fsToken = await ycGetFsToken(env);
         const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
         const since = new Date(Date.now() - 90*24*60*60*1000).toISOString();
-        const applyQ = { structuredQuery: { from:[{collectionId:'yongcha_applies'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:driverId}}}, {fieldFilter:{field:{fieldPath:'createdAt'},op:'GREATER_THAN',value:{stringValue:since}}} ] } }, limit:200 } };
+        const applyQ = { structuredQuery: { from:[{collectionId:'yongcha_applies'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:driverId}}}, {fieldFilter:{field:{fieldPath:'createdAt'},op:'GREATER_THAN',value:{timestampValue:since}}} ] } }, limit:200 } };
         const docs = await (await fetch(`${FS}:runQuery`, { method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify(applyQ) })).json();
         let total=0, completed=0, noshow=0;
         (docs||[]).filter(d=>d.document).forEach(d=>{ const st=d.document.fields?.status?.stringValue||''; total++; if(st==='completed'||st==='approved')completed++; else if(st==='noshow')noshow++; });
@@ -9877,8 +9879,16 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const fsToken = await ycGetFsToken(env);
         const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
         await fetch(`${FS}/yongcha_applies/${applyId}?updateMask.fieldPaths=status&updateMask.fieldPaths=noshowAt`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields:{ status:{stringValue:'noshow'}, noshowAt:{timestampValue:new Date().toISOString()} } }) });
-        await fetch(`${FS}/yongcha_posts/${postId}?updateMask.fieldPaths=status&updateMask.fieldPaths=escalatedAt`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields:{ status:{stringValue:'open'}, escalatedAt:{timestampValue:new Date().toISOString()} } }) });
-        if (driverId) { fetch(new URL('/api/yongcha/risk-score',request.url).toString(), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({driverId}) }).catch(()=>{}); }
+        // Only reopen post if still in matched state
+        const postDoc = await (await fetch(`${FS}/yongcha_posts/${postId}`, { headers:{'Authorization':`Bearer ${fsToken}`} })).json();
+        const postStatus = postDoc.fields?.status?.stringValue || '';
+        if (postStatus === 'matched' || postStatus === 'open') {
+          await fetch(`${FS}/yongcha_posts/${postId}?updateMask.fieldPaths=status&updateMask.fieldPaths=escalatedAt`, { method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify({ fields:{ status:{stringValue:'open'}, escalatedAt:{timestampValue:new Date().toISOString()} } }) });
+        }
+        if (driverId) {
+          const authHdr = request.headers.get('Authorization') || '';
+          fetch(new URL('/api/yongcha/risk-score',request.url).toString(), { method:'POST', headers:{'Content-Type':'application/json','Authorization':authHdr}, body: JSON.stringify({driverId}) }).catch(()=>{});
+        }
         if (agencyId && env.FCM_SERVER_KEY) {
           const agData = await (await fetch(`${FS}/yongcha_users/${agencyId}`, { headers:{'Authorization':`Bearer ${fsToken}`} })).json();
           const agFcm = agData.fields?.fcmToken?.stringValue;
@@ -9900,7 +9910,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const fsToken = await ycGetFsToken(env);
         const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
         const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); weekStart.setHours(0,0,0,0);
-        const q = { structuredQuery: { from:[{collectionId:'yongcha_work'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'agencyId'},op:'EQUAL',value:{stringValue:uid}}}, {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'done'}}}, {fieldFilter:{field:{fieldPath:'completedAt'},op:'GREATER_THAN',value:{stringValue:weekStart.toISOString()}}} ] } }, limit: 300 } };
+        const q = { structuredQuery: { from:[{collectionId:'yongcha_work'}], where:{ compositeFilter:{ op:'AND', filters:[ {fieldFilter:{field:{fieldPath:'agencyId'},op:'EQUAL',value:{stringValue:uid}}}, {fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'done'}}}, {fieldFilter:{field:{fieldPath:'completedAt'},op:'GREATER_THAN',value:{timestampValue:weekStart.toISOString()}}} ] } }, limit: 300 } };
         const docs = await (await fetch(`${FS}:runQuery`, { method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'}, body: JSON.stringify(q) })).json();
         let totalFare=0, cnt=0;
         (docs||[]).filter(d=>d.document).forEach(d=>{ const f=d.document.fields||{}; totalFare+=Number(f.fare?.integerValue||f.fare?.doubleValue||0); cnt++; });
