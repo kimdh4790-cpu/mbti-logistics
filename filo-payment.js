@@ -66,7 +66,8 @@ function _filoConfirmPay(method, methodLabel){
   return;
  }
 
- var payType=window._posPayType||'postpay';
+ // 실제 결제수단(카드/현금/카카오페이/분할) 선택 시 즉시결제(prepay) 처리 — postpay는 후불 전용
+ var payType=(method&&method!=='postpay')?'prepay':(window._posPayType||'postpay');
  window._posPayType='postpay';
  var saveData={
   dealerId:did,items:items,total:total,
@@ -84,6 +85,14 @@ function _filoConfirmPay(method, methodLabel){
    _db.collection('filo_orders').add(Object.assign({},saveData,{
     type:'table',source:'pos'
    })).catch(function(){});
+   // 즉시결제(prepay)면 filo_payments에도 저장 → 테이블 모달 결제 내역 표시
+   if(payType==='prepay'){
+    _db.collection('filo_payments').add({
+     dealerId:did,tableNum:parseInt(tableId)||tableId,tableName:tableName,
+     items:items,amount:total,method:method,methodLabel:methodLabel||method,
+     payType:'table',orderIds:[],date:now.toISOString().slice(0,10),paidAt:now.toISOString()
+    }).catch(function(){});
+   }
   }
   window._selectedTableId=null;window._selectedTableName=null;
   var ct=document.querySelector('.cart-panel div:first-child');if(ct)ct.textContent='주문 내역';
