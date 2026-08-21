@@ -8,15 +8,7 @@ const YONGCHA_HTML = `﻿<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="theme-color" content="#2563eb">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="용차">
-<link rel="manifest" href="/manifest.json?v=5">
-<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
-<link rel="shortcut icon" type="image/png" href="/icon-192.png?v=5">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=5">
+<meta name="theme-color" content="#1a1a2e">
 <title>용차 — 택배 노선 매칭</title>
 <style>
 /* ═══════════════════════════════════════════════════════════
@@ -701,7 +693,6 @@ select.inp option{background:#24243d;color:#f0f1f8}
 @keyframes slideInBottom{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes badgePop{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 @keyframes aiDot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
-@keyframes geo-pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(3);opacity:0}}
 
 /* ── 기사용 v2 히어로 카드 ── */
 .hero-v2{background:linear-gradient(145deg,#1d4ed8 0%,#2563eb 45%,#1e40af 100%);
@@ -1036,19 +1027,6 @@ firebase.initializeApp({
   messagingSenderId:'40761160761',
   appId:'1:40761160761:web:20545b610f03f534e949e8'
 });
-
-// PWA 스플래시 자동 제거 (Firebase 준비 후)
-(function(){
-  var sp=document.getElementById('pwa-splash');
-  if(!sp)return;
-  function hideSplash(){sp.classList.add('fade');setTimeout(function(){if(sp.parentNode)sp.parentNode.removeChild(sp);},450);}
-  // 최대 3초 후 강제 제거 (Firebase 지연 대비)
-  var t=setTimeout(hideSplash,3000);
-  document.addEventListener('firebase-ready',function(){clearTimeout(t);hideSplash();},{once:true});
-  // 앱 ready 신호가 없어도 DOMContentLoaded 후 1.5초
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){clearTimeout(t);hideSplash();},1500);},{once:true});
-})();
-
 _db=firebase.firestore();
 _auth=firebase.auth();
 var _storage=firebase.storage();
@@ -1063,48 +1041,42 @@ _auth.onAuthStateChanged(function(u){
   clearTimeout(_ldTimer);
   document.getElementById('ld').style.display='none';document.body.style.visibility='visible';
   if(u){
-    if(_CU&&_CU.uid===u.uid)return; // already handled by registration flow
-    var _authTimer=setTimeout(function(){_showLogin();},30000);
-    function _tryLoadUser(retries){
-      return u.getIdToken().then(function(){
-        return _db.collection('yongcha_users').doc(u.uid).get();
-      }).catch(function(e){
-        if(retries>0){return new Promise(function(r){setTimeout(r,2000);}).then(function(){return _tryLoadUser(retries-1);});}
-        throw e;
-      });
-    }
-    _tryLoadUser(3).then(function(snap){
+    if(_CU&&_CU.uid===u.uid)return;
+    // 10초 내 Firestore 응답 없으면 타임아웃
+    var _authTimer=setTimeout(function(){
+      _showLogin();
+      setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='네트워크 연결이 불안정해요. 다시 시도해주세요.';err.style.display='block';}},100);
+    },10000);
+    _db.collection('yongcha_users').doc(u.uid).get().then(function(snap){
       clearTimeout(_authTimer);
-      if(_CU&&_CU.uid===u.uid)return; // registration flow already set _CU
+      if(_CU&&_CU.uid===u.uid)return;
       var _lBtn=document.getElementById('l-btn');
       if(_lBtn){_lBtn.textContent='로그인';_lBtn.disabled=false;}
       if(snap.exists){
         var _ud=snap.data();
         if(_ud.suspended){
           _auth.signOut();_showLogin();
-          setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='계정이 정지되었습니다. 관리자에게 문의하세요.';err.style.display='block';}},300);
+          setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='계정이 정지되었습니다. 관리자에게 문의하세요.';err.style.display='block';}},100);
           return;
         }
         _CU=Object.assign({uid:u.uid},_ud);_showApp();
-      }
-      else if(ADMINS.indexOf(u.email||'')>=0){
+      } else if(ADMINS.indexOf(u.email||'')>=0){
         var doc={uid:u.uid,type:'admin',name:'관리자',email:u.email,
           phone:'051-711-3103',region:'부산',rating:5,reviewCount:0,status:'active',
           createdAt:firebase.firestore.FieldValue.serverTimestamp()};
         _db.collection('yongcha_users').doc(u.uid).set(doc).then(function(){
-          clearTimeout(_authTimer);
-          if(_CU&&_CU.uid===u.uid)return; // registration flow may have already set _CU
+          if(_CU&&_CU.uid===u.uid)return;
           _CU=Object.assign({uid:u.uid},doc);_showApp();
-        }).catch(function(e){clearTimeout(_authTimer);console.error('[yongcha] set error:',e);_showLogin();});
-      } else {clearTimeout(_authTimer);_showLogin();}
+        }).catch(function(){_showLogin();});
+      } else {
+        // Firebase Auth는 됐으나 yongcha_users 문서 없음 → 회원가입 필요
+        _auth.signOut();_showLogin();
+        setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='앱에서 회원가입을 완료해주세요.';err.style.display='block';}},100);
+      }
     }).catch(function(e){
       clearTimeout(_authTimer);
-      // 로그인 화면에 에러 표시
       _showLogin();
-      setTimeout(function(){
-        var err=document.getElementById('l-err');
-        if(err){err.textContent='DB오류: '+e.code+' / '+e.message;err.style.display='block';}
-      },300);
+      setTimeout(function(){var err=document.getElementById('l-err');if(err){err.textContent='로그인 오류가 발생했어요. 다시 시도해주세요.';err.style.display='block';}},100);
     });
   } else {_showLogin();}
 });
@@ -1388,7 +1360,7 @@ function _goPage(p){
   else if(p==='driver_offer')_pgDriverOffer(el);
   else if(p==='entrance_codes')_pgEntranceCodes(el);
   else if(p==='settle_reconcile')_pgSettlementReconcile(el);
-  else if(p==='my_settlements')_pgMySettlements(el);
+  else if(p==='tax_approve')_pgTaxApprove(el,'');
 }
 
 // ── 채팅 안읽음 배지 (실시간) ──
@@ -1590,16 +1562,14 @@ function _pgHomeDriver(el){
     '<div class="hero-v2-earn-amt" id="earn-today">—</div>'+
     '<div class="hero-v2-earn-sub" id="earn-sub-lbl">'+_esc(_CU.region||'지역')+'  운행 기록 집계 중...</div>'+
     '<div class="hero-v2-chips" id="earn-chips"></div>'+
-  '</div>'+
-
-  // 날씨 위젯
-  '<div id="home-weather-bar" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:10px 14px;margin-bottom:10px">'+
-    '<div id="home-weather-icon" style="font-size:22px;flex-shrink:0">—</div>'+
-    '<div style="flex:1;min-width:0">'+
-      '<div id="home-weather-main" style="font-size:13.5px;font-weight:800;color:var(--tx)">날씨 불러오는 중...</div>'+
-      '<div id="home-weather-sub" style="font-size:11.5px;color:var(--t3);margin-top:1px"></div>'+
+    '<div id="home-weather-bar" style="display:flex;align-items:center;gap:14px;margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.18)">'+
+      '<span id="home-weather-icon" style="font-size:40px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5));line-height:1">—</span>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div id="home-weather-main" style="font-size:18px;font-weight:900;color:#fff;letter-spacing:-.5px;text-shadow:0 1px 4px rgba(0,0,0,0.4)">날씨 불러오는 중...</div>'+
+        '<div id="home-weather-sub" style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:3px;font-weight:600"></div>'+
+      '</div>'+
+      '<div id="home-weather-diff" style="font-size:12px;font-weight:900;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,0.18);color:#fff;flex-shrink:0;letter-spacing:-.3px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.2)"></div>'+
     '</div>'+
-    '<div id="home-weather-diff" style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;flex-shrink:0"></div>'+
   '</div>'+
 
   // 차량 검사 만료 배너 (조건부 — JS에서 채움)
@@ -1635,10 +1605,10 @@ function _pgHomeDriver(el){
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>공동현관 DB</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'routeiq\\')" style="border-color:var(--acln);color:var(--ac)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></span>ROUTE IQ</button>'+
+    '<button type="button" class="quick-btn" onclick="_yAiCoach()" style="border-color:rgba(167,139,250,.4);color:#a78bfa">'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>AI 코치</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'driver_offer\\')" style="border-color:var(--gnln);color:var(--gn)">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>용차 등록</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_settlements\\')" style="border-color:var(--gnln);color:var(--gn)">'+
-      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>정산 내역</button>'+
   '</div>'+
 
   // 오늘 일정
@@ -1716,23 +1686,32 @@ function _pgHomeDriver(el){
   setTimeout(function(){
     var mapEl=document.getElementById('home-drv-map');
     if(!mapEl)return;
-    // GPS 확인 후 지도 초기화 (정확한 현위치 마커)
-    _yLoadGeo().then(function(){
     _loadKakaoMap(function(){
-      var g=_myGeo;
-      var center=g?new kakao.maps.LatLng(g.lat,g.lng):new kakao.maps.LatLng(35.1796,129.0756);
+      var center=new kakao.maps.LatLng(35.1796,129.0756);
+      if(typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
+        center=new kakao.maps.LatLng(_CU.lat,_CU.lng);
+      } else if(_myGeo){
+        center=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
+      }
       var m=new kakao.maps.Map(mapEl,{center:center,level:7});
-      _homeMapRef=m;
-      // 내 위치 마커 (파란 원 + 실시간 pulse 애니메이션)
-      _homeDotRef=new kakao.maps.CustomOverlay({
+      // 내 위치 마커 (파란 원) — 초기값은 center, watchPosition으로 실시간 갱신
+      var _myDot=new kakao.maps.CustomOverlay({
         position:center,
-        content:'<div style="position:relative;width:20px;height:20px">'+
-          '<div style="position:absolute;inset:0;border-radius:50%;background:rgba(37,99,235,.25);animation:geo-pulse 2s ease-out infinite"></div>'+
-          '<div style="position:absolute;inset:4px;border-radius:50%;background:#2563eb;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.7)"></div>'+
-          '</div>',
+        content:'<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,.6)"></div>',
         yAnchor:0.5,xAnchor:0.5,
         map:m
       });
+      // watchPosition — 실시간 GPS 추적 (항상 실행, _myGeo 상태 무관)
+      if(navigator.geolocation){
+        var _homeWatchFirst=true;
+        navigator.geolocation.watchPosition(function(pos){
+          _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
+          var gpsLatLng=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
+          _myDot.setPosition(gpsLatLng);
+          if(_homeWatchFirst){_homeWatchFirst=false;m.setCenter(gpsLatLng);}
+        },function(){},
+        {enableHighAccuracy:true,timeout:10000,maximumAge:5000});
+      }
       // 공고 존 마커 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
       function _drawZoneMarkers(posts){
         posts.forEach(function(p){
@@ -1762,7 +1741,6 @@ function _pgHomeDriver(el){
         }).catch(function(){});
       }
     });
-  });  // _yLoadGeo().then
   },600);
 
   // 내 주변 공고 — GPS 우선, 없으면 지역명 매칭
@@ -1818,7 +1796,7 @@ function _pgHomeDriver(el){
       if(!d.ok)return;
       var w=d.weather;
       var iconMap={맑음:'☀',구름많음:'⛅',흐림:'☁',비:'🌧',눈:'🌨','비/눈':'🌦'};
-      var diffColor={low:'var(--gn)',medium:'var(--br)',high:'var(--rd)'};
+      var diffBg={low:'rgba(16,185,129,0.25)',medium:'rgba(251,191,36,0.3)',high:'rgba(239,68,68,0.35)'};
       var diffLbl={low:'배달 쾌적',medium:'주의',high:'난이도 높음'};
       var wIcon=document.getElementById('home-weather-icon');
       var wMain=document.getElementById('home-weather-main');
@@ -1829,35 +1807,52 @@ function _pgHomeDriver(el){
       if(wSub)wSub.textContent=w.msg;
       if(wDiff){
         wDiff.textContent=diffLbl[w.difficulty]||'';
-        wDiff.style.background=diffColor[w.difficulty]+'22';
-        wDiff.style.color=diffColor[w.difficulty];
-        wDiff.style.border='1px solid '+diffColor[w.difficulty]+'44';
-      }
-      // 우천 시 홈 배너 표시
-      if(w.difficulty==='high'){
-        var bar=document.getElementById('home-weather-bar');
-        if(bar){bar.style.borderColor='var(--rdln)';bar.style.background='var(--rdl)';}
+        wDiff.style.background=diffBg[w.difficulty]||'rgba(255,255,255,0.15)';
       }
     }).catch(function(){});
   });
 
   // 차량 검사 만료 배너
+  var inspBanner=document.getElementById('home-inspect-banner');
   if(_CU.carNumber){
     var carNum=_CU.carNumber;
     var stored=null;
     try{stored=JSON.parse(localStorage.getItem('yc_inspect_'+carNum)||'null');}catch(e){}
     var fetchInspect=function(){
       fetch('/api/yongcha/vehicle-inspect?carNum='+encodeURIComponent(carNum)).then(function(r){return r.json();}).then(function(d){
-        if(!d.ok||!d.inspectDue)return;
+        if(!d.ok){
+          if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
+          else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+          return;
+        }
+        if(!d.inspectDue){
+          if(_CU.inspectDue){
+            try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:_CU.inspectDue,ts:Date.now()}));}catch(e){}
+            _renderInspectBanner(_CU.inspectDue);
+          } else {
+            if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+          }
+          return;
+        }
         try{localStorage.setItem('yc_inspect_'+carNum,JSON.stringify({due:d.inspectDue,ts:Date.now()}));}catch(e){}
         _renderInspectBanner(d.inspectDue);
-      }).catch(function(){});
+      }).catch(function(e){
+        if(_CU.inspectDue){_renderInspectBanner(_CU.inspectDue);}
+        else if(inspBanner)inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--bd);margin-bottom:10px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:var(--t2)">검사 만료일 미등록</div><div style="font-size:11px;color:var(--t3)">내정보에서 정기검사 만료일을 입력해 주세요</div></div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+      });
     };
     if(stored&&stored.ts&&Date.now()-stored.ts<86400000){
       _renderInspectBanner(stored.due);
     } else {
       fetchInspect();
     }
+  } else if(inspBanner){
+    inspBanner.innerHTML='<div onclick="_goPage(\\'profile\\')" style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 14px;margin-bottom:10px;cursor:pointer">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:var(--tx)">차량번호 미등록</div>'+
+      '<div style="font-size:11.5px;color:var(--t3)">내정보 → 차량번호 입력 시 검사 만료일을 알려드려요</div></div>'+
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>'+
+    '</div>';
   }
 }
 
@@ -1907,7 +1902,6 @@ function _pgHomeAgency(el){
     '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">배차 공고</button>'+
     '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'my_settlements\\')" style="border-color:var(--gnln);color:var(--gn)">정산 내역</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'settle_reconcile\\')" style="border-color:var(--brln);color:var(--br)">정산 대사</button>'+
   '</div>'+
 
@@ -1920,13 +1914,13 @@ function _pgHomeAgency(el){
   '<div id="home-recent">'+_skRows(2)+'</div>';
 
   // KPI 로딩 (카운트업 애니메이션)
-  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched','closed']).get().then(function(s){
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).where('status','in',['open','matched','completed']).get().then(function(s){
     var reg=0,done=0,prog=0;
     s.forEach(function(d){
       var st=d.data().status;
       if(st==='open')reg++;
       else if(st==='matched')prog++;
-      else if(st==='closed')done++;
+      else if(st==='completed')done++;
     });
     var e1=document.getElementById('kpi-reg');if(e1)_yCountUp(e1,0,reg,700,'건');
     var e2=document.getElementById('kpi-done');if(e2)_yCountUp(e2,0,done,800,'건');
@@ -1978,7 +1972,7 @@ function _pgHomeAgency(el){
   }).catch(function(e){var el=document.getElementById('home-recent');if(el)el.innerHTML=_emptyHtml('','지원자 불러오기 실패','');console.error('recent applicants',e);});
 
   // 현금흐름 예측 로딩
-  firebase.auth().currentUser.getIdToken().then(function(tok){
+  _yGetToken().then(function(tok){
     fetch('/api/yongcha/cashflow',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.json();}).then(function(d){
       var el=document.getElementById('agency-cashflow');if(!el)return;
       if(!d.ok){el.innerHTML='<div class="err-block">현금흐름 계산 실패</div>';return;}
@@ -2075,13 +2069,21 @@ function _renderInspectBanner(dueStr){
   if(!dueStr){el.innerHTML='';return;}
   var due=new Date(dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1-$2-$3'));
   var daysLeft=Math.ceil((due-Date.now())/(86400000));
-  if(daysLeft>30){el.innerHTML='';return;}
-  var danger=daysLeft<=7;
-  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+(danger?'var(--rdl)':'var(--brl)')+';border:1px solid '+(danger?'var(--rdln)':'var(--brln)')+';margin-bottom:10px">'+
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+(danger?'var(--rd)':'var(--br)')+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'+
-    '<div style="flex:1">'+
-      '<div style="font-size:13px;font-weight:800;color:'+(danger?'var(--rd)':'var(--br)')+'">차량 정기검사 D-'+daysLeft+'</div>'+
-      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">'+dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3')+'까지 수검 필요</div>'+
+  var dateLabel=dueStr.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1.$2.$3');
+  var danger=daysLeft<=7, warn=daysLeft<=30&&daysLeft>7, safe=daysLeft>30;
+  var bg=danger?'var(--rdl)':warn?'var(--brl)':'var(--gnl)';
+  var bd=danger?'var(--rdln)':warn?'var(--brln)':'rgba(16,163,74,.2)';
+  var clr=danger?'var(--rd)':warn?'var(--br)':'var(--gn)';
+  var lbl=daysLeft<0?'검사 만료 '+Math.abs(daysLeft)+'일 경과':daysLeft===0?'오늘 만료!':'D-'+daysLeft;
+  var statusTxt=daysLeft<0?'즉시 수검 필요!':safe?'검사 유효':warn?'수검 준비 필요':'긴급 수검 필요!';
+  var icon=danger||daysLeft<0?
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+clr+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>':
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+clr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:'+bg+';border:1px solid '+bd+';margin-bottom:10px">'+
+    icon+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:13px;font-weight:800;color:'+clr+'">차량 정기검사 '+lbl+'</div>'+
+      '<div style="font-size:11.5px;color:var(--t3);margin-top:1px">만료: '+dateLabel+' · '+statusTxt+'</div>'+
     '</div>'+
   '</div>';
 }
@@ -2144,7 +2146,7 @@ function _ecSearch(){
 }
 
 function _ecVote(id,action){
-  firebase.auth().currentUser.getIdToken().then(function(tok){
+  _yGetToken().then(function(tok){
     fetch('/api/yongcha/entrance-codes/'+id,{method:'PATCH',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({action:action})}).then(function(r){return r.json();}).then(function(d){
       if(d.ok)_yToast(action==='verify'?'검증 감사해요!':'신고 접수됐어요');
     }).catch(function(){_yToast('처리 실패');});
@@ -2168,7 +2170,7 @@ function _ecSubmit(){
   var code=(document.getElementById('ec-code')||{}).value||'';
   if(!addr||!code){_yToast('필수 항목을 입력해주세요');return;}
   var btn=document.querySelector('#modal-body .btn');if(btn)btn.disabled=true;
-  firebase.auth().currentUser.getIdToken().then(function(tok){
+  _yGetToken().then(function(tok){
     return fetch('/api/yongcha/entrance-codes',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({address:addr,addressDetail:detail,code:code})});
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok){_closeModal();_yToast('등록됐어요!');_ecLoad('');}
@@ -2216,7 +2218,7 @@ function _srSubmit(){
   var btn=document.querySelector('.page-hdr~.card .btn');if(btn)btn.disabled=true;
   var res=document.getElementById('sr-result');if(res)res.innerHTML=_skRows(2);
 
-  firebase.auth().currentUser.getIdToken().then(function(tok){
+  _yGetToken().then(function(tok){
     return fetch('/api/yongcha/settlement-reconcile',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({csvRows:rows,courier:courier,periodStart:start})});
   }).then(function(r){return r.json();}).then(function(d){
     if(btn)btn.disabled=false;
@@ -2542,29 +2544,21 @@ window._yStats=window._yStats||{};
    기사의 현재 좌표를 1회 받아 캐시하고, 공고 상차지(loadingLat/Lng)와의
    실거리를 계산해 "가까운 공고 우선" 정렬 + 카드에 거리 배지를 노출한다.
    권한 거부/미지원이면 조용히 지역명 매칭으로 폴백한다. */
-var _myGeo=null;                       // {lat,lng} — 현재 위치 (watchPosition 실시간 갱신)
-var _geoWatchId=null;                  // watchPosition 핸들러 ID
-var _homeMapRef=null;                  // 홈 지도 카카오맵 인스턴스
-var _homeDotRef=null;                  // 홈 지도 내 위치 마커 오버레이
-var _yGeoLastSave=0;                   // Firestore 저장 throttle 타임스탬프
-
+var _myGeo=null;                       // {lat,lng}
 function _yLoadGeo(){
   return new Promise(function(res){
     if(_myGeo)return res(_myGeo);
-    // 저장된 좌표가 1시간 이내면 우선 사용 (권한 팝업 없이 즉시 동작)
-    var geoAge=_CU&&_CU.geoUpdatedAt?(_CU.geoUpdatedAt.toMillis?_CU.geoUpdatedAt.toMillis():_CU.geoUpdatedAt):0;
-    var isRecent=geoAge&&(Date.now()-geoAge<3600000);
-    if(isRecent&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
-      _myGeo={lat:_CU.lat,lng:_CU.lng};
-      _yStartGeoWatch();
-      return res(_myGeo);
+    // 저장된 좌표가 있으면 우선 사용 (권한 팝업 없이 즉시 동작)
+    if(_CU&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
+      _myGeo={lat:_CU.lat,lng:_CU.lng};return res(_myGeo);
     }
     if(!navigator.geolocation)return res(null);
     var done=false;
     var finish=function(v){if(done)return;done=true;res(v);};
-    setTimeout(function(){finish(null);},6000);
+    setTimeout(function(){finish(null);},6000);       // 응답 없으면 폴백
     navigator.geolocation.getCurrentPosition(function(pos){
       _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      // 기사 문서에 저장 → AI 배차 추천이 대리점 쪽에서도 거리 계산 가능
       if(_CU&&_CU.type==='driver'){
         _CU.lat=_myGeo.lat;_CU.lng=_myGeo.lng;
         _db.collection('yongcha_users').doc(_CU.uid).update({
@@ -2573,36 +2567,8 @@ function _yLoadGeo(){
         }).catch(function(){});
       }
       finish(_myGeo);
-      _yStartGeoWatch();  // 최초 1회 확보 후 실시간 감시 시작
-    },function(){
-      // GPS 실패 시 저장된 좌표 폴백
-      if(_CU&&typeof _CU.lat==='number'&&typeof _CU.lng==='number'){
-        _myGeo={lat:_CU.lat,lng:_CU.lng};finish(_myGeo);
-      } else {finish(null);}
-    },{enableHighAccuracy:true,timeout:5500,maximumAge:60000});
+    },function(){finish(null);},{enableHighAccuracy:false,timeout:5500,maximumAge:600000});
   });
-}
-
-// 실시간 위치 감시 — 이동 시 홈 지도 파란 점 자동 이동
-function _yStartGeoWatch(){
-  if(_geoWatchId!=null||!navigator.geolocation)return;
-  _geoWatchId=navigator.geolocation.watchPosition(function(pos){
-    _myGeo={lat:pos.coords.latitude,lng:pos.coords.longitude};
-    // 홈 지도 파란 점 실시간 이동
-    if(_homeDotRef&&_homeMapRef&&window.kakao&&kakao.maps){
-      var newPos=new kakao.maps.LatLng(_myGeo.lat,_myGeo.lng);
-      _homeDotRef.setPosition(newPos);
-    }
-    // Firestore 저장 (3분 간격 throttle)
-    var now=Date.now();
-    if(_CU&&_CU.type==='driver'&&(now-_yGeoLastSave)>180000){
-      _yGeoLastSave=now;
-      _db.collection('yongcha_users').doc(_CU.uid).update({
-        lat:_myGeo.lat,lng:_myGeo.lng,
-        geoUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(function(){});
-    }
-  },function(){},{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
 }
 /* 주유소/충전소 목록 조회 + 렌더링
    fuelType: '휘발유'|'경유'|'LPG'|'전기' (없으면 휘발유) */
@@ -2649,7 +2615,7 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
       var aiBadge=i===0&&!isFav?'<span class="gas-badge" style="background:rgba(43,110,240,.12);color:var(--ac);border:1px solid rgba(43,110,240,.25)">AI 1위</span>':'';
       var favBadge=isFav?'<span class="gas-badge" style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3)">즐겨찾기</span>':'';
       var distStr=s.dist<1?(Math.round(s.dist*1000)+'m'):(Math.round(s.dist*10)/10+'km');
-      var mapLink='https://map.kakao.com/?q='+encodeURIComponent((s.name||'주유소')+' '+(s.address||''));
+      var mapLink=s.url||('https://map.kakao.com/?q='+encodeURIComponent((s.name||'주유소')+' '+(s.address||'')));
       var brandLabel=s.brand?'<span style="font-size:10px;color:var(--t3);background:var(--bg3);border:1px solid var(--bd);border-radius:4px;padding:1px 6px;font-weight:700">'+_esc(s.brand)+'</span>':'';
       var starBtn='<button type="button" onclick="_yGasFav(\\''+_esc(containerId)+'\\',\\''+_esc(s.id||'')+'\\',\\''+_esc((lat||0).toString())+'\\',\\''+_esc((lng||0).toString())+'\\',\\''+_esc(fuel)+'\\')" '+
         'style="font-size:16px;background:none;border:none;cursor:pointer;padding:2px;color:'+(isFav?'var(--br)':'var(--t3)')+';" '+
@@ -2668,8 +2634,7 @@ function _yLoadGasStations(lat,lng,containerId,fuelType){
         '</div>'+
         '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px">'+
           starBtn+
-          '<div class="gas-price">'+Number(s.price||0).toLocaleString()+'</div>'+
-          '<div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>'+
+          (s.price?'<div class="gas-price">'+Number(s.price).toLocaleString()+'</div><div style="font-size:10px;color:var(--t3);margin-bottom:2px">원/L</div>':'<div style="font-size:10px;font-weight:700;color:var(--t3);margin:2px 0 4px;text-align:right;line-height:1.3">가격<br>정보없음</div>')+
           '<a href="'+mapLink+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--ac);text-decoration:none">지도 ›</a>'+
         '</div>'+
       '</div>';
@@ -2933,7 +2898,7 @@ function _yDayBadge(startDate){
   var d=_yDays(startDate);
   if(d===null)return '';
   if(d<=0)return '<span class="dday dday-0">오늘 시작</span>';
-  if(d===1)return '<span class="dday dday-soon">D-1 시작</span>';
+  if(d===1)return '<span class="dday dday-0">D-1 시작</span>';
   if(d<=3)return '<span class="dday dday-soon">D-'+d+'</span>';
   return '';
 }
@@ -3220,11 +3185,188 @@ function _sharePost(postId,area){
 }
 
 /* ── 딥링크: /?post=<id> 로 들어오면 해당 공고 상세를 자동 오픈 ── */
+/// ── 소장: 정산 입금 완료 처리 ─────────────────────────────────────────
+function _yMarkSettlePaid(settleId,driverId,amount){
+  if(!confirm('입금 완료로 처리하시겠어요?\\n기사에게 FCM 알림이 발송됩니다.'))return;
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/settlement-paid',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({settleId:settleId,driverId:driverId,amount:amount,agencyId:_CU.uid})
+    });
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){_yToast('입금 완료 처리됐어요. 기사에게 알림이 발송됩니다.');_goPage('dashboard');}
+    else _yToast('처리 실패: '+(d.error||''));
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+// ── 소장: 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ───────────────────────────
+function _ySendSettleNotify(settleId,driverPhone,driverName,agencyName,driverId,totalAmount,totalCount,weekStart){
+  if(!driverPhone){_yToast('기사 전화번호가 없어요. 프로필을 확인하세요.');return;}
+  var btn=event&&event.currentTarget;
+  if(btn){btn.disabled=true;btn.textContent='발송중...';}
+  // 1) 팝빌 역발행 요청
+  fetch('/api/yongcha/popbill-issue',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({workId:settleId,agencyId:_CU.uid,driverId:driverId,driverName:driverName,fare:totalAmount})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false&&d.error&&d.error.indexOf('사업자번호')>=0){
+      _yToast('사업자번호 미등록: 프로필에서 사업자번호를 먼저 입력하세요.');
+      if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
+      return;
+    }
+    // 2) 명세서 알림톡 발송 (팝빌 성공/실패 무관하게 발송)
+    return fetch('/api/yongcha/settle-notify',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({settleId:settleId,driverPhone:driverPhone,driverName:driverName,
+        agencyId:_CU.uid,agencyName:agencyName,driverId:driverId,
+        totalAmount:totalAmount,totalCount:totalCount,weekStart:weekStart})
+    }).then(function(r2){return r2.json();});
+  }).then(function(d2){
+    if(!d2)return;
+    _yToast(d2.alimtalkOk?'명세서 알림톡 발송 완료! 기사 승인을 기다리세요.':'명세서 발송됨 (SMS fallback). 기사 승인 대기중.');
+    _goPage('dashboard'); // 새로고침
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='명세서 발송';}
+  });
+}
+
+// ── 기사: 세금계산서 역발행 승인 화면 ─────────────────────────────────────────
+function _pgTaxApprove(el,settleId){
+  _curPage='tax_approve';
+  el=el||document.getElementById('content');
+  el.innerHTML=
+    '<div class="page-hdr"><h1 class="page-title">세금계산서 승인</h1>'+
+    '<p class="page-sub">정산 명세서를 확인하고 세금계산서 등록을 승인하세요</p></div>'+
+    '<div id="tax-approve-body">'+_skRows(3)+'</div>';
+  if(!settleId){el.innerHTML+='<p style="color:var(--rd);text-align:center;padding:32px">잘못된 접근이에요.</p>';return;}
+  _db.collection('yongcha_settlements').doc(settleId).get().then(function(snap){
+    var body=document.getElementById('tax-approve-body');if(!body)return;
+    if(!snap.exists){body.innerHTML='<p style="color:var(--rd);text-align:center;padding:32px">정산 내역을 찾을 수 없어요.</p>';return;}
+    var s=snap.data();
+    var state=s.taxInvoiceState||'';
+    var stateColor=state==='역발행승인'?'var(--gn)':state==='역발행거부'?'var(--rd)':'var(--br)';
+    var stateLabel=state==='역발행승인'?'홈택스 등록 완료':state==='역발행거부'?'거부됨':state==='명세서발송'?'승인 대기중':'처리 대기';
+    var isDone=(state==='역발행승인');
+    var isRejected=(state==='역발행거부');
+    var amt=Number(s.totalAmount||0);
+    var supply=Math.round(amt/1.1);
+    var tax=amt-supply;
+    body.innerHTML=
+      '<div class="card">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+          '<div style="font-size:16px;font-weight:900">정산 명세서</div>'+
+          '<span style="padding:3px 10px;border-radius:6px;font-size:12px;font-weight:800;background:rgba(245,158,11,.12);color:'+stateColor+';border:1px solid rgba(245,158,11,.2)">'+stateLabel+'</span>'+
+        '</div>'+
+        '<div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:14px">'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">소장(공급받는자)</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_esc(s.agencyName||'대리점')+'</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">기사(공급자)</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_esc(s.driverName||'기사')+'</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">기간</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_esc((s.weekStart||'').slice(0,10))+'</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">건수</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_won(Number(s.totalCount||0))+'건</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">공급가액</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_won(supply)+'원</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+            '<span style="font-size:13px;color:var(--t2)">부가세(10%)</span>'+
+            '<span style="font-size:13px;font-weight:800">'+_won(tax)+'원</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;padding:10px 0 4px">'+
+            '<span style="font-size:14px;font-weight:900">합계</span>'+
+            '<span style="font-size:18px;font-weight:900;color:var(--ac)">'+_won(amt)+'원</span>'+
+          '</div>'+
+        '</div>'+
+        (isDone?
+          '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:14px;text-align:center;color:var(--gn);font-weight:800">'+
+            '국세청(홈택스)에 자동 등록이 완료됐어요'+
+          '</div>':
+        isRejected?
+          '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px;text-align:center;color:var(--rd);font-weight:800">'+
+            '거부된 세금계산서입니다. 소장에게 문의하세요.'+
+          '</div>':
+          '<div style="display:flex;gap:10px;margin-top:4px">'+
+            '<button type="button" id="tax-reject-btn" onclick="_yTaxReject(\\''+settleId+'\\')" '+
+            'style="flex:1;min-height:var(--tap);background:none;color:var(--rd);border:1.5px solid rgba(239,68,68,.35);border-radius:var(--r);font-size:14px;font-weight:800;cursor:pointer">거부</button>'+
+            '<button type="button" id="tax-approve-btn" onclick="_yTaxApprove(\\''+settleId+'\\')" '+
+            'style="flex:2;min-height:var(--tap);background:var(--ac);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:900;cursor:pointer">세금계산서 등록 승인</button>'+
+          '</div>'
+        )+
+      '</div>'+
+      '<p style="font-size:12px;color:var(--t3);text-align:center;padding:12px 0;line-height:1.6">'+
+        '승인 시 공급자(기사) 명의로 전자세금계산서가 발행되어<br>국세청(홈택스)에 자동 등록됩니다.'+
+      '</p>';
+  }).catch(function(e){
+    var body=document.getElementById('tax-approve-body');
+    if(body)body.innerHTML=_errHtml(e);
+  });
+}
+
+// ── 기사: 세금계산서 역발행 승인 처리 ──────────────────────────────────────────
+function _yTaxApprove(settleId){
+  var btn=document.getElementById('tax-approve-btn');
+  if(btn){btn.disabled=true;btn.textContent='처리중...';}
+  var corpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+  if(!corpNum){
+    _yToast('사업자번호가 없어요. 프로필에서 사업자번호를 먼저 입력하세요.');
+    if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
+    return;
+  }
+  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false)throw new Error(d.error||'승인 실패');
+    _yToast('세금계산서가 홈택스에 자동 등록됐어요!');
+    _pgTaxApprove(document.getElementById('content'),settleId); // 화면 갱신
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
+  });
+}
+
+// ── 기사: 세금계산서 역발행 거부 ───────────────────────────────────────────────
+function _yTaxReject(settleId){
+  var corpNum=(_CU.corpNum||'').replace(/[^0-9]/g,'');
+  if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
+  var btn=document.getElementById('tax-reject-btn');
+  if(btn){btn.disabled=true;btn.textContent='처리중...';}
+  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
+    _yToast('거부했어요. 소장에게 사유를 전달하세요.');
+    _pgTaxApprove(document.getElementById('content'),settleId);
+  }).catch(function(e){
+    _yToast('오류: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='거부';}
+  });
+}
+
 function _yHandleDeepLink(){
-  var m=(location.search||'').match(/[?&]post=([^&]+)/);
+  var qs=location.search||'';
+  // ?tax=settleId — 정산명세서 세금계산서 승인 딥링크 (기사용)
+  var mt=qs.match(/[?&]tax=([^&]+)/);
+  if(mt){
+    var sid=decodeURIComponent(mt[1]);
+    history.replaceState(null,'',location.pathname);
+    _pgTaxApprove(document.getElementById('content'),sid);
+    return;
+  }
+  // ?post=postId — 공고 상세 딥링크
+  var m=qs.match(/[?&]post=([^&]+)/);
   if(!m)return;
   var postId=decodeURIComponent(m[1]);
-  history.replaceState(null,'',location.pathname); // 새로고침 시 재오픈 방지
+  history.replaceState(null,'',location.pathname);
   _db.collection('yongcha_posts').doc(postId).get().then(function(snap){
     if(!snap.exists){_yToast('공고를 찾을 수 없어요');return;}
     _showPostDetail(Object.assign({id:snap.id},snap.data()));
@@ -3716,7 +3858,7 @@ function _pgMyPosts(el){
   '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 새 공고 등록하기</button>'+
   '<div id="my-posts-list">'+_skRows(3)+'</div>';
 
-  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').limit(100).get()
+  _db.collection('yongcha_posts').where('agencyId','==',_CU.uid).get()
     .then(function(snap){
       var list=document.getElementById('my-posts-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요<br><span style="font-size:11px;color:var(--t2)">uid: '+(_CU&&_CU.uid||'없음')+'</span></div></div>';return;}
@@ -3799,7 +3941,7 @@ function _togglePost(id,status){
    지금까지 completedRoutes 를 올리는 코드가 어디에도 없어 모든 기사가
    영원히 '새내기' 등급에 머물렀다. */
 function _yCompleteRoutes(postId){
-  _db.collection('yongcha_applies').where('postId','==',postId).where('status','in',['approved','done']).get()
+  _db.collection('yongcha_applies').where('postId','==',postId).where('status','==','approved').get()
   .then(function(snap){
     snap.forEach(function(doc){
       var a=doc.data();
@@ -3904,8 +4046,7 @@ function _judgeApply(applyId,status,name,driverId){
             _CU.name+'\\n📍 노선: '+postTitle+' | 💰 단가: '+unitPrice+'원/건 | 📅 시작: '+startDate,'dispatch');
           // 채팅방 자동 생성 + 첫 메시지
           _yAutoChat(driverId,name,a,postTitle,unitPrice,startDate);
-          // 계약서 초안 생성 (정산 보장 조건 포함)
-          var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);tomorrow.setHours(18,0,0,0);
+          // 계약서 초안 생성
           _db.collection('yongcha_contracts').add({
             applyId:applyId,postId:a.postId||'',
             agencyId:_CU.uid,agencyName:_CU.name,
@@ -3914,16 +4055,10 @@ function _judgeApply(applyId,status,name,driverId){
             terms:{courier:a.courier||'',area:a.area||'',unitPrice:unitPrice,
                    workShift:a.workShift||'',workDays:a.workDays||'',
                    settleFreq:a.settleFreq||'',settleDay:a.settleDay||'',
-                   minGuarantee:a.minGuarantee||0,startDate:startDate,
-                   payDueDays:1,payDueHour:18,penaltyRate:0.15,
-                   legalBasis:'하도급법 제13조, 화물자동차 운수사업법 제5조, 민법 제397조'},
-            termsVersion:'v1.2',
-            agencyDevice:navigator.userAgent.substring(0,200),
+                   minGuarantee:a.minGuarantee||0,startDate:startDate},
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
           }).then(function(ref){
             _db.collection('yongcha_applies').doc(applyId).update({contractId:ref.id}).catch(function(e){console.error('contractId link fail',e);});
-            // 기사에게 계약서 서명 요청 FCM
-            _yNotify(driverId,'계약서 서명 요청','배차가 확정됐어요. 계약서를 확인하고 서명해주세요.','contract');
           }).catch(function(e){_yToast('계약서 생성 실패: '+e.message);});
         }).catch(function(e){_yToast('지원 승인 저장 실패: '+e.message);});
       } else {
@@ -4021,7 +4156,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
   _db.collection('yongcha_applies').doc(applyId).get().then(function(ap){
     if(!ap.exists)return;
     var a=ap.data();
-    var recordId=_CU.uid+'_'+date+'_'+(applyId||'x');
+    var recordId=_CU.uid+'_'+date;
     _db.collection('yongcha_daily_records').doc(recordId).set({
       applyId:applyId,postId:a.postId||'',
       driverId:_CU.uid,driverName:_CU.name,
@@ -4031,7 +4166,7 @@ function _ySaveDailyRecord(applyId,date,unitPrice){
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     }).then(function(){
       _yToast('건수 저장됐어요! '+cnt+'건 / '+Number(cnt*unitPrice).toLocaleString()+'원');
-      if(a.agencyId)_yNotify(a.agencyId,'📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
+      _yNotify(a.agencyId||'','📦 오늘 건수 등록',_CU.name+'님 '+date+' '+cnt+'건 등록','work');
       _closeModal();
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -4121,7 +4256,6 @@ function _yRequestSettle(driverId,driverName,cnt,amt,weekStart){
 function _signContract(contractId, role){
   var field=role==='agency'?'agencySigned':'driverSigned';
   var upd={};upd[field]=true;upd[field+'At']=firebase.firestore.FieldValue.serverTimestamp();
-  upd[field.replace('Signed','Device')]=navigator.userAgent.substring(0,200);
   _db.collection('yongcha_contracts').doc(contractId).update(upd).then(function(){
     // 양쪽 모두 서명했는지 확인
     _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
@@ -4171,17 +4305,6 @@ function _showContract(contractId){
       '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">정산일</span> <strong>'+(t.settleDay||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">시작일</span> <strong>'+(t.startDate||'—')+'</strong></div>'+
-      '<div><span style="color:var(--t3)">배송완료 익일 정산</span> <strong>익일 18:00 KST 이내</strong></div>'+
-      '<div><span style="color:var(--t3)">연체 이율</span> <strong>연 15% (일할 계산)</strong></div>'+
-      '</div>'+
-
-      '<div style="background:#1a1a2e;border:1px solid var(--ac);border-radius:10px;padding:12px;margin-bottom:14px;font-size:11.5px;line-height:1.8;color:var(--t2)">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--ac);margin-bottom:6px">정산 보장 약정</div>'+
-      '제3조 (정산 의무) 소장은 기사의 배송 완료 확인 후 익일 18:00(KST) 이내에 약정 단가에 건수를 곱한 금액을 지급해야 한다.<br>'+
-      '제5조 (지연 이자) 정산 지연 시 연 15%의 이자를 일할 계산하여 추가 지급한다.<br>'+
-      '제8조 (신용 제한) 2회 이상 정산 지연 시 플랫폼이 신규 기사 배차를 제한할 수 있다.<br>'+
-      '<div style="margin-top:6px;font-size:11px;color:var(--t3)">근거: 하도급법 제13조 · 화물자동차 운수사업법 제5조 · 민법 제397조</div>'+
-      '<div style="margin-top:4px;font-size:10.5px;color:var(--t3)">※ 본 플랫폼(엠비티아이)은 중개 정보를 제공하는 사업자로, 계약의 당사자가 아닙니다.</div>'+
       '</div>'+
 
       '<div style="display:flex;gap:8px;margin-bottom:12px">'+
@@ -4209,6 +4332,16 @@ function _pgPostWrite(el){
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">원클릭 공고 등록</div>'+
   '<div class="page-sub">템플릿으로 5초 만에 공고를 발송하세요</div></div>'+
+
+  // AI 자연어 빠른 입력
+  '<div class="form-section" style="padding:12px 14px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);margin-bottom:12px">'+
+  '<div style="font-size:13px;font-weight:900;color:var(--gn);margin-bottom:8px">AI 빠른 입력</div>'+
+  '<div style="display:flex;gap:8px;align-items:center">'+
+  '<input class="inp" id="pw-nl-input" placeholder="예: 쿠팡 금정 120건 오늘저녁 18만" style="flex:1;margin-bottom:0;border-color:rgba(16,185,129,.35)">'+
+  '<button type="button" onclick="_pwNlParse()" style="flex-shrink:0;padding:0 14px;height:44px;background:var(--gn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:900;cursor:pointer">AI 파싱</button>'+
+  '</div>'+
+  '<div id="pw-nl-status" style="font-size:11.5px;color:var(--t3);margin-top:6px">자연어로 입력하면 AI가 자동으로 아래 필드를 채워줘요</div>'+
+  '</div>'+
 
   // 템플릿 선택 (모형에서 가장 위)
   '<div class="form-section" style="padding:14px;background:linear-gradient(135deg,rgba(59,126,248,.12),rgba(59,126,248,.06));border:1px solid var(--acln);border-radius:var(--r-lg);margin-bottom:12px">'+
@@ -4314,6 +4447,7 @@ function _pgPostWrite(el){
     '<label class="inp-lbl" style="margin-bottom:0">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
     '<div style="display:flex;gap:6px;align-items:center">'+
       '<button type="button" id="settle-badge" onclick="_toggleSettleBadge()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid var(--acln);background:var(--acl);color:var(--ac);font-size:11px;font-weight:900;cursor:pointer" title="클릭하면 당일즉시정산 활성화">당일즉시정산</button>'+
+      '<button type="button" onclick="_pwAiPrice()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--br);font-size:11px;font-weight:900;cursor:pointer">AI 단가 추천</button>'+
       '<input type="hidden" id="pw-instant-settle" value="0">'+
     '</div>'+
   '</div>'+
@@ -4597,7 +4731,6 @@ function _submitPost(){
   var postType=get('pw-type'), workShift=get('pw-shift'), vatIncluded=get('pw-vat');
   var vehicle=get('pw-vehicle'), plate=get('pw-plate'), settle=get('pw-settle');
   var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
-  var contractType=get('pw-contract'), contractDuration=get('pw-duration');
   var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
   var aptRatio=get('pw-apt'), loadingAddr=get('pw-loadingAddr');
   var loadingLat=parseFloat(get('pw-loadingLat'))||null;
@@ -4659,12 +4792,10 @@ function _submitPost(){
       btn.textContent='등록 중...';
       return _db.collection('yongcha_posts').add({
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
-        agencyReviewCount:_CU.reviewCount||0, agencyFakeCount:_CU.fakeCount||0,
         region:_CU.region, courier:courier, area:area, routeNo:routeNo,
         loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
         zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
         postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
-        contractType:contractType||null, contractDuration:contractDuration||null,
         workHours:hours, startDate:date, endDate:endDate,
         vehicleType:vehicle, plateType:plate,
         priceType:priceType||'건당', unitPrice:parseInt(price),
@@ -4678,14 +4809,17 @@ function _submitPost(){
       }).then(function(){
         _yToast('공고가 등록됐어요!');
         if(_isUrgent){
-          _db.collection('yongcha_fcm_tokens').where('type','==','driver').where('region','==',_CU.region).get()
-            .then(function(snap){
-              snap.forEach(function(doc){
-                var t=doc.data().token;
-                if(t) _yAuthFetch('/api/ctrl-notify',{method:'POST',headers:{'Content-Type':'application/json'},
-                  body:JSON.stringify({token:t,title:'긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
+          _yGetToken().then(function(tok){
+            return _db.collection('yongcha_fcm_tokens').where('type','==','driver').where('region','==',_CU.region).get()
+              .then(function(snap){
+                snap.forEach(function(doc){
+                  var t=doc.data().token;
+                  if(t) fetch('/api/ctrl-notify',{method:'POST',
+                    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+                    body:JSON.stringify({token:t,title:'긴급공고',body:_CU.region+' 새 긴급 노선공고가 등록됐어요!'})}).catch(function(){});
+                });
               });
-            }).catch(function(){});
+          }).catch(function(){});
         }
         _isUrgent=false; _selectedDays=[]; _selectedExtras=[]; window._zones=[];
         // 지역 시세 통계 업데이트
@@ -4805,6 +4939,9 @@ function _pgMyApplies(el){
       });
       list.appendChild(apDiv);
     }
+  }).catch(function(e){
+    var list=document.getElementById('applies-list');
+    if(list)list.innerHTML=_errHtml(e);
   });
 }
 
@@ -5059,18 +5196,18 @@ function _yOpenCalc(prefill){
 
   var body=document.getElementById('modal-body');
   body.innerHTML=
-    '<div style="font-size:21px;font-weight:900;letter-spacing:-.6px;margin-bottom:4px">실수령액 계산기</div>'+
-    '<div style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6">개인사업자 용차기사 기준 — 4대보험·세금 포함<br>실제 손에 쥐는 금액을 계산해요.</div>'+
+    '<div style="font-size:21px;font-weight:900;letter-spacing:-.6px;margin-bottom:4px"> 실수령액 계산기</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6">단가와 물량만 넣으면 유류비·보험·할부까지 뺀<br>실제로 손에 쥐는 금액을 계산해요.</div>'+
 
     '<div class="form-section" style="margin-bottom:18px">'+
-    '<div class="form-section-title">월 수입</div>'+
+    '<div class="form-section-title">수입</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">건당 단가(원)</label>'+
       '<input class="inp" id="cal-price" type="number" inputmode="numeric" value="'+_esc(v('price',900))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">일 물량(건)</label>'+
       '<input class="inp" id="cal-vol" type="number" inputmode="numeric" value="'+_esc(v('vol',150))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
-    '<div class="inp-wrap" style="margin-top:10px;margin-bottom:0"><label class="inp-lbl">월 근무일수</label>'+
+    '<div class="inp-wrap" style="margin-top:12px;margin-bottom:0"><label class="inp-lbl">월 근무일수</label>'+
     '<input class="inp" id="cal-days" type="number" inputmode="numeric" value="'+_esc(v('days',26))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
 
@@ -5081,24 +5218,12 @@ function _yOpenCalc(prefill){
       '<input class="inp" id="cal-fuel" type="number" inputmode="numeric" value="'+_esc(v('fuel',700000))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">차량 할부/리스</label>'+
       '<input class="inp" id="cal-lease" type="number" inputmode="numeric" value="'+_esc(v('lease',600000))+'" oninput="_yCalcRun()"></div>'+
-      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">차량보험료</label>'+
+      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">보험료</label>'+
       '<input class="inp" id="cal-ins" type="number" inputmode="numeric" value="'+_esc(v('ins',180000))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">기타(통신·정비)</label>'+
       '<input class="inp" id="cal-etc" type="number" inputmode="numeric" value="'+_esc(v('etc',150000))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
-    '</div>'+
-
-    '<div class="form-section" style="margin-bottom:18px">'+
-    '<div class="form-section-title">4대보험 · 세금 <span style="font-size:11px;color:var(--t3);font-weight:500">(개인사업자 지역가입자)</span></div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-      '<div class="inp-wrap" style="margin-bottom:0">'+
-        '<label class="inp-lbl">국민연금 <span style="font-size:10px;color:var(--t3)">소득의 9%</span></label>'+
-        '<input class="inp" id="cal-pension" type="number" inputmode="numeric" value="'+_esc(v('pension',270000))+'" oninput="_yCalcRun()"></div>'+
-      '<div class="inp-wrap" style="margin-bottom:0">'+
-        '<label class="inp-lbl">건강보험 <span style="font-size:10px;color:var(--t3)">소득+장기요양</span></label>'+
-        '<input class="inp" id="cal-health" type="number" inputmode="numeric" value="'+_esc(v('health',230000))+'" oninput="_yCalcRun()"></div>'+
-    '</div>'+
-    '<div class="toggle-row" style="margin-top:10px">'+
+    '<div class="toggle-row" style="margin-top:6px">'+
       '<div><div class="toggle-lbl">사업소득세 3.3% 원천징수</div>'+
       '<div class="toggle-desc">개인사업자·프리랜서 기사 해당 (세금계산서 발행 시 제외)</div></div>'+
       '<button type="button" class="toggle'+(v('tax',true)?' on':'')+'" id="cal-tax" onclick="this.classList.toggle(\\'on\\');_yCalcRun()"></button>'+
@@ -5106,10 +5231,8 @@ function _yOpenCalc(prefill){
     '</div>'+
 
     '<div class="card" id="cal-out" style="margin-bottom:14px"></div>'+
-    '<div style="font-size:11.5px;color:var(--t3);line-height:1.7;margin-bottom:8px">'+
-      '※ 국민연금 기준소득 하한 37만원(최소 33,300원) · 상한 590만원(최대 531,000원)<br>'+
-      '※ 건강보험 지역가입자는 소득·재산·자동차 합산 부과로 실제 금액 상이할 수 있음<br>'+
-      '※ 원천징수 3.3%는 선납세금 — 5월 종합소득세 신고 시 환급 또는 추납 정산</div>';
+    '<div style="font-size:11.5px;color:var(--t3);line-height:1.6;margin-bottom:8px">'+
+      '※ 참고용 추정치입니다. 실제 정산은 계약 조건에 따라 달라질 수 있어요.</div>';
   _openModal();
   _yCalcRun();
 }
@@ -5118,51 +5241,38 @@ function _yCalcRun(){
   var g=function(id){return parseInt((document.getElementById(id)||{}).value)||0;};
   var price=g('cal-price'), vol=g('cal-vol'), days=g('cal-days');
   var fuel=g('cal-fuel'), lease=g('cal-lease'), ins=g('cal-ins'), etc=g('cal-etc');
-  var pension=g('cal-pension'), health=g('cal-health');
   var taxEl=document.getElementById('cal-tax');
   var useTax=taxEl&&taxEl.classList.contains('on');
 
   var gross=price*vol*days;
   var tax=useTax?Math.round(gross*0.033):0;
-  var fixedCost=fuel+lease+ins+etc;
-  var socialInsurance=pension+health;
-  var net=gross-tax-fixedCost-socialInsurance;
+  var cost=fuel+lease+ins+etc;
+  var net=gross-tax-cost;
   var perDay=days>0?Math.round(net/days):0;
-  var perHour=days>0?Math.round(net/days/10):0;
-
-  var effectiveRate=gross>0?Math.round((gross-net)/gross*100):0;
+  var perHour=days>0?Math.round(net/days/10):0; // 1일 10시간 가정
 
   try{
     localStorage.setItem(_CALC_KEY,JSON.stringify({price:price,vol:vol,days:days,
-      fuel:fuel,lease:lease,ins:ins,etc:etc,pension:pension,health:health,tax:useTax}));
+      fuel:fuel,lease:lease,ins:ins,etc:etc,tax:useTax}));
   }catch(e){}
 
   var out=document.getElementById('cal-out');
   if(!out)return;
   out.innerHTML=
     '<div class="calc-row"><span>월 총 매출</span><b>'+_won(gross)+'원</b></div>'+
-    (useTax?'<div class="calc-row"><span>사업소득세 원천징수 3.3%</span><b style="color:var(--rd)">−'+_won(tax)+'원</b></div>':'')+
-    '<div class="calc-row" style="border-top:1px dashed var(--bd);padding-top:10px;margin-top:2px">'+
-      '<span style="color:var(--t2);font-size:12px">고정 지출</span><b style="color:var(--t2);font-size:12px">−'+_won(fixedCost)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">유류비</span><b style="color:var(--rd);font-size:12.5px">−'+_won(fuel)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">차량 할부/리스</span><b style="color:var(--rd);font-size:12.5px">−'+_won(lease)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">차량보험료</span><b style="color:var(--rd);font-size:12.5px">−'+_won(ins)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">기타(통신·정비)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(etc)+'원</b></div>'+
-    '<div class="calc-row" style="border-top:1px dashed var(--bd);padding-top:10px;margin-top:2px">'+
-      '<span style="color:var(--t2);font-size:12px">4대보험 (개인사업자)</span><b style="color:var(--t2);font-size:12px">−'+_won(socialInsurance)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">국민연금 (지역가입자 9%)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(pension)+'원</b></div>'+
-    '<div class="calc-row" style="padding-left:10px"><span style="font-size:12.5px">건강보험 (지역가입자)</span><b style="color:var(--rd);font-size:12.5px">−'+_won(health)+'원</b></div>'+
+    (useTax?'<div class="calc-row"><span>원천징수 3.3%</span><b style="color:var(--rd)">−'+_won(tax)+'원</b></div>':'')+
+    '<div class="calc-row"><span>유류비</span><b style="color:var(--rd)">−'+_won(fuel)+'원</b></div>'+
+    '<div class="calc-row"><span>차량 할부/리스</span><b style="color:var(--rd)">−'+_won(lease)+'원</b></div>'+
+    '<div class="calc-row"><span>보험료</span><b style="color:var(--rd)">−'+_won(ins)+'원</b></div>'+
+    '<div class="calc-row"><span>기타</span><b style="color:var(--rd)">−'+_won(etc)+'원</b></div>'+
     '<div class="calc-total"><span>월 실수령액</span><b>'+_won(net)+'원</b></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">'+
-      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
-      '<div style="font-size:15px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perDay)+'원</div>'+
-      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">일 실수령</div></div>'+
-      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
-      '<div style="font-size:15px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perHour)+'원</div>'+
-      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">시급(10h)</div></div>'+
-      '<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">'+
-      '<div style="font-size:15px;font-weight:900;color:var(--rd);font-variant-numeric:tabular-nums">'+effectiveRate+'%</div>'+
-      '<div style="font-size:10px;color:var(--t2);font-weight:700;margin-top:3px">공제율</div></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">'+
+      '<div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center">'+
+      '<div style="font-size:17px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perDay)+'원</div>'+
+      '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-top:3px">일 실수령</div></div>'+
+      '<div style="background:var(--bg3);border-radius:var(--r);padding:12px;text-align:center">'+
+      '<div style="font-size:17px;font-weight:900;font-variant-numeric:tabular-nums">'+_won(perHour)+'원</div>'+
+      '<div style="font-size:11px;color:var(--t2);font-weight:700;margin-top:3px">시급 환산(10h)</div></div>'+
     '</div>'+
     (net<=0?'<div style="margin-top:12px;padding:12px;border-radius:var(--r);background:var(--rdl);border:1px solid var(--rdln);color:var(--rd);font-size:12.5px;font-weight:800">고정 지출이 매출을 넘습니다. 조건을 다시 확인하세요.</div>':'');
 }
@@ -5252,6 +5362,10 @@ function _pgProfile(el){
         '<select id="pref-time" class="inp">'+
           ['','오전','오후','야간'].map(function(v){return '<option value="'+v+'"'+(p.timeSlot===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
         '</select></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
+        '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
+      '<div class="inp-wrap"><label class="inp-lbl">정기검사 만료일</label>'+
+        '<input id="pref-inspectDue" type="date" class="inp" value="'+(_CU.inspectDue?_CU.inspectDue.replace(/(\\d{4})(\\d{2})(\\d{2})/,'$1-$2-$3'):'')+'"></div>'+
       '<button onclick="_ySavePrefs()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">맞춤 조건 저장</button>'+
     '</div>';
   })():'')+
@@ -5409,7 +5523,7 @@ function _adrvLoad(s){
           '<button type="button" class="judge-btn judge-reject" onclick="_judgeApply(\\''+a.id+'\\',\\'rejected\\',\\''+_jsq(a.driverName)+'\\',\\''+a.driverId+'\\')">거절</button>'+
           '</div>':'')+
         (s==='active'?
-          '<button type="button" onclick="_openChatWith(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\')" '+
+          '<button type="button" onclick="_openChatRoom(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\')" '+
           'style="width:100%;min-height:40px;background:var(--acl);color:var(--ac);border:1px solid var(--acln);'+
           'border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">채팅</button>':'');
       el.appendChild(card);
@@ -5439,7 +5553,7 @@ function _admLoadMembers(){
   '</div>'+
   '<div id="members-list">'+_skRows(3)+'</div>';
 
-  _db.collection('yongcha_users').orderBy('createdAt','desc').limit(200).get().then(function(snap){
+  _db.collection('yongcha_users').get().then(function(snap){
     var agencies=0,drivers=0,suspended=0;
     snap.forEach(function(doc){
       var t=doc.data().type,d=doc.data();
@@ -5571,19 +5685,12 @@ function _admLoadCleanup(){
 }
 
 function _yCountTestAccounts(){
-  _db.collection('yongcha_users').where('email','>=','@ytest.io').get().then(function(snap){
+  _db.collection('yongcha_users').limit(500).get().then(function(snap){
     var count=0;
     snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))count++;});
     var el=document.getElementById('cleanup-test-info');
     if(el)el.textContent='발견된 테스트 계정: '+count+'개';
-  }).catch(function(){
-    _db.collection('yongcha_users').get().then(function(snap){
-      var count=0;
-      snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))count++;});
-      var el=document.getElementById('cleanup-test-info');
-      if(el)el.textContent='발견된 테스트 계정: '+count+'개';
-    });
-  });
+  }).catch(function(){});
 }
 
 function _yCleanTestAccounts(){
@@ -5742,7 +5849,7 @@ function _loadMyJobs(el){
 
   var q=_CU.type==='admin'
     ? _db.collection('yongcha_jobs').orderBy('createdAt','desc').limit(50)
-    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).orderBy('createdAt','desc').limit(50);
+    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid);
 
   q.get().then(function(snap){
     var list=document.getElementById('myjobs-list');if(!list)return;
@@ -5779,7 +5886,7 @@ function _loadMyJobs(el){
 
 function _loadResumes(el){
   el.innerHTML='<div id="resume-list">'+_skRows(3)+'</div>';
-  _db.collection('yongcha_resumes').where('isPublic','==',true).orderBy('updatedAt','desc').limit(50).get()
+  _db.collection('yongcha_resumes').where('isPublic','==',true).limit(80).get()
   .then(function(snap){
     var list=document.getElementById('resume-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📄</div><div class="empty-msg">공개된 이력서가 없어요</div></div>';return;}
@@ -5961,12 +6068,12 @@ function _loadDriverOfferList(){
         (d.memo?'<div style="font-size:13px;color:var(--t2);background:var(--bg3);border-radius:10px;padding:8px 12px;margin-bottom:12px;line-height:1.55">'+_esc(d.memo)+'</div>':'')+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
           (!isMe&&_CU&&_CU.type!=='driver'?
-            '<button type="button" onclick="event.stopPropagation();_openChatWith(\\''+d.driverId+'\\',\\''+_jsq(d.driverName||'기사')+'\\')" '+
+            '<button type="button" onclick="event.stopPropagation();_openChatRoom(\\''+d.driverId+'\\',\\''+_jsq(d.driverName||'기사')+'\\',\\'driver\\')" '+
             'style="min-height:44px;background:var(--acl);color:var(--ac);border:1.5px solid var(--acln);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">채팅 연락</button>':
             '<div></div>')+
           (isMe?
             '<button type="button" onclick="event.stopPropagation();_deleteDriverOffer(\\''+d.id+'\\')" '+
-            'style="min-height:44px;background:var(--rdl)||#fee2e2;color:var(--rd);border:1px solid #fca5a5;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">공고 내리기</button>':'<div></div>')+
+            'style="min-height:44px;background:var(--rdl,#fee2e2);color:var(--rd);border:1px solid #fca5a5;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">공고 내리기</button>':'<div></div>')+
         '</div>';
       el.appendChild(card);
     });
@@ -6047,16 +6154,11 @@ function _pgDriverOffer(el){
 
 function _loadMyDriverOffers(){
   var el=document.getElementById('my-offer-list');if(!el)return;
-  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).limit(20).get()
+  _db.collection('yongcha_driver_posts').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(10).get()
   .then(function(snap){
     if(snap.empty){el.innerHTML='<div style="padding:12px 0;font-size:13px;color:var(--t3);text-align:center">아직 등록한 공고가 없어요</div>';return;}
     el.innerHTML='';
-    var sortedDocs=snap.docs.slice().sort(function(a,b){
-      var ta=(a.data().createdAt||{seconds:0}).seconds||0;
-      var tb=(b.data().createdAt||{seconds:0}).seconds||0;
-      return tb-ta;
-    }).slice(0,10);
-    sortedDocs.forEach(function(doc){
+    snap.docs.forEach(function(doc){
       var d=Object.assign({id:doc.id},doc.data());
       var isActive=d.status==='active';
       var row=document.createElement('div');row.className='card';row.style.cssText='margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;';
@@ -6145,7 +6247,7 @@ function _jSwitchDriver(tab){
 
 function _loadJobList(el){
   el.innerHTML='<div id="job-list">'+_skRows(3)+'</div>';
-  _db.collection('yongcha_jobs').where('status','==','open').orderBy('createdAt','desc').limit(120).get()
+  _db.collection('yongcha_jobs').where('status','==','open').limit(120).get()
   .then(function(snap){
     var list=document.getElementById('job-list');if(!list)return;
     if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 채용공고가 없어요</div></div>';return;}
@@ -6493,7 +6595,7 @@ function _pgChats(el){
 
   if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   _chatListUnsub=_db.collection('yongcha_chats').where('participants','array-contains',_CU.uid)
-    .orderBy('lastAt','desc').limit(50)
+    .limit(50)
     .onSnapshot(function(snap){
       var list=document.getElementById('chat-list');if(!list)return;
       if(snap.empty){
@@ -6543,7 +6645,6 @@ function _pgChats(el){
 }
 
 function _openChatRoom(otherUid,otherName,otherType){
-  if(!otherUid){_yToast('채팅 상대를 찾을 수 없어요');return;}
   _closeModal();
   var ids=[_CU.uid,otherUid].sort();
   var chatId=ids[0]+'__'+ids[1];
@@ -6923,16 +7024,19 @@ function _yNotify(recipientId,title,body,type){
     read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(){});
   // FCM push
-  _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
-    .then(function(snap){
-      if(!snap.exists)return;
-      var token=snap.data().token;
-      if(!token)return;
-      return _yAuthFetch('/api/ctrl-notify',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({token:token,title:title,body:body||''})
+  _yGetToken().then(function(tok){
+    return _db.collection('yongcha_fcm_tokens').doc(recipientId).get()
+      .then(function(snap){
+        if(!snap.exists)return;
+        var token=snap.data().token;
+        if(!token)return;
+        return fetch('/api/ctrl-notify',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+          body:JSON.stringify({token:token,title:title,body:body||''})
+        });
       });
-    }).catch(function(){});
+  }).catch(function(){});
 }
 
 function _yStartNotifListener(){
@@ -6978,8 +7082,6 @@ function _yLogout(){
 }
 function _doLogout(){
   _closeModal();
-  if(_chatBadgeUnsub){_chatBadgeUnsub();_chatBadgeUnsub=null;}
-  if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   _auth.signOut().then(function(){_CU=null;_prefs=null;_showLogin();});
 }
 
@@ -6994,13 +7096,20 @@ function _ySavePrefs(){
   // carType/region 은 문서 루트에도 미러링한다 — AI 배차 추천이 preferences 를
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
   var fuelType=(document.getElementById('pref-fuelType')||{}).value||'휘발유';
+  var carNum=((document.getElementById('pref-carNum')||{}).value||'').trim();
+  var inspectDueRaw=((document.getElementById('pref-inspectDue')||{}).value||'').trim();
+  var inspectDue=inspectDueRaw.replace(/-/g,'');
   var patch={preferences:prefs};
   if(prefs.carType)patch.carType=_yCarNorm(prefs.carType);
   patch.carFuelType=fuelType;
+  if(carNum)patch.carNumber=carNum;
+  if(inspectDue)patch.inspectDue=inspectDue;
   _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
     _CU.preferences=prefs;
     if(patch.carType)_CU.carType=patch.carType;
     _CU.carFuelType=fuelType;
+    if(carNum)_CU.carNumber=carNum;
+    if(inspectDue){_CU.inspectDue=inspectDue;try{localStorage.removeItem('yc_inspect_'+carNum);}catch(e){}}
     _prefs=prefs;
     _yToast('맞춤 조건이 저장되었습니다!');
     _renderPostList();
@@ -7084,7 +7193,6 @@ function _yRenderFatigue(el){
 function _pgDashboard(el){
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
   if(_CU.type==='agency') return _pgDashboardAgency(el);
-  if(_CU.type==='admin') return _pgMembers(el);
   el.innerHTML=
     '<div class="page-hdr"><h1 class="page-title">월 대시보드</h1>'+
     '<p class="page-sub">최근 6개월 운행 실적을 한눈에</p></div>'+
@@ -7174,6 +7282,60 @@ function _pgDashboard(el){
     var body=document.getElementById('dash-body');
     if(body)body.innerHTML=_errHtml(e);
   });
+
+  // 세금계산서 역발행 대기 배너 (기사 전용)
+  _db.collection('yongcha_settlements').where('driverId','==',_CU.uid)
+    .where('taxInvoiceState','==','명세서발송').limit(5).get()
+  .then(function(snap){
+    if(snap.empty)return;
+    var items=[];
+    snap.forEach(function(doc){
+      var s=doc.data();
+      items.push('<button type="button" onclick="_pgTaxApprove(document.getElementById(\\'content\\'),\\''+doc.id+'\\')" '+
+        'style="width:100%;min-height:var(--tap);margin-bottom:8px;background:rgba(79,120,245,.08);border:1.5px solid rgba(79,120,245,.3);border-radius:var(--r);'+
+        'color:var(--ac);font-size:13.5px;font-weight:800;cursor:pointer;text-align:left;padding:10px 14px">'+
+        _esc(s.agencyName||'소장')+'에서 정산명세서 도착 — '+_won(Number(s.totalAmount||0))+'원 &rarr; 세금계산서 승인</button>');
+    });
+    var banner=document.createElement('div');
+    banner.style.cssText='padding:0 0 4px';
+    banner.innerHTML=items.join('');
+    var db=document.getElementById('dash-body');
+    if(db)db.insertAdjacentElement('beforebegin',banner);
+  }).catch(function(){});
+
+  // 정산 내역 카드 (API)
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/my-settlements',{headers:{'Authorization':'Bearer '+tok}});
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.ok||!d.items||!d.items.length)return;
+    var items=d.items.slice(0,10);
+    var rows=items.map(function(s){
+      var statusLabel=s.status==='paid'?'<span style="color:var(--gn);font-weight:800">입금완료</span>':
+        s.isOverdue?'<span style="color:#ef4444;font-weight:800">연체</span>':
+        '<span style="color:var(--t2)">정산대기</span>';
+      var sub=s.courier&&s.area?_esc(s.courier)+' '+_esc(s.area):(s.agencyName?_esc(s.agencyName):'');
+      var penalty=s.penaltyAmt>0?'<div style="font-size:11px;color:#ef4444;margin-top:2px">연체료 '+_won(s.penaltyAmt)+'원</div>':'';
+      var paidInfo=s.paidAt?'<div style="font-size:11px;color:var(--t3)">'+s.paidAt.slice(0,10)+' 입금</div>':'';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--bd)">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div>'+
+          '<div style="font-size:11.5px;color:var(--t3);margin-top:2px">'+(s.dueDate?s.dueDate.slice(0,10)+' 지급예정':'')+
+            (s.deliveryDate?' · '+s.deliveryDate.slice(0,7)+'월':'')+
+          '</div>'+penalty+paidInfo+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:15px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums">'+_won(s.netAmount)+'원</div>'+
+          statusLabel+
+        '</div>'+
+      '</div>';
+    }).join('');
+    var card=document.createElement('div');
+    card.className='card';
+    card.style.marginTop='6px';
+    card.innerHTML='<div style="font-size:15px;font-weight:900;margin-bottom:14px">정산 내역</div>'+rows;
+    var cnt=document.getElementById('content');
+    if(cnt)cnt.appendChild(card);
+  }).catch(function(){});
 }
 
 // ── 소장 정산 관리 대시보드 ────────────────────────────────────
@@ -7257,7 +7419,59 @@ function _pgDashboardAgency(el){
           '<div style="font-size:12px;color:var(--t2)">'+_won(totalCnt)+'건</div>'+
           '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(Math.round(totalNet/10000))+'만</div>'+
         '</div>'+
+      '</div>'+
+      // 세금계산서 역발행 섹션
+      '<div class="card" style="margin-top:10px">'+
+        '<div style="font-size:15px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
+          '<span>세금계산서 역발행</span>'+
+          '<span style="font-size:11px;color:var(--t3);font-weight:500">명세서 발송 → 기사 승인 → 홈택스 자동등록</span>'+
+        '</div>'+
+        '<div id="tax-inv-list">'+_skRows(3)+'</div>'+
       '</div>';
+
+    // 세금계산서 목록 로드
+    _db.collection('yongcha_settlements').where('agencyId','==',_CU.uid)
+      .orderBy('createdAt','desc').limit(30).get()
+    .then(function(snap){
+      var el=document.getElementById('tax-inv-list');if(!el)return;
+      if(snap.empty){el.innerHTML='<p style="color:var(--t3);font-size:13px;text-align:center;padding:16px 0">정산 내역이 없어요</p>';return;}
+      var html='';
+      snap.forEach(function(doc){
+        var s=doc.data(),id=doc.id;
+        var state=s.taxInvoiceState||'';
+        var badge='';
+        if(state==='역발행승인')badge='<span style="background:rgba(16,185,129,.12);color:var(--gn);border:1px solid rgba(16,185,129,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">홈택스 등록완료</span>';
+        else if(state==='명세서발송')badge='<span style="background:rgba(79,120,245,.12);color:var(--ac);border:1px solid rgba(79,120,245,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">명세서 발송됨</span>';
+        else if(state==='역발행요청')badge='<span style="background:rgba(245,158,11,.12);color:var(--br);border:1px solid rgba(245,158,11,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 승인 대기</span>';
+        else if(state==='역발행거부')badge='<span style="background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">기사 거부</span>';
+        else badge='<span style="background:var(--bg3);color:var(--t3);border:1px solid var(--bd);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700">미발송</span>';
+        var canSend=(state===''||state==='미발송'||state==='역발행거부');
+        var isPaid=(s.settlePaid===true||state==='입금완료');
+        var dPhone=_esc(s.driverPhone||s.notifyPhone||'');
+        var dName=_jsq(s.driverName||'기사');
+        var aName=_jsq(s.agencyName||_CU.name||'');
+        var dId=_esc(s.driverId||'');
+        var amt=Number(s.totalAmount||0);
+        var cnt=Number(s.totalCount||0);
+        var wk=(s.weekStart||'').slice(0,10);
+        var btnSend=canSend?
+          '<button type="button" onclick="_ySendSettleNotify(\\''+id+'\\',\\''+dPhone+'\\',\\''+dName+'\\',\\''+aName+'\\',\\''+dId+'\\','+amt+','+cnt+',\\''+_esc(wk)+'\\')" '+
+          'style="min-height:40px;padding:0 12px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">명세서 발송</button>':'';
+        var btnPaid=(!isPaid&&state==='역발행승인')?
+          '<button type="button" onclick="_yMarkSettlePaid(\\''+id+'\\',\\''+dId+'\\','+amt+')" '+
+          'style="min-height:40px;padding:0 12px;background:var(--gn);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">입금 완료</button>':'';
+        var btn=btnPaid||btnSend;
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13.5px;font-weight:800">'+_esc(s.driverName||'기사')+'</div>'+
+            '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+_esc(wk)+' · '+_won(cnt)+'건 · '+_won(amt)+'원</div>'+
+          '</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+badge+btn+'</div>'+
+        '</div>';
+      });
+      el.innerHTML=html||'<p style="color:var(--t3);font-size:13px;text-align:center;padding:16px 0">정산 내역이 없어요</p>';
+    }).catch(function(){});
+
   }).catch(function(e){
     var body=document.getElementById('adash-body');
     if(body)body.innerHTML=_errHtml(e);
@@ -7671,7 +7885,7 @@ function _riqHeatmap(el){
     snap.forEach(function(d){
       var p=d.data();
       var r=p.region||'기타';
-      var price=Number(p.price||0);
+      var price=Number(p.unitPrice||p.price||0);
       var c=p.courier||p.courierBrand||'기타';
       courierMap[c]=(courierMap[c]||0)+1;
       if(!price)return;
@@ -7787,20 +8001,15 @@ function _riqRecord(el){
   el.innerHTML=html;
 
   var q=isDriver
-    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).limit(30)
-    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).limit(50);
+    ? _db.collection('yongcha_records').where('driverId','==',_CU.uid).orderBy('createdAt','desc').limit(30)
+    : _db.collection('yongcha_records').where('agencyName','==',_CU.name).orderBy('createdAt','desc').limit(50);
   q.get().then(function(snap){
     var list=document.getElementById('riq-record-list');if(!list)return;
     if(snap.empty){list.innerHTML=_emptyHtml('📋','실적 없음',isDriver?'첫 실적을 등록해보세요':'기사가 실적을 등록하면 여기에 나타나요');return;}
-    var sortedDocs=snap.docs.slice().sort(function(a,b){
-      var ta=(a.data().createdAt||{seconds:0}).seconds||0;
-      var tb=(b.data().createdAt||{seconds:0}).seconds||0;
-      return tb-ta;
-    });
     var totalCnt=0,totalEarning=0;
     var isAgency=_CU.type==='agency';
     var rows='';
-    sortedDocs.forEach(function(d){
+    snap.forEach(function(d){
       var r=d.data();
       var earning=(r.price||0)*(r.count||0);
       totalCnt+=r.count||0;totalEarning+=earning;
@@ -7839,6 +8048,9 @@ function _riqRecord(el){
   });
 }
 
+// isAgency 선언이 forEach 뒤에 있어 undefined로 평가되던 버그를 위해 아래 중복 선언 제거 (위에서 이미 선언함)
+// var isAgency=_CU.type==='agency'; — removed
+
 function _riqSaveRecord(){
   var agencyEl=document.getElementById('riq-agency');
   var dateEl=document.getElementById('riq-date');
@@ -7874,6 +8086,141 @@ function _riqSaveRecord(){
   });
 }
 
+// ── _yOpenPost: RouteIQ 카드에서 공고 상세 열기 ──────────────────
+function _yOpenPost(postId){
+  var cached=(_allPosts||[]).filter(function(p){return p.id===postId;})[0];
+  if(cached){_showPostDetail(cached);return;}
+  _db.collection('yongcha_posts').doc(postId).get().then(function(s){
+    if(s.exists)_showPostDetail(Object.assign({id:s.id},s.data()));
+    else _yToast('공고를 찾을 수 없어요');
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+// ── _yGetToken: 공통 인증 토큰 헬퍼 (null guard 포함) ─────────────
+function _yGetToken(){
+  var u=_auth.currentUser;
+  if(!u){_yToast('로그인이 필요해요');return Promise.reject(new Error('not logged in'));}
+  return u.getIdToken();
+}
+
+// ── AI 코치 (기사용) ──────────────────────────────────────────────
+function _yAiCoach(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:6px">AI 수익 코치</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:16px">내 실적과 공고를 분석하는 중...</div>'+_skRows(3);
+  _openModal();
+  _db.collection('yongcha_posts').where('status','in',['open','urgent'])
+    .orderBy('createdAt','desc').limit(20).get()
+  .then(function(snap){
+    var posts=[];
+    snap.forEach(function(d){posts.push(Object.assign({id:d.id},d.data()));});
+    return _yGetToken().then(function(tok){
+      return fetch('/api/ai-coach',{
+        method:'POST',
+        headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+        body:JSON.stringify({driver:{
+          uid:_CU.uid,name:_CU.name,region:_CU.region||'',
+          carType:_CU.carType||'',rating:_CU.rating||0,
+          completedRoutes:_CU.completedRoutes||0,
+          acceptRate:_CU.acceptRate||null,trustGrade:_CU.trustGrade||'C'
+        },posts:posts})
+      });
+    });
+  }).then(function(r){return r.json();}).then(function(res){
+    var b=document.getElementById('modal-body');if(!b)return;
+    var d=res.data||{};
+    b.innerHTML=
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">AI 수익 코치</div>'+
+      (d.summary?'<div style="padding:12px;background:rgba(79,120,245,.1);border:1px solid var(--acln);border-radius:var(--r);margin-bottom:14px;font-size:13px;color:var(--ac);font-weight:700;line-height:1.55">'+_esc(d.summary)+'</div>':'')+
+      (d.monthlyEst?'<div style="text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r-lg);margin-bottom:14px">'+
+        '<div style="font-size:11px;color:var(--t3);font-weight:700;margin-bottom:4px">이달 예상 수입</div>'+
+        '<div style="font-size:30px;font-weight:900;color:var(--br)">'+_esc(d.monthlyEst)+'</div>'+
+      '</div>':'')+
+      (d.reason?'<div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:12px">'+_esc(d.reason)+'</div>':'')+
+      (d.applyMsg?'<div style="padding:10px 13px;background:var(--gnl);border-radius:var(--r);font-size:12.5px;color:var(--gn);font-weight:700">'+_esc(d.applyMsg)+'</div>':'')+
+      '<button type="button" onclick="_closeModal();_goPage(\\'posts\\')" style="margin-top:16px;width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--r-lg);font-size:14px;font-weight:900;cursor:pointer">공고 보러가기</button>';
+  }).catch(function(e){
+    var b=document.getElementById('modal-body');
+    if(b)b.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:12px">AI 수익 코치</div>'+_errHtml(e);
+  });
+}
+
+// ── NL 공고 파싱 (소장용) ─────────────────────────────────────────
+function _pwNlParse(){
+  var nlEl=document.getElementById('pw-nl-input');
+  var st=document.getElementById('pw-nl-status');
+  var text=(nlEl&&nlEl.value||'').trim();
+  if(!text){_yToast('입력 내용이 없어요');return;}
+  if(st)st.textContent='AI 분석 중...';
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/quick-post',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({text:text})
+    });
+  }).then(function(r){return r.json();}).then(function(res){
+    if(!res.ok||!res.fields){if(st)st.textContent='파싱 실패. 직접 입력해주세요.';return;}
+    var f=res.fields;
+    if(f.courier){var s=document.getElementById('pw-courier');if(s){for(var i=0;i<s.options.length;i++)if(s.options[i].value===f.courier){s.selectedIndex=i;break;}}}
+    if(f.volume){var v=document.getElementById('pw-volume');if(v)v.value=f.volume;}
+    if(f.unitPrice){var p=document.getElementById('pw-price');if(p){p.value=f.unitPrice;_calcEst();_loadRegionStats();}}
+    if(f.urgent&&!_isUrgent){var ub=document.getElementById('toggle-urgent');if(ub)ub.click();}
+    if(f.region){
+      var ri=document.getElementById('pw-region');if(ri)ri.value=f.region;
+      var ai=document.getElementById('pw-area');if(ai&&f.area)ai.value=f.area;
+    }
+    if(f.workShift){
+      document.querySelectorAll('#pw-shift-group button').forEach(function(b){
+        if(b.textContent===f.workShift)b.click();
+      });
+    }
+    if(st)st.innerHTML='<span style="color:var(--gn);font-weight:800">자동 완성됨</span> — 내용을 확인하고 수정하세요';
+  }).catch(function(e){if(st)st.textContent='오류: '+e.message;});
+}
+
+// ── AI 단가 추천 (소장용) ─────────────────────────────────────────
+function _pwAiPrice(){
+  var courier=(document.getElementById('pw-courier')||{}).value||'';
+  var region=(document.getElementById('pw-region')||{}).value||_CU.region||'';
+  var volume=parseInt((document.getElementById('pw-volume')||{}).value||'100')||100;
+  var shift=(document.getElementById('pw-shift')||{}).value||'주간';
+  if(!courier){_yToast('택배사를 먼저 선택해주세요');return;}
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/price-suggest',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({courier:courier,region:region,volume:volume,workShift:shift})
+    });
+  }).then(function(r){return r.json();}).then(function(res){
+    if(!res.ok||!res.data){_yToast('단가 추천 실패');return;}
+    var d=res.data;
+    var body=document.getElementById('modal-body');
+    body.innerHTML=
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">AI 단가 추천</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:16px">'+_esc(courier)+' '+_esc(region)+' · '+volume+'건 기준</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
+        '<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--r)">'+
+          '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">최저</div>'+
+          '<div style="font-size:18px;font-weight:900;color:var(--rd)">'+(d.minPrice||0).toLocaleString()+'</div>'+
+        '</div>'+
+        '<div style="text-align:center;padding:12px;background:rgba(79,120,245,.1);border:1.5px solid var(--acln);border-radius:var(--r)">'+
+          '<div style="font-size:11px;color:var(--ac);margin-bottom:4px;font-weight:800">추천</div>'+
+          '<div style="font-size:22px;font-weight:900;color:var(--ac)">'+(d.recommended||0).toLocaleString()+'</div>'+
+        '</div>'+
+        '<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--r)">'+
+          '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">최고</div>'+
+          '<div style="font-size:18px;font-weight:900;color:var(--gn)">'+(d.maxPrice||0).toLocaleString()+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-bottom:8px">시세 기준: '+_esc(courier)+' '+(d.marketRate||0).toLocaleString()+'원</div>'+
+      (d.analysis?'<div style="font-size:13px;line-height:1.6;color:var(--t2);margin-bottom:10px">'+_esc(d.analysis)+'</div>':'')+
+      (d.tip?'<div style="padding:10px;background:rgba(245,158,11,.1);border-radius:var(--r);font-size:12px;color:var(--br);font-weight:700;margin-bottom:14px">'+_esc(d.tip)+'</div>':'')+
+      '<button type="button" onclick="var p=document.getElementById(\\'pw-price\\');if(p){p.value='+d.recommended+';_calcEst();_loadRegionStats();}_closeModal();_yToast(\\'단가 적용됨\\');" '+
+        'style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--r-lg);font-size:14px;font-weight:900;cursor:pointer">추천 단가 적용</button>';
+    _openModal();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
 // ── 3. AI 매칭 ──────────────────────────────────────────────────
 function _riqMatch(el){
   el.innerHTML='<div class="riq-score-card" style="margin-bottom:14px">'+
@@ -7884,7 +8231,7 @@ function _riqMatch(el){
 
   var recentRegions=[],avgPrice=0,preferredCouriers=[];
   _db.collection('yongcha_records').where('driverId','==',_CU.uid)
-    .limit(20).get()
+    .orderBy('createdAt','desc').limit(20).get()
   .then(function(recSnap){
     var priceSum=0,cnt=0,courierMap={};
     recSnap.forEach(function(d){
@@ -7896,7 +8243,7 @@ function _riqMatch(el){
     avgPrice=cnt>0?Math.round(priceSum/cnt):0;
     preferredCouriers=Object.keys(courierMap).sort(function(a,b){return courierMap[b]-courierMap[a];}).slice(0,3);
     return _db.collection('yongcha_posts').where('status','in',['open','urgent'])
-      .limit(30).get();
+      .orderBy('createdAt','desc').limit(30).get();
   }).then(function(postsSnap){
     var posts=[];
     postsSnap.forEach(function(d){posts.push(Object.assign({id:d.id},d.data()));});
@@ -8036,7 +8383,7 @@ function _yAiRecommend(postId){
 
 function _yAiRenderPicks(data,post,postId){
   var body=document.getElementById('modal-body');if(!body)return;
-  var picks=(data&&data.results)||[];
+  var picks=(data&&data.picks)||[];
   var engine=(data&&data.engine)||'rule';
   var isAI=engine==='ai';
 
@@ -8546,40 +8893,15 @@ function _ySubmitComplete(applyId){
     _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
       if(!s.exists){_yToast('배차 정보 없음');_closeModal();return;}
       var a=s.data();
-      var unitPrice=a.unitPrice||0;
-      var volume=a.volume||0;
-      var gross=unitPrice*volume;
-      var fee=Math.round(gross*0.03);
-      var net=gross-fee;
-      // 익일 18:00 KST = UTC+9 → UTC 09:00
-      var dueDt=new Date();
-      dueDt.setDate(dueDt.getDate()+1);
-      dueDt.setHours(9,0,0,0);
-      var dueIso=dueDt.toISOString();
-      var settleData={
-        applyId:applyId,postId:a.postId||'',
-        agencyId:a.agencyId||'',agencyName:a.agencyName||'',
-        driverId:_CU.uid,driverName:_CU.name,
-        courier:a.courier||'',area:a.area||'',
-        unitPrice:unitPrice,volume:volume,
-        grossAmount:gross,platformFee:fee,netAmount:net,
-        dueDate:dueIso,
-        status:'pending',
-        contractId:a.contractId||'',
-        deliveryDate:new Date().toISOString(),
-        createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      };
       return _db.collection('yongcha_applies').doc(applyId).update({
         step:3,status:'done',completedAt:firebase.firestore.FieldValue.serverTimestamp(),
         photoUrl:photoUrl||''
       }).then(function(){
-        return _db.collection('yongcha_settlements').add(settleData);
-      }).then(function(sRef){
         if(a.agencyId){
           _yNotify(a.agencyId,'정산 요청',
-            _CU.name+'님이 배송을 완료했어요. 익일 18:00까지 '+_won(net)+'원을 정산해주세요.','settle');
+            _CU.name+'님이 배송을 완료했어요. 정산을 확인해주세요. ('+_won(a.unitPrice||0)+'원/건)','settle');
         }
-        _yShowSettlementDone(a,sRef.id,dueIso,net);
+        _yShowSettlementDone(a);
       });
     }).catch(function(e){
       if(btn){btn.textContent='완료 확정 + 정산 요청';btn.disabled=false;}
@@ -8598,14 +8920,14 @@ function _ySubmitComplete(applyId){
 }
 
 // ── 정산 완료 내역 모달 ───────────────────────────────────────
-function _yShowSettlementDone(a,settleId,dueIso,net){
+function _yShowSettlementDone(a){
   var unitPrice=a.unitPrice||0;
   var volume=a.volume||0;
   var gross=unitPrice*volume;
   var fee=Math.round(gross*0.03);
-  if(net===undefined)net=gross-fee;
-  var dueD=dueIso?new Date(dueIso):new Date(Date.now()+33*60*60*1000);
-  var sdStr=dueD.getFullYear()+'년 '+(dueD.getMonth()+1)+'월 '+dueD.getDate()+'일 18:00';
+  var net=gross-fee;
+  var settleDt=new Date();settleDt.setDate(settleDt.getDate()+2);
+  var sdStr=settleDt.getFullYear()+'년 '+(settleDt.getMonth()+1)+'월 '+settleDt.getDate()+'일';
   var body=document.getElementById('modal-body');
   body.innerHTML=
     '<div style="text-align:center;margin-bottom:20px">'+
@@ -8630,87 +8952,13 @@ function _yShowSettlementDone(a,settleId,dueIso,net){
         '<span style="font-size:24px;font-weight:900;color:var(--ac);letter-spacing:-.8px">'+_won(net)+'원</span>'+
       '</div>'+
     '</div>'+
-    '<div style="background:#0a1628;border:1px solid var(--gn);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.8;color:var(--t2)">'+
-      '<div style="font-size:12px;font-weight:800;color:var(--gn);margin-bottom:4px">정산 보장 약정</div>'+
-      '<div>입금 기한: <strong style="color:#fff">'+sdStr+' 까지</strong></div>'+
-      '<div>연체 이율: <strong style="color:#fff">연 15%</strong> (일할 계산)</div>'+
-      '<div style="font-size:11px;color:var(--t3);margin-top:4px">하도급법 제13조 · 화물자동차 운수사업법 제5조 · 민법 제397조</div>'+
+    '<div style="text-align:center;font-size:12.5px;color:var(--t3);margin-bottom:20px">'+
+      '정산 예정일: '+sdStr+
     '</div>'+
     '<button type="button" onclick="_closeModal();_goPage(\\'my_routes\\')" '+
       'style="width:100%;min-height:52px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;'+
-      'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">정산 내역 확인</button>';
+      'border:none;border-radius:var(--r);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">확인</button>';
   _openModal();
-}
-
-// ── 소장: 정산 입금 확인 ─────────────────────────────────────────────────────
-function _yMarkPaid(settleId,net){
-  if(!confirm('입금 처리하셨나요? 확인하면 기사에게 알림이 발송됩니다.'))return;
-  firebase.auth().currentUser.getIdToken().then(function(tok){
-    return fetch('/api/yongcha/settlement-paid',{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
-      body:JSON.stringify({settleId:settleId,netAmount:net||0})
-    });
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){_yToast('입금 처리 완료! 기사에게 알림을 보냈어요.');_loadSettleList();}
-    else _yToast(d.error||'처리 실패');
-  }).catch(function(){_yToast('처리 실패');});
-}
-
-// ── 정산 내역 목록 (기사/소장 공용) ─────────────────────────────────────────
-function _pgMySettlements(el){
-  el.innerHTML=
-    '<div class="page-hdr"><h1 class="page-title">정산 내역</h1>'+
-    '<p class="page-sub">배송 완료 건별 정산 현황이에요</p></div>'+
-    '<div id="settle-list">'+_skRows(4)+'</div>';
-  _loadSettleList();
-}
-
-function _loadSettleList(){
-  var listEl=document.getElementById('settle-list');
-  if(!listEl)return;
-  var field=_CU.type==='agency'?'agencyId':'driverId';
-  _db.collection('yongcha_settlements')
-    .where(field,'==',_CU.uid)
-    .orderBy('createdAt','desc').limit(30)
-    .get().then(function(snap){
-      if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3);font-size:14px">아직 정산 내역이 없어요</div>';return;}
-      var html='';
-      snap.forEach(function(doc){
-        var s=doc.data(),sid=doc.id;
-        var dueD=s.dueDate?new Date(s.dueDate):null;
-        var now=new Date();
-        var isOverdue=dueD&&s.status==='pending'&&now>dueD;
-        var statusCls=s.status==='paid'?'var(--gn)':isOverdue?'#ef4444':'var(--t3)';
-        var statusTxt=s.status==='paid'?'입금완료':isOverdue?'연체':'입금대기';
-        var penalty='';
-        if(isOverdue&&dueD){
-          var days=Math.ceil((now-dueD)/(1000*60*60*24));
-          var penAmt=Math.round((s.netAmount||0)*0.15/365*days);
-          penalty='<div style="font-size:11.5px;color:#ef4444;margin-top:3px">연체 '+days+'일 — 이자 +'+_won(penAmt)+'원</div>';
-        }
-        html+='<div class="card" style="padding:14px 16px;margin-bottom:10px">'+
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
-            '<div>'+
-              '<div style="font-size:13.5px;font-weight:800">'+(s.courier||'')+(s.area?' · '+s.area:'')+'</div>'+
-              '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
-                (s.driverId===_CU.uid?s.agencyName:s.driverName||'')+' · '+
-                (s.deliveryDate?s.deliveryDate.slice(0,10):'')+
-              '</div>'+
-              penalty+
-            '</div>'+
-            '<div style="text-align:right">'+
-              '<div style="font-size:17px;font-weight:900">'+_won(s.netAmount||0)+'원</div>'+
-              '<div style="font-size:11.5px;font-weight:700;color:'+statusCls+'">'+statusTxt+'</div>'+
-            '</div>'+
-          '</div>'+
-          (dueD?'<div style="font-size:11px;color:var(--t3);margin-top:8px">입금 기한: '+dueD.toLocaleDateString('ko-KR')+' 18:00</div>':'')+
-          (_CU.type==='agency'&&s.status==='pending'?
-            '<button onclick="_yMarkPaid(\''+sid+'\','+s.netAmount+')" style="width:100%;margin-top:10px;padding:10px;background:var(--gn);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">입금 완료 처리</button>':'')
-        +'</div>';
-      });
-      listEl.innerHTML=html;
-    }).catch(function(e){listEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--rd)">'+e.message+'</div>';});
 }
 
 // ── 멀티스톱 내비게이션 모달 (기사 홈 "내비게이션 시작" 버튼) ─────
@@ -8787,11 +9035,20 @@ function _yStartNoShowTimer(applyId,pickupLat,pickupLng,waitMin){
       if(!g)return;
       var d=_yHaversine(g.lat,g.lng,pickupLat,pickupLng);
       if(d>5){
-        // 아직 픽업지 5km 밖 → 경고
         _yToast('현장까지 아직 멀어요! 지금 바로 출발하세요 ('+Math.round(d)+'km)','warn');
-        _db.collection('yongcha_applies').doc(applyId).update({
-          noShowWarned:true,noShowWarnedAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).catch(function(){});
+        // 서버에 노쇼 에스컬레이션 요청 (공고 재오픈 + 소장 FCM)
+        _yGetToken().then(function(tok){
+          return fetch('/api/yongcha/noshow-escalate',{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+            body:JSON.stringify({applyId:applyId})
+          });
+        }).catch(function(){
+          // 에스컬레이션 실패 시 로컬 업데이트만
+          _db.collection('yongcha_applies').doc(applyId).update({
+            noShowWarned:true,noShowWarnedAt:firebase.firestore.FieldValue.serverTimestamp()
+          }).catch(function(){});
+        });
       }
       delete _noShowTimers[applyId];
     });
@@ -8890,6 +9147,7 @@ function _showZoneOnMap(i){
 </script>
 </body>
 </html>
+
 
 `;
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
