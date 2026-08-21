@@ -82,7 +82,13 @@ function _filoPageOrders(el){
  var today=new Date().toISOString().slice(0,10);
  var _oSales=[], _oQR=[];
  function _renderOrders(){
-  var orders=_oSales.concat(_oQR);
+  // filo_sales에서 테이블 주문(type=table/qr)은 제외 — 테이블 주문은 filo_orders(_oQR)만 표시
+  // filo_sales는 배달 주문(type=delivery)만 표시
+  var salesDeduped=_oSales.filter(function(o){
+   var t=o.type||'';
+   return t==='delivery'||t===''; // table/qr/staff 타입은 제외
+  });
+  var orders=salesDeduped.concat(_oQR);
   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
   var listEl=document.getElementById('orders-list');
   if(!listEl)return;
