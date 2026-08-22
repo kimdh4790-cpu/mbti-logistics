@@ -39,6 +39,7 @@ function _filoTableLoad(did){
  if(window._tableUnsub)window._tableUnsub();
  if(window._bookingUnsub)window._bookingUnsub();
  if(window._callUnsub)window._callUnsub();
+ if(window._orderUnsub)window._orderUnsub();
 
  /* 직원 호출 실시간 감지 */
  window._callUnsub=_db.collection('staff_calls')
@@ -103,7 +104,7 @@ function _filoTableLoad(did){
  var tableSnap=null,bookingSnap=null,orderMap={};
  // 실시간 주문 감지 (테이블별 주문금액)
  var today=_today();
- _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+ window._orderUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
   .onSnapshot(function(snap){
    orderMap={};
    snap.forEach(function(doc){

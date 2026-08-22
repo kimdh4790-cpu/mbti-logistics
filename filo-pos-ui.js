@@ -96,9 +96,10 @@ function _filoPageKiosk(el){
  function _loadKioskTableBar(){
   var bar=document.getElementById('kiosk-table-bar');
   if(!bar)return;
+  if(_kioskTableUnsub){_kioskTableUnsub();_kioskTableUnsub=null;}
   var today=_today();
   // 주문 맵 로드
-  _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+  _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
    .onSnapshot(function(oSnap){
     var oMap={};
     oSnap.forEach(function(doc){
