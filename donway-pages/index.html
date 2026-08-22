@@ -18365,6 +18365,7 @@ function pageMyRoster(offsetWeek){
   _empLoadRoster(did, uid, today);
 }
 function _empLoadRoster(did, uid, today){
+  if(window._rosterUnsub){window._rosterUnsub();window._rosterUnsub=null;}
   var weekStart = _getWeekStart(today);
   var days3=['일','월','화','수','목','금','토'];
   var weekDays=[];
@@ -18382,7 +18383,7 @@ function _empLoadRoster(did, uid, today){
         return v.userId===_rosterUserId || v.name===_rosterName || d.id===_rosterUserId;
       });
       var mycamp = myDoc ? (myDoc.data().camp||'') : '';
-      return _db.collection('roster_week')
+      window._rosterUnsub=_db.collection('roster_week')
         .where('dealerId','==',did)
         .where('weekStart','==',weekStart)
         .onSnapshot(function(snap){
@@ -19403,8 +19404,9 @@ function _lunchAdminView(did){
   if(!_db||!did)return;
   var el=document.getElementById('lunch-admin-list');
   if(!el)return;
+  if(window._lunchUnsub){window._lunchUnsub();window._lunchUnsub=null;}
   var today=new Date().toISOString().slice(0,10);
-  _db.collection('lunch').where('dealerId','==',did).where('date','==',today)
+  window._lunchUnsub=_db.collection('lunch').where('dealerId','==',did).where('date','==',today)
     .onSnapshot(function(snap){
       if(!el)return;
       if(snap.empty){el.innerHTML='<div style="font-size:12px;color:var(--text3)">점심중 직원 없음</div>';return;}
