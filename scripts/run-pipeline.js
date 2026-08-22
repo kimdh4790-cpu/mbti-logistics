@@ -23,7 +23,7 @@ const getArg = (flag) => {
 const product = getArg('--product') || 'filo';
 const steps = (getArg('--steps') || 'record,compose').split(',').map(s => s.trim());
 const dryRun = args.includes('--dry-run');
-const PRODUCTS = ['filo', 'donway', 'yongcha', 'mbtico'];
+const PRODUCTS = ['filo', 'dine', 'donway', 'yongcha', 'mbtico'];
 const targets = product === 'all' ? PRODUCTS : [product];
 
 const ROOT = path.join(__dirname, '..');
