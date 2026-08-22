@@ -24,6 +24,9 @@
     "login:naver": "HEADLESS=false node scripts/upload/post-naver-blog.js --login-only",
     "pipeline": "node scripts/run-pipeline.js",
     "pipeline:filo": "node scripts/run-pipeline.js --product filo --steps record,compose",
+    "pipeline:donway": "node scripts/run-pipeline.js --product donway --steps record,compose",
+    "pipeline:yongcha": "node scripts/run-pipeline.js --product yongcha --steps record,compose",
+    "pipeline:mbtico": "node scripts/run-pipeline.js --product mbtico --steps record,compose",
     "pipeline:all": "node scripts/run-pipeline.js --product all --steps record,compose"
   },
   "repository": {
