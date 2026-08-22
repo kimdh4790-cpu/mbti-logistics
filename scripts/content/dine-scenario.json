@@ -1,0 +1,27 @@
+{
+  "product": "dine",
+  "title": "DINE - 외식업 전문 운영 플랫폼",
+  "outputFile": "output/dine-raw.webm",
+  "viewport": { "width": 390, "height": 844 },
+  "track": "landing+app",
+  "steps": [
+    { "action": "goto", "url": "https://dine.ne.kr", "wait": 3000 },
+    { "action": "scroll", "y": 400, "wait": 2000 },
+    { "action": "scroll", "y": 800, "wait": 2000 },
+    { "action": "scroll", "y": 1200, "wait": 2000 },
+    { "action": "scroll", "y": 0, "wait": 1000 },
+    { "action": "screenshot", "label": "landing" },
+    { "action": "goto", "url": "https://dine.ne.kr/join", "wait": 3000 },
+    { "action": "screenshot", "label": "join" },
+    { "action": "wait", "ms": 2000 },
+    { "action": "goto", "url": "https://dine.ne.kr/app", "wait": 4000 },
+    { "action": "screenshot", "label": "app-home" },
+    { "action": "wait", "ms": 2000 },
+    { "action": "goto", "url": "https://dine.ne.kr/schedule", "wait": 3000 },
+    { "action": "screenshot", "label": "schedule" },
+    { "action": "wait", "ms": 2000 },
+    { "action": "goto", "url": "https://dine.ne.kr/payroll", "wait": 3000 },
+    { "action": "screenshot", "label": "payroll" },
+    { "action": "wait", "ms": 3000 }
+  ]
+}
