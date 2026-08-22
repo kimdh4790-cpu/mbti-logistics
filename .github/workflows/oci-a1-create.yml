@@ -99,12 +99,12 @@ jobs:
           fi
           echo "Image: $IMAGE"
 
-          # 남은 할당량 기준으로 스펙 결정 (큰 것부터 시도, 최소 1 OCPU)
-          # REMAIN=4 → 4/2/1 시도, REMAIN=3 → 3/2/1, REMAIN=2 → 2/1, REMAIN=1 → 1
+          # 남은 할당량 기준으로 스펙 결정 (작은 것부터 시도 — 1 OCPU가 할당 가능성 가장 높음)
+          # REMAIN=4 → 1/2/4 시도, REMAIN=3 → 1/2/3, REMAIN=2 → 1/2, REMAIN=1 → 1
           SPECS=""
-          if [ "$REMAIN" -ge 4 ]; then SPECS="4 2 1"; fi
-          if [ "$REMAIN" -eq 3 ]; then SPECS="3 2 1"; fi
-          if [ "$REMAIN" -eq 2 ]; then SPECS="2 1"; fi
+          if [ "$REMAIN" -ge 4 ]; then SPECS="1 2 4"; fi
+          if [ "$REMAIN" -eq 3 ]; then SPECS="1 2 3"; fi
+          if [ "$REMAIN" -eq 2 ]; then SPECS="1 2"; fi
           if [ "$REMAIN" -eq 1 ]; then SPECS="1"; fi
 
           for OCPU in $SPECS; do
@@ -134,8 +134,13 @@ jobs:
               PUBLIC_IP=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('public-ip','할당중'))" 2>/dev/null || echo "IP 확인 필요")
               echo "Public IP: $PUBLIC_IP"
               exit 0
-            elif echo "$RESULT" | grep -qi "capacity\|InternalError\|TooManyRequests"; then
-              echo "용량 부족 -- 더 작은 스펙으로 시도"
+            elif echo "$RESULT" | grep -qi "TooManyRequests"; then
+              echo "API 레이트 리밋 -- 30초 대기 후 다음 시도"
+              sleep 30
+              continue
+            elif echo "$RESULT" | grep -qi "capacity\|InternalError"; then
+              echo "용량 부족 -- 다음 스펙 시도"
+              sleep 10
               continue
             else
               echo "오류 -- 다음 스펙 시도"
