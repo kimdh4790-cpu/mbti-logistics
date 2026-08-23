@@ -52,15 +52,16 @@ async function postNaverBlog() {
   const profileDir = path.join(PROFILES_DIR, 'naver');
   fs.mkdirSync(profileDir, { recursive: true });
 
-  console.log(`[네이버 블로그] ${dryRun ? '[DRY-RUN] ' : ''}포스팅: ${product}`);
+  console.log(`[네이버 블로그] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product}`);
 
-  const ctx = await chromium.launchPersistentContext(profileDir, {
-    executablePath: CHROMIUM_PATH,
+  const launchOpts = {
     headless,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     viewport: { width: 1280, height: 800 },
     timeout: 60000,
-  });
+  };
+  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
+  const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
   const page = await ctx.newPage();
   await page.goto('https://www.naver.com', { waitUntil: 'networkidle', timeout: 30000 });

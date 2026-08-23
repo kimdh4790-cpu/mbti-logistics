@@ -25,7 +25,7 @@ const meta = require(`../content/${product}-meta.json`);
 const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
 
 async function uploadInstagram() {
-  if (!dryRun && !fs.existsSync(videoPath)) {
+  if (!loginOnly && !dryRun && !fs.existsSync(videoPath)) {
     console.error(`[Instagram] 파일 없음: ${videoPath}`);
     process.exit(1);
   }
@@ -33,16 +33,17 @@ async function uploadInstagram() {
   const profileDir = path.join(PROFILES_DIR, 'instagram');
   fs.mkdirSync(profileDir, { recursive: true });
 
-  console.log(`[Instagram] ${dryRun ? '[DRY-RUN] ' : ''}업로드: ${product} (${type})`);
+  console.log(`[Instagram] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product} (${type})`);
 
-  const ctx = await chromium.launchPersistentContext(profileDir, {
-    executablePath: CHROMIUM_PATH,
+  const launchOpts = {
     headless,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     viewport: { width: 375, height: 812 },
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     timeout: 60000,
-  });
+  };
+  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
+  const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
   const page = await ctx.newPage();
   await page.goto('https://www.instagram.com', { waitUntil: 'networkidle', timeout: 30000 });

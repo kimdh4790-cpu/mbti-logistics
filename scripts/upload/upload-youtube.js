@@ -24,7 +24,7 @@ const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
 const thumbPath = path.join(ROOT, 'output', `${product}-thumbnail.jpg`);
 
 async function uploadYouTube() {
-  if (!dryRun && !fs.existsSync(videoPath)) {
+  if (!loginOnly && !dryRun && !fs.existsSync(videoPath)) {
     console.error(`[YouTube] 영상 파일 없음: ${videoPath}`);
     process.exit(1);
   }
@@ -32,15 +32,16 @@ async function uploadYouTube() {
   const profileDir = path.join(PROFILES_DIR, 'youtube');
   fs.mkdirSync(profileDir, { recursive: true });
 
-  console.log(`[YouTube] ${dryRun ? '[DRY-RUN] ' : ''}업로드 시작: ${product}`);
+  console.log(`[YouTube] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product}`);
 
-  const ctx = await chromium.launchPersistentContext(profileDir, {
-    executablePath: CHROMIUM_PATH,
+  const launchOpts = {
     headless,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     viewport: { width: 1280, height: 800 },
     timeout: 60000,
-  });
+  };
+  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
+  const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
   const page = await ctx.newPage();
 
