@@ -27,16 +27,21 @@ BGM="$ASSETS_DIR/bgm/background.mp3"
 INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
 
-# 자막 필터 (SRT → drawtext 방식)
+# 자막 필터 (SRT → ASS 변환 후 overlay)
+# Windows(Git Bash)에서 ass= 필터에 드라이브 문자가 포함된 절대경로를 넘기면
+# FFmpeg가 ':' 를 옵션 구분자로 오인 → OUTPUT_DIR로 이동 후 파일명만 사용
 SUBTITLE_FILTER=""
 if [ -f "$SUBTITLES" ]; then
-  # ASS 변환 후 subtitles 필터 사용 (한글 폰트 지원)
-  ASS_FILE="$OUTPUT_DIR/${PRODUCT}-subtitles.ass"
-  ffmpeg -y -i "$SUBTITLES" "$ASS_FILE" 2>/dev/null || true
+  ASS_FNAME="${PRODUCT}-subtitles.ass"
+  ASS_FILE="$OUTPUT_DIR/${ASS_FNAME}"
+  (cd "$OUTPUT_DIR" && ffmpeg -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
   if [ -f "$ASS_FILE" ]; then
-    SUBTITLE_FILTER=",ass=$ASS_FILE"
+    SUBTITLE_FILTER=",ass=${ASS_FNAME}"
   fi
 fi
+
+# 자막 필터 사용 시 OUTPUT_DIR 기준으로 ffmpeg 실행
+cd "$OUTPUT_DIR"
 
 # 로고 오버레이 필터
 LOGO_FILTER=""
