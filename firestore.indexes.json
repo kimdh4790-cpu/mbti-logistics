@@ -29,36 +29,6 @@
       ]
     },
     {
-      "collectionGroup": "chats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "lastAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "notices",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "payment_requests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "yongcha_jobs",
       "queryScope": "COLLECTION",
       "fields": [
