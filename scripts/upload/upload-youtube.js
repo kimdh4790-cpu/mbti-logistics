@@ -8,7 +8,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { chromium, getLaunchOpts, PROFILES_DIR } = require('./session-manager');
+const { chromium, getLaunchOpts, waitForEnter, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);
 const product = (args.find(a => a.startsWith('--product=')) || '--product=filo').split('=')[1]
@@ -38,27 +38,40 @@ async function uploadYouTube() {
 
   const page = await ctx.newPage();
 
+  // navigator.webdriver 숨기기 (Google 자동화 감지 우회)
+  await ctx.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+  });
+
   // 로그인 확인
-  await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
-  await page.waitForTimeout(3000);
+  await page.goto('https://accounts.google.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForTimeout(2000);
 
   const url = page.url();
-  if (url.includes('accounts.google.com')) {
-    if (loginOnly || !headless) {
-      console.log('[YouTube] 수동 로그인 필요. 로그인 후 Enter를 누르세요...');
-      await page.waitForURL('**/studio.youtube.com**', { timeout: 300000 });
-    } else {
-      console.error('[YouTube] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
-      await ctx.close();
-      process.exit(1);
-    }
-  }
+  const isLoggedIn = !url.includes('accounts.google.com/v3/signin')
+    && !url.includes('/signin')
+    && !url.includes('/rejected');
 
   if (loginOnly) {
-    console.log('[YouTube] 로그인 완료. 세션 저장됨.');
+    if (!isLoggedIn) {
+      console.log('[YouTube] 브라우저에서 Google 계정으로 로그인하세요.');
+      console.log('           로그인 완료 후 이 터미널에서 Enter를 누르세요.');
+      await waitForEnter();
+    }
+    console.log('[YouTube] 세션 저장됨.');
     await ctx.close();
     return;
   }
+
+  if (!isLoggedIn) {
+    console.error('[YouTube] 로그인 세션 없음. node upload-youtube.js --login-only 로 먼저 로그인하세요.');
+    await ctx.close();
+    process.exit(1);
+  }
+
+  // YouTube Studio로 이동
+  await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
+  await page.waitForTimeout(2000);
 
   if (dryRun) {
     console.log('[YouTube][DRY-RUN] YouTube Studio 접속 성공.');

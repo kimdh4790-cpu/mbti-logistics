@@ -31,8 +31,9 @@ async function getContext(platform) {
   };
 
   if (USE_SYSTEM_CHROME) {
-    // Windows/Mac: 시스템 Chrome 사용 (Google 로그인 차단 우회)
+    // Windows/Mac: 시스템 Chrome + 자동화 감지 우회
     opts.channel = 'chrome';
+    opts.args = ['--disable-blink-features=AutomationControlled'];
   } else {
     // Linux(원격): 번들 Chromium 사용
     opts.args = ['--no-sandbox', '--disable-setuid-sandbox'];
@@ -45,11 +46,30 @@ async function getContext(platform) {
 // 개별 스크립트에서 직접 launchPersistentContext 사용 시 참고용
 function getLaunchOpts(headless) {
   if (USE_SYSTEM_CHROME) {
-    return { channel: 'chrome', headless, viewport: { width: 1280, height: 800 } };
+    return {
+      channel: 'chrome',
+      headless,
+      args: ['--disable-blink-features=AutomationControlled'],
+      viewport: { width: 1280, height: 800 },
+    };
   }
   const opts = { headless, args: ['--no-sandbox', '--disable-setuid-sandbox'], viewport: { width: 1280, height: 800 } };
   if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
   return opts;
 }
 
-module.exports = { getContext, getLaunchOpts, chromium, CHROMIUM_PATH, PROFILES_DIR, USE_SYSTEM_CHROME };
+// 터미널에서 Enter 입력 대기 (로그인 완료 확인용)
+function waitForEnter(message) {
+  process.stdout.write(message || '완료 후 Enter를 누르세요...');
+  return new Promise(resolve => {
+    const handler = (data) => {
+      process.stdin.removeListener('data', handler);
+      process.stdin.pause();
+      resolve();
+    };
+    process.stdin.resume();
+    process.stdin.once('data', handler);
+  });
+}
+
+module.exports = { getContext, getLaunchOpts, waitForEnter, chromium, CHROMIUM_PATH, PROFILES_DIR, USE_SYSTEM_CHROME };
