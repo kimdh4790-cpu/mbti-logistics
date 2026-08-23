@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>용차앱 소셜미디어 홍보영상</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{width:1280px;height:720px;overflow:hidden;background:#08101f;font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;}
+#wrap{position:relative;width:1280px;height:720px;overflow:hidden;background:#08101f;}
+
+@keyframes shimProg{0%{background-position:0%}100%{background-position:200%}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(40px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(60px);}to{opacity:1;transform:translateX(0);}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.8);}to{opacity:1;transform:scale(1);}}
+@keyframes countUp{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,.4);}50%{box-shadow:0 0 0 16px rgba(201,168,76,0);}}
+@keyframes truckMove{0%{transform:translateX(-120px);}100%{transform:translateX(0);}}
+@keyframes routeLine{from{stroke-dashoffset:400;}to{stroke-dashoffset:0;}}
+@keyframes bounce{0%,100%{transform:translateY(0);}40%{transform:translateY(-12px);}70%{transform:translateY(-4px);}}
+@keyframes barFill{from{width:0;}to{}}
+@keyframes shine{0%{transform:translateX(-100%) skewX(-12deg);}100%{transform:translateX(300%) skewX(-12deg);}}
+@keyframes ringPop{from{transform:scale(0);opacity:1;}to{transform:scale(2.5);opacity:0;}}
+
+#prog{position:absolute;top:0;left:0;height:5px;width:0;background:linear-gradient(90deg,#c9a84c,#f0d080,#c9a84c);background-size:200%;animation:shimProg 2s linear infinite;transition:width .65s cubic-bezier(.4,0,.2,1);z-index:100;}
+.slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .6s ease;}
+.slide.on{opacity:1;pointer-events:auto;}
+.vis{animation-play-state:running!important;}
+
+/* ─── S0: HERO ─── */
+#s0{background:radial-gradient(ellipse 80% 70% at 50% 50%,#0e1f36 0%,#08101f 100%);}
+#s0 canvas{position:absolute;inset:0;}
+#s0 .hero{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;}
+#s0 .logo{font-size:108px;font-weight:900;letter-spacing:-4px;color:#fff;line-height:1;opacity:0;animation:fadeUp .8s .15s forwards cubic-bezier(.34,1.56,.64,1);}
+#s0 .logo span{color:#c9a84c;}
+#s0 .tagline{font-size:28px;font-weight:700;color:#c9a84c;letter-spacing:2px;margin-top:12px;opacity:0;animation:fadeUp .7s .55s forwards;}
+#s0 .sub{font-size:17px;color:#94a3b8;letter-spacing:.5px;margin-top:10px;opacity:0;animation:fadeUp .7s .85s forwards;}
+#s0 .goldbar{width:0;height:4px;background:linear-gradient(90deg,transparent,#c9a84c,#f0d080,#c9a84c,transparent);margin:20px auto 0;animation:barFill 1.1s 1s forwards cubic-bezier(.4,0,.2,1);box-shadow:0 0 14px rgba(201,168,76,.4);}
+#s0 .domain{font-size:19px;font-weight:700;color:#c9a84c;margin-top:18px;letter-spacing:1px;opacity:0;animation:fadeIn .8s 1.4s forwards;}
+#s0 .ring{position:absolute;border-radius:50%;border:1px solid rgba(201,168,76,.15);animation:ringPop 3s 1.8s ease-out infinite;}
+#s0 .r1{width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);}
+#s0 .r2{width:480px;height:480px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:3.4s;}
+
+/* ─── S1: 문제 ─── */
+#s1{background:#08101f;}
+#s1 .eyebrow{position:absolute;top:60px;left:80px;font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s1 .headline{position:absolute;top:100px;left:80px;font-size:52px;font-weight:900;color:#fff;line-height:1.15;opacity:0;animation:slideRight .7s .4s forwards;}
+#s1 .headline em{color:#ef4444;font-style:normal;}
+#s1 .cards{position:absolute;top:230px;left:80px;right:80px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+#s1 .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px 24px;opacity:0;}
+#s1 .card:nth-child(1){animation:fadeUp .6s .6s forwards;}
+#s1 .card:nth-child(2){animation:fadeUp .6s .8s forwards;}
+#s1 .card:nth-child(3){animation:fadeUp .6s 1s forwards;}
+#s1 .card .icon{font-size:36px;margin-bottom:12px;}
+#s1 .card .ttl{font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;}
+#s1 .card .desc{font-size:14px;color:#64748b;line-height:1.6;}
+#s1 .card .bad{display:inline-block;background:rgba(239,68,68,.12);color:#ef4444;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:8px;}
+#s1 .divider{position:absolute;bottom:100px;left:80px;right:80px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,.3),transparent);opacity:0;animation:fadeIn .8s 1.2s forwards;}
+#s1 .pain{position:absolute;bottom:50px;left:0;right:0;text-align:center;font-size:16px;color:#94a3b8;opacity:0;animation:fadeIn .8s 1.4s forwards;}
+#s1 .pain b{color:#c9a84c;}
+
+/* ─── S2: 솔루션 ─── */
+#s2{background:#08101f;}
+#s2 .eyebrow{position:absolute;top:56px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#22c55e;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s2 .headline{position:absolute;top:90px;left:0;right:0;text-align:center;font-size:48px;font-weight:900;color:#fff;opacity:0;animation:fadeUp .7s .4s forwards;}
+#s2 .headline em{color:#c9a84c;font-style:normal;}
+#s2 .flow{position:absolute;top:200px;left:80px;right:80px;display:flex;align-items:center;gap:0;opacity:0;animation:fadeIn .8s .8s forwards;}
+#s2 .fbox{flex:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:24px 16px;text-align:center;}
+#s2 .fbox .num{width:36px;height:36px;border-radius:50%;background:#c9a84c;color:#08101f;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;}
+#s2 .fbox .label{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;}
+#s2 .fbox .sub{font-size:12px;color:#64748b;line-height:1.5;}
+#s2 .arrow{font-size:28px;color:#c9a84c;margin:0 12px;flex-shrink:0;}
+#s2 .highlight{position:absolute;top:430px;left:80px;right:80px;background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(34,197,94,.04));border:1px solid rgba(34,197,94,.2);border-radius:16px;padding:24px 32px;opacity:0;animation:fadeUp .7s 1.2s forwards;}
+#s2 .highlight p{font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;}
+#s2 .highlight small{font-size:14px;color:#64748b;}
+#s2 .highlight .tag{display:inline-flex;gap:10px;margin-top:12px;}
+#s2 .highlight .tag span{background:rgba(34,197,94,.12);color:#22c55e;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;}
+#s2 .settle{position:absolute;bottom:36px;left:0;right:0;text-align:center;font-size:14px;color:#64748b;opacity:0;animation:fadeIn .8s 1.6s forwards;}
+#s2 .settle b{color:#c9a84c;}
+
+/* ─── S3: 핵심 기능 ─── */
+#s3{background:#08101f;}
+#s3 .eyebrow{position:absolute;top:56px;left:80px;font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s3 .headline{position:absolute;top:90px;left:80px;font-size:48px;font-weight:900;color:#fff;opacity:0;animation:slideRight .7s .4s forwards;}
+#s3 .grid{position:absolute;top:190px;left:80px;right:80px;display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+#s3 .feat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px 24px;display:flex;gap:16px;align-items:flex-start;opacity:0;}
+#s3 .feat:nth-child(1){animation:slideRight .6s .6s forwards;}
+#s3 .feat:nth-child(2){animation:slideLeft .6s .7s forwards;}
+#s3 .feat:nth-child(3){animation:slideRight .6s .8s forwards;}
+#s3 .feat:nth-child(4){animation:slideLeft .6s .9s forwards;}
+#s3 .feat .icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+#s3 .feat .icon.gold{background:rgba(201,168,76,.12);}
+#s3 .feat .icon.green{background:rgba(34,197,94,.12);}
+#s3 .feat .icon.blue{background:rgba(59,130,246,.12);}
+#s3 .feat .icon.purple{background:rgba(168,85,247,.12);}
+#s3 .feat h4{font-size:17px;font-weight:700;color:#fff;margin-bottom:5px;}
+#s3 .feat p{font-size:13px;color:#64748b;line-height:1.55;}
+#s3 .feat .badge{display:inline-block;background:rgba(201,168,76,.12);color:#c9a84c;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-top:6px;}
+#s3 .bottom{position:absolute;bottom:36px;left:80px;right:80px;display:flex;justify-content:center;gap:32px;opacity:0;animation:fadeIn .8s 1.2s forwards;}
+#s3 .stat{text-align:center;}
+#s3 .stat .num{font-size:32px;font-weight:900;color:#c9a84c;}
+#s3 .stat .lbl{font-size:12px;color:#64748b;margin-top:2px;}
+
+/* ─── S4: 요금제 ─── */
+#s4{background:#08101f;}
+#s4 .eyebrow{position:absolute;top:56px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s4 .headline{position:absolute;top:90px;left:0;right:0;text-align:center;font-size:48px;font-weight:900;color:#fff;opacity:0;animation:fadeUp .7s .4s forwards;}
+#s4 .plans{position:absolute;top:190px;left:80px;right:80px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+#s4 .plan{border-radius:20px;padding:32px 28px;opacity:0;}
+#s4 .plan:nth-child(1){background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);animation:fadeUp .6s .6s forwards;}
+#s4 .plan:nth-child(2){background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);animation:fadeUp .6s .75s forwards;}
+#s4 .plan:nth-child(3){background:linear-gradient(145deg,rgba(201,168,76,.12),rgba(201,168,76,.06));border:1px solid rgba(201,168,76,.35);animation:fadeUp .6s .9s forwards;position:relative;overflow:hidden;}
+#s4 .plan .shine{position:absolute;top:0;left:0;width:40px;height:100%;background:linear-gradient(90deg,transparent,rgba(201,168,76,.15),transparent);animation:shine 3s 1.5s ease-in-out infinite;}
+#s4 .plan-tag{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;}
+#s4 .plan-tag.free{color:#64748b;}
+#s4 .plan-tag.starter{color:#3b82f6;}
+#s4 .plan-tag.pro{color:#c9a84c;}
+#s4 .plan-who{font-size:16px;font-weight:700;color:#fff;margin-bottom:18px;}
+#s4 .plan-price{font-size:40px;font-weight:900;color:#fff;margin-bottom:4px;}
+#s4 .plan-price span{font-size:16px;font-weight:400;color:#64748b;}
+#s4 .plan-sub{font-size:12px;color:#64748b;margin-bottom:20px;}
+#s4 .plan-features{list-style:none;display:flex;flex-direction:column;gap:8px;}
+#s4 .plan-features li{font-size:13px;color:#94a3b8;display:flex;gap:8px;align-items:flex-start;}
+#s4 .plan-features li::before{content:'✓';color:#22c55e;font-weight:700;flex-shrink:0;}
+#s4 .plan:nth-child(1) .plan-features li::before{content:'✓';color:#64748b;}
+#s4 .footnote{position:absolute;bottom:36px;left:0;right:0;text-align:center;font-size:13px;color:#475569;opacity:0;animation:fadeIn .8s 1.3s forwards;}
+
+/* ─── S5: 수치 ─── */
+#s5{background:#08101f;}
+#s5 .eyebrow{position:absolute;top:56px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#c9a84c;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s5 .headline{position:absolute;top:90px;left:0;right:0;text-align:center;font-size:44px;font-weight:900;color:#fff;line-height:1.2;opacity:0;animation:fadeUp .7s .4s forwards;}
+#s5 .headline em{color:#c9a84c;font-style:normal;}
+#s5 .bigstats{position:absolute;top:230px;left:80px;right:80px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+#s5 .bstat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:36px 20px;text-align:center;opacity:0;}
+#s5 .bstat:nth-child(1){animation:scaleIn .6s .6s forwards;}
+#s5 .bstat:nth-child(2){animation:scaleIn .6s .8s forwards;}
+#s5 .bstat:nth-child(3){animation:scaleIn .6s 1s forwards;}
+#s5 .bstat .num{font-size:60px;font-weight:900;color:#c9a84c;line-height:1;}
+#s5 .bstat .unit{font-size:24px;font-weight:700;color:#c9a84c;}
+#s5 .bstat .lbl{font-size:14px;color:#64748b;margin-top:8px;line-height:1.4;}
+#s5 .carriers{position:absolute;bottom:36px;left:80px;right:80px;opacity:0;animation:fadeIn .8s 1.3s forwards;}
+#s5 .carriers p{text-align:center;font-size:13px;color:#475569;margin-bottom:14px;}
+#s5 .carrier-list{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
+#s5 .carrier-list span{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#94a3b8;font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;}
+
+/* ─── S6: AI 루트코치 ─── */
+#s6{background:#08101f;}
+#s6 .eyebrow{position:absolute;top:56px;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#a855f7;letter-spacing:4px;text-transform:uppercase;opacity:0;animation:fadeIn .6s .2s forwards;}
+#s6 .headline{position:absolute;top:90px;left:0;right:0;text-align:center;font-size:46px;font-weight:900;color:#fff;line-height:1.2;opacity:0;animation:fadeUp .7s .4s forwards;}
+#s6 .headline em{color:#a855f7;font-style:normal;}
+#s6 .chat-wrap{position:absolute;top:210px;left:160px;right:160px;opacity:0;animation:fadeIn .8s .8s forwards;}
+#s6 .q-box{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:16px 16px 16px 4px;padding:20px 24px;margin-bottom:16px;}
+#s6 .q-box .who{font-size:11px;color:#a855f7;font-weight:700;letter-spacing:2px;margin-bottom:8px;}
+#s6 .q-box p{font-size:15px;color:#e2e8f0;}
+#s6 .a-box{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:16px 16px 4px 16px;padding:20px 24px;margin-left:60px;opacity:0;animation:fadeIn .7s 1.4s forwards;}
+#s6 .a-box .who{font-size:11px;color:#c9a84c;font-weight:700;letter-spacing:2px;margin-bottom:8px;}
+#s6 .a-box .route{font-size:18px;font-weight:800;color:#fff;margin-bottom:6px;}
+#s6 .a-box .detail{font-size:13px;color:#94a3b8;line-height:1.5;}
+#s6 .a-box .income{display:inline-block;background:rgba(34,197,94,.12);color:#22c55e;font-size:14px;font-weight:700;padding:6px 16px;border-radius:20px;margin-top:10px;}
+#s6 .powered{position:absolute;bottom:36px;left:0;right:0;text-align:center;font-size:13px;color:#475569;opacity:0;animation:fadeIn .8s 1.8s forwards;}
+
+/* ─── S7: CTA ─── */
+#s7{background:radial-gradient(ellipse 80% 70% at 50% 50%,#0e1f36 0%,#08101f 100%);}
+#s7 .logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);font-size:96px;font-weight:900;letter-spacing:-4px;color:#fff;opacity:0;animation:fadeUp .8s .3s forwards cubic-bezier(.34,1.56,.64,1);}
+#s7 .logo span{color:#c9a84c;}
+#s7 .msg{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(10px);margin-top:28px;font-size:26px;font-weight:700;color:#c9a84c;opacity:0;animation:fadeIn .7s .9s forwards;}
+#s7 .domain{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(80px);font-size:36px;font-weight:900;color:#fff;letter-spacing:2px;opacity:0;animation:fadeIn .7s 1.2s forwards;}
+#s7 .sub{position:absolute;top:50%;left:0;right:0;text-align:center;transform:translateY(130px);font-size:16px;color:#64748b;opacity:0;animation:fadeIn .7s 1.5s forwards;}
+#s7 .goldbar{position:absolute;top:50%;left:50%;transform:translate(-50%,170px);width:0;height:3px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);animation:barFill 1s 1.6s forwards;}
+#s7 .ring{position:absolute;border-radius:50%;border:1px solid rgba(201,168,76,.1);animation:ringPop 3s 2s ease-out infinite;}
+#s7 .r1{width:260px;height:260px;top:50%;left:50%;transform:translate(-50%,-50%);}
+#s7 .r2{width:420px;height:420px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:3.4s;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="prog"></div>
+
+  <!-- S0: HERO -->
+  <div class="slide on" id="s0">
+    <canvas id="starCanvas" width="1280" height="720"></canvas>
+    <div class="ring r1"></div>
+    <div class="ring r2"></div>
+    <div class="hero">
+      <div class="logo">용<span>차</span>앱</div>
+      <div class="tagline">공차 없이 더 많이 버세요</div>
+      <div class="goldbar" id="s0bar" style="width:0"></div>
+      <div class="sub">택배 기사·대리점 실시간 노선 매칭 플랫폼</div>
+      <div class="domain">yongcha.app</div>
+    </div>
+  </div>
+
+  <!-- S1: 문제 -->
+  <div class="slide" id="s1">
+    <div class="eyebrow">The Problem</div>
+    <div class="headline">기사님, 하루에 몇 번<br><em>빈 차</em>로 이동하세요?</div>
+    <div class="cards">
+      <div class="card">
+        <div class="icon">🚛</div>
+        <div class="ttl">공차 이동 = 손실</div>
+        <div class="desc">화물 없이 이동하는 시간은 곧 돈을 버리는 것. 하루 평균 2~3시간 공차 이동 발생.</div>
+        <span class="bad">월 수익 30%↓</span>
+      </div>
+      <div class="card">
+        <div class="icon">📞</div>
+        <div class="ttl">전화로 공고 확인?</div>
+        <div class="desc">카카오톡·전화로 일일이 확인하는 비효율. 좋은 공고는 이미 마감된 경우가 태반.</div>
+        <span class="bad">정보 비대칭</span>
+      </div>
+      <div class="card">
+        <div class="icon">💸</div>
+        <div class="ttl">높은 수수료 부담</div>
+        <div class="desc">기존 중개 플랫폼은 건당 수수료 수천 원. 월 수십만 원이 수수료로 빠져나감.</div>
+        <span class="bad">기사 수수료 부담</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="pain">이 세 가지 문제, <b>용차앱 하나</b>로 해결됩니다</div>
+  </div>
+
+  <!-- S2: 솔루션 -->
+  <div class="slide" id="s2">
+    <div class="eyebrow">The Solution</div>
+    <div class="headline">밀어서 지원 — <em>단 1초</em></div>
+    <div class="flow">
+      <div class="fbox">
+        <div class="num">1</div>
+        <div class="label">대리점 공고 등록</div>
+        <div class="sub">노선·단가·물량·정산일<br>앱에서 30초 완료</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="fbox">
+        <div class="num">2</div>
+        <div class="label">FCM 즉시 알림</div>
+        <div class="sub">반경 내 기사님에게<br>카카오맵 기반 푸시</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="fbox">
+        <div class="num">3</div>
+        <div class="label">슬라이드로 지원</div>
+        <div class="sub">화면 밀기 한 번으로<br>즉시 지원 완료</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="fbox">
+        <div class="num">4</div>
+        <div class="label">7일 정산</div>
+        <div class="sub">확정·지급까지<br>7일 이내 자동 처리</div>
+      </div>
+    </div>
+    <div class="highlight">
+      <p>최소보장 단가×85% — 공고마다 표시</p>
+      <small>등록된 단가의 85% 이상 보장. 수락 전 수익을 미리 확인하고 지원하세요.</small>
+      <div class="tag">
+        <span>세금계산서 자동 발행</span>
+        <span>출발·현장도착·완료 3단계 확인</span>
+        <span>정산 pending → confirmed → paid</span>
+      </div>
+    </div>
+    <div class="settle"><b>7일 이내 정산</b> + 세금계산서 자동 발행 · 정산 이력 영구 보관</div>
+  </div>
+
+  <!-- S3: 핵심 기능 -->
+  <div class="slide" id="s3">
+    <div class="eyebrow">Key Features</div>
+    <div class="headline">기사님에게 필요한 모든 것</div>
+    <div class="grid">
+      <div class="feat">
+        <div class="icon gold">🤖</div>
+        <div>
+          <h4>AI 루트코치</h4>
+          <p>Claude Haiku 기반 AI가 공고 목록 분석 → 최적 노선·예상 월수익 자동 추천</p>
+          <span class="badge">Claude Haiku 탑재</span>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="icon green">🔔</div>
+        <div>
+          <h4>FCM 실시간 푸시</h4>
+          <p>카카오맵 반경 내 새 공고 등록 즉시 알림. 좋은 공고를 가장 먼저 확인하세요.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="icon blue">📦</div>
+        <div>
+          <h4>6대 택배사 시세 공개</h4>
+          <p>CJ대한통운·한진·롯데·쿠팡로지스틱스·로젠·우체국 건당 시세를 공고마다 표시</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="icon purple">✅</div>
+        <div>
+          <h4>3단계 완료 처리</h4>
+          <p>출발확인 → 현장도착 → 완료처리. 각 단계 타임스탬프 자동 기록, 분쟁 방지.</p>
+        </div>
+      </div>
+    </div>
+    <div class="bottom">
+      <div class="stat"><div class="num">2,400<span style="font-size:20px">명+</span></div><div class="lbl">등록 기사</div></div>
+      <div class="stat"><div class="num">380<span style="font-size:20px">개+</span></div><div class="lbl">파트너 대리점</div></div>
+      <div class="stat"><div class="num">11<span style="font-size:20px">만원</span></div><div class="lbl">평균 건당 단가</div></div>
+    </div>
+  </div>
+
+  <!-- S4: 요금제 -->
+  <div class="slide" id="s4">
+    <div class="eyebrow">Pricing</div>
+    <div class="headline">기사님은 영원히 무료</div>
+    <div class="plans">
+      <div class="plan">
+        <div class="plan-tag free">기사 전용</div>
+        <div class="plan-who">택배 기사님</div>
+        <div class="plan-price">₩0<span>/영구</span></div>
+        <div class="plan-sub">가입비·수수료 전혀 없음</div>
+        <ul class="plan-features">
+          <li>노선 공고 무제한 조회</li>
+          <li>FCM 실시간 알림</li>
+          <li>슬라이드 1초 지원</li>
+          <li>AI 루트코치 이용</li>
+          <li>정산 내역 조회</li>
+        </ul>
+      </div>
+      <div class="plan">
+        <div class="plan-tag starter">대리점 스타터</div>
+        <div class="plan-who">소규모 대리점</div>
+        <div class="plan-price">₩0<span>/월</span></div>
+        <div class="plan-sub">월 3건 공고 무료</div>
+        <ul class="plan-features">
+          <li>공고 등록 월 3건</li>
+          <li>지원자 관리</li>
+          <li>기본 정산 관리</li>
+        </ul>
+      </div>
+      <div class="plan">
+        <div class="shine"></div>
+        <div class="plan-tag pro">대리점 프로</div>
+        <div class="plan-who">성장 대리점</div>
+        <div class="plan-price">₩49,000<span>/월</span></div>
+        <div class="plan-sub">공고 무제한</div>
+        <ul class="plan-features">
+          <li>공고 등록 무제한</li>
+          <li>우선 노출</li>
+          <li>AI 루트코치 분석</li>
+          <li>세금계산서 자동 발행</li>
+          <li>정산 대시보드</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footnote">기사님은 어떤 플랜이든 완전 무료 · 수수료 0원</div>
+  </div>
+
+  <!-- S5: 수치 -->
+  <div class="slide" id="s5">
+    <div class="eyebrow">Results</div>
+    <div class="headline">숫자로 증명합니다<br><em>월 350~500만원</em> 가능합니다</div>
+    <div class="bigstats">
+      <div class="bstat">
+        <div class="num">11<span class="unit">만</span></div>
+        <div class="lbl">평균 건당 단가<br>(건당 최소보장 9.35만)</div>
+      </div>
+      <div class="bstat">
+        <div class="num">2,400<span class="unit">+</span></div>
+        <div class="lbl">등록 기사<br>전국 네트워크</div>
+      </div>
+      <div class="bstat">
+        <div class="num">7<span class="unit">일</span></div>
+        <div class="lbl">정산 주기<br>(업계 최단)</div>
+      </div>
+    </div>
+    <div class="carriers">
+      <p>지원 택배사</p>
+      <div class="carrier-list">
+        <span>CJ대한통운 880원</span>
+        <span>한진 855원</span>
+        <span>롯데 860원</span>
+        <span>쿠팡로지스틱스 960원</span>
+        <span>로젠 840원</span>
+        <span>우체국 900원</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6: AI 루트코치 -->
+  <div class="slide" id="s6">
+    <div class="eyebrow">AI Route Coach</div>
+    <div class="headline">AI가 최적 노선을<br><em>자동으로</em> 추천합니다</div>
+    <div class="chat-wrap">
+      <div class="q-box">
+        <div class="who">기사님</div>
+        <p>이번 주 부산·경남 노선 중 가장 수익이 좋은 공고 알려줘</p>
+      </div>
+      <div class="a-box">
+        <div class="who">AI 루트코치 (Claude Haiku)</div>
+        <div class="route">🏆 부산 → 울산 → 경주 노선 추천</div>
+        <div class="detail">CJ대한통운 880원 × 예상 38건 = 약 33만원<br>이동 거리 최적화 · 공차 구간 없음 · 정산일 7일 이내</div>
+        <span class="income">예상 월수익 ₩420만원+</span>
+      </div>
+    </div>
+    <div class="powered">Claude Haiku (claude-haiku-4-5-20251001) 기반 · POST /api/ai-coach</div>
+  </div>
+
+  <!-- S7: CTA -->
+  <div class="slide" id="s7">
+    <div class="ring r1"></div>
+    <div class="ring r2"></div>
+    <div class="logo">용<span>차</span>앱</div>
+    <div class="msg">기사님 무료 가입</div>
+    <div class="domain">yongcha.app</div>
+    <div class="sub">대리점 문의: 프로 플랜 ₩49,000/월 · 스타터 무료</div>
+    <div class="goldbar"></div>
+  </div>
+</div>
+
+<script>
+// 별 파티클
+(function(){
+  var c=document.getElementById('starCanvas');
+  if(!c)return;
+  var ctx=c.getContext('2d');
+  var stars=Array.from({length:120},function(){
+    return{x:Math.random()*1280,y:Math.random()*720,r:Math.random()*1.5+.3,a:Math.random(),da:(Math.random()-.5)*.012};
+  });
+  function draw(){
+    ctx.clearRect(0,0,1280,720);
+    stars.forEach(function(s){
+      s.a+=s.da;
+      if(s.a<0||s.a>1)s.da*=-1;
+      ctx.globalAlpha=s.a*.7;
+      ctx.fillStyle='#c9a84c';
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+var slides=['s0','s1','s2','s3','s4','s5','s6','s7'];
+var cur=0;
+var cbs={};
+
+function switchSlide(i){
+  document.querySelectorAll('.slide').forEach(function(e){e.classList.remove('on');});
+  document.getElementById(slides[i]).classList.add('on');
+  document.getElementById('prog').style.width=((i+1)/slides.length*100)+'%';
+  cur=i;
+  // goldbar for s0
+  if(i===0){
+    var bar=document.getElementById('s0bar');
+    if(bar){bar.style.width='0';setTimeout(function(){bar.style.width='400px';},1000);}
+  }
+}
+
+window.goNext=function(){if(cur<slides.length-1)switchSlide(cur+1);};
+window.goPrev=function(){if(cur>0)switchSlide(cur-1);};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key===' ')window.goNext();
+  if(e.key==='ArrowLeft')window.goPrev();
+});
+// init goldbar
+var s0bar=document.getElementById('s0bar');
+if(s0bar){setTimeout(function(){s0bar.style.width='400px';s0bar.style.transition='width 1.1s .8s cubic-bezier(.4,0,.2,1)';},100);}
+</script>
+</body>
+</html>
