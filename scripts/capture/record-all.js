@@ -1,58 +1,59 @@
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 
-const FFMPEG = '/opt/node22/lib/node_modules/ffmpeg-static/ffmpeg';
-const CHROMIUM = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const IS_WIN = process.platform === 'win32';
+const IS_LINUX = process.platform === 'linux';
+
+// Playwright: 원격 Linux 환경은 /opt 경로, 로컬은 node_modules에서
+let chromium;
+try {
+  chromium = require('/opt/node22/lib/node_modules/playwright').chromium;
+} catch(e) {
+  chromium = require('playwright').chromium;
+}
+
+// FFmpeg: ffmpeg-static 패키지 우선, 없으면 시스템 ffmpeg
+let FFMPEG;
+try {
+  FFMPEG = require('ffmpeg-static');
+} catch(e) {
+  FFMPEG = IS_WIN ? 'ffmpeg.exe' : 'ffmpeg';
+}
+
+// Chromium: 원격 Linux 환경만 고정 경로, 로컬은 Playwright 기본값(undefined)
+const CHROMIUM_PATH = IS_LINUX && fs.existsSync('/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
+  ? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
+  : undefined;
+
 const TEMPLATE_DIR = path.join(__dirname, '..', 'video-templates');
 const OUT_DIR = path.join(__dirname, '..', '..', 'output');
 
 const VIDEOS = [
-  {
-    name: 'filo',
-    html: path.join(TEMPLATE_DIR, 'filo-bexco2026.html'),
-    out: path.join(OUT_DIR, 'filo-promo.mp4'),
-    slides: 9,
-    slideDuration: 5500,
-  },
-  {
-    name: 'dine',
-    html: path.join(TEMPLATE_DIR, 'dine-bexco2026.html'),
-    out: path.join(OUT_DIR, 'dine-promo.mp4'),
-    slides: 6,
-    slideDuration: 5500,
-  },
-  {
-    name: 'yongcha',
-    html: path.join(TEMPLATE_DIR, 'yongcha-promo.html'),
-    out: path.join(OUT_DIR, 'yongcha-promo.mp4'),
-    slides: 8,
-    slideDuration: 5500,
-  },
-  {
-    name: 'donway',
-    html: path.join(TEMPLATE_DIR, 'donway-promo.html'),
-    out: path.join(OUT_DIR, 'donway-promo.mp4'),
-    slides: 7,
-    slideDuration: 5500,
-  },
-  {
-    name: 'mbtico',
-    html: path.join(TEMPLATE_DIR, 'mbtico-promo.html'),
-    out: path.join(OUT_DIR, 'mbtico-promo.mp4'),
-    slides: 6,
-    slideDuration: 5500,
-  },
-];
+  { name: 'filo',    html: 'filo-bexco2026.html',  slides: 9, slideDuration: 5500 },
+  { name: 'dine',    html: 'dine-bexco2026.html',  slides: 6, slideDuration: 5500 },
+  { name: 'yongcha', html: 'yongcha-promo.html',   slides: 8, slideDuration: 5500 },
+  { name: 'donway',  html: 'donway-promo.html',    slides: 7, slideDuration: 5500 },
+  { name: 'mbtico',  html: 'mbtico-promo.html',    slides: 6, slideDuration: 5500 },
+].map(v => ({
+  ...v,
+  htmlPath: path.join(TEMPLATE_DIR, v.html),
+  out: path.join(OUT_DIR, `${v.name}-promo.mp4`),
+}));
 
 // CLI: node record-all.js [filo|dine|yongcha|donway|mbtico]
 const filter = process.argv[2];
 const targets = filter ? VIDEOS.filter(v => v.name === filter) : VIDEOS;
 
+if (targets.length === 0) {
+  console.error(`알 수 없는 제품명: ${filter}. filo/dine/yongcha/donway/mbtico 중 선택`);
+  process.exit(1);
+}
+
 async function recordVideo(cfg) {
-  if (!fs.existsSync(cfg.html)) {
-    console.error(`[${cfg.name}] 템플릿 없음: ${cfg.html}`);
+  if (!fs.existsSync(cfg.htmlPath)) {
+    console.error(`[${cfg.name}] 템플릿 없음: ${cfg.htmlPath}`);
+    console.error(`  → git pull 후 다시 시도하세요`);
     return;
   }
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -63,20 +64,25 @@ async function recordVideo(cfg) {
 
   console.log(`\n[${cfg.name.toUpperCase()}] 녹화 시작 (${cfg.slides}슬라이드)...`);
 
-  const browser = await chromium.launch({
-    executablePath: CHROMIUM,
+  const launchOpts = {
     headless: true,
-    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--force-device-scale-factor=1']
-  });
+    args: ['--no-sandbox','--disable-setuid-sandbox','--disable-gpu','--force-device-scale-factor=1'],
+  };
+  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
 
+  const browser = await chromium.launch(launchOpts);
   const context = await browser.newContext({
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 1,
-    recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } }
+    recordVideo: { dir: videoDir, size: { width: 1280, height: 720 } },
   });
 
   const page = await context.newPage();
-  await page.goto('file://' + cfg.html, { waitUntil: 'load' });
+  // Windows: file:///C:/... 형식 필요
+  const fileUrl = IS_WIN
+    ? 'file:///' + cfg.htmlPath.replace(/\\/g, '/')
+    : 'file://' + cfg.htmlPath;
+  await page.goto(fileUrl, { waitUntil: 'load' });
   await page.waitForTimeout(1200);
 
   for (let i = 1; i < cfg.slides; i++) {
@@ -101,11 +107,12 @@ async function recordVideo(cfg) {
     '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart',
     '-r', '30',
-    cfg.out
+    cfg.out,
   ], { stdio: 'inherit' });
 
   if (result.status !== 0) {
-    console.error(`[${cfg.name}] FFmpeg 실패`);
+    console.error(`[${cfg.name}] FFmpeg 실패 — ffmpeg-static 또는 ffmpeg 설치 필요`);
+    console.error(`  npm install ffmpeg-static  또는  choco install ffmpeg`);
     return;
   }
 
@@ -114,10 +121,11 @@ async function recordVideo(cfg) {
 }
 
 (async () => {
+  console.log(`플랫폼: ${process.platform} | Chromium: ${CHROMIUM_PATH || '(Playwright 기본값)'} | FFmpeg: ${FFMPEG}`);
   for (const cfg of targets) {
     await recordVideo(cfg);
   }
-  console.log('\n모든 영상 제작 완료!');
+  console.log('\n완료!');
   for (const cfg of targets) {
     if (fs.existsSync(cfg.out)) console.log(`  ${cfg.name}: ${cfg.out}`);
   }
