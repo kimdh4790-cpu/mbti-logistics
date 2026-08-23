@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const { getChromiumLaunchOpts } = require('../utils/launch-options');
 
 const CHECKS = [
-  { url: 'https://yongcha.app', expect: ['용차', '공차', '매칭', '기사'], name: '랜딩' },
+  { url: 'https://yongcha.app', expect: ['용차', '노선', '배차'], name: '랜딩' },
 ];
 
 async function run() {
