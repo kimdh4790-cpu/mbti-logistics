@@ -152,14 +152,61 @@ async function uploadYouTube() {
     await page.waitForTimeout(1500);
   }
 
-  // 공개 설정
-  const publicSel = '[name="PUBLIC"], [aria-label="공개"], input[value="PUBLIC"]';
-  await page.waitForSelector(publicSel, { timeout: 10000 });
-  await page.click(publicSel);
+  // 공개 설정 — 여러 셀렉터 순차 시도
+  const publicSelectors = [
+    'tp-yt-paper-radio-button[name="PUBLIC"]',
+    '#privacy-radios tp-yt-paper-radio-button:first-child',
+    'ytcp-ve tp-yt-paper-radio-button[name="PUBLIC"]',
+    '[name="PUBLIC"]',
+    '[aria-label="공개"]',
+    '[aria-label="Public"]',
+    'input[value="PUBLIC"]',
+    'ytcp-privacy-dropdown #privacy-radios tp-yt-paper-radio-button',
+  ];
+  let publicClicked = false;
+  for (const sel of publicSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 3000 });
+      await page.click(sel);
+      publicClicked = true;
+      console.log(`[YouTube] 공개 설정 클릭 (${sel})`);
+      break;
+    } catch(e) { /* 다음 시도 */ }
+  }
+  if (!publicClicked) {
+    const shotPath = path.join(ROOT, 'output', 'yt-public-debug.png');
+    await page.screenshot({ path: shotPath, fullPage: true });
+    console.error(`[YouTube] 공개 설정 버튼 못 찾음. 스크린샷: ${shotPath}`);
+    console.log('[YouTube] 그래도 게시 버튼 클릭 시도 (이미 공개 기본값일 수 있음)...');
+  }
   await page.waitForTimeout(1000);
 
   // 게시
-  await page.click('ytcp-button#done-button, [aria-label="게시"], [aria-label="Publish"]');
+  const doneSelectors = [
+    'ytcp-button#done-button',
+    '[aria-label="게시"]',
+    '[aria-label="Publish"]',
+    'ytcp-button:has-text("게시")',
+    'ytcp-button:has-text("Publish")',
+    'button:has-text("게시")',
+  ];
+  let doneClicked = false;
+  for (const sel of doneSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 5000 });
+      await page.click(sel);
+      doneClicked = true;
+      console.log(`[YouTube] 게시 버튼 클릭 (${sel})`);
+      break;
+    } catch(e) {}
+  }
+  if (!doneClicked) {
+    const shotPath = path.join(ROOT, 'output', 'yt-done-debug.png');
+    await page.screenshot({ path: shotPath, fullPage: true });
+    console.error(`[YouTube] 게시 버튼 못 찾음. 스크린샷: ${shotPath}`);
+    await ctx.close();
+    process.exit(1);
+  }
   console.log('[YouTube] 업로드 완료!');
 
   await page.waitForTimeout(5000);
