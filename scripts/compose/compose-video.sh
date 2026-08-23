@@ -5,6 +5,7 @@
 set -e
 
 PRODUCT="${1:-filo}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUTPUT_DIR="$ROOT/output"
 ASSETS_DIR="$ROOT/assets"
@@ -97,4 +98,4 @@ fi
 echo "[${PRODUCT}] 최종 영상 완료: $FINAL"
 
 # Instagram Reels용 세로형 클립 추출
-bash "$(dirname "$0")/make-reels.sh" "$PRODUCT"
+bash "$SCRIPT_DIR/make-reels.sh" "$PRODUCT"
