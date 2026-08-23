@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const { getChromiumLaunchOpts } = require('../utils/launch-options');
 
 const CHECKS = [
-  { url: 'https://mbtico.kr', expect: ['배송', 'mbtico'], name: '랜딩' },
+  { url: 'https://mbtico.kr', expect: ['배송', '배송앱'], name: '랜딩' },
 ];
 
 async function run() {
