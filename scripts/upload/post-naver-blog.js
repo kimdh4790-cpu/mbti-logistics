@@ -8,9 +8,9 @@
  * 환경변수: NAVER_BLOG_ID (블로그 아이디, 기본값: mbtico)
  */
 
-const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const { chromium } = (() => { try { return require('/opt/node22/lib/node_modules/playwright'); } catch(e) { return require('playwright'); } })();
 const { CHROMIUM_PATH, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);

@@ -22,9 +22,9 @@
     "upload:instagram": "node scripts/upload/upload-instagram.js",
     "upload:blog": "node scripts/upload/post-naver-blog.js",
     "login:dine": "HEADLESS=false node scripts/capture/record-dine.js --login-only",
-    "login:youtube": "HEADLESS=false node scripts/upload/upload-youtube.js --login-only",
-    "login:instagram": "HEADLESS=false node scripts/upload/upload-instagram.js --login-only",
-    "login:naver": "HEADLESS=false node scripts/upload/post-naver-blog.js --login-only",
+    "login:youtube": "node scripts/upload/upload-youtube.js --login-only",
+    "login:instagram": "node scripts/upload/upload-instagram.js --login-only",
+    "login:naver": "node scripts/upload/post-naver-blog.js --login-only",
     "pipeline": "node scripts/run-pipeline.js",
     "pipeline:filo": "node scripts/run-pipeline.js --product filo --steps record,compose",
     "pipeline:dine": "node scripts/run-pipeline.js --product dine --steps record,compose",
@@ -39,7 +39,9 @@
     "smoke:donway": "node scripts/test/run-smoke.js --app donway",
     "smoke:yongcha": "node scripts/test/run-smoke.js --app yongcha",
     "smoke:mbtico": "node scripts/test/run-smoke.js --app mbtico",
-    "smoke:shared": "node scripts/test/run-smoke.js --all"
+    "smoke:shared": "node scripts/test/run-smoke.js --all",
+    "login:filo": "node scripts/capture/record-filo.js --login-only",
+    "record:all": "node scripts/capture/record-all.js"
   },
   "repository": {
     "type": "git",

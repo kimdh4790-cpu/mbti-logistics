@@ -6,9 +6,9 @@
  *   HEADLESS=false node upload-instagram.js --product filo --login-only
  */
 
-const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const { chromium } = (() => { try { return require('/opt/node22/lib/node_modules/playwright'); } catch(e) { return require('playwright'); } })();
 const { CHROMIUM_PATH, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);
@@ -22,7 +22,7 @@ const headless = process.env.HEADLESS !== 'false' && !loginOnly;
 
 const ROOT = path.join(__dirname, '../..');
 const meta = require(`../content/${product}-meta.json`);
-const videoPath = path.join(ROOT, 'output', `${product}-${type === 'reels' ? 'reels' : 'final'}.mp4`);
+const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
 
 async function uploadInstagram() {
   if (!dryRun && !fs.existsSync(videoPath)) {
