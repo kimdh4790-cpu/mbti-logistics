@@ -145,11 +145,34 @@ async function uploadYouTube() {
   await page.keyboard.press('Control+a');
   await page.keyboard.type(meta.youtube.description);
 
-  // 다음 버튼 3회 (세부정보 → 최종화면 → 공개설정)
+  // 아동용 여부 — 필수 항목 (선택 안 하면 다음 안 넘어감)
+  const notKidsSelectors = [
+    'tp-yt-paper-radio-button[name="VIDEO_NOT_MADE_FOR_KIDS"]',
+    '[aria-label="아니요, 아동용이 아닙니다"]',
+    '[aria-label="No, it\'s not made for kids"]',
+    'ytcp-form-select tp-yt-paper-radio-button:last-child',
+  ];
+  for (const sel of notKidsSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 4000 });
+      await page.click(sel);
+      console.log(`[YouTube] 아동용 아님 선택 (${sel})`);
+      break;
+    } catch(e) {}
+  }
+  // 위 셀렉터 모두 실패 시 텍스트로 시도
+  try {
+    await page.locator('text=아니요, 아동용이 아닙니다').first().click({ timeout: 3000 });
+    console.log('[YouTube] 아동용 아님 선택 (text locator)');
+  } catch(e) {}
+  await page.waitForTimeout(1000);
+
+  // 다음 버튼 3회 (세부정보 → 동영상요소 → 검토 → 공개설정)
   for (let i = 0; i < 3; i++) {
     await page.waitForSelector('ytcp-button#next-button', { timeout: 10000 });
     await page.click('ytcp-button#next-button');
-    await page.waitForTimeout(1500);
+    console.log(`[YouTube] 다음 버튼 ${i + 1}/3`);
+    await page.waitForTimeout(2000);
   }
 
   // 공개 설정 — 여러 셀렉터 순차 시도
